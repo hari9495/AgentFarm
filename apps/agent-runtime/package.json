@@ -1,0 +1,25 @@
+{
+    "name": "@agentfarm/agent-runtime",
+    "version": "0.1.0",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "build": "tsc -p tsconfig.json",
+        "dev": "node --loader ts-node/esm src/main.ts",
+        "start": "node dist/main.js",
+        "typecheck": "tsc -p tsconfig.json --noEmit",
+        "test": "tsx --test src/**/*.test.ts",
+        "test:db-smoke": "node --import tsx src/db-snapshot-smoke.ts",
+        "test:coverage": "pnpm exec c8 --reporter=text-summary --reporter=json-summary --exclude=src/**/*.test.ts tsx --test src/**/*.test.ts && node ../../scripts/coverage-threshold-check.mjs coverage/coverage-summary.json 80 lines src/runtime-server.ts src/execution-engine.ts src/action-result-writer.ts"
+    },
+    "devDependencies": {
+        "tsx": "^4.20.6",
+        "ts-node": "^10.9.2",
+        "typescript": "^5.7.2"
+    },
+    "dependencies": {
+        "@prisma/client": "^6.19.3",
+        "@agentfarm/shared-types": "workspace:*",
+        "fastify": "^5.2.1"
+    }
+}

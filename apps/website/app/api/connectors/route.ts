@@ -1,0 +1,159 @@
+import { NextResponse } from "next/server";
+import { getSessionUser } from "@/lib/auth-store";
+import { connectorStore } from "@/lib/connector-store";
+import {
+    CONNECTOR_REGISTRY,
+    type ConnectorTool,
+    type ConnectorCategory,
+    type TenantConnector,
+} from "@agentfarm/connector-contracts";
+import crypto from "crypto";
+
+const COOKIE_NAME = "agentfarm_session";
+
+function getCookieValue(cookieHeader: string | null, name: string): string | null {
+    if (!cookieHeader) return null;
+    const cookie = cookieHeader
+        .split(";")
+        .map((p) => p.trim())
+        .find((p) => p.startsWith(`${name}=`));
+    return cookie ? decodeURIComponent(cookie.slice(name.length + 1)) : null;
+}
+
+// ── GET /api/connectors — list connectors for the current workspace ────────
+export async function GET(request: Request) {
+    const token = getCookieValue(request.headers.get("cookie"), COOKIE_NAME);
+    if (!token) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
+
+    const user = getSessionUser(token);
+    if (!user) return NextResponse.json({ error: "Invalid session." }, { status: 401 });
+
+    const { searchParams } = new URL(request.url);
+    const category = searchParams.get("category") as ConnectorCategory | null;
+
+    // Return both: what they have configured + the full registry they can add
+    const tenantConnectors = Array.from(connectorStore.values()).filter(
+        (c) => c.tenantId === user.company
+    );
+
+    const available = CONNECTOR_REGISTRY.filter((def) =>
+        category ? def.category === category : true
+    ).map((def) => ({
+        tool: def.tool,
+        category: def.category,
+        displayName: def.displayName,
+        logoUrl: def.logoUrl,
+        authMethod: def.authMethod,
+        supportedActions: def.supportedActions,
+        docsUrl: def.docsUrl,
+        configSchema: def.configSchema ?? null,
+        oauthScopes: def.oauthScopes ?? null,
+        // is this tool already connected by this tenant?
+        connected: tenantConnectors.some((c) => c.tool === def.tool),
+    }));
+
+    return NextResponse.json({
+        status: "ok",
+        configured: tenantConnectors,
+        available,
+    });
+}
+
+// ── POST /api/connectors — add / configure a connector ────────────────────
+export async function POST(request: Request) {
+    const token = getCookieValue(request.headers.get("cookie"), COOKIE_NAME);
+    if (!token) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
+
+    const user = getSessionUser(token);
+    if (!user) return NextResponse.json({ error: "Invalid session." }, { status: 401 });
+
+    let body: {
+        tool?: string;
+        displayName?: string;
+        baseUrl?: string;
+        authMethod?: string;
+        configValues?: Record<string, string>;
+        workspaceId?: string;
+    };
+
+    try {
+        body = await request.json();
+    } catch {
+        return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
+    }
+
+    const tool = body.tool?.trim() as ConnectorTool | undefined;
+    if (!tool) return NextResponse.json({ error: "tool is required." }, { status: 400 });
+
+    const definition = CONNECTOR_REGISTRY.find((d) => d.tool === tool);
+    if (!definition) {
+        return NextResponse.json(
+            { error: `Unknown tool: ${tool}. Check GET /api/connectors for supported tools.` },
+            { status: 400 }
+        );
+    }
+
+    // Validate required configSchema fields for non-OAuth connectors
+    if (definition.configSchema && definition.configSchema.length > 0) {
+        const missing = definition.configSchema
+            .filter((f) => f.required)
+            .filter((f) => !body.configValues?.[f.key])
+            .map((f) => f.key);
+
+        if (missing.length > 0) {
+            return NextResponse.json(
+                { error: `Missing required config fields: ${missing.join(", ")}` },
+                { status: 400 }
+            );
+        }
+    }
+
+    // For generic REST connectors, base URL is required.
+    // We detect this by authMethod so all custom REST categories are covered.
+    const configuredBaseUrl = body.baseUrl ?? body.configValues?.baseUrl;
+    if (definition.authMethod === "generic_rest" && !configuredBaseUrl) {
+        return NextResponse.json({ error: "baseUrl is required for custom REST connectors." }, { status: 400 });
+    }
+
+    const connectorId = `conn_${crypto.randomUUID()}`;
+    const now = new Date().toISOString();
+
+    const connector: TenantConnector = {
+        connectorId,
+        tenantId: user.company,
+        workspaceId: body.workspaceId ?? "default",
+        tool,
+        category: definition.category,
+        displayName: body.displayName?.trim() || definition.displayName,
+        status: definition.authMethod === "oauth2" ? "pending_auth" : "connected",
+        authMethod: definition.authMethod,
+        secretRefId: null,
+        baseUrl: configuredBaseUrl,
+        configValues: body.configValues,
+        lastHealthcheckAt: null,
+        lastErrorClass: null,
+        createdAt: now,
+        updatedAt: now,
+        createdByUserId: user.id,
+    };
+
+    connectorStore.set(connectorId, connector);
+
+    // For OAuth connectors, return the auth URL the customer needs to open
+    const oauthInitUrl =
+        definition.authMethod === "oauth2"
+            ? `/api/connectors/${connectorId}/oauth/start`
+            : null;
+
+    return NextResponse.json(
+        {
+            status: "ok",
+            connector,
+            nextStep:
+                definition.authMethod === "oauth2"
+                    ? { action: "oauth", oauthInitUrl, message: "Visit oauthInitUrl to complete authentication." }
+                    : { action: "ready", message: "Connector configured and ready." },
+        },
+        { status: 201 }
+    );
+}

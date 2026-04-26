@@ -1,0 +1,352 @@
+:root {
+    --bg: #f6f5f2;
+    --ink: #1c1d1f;
+    --card: #fffdfa;
+    --line: #ddd6cc;
+    --accent: #0e7490;
+    --warn: #b45309;
+    --ok: #166534;
+    --soft: #eee9e0;
+    --card-shadow: 0 24px 60px -44px rgba(26, 23, 20, 0.45);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    background:
+        radial-gradient(100% 90% at 10% 0%, #fff9ee 0%, rgba(255, 249, 238, 0) 60%),
+        radial-gradient(90% 70% at 100% 0%, #e7f2f9 0%, rgba(231, 242, 249, 0) 60%),
+        linear-gradient(180deg, #f9f8f5 0%, var(--bg) 48%, #efebe2 100%);
+    color: var(--ink);
+    font-family: var(--font-space-grotesk), 'Trebuchet MS', 'Segoe UI', sans-serif;
+}
+
+.page-shell {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1rem 3rem;
+    display: grid;
+    gap: 1rem;
+}
+
+.hero {
+    background:
+        linear-gradient(135deg, rgba(255, 249, 236, 0.9) 0%, rgba(230, 243, 251, 0.75) 55%, rgba(244, 242, 235, 0.9) 100%),
+        #fffdf8;
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 1.6rem;
+    box-shadow: var(--card-shadow);
+}
+
+.hero h1 {
+    margin: 0.25rem 0 0.5rem;
+    font-size: clamp(1.4rem, 2.5vw, 2.1rem);
+}
+
+.hero p {
+    margin: 0;
+    max-width: 75ch;
+    color: #3f3d38;
+    line-height: 1.5;
+}
+
+.eyebrow {
+    margin: 0;
+    color: #155e75;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 0.76rem;
+    font-weight: 700;
+}
+
+.grid-two {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.card {
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    background: var(--card);
+    padding: 1.05rem;
+    box-shadow: var(--card-shadow);
+    backdrop-filter: blur(2px);
+}
+
+.card h2 {
+    margin: 0 0 0.8rem;
+    font-size: 1.08rem;
+}
+
+.card h3 {
+    letter-spacing: -0.01em;
+}
+
+.kv-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.6rem;
+}
+
+.kv-list li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px dashed var(--line);
+    padding-bottom: 0.4rem;
+}
+
+.state-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+}
+
+.state-pill {
+    padding: 0.35rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    border: 1px solid var(--line);
+    background: var(--soft);
+}
+
+.state-pill.done {
+    background: #dcfce7;
+    border-color: #86efac;
+}
+
+.state-pill.active {
+    background: #fef3c7;
+    border-color: #fcd34d;
+    font-weight: 700;
+}
+
+.state-pill.pending {
+    opacity: 0.85;
+}
+
+.badge {
+    display: inline-block;
+    border-radius: 999px;
+    padding: 0.2rem 0.55rem;
+    font-size: 0.76rem;
+    border: 1px solid transparent;
+    font-weight: 600;
+}
+
+.badge.warn {
+    background: #ffedd5;
+    border-color: #fdba74;
+    color: #9a3412;
+}
+
+.badge.neutral {
+    background: #e2e8f0;
+    border-color: #94a3b8;
+    color: #0f172a;
+}
+
+.badge.low {
+    background: #dcfce7;
+    border-color: #86efac;
+    color: var(--ok);
+}
+
+.badge.medium {
+    background: #fef3c7;
+    border-color: #fcd34d;
+    color: #92400e;
+}
+
+.badge.high {
+    background: #fee2e2;
+    border-color: #fca5a5;
+    color: #991b1b;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th,
+td {
+    text-align: left;
+    border-bottom: 1px solid var(--line);
+    padding: 0.45rem 0.4rem;
+    font-size: 0.9rem;
+}
+
+thead th {
+    color: #4a453e;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 700;
+}
+
+code,
+.mono {
+    font-family: var(--font-plex-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+input,
+select,
+button,
+textarea {
+    font-family: inherit;
+}
+
+.approval-toolbar {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.7rem;
+}
+
+.approval-input,
+.approval-select {
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.82rem;
+    background: #ffffff;
+    color: #1f2937;
+}
+
+.approval-input {
+    min-width: 220px;
+}
+
+.chip-button {
+    border: 1px solid #cbd5e1;
+    background: #f8fafc;
+    border-radius: 10px;
+    padding: 0.33rem 0.58rem;
+    font-size: 0.78rem;
+    cursor: pointer;
+}
+
+.chip-button.active {
+    background: #e2e8f0;
+    border-color: #94a3b8;
+}
+
+.primary-action {
+    border: 1px solid #d6b37c;
+    background: #ffedd5;
+    color: #9a3412;
+    border-radius: 10px;
+    padding: 0.36rem 0.7rem;
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.primary-action:disabled,
+.secondary-action:disabled,
+.danger-action:disabled,
+.warn-action:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.secondary-action,
+.danger-action,
+.warn-action {
+    border-radius: 7px;
+    padding: 0.26rem 0.52rem;
+    cursor: pointer;
+    font-size: 0.82rem;
+}
+
+.secondary-action {
+    border: 1px solid #86efac;
+    background: #dcfce7;
+    color: #166534;
+}
+
+.danger-action {
+    border: 1px solid #fca5a5;
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.warn-action {
+    border: 1px solid #fcd34d;
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.message-inline {
+    margin: 0 0 0.8rem;
+    font-size: 0.82rem;
+    color: #155e75;
+    background: #ecfeff;
+    border: 1px solid #a5f3fc;
+    border-radius: 10px;
+    padding: 0.45rem 0.65rem;
+}
+
+.evidence-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.6rem;
+}
+
+.evidence-list li {
+    border-left: 3px solid var(--accent);
+    padding-left: 0.6rem;
+    display: grid;
+    gap: 0.15rem;
+}
+
+.evidence-list span {
+    font-size: 0.82rem;
+    color: #57534e;
+}
+
+.steps-list {
+    margin: 0;
+    padding-left: 1.1rem;
+    display: grid;
+    gap: 0.7rem;
+}
+
+.steps-list h3 {
+    margin: 0 0 0.2rem;
+    font-size: 0.95rem;
+}
+
+.steps-list p {
+    margin: 0.1rem 0;
+    font-size: 0.9rem;
+}
+
+.steps-list span {
+    font-weight: 700;
+}
+
+@media (max-width: 860px) {
+    .grid-two {
+        grid-template-columns: 1fr;
+    }
+
+    .page-shell {
+        padding: 1rem 0.75rem 2rem;
+    }
+
+    .approval-input {
+        min-width: 100%;
+    }
+}

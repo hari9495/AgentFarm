@@ -1,0 +1,556 @@
+"use client";
+
+import { useState, useEffect } from "react";
+
+// ── Types (mirrors connector-contracts, safe to duplicate for client) ──────
+type ConnectorCategory = "task_tracker" | "messaging" | "code" | "email";
+type ConnectorAuthMethod = "oauth2" | "api_key" | "bearer_token" | "basic" | "generic_rest";
+type ConnectorStatus = "connected" | "disconnected" | "error" | "pending_auth";
+
+interface ConfigField {
+    key: string;
+    label: string;
+    type: "text" | "password" | "url" | "select";
+    required: boolean;
+    placeholder?: string;
+    options?: { value: string; label: string }[];
+    hint?: string;
+}
+
+interface AvailableConnector {
+    tool: string;
+    category: ConnectorCategory;
+    displayName: string;
+    logoUrl: string;
+    authMethod: ConnectorAuthMethod;
+    supportedActions: string[];
+    docsUrl: string;
+    configSchema: ConfigField[] | null;
+    oauthScopes: string[] | null;
+    connected: boolean;
+}
+
+interface ConfiguredConnector {
+    connectorId: string;
+    tool: string;
+    category: ConnectorCategory;
+    displayName: string;
+    status: ConnectorStatus;
+    authMethod: ConnectorAuthMethod;
+    lastHealthcheckAt: string | null;
+    lastErrorClass: string | null;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+const CATEGORY_LABELS: Record<ConnectorCategory, string> = {
+    task_tracker: "Task Trackers",
+    messaging: "Messaging",
+    code: "Code & Version Control",
+    email: "Email",
+};
+
+const CATEGORY_ORDER: ConnectorCategory[] = ["task_tracker", "messaging", "code", "email"];
+
+const STATUS_COLORS: Record<ConnectorStatus, string> = {
+    connected: "bg-green-100 text-green-800",
+    pending_auth: "bg-yellow-100 text-yellow-800",
+    error: "bg-red-100 text-red-800",
+    disconnected: "bg-gray-100 text-gray-600",
+};
+
+const STATUS_LABELS: Record<ConnectorStatus, string> = {
+    connected: "Connected",
+    pending_auth: "Auth Required",
+    error: "Error",
+    disconnected: "Disconnected",
+};
+
+function ConnectorIcon({ tool, size = 32 }: { tool: string; size?: number }) {
+    // Simple emoji fallback per tool until real SVGs are served
+    const icons: Record<string, string> = {
+        jira: "🔷", linear: "🔵", asana: "🟠", monday: "🟣", trello: "🃏", clickup: "🟡",
+        teams: "💬", slack: "💚", discord: "🎮", google_chat: "💭",
+        github: "⬛", gitlab: "🟠", bitbucket: "🔵", azure_devops: "🔷",
+        outlook: "📧", gmail: "📬", exchange: "📮",
+        generic_rest: "🔌", generic_rest_messaging: "🔌", generic_rest_code: "🔌", generic_rest_email: "🔌", generic_smtp: "📨",
+    };
+    return (
+        <span style={{ fontSize: size * 0.7 }} className="inline-flex items-center justify-center" aria-hidden>
+            {icons[tool] ?? "🔌"}
+        </span>
+    );
+}
+
+// ── Add Connector Modal ────────────────────────────────────────────────────
+function AddConnectorModal({
+    connector,
+    onClose,
+    onAdded,
+}: {
+    connector: AvailableConnector;
+    onClose: () => void;
+    onAdded: () => void;
+}) {
+    const [displayName, setDisplayName] = useState(connector.displayName);
+    const [configValues, setConfigValues] = useState<Record<string, string>>({});
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const fields = connector.configSchema ?? [];
+
+    async function handleSubmit(e: React.FormEvent) {
+        e.preventDefault();
+        setLoading(true);
+        setError(null);
+        try {
+            const res = await fetch("/api/connectors", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    tool: connector.tool,
+                    displayName,
+                    configValues,
+                }),
+            });
+            const json = await res.json();
+            if (!res.ok) {
+                setError(json.error ?? "Failed to add connector.");
+                return;
+            }
+            onAdded();
+            onClose();
+        } catch {
+            setError("Network error. Please try again.");
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    return (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-lg">
+                {/* Header */}
+                <div className="flex items-center gap-3 p-5 border-b border-gray-200">
+                    <ConnectorIcon tool={connector.tool} size={36} />
+                    <div>
+                        <h2 className="text-lg font-semibold text-gray-900">Connect {connector.displayName}</h2>
+                        <p className="text-sm text-gray-500 capitalize">{connector.category.replace("_", " ")}</p>
+                    </div>
+                    <button onClick={onClose} className="ml-auto text-gray-400 hover:text-gray-600 text-xl font-bold" aria-label="Close">×</button>
+                </div>
+
+                <form onSubmit={handleSubmit} className="p-5 space-y-4">
+                    {/* Display name */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Display Name
+                        </label>
+                        <input
+                            type="text"
+                            value={displayName}
+                            onChange={(e) => setDisplayName(e.target.value)}
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="e.g. Our Jira, Engineering Slack"
+                        />
+                        <p className="text-xs text-gray-400 mt-1">The name your team will see in the dashboard.</p>
+                    </div>
+
+                    {/* OAuth info block */}
+                    {connector.authMethod === "oauth2" && (
+                        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
+                            <p className="font-medium mb-1">OAuth 2.0 Authentication</p>
+                            <p className="text-xs text-blue-700">
+                                After clicking Add, you'll be redirected to {connector.displayName} to authorize access.
+                                We request only the permissions your agent needs:
+                            </p>
+                            {connector.oauthScopes && (
+                                <ul className="mt-2 text-xs text-blue-700 space-y-0.5">
+                                    {connector.oauthScopes.map((s) => (
+                                        <li key={s} className="font-mono bg-blue-100 rounded px-1">• {s}</li>
+                                    ))}
+                                </ul>
+                            )}
+                        </div>
+                    )}
+
+                    {/* API key / generic_rest config fields */}
+                    {fields.map((field) => (
+                        <div key={field.key}>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                {field.label}
+                                {field.required && <span className="text-red-500 ml-1">*</span>}
+                            </label>
+                            {field.type === "select" ? (
+                                <select
+                                    value={configValues[field.key] ?? ""}
+                                    onChange={(e) => setConfigValues((v) => ({ ...v, [field.key]: e.target.value }))}
+                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    required={field.required}
+                                >
+                                    <option value="">Select...</option>
+                                    {field.options?.map((o) => (
+                                        <option key={o.value} value={o.value}>{o.label}</option>
+                                    ))}
+                                </select>
+                            ) : (
+                                <input
+                                    type={field.type === "password" ? "password" : field.type === "url" ? "url" : "text"}
+                                    value={configValues[field.key] ?? ""}
+                                    onChange={(e) => setConfigValues((v) => ({ ...v, [field.key]: e.target.value }))}
+                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    placeholder={field.placeholder}
+                                    required={field.required}
+                                />
+                            )}
+                            {field.hint && <p className="text-xs text-gray-400 mt-1">{field.hint}</p>}
+                        </div>
+                    ))}
+
+                    {/* Supported actions */}
+                    <div>
+                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+                            Your agent will be able to:
+                        </p>
+                        <div className="flex flex-wrap gap-1">
+                            {connector.supportedActions.map((a) => (
+                                <span key={a} className="bg-gray-100 text-gray-600 rounded-full px-2 py-0.5 text-xs font-mono">
+                                    {a}
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+
+                    {error && (
+                        <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>
+                    )}
+
+                    <div className="flex gap-3 pt-2">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="flex-1 border border-gray-300 text-gray-700 rounded-lg px-4 py-2 text-sm hover:bg-gray-50 transition"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="flex-1 bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition"
+                        >
+                            {loading ? "Connecting..." : connector.authMethod === "oauth2" ? "Continue to Auth" : "Add Connector"}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
+
+// ── Configured Connector Card ──────────────────────────────────────────────
+function ConnectorCard({
+    connector,
+    onRemove,
+    onHealthCheck,
+}: {
+    connector: ConfiguredConnector;
+    onRemove: () => void;
+    onHealthCheck: () => void;
+}) {
+    const [checking, setChecking] = useState(false);
+
+    async function runHealthCheck() {
+        setChecking(true);
+        await onHealthCheck();
+        setChecking(false);
+    }
+
+    return (
+        <div className="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-4 hover:shadow-sm transition">
+            <ConnectorIcon tool={connector.tool} size={40} />
+            <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                    <p className="font-medium text-gray-900 text-sm truncate">{connector.displayName}</p>
+                    <span className={`text-xs rounded-full px-2 py-0.5 font-medium ${STATUS_COLORS[connector.status]}`}>
+                        {STATUS_LABELS[connector.status]}
+                    </span>
+                </div>
+                <p className="text-xs text-gray-400 mt-0.5 capitalize">{connector.category.replace("_", " ")} · {connector.authMethod.replace("_", " ")}</p>
+                {connector.lastHealthcheckAt && (
+                    <p className="text-xs text-gray-400">
+                        Last checked: {new Date(connector.lastHealthcheckAt).toLocaleString()}
+                    </p>
+                )}
+                {connector.lastErrorClass && (
+                    <p className="text-xs text-red-500">Error: {connector.lastErrorClass.replace(/_/g, " ")}</p>
+                )}
+            </div>
+            <div className="flex items-center gap-2">
+                <button
+                    onClick={runHealthCheck}
+                    disabled={checking}
+                    className="text-xs text-blue-600 hover:text-blue-800 border border-blue-200 hover:border-blue-400 rounded-lg px-3 py-1.5 transition disabled:opacity-50"
+                >
+                    {checking ? "Checking..." : "Test"}
+                </button>
+                <button
+                    onClick={onRemove}
+                    className="text-xs text-red-500 hover:text-red-700 border border-red-200 hover:border-red-400 rounded-lg px-3 py-1.5 transition"
+                >
+                    Remove
+                </button>
+            </div>
+        </div>
+    );
+}
+
+// ── Available Connector Card ───────────────────────────────────────────────
+function AvailableCard({
+    connector,
+    onAdd,
+}: {
+    connector: AvailableConnector;
+    onAdd: () => void;
+}) {
+    return (
+        <div className="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-3 hover:shadow-sm transition">
+            <ConnectorIcon tool={connector.tool} size={36} />
+            <div className="flex-1 min-w-0">
+                <p className="font-medium text-gray-900 text-sm">{connector.displayName}</p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                    {connector.supportedActions.length} actions · {connector.authMethod.replace("_", " ")}
+                </p>
+            </div>
+            {connector.connected ? (
+                <span className="text-xs bg-green-100 text-green-700 rounded-full px-2 py-0.5 font-medium">
+                    Connected
+                </span>
+            ) : (
+                <button
+                    onClick={onAdd}
+                    className="text-xs bg-blue-600 text-white rounded-lg px-3 py-1.5 hover:bg-blue-700 transition font-medium"
+                >
+                    + Add
+                </button>
+            )}
+        </div>
+    );
+}
+
+// ── Main Page ──────────────────────────────────────────────────────────────
+export default function ConnectorsPage() {
+    const [configured, setConfigured] = useState<ConfiguredConnector[]>([]);
+    const [available, setAvailable] = useState<AvailableConnector[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [activeCategory, setActiveCategory] = useState<ConnectorCategory | "all">("all");
+    const [addingConnector, setAddingConnector] = useState<AvailableConnector | null>(null);
+    const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+
+    function showToast(message: string, type: "success" | "error" = "success") {
+        setToast({ message, type });
+        setTimeout(() => setToast(null), 3500);
+    }
+
+    async function loadConnectors() {
+        try {
+            const res = await fetch("/api/connectors");
+            if (res.ok) {
+                const data = await res.json();
+                setConfigured(data.configured ?? []);
+                setAvailable(data.available ?? []);
+            }
+        } catch {
+            // silent
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    useEffect(() => {
+        loadConnectors();
+    }, []);
+
+    async function handleRemove(connectorId: string, name: string) {
+        if (!confirm(`Remove "${name}"? Your agent will lose access to this tool.`)) return;
+        const res = await fetch(`/api/connectors/${connectorId}`, { method: "DELETE" });
+        if (res.ok) {
+            showToast(`"${name}" removed.`);
+            await loadConnectors();
+        } else {
+            showToast("Failed to remove connector.", "error");
+        }
+    }
+
+    async function handleHealthCheck(connectorId: string) {
+        const res = await fetch(`/api/connectors/${connectorId}/health`, { method: "POST" });
+        const json = await res.json();
+        if (json.healthy) {
+            showToast(json.message ?? "Connector is healthy.");
+        } else {
+            showToast(json.message ?? "Connector check failed.", "error");
+        }
+        await loadConnectors();
+    }
+
+    const filteredAvailable = available.filter((c) =>
+        activeCategory === "all" ? true : c.category === activeCategory
+    );
+
+    const customToolByCategory: Record<ConnectorCategory, string> = {
+        task_tracker: "generic_rest",
+        messaging: "generic_rest_messaging",
+        code: "generic_rest_code",
+        email: "generic_rest_email",
+    };
+
+    const getPreferredCustomConnector = (): AvailableConnector | undefined => {
+        if (activeCategory !== "all") {
+            return available.find((c) => c.tool === customToolByCategory[activeCategory]);
+        }
+
+        return available.find((c) => c.tool === "generic_rest")
+            ?? available.find((c) => c.tool.startsWith("generic_rest"));
+    };
+
+    const groupedAvailable = CATEGORY_ORDER.reduce<Record<ConnectorCategory, AvailableConnector[]>>(
+        (acc, cat) => {
+            acc[cat] = filteredAvailable.filter((c) => c.category === cat);
+            return acc;
+        },
+        {} as Record<ConnectorCategory, AvailableConnector[]>
+    );
+
+    return (
+        <div className="min-h-screen bg-gray-50 p-6">
+            {/* Toast */}
+            {toast && (
+                <div className={`fixed top-4 right-4 z-50 rounded-xl px-4 py-3 text-sm font-medium shadow-lg ${toast.type === "success" ? "bg-green-600 text-white" : "bg-red-600 text-white"}`}>
+                    {toast.message}
+                </div>
+            )}
+
+            {/* Add connector modal */}
+            {addingConnector && (
+                <AddConnectorModal
+                    connector={addingConnector}
+                    onClose={() => setAddingConnector(null)}
+                    onAdded={() => {
+                        showToast(`${addingConnector.displayName} added successfully.`);
+                        loadConnectors();
+                    }}
+                />
+            )}
+
+            <div className="max-w-5xl mx-auto space-y-8">
+
+                {/* Header */}
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-900">Integrations</h1>
+                    <p className="text-gray-500 mt-1 text-sm">
+                        Connect your tools so your agent can work across your entire stack. Your agent's logic stays the same — only the connector changes.
+                    </p>
+                </div>
+
+                {/* Connected tools summary */}
+                {configured.length > 0 && (
+                    <section>
+                        <h2 className="text-base font-semibold text-gray-800 mb-3">
+                            Your Connected Tools <span className="text-gray-400 font-normal">({configured.length})</span>
+                        </h2>
+                        <div className="space-y-2">
+                            {configured.map((c) => (
+                                <ConnectorCard
+                                    key={c.connectorId}
+                                    connector={c}
+                                    onRemove={() => handleRemove(c.connectorId, c.displayName)}
+                                    onHealthCheck={() => handleHealthCheck(c.connectorId)}
+                                />
+                            ))}
+                        </div>
+                    </section>
+                )}
+
+                {/* No connections state */}
+                {!loading && configured.length === 0 && (
+                    <div className="bg-white rounded-xl border border-dashed border-gray-300 p-8 text-center">
+                        <p className="text-3xl mb-2">🔌</p>
+                        <p className="font-medium text-gray-800">No tools connected yet</p>
+                        <p className="text-sm text-gray-400 mt-1">Add your first integration below to get your agent working.</p>
+                    </div>
+                )}
+
+                {/* Available integrations */}
+                <section>
+                    <div className="flex items-center justify-between mb-3">
+                        <h2 className="text-base font-semibold text-gray-800">Available Integrations</h2>
+                    </div>
+
+                    {/* Category filter tabs */}
+                    <div className="flex gap-2 mb-4 flex-wrap">
+                        {(["all", ...CATEGORY_ORDER] as const).map((cat) => (
+                            <button
+                                key={cat}
+                                onClick={() => setActiveCategory(cat)}
+                                className={`text-xs rounded-full px-3 py-1.5 border transition font-medium ${activeCategory === cat
+                                    ? "bg-blue-600 text-white border-blue-600"
+                                    : "bg-white text-gray-600 border-gray-300 hover:border-gray-400"
+                                    }`}
+                            >
+                                {cat === "all" ? "All" : CATEGORY_LABELS[cat]}
+                            </button>
+                        ))}
+                    </div>
+
+                    {loading ? (
+                        <p className="text-sm text-gray-400">Loading integrations...</p>
+                    ) : (
+                        <div className="space-y-6">
+                            {CATEGORY_ORDER.map((cat) => {
+                                const items = groupedAvailable[cat];
+                                if (items.length === 0) return null;
+                                return (
+                                    <div key={cat}>
+                                        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+                                            {CATEGORY_LABELS[cat]}
+                                        </h3>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                            {items.map((c) => (
+                                                <AvailableCard
+                                                    key={c.tool}
+                                                    connector={c}
+                                                    onAdd={() => setAddingConnector(c)}
+                                                />
+                                            ))}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </section>
+
+                {/* Custom REST API callout */}
+                <section className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-xl p-5 text-white">
+                    <div className="flex items-start gap-3">
+                        <span className="text-2xl">🔌</span>
+                        <div className="flex-1">
+                            <p className="font-semibold text-base">Using a custom or internal tool?</p>
+                            <p className="text-sm text-gray-300 mt-1">
+                                Any tool with a REST API can be connected using category-specific Custom REST connectors for tasks, messaging, code, and email.
+                            </p>
+                        </div>
+                        <button
+                            onClick={() => {
+                                const generic = getPreferredCustomConnector();
+                                if (generic) setAddingConnector(generic);
+                            }}
+                            className="shrink-0 bg-white text-gray-900 rounded-lg px-4 py-2 text-sm font-medium hover:bg-gray-100 transition"
+                        >
+                            + Custom API
+                        </button>
+                    </div>
+                </section>
+
+            </div>
+        </div>
+    );
+}

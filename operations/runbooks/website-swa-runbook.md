@@ -1,0 +1,60 @@
+# Website Azure Static Web App Runbook (Task 7.1)
+
+## Purpose
+Operational checklist for deploying the AgentFarm website to Azure Static Web Apps with custom domain, CDN validation, analytics checks, and Lighthouse signoff.
+
+## Scope
+- Website source: apps/website
+- Deployment workflow: .github/workflows/website-swa.yml
+- Static Web App config: apps/website/staticwebapp.config.json
+
+## Prerequisites
+1. Azure Static Web App resource created.
+2. GitHub repository secret configured:
+   - AZURE_STATIC_WEB_APPS_API_TOKEN_WEBSITE
+3. Main branch protection and PR workflow enabled.
+
+## Deployment Procedure
+1. Merge website changes into main.
+2. Verify workflow run in GitHub Actions:
+   - job: deploy
+   - status: success
+   - build command: `pnpm --filter @agentfarm/website exec next build --no-lint`
+3. Confirm SWA environment URL returns HTTP 200.
+4. Validate key pages:
+   - /
+   - /signup
+   - /target
+
+## Custom Domain Setup
+1. In Azure portal, open Static Web App custom domains.
+2. Add apex and www records as needed.
+3. Configure DNS records at registrar:
+   - CNAME for www
+   - ALIAS/ANAME (or Azure-supported method) for apex
+4. Wait for certificate issuance and TLS validation.
+5. Verify HTTPS redirect and certificate validity.
+
+## CDN and Performance Validation
+1. Confirm static assets are served with cache headers.
+2. Validate cold and warm page response from at least two regions.
+3. Run Lighthouse on production URL:
+   - Performance >= 90
+   - Accessibility >= 90
+   - Best Practices >= 90
+   - SEO >= 90
+
+## Analytics and SEO Validation
+1. Confirm analytics events are emitted from production domain.
+2. Validate sitemap and robots.txt exposure.
+3. Validate metadata/title/description for top routes.
+
+## Rollback
+1. Re-run workflow from last known-good commit.
+2. If required, revert main branch to previous release commit.
+3. Confirm rollback deployment health and analytics continuity.
+
+## Ownership
+- Frontend Lead: website build and UX verification
+- DevOps: deployment workflow and domain configuration
+- Product: launch signoff

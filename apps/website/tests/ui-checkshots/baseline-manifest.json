@@ -1,0 +1,39 @@
+{
+  "generatedAt": "2026-04-26T15:09:08.162Z",
+  "expectedFiles": [
+    "home-desktop.png",
+    "home-mobile.png",
+    "marketplace-desktop.png",
+    "marketplace-mobile.png",
+    "product-desktop.png",
+    "product-mobile.png",
+    "pricing-desktop.png",
+    "pricing-mobile.png",
+    "docs-desktop.png",
+    "docs-mobile.png",
+    "login-desktop.png",
+    "login-mobile.png",
+    "about-desktop.png",
+    "about-mobile.png",
+    "security-desktop.png",
+    "security-mobile.png"
+  ],
+  "files": {
+    "home-desktop.png": "418a021c93c87c0b68dfb8574c69633d2a2afc5089c8e7b5d6d8be2840e07e49",
+    "home-mobile.png": "740069f6fe3570ecc0fde5fbca45417fa93c3cac29c53c13b01f2e300d0758a6",
+    "marketplace-desktop.png": "2436ace74810bcf679f87cbda493c53304389f181b5086a774da7b0450223db9",
+    "marketplace-mobile.png": "7911462f28db24dfd9d64c24d4a85895960c5340dd77853fe618354b213cf4dd",
+    "product-desktop.png": "50e60140e056303145015c8a61133fa203c76ccd220612625a504d77c9f63fce",
+    "product-mobile.png": "d3e0fd6cecc354cde14b89546462c09ff3e0e54041dd78c86e21048f65c03fdf",
+    "pricing-desktop.png": "da14d1601d1c4b298215e4859eca420ff6cbd0a5322e47cb79856e0766d64188",
+    "pricing-mobile.png": "56bdcf08e93af11d5c0017f2d6e66585a73002825553179bc6a0253e89c7770c",
+    "docs-desktop.png": "7345ea24df922f2465142ddf9f26925b2935bf24698655142f50f7fdc46044e4",
+    "docs-mobile.png": "d3beb8d201fb73617119b03d046d6e73d61b70268a33733f5a6a503dbf742c73",
+    "login-desktop.png": "7f16ed2455ef0656a2e0f03f2eafed4237dd851ada8b760e22f5178c66315ba5",
+    "login-mobile.png": "090732cf3cb10f59ca884a1f378e7093e80b49ab30720bf256e988262b65992d",
+    "about-desktop.png": "091729f37bd7725b36b70085c738617f4f8c67e304ca69ffd98fdfbb315e7fd4",
+    "about-mobile.png": "5785c882392f21a2b432e542e742b43810593cb88540b59a2c59a7842f55a9f4",
+    "security-desktop.png": "7975628d1ff1efff1d10823f6d616e1df7735459f91c95198309b5e2f4d27e5d",
+    "security-mobile.png": "96d24faa7993acedb693b959af82e2e8a7612631c69cceb3cf0ad8b6b6b2bdbb"
+  }
+}

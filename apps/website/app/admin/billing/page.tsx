@@ -1,0 +1,240 @@
+import type { Metadata } from "next";
+import { ArrowUpRight, CreditCard, Download, Receipt, TrendingUp, Users, Zap } from "lucide-react";
+import ButtonLink from "@/components/shared/ButtonLink";
+
+export const metadata: Metadata = {
+    title: "Admin Billing - AgentFarm",
+    description: "Track plan usage, seats, invoices, and monthly spend across your AgentFarm workspace.",
+};
+
+const plans = [
+    {
+        name: "Starter+",
+        seats: "Up to 10 seats",
+        price: "$99",
+        unit: "/ worker / mo",
+        features: ["10 AI workers", "Basic approvals", "Community support"],
+        current: false,
+    },
+    {
+        name: "Pro+",
+        seats: "Up to 50 seats",
+        price: "$249",
+        unit: "/ worker / mo",
+        features: ["50 AI workers", "Policy engine", "Priority support", "Audit logs"],
+        current: true,
+    },
+    {
+        name: "Enterprise",
+        seats: "Custom",
+        price: "Custom",
+        unit: "contract",
+        features: ["Unlimited workers", "SSO + SAML", "SLA guarantee", "Dedicated CSM"],
+        current: false,
+    },
+];
+
+const invoices = [
+    { id: "INV-2026-041", amount: "$6,920", status: "Paid", date: "Apr 01, 2026" },
+    { id: "INV-2026-032", amount: "$6,340", status: "Paid", date: "Mar 01, 2026" },
+    { id: "INV-2026-022", amount: "$5,980", status: "Paid", date: "Feb 01, 2026" },
+];
+
+const seatPct = Math.round((46 / 50) * 100);
+
+export default function AdminBillingPage() {
+    return (
+        <div className="site-shell min-h-screen">
+
+            {/* Page header */}
+            <section className="border-b border-slate-200 dark:border-slate-800 bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-700">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+                    <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-emerald-200 mb-4">
+                        <CreditCard className="w-3.5 h-3.5" />
+                        Admin Billing
+                    </div>
+                    <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight max-w-xl">
+                        Plan, seats, and invoice management
+                    </h1>
+                    <p className="mt-2 text-emerald-200 max-w-lg">
+                        Monitor spend, right-size worker seats, and keep procurement and finance aligned.
+                    </p>
+                    <div className="mt-5 flex flex-wrap gap-3">
+                        <ButtonLink href="/book-demo" size="sm" className="!bg-white !text-emerald-700 hover:!brightness-95">
+                            Talk to Sales
+                        </ButtonLink>
+                        <ButtonLink href="/admin" variant="outline" size="sm" className="!bg-white/10 !text-white !border-white/30 hover:!bg-white/20">
+                            Back to Admin
+                        </ButtonLink>
+                    </div>
+                </div>
+            </section>
+
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+
+                {/* Spend KPI Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
+                        <div className="flex items-center justify-between mb-4">
+                            <span className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/50">
+                                <TrendingUp className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                            </span>
+                            <span className="inline-flex items-center gap-1 text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/30 rounded-full px-2.5 py-1">
+                                <ArrowUpRight className="w-3 h-3" />
+                                +9.1%
+                            </span>
+                        </div>
+                        <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 tabular-nums">$6,920</p>
+                        <p className="mt-1 text-sm font-medium text-slate-700 dark:text-slate-300">Monthly Spend</p>
+                        <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">vs last month</p>
+                    </div>
+
+                    <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
+                        <div className="flex items-center justify-between mb-4">
+                            <span className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-sky-100 dark:bg-sky-900/50">
+                                <Users className="w-5 h-5 text-sky-600 dark:text-sky-400" />
+                            </span>
+                            <span className="text-xs font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 rounded-full px-2.5 py-1">
+                                {seatPct}% used
+                            </span>
+                        </div>
+                        <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 tabular-nums">46 / 50</p>
+                        <p className="mt-1 text-sm font-medium text-slate-700 dark:text-slate-300">Worker Seats</p>
+                        <div className="mt-2 w-full h-1.5 rounded-full bg-slate-200 dark:bg-slate-700">
+                            <div className="h-1.5 rounded-full bg-amber-500" style={{ width: `${seatPct}%` }} />
+                        </div>
+                        <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">4 seats remaining</p>
+                    </div>
+
+                    <div className="rounded-2xl border border-emerald-200 dark:border-emerald-800/50 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/20 p-5">
+                        <div className="flex items-center justify-between mb-4">
+                            <span className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/50">
+                                <Zap className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                            </span>
+                            <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/40 rounded-full px-2.5 py-1">
+                                Active
+                            </span>
+                        </div>
+                        <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100">Pro+</p>
+                        <p className="mt-1 text-sm font-medium text-slate-700 dark:text-slate-300">Current Plan</p>
+                        <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Renews May 1, 2026</p>
+                    </div>
+                </div>
+
+                {/* Plan comparison + Seat controls */}
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                    {/* Plan options */}
+                    <div className="xl:col-span-2 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
+                        <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800">
+                            <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Plan Options</h2>
+                            <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Compare and switch plans at any time</p>
+                        </div>
+                        <div className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            {plans.map((plan) => (
+                                <div key={plan.name} className={`rounded-xl border p-4 flex flex-col gap-3 transition-all ${plan.current ? "border-emerald-400 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 ring-2 ring-emerald-200 dark:ring-emerald-900" : "border-slate-200 dark:border-slate-700"}`}>
+                                    <div className="flex items-start justify-between">
+                                        <div>
+                                            <p className="font-bold text-slate-900 dark:text-slate-100">{plan.name}</p>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{plan.seats}</p>
+                                        </div>
+                                        {plan.current && (
+                                            <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/50 rounded-full px-2 py-0.5 whitespace-nowrap">
+                                                Current
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <span className="text-2xl font-extrabold text-slate-900 dark:text-slate-100">{plan.price}</span>
+                                        <span className="text-xs text-slate-500 dark:text-slate-400 ml-1">{plan.unit}</span>
+                                    </div>
+                                    <ul className="space-y-1.5">
+                                        {plan.features.map((f) => (
+                                            <li key={f} className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                                                {f}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                    {!plan.current && (
+                                        <button className="mt-auto text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 py-1.5 transition-colors">
+                                            Switch Plan
+                                        </button>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Seat controls */}
+                    <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
+                        <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800">
+                            <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Seat Controls</h2>
+                            <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Manage capacity settings</p>
+                        </div>
+                        <div className="p-4 space-y-3">
+                            {[
+                                { label: "Seats remaining", value: "4 of 50", icon: Users, warn: false },
+                                { label: "Auto-scale on overload", value: "Disabled", icon: Zap, warn: true },
+                                { label: "Cost anomaly alert", value: "+20% threshold", icon: TrendingUp, warn: false },
+                            ].map(({ label, value, icon: Icon, warn }) => (
+                                <div key={label} className="flex items-center justify-between rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 px-4 py-3 gap-3">
+                                    <div className="flex items-center gap-2.5 min-w-0">
+                                        <Icon className="w-4 h-4 text-slate-400 dark:text-slate-500 shrink-0" />
+                                        <p className="text-sm text-slate-600 dark:text-slate-300 truncate">{label}</p>
+                                    </div>
+                                    <span className={`text-xs font-bold shrink-0 ${warn ? "text-amber-600 dark:text-amber-400" : "text-slate-700 dark:text-slate-300"}`}>{value}</span>
+                                </div>
+                            ))}
+                            <div className="pt-1">
+                                <ButtonLink href="/book-demo" size="sm" className="w-full justify-center">Upgrade Seats</ButtonLink>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Invoice table */}
+                <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
+                    <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Invoice History</h2>
+                        <span className="text-xs text-slate-400 dark:text-slate-500">{invoices.length} invoices</span>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full min-w-[520px] text-sm">
+                            <thead>
+                                <tr className="bg-slate-50 dark:bg-slate-800/50 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                    <th className="text-left px-5 py-3">Invoice</th>
+                                    <th className="text-left px-4 py-3">Date</th>
+                                    <th className="text-left px-4 py-3">Amount</th>
+                                    <th className="text-left px-4 py-3">Status</th>
+                                    <th className="text-left px-4 py-3">Receipt</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/70">
+                                {invoices.map((inv) => (
+                                    <tr key={inv.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                                        <td className="px-5 py-3.5 font-semibold text-slate-900 dark:text-slate-100 font-mono text-xs">{inv.id}</td>
+                                        <td className="px-4 py-3.5 text-slate-600 dark:text-slate-300">{inv.date}</td>
+                                        <td className="px-4 py-3.5 font-bold text-slate-900 dark:text-slate-100">{inv.amount}</td>
+                                        <td className="px-4 py-3.5">
+                                            <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/40 rounded-full px-2.5 py-1">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                                {inv.status}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3.5">
+                                            <button className="inline-flex items-center gap-1.5 text-xs font-semibold text-sky-600 dark:text-sky-400 hover:text-sky-800 dark:hover:text-sky-200 transition-colors">
+                                                <Download className="w-3.5 h-3.5" />
+                                                Download
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    );
+}

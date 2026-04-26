@@ -1,0 +1,5 @@
+"id","actorEmail","action","targetType","targetId","tenantId","reason","createdAt"
+"aud_1eebd6dded1e8e13","ops@agentfarm.local","session.revoke","session","ses_50c9f58cbddfc9fbaf11","","Revoked by company operator","1776901032361"
+"aud_5bcd4107809cfb50","ops@agentfarm.local","incident.escalate","incident","inc_1001","tnt_zenith","Tier C/I verification","1776901026161"
+"aud_90bbaf5d8a82d605","ops@agentfarm.local","fleet.status_change","fleet_bot","fb_6","tnt_lumina","Tier B verification","1776901021415"
+"aud_f2cd93cfe5c1f3ad","ops@agentfarm.local","fleet.status_change","fleet_bot","fb_1","tnt_acme","Tier B verification","1776901021412"

@@ -1,0 +1,470 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TenantStatus {
+  pending
+  provisioning
+  ready
+  degraded
+  suspended
+  terminated
+}
+
+enum WorkspaceStatus {
+  pending
+  provisioning
+  ready
+  degraded
+  suspended
+  failed
+}
+
+enum BotStatus {
+  created
+  bootstrapping
+  connector_setup_required
+  active
+  paused
+  failed
+}
+
+// Frozen 2026-04-21 — canonical source: planning/spec-azure-provisioning-workflow.md
+enum ProvisioningJobStatus {
+  queued
+  validating
+  creating_resources
+  bootstrapping_vm
+  starting_container
+  registering_runtime
+  healthchecking
+  completed
+  failed
+  cleanup_pending
+  cleaned_up
+}
+
+// Frozen 2026-04-21 — canonical source: planning/spec-docker-runtime-contract.md
+enum RuntimeStatus {
+  created
+  starting
+  ready
+  active
+  degraded
+  paused
+  stopping
+  stopped
+  failed
+}
+
+enum CapabilitySnapshotSource {
+  runtime_freeze
+  persisted_load
+  manual_override
+}
+
+// Frozen 2026-04-21 — canonical source: planning/engineering-execution-design.md Section 6
+enum ApprovalDecision {
+  pending
+  approved
+  rejected
+  timeout_rejected
+}
+
+// Frozen 2026-04-21 — canonical source: planning/spec-connector-auth-flow.md
+enum ConnectorAuthStatus {
+  not_configured
+  auth_initiated
+  consent_pending
+  token_received
+  validation_in_progress
+  connected
+  degraded
+  token_expired
+  permission_invalid
+  revoked
+  disconnected
+}
+
+enum ConnectorScopeStatus {
+  full
+  partial
+  insufficient
+}
+
+enum ConnectorErrorClass {
+  oauth_state_mismatch
+  oauth_code_exchange_failed
+  token_refresh_failed
+  token_expired
+  insufficient_scope
+  provider_rate_limited
+  provider_unavailable
+  secret_store_unavailable
+}
+
+// Frozen 2026-04-21 — canonical source: planning/engineering-execution-design.md Section 4 (normalized action contract)
+enum ConnectorActionType {
+  read_task
+  create_comment
+  update_status
+  send_message
+  create_pr_comment
+  send_email
+}
+
+enum ConnectorActionStatus {
+  success
+  failed
+  timeout
+}
+
+enum ConnectorActionErrorCode {
+  rate_limit
+  timeout
+  provider_unavailable
+  permission_denied
+  invalid_format
+  unsupported_action
+  upgrade_required
+}
+
+// Frozen 2026-04-21 — canonical source: planning/engineering-execution-design.md Section 7
+enum AuditEventType {
+  provisioning_event
+  bot_runtime_event
+  connector_event
+  approval_event
+  security_event
+  audit_event
+}
+
+enum AuditSeverity {
+  info
+  warn
+  error
+  critical
+}
+
+enum ActionStatus {
+  pending
+  executing
+  completed
+  rejected
+  failed
+}
+
+// Frozen 2026-04-21 — canonical source: planning/engineering-execution-design.md Section 6
+enum RiskLevel {
+  low
+  medium
+  high
+}
+
+model Tenant {
+  id          String       @id @default(cuid())
+  name        String
+  status      TenantStatus @default(pending)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  users       TenantUser[]
+  workspaces  Workspace[]
+}
+
+model TenantUser {
+  id           String   @id @default(cuid())
+  tenantId     String
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         String
+  createdAt    DateTime @default(now())
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model Workspace {
+  id        String          @id @default(cuid())
+  tenantId  String
+  name      String
+  status    WorkspaceStatus @default(pending)
+  createdAt DateTime        @default(now())
+  tenant    Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  bot       Bot?
+}
+
+model Bot {
+  id          String    @id @default(cuid())
+  workspaceId String    @unique
+  role        String
+  status      BotStatus @default(created)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+// Frozen 2026-04-21 — canonical source: planning/spec-azure-provisioning-workflow.md
+model ProvisioningJob {
+  id                String                @id @default(cuid())
+  tenantId          String
+  workspaceId       String
+  botId             String
+  planId            String
+  runtimeTier       String
+  roleType          String
+  correlationId     String
+  triggerSource     String
+  status            ProvisioningJobStatus @default(queued)
+  failureReason     String?
+  remediationHint   String?
+  cleanupResult     String?
+  requestedAt       DateTime
+  requestedBy       String
+  startedAt         DateTime?
+  completedAt       DateTime?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+
+  @@index([tenantId])
+  @@index([workspaceId])
+  @@index([correlationId])
+}
+
+// Frozen 2026-04-21 — canonical source: planning/spec-docker-runtime-contract.md
+model RuntimeInstance {
+  id              String        @id @default(cuid())
+  botId           String        @unique
+  workspaceId     String
+  tenantId        String
+  status          RuntimeStatus @default(created)
+  contractVersion String
+  endpoint        String?
+  heartbeatAt     DateTime?
+  lastSeenAt      DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([tenantId])
+  @@index([workspaceId])
+}
+
+// Frozen 2026-04-25 — canonical source: planning/role-bot-sprint-execution-plan.md (Sprint 1)
+model BotCapabilitySnapshot {
+  id                    String                   @id @default(cuid())
+  botId                 String
+  tenantId              String
+  workspaceId           String
+  roleKey               String
+  roleVersion           String
+  policyPackVersion     String
+  allowedConnectorTools String[]
+  allowedActions        String[]
+  brainConfig           Json
+  supportedLanguages    String[]                 @default(["en-US"])
+  defaultLanguage       String                   @default("en-US")
+  languageTier          String                   @default("base")
+  speechProvider        String                   @default("oss")
+  translationProvider   String                   @default("oss")
+  ttsProvider           String                   @default("oss")
+  avatarEnabled         Boolean                  @default(false)
+  avatarStyle           String                   @default("audio-only")
+  avatarProvider        String                   @default("none")
+  avatarLocale          String                   @default("en-US")
+  snapshotVersion       Int                      @default(1)
+  snapshotChecksum      String?
+  source                CapabilitySnapshotSource @default(runtime_freeze)
+  frozenAt              DateTime
+  createdAt             DateTime                 @default(now())
+
+  @@unique([botId, snapshotVersion])
+  @@index([tenantId])
+  @@index([workspaceId])
+  @@index([botId, frozenAt])
+}
+
+// Frozen 2026-04-21 — canonical source: planning/engineering-execution-design.md Section 7
+model ActionRecord {
+  id                String        @id @default(cuid())
+  tenantId          String
+  workspaceId       String
+  botId             String
+  actionType        String
+  riskLevel         RiskLevel
+  policyPackVersion String
+  inputSummary      String
+  outputSummary     String?
+  status            ActionStatus  @default(pending)
+  approvalId        String?
+  connectorType     String?
+  correlationId     String
+  createdAt         DateTime      @default(now())
+  completedAt       DateTime?
+
+  @@index([tenantId])
+  @@index([botId])
+  @@index([correlationId])
+}
+
+// Frozen 2026-04-21 — canonical source: planning/engineering-execution-design.md Section 6
+model Approval {
+  id                       String           @id @default(cuid())
+  tenantId                 String
+  workspaceId              String
+  botId                    String
+  taskId                   String
+  actionId                 String
+  riskLevel                RiskLevel
+  actionSummary            String
+  requestedBy              String
+  approverId               String?
+  decision                 ApprovalDecision @default(pending)
+  decisionReason           String?
+  decisionLatencySeconds   Int? // Supports P95 latency SLA reporting per product-architecture.md Step 8
+  policyPackVersion        String
+  escalationTimeoutSeconds Int              @default(3600)
+  escalatedAt              DateTime?
+  createdAt                DateTime         @default(now()) // Immutable after created
+  decidedAt                DateTime? // Immutable after set; signals record completion
+
+  @@index([tenantId])
+  @@index([workspaceId]) // For dashboard scope filtering per spec-dashboard-data-model.md
+  @@index([botId])
+  @@index([taskId])
+  @@index([decision]) // For pending vs decided filtering
+  @@index([riskLevel]) // For risk-based latency SLA queries
+  @@index([decisionLatencySeconds]) // For P95 latency analysis
+}
+
+// Frozen 2026-04-21 — canonical source: planning/engineering-execution-design.md Section 7
+model AuditEvent {
+  id            String         @id @default(cuid())
+  tenantId      String
+  workspaceId   String
+  botId         String
+  eventType     AuditEventType
+  severity      AuditSeverity  @default(info)
+  summary       String
+  sourceSystem  String
+  correlationId String
+  createdAt     DateTime       @default(now())
+
+  @@index([tenantId])
+  @@index([botId])
+  @@index([correlationId])
+  @@index([createdAt])
+}
+
+// Frozen 2026-04-21 — canonical source: planning/spec-connector-auth-flow.md
+model ConnectorAuthMetadata {
+  id              String               @id @default(cuid())
+  connectorId     String               @unique
+  tenantId        String
+  workspaceId     String
+  connectorType   String
+  authMode        String
+  status          ConnectorAuthStatus  @default(not_configured)
+  grantedScopes   String[]
+  scopeStatus     ConnectorScopeStatus?
+  secretRefId     String?
+  tokenExpiresAt  DateTime?
+  lastRefreshAt   DateTime?
+  lastErrorClass  ConnectorErrorClass?
+  lastHealthcheckAt DateTime?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  @@index([tenantId])
+  @@index([workspaceId])
+  @@index([status])
+}
+
+model ConnectorAuthSession {
+  id            String   @id @default(cuid())
+  connectorId   String
+  tenantId      String
+  workspaceId   String
+  stateNonce    String   @unique
+  status        String
+  createdAt     DateTime @default(now())
+  expiresAt     DateTime
+
+  @@index([connectorId])
+  @@index([tenantId])
+}
+
+model ConnectorAuthEvent {
+  id            String               @id @default(cuid())
+  connectorId   String
+  tenantId      String
+  eventType     String
+  result        String
+  errorClass    ConnectorErrorClass?
+  correlationId String
+  actor         String
+  createdAt     DateTime             @default(now())
+
+  @@index([connectorId])
+  @@index([tenantId])
+  @@index([correlationId])
+}
+
+// Frozen 2026-04-21 — canonical source: planning/engineering-execution-design.md Section 4 (normalized action contract)
+model ConnectorAction {
+  id                 String                    @id @default(cuid())
+  actionId           String                    @unique
+  tenantId           String
+  workspaceId        String
+  botId              String
+  connectorId        String
+  connectorType      String
+  actionType         ConnectorActionType
+  contractVersion    String                    @default("v1.0")
+  correlationId      String
+  requestBody        Json
+  resultStatus       ConnectorActionStatus
+  providerResponseCode String?
+  resultSummary      String
+  errorCode          ConnectorActionErrorCode?
+  errorMessage       String?
+  remediationHint    String?
+  completedAt        DateTime
+  createdAt          DateTime                  @default(now())
+
+  @@index([tenantId])
+  @@index([botId])
+  @@index([correlationId])
+  @@index([connectorType])
+}
+
+// Sprint 2 — LLM task execution metadata; canonical source: planning/sprint-1-execution-task-list.md Item 5
+model TaskExecutionRecord {
+  id               String               @id @default(cuid())
+  botId            String
+  tenantId         String
+  workspaceId      String
+  taskId           String
+  modelProvider    String
+  modelProfile     String
+  promptTokens     Int?
+  completionTokens Int?
+  totalTokens      Int?
+  latencyMs        Int
+  outcome          TaskExecutionOutcome
+  executedAt       DateTime
+  createdAt        DateTime             @default(now())
+
+  @@index([botId])
+  @@index([tenantId])
+  @@index([tenantId, executedAt])
+  @@index([taskId])
+}
+
+enum TaskExecutionOutcome {
+  success
+  failed
+  approval_queued
+}

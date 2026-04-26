@@ -1,0 +1,122 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  website-permissions:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build website
+        run: pnpm --filter @agentfarm/website build > /tmp/website-build.log 2>&1
+
+      - name: Start website server
+        run: pnpm --filter @agentfarm/website start > /tmp/website-start.log 2>&1 &
+
+      - name: Wait for website
+        run: |
+          for i in {1..60}; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:3002/api/auth/session || true)
+            if [ "$code" = "200" ] || [ "$code" = "401" ]; then
+              echo "Website is ready with status $code"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Website failed to start in time"
+          cat /tmp/website-start.log
+          exit 1
+
+      - name: Run permission matrix tests
+        run: pnpm --filter @agentfarm/website test:permissions
+        env:
+          WEBSITE_BASE_URL: http://127.0.0.1:3002
+
+      - name: Run website deployment UI regression
+        run: pnpm --filter @agentfarm/website test:deployments:ui
+
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Build
+        run: pnpm build
+
+  db-integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: agentfarm
+          POSTGRES_PASSWORD: agentfarm
+          POSTGRES_DB: agentfarm
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U agentfarm"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://agentfarm:agentfarm@localhost:5432/agentfarm
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Apply DB migrations
+        run: pnpm db:migrate:deploy
+
+      - name: Run DB runtime smoke lane
+        run: pnpm test:db-smoke
