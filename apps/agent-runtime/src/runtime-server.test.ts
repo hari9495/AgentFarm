@@ -20,6 +20,21 @@ const baseEnv = (): NodeJS.ProcessEnv => ({
     AF_ACTION_RESULT_LOG_PATH: join(tmpdir(), `agent-runtime-${process.pid}-${Date.now()}-${Math.random()}.ndjson`),
 });
 
+const fallbackEnv = (): NodeJS.ProcessEnv => ({
+    AGENTFARM_TENANT_ID: 'tenant_fallback',
+    AGENTFARM_WORKSPACE_ID: 'ws_fallback',
+    AGENTFARM_BOT_ID: 'bot_fallback',
+    AGENTFARM_ROLE_TYPE: 'Developer Agent',
+    AGENTFARM_POLICY_PACK_VERSION: 'mvp-v1',
+    AGENTFARM_APPROVAL_API_URL: 'http://approval.local',
+    AGENTFARM_EVIDENCE_API_ENDPOINT: 'http://evidence.local',
+    AGENTFARM_HEALTH_PORT: '8080',
+    AGENTFARM_LOG_LEVEL: 'silent',
+    AGENTFARM_CONTRACT_VERSION: '1.0',
+    AGENTFARM_CORRELATION_ID: 'corr_fallback',
+    AF_ACTION_RESULT_LOG_PATH: join(tmpdir(), `agent-runtime-fallback-${process.pid}-${Date.now()}-${Math.random()}.ndjson`),
+});
+
 test('startup starts worker loop and health/ready is true when dependencies are reachable', async () => {
     const app = buildRuntimeServer({
         env: baseEnv(),
@@ -44,6 +59,79 @@ test('startup starts worker loop and health/ready is true when dependencies are 
         };
         assert.equal(readyBody.ready, true);
         assert.equal(readyBody.checks['worker_loops_started'], true);
+    } finally {
+        await app.close();
+    }
+});
+
+test('startup accepts AGENTFARM_* fallback runtime inputs and resolves contract metadata', async () => {
+    const app = buildRuntimeServer({
+        env: fallbackEnv(),
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+    });
+
+    try {
+        const startupRes = await app.inject({ method: 'POST', url: '/startup' });
+        assert.equal(startupRes.statusCode, 200);
+        const startupBody = startupRes.json() as Record<string, unknown>;
+        assert.equal(startupBody['status'], 'started');
+        assert.equal(startupBody['runtime_contract_version'], '1.0');
+        assert.equal(startupBody['state'], 'active');
+
+        const healthRes = await app.inject({ method: 'GET', url: '/health' });
+        assert.equal(healthRes.statusCode, 200);
+        const healthBody = healthRes.json() as {
+            checks: Record<string, boolean>;
+        };
+        assert.equal(healthBody.checks['config_loaded'], true);
+    } finally {
+        await app.close();
+    }
+});
+
+test('startup returns already_started on duplicate startup call', async () => {
+    const app = buildRuntimeServer({
+        env: baseEnv(),
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+    });
+
+    try {
+        const firstStartup = await app.inject({ method: 'POST', url: '/startup' });
+        assert.equal(firstStartup.statusCode, 200);
+
+        const secondStartup = await app.inject({ method: 'POST', url: '/startup' });
+        assert.equal(secondStartup.statusCode, 200);
+        const secondBody = secondStartup.json() as Record<string, unknown>;
+        assert.equal(secondBody['status'], 'already_started');
+        assert.equal(secondBody['state'], 'active');
+    } finally {
+        await app.close();
+    }
+});
+
+test('startup fails with runtime_init_failed when required runtime config is missing', async () => {
+    const env = baseEnv();
+    delete env.AF_EVIDENCE_API_URL;
+    delete env.AGENTFARM_EVIDENCE_API_ENDPOINT;
+
+    const app = buildRuntimeServer({
+        env,
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+    });
+
+    try {
+        const startupRes = await app.inject({ method: 'POST', url: '/startup' });
+        assert.equal(startupRes.statusCode, 500);
+        const startupBody = startupRes.json() as Record<string, unknown>;
+        assert.equal(startupBody['error'], 'runtime_init_failed');
+        assert.equal(startupBody['failure_class'], 'config_error');
+        assert.equal(startupBody['state'], 'failed');
     } finally {
         await app.close();
     }
@@ -107,6 +195,31 @@ test('kill endpoint engages graceful stop and reaches stopped state', async () =
         assert.equal(liveBody.state, 'stopped');
         assert.equal(liveBody.ok, false);
         assert.equal(liveBody.worker_loop_running, false);
+    } finally {
+        await app.close();
+    }
+});
+
+test('kill endpoint is idempotent and returns kill_already_engaged after first invocation', async () => {
+    const app = buildRuntimeServer({
+        env: baseEnv(),
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+        killGraceMs: 25,
+    });
+
+    try {
+        const startupRes = await app.inject({ method: 'POST', url: '/startup' });
+        assert.equal(startupRes.statusCode, 200);
+
+        const firstKill = await app.inject({ method: 'POST', url: '/kill' });
+        assert.equal(firstKill.statusCode, 202);
+
+        const secondKill = await app.inject({ method: 'POST', url: '/kill' });
+        assert.equal(secondKill.statusCode, 202);
+        const secondBody = secondKill.json() as Record<string, unknown>;
+        assert.equal(secondBody['status'], 'kill_already_engaged');
     } finally {
         await app.close();
     }
@@ -907,6 +1020,149 @@ test('logs endpoint returns structured runtime events and supports limit', async
 
         const badLimitRes = await app.inject({ method: 'GET', url: '/logs?limit=0' });
         assert.equal(badLimitRes.statusCode, 400);
+    } finally {
+        await app.close();
+    }
+});
+
+test('logs contain runtime.task_classified event with confidence and risk metadata for low-risk task', async () => {
+    const app = buildRuntimeServer({
+        env: baseEnv(),
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+    });
+
+    try {
+        const startupRes = await app.inject({ method: 'POST', url: '/startup' });
+        assert.equal(startupRes.statusCode, 200);
+
+        await app.inject({
+            method: 'POST',
+            url: '/tasks/intake',
+            payload: {
+                task_id: 'log-meta-low-1',
+                payload: {
+                    action_type: 'read_task',
+                    summary: 'Read and summarize deployment status',
+                    target: 'deployments',
+                },
+            },
+        });
+
+        await new Promise<void>((resolve) => setTimeout(resolve, 60));
+
+        const logsRes = await app.inject({ method: 'GET', url: '/logs?limit=50' });
+        assert.equal(logsRes.statusCode, 200);
+        const logsBody = logsRes.json() as {
+            logs: Array<{ eventType: string; details?: Record<string, unknown> }>;
+        };
+
+        const classified = logsBody.logs.find(
+            (l) => l.eventType === 'runtime.task_classified' &&
+                (l.details as Record<string, unknown>)?.['task_id'] === 'log-meta-low-1',
+        );
+        assert.ok(classified, 'runtime.task_classified event must appear in logs');
+
+        const details = classified?.details as Record<string, unknown>;
+        assert.equal(details['action_type'], 'read_task');
+        assert.equal(details['risk_level'], 'low');
+        assert.equal(details['route'], 'execute');
+        assert.equal(typeof details['confidence'], 'number');
+        assert.ok((details['confidence'] as number) > 0.5, 'confidence must be above 0.5 for a well-formed task');
+        assert.equal(typeof details['classification_reason'], 'string');
+    } finally {
+        await app.close();
+    }
+});
+
+test('logs contain runtime.approval_required event with confidence and risk_level for high-risk task', async () => {
+    const app = buildRuntimeServer({
+        env: baseEnv(),
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+    });
+
+    try {
+        const startupRes = await app.inject({ method: 'POST', url: '/startup' });
+        assert.equal(startupRes.statusCode, 200);
+
+        await app.inject({
+            method: 'POST',
+            url: '/tasks/intake',
+            payload: {
+                task_id: 'log-meta-high-1',
+                payload: {
+                    action_type: 'merge_release',
+                    summary: 'Merge release branch into production',
+                    target: 'main',
+                },
+            },
+        });
+
+        await new Promise<void>((resolve) => setTimeout(resolve, 60));
+
+        const logsRes = await app.inject({ method: 'GET', url: '/logs?limit=100' });
+        const logsBody = logsRes.json() as {
+            logs: Array<{ eventType: string; details?: Record<string, unknown> }>;
+        };
+
+        const classifiedEvent = logsBody.logs.find(
+            (l) => l.eventType === 'runtime.task_classified' &&
+                (l.details as Record<string, unknown>)?.['task_id'] === 'log-meta-high-1',
+        );
+        assert.ok(classifiedEvent, 'runtime.task_classified event must appear');
+        const classifiedDetails = classifiedEvent?.details as Record<string, unknown>;
+        assert.equal(classifiedDetails['risk_level'], 'high');
+        assert.equal(classifiedDetails['route'], 'approval');
+
+        const approvalEvent = logsBody.logs.find(
+            (l) => l.eventType === 'runtime.approval_required' &&
+                (l.details as Record<string, unknown>)?.['task_id'] === 'log-meta-high-1',
+        );
+        assert.ok(approvalEvent, 'runtime.approval_required event must appear');
+        const approvalDetails = approvalEvent?.details as Record<string, unknown>;
+        assert.equal(approvalDetails['risk_level'], 'high');
+        assert.equal(typeof approvalDetails['confidence'], 'number');
+    } finally {
+        await app.close();
+    }
+});
+
+test('logs do not contain confidence metadata for tasks that fail before classification', async () => {
+    const app = buildRuntimeServer({
+        env: baseEnv(),
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+    });
+
+    try {
+        // Do not startup — task intake will be rejected with 409
+        const intakeRes = await app.inject({
+            method: 'POST',
+            url: '/tasks/intake',
+            payload: {
+                task_id: 'log-meta-prestart-1',
+                payload: { action_type: 'read_task', summary: 'Should not classify', target: 'x' },
+            },
+        });
+        assert.equal(intakeRes.statusCode, 409);
+
+        const startupRes = await app.inject({ method: 'POST', url: '/startup' });
+        assert.equal(startupRes.statusCode, 200);
+
+        const logsRes = await app.inject({ method: 'GET', url: '/logs?limit=100' });
+        const logsBody = logsRes.json() as {
+            logs: Array<{ eventType: string; details?: Record<string, unknown> }>;
+        };
+
+        const classified = logsBody.logs.find(
+            (l) => l.eventType === 'runtime.task_classified' &&
+                (l.details as Record<string, unknown>)?.['task_id'] === 'log-meta-prestart-1',
+        );
+        assert.ok(!classified, 'rejected pre-startup task must never appear in task_classified logs');
     } finally {
         await app.close();
     }
@@ -1827,6 +2083,291 @@ test('decision endpoint accepts bearer authorization token when configured', asy
         assert.equal(authorizedRes.statusCode, 404);
         const body = authorizedRes.json() as { error: string };
         assert.equal(body.error, 'approval_not_found');
+    } finally {
+        await app.close();
+    }
+});
+
+// ── Task 3.3: Runtime observability and state management ────────────────────
+
+test('logs total_buffered shows full buffer size while limit restricts response count', async () => {
+    const app = buildRuntimeServer({
+        env: baseEnv(),
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+        heartbeatIntervalMs: 1_000,
+    });
+
+    try {
+        const startupRes = await app.inject({ method: 'POST', url: '/startup' });
+        assert.equal(startupRes.statusCode, 200);
+
+        // Startup alone emits 10+ events; limit=2 must show fewer than buffered.
+        const logsRes = await app.inject({ method: 'GET', url: '/logs?limit=2' });
+        assert.equal(logsRes.statusCode, 200);
+        const body = logsRes.json() as {
+            count: number;
+            total_buffered: number;
+            logs: unknown[];
+        };
+
+        assert.equal(body.count, 2);
+        assert.ok(body.total_buffered > 2, 'total_buffered must reflect all emitted events');
+        assert.equal(body.logs.length, 2);
+    } finally {
+        await app.close();
+    }
+});
+
+test('logs buffer caps at maxRuntimeLogs and oldest entries are evicted', async () => {
+    const app = buildRuntimeServer({
+        env: baseEnv(),
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+        heartbeatIntervalMs: 1_000,
+        // Startup emits ~11 events; with cap=5 the oldest should be evicted.
+        maxRuntimeLogs: 5,
+    });
+
+    try {
+        const startupRes = await app.inject({ method: 'POST', url: '/startup' });
+        assert.equal(startupRes.statusCode, 200);
+
+        const logsRes = await app.inject({ method: 'GET', url: '/logs?limit=100' });
+        assert.equal(logsRes.statusCode, 200);
+        const body = logsRes.json() as {
+            count: number;
+            total_buffered: number;
+            logs: Array<{ eventType: string }>;
+        };
+
+        // Buffer must never exceed the cap.
+        assert.ok(body.total_buffered <= 5, `total_buffered must be <= 5, got ${body.total_buffered}`);
+        assert.ok(body.count <= 5);
+
+        // The very first startup event (init_started) must have been evicted.
+        const hasInitStarted = body.logs.some((l) => l.eventType === 'runtime.init_started');
+        assert.equal(hasInitStarted, false, 'runtime.init_started should be evicted when cap is 5');
+    } finally {
+        await app.close();
+    }
+});
+
+test('runtime.state_transition events appear in /logs with from_state and next_state details', async () => {
+    const app = buildRuntimeServer({
+        env: baseEnv(),
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+    });
+
+    try {
+        const startupRes = await app.inject({ method: 'POST', url: '/startup' });
+        assert.equal(startupRes.statusCode, 200);
+
+        const logsRes = await app.inject({ method: 'GET', url: '/logs?limit=100' });
+        assert.equal(logsRes.statusCode, 200);
+        const body = logsRes.json() as {
+            logs: Array<{ eventType: string; details?: Record<string, unknown> }>;
+        };
+
+        const transitions = body.logs.filter((l) => l.eventType === 'runtime.state_transition');
+        assert.ok(transitions.length >= 3, 'at least 3 state transitions (starting, ready, active)');
+
+        for (const t of transitions) {
+            const d = t.details as Record<string, unknown>;
+            assert.equal(typeof d['from_state'], 'string', 'from_state must be a string');
+            assert.equal(typeof d['next_state'], 'string', 'next_state must be a string');
+        }
+
+        const transitionTargets = transitions.map((t) => (t.details as Record<string, unknown>)['next_state'] as string);
+        assert.ok(transitionTargets.includes('starting'));
+        assert.ok(transitionTargets.includes('ready'));
+        assert.ok(transitionTargets.includes('active'));
+    } finally {
+        await app.close();
+    }
+});
+
+test('heartbeat failure increments failed count when control plane probe returns false', async () => {
+    const app = buildRuntimeServer({
+        env: {
+            ...baseEnv(),
+            AF_CONTROL_PLANE_HEARTBEAT_URL: 'http://control-plane.local/heartbeat',
+        },
+        closeOnKill: false,
+        // Approval and evidence URLs succeed; heartbeat URL fails.
+        dependencyProbe: async (url) => !url.includes('control-plane'),
+        workerPollMs: 10,
+        heartbeatIntervalMs: 20,
+    });
+
+    try {
+        const startupRes = await app.inject({ method: 'POST', url: '/startup' });
+        assert.equal(startupRes.statusCode, 200);
+
+        await new Promise<void>((resolve) => setTimeout(resolve, 80));
+
+        const liveRes = await app.inject({ method: 'GET', url: '/health/live' });
+        assert.equal(liveRes.statusCode, 200);
+        const liveBody = liveRes.json() as {
+            heartbeat_loop_running: boolean;
+            heartbeat_sent: number;
+            heartbeat_failed: number;
+        };
+
+        assert.equal(liveBody.heartbeat_loop_running, true);
+        assert.equal(liveBody.heartbeat_sent, 0);
+        assert.ok(liveBody.heartbeat_failed >= 1, 'heartbeat_failed must increment on probe failure');
+    } finally {
+        await app.close();
+    }
+});
+
+test('heartbeat loop stops and metrics freeze after kill switch engages', async () => {
+    const app = buildRuntimeServer({
+        env: baseEnv(),
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+        heartbeatIntervalMs: 20,
+        killGraceMs: 25,
+    });
+
+    try {
+        const startupRes = await app.inject({ method: 'POST', url: '/startup' });
+        assert.equal(startupRes.statusCode, 200);
+
+        await new Promise<void>((resolve) => setTimeout(resolve, 60));
+
+        const beforeKill = await app.inject({ method: 'GET', url: '/health/live' });
+        const beforeBody = beforeKill.json() as { heartbeat_sent: number; heartbeat_loop_running: boolean };
+        assert.equal(beforeBody.heartbeat_loop_running, true);
+        const sentBeforeKill = beforeBody.heartbeat_sent;
+
+        await app.inject({ method: 'POST', url: '/kill' });
+        await new Promise<void>((resolve) => setTimeout(resolve, 60));
+
+        const afterKill = await app.inject({ method: 'GET', url: '/health/live' });
+        const afterBody = afterKill.json() as {
+            heartbeat_loop_running: boolean;
+            heartbeat_sent: number;
+            state: string;
+        };
+
+        assert.equal(afterBody.state, 'stopped');
+        assert.equal(afterBody.heartbeat_loop_running, false, 'heartbeat loop must stop after kill');
+        // Sent count must not have grown after kill.
+        assert.equal(afterBody.heartbeat_sent, sentBeforeKill);
+    } finally {
+        await app.close();
+    }
+});
+
+test('runtime.heartbeat_sent log event is emitted and carries sent_count metadata', async () => {
+    const app = buildRuntimeServer({
+        env: baseEnv(),
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+        heartbeatIntervalMs: 20,
+    });
+
+    try {
+        const startupRes = await app.inject({ method: 'POST', url: '/startup' });
+        assert.equal(startupRes.statusCode, 200);
+
+        await new Promise<void>((resolve) => setTimeout(resolve, 80));
+
+        const logsRes = await app.inject({ method: 'GET', url: '/logs?limit=100' });
+        assert.equal(logsRes.statusCode, 200);
+        const body = logsRes.json() as {
+            logs: Array<{ eventType: string; details?: Record<string, unknown> }>;
+        };
+
+        const sentEvent = body.logs.find((l) => l.eventType === 'runtime.heartbeat_sent');
+        assert.ok(sentEvent, 'runtime.heartbeat_sent must appear in /logs');
+
+        const details = sentEvent?.details as Record<string, unknown>;
+        assert.equal(typeof details['heartbeat_url'], 'string');
+        assert.ok((details['sent_count'] as number) >= 1, 'sent_count must be >= 1');
+    } finally {
+        await app.close();
+    }
+});
+
+test('state history transitions each have at, from, to, and reason fields', async () => {
+    const app = buildRuntimeServer({
+        env: baseEnv(),
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+        killGraceMs: 25,
+    });
+
+    try {
+        const startupRes = await app.inject({ method: 'POST', url: '/startup' });
+        assert.equal(startupRes.statusCode, 200);
+
+        await app.inject({ method: 'POST', url: '/kill' });
+        await new Promise<void>((resolve) => setTimeout(resolve, 60));
+
+        const historyRes = await app.inject({ method: 'GET', url: '/state/history?limit=50' });
+        assert.equal(historyRes.statusCode, 200);
+        const body = historyRes.json() as {
+            transitions: Array<{ at: unknown; from: unknown; to: unknown; reason: unknown }>;
+        };
+
+        assert.ok(body.transitions.length >= 5, 'expect at least 5 recorded transitions');
+
+        for (const t of body.transitions) {
+            assert.equal(typeof t.at, 'string', 'at must be a string');
+            assert.equal(typeof t.from, 'string', 'from must be a string');
+            assert.equal(typeof t.to, 'string', 'to must be a string');
+            // reason may be null or a string — must not be undefined
+            assert.notEqual(t.reason, undefined, 'reason must not be undefined');
+        }
+    } finally {
+        await app.close();
+    }
+});
+
+test('degraded state is recorded in state history when dependencies become unreachable', async () => {
+    let depsHealthy = true;
+    const app = buildRuntimeServer({
+        env: baseEnv(),
+        closeOnKill: false,
+        dependencyProbe: async () => depsHealthy,
+        workerPollMs: 10,
+    });
+
+    try {
+        const startupRes = await app.inject({ method: 'POST', url: '/startup' });
+        assert.equal(startupRes.statusCode, 200);
+
+        // Simulate dependency failure — triggers degraded on /health/ready call.
+        depsHealthy = false;
+
+        const readyRes = await app.inject({ method: 'GET', url: '/health/ready' });
+        assert.equal(readyRes.statusCode, 200);
+        const readyBody = readyRes.json() as { state: string; ready: boolean };
+        assert.equal(readyBody.state, 'degraded');
+        assert.equal(readyBody.ready, false);
+
+        const historyRes = await app.inject({ method: 'GET', url: '/state/history?limit=50' });
+        assert.equal(historyRes.statusCode, 200);
+        const historyBody = historyRes.json() as {
+            current_state: string;
+            transitions: Array<{ to: string; reason: string | null }>;
+        };
+
+        assert.equal(historyBody.current_state, 'degraded');
+
+        const degradedTransition = historyBody.transitions.find((t) => t.to === 'degraded');
+        assert.ok(degradedTransition, 'degraded transition must be recorded in history');
+        assert.equal(degradedTransition?.reason, 'dependency_unreachable');
     } finally {
         await app.close();
     }

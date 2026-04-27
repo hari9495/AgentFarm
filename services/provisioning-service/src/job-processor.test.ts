@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import type { ProvisioningJobRecord, ProvisioningJobStatus } from "@agentfarm/shared-types";
 import {
     ProvisioningJobProcessor,
+    type ProvisioningExecutionContext,
     type ProvisioningJobRepository,
     type ProvisioningProcessingEvent,
     type ProvisioningStepExecutor,
@@ -48,9 +49,22 @@ const createRepo = (seed: MutableJob[]) => {
         async listQueued(limit) {
             return [...jobs.values()].filter((job) => job.status === "queued").slice(0, limit);
         },
+        async listCleanupPending(limit) {
+            return [...jobs.values()].filter((job) => job.status === "cleanup_pending").slice(0, limit);
+        },
+        async listActive(limit) {
+            return [...jobs.values()].filter((job) => !["completed", "failed", "cleaned_up"].includes(job.status)).slice(0, limit);
+        },
         async claimJob(jobId) {
             const job = jobs.get(jobId);
             if (!job || job.status !== "queued") {
+                return null;
+            }
+            return { ...job };
+        },
+        async claimCleanupJob(jobId) {
+            const job = jobs.get(jobId);
+            if (!job || job.status !== "cleanup_pending") {
                 return null;
             }
             return { ...job };
@@ -109,21 +123,44 @@ const createExecutor = (options?: {
     cleanupFails?: boolean;
 }) => {
     const calls: ProvisioningJobStatus[] = [];
+    const contexts: ProvisioningExecutionContext[] = [];
 
-    const maybeFail = async (state: ProvisioningJobStatus) => {
+    const maybeFail = async (state: ProvisioningJobStatus, context: ProvisioningExecutionContext) => {
         calls.push(state);
+        contexts.push({ ...context });
         if (options?.failAt === state) {
             throw new Error(`forced failure at ${state}`);
         }
+
+        if (state === "creating_resources") {
+            return {
+                resourceGroupName: "agentfarm-rg",
+            };
+        }
+
+        if (state === "bootstrapping_vm") {
+            return {
+                vmName: "agentfarm-vm",
+                vmPrivateIp: "10.0.1.10",
+            };
+        }
+
+        if (state === "starting_container") {
+            return {
+                containerEndpoint: "http://10.0.1.10:8080",
+            };
+        }
+
+        return undefined;
     };
 
     const executor: ProvisioningStepExecutor = {
-        validateTenant: async () => maybeFail("validating"),
-        createResources: async () => maybeFail("creating_resources"),
-        bootstrapVm: async () => maybeFail("bootstrapping_vm"),
-        startContainer: async () => maybeFail("starting_container"),
-        registerRuntime: async () => maybeFail("registering_runtime"),
-        healthCheck: async () => maybeFail("healthchecking"),
+        validateTenant: async (_job, context) => maybeFail("validating", context),
+        createResources: async (_job, context) => maybeFail("creating_resources", context),
+        bootstrapVm: async (_job, context) => maybeFail("bootstrapping_vm", context),
+        startContainer: async (_job, context) => maybeFail("starting_container", context),
+        registerRuntime: async (_job, context) => maybeFail("registering_runtime", context),
+        healthCheck: async (_job, context) => maybeFail("healthchecking", context),
         cleanupResources: async () => {
             calls.push("cleanup_pending");
             if (options?.cleanupFails) {
@@ -132,13 +169,13 @@ const createExecutor = (options?: {
         },
     };
 
-    return { executor, calls };
+    return { executor, calls, contexts };
 };
 
 test("processor: completes queued jobs through full happy path", async () => {
     const job = makeJob();
     const { repo, jobs, signals, events } = createRepo([job]);
-    const { executor, calls } = createExecutor();
+    const { executor, calls, contexts } = createExecutor();
 
     const processor = new ProvisioningJobProcessor(repo, executor, 3);
     const result = await processor.processOnce();
@@ -146,6 +183,9 @@ test("processor: completes queued jobs through full happy path", async () => {
     assert.equal(result.processed, 1);
     assert.equal(result.completed, 1);
     assert.equal(result.failed, 0);
+    assert.equal(result.slaBreaches, 0);
+    assert.equal(result.timeoutRemediations, 0);
+    assert.equal(result.stuckAlerts, 0);
 
     const updated = jobs.get(job.id);
     assert.ok(updated);
@@ -163,6 +203,10 @@ test("processor: completes queued jobs through full happy path", async () => {
         "registering_runtime",
         "healthchecking",
     ]);
+
+    // Context from earlier states is visible in later states.
+    assert.equal(contexts[3]?.vmName, "agentfarm-vm");
+    assert.equal(contexts[4]?.containerEndpoint, "http://10.0.1.10:8080");
 
     assert.equal(events.length >= 7, true);
 });
@@ -185,12 +229,56 @@ test("processor: failure transitions to cleanup and cleaned_up", async () => {
     assert.match(updated?.failureReason ?? "", /creating_resources/);
     assert.ok(updated?.remediationHint);
 
-    assert.equal(signals.runtimeFailed, 1);
+    assert.equal(signals.runtimeFailed, 0);
     assert.equal(signals.workspaceFailed, 1);
     assert.equal(signals.tenantDegraded, 1);
     assert.equal(signals.botFailed, 1);
 
     assert.equal(calls.includes("cleanup_pending"), true);
+});
+
+test("processor: runtime rollback marks runtime failed for late-stage failures", async () => {
+    const job = makeJob({ id: "job_runtime_fail" });
+    const { repo, signals } = createRepo([job]);
+    const { executor } = createExecutor({ failAt: "healthchecking" });
+
+    const processor = new ProvisioningJobProcessor(repo, executor, 3);
+    await processor.processOnce();
+
+    assert.equal(signals.runtimeFailed, 1);
+});
+
+test("processor: cleanup_pending jobs are retried and marked cleaned_up", async () => {
+    const cleanupJob = makeJob({
+        id: "job_cleanup_retry",
+        status: "cleanup_pending",
+        failureReason: "[healthchecking] prior failure",
+    });
+
+    const { repo, jobs } = createRepo([cleanupJob]);
+    const { executor } = createExecutor();
+
+    const processor = new ProvisioningJobProcessor(repo, executor, 3);
+    const result = await processor.processOnce();
+
+    assert.equal(result.processed, 1);
+    const updated = jobs.get(cleanupJob.id);
+    assert.equal(updated?.status, "cleaned_up");
+    assert.match(updated?.cleanupResult ?? "", /retry cleanup/i);
+});
+
+test("processor: logs rollback plan event for failed jobs", async () => {
+    const job = makeJob({ id: "job_rollback_event" });
+    const { repo, events } = createRepo([job]);
+    const { executor } = createExecutor({ failAt: "bootstrapping_vm" });
+
+    const processor = new ProvisioningJobProcessor(repo, executor, 3);
+    await processor.processOnce();
+
+    assert.equal(
+        events.some((event) => (event.reason ?? "").includes("Rollback plan:")),
+        true,
+    );
 });
 
 test("processor: failed cleanup leaves job in cleanup_pending", async () => {
@@ -209,4 +297,64 @@ test("processor: failed cleanup leaves job in cleanup_pending", async () => {
     assert.ok(updated);
     assert.equal(updated?.status, "cleanup_pending");
     assert.match(updated?.cleanupResult ?? "", /Cleanup retry required/);
+});
+
+test("processor: emits SLA breach metric when elapsed time exceeds 10 minutes", async () => {
+    const requestedAt = new Date(Date.now() - (11 * 60 * 1000)).toISOString();
+    const job = makeJob({ id: "job_sla_breach", requestedAt });
+    const { repo, events } = createRepo([job]);
+    const { executor } = createExecutor();
+
+    const processor = new ProvisioningJobProcessor(repo, executor, 3);
+    const result = await processor.processOnce();
+
+    assert.equal(result.completed, 1);
+    assert.equal(result.slaBreaches, 1);
+    assert.equal(
+        events.some((event) => (event.reason ?? "").includes("SLA metric:")),
+        true,
+    );
+    assert.equal(
+        events.some((event) => (event.reason ?? "").includes("latency breached 10 minute target")),
+        true,
+    );
+});
+
+test("processor: enforces 24h timeout with auto-remediation", async () => {
+    const requestedAt = new Date(Date.now() - (25 * 60 * 60 * 1000)).toISOString();
+    const job = makeJob({ id: "job_timeout_24h", requestedAt });
+    const { repo, jobs } = createRepo([job]);
+    const { executor } = createExecutor();
+
+    const processor = new ProvisioningJobProcessor(repo, executor, 3);
+    const result = await processor.processOnce();
+
+    assert.equal(result.processed, 1);
+    assert.equal(result.failed, 1);
+    assert.equal(result.timeoutRemediations, 1);
+    const updated = jobs.get(job.id);
+    assert.equal(updated?.status, "cleaned_up");
+    assert.match(updated?.failureReason ?? "", /timeout_exceeded_24h/);
+    assert.match(updated?.remediationHint ?? "", /auto-remediation/i);
+});
+
+test("processor: creates stuck-state alert when active job is older than one hour", async () => {
+    const requestedAt = new Date(Date.now() - (2 * 60 * 60 * 1000)).toISOString();
+    const job = makeJob({
+        id: "job_stuck_alert",
+        status: "cleanup_pending",
+        requestedAt,
+    });
+
+    const { repo, events } = createRepo([job]);
+    const { executor } = createExecutor();
+
+    const processor = new ProvisioningJobProcessor(repo, executor, 3);
+    const result = await processor.processOnce();
+
+    assert.equal(result.stuckAlerts, 1);
+    assert.equal(
+        events.some((event) => (event.reason ?? "").includes("ALERT: provisioning job stuck")),
+        true,
+    );
 });

@@ -82,7 +82,7 @@ export function scoreConfidence(payload: Record<string, unknown>): number {
     }
 
     const ambiguous = payload['ambiguous'];
-    if (ambiguous === true) {
+    if (ambiguous) {
         score -= 0.2;
     }
 
@@ -108,6 +108,10 @@ export function classifyRisk(
 
     if (payload['risk_hint'] === 'medium') {
         return { riskLevel: 'medium', reason: 'Task payload includes risk_hint=medium.' };
+    }
+
+    if (payload['risk_hint'] === 'low') {
+        return { riskLevel: 'low', reason: 'Task payload explicitly overrides risk to low.' };
     }
 
     if (confidence < 0.6) {

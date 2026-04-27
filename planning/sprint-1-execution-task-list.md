@@ -68,6 +68,8 @@ Build the provisioning orchestrator that creates VMs, bootstraps Docker, registe
 - Implement secure env var injection (no secrets in script)
 - Add VM health probes and auto-restart policy
 - Acceptance criteria: VM boots, Docker container starts, runtime reports ready status within 2 minutes
+- Status: Completed (2026-04-27)
+- Evidence: services/provisioning-service/src/vm-bootstrap.ts, services/provisioning-service/src/default-step-executor.ts, services/provisioning-service/src/default-step-executor.test.ts, services/provisioning-service/src/vm-bootstrap.test.ts
 - Owner: Cloud Ops + Engineering Lead
 - Dependency: 2.1
 - Due: 2026-05-12
@@ -77,6 +79,8 @@ Build the provisioning orchestrator that creates VMs, bootstraps Docker, registe
 - Build cleanup workflow (deprovision VMs, delete storage, update audit log)
 - Add remediation hints to bot owner (dashboard alert)
 - Acceptance criteria: Failed provisioning rolls back cleanly, audit log complete, dashboard shows error + next steps
+- Status: Completed (2026-04-27)
+- Evidence: services/provisioning-service/src/job-processor.ts, services/provisioning-service/src/job-processor.test.ts, services/provisioning-service/src/default-step-executor.ts
 - Owner: Cloud Ops
 - Dependency: 2.1, 2.2
 - Due: 2026-05-15
@@ -86,6 +90,8 @@ Build the provisioning orchestrator that creates VMs, bootstraps Docker, registe
 - Implement provisioning timeout (24 hours) with auto-remediation
 - Add alert rule for provisioning stuck in any state > 1 hour
 - Acceptance criteria: Metrics tracked, timeout enforced, alerts fire
+- Status: Completed (2026-04-27)
+- Evidence: services/provisioning-service/src/job-processor.ts, services/provisioning-service/src/job-processor.test.ts, apps/website/lib/auth-store.ts, apps/website/app/api/provisioning/status/route.ts, apps/website/components/dashboard/ProvisioningProgressCard.tsx, apps/website/tests/provisioning-progress-ui.test.ts
 - Owner: Cloud Ops
 - Dependency: 2.1, 2.3
 - Due: 2026-05-18
@@ -99,6 +105,8 @@ Build the Docker runtime that executes bot logic, handles lifecycle, and reports
 - Add kill-switch handler (/kill endpoint with 5s graceful shutdown)
 - Implement runtime config inputs (evidence_api_endpoint, correlationId, etc.)
 - Acceptance criteria: Container starts, health probes respond, kill-switch terminates gracefully
+- Status: Completed (2026-04-27)
+- Evidence: apps/agent-runtime/src/runtime-server.ts, apps/agent-runtime/src/runtime-server.test.ts, apps/agent-runtime/src/main.ts
 - Owner: Engineering Lead
 - Dependency: 2.2
 - Due: 2026-05-09
@@ -108,6 +116,8 @@ Build the Docker runtime that executes bot logic, handles lifecycle, and reports
 - Add confidence scoring and risk classification logic (low/medium/high)
 - Implement action queueing and retry logic (transient failures)
 - Acceptance criteria: Agent processes tasks, classifies risk, queues actions correctly
+- Status: Completed (2026-04-27)
+- Evidence (current): apps/agent-runtime/src/execution-engine.ts, apps/agent-runtime/src/execution-engine.test.ts, apps/agent-runtime/src/runtime-server.ts, apps/agent-runtime/src/runtime-server.test.ts
 - Owner: AI/LLM Lead + Engineering Lead
 - Dependency: 3.1
 - Due: 2026-05-19
@@ -117,7 +127,8 @@ Build the Docker runtime that executes bot logic, handles lifecycle, and reports
 - Implement heartbeat to control plane (every 30s)
 - Add runtime state tracking (created → starting → ready → active → stopping → stopped)
 - Acceptance criteria: Logs queryable, heartbeats reliable, state transitions tracked
-- Owner: Engineering Lead
+- Status: Completed (2026-04-27)
+- Evidence: apps/agent-runtime/src/runtime-server.ts, apps/agent-runtime/src/runtime-server.test.ts
 - Dependency: 3.1
 - Due: 2026-05-16
 
@@ -319,7 +330,7 @@ Build end-to-end testing, load testing, and production deployment.
 6. **MVP launch gate** signed by Product Lead, Engineering Lead, Security and Safety Lead
 
 ## Current Status
-1. List status: **21/24 tasks completed; remaining 3 tasks are in active release-operations execution**.
+1. List status: **22/24 tasks completed; remaining 2 tasks are in active release-operations execution**.
 2. Verified now: `pnpm quality:gate` passing (API Gateway coverage gate, Agent Runtime coverage gate, typechecks, dashboard typecheck, website smoke lane).
 3. Active blockers: Azure extensions auth context is signed out; GitHub secret and DNS/domain cutover require platform-owner actions.
 4. Next action: complete platform-owner steps, execute deployment, then run security/load/freshness evidence gates for launch signoff.

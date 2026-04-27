@@ -34,6 +34,21 @@ type ProvisioningStatusPayload = {
         reason: string | null;
     }>;
     estimatedSecondsRemaining: number | null;
+    slaMetrics?: {
+        elapsedSeconds: number;
+        targetSeconds: number;
+        timeoutSeconds: number;
+        stuckThresholdSeconds: number;
+        withinTarget: boolean;
+        breachedTarget: boolean;
+        isStuck: boolean;
+        isTimedOut: boolean;
+    } | null;
+    provisioningAlerts?: Array<{
+        level: "warning" | "critical";
+        code: string;
+        message: string;
+    }>;
 };
 
 const POLL_INTERVAL_MS = 2000;
@@ -64,6 +79,8 @@ const formatEta = (seconds: number | null): string => {
     return `${minutes}m ${remainingSeconds}s`;
 };
 
+const formatMinutes = (seconds: number): string => `${Math.max(1, Math.floor(seconds / 60))}m`;
+
 const relative = (timestamp: number): string => {
     const deltaMs = Math.max(0, Date.now() - timestamp);
     const seconds = Math.max(1, Math.floor(deltaMs / 1000));
@@ -84,6 +101,8 @@ export function ProvisioningProgressCardContent(props: {
 }) {
     const job = props.payload?.provisioningJob ?? null;
     const timeline = props.payload?.provisioningTimeline ?? [];
+    const slaMetrics = props.payload?.slaMetrics ?? null;
+    const alerts = props.payload?.provisioningAlerts ?? [];
 
     return (
         <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
@@ -128,6 +147,33 @@ export function ProvisioningProgressCardContent(props: {
                             Last transition: <span className="font-semibold text-slate-900 dark:text-slate-100">{job.updatedAt ? relative(job.updatedAt) : "Unknown"}</span>
                         </p>
                     </div>
+
+                    {slaMetrics ? (
+                        <div className="grid gap-2 sm:grid-cols-3 text-xs">
+                            <p className="rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-600 dark:text-slate-300">
+                                Elapsed: <span className="font-semibold text-slate-900 dark:text-slate-100">{formatEta(slaMetrics.elapsedSeconds)}</span>
+                            </p>
+                            <p className="rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-600 dark:text-slate-300">
+                                SLA target: <span className="font-semibold text-slate-900 dark:text-slate-100">{formatMinutes(slaMetrics.targetSeconds)}</span>
+                            </p>
+                            <p className="rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-600 dark:text-slate-300">
+                                SLA status: <span className={`font-semibold ${slaMetrics.breachedTarget ? "text-rose-600 dark:text-rose-300" : "text-emerald-700 dark:text-emerald-300"}`}>{slaMetrics.breachedTarget ? "Breached" : "Within target"}</span>
+                            </p>
+                        </div>
+                    ) : null}
+
+                    {alerts.length > 0 ? (
+                        <div className="rounded-xl border border-amber-200 dark:border-amber-700/40 bg-amber-50 dark:bg-amber-950/20 p-3.5">
+                            <p className="text-sm font-semibold text-amber-700 dark:text-amber-300 inline-flex items-center gap-1.5">
+                                <AlertTriangle className="h-4 w-4" /> Provisioning alert
+                            </p>
+                            {alerts.map((alert) => (
+                                <p key={alert.code} className="mt-1 text-xs text-slate-700 dark:text-slate-300">
+                                    {alert.level === "critical" ? "Critical" : "Warning"}: {alert.message}
+                                </p>
+                            ))}
+                        </div>
+                    ) : null}
 
                     <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-3">
                         <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Step history</p>

@@ -144,6 +144,17 @@ export type ProvisioningTimelineEntry = {
     reason: string | null;
 };
 
+export type ProvisioningSlaMetrics = {
+    elapsedSeconds: number;
+    targetSeconds: number;
+    timeoutSeconds: number;
+    stuckThresholdSeconds: number;
+    withinTarget: boolean;
+    breachedTarget: boolean;
+    isStuck: boolean;
+    isTimedOut: boolean;
+};
+
 type MarketplaceSelectionRecord = {
     userId: string;
     starterAgent: string;
@@ -804,6 +815,10 @@ const PROVISIONING_STAGE_ESTIMATED_SECONDS: Record<ProvisioningJobStatus, number
     cleanup_pending: 60,
     cleaned_up: 0,
 };
+
+const PROVISIONING_SLA_TARGET_SECONDS = 10 * 60;
+const PROVISIONING_TIMEOUT_SECONDS = 24 * 60 * 60;
+const PROVISIONING_STUCK_THRESHOLD_SECONDS = 60 * 60;
 
 const setProvisioningJobStatus = (
     entry: ProvisioningQueueEntry,
@@ -2557,6 +2572,25 @@ export const getProvisioningEstimatedSecondsRemaining = (status: ProvisioningJob
     }
 
     return remaining;
+};
+
+export const getProvisioningSlaMetrics = (job: ProvisioningQueueEntry): ProvisioningSlaMetrics => {
+    const elapsedSeconds = Math.max(0, Math.floor((now() - job.requestedAt) / 1000));
+    const withinTarget = elapsedSeconds <= PROVISIONING_SLA_TARGET_SECONDS;
+    const breachedTarget = elapsedSeconds > PROVISIONING_SLA_TARGET_SECONDS;
+    const isStuck = elapsedSeconds > PROVISIONING_STUCK_THRESHOLD_SECONDS;
+    const isTimedOut = elapsedSeconds > PROVISIONING_TIMEOUT_SECONDS;
+
+    return {
+        elapsedSeconds,
+        targetSeconds: PROVISIONING_SLA_TARGET_SECONDS,
+        timeoutSeconds: PROVISIONING_TIMEOUT_SECONDS,
+        stuckThresholdSeconds: PROVISIONING_STUCK_THRESHOLD_SECONDS,
+        withinTarget,
+        breachedTarget,
+        isStuck,
+        isTimedOut,
+    };
 };
 
 // ── Customer signup: tenant / workspace / bot lifecycle ───────────────────

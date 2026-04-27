@@ -2,6 +2,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { ApprovalQueuePanel } from './components/approval-queue-panel';
 import { EvidenceCompliancePanel } from './components/evidence-compliance-panel';
+import { RuntimeObservabilityPanel } from './components/runtime-observability-panel';
 
 type Step = {
     title: string;
@@ -112,6 +113,64 @@ type AuditEvent = {
     source_system: string;
     created_at: string;
     correlation_id: string;
+};
+
+type RuntimeLogEntry = {
+    at: string;
+    eventType: string;
+    runtimeState: string;
+    tenantId?: string | null;
+    workspaceId?: string | null;
+    botId?: string | null;
+    correlationId?: string | null;
+    details?: Record<string, unknown> | null;
+};
+
+type RuntimeStateTransition = {
+    at: string;
+    from: string;
+    to: string;
+    reason?: string | null;
+};
+
+type RuntimeHealthSnapshot = {
+    status?: string;
+    runtime_state?: string;
+    heartbeat_loop_running?: boolean;
+    heartbeat_sent?: number;
+    heartbeat_failed?: number;
+    last_heartbeat_at?: string | null;
+    task_queue_depth?: number;
+    processed_tasks?: number;
+    succeeded_tasks?: number;
+    failed_tasks?: number;
+};
+
+type RuntimeObservabilityData = {
+    logs: RuntimeLogEntry[];
+    transitions: RuntimeStateTransition[];
+    currentState: string;
+    health: RuntimeHealthSnapshot;
+    source: ApiSource;
+};
+
+const fallbackRuntimeHealth: RuntimeHealthSnapshot = {
+    heartbeat_loop_running: false,
+    heartbeat_sent: 0,
+    heartbeat_failed: 0,
+    last_heartbeat_at: null,
+    task_queue_depth: 0,
+    processed_tasks: 0,
+    succeeded_tasks: 0,
+    failed_tasks: 0,
+};
+
+const fallbackRuntimeObservability: RuntimeObservabilityData = {
+    logs: [],
+    transitions: [],
+    currentState: 'unknown',
+    health: fallbackRuntimeHealth,
+    source: 'fallback',
 };
 
 const fallbackTenantSummary: TenantSummary = {
@@ -497,6 +556,42 @@ const getDashboardWorkspaceSlice = async (
     }
 };
 
+
+const getRuntimeObservabilityData = async (_botId: string): Promise<RuntimeObservabilityData> => {
+    const runtimeBaseUrl = process.env.AGENT_RUNTIME_BASE_URL ?? 'http://localhost:8080';
+    const runtimeToken = process.env.AGENT_RUNTIME_TOKEN;
+    const headers: Record<string, string> = {};
+    if (runtimeToken) {
+        headers['Authorization'] = `Bearer ${runtimeToken}`;
+    }
+
+    try {
+        const [logsRes, stateRes, healthRes] = await Promise.all([
+            fetch(`${runtimeBaseUrl}/logs?limit=50`, { headers, cache: 'no-store' }),
+            fetch(`${runtimeBaseUrl}/state/history?limit=20`, { headers, cache: 'no-store' }),
+            fetch(`${runtimeBaseUrl}/health/live`, { headers, cache: 'no-store' }),
+        ]);
+
+        if (!logsRes.ok || !stateRes.ok || !healthRes.ok) {
+            return { ...fallbackRuntimeObservability, source: 'fallback' };
+        }
+
+        const logsData = (await logsRes.json()) as { logs?: RuntimeLogEntry[] };
+        const stateData = (await stateRes.json()) as { transitions?: RuntimeStateTransition[]; current_state?: string };
+        const healthData = (await healthRes.json()) as RuntimeHealthSnapshot;
+
+        return {
+            logs: logsData.logs ?? [],
+            transitions: stateData.transitions ?? [],
+            currentState: stateData.current_state ?? 'unknown',
+            health: healthData,
+            source: 'live',
+        };
+    } catch {
+        return { ...fallbackRuntimeObservability, source: 'fallback' };
+    }
+};
+
 const getStatusBadgeClass = (status: string): string => {
     if (status === 'connected' || status === 'active' || status === 'ready') {
         return 'low';
@@ -524,6 +619,7 @@ export default async function HomePage() {
     const workspace = workspaceSummaries[0] ?? fallbackWorkspaceBotSummaries[0];
 
     const dashboardSlice = await getDashboardWorkspaceSlice(context, workspace.workspace_id);
+    const runtimeObs = await getRuntimeObservabilityData(workspace.bot_id);
 
     const source = summarySource === 'live' && dashboardSlice.source === 'live' ? 'live' : 'fallback';
 
@@ -794,6 +890,16 @@ export default async function HomePage() {
                 <EvidenceCompliancePanel
                     workspaceId={workspace.workspace_id}
                     initialEvents={dashboardSlice.events}
+                />
+            </section>
+
+            <section>
+                <RuntimeObservabilityPanel
+                    botId={workspace.bot_id}
+                    initialLogs={runtimeObs.logs}
+                    initialTransitions={runtimeObs.transitions}
+                    initialCurrentState={runtimeObs.currentState}
+                    initialHealth={runtimeObs.health}
                 />
             </section>
 

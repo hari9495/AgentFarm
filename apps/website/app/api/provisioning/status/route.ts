@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
     autoProcessProvisioningForUser,
     getProvisioningEstimatedSecondsRemaining,
+    getProvisioningSlaMetrics,
     getProvisioningStatusForUser,
     getProvisioningTimelineForJob,
     getSessionUser,
@@ -56,6 +57,24 @@ export async function GET(request: Request) {
     const estimatedSecondsRemaining = provisioningJob
         ? getProvisioningEstimatedSecondsRemaining(provisioningJob.status)
         : null;
+    const slaMetrics = provisioningJob
+        ? getProvisioningSlaMetrics(provisioningJob)
+        : null;
+
+    const provisioningAlerts = [] as Array<{ level: "warning" | "critical"; code: string; message: string }>;
+    if (slaMetrics?.isTimedOut) {
+        provisioningAlerts.push({
+            level: "critical",
+            code: "provisioning_timeout_24h",
+            message: "Provisioning exceeded 24 hours and requires immediate remediation.",
+        });
+    } else if (slaMetrics?.isStuck) {
+        provisioningAlerts.push({
+            level: "warning",
+            code: "provisioning_stuck_1h",
+            message: "Provisioning has been in progress for over 1 hour.",
+        });
+    }
 
     return NextResponse.json({
         status: "ok",
@@ -65,6 +84,8 @@ export async function GET(request: Request) {
         provisioningJob,
         provisioningTimeline,
         estimatedSecondsRemaining,
+        slaMetrics,
+        provisioningAlerts,
         autoProcessed,
     });
 }

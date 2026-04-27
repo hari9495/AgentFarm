@@ -114,3 +114,52 @@ test("provisioning progress UI: failed state shows remediation hint", () => {
     assert.equal(html.includes("Remediation:"), true);
     assert.equal(html.includes("Retry after increasing quota or switch runtime tier."), true);
 });
+
+test("provisioning progress UI: shows SLA metrics and stuck alert", () => {
+    const now = Date.now();
+    const html = renderHtml({
+        loading: false,
+        error: null,
+        payload: {
+            tenant: { tenantStatus: "provisioning" },
+            workspace: { workspaceStatus: "provisioning" },
+            bot: { botStatus: "created" },
+            provisioningJob: {
+                id: "prv_sla_1",
+                status: "starting_container",
+                updatedAt: now - 2_000,
+                failureReason: null,
+                remediationHint: null,
+            },
+            provisioningTimeline: [
+                { status: "queued", at: now - 5_000, reason: null },
+                { status: "validating", at: now - 4_000, reason: null },
+                { status: "starting_container", at: now - 2_000, reason: null },
+            ],
+            estimatedSecondsRemaining: 120,
+            slaMetrics: {
+                elapsedSeconds: 3800,
+                targetSeconds: 600,
+                timeoutSeconds: 86400,
+                stuckThresholdSeconds: 3600,
+                withinTarget: false,
+                breachedTarget: true,
+                isStuck: true,
+                isTimedOut: false,
+            },
+            provisioningAlerts: [
+                {
+                    level: "warning",
+                    code: "provisioning_stuck_1h",
+                    message: "Provisioning has been in progress for over 1 hour.",
+                },
+            ],
+        },
+    });
+
+    assert.equal(html.includes("SLA target:"), true);
+    assert.equal(html.includes("SLA status:"), true);
+    assert.equal(html.includes("Breached"), true);
+    assert.equal(html.includes("Provisioning alert"), true);
+    assert.equal(html.includes("over 1 hour"), true);
+});
