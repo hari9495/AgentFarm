@@ -138,6 +138,12 @@ export type ProvisioningQueueEntry = {
     updatedAt: number;
 };
 
+export type ProvisioningTimelineEntry = {
+    status: ProvisioningJobStatus;
+    at: number;
+    reason: string | null;
+};
+
 type MarketplaceSelectionRecord = {
     userId: string;
     starterAgent: string;
@@ -773,6 +779,31 @@ const PROVISIONING_SUCCESS_STAGES: ProvisioningJobStatus[] = [
 ];
 
 const PROVISIONING_FAILURE_STAGE: ProvisioningJobStatus = "failed";
+
+const PROVISIONING_STATUS_ORDER: ProvisioningJobStatus[] = [
+    "queued",
+    "validating",
+    "creating_resources",
+    "bootstrapping_vm",
+    "starting_container",
+    "registering_runtime",
+    "healthchecking",
+    "completed",
+];
+
+const PROVISIONING_STAGE_ESTIMATED_SECONDS: Record<ProvisioningJobStatus, number> = {
+    queued: 30,
+    validating: 20,
+    creating_resources: 120,
+    bootstrapping_vm: 180,
+    starting_container: 90,
+    registering_runtime: 45,
+    healthchecking: 30,
+    completed: 0,
+    failed: 0,
+    cleanup_pending: 60,
+    cleaned_up: 0,
+};
 
 const setProvisioningJobStatus = (
     entry: ProvisioningQueueEntry,
@@ -2437,6 +2468,95 @@ export const listAuditEvents = (input?: {
         reason: String(row.reason),
         createdAt: Number(row.created_at),
     }));
+};
+
+export const getProvisioningTimelineForJob = (input: {
+    tenantId: string;
+    jobId: string;
+    createdAt: number;
+    currentStatus: ProvisioningJobStatus;
+    updatedAt: number;
+}): ProvisioningTimelineEntry[] => {
+    const rows = db.prepare(
+        `SELECT action, after_state, reason, created_at
+         FROM company_audit_events
+         WHERE tenant_id = ?
+           AND target_type = 'provisioning_job'
+           AND target_id = ?
+           AND action = 'provisioning.job.status_updated'
+         ORDER BY created_at ASC`,
+    ).all(input.tenantId, input.jobId) as Array<{ after_state: string; reason: string; created_at: number }>;
+
+    const timeline: ProvisioningTimelineEntry[] = [
+        {
+            status: "queued",
+            at: input.createdAt,
+            reason: null,
+        },
+    ];
+
+    for (const row of rows) {
+        let parsedAfterState: { status?: string } = {};
+        try {
+            parsedAfterState = JSON.parse(String(row.after_state ?? "{}")) as { status?: string };
+        } catch {
+            parsedAfterState = {};
+        }
+
+        const status = parsedAfterState.status as ProvisioningJobStatus | undefined;
+        if (!status) {
+            continue;
+        }
+
+        const last = timeline[timeline.length - 1];
+        if (last && last.status === status) {
+            timeline[timeline.length - 1] = {
+                status,
+                at: Number(row.created_at),
+                reason: row.reason ? String(row.reason) : null,
+            };
+            continue;
+        }
+
+        timeline.push({
+            status,
+            at: Number(row.created_at),
+            reason: row.reason ? String(row.reason) : null,
+        });
+    }
+
+    const last = timeline[timeline.length - 1];
+    if (!last || last.status !== input.currentStatus) {
+        timeline.push({
+            status: input.currentStatus,
+            at: input.updatedAt,
+            reason: null,
+        });
+    }
+
+    return timeline;
+};
+
+export const getProvisioningEstimatedSecondsRemaining = (status: ProvisioningJobStatus): number | null => {
+    if (status === "completed" || status === "cleaned_up") {
+        return 0;
+    }
+    if (status === "failed") {
+        return null;
+    }
+
+    const currentIndex = PROVISIONING_STATUS_ORDER.indexOf(status);
+    if (currentIndex < 0) {
+        return null;
+    }
+
+    let remaining = 0;
+    for (let index = currentIndex; index < PROVISIONING_STATUS_ORDER.length; index += 1) {
+        const stage = PROVISIONING_STATUS_ORDER[index];
+        remaining += PROVISIONING_STAGE_ESTIMATED_SECONDS[stage] ?? 0;
+    }
+
+    return remaining;
 };
 
 // ── Customer signup: tenant / workspace / bot lifecycle ───────────────────

@@ -39,6 +39,18 @@ const checks = [
         args: ['--filter', '@agentfarm/dashboard', 'typecheck'],
     },
     {
+        id: 'provisioning-service-typecheck',
+        title: 'Provisioning service typecheck',
+        command: 'pnpm',
+        args: ['--filter', '@agentfarm/provisioning-service', 'typecheck'],
+    },
+    {
+        id: 'provisioning-service-regression',
+        title: 'Provisioning service state-machine regression',
+        command: 'pnpm',
+        args: ['--filter', '@agentfarm/provisioning-service', 'test'],
+    },
+    {
         id: 'website-signup-regression',
         title: 'Website signup flow regression',
         command: 'pnpm',
@@ -55,6 +67,12 @@ const checks = [
         title: 'Website session auth and workspace RLS regression',
         command: 'pnpm',
         args: ['--filter', '@agentfarm/website', 'test:session-auth'],
+    },
+    {
+        id: 'website-provisioning-progress-ui-regression',
+        title: 'Website provisioning progress UI regression',
+        command: 'pnpm',
+        args: ['--filter', '@agentfarm/website', 'test:provisioning-ui'],
     },
     {
         id: 'website-deployment-regression',

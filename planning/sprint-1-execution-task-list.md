@@ -31,6 +31,8 @@ Build user signup, auth service, tenant provisioning, and workspace initializati
 - Build session token validation (HMAC SHA-256 v1 format)
 - Add workspace-scoped row-level security (RLS)
 - Acceptance criteria: Session token valid, workspace isolated, dashboard loads with correct tenant data
+- Status: Completed (2026-04-27)
+- Evidence: apps/website/middleware.ts, apps/website/app/api/auth/login/route.ts, apps/website/tests/session-auth.test.ts
 - Owner: Engineering Lead
 - Dependency: 1.1
 - Due: 2026-05-05
@@ -40,6 +42,8 @@ Build user signup, auth service, tenant provisioning, and workspace initializati
 - Show current job state, step history, and estimated time
 - Add failure alert with remediation hints
 - Acceptance criteria: Dashboard reflects ProvisioningJob state transitions within 2 seconds
+- Status: Completed (2026-04-27)
+- Evidence: apps/website/components/dashboard/ProvisioningProgressCard.tsx, apps/website/app/api/provisioning/status/route.ts, apps/website/tests/provisioning-progress-ui.test.ts
 - Owner: Frontend Lead
 - Dependency: 1.2
 - Due: 2026-05-08
@@ -53,6 +57,8 @@ Build the provisioning orchestrator that creates VMs, bootstraps Docker, registe
 - Implement resource group and VM creation via Azure SDK
 - Implement failure handling and cleanup workflow
 - Acceptance criteria: Job transitions through all states, state mutations logged, resource cleanup on failure
+- Status: Completed (2026-04-27)
+- Evidence: services/provisioning-service/src/job-processor.ts, services/provisioning-service/src/state-machine.ts, services/provisioning-service/src/job-processor.test.ts
 - Owner: Engineering Lead + Cloud Ops
 - Dependency: 1.1
 - Due: 2026-05-09

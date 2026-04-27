@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import ButtonLink from "@/components/shared/ButtonLink";
 import DeploymentStatusPanel from "@/components/dashboard/DeploymentStatusPanel";
+import ProvisioningProgressCard from "@/components/dashboard/ProvisioningProgressCard";
 
 export const metadata: Metadata = {
     title: "Customer Dashboard - AgentFarm",
@@ -115,7 +116,10 @@ export default function DashboardPage() {
                     ))}
                 </div>
 
-                <DeploymentStatusPanel />
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                    <ProvisioningProgressCard />
+                    <DeploymentStatusPanel />
+                </div>
 
                 {/* Workers table + Approval queue */}
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">

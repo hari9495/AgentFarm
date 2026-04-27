@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
-import { autoProcessProvisioningForUser, getProvisioningStatusForUser, getSessionUser } from "@/lib/auth-store";
+import {
+    autoProcessProvisioningForUser,
+    getProvisioningEstimatedSecondsRemaining,
+    getProvisioningStatusForUser,
+    getProvisioningTimelineForJob,
+    getSessionUser,
+} from "@/lib/auth-store";
 
 const COOKIE_NAME = "agentfarm_session";
-const AUTO_TICK_MIN_INTERVAL_MS = 2500;
+const AUTO_TICK_MIN_INTERVAL_MS = 1500;
 let lastAutoTickAt = 0;
 
 const getCookieValue = (cookieHeader: string | null, name: string): string | null => {
@@ -38,6 +44,18 @@ export async function GET(request: Request) {
     }
 
     const { tenant, workspace, bot, provisioningJob } = getProvisioningStatusForUser(user.id);
+    const provisioningTimeline = provisioningJob && user.tenantId
+        ? getProvisioningTimelineForJob({
+            tenantId: user.tenantId,
+            jobId: provisioningJob.id,
+            createdAt: provisioningJob.createdAt,
+            currentStatus: provisioningJob.status,
+            updatedAt: provisioningJob.updatedAt,
+        })
+        : [];
+    const estimatedSecondsRemaining = provisioningJob
+        ? getProvisioningEstimatedSecondsRemaining(provisioningJob.status)
+        : null;
 
     return NextResponse.json({
         status: "ok",
@@ -45,6 +63,8 @@ export async function GET(request: Request) {
         workspace,
         bot,
         provisioningJob,
+        provisioningTimeline,
+        estimatedSecondsRemaining,
         autoProcessed,
     });
 }
