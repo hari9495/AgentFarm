@@ -22,6 +22,10 @@ Build user signup, auth service, tenant provisioning, and workspace initializati
 - Initialize tenant, workspace, and bot records
 - Emit provisioning.requested event to queue
 - Acceptance criteria: User signup → instant tenant → bot in created status → provisioning queued
+- Status: Completed (2026-04-30)
+- Evidence: apps/api-gateway/src/routes/auth.ts, apps/api-gateway/src/routes/auth.test.ts
+- Validation: pnpm --filter @agentfarm/api-gateway test (200/200 pass), pnpm --filter @agentfarm/api-gateway typecheck (pass)
+- Notes: POST /auth/signup runs atomic Prisma transaction creating tenant (status→provisioning), TenantUser (role owner), Workspace, Bot (status created), and ProvisioningJob (status queued). Returns session token and HttpOnly cookie. Email normalised to lowercase; duplicate emails rejected 409; timing-safe dummy-hash prevents user enumeration on login. ProvisioningJob acts as durable queue message consumed by provisioning-service poll loop.
 - Owner: Engineering Lead
 - Dependency: None
 - Due: 2026-05-02
@@ -203,6 +207,10 @@ Build the approval workflow service, risk evaluation engine, and human approval 
 - Implement approval routing (medium/high → approval queue, auto-escalation after 1 hour)
 - Build Approval record creation and immutability enforcement
 - Acceptance criteria: Actions classified correctly, medium/high actions routed to approvers, timeout escalation works
+- Status: Completed (2026-04-30)
+- Evidence: apps/agent-runtime/src/execution-engine.ts, apps/api-gateway/src/routes/approvals.ts, apps/api-gateway/src/routes/approvals.test.ts, apps/agent-runtime/src/execution-engine.test.ts
+- Validation: pnpm --filter @agentfarm/api-gateway test (200/200 pass), pnpm --filter @agentfarm/agent-runtime test (99/99 pass), pnpm --filter @agentfarm/approval-service test (12/12 pass)
+- Notes: classifyRisk() in execution-engine.ts implements frozen policy: HIGH_RISK_ACTIONS (merge_pr, merge_release, delete_resource, change_permissions, deploy_production) and MEDIUM_RISK_ACTIONS (update_status, create_comment, create_pr_comment, create_pr, send_message); low-confidence fallback (<0.6) escalates to medium. POST /v1/approvals/intake routes low-risk actions to execute_without_approval (200) and medium/high to queued_for_approval (201) with immutability enforcement (409 on field mutation). POST /v1/approvals/escalate marks overdue pending approvals after per-record timeout (default 3600s = 1 hour). All approval fields are immutable after creation. ApprovalEnforcer in approval-service enforces kill-switch precedence over in-flight approvals.
 - Owner: Security and Safety Lead
 - Dependency: 3.2 (bot action generation)
 - Due: 2026-05-15
