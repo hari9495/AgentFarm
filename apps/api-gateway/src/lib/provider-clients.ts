@@ -33,6 +33,9 @@ export type ConnectorActionType =
     | 'update_status'
     | 'send_message'
     | 'create_pr_comment'
+    | 'create_pr'
+    | 'merge_pr'
+    | 'list_prs'
     | 'send_email';
 
 export type ConnectorActionErrorCode =
@@ -472,13 +475,191 @@ const executeGitHub = async (
     credentials: GitHubCredentials,
     fetcher: FetchFn,
 ): Promise<ProviderExecutionResult> => {
+    const headers: Record<string, string> = {
+        Authorization: `Bearer ${credentials.access_token}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+    };
+
+    if (actionType === 'create_pr') {
+        const owner = String(payload['owner'] ?? '').trim();
+        const repo = String(payload['repo'] ?? '').trim();
+        const title = String(payload['title'] ?? '').trim();
+        const head = String(payload['head'] ?? '').trim();
+        const base = String(payload['base'] ?? '').trim();
+        const body = payload['body'] !== undefined ? String(payload['body']) : undefined;
+        const draft = typeof payload['draft'] === 'boolean' ? payload['draft'] : undefined;
+
+        if (!owner || !repo || !title || !head || !base) {
+            return {
+                ok: false,
+                providerResponseCode: '400',
+                resultSummary: 'Missing required fields: owner, repo, title, head, base',
+                errorCode: 'invalid_format',
+                errorMessage: 'owner, repo, title, head, and base are required for create_pr',
+                remediationHint: 'Provide owner, repo, title, head, and base in the payload.',
+            };
+        }
+
+        const url = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/pulls`;
+        const requestBody: Record<string, unknown> = { title, head, base };
+        if (body !== undefined) {
+            requestBody['body'] = body;
+        }
+        if (draft !== undefined) {
+            requestBody['draft'] = draft;
+        }
+
+        let res: Response;
+        try {
+            res = await fetcher(url, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(requestBody),
+            });
+        } catch (err) {
+            return {
+                ok: false,
+                providerResponseCode: '0',
+                resultSummary: 'Network error reaching GitHub',
+                transient: true,
+                errorCode: 'provider_unavailable',
+                errorMessage: String(err),
+                remediationHint: 'Check network connectivity to api.github.com.',
+            };
+        }
+
+        if (!res.ok) {
+            return failFromStatus(res.status, `GitHub create PR failed with ${res.status}`);
+        }
+
+        const created = (await res.json()) as { number?: number; html_url?: string };
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `PR #${created.number ?? 'created'} opened for ${owner}/${repo}`,
+        };
+    }
+
+    if (actionType === 'merge_pr') {
+        const owner = String(payload['owner'] ?? '').trim();
+        const repo = String(payload['repo'] ?? '').trim();
+        const pullNumber = Number(payload['pull_number']);
+        const commitTitle = payload['commit_title'] !== undefined ? String(payload['commit_title']) : undefined;
+        const commitMessage = payload['commit_message'] !== undefined ? String(payload['commit_message']) : undefined;
+        const mergeMethod = payload['merge_method'] !== undefined ? String(payload['merge_method']) : undefined;
+
+        if (!owner || !repo || !Number.isInteger(pullNumber) || pullNumber <= 0) {
+            return {
+                ok: false,
+                providerResponseCode: '400',
+                resultSummary: 'Missing required fields: owner, repo, pull_number (integer)',
+                errorCode: 'invalid_format',
+                errorMessage: 'owner, repo, and pull_number are required for merge_pr',
+                remediationHint: 'Provide owner, repo, and pull_number in the payload.',
+            };
+        }
+
+        const url = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/pulls/${pullNumber}/merge`;
+        const requestBody: Record<string, unknown> = {};
+        if (commitTitle !== undefined) {
+            requestBody['commit_title'] = commitTitle;
+        }
+        if (commitMessage !== undefined) {
+            requestBody['commit_message'] = commitMessage;
+        }
+        if (mergeMethod !== undefined) {
+            requestBody['merge_method'] = mergeMethod;
+        }
+
+        let res: Response;
+        try {
+            res = await fetcher(url, {
+                method: 'PUT',
+                headers,
+                body: JSON.stringify(requestBody),
+            });
+        } catch (err) {
+            return {
+                ok: false,
+                providerResponseCode: '0',
+                resultSummary: 'Network error reaching GitHub',
+                transient: true,
+                errorCode: 'provider_unavailable',
+                errorMessage: String(err),
+                remediationHint: 'Check network connectivity to api.github.com.',
+            };
+        }
+
+        if (!res.ok) {
+            return failFromStatus(res.status, `GitHub merge PR failed with ${res.status}`);
+        }
+
+        const merged = (await res.json()) as { sha?: string; merged?: boolean };
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `PR #${pullNumber} merged for ${owner}/${repo} (${merged.sha ?? 'no sha'})`,
+        };
+    }
+
+    if (actionType === 'list_prs') {
+        const owner = String(payload['owner'] ?? '').trim();
+        const repo = String(payload['repo'] ?? '').trim();
+        const state = payload['state'] !== undefined ? String(payload['state']).trim() : 'open';
+
+        if (!owner || !repo) {
+            return {
+                ok: false,
+                providerResponseCode: '400',
+                resultSummary: 'Missing required fields: owner, repo',
+                errorCode: 'invalid_format',
+                errorMessage: 'owner and repo are required for list_prs',
+                remediationHint: 'Provide owner and repo in the payload.',
+            };
+        }
+
+        const url = new URL(`https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/pulls`);
+        url.searchParams.set('state', state || 'open');
+
+        let res: Response;
+        try {
+            res = await fetcher(url.toString(), {
+                method: 'GET',
+                headers,
+            });
+        } catch (err) {
+            return {
+                ok: false,
+                providerResponseCode: '0',
+                resultSummary: 'Network error reaching GitHub',
+                transient: true,
+                errorCode: 'provider_unavailable',
+                errorMessage: String(err),
+                remediationHint: 'Check network connectivity to api.github.com.',
+            };
+        }
+
+        if (!res.ok) {
+            return failFromStatus(res.status, `GitHub list PRs failed with ${res.status}`);
+        }
+
+        const prs = (await res.json()) as Array<{ number?: number }>;
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `Fetched ${prs.length} pull request(s) for ${owner}/${repo}`,
+        };
+    }
+
     if (actionType !== 'create_pr_comment') {
         return {
             ok: false,
             providerResponseCode: '400',
             resultSummary: `Action ${actionType} is not supported by the GitHub connector`,
             errorCode: 'unsupported_action',
-            errorMessage: `GitHub supports: create_pr_comment`,
+            errorMessage: 'GitHub supports: create_pr_comment, create_pr, merge_pr, list_prs',
         };
     }
 
@@ -520,12 +701,7 @@ const executeGitHub = async (
     try {
         res = await fetcher(url, {
             method: 'POST',
-            headers: {
-                Authorization: `Bearer ${credentials.access_token}`,
-                'Content-Type': 'application/json',
-                Accept: 'application/vnd.github+json',
-                'X-GitHub-Api-Version': '2022-11-28',
-            },
+            headers,
             body: JSON.stringify(commentBody),
         });
     } catch (err) {

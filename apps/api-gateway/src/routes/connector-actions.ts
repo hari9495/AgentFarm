@@ -21,6 +21,9 @@ type ConnectorActionType =
     | 'update_status'
     | 'send_message'
     | 'create_pr_comment'
+    | 'create_pr'
+    | 'merge_pr'
+    | 'list_prs'
     | 'send_email';
 
 type ConnectorActionErrorCode =
@@ -173,6 +176,9 @@ const SUPPORTED_ACTIONS: ConnectorActionType[] = [
     'update_status',
     'send_message',
     'create_pr_comment',
+    'create_pr',
+    'merge_pr',
+    'list_prs',
     'send_email',
 ];
 
@@ -209,6 +215,9 @@ const ACTION_ALIAS: Record<ConnectorActionType, NormalizedActionType> = {
     update_status: 'update_task_status',
     send_message: 'send_message',
     create_pr_comment: 'add_pr_comment',
+    create_pr: 'create_pr',
+    merge_pr: 'merge_pr',
+    list_prs: 'list_prs',
     send_email: 'send_email',
 };
 
@@ -590,7 +599,7 @@ export const registerConnectorActionRoutes = async (
         if (!actionType) {
             return reply.code(400).send({
                 error: 'unsupported_action',
-                message: 'action_type must be one of read_task, create_comment, update_status, send_message, create_pr_comment, send_email',
+                message: 'action_type must be one of read_task, create_comment, update_status, send_message, create_pr_comment, create_pr, merge_pr, list_prs, send_email',
             });
         }
 
@@ -785,8 +794,10 @@ export const registerConnectorActionRoutes = async (
             });
         }
 
-        return reply.code(502).send({
-            status: 'failed',
+        const failureHttpStatus = status === 'timeout' ? 504 : 502;
+
+        return reply.code(failureHttpStatus).send({
+            status,
             action_id: actionId,
             connector_id: connectorId,
             connector_type: connectorType,

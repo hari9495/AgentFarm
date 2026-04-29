@@ -24,13 +24,13 @@ export const metadata: Metadata = {
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL ?? "https://agentfarm.ai"
   ),
-  title: "AgentFarm — Hire AI Employees for Your Engineering Team",
+  title: "AgentFarm — Trusted AI Teammates for Engineering Teams",
   description:
-    "Deploy AI developers, QA engineers, and DevOps agents that work directly inside your GitHub and Slack.",
+    "Augment engineering teams with secure AI teammates for development, QA, and operations with approval gates and audit-ready workflows.",
   openGraph: {
-    title: "AgentFarm — Hire AI Employees for Your Engineering Team",
+    title: "AgentFarm — Trusted AI Teammates for Engineering Teams",
     description:
-      "Deploy AI developers, QA engineers, and DevOps agents that work directly inside your GitHub and Slack.",
+      "Augment engineering teams with secure AI teammates for development, QA, and operations with approval gates and audit-ready workflows.",
     type: "website",
   },
 };
@@ -42,7 +42,7 @@ const jsonLd = {
   applicationCategory: "DeveloperApplication",
   operatingSystem: "Web",
   description:
-    "AI workforce platform for engineering teams. Deploy AI developers, QA engineers, and DevOps agents.",
+    "Trusted AI teammate platform for engineering teams. Run development, QA, and operations workflows with approvals and auditable evidence.",
   url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://agentfarm.ai",
   offers: {
     "@type": "Offer",

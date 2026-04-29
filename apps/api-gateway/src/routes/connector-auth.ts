@@ -15,7 +15,7 @@ type SessionContext = {
     expiresAt: number;
 };
 
-type ConnectorType = 'jira' | 'teams' | 'github';
+type ConnectorType = 'jira' | 'teams' | 'github' | 'email';
 type CallbackStatus = 'completed' | 'failed' | 'expired';
 
 type ConnectorAuthSessionRecord = {
@@ -138,12 +138,13 @@ type ReportErrorBody = {
     reason?: string;
 };
 
-const SUPPORTED_OAUTH_CONNECTORS: ConnectorType[] = ['jira', 'teams', 'github'];
+const SUPPORTED_OAUTH_CONNECTORS: ConnectorType[] = ['jira', 'teams', 'github', 'email'];
 const SESSION_TTL_MS = 10 * 60 * 1000;
 const ACCESS_TOKEN_TTL_MS = 60 * 60 * 1000;
 const REFRESH_EARLY_WINDOW_MS = 5 * 60 * 1000;
 
 const DEFAULT_SCOPES: Record<ConnectorType, string[]> = {
+    email: ['offline_access', 'Mail.Send', 'User.Read'],
     github: ['read:user', 'repo', 'workflow'],
     jira: ['read:jira-work', 'write:jira-work', 'read:jira-user'],
     teams: ['offline_access', 'User.Read', 'ChannelMessage.Send'],
@@ -241,8 +242,8 @@ const normalizeConnectorType = (value: string | undefined): ConnectorType | null
         return null;
     }
     const normalized = value.trim().toLowerCase();
-    if (normalized === 'jira' || normalized === 'teams' || normalized === 'github') {
-        return normalized;
+    if (SUPPORTED_OAUTH_CONNECTORS.includes(normalized as ConnectorType)) {
+        return normalized as ConnectorType;
     }
     return null;
 };
@@ -354,6 +355,10 @@ const defaultCodeExchanger = async (input: {
         }
         if (input.connectorType === 'teams') {
             baseCredentials.tenant_id = input.env.CONNECTOR_TEAMS_TENANT_ID ?? 'dev-tenant-id';
+        }
+        if (input.connectorType === 'email') {
+            baseCredentials.provider = 'microsoft_graph';
+            baseCredentials.tenant_id = input.env.CONNECTOR_EMAIL_TENANT_ID ?? 'dev-tenant-id';
         }
 
         return {
@@ -481,6 +486,61 @@ const defaultCodeExchanger = async (input: {
         };
     }
 
+    if (input.connectorType === 'email') {
+        const tenantId = input.env.CONNECTOR_EMAIL_TENANT_ID ?? 'common';
+        const tokenUrl = input.env.CONNECTOR_EMAIL_TOKEN_URL
+            ?? `https://login.microsoftonline.com/${encodeURIComponent(tenantId)}/oauth2/v2.0/token`;
+        const body = new URLSearchParams({
+            client_id: clientId,
+            client_secret: clientSecret,
+            grant_type: 'authorization_code',
+            code: input.code,
+            redirect_uri: redirectUri,
+            scope: DEFAULT_SCOPES.email.join(' '),
+        });
+
+        const tokenResponse = await fetch(tokenUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                Accept: 'application/json',
+            },
+            body,
+        });
+        await assertHttpOk(tokenResponse);
+        const payload = (await parseJsonSafely(tokenResponse)) as {
+            access_token?: string;
+            refresh_token?: string;
+            expires_in?: number;
+            scope?: string;
+            error?: string;
+            error_description?: string;
+        };
+
+        if (payload.error || !payload.access_token) {
+            throw new OAuthCodeExchangeError(
+                payload.error === 'invalid_scope' ? 'insufficient_scope' : 'oauth_code_exchange_failed',
+                502,
+                payload.error_description ?? payload.error ?? 'Email token response missing access_token.',
+            );
+        }
+
+        const credentials: Record<string, string> = {
+            access_token: payload.access_token,
+            provider: 'microsoft_graph',
+            tenant_id: tenantId,
+        };
+        if (payload.refresh_token) {
+            credentials.refresh_token = payload.refresh_token;
+        }
+
+        return {
+            credentials,
+            expiresAt: new Date(input.now + (payload.expires_in ? payload.expires_in * 1000 : ACCESS_TOKEN_TTL_MS)),
+            scopeStatus: inferScopeStatus('email', payload.scope),
+        };
+    }
+
     const tenantId = input.env.CONNECTOR_TEAMS_TENANT_ID ?? 'common';
     const tokenUrl = input.env.CONNECTOR_TEAMS_TOKEN_URL
         ?? `https://login.microsoftonline.com/${encodeURIComponent(tenantId)}/oauth2/v2.0/token`;
@@ -558,7 +618,7 @@ export const registerConnectorAuthRoutes = async (
         if (!connectorType) {
             return reply.code(400).send({
                 error: 'unsupported_connector',
-                message: 'connector_type must be one of jira, teams, github',
+                message: 'connector_type must be one of jira, teams, github, email',
             });
         }
 
@@ -635,6 +695,21 @@ export const registerConnectorAuthRoutes = async (
             return reply.code(400).send({
                 error: 'invalid_state_nonce',
                 message: 'No active connector auth session found for provided state.',
+            });
+        }
+
+        if (authSession.status !== 'auth_initiated') {
+            await repo.createAuthEvent({
+                connectorId: authSession.connectorId,
+                tenantId: authSession.tenantId,
+                eventType: 'oauth_callback',
+                result: 'state_nonce_replay',
+                correlationId: `corr_connector_auth_${now()}`,
+                actor: 'oauth_provider_callback',
+            });
+            return reply.code(409).send({
+                error: 'state_nonce_already_used',
+                message: 'Connector auth state nonce has already been consumed. Re-initiate OAuth flow.',
             });
         }
 
@@ -798,6 +873,40 @@ export const registerConnectorAuthRoutes = async (
         }
 
         await repo.updateAuthSessionStatus(authSession.id, 'completed');
+        if (exchanged.scopeStatus === 'insufficient') {
+            await repo.updateAuthSessionStatus(authSession.id, 'failed');
+            await repo.upsertAuthMetadata({
+                connectorId: authSession.connectorId,
+                tenantId: authSession.tenantId,
+                workspaceId: authSession.workspaceId,
+                connectorType,
+                authMode: 'oauth2',
+                status: 'consent_pending',
+                secretRefId,
+                tokenExpiresAt: exchanged.expiresAt,
+                lastRefreshAt: new Date(now()),
+                scopeStatus: 'insufficient',
+                lastErrorClass: 'insufficient_scope',
+            });
+            await repo.createAuthEvent({
+                connectorId: authSession.connectorId,
+                tenantId: authSession.tenantId,
+                eventType: 'oauth_callback',
+                result: 'insufficient_scope',
+                correlationId: `corr_connector_auth_${now()}`,
+                actor: 'oauth_provider_callback',
+            });
+
+            return reply.code(409).send({
+                error: 'insufficient_scope',
+                message: 'Connector permissions are insufficient; restart consent flow.',
+                status: 'consent_pending',
+                connector_id: authSession.connectorId,
+                token_storage: 'key_vault_reference_only',
+                secret_ref_id: secretRefId,
+            });
+        }
+
         await repo.upsertAuthMetadata({
             connectorId: authSession.connectorId,
             tenantId: authSession.tenantId,
@@ -842,7 +951,7 @@ export const registerConnectorAuthRoutes = async (
         if (!connectorType) {
             return reply.code(400).send({
                 error: 'unsupported_connector',
-                message: 'connector_type must be one of jira, teams, github',
+                message: 'connector_type must be one of jira, teams, github, email',
             });
         }
 
@@ -962,7 +1071,7 @@ export const registerConnectorAuthRoutes = async (
         if (!connectorType) {
             return reply.code(400).send({
                 error: 'unsupported_connector',
-                message: 'connector_type must be one of jira, teams, github',
+                message: 'connector_type must be one of jira, teams, github, email',
             });
         }
 
@@ -1024,7 +1133,7 @@ export const registerConnectorAuthRoutes = async (
         if (!connectorType) {
             return reply.code(400).send({
                 error: 'unsupported_connector',
-                message: 'connector_type must be one of jira, teams, github',
+                message: 'connector_type must be one of jira, teams, github, email',
             });
         }
 

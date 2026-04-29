@@ -107,6 +107,9 @@ const actions = [
     'update_status',
     'send_message',
     'create_pr_comment',
+    'create_pr',
+    'merge_pr',
+    'list_prs',
     'send_email',
 ] as const;
 
@@ -141,7 +144,7 @@ test('executes supported actions per connector and logs success records', async 
         const supportedByConnector: Record<typeof connectors[number], readonly typeof actions[number][]> = {
             jira: ['read_task', 'create_comment', 'update_status'],
             teams: ['send_message'],
-            github: ['create_pr_comment'],
+            github: ['create_pr_comment', 'create_pr', 'merge_pr', 'list_prs'],
             email: ['send_email'],
         };
 
@@ -176,7 +179,7 @@ test('executes supported actions per connector and logs success records', async 
             }
         }
 
-        assert.equal(repo.logs.length, 6);
+        assert.equal(repo.logs.length, 9);
         for (const entry of repo.logs) {
             assert.equal(entry.resultStatus, 'success');
             assert.equal(entry.errorCode, null);
@@ -298,6 +301,56 @@ test('classifies permission failures and updates connector auth for re-consent',
         assert.equal(repo.logs.length, 1);
         assert.equal(repo.logs[0]?.resultStatus, 'failed');
         assert.equal(repo.logs[0]?.errorCode, 'permission_denied');
+    } finally {
+        await app.close();
+    }
+});
+
+test('classifies timeout failures consistently in response and connector action logs', async () => {
+    const app = Fastify();
+    const repo = createFakeRepo();
+    seedConnectedMetadata(repo);
+
+    const providerExecutor: ProviderExecutor = async ({ attempt }) => ({
+        ok: false,
+        providerResponseCode: '504',
+        resultSummary: 'Provider timeout',
+        transient: attempt < 3,
+        errorCode: 'timeout',
+        errorMessage: 'provider timeout',
+        remediationHint: 'retry with backoff',
+    });
+
+    await registerConnectorActionRoutes(app, {
+        getSession: () => sessionContext(),
+        repo,
+        sleep: async () => { },
+        providerExecutor,
+    });
+
+    try {
+        const response = await app.inject({
+            method: 'POST',
+            url: '/v1/connectors/actions/execute',
+            payload: {
+                connector_type: 'jira',
+                workspace_id: 'ws_1',
+                bot_id: 'bot_1',
+                role_key: 'developer',
+                action_type: 'read_task',
+                payload: { issue_key: 'PROJ-1' },
+            },
+        });
+
+        assert.equal(response.statusCode, 504);
+        const body = response.json() as { status: string; error_code: string; attempts: number };
+        assert.equal(body.status, 'timeout');
+        assert.equal(body.error_code, 'timeout');
+        assert.equal(body.attempts, 3);
+
+        assert.equal(repo.logs.length, 1);
+        assert.equal(repo.logs[0]?.resultStatus, 'timeout');
+        assert.equal(repo.logs[0]?.errorCode, 'timeout');
     } finally {
         await app.close();
     }

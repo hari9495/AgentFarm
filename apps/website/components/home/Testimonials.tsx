@@ -12,7 +12,7 @@ const testimonials = [
     stars: 5,
     metric: "Test coverage 61% to 94% in 3 weeks",
     quote:
-      "We replaced a full-time QA contractor with AgentFarm's QA robot. Test coverage went from 61% to 94% in three weeks. The ROI is insane.",
+      "We used AgentFarm's QA robot to automate regression-heavy work while our QA lead focused on release strategy. Test coverage went from 61% to 94% in three weeks.",
   },
   {
     name: "Marcus Webb",
@@ -48,7 +48,7 @@ const testimonials = [
     stars: 5,
     metric: "Team velocity doubled",
     quote:
-      "We run 3 AI workers alongside our 8-person team. They handle all the grunt work, our engineers focus on hard problems. Velocity doubled.",
+      "We run 3 AI workers alongside our 8-person team. They handle repetitive execution while our engineers focus on high-judgment problems. Velocity doubled.",
   },
   {
     name: "Tom Lindström",

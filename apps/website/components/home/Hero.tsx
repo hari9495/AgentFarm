@@ -63,7 +63,7 @@ export default function Hero() {
                             transition={{ duration: 0.46 * motionScale, delay: 0.12 * motionScale }}
                             className="mt-6 text-lg text-slate-600 dark:text-slate-400 max-w-xl leading-relaxed"
                         >
-                            AgentFarm gives you role-specific AI workers for development, QA, support, and operations.
+                            AgentFarm gives you role-specific AI teammates for development, QA, support, and operations.
                             Every task is visible, reviewable, and integrated into tools your team already uses.
                         </motion.p>
 
@@ -88,7 +88,7 @@ export default function Hero() {
                             className="mt-8 flex flex-col sm:flex-row items-start sm:items-center gap-4"
                         >
                             <ButtonLink href="/get-started" size="lg">
-                                Start Building Team
+                                Start Augmenting Team
                             </ButtonLink>
                             <ButtonLink href="/marketplace" variant="outline" size="lg">
                                 Explore Roles <ArrowRight className="w-4 h-4" />

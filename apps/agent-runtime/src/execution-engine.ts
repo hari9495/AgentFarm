@@ -14,6 +14,24 @@ export type ActionDecision = {
     reason: string;
 };
 
+export type LlmDecisionMetadata = {
+    classificationSource: 'heuristic' | 'llm';
+    modelProvider: string;
+    model: string | null;
+    promptTokens: number | null;
+    completionTokens: number | null;
+    totalTokens: number | null;
+    fallbackReason?: string;
+};
+
+export type LlmDecisionResolver = (input: {
+    task: TaskEnvelope;
+    heuristicDecision: ActionDecision;
+}) => Promise<{
+    decision: ActionDecision;
+    metadata: Omit<LlmDecisionMetadata, 'classificationSource'>;
+}>;
+
 export type ProcessedTaskResult = {
     decision: ActionDecision;
     status: 'success' | 'approval_required' | 'failed';
@@ -21,10 +39,12 @@ export type ProcessedTaskResult = {
     transientRetries: number;
     failureClass?: 'transient_error' | 'runtime_exception';
     errorMessage?: string;
+    llmExecution?: LlmDecisionMetadata;
 };
 
 const HIGH_RISK_ACTIONS = new Set([
     'merge_release',
+    'merge_pr',
     'delete_resource',
     'change_permissions',
     'deploy_production',
@@ -34,6 +54,7 @@ const MEDIUM_RISK_ACTIONS = new Set([
     'update_status',
     'create_comment',
     'create_pr_comment',
+    'create_pr',
     'send_message',
 ]);
 
@@ -155,6 +176,7 @@ async function executeLowRiskAction(task: TaskEnvelope, attempt: number): Promis
 async function executeTaskWithRetries(
     task: TaskEnvelope,
     decision: ActionDecision,
+    llmExecution?: LlmDecisionMetadata,
     options?: { maxAttempts?: number },
 ): Promise<ProcessedTaskResult> {
     const maxAttempts = options?.maxAttempts ?? 3;
@@ -170,6 +192,7 @@ async function executeTaskWithRetries(
                 status: 'success',
                 attempts,
                 transientRetries,
+                llmExecution,
             };
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : String(err);
@@ -187,6 +210,7 @@ async function executeTaskWithRetries(
                 transientRetries,
                 failureClass: isTransient ? 'transient_error' : 'runtime_exception',
                 errorMessage: message,
+                llmExecution,
             };
         }
     }
@@ -198,12 +222,13 @@ async function executeTaskWithRetries(
         transientRetries,
         failureClass: 'runtime_exception',
         errorMessage: 'Failed after exhausting retry attempts.',
+        llmExecution,
     };
 }
 
 export async function processApprovedTask(
     task: TaskEnvelope,
-    options?: { maxAttempts?: number },
+    options?: { maxAttempts?: number; modelProvider?: string },
 ): Promise<ProcessedTaskResult> {
     const baseDecision = buildDecision(task);
     const approvedDecision: ActionDecision = {
@@ -212,14 +237,61 @@ export async function processApprovedTask(
         reason: 'Human approval granted via decision webhook.',
     };
 
-    return executeTaskWithRetries(task, approvedDecision, options);
+    const llmExecution: LlmDecisionMetadata = {
+        classificationSource: 'heuristic',
+        modelProvider: options?.modelProvider ?? 'agentfarm',
+        model: null,
+        promptTokens: null,
+        completionTokens: null,
+        totalTokens: null,
+        fallbackReason: 'human_approved_path',
+    };
+
+    return executeTaskWithRetries(task, approvedDecision, llmExecution, options);
 }
 
 export async function processDeveloperTask(
     task: TaskEnvelope,
-    options?: { maxAttempts?: number },
+    options?: {
+        maxAttempts?: number;
+        modelProvider?: string;
+        llmDecisionResolver?: LlmDecisionResolver;
+    },
 ): Promise<ProcessedTaskResult> {
-    const decision = buildDecision(task);
+    const heuristicDecision = buildDecision(task);
+    const fallbackProvider = options?.modelProvider ?? 'agentfarm';
+    let decision = heuristicDecision;
+    let llmExecution: LlmDecisionMetadata = {
+        classificationSource: 'heuristic',
+        modelProvider: fallbackProvider,
+        model: null,
+        promptTokens: null,
+        completionTokens: null,
+        totalTokens: null,
+        fallbackReason: 'llm_provider_unconfigured',
+    };
+
+    if (options?.llmDecisionResolver) {
+        try {
+            const llmResult = await options.llmDecisionResolver({
+                task,
+                heuristicDecision,
+            });
+
+            if (llmResult) {
+                decision = llmResult.decision;
+                llmExecution = {
+                    classificationSource: 'llm',
+                    ...llmResult.metadata,
+                };
+            }
+        } catch {
+            llmExecution = {
+                ...llmExecution,
+                fallbackReason: 'llm_resolution_failed',
+            };
+        }
+    }
 
     if (decision.route === 'approval') {
         return {
@@ -227,8 +299,9 @@ export async function processDeveloperTask(
             status: 'approval_required',
             attempts: 0,
             transientRetries: 0,
+            llmExecution,
         };
     }
 
-    return executeTaskWithRetries(task, decision, options);
+    return executeTaskWithRetries(task, decision, llmExecution, options);
 }

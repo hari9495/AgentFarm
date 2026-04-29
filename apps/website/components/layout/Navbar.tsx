@@ -87,7 +87,7 @@ export default function Navbar() {
   }, []);
 
   return (
-    <header className="sticky top-0 z-50 bg-white/72 dark:bg-slate-950/78 backdrop-blur-xl border-b border-white/70 dark:border-slate-800/80 shadow-[0_8px_30px_rgba(2,132,199,0.08)] dark:shadow-[0_8px_30px_rgba(2,132,199,0.14)]">
+    <header className="sticky top-0 z-50 bg-white/72 dark:bg-slate-950/78 backdrop-blur-xl border-b border-white/70 dark:border-slate-800/80 shadow-[0_10px_36px_rgba(2,132,199,0.1)] dark:shadow-[0_10px_36px_rgba(2,132,199,0.16)]">
       <nav ref={ref} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="group flex items-center gap-2 font-bold text-slate-900 dark:text-slate-100 text-lg shrink-0">
@@ -105,7 +105,7 @@ export default function Navbar() {
                 <>
                   <button
                     onClick={() => setDropdown(dropdown === l.label ? null : l.label)}
-                    className="flex items-center gap-1 px-3.5 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 rounded-md hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                    className="flex items-center gap-1 px-3.5 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 rounded-full hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100/90 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                   >
                     {l.label}
                     <ChevronDown className={`w-3.5 h-3.5 transition-transform ${dropdown === l.label ? "rotate-180" : ""}`} />
@@ -119,9 +119,9 @@ export default function Navbar() {
               ) : (
                 <Link
                   href={l.href!}
-                  className={`px-3.5 py-2 text-sm font-medium rounded-md transition-colors block ${pathname === l.href
+                  className={`px-3.5 py-2 text-sm font-medium rounded-full transition-colors block ${pathname === l.href
                     ? "bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100"
-                    : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100/90 dark:hover:bg-slate-800"
                     }`}
                 >
                   {l.label}
@@ -138,9 +138,9 @@ export default function Navbar() {
           <span className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-0.5" />
           <Link
             href="/dashboard"
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${pathname.startsWith("/dashboard")
-                ? "bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100"
-                : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800"
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-full transition-colors ${pathname.startsWith("/dashboard")
+              ? "bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+              : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800"
               }`}
           >
             <LayoutDashboard className="w-3.5 h-3.5" />
@@ -148,9 +148,9 @@ export default function Navbar() {
           </Link>
           <Link
             href="/admin"
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${pathname.startsWith("/admin")
-                ? "bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100"
-                : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800"
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-full transition-colors ${pathname.startsWith("/admin")
+              ? "bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+              : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800"
               }`}
           >
             <Shield className="w-3.5 h-3.5" />
@@ -159,13 +159,13 @@ export default function Navbar() {
           <span className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-0.5" />
           <Link
             href="/login"
-            className="px-3.5 py-1.5 text-sm font-medium text-slate-700 dark:text-slate-300 rounded-md hover:text-slate-900 dark:hover:text-slate-100 hover:bg-white/80 dark:hover:bg-slate-800/80 transition-colors"
+            className="px-3.5 py-1.5 text-sm font-medium text-slate-700 dark:text-slate-300 rounded-full hover:text-slate-900 dark:hover:text-slate-100 hover:bg-white/80 dark:hover:bg-slate-800/80 transition-colors"
           >
             Sign In
           </Link>
           <Link
             href="/get-started"
-            className="px-4 py-2 text-sm font-semibold text-white rounded-xl bg-gradient-to-br from-sky-500 via-blue-600 to-emerald-500 hover:brightness-110 hover:-translate-y-0.5 shadow-md shadow-sky-500/35"
+            className="px-4 py-2 text-sm font-semibold text-white rounded-full bg-gradient-to-br from-sky-500 via-blue-600 to-emerald-500 hover:brightness-110 hover:-translate-y-0.5 shadow-md shadow-sky-500/35"
           >
             Get Started
           </Link>

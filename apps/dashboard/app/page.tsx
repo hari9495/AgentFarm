@@ -1,14 +1,15 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { ApprovalQueuePanel } from './components/approval-queue-panel';
+import { ConnectorConfigPanel } from './components/connector-config-panel';
 import { EvidenceCompliancePanel } from './components/evidence-compliance-panel';
 import { RuntimeObservabilityPanel } from './components/runtime-observability-panel';
-
-type Step = {
-    title: string;
-    check: string;
-    expected: string;
-};
+import { LlmConfigPanel } from './components/llm-config-panel';
+import { DashboardTabNav } from './components/dashboard-tab-nav';
+import { DashboardDeepLinkBar } from './components/dashboard-deep-link-bar';
+import { DashboardWorkspaceSwitcher } from './components/dashboard-workspace-switcher';
+import type { DashboardTab } from './components/dashboard-navigation';
+import { isInternalSessionToken } from './lib/internal-session';
 
 type TenantSummary = {
     tenant_id: string;
@@ -83,6 +84,18 @@ type ConnectorHealth = {
     last_error_message: string | null;
 };
 
+type ConnectorConfigType = 'jira' | 'teams' | 'github' | 'email' | 'custom_api';
+
+type ConnectorConfigSummary = {
+    connector_id: string;
+    connector_type: ConnectorConfigType;
+    status: string;
+    scope_status: string | null;
+    last_error_class: string | null;
+    last_healthcheck_at: string | null;
+    remediation: string;
+};
+
 type ApprovalItem = {
     approval_id: string;
     workspace_id: string;
@@ -154,6 +167,14 @@ type RuntimeObservabilityData = {
     source: ApiSource;
 };
 
+type InternalLoginPolicySnapshot = {
+    allowed_domains_count: number;
+    admin_roles_count: number;
+    deny_all_mode: boolean;
+    source: ApiSource;
+    fetched_at: string;
+};
+
 const fallbackRuntimeHealth: RuntimeHealthSnapshot = {
     heartbeat_loop_running: false,
     heartbeat_sent: 0,
@@ -171,6 +192,14 @@ const fallbackRuntimeObservability: RuntimeObservabilityData = {
     currentState: 'unknown',
     health: fallbackRuntimeHealth,
     source: 'fallback',
+};
+
+const fallbackInternalLoginPolicy: InternalLoginPolicySnapshot = {
+    allowed_domains_count: 0,
+    admin_roles_count: 0,
+    deny_all_mode: true,
+    source: 'fallback',
+    fetched_at: new Date(0).toISOString(),
 };
 
 const fallbackTenantSummary: TenantSummary = {
@@ -199,6 +228,20 @@ const fallbackWorkspaceBotSummaries: WorkspaceBotSummary[] = [
         last_heartbeat_at: '2026-04-20T09:11:09Z',
         provisioning_status: 'bootstrapping_vm',
         latest_incident_level: 'none',
+    },
+    {
+        workspace_id: 'ws_release_002',
+        tenant_id: 'tenant_acme_001',
+        workspace_name: 'Release Workspace',
+        role_type: 'Release Agent',
+        bot_id: 'bot_release_002',
+        bot_name: 'Release Agent',
+        bot_status: 'active',
+        workspace_status: 'active',
+        runtime_tier: 'shared_vm',
+        last_heartbeat_at: '2026-04-20T09:12:45Z',
+        provisioning_status: 'completed',
+        latest_incident_level: 'low',
     },
 ];
 
@@ -359,34 +402,6 @@ const fallbackActivity: AuditEvent[] = [
     },
 ];
 
-const manualSteps: Step[] = [
-    {
-        title: 'Step 1: Confirm tenant lifecycle status',
-        check: 'Read the Tenant card and verify the status badge.',
-        expected: 'Tenant status should move from pending to provisioning after signup handoff.',
-    },
-    {
-        title: 'Step 2: Confirm provisioning pipeline visibility',
-        check: 'Follow the provisioning stages timeline left to right.',
-        expected: 'Current stage should be highlighted, and previous stages should be complete.',
-    },
-    {
-        title: 'Step 3: Confirm bot readiness',
-        check: 'Review bot status and connector readiness in the Workspace panel.',
-        expected: 'Bot status should be created or bootstrapping until runtime is healthy.',
-    },
-    {
-        title: 'Step 4: Confirm approval queue behavior',
-        check: 'Inspect approval entries and their risk level tags.',
-        expected: 'Medium and high risk actions should appear as pending approval.',
-    },
-    {
-        title: 'Step 5: Confirm audit and evidence completeness',
-        check: 'Read the Evidence feed to verify actor, action, timestamp, and reason fields.',
-        expected: 'Every important action should have an auditable record entry.',
-    },
-];
-
 type ApiSource = 'live' | 'fallback';
 
 type ApiRequestContext = {
@@ -399,34 +414,25 @@ const getApiRequestContext = async (): Promise<ApiRequestContext> => {
 
     // 1. Prefer real session cookie (set by /auth/login or /auth/signup)
     const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get('agentfarm_session');
+    const sessionCookie = cookieStore.get('agentfarm_internal_session');
     if (sessionCookie?.value) {
+        const token = decodeURIComponent(sessionCookie.value);
+        if (!isInternalSessionToken(token)) {
+            return { apiBaseUrl, headers: {} };
+        }
         return {
             apiBaseUrl,
-            headers: { Authorization: `Bearer ${decodeURIComponent(sessionCookie.value)}` },
+            headers: { Authorization: `Bearer ${token}` },
         };
     }
 
     // 2. Explicit env token (CI, integration tests)
     const explicitToken = process.env.DASHBOARD_API_TOKEN;
-    if (explicitToken) {
+    if (explicitToken && isInternalSessionToken(explicitToken)) {
         return { apiBaseUrl, headers: { Authorization: `Bearer ${explicitToken}` } };
     }
 
-    // 3. Dev-only session endpoint (development without a real login)
-    try {
-        const response = await fetch(`${apiBaseUrl}/v1/auth/dev-session`, { cache: 'no-store' });
-        if (!response.ok) {
-            return { apiBaseUrl, headers: {} };
-        }
-        const payload = (await response.json()) as { token?: string };
-        if (!payload.token) {
-            return { apiBaseUrl, headers: {} };
-        }
-        return { apiBaseUrl, headers: { Authorization: `Bearer ${payload.token}` } };
-    } catch {
-        return { apiBaseUrl, headers: {} };
-    }
+    return { apiBaseUrl, headers: {} };
 };
 
 const getTenantSummary = async (context: ApiRequestContext): Promise<{
@@ -592,6 +598,37 @@ const getRuntimeObservabilityData = async (_botId: string): Promise<RuntimeObser
     }
 };
 
+const getInternalLoginPolicySnapshot = async (context: ApiRequestContext): Promise<InternalLoginPolicySnapshot> => {
+    try {
+        const response = await fetch(`${context.apiBaseUrl}/v1/auth/internal-login-policy`, {
+            cache: 'no-store',
+            headers: context.headers,
+        });
+
+        if (!response.ok) {
+            return fallbackInternalLoginPolicy;
+        }
+
+        const payload = (await response.json()) as {
+            policy?: {
+                allowed_domains_count?: number;
+                admin_roles_count?: number;
+                deny_all_mode?: boolean;
+            };
+        };
+
+        return {
+            allowed_domains_count: payload.policy?.allowed_domains_count ?? 0,
+            admin_roles_count: payload.policy?.admin_roles_count ?? 0,
+            deny_all_mode: payload.policy?.deny_all_mode ?? true,
+            source: 'live',
+            fetched_at: new Date().toISOString(),
+        };
+    } catch {
+        return fallbackInternalLoginPolicy;
+    }
+};
+
 const getStatusBadgeClass = (status: string): string => {
     if (status === 'connected' || status === 'active' || status === 'ready') {
         return 'low';
@@ -604,7 +641,48 @@ const getStatusBadgeClass = (status: string): string => {
     return 'neutral';
 };
 
-export default async function HomePage() {
+const toConnectorConfigType = (value: string): ConnectorConfigType => {
+    if (value === 'jira' || value === 'teams' || value === 'github' || value === 'email' || value === 'custom_api') {
+        return value;
+    }
+
+    return 'custom_api';
+};
+
+const mapConnectorForConfig = (connector: ConnectorHealth): ConnectorConfigSummary => {
+    const needsReauth =
+        connector.status === 'degraded' || connector.status === 'token_expired' || connector.status === 'permission_invalid';
+
+    return {
+        connector_id: connector.connector_id,
+        connector_type: toConnectorConfigType(connector.connector_type),
+        status: connector.status,
+        scope_status: null,
+        last_error_class: connector.last_error_code,
+        last_healthcheck_at: connector.last_healthcheck_at,
+        remediation: needsReauth ? 're_auth_or_reconsent' : 'none',
+    };
+};
+
+const normalizeTab = (tab: string | undefined): DashboardTab => {
+    if (tab === 'approvals' || tab === 'observability' || tab === 'audit') {
+        return tab;
+    }
+
+    return 'overview';
+};
+
+export default async function HomePage({
+    searchParams,
+}: {
+    searchParams?: Promise<{ tab?: string; workspaceId?: string; approvalId?: string; correlationId?: string }>;
+}) {
+    const resolvedSearchParams = searchParams ? await searchParams : {};
+    const activeTab = normalizeTab(resolvedSearchParams.tab);
+    const requestedWorkspaceId = resolvedSearchParams.workspaceId;
+    const focusedApprovalId = resolvedSearchParams.approvalId;
+    const focusedCorrelationId = resolvedSearchParams.correlationId;
+
     const context = await getApiRequestContext();
 
     // If no auth context, redirect to login
@@ -616,10 +694,15 @@ export default async function HomePage() {
         redirect('/login');
     }
     const { summary, workspaceSummaries, usageSummary, source: summarySource } = await getTenantSummary(context);
-    const workspace = workspaceSummaries[0] ?? fallbackWorkspaceBotSummaries[0];
+    const workspace =
+        workspaceSummaries.find((item) => item.workspace_id === requestedWorkspaceId) ??
+        workspaceSummaries[0] ??
+        fallbackWorkspaceBotSummaries[0];
+    const workspaceOptions = workspaceSummaries.length > 0 ? workspaceSummaries : [workspace];
 
     const dashboardSlice = await getDashboardWorkspaceSlice(context, workspace.workspace_id);
     const runtimeObs = await getRuntimeObservabilityData(workspace.bot_id);
+    const internalPolicy = await getInternalLoginPolicySnapshot(context);
 
     const source = summarySource === 'live' && dashboardSlice.source === 'live' ? 'live' : 'fallback';
 
@@ -628,12 +711,12 @@ export default async function HomePage() {
         {
             label: 'Approval SLA (P95)',
             value: dashboardSlice.pendingApprovals.length === 0 ? 'Auto' : `${dashboardSlice.pendingApprovals.length} pending`,
-            trend: 'approval queue visibility',
+            trend: 'review queue',
         },
         {
-            label: 'Bot Task Success',
+            label: 'Bot Runtime Status',
             value: workspace.bot_status === 'active' ? 'Healthy' : workspace.bot_status,
-            trend: 'runtime contract aligned',
+            trend: 'live runtime',
         },
         {
             label: 'Provisioning SLA',
@@ -641,283 +724,305 @@ export default async function HomePage() {
             trend: `${Math.ceil(dashboardSlice.provisioning.provisioning_latency_ms / 60_000)}m / ${Math.ceil(dashboardSlice.provisioning.sla_target_ms / 60_000)}m`,
         },
         {
-            label: 'Evidence Completeness',
+            label: 'Audit Coverage',
             value: dashboardSlice.events.length > 0 ? 'Tracked' : 'Pending',
-            trend: 'audit feed wired',
+            trend: 'recent activity',
         },
     ];
 
     return (
-        <main className="page-shell">
-            <header className="hero">
-                <p className="eyebrow">AgentFarm MVP Manual Visualization</p>
-                <h1>Operations Command Dashboard</h1>
-                <p>
-                    Validate provisioning, approval, and evidence workflows end-to-end with one operator-facing view.
-                    This screen mirrors the MVP contract while exposing decision latency and remediation controls.
+        <main className="dashboard-layout">
+            <aside className="dashboard-sidebar">
+                <p className="eyebrow">AgentFarm Internal</p>
+                <h2 className="dashboard-sidebar-title">Operations Console</h2>
+                <p className="sidebar-current-workspace">
+                    Current workspace: <strong>{workspace.workspace_name}</strong>
                 </p>
-            </header>
+                <DashboardWorkspaceSwitcher
+                    variant="sidebar"
+                    activeWorkspaceId={workspace.workspace_id}
+                    activeTab={activeTab}
+                    workspaces={workspaceOptions.map((item) => ({
+                        workspaceId: item.workspace_id,
+                        workspaceName: item.workspace_name,
+                    }))}
+                    syncFromStorage
+                />
+                <DashboardTabNav activeTab={activeTab} variant="sidebar" syncFromStorage workspaceId={workspace.workspace_id} />
+            </aside>
 
-            <section className="grid-two">
-                {targetKpis.map((kpi) => (
-                    <article key={kpi.label} className="card">
-                        <h2>{kpi.label}</h2>
-                        <p style={{ fontSize: '1.8rem', margin: '0.2rem 0 0.3rem', fontWeight: 700 }}>{kpi.value}</p>
-                        <p style={{ margin: 0, color: '#57534e' }}>{kpi.trend}</p>
-                    </article>
-                ))}
-            </section>
-
-            <section className="grid-two">
-                <article className="card">
-                    <h2>Tenant Summary</h2>
-                    <p style={{ marginTop: '-0.25rem', marginBottom: '0.6rem', color: '#57534e', fontSize: '0.82rem' }}>
-                        Data source:{' '}
-                        <strong className={`badge ${source === 'live' ? 'low' : 'warn'}`}>
-                            {source === 'live' ? 'all live API' : 'mixed with fallback'}
-                        </strong>
-                    </p>
-                    <ul className="kv-list">
-                        <li>
-                            <span>Tenant</span>
-                            <strong>{summary.tenant_name}</strong>
-                        </li>
-                        <li>
-                            <span>Plan</span>
-                            <strong>{summary.plan_name}</strong>
-                        </li>
-                        <li>
-                            <span>Tenant Status</span>
-                            <strong className="badge warn">{summary.tenant_status}</strong>
-                        </li>
-                        <li>
-                            <span>Pending Approvals</span>
-                            <strong>{summary.pending_approvals}</strong>
-                        </li>
-                        <li>
-                            <span>Total Workspaces</span>
-                            <strong>{summary.total_workspaces}</strong>
-                        </li>
-                        <li>
-                            <span>Estimated Monthly Cost</span>
-                            <strong>${usageSummary.estimated_cost.toFixed(1)}</strong>
-                        </li>
-                    </ul>
-                </article>
-
-                <article className="card">
-                    <h2>Workspace and Bot</h2>
-                    <ul className="kv-list">
-                        <li>
-                            <span>Workspace</span>
-                            <strong>{workspace.workspace_name}</strong>
-                        </li>
-                        <li>
-                            <span>Role</span>
-                            <strong>{workspace.role_type}</strong>
-                        </li>
-                        <li>
-                            <span>Workspace Status</span>
-                            <strong className={`badge ${getStatusBadgeClass(workspace.workspace_status)}`}>
-                                {workspace.workspace_status}
-                            </strong>
-                        </li>
-                        <li>
-                            <span>Bot Status</span>
-                            <strong className={`badge ${getStatusBadgeClass(workspace.bot_status)}`}>{workspace.bot_status}</strong>
-                        </li>
-                        <li>
-                            <span>Runtime Tier</span>
-                            <strong>{workspace.runtime_tier}</strong>
-                        </li>
-                        <li>
-                            <span>Latest Incident Level</span>
-                            <strong>{workspace.latest_incident_level}</strong>
-                        </li>
-                    </ul>
-                </article>
-            </section>
-
-            <section className="card">
-                <h2>Provisioning Progress</h2>
-                <p style={{ margin: '-0.5rem 0 0.8rem', fontSize: '0.82rem', color: '#57534e' }}>
-                    Job{' '}
-                    <code style={{ background: '#ece6dc', padding: '0.1rem 0.3rem', borderRadius: 4 }}>
-                        {dashboardSlice.provisioning.job_id ?? 'pending'}
-                    </code>{' '}
-                    — started{' '}
-                    {dashboardSlice.provisioning.started_at
-                        ? new Date(dashboardSlice.provisioning.started_at).toLocaleTimeString()
-                        : 'not yet'}
-                </p>
-
-                <div
-                    style={{
-                        display: 'flex',
-                        gap: '0.5rem',
-                        flexWrap: 'wrap',
-                        marginBottom: '0.7rem',
-                    }}
-                >
-                    <span className={`badge ${dashboardSlice.provisioning.sla_breached ? 'high' : 'low'}`}>
-                        latency {Math.ceil(dashboardSlice.provisioning.provisioning_latency_ms / 60_000)}m / target {Math.ceil(dashboardSlice.provisioning.sla_target_ms / 60_000)}m
-                    </span>
-                    <span className={`badge ${dashboardSlice.provisioning.is_stuck ? 'high' : 'neutral'}`}>
-                        stuck alert {Math.ceil(dashboardSlice.provisioning.stuck_alert_threshold_ms / 60_000)}m: {dashboardSlice.provisioning.is_stuck ? 'active' : 'clear'}
-                    </span>
-                    {dashboardSlice.provisioning.timeout_at && (
-                        <span className="badge warn">
-                            timeout at {new Date(dashboardSlice.provisioning.timeout_at).toLocaleString()}
-                        </span>
-                    )}
-                </div>
-
-                {/* Step pipeline */}
-                <div className="state-row" style={{ marginBottom: '0.6rem' }}>
-                    {dashboardSlice.provisioning.step_history.length > 0
-                        ? dashboardSlice.provisioning.step_history.map((stage, i) => {
-                            const stateClass =
-                                stage.status === 'completed' ? 'done' : stage.status === 'active' ? 'active' : 'pending';
-                            return (
-                                <div key={stage.step} className={`state-pill ${stateClass}`}>
-                                    <span style={{ opacity: 0.5, marginRight: '0.25rem', fontSize: '0.72rem' }}>{i + 1}.</span>
-                                    {stage.step.replace(/_/g, ' ')}
-                                </div>
-                            );
-                        })
-                        : (['queued', 'validating', 'creating_resources', 'bootstrapping_vm', 'starting_container', 'registering_runtime', 'healthchecking', 'completed'] as const).map(
-                            (step, i) => {
-                                const currentStep = dashboardSlice.provisioning.current_step;
-                                const orderedSteps = ['queued', 'validating', 'creating_resources', 'bootstrapping_vm', 'starting_container', 'registering_runtime', 'healthchecking', 'completed'];
-                                const currentIndex = orderedSteps.indexOf(currentStep);
-                                const stepIndex = orderedSteps.indexOf(step);
-                                const stateClass = stepIndex < currentIndex ? 'done' : stepIndex === currentIndex ? 'active' : 'pending';
-                                return (
-                                    <div key={step} className={`state-pill ${stateClass}`}>
-                                        <span style={{ opacity: 0.5, marginRight: '0.25rem', fontSize: '0.72rem' }}>{i + 1}.</span>
-                                        {step.replace(/_/g, ' ')}
-                                    </div>
-                                );
-                            },
-                        )}
-                </div>
-
-                {/* Error / remediation hint */}
-                {['failed', 'cleanup_pending', 'cleaned_up'].includes(dashboardSlice.provisioning.job_status) && (
-                    <div
-                        style={{
-                            background: dashboardSlice.provisioning.job_status === 'cleaned_up' ? '#fef3c7' : '#fee2e2',
-                            border: dashboardSlice.provisioning.job_status === 'cleaned_up' ? '1px solid #fcd34d' : '1px solid #fca5a5',
-                            borderRadius: 8,
-                            padding: '0.6rem 0.8rem',
-                            marginTop: '0.4rem',
-                        }}
-                    >
-                        <p style={{ margin: '0 0 0.25rem', fontWeight: 700, color: dashboardSlice.provisioning.job_status === 'cleaned_up' ? '#92400e' : '#991b1b', fontSize: '0.88rem' }}>
-                            {dashboardSlice.provisioning.job_status === 'failed' && 'Provisioning failed'}
-                            {dashboardSlice.provisioning.job_status === 'cleanup_pending' && 'Provisioning failed — cleanup in progress'}
-                            {dashboardSlice.provisioning.job_status === 'cleaned_up' && 'Provisioning failed — resources cleaned up'}
+            <section className="dashboard-main">
+                <header className="topbar">
+                    <div>
+                        <p className="eyebrow topbar-eyebrow">
+                            Company Dashboard
                         </p>
-                        {dashboardSlice.provisioning.error_code && (
-                            <p style={{ margin: '0 0 0.2rem', fontSize: '0.82rem', color: dashboardSlice.provisioning.job_status === 'cleaned_up' ? '#78350f' : '#7f1d1d' }}>
-                                Error: <code>{dashboardSlice.provisioning.error_code}</code>
-                            </p>
-                        )}
-                        {dashboardSlice.provisioning.error_message && (
-                            <p style={{ margin: 0, fontSize: '0.82rem', color: dashboardSlice.provisioning.job_status === 'cleaned_up' ? '#78350f' : '#7f1d1d' }}>
-                                Hint: {dashboardSlice.provisioning.error_message}
-                            </p>
-                        )}
+                        <h1 className="topbar-title">Internal Command Center</h1>
                     </div>
-                )}
-
-                {/* Completed banner */}
-                {dashboardSlice.provisioning.job_status === 'completed' && (
-                    <div
-                        style={{
-                            background: '#dcfce7',
-                            border: '1px solid #86efac',
-                            borderRadius: 8,
-                            padding: '0.5rem 0.8rem',
-                            marginTop: '0.4rem',
-                            color: '#166534',
-                            fontSize: '0.88rem',
-                            fontWeight: 700,
-                        }}
-                    >
-                        Bot provisioned and ready.{' '}
-                        {dashboardSlice.provisioning.completed_at &&
-                            `Completed at ${new Date(dashboardSlice.provisioning.completed_at).toLocaleTimeString()}.`}
+                    <div className="topbar-meta">
+                        <DashboardWorkspaceSwitcher
+                            variant="topbar"
+                            activeWorkspaceId={workspace.workspace_id}
+                            activeTab={activeTab}
+                            workspaces={workspaceOptions.map((item) => ({
+                                workspaceId: item.workspace_id,
+                                workspaceName: item.workspace_name,
+                            }))}
+                            syncFromStorage
+                        />
+                        <span className={`badge ${source === 'live' ? 'low' : 'warn'}`}>
+                            {source === 'live' ? 'Live Data' : 'Fallback Data'}
+                        </span>
+                        <span className="badge neutral">{summary.tenant_name}</span>
                     </div>
-                )}
-            </section>
+                </header>
 
-            <section className="grid-two">
-                <article className="card">
-                    <h2>Connector Health Snapshot</h2>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Connector</th>
-                                <th>Status</th>
-                                <th>Last Error</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {dashboardSlice.connectors.map((connector) => (
-                                <tr key={connector.connector_id}>
-                                    <td>{connector.connector_type}</td>
-                                    <td>
-                                        <span className={`badge ${getStatusBadgeClass(connector.status)}`}>{connector.status}</span>
-                                    </td>
-                                    <td>{connector.last_error_code ?? 'ok'}</td>
-                                </tr>
+                <DashboardTabNav activeTab={activeTab} variant="top" workspaceId={workspace.workspace_id} />
+                <DashboardDeepLinkBar activeTab={activeTab} workspaceId={workspace.workspace_id} />
+
+                {activeTab === 'overview' && (
+                    <>
+                        <header className="hero">
+                            <p className="eyebrow">Overview</p>
+                            <h1>Workspace Operations Summary</h1>
+                            <p>
+                                Monitor provisioning progress, connector health, and runtime readiness from one operational view.
+                            </p>
+                        </header>
+
+                        <section className="metric-row">
+                            {targetKpis.map((kpi) => (
+                                <article key={kpi.label} className="card metric-card">
+                                    <h2>{kpi.label}</h2>
+                                    <p className="metric-value">{kpi.value}</p>
+                                    <p className="metric-trend">{kpi.trend}</p>
+                                </article>
                             ))}
-                        </tbody>
-                    </table>
-                </article>
-                <section aria-label="approval-command-center">
-                    <ApprovalQueuePanel
-                        workspaceId={workspace.workspace_id}
-                        initialPending={dashboardSlice.pendingApprovals}
-                        initialRecent={dashboardSlice.recentDecisions}
-                        initialMetrics={dashboardSlice.approvalMetrics}
-                    />
-                </section>
-            </section>
+                        </section>
 
-            <section>
-                <EvidenceCompliancePanel
-                    workspaceId={workspace.workspace_id}
-                    initialEvents={dashboardSlice.events}
-                />
-            </section>
+                        <section className="grid-two">
+                            <article className="card">
+                                <h2>Tenant Summary</h2>
+                                <ul className="kv-list">
+                                    <li>
+                                        <span>Tenant</span>
+                                        <strong>{summary.tenant_name}</strong>
+                                    </li>
+                                    <li>
+                                        <span>Plan</span>
+                                        <strong>{summary.plan_name}</strong>
+                                    </li>
+                                    <li>
+                                        <span>Tenant Status</span>
+                                        <strong className="badge warn">{summary.tenant_status}</strong>
+                                    </li>
+                                    <li>
+                                        <span>Pending Approvals</span>
+                                        <strong>{summary.pending_approvals}</strong>
+                                    </li>
+                                    <li>
+                                        <span>Total Workspaces</span>
+                                        <strong>{summary.total_workspaces}</strong>
+                                    </li>
+                                    <li>
+                                        <span>Estimated Monthly Cost</span>
+                                        <strong>${usageSummary.estimated_cost.toFixed(1)}</strong>
+                                    </li>
+                                </ul>
+                            </article>
 
-            <section>
-                <RuntimeObservabilityPanel
-                    botId={workspace.bot_id}
-                    initialLogs={runtimeObs.logs}
-                    initialTransitions={runtimeObs.transitions}
-                    initialCurrentState={runtimeObs.currentState}
-                    initialHealth={runtimeObs.health}
-                />
-            </section>
+                            <article className="card">
+                                <h2>Workspace and Bot</h2>
+                                <ul className="kv-list">
+                                    <li>
+                                        <span>Workspace</span>
+                                        <strong>{workspace.workspace_name}</strong>
+                                    </li>
+                                    <li>
+                                        <span>Role</span>
+                                        <strong>{workspace.role_type}</strong>
+                                    </li>
+                                    <li>
+                                        <span>Workspace Status</span>
+                                        <strong className={`badge ${getStatusBadgeClass(workspace.workspace_status)}`}>
+                                            {workspace.workspace_status}
+                                        </strong>
+                                    </li>
+                                    <li>
+                                        <span>Bot Status</span>
+                                        <strong className={`badge ${getStatusBadgeClass(workspace.bot_status)}`}>{workspace.bot_status}</strong>
+                                    </li>
+                                    <li>
+                                        <span>Runtime Tier</span>
+                                        <strong>{workspace.runtime_tier}</strong>
+                                    </li>
+                                    <li>
+                                        <span>Latest Incident Level</span>
+                                        <strong>{workspace.latest_incident_level}</strong>
+                                    </li>
+                                </ul>
+                            </article>
+                        </section>
 
-            <section className="card">
-                <h2>Manual Validation Steps</h2>
-                <ol className="steps-list">
-                    {manualSteps.map((step) => (
-                        <li key={step.title}>
-                            <h3>{step.title}</h3>
-                            <p>
-                                <span>Check:</span> {step.check}
+                        <section className="card">
+                            <h2>Provisioning Progress</h2>
+                            <p className="provisioning-job-meta">
+                                Job{' '}
+                                <code style={{ background: '#ece6dc', padding: '0.1rem 0.3rem', borderRadius: 4 }}>
+                                    {dashboardSlice.provisioning.job_id ?? 'pending'}
+                                </code>{' '}
+                                — started{' '}
+                                {dashboardSlice.provisioning.started_at
+                                    ? new Date(dashboardSlice.provisioning.started_at).toLocaleTimeString()
+                                    : 'not yet'}
                             </p>
-                            <p>
-                                <span>Expected:</span> {step.expected}
-                            </p>
-                        </li>
-                    ))}
-                </ol>
+
+                            <div className="provisioning-badge-row">
+                                <span className={`badge ${dashboardSlice.provisioning.sla_breached ? 'high' : 'low'}`}>
+                                    latency {Math.ceil(dashboardSlice.provisioning.provisioning_latency_ms / 60_000)}m / target {Math.ceil(dashboardSlice.provisioning.sla_target_ms / 60_000)}m
+                                </span>
+                                <span className={`badge ${dashboardSlice.provisioning.is_stuck ? 'high' : 'neutral'}`}>
+                                    stuck alert {Math.ceil(dashboardSlice.provisioning.stuck_alert_threshold_ms / 60_000)}m: {dashboardSlice.provisioning.is_stuck ? 'active' : 'clear'}
+                                </span>
+                                {dashboardSlice.provisioning.timeout_at && (
+                                    <span className="badge warn">
+                                        timeout at {new Date(dashboardSlice.provisioning.timeout_at).toLocaleString()}
+                                    </span>
+                                )}
+                            </div>
+
+                            <div className="state-row provisioning-steps">
+                                {dashboardSlice.provisioning.step_history.length > 0
+                                    ? dashboardSlice.provisioning.step_history.map((stage, i) => {
+                                        const stateClass =
+                                            stage.status === 'completed' ? 'done' : stage.status === 'active' ? 'active' : 'pending';
+                                        return (
+                                            <div key={stage.step} className={`state-pill ${stateClass}`}>
+                                                <span className="provisioning-step-index">{i + 1}.</span>
+                                                {stage.step.replace(/_/g, ' ')}
+                                            </div>
+                                        );
+                                    })
+                                    : (['queued', 'validating', 'creating_resources', 'bootstrapping_vm', 'starting_container', 'registering_runtime', 'healthchecking', 'completed'] as const).map(
+                                        (step, i) => {
+                                            const currentStep = dashboardSlice.provisioning.current_step;
+                                            const orderedSteps = ['queued', 'validating', 'creating_resources', 'bootstrapping_vm', 'starting_container', 'registering_runtime', 'healthchecking', 'completed'];
+                                            const currentIndex = orderedSteps.indexOf(currentStep);
+                                            const stepIndex = orderedSteps.indexOf(step);
+                                            const stateClass = stepIndex < currentIndex ? 'done' : stepIndex === currentIndex ? 'active' : 'pending';
+                                            return (
+                                                <div key={step} className={`state-pill ${stateClass}`}>
+                                                    <span className="provisioning-step-index">{i + 1}.</span>
+                                                    {step.replace(/_/g, ' ')}
+                                                </div>
+                                            );
+                                        },
+                                    )}
+                            </div>
+
+                            {['failed', 'cleanup_pending', 'cleaned_up'].includes(dashboardSlice.provisioning.job_status) && (
+                                <div className={`status-panel ${dashboardSlice.provisioning.job_status === 'cleaned_up' ? 'warning' : 'error'}`}>
+                                    <p style={{ margin: '0 0 0.25rem', fontWeight: 700, color: dashboardSlice.provisioning.job_status === 'cleaned_up' ? '#92400e' : '#991b1b', fontSize: '0.88rem' }}>
+                                        {dashboardSlice.provisioning.job_status === 'failed' && 'Provisioning failed'}
+                                        {dashboardSlice.provisioning.job_status === 'cleanup_pending' && 'Provisioning failed — cleanup in progress'}
+                                        {dashboardSlice.provisioning.job_status === 'cleaned_up' && 'Provisioning failed — resources cleaned up'}
+                                    </p>
+                                    {dashboardSlice.provisioning.error_code && (
+                                        <p style={{ margin: '0 0 0.2rem', fontSize: '0.82rem', color: dashboardSlice.provisioning.job_status === 'cleaned_up' ? '#78350f' : '#7f1d1d' }}>
+                                            Error: <code>{dashboardSlice.provisioning.error_code}</code>
+                                        </p>
+                                    )}
+                                    {dashboardSlice.provisioning.error_message && (
+                                        <p style={{ margin: 0, fontSize: '0.82rem', color: dashboardSlice.provisioning.job_status === 'cleaned_up' ? '#78350f' : '#7f1d1d' }}>
+                                            Hint: {dashboardSlice.provisioning.error_message}
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+
+                            {dashboardSlice.provisioning.job_status === 'completed' && (
+                                <div className="status-panel success">
+                                    Bot provisioned and ready.{' '}
+                                    {dashboardSlice.provisioning.completed_at &&
+                                        `Completed at ${new Date(dashboardSlice.provisioning.completed_at).toLocaleTimeString()}.`}
+                                </div>
+                            )}
+                        </section>
+
+                        <section className="card">
+                            <h2>Connector Health Snapshot</h2>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Connector</th>
+                                        <th>Status</th>
+                                        <th>Last Error</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {dashboardSlice.connectors.map((connector) => (
+                                        <tr key={connector.connector_id}>
+                                            <td>{connector.connector_type}</td>
+                                            <td>
+                                                <span className={`badge ${getStatusBadgeClass(connector.status)}`}>{connector.status}</span>
+                                            </td>
+                                            <td>{connector.last_error_code ?? 'ok'}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </section>
+
+                        <ConnectorConfigPanel
+                            workspaceId={workspace.workspace_id}
+                            apiBase={context.apiBaseUrl}
+                            initialConnectors={dashboardSlice.connectors.map(mapConnectorForConfig)}
+                        />
+                        <LlmConfigPanel workspaceId={workspace.workspace_id} />
+                    </>
+                )}
+
+                {activeTab === 'approvals' && (
+                    <section aria-label="approval-command-center">
+                        <ApprovalQueuePanel
+                            workspaceId={workspace.workspace_id}
+                            initialPending={dashboardSlice.pendingApprovals}
+                            initialRecent={dashboardSlice.recentDecisions}
+                            focusedApprovalId={focusedApprovalId}
+                            initialMetrics={dashboardSlice.approvalMetrics}
+                        />
+                    </section>
+                )}
+
+                {activeTab === 'observability' && (
+                    <section>
+                        <RuntimeObservabilityPanel
+                            botId={workspace.bot_id}
+                            connectors={dashboardSlice.connectors}
+                            internalPolicy={internalPolicy}
+                            initialLogs={runtimeObs.logs}
+                            initialTransitions={runtimeObs.transitions}
+                            initialCurrentState={runtimeObs.currentState}
+                            initialHealth={runtimeObs.health}
+                        />
+                        <ConnectorConfigPanel
+                            workspaceId={workspace.workspace_id}
+                            apiBase={context.apiBaseUrl}
+                            initialConnectors={dashboardSlice.connectors.map(mapConnectorForConfig)}
+                        />
+                        <LlmConfigPanel workspaceId={workspace.workspace_id} />
+                    </section>
+                )}
+
+                {activeTab === 'audit' && (
+                    <section>
+                        <EvidenceCompliancePanel
+                            workspaceId={workspace.workspace_id}
+                            initialEvents={dashboardSlice.events}
+                            focusedCorrelationId={focusedCorrelationId}
+                        />
+                    </section>
+                )}
             </section>
         </main>
     );

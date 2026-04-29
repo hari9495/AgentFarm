@@ -156,6 +156,104 @@ Operational execution guide to close final MVP launch blockers after engineering
 2. `pnpm --filter @agentfarm/website exec next build --no-lint`
 3. `pnpm --filter @agentfarm/website test:permissions`
 
+## Internal Dashboard Access Policy (Auth Hardening)
+### Purpose
+Prevent customer accounts from obtaining internal-scoped session tokens via `/auth/internal-login`.
+
+### Required Configuration (api-gateway)
+1. Set domain allowlist:
+- `API_INTERNAL_LOGIN_ALLOWED_DOMAINS=agentfarm.com,corp.agentfarm.com`
+2. Set admin role allowlist:
+- `API_INTERNAL_LOGIN_ADMIN_ROLES=internal_admin,platform_admin,owner`
+
+### Enforcement Behavior
+1. Internal login is deny-by-default.
+2. Access is granted only if either condition is true:
+- User email domain is in `API_INTERNAL_LOGIN_ALLOWED_DOMAINS`
+- User role is in `API_INTERNAL_LOGIN_ADMIN_ROLES`
+3. Disallowed users receive:
+- HTTP 403
+- error code: `internal_access_denied`
+4. Startup warning behavior:
+- api-gateway logs a warning when both policy lists are empty.
+
+### Internal Diagnostics Endpoint
+1. Endpoint:
+- `GET /v1/auth/internal-login-policy`
+2. Access control:
+- Internal scope session required.
+3. Output:
+- Sanitized effective policy values and counts.
+- Includes `deny_all_mode` for empty-policy visibility.
+
+### Validation Steps
+1. Positive test (allowed account):
+- Call `/auth/internal-login` with allowed domain or admin role.
+- Confirm returned token has `scope=internal`.
+2. Negative test (customer account):
+- Call `/auth/internal-login` with non-allowed domain and non-admin role.
+- Confirm HTTP 403 with `internal_access_denied`.
+3. Regression test (customer login path):
+- Call `/auth/login` for same customer account.
+- Confirm customer login still succeeds and returns customer session token.
+4. Focused smoke command:
+- `pnpm --filter @agentfarm/api-gateway test:internal-login-policy`
+- Confirms auth policy allow/deny and diagnostics endpoint behavior.
+
+### Evidence to Record
+1. Final api-gateway env values used for policy.
+2. One successful internal login response (sanitized).
+3. One denied internal login response (403 + `internal_access_denied`).
+
+## Internal Dashboard Multi-Workspace Tab Persistence
+### Purpose
+Ensure each workspace in the internal dashboard remembers its own last active tab without leaking tab choice between workspaces.
+
+### Behavior
+1. Dashboard supports workspace-aware URLs:
+- `/?workspaceId=<workspace_id>&tab=<overview|approvals|observability|audit>`
+2. Top bar and sidebar workspace selectors update `workspaceId` while preserving current `tab`.
+3. Tab selection persists in local storage per workspace key:
+- `agentfarm.dashboard.activeTab.<workspaceId>`
+4. Workspace selection persists in local storage key:
+- `agentfarm.dashboard.activeWorkspaceId`
+5. Legacy migration:
+- If legacy key `agentfarm.dashboard.activeTab` exists and scoped key is missing, value is migrated into the active workspace key.
+6. Deep links:
+- Operators can copy current view links and tab-specific links from the dashboard deep-link bar.
+- Approval links include `approvalId`; audit links include `correlationId`.
+
+## Internal Dashboard Observability Enhancements
+### Runtime Incident Drilldown
+1. Drilldown buttons provide focused views for:
+- heartbeat incidents
+- state degradation incidents
+- connector incidents
+2. Each drilldown includes recommended runbook action text for first response.
+
+### Internal Login Policy Visibility
+1. Observability tab shows policy health snapshot:
+- `deny_all_mode`
+- allowed domains count
+- admin roles count
+- policy check source and check timestamp
+
+## Dashboard CI Lane
+1. Workflow:
+- `.github/workflows/dashboard-ci.yml`
+2. Gate checks:
+- Dashboard typecheck
+- Dashboard production build
+- Playwright Chromium install
+- Workspace/tab browser e2e (`test:e2e:workspace-tabs`)
+
+### Validation Steps
+1. Open workspace A and select tab `observability`.
+2. Switch to workspace B and select tab `overview`.
+3. Return to workspace A and confirm it restores `observability`.
+4. Run smoke checks:
+- `pnpm smoke:e2e`
+
 ## Exit Criteria
 1. Task 7.1 production SWA rollout complete.
 2. Task 8.2 deployment evidence and runbook signoff complete.

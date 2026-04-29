@@ -6,7 +6,7 @@ const POLL_INTERVAL_IDLE_MS = 5 * 60_000;
 const REFRESH_WINDOW_MS = 5 * 60_000;
 const BATCH_SIZE = 25;
 
-type ConnectorType = 'jira' | 'teams' | 'github';
+type ConnectorType = 'jira' | 'teams' | 'github' | 'email';
 type ScopeStatus = 'full' | 'partial' | 'insufficient';
 
 type MetadataStatus =
@@ -169,7 +169,7 @@ let inFlightTick = false;
 
 const normalizeConnectorType = (value: string): ConnectorType | null => {
     const normalized = value.trim().toLowerCase();
-    if (normalized === 'jira' || normalized === 'teams' || normalized === 'github') {
+    if (normalized === 'jira' || normalized === 'teams' || normalized === 'github' || normalized === 'email') {
         return normalized;
     }
     return null;
@@ -181,6 +181,7 @@ const inferScopeStatus = (connectorType: ConnectorType, scopeValue: string | und
     }
 
     const expectedScopes: Record<ConnectorType, string[]> = {
+        email: ['offline_access', 'Mail.Send', 'User.Read'],
         github: ['read:user', 'repo', 'workflow'],
         jira: ['read:jira-work', 'write:jira-work', 'read:jira-user'],
         teams: ['offline_access', 'User.Read', 'ChannelMessage.Send'],
@@ -329,6 +330,57 @@ const refreshTokenFromProvider = async (
             },
             expiresAt: new Date(nowMs + (payload.expires_in ? payload.expires_in * 1000 : 60 * 60_000)),
             scopeStatus: inferScopeStatus('jira', payload.scope),
+        };
+    }
+
+    if (connectorType === 'email') {
+        const tenantId = env.CONNECTOR_EMAIL_TENANT_ID ?? 'common';
+        const tokenUrl = env.CONNECTOR_EMAIL_TOKEN_URL
+            ?? `https://login.microsoftonline.com/${encodeURIComponent(tenantId)}/oauth2/v2.0/token`;
+        const body = new URLSearchParams({
+            client_id: clientId,
+            client_secret: clientSecret,
+            grant_type: 'refresh_token',
+            refresh_token: refreshToken,
+            scope: ['offline_access', 'Mail.Send', 'User.Read'].join(' '),
+        });
+
+        const response = await fetchImpl(tokenUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                Accept: 'application/json',
+            },
+            body,
+        });
+        await assertRefreshResponseOk(response);
+
+        const payload = (await parseRefreshJson(response)) as {
+            access_token?: string;
+            refresh_token?: string;
+            expires_in?: number;
+            scope?: string;
+            error?: string;
+            error_description?: string;
+        };
+
+        if (payload.error || !payload.access_token) {
+            throw new OAuthRefreshError(
+                payload.error === 'invalid_scope' ? 'insufficient_scope' : 'token_refresh_failed',
+                502,
+                payload.error_description ?? payload.error ?? 'Email refresh did not return access_token.',
+            );
+        }
+
+        return {
+            credentials: {
+                access_token: payload.access_token,
+                refresh_token: payload.refresh_token ?? refreshToken,
+                provider: 'microsoft_graph',
+                tenant_id: tenantId,
+            },
+            expiresAt: new Date(nowMs + (payload.expires_in ? payload.expires_in * 1000 : 60 * 60_000)),
+            scopeStatus: inferScopeStatus('email', payload.scope),
         };
     }
 

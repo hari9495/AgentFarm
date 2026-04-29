@@ -77,7 +77,7 @@ function LoginForm() {
                             Sign in to AgentFarm
                         </h1>
                         <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                            Continue to your AI workforce dashboard and marketplace.
+                            Continue to your AI teammate dashboard and marketplace.
                         </p>
 
                         <form onSubmit={onSubmit} noValidate className="mt-8 space-y-4">

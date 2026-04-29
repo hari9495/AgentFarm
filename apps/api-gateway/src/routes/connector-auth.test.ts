@@ -187,6 +187,47 @@ test('oauth initiate creates connector auth session and returns authorization UR
     }
 });
 
+test('oauth initiate supports company email connector', async () => {
+    const app = Fastify();
+    const repo = createFakeRepo();
+
+    await registerConnectorAuthRoutes(app, {
+        getSession: () => sessionContext(),
+        repo,
+        nonceGenerator: () => 'state_nonce_email_init',
+        env: {
+            API_BASE_URL: 'http://localhost:3000',
+            CONNECTOR_EMAIL_AUTHORIZE_URL: 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
+            CONNECTOR_EMAIL_CLIENT_ID: 'email-client-123',
+        },
+    });
+
+    try {
+        const response = await app.inject({
+            method: 'POST',
+            url: '/v1/connectors/oauth/initiate',
+            payload: {
+                connector_type: 'email',
+                workspace_id: 'ws_1',
+            },
+        });
+
+        assert.equal(response.statusCode, 201);
+        const body = response.json() as {
+            connector_id: string;
+            authorization_url: string;
+            state_nonce: string;
+        };
+
+        assert.equal(body.connector_id, 'email:tenant_1:ws_1');
+        assert.equal(body.state_nonce, 'state_nonce_email_init');
+        assert.ok(body.authorization_url.includes('client_id=email-client-123'));
+        assert.ok(body.authorization_url.includes('Mail.Send'));
+    } finally {
+        await app.close();
+    }
+});
+
 test('oauth initiate rejects workspace outside session scope', async () => {
     const app = Fastify();
 
@@ -292,6 +333,59 @@ test('callback success stores only key vault reference and marks token_received'
     }
 });
 
+test('email callback success stores key vault reference and marks token_received', async () => {
+    const app = Fastify();
+    const repo = createFakeRepo();
+    const secretStore = createFakeSecretStore();
+
+    await registerConnectorAuthRoutes(app, {
+        getSession: () => sessionContext(),
+        repo,
+        secretStore,
+        nonceGenerator: () => 'state_nonce_email_success',
+        env: {
+            CONNECTOR_TOKEN_KEYVAULT_URI: 'https://kv-agentfarm.vault.azure.net',
+        },
+    });
+
+    try {
+        const init = await app.inject({
+            method: 'POST',
+            url: '/v1/connectors/oauth/initiate',
+            payload: {
+                connector_type: 'email',
+                workspace_id: 'ws_1',
+            },
+        });
+        assert.equal(init.statusCode, 201);
+
+        const callback = await app.inject({
+            method: 'GET',
+            url: '/auth/connectors/callback?state=state_nonce_email_success&code=oauth_code_email_123',
+        });
+
+        assert.equal(callback.statusCode, 200);
+        const body = callback.json() as {
+            status: string;
+            secret_ref_id: string;
+        };
+        assert.equal(body.status, 'oauth_completed');
+
+        const metadata = repo.metadata.get('email:tenant_1:ws_1');
+        assert.equal(metadata?.status, 'token_received');
+        assert.equal(metadata?.scopeStatus, 'full');
+        assert.equal(metadata?.secretRefId, body.secret_ref_id);
+
+        const persistedSecret = await secretStore.getSecret(body.secret_ref_id);
+        assert.ok(typeof persistedSecret === 'string');
+        const parsedSecret = JSON.parse(persistedSecret ?? '{}') as { access_token?: string; provider?: string };
+        assert.ok(parsedSecret.access_token?.includes('oauth_code_email_123'));
+        assert.equal(parsedSecret.provider, 'microsoft_graph');
+    } finally {
+        await app.close();
+    }
+});
+
 test('callback marks metadata degraded when secret store write fails', async () => {
     const app = Fastify();
     const repo = createFakeRepo();
@@ -374,6 +468,102 @@ test('callback handles provider consent error and marks connector consent_pendin
 
         const firstSession = Array.from(repo.sessions.values())[0];
         assert.equal(firstSession?.status, 'failed');
+    } finally {
+        await app.close();
+    }
+});
+
+test('email callback with insufficient scope is routed to consent_pending', async () => {
+    const app = Fastify();
+    const repo = createFakeRepo();
+    const secretStore = createFakeSecretStore();
+
+    await registerConnectorAuthRoutes(app, {
+        getSession: () => sessionContext(),
+        repo,
+        secretStore,
+        nonceGenerator: () => 'state_nonce_email_scope',
+        codeExchanger: async () => ({
+            credentials: {
+                access_token: 'email_access_insufficient',
+                provider: 'microsoft_graph',
+            },
+            expiresAt: new Date(Date.now() + 60_000),
+            scopeStatus: 'insufficient',
+        }),
+    });
+
+    try {
+        const init = await app.inject({
+            method: 'POST',
+            url: '/v1/connectors/oauth/initiate',
+            payload: {
+                connector_type: 'email',
+                workspace_id: 'ws_1',
+            },
+        });
+        assert.equal(init.statusCode, 201);
+
+        const callback = await app.inject({
+            method: 'GET',
+            url: '/auth/connectors/callback?state=state_nonce_email_scope&code=oauth_code_email_scope',
+        });
+
+        assert.equal(callback.statusCode, 409);
+        const body = callback.json() as { error: string; status: string };
+        assert.equal(body.error, 'insufficient_scope');
+        assert.equal(body.status, 'consent_pending');
+
+        const metadata = repo.metadata.get('email:tenant_1:ws_1');
+        assert.equal(metadata?.status, 'consent_pending');
+        assert.equal(metadata?.scopeStatus, 'insufficient');
+        assert.equal(metadata?.lastErrorClass, 'insufficient_scope');
+
+        const firstSession = Array.from(repo.sessions.values())[0];
+        assert.equal(firstSession?.status, 'failed');
+    } finally {
+        await app.close();
+    }
+});
+
+test('callback rejects state nonce replay after successful completion', async () => {
+    const app = Fastify();
+    const repo = createFakeRepo();
+
+    await registerConnectorAuthRoutes(app, {
+        getSession: () => sessionContext(),
+        repo,
+        nonceGenerator: () => 'state_nonce_replay',
+    });
+
+    try {
+        const init = await app.inject({
+            method: 'POST',
+            url: '/v1/connectors/oauth/initiate',
+            payload: {
+                connector_type: 'github',
+                workspace_id: 'ws_1',
+            },
+        });
+        assert.equal(init.statusCode, 201);
+
+        const firstCallback = await app.inject({
+            method: 'GET',
+            url: '/auth/connectors/callback?state=state_nonce_replay&code=oauth_code_123',
+        });
+        assert.equal(firstCallback.statusCode, 200);
+
+        const replay = await app.inject({
+            method: 'GET',
+            url: '/auth/connectors/callback?state=state_nonce_replay&code=oauth_code_456',
+        });
+
+        assert.equal(replay.statusCode, 409);
+        const body = replay.json() as { error: string };
+        assert.equal(body.error, 'state_nonce_already_used');
+
+        const metadata = repo.metadata.get('github:tenant_1:ws_1');
+        assert.equal(metadata?.status, 'token_received');
     } finally {
         await app.close();
     }

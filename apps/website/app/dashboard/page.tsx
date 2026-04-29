@@ -16,7 +16,7 @@ import ProvisioningProgressCard from "@/components/dashboard/ProvisioningProgres
 
 export const metadata: Metadata = {
     title: "Customer Dashboard - AgentFarm",
-    description: "Track AI worker output, task execution, and team outcomes in one dashboard.",
+    description: "Track AI teammate output, task execution, and team outcomes in one dashboard.",
 };
 
 const stats = [
@@ -77,13 +77,13 @@ export default function DashboardPage() {
                             Customer Dashboard
                         </div>
                         <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight max-w-xl leading-tight">
-                            Your AI workforce,<br className="hidden sm:block" /> fully visible
+                            Your AI teammate operations,<br className="hidden sm:block" /> fully visible
                         </h1>
                         <p className="mt-2 text-slate-300 text-base max-w-lg">
                             Monitor tasks, approvals, and delivery outcomes across every AI teammate in real time.
                         </p>
                         <div className="mt-5 flex flex-wrap gap-3">
-                            <ButtonLink href="/marketplace" size="sm">Add AI Worker</ButtonLink>
+                            <ButtonLink href="/marketplace" size="sm">Add AI Teammate</ButtonLink>
                             <ButtonLink href="/checkout" size="sm" variant="outline" className="!bg-white/10 !text-white !border-white/30 hover:!bg-white/20">
                                 Manage Plan
                             </ButtonLink>
@@ -126,7 +126,7 @@ export default function DashboardPage() {
                     {/* Workers table */}
                     <div className="xl:col-span-2 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
                         <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                            <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Active AI Workers</h2>
+                            <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Active AI Teammates</h2>
                             <span className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500">
                                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                                 Live
@@ -136,7 +136,7 @@ export default function DashboardPage() {
                             <table className="w-full text-sm min-w-[600px]">
                                 <thead>
                                     <tr className="bg-slate-50 dark:bg-slate-800/50 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                                        <th className="text-left px-5 py-3">Worker</th>
+                                        <th className="text-left px-5 py-3">Teammate</th>
                                         <th className="text-left px-4 py-3">Status</th>
                                         <th className="text-left px-4 py-3">Tasks</th>
                                         <th className="text-left px-4 py-3">PRs</th>
@@ -249,7 +249,7 @@ export default function DashboardPage() {
                                 { label: "Security policy compliance", value: "Pass", highlight: true },
                                 { label: "SLA adherence this week", value: "97.4%" },
                                 { label: "Median first response", value: "11m" },
-                                { label: "Active worker uptime", value: "100%" },
+                                { label: "Active teammate uptime", value: "100%" },
                             ].map(({ label, value, highlight }) => (
                                 <div key={label} className="flex items-center justify-between rounded-xl bg-white/70 dark:bg-slate-900/50 border border-white dark:border-slate-800 px-4 py-3">
                                     <p className="text-sm text-slate-600 dark:text-slate-300">{label}</p>
@@ -263,7 +263,7 @@ export default function DashboardPage() {
                                 <ButtonLink href="/dashboard/activity" variant="outline" size="sm">Live Activity</ButtonLink>
                                 <ButtonLink href="/docs" variant="outline" size="sm">View Runbook</ButtonLink>
                                 <ButtonLink href="/how-it-works" size="sm">
-                                    Scale Workforce <Rocket className="w-4 h-4 ml-1" />
+                                    Scale Teammates <Rocket className="w-4 h-4 ml-1" />
                                 </ButtonLink>
                             </div>
                         </div>

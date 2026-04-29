@@ -61,6 +61,9 @@ const plans = PLAN_ORDER.map((tier) => {
     };
 });
 
+const starterPlanPrice = plans.find((plan) => plan.name === "Starter+")?.price ?? "$299";
+const proPlanPrice = plans.find((plan) => plan.name === "Pro+")?.price ?? "$599";
+
 const faqs = [
     {
         q: "Is there a free trial?",
@@ -101,7 +104,7 @@ export default function PricingPage() {
                     </span>
                     <h1 className="mt-3 text-4xl sm:text-6xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
                         Simple,{" "}
-                        <span className="bg-gradient-to-r from-blue-600 via-violet-600 to-blue-600 bg-clip-text text-transparent">
+                        <span className="bg-gradient-to-r from-blue-600 via-cyan-500 to-emerald-500 bg-clip-text text-transparent">
                             predictable
                         </span>{" "}
                         pricing
@@ -130,6 +133,28 @@ export default function PricingPage() {
             </section>
 
             <PricingCalculator />
+
+            <section className="py-10 sm:py-12">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="grid gap-4 md:grid-cols-3">
+                        <article className="card-premium">
+                            <p className="text-xs uppercase tracking-[0.14em] font-semibold text-sky-700 dark:text-sky-300">Starter Decision</p>
+                            <p className="mt-2 text-lg font-bold text-slate-900 dark:text-slate-100">From {starterPlanPrice}/month</p>
+                            <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Best when you are proving AI teammate workflows with one to two core roles.</p>
+                        </article>
+                        <article className="card-premium">
+                            <p className="text-xs uppercase tracking-[0.14em] font-semibold text-emerald-700 dark:text-emerald-300">Scale Decision</p>
+                            <p className="mt-2 text-lg font-bold text-slate-900 dark:text-slate-100">Most teams pick Pro+ at {proPlanPrice}/month</p>
+                            <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Adds coverage breadth across departments with better rollout economics.</p>
+                        </article>
+                        <article className="card-premium">
+                            <p className="text-xs uppercase tracking-[0.14em] font-semibold text-slate-700 dark:text-slate-300">Governance Decision</p>
+                            <p className="mt-2 text-lg font-bold text-slate-900 dark:text-slate-100">Enterprise for regulated environments</p>
+                            <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Custom controls, support, and deployment posture for strict compliance teams.</p>
+                        </article>
+                    </div>
+                </div>
+            </section>
 
             {/* Plans */}
             <section className="py-24 bg-slate-50 dark:bg-slate-900/50">

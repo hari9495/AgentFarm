@@ -414,6 +414,83 @@ test('github create_pr_comment returns invalid_format when pull_number not integ
     assert.equal(result.errorCode, 'invalid_format');
 });
 
+test('github create_pr opens pull request and returns number in summary', async () => {
+    const { fetcher, calls } = makeFetch([
+        { status: 201, body: { number: 73, html_url: 'https://github.com/acme/backend/pull/73' } },
+    ]);
+
+    const executor = createRealProviderExecutor(makeStore(), fetcher);
+    const result = await executor({
+        connectorType: 'github',
+        actionType: 'create_pr',
+        payload: {
+            owner: 'acme',
+            repo: 'backend',
+            title: 'feat: add audit stream',
+            head: 'feature/audit-stream',
+            base: 'main',
+            body: 'Adds audit stream processing.',
+        },
+        attempt: 1,
+        secretRefId: SECRET_REF_GITHUB,
+    });
+
+    assert.equal(result.ok, true);
+    assert.ok(result.resultSummary.includes('#73'));
+    assert.equal(calls[0]!.method, 'POST');
+    assert.ok(calls[0]!.url.includes('/repos/acme/backend/pulls'));
+});
+
+test('github merge_pr merges pull request and returns success summary', async () => {
+    const { fetcher, calls } = makeFetch([
+        { status: 200, body: { merged: true, sha: 'abc123' } },
+    ]);
+
+    const executor = createRealProviderExecutor(makeStore(), fetcher);
+    const result = await executor({
+        connectorType: 'github',
+        actionType: 'merge_pr',
+        payload: {
+            owner: 'acme',
+            repo: 'backend',
+            pull_number: 73,
+            merge_method: 'squash',
+        },
+        attempt: 1,
+        secretRefId: SECRET_REF_GITHUB,
+    });
+
+    assert.equal(result.ok, true);
+    assert.ok(result.resultSummary.includes('merged'));
+    assert.equal(calls[0]!.method, 'PUT');
+    assert.ok(calls[0]!.url.includes('/repos/acme/backend/pulls/73/merge'));
+});
+
+test('github list_prs fetches pull requests and returns count', async () => {
+    const { fetcher, calls } = makeFetch([
+        { status: 200, body: [{ number: 1 }, { number: 2 }, { number: 3 }] },
+    ]);
+
+    const executor = createRealProviderExecutor(makeStore(), fetcher);
+    const result = await executor({
+        connectorType: 'github',
+        actionType: 'list_prs',
+        payload: {
+            owner: 'acme',
+            repo: 'backend',
+            state: 'open',
+        },
+        attempt: 1,
+        secretRefId: SECRET_REF_GITHUB,
+    });
+
+    assert.equal(result.ok, true);
+    assert.ok(result.resultSummary.includes('3 pull request'));
+    assert.equal(calls[0]!.method, 'GET');
+    assert.ok(calls[0]!.url.includes('/repos/acme/backend/pulls'));
+    assert.ok(calls[0]!.url.includes('state=open'));
+});
+
 // ---------------------------------------------------------------------------
 // Email: send_email (SendGrid)
 // ---------------------------------------------------------------------------

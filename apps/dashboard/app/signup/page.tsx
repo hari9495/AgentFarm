@@ -26,27 +26,44 @@ export default function SignupPage() {
         setLoading(true);
 
         try {
-            const res = await fetch(`${apiBase}/auth/signup`, {
+            const signupRes = await fetch(`${apiBase}/auth/signup`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name, email, password, companyName }),
             });
 
-            const data = (await res.json()) as { token?: string; provisioning_job_id?: string; message?: string; error?: string; field?: string };
+            const signupData = (await signupRes.json()) as {
+                provisioning_job_id?: string;
+                message?: string;
+                error?: string;
+                field?: string;
+            };
 
-            if (!res.ok || !data.token) {
+            if (!signupRes.ok) {
                 const msg =
-                    data.error === 'email_taken'
+                    signupData.error === 'email_taken'
                         ? 'An account with this email already exists. Sign in instead.'
-                        : (data.message ?? 'Signup failed. Please try again.');
+                        : (signupData.message ?? 'Signup failed. Please try again.');
                 setError(msg);
                 return;
             }
 
+            const internalLoginRes = await fetch(`${apiBase}/auth/internal-login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password }),
+            });
+
+            const internalLoginData = (await internalLoginRes.json()) as { token?: string; message?: string };
+            if (!internalLoginRes.ok || !internalLoginData.token) {
+                setError(internalLoginData.message ?? 'Internal access is not enabled for this account yet.');
+                return;
+            }
+
             // Set session cookie for server components to read on next navigation
-            document.cookie = `agentfarm_session=${encodeURIComponent(data.token)}; path=/; samesite=strict; max-age=28800`;
-            const target = data.provisioning_job_id
-                ? `/provisioning?jobId=${encodeURIComponent(data.provisioning_job_id)}`
+            document.cookie = `agentfarm_internal_session=${encodeURIComponent(internalLoginData.token)}; path=/; samesite=strict; max-age=28800`;
+            const target = signupData.provisioning_job_id
+                ? `/provisioning?jobId=${encodeURIComponent(signupData.provisioning_job_id)}`
                 : '/';
             router.push(target);
         } catch {
@@ -59,10 +76,10 @@ export default function SignupPage() {
     return (
         <main className="page-shell" style={{ maxWidth: 480, paddingTop: '3rem' }}>
             <header className="hero">
-                <p className="eyebrow">AgentFarm</p>
-                <h1 style={{ fontSize: '1.5rem' }}>Create your account</h1>
+                <p className="eyebrow">AgentFarm Internal</p>
+                <h1 style={{ fontSize: '1.5rem' }}>Internal Access Setup</h1>
                 <p style={{ marginTop: '0.3rem', fontSize: '0.9rem' }}>
-                    Your first Developer Agent will be provisioned automatically after signup.
+                    Internal dashboard access is intended for approved team members.
                 </p>
             </header>
 
@@ -139,24 +156,24 @@ export default function SignupPage() {
                 </label>
 
                 <button type="submit" disabled={loading} style={btnStyle(loading)}>
-                    {loading ? 'Creating account…' : 'Create account and start provisioning'}
+                    {loading ? 'Creating internal account…' : 'Create internal account'}
                 </button>
 
                 <p style={{ margin: 0, fontSize: '0.85rem', textAlign: 'center', color: '#57534e' }}>
-                    Already have an account?{' '}
+                    Already approved?{' '}
                     <a href="/login" style={{ color: '#0f766e' }}>
-                        Sign in
+                        Sign in to internal dashboard
                     </a>
                 </p>
             </form>
 
             <div className="card" style={{ fontSize: '0.82rem', color: '#57534e' }}>
-                <p style={{ margin: '0 0 0.4rem', fontWeight: 700 }}>What happens after signup</p>
+                <p style={{ margin: '0 0 0.4rem', fontWeight: 700 }}>Internal account notes</p>
                 <ol style={{ margin: 0, paddingLeft: '1.1rem', display: 'grid', gap: '0.25rem' }}>
-                    <li>Tenant and Primary Workspace are created instantly.</li>
-                    <li>A Developer Agent bot record is initialized.</li>
-                    <li>VM provisioning is queued (usually completes in under 10 minutes).</li>
-                    <li>Dashboard shows live provisioning progress.</li>
+                    <li>Use this app only for internal operations visibility and controls.</li>
+                    <li>Customer-facing dashboard remains in the website application.</li>
+                    <li>Session is isolated from customer session with a separate cookie.</li>
+                    <li>Provisioning and runtime sections are intended for support and incident teams.</li>
                 </ol>
             </div>
         </main>

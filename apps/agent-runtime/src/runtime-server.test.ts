@@ -833,6 +833,65 @@ test('approved connector-risk task executes via connector action endpoint client
     }
 });
 
+test('low-risk connector task executes via connector action endpoint without approval', async () => {
+    const persisted: ActionResultRecord[] = [];
+    const connectorCalls: Array<Record<string, unknown>> = [];
+
+    const app = buildRuntimeServer({
+        env: {
+            ...baseEnv(),
+            AF_CONNECTOR_EXEC_SHARED_TOKEN: 'connector-exec-token',
+        },
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+        actionResultWriter: async (record) => {
+            persisted.push(record);
+        },
+        connectorActionExecuteClient: async (input) => {
+            connectorCalls.push(input as unknown as Record<string, unknown>);
+            return {
+                ok: true,
+                statusCode: 200,
+                attempts: 1,
+            };
+        },
+    });
+
+    try {
+        const startupRes = await app.inject({ method: 'POST', url: '/startup' });
+        assert.equal(startupRes.statusCode, 200);
+
+        const intakeRes = await app.inject({
+            method: 'POST',
+            url: '/tasks/intake',
+            payload: {
+                task_id: 'direct-connector-1',
+                payload: {
+                    action_type: 'read_task',
+                    connector_type: 'jira',
+                    summary: 'Read issue details directly from connector',
+                    target: 'JIRA-101',
+                },
+            },
+        });
+        assert.equal(intakeRes.statusCode, 202);
+
+        await new Promise<void>((resolve) => setTimeout(resolve, 80));
+
+        assert.equal(connectorCalls.length, 1);
+        assert.equal(connectorCalls[0]?.connectorType, 'jira');
+        assert.equal(connectorCalls[0]?.actionType, 'read_task');
+        assert.equal(connectorCalls[0]?.roleKey, 'developer');
+
+        const successRecord = persisted.find((record) => record.taskId === 'direct-connector-1' && record.status === 'success');
+        assert.ok(successRecord);
+        assert.equal(successRecord?.route, 'execute');
+    } finally {
+        await app.close();
+    }
+});
+
 test('rejected decision persists cancelled action result for graceful cancellation', async () => {
     const persisted: ActionResultRecord[] = [];
     const app = buildRuntimeServer({
@@ -1377,6 +1436,9 @@ test('startup freezes capability snapshot and exposes it via runtime endpoint', 
         assert.equal(snapshotBody.snapshot.roleKey, 'developer');
         assert.ok(snapshotBody.snapshot.allowedConnectorTools.includes('github'));
         assert.ok(snapshotBody.snapshot.allowedActions.includes('create_pr_comment'));
+        assert.ok(snapshotBody.snapshot.allowedActions.includes('create_pr'));
+        assert.ok(snapshotBody.snapshot.allowedActions.includes('merge_pr'));
+        assert.ok(snapshotBody.snapshot.allowedActions.includes('list_prs'));
     } finally {
         await app.close();
     }
@@ -1396,7 +1458,7 @@ test('startup loads latest persisted capability snapshot by botId when available
                 roleKey: 'developer',
                 roleVersion: 'v1',
                 allowedConnectorTools: ['jira', 'teams', 'github', 'email'],
-                allowedActions: ['read_task', 'create_comment', 'update_status', 'send_message', 'create_pr_comment', 'send_email'],
+                allowedActions: ['read_task', 'create_comment', 'update_status', 'send_message', 'create_pr_comment', 'create_pr', 'merge_pr', 'list_prs', 'send_email'],
                 policyPackVersion: 'mvp-v1',
                 frozenAt: new Date().toISOString(),
                 brainConfig: {
@@ -1640,7 +1702,7 @@ test('startup falls back to fresh freeze when persisted snapshot policy pack mis
                 roleKey: 'developer',
                 roleVersion: 'v1',
                 allowedConnectorTools: ['jira', 'teams', 'github', 'email'],
-                allowedActions: ['read_task', 'create_comment', 'update_status', 'send_message', 'create_pr_comment', 'send_email'],
+                allowedActions: ['read_task', 'create_comment', 'update_status', 'send_message', 'create_pr_comment', 'create_pr', 'merge_pr', 'list_prs', 'send_email'],
                 policyPackVersion: 'legacy-policy-v0',
                 frozenAt: new Date().toISOString(),
                 brainConfig: {
@@ -2368,6 +2430,170 @@ test('degraded state is recorded in state history when dependencies become unrea
         const degradedTransition = historyBody.transitions.find((t) => t.to === 'degraded');
         assert.ok(degradedTransition, 'degraded transition must be recorded in history');
         assert.equal(degradedTransition?.reason, 'dependency_unreachable');
+    } finally {
+        await app.close();
+    }
+});
+
+test('task execution record captures llm token usage when llmDecisionResolver is configured', async () => {
+    const records: Array<Record<string, unknown>> = [];
+    const app = buildRuntimeServer({
+        env: {
+            ...baseEnv(),
+            AF_MODEL_PROVIDER: 'openai',
+        },
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+        llmDecisionResolver: async ({ heuristicDecision }) => ({
+            decision: {
+                ...heuristicDecision,
+                confidence: 0.88,
+                reason: 'LLM-classified as safe read action.',
+            },
+            metadata: {
+                modelProvider: 'openai',
+                model: 'gpt-4o-mini',
+                promptTokens: 90,
+                completionTokens: 30,
+                totalTokens: 120,
+            },
+        }),
+        taskExecutionRecordWriter: {
+            write: async (input) => {
+                records.push(input as unknown as Record<string, unknown>);
+            },
+        },
+    });
+
+    try {
+        const startupRes = await app.inject({ method: 'POST', url: '/startup' });
+        assert.equal(startupRes.statusCode, 200);
+
+        const intakeRes = await app.inject({
+            method: 'POST',
+            url: '/tasks/intake',
+            payload: {
+                task_id: 'llm-metadata-1',
+                payload: {
+                    action_type: 'read_task',
+                    summary: 'Read and summarize deployment status',
+                    target: 'deployments',
+                },
+            },
+        });
+        assert.equal(intakeRes.statusCode, 202);
+
+        await new Promise<void>((resolve) => setTimeout(resolve, 70));
+
+        const written = records.find((record) => record['taskId'] === 'llm-metadata-1');
+        assert.ok(written, 'task execution record should be written');
+        assert.equal(written?.['modelProvider'], 'openai');
+        assert.equal(written?.['promptTokens'], 90);
+        assert.equal(written?.['completionTokens'], 30);
+        assert.equal(written?.['totalTokens'], 120);
+    } finally {
+        await app.close();
+    }
+});
+
+test('task execution record falls back to provider metadata with null token usage when llmDecisionResolver fails', async () => {
+    const records: Array<Record<string, unknown>> = [];
+    const app = buildRuntimeServer({
+        env: {
+            ...baseEnv(),
+            AF_MODEL_PROVIDER: 'openai',
+        },
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+        llmDecisionResolver: async () => {
+            throw new Error('timeout');
+        },
+        taskExecutionRecordWriter: {
+            write: async (input) => {
+                records.push(input as unknown as Record<string, unknown>);
+            },
+        },
+    });
+
+    try {
+        const startupRes = await app.inject({ method: 'POST', url: '/startup' });
+        assert.equal(startupRes.statusCode, 200);
+
+        const intakeRes = await app.inject({
+            method: 'POST',
+            url: '/tasks/intake',
+            payload: {
+                task_id: 'llm-metadata-fallback-1',
+                payload: {
+                    action_type: 'read_task',
+                    summary: 'Read and summarize deployment status',
+                    target: 'deployments',
+                },
+            },
+        });
+        assert.equal(intakeRes.statusCode, 202);
+
+        await new Promise<void>((resolve) => setTimeout(resolve, 70));
+
+        const written = records.find((record) => record['taskId'] === 'llm-metadata-fallback-1');
+        assert.ok(written, 'task execution record should be written');
+        assert.equal(written?.['modelProvider'], 'openai');
+        assert.equal(written?.['promptTokens'], null);
+        assert.equal(written?.['completionTokens'], null);
+        assert.equal(written?.['totalTokens'], null);
+    } finally {
+        await app.close();
+    }
+});
+
+test('startup applies workspace LLM provider from llmConfigFetcher for task execution metadata', async () => {
+    const records: Array<Record<string, unknown>> = [];
+    const app = buildRuntimeServer({
+        env: {
+            ...baseEnv(),
+            AF_MODEL_PROVIDER: 'agentfarm',
+        },
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+        llmConfigFetcher: async () => ({
+            provider: 'openai',
+            openai: {
+                model: 'gpt-4o-mini',
+            },
+        }),
+        taskExecutionRecordWriter: {
+            write: async (input) => {
+                records.push(input as unknown as Record<string, unknown>);
+            },
+        },
+    });
+
+    try {
+        const startupRes = await app.inject({ method: 'POST', url: '/startup' });
+        assert.equal(startupRes.statusCode, 200);
+
+        const intakeRes = await app.inject({
+            method: 'POST',
+            url: '/tasks/intake',
+            payload: {
+                task_id: 'workspace-provider-1',
+                payload: {
+                    action_type: 'read_task',
+                    summary: 'Read deployment status',
+                    target: 'deployments',
+                },
+            },
+        });
+        assert.equal(intakeRes.statusCode, 202);
+
+        await new Promise<void>((resolve) => setTimeout(resolve, 70));
+
+        const written = records.find((record) => record['taskId'] === 'workspace-provider-1');
+        assert.ok(written, 'task execution record should be written');
+        assert.equal(written?.['modelProvider'], 'openai');
     } finally {
         await app.close();
     }

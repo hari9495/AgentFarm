@@ -1,16 +1,7 @@
-import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { runRuntimeProxy } from '../../route-handler-core';
-import { buildStateHistoryUrl, buildUpstreamHeaders, getRuntimeBaseUrl, resolveLimit } from '../../runtime-proxy-utils';
-
-const getAuthHeader = async (): Promise<string | null> => {
-    const cookieStore = await cookies();
-    const session = cookieStore.get('agentfarm_session');
-    if (!session?.value) {
-        return null;
-    }
-    return `Bearer ${decodeURIComponent(session.value)}`;
-};
+import { buildStateRouteContract } from '../route-contract';
+import { getInternalSessionAuthHeader } from '../../../../lib/internal-session';
 
 export async function GET(
     request: Request,
@@ -18,25 +9,20 @@ export async function GET(
 ) {
     await params; // botId reserved for future multi-bot routing
 
-    const authHeader = await getAuthHeader();
+    const authHeader = await getInternalSessionAuthHeader();
     if (!authHeader) {
         return NextResponse.json(
-            { error: 'unauthorized', message: 'Missing session cookie.' },
-            { status: 401 },
+            { error: 'forbidden', message: 'Internal session required.' },
+            { status: 403 },
         );
     }
 
-    const { searchParams } = new URL(request.url);
-    const limit = resolveLimit(searchParams.get('limit'), '20');
-    const upstreamHeaders = buildUpstreamHeaders();
+    const contract = buildStateRouteContract(request.url);
 
     const result = await runRuntimeProxy({
         sessionAuthHeader: authHeader,
-        upstreamUrl: buildStateHistoryUrl(getRuntimeBaseUrl(), limit),
-        requestInit: {
-            headers: upstreamHeaders,
-            cache: 'no-store',
-        },
+        upstreamUrl: contract.upstreamUrl,
+        requestInit: contract.requestInit,
     });
 
     return NextResponse.json(result.body, { status: result.status });

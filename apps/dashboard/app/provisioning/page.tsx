@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { isInternalSessionToken } from '../lib/internal-session';
 
 type ProvisioningStep = {
     step: string;
@@ -104,10 +105,10 @@ export default async function ProvisioningPage({
     const { jobId } = await searchParams;
 
     const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get('agentfarm_session');
+    const sessionCookie = cookieStore.get('agentfarm_internal_session');
     const token = sessionCookie?.value ? decodeURIComponent(sessionCookie.value) : null;
 
-    if (!token) {
+    if (!token || !isInternalSessionToken(token)) {
         redirect('/login');
     }
 

@@ -284,3 +284,125 @@ test('maps provider 429 refresh failure to degraded/provider_rate_limited', asyn
     assert.equal(fakeRepo.events[0]?.errorClass, 'provider_rate_limited');
     assert.equal(fakeRepo.events[0]?.result, 'refresh_failed');
 });
+
+test('refreshes due email token and keeps credential reference with provider metadata', async () => {
+    const nowMs = 1_710_000_000_000;
+    const connectorId = 'email:tenant_1:ws_1';
+    const secretRefId = 'kv://vault/secrets/email-token';
+
+    const store = createInMemorySecretStore({
+        [secretRefId]: JSON.stringify({
+            access_token: 'old_email_access',
+            refresh_token: 'email_refresh_1',
+            provider: 'microsoft_graph',
+        }),
+    });
+
+    const fakeRepo = createFakeRepo([
+        {
+            connectorId,
+            tenantId: 'tenant_1',
+            workspaceId: 'ws_1',
+            connectorType: 'email',
+            authMode: 'oauth2',
+            status: 'connected',
+            secretRefId,
+            tokenExpiresAt: new Date(nowMs + 20_000),
+            lastRefreshAt: null,
+            scopeStatus: 'full',
+        },
+    ]);
+
+    const fetchImpl: typeof fetch = async () => {
+        return jsonResponse(200, {
+            access_token: 'new_email_access',
+            refresh_token: 'email_refresh_2',
+            expires_in: 3600,
+            scope: 'offline_access Mail.Send User.Read',
+        });
+    };
+
+    await runConnectorTokenLifecycleTick({
+        repo: fakeRepo.repo,
+        secretStore: store,
+        fetchImpl,
+        now: () => nowMs,
+        env: {
+            CONNECTOR_EMAIL_CLIENT_ID: 'email_client',
+            CONNECTOR_EMAIL_CLIENT_SECRET: 'email_secret',
+            CONNECTOR_EMAIL_TENANT_ID: 'tenant-aad',
+        },
+    });
+
+    const updated = fakeRepo.metadata.get(connectorId);
+    assert.equal(updated?.status, 'connected');
+    assert.equal(updated?.lastErrorClass, null);
+
+    const refreshedSecret = await store.getSecret(secretRefId);
+    const parsed = JSON.parse(refreshedSecret ?? '{}') as {
+        access_token?: string;
+        refresh_token?: string;
+        provider?: string;
+        tenant_id?: string;
+    };
+
+    assert.equal(parsed.access_token, 'new_email_access');
+    assert.equal(parsed.refresh_token, 'email_refresh_2');
+    assert.equal(parsed.provider, 'microsoft_graph');
+    assert.equal(parsed.tenant_id, 'tenant-aad');
+    assert.equal(fakeRepo.events[0]?.result, 'refreshed');
+});
+
+test('email refresh with invalid scope moves connector to consent_pending', async () => {
+    const nowMs = 1_710_000_000_000;
+    const connectorId = 'email:tenant_1:ws_1';
+    const secretRefId = 'kv://vault/secrets/email-token';
+
+    const store = createInMemorySecretStore({
+        [secretRefId]: JSON.stringify({
+            access_token: 'old_email_access',
+            refresh_token: 'email_refresh_1',
+            provider: 'microsoft_graph',
+        }),
+    });
+
+    const fakeRepo = createFakeRepo([
+        {
+            connectorId,
+            tenantId: 'tenant_1',
+            workspaceId: 'ws_1',
+            connectorType: 'email',
+            authMode: 'oauth2',
+            status: 'connected',
+            secretRefId,
+            tokenExpiresAt: new Date(nowMs + 20_000),
+            lastRefreshAt: null,
+            scopeStatus: 'full',
+        },
+    ]);
+
+    const fetchImpl: typeof fetch = async () => {
+        return jsonResponse(200, {
+            error: 'invalid_scope',
+            error_description: 'Mail.Send scope missing',
+        });
+    };
+
+    await runConnectorTokenLifecycleTick({
+        repo: fakeRepo.repo,
+        secretStore: store,
+        fetchImpl,
+        now: () => nowMs,
+        env: {
+            CONNECTOR_EMAIL_CLIENT_ID: 'email_client',
+            CONNECTOR_EMAIL_CLIENT_SECRET: 'email_secret',
+            CONNECTOR_EMAIL_TENANT_ID: 'tenant-aad',
+        },
+    });
+
+    const updated = fakeRepo.metadata.get(connectorId);
+    assert.equal(updated?.status, 'consent_pending');
+    assert.equal(updated?.lastErrorClass, 'insufficient_scope');
+    assert.equal(fakeRepo.events[0]?.result, 'refresh_failed');
+    assert.equal(fakeRepo.events[0]?.errorClass, 'insufficient_scope');
+});

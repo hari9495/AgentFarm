@@ -13,7 +13,7 @@ const sections = [
     },
     {
         heading: "2. Description of Service",
-        body: `AgentFarm provides an AI workforce platform that allows engineering teams to deploy AI-powered workers ("Robots") to perform software development tasks including: writing code, creating pull requests, running tests, reviewing code, and managing CI/CD pipelines. The Service integrates with third-party developer tools including GitHub, Slack, Jira, and Linear.`,
+        body: `AgentFarm provides a trusted AI teammate platform that allows engineering teams to deploy AI-powered teammates ("Robots") to perform software development tasks including: writing code, creating pull requests, running tests, reviewing code, and managing CI/CD pipelines. The Service integrates with third-party developer tools including GitHub, Slack, Jira, and Linear.`,
     },
     {
         heading: "3. Account Registration",

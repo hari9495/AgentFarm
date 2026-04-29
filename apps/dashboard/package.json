@@ -7,6 +7,7 @@
         "dev": "next dev -p 3001",
         "start": "next start -p 3001",
         "test": "tsx --test app/**/*.test.ts",
+        "test:e2e:workspace-tabs": "node scripts/workspace-tab-e2e.mjs",
         "typecheck": "tsc -p tsconfig.json --noEmit"
     },
     "dependencies": {
@@ -15,6 +16,7 @@
         "react-dom": "^19.0.0"
     },
     "devDependencies": {
+        "@playwright/test": "^1.59.1",
         "@types/node": "^22.10.2",
         "@types/react": "^19.0.2",
         "@types/react-dom": "^19.0.2",

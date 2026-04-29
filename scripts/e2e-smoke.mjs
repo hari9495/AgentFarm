@@ -101,6 +101,24 @@ const assertRedirectToLogin = async (url) => {
     }
 };
 
+const runDashboardTabPersistenceSmoke = async () => {
+    logPhase('Dashboard tab persistence smoke: workspace-scoped key and migration checks');
+    const tabPersistenceTest = await run('pnpm', [
+        '--filter',
+        '@agentfarm/dashboard',
+        'exec',
+        'tsx',
+        '--test',
+        'app/components/dashboard-tab-storage.test.ts',
+    ]);
+
+    if (tabPersistenceTest.code !== 0) {
+        throw new Error('Dashboard tab persistence smoke failed.');
+    }
+
+    logPass('Dashboard tab persistence smoke checks passed');
+};
+
 const runDashboardSmoke = async () => {
     logPhase('Dashboard smoke: build + start + route checks');
     const dashboardBuild = await run('pnpm', ['--filter', '@agentfarm/dashboard', 'exec', 'next', 'build', '--no-lint']);
@@ -135,6 +153,18 @@ const runDashboardSmoke = async () => {
 
         await assertOk(`${dashboardBaseUrl}/login`, 'Dashboard login page smoke failed');
         logPass('Dashboard login route check passed');
+
+        const browserE2e = await run('pnpm', [
+            '--filter',
+            '@agentfarm/dashboard',
+            'test:e2e:workspace-tabs',
+            dashboardBaseUrl,
+        ]);
+
+        if (browserE2e.code !== 0) {
+            throw new Error('Dashboard browser e2e workspace-tab smoke failed.');
+        }
+        logPass('Dashboard browser e2e workspace-tab check passed');
     } finally {
         await terminateProcessTree(dashboardProcess.pid);
         await delay(1000);
@@ -233,6 +263,7 @@ const runWebsiteAuthSmoke = async () => {
 
 const main = async () => {
     try {
+        await runDashboardTabPersistenceSmoke();
         await runDashboardSmoke();
         await runWebsiteAuthSmoke();
         logPhase('All smoke checks completed successfully');

@@ -44,8 +44,14 @@ test('classifyRisk maps action policy and confidence to low/medium/high risk lev
     const high = classifyRisk('merge_release', 0.91, {});
     assert.equal(high.riskLevel, 'high');
 
+    const highMergePr = classifyRisk('merge_pr', 0.91, {});
+    assert.equal(highMergePr.riskLevel, 'high');
+
     const medium = classifyRisk('create_comment', 0.9, {});
     assert.equal(medium.riskLevel, 'medium');
+
+    const mediumCreatePr = classifyRisk('create_pr', 0.9, {});
+    assert.equal(mediumCreatePr.riskLevel, 'medium');
 
     const confidenceMedium = classifyRisk('read_task', 0.4, {});
     assert.equal(confidenceMedium.riskLevel, 'medium');
@@ -103,6 +109,18 @@ test('processDeveloperTask queues medium/high-risk tasks for approval instead of
         target: 'main',
     }));
 
+    const createPrRisk = await processDeveloperTask(taskEnvelope({
+        action_type: 'create_pr',
+        summary: 'Open pull request from feature branch',
+        target: 'repo/main',
+    }));
+
+    const mergePrRisk = await processDeveloperTask(taskEnvelope({
+        action_type: 'merge_pr',
+        summary: 'Merge approved pull request into main',
+        target: 'repo/main',
+    }));
+
     assert.equal(mediumRisk.status, 'approval_required');
     assert.equal(mediumRisk.decision.riskLevel, 'medium');
     assert.equal(mediumRisk.attempts, 0);
@@ -110,6 +128,14 @@ test('processDeveloperTask queues medium/high-risk tasks for approval instead of
     assert.equal(highRisk.status, 'approval_required');
     assert.equal(highRisk.decision.riskLevel, 'high');
     assert.equal(highRisk.attempts, 0);
+
+    assert.equal(createPrRisk.status, 'approval_required');
+    assert.equal(createPrRisk.decision.riskLevel, 'medium');
+    assert.equal(createPrRisk.attempts, 0);
+
+    assert.equal(mergePrRisk.status, 'approval_required');
+    assert.equal(mergePrRisk.decision.riskLevel, 'high');
+    assert.equal(mergePrRisk.attempts, 0);
 });
 
 test('processDeveloperTask marks non-retryable executor failures as runtime_exception', async () => {
@@ -225,4 +251,55 @@ test('buildDecision routes risk_hint=high payload to approval even for normally-
 
     assert.equal(decision.riskLevel, 'high');
     assert.equal(decision.route, 'approval');
+});
+
+test('processDeveloperTask uses llmDecisionResolver output when available', async () => {
+    const result = await processDeveloperTask(taskEnvelope({
+        action_type: 'read_task',
+        summary: 'Post deployment update',
+        target: 'deployments',
+    }), {
+        modelProvider: 'openai',
+        llmDecisionResolver: async () => ({
+            decision: {
+                actionType: 'create_comment',
+                confidence: 0.87,
+                riskLevel: 'medium',
+                route: 'approval',
+                reason: 'Requires stakeholder-visible update.',
+            },
+            metadata: {
+                modelProvider: 'openai',
+                model: 'gpt-4o-mini',
+                promptTokens: 120,
+                completionTokens: 40,
+                totalTokens: 160,
+            },
+        }),
+    });
+
+    assert.equal(result.status, 'approval_required');
+    assert.equal(result.decision.actionType, 'create_comment');
+    assert.equal(result.decision.riskLevel, 'medium');
+    assert.equal(result.llmExecution?.classificationSource, 'llm');
+    assert.equal(result.llmExecution?.modelProvider, 'openai');
+    assert.equal(result.llmExecution?.totalTokens, 160);
+});
+
+test('processDeveloperTask falls back to heuristic decision when llmDecisionResolver throws', async () => {
+    const result = await processDeveloperTask(taskEnvelope({
+        action_type: 'read_task',
+        summary: 'Read deployment status',
+        target: 'deployments',
+    }), {
+        modelProvider: 'openai',
+        llmDecisionResolver: async () => {
+            throw new Error('provider_unavailable');
+        },
+    });
+
+    assert.equal(result.status, 'success');
+    assert.equal(result.decision.actionType, 'read_task');
+    assert.equal(result.llmExecution?.classificationSource, 'heuristic');
+    assert.equal(result.llmExecution?.fallbackReason, 'llm_resolution_failed');
 });

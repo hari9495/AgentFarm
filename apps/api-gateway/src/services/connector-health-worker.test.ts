@@ -51,12 +51,25 @@ type AuthEvent = {
 const createFakeRepo = (records: MetadataRecord[]) => {
     const data = new Map(records.map((item) => [item.connectorId, { ...item }]));
     const events: AuthEvent[] = [];
+    let findCandidatesInput:
+        | {
+            staleBefore: Date;
+            unhealthyStatuses: ConnectorStatus[];
+            limit: number;
+        }
+        | null = null;
 
     return {
         data,
         events,
+        getFindCandidatesInput: () => findCandidatesInput,
         repo: {
-            async findCandidates() {
+            async findCandidates(input: {
+                staleBefore: Date;
+                unhealthyStatuses: ConnectorStatus[];
+                limit: number;
+            }) {
+                findCandidatesInput = input;
                 return Array.from(data.values());
             },
             async updateMetadata(input: {
@@ -204,4 +217,24 @@ test('insufficient scope always maps to consent_pending regardless of probe outc
     assert.equal(updated?.scopeStatus, 'insufficient');
     assert.equal(updated?.lastErrorClass, 'insufficient_scope');
     assert.equal(fakeRepo.events[0]?.result, 'requires_reconsent');
+});
+
+test('health tick passes monthly stale window and unhealthy status set to candidate query', async () => {
+    const nowMs = 1_710_000_000_000;
+    const fakeRepo = createFakeRepo([]);
+
+    await runConnectorHealthTick({
+        secretStore: createInMemorySecretStore({}),
+        repo: fakeRepo.repo,
+        now: () => nowMs,
+        staleIntervalMs: 30 * 24 * 60 * 60_000,
+        limit: 17,
+        healthProbe: async () => ({ outcome: 'ok', message: 'healthy' }),
+    });
+
+    const input = fakeRepo.getFindCandidatesInput();
+    assert.ok(input);
+    assert.equal(input?.limit, 17);
+    assert.deepEqual(input?.unhealthyStatuses, ['degraded', 'permission_invalid', 'token_expired', 'consent_pending']);
+    assert.equal(input?.staleBefore.getTime(), nowMs - 30 * 24 * 60 * 60_000);
 });

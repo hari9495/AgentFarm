@@ -4,17 +4,25 @@ type SessionPayload = {
     userId: string;
     tenantId: string;
     workspaceIds: string[];
+    scope: 'customer' | 'internal';
     expiresAt: number;
 };
+
+export type SessionScope = SessionPayload['scope'];
+export type { SessionPayload };
 
 const getSecret = (): string => process.env.API_SESSION_SECRET ?? 'agentfarm-dev-secret';
 
 const toBase64Url = (value: string): string => Buffer.from(value, 'utf8').toString('base64url');
 const fromBase64Url = (value: string): string => Buffer.from(value, 'base64url').toString('utf8');
 
-export const buildSessionToken = (payload: Omit<SessionPayload, 'expiresAt'>, ttlMs = 8 * 60 * 60 * 1000): string => {
+export const buildSessionToken = (
+    payload: Omit<SessionPayload, 'expiresAt' | 'scope'> & { scope?: SessionScope },
+    ttlMs = 8 * 60 * 60 * 1000,
+): string => {
     const session: SessionPayload = {
         ...payload,
+        scope: payload.scope ?? 'customer',
         expiresAt: Date.now() + ttlMs,
     };
 
@@ -47,10 +55,17 @@ export const verifySessionToken = (token: string): SessionPayload | null => {
         if (!payload.userId || !payload.tenantId || !Array.isArray(payload.workspaceIds)) {
             return null;
         }
+        const scope = payload.scope ?? 'customer';
+        if (scope !== 'customer' && scope !== 'internal') {
+            return null;
+        }
         if (typeof payload.expiresAt !== 'number' || Date.now() > payload.expiresAt) {
             return null;
         }
-        return payload;
+        return {
+            ...payload,
+            scope,
+        };
     } catch {
         return null;
     }

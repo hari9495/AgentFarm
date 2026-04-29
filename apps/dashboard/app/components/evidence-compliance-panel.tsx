@@ -1,5 +1,10 @@
 'use client';
 
+import { useMemo, useState } from 'react';
+import { usePathname, useSearchParams } from 'next/navigation';
+import { CopyLinkButton } from './copy-link-button';
+import { buildDashboardHref } from './dashboard-navigation';
+
 type AuditEvent = {
     event_id: string;
     tenant_id: string;
@@ -16,9 +21,10 @@ type AuditEvent = {
 type Props = {
     workspaceId: string;
     initialEvents: AuditEvent[];
+    focusedCorrelationId?: string;
 };
 
-import { useMemo, useState } from 'react';
+type ExportPreset = 'last_24h' | 'last_7d' | 'severity_error' | 'workspace_all';
 
 const FRESHNESS_WARNING_MINUTES = 120;
 
@@ -36,7 +42,9 @@ const formatAgeMinutes = (minutes: number): string => {
     return `${hours}h ${remainder}m`;
 };
 
-export function EvidenceCompliancePanel({ workspaceId, initialEvents }: Props) {
+export function EvidenceCompliancePanel({ workspaceId, initialEvents, focusedCorrelationId }: Props) {
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
     const [events, setEvents] = useState<AuditEvent[]>(initialEvents);
     const [severity, setSeverity] = useState('');
     const [eventType, setEventType] = useState('');
@@ -48,6 +56,7 @@ export function EvidenceCompliancePanel({ workspaceId, initialEvents }: Props) {
     const [retentionDays, setRetentionDays] = useState('90');
     const [retentionBusy, setRetentionBusy] = useState(false);
     const [message, setMessage] = useState<string | null>(null);
+    const [preset, setPreset] = useState<ExportPreset>('workspace_all');
 
     const freshness = useMemo(() => {
         if (events.length === 0) {
@@ -78,6 +87,38 @@ export function EvidenceCompliancePanel({ workspaceId, initialEvents }: Props) {
             stale: ageMinutes > FRESHNESS_WARNING_MINUTES,
         };
     }, [events]);
+
+    const applyPreset = (next: ExportPreset) => {
+        const now = new Date();
+        setPreset(next);
+
+        if (next === 'last_24h') {
+            const start = new Date(now.getTime() - 24 * 60 * 60_000);
+            setFrom(start.toISOString().slice(0, 16));
+            setTo(now.toISOString().slice(0, 16));
+            setSeverity('');
+            return;
+        }
+
+        if (next === 'last_7d') {
+            const start = new Date(now.getTime() - 7 * 24 * 60 * 60_000);
+            setFrom(start.toISOString().slice(0, 16));
+            setTo(now.toISOString().slice(0, 16));
+            setSeverity('');
+            return;
+        }
+
+        if (next === 'severity_error') {
+            setSeverity('error');
+            setFrom('');
+            setTo('');
+            return;
+        }
+
+        setSeverity('');
+        setFrom('');
+        setTo('');
+    };
 
     const queryEvents = async () => {
         setLoading(true);
@@ -208,10 +249,18 @@ export function EvidenceCompliancePanel({ workspaceId, initialEvents }: Props) {
         }
 
         const blob = await response.blob();
+        const compact = (value: string | null | undefined): string => {
+            if (!value) {
+                return 'na';
+            }
+            return value.replace(/[^0-9a-zA-Z]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 32) || 'na';
+        };
+        const windowLabel = `${compact(from)}-to-${compact(to)}`;
+        const deterministicName = `audit-${workspaceId}-${preset}-${severity || 'all'}-${windowLabel}.${format}`;
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `audit-export-${workspaceId}.${format}`;
+        a.download = deterministicName;
         a.click();
         URL.revokeObjectURL(url);
         setMessage(`Exported ${format.toUpperCase()} compliance report.`);
@@ -231,6 +280,12 @@ export function EvidenceCompliancePanel({ workspaceId, initialEvents }: Props) {
 
             <div style={{ display: 'grid', gap: '0.45rem', marginBottom: '0.7rem' }}>
                 <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <select value={preset} onChange={(event) => applyPreset(event.target.value as ExportPreset)}>
+                        <option value="workspace_all">preset: workspace all</option>
+                        <option value="last_24h">preset: last 24h</option>
+                        <option value="last_7d">preset: last 7d</option>
+                        <option value="severity_error">preset: severity error</option>
+                    </select>
                     <select value={severity} onChange={(event) => setSeverity(event.target.value)}>
                         <option value="">all severity</option>
                         <option value="info">info</option>
@@ -310,11 +365,27 @@ export function EvidenceCompliancePanel({ workspaceId, initialEvents }: Props) {
                         </tr>
                     ) : (
                         events.map((event) => (
-                            <tr key={event.event_id}>
+                            <tr key={event.event_id} style={focusedCorrelationId === event.correlation_id ? { background: '#eff6ff' } : undefined}>
                                 <td>{new Date(event.created_at).toLocaleString()}</td>
                                 <td>{event.severity}</td>
                                 <td>{event.event_type}</td>
-                                <td>{event.summary}</td>
+                                <td>
+                                    <div style={{ display: 'grid', gap: '0.2rem' }}>
+                                        <span>{event.summary}</span>
+                                        <span style={{ fontSize: '0.76rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                                            corr: {event.correlation_id}
+                                            <CopyLinkButton
+                                                href={buildDashboardHref(pathname, searchParams.toString(), {
+                                                    tab: 'audit',
+                                                    workspaceId,
+                                                    params: { correlationId: event.correlation_id },
+                                                })}
+                                                label="Copy Correlation Link"
+                                                className="chip-button"
+                                            />
+                                        </span>
+                                    </div>
+                                </td>
                             </tr>
                         ))
                     )}

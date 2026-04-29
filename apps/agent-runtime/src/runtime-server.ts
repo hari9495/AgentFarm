@@ -11,9 +11,15 @@ import {
     buildDecision,
     processDeveloperTask,
     processApprovedTask,
+    type LlmDecisionResolver,
     type ProcessedTaskResult,
     type TaskEnvelope,
 } from './execution-engine.js';
+import {
+    createLlmDecisionResolver,
+    createLlmDecisionResolverFromConfig,
+    type RuntimeLlmWorkspaceConfig,
+} from './llm-decision-adapter.js';
 import {
     type ActionResultRecord,
     type ActionResultWriter,
@@ -79,7 +85,16 @@ type ConnectorActionExecuteClient = (input: {
     botId: string;
     roleKey: RoleKey;
     connectorType: 'jira' | 'teams' | 'github' | 'email';
-    actionType: 'read_task' | 'create_comment' | 'update_status' | 'send_message' | 'create_pr_comment' | 'send_email';
+    actionType:
+    | 'read_task'
+    | 'create_comment'
+    | 'update_status'
+    | 'send_message'
+    | 'create_pr_comment'
+    | 'create_pr'
+    | 'merge_pr'
+    | 'list_prs'
+    | 'send_email';
     payload: Record<string, unknown>;
     correlationId: string;
 }) => Promise<{
@@ -136,6 +151,11 @@ type RuntimeServerOptions = {
     actionResultWriter?: ActionResultWriter;
     capabilitySnapshotPersistenceClient?: CapabilitySnapshotPersistenceClient;
     taskExecutionRecordWriter?: TaskExecutionRecordWriter;
+    llmDecisionResolver?: LlmDecisionResolver;
+    llmConfigFetcher?: (input: {
+        config: RuntimeConfig;
+        env: NodeJS.ProcessEnv;
+    }) => Promise<RuntimeLlmWorkspaceConfig | null>;
 };
 
 type RuntimeLogEntry = {
@@ -240,6 +260,9 @@ const CONNECTOR_ACTION_TYPES = new Set([
     'update_status',
     'send_message',
     'create_pr_comment',
+    'create_pr',
+    'merge_pr',
+    'list_prs',
     'send_email',
 ] as const);
 
@@ -250,6 +273,9 @@ type RuntimeConnectorActionType =
     | 'update_status'
     | 'send_message'
     | 'create_pr_comment'
+    | 'create_pr'
+    | 'merge_pr'
+    | 'list_prs'
     | 'send_email';
 
 const ROLE_CONNECTOR_POLICY: Record<RoleKey, RuntimeConnectorType[]> = {
@@ -270,20 +296,36 @@ const ROLE_CONNECTOR_POLICY: Record<RoleKey, RuntimeConnectorType[]> = {
 const CONNECTOR_ACTION_POLICY: Record<RuntimeConnectorType, RuntimeConnectorActionType[]> = {
     jira: ['read_task', 'create_comment', 'update_status'],
     teams: ['send_message'],
-    github: ['create_pr_comment'],
+    github: ['create_pr_comment', 'create_pr', 'merge_pr', 'list_prs'],
     email: ['send_email'],
 };
 
 const defaultSleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+const toStableJsonValue = (value: unknown): unknown => {
+    if (Array.isArray(value)) {
+        return value.map((entry) => toStableJsonValue(entry));
+    }
+
+    if (value && typeof value === 'object') {
+        const record = value as Record<string, unknown>;
+        const sortedEntries = Object.entries(record)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([key, entry]) => [key, toStableJsonValue(entry)] as const);
+        return Object.fromEntries(sortedEntries);
+    }
+
+    return value;
+};
 
 const calculateSnapshotChecksum = (snapshot: BotCapabilitySnapshotRecord): string => {
     const payload = JSON.stringify({
         roleKey: snapshot.roleKey,
         roleVersion: snapshot.roleVersion,
         policyPackVersion: snapshot.policyPackVersion,
-        allowedConnectorTools: snapshot.allowedConnectorTools.sort(),
-        allowedActions: snapshot.allowedActions.sort(),
-        brainConfig: snapshot.brainConfig,
+        allowedConnectorTools: [...snapshot.allowedConnectorTools].sort(),
+        allowedActions: [...snapshot.allowedActions].sort(),
+        brainConfig: toStableJsonValue(snapshot.brainConfig),
         languageTier: snapshot.languageTier,
         speechProvider: snapshot.speechProvider,
         translationProvider: snapshot.translationProvider,
@@ -983,6 +1025,52 @@ const defaultDependencyProbe = async (baseUrl: string): Promise<boolean> => {
     }
 };
 
+const defaultLlmConfigFetcher = async (input: {
+    config: RuntimeConfig;
+    env: NodeJS.ProcessEnv;
+}): Promise<RuntimeLlmWorkspaceConfig | null> => {
+    const token =
+        input.config.approvalIntakeToken
+        ?? input.env.RUNTIME_CONFIG_SHARED_TOKEN
+        ?? input.env.AF_APPROVAL_INTAKE_SHARED_TOKEN
+        ?? input.env.AGENTFARM_APPROVAL_INTAKE_SHARED_TOKEN
+        ?? null;
+
+    if (!token) {
+        return null;
+    }
+
+    try {
+        const url = new URL(
+            `/v1/workspaces/${encodeURIComponent(input.config.workspaceId)}/runtime/llm-config`,
+            input.config.approvalApiUrl,
+        );
+        url.searchParams.set('tenant_id', input.config.tenantId);
+
+        const response = await fetch(url.toString(), {
+            method: 'GET',
+            headers: {
+                'x-runtime-config-token': token,
+            },
+            signal: AbortSignal.timeout(4_000),
+            cache: 'no-store',
+        });
+
+        if (!response.ok) {
+            return null;
+        }
+
+        const body = await response.json() as { config?: RuntimeLlmWorkspaceConfig };
+        if (!body.config || !body.config.provider) {
+            return null;
+        }
+
+        return body.config;
+    } catch {
+        return null;
+    }
+};
+
 export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyInstance {
     const env = options.env ?? process.env;
     const workerPollMs = options.workerPollMs ?? DEFAULT_WORKER_POLL_MS;
@@ -1006,6 +1094,9 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
     const taskExecutionRecordWriter =
         options.taskExecutionRecordWriter
         ?? createDefaultTaskExecutionRecordWriter(env);
+    const llmConfigFetcher = options.llmConfigFetcher ?? defaultLlmConfigFetcher;
+    let llmDecisionResolver = options.llmDecisionResolver ?? createLlmDecisionResolver(env);
+    let activeModelProvider = env.AF_MODEL_PROVIDER ?? env.AGENTFARM_MODEL_PROVIDER ?? 'agentfarm';
     const sleep = options.sleep ?? defaultSleep;
     const exitProcess = options.exitProcess ?? ((code: number) => process.exit(code));
     const actionResultLogPath = resolveActionResultPath(env);
@@ -1124,6 +1215,97 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         }
     };
 
+    const executeConnectorActionForTask = async (input: {
+        task: TaskEnvelope;
+        config: RuntimeConfig;
+        decision: {
+            actionType: string;
+            confidence: number;
+            riskLevel: 'low' | 'medium' | 'high';
+            route: 'execute' | 'approval';
+            reason: string;
+        };
+        connectorType: 'jira' | 'teams' | 'github' | 'email';
+        source: 'approval_decision_webhook' | 'approval_decision_cache' | 'direct_execute';
+    }): Promise<ProcessedTaskResult> => {
+        const connectorResponse = await connectorActionExecuteClient({
+            baseUrl: input.config.connectorApiUrl,
+            token: input.config.connectorExecuteToken,
+            tenantId: input.config.tenantId,
+            workspaceId: input.config.workspaceId,
+            botId: input.config.botId,
+            roleKey: input.config.roleKey,
+            connectorType: input.connectorType,
+            actionType: input.decision.actionType as
+                | 'read_task'
+                | 'create_comment'
+                | 'update_status'
+                | 'send_message'
+                | 'create_pr_comment'
+                | 'create_pr'
+                | 'merge_pr'
+                | 'list_prs'
+                | 'send_email',
+            payload: input.task.payload,
+            correlationId: `${input.config.correlationId}:${input.task.taskId}`,
+        });
+
+        if (connectorResponse.ok) {
+            emitRuntimeEvent('runtime.connector_action_executed', input.config, {
+                task_id: input.task.taskId,
+                connector_type: input.connectorType,
+                action_type: input.decision.actionType,
+                status_code: connectorResponse.statusCode,
+                source: input.source,
+            });
+
+            const attempts = Math.max(1, connectorResponse.attempts ?? 1);
+            return {
+                decision: {
+                    ...input.decision,
+                    route: 'execute',
+                    reason:
+                        input.source === 'direct_execute'
+                            ? 'Executed via connector action endpoint.'
+                            : 'Executed via connector action endpoint after approval.',
+                },
+                status: 'success',
+                attempts,
+                transientRetries: Math.max(0, attempts - 1),
+            };
+        }
+
+        emitRuntimeEvent('runtime.connector_action_failed', input.config, {
+            task_id: input.task.taskId,
+            connector_type: input.connectorType,
+            action_type: input.decision.actionType,
+            status_code: connectorResponse.statusCode,
+            error_message: connectorResponse.errorMessage ?? null,
+            source: input.source,
+        });
+
+        return {
+            decision: {
+                ...input.decision,
+                route: 'execute',
+                reason:
+                    input.source === 'direct_execute'
+                        ? 'Connector action endpoint execution failed.'
+                        : 'Connector action endpoint execution failed after approval.',
+            },
+            status: 'failed',
+            attempts: Math.max(1, connectorResponse.attempts ?? 1),
+            transientRetries: 0,
+            failureClass:
+                connectorResponse.statusCode === 0
+                    || connectorResponse.statusCode === 429
+                    || connectorResponse.statusCode >= 500
+                    ? 'transient_error'
+                    : 'runtime_exception',
+            errorMessage: connectorResponse.errorMessage ?? `Connector execution failed with status ${connectorResponse.statusCode}.`,
+        };
+    };
+
     const executeApprovedTask = async (
         task: TaskEnvelope,
         config: RuntimeConfig,
@@ -1167,80 +1349,26 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             | 'update_status'
             | 'send_message'
             | 'create_pr_comment'
+            | 'create_pr'
+            | 'merge_pr'
+            | 'list_prs'
             | 'send_email',
         );
 
         if (connectorType && isConnectorAction) {
-            const connectorResponse = await connectorActionExecuteClient({
-                baseUrl: config.connectorApiUrl,
-                token: config.connectorExecuteToken,
-                tenantId: config.tenantId,
-                workspaceId: config.workspaceId,
-                botId: config.botId,
-                roleKey: config.roleKey,
+            return executeConnectorActionForTask({
+                task,
+                config,
+                decision,
                 connectorType,
-                actionType: decision.actionType as
-                    | 'read_task'
-                    | 'create_comment'
-                    | 'update_status'
-                    | 'send_message'
-                    | 'create_pr_comment'
-                    | 'send_email',
-                payload: task.payload,
-                correlationId: `${config.correlationId}:${task.taskId}`,
-            });
-
-            if (connectorResponse.ok) {
-                emitRuntimeEvent('runtime.connector_action_executed', config, {
-                    task_id: task.taskId,
-                    connector_type: connectorType,
-                    action_type: decision.actionType,
-                    status_code: connectorResponse.statusCode,
-                    source,
-                });
-
-                const attempts = Math.max(1, connectorResponse.attempts ?? 1);
-                return {
-                    decision: {
-                        ...decision,
-                        route: 'execute',
-                        reason: 'Executed via connector action endpoint after approval.',
-                    },
-                    status: 'success',
-                    attempts,
-                    transientRetries: Math.max(0, attempts - 1),
-                };
-            }
-
-            emitRuntimeEvent('runtime.connector_action_failed', config, {
-                task_id: task.taskId,
-                connector_type: connectorType,
-                action_type: decision.actionType,
-                status_code: connectorResponse.statusCode,
-                error_message: connectorResponse.errorMessage ?? null,
                 source,
             });
-
-            return {
-                decision: {
-                    ...decision,
-                    route: 'execute',
-                    reason: 'Connector action endpoint execution failed after approval.',
-                },
-                status: 'failed',
-                attempts: Math.max(1, connectorResponse.attempts ?? 1),
-                transientRetries: 0,
-                failureClass:
-                    connectorResponse.statusCode === 0
-                        || connectorResponse.statusCode === 429
-                        || connectorResponse.statusCode >= 500
-                        ? 'transient_error'
-                        : 'runtime_exception',
-                errorMessage: connectorResponse.errorMessage ?? `Connector execution failed with status ${connectorResponse.statusCode}.`,
-            };
         }
 
-        return processApprovedTask(task, { maxAttempts: 3 });
+        return processApprovedTask(task, {
+            maxAttempts: 3,
+            modelProvider: activeModelProvider,
+        });
     };
 
     const processOneTask = async (task: TaskEnvelope, config: RuntimeConfig): Promise<void> => {
@@ -1320,7 +1448,11 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             return;
         }
 
-        const result = await processDeveloperTask(task, { maxAttempts: 3 });
+        const result = await processDeveloperTask(task, {
+            maxAttempts: 3,
+            modelProvider: activeModelProvider,
+            llmDecisionResolver,
+        });
         workerLoop.processedTasks += 1;
         workerLoop.retriedAttempts += result.transientRetries;
 
@@ -1331,6 +1463,8 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             risk_level: result.decision.riskLevel,
             route: result.decision.route,
             classification_reason: result.decision.reason,
+            classification_source: result.llmExecution?.classificationSource ?? 'heuristic',
+            llm_fallback_reason: result.llmExecution?.fallbackReason ?? null,
         });
 
         if (result.status === 'approval_required') {
@@ -1436,6 +1570,57 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             return;
         }
 
+        const connectorType = normalizeConnectorType(task.payload['connector_type']);
+        const directConnectorAction = CONNECTOR_ACTION_TYPES.has(
+            result.decision.actionType as
+            | 'read_task'
+            | 'create_comment'
+            | 'update_status'
+            | 'send_message'
+            | 'create_pr_comment'
+            | 'create_pr'
+            | 'merge_pr'
+            | 'list_prs'
+            | 'send_email',
+        );
+
+        if (result.status === 'success' && connectorType && directConnectorAction) {
+            const connectorResult = await executeConnectorActionForTask({
+                task,
+                config,
+                decision: result.decision,
+                connectorType,
+                source: 'direct_execute',
+            });
+
+            if (connectorResult.status === 'success') {
+                workerLoop.succeededTasks += 1;
+                workerLoop.retriedAttempts += connectorResult.transientRetries;
+                emitRuntimeEvent('runtime.task_processed', config, {
+                    task_id: task.taskId,
+                    queue_depth: workerLoop.queuedTasks.length,
+                    processed_tasks: workerLoop.processedTasks,
+                    retries: connectorResult.transientRetries,
+                    attempts: connectorResult.attempts,
+                    execution_path: 'connector_endpoint',
+                });
+                await persistActionResultRecord(task, config, connectorResult);
+                return;
+            }
+
+            workerLoop.failedTasks += 1;
+            emitRuntimeEvent('runtime.task_failed', config, {
+                task_id: task.taskId,
+                attempts: connectorResult.attempts,
+                retries: connectorResult.transientRetries,
+                failure_class: connectorResult.failureClass ?? 'runtime_exception',
+                error_message: connectorResult.errorMessage ?? null,
+                execution_path: 'connector_endpoint',
+            });
+            await persistActionResultRecord(task, config, connectorResult);
+            return;
+        }
+
         if (result.status === 'success') {
             workerLoop.succeededTasks += 1;
             emitRuntimeEvent('runtime.task_processed', config, {
@@ -1516,7 +1701,10 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             brainConfig && typeof brainConfig === 'object' && 'defaultModelProfile' in brainConfig
                 ? String((brainConfig as { defaultModelProfile: unknown }).defaultModelProfile)
                 : 'quality_first';
-        const modelProvider = env.AF_MODEL_PROVIDER ?? 'agentfarm';
+        const modelProvider =
+            result.llmExecution?.modelProvider
+            ?? activeModelProvider
+            ?? 'agentfarm';
         const latencyMs = Math.max(0, now() - task.enqueuedAt);
 
         taskExecutionRecordWriter.write({
@@ -1526,9 +1714,9 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             taskId: task.taskId,
             modelProvider,
             modelProfile,
-            promptTokens: null,
-            completionTokens: null,
-            totalTokens: null,
+            promptTokens: result.llmExecution?.promptTokens ?? null,
+            completionTokens: result.llmExecution?.completionTokens ?? null,
+            totalTokens: result.llmExecution?.totalTokens ?? null,
             latencyMs,
             outcome: taskOutcome,
             executedAt: new Date(task.enqueuedAt),
@@ -1840,6 +2028,30 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             emitRuntimeEvent('runtime.policy_loaded', runtimeConfig, {
                 policy_pack_version: runtimeConfig.policyPackVersion,
             });
+
+            const workspaceLlmConfig = await llmConfigFetcher({
+                config: runtimeConfig,
+                env,
+            });
+            if (workspaceLlmConfig) {
+                activeModelProvider = workspaceLlmConfig.provider;
+                llmDecisionResolver =
+                    options.llmDecisionResolver
+                    ?? createLlmDecisionResolverFromConfig(workspaceLlmConfig)
+                    ?? createLlmDecisionResolver(env);
+                emitRuntimeEvent('runtime.llm_config_loaded', runtimeConfig, {
+                    provider: workspaceLlmConfig.provider,
+                    source: 'workspace_config',
+                });
+            } else {
+                activeModelProvider = env.AF_MODEL_PROVIDER ?? env.AGENTFARM_MODEL_PROVIDER ?? 'agentfarm';
+                llmDecisionResolver = options.llmDecisionResolver ?? createLlmDecisionResolver(env);
+                emitRuntimeEvent('runtime.llm_config_loaded', runtimeConfig, {
+                    provider: activeModelProvider,
+                    source: 'env_fallback',
+                });
+            }
+
             let persistedSnapshot: BotCapabilitySnapshotRecord | null = null;
             try {
                 persistedSnapshot = await capabilitySnapshotPersistenceClient.loadLatestByBotId({

@@ -5,7 +5,7 @@ import ButtonLink from "@/components/shared/ButtonLink";
 export const metadata: Metadata = {
     title: "About — AgentFarm",
     description:
-        "We're building the AI workforce platform that lets engineering teams scale without limits.",
+        "We're building a trusted AI teammate platform that helps engineering teams scale delivery with clear controls.",
 };
 
 const team = [
@@ -115,7 +115,7 @@ export default function AboutPage() {
                         <h2 className="text-2xl font-bold mb-4">Our mission</h2>
                         <p className="text-lg text-blue-100 leading-relaxed">
                             To make 10× engineering productivity the default — not the exception
-                            — by giving every team an AI workforce that codes, tests, reviews, and
+                            — by giving every team AI teammates that code, test, review, and
                             ships alongside humans.
                         </p>
                         <div className="mt-6 grid grid-cols-2 gap-4">

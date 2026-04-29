@@ -14,6 +14,7 @@
         "test:db-smoke": "pnpm --filter @agentfarm/agent-runtime test:db-smoke",
         "test:db-lane": "pnpm db:migrate:deploy && pnpm test:db-smoke",
         "smoke:e2e": "node scripts/e2e-smoke.mjs",
+        "verify:website:prod": "node scripts/website-swa-verify.mjs",
         "quality:gate": "node scripts/quality-gate.mjs"
     },
     "devDependencies": {

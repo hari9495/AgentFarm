@@ -535,7 +535,7 @@ export default function MarketplaceGrid() {
                         <h1 className="mt-3 text-4xl sm:text-6xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
                             Hire your{" "}
                             <span className="bg-gradient-to-r from-blue-600 via-violet-600 to-blue-600 bg-clip-text text-transparent">
-                                AI workforce
+                                AI teammates
                             </span>
                         </h1>
                         <p className="mt-5 text-xl text-slate-500 dark:text-slate-400 max-w-2xl leading-relaxed">

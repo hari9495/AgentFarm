@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import Fastify from 'fastify';
 import { hashPassword } from '../lib/password.js';
+import { verifySessionToken } from '../lib/session-auth.js';
 import { registerAuthRoutes, type AuthRepo } from './auth.js';
 
 // ---------------------------------------------------------------------------
@@ -12,6 +13,7 @@ type StoredUser = {
     id: string;
     tenantId: string;
     passwordHash: string;
+    role: string;
 };
 
 const createRepo = (): { repo: AuthRepo; users: Map<string, StoredUser>; signupCalls: number } => {
@@ -29,7 +31,7 @@ const createRepo = (): { repo: AuthRepo; users: Map<string, StoredUser>; signupC
             const workspaceId = `ws_${signupCalls}`;
             const botId = `bot_${signupCalls}`;
             const jobId = `job_${signupCalls}`;
-            users.set(email, { id: userId, tenantId, passwordHash });
+            users.set(email, { id: userId, tenantId, passwordHash, role: 'owner' });
             return {
                 tenant: { id: tenantId },
                 user: { id: userId },
@@ -52,6 +54,14 @@ const buildApp = (repo: AuthRepo) => {
     const app = Fastify();
     // Register synchronously via a setup helper; in tests we call it before inject
     return { app, register: () => registerAuthRoutes(app, { repo }) };
+};
+
+const restoreEnv = (key: string, previousValue: string | undefined) => {
+    if (previousValue === undefined) {
+        delete process.env[key];
+        return;
+    }
+    process.env[key] = previousValue;
 };
 
 // ---------------------------------------------------------------------------
@@ -341,6 +351,127 @@ test('POST /auth/login — 400 missing password', async () => {
     assert.equal(res.statusCode, 400);
     const body = res.json<{ field: string }>();
     assert.equal(body.field, 'password');
+});
+
+test('POST /auth/internal-login — 200 returns internal scoped token', async () => {
+    const previousAllowedDomains = process.env.API_INTERNAL_LOGIN_ALLOWED_DOMAINS;
+    process.env.API_INTERNAL_LOGIN_ALLOWED_DOMAINS = 'acme.com';
+
+    const { repo } = createRepo();
+    const { app, register } = buildApp(repo);
+    await register();
+
+    const pw = 'internalPassword1';
+    await app.inject({
+        method: 'POST',
+        url: '/auth/signup',
+        body: { name: 'Internal User', email: 'internal@acme.com', password: pw, companyName: 'Acme' },
+    });
+
+    const res = await app.inject({
+        method: 'POST',
+        url: '/auth/internal-login',
+        body: { email: 'internal@acme.com', password: pw },
+    });
+
+    assert.equal(res.statusCode, 200);
+    const body = res.json<{ token: string; scope: string }>();
+    assert.equal(body.scope, 'internal');
+    const payload = verifySessionToken(body.token);
+    assert.equal(payload?.scope, 'internal');
+
+    restoreEnv('API_INTERNAL_LOGIN_ALLOWED_DOMAINS', previousAllowedDomains);
+});
+
+test('POST /auth/internal-login — 401 wrong password', async () => {
+    const previousAllowedDomains = process.env.API_INTERNAL_LOGIN_ALLOWED_DOMAINS;
+    process.env.API_INTERNAL_LOGIN_ALLOWED_DOMAINS = 'acme.com';
+
+    const { repo } = createRepo();
+    const { app, register } = buildApp(repo);
+    await register();
+
+    await app.inject({
+        method: 'POST',
+        url: '/auth/signup',
+        body: { name: 'Internal User', email: 'internal2@acme.com', password: 'correctPassword1', companyName: 'Acme' },
+    });
+
+    const res = await app.inject({
+        method: 'POST',
+        url: '/auth/internal-login',
+        body: { email: 'internal2@acme.com', password: 'wrong-password' },
+    });
+
+    assert.equal(res.statusCode, 401);
+
+    restoreEnv('API_INTERNAL_LOGIN_ALLOWED_DOMAINS', previousAllowedDomains);
+});
+
+test('POST /auth/internal-login — 403 when account is not in internal policy', async () => {
+    const previousAllowedDomains = process.env.API_INTERNAL_LOGIN_ALLOWED_DOMAINS;
+    const previousAdminRoles = process.env.API_INTERNAL_LOGIN_ADMIN_ROLES;
+    process.env.API_INTERNAL_LOGIN_ALLOWED_DOMAINS = 'internal.company';
+    process.env.API_INTERNAL_LOGIN_ADMIN_ROLES = 'internal_admin';
+
+    const { repo } = createRepo();
+    const { app, register } = buildApp(repo);
+    await register();
+
+    await app.inject({
+        method: 'POST',
+        url: '/auth/signup',
+        body: { name: 'Customer User', email: 'customer@acme.com', password: 'correctPassword1', companyName: 'Acme' },
+    });
+
+    const res = await app.inject({
+        method: 'POST',
+        url: '/auth/internal-login',
+        body: { email: 'customer@acme.com', password: 'correctPassword1' },
+    });
+
+    assert.equal(res.statusCode, 403);
+    const body = res.json<{ error: string }>();
+    assert.equal(body.error, 'internal_access_denied');
+
+    restoreEnv('API_INTERNAL_LOGIN_ALLOWED_DOMAINS', previousAllowedDomains);
+    restoreEnv('API_INTERNAL_LOGIN_ADMIN_ROLES', previousAdminRoles);
+});
+
+test('POST /auth/internal-login — 200 when account role matches admin policy', async () => {
+    const previousAllowedDomains = process.env.API_INTERNAL_LOGIN_ALLOWED_DOMAINS;
+    const previousAdminRoles = process.env.API_INTERNAL_LOGIN_ADMIN_ROLES;
+    process.env.API_INTERNAL_LOGIN_ALLOWED_DOMAINS = '';
+    process.env.API_INTERNAL_LOGIN_ADMIN_ROLES = 'owner,internal_admin';
+
+    const { repo, users } = createRepo();
+    const { app, register } = buildApp(repo);
+    await register();
+
+    await app.inject({
+        method: 'POST',
+        url: '/auth/signup',
+        body: { name: 'Ops Owner', email: 'ops@customer.com', password: 'correctPassword1', companyName: 'Acme' },
+    });
+
+    const stored = users.get('ops@customer.com');
+    assert.ok(stored);
+    stored.role = 'owner';
+
+    const res = await app.inject({
+        method: 'POST',
+        url: '/auth/internal-login',
+        body: { email: 'ops@customer.com', password: 'correctPassword1' },
+    });
+
+    assert.equal(res.statusCode, 200);
+    const body = res.json<{ token: string; scope: string }>();
+    assert.equal(body.scope, 'internal');
+    const payload = verifySessionToken(body.token);
+    assert.equal(payload?.scope, 'internal');
+
+    restoreEnv('API_INTERNAL_LOGIN_ALLOWED_DOMAINS', previousAllowedDomains);
+    restoreEnv('API_INTERNAL_LOGIN_ADMIN_ROLES', previousAdminRoles);
 });
 
 // ---------------------------------------------------------------------------

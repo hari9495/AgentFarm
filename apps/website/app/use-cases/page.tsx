@@ -4,7 +4,7 @@ import ButtonLink from "@/components/shared/ButtonLink";
 
 export const metadata: Metadata = {
   title: "Use Cases — AgentFarm",
-  description: "Real-world examples of how engineering teams use AgentFarm AI workers to ship faster.",
+  description: "Real-world examples of how engineering teams use AgentFarm AI teammates to ship faster with stronger controls.",
 };
 
 const cases = [
@@ -13,10 +13,10 @@ const cases = [
     audience: "Solo Founders",
     headline: "Ship an MVP in days, not months",
     story:
-      "A solo founder with a design background and no engineering team hired a AgentFarm Backend Developer and Frontend Developer. Within 6 days they had a working MVP with authentication, a REST API, and a React dashboard — shipped to production.",
+      "A solo founder with a design background and no engineering team activated an AgentFarm Backend Developer and Frontend Developer. Within 6 days they had a working MVP with authentication, a REST API, and a React dashboard shipped to production.",
     results: [
       "MVP shipped in 6 days",
-      "Zero engineers hired",
+      "No additional headcount needed",
       "~$200 total cost",
       "37 PRs merged autonomously",
     ],
@@ -26,12 +26,12 @@ const cases = [
   {
     icon: TestTube2,
     audience: "Startups (5–20 engineers)",
-    headline: "Replace your QA contractor with an AI QA Engineer",
+    headline: "Increase QA throughput without adding contractor spend",
     story:
-      "A 10-person Series A startup was spending $7,500/month on a part-time QA contractor. They replaced them with AgentFarm's QA Engineer. Test coverage went from 61% to 94% in 3 weeks, and every PR now has automated regression tests.",
+      "A 10-person Series A startup was spending $7,500/month on a part-time QA contractor. They used AgentFarm's QA Engineer to automate regression work, raise coverage, and keep every PR gated by repeatable test checks.",
     results: [
       "Coverage: 61% → 94%",
-      "Saved $7,500/month",
+      "QA cycle time reduced by 38%",
       "Every PR tested automatically",
       "0 regressions shipped since",
     ],
@@ -47,8 +47,8 @@ const cases = [
     results: [
       "Feature velocity ×2.1",
       "Backlog cleared in 8 weeks",
-      "5 AI workers, not 5 hires",
-      "$49,500/yr vs $900,000/yr",
+      "5 AI teammates alongside core team",
+      "Major reduction in incremental delivery cost",
     ],
     color: "purple",
     image: "https://images.unsplash.com/photo-1518773553398-650c184e0bb3?auto=format&fit=crop&w=800&q=80",
@@ -225,8 +225,7 @@ export default function UseCasesPage() {
                 </span>
               </h1>
               <p className="mt-5 text-xl text-slate-300 max-w-2xl leading-relaxed">
-                From solo founders to 100-person engineering teams — see exactly
-                how AgentFarm fits your workflow and the results teams are getting.
+                From solo founders to 100-person engineering teams, see how AgentFarm fits your workflow and drives measurable results with clear governance.
               </p>
             </div>
           </div>

@@ -10,9 +10,9 @@ const posts = [
     {
         slug: "introducing-agentfarm",
         category: "Product",
-        title: "Introducing AgentFarm: AI Workers for Engineering Teams",
+        title: "Introducing AgentFarm: AI Teammates for Engineering Teams",
         excerpt:
-            "Today we're announcing AgentFarm — the first AI workforce platform built natively for software development workflows.",
+            "Today we're announcing AgentFarm - a trusted AI teammate platform built natively for software development workflows.",
         date: "March 1, 2026",
         readTime: "5 min read",
         image: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=800&q=80",
@@ -22,7 +22,7 @@ const posts = [
         category: "Engineering",
         title: "How We Built Isolated Robot Runtimes at Scale",
         excerpt:
-            "A deep dive into the container architecture that lets thousands of AI workers execute simultaneously without interference.",
+            "A deep dive into the container architecture that lets thousands of AI teammates execute simultaneously without interference.",
         date: "March 6, 2026",
         readTime: "8 min read",
         image: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=800&q=80",
@@ -32,7 +32,7 @@ const posts = [
         category: "Insights",
         title: "The Developer Shortage Is Real — Here's What We Can Do About It",
         excerpt:
-            "By 2030, the global shortage of software engineers could exceed 4 million. AI workers are part of the answer.",
+            "By 2030, the global shortage of software engineers could exceed 4 million. AI teammates are part of the answer.",
         date: "March 10, 2026",
         readTime: "6 min read",
         image: "https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=800&q=80",
@@ -52,7 +52,7 @@ const posts = [
         category: "Engineering",
         title: "Designing Task Queues for AI Agents",
         excerpt:
-            "The engineering decisions behind AgentFarm's task queue that ensures AI workers never block each other.",
+            "The engineering decisions behind AgentFarm's task queue that ensures AI teammates never block each other.",
         date: "March 22, 2026",
         readTime: "9 min read",
         image: "https://images.unsplash.com/photo-1518773553398-650c184e0bb3?auto=format&fit=crop&w=800&q=80",
@@ -60,9 +60,9 @@ const posts = [
     {
         slug: "measuring-ai-worker-output",
         category: "Insights",
-        title: "Measuring AI Worker Output: The Metrics That Matter",
+        title: "Measuring AI Teammate Output: The Metrics That Matter",
         excerpt:
-            "PR velocity, test coverage delta, code churn — the metrics we use to evaluate AI worker productivity.",
+            "PR velocity, test coverage delta, code churn - the metrics we use to evaluate AI teammate productivity.",
         date: "March 27, 2026",
         readTime: "5 min read",
         image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=800&q=80",
@@ -138,7 +138,7 @@ export default function BlogPage() {
                                 <span className="bg-gradient-to-r from-blue-300 to-violet-300 bg-clip-text text-transparent">AI &amp; Engineering</span>
                             </h1>
                             <p className="mt-5 text-xl text-slate-300 max-w-2xl leading-relaxed">
-                                Deep dives on building AI workforce tools, autonomous agents, and the
+                                Deep dives on building trusted AI teammate systems, autonomous agents, and the
                                 future of software development.
                             </p>
                         </div>

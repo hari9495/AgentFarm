@@ -5,8 +5,23 @@ import MarketplaceGrid from "@/components/marketplace/MarketplaceGrid";
 export const metadata: Metadata = {
   title: "Robot Marketplace – AgentFarm",
   description:
-    "Browse and hire AI workers for every engineering role. Deploy in minutes.",
+    "Browse and deploy AI teammates for every engineering role in minutes.",
 };
+
+const launchPaths = [
+  {
+    label: "Start with Engineering",
+    detail: "Launch backend, frontend, QA, and DevOps roles for immediate sprint impact.",
+  },
+  {
+    label: "Expand to Operations",
+    detail: "Add support, security, and business operations teammates with clear ownership.",
+  },
+  {
+    label: "Scale by Department",
+    detail: "Standardize role bundles and approvals for repeatable cross-team rollouts.",
+  },
+];
 
 export default function MarketplacePage() {
   return (
@@ -17,7 +32,7 @@ export default function MarketplacePage() {
             <div>
               <p className="marketplace-eyebrow">Agent Marketplace</p>
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
-                Build a production-ready AI team in one hiring sprint
+                Build a production-ready AI team in one launch sprint
               </h1>
               <p className="mt-4 max-w-3xl text-slate-600 dark:text-slate-300 text-base sm:text-lg">
                 Curated agents for engineering, operations, and business workflows. Compare capabilities,
@@ -64,6 +79,18 @@ export default function MarketplacePage() {
             <span>Transparent pricing</span>
             <span>Human approval controls</span>
             <span>Audit-ready operations</span>
+          </div>
+
+          <div className="mt-6 grid gap-4 md:grid-cols-3">
+            {launchPaths.map((path) => (
+              <article
+                key={path.label}
+                className="rounded-2xl border border-slate-200/80 dark:border-slate-700/80 bg-white/85 dark:bg-slate-900/80 backdrop-blur p-5"
+              >
+                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{path.label}</p>
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{path.detail}</p>
+              </article>
+            ))}
           </div>
         </div>
       </section>

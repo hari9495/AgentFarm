@@ -1,16 +1,7 @@
-import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { runRuntimeProxy } from '../../route-handler-core';
-import { buildHealthUrl, buildUpstreamHeaders, getRuntimeBaseUrl } from '../../runtime-proxy-utils';
-
-const getAuthHeader = async (): Promise<string | null> => {
-    const cookieStore = await cookies();
-    const session = cookieStore.get('agentfarm_session');
-    if (!session?.value) {
-        return null;
-    }
-    return `Bearer ${decodeURIComponent(session.value)}`;
-};
+import { buildHealthRouteContract } from '../route-contract';
+import { getInternalSessionAuthHeader } from '../../../../lib/internal-session';
 
 export async function GET(
     _request: Request,
@@ -18,16 +9,13 @@ export async function GET(
 ) {
     await params; // botId reserved for future multi-bot routing
 
-    const authHeader = await getAuthHeader();
-    const upstreamHeaders = buildUpstreamHeaders();
+    const authHeader = await getInternalSessionAuthHeader();
+    const contract = buildHealthRouteContract();
 
     const result = await runRuntimeProxy({
         sessionAuthHeader: authHeader,
-        upstreamUrl: buildHealthUrl(getRuntimeBaseUrl()),
-        requestInit: {
-            headers: upstreamHeaders,
-            cache: 'no-store',
-        },
+        upstreamUrl: contract.upstreamUrl,
+        requestInit: contract.requestInit,
     });
 
     return NextResponse.json(result.body, { status: result.status });

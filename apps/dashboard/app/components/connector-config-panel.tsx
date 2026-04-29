@@ -212,19 +212,19 @@ function CredentialForm({
     };
 
     return (
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.75rem' }}>
+        <form onSubmit={handleSubmit} className="panel-stack" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {visibleFields.map((field) => (
-                <label key={field.key} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.875rem' }}>
-                    <span style={{ fontWeight: 600 }}>
+                <label key={field.key} className="panel-field">
+                    <span className="panel-field-label">
                         {field.label}
-                        {field.required && <span style={{ color: '#dc2626' }}> *</span>}
+                        {field.required && <span className="required"> *</span>}
                     </span>
                     {field.type === 'select' ? (
                         <select
                             value={values[field.key] ?? ''}
                             onChange={(e) => handleChange(field.key, e.target.value)}
                             required={field.required}
-                            style={{ padding: '0.4rem 0.5rem', borderRadius: 4, border: '1px solid #d6d3d1', background: 'white' }}
+                            className="panel-control"
                         >
                             {field.options?.map((opt) => (
                                 <option key={opt} value={opt}>{opt}</option>
@@ -238,33 +238,33 @@ function CredentialForm({
                             required={field.required}
                             autoComplete={field.type === 'password' ? 'new-password' : 'off'}
                             onChange={(e) => handleChange(field.key, e.target.value)}
-                            style={{ padding: '0.4rem 0.5rem', borderRadius: 4, border: '1px solid #d6d3d1', fontFamily: field.type === 'password' ? 'monospace' : 'inherit' }}
+                            className={`panel-control ${field.type === 'password' ? 'mono' : ''}`}
                         />
                     )}
                 </label>
             ))}
 
             {error && (
-                <p role="alert" style={{ color: '#dc2626', fontSize: '0.875rem', margin: 0 }}>
+                <p role="alert" className="panel-inline-note error">
                     {error}
                 </p>
             )}
 
-            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', marginTop: '0.25rem' }}>
+            <div className="panel-actions-end">
                 <button
                     type="button"
                     onClick={onCancel}
                     disabled={saving}
-                    style={{ padding: '0.4rem 1rem', borderRadius: 4, border: '1px solid #d6d3d1', background: 'white', cursor: 'pointer' }}
+                    className="secondary-action"
                 >
                     Cancel
                 </button>
                 <button
                     type="submit"
                     disabled={saving}
-                    style={{ padding: '0.4rem 1rem', borderRadius: 4, border: 'none', background: '#0f766e', color: 'white', fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}
+                    className="primary-action"
                 >
-                    {saving ? 'Saving…' : 'Save credentials'}
+                    {saving ? 'Saving...' : 'Save credentials'}
                 </button>
             </div>
         </form>
@@ -428,36 +428,28 @@ export function ConnectorConfigPanel({ workspaceId, apiBase, initialConnectors }
     };
 
     return (
-        <article className="card" style={{ marginTop: '1.5rem' }}>
+        <article className="card panel-stack">
             <h2>Connector Credentials</h2>
-            <p style={{ marginTop: 0, color: '#57534e', fontSize: '0.9rem' }}>
+            <p className="panel-muted">
                 Update the credentials used to connect to external tools. Credentials are stored securely in Azure Key Vault and never logged.
             </p>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem' }}>
+            <div className="panel-toolbar">
                 <button
                     onClick={() => void handleRunHealthCheck()}
                     disabled={healthRunning}
-                    style={{
-                        padding: '0.35rem 0.8rem',
-                        borderRadius: 4,
-                        border: '1px solid #0f766e',
-                        background: '#f0fdfa',
-                        color: '#0f766e',
-                        cursor: healthRunning ? 'not-allowed' : 'pointer',
-                        fontSize: '0.85rem',
-                    }}
+                    className="secondary-action"
                 >
-                    {healthRunning ? 'Running health check…' : 'Run Health Check Now'}
+                    {healthRunning ? 'Running health check...' : 'Run Health Check Now'}
                 </button>
                 {healthError && (
-                    <p role="alert" style={{ margin: 0, color: '#dc2626', fontSize: '0.85rem' }}>
+                    <p role="alert" className="panel-inline-note error">
                         {healthError}
                     </p>
                 )}
             </div>
 
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <ul className="panel-list">
                 {connectors.map((connector) => {
                     const isEditing = editingId === connector.connector_id;
                     const isSaved = savedId === connector.connector_id;
@@ -466,80 +458,49 @@ export function ConnectorConfigPanel({ workspaceId, apiBase, initialConnectors }
                     return (
                         <li
                             key={connector.connector_id}
-                            style={{
-                                border: '1px solid #e7e5e4',
-                                borderRadius: 6,
-                                padding: '1rem',
-                                background: isSaved ? '#f0fdf4' : 'white',
-                                transition: 'background 0.4s',
-                            }}
+                            className={`panel-list-item ${isSaved ? 'saved' : ''}`}
                         >
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem' }}>
+                            <div className="panel-item-head">
                                 <div>
-                                    <strong style={{ fontSize: '1rem' }}>
+                                    <strong className="panel-item-name">
                                         {DISPLAY_NAMES[connector.connector_type] ?? connector.connector_type}
                                     </strong>
                                     <span
                                         className={statusBadgeClass(connector.status)}
-                                        style={{ marginLeft: '0.5rem', fontSize: '0.75rem', verticalAlign: 'middle' }}
+                                        style={{ marginLeft: '0.5rem' }}
                                     >
                                         {connector.status.replace(/_/g, ' ')}
                                     </span>
                                     {isSaved && (
-                                        <span style={{ marginLeft: '0.5rem', fontSize: '0.75rem', color: '#16a34a', verticalAlign: 'middle' }}>
+                                        <span className="panel-inline-note success" style={{ marginLeft: '0.5rem', display: 'inline' }}>
                                             ✓ Saved
                                         </span>
                                     )}
                                 </div>
 
                                 {!isEditing && (
-                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                    <div className="panel-actions-end" style={{ marginTop: 0 }}>
                                         {isOAuthConnector(connector.connector_type) && (
                                             <button
                                                 onClick={() => void handleOAuthConnect(connector)}
                                                 disabled={oauthPendingId === connector.connector_id}
-                                                style={{
-                                                    padding: '0.3rem 0.8rem',
-                                                    borderRadius: 4,
-                                                    border: '1px solid #0f766e',
-                                                    background: '#0f766e',
-                                                    color: 'white',
-                                                    fontSize: '0.875rem',
-                                                    cursor: oauthPendingId === connector.connector_id ? 'not-allowed' : 'pointer',
-                                                    opacity: oauthPendingId === connector.connector_id ? 0.7 : 1,
-                                                }}
+                                                className="primary-action"
                                             >
-                                                {oauthPendingId === connector.connector_id ? 'Opening OAuth…' : 'Connect via OAuth'}
+                                                {oauthPendingId === connector.connector_id ? 'Opening OAuth...' : 'Connect via OAuth'}
                                             </button>
                                         )}
                                         {isOAuthConnector(connector.connector_type) && (
                                             <button
                                                 onClick={() => void handleDisconnect(connector)}
                                                 disabled={revokePendingId === connector.connector_id}
-                                                style={{
-                                                    padding: '0.3rem 0.8rem',
-                                                    borderRadius: 4,
-                                                    border: '1px solid #dc2626',
-                                                    background: 'white',
-                                                    color: '#dc2626',
-                                                    fontSize: '0.875rem',
-                                                    cursor: revokePendingId === connector.connector_id ? 'not-allowed' : 'pointer',
-                                                    opacity: revokePendingId === connector.connector_id ? 0.7 : 1,
-                                                }}
+                                                className="danger-action"
                                             >
-                                                {revokePendingId === connector.connector_id ? 'Disconnecting…' : 'Disconnect'}
+                                                {revokePendingId === connector.connector_id ? 'Disconnecting...' : 'Disconnect'}
                                             </button>
                                         )}
                                         <button
                                             onClick={() => setEditingId(connector.connector_id)}
-                                            style={{
-                                                padding: '0.3rem 0.8rem',
-                                                borderRadius: 4,
-                                                border: '1px solid #d6d3d1',
-                                                background: 'white',
-                                                fontSize: '0.875rem',
-                                                cursor: 'pointer',
-                                            }}
+                                            className="secondary-action"
                                         >
                                             Update credentials
                                         </button>
@@ -548,25 +509,25 @@ export function ConnectorConfigPanel({ workspaceId, apiBase, initialConnectors }
                             </div>
 
                             {connector.last_healthcheck_at && !isEditing && (
-                                <p style={{ margin: '0.35rem 0 0', color: '#78716c', fontSize: '0.8rem' }}>
+                                <p className="panel-inline-note" style={{ color: '#78716c' }}>
                                     Last checked: {new Date(connector.last_healthcheck_at).toLocaleString()}
                                 </p>
                             )}
 
                             {hint && !isEditing && (
-                                <p role="alert" style={{ margin: '0.4rem 0 0', color: '#b45309', fontSize: '0.85rem' }}>
-                                    ⚠ {hint}
+                                <p role="alert" className="panel-inline-note warn">
+                                    {hint}
                                 </p>
                             )}
 
                             {oauthErrorId === connector.connector_id && !isEditing && (
-                                <p role="alert" style={{ margin: '0.4rem 0 0', color: '#dc2626', fontSize: '0.85rem' }}>
+                                <p role="alert" className="panel-inline-note error">
                                     Could not initiate OAuth for this connector. Please try again.
                                 </p>
                             )}
 
                             {revokeErrorId === connector.connector_id && !isEditing && (
-                                <p role="alert" style={{ margin: '0.4rem 0 0', color: '#dc2626', fontSize: '0.85rem' }}>
+                                <p role="alert" className="panel-inline-note error">
                                     Could not disconnect this connector. Please retry.
                                 </p>
                             )}
@@ -585,7 +546,7 @@ export function ConnectorConfigPanel({ workspaceId, apiBase, initialConnectors }
             </ul>
 
             {connectors.length === 0 && (
-                <p style={{ color: '#78716c', fontSize: '0.9rem' }}>
+                <p className="panel-muted">
                     No connectors configured for workspace {workspaceId}.
                 </p>
             )}

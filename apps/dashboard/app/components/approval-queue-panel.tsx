@@ -1,6 +1,9 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { usePathname, useSearchParams } from 'next/navigation';
+import { CopyLinkButton } from './copy-link-button';
+import { buildDashboardHref } from './dashboard-navigation';
 
 type ApprovalItem = {
     approval_id: string;
@@ -19,6 +22,7 @@ type Props = {
     workspaceId: string;
     initialPending: ApprovalItem[];
     initialRecent: ApprovalItem[];
+    focusedApprovalId?: string;
     initialMetrics: {
         pending_count: number;
         decision_count: number;
@@ -28,6 +32,7 @@ type Props = {
 
 type DecisionValue = 'approved' | 'rejected' | 'timeout_rejected';
 type SortValue = 'requested_desc' | 'requested_asc' | 'risk_desc';
+type SavedView = 'all' | 'pending_high_risk' | 'aging_15m' | 'my_team';
 
 const REASON_TEMPLATES = [
     'Approved after policy review and scope verification',
@@ -46,7 +51,9 @@ const riskBadgeClass = (risk: ApprovalItem['risk_level']): string => {
     return 'badge low';
 };
 
-export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent, initialMetrics }: Props) {
+export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent, focusedApprovalId, initialMetrics }: Props) {
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
     const [pending, setPending] = useState<ApprovalItem[]>(initialPending);
     const [recent, setRecent] = useState<ApprovalItem[]>(initialRecent);
     const [metrics, setMetrics] = useState(initialMetrics);
@@ -59,6 +66,11 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
     const [pendingPage, setPendingPage] = useState(1);
     const [recentPage, setRecentPage] = useState(1);
     const [pendingSort, setPendingSort] = useState<SortValue>('risk_desc');
+    const [savedView, setSavedView] = useState<SavedView>('all');
+    const [selectedApprovals, setSelectedApprovals] = useState<Record<string, boolean>>({});
+    const [bulkDecision, setBulkDecision] = useState<DecisionValue | null>(null);
+    const [bulkReason, setBulkReason] = useState('Bulk decision confirmed by operations triage run.');
+    const [bulkBusy, setBulkBusy] = useState(false);
 
     const PAGE_SIZE = 5;
 
@@ -95,6 +107,22 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                 return false;
             }
             if (!query) {
+                if (savedView === 'all') {
+                    return true;
+                }
+
+                if (savedView === 'pending_high_risk') {
+                    return item.risk_level === 'high';
+                }
+
+                if (savedView === 'aging_15m') {
+                    return Date.now() - new Date(item.requested_at).getTime() > 15 * 60_000;
+                }
+
+                if (savedView === 'my_team') {
+                    return item.risk_level === 'high' || item.risk_level === 'medium';
+                }
+
                 return true;
             }
             return (
@@ -128,7 +156,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
             }
             return sortByRequestedDesc(a, b);
         });
-    }, [pending, riskFilter, search, pendingSort]);
+    }, [pending, pendingSort, riskFilter, savedView, search]);
 
     const filteredRecent = useMemo(() => {
         const query = search.trim().toLowerCase();
@@ -215,6 +243,72 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
         } finally {
             setBusyByApproval((prev) => ({ ...prev, [approval.approval_id]: false }));
         }
+    };
+
+    const runBulkDecision = async () => {
+        if (!bulkDecision) {
+            return;
+        }
+
+        const selected = pending.filter((item) => selectedApprovals[item.approval_id]);
+        if (selected.length === 0) {
+            setMessage('Select at least one approval before running bulk decision.');
+            return;
+        }
+
+        if ((bulkDecision === 'rejected' || bulkDecision === 'timeout_rejected') && !bulkReason.trim()) {
+            setMessage('Bulk reason is required for reject and timeout reject decisions.');
+            return;
+        }
+
+        setBulkBusy(true);
+        setMessage(null);
+
+        let processed = 0;
+        for (const approval of selected) {
+            const response = await fetch('/api/approvals/decision', {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({
+                    approval_id: approval.approval_id,
+                    workspace_id: workspaceId,
+                    decision: bulkDecision,
+                    reason: bulkReason.trim(),
+                }),
+            });
+
+            if (!response.ok) {
+                continue;
+            }
+
+            const body = (await response.json().catch(() => ({}))) as {
+                decided_at?: string;
+                decision_reason?: string | null;
+                decision?: string;
+            };
+
+            const moved: ApprovalItem = {
+                ...approval,
+                decision_status: body.decision ?? bulkDecision,
+                decided_at: body.decided_at ?? new Date().toISOString(),
+                decision_reason: body.decision_reason ?? bulkReason.trim(),
+            };
+
+            processed += 1;
+            setPending((prev) => prev.filter((item) => item.approval_id !== approval.approval_id));
+            setRecent((prev) => [moved, ...prev].slice(0, 50));
+        }
+
+        setMetrics((prev) => ({
+            ...prev,
+            pending_count: Math.max(0, prev.pending_count - processed),
+            decision_count: prev.decision_count + processed,
+            p95_decision_latency_seconds: computedP95Latency,
+        }));
+        setSelectedApprovals({});
+        setBulkDecision(null);
+        setBulkBusy(false);
+        setMessage(`Bulk decision completed for ${processed} approvals.`);
     };
 
     const applyReasonTemplate = (approvalId: string, value: string) => {
@@ -308,6 +402,17 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                         {risk}
                     </button>
                 ))}
+                <select
+                    value={savedView}
+                    onChange={(event) => setSavedView(event.target.value as SavedView)}
+                    className="approval-select"
+                    aria-label="Saved approval views"
+                >
+                    <option value="all">View: all</option>
+                    <option value="pending_high_risk">View: pending-high-risk</option>
+                    <option value="aging_15m">View: aging {`>`} 15m</option>
+                    <option value="my_team">View: my-team</option>
+                </select>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.7rem' }}>
@@ -321,6 +426,59 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                     {escalationBusy ? 'Running…' : 'Run Escalation Sweep'}
                 </button>
             </div>
+
+            <div style={{ display: 'flex', gap: '0.45rem', alignItems: 'center', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+                <button
+                    type="button"
+                    className="secondary-action"
+                    onClick={() => setBulkDecision('approved')}
+                    disabled={bulkBusy}
+                >
+                    Bulk Approve
+                </button>
+                <button
+                    type="button"
+                    className="danger-action"
+                    onClick={() => setBulkDecision('rejected')}
+                    disabled={bulkBusy}
+                >
+                    Bulk Reject
+                </button>
+                <button
+                    type="button"
+                    className="warn-action"
+                    onClick={() => setBulkDecision('timeout_rejected')}
+                    disabled={bulkBusy}
+                >
+                    Bulk Timeout Reject
+                </button>
+                <span style={{ fontSize: '0.8rem', color: '#57534e' }}>
+                    Selected: {Object.values(selectedApprovals).filter(Boolean).length}
+                </span>
+            </div>
+
+            {bulkDecision && (
+                <div className="message-inline" style={{ marginBottom: '0.8rem' }}>
+                    <p style={{ margin: '0 0 0.35rem' }}>
+                        Confirm bulk <strong>{bulkDecision}</strong> for selected approvals.
+                    </p>
+                    <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                        <input
+                            type="text"
+                            value={bulkReason}
+                            onChange={(event) => setBulkReason(event.target.value)}
+                            className="approval-input"
+                            placeholder="Bulk decision reason"
+                        />
+                        <button type="button" className="primary-action" disabled={bulkBusy} onClick={() => void runBulkDecision()}>
+                            {bulkBusy ? 'Applying…' : 'Confirm Bulk Decision'}
+                        </button>
+                        <button type="button" className="chip-button" disabled={bulkBusy} onClick={() => setBulkDecision(null)}>
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {message && (
                 <p className="message-inline">
@@ -346,11 +504,38 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                         pagedPending.map((approval) => {
                             const busy = busyByApproval[approval.approval_id] === true;
                             return (
-                                <tr key={approval.approval_id}>
+                                <tr
+                                    key={approval.approval_id}
+                                    style={focusedApprovalId === approval.approval_id ? { background: '#eff6ff' } : undefined}
+                                >
                                     <td>
                                         <div style={{ display: 'grid', gap: '0.2rem' }}>
-                                            <strong>{approval.action_summary}</strong>
-                                            <span style={{ fontSize: '0.78rem', color: '#57534e' }}>{approval.approval_id}</span>
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedApprovals[approval.approval_id] === true}
+                                                    onChange={(event) => {
+                                                        const checked = event.target.checked;
+                                                        setSelectedApprovals((prev) => ({
+                                                            ...prev,
+                                                            [approval.approval_id]: checked,
+                                                        }));
+                                                    }}
+                                                />
+                                                <strong>{approval.action_summary}</strong>
+                                            </label>
+                                            <span style={{ fontSize: '0.78rem', color: '#57534e', display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                                                {approval.approval_id}
+                                                <CopyLinkButton
+                                                    href={buildDashboardHref(pathname, searchParams.toString(), {
+                                                        tab: 'approvals',
+                                                        workspaceId,
+                                                        params: { approvalId: approval.approval_id },
+                                                    })}
+                                                    label="Copy Approval Link"
+                                                    className="chip-button"
+                                                />
+                                            </span>
                                         </div>
                                     </td>
                                     <td>

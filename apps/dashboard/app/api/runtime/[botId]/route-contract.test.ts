@@ -1,0 +1,52 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import {
+    buildHealthRouteContract,
+    buildKillRouteContract,
+    buildLogsRouteContract,
+    buildStateRouteContract,
+} from './route-contract';
+
+test('buildLogsRouteContract uses default limit when query is absent', () => {
+    const contract = buildLogsRouteContract('http://localhost:3001/api/runtime/bot-1/logs');
+
+    assert.equal(contract.upstreamUrl, 'http://localhost:8080/logs?limit=50');
+    assert.deepEqual(contract.requestInit, {
+        headers: {},
+        cache: 'no-store',
+    });
+});
+
+test('buildLogsRouteContract preserves and encodes explicit limit query', () => {
+    const contract = buildLogsRouteContract('http://localhost:3001/api/runtime/bot-1/logs?limit=10 0');
+
+    assert.equal(contract.upstreamUrl, 'http://localhost:8080/logs?limit=10%200');
+    assert.equal(contract.requestInit.cache, 'no-store');
+});
+
+test('buildStateRouteContract uses default limit and cache contract', () => {
+    const contract = buildStateRouteContract('http://localhost:3001/api/runtime/bot-1/state');
+
+    assert.equal(contract.upstreamUrl, 'http://localhost:8080/state/history?limit=20');
+    assert.equal(contract.requestInit.cache, 'no-store');
+    assert.deepEqual(contract.requestInit.headers, {});
+});
+
+test('buildHealthRouteContract creates no-store GET-style request shape', () => {
+    const contract = buildHealthRouteContract();
+
+    assert.equal(contract.upstreamUrl, 'http://localhost:8080/health/live');
+    assert.equal(contract.requestInit.cache, 'no-store');
+    assert.deepEqual(contract.requestInit.headers, {});
+    assert.equal(contract.requestInit.method, undefined);
+});
+
+test('buildKillRouteContract creates POST request with JSON content type', () => {
+    const contract = buildKillRouteContract();
+
+    assert.equal(contract.upstreamUrl, 'http://localhost:8080/kill');
+    assert.equal(contract.requestInit.method, 'POST');
+    assert.deepEqual(contract.requestInit.headers, {
+        'content-type': 'application/json',
+    });
+});

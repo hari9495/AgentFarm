@@ -23,8 +23,26 @@ type RuntimeHealthSnapshot = {
     failed_tasks?: number;
 };
 
+type ConnectorHealth = {
+    connector_id: string;
+    connector_type: string;
+    status: string;
+    last_error_code: string | null;
+    last_error_message: string | null;
+};
+
+type InternalLoginPolicySnapshot = {
+    allowed_domains_count: number;
+    admin_roles_count: number;
+    deny_all_mode: boolean;
+    source: 'live' | 'fallback';
+    fetched_at: string;
+};
+
 type Props = {
     botId: string;
+    connectors: ConnectorHealth[];
+    internalPolicy: InternalLoginPolicySnapshot;
     initialLogs: RuntimeLogEntry[];
     initialTransitions: RuntimeStateTransition[];
     initialCurrentState: string;
@@ -76,7 +94,16 @@ const statePillStyle = (state: string, isCurrent: boolean) => ({
     opacity: isCurrent ? 1 : 0.6,
 });
 
-export function RuntimeObservabilityPanel({ botId, initialLogs, initialTransitions, initialCurrentState, initialHealth }: Props) {
+export function RuntimeObservabilityPanel({
+    botId,
+    connectors,
+    internalPolicy,
+    initialLogs,
+    initialTransitions,
+    initialCurrentState,
+    initialHealth,
+}: Props) {
+    const [drilldownTarget, setDrilldownTarget] = useState<'heartbeat' | 'state' | 'connector' | null>(null);
     const [logs, setLogs] = useState<RuntimeLogEntry[]>(initialLogs);
     const [transitions, setTransitions] = useState<RuntimeStateTransition[]>(initialTransitions);
     const [currentState, setCurrentState] = useState<string>(initialCurrentState);
@@ -169,60 +196,111 @@ export function RuntimeObservabilityPanel({ botId, initialLogs, initialTransitio
     };
 
     const heartbeatSuccessRate = computeHeartbeatSuccessRate(health.heartbeat_sent, health.heartbeat_failed);
+    const degradedConnectors = connectors.filter((item) => item.status === 'degraded' || item.status === 'token_expired');
+    const hasHeartbeatIncident = (health.heartbeat_failed ?? 0) > 0;
+    const hasStateIncident = currentState === 'degraded';
+
+    const renderDrilldown = () => {
+        if (!drilldownTarget) {
+            return null;
+        }
+
+        if (drilldownTarget === 'heartbeat') {
+            return (
+                <div className="message-inline panel-stack">
+                    <strong>Heartbeat incident drilldown</strong>
+                    <p style={{ margin: '0.35rem 0 0' }}>
+                        Failed heartbeats: {health.heartbeat_failed ?? 0}, sent: {health.heartbeat_sent ?? 0}. Review runtime network path,
+                        then run runbook step: restart heartbeat loop and confirm recovery in health endpoint.
+                    </p>
+                </div>
+            );
+        }
+
+        if (drilldownTarget === 'state') {
+            const recent = transitions.slice(0, 5);
+            return (
+                <div className="message-inline panel-stack">
+                    <strong>State incident drilldown</strong>
+                    <p style={{ margin: '0.35rem 0 0.4rem' }}>
+                        Latest transitions into degraded path. Runbook step: inspect recent runtime errors and clear blocker before forcing restart.
+                    </p>
+                    <ul style={{ margin: 0, paddingLeft: '1rem' }}>
+                        {recent.map((item, index) => (
+                            <li key={`${item.at}-${index}`}>
+                                {formatTs(item.at)}: {item.from} -&gt; {item.to} {item.reason ? `(${item.reason})` : ''}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            );
+        }
+
+        return (
+            <div className="message-inline panel-stack">
+                <strong>Connector incident drilldown</strong>
+                <p style={{ margin: '0.35rem 0 0.4rem' }}>
+                    Degraded connectors detected. Runbook step: re-authorize expired tokens and retry connector health checks.
+                </p>
+                <ul style={{ margin: 0, paddingLeft: '1rem' }}>
+                    {degradedConnectors.map((connector) => (
+                        <li key={connector.connector_id}>
+                            {connector.connector_type}: {connector.last_error_code ?? connector.status}
+                        </li>
+                    ))}
+                </ul>
+            </div>
+        );
+    };
 
     return (
         <article className="card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <div className="obs-header">
                 <div>
-                    <h2 style={{ marginBottom: '0.15rem' }}>Runtime Observability</h2>
-                    <p style={{ margin: 0, fontSize: '0.78rem', color: '#78716c' }}>
-                        Bot <code style={{ background: '#ece6dc', padding: '0 0.3rem', borderRadius: 4 }}>{botId}</code>
+                    <h2 className="obs-title">Runtime Observability</h2>
+                    <p className="obs-meta">
+                        Bot <code>{botId}</code>
                         {lastRefreshed && (
                             <> &mdash; last refreshed {lastRefreshed.toLocaleTimeString()}</>
                         )}
                         {refreshError && (
-                            <> &mdash; <span style={{ color: '#dc2626' }}>{refreshError}</span></>
+                            <> &mdash; <span className="obs-error">{refreshError}</span></>
                         )}
                     </p>
+                </div>
+
+                <div className="obs-policy-row">
+                    <span className={`badge ${internalPolicy.source === 'live' ? 'low' : 'warn'}`}>
+                        policy source {internalPolicy.source}
+                    </span>
+                    <span className="badge neutral">policy checked {formatTs(internalPolicy.fetched_at)}</span>
+                    <span className={`badge ${internalPolicy.deny_all_mode ? 'high' : 'low'}`}>
+                        deny_all_mode {internalPolicy.deny_all_mode ? 'enabled' : 'disabled'}
+                    </span>
+                    <span className="badge neutral">domains {internalPolicy.allowed_domains_count}</span>
+                    <span className="badge neutral">admin roles {internalPolicy.admin_roles_count}</span>
                 </div>
 
                 {/* Kill switch */}
                 <div>
                     {killEngaged ? (
-                        <span className="badge high" style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}>
+                        <span className="badge high">
                             Kill switch engaged
                         </span>
                     ) : killConfirm ? (
-                        <span style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
-                            <span style={{ fontSize: '0.82rem', color: '#7f1d1d', fontWeight: 600 }}>Confirm shutdown?</span>
+                        <span className="obs-kill-row">
+                            <span className="obs-kill-note">Confirm shutdown?</span>
                             <button
                                 onClick={() => void handleKillConfirm()}
                                 disabled={killPending}
-                                style={{
-                                    background: '#dc2626',
-                                    color: '#fff',
-                                    border: 'none',
-                                    borderRadius: 6,
-                                    padding: '0.3rem 0.7rem',
-                                    cursor: killPending ? 'wait' : 'pointer',
-                                    fontWeight: 700,
-                                    fontSize: '0.8rem',
-                                }}
+                                className="danger-action"
                             >
-                                {killPending ? 'Engaging…' : 'Yes, shutdown'}
+                                {killPending ? 'Engaging...' : 'Yes, shutdown'}
                             </button>
                             <button
                                 onClick={handleKillCancel}
                                 disabled={killPending}
-                                style={{
-                                    background: '#e5e7eb',
-                                    color: '#374151',
-                                    border: 'none',
-                                    borderRadius: 6,
-                                    padding: '0.3rem 0.7rem',
-                                    cursor: 'pointer',
-                                    fontSize: '0.8rem',
-                                }}
+                                className="secondary-action"
                             >
                                 Cancel
                             </button>
@@ -230,37 +308,46 @@ export function RuntimeObservabilityPanel({ botId, initialLogs, initialTransitio
                     ) : (
                         <button
                             onClick={handleKillClick}
-                            style={{
-                                background: '#fee2e2',
-                                color: '#991b1b',
-                                border: '1px solid #fca5a5',
-                                borderRadius: 6,
-                                padding: '0.35rem 0.9rem',
-                                cursor: 'pointer',
-                                fontWeight: 700,
-                                fontSize: '0.82rem',
-                            }}
+                            className="danger-action"
                         >
                             Kill Switch
                         </button>
                     )}
                     {killMessage && (
-                        <p style={{ margin: '0.3rem 0 0', fontSize: '0.78rem', color: killEngaged ? '#166534' : '#dc2626' }}>
+                        <p className="obs-kill-message" style={{ color: killEngaged ? '#166534' : '#dc2626' }}>
                             {killMessage}
                         </p>
                     )}
                 </div>
             </div>
 
+            <div className="panel-badge-row panel-stack" style={{ marginBottom: 0 }}>
+                <button type="button" className={`chip-button ${drilldownTarget === 'heartbeat' ? 'active' : ''}`} onClick={() => setDrilldownTarget('heartbeat')}>
+                    Heartbeat Incident {hasHeartbeatIncident ? 'Detected' : 'Clear'}
+                </button>
+                <button type="button" className={`chip-button ${drilldownTarget === 'state' ? 'active' : ''}`} onClick={() => setDrilldownTarget('state')}>
+                    State Incident {hasStateIncident ? 'Degraded' : 'Stable'}
+                </button>
+                <button type="button" className={`chip-button ${drilldownTarget === 'connector' ? 'active' : ''}`} onClick={() => setDrilldownTarget('connector')}>
+                    Connector Incident {degradedConnectors.length > 0 ? `${degradedConnectors.length}` : '0'}
+                </button>
+                {drilldownTarget && (
+                    <button type="button" className="chip-button" onClick={() => setDrilldownTarget(null)}>
+                        Close Drilldown
+                    </button>
+                )}
+            </div>
+            {renderDrilldown()}
+
             {/* Current state + state machine */}
-            <div style={{ marginTop: '1rem' }}>
-                <p style={{ fontSize: '0.78rem', color: '#78716c', margin: '0 0 0.4rem' }}>State machine</p>
-                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
+            <div className="obs-section">
+                <p className="obs-section-title">State machine</p>
+                <div className="obs-state-machine">
                     {ORDERED_STATES.map((state, i) => (
-                        <span key={state} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                        <span key={state} className="obs-state-node">
                             <span style={statePillStyle(state, state === currentState)}>{state}</span>
                             {i < ORDERED_STATES.length - 1 && (
-                                <span style={{ color: '#9ca3af', fontSize: '0.75rem' }}>→</span>
+                                <span className="obs-state-arrow">→</span>
                             )}
                         </span>
                     ))}
@@ -271,26 +358,16 @@ export function RuntimeObservabilityPanel({ botId, initialLogs, initialTransitio
             </div>
 
             {/* Heartbeat + task metrics */}
-            <div
-                style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
-                    gap: '0.5rem',
-                    marginTop: '1rem',
-                    background: '#f9fafb',
-                    borderRadius: 8,
-                    padding: '0.6rem 0.8rem',
-                }}
-            >
+            <div className="obs-metrics-grid">
                 <div>
-                    <p style={{ margin: 0, fontSize: '0.7rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Heartbeat loop</p>
-                    <p style={{ margin: '0.1rem 0 0', fontWeight: 700, fontSize: '0.9rem', color: health.heartbeat_loop_running ? '#16a34a' : '#dc2626' }}>
+                    <p className="obs-metric-label">Heartbeat loop</p>
+                    <p className="obs-metric-value" style={{ color: health.heartbeat_loop_running ? '#16a34a' : '#dc2626' }}>
                         {health.heartbeat_loop_running ? 'running' : 'stopped'}
                     </p>
                 </div>
                 <div>
-                    <p style={{ margin: 0, fontSize: '0.7rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Sent / Failed</p>
-                    <p style={{ margin: '0.1rem 0 0', fontWeight: 700, fontSize: '0.9rem' }}>
+                    <p className="obs-metric-label">Sent / Failed</p>
+                    <p className="obs-metric-value">
                         <span style={{ color: '#16a34a' }}>{health.heartbeat_sent ?? 0}</span>
                         {' / '}
                         <span style={{ color: (health.heartbeat_failed ?? 0) > 0 ? '#dc2626' : '#374151' }}>
@@ -304,14 +381,14 @@ export function RuntimeObservabilityPanel({ botId, initialLogs, initialTransitio
                     </p>
                 </div>
                 <div>
-                    <p style={{ margin: 0, fontSize: '0.7rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Last heartbeat</p>
-                    <p style={{ margin: '0.1rem 0 0', fontWeight: 600, fontSize: '0.85rem', color: '#374151' }}>
+                    <p className="obs-metric-label">Last heartbeat</p>
+                    <p className="obs-metric-value subtle">
                         {health.last_heartbeat_at ? formatTs(health.last_heartbeat_at) : 'none'}
                     </p>
                 </div>
                 <div>
-                    <p style={{ margin: 0, fontSize: '0.7rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Tasks processed</p>
-                    <p style={{ margin: '0.1rem 0 0', fontWeight: 700, fontSize: '0.9rem' }}>
+                    <p className="obs-metric-label">Tasks processed</p>
+                    <p className="obs-metric-value">
                         <span style={{ color: '#16a34a' }}>{health.succeeded_tasks ?? 0}</span>
                         {' ok / '}
                         <span style={{ color: (health.failed_tasks ?? 0) > 0 ? '#dc2626' : '#374151' }}>
@@ -321,40 +398,30 @@ export function RuntimeObservabilityPanel({ botId, initialLogs, initialTransitio
                     </p>
                 </div>
                 <div>
-                    <p style={{ margin: 0, fontSize: '0.7rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Queue depth</p>
-                    <p style={{ margin: '0.1rem 0 0', fontWeight: 700, fontSize: '0.9rem', color: (health.task_queue_depth ?? 0) > 0 ? '#f59e0b' : '#374151' }}>
+                    <p className="obs-metric-label">Queue depth</p>
+                    <p className="obs-metric-value" style={{ color: (health.task_queue_depth ?? 0) > 0 ? '#f59e0b' : '#374151' }}>
                         {health.task_queue_depth ?? 0}
                     </p>
                 </div>
             </div>
 
             {/* State transition history */}
-            <div style={{ marginTop: '1rem' }}>
-                <p style={{ fontSize: '0.78rem', color: '#78716c', margin: '0 0 0.4rem', fontWeight: 600 }}>
+            <div className="obs-section">
+                <p className="obs-section-title">
                     State transitions ({transitions.length})
                 </p>
                 {transitions.length === 0 ? (
-                    <p style={{ fontSize: '0.82rem', color: '#9ca3af', margin: 0 }}>No transitions recorded yet.</p>
+                    <p className="obs-muted-empty">No transitions recorded yet.</p>
                 ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                    <div className="obs-transition-list">
                         {transitions.map((t, i) => (
-                            <div
-                                key={i}
-                                style={{
-                                    display: 'flex',
-                                    gap: '0.6rem',
-                                    alignItems: 'center',
-                                    fontSize: '0.8rem',
-                                    padding: '0.2rem 0',
-                                    borderBottom: i < transitions.length - 1 ? '1px solid #f3f4f6' : undefined,
-                                }}
-                            >
-                                <span style={{ color: '#9ca3af', minWidth: '5.5rem', flexShrink: 0 }}>{formatTs(t.at)}</span>
-                                <span style={{ color: '#6b7280' }}>{t.from}</span>
-                                <span style={{ color: '#9ca3af' }}>→</span>
-                                <span style={{ color: STATE_COLORS[t.to] ?? '#374151', fontWeight: 600 }}>{t.to}</span>
+                            <div key={i} className="obs-transition-item">
+                                <span className="obs-transition-time">{formatTs(t.at)}</span>
+                                <span className="obs-transition-from">{t.from}</span>
+                                <span className="obs-state-arrow">→</span>
+                                <span className="obs-transition-to" style={{ color: STATE_COLORS[t.to] ?? '#374151' }}>{t.to}</span>
                                 {t.reason && (
-                                    <span style={{ color: '#9ca3af', fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    <span className="obs-transition-reason">
                                         — {t.reason}
                                     </span>
                                 )}
@@ -365,94 +432,60 @@ export function RuntimeObservabilityPanel({ botId, initialLogs, initialTransitio
             </div>
 
             {/* Log feed */}
-            <div style={{ marginTop: '1rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
-                    <p style={{ fontSize: '0.78rem', color: '#78716c', margin: 0, fontWeight: 600 }}>
+            <div className="obs-section">
+                <div className="obs-log-toolbar">
+                    <p className="obs-section-title" style={{ marginBottom: 0 }}>
                         Runtime logs ({filteredLogs.length}{logFilter ? ` of ${logs.length}` : ''})
                     </p>
                     <input
                         type="text"
-                        placeholder="Filter by event, state, or correlation ID…"
+                        placeholder="Filter by event, state, or correlation ID..."
                         value={logFilter}
                         onChange={(e) => setLogFilter(e.target.value)}
-                        style={{
-                            flex: 1,
-                            minWidth: 180,
-                            fontSize: '0.78rem',
-                            padding: '0.25rem 0.5rem',
-                            border: '1px solid #d1d5db',
-                            borderRadius: 5,
-                            outline: 'none',
-                        }}
+                        className="obs-log-input"
                     />
                 </div>
 
                 {filteredLogs.length === 0 ? (
-                    <p style={{ fontSize: '0.82rem', color: '#9ca3af', margin: 0 }}>
+                    <p className="obs-muted-empty">
                         {logFilter ? 'No logs match the filter.' : 'No logs buffered yet.'}
                     </p>
                 ) : (
-                    <div
-                        style={{
-                            fontFamily: 'monospace',
-                            fontSize: '0.78rem',
-                            background: '#1c1917',
-                            color: '#d6d3d1',
-                            borderRadius: 8,
-                            padding: '0.6rem 0.8rem',
-                            maxHeight: '22rem',
-                            overflowY: 'auto',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '0.15rem',
-                        }}
-                    >
+                    <div className="obs-log-console">
                         {filteredLogs.map((log, i) => (
                             <div key={i}>
                                 <div
-                                    style={{ display: 'flex', gap: '0.6rem', alignItems: 'baseline', cursor: log.details ? 'pointer' : 'default' }}
+                                    className={`obs-log-line ${log.details ? 'clickable' : ''}`}
                                     onClick={() => { if (log.details) toggleDetails(i); }}
                                 >
-                                    <span style={{ color: '#a8a29e', minWidth: '5.5rem', flexShrink: 0 }}>{formatTs(log.at)}</span>
+                                    <span className="obs-log-time">{formatTs(log.at)}</span>
                                     <span
+                                        className="obs-log-event"
                                         style={{
-                                            padding: '0 0.4rem',
-                                            borderRadius: 4,
-                                            background: '#292524',
                                             color: EVENT_TYPE_BADGE[log.eventType] === 'high' ? '#f87171'
                                                 : EVENT_TYPE_BADGE[log.eventType] === 'low' ? '#86efac'
                                                     : EVENT_TYPE_BADGE[log.eventType] === 'medium' ? '#fcd34d'
                                                         : '#94a3b8',
-                                            fontWeight: 600,
-                                            flexShrink: 0,
                                         }}
                                     >
                                         {log.eventType}
                                     </span>
-                                    <span style={{ color: STATE_COLORS[log.runtimeState] ?? '#94a3b8', flexShrink: 0 }}>
+                                    <span className="obs-log-state" style={{ color: STATE_COLORS[log.runtimeState] ?? '#94a3b8' }}>
                                         [{log.runtimeState}]
                                     </span>
                                     {log.correlationId && (
-                                        <span style={{ color: '#57534e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        <span className="obs-log-correlation">
                                             corr:{log.correlationId}
                                         </span>
                                     )}
                                     {log.details && (
-                                        <span style={{ color: '#57534e', marginLeft: 'auto', flexShrink: 0 }}>
+                                        <span className="obs-log-details-toggle">
                                             {showDetails[i] ? '▲' : '▼'} details
                                         </span>
                                     )}
                                 </div>
                                 {log.details && showDetails[i] && (
-                                    <pre
-                                        style={{
-                                            margin: '0.2rem 0 0.3rem 5.5rem',
-                                            color: '#a8a29e',
-                                            fontSize: '0.72rem',
-                                            whiteSpace: 'pre-wrap',
-                                            wordBreak: 'break-all',
-                                        }}
-                                    >
+                                    <pre className="obs-log-details">
                                         {JSON.stringify(log.details, null, 2)}
                                     </pre>
                                 )}

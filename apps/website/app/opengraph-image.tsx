@@ -1,7 +1,7 @@
 ﻿import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
-export const alt = "AgentFarm — Hire AI Employees for Your Engineering Team";
+export const alt = "AgentFarm — Trusted AI Teammates for Your Engineering Team";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -50,13 +50,13 @@ export default function OGImage() {
               marginBottom: 24,
             }}
           >
-            Hire AI Employees for Your{" "}
+            Trusted AI Teammates for Your{" "}
             <span style={{ color: "#2563eb" }}>Engineering Team</span>
           </h1>
           <p style={{ color: "#94a3b8", fontSize: 28, margin: 0 }}>
-            Deploy AI developers, QA engineers, and DevOps agents
+            Deploy secure AI teammates with approvals,
             <br />
-            that work inside your GitHub and Slack.
+            audit trails, and real delivery outcomes.
           </p>
         </div>
 

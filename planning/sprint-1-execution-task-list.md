@@ -141,6 +141,10 @@ Build the connector layer for Jira, Teams, GitHub, and email with OAuth and norm
 - Add secure state nonce validation (CSRF protection)
 - Implement token storage in Key Vault (never in DB)
 - Acceptance criteria: OAuth flows complete for all 4 connectors, tokens secured, state nonces validated
+- Status: Completed (2026-04-28)
+- Evidence: apps/api-gateway/src/routes/connector-auth.ts, apps/api-gateway/src/routes/connector-auth.test.ts
+- Validation: pnpm --filter @agentfarm/api-gateway exec tsx --test src/routes/connector-auth.test.ts (14 pass), pnpm --filter @agentfarm/api-gateway typecheck (pass)
+- Notes: OAuth initiation/callback now supports Jira, Teams, GitHub, and company email; callback enforces nonce replay rejection and routes insufficient scopes to consent_pending while persisting secret references only.
 - Owner: Engineering Lead + Security Lead
 - Dependency: 2.1 (tenant identity ready)
 - Due: 2026-05-12
@@ -151,6 +155,10 @@ Build the connector layer for Jira, Teams, GitHub, and email with OAuth and norm
 - Add error handling for permission_invalid, token_expired states
 - Implement scope validation and consent recovery
 - Acceptance criteria: Tokens refresh before expiry, revoke clears auth, permission errors trigger re-consent
+- Status: Completed (2026-04-28)
+- Evidence: apps/api-gateway/src/services/connector-token-lifecycle-worker.ts, apps/api-gateway/src/services/connector-token-lifecycle-worker.test.ts, apps/api-gateway/src/routes/connector-auth.ts, apps/api-gateway/src/routes/connector-auth.test.ts
+- Validation: pnpm --filter @agentfarm/api-gateway exec tsx --test src/services/connector-token-lifecycle-worker.test.ts (6 pass), pnpm --filter @agentfarm/api-gateway exec tsx --test src/routes/connector-auth.test.ts (14 pass), pnpm --filter @agentfarm/api-gateway typecheck (pass)
+- Notes: Auto-refresh worker now supports Jira, Teams, GitHub, and company email OAuth tokens; revoke clears secret references; permission_invalid and insufficient_scope paths consistently route to consent_pending for re-consent recovery.
 - Owner: Engineering Lead
 - Dependency: 4.1
 - Due: 2026-05-16
@@ -161,6 +169,10 @@ Build the connector layer for Jira, Teams, GitHub, and email with OAuth and norm
 - Implement retry logic (exponential backoff for transient errors)
 - Add ConnectorAction logging (success/failure/error code)
 - Acceptance criteria: All 6 actions execute end-to-end for each connector, errors classified correctly
+- Status: Completed (2026-04-28)
+- Evidence: apps/api-gateway/src/routes/connector-actions.ts, apps/api-gateway/src/routes/connector-actions.test.ts, apps/api-gateway/src/lib/provider-clients.ts, apps/api-gateway/src/lib/provider-clients.test.ts
+- Validation: pnpm --filter @agentfarm/api-gateway exec tsx --test src/routes/connector-actions.test.ts (22 pass), pnpm --filter @agentfarm/api-gateway exec tsx --test src/lib/provider-clients.test.ts (45 pass), pnpm --filter @agentfarm/api-gateway typecheck (pass)
+- Notes: Route executor enforces normalized action contract v1.0 with exponential backoff retries (50ms, 100ms), connector action logging, role-policy checks, and consistent timeout classification (timeout -> HTTP 504 + timeout log status).
 - Owner: Engineering Lead + Integration Lead
 - Dependency: 4.1, 4.2
 - Due: 2026-05-21
@@ -170,6 +182,10 @@ Build the connector layer for Jira, Teams, GitHub, and email with OAuth and norm
 - Implement error handlers for auth failures, rate limits, and network timeouts
 - Add remediation flows (re-auth, scope re-consent, backoff)
 - Acceptance criteria: Health checks run, errors surface to dashboard, re-auth flows work
+- Status: Completed (2026-04-28)
+- Evidence: apps/api-gateway/src/services/connector-health-worker.ts, apps/api-gateway/src/services/connector-health-worker.test.ts, apps/api-gateway/src/routes/connector-actions.ts, apps/api-gateway/src/routes/connector-actions.test.ts, apps/api-gateway/src/lib/provider-clients.ts
+- Validation: pnpm --filter @agentfarm/api-gateway exec tsx --test src/services/connector-health-worker.test.ts (5 pass), pnpm --filter @agentfarm/api-gateway exec tsx --test src/routes/connector-actions.test.ts (22 pass), pnpm --filter @agentfarm/api-gateway typecheck (pass)
+- Notes: Health worker enforces monthly stale validation window and prioritizes unhealthy connector states; remediation mapping applies re-auth/reconsent/backoff outcomes and is exposed through health summary endpoints for dashboard consumption.
 - Owner: Integration Lead
 - Dependency: 4.3
 - Due: 2026-05-23
@@ -302,7 +318,7 @@ Build end-to-end testing, load testing, and production deployment.
 | 5.3 | Approval enforcement and action execution | Engineering Lead | Completed | P0 | 5.1, 5.2 | 2026-05-24 | Pass | Completed approval enforcement end-to-end: risky tasks block in runtime pending-approval queue; approval decisions execute or cancel with immutable audit trail; approved decisions run real connector execution via gateway (`/v1/connectors/actions/execute`) using ops-safe service token auth (`x-connector-exec-token`); decision cache + cache-hit execution path added; rejection/timeout rejection persist graceful `cancelled` action results and emit bot-notification runtime events. Runtime `/decision` webhook auth (`x-runtime-decision-token`) and gateway-to-runtime decision webhook fanout are both implemented and fully tested. |
 | 6.1 | Audit event logging and retention | Engineering Lead + Compliance Lead | Completed | P0 | 2.1, 3.1, 4.3, 5.1 | 2026-05-18 | Pass | Completed dedicated audit API module: append-only event ingestion (`POST /v1/audit/events`), compliance query endpoint with scoped filters/pagination cursor (`GET /v1/audit/events`), and retention cleanup policy endpoint with dry-run + execute modes (`POST /v1/audit/retention/cleanup`). Routes wired into gateway and covered by route tests. |
 | 6.2 | Evidence dashboard and compliance reporting | Compliance Lead | Completed | P1 | 6.1 | 2026-05-26 | Pass | Completed evidence/compliance dashboard workflow: new interactive Evidence & Compliance panel with evidence freshness indicator (latest event age + stale warning), filterable audit query UI (severity/event type/bot/time window), and compliance export to CSV/JSON. Added dashboard API proxy routes for audit query and retention cleanup plus export endpoint (`/api/audit/export`) and integrated panel into home page replacing static evidence feed. |
-| 7.1 | Resume website (from Sprint 0 deferred) | Frontend Lead + DevOps | In progress | P1 | None | 2026-05-22 | Pass | SWA deployment workflow added (`.github/workflows/website-swa.yml`) with main/PR triggers and deployment token auth; SWA runtime headers config added (`apps/website/staticwebapp.config.json`); operations runbook created for domain/CDN/analytics/Lighthouse signoff (`operations/runbooks/website-swa-runbook.md`). Website source files were normalized to UTF-8 and build path validated using `pnpm --filter @agentfarm/website exec next build --no-lint`. Pending: set repository secret `AZURE_STATIC_WEB_APPS_API_TOKEN_WEBSITE`, execute first production deploy, and complete DNS domain cutover. |
+| 7.1 | Resume website (from Sprint 0 deferred) | Frontend Lead + DevOps | In progress | P1 | None | 2026-05-22 | Pass | SWA deployment workflow added (`.github/workflows/website-swa.yml`) with main/PR triggers and deployment token auth; SWA runtime headers config added (`apps/website/staticwebapp.config.json`); operations runbook created for domain/CDN/analytics/Lighthouse signoff (`operations/runbooks/website-swa-runbook.md`). Automated production verification command added (`pnpm verify:website:prod`) backed by `scripts/website-swa-verify.mjs`, with evidence output path documented in runbook (`operations/quality/7.1-website-swa-verification.json`). Website build validated using `pnpm --filter @agentfarm/website exec next build --no-lint`. Pending external platform-owner steps: configure repository secret `AZURE_STATIC_WEB_APPS_API_TOKEN_WEBSITE`, run first production deployment workflow, and complete DNS/custom-domain TLS cutover. |
 | 7.2 | Build marketplace discovery and bot listing | Frontend Lead + Product Lead | Completed | P1 | 1.1, 1.2 | 2026-05-26 | Pass | Implemented marketplace listing API (`apps/website/app/api/marketplace/bots/route.ts`) with plan/department/availability/search filters; added quick-start onboarding API (`apps/website/app/api/marketplace/quick-start/route.ts`) with payload validation and onboarding request IDs; implemented checkout onboarding workflow page (`apps/website/app/checkout/page.tsx`) wired to cart selection and quick-start submission. Build verified via `pnpm --filter @agentfarm/website exec next build --no-lint`. |
 | 8.1 | Comprehensive test suite | QA Lead | Completed | P0 | All core tasks | 2026-05-24 | Pass | Quality gate fully closed: explicit >=80% line threshold enforcement implemented via `scripts/coverage-threshold-check.mjs` and integrated into package coverage scripts; minimal E2E smoke lane implemented via `scripts/e2e-smoke.mjs`; consolidated report generated at `operations/quality/8.1-quality-gate-report.md` with passing gate run (`pnpm quality:gate`, exit 0). |
 | 8.2 | Production deployment and runbooks | Cloud Ops + DevOps | In progress | P0 | All core tasks | 2026-05-26 | Pass | Release operations runbook created at `operations/runbooks/mvp-launch-ops-runbook.md`; `.azure/deployment-plan.md` advanced to `Validated` with proof. Execution now blocked on Azure sign-in context and production deployment window. |

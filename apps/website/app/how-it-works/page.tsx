@@ -4,7 +4,7 @@ import ButtonLink from "@/components/shared/ButtonLink";
 
 export const metadata: Metadata = {
     title: "How It Works — AgentFarm",
-    description: "Learn how AgentFarm AI workers integrate with your GitHub, Slack, and Jira workflow.",
+    description: "Learn how AgentFarm AI teammates integrate with your GitHub, Slack, and Jira workflow.",
 };
 
 const steps = [
@@ -22,10 +22,10 @@ const steps = [
         number: "02",
         icon: Rocket,
         gradient: "from-violet-500 to-violet-600",
-        title: "Hire Your AI Worker",
+        title: "Activate Your First AI Teammate",
         description:
-            "Click 'Hire' on any robot card. Choose a plan (Starter, Pro, or Enterprise), confirm the role, and your AI worker is provisioned instantly in an isolated runtime container.",
-        detail: "Worker live in ~30 seconds",
+            "Select a role, choose a plan (Starter, Pro, or Enterprise), and activate your teammate in an isolated runtime with governed access.",
+        detail: "Teammate live in ~30 seconds",
         image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=900&q=80",
     },
     {
@@ -44,7 +44,7 @@ const steps = [
         gradient: "from-orange-500 to-orange-600",
         title: "Assign Tasks",
         description:
-            "Mention your AI worker in Slack, assign a Jira ticket, or create a task directly in the AgentFarm dashboard. The worker picks it up, analyses your codebase, and starts executing.",
+            "Mention a teammate in Slack, assign a Jira ticket, or create a task directly in AgentFarm. The teammate picks it up, analyzes context, and starts execution.",
         detail: "Execution starts in <30s",
         image: "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?auto=format&fit=crop&w=900&q=80",
     },
@@ -54,7 +54,7 @@ const steps = [
         gradient: "from-pink-500 to-pink-600",
         title: "Review the Pull Request",
         description:
-            "Your AI worker opens a PR on GitHub with a description of what was changed and why. Review the diff, leave feedback, and approve — just as you would with a human engineer.",
+            "Your teammate opens a PR on GitHub with clear change summaries and rationale. Review the diff, leave feedback, and approve with policy-aware guardrails.",
         detail: "PR ready in minutes",
         image: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=900&q=80",
     },
@@ -64,7 +64,7 @@ const steps = [
         gradient: "from-indigo-500 to-indigo-600",
         title: "Monitor & Iterate",
         description:
-            "The AgentFarm dashboard shows real-time metrics: tasks completed, PRs merged, test coverage, and deployment frequency. Use insights to scale up workers or adjust workflow rules.",
+            "The AgentFarm dashboard shows real-time metrics: tasks completed, PRs merged, test coverage, and deployment frequency. Use insights to refine role usage and approval rules.",
         detail: "Full observability, always",
         image: "https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=900&q=80",
     },
@@ -90,14 +90,14 @@ export default function HowItWorksPage() {
                                 How It Works
                             </span>
                             <h1 className="mt-3 text-4xl sm:text-6xl font-extrabold text-white tracking-tight leading-tight">
-                                From zero to AI workforce in{" "}
+                                From zero to trusted AI operations in{" "}
                                 <span className="bg-gradient-to-r from-emerald-300 to-blue-300 bg-clip-text text-transparent">
                                     under 10 minutes
                                 </span>
                             </h1>
                             <p className="mt-5 text-xl text-slate-300 leading-relaxed">
                                 AgentFarm is designed to slot into your existing workflow with zero disruption.
-                                No new tools, no new processes — just AI workers inside the tools you already use.
+                                No new tools, no new processes — just AI teammates inside the tools your team already uses.
                             </p>
                         </div>
                     </div>
@@ -108,10 +108,10 @@ export default function HowItWorksPage() {
             <div className="bg-slate-900 dark:bg-slate-950 border-b border-slate-800">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-wrap justify-center gap-8 text-center">
                     {[
-                        { label: "Browse & hire a role", time: "2 min" },
+                        { label: "Browse & activate a role", time: "2 min" },
                         { label: "Connect GitHub + Slack", time: "5 min" },
                         { label: "First task assigned", time: "8 min" },
-                        { label: "First PR opened by AI", time: "<15 min" },
+                        { label: "First review-ready PR", time: "<15 min" },
                     ].map(({ label, time }) => (
                         <div key={label} className="flex items-center gap-3">
                             <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
@@ -172,7 +172,7 @@ export default function HowItWorksPage() {
                         />
                         <div className="absolute inset-0 bg-gradient-to-br from-blue-900/90 to-violet-900/90" />
                         <div className="relative py-14 px-10 text-white text-center">
-                            <h3 className="text-2xl font-bold mb-3">Ready to build your AI workforce?</h3>
+                            <h3 className="text-2xl font-bold mb-3">Ready to augment your team with trusted AI execution?</h3>
                             <p className="text-blue-100 mb-6">Start with a 14-day free trial. No credit card required.</p>
                             <ButtonLink href="/#waitlist" size="lg">
                                 Get Started Free

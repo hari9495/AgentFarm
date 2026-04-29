@@ -15,8 +15,8 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-    title: 'AgentFarm Dashboard',
-    description: 'MVP dashboard scaffold',
+    title: 'AgentFarm Internal Dashboard',
+    description: 'Internal operations dashboard for runtime, approvals, and evidence monitoring.',
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

@@ -25,6 +25,9 @@ Operational checklist for deploying the AgentFarm website to Azure Static Web Ap
    - /
    - /signup
    - /target
+5. Run automated production verification from repo root:
+   - `pnpm verify:website:prod -- --url https://<your-swa-domain>`
+   - report output: `operations/quality/7.1-website-swa-verification.json`
 
 ## Custom Domain Setup
 1. In Azure portal, open Static Web App custom domains.
@@ -48,6 +51,12 @@ Operational checklist for deploying the AgentFarm website to Azure Static Web Ap
 1. Confirm analytics events are emitted from production domain.
 2. Validate sitemap and robots.txt exposure.
 3. Validate metadata/title/description for top routes.
+
+## Closure Evidence (Task 7.1)
+1. Attach successful GitHub Actions run URL for `.github/workflows/website-swa.yml`.
+2. Attach verification report file: `operations/quality/7.1-website-swa-verification.json`.
+3. Record custom domain DNS and TLS completion timestamp.
+4. Record Lighthouse scores for production URL (all categories >= 90).
 
 ## Rollback
 1. Re-run workflow from last known-good commit.

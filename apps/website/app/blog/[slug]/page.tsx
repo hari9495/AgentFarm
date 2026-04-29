@@ -28,7 +28,7 @@ type Post = {
 const posts: Post[] = [
     {
         slug: "introducing-agentfarm",
-        title: "Introducing AgentFarm: AI Workers for Software Teams",
+        title: "Introducing AgentFarm: AI Teammates for Software Teams",
         category: "Product",
         categoryColor: "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300",
         date: "March 15, 2026",
@@ -37,7 +37,7 @@ const posts: Post[] = [
         excerpt: "We're building AI agents that show up to work like real teammates — with real identities, real specialisations, and real accountability.",
         body: [
             "Every software team we've spoken to has the same problem: not enough engineers. Backlogs grow, shipping slows, and the best engineers spend half their time on work that could be automated.",
-            "AgentFarm was built to solve this. We deploy AI workers — not chatbots, not copilots, but full-stack software agents — that join your team as first-class contributors. They open PRs, write tests, monitor infrastructure, and hunt down vulnerabilities, all day, every day.",
+            "AgentFarm was built to solve this. We deploy AI teammates - not chatbots, not copilots, but full-stack software agents - that join your team as first-class contributors. They open PRs, write tests, monitor infrastructure, and hunt down vulnerabilities, all day, every day.",
             "What makes AgentFarm different is identity. Our agents operate through real corporate accounts: a real email address, a real Slack presence, a real GitHub profile. They show up in your standup feed. They reply to PR comments. They get assigned Jira tickets. They look and feel like teammates.",
             "But they're not black boxes. Every action is logged. Every risky operation goes through your existing approval process. You decide what they can do autonomously and where they need a human in the loop. AgentFarm is designed for teams that care about accountability as much as velocity.",
             "Today we're launching with four specialist roles: Backend Developer, QA Engineer, DevOps Engineer, and Security Engineer. Each has deep, role-specific skills — not a general LLM pretending to know your stack.",
@@ -54,7 +54,7 @@ const posts: Post[] = [
         author: { name: "Sam Okafor", role: "Head of Infrastructure", initials: "SO" },
         excerpt: "We give every agent its own sandboxed runtime, ephemeral credentials, and network policies. Here's why that matters for security and reliability.",
         body: [
-            "When you run multiple AI agents in a shared environment, one compromised or misbehaving agent can affect all the others. That's why we give each AgentFarm worker its own isolated runtime from the moment it starts a task.",
+            "When you run multiple AI agents in a shared environment, one compromised or misbehaving agent can affect all the others. That's why we give each AgentFarm teammate its own isolated runtime from the moment it starts a task.",
             "Isolation means different things at different layers. At the compute layer, each agent runs in its own container with strict CPU and memory limits. At the network layer, default-deny policies prevent lateral movement. At the credential layer, agents receive short-lived, scoped tokens that expire when the task completes.",
             "We built our isolation model around three principles: least privilege, blast radius minimisation, and auditability. Least privilege means an agent can only access the resources its current task requires — nothing more. Blast radius minimisation means a failure or compromise in one agent cannot cascade to others. Auditability means every action, every API call, every credential access is logged and attributable.",
             "The practical effect is that when our security agent flags a CVE, it can scan the affected package in its own ephemeral environment without touching anything else. When our DevOps agent deploys to staging, it uses credentials scoped to that environment for that deployment window.",
@@ -118,7 +118,7 @@ const posts: Post[] = [
     },
     {
         slug: "measuring-ai-worker-output",
-        title: "How We Measure AI Worker Output Quality",
+        title: "How We Measure AI Teammate Output Quality",
         category: "Engineering",
         categoryColor: "bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300",
         date: "January 30, 2026",
@@ -160,12 +160,12 @@ const posts: Post[] = [
         date: "January 5, 2026",
         readTime: "4 min read",
         author: { name: "Alex Rivera", role: "Engineering Lead", initials: "AR" },
-        excerpt: "The economic case for AI workers: what happens to unit economics when your engineering capacity scales without adding seats.",
+        excerpt: "The economic case for AI teammates: what happens to unit economics when your engineering capacity scales without adding seats.",
         body: [
             "The traditional engineering team model is headcount-bound. More output requires more hires. Hiring takes months, onboarding takes more months, and turnover sets you back.",
             "With AgentFarm, engineering capacity can scale in days, not months. You add a new agent role, it connects to your existing tools, and it starts picking up work. No hiring pipeline, no onboarding, no equity dilution.",
             "The economics are straightforward. A deployed AI engineer costs a fraction of a human engineer — today we estimate 8-15% of fully-loaded headcount cost for equivalent output volume on automatable tasks. That ratio will improve as the technology matures.",
-            "The implication is that teams can maintain a lean human engineering core and scale output by adding AI workers. The human engineers focus on what humans are best at: architecture, difficult debugging, customer conversations, and reviewing AI output. The agents handle the volume.",
+            "The implication is that teams can maintain a lean human engineering core and scale output by adding AI teammates. The human engineers focus on what humans are best at: architecture, difficult debugging, customer conversations, and reviewing AI output. The agents handle the volume.",
             "We've seen early customers ship 40-60% more features per quarter without adding headcount, and reduce security backlog processing time by over 70%.",
             "This doesn't mean AI engineers replace human engineers. It means the teams that adopt this model can do more with the engineers they have — and can hire fewer engineers per unit of output as they scale.",
         ],

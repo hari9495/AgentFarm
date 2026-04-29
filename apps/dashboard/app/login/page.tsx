@@ -10,15 +10,13 @@ export default function LoginPage() {
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
 
-    const apiBase = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
-
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
         setError(null);
         setLoading(true);
 
         try {
-            const res = await fetch(`${apiBase}/auth/login`, {
+            const res = await fetch('/api/auth/internal-login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password }),
@@ -32,7 +30,7 @@ export default function LoginPage() {
             }
 
             // Set session cookie for server components to read on next navigation
-            document.cookie = `agentfarm_session=${encodeURIComponent(data.token)}; path=/; samesite=strict; max-age=28800`;
+            document.cookie = `agentfarm_internal_session=${encodeURIComponent(data.token)}; path=/; samesite=strict; max-age=28800`;
             router.push('/');
         } catch {
             setError('Cannot connect to the server. Make sure the API gateway is running.');
@@ -44,8 +42,11 @@ export default function LoginPage() {
     return (
         <main className="page-shell" style={{ maxWidth: 440, paddingTop: '4rem' }}>
             <header className="hero">
-                <p className="eyebrow">AgentFarm</p>
-                <h1 style={{ fontSize: '1.5rem' }}>Sign in to your account</h1>
+                <p className="eyebrow">AgentFarm Internal</p>
+                <h1 style={{ fontSize: '1.5rem' }}>Internal Team Sign In</h1>
+                <p style={{ marginTop: '0.3rem', fontSize: '0.9rem' }}>
+                    This login is for operations and support teams.
+                </p>
             </header>
 
             <form onSubmit={handleSubmit} className="card" style={{ display: 'grid', gap: '0.85rem' }}>
@@ -93,10 +94,7 @@ export default function LoginPage() {
                 </button>
 
                 <p style={{ margin: 0, fontSize: '0.85rem', textAlign: 'center', color: '#57534e' }}>
-                    No account?{' '}
-                    <a href="/signup" style={{ color: '#0f766e' }}>
-                        Create one
-                    </a>
+                    Customer user? Use the customer portal login.
                 </p>
             </form>
         </main>

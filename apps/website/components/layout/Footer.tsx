@@ -49,15 +49,15 @@ export default function Footer() {
                             </span>
                             AgentFarm
                         </Link>
-                        <p className="mt-3 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                            The AI workforce platform for engineering teams.
+                        <p className="mt-3 text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-xs">
+                            Trusted AI teammate platform for engineering teams.
                         </p>
                     </div>
 
                     {/* Columns */}
                     {footerCols.map((col) => (
                         <div key={col.heading}>
-                            <p className="text-xs font-semibold uppercase tracking-wider text-slate-900 dark:text-slate-100 mb-3">
+                            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-900 dark:text-slate-100 mb-3">
                                 {col.heading}
                             </p>
                             <ul className="space-y-2">
@@ -78,7 +78,7 @@ export default function Footer() {
 
                 <div className="mt-12 pt-8 border-t border-slate-200/75 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-2 text-sm text-slate-500 dark:text-slate-400">
                     <p>© {new Date().getFullYear()} AgentFarm. All rights reserved.</p>
-                    <p>Built with Next.js &amp; deployed on Vercel.</p>
+                    <p>Built with Next.js for modern engineering teams.</p>
                 </div>
             </div>
         </footer>

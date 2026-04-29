@@ -6,7 +6,7 @@ const faqs = [
     {
         question: "What is AgentFarm?",
         answer:
-            "AgentFarm is a role-based AI workforce platform. Teams add specialist agents (development, QA, support, and operations) that work inside existing tools like GitHub, Slack, and Jira.",
+            "AgentFarm is a role-based AI teammate platform. Teams add specialist agents for development, QA, support, and operations that work inside existing tools like GitHub, Slack, and Jira.",
     },
     {
         question: "How is AgentFarm different from GitHub Copilot?",

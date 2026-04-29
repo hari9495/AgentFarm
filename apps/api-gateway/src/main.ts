@@ -1,6 +1,6 @@
 import Fastify from 'fastify';
 import { rateLimit } from './lib/rate-limit.js';
-import { buildSessionToken, verifySessionToken } from './lib/session-auth.js';
+import { buildSessionToken, verifySessionToken, type SessionPayload } from './lib/session-auth.js';
 import { prisma } from './lib/db.js';
 import { registerAuthRoutes } from './routes/auth.js';
 import { registerConnectorAuthRoutes } from './routes/connector-auth.js';
@@ -21,6 +21,12 @@ import {
     PROVISIONING_STUCK_ALERT_MS,
     PROVISIONING_TIMEOUT_MS,
 } from './services/provisioning-monitoring.js';
+import {
+    getInternalLoginPolicyConfig,
+    isInternalLoginPolicyEmpty,
+} from './lib/internal-login-policy.js';
+import { registerInternalLoginPolicyRoutes } from './routes/internal-login-policy.js';
+import { registerRuntimeLlmConfigRoutes } from './routes/runtime-llm-config.js';
 
 const app = Fastify({ logger: true });
 const port = Number(process.env.API_GATEWAY_PORT ?? 3000);
@@ -59,13 +65,6 @@ type OpsSlaSummary = {
         timed_out_candidates: number;
         stuck_candidates: number;
     }>;
-};
-
-type SessionPayload = {
-    userId: string;
-    tenantId: string;
-    workspaceIds: string[];
-    expiresAt: number;
 };
 
 const readSessionToken = (request: { headers: Record<string, unknown> }): string | null => {
@@ -301,7 +300,7 @@ app.get('/v1/auth/dev-session', async (_request, reply) => {
 });
 
 // Public paths that bypass auth checks (still rate-limited)
-const PUBLIC_PATHS = new Set(['/health', '/auth/signup', '/auth/login']);
+const PUBLIC_PATHS = new Set(['/health', '/auth/signup', '/auth/login', '/auth/internal-login']);
 const isPublicPath = (url: string): boolean => {
     const path = url.split('?')[0] ?? '';
     return PUBLIC_PATHS.has(path) || path === '/auth/logout';
@@ -370,8 +369,15 @@ await registerRoleRoutes(app, {
 await registerSnapshotRoutes(app, {
     getSession: (request) => readSession(request),
 });
+await registerInternalLoginPolicyRoutes(app, {
+    getSession: (request) => readSession(request),
+});
+await registerRuntimeLlmConfigRoutes(app, {
+    getSession: (request) => readSession(request),
+    secretStore: createDefaultSecretStore(),
+});
 
-app.get('/v1/dashboard/summary', async (request) => {
+app.get('/v1/dashboard/summary', async (request, reply) => {
     const session = readSession(request);
 
     if (!session) {
@@ -381,6 +387,13 @@ app.get('/v1/dashboard/summary', async (request) => {
             workspaceBotSummaries: [],
             usageSummary: null,
         };
+    }
+
+    if (session.scope !== 'internal') {
+        return reply.code(403).send({
+            error: 'forbidden',
+            message: 'Internal session required for dashboard summary.',
+        });
     }
 
     const [tenantSummary, workspaceBotSummaries] = await Promise.all([
@@ -612,7 +625,14 @@ app.get<{ Params: PathParams }>('/v1/dashboard/workspace/:workspaceId', async (r
     const { workspaceId } = request.params;
     const session = readSession(request);
 
-    if (session && !session.workspaceIds.includes(workspaceId)) {
+    if (!session || session.scope !== 'internal') {
+        return reply.code(403).send({
+            error: 'forbidden',
+            message: 'Internal session required for workspace dashboard access.',
+        });
+    }
+
+    if (!session.workspaceIds.includes(workspaceId)) {
         return reply.code(403).send({
             error: 'forbidden',
             message: 'Workspace is outside your session scope.',
@@ -719,6 +739,13 @@ app.get<{ Params: JobIdParams }>('/v1/provisioning/jobs/:jobId', async (request,
 
 const start = async (): Promise<void> => {
     try {
+        const internalLoginPolicy = getInternalLoginPolicyConfig();
+        if (isInternalLoginPolicyEmpty(internalLoginPolicy)) {
+            app.log.warn(
+                'Internal login policy is empty: set API_INTERNAL_LOGIN_ALLOWED_DOMAINS and/or API_INTERNAL_LOGIN_ADMIN_ROLES. Internal login is currently deny-by-default.',
+            );
+        }
+
         await app.listen({ port, host: '0.0.0.0' });
         app.log.info(`api-gateway listening on ${port}`);
 

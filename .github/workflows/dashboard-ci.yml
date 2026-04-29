@@ -1,0 +1,69 @@
+name: Dashboard CI
+
+on:
+  pull_request:
+    paths:
+      - apps/dashboard/**
+      - scripts/e2e-smoke.mjs
+      - pnpm-lock.yaml
+      - package.json
+      - .github/workflows/dashboard-ci.yml
+  push:
+    branches:
+      - main
+    paths:
+      - apps/dashboard/**
+      - scripts/e2e-smoke.mjs
+      - pnpm-lock.yaml
+      - package.json
+      - .github/workflows/dashboard-ci.yml
+  workflow_dispatch:
+
+jobs:
+  dashboard-workspace-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Typecheck dashboard
+        run: pnpm --filter @agentfarm/dashboard typecheck
+
+      - name: Build dashboard
+        run: pnpm --filter @agentfarm/dashboard exec next build --no-lint
+
+      - name: Install Playwright Chromium
+        run: pnpm --filter @agentfarm/dashboard exec playwright install chromium
+
+      - name: Start dashboard
+        run: pnpm --filter @agentfarm/dashboard exec next start -p 3101 > /tmp/dashboard-start.log 2>&1 &
+
+      - name: Wait for dashboard
+        run: |
+          for i in {1..60}; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:3101/ || true)
+            if [ "$code" = "200" ]; then
+              echo "Dashboard is ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Dashboard failed to start in time"
+          cat /tmp/dashboard-start.log
+          exit 1
+
+      - name: Run workspace-tab browser e2e
+        run: pnpm --filter @agentfarm/dashboard test:e2e:workspace-tabs http://127.0.0.1:3101

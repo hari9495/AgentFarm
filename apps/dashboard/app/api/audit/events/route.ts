@@ -1,24 +1,14 @@
-import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { getInternalSessionAuthHeader } from '../../../lib/internal-session';
 
 const getApiBaseUrl = (): string => process.env.DASHBOARD_API_BASE_URL ?? 'http://localhost:3000';
 
-const getAuthHeader = async (): Promise<string | null> => {
-    const cookieStore = await cookies();
-    const session = cookieStore.get('agentfarm_session');
-    if (!session?.value) {
-        return null;
-    }
-
-    return `Bearer ${decodeURIComponent(session.value)}`;
-};
-
 export async function GET(request: Request) {
-    const authHeader = await getAuthHeader();
+    const authHeader = await getInternalSessionAuthHeader();
     if (!authHeader) {
         return NextResponse.json(
-            { error: 'unauthorized', message: 'Missing session cookie.' },
-            { status: 401 },
+            { error: 'forbidden', message: 'Internal session required.' },
+            { status: 403 },
         );
     }
 

@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { hashPassword, verifyPassword } from '../lib/password.js';
 import { buildSessionToken } from '../lib/session-auth.js';
+import { isInternalAccessAllowed } from '../lib/internal-login-policy.js';
 
 type SignupBody = {
     name: string;
@@ -18,6 +19,7 @@ type UserRecord = {
     id: string;
     tenantId: string;
     passwordHash: string;
+    role: string;
 };
 
 type SignupResult = {
@@ -201,6 +203,7 @@ export const registerAuthRoutes = async (
             userId: user.id,
             tenantId: user.tenantId,
             workspaceIds: workspaces.map((w: { id: string }) => w.id),
+            scope: 'customer',
         });
 
         return reply
@@ -210,6 +213,60 @@ export const registerAuthRoutes = async (
                 user_id: user.id,
                 tenant_id: user.tenantId,
                 workspace_ids: workspaces.map((w: { id: string }) => w.id),
+            });
+    });
+
+    /**
+     * POST /auth/internal-login
+     * Authenticates user and returns an internal-scope session token.
+     */
+    app.post<{ Body: LoginBody }>('/auth/internal-login', async (request, reply) => {
+        const body = request.body ?? ({} as LoginBody);
+        const { email, password } = body;
+
+        if (!email || typeof email !== 'string') {
+            return reply.code(400).send({ error: 'validation_failed', field: 'email', message: 'Email is required.' });
+        }
+        if (!password || typeof password !== 'string') {
+            return reply.code(400).send({ error: 'validation_failed', field: 'password', message: 'Password is required.' });
+        }
+
+        const normalizedEmail = email.trim().toLowerCase();
+        const user = await repo.findUserByEmail(normalizedEmail);
+
+        const DUMMY_HASH = 'scrypt:0000000000000000000000000000000000000000000000000000000000000000:0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000';
+        const passwordValid = user
+            ? await verifyPassword(password, user.passwordHash)
+            : await verifyPassword(password, DUMMY_HASH);
+
+        if (!user || !passwordValid) {
+            return reply.code(401).send({ error: 'invalid_credentials', message: 'Email or password is incorrect.' });
+        }
+
+        if (!isInternalAccessAllowed({ email: normalizedEmail, role: user.role })) {
+            return reply.code(403).send({
+                error: 'internal_access_denied',
+                message: 'Your account is not allowed to use internal login.',
+            });
+        }
+
+        const workspaces = await repo.getWorkspacesForTenant(user.tenantId);
+
+        const token = buildSessionToken({
+            userId: user.id,
+            tenantId: user.tenantId,
+            workspaceIds: workspaces.map((w: { id: string }) => w.id),
+            scope: 'internal',
+        });
+
+        return reply
+            .header('Set-Cookie', setSessionCookie(token))
+            .send({
+                token,
+                user_id: user.id,
+                tenant_id: user.tenantId,
+                workspace_ids: workspaces.map((w: { id: string }) => w.id),
+                scope: 'internal',
             });
     });
 
