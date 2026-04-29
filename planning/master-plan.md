@@ -63,6 +63,9 @@ Rule: development starts only after all architecture gates are approved.
 3. Architecture risk register: planning/architecture-risk-register.md
 4. Production-ready v1 pack: planning/v1-release-pack.md
 5. Engineering execution design: planning/engineering-execution-design.md
+6. Gap matrix (current vs desired): planning/agentfarm-gap-matrix-current-vs-desired.md
+7. Two-sprint backlog (safety and orchestration): planning/agentfarm-two-sprint-backlog-safety-and-orchestration.md
+8. Low-risk migration plan (boundary-safe): planning/agentfarm-low-risk-migration-plan.md
 ## Non-Negotiable Release Gates
 1. Identity Realism = 5
 2. Role Fidelity and Task Quality = 5

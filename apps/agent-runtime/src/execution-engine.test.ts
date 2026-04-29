@@ -271,6 +271,7 @@ test('processDeveloperTask uses llmDecisionResolver output when available', asyn
             metadata: {
                 modelProvider: 'openai',
                 model: 'gpt-4o-mini',
+                modelProfile: 'speed_first',
                 promptTokens: 120,
                 completionTokens: 40,
                 totalTokens: 160,
@@ -283,6 +284,7 @@ test('processDeveloperTask uses llmDecisionResolver output when available', asyn
     assert.equal(result.decision.riskLevel, 'medium');
     assert.equal(result.llmExecution?.classificationSource, 'llm');
     assert.equal(result.llmExecution?.modelProvider, 'openai');
+    assert.equal(result.llmExecution?.modelProfile, 'speed_first');
     assert.equal(result.llmExecution?.totalTokens, 160);
 });
 

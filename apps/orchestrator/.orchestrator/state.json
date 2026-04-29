@@ -1,0 +1,86 @@
+{
+  "version": 1,
+  "taskScheduler": {
+    "runs": [
+      {
+        "id": "cb0b1ed3-b6f5-44b3-9fef-ad35a557c647",
+        "botId": "bot-1",
+        "tenantId": "tenant-1",
+        "workspaceId": "ws-1",
+        "wakeSource": "timer",
+        "status": "queued",
+        "dedupeKey": "dedupe-hourly",
+        "activeTaskCount": 0,
+        "startedAt": "2023-11-14T22:13:20.000Z",
+        "lastHeartbeatAt": "2023-11-14T22:13:20.000Z",
+        "correlationId": "corr-1"
+      }
+    ]
+  },
+  "routineScheduler": {
+    "scheduledTasks": [
+      {
+        "id": "af846a95-2771-40d7-bf96-b07fd4b428cb",
+        "botId": "bot-queue",
+        "tenantId": "tenant-1",
+        "workspaceId": "ws-1",
+        "scheduleId": "01417391-af60-425f-b507-4df66f5c090e",
+        "scheduleType": "daily",
+        "scheduleExpression": "0 9 * * *",
+        "taskPayload": {
+          "action_type": "read_task"
+        },
+        "policyPackVersion": "v1",
+        "status": "completed",
+        "isFeatureFlagged": true,
+        "featureFlagKey": "scheduler.routine_tasks",
+        "enabled": true,
+        "failureCount": 0,
+        "policy": {
+          "dedupeKey": "daily-queue",
+          "concurrencyPolicy": "queue",
+          "maxRetries": 2,
+          "retryBackoffMs": 1000
+        },
+        "correlationId": "corr-schedule",
+        "createdAt": "2026-04-29T21:37:42.100Z",
+        "updatedAt": "2026-04-29T21:37:42.109Z",
+        "lastTriggeredAt": "2026-04-29T21:37:42.103Z",
+        "lastCompletedRunId": "bc8e7fac-aaa0-46fe-9fdb-220ac9f3633e"
+      },
+      {
+        "id": "ed9b8c05-61fe-4c7e-9ff3-56f7cbb647f1",
+        "botId": "bot-queue",
+        "tenantId": "tenant-1",
+        "workspaceId": "ws-1",
+        "scheduleId": "b82d94f9-f0a7-45f3-b27e-910a6e11e448",
+        "scheduleType": "daily",
+        "scheduleExpression": "0 9 * * *",
+        "taskPayload": {
+          "action_type": "read_task"
+        },
+        "policyPackVersion": "v1",
+        "status": "completed",
+        "isFeatureFlagged": true,
+        "featureFlagKey": "scheduler.routine_tasks",
+        "enabled": true,
+        "failureCount": 0,
+        "policy": {
+          "dedupeKey": "daily-queue",
+          "concurrencyPolicy": "queue",
+          "maxRetries": 2,
+          "retryBackoffMs": 1000
+        },
+        "correlationId": "corr-schedule",
+        "createdAt": "2026-04-29T21:38:08.483Z",
+        "updatedAt": "2026-04-29T21:38:08.491Z",
+        "lastTriggeredAt": "2026-04-29T21:38:08.486Z",
+        "lastCompletedRunId": "095cd2f1-eeeb-4aaf-a9cc-295634a62967"
+      }
+    ],
+    "featureFlags": {
+      "scheduler.routine_tasks": true
+    },
+    "schedulerErrors": []
+  }
+}

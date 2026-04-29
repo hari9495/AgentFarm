@@ -279,6 +279,233 @@ test('tasks intake rejects before startup and accepts after startup with process
     }
 });
 
+test('task lease claim supports idempotent retries and conflict protection', async () => {
+    const app = buildRuntimeServer({
+        env: baseEnv(),
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 20,
+    });
+
+    try {
+        await app.inject({ method: 'POST', url: '/startup' });
+        await app.inject({
+            method: 'POST',
+            url: '/tasks/intake',
+            payload: {
+                task_id: 'lease-task-1',
+                payload: { action_type: 'read_task', summary: 'read docs', target: 'docs' },
+            },
+        });
+
+        const claim = await app.inject({
+            method: 'POST',
+            url: '/tasks/claim',
+            payload: {
+                task_id: 'lease-task-1',
+                idempotency_key: 'idem-1',
+                claimed_by: 'worker-a',
+            },
+        });
+        assert.equal(claim.statusCode, 200);
+        const claimBody = claim.json() as { status: string; lease_id: string };
+        assert.equal(claimBody.status, 'claimed');
+
+        const retryClaim = await app.inject({
+            method: 'POST',
+            url: '/tasks/claim',
+            payload: {
+                task_id: 'lease-task-1',
+                idempotency_key: 'idem-1',
+                claimed_by: 'worker-a',
+            },
+        });
+        assert.equal(retryClaim.statusCode, 200);
+        const retryBody = retryClaim.json() as { status: string; lease_id: string };
+        assert.equal(retryBody.status, 'already_claimed');
+        assert.equal(retryBody.lease_id, claimBody.lease_id);
+
+        const conflictClaim = await app.inject({
+            method: 'POST',
+            url: '/tasks/claim',
+            payload: {
+                task_id: 'lease-task-1',
+                idempotency_key: 'idem-2',
+                claimed_by: 'worker-b',
+            },
+        });
+        assert.equal(conflictClaim.statusCode, 409);
+    } finally {
+        await app.close();
+    }
+});
+
+test('task lease renew and release lifecycle works with lease validation', async () => {
+    const app = buildRuntimeServer({
+        env: baseEnv(),
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 20,
+    });
+
+    try {
+        await app.inject({ method: 'POST', url: '/startup' });
+        await app.inject({
+            method: 'POST',
+            url: '/tasks/intake',
+            payload: {
+                task_id: 'lease-task-2',
+                payload: { action_type: 'read_task', summary: 'read docs', target: 'docs' },
+            },
+        });
+
+        const claim = await app.inject({
+            method: 'POST',
+            url: '/tasks/claim',
+            payload: {
+                task_id: 'lease-task-2',
+                idempotency_key: 'idem-lifecycle',
+                lease_ttl_seconds: 20,
+            },
+        });
+        const claimBody = claim.json() as { lease_id: string };
+
+        const renew = await app.inject({
+            method: 'POST',
+            url: '/tasks/lease-task-2/lease/renew',
+            payload: {
+                lease_id: claimBody.lease_id,
+                idempotency_key: 'idem-lifecycle',
+                lease_ttl_seconds: 60,
+            },
+        });
+        assert.equal(renew.statusCode, 200);
+        const renewBody = renew.json() as { status: string };
+        assert.equal(renewBody.status, 'renewed');
+
+        const release = await app.inject({
+            method: 'POST',
+            url: '/tasks/lease-task-2/lease/release',
+            payload: {
+                lease_id: claimBody.lease_id,
+                idempotency_key: 'idem-lifecycle',
+            },
+        });
+        assert.equal(release.statusCode, 200);
+        const releaseBody = release.json() as { status: string };
+        assert.equal(releaseBody.status, 'released');
+
+        const renewAfterRelease = await app.inject({
+            method: 'POST',
+            url: '/tasks/lease-task-2/lease/renew',
+            payload: {
+                lease_id: claimBody.lease_id,
+                idempotency_key: 'idem-lifecycle',
+            },
+        });
+        assert.equal(renewAfterRelease.statusCode, 409);
+    } finally {
+        await app.close();
+    }
+});
+
+test('lease claim race allows exactly one winner across 10 concurrent attempts', async () => {
+    const app = buildRuntimeServer({
+        env: baseEnv(),
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 20,
+    });
+
+    try {
+        await app.inject({ method: 'POST', url: '/startup' });
+        await app.inject({
+            method: 'POST',
+            url: '/tasks/intake',
+            payload: {
+                task_id: 'lease-race-task',
+                payload: { action_type: 'read_task', summary: 'race test', target: 'queue' },
+            },
+        });
+
+        const raceResults = await Promise.all(
+            Array.from({ length: 10 }, (_entry, index) => {
+                return app.inject({
+                    method: 'POST',
+                    url: '/tasks/claim',
+                    payload: {
+                        task_id: 'lease-race-task',
+                        idempotency_key: `race-claim-${index}`,
+                        claimed_by: `worker-${index}`,
+                    },
+                });
+            }),
+        );
+
+        const winners = raceResults.filter((response) => {
+            if (response.statusCode !== 200) {
+                return false;
+            }
+            const body = response.json() as { status: string };
+            return body.status === 'claimed';
+        });
+        const conflicts = raceResults.filter((response) => response.statusCode === 409);
+
+        assert.equal(winners.length, 1);
+        assert.equal(conflicts.length, 9);
+    } finally {
+        await app.close();
+    }
+});
+
+test('enforce task lease mode requires claim before worker processes queued tasks', async () => {
+    const env = baseEnv();
+    env.AF_ENFORCE_TASK_LEASE = 'true';
+
+    const app = buildRuntimeServer({
+        env,
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 20,
+    });
+
+    try {
+        await app.inject({ method: 'POST', url: '/startup' });
+        await app.inject({
+            method: 'POST',
+            url: '/tasks/intake',
+            payload: {
+                task_id: 'lease-enforced-task',
+                payload: { action_type: 'read_task', summary: 'lease required', target: 'docs' },
+            },
+        });
+
+        await new Promise<void>((resolve) => setTimeout(resolve, 80));
+        const preClaimLive = await app.inject({ method: 'GET', url: '/health/live' });
+        const preClaimBody = preClaimLive.json() as { processed_tasks: number; task_queue_depth: number };
+        assert.equal(preClaimBody.processed_tasks, 0);
+        assert.equal(preClaimBody.task_queue_depth, 1);
+
+        const claim = await app.inject({
+            method: 'POST',
+            url: '/tasks/claim',
+            payload: {
+                task_id: 'lease-enforced-task',
+                idempotency_key: 'lease-enforced-idem',
+            },
+        });
+        assert.equal(claim.statusCode, 200);
+
+        await new Promise<void>((resolve) => setTimeout(resolve, 100));
+        const postClaimLive = await app.inject({ method: 'GET', url: '/health/live' });
+        const postClaimBody = postClaimLive.json() as { processed_tasks: number; task_queue_depth: number };
+        assert.ok(postClaimBody.processed_tasks >= 1);
+        assert.equal(postClaimBody.task_queue_depth, 0);
+    } finally {
+        await app.close();
+    }
+});
+
 test('tasks intake returns 400 when task_id is missing after startup', async () => {
     const app = buildRuntimeServer({
         env: baseEnv(),
@@ -800,6 +1027,7 @@ test('approved connector-risk task executes via connector action endpoint client
                     connector_type: 'jira',
                     summary: 'Post PR comment after human approval',
                     target: 'PR-44',
+                    _claim_token: 'claim-runtime-1',
                 },
             },
         });
@@ -823,11 +1051,106 @@ test('approved connector-risk task executes via connector action endpoint client
         assert.equal(connectorCalls[0]?.actionType, 'create_comment');
         assert.equal(connectorCalls[0]?.roleKey, 'developer');
         assert.equal(connectorCalls[0]?.token, 'connector-exec-token');
+        assert.equal(connectorCalls[0]?.claimToken, 'claim-runtime-1');
 
         const successRecord = persisted.find((record) => record.taskId === 'decision-connector-1' && record.status === 'success');
         assert.ok(successRecord);
         assert.equal(successRecord?.route, 'execute');
         assert.equal(successRecord?.retries, 1);
+        assert.equal(successRecord?.claimToken, 'claim-runtime-1');
+        assert.equal(successRecord?.leaseId, undefined);
+    } finally {
+        await app.close();
+    }
+});
+
+test('enforced lease connector task forwards lease metadata and persists correlation fields', async () => {
+    const persisted: ActionResultRecord[] = [];
+    const connectorCalls: Array<Record<string, unknown>> = [];
+
+    const env = {
+        ...baseEnv(),
+        AF_CONNECTOR_EXEC_SHARED_TOKEN: 'connector-exec-token',
+        AF_ENFORCE_TASK_LEASE: 'true',
+    };
+
+    const app = buildRuntimeServer({
+        env,
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+        now: () => 1_700_000_000_000,
+        actionResultWriter: async (record) => {
+            persisted.push(record);
+        },
+        connectorActionExecuteClient: async (input) => {
+            connectorCalls.push(input as unknown as Record<string, unknown>);
+            return {
+                ok: true,
+                statusCode: 200,
+                attempts: 1,
+            };
+        },
+    });
+
+    try {
+        const startupRes = await app.inject({ method: 'POST', url: '/startup' });
+        assert.equal(startupRes.statusCode, 200);
+
+        const intakeRes = await app.inject({
+            method: 'POST',
+            url: '/tasks/intake',
+            payload: {
+                task_id: 'lease-connector-1',
+                payload: {
+                    action_type: 'read_task',
+                    connector_type: 'jira',
+                    summary: 'Read issue details under lease claim',
+                    target: 'JIRA-LEASE-1',
+                    _claim_token: 'claim-runtime-lease-1',
+                },
+            },
+        });
+        assert.equal(intakeRes.statusCode, 202);
+
+        const claimRes = await app.inject({
+            method: 'POST',
+            url: '/tasks/claim',
+            payload: {
+                task_id: 'lease-connector-1',
+                idempotency_key: 'lease-idem-1',
+                claimed_by: 'runtime-claimant',
+                lease_ttl_seconds: 60,
+                correlation_id: 'corr-runtime-lease-1',
+            },
+        });
+        assert.equal(claimRes.statusCode, 200);
+        const claimBody = claimRes.json() as { lease_id: string };
+
+        await new Promise<void>((resolve) => setTimeout(resolve, 80));
+
+        assert.equal(connectorCalls.length, 1);
+        assert.equal(connectorCalls[0]?.connectorType, 'jira');
+        assert.equal(connectorCalls[0]?.actionType, 'read_task');
+        assert.equal(connectorCalls[0]?.claimToken, 'claim-runtime-lease-1');
+        assert.deepEqual(connectorCalls[0]?.leaseMetadata, {
+            leaseId: claimBody.lease_id,
+            idempotencyKey: 'lease-idem-1',
+            claimedBy: 'runtime-claimant',
+            claimedAt: 1_700_000_000_000,
+            expiresAt: 1_700_000_060_000,
+            status: 'claimed',
+            correlationId: 'corr-runtime-lease-1',
+        });
+
+        const successRecord = persisted.find((record) => record.taskId === 'lease-connector-1' && record.status === 'success');
+        assert.ok(successRecord);
+        assert.equal(successRecord?.claimToken, 'claim-runtime-lease-1');
+        assert.equal(successRecord?.leaseId, claimBody.lease_id);
+        assert.equal(successRecord?.leaseStatus, 'claimed');
+        assert.equal(successRecord?.leaseClaimedBy, 'runtime-claimant');
+        assert.equal(successRecord?.leaseIdempotencyKey, 'lease-idem-1');
+        assert.equal(successRecord?.leaseExpiresAt, 1_700_000_060_000);
     } finally {
         await app.close();
     }
@@ -2594,6 +2917,57 @@ test('startup applies workspace LLM provider from llmConfigFetcher for task exec
         const written = records.find((record) => record['taskId'] === 'workspace-provider-1');
         assert.ok(written, 'task execution record should be written');
         assert.equal(written?.['modelProvider'], 'openai');
+    } finally {
+        await app.close();
+    }
+});
+
+test('budget hard-stop denial blocks task execution and persists budget decision metadata', async () => {
+    const persisted: ActionResultRecord[] = [];
+    const app = buildRuntimeServer({
+        env: baseEnv(),
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+        actionResultWriter: async (record) => {
+            persisted.push(record);
+        },
+    });
+
+    try {
+        const startupRes = await app.inject({ method: 'POST', url: '/startup' });
+        assert.equal(startupRes.statusCode, 200);
+
+        const intakeRes = await app.inject({
+            method: 'POST',
+            url: '/tasks/intake',
+            payload: {
+                task_id: 'budget-denied-1',
+                payload: {
+                    action_type: 'merge_release',
+                    summary: 'Merge release branch into main',
+                    target: 'main',
+                    _budget_decision: 'denied',
+                    _budget_denial_reason: 'hard_stop_active',
+                    _budget_limit_scope: 'tenant_daily',
+                    _budget_limit_type: 'hard_stop',
+                },
+            },
+        });
+        assert.equal(intakeRes.statusCode, 202);
+
+        // Allow worker loop to process the queued task
+        await new Promise<void>((resolve) => setTimeout(resolve, 70));
+
+        // Verify task was not executed but persisted as denied
+        const deniedRecord = persisted.find((r) => r.taskId === 'budget-denied-1');
+        assert.ok(deniedRecord, 'budget denied task should be persisted');
+        assert.equal(deniedRecord?.status, 'failed');
+        assert.equal(deniedRecord?.budgetDecision, 'denied');
+        assert.equal(deniedRecord?.budgetDenialReason, 'hard_stop_active');
+        assert.equal(deniedRecord?.budgetLimitScope, 'tenant_daily');
+        assert.equal(deniedRecord?.budgetLimitType, 'hard_stop');
+        assert.ok(deniedRecord?.errorMessage?.includes('budget hard-stop'));
     } finally {
         await app.close();
     }

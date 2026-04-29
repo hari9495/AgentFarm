@@ -157,6 +157,16 @@ type ExecuteActionBody = {
     action_type?: string;
     payload?: Record<string, unknown>;
     correlation_id?: string;
+    claim_token?: string;
+    lease_metadata?: {
+        lease_id?: string;
+        idempotency_key?: string;
+        claimed_by?: string;
+        claimed_at?: number;
+        expires_at?: number;
+        status?: string;
+        correlation_id?: string;
+    };
 };
 
 type HealthCheckBody = {
@@ -656,6 +666,13 @@ export const registerConnectorActionRoutes = async (
         }
 
         const payload = request.body?.payload ?? {};
+        const requestBodyForLog: Record<string, unknown> = {
+            ...payload,
+            _control_plane: {
+                claim_token: request.body?.claim_token ?? null,
+                lease_metadata: request.body?.lease_metadata ?? null,
+            },
+        };
         const connectorId = buildConnectorId(connectorType, tenantId, workspaceId);
         const actionId = `action_${now()}_${Math.random().toString(16).slice(2, 10)}`;
         const correlationId = request.body?.correlation_id ?? `corr_connector_action_${now()}`;
@@ -680,7 +697,7 @@ export const registerConnectorActionRoutes = async (
                 actionType,
                 contractVersion: CONTRACT_VERSION,
                 correlationId,
-                requestBody: payload,
+                requestBody: requestBodyForLog,
                 resultStatus: 'failed',
                 providerResponseCode: '403',
                 resultSummary: availability.message ?? 'Connector unavailable for action execution.',
@@ -734,7 +751,7 @@ export const registerConnectorActionRoutes = async (
                 actionType,
                 contractVersion: CONTRACT_VERSION,
                 correlationId,
-                requestBody: payload,
+                requestBody: requestBodyForLog,
                 resultStatus: 'success',
                 providerResponseCode: finalResult?.providerResponseCode ?? '200',
                 resultSummary: finalResult?.resultSummary ?? 'Action executed successfully.',
@@ -770,7 +787,7 @@ export const registerConnectorActionRoutes = async (
             actionType,
             contractVersion: CONTRACT_VERSION,
             correlationId,
-            requestBody: payload,
+            requestBody: requestBodyForLog,
             resultStatus: status,
             providerResponseCode: finalResult.providerResponseCode,
             resultSummary: finalResult.resultSummary,

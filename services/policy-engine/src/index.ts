@@ -1,3 +1,7 @@
 ﻿export const serviceName = 'policy-engine';
-console.log(serviceName, 'service scaffold ready');
+
+export {
+    resolveApproverIds,
+    type GovernanceRoutingContext,
+} from './governance-routing-policy.js';
 

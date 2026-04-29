@@ -21,6 +21,16 @@ export type ActionResultRecord = {
     retries: number;
     failureClass?: 'transient_error' | 'runtime_exception';
     errorMessage?: string;
+    claimToken?: string;
+    leaseId?: string;
+    leaseStatus?: 'claimed' | 'released' | 'expired';
+    leaseClaimedBy?: string;
+    leaseIdempotencyKey?: string;
+    leaseExpiresAt?: number;
+    budgetDecision?: 'allowed' | 'denied' | 'warning';
+    budgetDenialReason?: string;
+    budgetLimitScope?: string;
+    budgetLimitType?: string;
 };
 
 export type ActionResultWriter = (record: ActionResultRecord) => Promise<void>;

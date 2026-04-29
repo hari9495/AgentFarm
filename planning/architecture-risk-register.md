@@ -129,3 +129,28 @@ Track architecture risks before development and keep mitigations owner-driven.
 - Product Lead, Engineering Lead, Security and Safety Lead, Architecture Owner
 3. Closure scope
 - Pre-development architecture and governance risks only
+
+## R-006: LLM Provider Availability and Cost Exposure
+1. Risk
+- Runtime relies on external LLM providers (OpenAI, Anthropic, Google, xAI, Mistral, Together, GitHub Models). A provider outage, API key revocation, or unexpected cost spike can degrade agent decision quality or block task processing.
+2. Severity
+- Medium
+3. Owner
+- Engineering Lead / AI Lead
+4. Mitigation
+- Implemented multi-provider Auto fallback chain (ADR-007): runtime tries providers in priority order per model profile and continues to the next on any error.
+- Provider health scoring (5-minute rolling window, composite error-rate + latency score) dynamically reorders the fallback chain at runtime — degraded providers are deprioritized automatically.
+- Heuristic-only `agentfarm` provider is always available as the last-resort fallback with zero external dependency.
+- Dashboard presets allow operators to choose a cost envelope (Ultra Low Cost / Balanced / Premium Quality) without manual provider ordering.
+5. Mitigation Evidence
+- ADR-007 approved in architecture decision log (2026-04-29).
+- `createAutoResolver` in `apps/agent-runtime/src/llm-decision-adapter.ts` implements health-sorted fallback chain.
+- `getProviderHealthScores()` exported for runtime observability.
+- API gateway config route stores and redacts keys for all nine providers.
+- 92/92 agent-runtime tests passing; 159/159 api-gateway tests passing; all typechecks clean.
+6. Due Date
+- 2026-05-26
+7. Status
+- Mitigated (Planning)
+8. Closure Basis
+- Open: operational monitoring of per-provider health scores in production and cost alerting rules are not yet wired to Azure Monitor. Remains open until production observability for provider health is confirmed.

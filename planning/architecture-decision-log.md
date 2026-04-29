@@ -102,6 +102,23 @@ Track architecture decisions with owner, status, and review dates before develop
 6. Impact
 - Enables fast delivery with managed PostgreSQL now while preserving a clean migration path later.
 
+## ADR-007: Multi-Provider LLM Routing with Health-Score Fallback
+1. Decision
+- The runtime LLM decision adapter supports nine named providers: openai, azure_openai, github_models, anthropic, google, xai (Grok), mistral, together, and agentfarm (heuristic-only).
+- A tenth mode, `auto`, accepts a per-profile priority list and tries providers in order, falling back to the next on any error.
+- Provider health scoring uses a 5-minute rolling window (max 20 entries per provider). Score = errorRate × 0.7 + (min(avgLatency, 10 000) / 10 000) × 0.3. Providers with lower scores are tried first; providers with no data score 0 and keep their configured order.
+- The API Gateway LLM config route stores and redacts keys for all nine providers. The dashboard LLM Config panel exposes per-provider fields plus three one-click presets: Ultra Low Cost, Balanced, and Premium Quality.
+2. Owner
+- Engineering Lead / AI Lead
+3. Status
+- Approved
+4. Decision Date
+- 2026-04-29
+5. Review Date
+- 2026-05-26
+6. Impact
+- Eliminates single-provider lock-in at runtime; health scoring improves reliability under partial provider outages; dashboard presets reduce operator configuration burden.
+
 ## Change Rules
 1. Any architecture change that affects release gates creates a new ADR entry.
 2. Superseded ADRs must link to replacement ADR.

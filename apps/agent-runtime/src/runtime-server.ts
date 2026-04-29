@@ -6,6 +6,7 @@ import type {
     CapabilitySnapshotSource,
     ModelProfileKey,
     RoleKey,
+    TaskLeaseRecord,
 } from '@agentfarm/shared-types';
 import {
     buildDecision,
@@ -56,6 +57,8 @@ type RuntimeConfig = {
     contractVersion: string;
     correlationId: string;
     controlPlaneHeartbeatUrl: string;
+    enforceTaskLease: boolean;
+    defaultTaskLeaseTtlSeconds: number;
 };
 
 type ApprovalIntakeClient = (input: {
@@ -97,6 +100,16 @@ type ConnectorActionExecuteClient = (input: {
     | 'send_email';
     payload: Record<string, unknown>;
     correlationId: string;
+    claimToken?: string;
+    leaseMetadata?: {
+        leaseId: string;
+        idempotencyKey: string;
+        claimedBy: string;
+        claimedAt: number;
+        expiresAt: number;
+        status: 'claimed' | 'released' | 'expired';
+        correlationId?: string;
+    };
 }) => Promise<{
     ok: boolean;
     statusCode: number;
@@ -214,6 +227,18 @@ type WorkerLoop = {
     retriedAttempts: number;
 };
 
+type RuntimeTaskLease = Omit<TaskLeaseRecord, 'claimedAt' | 'expiresAt' | 'releasedAt' | 'lastRenewedAt'> & {
+    claimedAt: number;
+    expiresAt: number;
+    releasedAt?: number;
+    lastRenewedAt?: number;
+};
+
+type TaskLeaseStore = {
+    byTaskId: Map<string, RuntimeTaskLease>;
+    byIdempotencyKey: Map<string, RuntimeTaskLease>;
+};
+
 type HeartbeatLoop = {
     running: boolean;
     handle: NodeJS.Timeout | null;
@@ -236,6 +261,9 @@ const DEFAULT_HEARTBEAT_INTERVAL_MS = 30_000;
 const DEFAULT_MAX_RUNTIME_LOGS = 200;
 const DEFAULT_APPROVAL_INTAKE_MAX_ATTEMPTS = 3;
 const DEFAULT_APPROVAL_INTAKE_BACKOFF_MS = 200;
+const DEFAULT_TASK_LEASE_TTL_SECONDS = 60;
+const MIN_TASK_LEASE_TTL_SECONDS = 5;
+const MAX_TASK_LEASE_TTL_SECONDS = 3600;
 const DEFAULT_ROLE_VERSION = 'v1';
 const DEFAULT_ROLE_POLICY_VERSION = 'v1';
 const DEFAULT_ROLE_RISK_POLICY_VERSION = 'v1';
@@ -376,6 +404,11 @@ const selectModelProfile = (value: string | undefined): ModelProfileKey => {
         return normalized;
     }
     return 'quality_first';
+};
+
+const resolveDefaultModelProfile = (snapshot: BotCapabilitySnapshotRecord | null): ModelProfileKey => {
+    const candidate = snapshot?.brainConfig?.defaultModelProfile;
+    return selectModelProfile(typeof candidate === 'string' ? candidate : undefined);
 };
 
 const buildBrainConfig = (env: NodeJS.ProcessEnv): BotBrainConfig => {
@@ -765,6 +798,21 @@ const required = (env: NodeJS.ProcessEnv, primary: string, fallback: string): st
     return value;
 };
 
+const parseBooleanFlag = (value: string | undefined): boolean => {
+    if (!value) {
+        return false;
+    }
+    return value.trim().toLowerCase() === 'true';
+};
+
+const parseLeaseTtlSeconds = (value: string | undefined): number => {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+        return DEFAULT_TASK_LEASE_TTL_SECONDS;
+    }
+    return Math.min(MAX_TASK_LEASE_TTL_SECONDS, Math.max(MIN_TASK_LEASE_TTL_SECONDS, Math.floor(parsed)));
+};
+
 const buildConfig = (env: NodeJS.ProcessEnv): RuntimeConfig => {
     const healthPortRaw = required(env, 'AF_HEALTH_PORT', 'AGENTFARM_HEALTH_PORT');
     const healthPort = Number(healthPortRaw);
@@ -799,6 +847,12 @@ const buildConfig = (env: NodeJS.ProcessEnv): RuntimeConfig => {
     }
 
     const roleProfile = required(env, 'AF_ROLE_PROFILE', 'AGENTFARM_ROLE_TYPE');
+    const enforceTaskLease = parseBooleanFlag(
+        readEnv(env, 'AF_ENFORCE_TASK_LEASE', 'AGENTFARM_ENFORCE_TASK_LEASE'),
+    );
+    const defaultTaskLeaseTtlSeconds = parseLeaseTtlSeconds(
+        readEnv(env, 'AF_TASK_LEASE_TTL_SECONDS', 'AGENTFARM_TASK_LEASE_TTL_SECONDS'),
+    );
     const roleKey =
         normalizeRoleKey(readEnv(env, 'AF_ROLE_KEY', 'AGENTFARM_ROLE_KEY'))
         ?? roleKeyFromRoleProfile(roleProfile);
@@ -827,6 +881,8 @@ const buildConfig = (env: NodeJS.ProcessEnv): RuntimeConfig => {
         controlPlaneHeartbeatUrl:
             readEnv(env, 'AF_CONTROL_PLANE_HEARTBEAT_URL', 'AGENTFARM_CONTROL_PLANE_HEARTBEAT_URL')
             ?? required(env, 'AF_APPROVAL_API_URL', 'AGENTFARM_APPROVAL_API_URL'),
+        enforceTaskLease,
+        defaultTaskLeaseTtlSeconds,
     };
 };
 
@@ -909,6 +965,8 @@ const defaultConnectorActionExecuteClient: ConnectorActionExecuteClient = async 
                 action_type: input.actionType,
                 payload: input.payload,
                 correlation_id: input.correlationId,
+                claim_token: input.claimToken,
+                lease_metadata: input.leaseMetadata,
             }),
             signal: AbortSignal.timeout(6_000),
         });
@@ -1144,6 +1202,11 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         retriedAttempts: 0,
     };
 
+    const taskLeaseStore: TaskLeaseStore = {
+        byTaskId: new Map<string, RuntimeTaskLease>(),
+        byIdempotencyKey: new Map<string, RuntimeTaskLease>(),
+    };
+
     const heartbeatLoop: HeartbeatLoop = {
         running: false,
         handle: null,
@@ -1180,6 +1243,56 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             runtime_state: runtimeState,
             ...extra,
         });
+    };
+
+    const isLeaseClaimedAndActive = (lease: RuntimeTaskLease, nowMs: number): boolean => {
+        return lease.status === 'claimed' && lease.expiresAt > nowMs;
+    };
+
+    const expireLeaseIfNeeded = (lease: RuntimeTaskLease, nowMs: number): RuntimeTaskLease => {
+        if (lease.status === 'claimed' && lease.expiresAt <= nowMs) {
+            const expired: RuntimeTaskLease = {
+                ...lease,
+                status: 'expired',
+            };
+            taskLeaseStore.byTaskId.set(expired.taskId, expired);
+            taskLeaseStore.byIdempotencyKey.set(expired.idempotencyKey, expired);
+            return expired;
+        }
+
+        return lease;
+    };
+
+    const enqueueTaskLeaseMetadata = (taskId: string, lease: RuntimeTaskLease): void => {
+        const queuedTask = workerLoop.queuedTasks.find((entry) => entry.taskId === taskId);
+        if (!queuedTask) {
+            return;
+        }
+
+        queuedTask.lease = {
+            leaseId: lease.leaseId,
+            idempotencyKey: lease.idempotencyKey,
+            claimedBy: lease.claimedBy,
+            claimedAt: lease.claimedAt,
+            expiresAt: lease.expiresAt,
+            correlationId: lease.correlationId,
+            status:
+                lease.status === 'claimed' || lease.status === 'released' || lease.status === 'expired'
+                    ? lease.status
+                    : 'expired',
+        };
+    };
+
+    const getActiveLeaseCount = (): number => {
+        const nowMs = now();
+        let active = 0;
+        for (const lease of taskLeaseStore.byTaskId.values()) {
+            const normalized = expireLeaseIfNeeded(lease, nowMs);
+            if (isLeaseClaimedAndActive(normalized, nowMs)) {
+                active += 1;
+            }
+        }
+        return active;
     };
 
     const setRuntimeState = (next: RuntimeState, config: RuntimeConfig | null, reason?: string): void => {
@@ -1248,6 +1361,11 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 | 'send_email',
             payload: input.task.payload,
             correlationId: `${input.config.correlationId}:${input.task.taskId}`,
+            claimToken:
+                typeof input.task.payload['_claim_token'] === 'string'
+                    ? input.task.payload['_claim_token']
+                    : undefined,
+            leaseMetadata: input.task.lease,
         });
 
         if (connectorResponse.ok) {
@@ -1368,6 +1486,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         return processApprovedTask(task, {
             maxAttempts: 3,
             modelProvider: activeModelProvider,
+            modelProfile: resolveDefaultModelProfile(capabilitySnapshotCache),
         });
     };
 
@@ -1451,6 +1570,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         const result = await processDeveloperTask(task, {
             maxAttempts: 3,
             modelProvider: activeModelProvider,
+            modelProfile: resolveDefaultModelProfile(capabilitySnapshotCache),
             llmDecisionResolver,
         });
         workerLoop.processedTasks += 1;
@@ -1650,6 +1770,26 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         config: RuntimeConfig,
         result: ProcessedTaskResult,
     ): Promise<void> => {
+        const claimToken =
+            typeof task.payload['_claim_token'] === 'string'
+                ? task.payload['_claim_token']
+                : undefined;
+        const budgetDecision =
+            typeof task.payload['_budget_decision'] === 'string'
+                ? (task.payload['_budget_decision'] as 'allowed' | 'denied' | 'warning')
+                : undefined;
+        const budgetDenialReason =
+            typeof task.payload['_budget_denial_reason'] === 'string'
+                ? task.payload['_budget_denial_reason']
+                : undefined;
+        const budgetLimitScope =
+            typeof task.payload['_budget_limit_scope'] === 'string'
+                ? task.payload['_budget_limit_scope']
+                : undefined;
+        const budgetLimitType =
+            typeof task.payload['_budget_limit_type'] === 'string'
+                ? task.payload['_budget_limit_type']
+                : undefined;
         const record: ActionResultRecord = {
             recordId: `${task.taskId}:${now()}`,
             recordedAt: new Date().toISOString(),
@@ -1669,6 +1809,16 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             retries: result.transientRetries,
             failureClass: result.failureClass,
             errorMessage: result.errorMessage,
+            claimToken,
+            leaseId: task.lease?.leaseId,
+            leaseStatus: task.lease?.status,
+            leaseClaimedBy: task.lease?.claimedBy,
+            leaseIdempotencyKey: task.lease?.idempotencyKey,
+            leaseExpiresAt: task.lease?.expiresAt,
+            budgetDecision,
+            budgetDenialReason,
+            budgetLimitScope,
+            budgetLimitType,
         };
 
         try {
@@ -1696,11 +1846,10 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 : result.status === 'approval_required'
                     ? 'approval_queued'
                     : 'failed';
-        const brainConfig = capabilitySnapshotCache?.brainConfig;
         const modelProfile =
-            brainConfig && typeof brainConfig === 'object' && 'defaultModelProfile' in brainConfig
-                ? String((brainConfig as { defaultModelProfile: unknown }).defaultModelProfile)
-                : 'quality_first';
+            typeof result.llmExecution?.modelProfile === 'string' && result.llmExecution.modelProfile.trim()
+                ? result.llmExecution.modelProfile.trim()
+                : resolveDefaultModelProfile(capabilitySnapshotCache);
         const modelProvider =
             result.llmExecution?.modelProvider
             ?? activeModelProvider
@@ -1734,6 +1883,10 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         },
         config: RuntimeConfig,
     ): Promise<void> => {
+        const claimToken =
+            typeof input.task.payload['_claim_token'] === 'string'
+                ? input.task.payload['_claim_token']
+                : undefined;
         const record: ActionResultRecord = {
             recordId: `${input.task.taskId}:${now()}`,
             recordedAt: new Date().toISOString(),
@@ -1752,6 +1905,12 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             attempts: 0,
             retries: 0,
             errorMessage: input.reason ?? undefined,
+            claimToken,
+            leaseId: input.task.lease?.leaseId,
+            leaseStatus: input.task.lease?.status,
+            leaseClaimedBy: input.task.lease?.claimedBy,
+            leaseIdempotencyKey: input.task.lease?.idempotencyKey,
+            leaseExpiresAt: input.task.lease?.expiresAt,
         };
 
         try {
@@ -1813,6 +1972,98 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         });
     };
 
+    const dequeueNextProcessableTask = (config: RuntimeConfig): TaskEnvelope | undefined => {
+        if (!config.enforceTaskLease) {
+            return workerLoop.queuedTasks.shift();
+        }
+
+        const nowMs = now();
+        for (let index = 0; index < workerLoop.queuedTasks.length; index += 1) {
+            const candidate = workerLoop.queuedTasks[index];
+            const lease = taskLeaseStore.byTaskId.get(candidate.taskId);
+            if (!lease) {
+                continue;
+            }
+
+            const normalizedLease = expireLeaseIfNeeded(lease, nowMs);
+            if (!isLeaseClaimedAndActive(normalizedLease, nowMs)) {
+                continue;
+            }
+
+            const [task] = workerLoop.queuedTasks.splice(index, 1);
+            return task;
+        }
+
+        return undefined;
+    };
+
+    const isBudgetDenied = (task: TaskEnvelope): boolean => {
+        return task.payload['_budget_decision'] === 'denied';
+    };
+
+    const persistBudgetDenialRecord = async (
+        task: TaskEnvelope,
+        config: RuntimeConfig,
+    ): Promise<void> => {
+        const budgetDenialReason =
+            typeof task.payload['_budget_denial_reason'] === 'string'
+                ? task.payload['_budget_denial_reason']
+                : 'unknown_budget_denial';
+        const budgetLimitScope =
+            typeof task.payload['_budget_limit_scope'] === 'string'
+                ? task.payload['_budget_limit_scope']
+                : undefined;
+        const budgetLimitType =
+            typeof task.payload['_budget_limit_type'] === 'string'
+                ? task.payload['_budget_limit_type']
+                : undefined;
+        const claimToken =
+            typeof task.payload['_claim_token'] === 'string'
+                ? task.payload['_claim_token']
+                : undefined;
+
+        const record: ActionResultRecord = {
+            recordId: `${task.taskId}:${now()}`,
+            recordedAt: new Date().toISOString(),
+            tenantId: config.tenantId,
+            workspaceId: config.workspaceId,
+            botId: config.botId,
+            roleProfile: config.roleProfile,
+            policyPackVersion: config.policyPackVersion,
+            correlationId: config.correlationId,
+            taskId: task.taskId,
+            actionType: typeof task.payload['action_type'] === 'string' ? (task.payload['action_type'] as string) : 'unknown',
+            riskLevel: 'low',
+            confidence: 0,
+            route: 'execute',
+            status: 'failed',
+            attempts: 0,
+            retries: 0,
+            failureClass: 'runtime_exception',
+            errorMessage: `Task blocked by budget hard-stop: ${budgetDenialReason}`,
+            claimToken,
+            budgetDecision: 'denied',
+            budgetDenialReason,
+            budgetLimitScope,
+            budgetLimitType,
+        };
+
+        try {
+            await actionResultWriter(record);
+            emitRuntimeEvent('runtime.task_budget_denied', config, {
+                record_id: record.recordId,
+                task_id: task.taskId,
+                denial_reason: budgetDenialReason,
+            });
+        } catch (err: unknown) {
+            emitRuntimeEvent('runtime.budget_denial_persist_failed', config, {
+                record_id: record.recordId,
+                task_id: task.taskId,
+                error_message: err instanceof Error ? err.message : String(err),
+            });
+        }
+    };
+
     const startWorkerLoop = (config: RuntimeConfig): void => {
         if (workerLoop.running && workerLoop.handle) {
             return;
@@ -1830,8 +2081,15 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 return;
             }
             processApprovalEscalations(config);
-            const task = workerLoop.queuedTasks.shift();
+            const task = dequeueNextProcessableTask(config);
             if (!task) {
+                return;
+            }
+            if (isBudgetDenied(task)) {
+                workerLoop.tickBusy = true;
+                void persistBudgetDenialRecord(task, config).finally(() => {
+                    workerLoop.tickBusy = false;
+                });
                 return;
             }
             workerLoop.tickBusy = true;
@@ -1925,6 +2183,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             approval_decision_cache_hits: workerLoop.approvalDecisionCacheHits,
             escalated_approval_tasks: workerLoop.escalatedApprovalTasks,
             retried_attempts: workerLoop.retriedAttempts,
+            active_task_leases: getActiveLeaseCount(),
         };
     });
 
@@ -1957,6 +2216,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             approval_decision_cache_hits: workerLoop.approvalDecisionCacheHits,
             escalated_approval_tasks: workerLoop.escalatedApprovalTasks,
             retried_attempts: workerLoop.retriedAttempts,
+            active_task_leases: getActiveLeaseCount(),
         };
     });
 
@@ -1983,6 +2243,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             approval_decision_cache_hits: workerLoop.approvalDecisionCacheHits,
             escalated_approval_tasks: workerLoop.escalatedApprovalTasks,
             retried_attempts: workerLoop.retriedAttempts,
+            active_task_leases: getActiveLeaseCount(),
             snapshot_source: snapshotObservabilityMetadata?.snapshot_source ?? null,
             snapshot_version: snapshotObservabilityMetadata?.snapshot_version ?? null,
             snapshot_checksum: snapshotObservabilityMetadata?.snapshot_checksum ?? null,
@@ -2192,6 +2453,283 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 message,
             });
         }
+    });
+
+    app.post<{
+        Body: {
+            task_id?: string;
+            idempotency_key?: string;
+            claimed_by?: string;
+            lease_ttl_seconds?: number;
+            correlation_id?: string;
+        };
+    }>('/tasks/claim', async (request, reply) => {
+        if (!startupCompleted || (runtimeState !== 'active' && runtimeState !== 'degraded')) {
+            return reply.code(409).send({
+                error: 'runtime_not_ready',
+                state: runtimeState,
+            });
+        }
+
+        const taskId = request.body?.task_id?.trim();
+        const idempotencyKey = request.body?.idempotency_key?.trim();
+        if (!taskId || !idempotencyKey) {
+            return reply.code(400).send({
+                error: 'invalid_lease_claim',
+                message: 'task_id and idempotency_key are required',
+            });
+        }
+
+        const taskExists = workerLoop.queuedTasks.some((entry) => entry.taskId === taskId);
+        if (!taskExists) {
+            return reply.code(404).send({
+                error: 'task_not_found',
+                message: `Task ${taskId} is not queued`,
+            });
+        }
+
+        const nowMs = now();
+        const existingByIdempotency = taskLeaseStore.byIdempotencyKey.get(idempotencyKey);
+        if (existingByIdempotency) {
+            const normalized = expireLeaseIfNeeded(existingByIdempotency, nowMs);
+            if (normalized.taskId !== taskId) {
+                return reply.code(409).send({
+                    error: 'idempotency_conflict',
+                    message: 'idempotency_key is already bound to another task',
+                    lease_id: normalized.leaseId,
+                    task_id: normalized.taskId,
+                });
+            }
+
+            if (isLeaseClaimedAndActive(normalized, nowMs)) {
+                return reply.code(200).send({
+                    status: 'already_claimed',
+                    task_id: taskId,
+                    lease_id: normalized.leaseId,
+                    expires_at: new Date(normalized.expiresAt).toISOString(),
+                });
+            }
+        }
+
+        const existingByTask = taskLeaseStore.byTaskId.get(taskId);
+        if (existingByTask) {
+            const normalized = expireLeaseIfNeeded(existingByTask, nowMs);
+            if (isLeaseClaimedAndActive(normalized, nowMs) && normalized.idempotencyKey !== idempotencyKey) {
+                return reply.code(409).send({
+                    error: 'task_already_claimed',
+                    message: 'Task is currently claimed by another lease',
+                    lease_id: normalized.leaseId,
+                    claimed_by: normalized.claimedBy,
+                    expires_at: new Date(normalized.expiresAt).toISOString(),
+                });
+            }
+        }
+
+        const activeConfig = configCache ?? buildConfig(env);
+        const requestedTtl =
+            typeof request.body?.lease_ttl_seconds === 'number' && Number.isFinite(request.body.lease_ttl_seconds)
+                ? Math.floor(request.body.lease_ttl_seconds)
+                : activeConfig.defaultTaskLeaseTtlSeconds;
+        const leaseTtlSeconds = Math.min(
+            MAX_TASK_LEASE_TTL_SECONDS,
+            Math.max(MIN_TASK_LEASE_TTL_SECONDS, requestedTtl),
+        );
+
+        const lease: RuntimeTaskLease = {
+            leaseId: `${taskId}:${nowMs}`,
+            taskId,
+            tenantId: activeConfig.tenantId,
+            workspaceId: activeConfig.workspaceId,
+            idempotencyKey,
+            status: 'claimed',
+            claimedBy: request.body?.claimed_by?.trim() || activeConfig.botId,
+            claimedAt: nowMs,
+            expiresAt: nowMs + (leaseTtlSeconds * 1000),
+            correlationId: request.body?.correlation_id?.trim() || activeConfig.correlationId,
+        };
+
+        taskLeaseStore.byTaskId.set(taskId, lease);
+        taskLeaseStore.byIdempotencyKey.set(idempotencyKey, lease);
+        enqueueTaskLeaseMetadata(taskId, lease);
+
+        emitRuntimeEvent('runtime.task_lease_claimed', activeConfig, {
+            task_id: taskId,
+            lease_id: lease.leaseId,
+            idempotency_key: idempotencyKey,
+            claimed_by: lease.claimedBy,
+            expires_at: new Date(lease.expiresAt).toISOString(),
+        });
+
+        return reply.code(200).send({
+            status: 'claimed',
+            task_id: taskId,
+            lease_id: lease.leaseId,
+            claimed_by: lease.claimedBy,
+            expires_at: new Date(lease.expiresAt).toISOString(),
+        });
+    });
+
+    app.post<{
+        Params: { taskId: string };
+        Body: {
+            lease_id?: string;
+            idempotency_key?: string;
+            requested_by?: string;
+            lease_ttl_seconds?: number;
+        };
+    }>('/tasks/:taskId/lease/renew', async (request, reply) => {
+        if (!startupCompleted || (runtimeState !== 'active' && runtimeState !== 'degraded')) {
+            return reply.code(409).send({
+                error: 'runtime_not_ready',
+                state: runtimeState,
+            });
+        }
+
+        const taskId = request.params.taskId?.trim();
+        const lease = taskId ? taskLeaseStore.byTaskId.get(taskId) : undefined;
+        if (!taskId || !lease) {
+            return reply.code(404).send({
+                error: 'lease_not_found',
+                message: 'No lease found for task',
+            });
+        }
+
+        if (request.body?.lease_id && request.body.lease_id !== lease.leaseId) {
+            return reply.code(409).send({
+                error: 'lease_conflict',
+                message: 'lease_id does not match current lease',
+            });
+        }
+
+        if (request.body?.idempotency_key && request.body.idempotency_key !== lease.idempotencyKey) {
+            return reply.code(409).send({
+                error: 'lease_conflict',
+                message: 'idempotency_key does not match current lease',
+            });
+        }
+
+        const nowMs = now();
+        const normalized = expireLeaseIfNeeded(lease, nowMs);
+        if (!isLeaseClaimedAndActive(normalized, nowMs)) {
+            return reply.code(409).send({
+                error: 'lease_not_active',
+                message: 'Only active claimed leases can be renewed',
+                lease_status: normalized.status,
+            });
+        }
+
+        const activeConfig = configCache ?? buildConfig(env);
+        const requestedTtl =
+            typeof request.body?.lease_ttl_seconds === 'number' && Number.isFinite(request.body.lease_ttl_seconds)
+                ? Math.floor(request.body.lease_ttl_seconds)
+                : activeConfig.defaultTaskLeaseTtlSeconds;
+        const leaseTtlSeconds = Math.min(
+            MAX_TASK_LEASE_TTL_SECONDS,
+            Math.max(MIN_TASK_LEASE_TTL_SECONDS, requestedTtl),
+        );
+
+        const renewed: RuntimeTaskLease = {
+            ...normalized,
+            expiresAt: nowMs + (leaseTtlSeconds * 1000),
+            lastRenewedAt: nowMs,
+        };
+
+        taskLeaseStore.byTaskId.set(taskId, renewed);
+        taskLeaseStore.byIdempotencyKey.set(renewed.idempotencyKey, renewed);
+        enqueueTaskLeaseMetadata(taskId, renewed);
+
+        emitRuntimeEvent('runtime.task_lease_renewed', activeConfig, {
+            task_id: taskId,
+            lease_id: renewed.leaseId,
+            requested_by: request.body?.requested_by?.trim() || activeConfig.botId,
+            expires_at: new Date(renewed.expiresAt).toISOString(),
+        });
+
+        return reply.code(200).send({
+            status: 'renewed',
+            task_id: taskId,
+            lease_id: renewed.leaseId,
+            expires_at: new Date(renewed.expiresAt).toISOString(),
+        });
+    });
+
+    app.post<{
+        Params: { taskId: string };
+        Body: {
+            lease_id?: string;
+            idempotency_key?: string;
+            requested_by?: string;
+        };
+    }>('/tasks/:taskId/lease/release', async (request, reply) => {
+        if (!startupCompleted || (runtimeState !== 'active' && runtimeState !== 'degraded')) {
+            return reply.code(409).send({
+                error: 'runtime_not_ready',
+                state: runtimeState,
+            });
+        }
+
+        const taskId = request.params.taskId?.trim();
+        const lease = taskId ? taskLeaseStore.byTaskId.get(taskId) : undefined;
+        if (!taskId || !lease) {
+            return reply.code(404).send({
+                error: 'lease_not_found',
+                message: 'No lease found for task',
+            });
+        }
+
+        if (request.body?.lease_id && request.body.lease_id !== lease.leaseId) {
+            return reply.code(409).send({
+                error: 'lease_conflict',
+                message: 'lease_id does not match current lease',
+            });
+        }
+
+        if (request.body?.idempotency_key && request.body.idempotency_key !== lease.idempotencyKey) {
+            return reply.code(409).send({
+                error: 'lease_conflict',
+                message: 'idempotency_key does not match current lease',
+            });
+        }
+
+        const nowMs = now();
+        const normalized = expireLeaseIfNeeded(lease, nowMs);
+        if (normalized.status === 'released') {
+            return reply.code(200).send({
+                status: 'already_released',
+                task_id: taskId,
+                lease_id: normalized.leaseId,
+            });
+        }
+
+        if (normalized.status === 'expired') {
+            return reply.code(409).send({
+                error: 'lease_not_active',
+                message: 'Expired leases cannot be released',
+            });
+        }
+
+        const released: RuntimeTaskLease = {
+            ...normalized,
+            status: 'released',
+            releasedAt: nowMs,
+        };
+        taskLeaseStore.byTaskId.set(taskId, released);
+        taskLeaseStore.byIdempotencyKey.set(released.idempotencyKey, released);
+        enqueueTaskLeaseMetadata(taskId, released);
+
+        const activeConfig = configCache ?? buildConfig(env);
+        emitRuntimeEvent('runtime.task_lease_released', activeConfig, {
+            task_id: taskId,
+            lease_id: released.leaseId,
+            requested_by: request.body?.requested_by?.trim() || activeConfig.botId,
+        });
+
+        return reply.code(200).send({
+            status: 'released',
+            task_id: taskId,
+            lease_id: released.leaseId,
+            released_at: new Date(nowMs).toISOString(),
+        });
     });
 
     app.post<{ Body: { task_id?: string; payload?: Record<string, unknown> } }>('/tasks/intake', async (request, reply) => {

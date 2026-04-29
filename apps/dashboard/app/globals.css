@@ -653,6 +653,66 @@ textarea {
     margin: 0;
 }
 
+.budget-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.5rem;
+}
+
+.budget-panel-header h2 {
+    margin: 0;
+}
+
+.budget-meter-group {
+    margin-top: 0.8rem;
+    display: grid;
+    gap: 0.8rem;
+}
+
+.budget-meter-label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 0.35rem;
+    font-size: 0.86rem;
+}
+
+.budget-meter-track {
+    width: 100%;
+    height: 0.62rem;
+    background: #e2e8f0;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.budget-meter-fill {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.25s ease;
+}
+
+.budget-meter-fill.healthy {
+    background: linear-gradient(90deg, #10b981, #0f766e);
+}
+
+.budget-meter-fill.warning {
+    background: linear-gradient(90deg, #f59e0b, #d97706);
+}
+
+.budget-meter-fill.critical {
+    background: linear-gradient(90deg, #ef4444, #b91c1c);
+}
+
+.budget-meta-row {
+    margin-top: 0.8rem;
+    display: flex;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+}
+
 .panel-badge-row {
     display: flex;
     gap: 0.6rem;

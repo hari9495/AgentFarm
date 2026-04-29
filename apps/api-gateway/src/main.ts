@@ -27,6 +27,10 @@ import {
 } from './lib/internal-login-policy.js';
 import { registerInternalLoginPolicyRoutes } from './routes/internal-login-policy.js';
 import { registerRuntimeLlmConfigRoutes } from './routes/runtime-llm-config.js';
+import { registerRuntimeTaskRoutes } from './routes/runtime-tasks.js';
+import { registerBudgetPolicyRoutes } from './routes/budget-policy.js';
+import { registerGovernanceWorkflowRoutes } from './routes/governance-workflows.js';
+import { registerPluginLoadingRoutes } from './routes/plugin-loading.js';
 
 const app = Fastify({ logger: true });
 const port = Number(process.env.API_GATEWAY_PORT ?? 3000);
@@ -375,6 +379,25 @@ await registerInternalLoginPolicyRoutes(app, {
 await registerRuntimeLlmConfigRoutes(app, {
     getSession: (request) => readSession(request),
     secretStore: createDefaultSecretStore(),
+});
+await registerRuntimeTaskRoutes(app, {
+    getSession: (request) => readSession(request),
+});
+await registerBudgetPolicyRoutes(app, {
+    getSession: (request) => readSession(request),
+});
+await registerGovernanceWorkflowRoutes(app, {
+    getSession: (request) => readSession(request),
+});
+await registerPluginLoadingRoutes(app, {
+    getSession: (request) => readSession(request),
+    featureEnabled: process.env.FEATURE_EXTERNAL_PLUGIN_LOADING === 'true',
+    trustedPublishers: [
+        {
+            publisher: 'agentfarm-plugins',
+            sourceRepoPrefix: 'https://github.com/agentfarm/',
+        },
+    ],
 });
 
 app.get('/v1/dashboard/summary', async (request, reply) => {

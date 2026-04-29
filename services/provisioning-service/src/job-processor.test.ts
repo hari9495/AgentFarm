@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import type { ProvisioningJobRecord, ProvisioningJobStatus } from "@agentfarm/shared-types";
+import { CONTRACT_VERSIONS } from "@agentfarm/shared-types";
 import {
     ProvisioningJobProcessor,
     type ProvisioningExecutionContext,
@@ -17,6 +18,7 @@ type MutableJob = ProvisioningJobRecord & {
 
 const makeJob = (overrides?: Partial<MutableJob>): MutableJob => ({
     id: "job_1",
+    contractVersion: CONTRACT_VERSIONS.PROVISIONING,
     tenantId: "tnt_1",
     workspaceId: "wsp_1",
     botId: "bot_1",

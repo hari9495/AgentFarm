@@ -13,15 +13,20 @@ Provide a repeatable, real-database validation workflow for AgentFarm runtime pe
 2. Prisma migration apply verification.
 3. Runtime DB smoke scenario (two-startup persisted snapshot check).
 4. CI DB integration lane behavior.
+5. Orchestrator state persistence backend selection and validation.
 
 ## Key Components
 1. Runtime smoke script:
 - `apps/agent-runtime/src/db-snapshot-smoke.ts`
-2. DB package migration scripts:
+2. Orchestrator state store implementation:
+- `apps/orchestrator/src/orchestrator-state-store.ts`
+3. Orchestrator API bootstrap and backend selection:
+- `apps/orchestrator/src/main.ts`
+4. DB package migration scripts:
 - `packages/db-schema/package.json`
-3. Root convenience scripts:
+5. Root convenience scripts:
 - `package.json`
-4. CI DB integration job:
+6. CI DB integration job:
 - `.github/workflows/ci.yml`
 
 ## Required Environment
@@ -33,6 +38,46 @@ Provide a repeatable, real-database validation workflow for AgentFarm runtime pe
 - `AF_DB_SMOKE_WORKSPACE_ID`
 - `AF_DB_SMOKE_ROLE_PROFILE`
 - `AF_DB_SMOKE_POLICY_PACK_VERSION`
+3. Orchestrator state backend selector:
+- `ORCHESTRATOR_STATE_BACKEND` with supported values:
+  - `auto` (default): use DB when `DATABASE_URL` exists; otherwise file.
+  - `db`: force DB backend and fail fast if `DATABASE_URL` is missing.
+  - `file`: force file backend regardless of `DATABASE_URL`.
+4. File backend override (optional):
+- `ORCHESTRATOR_STATE_PATH` (default `.orchestrator/state.json`)
+
+## Orchestrator Backend Rollout Defaults
+Use the following defaults for staged rollout:
+1. Local developer default:
+- `ORCHESTRATOR_STATE_BACKEND=auto`
+- Set `DATABASE_URL` only when explicitly validating DB persistence.
+2. CI default for non-DB lanes:
+- `ORCHESTRATOR_STATE_BACKEND=file`
+3. DB integration lane and production/staging environments:
+- `ORCHESTRATOR_STATE_BACKEND=db`
+- `DATABASE_URL` required and validated at startup.
+
+## Orchestrator Validation Commands
+
+### Step 5: Run orchestrator tests and typecheck
+```powershell
+pnpm --filter @agentfarm/orchestrator test
+pnpm --filter @agentfarm/orchestrator typecheck
+```
+
+### Step 6: Validate explicit DB backend behavior
+```powershell
+$env:DATABASE_URL='postgresql://agentfarm:agentfarm@localhost:5432/agentfarm'
+$env:ORCHESTRATOR_STATE_BACKEND='db'
+pnpm --filter @agentfarm/orchestrator test
+```
+
+### Step 7: Validate auto fallback behavior
+```powershell
+Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue
+$env:ORCHESTRATOR_STATE_BACKEND='auto'
+pnpm --filter @agentfarm/orchestrator test
+```
 
 ## Local Execution
 
@@ -136,6 +181,15 @@ Symptoms:
 Recovery:
 1. Free port 5432 or change local port mapping in compose for local-only runs.
 2. Update `DATABASE_URL` accordingly.
+
+### 5. Orchestrator DB backend startup fails fast
+Symptoms:
+- Startup error indicates `DATABASE_URL` is required for `ORCHESTRATOR_STATE_BACKEND=db`.
+
+Recovery:
+1. Set `DATABASE_URL` before starting orchestrator process.
+2. If DB is not required for current lane, set `ORCHESTRATOR_STATE_BACKEND=file`.
+3. Re-run orchestrator tests and typecheck.
 
 ## Operational Notes
 1. Keep migrations provider-agnostic PostgreSQL SQL; avoid platform-only DB features in core paths unless approved ADR exists.

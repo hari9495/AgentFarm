@@ -1,9 +1,20 @@
+import type { ProviderFailoverTraceRecord } from '@agentfarm/shared-types';
+
 export type RiskLevel = 'low' | 'medium' | 'high';
 
 export type TaskEnvelope = {
     taskId: string;
     payload: Record<string, unknown>;
     enqueuedAt: number;
+    lease?: {
+        leaseId: string;
+        idempotencyKey: string;
+        claimedBy: string;
+        claimedAt: number;
+        expiresAt: number;
+        correlationId?: string;
+        status: 'claimed' | 'released' | 'expired';
+    };
 };
 
 export type ActionDecision = {
@@ -18,10 +29,12 @@ export type LlmDecisionMetadata = {
     classificationSource: 'heuristic' | 'llm';
     modelProvider: string;
     model: string | null;
+    modelProfile?: string | null;
     promptTokens: number | null;
     completionTokens: number | null;
     totalTokens: number | null;
     fallbackReason?: string;
+    failoverTrace?: ProviderFailoverTraceRecord[];
 };
 
 export type LlmDecisionResolver = (input: {
@@ -228,7 +241,7 @@ async function executeTaskWithRetries(
 
 export async function processApprovedTask(
     task: TaskEnvelope,
-    options?: { maxAttempts?: number; modelProvider?: string },
+    options?: { maxAttempts?: number; modelProvider?: string; modelProfile?: string },
 ): Promise<ProcessedTaskResult> {
     const baseDecision = buildDecision(task);
     const approvedDecision: ActionDecision = {
@@ -241,6 +254,7 @@ export async function processApprovedTask(
         classificationSource: 'heuristic',
         modelProvider: options?.modelProvider ?? 'agentfarm',
         model: null,
+        modelProfile: options?.modelProfile ?? null,
         promptTokens: null,
         completionTokens: null,
         totalTokens: null,
@@ -255,6 +269,7 @@ export async function processDeveloperTask(
     options?: {
         maxAttempts?: number;
         modelProvider?: string;
+        modelProfile?: string;
         llmDecisionResolver?: LlmDecisionResolver;
     },
 ): Promise<ProcessedTaskResult> {
@@ -265,6 +280,7 @@ export async function processDeveloperTask(
         classificationSource: 'heuristic',
         modelProvider: fallbackProvider,
         model: null,
+        modelProfile: options?.modelProfile ?? null,
         promptTokens: null,
         completionTokens: null,
         totalTokens: null,

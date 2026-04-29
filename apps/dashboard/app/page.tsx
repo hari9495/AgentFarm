@@ -8,7 +8,9 @@ import { LlmConfigPanel } from './components/llm-config-panel';
 import { DashboardTabNav } from './components/dashboard-tab-nav';
 import { DashboardDeepLinkBar } from './components/dashboard-deep-link-bar';
 import { DashboardWorkspaceSwitcher } from './components/dashboard-workspace-switcher';
+import { WorkspaceBudgetPanel } from './components/workspace-budget-panel';
 import type { DashboardTab } from './components/dashboard-navigation';
+import type { WorkspaceBudgetSnapshot } from './components/workspace-budget-panel-utils';
 import { isInternalSessionToken } from './lib/internal-session';
 
 type TenantSummary = {
@@ -200,6 +202,16 @@ const fallbackInternalLoginPolicy: InternalLoginPolicySnapshot = {
     deny_all_mode: true,
     source: 'fallback',
     fetched_at: new Date(0).toISOString(),
+};
+
+const fallbackBudgetState: WorkspaceBudgetSnapshot = {
+    workspaceId: 'ws_primary_001',
+    dailySpent: 42,
+    dailyLimit: 100,
+    monthlySpent: 412,
+    monthlyLimit: 1000,
+    isHardStopActive: false,
+    lastResetDaily: '2026-04-20T00:00:00Z',
 };
 
 const fallbackTenantSummary: TenantSummary = {
@@ -598,6 +610,59 @@ const getRuntimeObservabilityData = async (_botId: string): Promise<RuntimeObser
     }
 };
 
+const getWorkspaceBudgetState = async (
+    context: ApiRequestContext,
+    workspaceId: string,
+): Promise<{ budget: WorkspaceBudgetSnapshot; source: ApiSource }> => {
+    try {
+        const response = await fetch(`${context.apiBaseUrl}/v1/workspaces/${workspaceId}/budget/state`, {
+            cache: 'no-store',
+            headers: context.headers,
+        });
+
+        if (!response.ok) {
+            return {
+                budget: {
+                    ...fallbackBudgetState,
+                    workspaceId,
+                },
+                source: 'fallback',
+            };
+        }
+
+        const payload = (await response.json()) as {
+            workspaceId?: string;
+            dailySpent?: number;
+            dailyLimit?: number;
+            monthlySpent?: number;
+            monthlyLimit?: number;
+            isHardStopActive?: boolean;
+            lastResetDaily?: string;
+        };
+
+        return {
+            budget: {
+                workspaceId: payload.workspaceId ?? workspaceId,
+                dailySpent: payload.dailySpent ?? 0,
+                dailyLimit: payload.dailyLimit ?? fallbackBudgetState.dailyLimit,
+                monthlySpent: payload.monthlySpent ?? 0,
+                monthlyLimit: payload.monthlyLimit ?? fallbackBudgetState.monthlyLimit,
+                isHardStopActive: payload.isHardStopActive ?? false,
+                lastResetDaily: payload.lastResetDaily ?? fallbackBudgetState.lastResetDaily,
+            },
+            source: 'live',
+        };
+    } catch {
+        return {
+            budget: {
+                ...fallbackBudgetState,
+                workspaceId,
+            },
+            source: 'fallback',
+        };
+    }
+};
+
 const getInternalLoginPolicySnapshot = async (context: ApiRequestContext): Promise<InternalLoginPolicySnapshot> => {
     try {
         const response = await fetch(`${context.apiBaseUrl}/v1/auth/internal-login-policy`, {
@@ -701,6 +766,7 @@ export default async function HomePage({
     const workspaceOptions = workspaceSummaries.length > 0 ? workspaceSummaries : [workspace];
 
     const dashboardSlice = await getDashboardWorkspaceSlice(context, workspace.workspace_id);
+    const workspaceBudget = await getWorkspaceBudgetState(context, workspace.workspace_id);
     const runtimeObs = await getRuntimeObservabilityData(workspace.bot_id);
     const internalPolicy = await getInternalLoginPolicySnapshot(context);
 
@@ -863,6 +929,8 @@ export default async function HomePage({
                                 </ul>
                             </article>
                         </section>
+
+                        <WorkspaceBudgetPanel budget={workspaceBudget.budget} source={workspaceBudget.source} />
 
                         <section className="card">
                             <h2>Provisioning Progress</h2>

@@ -54,6 +54,9 @@ importers:
       '@agentfarm/connector-contracts':
         specifier: workspace:*
         version: link:../../packages/connector-contracts
+      '@agentfarm/queue-contracts':
+        specifier: workspace:*
+        version: link:../../packages/queue-contracts
       '@agentfarm/shared-types':
         specifier: workspace:*
         version: link:../../packages/shared-types
@@ -118,10 +121,23 @@ importers:
         version: 5.9.3
 
   apps/orchestrator:
+    dependencies:
+      '@agentfarm/shared-types':
+        specifier: workspace:*
+        version: link:../../packages/shared-types
+      '@prisma/client':
+        specifier: ^5.22.0
+        version: 5.22.0(prisma@6.19.3(typescript@5.9.3))
+      fastify:
+        specifier: ^5.0.0
+        version: 5.8.5
     devDependencies:
       ts-node:
         specifier: ^10.9.2
         version: 10.9.2(@types/node@22.19.17)(typescript@5.9.3)
+      tsx:
+        specifier: ^4.19.2
+        version: 4.21.0
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
@@ -225,28 +241,55 @@ importers:
         version: 5.9.3
 
   services/approval-service:
+    dependencies:
+      '@agentfarm/shared-types':
+        specifier: workspace:*
+        version: link:../../packages/shared-types
     devDependencies:
       ts-node:
         specifier: ^10.9.2
         version: 10.9.2(@types/node@22.19.17)(typescript@5.9.3)
+      tsx:
+        specifier: ^4.19.2
+        version: 4.21.0
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
 
   services/connector-gateway:
+    dependencies:
+      '@agentfarm/connector-contracts':
+        specifier: workspace:*
+        version: link:../../packages/connector-contracts
+      '@agentfarm/observability':
+        specifier: workspace:*
+        version: link:../../packages/observability
+      '@agentfarm/shared-types':
+        specifier: workspace:*
+        version: link:../../packages/shared-types
     devDependencies:
       ts-node:
         specifier: ^10.9.2
         version: 10.9.2(@types/node@22.19.17)(typescript@5.9.3)
+      tsx:
+        specifier: ^4.19.2
+        version: 4.21.0
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
 
   services/evidence-service:
+    dependencies:
+      '@agentfarm/shared-types':
+        specifier: workspace:*
+        version: link:../../packages/shared-types
     devDependencies:
       ts-node:
         specifier: ^10.9.2
         version: 10.9.2(@types/node@22.19.17)(typescript@5.9.3)
+      tsx:
+        specifier: ^4.19.2
+        version: 4.21.0
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
@@ -270,10 +313,17 @@ importers:
         version: 5.9.3
 
   services/policy-engine:
+    dependencies:
+      '@agentfarm/shared-types':
+        specifier: workspace:*
+        version: link:../../packages/shared-types
     devDependencies:
       ts-node:
         specifier: ^10.9.2
         version: 10.9.2(@types/node@22.19.17)(typescript@5.9.3)
+      tsx:
+        specifier: ^4.19.2
+        version: 4.21.0
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
@@ -878,6 +928,15 @@ packages:
     resolution: {integrity: sha512-PG6q63nQg5c9rIi4/Z5lR5IVF7yU5MqmKaPOe0HSc0O2cX1fPi96sUQu5j7eo4gKCkB2AnNGoWt7y4/Xx3Kcqg==}
     engines: {node: '>=18'}
     hasBin: true
+
+  '@prisma/client@5.22.0':
+    resolution: {integrity: sha512-M0SVXfyHnQREBKxCgyo7sffrKttwE6R8PMq330MIUF0pTwjUhLbW84pFDlf06B27XyCR++VtjugEnIHdr07SVA==}
+    engines: {node: '>=16.13'}
+    peerDependencies:
+      prisma: '*'
+    peerDependenciesMeta:
+      prisma:
+        optional: true
 
   '@prisma/client@6.19.3':
     resolution: {integrity: sha512-mKq3jQFhjvko5LTJFHGilsuQs+W+T3Gm451NzuTDGQxwCzwXHYnIu2zGkRoW+Exq3Rob7yp2MfzSrdIiZVhrBg==}
@@ -3631,6 +3690,10 @@ snapshots:
   '@playwright/test@1.59.1':
     dependencies:
       playwright: 1.59.1
+
+  '@prisma/client@5.22.0(prisma@6.19.3(typescript@5.9.3))':
+    optionalDependencies:
+      prisma: 6.19.3(typescript@5.9.3)
 
   '@prisma/client@6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3)':
     optionalDependencies:

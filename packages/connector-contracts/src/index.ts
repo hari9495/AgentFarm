@@ -1,4 +1,6 @@
-﻿// ─── Capability categories (tool-agnostic) ────────────────────────────────
+﻿import { createHash, timingSafeEqual } from 'node:crypto';
+
+// ─── Capability categories (tool-agnostic) ────────────────────────────────
 export type ConnectorCategory =
   | 'task_tracker'   // Jira, Linear, Asana, Monday, Trello, ClickUp
   | 'messaging'      // Teams, Slack, Discord, Google Chat
@@ -413,4 +415,135 @@ export function getConnectorDefinition(tool: ConnectorTool): ConnectorDefinition
 export function getConnectorsByCategory(category: ConnectorCategory): ConnectorDefinition[] {
   return CONNECTOR_REGISTRY.filter((c) => c.category === category);
 }
+
+// ── External plugin manifest contracts (Phase 3 C2) ─────────────────────
+export type PluginSignatureAlgorithm = 'sha256' | 'sha512';
+
+export interface ExternalPluginManifestContract {
+  plugin_key: string;
+  plugin_name: string;
+  version: string;
+  provider: string;
+  capabilities: string[];
+  supported_adapter_types: ConnectorCategory[];
+  artifact_url: string;
+  signature: string;
+  signature_algorithm: PluginSignatureAlgorithm;
+  provenance: {
+    publisher: string;
+    source_repo?: string;
+    source_commit?: string;
+  };
+}
+
+export type TrustedPublisherRule = {
+  publisher: string;
+  sourceRepoPrefix?: string;
+};
+
+export const isValidPluginManifest = (manifest: unknown): manifest is ExternalPluginManifestContract => {
+  if (typeof manifest !== 'object' || manifest === null) return false;
+  const row = manifest as Record<string, unknown>;
+
+  if (typeof row.plugin_key !== 'string' || row.plugin_key.length === 0) return false;
+  if (typeof row.plugin_name !== 'string' || row.plugin_name.length === 0) return false;
+  if (typeof row.version !== 'string' || row.version.length === 0) return false;
+  if (typeof row.provider !== 'string' || row.provider.length === 0) return false;
+  if (!Array.isArray(row.capabilities) || row.capabilities.some((item) => typeof item !== 'string')) return false;
+  if (!Array.isArray(row.supported_adapter_types) || row.supported_adapter_types.some((item) => typeof item !== 'string')) return false;
+  if (typeof row.artifact_url !== 'string' || row.artifact_url.length === 0) return false;
+  if (typeof row.signature !== 'string' || row.signature.length < 16) return false;
+  if (row.signature_algorithm !== 'sha256' && row.signature_algorithm !== 'sha512') return false;
+
+  if (typeof row.provenance !== 'object' || row.provenance === null) return false;
+  const provenance = row.provenance as Record<string, unknown>;
+  if (typeof provenance.publisher !== 'string' || provenance.publisher.length === 0) return false;
+
+  return true;
+};
+
+export const isTrustedPluginPublisher = (
+  manifest: ExternalPluginManifestContract,
+  trustedRules: TrustedPublisherRule[],
+): boolean => {
+  for (const rule of trustedRules) {
+    if (manifest.provenance.publisher !== rule.publisher) continue;
+    if (!rule.sourceRepoPrefix) return true;
+    const sourceRepo = manifest.provenance.source_repo ?? '';
+    if (sourceRepo.startsWith(rule.sourceRepoPrefix)) {
+      return true;
+    }
+  }
+  return false;
+};
+
+const getDigestHexLength = (algorithm: PluginSignatureAlgorithm): number => {
+  return algorithm === 'sha256' ? 64 : 128;
+};
+
+const normalizeManifestSignature = (
+  signature: string,
+  algorithm: PluginSignatureAlgorithm,
+): string | null => {
+  const normalized = signature.trim().toLowerCase();
+  const prefixed = `${algorithm}:`;
+  const withoutPrefix = normalized.startsWith(prefixed)
+    ? normalized.slice(prefixed.length)
+    : normalized;
+
+  if (!/^[a-f0-9]+$/.test(withoutPrefix)) {
+    return null;
+  }
+
+  if (withoutPrefix.length !== getDigestHexLength(algorithm)) {
+    return null;
+  }
+
+  return withoutPrefix;
+};
+
+export const getPluginManifestSigningPayload = (
+  manifest: ExternalPluginManifestContract,
+): string => {
+  return JSON.stringify({
+    plugin_key: manifest.plugin_key,
+    plugin_name: manifest.plugin_name,
+    version: manifest.version,
+    provider: manifest.provider,
+    capabilities: manifest.capabilities,
+    supported_adapter_types: manifest.supported_adapter_types,
+    artifact_url: manifest.artifact_url,
+    provenance: {
+      publisher: manifest.provenance.publisher,
+      source_repo: manifest.provenance.source_repo ?? null,
+      source_commit: manifest.provenance.source_commit ?? null,
+    },
+  });
+};
+
+export const computePluginManifestSignature = (
+  manifest: ExternalPluginManifestContract,
+): string => {
+  return createHash(manifest.signature_algorithm)
+    .update(getPluginManifestSigningPayload(manifest), 'utf8')
+    .digest('hex');
+};
+
+export const verifyPluginManifestSignature = (
+  manifest: ExternalPluginManifestContract,
+): boolean => {
+  const normalizedSignature = normalizeManifestSignature(
+    manifest.signature,
+    manifest.signature_algorithm,
+  );
+  if (!normalizedSignature) {
+    return false;
+  }
+
+  const expected = computePluginManifestSignature(manifest);
+  return timingSafeEqual(
+    Buffer.from(normalizedSignature, 'hex'),
+    Buffer.from(expected, 'hex'),
+  );
+};
 
