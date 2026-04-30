@@ -137,6 +137,28 @@ type ProviderExecutor = (input: {
     secretRefId: string | null;
 }) => Promise<ProviderExecutionResult>;
 
+type ConnectorApprovalChecker = {
+    findByAction(input: {
+        tenantId: string;
+        workspaceId: string;
+        actionId: string;
+    }): Promise<{ decision: string } | null>;
+};
+
+type ConnectorAuditWriter = {
+    createEvent(input: {
+        tenantId: string;
+        workspaceId: string;
+        botId: string;
+        eventType: string;
+        severity: 'info' | 'warn' | 'error' | 'critical';
+        summary: string;
+        sourceSystem: string;
+        correlationId: string;
+        createdAt: Date;
+    }): Promise<unknown>;
+};
+
 type RegisterConnectorActionRoutesOptions = {
     getSession: (request: FastifyRequest) => SessionContext | null;
     repo?: ConnectorActionRepo;
@@ -146,6 +168,8 @@ type RegisterConnectorActionRoutesOptions = {
     connectorHealthProbe?: ConnectorHealthProbe;
     serviceAuthToken?: string;
     secretStore?: SecretStore;
+    approvalChecker?: ConnectorApprovalChecker;
+    auditWriter?: ConnectorAuditWriter;
 };
 
 type ExecuteActionBody = {
@@ -158,6 +182,7 @@ type ExecuteActionBody = {
     payload?: Record<string, unknown>;
     correlation_id?: string;
     claim_token?: string;
+    approval_action_id?: string;
     lease_metadata?: {
         lease_id?: string;
         idempotency_key?: string;
@@ -195,6 +220,18 @@ const SUPPORTED_ACTIONS: ConnectorActionType[] = [
 const CONTRACT_VERSION = 'v1.0';
 const MAX_ATTEMPTS = 3;
 const BASE_BACKOFF_MS = 50;
+
+const CONNECTOR_ACTION_RISK: Record<ConnectorActionType, 'low' | 'medium' | 'high'> = {
+    read_task: 'low',
+    list_prs: 'low',
+    create_comment: 'medium',
+    create_pr_comment: 'medium',
+    update_status: 'medium',
+    send_message: 'medium',
+    send_email: 'medium',
+    create_pr: 'high',
+    merge_pr: 'high',
+};
 
 const SUPPORTED_ROLE_KEYS: AgentRoleKey[] = [
     'recruiter',
@@ -564,6 +601,8 @@ export const registerConnectorActionRoutes = async (
     const repo = options.repo ?? defaultRepo;
     const now = options.now ?? (() => Date.now());
     const sleep = options.sleep ?? defaultSleep;
+    const approvalChecker = options.approvalChecker ?? null;
+    const auditWriter = options.auditWriter ?? null;
 
     // If a real secretStore is provided and no explicit executor override, use real provider clients.
     let providerExecutor = options.providerExecutor;
@@ -714,6 +753,44 @@ export const registerConnectorActionRoutes = async (
             });
         }
 
+        // Approval gate: when an approvalChecker is configured, medium and high risk
+        // actions require an approved approval record before execution.
+        const riskLevel = CONNECTOR_ACTION_RISK[actionType];
+        if (riskLevel !== 'low' && approvalChecker) {
+            const approvalActionId = request.body?.approval_action_id?.trim() ?? null;
+            if (!approvalActionId) {
+                return reply.code(403).send({
+                    error: 'action_awaiting_approval',
+                    reason_code: 'approval_required',
+                    message: `Action ${actionType} requires an approved approval record. Provide approval_action_id.`,
+                    risk_level: riskLevel,
+                });
+            }
+
+            const approvalRecord = await approvalChecker.findByAction({
+                tenantId,
+                workspaceId,
+                actionId: approvalActionId,
+            });
+            if (!approvalRecord) {
+                return reply.code(403).send({
+                    error: 'action_awaiting_approval',
+                    reason_code: 'approval_not_found',
+                    message: `No approval record found for approval_action_id ${approvalActionId}.`,
+                    risk_level: riskLevel,
+                });
+            }
+            if (approvalRecord.decision !== 'approved') {
+                return reply.code(403).send({
+                    error: 'action_awaiting_approval',
+                    reason_code: 'approval_not_granted',
+                    message: `Approval for action ${approvalActionId} has status '${approvalRecord.decision}'. Execution blocked.`,
+                    risk_level: riskLevel,
+                    approval_decision: approvalRecord.decision,
+                });
+            }
+        }
+
         let attempt = 0;
         let finalResult: ProviderExecutionResult | null = null;
         while (attempt < MAX_ATTEMPTS) {
@@ -760,6 +837,20 @@ export const registerConnectorActionRoutes = async (
                 remediationHint: null,
                 completedAt: new Date(now()),
             });
+
+            if (auditWriter) {
+                await auditWriter.createEvent({
+                    tenantId,
+                    workspaceId,
+                    botId,
+                    eventType: 'connector_action.executed',
+                    severity: 'info',
+                    summary: `Connector action ${actionType} on ${connectorType} executed successfully (action_id: ${actionId}).`,
+                    sourceSystem: 'connector-actions',
+                    correlationId,
+                    createdAt: new Date(now()),
+                });
+            }
 
             return {
                 status: 'success',
@@ -808,6 +899,20 @@ export const registerConnectorActionRoutes = async (
                 secretRefId: metadata.secretRefId,
                 scopeStatus: 'insufficient',
                 lastErrorClass: 'insufficient_scope',
+            });
+        }
+
+        if (auditWriter) {
+            await auditWriter.createEvent({
+                tenantId,
+                workspaceId,
+                botId,
+                eventType: 'connector_action.failed',
+                severity: resolvedErrorCode === 'permission_denied' ? 'error' : 'warn',
+                summary: `Connector action ${actionType} on ${connectorType} failed with error '${resolvedErrorCode}' after ${attempt} attempt(s) (action_id: ${actionId}).`,
+                sourceSystem: 'connector-actions',
+                correlationId,
+                createdAt: new Date(now()),
             });
         }
 
@@ -1111,15 +1216,9 @@ export const registerConnectorActionRoutes = async (
                 });
             }
 
-            if (!options.secretStore) {
-                return reply.code(503).send({
-                    error: 'secret_store_unavailable',
-                    message: 'Credential management is not configured on this server.',
-                });
-            }
-
-            const { connectorId } = request.params;
+            const connectorId = request.params.connectorId;
             const metadata = await repo.findAuthMetadata(connectorId);
+
             if (!metadata) {
                 return reply.code(404).send({
                     error: 'connector_not_found',
@@ -1165,7 +1264,13 @@ export const registerConnectorActionRoutes = async (
                 });
             }
 
-            // Determine which secret ref URI to write to
+            if (!options.secretStore) {
+                return reply.code(503).send({
+                    error: 'secret_store_unavailable',
+                    message: 'No secret store is configured. Credentials cannot be updated.',
+                });
+            }
+
             const targetSecretRefId =
                 secret_ref_id ??
                 metadata.secretRefId ??
@@ -1185,8 +1290,6 @@ export const registerConnectorActionRoutes = async (
                 });
             }
 
-            // Update the connector record — move back to token_received so the
-            // next scheduled health-check validates the new credentials live.
             await repo.updateAuthMetadata({
                 connectorId,
                 tenantId: metadata.tenantId,
@@ -1213,6 +1316,8 @@ export const registerConnectorActionRoutes = async (
 export type {
     RegisterConnectorActionRoutesOptions,
     ConnectorActionRepo,
+    ConnectorApprovalChecker,
+    ConnectorAuditWriter,
     SessionContext,
     ProviderExecutor,
 };

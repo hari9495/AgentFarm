@@ -1,9 +1,11 @@
 import {
     buildCapabilitySnapshotUrl,
     buildHealthUrl,
+    buildInterviewEventsUrl,
     buildKillUrl,
     buildLogsUrl,
     buildStateHistoryUrl,
+    buildTranscriptsUrl,
     buildUpstreamHeaders,
     getRuntimeBaseUrl,
     resolveLimit,
@@ -33,6 +35,32 @@ export const buildStateRouteContract = (requestUrl: string): RouteContract => {
 
     return {
         upstreamUrl: buildStateHistoryUrl(getRuntimeBaseUrl(), limit),
+        requestInit: {
+            headers: buildUpstreamHeaders(),
+            cache: 'no-store',
+        },
+    };
+};
+
+export const buildTranscriptsRouteContract = (requestUrl: string): RouteContract => {
+    const { searchParams } = new URL(requestUrl);
+    const limit = resolveLimit(searchParams.get('limit'), '50');
+
+    return {
+        upstreamUrl: buildTranscriptsUrl(getRuntimeBaseUrl(), limit),
+        requestInit: {
+            headers: buildUpstreamHeaders(),
+            cache: 'no-store',
+        },
+    };
+};
+
+export const buildInterviewEventsRouteContract = (requestUrl: string): RouteContract => {
+    const { searchParams } = new URL(requestUrl);
+    const limit = resolveLimit(searchParams.get('limit'), '200');
+
+    return {
+        upstreamUrl: buildInterviewEventsUrl(getRuntimeBaseUrl(), limit),
         requestInit: {
             headers: buildUpstreamHeaders(),
             cache: 'no-store',

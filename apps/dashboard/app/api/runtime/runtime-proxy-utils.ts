@@ -36,6 +36,14 @@ export const buildStateHistoryUrl = (baseUrl: string, limit: string): string => 
     `${baseUrl}/state/history?limit=${encodeURIComponent(limit)}`
 );
 
+export const buildTranscriptsUrl = (baseUrl: string, limit: string): string => (
+    `${baseUrl}/runtime/transcripts?limit=${encodeURIComponent(limit)}`
+);
+
+export const buildInterviewEventsUrl = (baseUrl: string, limit: string): string => (
+    `${baseUrl}/runtime/interview-events?limit=${encodeURIComponent(limit)}`
+);
+
 export const buildHealthUrl = (baseUrl: string): string => `${baseUrl}/health/live`;
 
 export const buildKillUrl = (baseUrl: string): string => `${baseUrl}/kill`;

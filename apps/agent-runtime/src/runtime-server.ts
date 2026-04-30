@@ -282,6 +282,24 @@ type TaskTranscript = {
     payloadOverridesApplied: boolean;
 };
 
+type RuntimeInterviewEvent = {
+    taskId: string;
+    actionType: string;
+    sessionId: string | null;
+    roleTrack: string | null;
+    turnIndex: number | null;
+    interruptedSpeaking: boolean;
+    followUpQuestion: string | null;
+    finalRecommendation: string | null;
+    sequence: number;
+    event: 'partial' | 'final';
+    text: string;
+    startedAt: string;
+    endedAt: string;
+    source: 'payload' | 'payload_chunks' | 'live_capture';
+    recordedAt: string;
+};
+
 const DEFAULT_WORKER_POLL_MS = 250;
 const DEFAULT_KILL_GRACE_MS = 5_000;
 const DEFAULT_APPROVAL_ESCALATION_MS = 60 * 60 * 1000;
@@ -460,6 +478,8 @@ const LOCAL_WORKSPACE_ACTION_POLICY: Record<RoleKey, RuntimeLocalWorkspaceAction
         'workspace_browser_open',
         'workspace_app_launch',
         'workspace_meeting_join',
+        'workspace_meeting_speak',
+        'workspace_meeting_interview_live',
         // Tier 12: Sub-agent delegation, GitHub intelligence, Slack notifications
         'workspace_subagent_spawn',
         'workspace_github_pr_status',
@@ -568,6 +588,8 @@ const LOCAL_WORKSPACE_ACTION_POLICY: Record<RoleKey, RuntimeLocalWorkspaceAction
         'workspace_browser_open',
         'workspace_app_launch',
         'workspace_meeting_join',
+        'workspace_meeting_speak',
+        'workspace_meeting_interview_live',
         // Tier 12: Sub-agent delegation, GitHub intelligence, Slack notifications
         'workspace_subagent_spawn',
         'workspace_github_pr_status',
@@ -1504,6 +1526,8 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
     // Compact per-task execution transcripts — bounded ring buffer (100 entries)
     const MAX_TRANSCRIPTS = 100;
     const recentTranscripts: TaskTranscript[] = [];
+    const MAX_INTERVIEW_EVENTS = 500;
+    const recentInterviewEvents: RuntimeInterviewEvent[] = [];
     const taskStartTimes = new Map<string, number>();
     const taskApprovalSummaries = new Map<string, string>();
 
@@ -1511,6 +1535,81 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         recentTranscripts.push(entry);
         if (recentTranscripts.length > MAX_TRANSCRIPTS) {
             recentTranscripts.shift();
+        }
+    };
+
+    const pushInterviewEvent = (entry: RuntimeInterviewEvent): void => {
+        recentInterviewEvents.push(entry);
+        if (recentInterviewEvents.length > MAX_INTERVIEW_EVENTS) {
+            recentInterviewEvents.shift();
+        }
+    };
+
+    const captureInterviewEventsFromLocalOutput = (input: {
+        taskId: string;
+        actionType: string;
+        output: string;
+    }): void => {
+        if (input.actionType !== 'workspace_meeting_interview_live' || !input.output.trim()) {
+            return;
+        }
+
+        try {
+            const parsed = JSON.parse(input.output) as {
+                session_id?: unknown;
+                role_track?: unknown;
+                turn_index?: unknown;
+                interrupted_speaking?: unknown;
+                follow_up_question?: unknown;
+                final_recommendation?: unknown;
+                transcript_events?: unknown;
+            };
+
+            const eventsRaw = Array.isArray(parsed.transcript_events) ? parsed.transcript_events : [];
+            const sessionId = typeof parsed.session_id === 'string' ? parsed.session_id : null;
+            const roleTrack = typeof parsed.role_track === 'string' ? parsed.role_track : null;
+            const turnIndex = typeof parsed.turn_index === 'number' ? parsed.turn_index : null;
+            const interruptedSpeaking = parsed.interrupted_speaking === true;
+            const followUpQuestion = typeof parsed.follow_up_question === 'string' ? parsed.follow_up_question : null;
+            const recommendationObj = parsed.final_recommendation;
+            const finalRecommendation = recommendationObj
+                && typeof recommendationObj === 'object'
+                && typeof (recommendationObj as Record<string, unknown>)['final_recommendation'] === 'string'
+                ? (recommendationObj as Record<string, unknown>)['final_recommendation'] as string
+                : null;
+
+            for (const eventEntry of eventsRaw) {
+                if (!eventEntry || typeof eventEntry !== 'object') continue;
+                const eventRecord = eventEntry as Record<string, unknown>;
+                const text = typeof eventRecord.text === 'string' ? eventRecord.text.trim() : '';
+                if (!text) continue;
+
+                const rawEventType = typeof eventRecord.event === 'string' ? eventRecord.event : 'partial';
+                const eventType: 'partial' | 'final' = rawEventType === 'final' ? 'final' : 'partial';
+                const sourceRaw = typeof eventRecord.source === 'string' ? eventRecord.source : 'payload';
+                const source: 'payload' | 'payload_chunks' | 'live_capture' =
+                    sourceRaw === 'live_capture' || sourceRaw === 'payload_chunks' ? sourceRaw : 'payload';
+
+                pushInterviewEvent({
+                    taskId: input.taskId,
+                    actionType: input.actionType,
+                    sessionId,
+                    roleTrack,
+                    turnIndex,
+                    interruptedSpeaking,
+                    followUpQuestion,
+                    finalRecommendation,
+                    sequence: typeof eventRecord.sequence === 'number' ? eventRecord.sequence : 0,
+                    event: eventType,
+                    text,
+                    startedAt: typeof eventRecord.started_at === 'string' ? eventRecord.started_at : new Date(now()).toISOString(),
+                    endedAt: typeof eventRecord.ended_at === 'string' ? eventRecord.ended_at : new Date(now()).toISOString(),
+                    source,
+                    recordedAt: new Date(now()).toISOString(),
+                });
+            }
+        } catch {
+            // Ignore malformed action output payloads for interview stream extraction.
         }
     };
 
@@ -1782,6 +1881,12 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         });
 
         if (localResult.ok) {
+            captureInterviewEventsFromLocalOutput({
+                taskId: input.task.taskId,
+                actionType: input.decision.actionType,
+                output: localResult.output,
+            });
+
             let payloadOverrideSource = input.payloadOverrideSource;
             if (input.decision.actionType === 'workspace_subagent_spawn' && localResult.output.trim()) {
                 try {
@@ -3542,6 +3647,24 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             count: slice.length,
             total_buffered: recentTranscripts.length,
             transcripts: slice,
+        };
+    });
+
+    app.get<{ Querystring: { limit?: string } }>('/runtime/interview-events', async (request, reply) => {
+        const rawLimit = Number(request.query?.limit ?? '200');
+        if (!Number.isFinite(rawLimit) || rawLimit <= 0) {
+            return reply.code(400).send({
+                error: 'invalid_limit',
+                message: 'limit must be a positive integer',
+            });
+        }
+
+        const limit = Math.min(Math.trunc(rawLimit), MAX_INTERVIEW_EVENTS);
+        const events = recentInterviewEvents.slice(Math.max(0, recentInterviewEvents.length - limit));
+        return {
+            count: events.length,
+            total_buffered: recentInterviewEvents.length,
+            events,
         };
     });
 

@@ -152,6 +152,40 @@ type RuntimeStateTransition = {
     reason?: string | null;
 };
 
+type RuntimeTranscriptEntry = {
+    taskId: string;
+    startedAt: string;
+    completedAt: string;
+    actionType: string;
+    riskLevel: 'low' | 'medium' | 'high';
+    route: 'execute' | 'approval';
+    status: 'success' | 'approval_required' | 'failed';
+    durationMs: number;
+    errorMessage: string | null;
+    approvalRequired: boolean;
+    approvalSummary: string | null;
+    payloadOverrideSource?: 'none' | 'llm_generated' | 'executor_inferred';
+    payloadOverridesApplied?: boolean;
+};
+
+type RuntimeInterviewEventEntry = {
+    taskId: string;
+    actionType: string;
+    sessionId: string | null;
+    roleTrack: string | null;
+    turnIndex: number | null;
+    interruptedSpeaking: boolean;
+    followUpQuestion: string | null;
+    finalRecommendation: string | null;
+    sequence: number;
+    event: 'partial' | 'final';
+    text: string;
+    startedAt: string;
+    endedAt: string;
+    source: 'payload' | 'payload_chunks' | 'live_capture';
+    recordedAt: string;
+};
+
 type RuntimeHealthSnapshot = {
     status?: string;
     runtime_state?: string;
@@ -168,6 +202,8 @@ type RuntimeHealthSnapshot = {
 type RuntimeObservabilityData = {
     logs: RuntimeLogEntry[];
     transitions: RuntimeStateTransition[];
+    transcripts: RuntimeTranscriptEntry[];
+    interviewEvents: RuntimeInterviewEventEntry[];
     currentState: string;
     health: RuntimeHealthSnapshot;
     source: ApiSource;
@@ -218,6 +254,8 @@ const fallbackRuntimeHealth: RuntimeHealthSnapshot = {
 const fallbackRuntimeObservability: RuntimeObservabilityData = {
     logs: [],
     transitions: [],
+    transcripts: [],
+    interviewEvents: [],
     currentState: 'unknown',
     health: fallbackRuntimeHealth,
     source: 'fallback',
@@ -611,23 +649,29 @@ const getRuntimeObservabilityData = async (_botId: string): Promise<RuntimeObser
     }
 
     try {
-        const [logsRes, stateRes, healthRes] = await Promise.all([
+        const [logsRes, stateRes, healthRes, transcriptsRes, interviewEventsRes] = await Promise.all([
             fetch(`${runtimeBaseUrl}/logs?limit=50`, { headers, cache: 'no-store' }),
             fetch(`${runtimeBaseUrl}/state/history?limit=20`, { headers, cache: 'no-store' }),
             fetch(`${runtimeBaseUrl}/health/live`, { headers, cache: 'no-store' }),
+            fetch(`${runtimeBaseUrl}/runtime/transcripts?limit=50`, { headers, cache: 'no-store' }),
+            fetch(`${runtimeBaseUrl}/runtime/interview-events?limit=200`, { headers, cache: 'no-store' }),
         ]);
 
-        if (!logsRes.ok || !stateRes.ok || !healthRes.ok) {
+        if (!logsRes.ok || !stateRes.ok || !healthRes.ok || !transcriptsRes.ok || !interviewEventsRes.ok) {
             return { ...fallbackRuntimeObservability, source: 'fallback' };
         }
 
         const logsData = (await logsRes.json()) as { logs?: RuntimeLogEntry[] };
         const stateData = (await stateRes.json()) as { transitions?: RuntimeStateTransition[]; current_state?: string };
         const healthData = (await healthRes.json()) as RuntimeHealthSnapshot;
+        const transcriptsData = (await transcriptsRes.json()) as { transcripts?: RuntimeTranscriptEntry[] };
+        const interviewEventsData = (await interviewEventsRes.json()) as { events?: RuntimeInterviewEventEntry[] };
 
         return {
             logs: logsData.logs ?? [],
             transitions: stateData.transitions ?? [],
+            transcripts: transcriptsData.transcripts ?? [],
+            interviewEvents: interviewEventsData.events ?? [],
             currentState: stateData.current_state ?? 'unknown',
             health: healthData,
             source: 'live',
@@ -1252,6 +1296,8 @@ export default async function HomePage({
                             internalPolicy={internalPolicy}
                             initialLogs={runtimeObs.logs}
                             initialTransitions={runtimeObs.transitions}
+                            initialTranscripts={runtimeObs.transcripts}
+                            initialInterviewEvents={runtimeObs.interviewEvents}
                             initialCurrentState={runtimeObs.currentState}
                             initialHealth={runtimeObs.health}
                         />

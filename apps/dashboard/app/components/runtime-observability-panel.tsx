@@ -10,6 +10,40 @@ type RuntimeStateTransition = {
     reason?: string | null;
 };
 
+type RuntimeTranscriptEntry = {
+    taskId: string;
+    startedAt: string;
+    completedAt: string;
+    actionType: string;
+    riskLevel: 'low' | 'medium' | 'high';
+    route: 'execute' | 'approval';
+    status: 'success' | 'approval_required' | 'failed';
+    durationMs: number;
+    errorMessage: string | null;
+    approvalRequired: boolean;
+    approvalSummary: string | null;
+    payloadOverrideSource?: 'none' | 'llm_generated' | 'executor_inferred';
+    payloadOverridesApplied?: boolean;
+};
+
+type RuntimeInterviewEventEntry = {
+    taskId: string;
+    actionType: string;
+    sessionId: string | null;
+    roleTrack: string | null;
+    turnIndex: number | null;
+    interruptedSpeaking: boolean;
+    followUpQuestion: string | null;
+    finalRecommendation: string | null;
+    sequence: number;
+    event: 'partial' | 'final';
+    text: string;
+    startedAt: string;
+    endedAt: string;
+    source: 'payload' | 'payload_chunks' | 'live_capture';
+    recordedAt: string;
+};
+
 type RuntimeHealthSnapshot = {
     status?: string;
     runtime_state?: string;
@@ -51,6 +85,8 @@ type Props = {
     internalPolicy: InternalLoginPolicySnapshot;
     initialLogs: RuntimeLogEntry[];
     initialTransitions: RuntimeStateTransition[];
+    initialTranscripts: RuntimeTranscriptEntry[];
+    initialInterviewEvents: RuntimeInterviewEventEntry[];
     initialCurrentState: string;
     initialHealth: RuntimeHealthSnapshot;
 };
@@ -106,12 +142,16 @@ export function RuntimeObservabilityPanel({
     internalPolicy,
     initialLogs,
     initialTransitions,
+    initialTranscripts,
+    initialInterviewEvents,
     initialCurrentState,
     initialHealth,
 }: Props) {
     const [drilldownTarget, setDrilldownTarget] = useState<'heartbeat' | 'state' | 'connector' | null>(null);
     const [logs, setLogs] = useState<RuntimeLogEntry[]>(initialLogs);
     const [transitions, setTransitions] = useState<RuntimeStateTransition[]>(initialTransitions);
+    const [transcripts, setTranscripts] = useState<RuntimeTranscriptEntry[]>(initialTranscripts);
+    const [interviewEvents, setInterviewEvents] = useState<RuntimeInterviewEventEntry[]>(initialInterviewEvents);
     const [currentState, setCurrentState] = useState<string>(initialCurrentState);
     const [health, setHealth] = useState<RuntimeHealthSnapshot>(initialHealth);
     const [workspaceActions, setWorkspaceActions] = useState<string[]>([]);
@@ -127,15 +167,20 @@ export function RuntimeObservabilityPanel({
     const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
     const [refreshError, setRefreshError] = useState<string | null>(null);
 
+    const [activeTab, setActiveTab] = useState<'overview' | 'interview-timeline'>('overview');
+    const [interviewFilter, setInterviewFilter] = useState<'all' | 'partial' | 'final'>('all');
+
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const refresh = useCallback(async () => {
         try {
-            const [logsRes, stateRes, healthRes, capabilityRes] = await Promise.all([
+            const [logsRes, stateRes, healthRes, capabilityRes, transcriptsRes, interviewEventsRes] = await Promise.all([
                 fetch(`/api/runtime/${encodeURIComponent(botId)}/logs?limit=50`),
                 fetch(`/api/runtime/${encodeURIComponent(botId)}/state?limit=20`),
                 fetch(`/api/runtime/${encodeURIComponent(botId)}/health`),
                 fetch(`/api/runtime/${encodeURIComponent(botId)}/capability`),
+                fetch(`/api/runtime/${encodeURIComponent(botId)}/transcripts?limit=50`),
+                fetch(`/api/runtime/${encodeURIComponent(botId)}/interview-events?limit=200`),
             ]);
 
             if (logsRes.ok) {
@@ -157,6 +202,14 @@ export function RuntimeObservabilityPanel({
                     ? capabilityData.snapshot.allowedActions
                     : [];
                 setWorkspaceActions(actions.filter((action) => action.startsWith('workspace_')).sort((a, b) => a.localeCompare(b)));
+            }
+            if (transcriptsRes.ok) {
+                const transcriptData = (await transcriptsRes.json()) as { transcripts?: RuntimeTranscriptEntry[] };
+                setTranscripts(transcriptData.transcripts ?? []);
+            }
+            if (interviewEventsRes.ok) {
+                const interviewData = (await interviewEventsRes.json()) as { events?: RuntimeInterviewEventEntry[] };
+                setInterviewEvents(interviewData.events ?? []);
             }
 
             setLastRefreshed(new Date());
@@ -205,6 +258,24 @@ export function RuntimeObservabilityPanel({
     };
 
     const filteredLogs = filterRuntimeLogs(logs, logFilter);
+
+    const filteredInterviewEvents = interviewFilter === 'all'
+        ? interviewEvents
+        : interviewEvents.filter((e) => e.event === interviewFilter);
+
+    const interviewSessionGroups = (() => {
+        const map = new Map<string, RuntimeInterviewEventEntry[]>();
+        for (const ev of filteredInterviewEvents) {
+            const key = ev.sessionId ?? `task-${ev.taskId}`;
+            if (!map.has(key)) map.set(key, []);
+            map.get(key)!.push(ev);
+        }
+        return Array.from(map.entries()).sort((a, b) => {
+            const aLast = a[1][a[1].length - 1]?.recordedAt ?? '';
+            const bLast = b[1][b[1].length - 1]?.recordedAt ?? '';
+            return bLast.localeCompare(aLast);
+        });
+    })();
 
     const toggleDetails = (index: number) => {
         setShowDetails((prev) => ({ ...prev, [index]: !prev[index] }));
@@ -359,190 +430,315 @@ export function RuntimeObservabilityPanel({
             </div>
             {renderDrilldown()}
 
-            {/* Current state + state machine */}
-            <div className="obs-section">
-                <p className="obs-section-title">State machine</p>
-                <div className="obs-state-machine">
-                    {ORDERED_STATES.map((state, i) => (
-                        <span key={state} className="obs-state-node">
-                            <span style={statePillStyle(state, state === currentState)}>{state}</span>
-                            {i < ORDERED_STATES.length - 1 && (
-                                <span className="obs-state-arrow">→</span>
+            <div className="panel-badge-row" style={{ marginTop: '0.75rem' }}>
+                <button type="button" className={`chip-button ${activeTab === 'overview' ? 'active' : ''}`} onClick={() => setActiveTab('overview')}>
+                    Overview
+                </button>
+                <button type="button" className={`chip-button ${activeTab === 'interview-timeline' ? 'active' : ''}`} onClick={() => setActiveTab('interview-timeline')}>
+                    Interview Timeline{interviewEvents.length > 0 ? ` (${interviewEvents.length})` : ''}
+                </button>
+            </div>
+
+            <div style={{ display: activeTab === 'overview' ? '' : 'none' }}>
+                {/* Current state + state machine */}
+                <div className="obs-section">
+                    <p className="obs-section-title">State machine</p>
+                    <div className="obs-state-machine">
+                        {ORDERED_STATES.map((state, i) => (
+                            <span key={state} className="obs-state-node">
+                                <span style={statePillStyle(state, state === currentState)}>{state}</span>
+                                {i < ORDERED_STATES.length - 1 && (
+                                    <span className="obs-state-arrow">→</span>
+                                )}
+                            </span>
+                        ))}
+                        {!ORDERED_STATES.includes(currentState) && (
+                            <span style={statePillStyle(currentState, true)}>{currentState}</span>
+                        )}
+                    </div>
+                </div>
+
+                {/* Heartbeat + task metrics */}
+                <div className="obs-metrics-grid">
+                    <div>
+                        <p className="obs-metric-label">Heartbeat loop</p>
+                        <p className="obs-metric-value" style={{ color: health.heartbeat_loop_running ? '#16a34a' : '#dc2626' }}>
+                            {health.heartbeat_loop_running ? 'running' : 'stopped'}
+                        </p>
+                    </div>
+                    <div>
+                        <p className="obs-metric-label">Sent / Failed</p>
+                        <p className="obs-metric-value">
+                            <span style={{ color: '#16a34a' }}>{health.heartbeat_sent ?? 0}</span>
+                            {' / '}
+                            <span style={{ color: (health.heartbeat_failed ?? 0) > 0 ? '#dc2626' : '#374151' }}>
+                                {health.heartbeat_failed ?? 0}
+                            </span>
+                            {heartbeatSuccessRate !== null && (
+                                <span style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 400, marginLeft: '0.25rem' }}>
+                                    ({heartbeatSuccessRate}%)
+                                </span>
                             )}
-                        </span>
-                    ))}
-                    {!ORDERED_STATES.includes(currentState) && (
-                        <span style={statePillStyle(currentState, true)}>{currentState}</span>
+                        </p>
+                    </div>
+                    <div>
+                        <p className="obs-metric-label">Last heartbeat</p>
+                        <p className="obs-metric-value subtle">
+                            {health.last_heartbeat_at ? formatTs(health.last_heartbeat_at) : 'none'}
+                        </p>
+                    </div>
+                    <div>
+                        <p className="obs-metric-label">Tasks processed</p>
+                        <p className="obs-metric-value">
+                            <span style={{ color: '#16a34a' }}>{health.succeeded_tasks ?? 0}</span>
+                            {' ok / '}
+                            <span style={{ color: (health.failed_tasks ?? 0) > 0 ? '#dc2626' : '#374151' }}>
+                                {health.failed_tasks ?? 0}
+                            </span>
+                            {' fail'}
+                        </p>
+                    </div>
+                    <div>
+                        <p className="obs-metric-label">Queue depth</p>
+                        <p className="obs-metric-value" style={{ color: (health.task_queue_depth ?? 0) > 0 ? '#f59e0b' : '#374151' }}>
+                            {health.task_queue_depth ?? 0}
+                        </p>
+                    </div>
+                </div>
+
+                {/* State transition history */}
+                <div className="obs-section">
+                    <p className="obs-section-title">
+                        State transitions ({transitions.length})
+                    </p>
+                    {transitions.length === 0 ? (
+                        <p className="obs-muted-empty">No transitions recorded yet.</p>
+                    ) : (
+                        <div className="obs-transition-list">
+                            {transitions.map((t, i) => (
+                                <div key={i} className="obs-transition-item">
+                                    <span className="obs-transition-time">{formatTs(t.at)}</span>
+                                    <span className="obs-transition-from">{t.from}</span>
+                                    <span className="obs-state-arrow">→</span>
+                                    <span className="obs-transition-to" style={{ color: STATE_COLORS[t.to] ?? '#374151' }}>{t.to}</span>
+                                    {t.reason && (
+                                        <span className="obs-transition-reason">
+                                            — {t.reason}
+                                        </span>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
                     )}
                 </div>
-            </div>
 
-            {/* Heartbeat + task metrics */}
-            <div className="obs-metrics-grid">
-                <div>
-                    <p className="obs-metric-label">Heartbeat loop</p>
-                    <p className="obs-metric-value" style={{ color: health.heartbeat_loop_running ? '#16a34a' : '#dc2626' }}>
-                        {health.heartbeat_loop_running ? 'running' : 'stopped'}
+                <div className="obs-section">
+                    <p className="obs-section-title">
+                        Available workspace actions ({workspaceActions.length})
                     </p>
-                </div>
-                <div>
-                    <p className="obs-metric-label">Sent / Failed</p>
-                    <p className="obs-metric-value">
-                        <span style={{ color: '#16a34a' }}>{health.heartbeat_sent ?? 0}</span>
-                        {' / '}
-                        <span style={{ color: (health.heartbeat_failed ?? 0) > 0 ? '#dc2626' : '#374151' }}>
-                            {health.heartbeat_failed ?? 0}
-                        </span>
-                        {heartbeatSuccessRate !== null && (
-                            <span style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 400, marginLeft: '0.25rem' }}>
-                                ({heartbeatSuccessRate}%)
-                            </span>
-                        )}
-                    </p>
-                </div>
-                <div>
-                    <p className="obs-metric-label">Last heartbeat</p>
-                    <p className="obs-metric-value subtle">
-                        {health.last_heartbeat_at ? formatTs(health.last_heartbeat_at) : 'none'}
-                    </p>
-                </div>
-                <div>
-                    <p className="obs-metric-label">Tasks processed</p>
-                    <p className="obs-metric-value">
-                        <span style={{ color: '#16a34a' }}>{health.succeeded_tasks ?? 0}</span>
-                        {' ok / '}
-                        <span style={{ color: (health.failed_tasks ?? 0) > 0 ? '#dc2626' : '#374151' }}>
-                            {health.failed_tasks ?? 0}
-                        </span>
-                        {' fail'}
-                    </p>
-                </div>
-                <div>
-                    <p className="obs-metric-label">Queue depth</p>
-                    <p className="obs-metric-value" style={{ color: (health.task_queue_depth ?? 0) > 0 ? '#f59e0b' : '#374151' }}>
-                        {health.task_queue_depth ?? 0}
-                    </p>
-                </div>
-            </div>
-
-            {/* State transition history */}
-            <div className="obs-section">
-                <p className="obs-section-title">
-                    State transitions ({transitions.length})
-                </p>
-                {transitions.length === 0 ? (
-                    <p className="obs-muted-empty">No transitions recorded yet.</p>
-                ) : (
-                    <div className="obs-transition-list">
-                        {transitions.map((t, i) => (
-                            <div key={i} className="obs-transition-item">
-                                <span className="obs-transition-time">{formatTs(t.at)}</span>
-                                <span className="obs-transition-from">{t.from}</span>
-                                <span className="obs-state-arrow">→</span>
-                                <span className="obs-transition-to" style={{ color: STATE_COLORS[t.to] ?? '#374151' }}>{t.to}</span>
-                                {t.reason && (
-                                    <span className="obs-transition-reason">
-                                        — {t.reason}
-                                    </span>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
-
-            <div className="obs-section">
-                <p className="obs-section-title">
-                    Available workspace actions ({workspaceActions.length})
-                </p>
-                {workspaceActions.length === 0 ? (
-                    <p className="obs-muted-empty">Capability snapshot not available yet.</p>
-                ) : (
-                    <>
-                        <div className="panel-badge-row" style={{ marginBottom: '0.6rem' }}>
-                            {highlightedWorkspaceActions.map((action) => (
-                                <span
-                                    key={action}
-                                    className={`badge ${workspaceActions.includes(action) ? 'low' : 'warn'}`}
-                                >
-                                    {action}
-                                </span>
-                            ))}
-                        </div>
-                        <div className="obs-transition-list" style={{ maxHeight: '11rem', overflowY: 'auto' }}>
-                            {workspaceActions.map((action) => (
-                                <div key={action} className="obs-transition-item">
-                                    <span className="obs-transition-to" style={{ color: '#1d4ed8' }}>{action}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </>
-                )}
-            </div>
-
-            {/* Log feed */}
-            <div className="obs-section">
-                <div className="obs-log-toolbar">
-                    <p className="obs-section-title" style={{ marginBottom: 0 }}>
-                        Runtime logs ({filteredLogs.length}{logFilter ? ` of ${logs.length}` : ''})
-                    </p>
-                    <input
-                        type="text"
-                        placeholder="Filter by event, state, or correlation ID..."
-                        value={logFilter}
-                        onChange={(e) => setLogFilter(e.target.value)}
-                        className="obs-log-input"
-                    />
-                </div>
-
-                {filteredLogs.length === 0 ? (
-                    <p className="obs-muted-empty">
-                        {logFilter ? 'No logs match the filter.' : 'No logs buffered yet.'}
-                    </p>
-                ) : (
-                    <div className="obs-log-console">
-                        {filteredLogs.map((log, i) => (
-                            <div key={i}>
-                                <div
-                                    className={`obs-log-line ${log.details ? 'clickable' : ''}`}
-                                    onClick={() => { if (log.details) toggleDetails(i); }}
-                                >
-                                    <span className="obs-log-time">{formatTs(log.at)}</span>
+                    {workspaceActions.length === 0 ? (
+                        <p className="obs-muted-empty">Capability snapshot not available yet.</p>
+                    ) : (
+                        <>
+                            <div className="panel-badge-row" style={{ marginBottom: '0.6rem' }}>
+                                {highlightedWorkspaceActions.map((action) => (
                                     <span
-                                        className="obs-log-event"
-                                        style={{
-                                            color: EVENT_TYPE_BADGE[log.eventType] === 'high' ? '#f87171'
-                                                : EVENT_TYPE_BADGE[log.eventType] === 'low' ? '#86efac'
-                                                    : EVENT_TYPE_BADGE[log.eventType] === 'medium' ? '#fcd34d'
-                                                        : '#94a3b8',
-                                        }}
+                                        key={action}
+                                        className={`badge ${workspaceActions.includes(action) ? 'low' : 'warn'}`}
                                     >
-                                        {log.eventType}
+                                        {action}
                                     </span>
-                                    <span className="obs-log-state" style={{ color: STATE_COLORS[log.runtimeState] ?? '#94a3b8' }}>
-                                        [{log.runtimeState}]
-                                    </span>
-                                    {log.correlationId && (
-                                        <span className="obs-log-correlation">
-                                            corr:{log.correlationId}
+                                ))}
+                            </div>
+                            <div className="obs-transition-list" style={{ maxHeight: '11rem', overflowY: 'auto' }}>
+                                {workspaceActions.map((action) => (
+                                    <div key={action} className="obs-transition-item">
+                                        <span className="obs-transition-to" style={{ color: '#1d4ed8' }}>{action}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </>
+                    )}
+                </div>
+
+                <div className="obs-section">
+                    <p className="obs-section-title">Recent agent activity ({transcripts.length})</p>
+                    {transcripts.length === 0 ? (
+                        <p className="obs-muted-empty">No task transcripts recorded yet.</p>
+                    ) : (
+                        <div className="obs-transition-list" style={{ maxHeight: '12rem', overflowY: 'auto' }}>
+                            {[...transcripts].reverse().slice(0, 20).map((entry) => (
+                                <div key={`${entry.taskId}:${entry.completedAt}`} className="obs-transition-item" style={{ alignItems: 'flex-start', flexDirection: 'column' }}>
+                                    <div>
+                                        <span className="obs-transition-time">{formatTs(entry.completedAt)}</span>
+                                        <span className="obs-transition-to" style={{ color: '#1d4ed8', marginLeft: '0.4rem' }}>{entry.actionType}</span>
+                                        <span className={`badge ${entry.status === 'success' ? 'low' : entry.status === 'approval_required' ? 'warn' : 'high'}`} style={{ marginLeft: '0.5rem' }}>
+                                            {entry.status}
                                         </span>
-                                    )}
-                                    {log.details && (
-                                        <span className="obs-log-details-toggle">
-                                            {showDetails[i] ? '▲' : '▼'} details
-                                        </span>
+                                    </div>
+                                    <div className="obs-muted-empty" style={{ marginTop: '0.25rem' }}>
+                                        task {entry.taskId} · {entry.durationMs}ms · override {entry.payloadOverrideSource ?? 'none'}
+                                        {entry.payloadOverridesApplied ? ' (applied)' : ''}
+                                        {entry.errorMessage ? ` · error: ${entry.errorMessage}` : ''}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                <div className="obs-section">
+                    <p className="obs-section-title">Live interview transcript events ({interviewEvents.length})</p>
+                    {interviewEvents.length === 0 ? (
+                        <p className="obs-muted-empty">No interview transcript events captured yet.</p>
+                    ) : (
+                        <div className="obs-transition-list" style={{ maxHeight: '13rem', overflowY: 'auto' }}>
+                            {[...interviewEvents].reverse().slice(0, 40).map((event) => (
+                                <div key={`${event.taskId}:${event.sequence}:${event.recordedAt}`} className="obs-transition-item" style={{ alignItems: 'flex-start', flexDirection: 'column' }}>
+                                    <div>
+                                        <span className="obs-transition-time">{formatTs(event.recordedAt)}</span>
+                                        <span className="obs-transition-to" style={{ color: '#0f766e', marginLeft: '0.4rem' }}>{event.event}</span>
+                                        <span className="badge neutral" style={{ marginLeft: '0.5rem' }}>{event.source}</span>
+                                        {event.finalRecommendation && (
+                                            <span className="badge warn" style={{ marginLeft: '0.5rem' }}>final {event.finalRecommendation}</span>
+                                        )}
+                                    </div>
+                                    <div className="obs-muted-empty" style={{ marginTop: '0.25rem' }}>
+                                        session {event.sessionId ?? 'n/a'} · role {event.roleTrack ?? 'n/a'} · turn {event.turnIndex ?? 'n/a'}
+                                        {event.interruptedSpeaking ? ' · speaker interrupted' : ''}
+                                    </div>
+                                    <div style={{ marginTop: '0.25rem', color: '#1f2937', fontSize: '0.82rem' }}>
+                                        {event.text}
+                                    </div>
+                                    {event.followUpQuestion && (
+                                        <div className="obs-muted-empty" style={{ marginTop: '0.2rem' }}>
+                                            follow-up: {event.followUpQuestion}
+                                        </div>
                                     )}
                                 </div>
-                                {log.details && showDetails[i] && (
-                                    <pre className="obs-log-details">
-                                        {JSON.stringify(log.details, null, 2)}
-                                    </pre>
-                                )}
-                            </div>
-                        ))}
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {/* Log feed */}
+                <div className="obs-section">
+                    <div className="obs-log-toolbar">
+                        <p className="obs-section-title" style={{ marginBottom: 0 }}>
+                            Runtime logs ({filteredLogs.length}{logFilter ? ` of ${logs.length}` : ''})
+                        </p>
+                        <input
+                            type="text"
+                            placeholder="Filter by event, state, or correlation ID..."
+                            value={logFilter}
+                            onChange={(e) => setLogFilter(e.target.value)}
+                            className="obs-log-input"
+                        />
                     </div>
-                )}
-            </div>
+
+                    {filteredLogs.length === 0 ? (
+                        <p className="obs-muted-empty">
+                            {logFilter ? 'No logs match the filter.' : 'No logs buffered yet.'}
+                        </p>
+                    ) : (
+                        <div className="obs-log-console">
+                            {filteredLogs.map((log, i) => (
+                                <div key={i}>
+                                    <div
+                                        className={`obs-log-line ${log.details ? 'clickable' : ''}`}
+                                        onClick={() => { if (log.details) toggleDetails(i); }}
+                                    >
+                                        <span className="obs-log-time">{formatTs(log.at)}</span>
+                                        <span
+                                            className="obs-log-event"
+                                            style={{
+                                                color: EVENT_TYPE_BADGE[log.eventType] === 'high' ? '#f87171'
+                                                    : EVENT_TYPE_BADGE[log.eventType] === 'low' ? '#86efac'
+                                                        : EVENT_TYPE_BADGE[log.eventType] === 'medium' ? '#fcd34d'
+                                                            : '#94a3b8',
+                                            }}
+                                        >
+                                            {log.eventType}
+                                        </span>
+                                        <span className="obs-log-state" style={{ color: STATE_COLORS[log.runtimeState] ?? '#94a3b8' }}>
+                                            [{log.runtimeState}]
+                                        </span>
+                                        {log.correlationId && (
+                                            <span className="obs-log-correlation">
+                                                corr:{log.correlationId}
+                                            </span>
+                                        )}
+                                        {log.details && (
+                                            <span className="obs-log-details-toggle">
+                                                {showDetails[i] ? '▲' : '▼'} details
+                                            </span>
+                                        )}
+                                    </div>
+                                    {log.details && showDetails[i] && (
+                                        <pre className="obs-log-details">
+                                            {JSON.stringify(log.details, null, 2)}
+                                        </pre>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>{/* end overview tab wrapper */}
+
+            {activeTab === 'interview-timeline' && (
+                <div className="obs-section">
+                    <div className="obs-log-toolbar" style={{ marginBottom: '0.6rem' }}>
+                        <p className="obs-section-title" style={{ marginBottom: 0 }}>
+                            Interview Timeline &mdash; {filteredInterviewEvents.length} event{filteredInterviewEvents.length !== 1 ? 's' : ''} across {interviewSessionGroups.length} session{interviewSessionGroups.length !== 1 ? 's' : ''}
+                        </p>
+                        <div className="panel-badge-row">
+                            <button type="button" className={`chip-button ${interviewFilter === 'all' ? 'active' : ''}`} onClick={() => setInterviewFilter('all')}>All</button>
+                            <button type="button" className={`chip-button ${interviewFilter === 'partial' ? 'active' : ''}`} onClick={() => setInterviewFilter('partial')}>Partial</button>
+                            <button type="button" className={`chip-button ${interviewFilter === 'final' ? 'active' : ''}`} onClick={() => setInterviewFilter('final')}>Final</button>
+                        </div>
+                    </div>
+                    {interviewSessionGroups.length === 0 ? (
+                        <p className="obs-muted-empty">No interview events match the current filter.</p>
+                    ) : (
+                        <div className="obs-transition-list" style={{ maxHeight: '32rem', overflowY: 'auto' }}>
+                            {interviewSessionGroups.map(([sessionKey, events]) => {
+                                const lastFinal = [...events].reverse().find((e) => e.event === 'final');
+                                const roleTrack = events[0]?.roleTrack ?? null;
+                                return (
+                                    <div key={sessionKey} style={{ marginBottom: '1rem', borderLeft: '3px solid #0f766e', paddingLeft: '0.75rem' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
+                                            <span className="obs-transition-time" style={{ fontWeight: 600, color: '#0f766e' }}>{sessionKey}</span>
+                                            {roleTrack && <span className="badge neutral">{roleTrack}</span>}
+                                            {lastFinal?.finalRecommendation && (
+                                                <span className="badge warn">rec: {lastFinal.finalRecommendation}</span>
+                                            )}
+                                            <span className="obs-muted-empty">{events.length} event{events.length !== 1 ? 's' : ''}</span>
+                                        </div>
+                                        {events.map((ev) => (
+                                            <div key={`${ev.sequence}:${ev.recordedAt}`} className="obs-transition-item" style={{ alignItems: 'flex-start', flexDirection: 'column', paddingLeft: '0.5rem', marginBottom: '0.35rem' }}>
+                                                <div>
+                                                    <span className="obs-transition-time">{formatTs(ev.recordedAt)}</span>
+                                                    <span className={`badge ${ev.event === 'final' ? 'low' : 'neutral'}`} style={{ marginLeft: '0.4rem' }}>{ev.event}</span>
+                                                    {ev.interruptedSpeaking && <span className="badge high" style={{ marginLeft: '0.4rem' }}>interrupted</span>}
+                                                    {ev.turnIndex !== null && <span className="obs-muted-empty" style={{ marginLeft: '0.5rem' }}>turn {ev.turnIndex}</span>}
+                                                </div>
+                                                <div style={{ marginTop: '0.2rem', color: '#1f2937', fontSize: '0.82rem' }}>{ev.text}</div>
+                                                {ev.followUpQuestion && (
+                                                    <div className="obs-muted-empty" style={{ marginTop: '0.15rem' }}>follow-up: {ev.followUpQuestion}</div>
+                                                )}
+                                                {ev.finalRecommendation && (
+                                                    <div className="obs-muted-empty" style={{ marginTop: '0.15rem', color: '#b45309' }}>recommendation: {ev.finalRecommendation}</div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+            )}
         </article>
     );
 }

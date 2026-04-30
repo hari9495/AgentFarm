@@ -121,6 +121,18 @@ test('processDeveloperTask queues medium/high-risk tasks for approval instead of
         target: 'repo/main',
     }));
 
+    const meetingSpeakRisk = await processDeveloperTask(taskEnvelope({
+        action_type: 'workspace_meeting_speak',
+        summary: 'Speak live interview questions in customer call',
+        target: 'teams meeting',
+    }));
+
+    const meetingInterviewRisk = await processDeveloperTask(taskEnvelope({
+        action_type: 'workspace_meeting_interview_live',
+        summary: 'Capture candidate answers and generate follow-up prompts',
+        target: 'teams interview bridge',
+    }));
+
     assert.equal(mediumRisk.status, 'approval_required');
     assert.equal(mediumRisk.decision.riskLevel, 'medium');
     assert.equal(mediumRisk.attempts, 0);
@@ -136,6 +148,14 @@ test('processDeveloperTask queues medium/high-risk tasks for approval instead of
     assert.equal(mergePrRisk.status, 'approval_required');
     assert.equal(mergePrRisk.decision.riskLevel, 'high');
     assert.equal(mergePrRisk.attempts, 0);
+
+    assert.equal(meetingSpeakRisk.status, 'approval_required');
+    assert.equal(meetingSpeakRisk.decision.riskLevel, 'high');
+    assert.equal(meetingSpeakRisk.attempts, 0);
+
+    assert.equal(meetingInterviewRisk.status, 'approval_required');
+    assert.equal(meetingInterviewRisk.decision.riskLevel, 'high');
+    assert.equal(meetingInterviewRisk.attempts, 0);
 });
 
 test('processDeveloperTask marks non-retryable executor failures as runtime_exception', async () => {

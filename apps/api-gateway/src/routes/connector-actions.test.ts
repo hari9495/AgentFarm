@@ -4,6 +4,8 @@ import Fastify from 'fastify';
 import {
     registerConnectorActionRoutes,
     type ConnectorActionRepo,
+    type ConnectorApprovalChecker,
+    type ConnectorAuditWriter,
     type ProviderExecutor,
     type SessionContext,
 } from './connector-actions.js';
@@ -974,6 +976,390 @@ test('PUT credentials returns 400 when email type is missing', async () => {
         const body = response.json() as { error: string; message: string };
         assert.equal(body.error, 'invalid_credentials');
         assert.ok(body.message.includes('type'));
+        test('PUT credentials returns 400 when email type is missing', async () => {
+            const app = Fastify();
+            const repo = createFakeRepo();
+            seedConnectedMetadata(repo);
+            const store = createInMemorySecretStore({});
+
+            await registerConnectorActionRoutes(app, {
+                getSession: () => sessionContext(),
+                repo,
+                secretStore: store,
+            });
+
+            try {
+                const response = await app.inject({
+                    method: 'PUT',
+                    url: '/v1/connectors/email:tenant_1:ws_1/credentials',
+                    payload: { credentials: { api_key: 'SG.key', from_address: 'bot@a.com' } }, // missing type
+                });
+
+                assert.equal(response.statusCode, 400);
+                const body = response.json() as { error: string; message: string };
+                assert.equal(body.error, 'invalid_credentials');
+                assert.ok(body.message.includes('type'));
+            } finally {
+                await app.close();
+            }
+        });
+
+        const createFakeApprovalChecker = (): ConnectorApprovalChecker & {
+            approvals: Map<string, { decision: string }>;
+        } => {
+            const approvals = new Map<string, { decision: string }>();
+            return {
+                approvals,
+                async findByAction(input) {
+                    return approvals.get(`${input.tenantId}:${input.workspaceId}:${input.actionId}`) ?? null;
+                },
+            };
+        };
+
+        const createFakeAuditWriter = (): ConnectorAuditWriter & {
+            events: Array<{ eventType: string; severity: string; summary: string }>;
+        } => {
+            const events: Array<{ eventType: string; severity: string; summary: string }> = [];
+            return {
+                events,
+                async createEvent(input) {
+                    events.push({ eventType: input.eventType, severity: input.severity, summary: input.summary });
+                },
+            };
+        };
+
+        test('blocks high-risk action when no approval_action_id provided', async () => {
+            const app = Fastify();
+            const repo = createFakeRepo();
+            seedConnectedMetadata(repo);
+            const approvalChecker = createFakeApprovalChecker();
+
+            await registerConnectorActionRoutes(app, {
+                getSession: () => sessionContext(),
+                repo,
+                sleep: async () => { },
+                approvalChecker,
+            });
+
+            try {
+                const response = await app.inject({
+                    method: 'POST',
+                    url: '/v1/connectors/actions/execute',
+                    payload: {
+                        connector_type: 'github',
+                        workspace_id: 'ws_1',
+                        bot_id: 'bot_1',
+                        role_key: 'developer',
+                        action_type: 'merge_pr',
+                        payload: { pr_number: 42 },
+                        // no approval_action_id provided
+                    },
+                });
+
+                assert.equal(response.statusCode, 403);
+                const body = response.json() as { error: string; reason_code: string; risk_level: string };
+                assert.equal(body.error, 'action_awaiting_approval');
+                assert.equal(body.reason_code, 'approval_required');
+                assert.equal(body.risk_level, 'high');
+                assert.equal(repo.logs.length, 0, 'no action log should be written for blocked action');
+            } finally {
+                await app.close();
+            }
+        });
+
+        test('blocks medium-risk action when no approval_action_id provided', async () => {
+            const app = Fastify();
+            const repo = createFakeRepo();
+            seedConnectedMetadata(repo);
+            const approvalChecker = createFakeApprovalChecker();
+
+            await registerConnectorActionRoutes(app, {
+                getSession: () => sessionContext(),
+                repo,
+                sleep: async () => { },
+                approvalChecker,
+            });
+
+            try {
+                const response = await app.inject({
+                    method: 'POST',
+                    url: '/v1/connectors/actions/execute',
+                    payload: {
+                        connector_type: 'jira',
+                        workspace_id: 'ws_1',
+                        bot_id: 'bot_1',
+                        role_key: 'developer',
+                        action_type: 'update_status',
+                        payload: { issue_id: 'JIRA-1', status: 'done' },
+                    },
+                });
+
+                assert.equal(response.statusCode, 403);
+                const body = response.json() as { error: string; reason_code: string; risk_level: string };
+                assert.equal(body.error, 'action_awaiting_approval');
+                assert.equal(body.reason_code, 'approval_required');
+                assert.equal(body.risk_level, 'medium');
+            } finally {
+                await app.close();
+            }
+        });
+
+        test('blocks risky action when approval record not found', async () => {
+            const app = Fastify();
+            const repo = createFakeRepo();
+            seedConnectedMetadata(repo);
+            const approvalChecker = createFakeApprovalChecker();
+            // no approval seeded
+
+            await registerConnectorActionRoutes(app, {
+                getSession: () => sessionContext(),
+                repo,
+                sleep: async () => { },
+                approvalChecker,
+            });
+
+            try {
+                const response = await app.inject({
+                    method: 'POST',
+                    url: '/v1/connectors/actions/execute',
+                    payload: {
+                        connector_type: 'github',
+                        workspace_id: 'ws_1',
+                        bot_id: 'bot_1',
+                        role_key: 'developer',
+                        action_type: 'create_pr',
+                        payload: {},
+                        approval_action_id: 'act_nonexistent',
+                    },
+                });
+
+                assert.equal(response.statusCode, 403);
+                const body = response.json() as { error: string; reason_code: string };
+                assert.equal(body.error, 'action_awaiting_approval');
+                assert.equal(body.reason_code, 'approval_not_found');
+            } finally {
+                await app.close();
+            }
+        });
+
+        test('blocks risky action when approval decision is pending (not approved)', async () => {
+            const app = Fastify();
+            const repo = createFakeRepo();
+            seedConnectedMetadata(repo);
+            const approvalChecker = createFakeApprovalChecker();
+            approvalChecker.approvals.set('tenant_1:ws_1:act_pending_1', { decision: 'pending' });
+
+            await registerConnectorActionRoutes(app, {
+                getSession: () => sessionContext(),
+                repo,
+                sleep: async () => { },
+                approvalChecker,
+            });
+
+            try {
+                const response = await app.inject({
+                    method: 'POST',
+                    url: '/v1/connectors/actions/execute',
+                    payload: {
+                        connector_type: 'github',
+                        workspace_id: 'ws_1',
+                        bot_id: 'bot_1',
+                        role_key: 'developer',
+                        action_type: 'merge_pr',
+                        payload: { pr_number: 1 },
+                        approval_action_id: 'act_pending_1',
+                    },
+                });
+
+                assert.equal(response.statusCode, 403);
+                const body = response.json() as { error: string; reason_code: string; approval_decision: string };
+                assert.equal(body.error, 'action_awaiting_approval');
+                assert.equal(body.reason_code, 'approval_not_granted');
+                assert.equal(body.approval_decision, 'pending');
+            } finally {
+                await app.close();
+            }
+        });
+
+        test('blocks risky action when approval is rejected', async () => {
+            const app = Fastify();
+            const repo = createFakeRepo();
+            seedConnectedMetadata(repo);
+            const approvalChecker = createFakeApprovalChecker();
+            approvalChecker.approvals.set('tenant_1:ws_1:act_rejected_1', { decision: 'rejected' });
+
+            await registerConnectorActionRoutes(app, {
+                getSession: () => sessionContext(),
+                repo,
+                sleep: async () => { },
+                approvalChecker,
+            });
+
+            try {
+                const response = await app.inject({
+                    method: 'POST',
+                    url: '/v1/connectors/actions/execute',
+                    payload: {
+                        connector_type: 'github',
+                        workspace_id: 'ws_1',
+                        bot_id: 'bot_1',
+                        role_key: 'developer',
+                        action_type: 'merge_pr',
+                        payload: { pr_number: 5 },
+                        approval_action_id: 'act_rejected_1',
+                    },
+                });
+
+                assert.equal(response.statusCode, 403);
+                const body = response.json() as { error: string; reason_code: string; approval_decision: string };
+                assert.equal(body.error, 'action_awaiting_approval');
+                assert.equal(body.reason_code, 'approval_not_granted');
+                assert.equal(body.approval_decision, 'rejected');
+            } finally {
+                await app.close();
+            }
+        });
+
+        test('executes high-risk action when approval is approved and writes audit event', async () => {
+            const app = Fastify();
+            const repo = createFakeRepo();
+            seedConnectedMetadata(repo);
+            const approvalChecker = createFakeApprovalChecker();
+            approvalChecker.approvals.set('tenant_1:ws_1:act_approved_1', { decision: 'approved' });
+            const auditWriter = createFakeAuditWriter();
+
+            await registerConnectorActionRoutes(app, {
+                getSession: () => sessionContext(),
+                repo,
+                sleep: async () => { },
+                approvalChecker,
+                auditWriter,
+            });
+
+            try {
+                const response = await app.inject({
+                    method: 'POST',
+                    url: '/v1/connectors/actions/execute',
+                    payload: {
+                        connector_type: 'github',
+                        workspace_id: 'ws_1',
+                        bot_id: 'bot_1',
+                        role_key: 'developer',
+                        action_type: 'merge_pr',
+                        payload: { pr_number: 7 },
+                        approval_action_id: 'act_approved_1',
+                    },
+                });
+
+                assert.equal(response.statusCode, 200);
+                const body = response.json() as { status: string; action_type: string };
+                assert.equal(body.status, 'success');
+                assert.equal(body.action_type, 'merge_pr');
+
+                assert.equal(repo.logs.length, 1);
+                assert.equal(repo.logs[0]!.resultStatus, 'success');
+
+                assert.equal(auditWriter.events.length, 1);
+                assert.equal(auditWriter.events[0]!.eventType, 'connector_action.executed');
+                assert.equal(auditWriter.events[0]!.severity, 'info');
+                assert.ok(auditWriter.events[0]!.summary.includes('merge_pr'));
+            } finally {
+                await app.close();
+            }
+        });
+
+        test('low-risk action executes without approval requirement and writes audit event on success', async () => {
+            const app = Fastify();
+            const repo = createFakeRepo();
+            seedConnectedMetadata(repo);
+            const approvalChecker = createFakeApprovalChecker();
+            const auditWriter = createFakeAuditWriter();
+
+            await registerConnectorActionRoutes(app, {
+                getSession: () => sessionContext(),
+                repo,
+                sleep: async () => { },
+                approvalChecker,
+                auditWriter,
+            });
+
+            try {
+                const response = await app.inject({
+                    method: 'POST',
+                    url: '/v1/connectors/actions/execute',
+                    payload: {
+                        connector_type: 'jira',
+                        workspace_id: 'ws_1',
+                        bot_id: 'bot_1',
+                        role_key: 'developer',
+                        action_type: 'read_task',
+                        payload: { issue_id: 'JIRA-42' },
+                        // no approval_action_id needed for low-risk
+                    },
+                });
+
+                assert.equal(response.statusCode, 200);
+                const body = response.json() as { status: string };
+                assert.equal(body.status, 'success');
+
+                assert.equal(auditWriter.events.length, 1);
+                assert.equal(auditWriter.events[0]!.eventType, 'connector_action.executed');
+            } finally {
+                await app.close();
+            }
+        });
+
+        test('writes audit event with error severity on connector action failure', async () => {
+            const app = Fastify();
+            const repo = createFakeRepo();
+            seedConnectedMetadata(repo);
+            const approvalChecker = createFakeApprovalChecker();
+            approvalChecker.approvals.set('tenant_1:ws_1:act_approved_fail', { decision: 'approved' });
+            const auditWriter = createFakeAuditWriter();
+
+            const failingExecutor: ProviderExecutor = async () => ({
+                ok: false,
+                providerResponseCode: '403',
+                resultSummary: 'Permission denied.',
+                errorCode: 'permission_denied',
+                errorMessage: 'Connector permission does not allow this action.',
+                remediationHint: 'Re-consent connector scopes in settings.',
+            });
+
+            await registerConnectorActionRoutes(app, {
+                getSession: () => sessionContext(),
+                repo,
+                sleep: async () => { },
+                providerExecutor: failingExecutor,
+                approvalChecker,
+                auditWriter,
+            });
+
+            try {
+                const response = await app.inject({
+                    method: 'POST',
+                    url: '/v1/connectors/actions/execute',
+                    payload: {
+                        connector_type: 'github',
+                        workspace_id: 'ws_1',
+                        bot_id: 'bot_1',
+                        role_key: 'developer',
+                        action_type: 'merge_pr',
+                        payload: {},
+                        approval_action_id: 'act_approved_fail',
+                    },
+                });
+
+                assert.equal(response.statusCode, 502);
+
+                assert.equal(auditWriter.events.length, 1);
+                assert.equal(auditWriter.events[0]!.eventType, 'connector_action.failed');
+                assert.equal(auditWriter.events[0]!.severity, 'error');
+                assert.ok(auditWriter.events[0]!.summary.includes('merge_pr'));
+            } finally {
+                await app.close();
+            }
+        });
     } finally {
         await app.close();
     }

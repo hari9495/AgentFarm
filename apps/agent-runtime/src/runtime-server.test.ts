@@ -1767,6 +1767,8 @@ test('startup freezes capability snapshot and exposes it via runtime endpoint', 
         assert.ok(snapshotBody.snapshot.allowedActions.includes('create_pr_from_workspace'));
         assert.ok(snapshotBody.snapshot.allowedActions.includes('workspace_github_issue_triage'));
         assert.ok(snapshotBody.snapshot.allowedActions.includes('workspace_azure_deploy_plan'));
+        assert.ok(snapshotBody.snapshot.allowedActions.includes('workspace_meeting_speak'));
+        assert.ok(snapshotBody.snapshot.allowedActions.includes('workspace_meeting_interview_live'));
     } finally {
         await app.close();
     }
@@ -1892,6 +1894,8 @@ test('startup loads latest persisted capability snapshot by botId when available
                     'workspace_browser_open',
                     'workspace_app_launch',
                     'workspace_meeting_join',
+                    'workspace_meeting_speak',
+                    'workspace_meeting_interview_live',
                     'workspace_subagent_spawn',
                     'workspace_github_pr_status',
                     'workspace_github_issue_triage',
@@ -3257,6 +3261,101 @@ test('/runtime/transcripts records a transcript entry after a task completes', a
         assert.equal(entry?.actionType, 'read_task');
         assert.equal(typeof entry?.durationMs, 'number');
         assert.ok(entry?.durationMs >= 0);
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/interview-events returns empty list before interview tasks run', async () => {
+    const app = buildRuntimeServer({
+        env: baseEnv(),
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+    });
+
+    try {
+        const res = await app.inject({ method: 'GET', url: '/runtime/interview-events' });
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as { count: number; total_buffered: number; events: unknown[] };
+        assert.equal(body.count, 0);
+        assert.equal(body.total_buffered, 0);
+        assert.ok(Array.isArray(body.events));
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/interview-events captures partial transcript events from meeting interview action', async () => {
+    const app = buildRuntimeServer({
+        env: baseEnv(),
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+    });
+
+    try {
+        const startupRes = await app.inject({ method: 'POST', url: '/startup' });
+        assert.equal(startupRes.statusCode, 200);
+
+        await app.inject({
+            method: 'POST',
+            url: '/tasks/intake',
+            payload: {
+                task_id: 'interview-events-task-1',
+                payload: {
+                    action_type: 'workspace_meeting_interview_live',
+                    summary: 'Capture interview stream events',
+                    target: 'teams interview room',
+                    session_id: 'runtime-events-session-1',
+                    current_question: 'Explain your system design approach.',
+                    role_track: 'system_design',
+                    transcript_chunks: [
+                        'I start from requirements and SLA constraints.',
+                        'Then I design services, queues, caching, and observability.',
+                    ],
+                },
+            },
+        });
+
+        await new Promise<void>((resolve) => setTimeout(resolve, 80));
+
+        const decisionRes = await app.inject({
+            method: 'POST',
+            url: '/decision',
+            payload: {
+                task_id: 'interview-events-task-1',
+                decision: 'approved',
+                reason: 'Interview event capture allowed for this test',
+                actor: 'approver_runtime_events',
+            },
+        });
+        assert.equal(decisionRes.statusCode, 200);
+
+        await new Promise<void>((resolve) => setTimeout(resolve, 120));
+
+        const res = await app.inject({ method: 'GET', url: '/runtime/interview-events?limit=20' });
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as {
+            count: number;
+            events: Array<{
+                taskId: string;
+                event: string;
+                text: string;
+                sessionId: string | null;
+                roleTrack: string | null;
+                followUpQuestion: string | null;
+            }>;
+        };
+
+        assert.ok(body.count >= 1);
+        const matching = body.events.filter((event) => event.taskId === 'interview-events-task-1');
+        assert.ok(matching.length >= 1, 'expected interview stream events for task');
+        assert.equal(matching[0]?.sessionId, 'runtime-events-session-1');
+        assert.equal(matching[0]?.roleTrack, 'system_design');
+        assert.equal(matching[0]?.event, 'partial');
+        assert.ok(typeof matching[0]?.followUpQuestion === 'string');
+        assert.ok((matching[0]?.text ?? '').length > 0);
     } finally {
         await app.close();
     }

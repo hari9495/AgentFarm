@@ -3,9 +3,11 @@ import test from 'node:test';
 import {
     buildCapabilityRouteContract,
     buildHealthRouteContract,
+    buildInterviewEventsRouteContract,
     buildKillRouteContract,
     buildLogsRouteContract,
     buildStateRouteContract,
+    buildTranscriptsRouteContract,
 } from './route-contract';
 
 test('buildLogsRouteContract uses default limit when query is absent', () => {
@@ -29,6 +31,22 @@ test('buildStateRouteContract uses default limit and cache contract', () => {
     const contract = buildStateRouteContract('http://localhost:3001/api/runtime/bot-1/state');
 
     assert.equal(contract.upstreamUrl, 'http://localhost:8080/state/history?limit=20');
+    assert.equal(contract.requestInit.cache, 'no-store');
+    assert.deepEqual(contract.requestInit.headers, {});
+});
+
+test('buildTranscriptsRouteContract uses default limit and cache contract', () => {
+    const contract = buildTranscriptsRouteContract('http://localhost:3001/api/runtime/bot-1/transcripts');
+
+    assert.equal(contract.upstreamUrl, 'http://localhost:8080/runtime/transcripts?limit=50');
+    assert.equal(contract.requestInit.cache, 'no-store');
+    assert.deepEqual(contract.requestInit.headers, {});
+});
+
+test('buildInterviewEventsRouteContract uses default limit and cache contract', () => {
+    const contract = buildInterviewEventsRouteContract('http://localhost:3001/api/runtime/bot-1/interview-events');
+
+    assert.equal(contract.upstreamUrl, 'http://localhost:8080/runtime/interview-events?limit=200');
     assert.equal(contract.requestInit.cache, 'no-store');
     assert.deepEqual(contract.requestInit.headers, {});
 });

@@ -9,7 +9,7 @@
  * outside the per-task workspace directory.
  */
 
-import { spawn } from 'node:child_process';
+import { spawn, type ChildProcess } from 'node:child_process';
 import { mkdir, writeFile, readFile, rm, rename, readdir, stat } from 'node:fs/promises';
 import { tmpdir, platform } from 'node:os';
 import { dirname, join, resolve, relative, basename, extname } from 'node:path';
@@ -102,6 +102,8 @@ export type LocalWorkspaceActionType =
     | 'workspace_browser_open'
     | 'workspace_app_launch'
     | 'workspace_meeting_join'
+    | 'workspace_meeting_speak'
+    | 'workspace_meeting_interview_live'
     // Tier 12 (Sub-agent delegation, GitHub intelligence, Slack notifications)
     | 'workspace_subagent_spawn'
     | 'workspace_github_pr_status'
@@ -304,6 +306,8 @@ export const LOCAL_WORKSPACE_ACTION_TYPES = new Set<LocalWorkspaceActionType>([
     'workspace_browser_open',
     'workspace_app_launch',
     'workspace_meeting_join',
+    'workspace_meeting_speak',
+    'workspace_meeting_interview_live',
     // Tier 12
     'workspace_subagent_spawn',
     'workspace_github_pr_status',
@@ -389,7 +393,483 @@ const DESKTOP_ACTION_TYPES = new Set([
     'workspace_browser_open',
     'workspace_app_launch',
     'workspace_meeting_join',
+    'workspace_meeting_speak',
+    'workspace_meeting_interview_live',
 ]);
+
+const MAX_MEETING_SPEECH_SEGMENTS = 12;
+const MAX_MEETING_SPEECH_SEGMENT_LENGTH = 300;
+
+type InterviewTurnRecord = {
+    question: string;
+    transcript: string;
+    follow_up_question: string;
+    score: number;
+    role_track: InterviewRoleTrack;
+    rubric_overall_score: number;
+    rubric_recommendation: 'strong_hire' | 'hire' | 'hold' | 'no_hire';
+    timestamp: string;
+};
+
+type TranscriptEventRecord = {
+    sequence: number;
+    event: 'partial' | 'final';
+    text: string;
+    started_at: string;
+    ended_at: string;
+    source: 'payload' | 'payload_chunks' | 'live_capture';
+};
+
+type InterviewRoleTrack = 'dsa' | 'system_design' | 'backend' | 'frontend';
+
+type RoleRubricCriterion = {
+    criterion: string;
+    score: number;
+    rationale: string;
+};
+
+type RoleRubricScore = {
+    role_track: InterviewRoleTrack;
+    overall_score: number;
+    recommendation: 'strong_hire' | 'hire' | 'hold' | 'no_hire';
+    criteria: RoleRubricCriterion[];
+};
+
+const ACTIVE_MEETING_SPEECH_BY_SESSION = new Map<string, ChildProcess>();
+
+const defaultInterviewQuestions = (): string[] => [
+    'Please walk me through a recent production incident you debugged and how you resolved it.',
+    'How do you design a reliable rollback plan for a risky deployment?',
+    'How would you improve CI feedback speed without reducing test confidence?',
+    'Tell me about a code review decision where you prioritized security over delivery speed.',
+];
+
+const normalizeSpeechSegments = (value: unknown): string[] => {
+    if (!Array.isArray(value)) return [];
+    return value
+        .filter((entry): entry is string => typeof entry === 'string')
+        .map((entry) => entry.trim())
+        .filter((entry) => entry.length > 0)
+        .slice(0, MAX_MEETING_SPEECH_SEGMENTS)
+        .map((entry) => entry.slice(0, MAX_MEETING_SPEECH_SEGMENT_LENGTH));
+};
+
+const normalizeInterviewFocus = (value: unknown): string[] => {
+    if (!Array.isArray(value)) return [];
+    return value
+        .filter((entry): entry is string => typeof entry === 'string')
+        .map((entry) => entry.trim().toLowerCase())
+        .filter((entry) => entry.length > 0)
+        .slice(0, 12);
+};
+
+function normalizeInterviewRoleTrack(value: unknown): InterviewRoleTrack {
+    if (typeof value !== 'string') return 'backend';
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'dsa' || normalized === 'algorithms' || normalized === 'data-structures') return 'dsa';
+    if (normalized === 'system-design' || normalized === 'system_design' || normalized === 'design') return 'system_design';
+    if (normalized === 'frontend' || normalized === 'ui') return 'frontend';
+    return 'backend';
+}
+
+function normalizeTranscriptChunkEvents(value: unknown): TranscriptEventRecord[] {
+    if (!Array.isArray(value)) return [];
+    const now = new Date().toISOString();
+    return value
+        .filter((item): item is string => typeof item === 'string')
+        .map((item) => item.trim())
+        .filter((item) => item.length > 0)
+        .slice(0, 40)
+        .map((item, index) => ({
+            sequence: index + 1,
+            event: 'partial' as const,
+            text: item.slice(0, 600),
+            started_at: now,
+            ended_at: now,
+            source: 'payload_chunks' as const,
+        }));
+}
+
+function tokenizeLower(text: string): string[] {
+    return text
+        .toLowerCase()
+        .split(/[^a-z0-9]+/)
+        .filter((token) => token.length > 0);
+}
+
+function scoreInterviewAnswer(answer: string): {
+    score: number;
+    missingSignals: string[];
+    strengths: string[];
+    wordCount: number;
+} {
+    const lower = answer.toLowerCase();
+    const words = tokenizeLower(answer);
+    const wordCount = words.length;
+    let score = 0;
+    const missingSignals: string[] = [];
+    const strengths: string[] = [];
+
+    if (wordCount >= 25) {
+        score += 25;
+        strengths.push('Sufficient detail length.');
+    } else {
+        missingSignals.push('Needs more concrete detail.');
+    }
+
+    if (/\b(i|we)\b/.test(lower)) {
+        score += 15;
+        strengths.push('Shows ownership language.');
+    } else {
+        missingSignals.push('Ownership is not clear.');
+    }
+
+    if (/\b(metric|latency|throughput|error rate|p95|p99|percent|ms|minute|hour)\b/.test(lower)) {
+        score += 20;
+        strengths.push('Includes measurable outcomes.');
+    } else {
+        missingSignals.push('Missing measurable outcomes.');
+    }
+
+    if (/\b(test|verify|validated|monitor|alert|rollback|postmortem)\b/.test(lower)) {
+        score += 20;
+        strengths.push('Covers validation or reliability practice.');
+    } else {
+        missingSignals.push('Missing validation and reliability details.');
+    }
+
+    if (/\btrade[- ]?off|because|therefore|decision|chose|alternative\b/.test(lower)) {
+        score += 20;
+        strengths.push('Explains decision rationale and trade-offs.');
+    } else {
+        missingSignals.push('No clear trade-off reasoning.');
+    }
+
+    return {
+        score: Math.max(0, Math.min(100, score)),
+        missingSignals,
+        strengths,
+        wordCount,
+    };
+}
+
+function roleCriterionScore(answer: string, patterns: RegExp[]): number {
+    const hitCount = patterns.reduce((count, pattern) => count + (pattern.test(answer) ? 1 : 0), 0);
+    if (patterns.length === 0) return 0;
+    return Math.round((hitCount / patterns.length) * 100);
+}
+
+function scoreRoleRubric(roleTrack: InterviewRoleTrack, answer: string): RoleRubricScore {
+    const lower = answer.toLowerCase();
+    const rubricByRole: Record<InterviewRoleTrack, Array<{ criterion: string; patterns: RegExp[]; rationale: string }>> = {
+        dsa: [
+            { criterion: 'Problem decomposition', patterns: [/approach|plan|steps|break down/], rationale: 'Candidate explains a structured approach.' },
+            { criterion: 'Complexity reasoning', patterns: [/o\(|time complexity|space complexity|big-?o/], rationale: 'Candidate discusses algorithmic trade-offs.' },
+            { criterion: 'Edge-case handling', patterns: [/edge case|null|empty|overflow|boundary/], rationale: 'Candidate accounts for failure edges.' },
+            { criterion: 'Validation strategy', patterns: [/test|example|validate|correctness|proof/], rationale: 'Candidate verifies correctness.' },
+        ],
+        system_design: [
+            { criterion: 'Requirements clarity', patterns: [/requirements|sla|latency|throughput|availability/], rationale: 'Candidate frames constraints explicitly.' },
+            { criterion: 'Architecture choices', patterns: [/cache|queue|database|service|partition|replica/], rationale: 'Candidate proposes practical components.' },
+            { criterion: 'Scalability and reliability', patterns: [/scale|failover|retry|circuit|rollback|degrade/], rationale: 'Candidate addresses reliability at scale.' },
+            { criterion: 'Observability and ops', patterns: [/monitor|metric|alert|dashboard|trace|log/], rationale: 'Candidate plans operations and observability.' },
+        ],
+        backend: [
+            { criterion: 'API and data modeling', patterns: [/api|endpoint|schema|contract|idempotent/], rationale: 'Candidate understands service contracts.' },
+            { criterion: 'Reliability and failure handling', patterns: [/retry|timeout|rollback|transaction|consistency/], rationale: 'Candidate handles production failures.' },
+            { criterion: 'Performance optimization', patterns: [/latency|throughput|cache|index|query/], rationale: 'Candidate optimizes hot paths.' },
+            { criterion: 'Security and correctness', patterns: [/auth|authorization|validation|sanit|secret|token/], rationale: 'Candidate covers secure implementation.' },
+        ],
+        frontend: [
+            { criterion: 'UX and interaction design', patterns: [/ux|accessibility|keyboard|responsive|state/], rationale: 'Candidate addresses user interaction quality.' },
+            { criterion: 'Performance and rendering', patterns: [/bundle|lazy|memo|render|hydration|web vitals/], rationale: 'Candidate optimizes rendering behavior.' },
+            { criterion: 'State and data flow', patterns: [/state|cache|query|swr|redux|context/], rationale: 'Candidate manages data flow soundly.' },
+            { criterion: 'Testing and reliability', patterns: [/test|e2e|unit|integration|regression/], rationale: 'Candidate includes validation plan.' },
+        ],
+    };
+
+    const criteria = rubricByRole[roleTrack].map((item) => {
+        const score = roleCriterionScore(lower, item.patterns);
+        return {
+            criterion: item.criterion,
+            score,
+            rationale: `${item.rationale} Signal score ${score}/100 based on answer content.`,
+        };
+    });
+
+    const overall = Math.round(criteria.reduce((sum, item) => sum + item.score, 0) / Math.max(criteria.length, 1));
+    const recommendation: RoleRubricScore['recommendation'] =
+        overall >= 85 ? 'strong_hire' : overall >= 70 ? 'hire' : overall >= 50 ? 'hold' : 'no_hire';
+
+    return {
+        role_track: roleTrack,
+        overall_score: overall,
+        recommendation,
+        criteria,
+    };
+}
+
+function buildFinalInterviewRecommendation(input: {
+    sessionId: string;
+    roleTrack: InterviewRoleTrack;
+    turns: InterviewTurnRecord[];
+}): {
+    session_id: string;
+    role_track: InterviewRoleTrack;
+    total_turns: number;
+    average_answer_score: number;
+    average_rubric_score: number;
+    final_recommendation: 'strong_hire' | 'hire' | 'hold' | 'no_hire';
+    summary: string;
+} {
+    const { sessionId, roleTrack, turns } = input;
+    const avgAnswer = turns.length === 0
+        ? 0
+        : Math.round(turns.reduce((sum, turn) => sum + turn.score, 0) / turns.length);
+    const avgRubric = turns.length === 0
+        ? 0
+        : Math.round(turns.reduce((sum, turn) => sum + turn.rubric_overall_score, 0) / turns.length);
+    const combined = Math.round((avgAnswer + avgRubric) / 2);
+    const recommendation: 'strong_hire' | 'hire' | 'hold' | 'no_hire' =
+        combined >= 85 ? 'strong_hire' : combined >= 70 ? 'hire' : combined >= 50 ? 'hold' : 'no_hire';
+
+    return {
+        session_id: sessionId,
+        role_track: roleTrack,
+        total_turns: turns.length,
+        average_answer_score: avgAnswer,
+        average_rubric_score: avgRubric,
+        final_recommendation: recommendation,
+        summary: `Interview summary for ${roleTrack}: ${turns.length} turn(s), answer score ${avgAnswer}/100, rubric score ${avgRubric}/100, recommendation ${recommendation}.`,
+    };
+}
+
+function buildFollowUpQuestion(input: {
+    currentQuestion: string;
+    answer: string;
+    analysis: ReturnType<typeof scoreInterviewAnswer>;
+    focusAreas: string[];
+}): string {
+    const { currentQuestion, analysis, focusAreas } = input;
+    const lowerQuestion = currentQuestion.toLowerCase();
+
+    if (analysis.wordCount < 25) {
+        return 'Can you walk me through that step-by-step with specific actions you took and the final result?';
+    }
+    if (analysis.missingSignals.some((signal) => signal.includes('measurable'))) {
+        return 'What concrete metrics changed after your solution, and how did you measure the impact?';
+    }
+    if (analysis.missingSignals.some((signal) => signal.includes('trade-off'))) {
+        return 'What options did you consider, and what trade-off made you choose this approach?';
+    }
+    if (analysis.missingSignals.some((signal) => signal.includes('validation'))) {
+        return 'How did you validate the fix and make sure it would not regress in production?';
+    }
+    if (focusAreas.includes('system-design') || lowerQuestion.includes('design')) {
+        return 'If scale doubled next quarter, what design change would you make first and why?';
+    }
+    if (focusAreas.includes('incident-response') || lowerQuestion.includes('incident')) {
+        return 'What early warning signal would you add so the team detects this issue faster next time?';
+    }
+
+    return 'What would you do differently if you had to solve this same problem again?';
+}
+
+async function captureWindowsSpeechTranscript(timeoutSeconds: number): Promise<string> {
+    const boundedTimeout = Math.max(5, Math.min(180, Math.floor(timeoutSeconds)));
+    const script = [
+        'Add-Type -AssemblyName System.Speech',
+        '$engine = New-Object System.Speech.Recognition.SpeechRecognitionEngine',
+        '$engine.LoadGrammar((New-Object System.Speech.Recognition.DictationGrammar))',
+        '$engine.SetInputToDefaultAudioDevice()',
+        `$result = $engine.Recognize([TimeSpan]::FromSeconds(${boundedTimeout}))`,
+        'if ($result -and $result.Text) { Write-Output $result.Text }',
+    ].join('; ');
+
+    return await new Promise((resolvePromise, rejectPromise) => {
+        const proc = spawn('powershell', ['-NoProfile', '-NonInteractive', '-Command', script], {
+            stdio: ['ignore', 'pipe', 'pipe'],
+        });
+
+        let stdout = '';
+        let stderr = '';
+
+        proc.stdout.on('data', (chunk: Buffer) => {
+            stdout += chunk.toString();
+        });
+        proc.stderr.on('data', (chunk: Buffer) => {
+            stderr += chunk.toString();
+        });
+
+        proc.on('close', (code) => {
+            if ((code ?? 1) !== 0) {
+                rejectPromise(new Error(stderr.trim() || `Speech recognition process exited with code ${code ?? 1}.`));
+                return;
+            }
+            resolvePromise(stdout.trim());
+        });
+
+        proc.on('error', (err) => {
+            rejectPromise(err);
+        });
+    });
+}
+
+async function captureWindowsSpeechStream(timeoutSeconds: number, chunkSeconds: number): Promise<TranscriptEventRecord[]> {
+    const boundedTimeout = Math.max(5, Math.min(180, Math.floor(timeoutSeconds)));
+    const boundedChunk = Math.max(2, Math.min(30, Math.floor(chunkSeconds)));
+    const iterations = Math.max(1, Math.ceil(boundedTimeout / boundedChunk));
+    const script = [
+        'Add-Type -AssemblyName System.Speech',
+        '$engine = New-Object System.Speech.Recognition.SpeechRecognitionEngine',
+        '$engine.LoadGrammar((New-Object System.Speech.Recognition.DictationGrammar))',
+        '$engine.SetInputToDefaultAudioDevice()',
+        `$iterations = ${iterations}`,
+        `$chunk = ${boundedChunk}`,
+        'for ($index = 0; $index -lt $iterations; $index++) {',
+        '  $started = Get-Date',
+        '  $result = $engine.Recognize([TimeSpan]::FromSeconds($chunk))',
+        '  $ended = Get-Date',
+        '  if ($result -and $result.Text) {',
+        '    $obj = @{ sequence = ($index + 1); event = "partial"; text = $result.Text; started_at = $started.ToString("o"); ended_at = $ended.ToString("o"); source = "live_capture" }',
+        '    $obj | ConvertTo-Json -Compress | Write-Output',
+        '  }',
+        '}',
+    ].join('; ');
+
+    return await new Promise((resolvePromise, rejectPromise) => {
+        const proc = spawn('powershell', ['-NoProfile', '-NonInteractive', '-Command', script], {
+            stdio: ['ignore', 'pipe', 'pipe'],
+        });
+
+        let stdout = '';
+        let stderr = '';
+
+        proc.stdout.on('data', (chunk: Buffer) => {
+            stdout += chunk.toString();
+        });
+        proc.stderr.on('data', (chunk: Buffer) => {
+            stderr += chunk.toString();
+        });
+
+        proc.on('close', (code) => {
+            if ((code ?? 1) !== 0) {
+                rejectPromise(new Error(stderr.trim() || `Speech stream process exited with code ${code ?? 1}.`));
+                return;
+            }
+            const events = stdout
+                .split(/\r?\n/)
+                .map((line) => line.trim())
+                .filter((line) => line.length > 0)
+                .map((line) => {
+                    try {
+                        return JSON.parse(line) as TranscriptEventRecord;
+                    } catch {
+                        return null;
+                    }
+                })
+                .filter((event): event is TranscriptEventRecord => event !== null && typeof event.text === 'string' && event.text.trim().length > 0)
+                .map((event, index) => ({
+                    sequence: index + 1,
+                    event: 'partial' as const,
+                    text: event.text.trim().slice(0, 600),
+                    started_at: typeof event.started_at === 'string' ? event.started_at : new Date().toISOString(),
+                    ended_at: typeof event.ended_at === 'string' ? event.ended_at : new Date().toISOString(),
+                    source: 'live_capture' as const,
+                }));
+            resolvePromise(events);
+        });
+
+        proc.on('error', (err) => {
+            rejectPromise(err);
+        });
+    });
+}
+
+async function launchInterruptibleSpeech(sessionId: string, command: string, args: string[]): Promise<void> {
+    await new Promise<void>((resolvePromise, rejectPromise) => {
+        const proc = spawn(command, args, { stdio: 'ignore' });
+        proc.once('error', (err) => rejectPromise(err));
+        proc.once('spawn', () => {
+            ACTIVE_MEETING_SPEECH_BY_SESSION.set(sessionId, proc);
+            proc.once('close', () => {
+                const existing = ACTIVE_MEETING_SPEECH_BY_SESSION.get(sessionId);
+                if (existing === proc) {
+                    ACTIVE_MEETING_SPEECH_BY_SESSION.delete(sessionId);
+                }
+            });
+            proc.unref();
+            resolvePromise();
+        });
+    });
+}
+
+function stopActiveSpeechSession(sessionId: string): boolean {
+    const proc = ACTIVE_MEETING_SPEECH_BY_SESSION.get(sessionId);
+    if (!proc) return false;
+    ACTIVE_MEETING_SPEECH_BY_SESSION.delete(sessionId);
+    try {
+        return proc.kill('SIGTERM');
+    } catch {
+        return false;
+    }
+}
+
+function escapePowerShellSingleQuoted(text: string): string {
+    return text.replace(/'/g, "''");
+}
+
+function buildMeetingSpeechInvocation(input: {
+    platform: NodeJS.Platform;
+    segments: string[];
+    voice: string;
+    paceSeconds: number;
+}): { command: string; args: string[]; engine: string } {
+    const { platform: os, segments, voice, paceSeconds } = input;
+
+    if (os === 'win32') {
+        const escapedSegments = segments.map((segment) => `'${escapePowerShellSingleQuoted(segment)}'`).join(', ');
+        const escapedVoice = escapePowerShellSingleQuoted(voice);
+        const script = [
+            'Add-Type -AssemblyName System.Speech',
+            '$speaker = New-Object System.Speech.Synthesis.SpeechSynthesizer',
+            escapedVoice
+                ? `try { $speaker.SelectVoice('${escapedVoice}') } catch { }`
+                : '',
+            `$segments = @(${escapedSegments})`,
+            'for ($index = 0; $index -lt $segments.Length; $index++) {',
+            '  $speaker.Speak($segments[$index])',
+            `  if ($index -lt ($segments.Length - 1) -and ${paceSeconds} -gt 0) { Start-Sleep -Seconds ${paceSeconds} }`,
+            '}',
+        ].filter((line) => line.length > 0).join('; ');
+
+        return {
+            command: 'powershell',
+            args: ['-NoProfile', '-NonInteractive', '-Command', script],
+            engine: 'powershell_system_speech',
+        };
+    }
+
+    const mergedText = segments.join(' ... ');
+    if (os === 'darwin') {
+        const args: string[] = [];
+        if (voice) {
+            args.push('-v', voice);
+        }
+        args.push(mergedText);
+        return {
+            command: 'say',
+            args,
+            engine: 'macos_say',
+        };
+    }
+
+    return {
+        command: 'espeak',
+        args: voice ? ['-v', voice, mergedText] : [mergedText],
+        engine: 'espeak',
+    };
+}
 
 const parseCsvEnvList = (raw: string | undefined): string[] => {
     if (!raw) return [];
@@ -3916,6 +4396,8 @@ export async function executeLocalWorkspaceAction(input: {
                 'workspace_browser_open',
                 'workspace_app_launch',
                 'workspace_meeting_join',
+                'workspace_meeting_speak',
+                'workspace_meeting_interview_live',
             ]);
             const mediumRiskActions = new Set([
                 'code_edit', 'code_edit_patch', 'code_search_replace', 'run_build', 'run_tests', 'git_commit', 'autonomous_loop',
@@ -4666,6 +5148,322 @@ export async function executeLocalWorkspaceAction(input: {
             } catch (err) {
                 return { ok: false, output: '', errorOutput: `Failed to open meeting link: ${String(err)}` };
             }
+        }
+
+        // workspace_meeting_speak: speak scripted prompts in a live meeting.
+        case 'workspace_meeting_speak': {
+            const mode = typeof payload['mode'] === 'string' ? payload['mode'].trim().toLowerCase() : 'statement';
+            const text = typeof payload['text'] === 'string' ? payload['text'].trim() : '';
+            const voice = typeof payload['voice'] === 'string' ? payload['voice'].trim() : '';
+            const sessionId = typeof payload['session_id'] === 'string' && payload['session_id'].trim()
+                ? payload['session_id'].trim().slice(0, 120)
+                : '';
+            const interruptible = payload['interruptible'] !== false;
+            const dryRun = payload['dry_run'] === true;
+            const paceSecondsRaw = typeof payload['pace_seconds'] === 'number'
+                ? payload['pace_seconds']
+                : typeof payload['wait_seconds'] === 'number'
+                    ? payload['wait_seconds']
+                    : 25;
+            const paceSeconds = Math.max(0, Math.min(120, Math.floor(paceSecondsRaw)));
+
+            if (mode !== 'statement' && mode !== 'interview') {
+                return { ok: false, output: '', errorOutput: "payload.mode must be 'statement' or 'interview'." };
+            }
+
+            const explicitSegments = normalizeSpeechSegments(payload['script']);
+            let segments: string[];
+            if (mode === 'interview') {
+                const interviewRole = typeof payload['interview_role'] === 'string' && payload['interview_role'].trim()
+                    ? payload['interview_role'].trim()
+                    : 'Software Engineer';
+                const candidateName = typeof payload['candidate_name'] === 'string' && payload['candidate_name'].trim()
+                    ? payload['candidate_name'].trim()
+                    : 'candidate';
+                const opening = typeof payload['opening'] === 'string' && payload['opening'].trim()
+                    ? payload['opening'].trim().slice(0, MAX_MEETING_SPEECH_SEGMENT_LENGTH)
+                    : `Hello ${candidateName}, this is AgentFarm interviewer. We are starting the ${interviewRole} interview.`;
+                const closing = typeof payload['closing'] === 'string' && payload['closing'].trim()
+                    ? payload['closing'].trim().slice(0, MAX_MEETING_SPEECH_SEGMENT_LENGTH)
+                    : 'Thanks for your responses. We will review and get back to you soon.';
+                const questionsFromPayload = normalizeSpeechSegments(payload['questions']);
+                const questions = questionsFromPayload.length > 0 ? questionsFromPayload : defaultInterviewQuestions();
+
+                segments = [
+                    opening,
+                    ...questions.map((question, index) => `Question ${index + 1}. ${question}`),
+                    closing,
+                ];
+            } else {
+                segments = explicitSegments;
+                if (text) {
+                    segments.unshift(text.slice(0, MAX_MEETING_SPEECH_SEGMENT_LENGTH));
+                }
+            }
+
+            if (segments.length === 0) {
+                return {
+                    ok: false,
+                    output: '',
+                    errorOutput: "Provide payload.text, payload.script, or payload.questions for workspace_meeting_speak.",
+                };
+            }
+
+            const os = platform();
+            const invocation = buildMeetingSpeechInvocation({
+                platform: os,
+                segments,
+                voice,
+                paceSeconds,
+            });
+
+            if (dryRun) {
+                return {
+                    ok: true,
+                    output: JSON.stringify({
+                        dry_run: true,
+                        mode,
+                        command: invocation.command,
+                        args: invocation.args,
+                        platform: os,
+                        voice: voice || null,
+                        pace_seconds: paceSeconds,
+                        segments,
+                        interview_mode: mode === 'interview',
+                        session_id: sessionId || null,
+                        interruptible,
+                    }, null, 2),
+                };
+            }
+
+            try {
+                if (sessionId && interruptible) {
+                    await launchInterruptibleSpeech(sessionId, invocation.command, invocation.args);
+                } else {
+                    await launchDetached(invocation.command, invocation.args);
+                }
+                return {
+                    ok: true,
+                    output: JSON.stringify({
+                        spoken: true,
+                        mode,
+                        engine: invocation.engine,
+                        command: invocation.command,
+                        platform: os,
+                        pace_seconds: paceSeconds,
+                        segment_count: segments.length,
+                        session_id: sessionId || null,
+                        interruptible: Boolean(sessionId && interruptible),
+                    }, null, 2),
+                };
+            } catch (err) {
+                return {
+                    ok: false,
+                    output: '',
+                    errorOutput: `Failed to start meeting speech on '${os}' with '${invocation.command}': ${String(err)}`,
+                };
+            }
+        }
+
+        // workspace_meeting_interview_live: capture candidate answer and generate dynamic follow-up prompts.
+        case 'workspace_meeting_interview_live': {
+            const dryRun = payload['dry_run'] === true;
+            const currentQuestion = typeof payload['current_question'] === 'string' ? payload['current_question'].trim() : '';
+            if (!currentQuestion) {
+                return { ok: false, output: '', errorOutput: 'payload.current_question is required for workspace_meeting_interview_live.' };
+            }
+
+            const sessionId = typeof payload['session_id'] === 'string' && payload['session_id'].trim()
+                ? payload['session_id'].trim().slice(0, 120)
+                : `interview-${Date.now()}`;
+            const roleTrack = normalizeInterviewRoleTrack(payload['role_track'] ?? payload['interview_role_track'] ?? payload['role']);
+            const transcriptTextRaw = typeof payload['transcript_text'] === 'string' ? payload['transcript_text'].trim() : '';
+            const transcriptChunkEvents = normalizeTranscriptChunkEvents(payload['transcript_chunks']);
+            const listenSeconds = typeof payload['listen_seconds'] === 'number'
+                ? Math.max(5, Math.min(180, Math.floor(payload['listen_seconds'])))
+                : 45;
+            const streamChunkSeconds = typeof payload['stream_chunk_seconds'] === 'number'
+                ? Math.max(2, Math.min(30, Math.floor(payload['stream_chunk_seconds'])))
+                : 12;
+            const enableStreaming = payload['streaming'] !== false;
+            const finalize = payload['finalize'] === true;
+            const interruptOnCandidateSpeech = payload['interrupt_speaking_on_candidate'] !== false;
+            const focusAreas = normalizeInterviewFocus(payload['focus_areas']);
+            const meetingUrlRaw = typeof payload['meeting_url'] === 'string' ? payload['meeting_url'].trim() : '';
+
+            if (meetingUrlRaw) {
+                let parsedMeetingUrl: URL;
+                try {
+                    parsedMeetingUrl = new URL(meetingUrlRaw);
+                } catch {
+                    return { ok: false, output: '', errorOutput: 'payload.meeting_url must be a valid absolute URL when provided.' };
+                }
+                if (parsedMeetingUrl.protocol !== 'https:') {
+                    return { ok: false, output: '', errorOutput: 'Only https meeting links are allowed.' };
+                }
+                const allowedHosts = configuredMeetingHostSuffixes();
+                const allowedHost = allowedHosts.some((suffix) =>
+                    parsedMeetingUrl.hostname === suffix || parsedMeetingUrl.hostname.endsWith(`.${suffix}`),
+                );
+                if (!allowedHost) {
+                    return {
+                        ok: false,
+                        output: '',
+                        errorOutput: `Meeting host '${parsedMeetingUrl.hostname}' is not in the allowlist (${allowedHosts.join(', ')}).`,
+                    };
+                }
+            }
+
+            const os = platform();
+            let transcriptText = transcriptTextRaw;
+            let transcriptSource: 'payload' | 'live_capture' = 'payload';
+            let transcriptEvents: TranscriptEventRecord[] = [];
+            if (transcriptChunkEvents.length > 0) {
+                transcriptEvents = transcriptChunkEvents;
+                transcriptSource = 'payload';
+                transcriptText = transcriptChunkEvents.map((event) => event.text).join(' ');
+            } else if (transcriptText) {
+                const stamp = new Date().toISOString();
+                transcriptEvents = [{
+                    sequence: 1,
+                    event: 'final',
+                    text: transcriptText,
+                    started_at: stamp,
+                    ended_at: stamp,
+                    source: 'payload',
+                }];
+            } else if (!dryRun && os === 'win32' && enableStreaming) {
+                try {
+                    transcriptEvents = await captureWindowsSpeechStream(listenSeconds, streamChunkSeconds);
+                    transcriptSource = 'live_capture';
+                    transcriptText = transcriptEvents.map((event) => event.text).join(' ').trim();
+                } catch (err) {
+                    return {
+                        ok: false,
+                        output: '',
+                        errorOutput: `Live transcription failed: ${String(err)}`,
+                    };
+                }
+            } else if (!dryRun && os === 'win32') {
+                try {
+                    transcriptText = await captureWindowsSpeechTranscript(listenSeconds);
+                    transcriptSource = 'live_capture';
+                    if (transcriptText) {
+                        const stamp = new Date().toISOString();
+                        transcriptEvents = [{
+                            sequence: 1,
+                            event: 'final',
+                            text: transcriptText,
+                            started_at: stamp,
+                            ended_at: stamp,
+                            source: 'live_capture',
+                        }];
+                    }
+                } catch (err) {
+                    return {
+                        ok: false,
+                        output: '',
+                        errorOutput: `Live transcription failed: ${String(err)}`,
+                    };
+                }
+            } else if (!dryRun) {
+                return {
+                    ok: false,
+                    output: '',
+                    errorOutput: 'Live transcription capture is currently supported on Windows only. Provide payload.transcript_text or payload.transcript_chunks on this platform.',
+                };
+            }
+
+            const transcriptPreview = transcriptText || '<captured during execution>';
+            const analysis = scoreInterviewAnswer(transcriptPreview);
+            const rubric = scoreRoleRubric(roleTrack, transcriptPreview);
+            const followUpQuestion = buildFollowUpQuestion({
+                currentQuestion,
+                answer: transcriptPreview,
+                analysis,
+                focusAreas,
+            });
+
+            const sessionPath = safeChildPath(workspaceDir, `.agentfarm/interview-sessions/${sessionId}.json`);
+            let turns: InterviewTurnRecord[] = [];
+            let sessionEvents: TranscriptEventRecord[] = [];
+            if (!dryRun) {
+                try {
+                    const existing = JSON.parse(await readFile(sessionPath, 'utf8')) as {
+                        turns?: InterviewTurnRecord[];
+                        transcript_events?: TranscriptEventRecord[];
+                    };
+                    turns = Array.isArray(existing.turns) ? existing.turns : [];
+                    sessionEvents = Array.isArray(existing.transcript_events) ? existing.transcript_events : [];
+                } catch {
+                    turns = [];
+                    sessionEvents = [];
+                }
+            }
+
+            const interruptedSpeaking = interruptOnCandidateSpeech && transcriptEvents.length > 0
+                ? stopActiveSpeechSession(sessionId)
+                : false;
+
+            const turnRecord: InterviewTurnRecord = {
+                question: currentQuestion,
+                transcript: transcriptPreview,
+                follow_up_question: followUpQuestion,
+                score: analysis.score,
+                role_track: roleTrack,
+                rubric_overall_score: rubric.overall_score,
+                rubric_recommendation: rubric.recommendation,
+                timestamp: new Date().toISOString(),
+            };
+
+            if (!dryRun) {
+                turns.push(turnRecord);
+                const offset = sessionEvents.length;
+                const normalizedEvents = transcriptEvents.map((event, index) => ({
+                    ...event,
+                    sequence: offset + index + 1,
+                }));
+                sessionEvents.push(...normalizedEvents);
+                await mkdir(dirname(sessionPath), { recursive: true });
+                await writeFile(sessionPath, JSON.stringify({
+                    session_id: sessionId,
+                    role_track: roleTrack,
+                    turns,
+                    transcript_events: sessionEvents,
+                }, null, 2), 'utf8');
+            }
+
+            const finalRecommendation = finalize
+                ? buildFinalInterviewRecommendation({ sessionId, roleTrack, turns: dryRun ? [turnRecord] : turns })
+                : null;
+
+            return {
+                ok: true,
+                output: JSON.stringify({
+                    dry_run: dryRun,
+                    session_id: sessionId,
+                    role_track: roleTrack,
+                    current_question: currentQuestion,
+                    transcript_source: transcriptSource,
+                    transcript: transcriptPreview,
+                    transcript_events: transcriptEvents,
+                    partial_transcript_events: transcriptEvents.filter((event) => event.event === 'partial'),
+                    streaming_enabled: enableStreaming,
+                    analysis,
+                    rubric,
+                    follow_up_question: followUpQuestion,
+                    next_action: 'workspace_meeting_speak',
+                    prompt_for_speak: followUpQuestion,
+                    turn_index: dryRun ? turns.length + 1 : turns.length,
+                    listen_seconds: listenSeconds,
+                    stream_chunk_seconds: streamChunkSeconds,
+                    focus_areas: focusAreas,
+                    interrupted_speaking: interruptedSpeaking,
+                    interrupt_speaking_on_candidate: interruptOnCandidateSpeech,
+                    final_recommendation: finalRecommendation,
+                    interview_mode: true,
+                }, null, 2),
+            };
         }
 
         // ------------------------------------------------------------------

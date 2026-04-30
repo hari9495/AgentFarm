@@ -3,9 +3,11 @@ import test from 'node:test';
 import {
     buildCapabilitySnapshotUrl,
     buildHealthUrl,
+    buildInterviewEventsUrl,
     buildKillUrl,
     buildLogsUrl,
     buildStateHistoryUrl,
+    buildTranscriptsUrl,
     buildUpstreamHeaders,
     DEFAULT_RUNTIME_BASE_URL,
     getRuntimeBaseUrl,
@@ -58,6 +60,8 @@ test('build url helpers encode query values correctly', () => {
     const baseUrl = 'http://localhost:8080';
     assert.equal(buildLogsUrl(baseUrl, '10'), 'http://localhost:8080/logs?limit=10');
     assert.equal(buildStateHistoryUrl(baseUrl, '10 0'), 'http://localhost:8080/state/history?limit=10%200');
+    assert.equal(buildTranscriptsUrl(baseUrl, '25'), 'http://localhost:8080/runtime/transcripts?limit=25');
+    assert.equal(buildInterviewEventsUrl(baseUrl, '80'), 'http://localhost:8080/runtime/interview-events?limit=80');
     assert.equal(buildHealthUrl(baseUrl), 'http://localhost:8080/health/live');
     assert.equal(buildKillUrl(baseUrl), 'http://localhost:8080/kill');
     assert.equal(buildCapabilitySnapshotUrl(baseUrl), 'http://localhost:8080/runtime/capability-snapshot');

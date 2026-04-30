@@ -2427,6 +2427,202 @@ test('workspace_meeting_join respects AF_LOCAL_ALLOWED_MEETING_HOSTS', async () 
     }
 });
 
+test('workspace_meeting_speak returns invocation plan in dry_run mode', async () => {
+    const { executeLocalWorkspaceAction } = await import('./local-workspace-executor.js');
+
+    const result = await executeLocalWorkspaceAction({
+        tenantId: 'tenant-t11', botId: 'bot-t11', taskId: 'task-meeting-speak-dry-run',
+        actionType: 'workspace_meeting_speak',
+        payload: {
+            workspace_key: 'repo-t11-meeting-speak',
+            mode: 'statement',
+            text: 'Thanks everyone, quick incident status update.',
+            dry_run: true,
+        },
+    });
+
+    assert.equal(result.ok, true, result.errorOutput);
+    const parsed = JSON.parse(result.output) as {
+        dry_run: boolean;
+        mode: string;
+        segments: string[];
+    };
+    assert.equal(parsed.dry_run, true);
+    assert.equal(parsed.mode, 'statement');
+    assert.equal(parsed.segments[0], 'Thanks everyone, quick incident status update.');
+});
+
+test('workspace_meeting_speak builds interview script when mode is interview', async () => {
+    const { executeLocalWorkspaceAction } = await import('./local-workspace-executor.js');
+
+    const result = await executeLocalWorkspaceAction({
+        tenantId: 'tenant-t11', botId: 'bot-t11', taskId: 'task-meeting-interview-dry-run',
+        actionType: 'workspace_meeting_speak',
+        payload: {
+            workspace_key: 'repo-t11-meeting-interview',
+            mode: 'interview',
+            candidate_name: 'Asha',
+            interview_role: 'Senior Backend Engineer',
+            questions: [
+                'Describe a time you handled a failed deployment.',
+                'How do you design observability for distributed services?',
+            ],
+            dry_run: true,
+        },
+    });
+
+    assert.equal(result.ok, true, result.errorOutput);
+    const parsed = JSON.parse(result.output) as {
+        interview_mode: boolean;
+        segments: string[];
+    };
+    assert.equal(parsed.interview_mode, true);
+    assert.ok(parsed.segments.some((segment) => segment.includes('Question 1.')));
+    assert.ok(parsed.segments.some((segment) => segment.includes('Question 2.')));
+});
+
+test('workspace_meeting_speak requires text, script, or interview questions', async () => {
+    const { executeLocalWorkspaceAction } = await import('./local-workspace-executor.js');
+
+    const result = await executeLocalWorkspaceAction({
+        tenantId: 'tenant-t11', botId: 'bot-t11', taskId: 'task-meeting-speak-empty',
+        actionType: 'workspace_meeting_speak',
+        payload: {
+            workspace_key: 'repo-t11-meeting-empty',
+            mode: 'statement',
+            dry_run: true,
+        },
+    });
+
+    assert.equal(result.ok, false);
+    assert.ok((result.errorOutput ?? '').includes('Provide payload.text'));
+});
+
+test('workspace_meeting_interview_live analyzes transcript and proposes follow-up', async () => {
+    const { executeLocalWorkspaceAction } = await import('./local-workspace-executor.js');
+
+    const result = await executeLocalWorkspaceAction({
+        tenantId: 'tenant-t11', botId: 'bot-t11', taskId: 'task-meeting-interview-live',
+        actionType: 'workspace_meeting_interview_live',
+        payload: {
+            workspace_key: 'repo-t11-meeting-live',
+            session_id: 'session-1',
+            current_question: 'Tell me how you handled a production outage.',
+            transcript_text: 'I led incident response, rolled back safely, validated with tests, and reduced p95 latency by 30 percent.',
+            focus_areas: ['incident-response'],
+            dry_run: true,
+        },
+    });
+
+    assert.equal(result.ok, true, result.errorOutput);
+    const parsed = JSON.parse(result.output) as {
+        interview_mode: boolean;
+        transcript_source: string;
+        follow_up_question: string;
+        analysis: { score: number };
+        next_action: string;
+    };
+    assert.equal(parsed.interview_mode, true);
+    assert.equal(parsed.transcript_source, 'payload');
+    assert.equal(typeof parsed.follow_up_question, 'string');
+    assert.equal(parsed.next_action, 'workspace_meeting_speak');
+    assert.ok(parsed.analysis.score >= 0);
+});
+
+test('workspace_meeting_interview_live emits partial transcript events from transcript_chunks', async () => {
+    const { executeLocalWorkspaceAction } = await import('./local-workspace-executor.js');
+
+    const result = await executeLocalWorkspaceAction({
+        tenantId: 'tenant-t11', botId: 'bot-t11', taskId: 'task-meeting-interview-streaming',
+        actionType: 'workspace_meeting_interview_live',
+        payload: {
+            workspace_key: 'repo-t11-meeting-live-stream',
+            session_id: 'session-stream',
+            current_question: 'How would you design this service for scale?',
+            role_track: 'system_design',
+            transcript_chunks: [
+                'I would start with API requirements and throughput expectations.',
+                'Then add caching, queue-based async processing, and observability metrics.',
+            ],
+            dry_run: true,
+        },
+    });
+
+    assert.equal(result.ok, true, result.errorOutput);
+    const parsed = JSON.parse(result.output) as {
+        transcript_events: Array<{ event: string; text: string }>;
+        partial_transcript_events: Array<{ event: string }>;
+        rubric: { role_track: string; overall_score: number };
+    };
+    assert.equal(parsed.transcript_events.length, 2);
+    assert.equal(parsed.partial_transcript_events.length, 2);
+    assert.equal(parsed.transcript_events[0]?.event, 'partial');
+    assert.equal(parsed.rubric.role_track, 'system_design');
+    assert.ok(parsed.rubric.overall_score >= 0);
+});
+
+test('workspace_meeting_interview_live returns final recommendation summary when finalize=true', async () => {
+    const { executeLocalWorkspaceAction } = await import('./local-workspace-executor.js');
+
+    const firstTurn = await executeLocalWorkspaceAction({
+        tenantId: 'tenant-t11', botId: 'bot-t11', taskId: 'task-meeting-interview-finalize-1',
+        actionType: 'workspace_meeting_interview_live',
+        payload: {
+            workspace_key: 'repo-t11-meeting-finalize',
+            session_id: 'session-finalize',
+            role_track: 'backend',
+            current_question: 'Tell me how you improved backend reliability.',
+            transcript_text: 'I added retries and rollback checks and validated with tests after deployment.',
+        },
+    });
+    assert.equal(firstTurn.ok, true, firstTurn.errorOutput);
+
+    const secondTurn = await executeLocalWorkspaceAction({
+        tenantId: 'tenant-t11', botId: 'bot-t11', taskId: 'task-meeting-interview-finalize-2',
+        actionType: 'workspace_meeting_interview_live',
+        payload: {
+            workspace_key: 'repo-t11-meeting-finalize',
+            session_id: 'session-finalize',
+            role_track: 'backend',
+            current_question: 'How did you measure impact?',
+            transcript_text: 'We reduced p95 latency by 20 percent and tracked alert volume reduction on dashboards.',
+            finalize: true,
+        },
+    });
+    assert.equal(secondTurn.ok, true, secondTurn.errorOutput);
+
+    const parsed = JSON.parse(secondTurn.output) as {
+        final_recommendation: null | {
+            session_id: string;
+            role_track: string;
+            total_turns: number;
+            final_recommendation: string;
+        };
+    };
+
+    assert.ok(parsed.final_recommendation);
+    assert.equal(parsed.final_recommendation?.session_id, 'session-finalize');
+    assert.equal(parsed.final_recommendation?.role_track, 'backend');
+    assert.equal(parsed.final_recommendation?.total_turns, 2);
+});
+
+test('workspace_meeting_interview_live requires current_question', async () => {
+    const { executeLocalWorkspaceAction } = await import('./local-workspace-executor.js');
+
+    const result = await executeLocalWorkspaceAction({
+        tenantId: 'tenant-t11', botId: 'bot-t11', taskId: 'task-meeting-interview-missing-question',
+        actionType: 'workspace_meeting_interview_live',
+        payload: {
+            workspace_key: 'repo-t11-meeting-live',
+            transcript_text: 'Candidate answer',
+            dry_run: true,
+        },
+    });
+
+    assert.equal(result.ok, false);
+    assert.ok((result.errorOutput ?? '').includes('payload.current_question is required'));
+});
+
 test('workspace_audit_export includes desktop action approval metadata', async () => {
     const { executeLocalWorkspaceAction } = await import('./local-workspace-executor.js');
     const { writeFile, mkdir, readFile } = await import('node:fs/promises');

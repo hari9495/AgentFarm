@@ -79,6 +79,8 @@ const HIGH_RISK_ACTIONS = new Set([
     'workspace_browser_open',
     'workspace_app_launch',
     'workspace_meeting_join',
+    'workspace_meeting_speak',
+    'workspace_meeting_interview_live',
     // Tier 12: Sub-agent delegation and GitHub issue auto-fix
     'workspace_subagent_spawn',
     'workspace_github_issue_fix',
