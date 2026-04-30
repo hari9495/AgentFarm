@@ -541,7 +541,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                     <td>
                                         <span className={riskBadgeClass(approval.risk_level)}>{approval.risk_level}</span>
                                     </td>
-                                    <td>{new Date(approval.requested_at).toLocaleTimeString()}</td>
+                                    <td>{new Date(approval.requested_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}</td>
                                     <td>
                                         <div style={{ display: 'grid', gap: '0.35rem' }}>
                                             <input

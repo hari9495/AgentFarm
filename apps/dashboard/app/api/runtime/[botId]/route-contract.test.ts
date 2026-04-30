@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+    buildCapabilityRouteContract,
     buildHealthRouteContract,
     buildKillRouteContract,
     buildLogsRouteContract,
@@ -49,4 +50,13 @@ test('buildKillRouteContract creates POST request with JSON content type', () =>
     assert.deepEqual(contract.requestInit.headers, {
         'content-type': 'application/json',
     });
+});
+
+test('buildCapabilityRouteContract creates no-store GET request shape', () => {
+    const contract = buildCapabilityRouteContract();
+
+    assert.equal(contract.upstreamUrl, 'http://localhost:8080/runtime/capability-snapshot');
+    assert.equal(contract.requestInit.cache, 'no-store');
+    assert.deepEqual(contract.requestInit.headers, {});
+    assert.equal(contract.requestInit.method, undefined);
 });

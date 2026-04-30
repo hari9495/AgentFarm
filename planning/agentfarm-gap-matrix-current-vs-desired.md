@@ -4,15 +4,34 @@
 Provide a concrete capability gap matrix mapped to existing AgentFarm apps, services, and shared packages.
 
 ## Baseline
-- Date: 2026-04-29
-- Inputs: architecture baseline, repo/service structure, sprint execution evidence, ADR-007
+- Date: 2026-04-30
+- Inputs: architecture baseline, repo/service structure, sprint execution evidence, ADR-007, Tier 1/2 workspace action implementation
 - Scope guard: MVP freeze remains active (Developer Agent + Jira/Teams/GitHub/company email)
 
 ## Legend
 - Gap severity: High, Medium, Low
 - Change type: Contract, Behavior, Operational, Observability
+- Status: **Open** = still a gap | **Closed** = implemented and tested
 
-## Matrix
+## Closed Gaps (Tier 1/2 Local Workspace Actions — 2026-04-30)
+
+| Capability | Prior State | Implemented | Actions | Risk | Status |
+|---|---|---|---|---|---|
+| Workspace file discovery | No file listing; agent had to assume paths | Recursive walk with depth/pattern/include_dirs filters | `workspace_list_files` | low | **Closed** |
+| Workspace code search | No way to search for symbols or patterns in workspace | Regex grep with context lines and max_results cap | `workspace_grep` | low | **Closed** |
+| File rename/move | No file movement operations; agent could only create/overwrite | Move/rename within sandbox with parent dir auto-creation | `file_move` | medium | **Closed** |
+| File deletion | No file deletion; agent accumulated stale files | Recursive-safe deletion with force:true | `file_delete` | medium | **Closed** |
+| Dependency installation | No way to install packages from inside agent | Auto-detects pnpm/yarn/npm/pip/go/cargo from lockfiles | `workspace_install_deps` | medium | **Closed** |
+| Lint execution | No linting in agent loop; validation only ran build/test | ESLint (default) + fix mode + file targeting + auto command | `run_linter` | medium | **Closed** |
+| Unified diff application | No `git apply` path; agent could only overwrite files | Writes to temp diff file, applies via git apply, auto-cleans | `apply_patch` | medium | **Closed** |
+| Git stash for WIP isolation | No safe checkpoint before risky edits without a commit | push/pop/list/drop stash operations | `git_stash` | medium | **Closed** |
+| Structured git history | No commit history visibility; agent could not inspect recent work | JSON array `[{hash, short_hash, subject, author_name, author_email, date}]` | `git_log` | low | **Closed** |
+| Project discovery / stack detection | Agent had to guess language/framework from file names | JSON summary: language, framework, package_manager, scripts, readme_excerpt | `workspace_scout` | low | **Closed** |
+| Safe WIP rollback branches | No git-native rollback before autonomous loops | Creates `agentfarm/checkpoints/<name>` branch; restore via reset --hard | `workspace_checkpoint` | medium | **Closed** |
+
+All 11 actions are covered by tests in `apps/agent-runtime/src/local-workspace-executor.test.ts` (118 tests, 0 failures as of 2026-04-30).
+
+## Open Gaps
 
 | Capability | Current State (Evidence) | Desired State | Gap | Severity | Change Type | Affected Apps | Affected Services | Affected Packages |
 |---|---|---|---|---|---|---|---|---|

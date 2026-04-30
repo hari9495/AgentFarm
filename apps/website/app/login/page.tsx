@@ -42,7 +42,13 @@ function LoginForm() {
                 return;
             }
 
-            router.push(data.redirectTo ?? "/dashboard");
+            const redirectTo = data.redirectTo ?? "/dashboard";
+            if (/^https?:\/\//i.test(redirectTo)) {
+                window.location.assign(redirectTo);
+                return;
+            }
+
+            router.push(redirectTo);
         } catch {
             setServerError("Network error. Please try again.");
         } finally {

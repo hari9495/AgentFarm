@@ -37,12 +37,15 @@ export type LlmDecisionMetadata = {
     failoverTrace?: ProviderFailoverTraceRecord[];
 };
 
+export type PayloadOverrideSource = 'none' | 'llm_generated' | 'executor_inferred';
+
 export type LlmDecisionResolver = (input: {
     task: TaskEnvelope;
     heuristicDecision: ActionDecision;
 }) => Promise<{
     decision: ActionDecision;
     metadata: Omit<LlmDecisionMetadata, 'classificationSource'>;
+    payloadOverrides?: Record<string, unknown>;
 }>;
 
 export type ProcessedTaskResult = {
@@ -50,6 +53,8 @@ export type ProcessedTaskResult = {
     status: 'success' | 'approval_required' | 'failed';
     attempts: number;
     transientRetries: number;
+    executionPayload: Record<string, unknown>;
+    payloadOverrideSource: PayloadOverrideSource;
     failureClass?: 'transient_error' | 'runtime_exception';
     errorMessage?: string;
     llmExecution?: LlmDecisionMetadata;
@@ -61,6 +66,22 @@ const HIGH_RISK_ACTIONS = new Set([
     'delete_resource',
     'change_permissions',
     'deploy_production',
+    // Local workspace: pushing code to a remote branch is high-risk
+    'git_push',
+    // Local workspace: arbitrary shell commands require explicit approval
+    'run_shell_command',
+    // Tier 5: REPL can execute arbitrary code
+    'workspace_repl_start',
+    'workspace_repl_execute',
+    // Tier 7: Dry-run with approval chain (prepares for external approval)
+    'workspace_dry_run_with_approval_chain',
+    // Tier 11: Local desktop and browser control
+    'workspace_browser_open',
+    'workspace_app_launch',
+    'workspace_meeting_join',
+    // Tier 12: Sub-agent delegation and GitHub issue auto-fix
+    'workspace_subagent_spawn',
+    'workspace_github_issue_fix',
 ]);
 
 const MEDIUM_RISK_ACTIONS = new Set([
@@ -69,8 +90,65 @@ const MEDIUM_RISK_ACTIONS = new Set([
     'create_pr_comment',
     'create_pr',
     'send_message',
+    // Local workspace: executing code or committing changes is medium-risk
+    'code_edit',
+    'code_edit_patch',
+    'code_search_replace',
+    'run_build',
+    'run_tests',
+    'git_commit',
+    'autonomous_loop',
+    // Generating PR content is medium-risk (no remote side-effects)
+    'create_pr_from_workspace',
+    // Persisting memory notes is medium-risk (mutates workspace state)
+    'workspace_memory_write',
+    // Tier 2 features — mutate workspace state
+    'git_stash',
+    'apply_patch',
+    'file_move',
+    'file_delete',
+    'run_linter',
+    'workspace_install_deps',
+    'workspace_checkpoint',
+    // Tier 3: IDE refactoring operations (modify code)
+    'workspace_rename_symbol',
+    'workspace_extract_function',
+    'workspace_analyze_imports',
+    'workspace_security_scan',
+    // Tier 4: Multi-file coordination (modify multiple files)
+    'workspace_bulk_refactor',
+    'workspace_atomic_edit_set',
+    'workspace_generate_from_template',
+    'workspace_migration_helper',
+    // Tier 5: Code review and profiling (might affect code state)
+    'workspace_debug_breakpoint',
+    'workspace_profiler_run',
+    // Tier 7: Governance operations (modify state)
+    'workspace_rollback_to_checkpoint',
+    // Tier 8: Code generation and formatting (modify files)
+    'workspace_generate_test',
+    'workspace_format_code',
+    'workspace_version_bump',
+    'workspace_changelog_generate',
+    // Tier 9: Pilot roadmap productivity actions
+    'workspace_create_pr',
+    'workspace_run_ci_checks',
+    'workspace_fix_test_failures',
+    'workspace_release_notes_generate',
+    'workspace_incident_patch_pack',
+    'workspace_memory_profile',
+    'workspace_autonomous_plan_execute',
+    // Tier 10: Connector hardening, code intelligence, observability (mutating subset)
+    'workspace_pr_auto_assign',
+    'workspace_ci_watch',
+    'workspace_add_docstring',
+    'workspace_diff_preview',
+    'workspace_audit_export',
+    // Tier 12: GitHub intelligence (read, but sends external request) and Slack notify
+    'workspace_github_pr_status',
+    'workspace_github_issue_triage',
+    'workspace_slack_notify',
 ]);
-
 function clamp01(value: number): number {
     if (value < 0) {
         return 0;
@@ -189,6 +267,7 @@ async function executeLowRiskAction(task: TaskEnvelope, attempt: number): Promis
 async function executeTaskWithRetries(
     task: TaskEnvelope,
     decision: ActionDecision,
+    payloadOverrideSource: PayloadOverrideSource,
     llmExecution?: LlmDecisionMetadata,
     options?: { maxAttempts?: number },
 ): Promise<ProcessedTaskResult> {
@@ -205,6 +284,8 @@ async function executeTaskWithRetries(
                 status: 'success',
                 attempts,
                 transientRetries,
+                executionPayload: task.payload,
+                payloadOverrideSource,
                 llmExecution,
             };
         } catch (err: unknown) {
@@ -221,6 +302,8 @@ async function executeTaskWithRetries(
                 status: 'failed',
                 attempts,
                 transientRetries,
+                executionPayload: task.payload,
+                payloadOverrideSource,
                 failureClass: isTransient ? 'transient_error' : 'runtime_exception',
                 errorMessage: message,
                 llmExecution,
@@ -233,6 +316,8 @@ async function executeTaskWithRetries(
         status: 'failed',
         attempts,
         transientRetries,
+        executionPayload: task.payload,
+        payloadOverrideSource,
         failureClass: 'runtime_exception',
         errorMessage: 'Failed after exhausting retry attempts.',
         llmExecution,
@@ -261,7 +346,7 @@ export async function processApprovedTask(
         fallbackReason: 'human_approved_path',
     };
 
-    return executeTaskWithRetries(task, approvedDecision, llmExecution, options);
+    return executeTaskWithRetries(task, approvedDecision, 'none', llmExecution, options);
 }
 
 export async function processDeveloperTask(
@@ -276,6 +361,8 @@ export async function processDeveloperTask(
     const heuristicDecision = buildDecision(task);
     const fallbackProvider = options?.modelProvider ?? 'agentfarm';
     let decision = heuristicDecision;
+    let executionPayload = task.payload;
+    let payloadOverrideSource: PayloadOverrideSource = 'none';
     let llmExecution: LlmDecisionMetadata = {
         classificationSource: 'heuristic',
         modelProvider: fallbackProvider,
@@ -296,6 +383,13 @@ export async function processDeveloperTask(
 
             if (llmResult) {
                 decision = llmResult.decision;
+                if (llmResult.payloadOverrides && typeof llmResult.payloadOverrides === 'object') {
+                    executionPayload = {
+                        ...task.payload,
+                        ...llmResult.payloadOverrides,
+                    };
+                    payloadOverrideSource = 'llm_generated';
+                }
                 llmExecution = {
                     classificationSource: 'llm',
                     ...llmResult.metadata,
@@ -315,9 +409,17 @@ export async function processDeveloperTask(
             status: 'approval_required',
             attempts: 0,
             transientRetries: 0,
+            executionPayload,
+            payloadOverrideSource,
             llmExecution,
         };
     }
 
-    return executeTaskWithRetries(task, decision, llmExecution, options);
+    return executeTaskWithRetries(
+        { ...task, payload: executionPayload },
+        decision,
+        payloadOverrideSource,
+        llmExecution,
+        options,
+    );
 }

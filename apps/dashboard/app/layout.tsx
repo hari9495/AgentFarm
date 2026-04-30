@@ -21,8 +21,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
     return (
-        <html lang="en" className={`${spaceGrotesk.variable} ${plexMono.variable}`}>
-            <body>{children}</body>
+        <html lang="en" className={`${spaceGrotesk.variable} ${plexMono.variable}`} suppressHydrationWarning>
+            <body suppressHydrationWarning>{children}</body>
         </html>
     );
 }

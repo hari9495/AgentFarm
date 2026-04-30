@@ -1,6 +1,6 @@
 # AgentFarm — Developer Agent Walkthrough
 
-**Last updated:** 2026-04-29  
+**Last updated:** 2026-04-30  
 **Role key:** `developer` / `fullstack_developer`  
 **Role profile aliases:** `developer`, `developer_agent`, `fullstack_developer`, `full_stack_developer`  
 **Source files:** `execution-engine.ts`, `runtime-server.ts`, `llm-decision-adapter.ts`, `developer-bot-architecture.md`
@@ -11,11 +11,17 @@
 
 The Developer Agent is an AI bot deployed inside a Docker container on a tenant-provisioned Azure VM. Its purpose is to act as a software engineering assistant — performing code review, writing test plans, creating PRs, commenting on issues, tracking Jira tickets, and notifying teams via Teams or email.
 
-It does **not** run arbitrary code or modify files directly on the host. It calls external services (GitHub, Jira, Teams, Email) through the API Gateway connector layer, always within a policy-enforced permission boundary.
+It supports **two execution surfaces**:
+1. **Connector actions** — calls external services (GitHub, Jira, Teams, Email) through the API Gateway connector layer.
+2. **Local workspace actions** — directly manipulates files, runs commands, manages git history, and reads/writes workspace context within a sandboxed workspace directory on the VM.
+
+Both surfaces are enforced by the same frozen capability snapshot — no task can execute outside the frozen permission boundary regardless of what the payload says.
 
 ---
 
 ## Developer Agent Capabilities
+
+### Connector Actions
 
 The `developer` role is granted access to all four connectors and all engineering actions:
 
@@ -27,6 +33,56 @@ The `developer` role is granted access to all four connectors and all engineerin
 | **Email** | `send_email` |
 
 No other role gets full GitHub write access. This is enforced at the frozen capability snapshot level — it cannot be overridden by a task payload.
+
+### Local Workspace Actions
+
+The `developer` and `fullstack_developer` roles are also granted the full set of local workspace actions. These execute directly in the sandboxed workspace directory (`/tmp/agentfarm-workspaces/<tenantId>/<botId>/<workspaceKey>`):
+
+| Action | Risk | Description |
+|---|---|---|
+| `git_clone` | low | Clone a remote repository into the workspace |
+| `git_branch` | low | Create or switch branches; supports `auto_name` for semantic branch generation |
+| `git_commit` | medium | Stage and commit changes; supports `auto_message` for semantic commit messages |
+| `git_push` | **high** | Push branch to remote (requires approval) |
+| `git_stash` | medium | Push/pop/list/drop git stash entries for safe WIP checkpointing |
+| `git_log` | low | Return structured JSON commit history `[{hash, subject, author_name, date}]` |
+| `code_read` | low | Read a file from the workspace |
+| `code_edit` | medium | Overwrite a workspace file with new content |
+| `code_edit_patch` | medium | Replace an exact text snippet inside a file |
+| `code_search_replace` | medium | Regex search-and-replace across files |
+| `apply_patch` | medium | Apply a unified diff (`git apply`) to workspace files |
+| `file_move` | medium | Rename or move a file/directory within the workspace |
+| `file_delete` | medium | Delete a file or directory from the workspace |
+| `run_build` | medium | Run the project build command (auto-detected or explicit) |
+| `run_tests` | medium | Run the test suite (auto-detected or explicit); supports `max_time_ms` |
+| `run_linter` | medium | Run ESLint/Prettier/black/gofmt; supports `fix` mode |
+| `workspace_install_deps` | medium | Install dependencies using auto-detected package manager |
+| `workspace_list_files` | low | Return JSON array of workspace file paths (with optional glob filter) |
+| `workspace_grep` | low | Regex search across workspace files; returns `[{file, line, col, text}]` |
+| `workspace_scout` | low | Compact project summary: language, framework, package manager, README excerpt, scripts |
+| `workspace_checkpoint` | medium | Save WIP to a temp git branch for safe rollback |
+| `autonomous_loop` | medium | Iterative test-fix loop: run tests, apply fixes, retry up to N attempts |
+| `workspace_cleanup` | low | Remove the workspace directory |
+| `workspace_diff` | low | Show git diff of current workspace changes |
+| `workspace_memory_write` | medium | Write key-value notes to `.agentfarm/workspace-memory.json` |
+| `workspace_memory_read` | low | Read notes from `.agentfarm/workspace-memory.json` |
+| `run_shell_command` | **high** | Run an arbitrary allowlisted shell command (requires approval) |
+| `create_pr_from_workspace` | medium | Generate a PR title/body from current workspace git diff |
+| `workspace_create_pr` | medium | Create a pull request from the current workspace branch with generated title/body, reviewers, and labels |
+| `workspace_run_ci_checks` | medium | Trigger CI checks and return structured pass/fail summaries with impacted file links |
+| `workspace_fix_test_failures` | medium | Parse failing tests, apply targeted patches, rerun failing tests in a loop (approval required before commit/push) |
+| `workspace_security_fix_suggest` | medium | Convert security scan findings into concrete patch suggestions; routes destructive changes through approval |
+| `workspace_pr_review_prepare` | low | Generate PR review summary: risk level, diff hotspots, missing test coverage |
+| `workspace_dependency_upgrade_plan` | medium | Scan outdated dependencies, produce upgrade plan with semver risk labels (patch/minor/major) |
+| `workspace_release_notes_generate` | medium | Generate release notes from a commit range plus PR merge metadata |
+| `workspace_incident_patch_pack` | medium | Build emergency patch bundle with rollback checkpoint and impact summary |
+| `workspace_memory_profile` | medium | Persist and read per-repo coding conventions (naming, lint style, test style) |
+| `workspace_autonomous_plan_execute` | medium | Structured plan → staged execution → checkpoint → verify → propose PR with full audit trail |
+| `workspace_policy_preflight` | low | Simulate risk and approval routing for any action without executing it |
+
+**Path safety:** All file operations are restricted to the workspace sandbox. Path traversal (`../`, absolute paths) is blocked by `safeChildPath()`.
+
+**Secret redaction:** All shell stdout/stderr is filtered through `redactSecrets()` before being returned.
 
 ---
 
@@ -423,6 +479,8 @@ Gateway uses **exponential backoff retries** (50 ms → 100 ms) for transient fa
 
 ## Risk Classification Reference for Developer
 
+### Connector Actions
+
 | Action | Risk | Requires Approval? |
 |---|---|---|
 | `code_review` (intent) | low | No |
@@ -441,6 +499,50 @@ Gateway uses **exponential backoff retries** (50 ms → 100 ms) for transient fa
 | `deploy_production` | high | **Yes** |
 | Any action with confidence < 0.6 | medium | **Yes** |
 
+### Local Workspace Actions
+
+| Action | Risk | Requires Approval? |
+|---|---|---|
+| `git_clone` | low | No |
+| `git_branch` | low | No |
+| `git_log` | low | No |
+| `code_read` | low | No |
+| `workspace_list_files` | low | No |
+| `workspace_grep` | low | No |
+| `workspace_scout` | low | No |
+| `workspace_cleanup` | low | No |
+| `workspace_diff` | low | No |
+| `workspace_memory_read` | low | No |
+| `git_commit` | medium | **Yes** |
+| `git_stash` | medium | **Yes** |
+| `code_edit` | medium | **Yes** |
+| `code_edit_patch` | medium | **Yes** |
+| `code_search_replace` | medium | **Yes** |
+| `apply_patch` | medium | **Yes** |
+| `file_move` | medium | **Yes** |
+| `file_delete` | medium | **Yes** |
+| `run_build` | medium | **Yes** |
+| `run_tests` | medium | **Yes** |
+| `run_linter` | medium | **Yes** |
+| `workspace_install_deps` | medium | **Yes** |
+| `workspace_checkpoint` | medium | **Yes** |
+| `autonomous_loop` | medium | **Yes** |
+| `workspace_memory_write` | medium | **Yes** |
+| `create_pr_from_workspace` | medium | **Yes** |
+| `workspace_create_pr` | medium | **Yes** |
+| `workspace_run_ci_checks` | medium | **Yes** |
+| `workspace_fix_test_failures` | medium | **Yes** |
+| `workspace_security_fix_suggest` | medium | **Yes** |
+| `workspace_dependency_upgrade_plan` | medium | **Yes** |
+| `workspace_release_notes_generate` | medium | **Yes** |
+| `workspace_incident_patch_pack` | medium | **Yes** |
+| `workspace_memory_profile` | medium | **Yes** |
+| `workspace_autonomous_plan_execute` | medium | **Yes** |
+| `workspace_pr_review_prepare` | low | No |
+| `workspace_policy_preflight` | low | No |
+| `git_push` | **high** | **Yes** |
+| `run_shell_command` | **high** | **Yes** |
+
 ---
 
 ## Capability Snapshot — What Locks Developer Agent Permissions
@@ -455,7 +557,7 @@ On startup the runtime freezes a `BotCapabilitySnapshotRecord`:
   "roleVersion": "v1",
   "policyPackVersion": "v1",
   "allowedConnectorTools": ["jira", "teams", "github", "email"],
-  "allowedActions": ["read_task", "create_comment", "update_status", "send_message", "create_pr_comment", "create_pr", "merge_pr", "list_prs", "send_email"],
+  "allowedActions": ["read_task", "create_comment", "update_status", "send_message", "create_pr_comment", "create_pr", "merge_pr", "list_prs", "send_email", "workspace_create_pr", "workspace_run_ci_checks", "workspace_fix_test_failures", "workspace_security_fix_suggest", "workspace_pr_review_prepare", "workspace_dependency_upgrade_plan", "workspace_release_notes_generate", "workspace_incident_patch_pack", "workspace_memory_profile", "workspace_autonomous_plan_execute", "workspace_policy_preflight"],
   "snapshotChecksum": "sha256:abc123...",
   "frozenAt": "2026-04-29T00:00:00.000Z"
 }
@@ -488,6 +590,60 @@ On startup the runtime freezes a `BotCapabilitySnapshotRecord`:
 | `AF_MODEL_PROVIDER` _(optional)_ | `openai`, `azure_openai`, or `agentfarm` (default) |
 | `AF_CONTROL_PLANE_HEARTBEAT_URL` _(optional)_ | Where heartbeats are sent |
 | `DATABASE_URL` _(optional)_ | Enables snapshot + execution record persistence |
+
+---
+
+## Current Delivery Status and Pending Items
+
+### What is already built (functional scope)
+
+1. Connector execution with policy enforcement for Jira, Teams, GitHub, and company email
+2. Local workspace execution in sandbox with path traversal protection and secret-redacted command output
+3. Risk classification (low/medium/high), approval routing, escalation timeout, and decision webhook fanout
+4. Capability snapshot freeze with checksum validation and compatibility checks
+5. Multi-provider LLM decision routing with fallback behavior
+6. Full runtime observability endpoints (`/logs`, health, readiness, state history)
+7. **Tier 9 — Developer Productivity Wave (2026-04-30):** `workspace_create_pr`, `workspace_run_ci_checks`, `workspace_fix_test_failures`, `workspace_security_fix_suggest`, `workspace_pr_review_prepare`, `workspace_dependency_upgrade_plan`, `workspace_release_notes_generate`, `workspace_incident_patch_pack`, `workspace_memory_profile`, `workspace_autonomous_plan_execute`, `workspace_policy_preflight` — 11 actions, 179/179 tests passing, typecheck clean
+8. **Tier 10 — Connector Hardening, Code Intelligence & Observability (2026-05-01):** `workspace_connector_test`, `workspace_pr_auto_assign`, `workspace_ci_watch`, `workspace_explain_code`, `workspace_add_docstring`, `workspace_refactor_plan`, `workspace_semantic_search`, `workspace_diff_preview`, `workspace_approval_status`, `workspace_audit_export` — 10 actions, 190/190 tests passing, typecheck clean
+
+### What is pending before production go-live (not code gaps)
+
+1. Add repo secret: `AZURE_STATIC_WEB_APPS_API_TOKEN_WEBSITE`
+2. Sign in Azure context and execute final deployment (`az login`, `azd up`)
+3. Complete DNS/custom-domain TLS cutover for website
+4. Run final post-deploy gates: SAST, DAST, load test, evidence freshness export
+
+### What we can add next (Developer Agent roadmap backlog)
+
+Tier 9 is complete — all 11 previously planned actions have been built, tested (179/179 pass), and integrated into the risk, policy, and snapshot layers. Tier 10 is also complete — 10 new actions (190/190 tests passing) adding connector health probing, PR reviewer assignment, CI watching, code explanation, docstring scaffolding, structured refactor planning, semantic workspace search, diff preview, approval status query, and audit evidence export. The following represents the next wave.
+
+#### Priority 1 — Real connector hardening
+
+1. **workspace_connector_test** — End-to-end integration test of a connector config (GitHub token, Jira credentials) without side effects
+2. **workspace_pr_auto_assign** — Auto-assign reviewers based on CODEOWNERS file and recent contributor activity
+3. **workspace_ci_watch** — Long-poll CI status until completion and return final pass/fail with log excerpt
+
+#### Priority 2 — Multi-agent coordination
+
+1. **workspace_delegate_task** — Submit a sub-task to a peer agent (QA Agent, Manager Agent) with structured context handoff
+2. **workspace_wait_for_agent** — Block current plan step until a delegated task resolves (with timeout + escalation)
+
+#### Priority 3 — Advanced autonomy
+
+1. **workspace_refactor_plan** — Produce a structured multi-step refactor plan before any edits are applied
+2. **workspace_explain_code** — Return an LLM-generated explanation of a code block for onboarding or review purposes
+3. **workspace_add_docstring** — Generate and insert docstrings/JSDoc comments for public APIs
+
+### Functional requirements for any new action
+
+Every new Developer Agent action must include:
+
+1. `LocalWorkspaceActionType` update and inclusion in `LOCAL_WORKSPACE_ACTION_TYPES`
+2. Risk classification mapping in execution engine (high/medium/low)
+3. Role policy updates (`developer`, `fullstack_developer`, and `tester` if read-only)
+4. Unit tests in `local-workspace-executor.test.ts`
+5. Capability snapshot fixture update in `runtime-server.test.ts` if action is role-allowed
+6. Secret-safe output handling and workspace boundary checks
 
 ---
 

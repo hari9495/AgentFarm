@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function LoginPage() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
@@ -31,7 +32,8 @@ export default function LoginPage() {
 
             // Set session cookie for server components to read on next navigation
             document.cookie = `agentfarm_internal_session=${encodeURIComponent(data.token)}; path=/; samesite=strict; max-age=28800`;
-            router.push('/');
+            const redirectTarget = searchParams.get('next') || '/';
+            router.push(redirectTarget.startsWith('/') ? redirectTarget : '/');
         } catch {
             setError('Cannot connect to the server. Make sure the API gateway is running.');
         } finally {

@@ -13,6 +13,7 @@ import {
     processDeveloperTask,
     processApprovedTask,
     type LlmDecisionResolver,
+    type PayloadOverrideSource,
     type ProcessedTaskResult,
     type TaskEnvelope,
 } from './execution-engine.js';
@@ -26,6 +27,13 @@ import {
     type ActionResultWriter,
 } from './action-result-contract.js';
 import { createFileActionResultWriter, resolveActionResultPath } from './action-result-writer.js';
+import {
+    executeLocalWorkspaceAction,
+    buildGitPushApprovalSummary,
+    getWorkspaceDir,
+    LOCAL_WORKSPACE_ACTION_TYPES,
+    type LocalWorkspaceActionType,
+} from './local-workspace-executor.js';
 
 type RuntimeState =
     | 'created'
@@ -141,6 +149,8 @@ type TaskExecutionRecordWriter = {
         totalTokens: number | null;
         latencyMs: number;
         outcome: TaskExecutionOutcome;
+        payloadOverrideSource: PayloadOverrideSource;
+        payloadOverridesApplied: boolean;
         executedAt: Date;
     }) => Promise<void>;
 };
@@ -196,6 +206,8 @@ type PendingApprovalTask = {
     actionType: string;
     actionSummary: string;
     task: TaskEnvelope;
+    executionPayload: Record<string, unknown>;
+    payloadOverrideSource: PayloadOverrideSource;
     escalated: boolean;
 };
 
@@ -254,6 +266,22 @@ type SnapshotObservabilityMetadata = {
     fallback_reason?: string | null;
 };
 
+type TaskTranscript = {
+    taskId: string;
+    startedAt: string;
+    completedAt: string;
+    actionType: string;
+    riskLevel: 'low' | 'medium' | 'high';
+    route: 'execute' | 'approval';
+    status: 'success' | 'approval_required' | 'failed';
+    durationMs: number;
+    errorMessage: string | null;
+    approvalRequired: boolean;
+    approvalSummary: string | null;
+    payloadOverrideSource: PayloadOverrideSource;
+    payloadOverridesApplied: boolean;
+};
+
 const DEFAULT_WORKER_POLL_MS = 250;
 const DEFAULT_KILL_GRACE_MS = 5_000;
 const DEFAULT_APPROVAL_ESCALATION_MS = 60 * 60 * 1000;
@@ -306,6 +334,8 @@ type RuntimeConnectorActionType =
     | 'list_prs'
     | 'send_email';
 
+type RuntimeLocalWorkspaceActionType = LocalWorkspaceActionType;
+
 const ROLE_CONNECTOR_POLICY: Record<RoleKey, RuntimeConnectorType[]> = {
     recruiter: ['teams', 'email'],
     developer: ['jira', 'teams', 'github', 'email'],
@@ -326,6 +356,288 @@ const CONNECTOR_ACTION_POLICY: Record<RuntimeConnectorType, RuntimeConnectorActi
     teams: ['send_message'],
     github: ['create_pr_comment', 'create_pr', 'merge_pr', 'list_prs'],
     email: ['send_email'],
+};
+
+const LOCAL_WORKSPACE_ACTION_POLICY: Record<RoleKey, RuntimeLocalWorkspaceActionType[]> = {
+    recruiter: [],
+    developer: [
+        // Tier 0-1
+        'git_clone',
+        'git_branch',
+        'git_commit',
+        'git_push',
+        'git_stash',
+        'git_log',
+        'code_read',
+        'code_edit',
+        'code_edit_patch',
+        'code_search_replace',
+        'apply_patch',
+        'file_move',
+        'file_delete',
+        'run_build',
+        'run_tests',
+        'run_linter',
+        'workspace_install_deps',
+        'workspace_list_files',
+        'workspace_grep',
+        'workspace_scout',
+        'workspace_checkpoint',
+        'autonomous_loop',
+        'workspace_cleanup',
+        'workspace_diff',
+        'workspace_memory_write',
+        'workspace_memory_read',
+        'run_shell_command',
+        'create_pr_from_workspace',
+        // Tier 3: IDE-level capabilities
+        'workspace_find_references',
+        'workspace_rename_symbol',
+        'workspace_extract_function',
+        'workspace_go_to_definition',
+        'workspace_hover_type',
+        'workspace_analyze_imports',
+        'workspace_code_coverage',
+        'workspace_complexity_metrics',
+        'workspace_security_scan',
+        // Tier 4: Multi-file coordination
+        'workspace_bulk_refactor',
+        'workspace_atomic_edit_set',
+        'workspace_generate_from_template',
+        'workspace_migration_helper',
+        'workspace_summarize_folder',
+        'workspace_dependency_tree',
+        'workspace_test_impact_analysis',
+        // Tier 5: External knowledge & experimentation
+        'workspace_search_docs',
+        'workspace_package_lookup',
+        'workspace_ai_code_review',
+        'workspace_repl_start',
+        'workspace_repl_execute',
+        'workspace_repl_stop',
+        'workspace_debug_breakpoint',
+        'workspace_profiler_run',
+        // Tier 6: Language adapters
+        'workspace_language_adapter_python',
+        'workspace_language_adapter_java',
+        'workspace_language_adapter_go',
+        'workspace_language_adapter_csharp',
+        // Tier 7: Governance & safety
+        'workspace_dry_run_with_approval_chain',
+        'workspace_change_impact_report',
+        'workspace_rollback_to_checkpoint',
+        // Tier 8: Release & collaboration intelligence
+        'workspace_generate_test',
+        'workspace_format_code',
+        'workspace_version_bump',
+        'workspace_changelog_generate',
+        'workspace_git_blame',
+        'workspace_outline_symbols',
+        // Tier 9: Pilot roadmap productivity actions
+        'workspace_create_pr',
+        'workspace_run_ci_checks',
+        'workspace_fix_test_failures',
+        'workspace_security_fix_suggest',
+        'workspace_pr_review_prepare',
+        'workspace_dependency_upgrade_plan',
+        'workspace_release_notes_generate',
+        'workspace_incident_patch_pack',
+        'workspace_memory_profile',
+        'workspace_autonomous_plan_execute',
+        'workspace_policy_preflight',
+        // Tier 10: Connector hardening, code intelligence, observability
+        'workspace_connector_test',
+        'workspace_pr_auto_assign',
+        'workspace_ci_watch',
+        'workspace_explain_code',
+        'workspace_add_docstring',
+        'workspace_refactor_plan',
+        'workspace_semantic_search',
+        'workspace_diff_preview',
+        'workspace_approval_status',
+        'workspace_audit_export',
+        // Tier 11: Local desktop and browser control
+        'workspace_browser_open',
+        'workspace_app_launch',
+        'workspace_meeting_join',
+        // Tier 12: Sub-agent delegation, GitHub intelligence, Slack notifications
+        'workspace_subagent_spawn',
+        'workspace_github_pr_status',
+        'workspace_github_issue_triage',
+        'workspace_github_issue_fix',
+        'workspace_azure_deploy_plan',
+        'workspace_slack_notify',
+    ],
+    fullstack_developer: [
+        // Tier 0-1
+        'git_clone',
+        'git_branch',
+        'git_commit',
+        'git_push',
+        'git_stash',
+        'git_log',
+        'code_read',
+        'code_edit',
+        'code_edit_patch',
+        'code_search_replace',
+        'apply_patch',
+        'file_move',
+        'file_delete',
+        'run_build',
+        'run_tests',
+        'run_linter',
+        'workspace_install_deps',
+        'workspace_list_files',
+        'workspace_grep',
+        'workspace_scout',
+        'workspace_checkpoint',
+        'autonomous_loop',
+        'workspace_cleanup',
+        'workspace_diff',
+        'workspace_memory_write',
+        'workspace_memory_read',
+        'run_shell_command',
+        'create_pr_from_workspace',
+        // Tier 3: IDE-level capabilities
+        'workspace_find_references',
+        'workspace_rename_symbol',
+        'workspace_extract_function',
+        'workspace_go_to_definition',
+        'workspace_hover_type',
+        'workspace_analyze_imports',
+        'workspace_code_coverage',
+        'workspace_complexity_metrics',
+        'workspace_security_scan',
+        // Tier 4: Multi-file coordination
+        'workspace_bulk_refactor',
+        'workspace_atomic_edit_set',
+        'workspace_generate_from_template',
+        'workspace_migration_helper',
+        'workspace_summarize_folder',
+        'workspace_dependency_tree',
+        'workspace_test_impact_analysis',
+        // Tier 5: External knowledge & experimentation
+        'workspace_search_docs',
+        'workspace_package_lookup',
+        'workspace_ai_code_review',
+        'workspace_repl_start',
+        'workspace_repl_execute',
+        'workspace_repl_stop',
+        'workspace_debug_breakpoint',
+        'workspace_profiler_run',
+        // Tier 6: Language adapters
+        'workspace_language_adapter_python',
+        'workspace_language_adapter_java',
+        'workspace_language_adapter_go',
+        'workspace_language_adapter_csharp',
+        // Tier 7: Governance & safety
+        'workspace_dry_run_with_approval_chain',
+        'workspace_change_impact_report',
+        'workspace_rollback_to_checkpoint',
+        // Tier 8: Release & collaboration intelligence
+        'workspace_generate_test',
+        'workspace_format_code',
+        'workspace_version_bump',
+        'workspace_changelog_generate',
+        'workspace_git_blame',
+        'workspace_outline_symbols',
+        // Tier 9: Pilot roadmap productivity actions
+        'workspace_create_pr',
+        'workspace_run_ci_checks',
+        'workspace_fix_test_failures',
+        'workspace_security_fix_suggest',
+        'workspace_pr_review_prepare',
+        'workspace_dependency_upgrade_plan',
+        'workspace_release_notes_generate',
+        'workspace_incident_patch_pack',
+        'workspace_memory_profile',
+        'workspace_autonomous_plan_execute',
+        'workspace_policy_preflight',
+        // Tier 10: Connector hardening, code intelligence, observability
+        'workspace_connector_test',
+        'workspace_pr_auto_assign',
+        'workspace_ci_watch',
+        'workspace_explain_code',
+        'workspace_add_docstring',
+        'workspace_refactor_plan',
+        'workspace_semantic_search',
+        'workspace_diff_preview',
+        'workspace_approval_status',
+        'workspace_audit_export',
+        // Tier 11: Local desktop and browser control
+        'workspace_browser_open',
+        'workspace_app_launch',
+        'workspace_meeting_join',
+        // Tier 12: Sub-agent delegation, GitHub intelligence, Slack notifications
+        'workspace_subagent_spawn',
+        'workspace_github_pr_status',
+        'workspace_github_issue_triage',
+        'workspace_github_issue_fix',
+        'workspace_azure_deploy_plan',
+        'workspace_slack_notify',
+    ],
+    tester: [
+        'code_read',
+        'run_tests',
+        'run_linter',
+        'workspace_list_files',
+        'workspace_grep',
+        'workspace_scout',
+        'git_log',
+        'workspace_cleanup',
+        'workspace_diff',
+        'workspace_memory_read',
+        // Tier 3: Analysis only (no refactoring)
+        'workspace_find_references',
+        'workspace_go_to_definition',
+        'workspace_hover_type',
+        'workspace_analyze_imports',
+        'workspace_code_coverage',
+        'workspace_complexity_metrics',
+        'workspace_security_scan',
+        // Tier 4: Test impact only
+        'workspace_test_impact_analysis',
+        // Tier 5: Search and package lookup only
+        'workspace_search_docs',
+        'workspace_package_lookup',
+        // Tier 6: Language adapters (info only)
+        'workspace_language_adapter_python',
+        'workspace_language_adapter_java',
+        'workspace_language_adapter_go',
+        'workspace_language_adapter_csharp',
+        // Tier 7: Impact reporting only
+        'workspace_change_impact_report',
+        // Tier 8: Read-only intelligence
+        'workspace_git_blame',
+        'workspace_outline_symbols',
+        // Tier 9: Read-only pilot intelligence
+        'workspace_security_fix_suggest',
+        'workspace_pr_review_prepare',
+        'workspace_dependency_upgrade_plan',
+        'workspace_policy_preflight',
+        // Tier 10: Read-only code intelligence and observability
+        'workspace_connector_test',
+        'workspace_explain_code',
+        'workspace_refactor_plan',
+        'workspace_semantic_search',
+        'workspace_diff_preview',
+        'workspace_approval_status',
+        'workspace_audit_export',
+    ],
+    business_analyst: [],
+    technical_writer: [],
+    content_writer: [],
+    sales_rep: [],
+    marketing_specialist: [],
+    corporate_assistant: [],
+    customer_support_executive: [],
+    project_manager_product_owner_scrum_master: ['code_read'],
+};
+
+const getAllowedActionsForRole = (roleKey: RoleKey): string[] => {
+    const connectorActions = ROLE_CONNECTOR_POLICY[roleKey].flatMap((tool) => CONNECTOR_ACTION_POLICY[tool]);
+    const localActions = LOCAL_WORKSPACE_ACTION_POLICY[roleKey] ?? [];
+    return Array.from(new Set([...connectorActions, ...localActions]));
 };
 
 const defaultSleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
@@ -425,9 +737,7 @@ const buildBrainConfig = (env: NodeJS.ProcessEnv): BotBrainConfig => {
 
 const buildCapabilitySnapshot = (config: RuntimeConfig, frozenAt: number, env: NodeJS.ProcessEnv): BotCapabilitySnapshotRecord => {
     const allowedConnectorTools = ROLE_CONNECTOR_POLICY[config.roleKey];
-    const allowedActions = Array.from(new Set(
-        allowedConnectorTools.flatMap((tool) => CONNECTOR_ACTION_POLICY[tool]),
-    ));
+    const allowedActions = getAllowedActionsForRole(config.roleKey);
 
     const snapshot: BotCapabilitySnapshotRecord = {
         id: `${config.botId}:snapshot:${frozenAt}`,
@@ -495,9 +805,7 @@ const validateSnapshotCompatibility = (input: {
     }
 
     const expectedConnectors = ROLE_CONNECTOR_POLICY[config.roleKey];
-    const expectedActions = Array.from(new Set(
-        expectedConnectors.flatMap((tool) => CONNECTOR_ACTION_POLICY[tool]),
-    ));
+    const expectedActions = getAllowedActionsForRole(config.roleKey);
 
     if (!hasSameStringSet(snapshot.allowedConnectorTools, expectedConnectors)) {
         return {
@@ -752,7 +1060,25 @@ const evaluateSnapshotExecutionPolicy = (input: {
         };
     }
 
-    if (!input.connectorType || !CONNECTOR_ACTION_TYPES.has(input.actionType as RuntimeConnectorActionType)) {
+    const isConnectorAction = CONNECTOR_ACTION_TYPES.has(input.actionType as RuntimeConnectorActionType);
+    const isLocalWorkspaceAction = LOCAL_WORKSPACE_ACTION_TYPES.has(input.actionType as LocalWorkspaceActionType);
+
+    if (!input.snapshot.allowedActions.includes(input.actionType)) {
+        if (!isConnectorAction && !isLocalWorkspaceAction) {
+            return { allowed: true };
+        }
+
+        return {
+            allowed: false,
+            reason: `Action ${input.actionType} is not in frozen capability snapshot policy.`,
+        };
+    }
+
+    if (!isConnectorAction) {
+        return { allowed: true };
+    }
+
+    if (!input.connectorType) {
         return { allowed: true };
     }
 
@@ -760,13 +1086,6 @@ const evaluateSnapshotExecutionPolicy = (input: {
         return {
             allowed: false,
             reason: `Connector ${input.connectorType} is not allowed for role ${input.snapshot.roleKey}.`,
-        };
-    }
-
-    if (!input.snapshot.allowedActions.includes(input.actionType)) {
-        return {
-            allowed: false,
-            reason: `Action ${input.actionType} is not in frozen capability snapshot policy.`,
         };
     }
 
@@ -1174,14 +1493,26 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
     let capabilitySnapshotCache: BotCapabilitySnapshotRecord | null = null;
     let snapshotObservabilityMetadata: SnapshotObservabilityMetadata | null = null;
     const runtimeLogs: RuntimeLogEntry[] = [];
-    const stateHistory: RuntimeStateTransition[] = [
-        {
-            at: new Date(now()).toISOString(),
-            from: 'created',
-            to: 'created',
-            reason: 'initialized',
-        },
+    const stateHistory: RuntimeStateTransition[] = [{
+        at: new Date(now()).toISOString(),
+        from: 'created',
+        to: 'created',
+        reason: 'initialized',
+    },
     ];
+
+    // Compact per-task execution transcripts — bounded ring buffer (100 entries)
+    const MAX_TRANSCRIPTS = 100;
+    const recentTranscripts: TaskTranscript[] = [];
+    const taskStartTimes = new Map<string, number>();
+    const taskApprovalSummaries = new Map<string, string>();
+
+    const pushTranscript = (entry: TaskTranscript): void => {
+        recentTranscripts.push(entry);
+        if (recentTranscripts.length > MAX_TRANSCRIPTS) {
+            recentTranscripts.shift();
+        }
+    };
 
     const workerLoop: WorkerLoop = {
         running: false,
@@ -1340,6 +1671,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         };
         connectorType: 'jira' | 'teams' | 'github' | 'email';
         source: 'approval_decision_webhook' | 'approval_decision_cache' | 'direct_execute';
+        payloadOverrideSource: PayloadOverrideSource;
     }): Promise<ProcessedTaskResult> => {
         const connectorResponse = await connectorActionExecuteClient({
             baseUrl: input.config.connectorApiUrl,
@@ -1390,6 +1722,8 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 status: 'success',
                 attempts,
                 transientRetries: Math.max(0, attempts - 1),
+                executionPayload: input.task.payload,
+                payloadOverrideSource: input.payloadOverrideSource,
             };
         }
 
@@ -1414,6 +1748,8 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             status: 'failed',
             attempts: Math.max(1, connectorResponse.attempts ?? 1),
             transientRetries: 0,
+            executionPayload: input.task.payload,
+            payloadOverrideSource: input.payloadOverrideSource,
             failureClass:
                 connectorResponse.statusCode === 0
                     || connectorResponse.statusCode === 429
@@ -1424,10 +1760,98 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         };
     };
 
+    const executeLocalWorkspaceActionForTask = async (input: {
+        task: TaskEnvelope;
+        config: RuntimeConfig;
+        decision: {
+            actionType: string;
+            confidence: number;
+            riskLevel: 'low' | 'medium' | 'high';
+            route: 'execute' | 'approval';
+            reason: string;
+        };
+        source: 'approval_decision_webhook' | 'approval_decision_cache' | 'direct_execute';
+        payloadOverrideSource: PayloadOverrideSource;
+    }): Promise<ProcessedTaskResult> => {
+        const localResult = await executeLocalWorkspaceAction({
+            tenantId: input.config.tenantId,
+            botId: input.config.botId,
+            taskId: input.task.taskId,
+            actionType: input.decision.actionType as LocalWorkspaceActionType,
+            payload: input.task.payload,
+        });
+
+        if (localResult.ok) {
+            let payloadOverrideSource = input.payloadOverrideSource;
+            if (input.decision.actionType === 'workspace_subagent_spawn' && localResult.output.trim()) {
+                try {
+                    const parsed = JSON.parse(localResult.output) as { plan_source?: string };
+                    if (parsed.plan_source === 'executor_inferred') {
+                        payloadOverrideSource = 'executor_inferred';
+                    }
+                } catch {
+                    // Ignore JSON parse errors for telemetry derivation.
+                }
+            }
+
+            emitRuntimeEvent('runtime.local_workspace_action_executed', input.config, {
+                task_id: input.task.taskId,
+                action_type: input.decision.actionType,
+                output_length: localResult.output.length,
+                exit_code: localResult.exitCode ?? 0,
+                source: input.source,
+                payload_override_source: payloadOverrideSource,
+            });
+
+            return {
+                decision: {
+                    ...input.decision,
+                    route: 'execute',
+                    reason:
+                        input.source === 'direct_execute'
+                            ? 'Local workspace action executed successfully.'
+                            : 'Local workspace action executed successfully after approval.',
+                },
+                status: 'success',
+                attempts: 1,
+                transientRetries: 0,
+                executionPayload: input.task.payload,
+                payloadOverrideSource,
+            };
+        }
+
+        emitRuntimeEvent('runtime.local_workspace_action_failed', input.config, {
+            task_id: input.task.taskId,
+            action_type: input.decision.actionType,
+            exit_code: localResult.exitCode ?? 1,
+            error_output: localResult.errorOutput ?? null,
+            source: input.source,
+        });
+
+        return {
+            decision: {
+                ...input.decision,
+                route: 'execute',
+                reason:
+                    input.source === 'direct_execute'
+                        ? 'Local workspace action failed.'
+                        : 'Local workspace action failed after approval.',
+            },
+            status: 'failed',
+            attempts: 1,
+            transientRetries: 0,
+            executionPayload: input.task.payload,
+            payloadOverrideSource: input.payloadOverrideSource,
+            failureClass: 'runtime_exception',
+            errorMessage: localResult.errorOutput ?? `Local workspace action '${input.decision.actionType}' failed.`,
+        };
+    };
+
     const executeApprovedTask = async (
         task: TaskEnvelope,
         config: RuntimeConfig,
         source: 'approval_decision_webhook' | 'approval_decision_cache',
+        payloadOverrideSource: PayloadOverrideSource = 'none',
     ): Promise<ProcessedTaskResult> => {
         const decision = buildDecision(task);
         const connectorType = normalizeConnectorType(task.payload['connector_type']);
@@ -1455,6 +1879,8 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 status: 'failed',
                 attempts: 0,
                 transientRetries: 0,
+                executionPayload: task.payload,
+                payloadOverrideSource,
                 failureClass: 'runtime_exception',
                 errorMessage: snapshotPolicy.reason ?? 'Capability policy blocked execution.',
             };
@@ -1480,7 +1906,16 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 decision,
                 connectorType,
                 source,
+                payloadOverrideSource,
             });
+        }
+
+        const isLocalWorkspaceAction = LOCAL_WORKSPACE_ACTION_TYPES.has(
+            decision.actionType as LocalWorkspaceActionType,
+        );
+
+        if (isLocalWorkspaceAction) {
+            return executeLocalWorkspaceActionForTask({ task, config, decision, source, payloadOverrideSource });
         }
 
         return processApprovedTask(task, {
@@ -1491,6 +1926,9 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
     };
 
     const processOneTask = async (task: TaskEnvelope, config: RuntimeConfig): Promise<void> => {
+        // Record task start time for transcript
+        taskStartTimes.set(task.taskId, now());
+
         const taskDecision = buildDecision(task);
         const connectorTypeForPolicy = normalizeConnectorType(task.payload['connector_type']);
         const snapshotPolicy = evaluateSnapshotExecutionPolicy({
@@ -1519,6 +1957,8 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 status: 'failed',
                 attempts: 0,
                 transientRetries: 0,
+                executionPayload: task.payload,
+                payloadOverrideSource: 'none',
                 failureClass: 'runtime_exception',
                 errorMessage: snapshotPolicy.reason ?? 'Capability policy blocked execution.',
             });
@@ -1573,6 +2013,10 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             modelProfile: resolveDefaultModelProfile(capabilitySnapshotCache),
             llmDecisionResolver,
         });
+        const executionTask: TaskEnvelope = {
+            ...task,
+            payload: result.executionPayload,
+        };
         workerLoop.processedTasks += 1;
         workerLoop.retriedAttempts += result.transientRetries;
 
@@ -1585,16 +2029,35 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             classification_reason: result.decision.reason,
             classification_source: result.llmExecution?.classificationSource ?? 'heuristic',
             llm_fallback_reason: result.llmExecution?.fallbackReason ?? null,
+            payload_override_source: result.payloadOverrideSource,
+            payload_overrides_applied: result.payloadOverrideSource !== 'none',
         });
 
         if (result.status === 'approval_required') {
             workerLoop.approvalQueuedTasks += 1;
             if (result.decision.riskLevel === 'medium' || result.decision.riskLevel === 'high') {
                 const actionId = `${task.taskId}:${result.decision.actionType}`;
-                const actionSummary =
-                    typeof task.payload['summary'] === 'string' && task.payload['summary'].trim()
-                        ? task.payload['summary']
+                let actionSummary =
+                    typeof executionTask.payload['summary'] === 'string' && executionTask.payload['summary'].trim()
+                        ? executionTask.payload['summary']
                         : `${result.decision.actionType} requested by runtime`;
+
+                // For git_push, generate a richer preflight summary (branch, commits, diff stat)
+                // so the approver has context about what will be pushed.
+                if (result.decision.actionType === 'git_push') {
+                    const workspaceKey = typeof executionTask.payload['workspace_key'] === 'string' && executionTask.payload['workspace_key'].trim()
+                        ? executionTask.payload['workspace_key'].trim()
+                        : task.taskId;
+                    const wsDir = getWorkspaceDir(config.tenantId, config.botId, workspaceKey);
+                    const gitSummary = await buildGitPushApprovalSummary(wsDir, executionTask.payload)
+                        .catch(() => actionSummary);
+                    if (gitSummary.trim()) {
+                        actionSummary = gitSummary;
+                    }
+                }
+
+                // Store approval summary for transcript
+                taskApprovalSummaries.set(task.taskId, actionSummary);
 
                 const pendingRecord: PendingApprovalTask = {
                     taskId: task.taskId,
@@ -1602,7 +2065,9 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                     riskLevel: result.decision.riskLevel,
                     actionType: result.decision.actionType,
                     actionSummary,
-                    task,
+                    task: executionTask,
+                    executionPayload: executionTask.payload,
+                    payloadOverrideSource: result.payloadOverrideSource,
                     escalated: false,
                 };
 
@@ -1686,11 +2151,11 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 risk_level: result.decision.riskLevel,
                 confidence: result.decision.confidence,
             });
-            await persistActionResultRecord(task, config, result);
+            await persistActionResultRecord(executionTask, config, result);
             return;
         }
 
-        const connectorType = normalizeConnectorType(task.payload['connector_type']);
+        const connectorType = normalizeConnectorType(executionTask.payload['connector_type']);
         const directConnectorAction = CONNECTOR_ACTION_TYPES.has(
             result.decision.actionType as
             | 'read_task'
@@ -1706,11 +2171,12 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
 
         if (result.status === 'success' && connectorType && directConnectorAction) {
             const connectorResult = await executeConnectorActionForTask({
-                task,
+                task: executionTask,
                 config,
                 decision: result.decision,
                 connectorType,
                 source: 'direct_execute',
+                payloadOverrideSource: result.payloadOverrideSource,
             });
 
             if (connectorResult.status === 'success') {
@@ -1724,7 +2190,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                     attempts: connectorResult.attempts,
                     execution_path: 'connector_endpoint',
                 });
-                await persistActionResultRecord(task, config, connectorResult);
+                await persistActionResultRecord(executionTask, config, connectorResult);
                 return;
             }
 
@@ -1737,7 +2203,47 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 error_message: connectorResult.errorMessage ?? null,
                 execution_path: 'connector_endpoint',
             });
-            await persistActionResultRecord(task, config, connectorResult);
+            await persistActionResultRecord(executionTask, config, connectorResult);
+            return;
+        }
+
+        const isDirectLocalWorkspaceAction = LOCAL_WORKSPACE_ACTION_TYPES.has(
+            result.decision.actionType as LocalWorkspaceActionType,
+        );
+
+        if (result.status === 'success' && isDirectLocalWorkspaceAction) {
+            const localResult = await executeLocalWorkspaceActionForTask({
+                task: executionTask,
+                config,
+                decision: result.decision,
+                source: 'direct_execute',
+                payloadOverrideSource: result.payloadOverrideSource,
+            });
+
+            if (localResult.status === 'success') {
+                workerLoop.succeededTasks += 1;
+                emitRuntimeEvent('runtime.task_processed', config, {
+                    task_id: task.taskId,
+                    queue_depth: workerLoop.queuedTasks.length,
+                    processed_tasks: workerLoop.processedTasks,
+                    retries: localResult.transientRetries,
+                    attempts: localResult.attempts,
+                    execution_path: 'local_workspace',
+                });
+                await persistActionResultRecord(executionTask, config, localResult);
+                return;
+            }
+
+            workerLoop.failedTasks += 1;
+            emitRuntimeEvent('runtime.task_failed', config, {
+                task_id: task.taskId,
+                attempts: localResult.attempts,
+                retries: localResult.transientRetries,
+                failure_class: localResult.failureClass ?? 'runtime_exception',
+                error_message: localResult.errorMessage ?? null,
+                execution_path: 'local_workspace',
+            });
+            await persistActionResultRecord(executionTask, config, localResult);
             return;
         }
 
@@ -1750,7 +2256,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 retries: result.transientRetries,
                 attempts: result.attempts,
             });
-            await persistActionResultRecord(task, config, result);
+            await persistActionResultRecord(executionTask, config, result);
             return;
         }
 
@@ -1762,7 +2268,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             failure_class: result.failureClass ?? 'runtime_exception',
             error_message: result.errorMessage ?? null,
         });
-        await persistActionResultRecord(task, config, result);
+        await persistActionResultRecord(executionTask, config, result);
     };
 
     const persistActionResultRecord = async (
@@ -1770,6 +2276,30 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         config: RuntimeConfig,
         result: ProcessedTaskResult,
     ): Promise<void> => {
+        // Write compact execution transcript before flushing the action result
+        const startedAt = taskStartTimes.get(task.taskId);
+        taskStartTimes.delete(task.taskId);
+        const approvalSummary = taskApprovalSummaries.get(task.taskId) ?? null;
+        taskApprovalSummaries.delete(task.taskId);
+        if (startedAt !== undefined) {
+            const completedAt = now();
+            pushTranscript({
+                taskId: task.taskId,
+                startedAt: new Date(startedAt).toISOString(),
+                completedAt: new Date(completedAt).toISOString(),
+                actionType: result.decision.actionType,
+                riskLevel: result.decision.riskLevel,
+                route: result.decision.route,
+                status: result.status,
+                durationMs: completedAt - startedAt,
+                errorMessage: result.errorMessage ?? null,
+                approvalRequired: result.status === 'approval_required',
+                approvalSummary,
+                payloadOverrideSource: result.payloadOverrideSource,
+                payloadOverridesApplied: result.payloadOverrideSource !== 'none',
+            });
+        }
+
         const claimToken =
             typeof task.payload['_claim_token'] === 'string'
                 ? task.payload['_claim_token']
@@ -1819,6 +2349,8 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             budgetDenialReason,
             budgetLimitScope,
             budgetLimitType,
+            payloadOverrideSource: result.payloadOverrideSource,
+            payloadOverridesApplied: result.payloadOverrideSource !== 'none',
         };
 
         try {
@@ -1868,6 +2400,8 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             totalTokens: result.llmExecution?.totalTokens ?? null,
             latencyMs,
             outcome: taskOutcome,
+            payloadOverrideSource: result.payloadOverrideSource,
+            payloadOverridesApplied: result.payloadOverrideSource !== 'none',
             executedAt: new Date(task.enqueuedAt),
         }).catch(() => {
             // Non-blocking: task execution record write failures do not affect task outcome
@@ -1911,6 +2445,8 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             leaseClaimedBy: input.task.lease?.claimedBy,
             leaseIdempotencyKey: input.task.lease?.idempotencyKey,
             leaseExpiresAt: input.task.lease?.expiresAt,
+            payloadOverrideSource: 'none',
+            payloadOverridesApplied: false,
         };
 
         try {
@@ -2838,6 +3374,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 resolved.task,
                 configCache as RuntimeConfig,
                 'approval_decision_webhook',
+                resolved.payloadOverrideSource,
             );
             workerLoop.processedTasks += 1;
             workerLoop.retriedAttempts += approvedResult.transientRetries;
@@ -2987,6 +3524,24 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             total_buffered: stateHistory.length,
             current_state: runtimeState,
             transitions,
+        };
+    });
+
+    app.get<{ Querystring: { limit?: string } }>('/runtime/transcripts', async (request, reply) => {
+        const rawLimit = Number(request.query?.limit ?? '50');
+        if (!Number.isFinite(rawLimit) || rawLimit <= 0) {
+            return reply.code(400).send({
+                error: 'invalid_limit',
+                message: 'limit must be a positive integer',
+            });
+        }
+
+        const limit = Math.min(Math.trunc(rawLimit), MAX_TRANSCRIPTS);
+        const slice = recentTranscripts.slice(Math.max(0, recentTranscripts.length - limit));
+        return {
+            count: slice.length,
+            total_buffered: recentTranscripts.length,
+            transcripts: slice,
         };
     });
 

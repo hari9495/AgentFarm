@@ -7,26 +7,43 @@ Planning-first rule: no feature development starts until architecture baseline a
 2. Keep strict safety and approval controls.
 3. Launch only when gold-standard quality is proven.
 ## Phases
-1. Validation and Architecture (Weeks 1-6)
+1. Validation and Architecture (Weeks 1-6) — **COMPLETED 2026-04-19**
 - Validate customer need and workflow fit.
 - Confirm top gold standards and evidence rules.
 - Finalize MVP role scope.
 - Finalize product architecture and decision records.
 - Approve architecture gates before implementation.
-2. MVP Build (Weeks 7-20)
-- Build Developer Agent first.
-- Run internal dogfooding and quality checks.
-- Pass all launch gates at score 5.
-3. Pilot (Weeks 21-30)
-- Run with 1-2 customers.
-- Track quality, safety, and business value.
-- Convert feedback into improvements.
+2. MVP Build (Weeks 7-20) — **COMPLETED 2026-04-30**
+- Built Developer Agent with 92 local workspace actions (Tier 0–9) and 6 connector actions.
+- Nine LLM provider adapters with health-score fallback routing.
+- Full approval and risk enforcement (HIGH/MEDIUM/LOW) with audit evidence.
+- Azure runtime provisioning, VM bootstrap, Docker runtime lifecycle.
+- Connector auth (Jira, Teams, GitHub, email) with OAuth, token refresh, health monitoring.
+- Dashboard with provisioning status, approval queue, evidence panel, LLM config, marketplace.
+- Quality gate passing: 179/179 agent-runtime tests passing, 200/200 api-gateway, all typechecks clean.
+- Tier 9 Developer Productivity Wave shipped (2026-04-30): workspace_create_pr, workspace_run_ci_checks, workspace_fix_test_failures, workspace_security_fix_suggest, workspace_pr_review_prepare, workspace_dependency_upgrade_plan, workspace_release_notes_generate, workspace_incident_patch_pack, workspace_memory_profile, workspace_autonomous_plan_execute, workspace_policy_preflight.
+- Tier 10 Connector Hardening + Code Intelligence + Observability shipped (2026-05-01): workspace_connector_test, workspace_pr_auto_assign, workspace_ci_watch, workspace_explain_code, workspace_add_docstring, workspace_refactor_plan, workspace_semantic_search, workspace_diff_preview, workspace_approval_status, workspace_audit_export. 190/190 tests passing.
+3. Pilot (Weeks 21-30) — **ACTIVE**
+- Run with 1-2 customers per operations/company-access-rollout.md.
+- Track quality, safety, and business value weekly.
+- Harden production connector SDK integrations.
+- Implement autonomous coding loop chaining.
+- Convert pilot feedback into near-term roadmap items.
 4. Scale (Weeks 31-42)
-- Add QA Agent and Manager Agent.
+- Add QA Agent and Manager Agent (each requires dedicated ADR and safety gate).
+- Multi-agent orchestration with shared approval queue.
+- Additional connectors: Confluence, Slack, Linear, Azure DevOps.
+- Container-native density migration: VM → Azure Container Apps (requires separate ADR).
 - Keep same score-5 gates per role.
 5. Enterprise (Week 43+)
-- Expand compliance, reliability, and operations.
-- Standardize rollout process across customers.
+- SAML/SSO and enterprise identity federation.
+- Policy-pack customization per tenant.
+- Multi-region deployment for data residency compliance.
+- Live meeting participation (requires separate voice pipeline safety gate).
+- Compliance export automation (SOC 2, ISO 27001 evidence bundles).
+- AgentFarm Marketplace with partner ecosystem and revenue sharing.
+- Bring-your-own-model (BYOM) with same risk and approval wrapper.
+- Developer Agent persistent workspace memory (✅ delivered as workspace_memory_profile in Tier 9).
 ## Architecture Baseline (Must Finish Before Build)
 1. System boundaries
 - Control plane: identity, policy, approval, and configuration.

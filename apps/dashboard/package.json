@@ -7,6 +7,7 @@
         "dev": "next dev -p 3001",
         "start": "next start -p 3001",
         "test": "tsx --test app/**/*.test.ts",
+        "test:e2e:mobile-drawer": "node scripts/mobile-drawer-e2e.mjs",
         "test:e2e:workspace-tabs": "node scripts/workspace-tab-e2e.mjs",
         "typecheck": "tsc -p tsconfig.json --noEmit"
     },

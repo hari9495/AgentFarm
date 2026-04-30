@@ -1,8 +1,8 @@
 # AgentFarm — Agent Function Walkthrough
 
-**Last updated:** 2026-04-29  
+**Last updated:** 2026-04-30  
 **Scope:** `apps/agent-runtime` + `apps/api-gateway` (connector layer)  
-**Source files:** `execution-engine.ts`, `runtime-server.ts`, `llm-decision-adapter.ts`, `provider-clients.ts`, `connector-actions.ts`
+**Source files:** `execution-engine.ts`, `runtime-server.ts`, `llm-decision-adapter.ts`, `local-workspace-executor.ts`, `provider-clients.ts`, `connector-actions.ts`
 
 ---
 
@@ -13,8 +13,9 @@ An AgentFarm bot is a Docker container that runs inside a VM provisioned per ten
 1. Receives tasks from the control plane or user
 2. Decides what action to take and how risky it is
 3. Executes safe actions immediately; routes risky actions for human approval
-4. Calls real external systems (GitHub, Jira, Teams, Email) via the API Gateway connector layer
-5. Logs every event and sends heartbeats to the control plane
+4. For **connector tasks**: calls real external systems (GitHub, Jira, Teams, Email) via the API Gateway connector layer
+5. For **local workspace tasks**: executes directly in a sandboxed workspace directory on the VM (`/tmp/agentfarm-workspaces/<tenantId>/<botId>/<workspaceKey>`)
+6. Logs every event and sends heartbeats to the control plane
 
 ---
 
@@ -37,13 +38,55 @@ Task arrives (POST /tasks/intake)
     │         approved / rejected
     │             │
     └─────┬───────┘
-          ▼
-   Call API Gateway → connector policy check → real API call
-   (GitHub / Jira / Teams / Email)
           │
-          ▼
-   Write ActionResultRecord + emit event to /logs
+    ┌─────┴──────────────────────────────────┐
+    │  Is it a LOCAL WORKSPACE action?        │
+    │  (LOCAL_WORKSPACE_ACTION_TYPES set)     │
+    └─────┬───────────────────────────────┬───┘
+       YES │                           NO │
+          ▼                              ▼
+  executeLocalWorkspaceAction()    API Gateway → connector policy check
+  (sandboxed in workspace dir)     → real API call (GitHub/Jira/Teams/Email)
+          │                              │
+          └──────────────┬───────────────┘
+                         ▼
+          Write ActionResultRecord + emit event to /logs
 ```
+
+---
+
+## Local Workspace Execution Branch
+
+When the action type is in `LOCAL_WORKSPACE_ACTION_TYPES`, the task is dispatched to `executeLocalWorkspaceAction()` in `local-workspace-executor.ts` instead of the connector path.
+
+### Sandbox Model
+
+Every action operates inside a workspace directory:
+```
+/tmp/agentfarm-workspaces/<tenantId>/<botId>/<workspaceKey>
+```
+
+Path traversal is blocked by `safeChildPath()`. All file operations are restricted to this directory. Shell output is filtered through `redactSecrets()` before returning.
+
+### Execution Categories
+
+**Git operations** (`git_clone`, `git_branch`, `git_commit`, `git_push`, `git_stash`, `git_log`): Run git commands via `execa`. `git_log` returns structured JSON. `git_stash` supports push/pop/list/drop.
+
+**Code read/write** (`code_read`, `code_edit`, `code_edit_patch`, `code_search_replace`, `apply_patch`, `file_move`, `file_delete`): File operations within the sandbox. `apply_patch` writes a temp diff file and applies via `git apply`.
+
+**Execution** (`run_build`, `run_tests`, `run_linter`, `workspace_install_deps`, `run_shell_command`): Run commands in the workspace. `workspace_install_deps` auto-detects pnpm/yarn/npm/pip/go/cargo from lockfiles. `run_linter` defaults to ESLint with optional fix mode.
+
+**Intelligence** (`workspace_list_files`, `workspace_grep`, `workspace_scout`, `workspace_checkpoint`, `workspace_diff`, `workspace_cleanup`): Read-only intelligence and navigation. `workspace_scout` returns a compact JSON project summary. `workspace_checkpoint` creates/restores rollback branches.
+
+**Memory & PR** (`workspace_memory_write`, `workspace_memory_read`, `create_pr_from_workspace`, `autonomous_loop`): Persistent scratchpad in `.agentfarm/workspace-memory.json`. `autonomous_loop` iterates test-fix cycles up to N attempts.
+
+### Risk Classification for Local Actions
+
+| Risk | Actions |
+|---|---|
+| **high** | `git_push`, `run_shell_command` |
+| **medium** | `git_commit`, `git_stash`, `code_edit`, `code_edit_patch`, `code_search_replace`, `apply_patch`, `file_move`, `file_delete`, `run_build`, `run_tests`, `run_linter`, `workspace_install_deps`, `workspace_checkpoint`, `autonomous_loop`, `workspace_memory_write`, `create_pr_from_workspace` |
+| **low** | `git_clone`, `git_branch`, `git_log`, `code_read`, `workspace_list_files`, `workspace_grep`, `workspace_scout`, `workspace_diff`, `workspace_cleanup`, `workspace_memory_read` |
 
 ---
 

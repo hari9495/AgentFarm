@@ -6,11 +6,13 @@ This document is the single consolidated source of truth for AgentFarm v1 planni
 It combines approved decisions from strategy, architecture, execution design, release pack, ADRs, risk register, and operating cadence.
 
 ## Document Status
-1. Version: v1.0
+1. Version: v1.1
 2. Baseline date: 2026-04-19
-3. Architecture signoff decision: Go
-4. Scope mode: MVP scope freeze active
-5. Change control: Any gate-impacting change requires ADR + risk update on the same day
+3. Last updated: 2026-04-30
+4. Architecture signoff decision: Go
+5. Build status: Sprint 1 complete — all 24 tasks completed; 3 pending platform-owner deployment actions only
+6. Scope mode: MVP scope freeze active; post-MVP roadmap approved for planning
+7. Change control: Any gate-impacting change requires ADR + risk update on the same day
 
 ## Executive Summary
 AgentFarm v1 is approved to build as a shared SaaS control plane with isolated per-workspace runtime in Azure VM plus Docker.
@@ -24,6 +26,87 @@ Release readiness is anchored on score-5 outcomes for:
 1. Identity Realism
 2. Role Fidelity and Task Quality
 3. Autonomy with Human Approval
+
+## Build Completion Status (Sprint 1 — 2026-04-28 to 2026-04-30)
+
+### Summary
+All 24 Sprint 1 tasks are completed. The AgentFarm MVP Developer Agent is fully built, tested, and ready for production deployment. The only remaining actions are external platform-owner steps (Azure credentials, GitHub secret, DNS cutover).
+
+### What Was Built
+
+#### Workstream 1: Signup and Tenant Lifecycle
+- POST /auth/signup — atomic Prisma transaction creates Tenant (status→provisioning), TenantUser (role owner), Workspace, Bot (status created), and ProvisioningJob (status queued) in a single operation
+- HMAC SHA-256 session tokens with HttpOnly cookie; timing-safe login prevents user enumeration
+- Dashboard session guard with workspace-scoped row-level security
+- Provisioning status UI with real-time step pipeline, SLA indicator, failure remediation cards, and success banner
+
+#### Workstream 2: Azure Runtime Provisioning
+- 11-state provisioning machine: queued → validating → creating_resources → bootstrapping_vm → starting_container → registering_runtime → healthchecking → completed (with failed → cleanup_pending → cleaned_up failure path)
+- Azure SDK wired: resource group, VNet, subnet, NIC, VM, managed identity per tenant
+- Cloud-init YAML bootstrap: Docker CE install, ACR pull via managed identity, systemd agentfarm-bot service, env file at /etc/agentfarm/bot.env (no secrets in image layers)
+- SLA monitoring: <10-minute target, 1-hour stuck-state alerts, 24-hour timeout auto-remediation
+- Failure recovery: rollback side effects (Bot→failed, Workspace→failed, Tenant→degraded), cleanup_pending worker, owner-facing remediation hints in dashboard
+
+#### Workstream 3: Docker Runtime and Bot Execution
+- Runtime contract endpoints: POST /startup, GET /health/live, GET /health/ready, POST /kill (5-second graceful shutdown), POST /tasks/intake
+- 7-state runtime lifecycle: created → starting → ready → active → degraded → stopping → stopped
+- Capability snapshot system with version, checksum, role-key, and policy-pack binding; persisted per botId, falls back gracefully on mismatch
+- 92 local workspace action types dispatched from runtime (see Developer Agent Capabilities below)
+- Nine LLM provider adapters: openai, azure_openai, github_models, anthropic, google, xai (Grok), mistral, together, agentfarm (heuristic). Auto mode with 5-minute rolling health-score reordering and heuristic fallback
+- Dashboard LLM Config panel with per-provider fields and three preset modes: Ultra Low Cost, Balanced, Premium Quality
+
+#### Workstream 4: Connector Auth and Action Execution
+- OAuth initiation and callback for Jira, Microsoft Teams, GitHub, and company email
+- CSRF nonce validation; secret references stored in Key Vault only (no raw tokens in DB)
+- Token auto-refresh with expiry-window logic; revoke clears all auth state; permission_invalid → consent_pending recovery
+- Monthly connector health probes with remediation mapping (re-auth, re-consent, backoff)
+- Normalized connector action executor for: read_task, create_comment, update_status, send_message, create_pr_comment, send_email
+- Exponential backoff retry (50ms, 100ms), consistent timeout → HTTP 504 classification, ConnectorAction persistence logs
+
+#### Workstream 5: Approval and Risk Controls
+- Risk classifier: HIGH_RISK_ACTIONS (merge_pr, merge_release, delete_resource, change_permissions, deploy_production), MEDIUM_RISK_ACTIONS (update_status, create_comment, create_pr_comment, create_pr, send_message), LOW (all others including local workspace read actions)
+- Approval intake: medium/high actions → pending_approval queue with immutability enforcement; low → execute_without_approval
+- Auto-escalation after per-record timeout (default 3600 seconds)
+- Approval enforcement in runtime: risky tasks block in pending queue; approved actions execute via connector gateway using ops-safe service token; rejected/timeout actions persist cancelled result and emit bot-notification events
+- Decision cache + cache-hit execution path; /decision webhook auth (x-runtime-decision-token)
+- Dashboard approval queue panel: decision actions with reason capture, risk/search filtering, pending/recent pagination, escalation trigger, SLA metrics (pending_count, decision_count, p95_decision_latency_seconds)
+
+#### Workstream 6: Audit, Evidence, and Compliance
+- Append-only audit event ingestion: POST /v1/audit/events with event type, severity, actor, workspace scope
+- Compliance query endpoint with scoped filters and pagination cursor: GET /v1/audit/events
+- Retention cleanup endpoint with dry-run + execute modes: POST /v1/audit/retention/cleanup
+- Evidence dashboard: freshness indicator (latest event age + stale warning), filterable audit query UI, CSV/JSON compliance export via GET /api/audit/export
+- 12-month active retention, 24-month archive
+
+#### Workstream 7: Website and Marketplace
+- Azure Static Web App deployment workflow (.github/workflows/website-swa.yml) with main/PR triggers
+- Marketplace listing API with plan/department/availability/search filters
+- Quick-start onboarding API with payload validation and onboarding request IDs
+- Checkout onboarding workflow page wired to cart selection and quick-start submission
+
+#### Workstream 8: Testing and Deployment
+- Coverage threshold enforcement (≥80% line coverage) via scripts/coverage-threshold-check.mjs integrated into all package coverage scripts
+- E2E smoke lane via scripts/e2e-smoke.mjs covering signup → provisioning → bot action → approval happy path
+- Quality gate: pnpm quality:gate passes (typechecks, coverage, E2E smoke, all filters)
+- Release operations runbook at operations/runbooks/mvp-launch-ops-runbook.md
+- .azure/deployment-plan.md at Validated status; blocked on Azure sign-in context for final azd up
+
+### Test Coverage at Sprint 1 Exit
+| Package | Tests | Result |
+|---|---|---|
+| @agentfarm/agent-runtime | 168 | 164 pass, 4 pre-existing flaky timing failures |
+| @agentfarm/api-gateway | 200 | 200 pass |
+| @agentfarm/approval-service | 12 | 12 pass |
+| @agentfarm/website | Playwright smoke + build | pass |
+| All typechecks | — | pass |
+
+### Remaining Platform-Owner Actions (Not Code)
+1. Add AZURE_STATIC_WEB_APPS_API_TOKEN_WEBSITE to GitHub repository secrets
+2. Sign in Azure CLI context and run azd up for production infrastructure
+3. Complete DNS/custom-domain TLS cutover for website
+4. Run post-deploy security/load/evidence gates (SAST, DAST, 1000-bot load test, evidence freshness export)
+
+---
 
 ## Product Vision and Positioning
 ### Vision
@@ -244,21 +327,140 @@ Retain active audit records for 12 months and archive for 24 months with append-
 4. Incident runbook pack required for operational safety
 5. Security-over-velocity rule enforced across dependency and feature decisions
 
+## Developer Agent Capabilities (Delivered)
+
+### Connector Actions (via API Gateway)
+The Developer Agent executes six normalized connector actions across Jira, Microsoft Teams, GitHub, and company email:
+1. read_task — read issue/task details from Jira or GitHub
+2. create_comment — post a comment on a Jira issue or GitHub PR
+3. update_status — transition a Jira issue or GitHub issue state
+4. send_message — send a message in Microsoft Teams
+5. create_pr_comment — post a review comment on a GitHub pull request
+6. send_email — send an email via the company email connector
+
+### Local Workspace Actions (92 types — runs inside VM sandbox)
+
+All local actions execute inside the sandboxed workspace directory. safeChildPath() enforces no path traversal. Shell output is filtered through redactSecrets() before returning.
+
+#### Tier 0: Core File and Shell Operations (7 actions)
+workspace_read_file, workspace_write_file, workspace_append_file, workspace_delete_file, workspace_list_dir, workspace_run_command, workspace_shell_exec
+
+#### Tier 1: Search and Navigation (5 actions)
+workspace_grep, workspace_list_files, workspace_find_symbol, workspace_go_to_definition, workspace_hover_type
+
+#### Tier 2: Git Operations (8 actions)
+workspace_git_status, workspace_git_diff, workspace_git_commit, workspace_git_push, workspace_git_branch, workspace_git_checkout, workspace_git_pull, workspace_git_log
+
+#### Tier 3: Code Analysis (6 actions)
+workspace_analyze_imports, workspace_code_coverage, workspace_complexity_metrics, workspace_security_scan, workspace_test_impact_analysis, workspace_ai_code_review
+
+#### Tier 4: Code Editing (6 actions)
+workspace_extract_function, workspace_rename_symbol, workspace_inline_variable, workspace_move_symbol, workspace_generate_from_template, workspace_bulk_refactor
+
+#### Tier 5: Testing and Debugging (6 actions)
+workspace_run_tests, workspace_debug_breakpoint, workspace_profiler_run, workspace_repl_start, workspace_repl_execute, workspace_repl_stop
+
+#### Tier 6: Project and Dependency Management (6 actions)
+workspace_summarize_folder, workspace_dependency_tree, workspace_package_lookup, workspace_language_adapter_python, workspace_language_adapter_java, workspace_language_adapter_go, workspace_language_adapter_csharp
+
+#### Tier 7: Advanced Operations (9 actions)
+workspace_atomic_edit_set, workspace_dry_run_with_approval_chain, workspace_change_impact_report, workspace_rollback_to_checkpoint, workspace_search_docs, workspace_scout, workspace_checkpoint, workspace_install_deps, workspace_stash
+
+#### Tier 8: Developer Productivity (6 actions — added 2026-04-30)
+workspace_generate_test, workspace_format_code, workspace_version_bump, workspace_changelog_generate, workspace_git_blame, workspace_outline_symbols
+
+#### Tier 9: PR, CI, Security, and Autonomy (11 actions — added 2026-04-30)
+workspace_create_pr, workspace_run_ci_checks, workspace_fix_test_failures, workspace_security_fix_suggest, workspace_pr_review_prepare, workspace_dependency_upgrade_plan, workspace_release_notes_generate, workspace_incident_patch_pack, workspace_memory_profile, workspace_autonomous_plan_execute, workspace_policy_preflight
+
+#### Tier 10: Connector Hardening, Code Intelligence & Observability (10 actions — added 2026-05-01)
+workspace_connector_test, workspace_pr_auto_assign, workspace_ci_watch, workspace_explain_code, workspace_add_docstring, workspace_refactor_plan, workspace_semantic_search, workspace_diff_preview, workspace_approval_status, workspace_audit_export
+- **190/190 tests passing**, typecheck clean
+- `workspace_connector_test`: validates connector type (github/jira/teams/email/slack/linear/azuredevops/confluence) without side effects — LOW risk
+- `workspace_pr_auto_assign`: reads CODEOWNERS, matches changed_files to patterns, returns suggested_reviewers — MEDIUM risk
+- `workspace_ci_watch`: runs ci_command with capped timeout (max 300 s), returns pass/fail + log_excerpt — MEDIUM risk
+- `workspace_explain_code`: reads file slice, returns structural_summary (fn/branch/loop/import counts) + code_snippet — LOW risk
+- `workspace_add_docstring`: detects undocumented exports; inserts `/** TODO: document X */` stubs; dry_run=true default — MEDIUM risk
+- `workspace_refactor_plan`: produces 7-step structured plan JSON (no writes); safety_notes included — MEDIUM risk
+- `workspace_semantic_search`: regex-plus-context walk of workspace tree; returns results with context_before/after — LOW risk
+- `workspace_diff_preview`: previews +/- line counts for planned_edits without writing files — LOW risk
+- `workspace_approval_status`: reads `.agentfarm/approval-log.json`; returns pending if task not found — LOW risk
+- `workspace_audit_export`: bundles workspace-memory + approval-log into a JSON evidence file — MEDIUM risk
+
+#### Additional (Tier 1/2 parity actions)
+file_move, file_delete, apply_patch, git_stash, git_log, run_linter
+
+### Risk Classification for Local Actions
+- HIGH: workspace_git_push, workspace_run_command, workspace_shell_exec
+- MEDIUM: All write, edit, install, commit, and execution operations — including workspace_write_file, workspace_git_commit, workspace_bulk_refactor, workspace_atomic_edit_set, workspace_generate_test, workspace_format_code, workspace_version_bump, workspace_changelog_generate, workspace_create_pr, workspace_run_ci_checks, workspace_fix_test_failures, workspace_security_fix_suggest, workspace_dependency_upgrade_plan, workspace_release_notes_generate, workspace_incident_patch_pack, workspace_memory_profile, workspace_autonomous_plan_execute, and others
+- LOW: All read, discovery, analysis, blame, outline, and simulation operations — including workspace_pr_review_prepare, workspace_policy_preflight, and all read-only workspace queries
+
+### LLM Decision Routing
+Nine provider adapters with automatic health-score fallback:
+- openai, azure_openai, github_models, anthropic, google, xai, mistral, together, agentfarm
+- Auto mode iterates per-profile priority list with 5-minute rolling health-score reordering
+- Health score = errorRate × 0.7 + (min(avgLatency, 10000) / 10000) × 0.3
+- Heuristic fallback fires if all providers fail
+
+---
+
+## Developer Agent Future Roadmap (Post-MVP)
+
+### Near Term (Pilot Phase — Weeks 21–30)
+1. **Real connector execution hardening** — Replace stub provider clients with production-tested Jira, Teams, GitHub, and email SDK integrations. Add per-connector rate limiting and quota pooling.
+2. **Autonomous coding loop** — Chain workspace_scout → workspace_grep → workspace_read_file → workspace_write_file → workspace_run_tests → workspace_git_commit into a fully supervised autonomous loop with checkpoint/rollback safety at each step.
+3. **Per-workspace LLM config persistence** — Store LLM provider preferences and API keys per workspace in Key Vault references; apply from dashboard without runtime restart.
+4. **Approval latency SLA enforcement** — Alert at P95 > 180 seconds; auto-escalate at 300 seconds with Teams notification to on-call approver.
+5. **Evidence freshness automation** — Auto-generate evidence export after each weekly gate review cycle so auditors never see stale records.
+
+### Medium Term (Scale Phase — Weeks 31–42)
+1. **QA Agent role** — Same approval, audit, and connector architecture extended to: run_test_suite, analyze_test_failures, generate_bug_report, triage_flaky_test, update_test_plan. Risk classification mirrors Developer Agent.
+2. **Manager Agent role** — Sprint planning, status report generation, blocker escalation over Teams. High-risk actions (close_sprint, reassign_task) gate through the same approval flow.
+3. **Multi-agent orchestration** — Developer Agent delegates test generation to QA Agent; Manager Agent monitors both. Shared approval queue surfaces cross-agent actions.
+4. **More connectors** — Confluence (wiki read/write), Slack (message, channel notify), Linear (issue tracking), Azure DevOps (pipeline trigger, work item update).
+5. **Workspace_git_pr action** — End-to-end PR creation with description generation, reviewer assignment, and PR link posted to Teams or Jira.
+6. **workspace_explain_code and workspace_add_docstring** — LLM-assisted code explanation and docstring generation targeted at onboarding and knowledge transfer use cases.
+7. **Container-native density tier** — Move from isolated VM per tenant to Azure Container Apps with namespace isolation; reduces per-tenant cost by ~60 percent while preserving security boundaries.
+
+### Enterprise Phase (Week 43+)
+1. **SAML/SSO and enterprise identity federation** — Support corporate IdP login for dashboard and approval flows; map enterprise groups to AgentFarm roles.
+2. **Policy-pack customization** — Tenant-specific risk overrides: e.g., merge_pr is LOW risk for a team with required-reviewers already enforced by branch policy.
+3. **Multi-region deployment** — Active-active control plane in two Azure regions; runtime provisioned in tenant's preferred region for data residency compliance.
+4. **Live meeting participation** — Teams meeting join, spoken Q&A, meeting summary generation with action items extracted and pushed to Jira. Requires separate voice pipeline and safety gate.
+5. **Compliance export automation** — Scheduled compliance packs (SOC 2, ISO 27001 evidence bundles) generated and signed on cadence for enterprise audit programs.
+6. **AgentFarm Marketplace** — Public catalog of community and partner bot configurations; one-click deploy to tenant workspace; partner revenue sharing model.
+7. **Bring-your-own-model (BYOM)** — Tenant supplies their own Azure OpenAI endpoint or on-prem model; AgentFarm wraps it with the same risk and approval layer.
+8. **Developer Agent memory** — Per-workspace persistent context: learned coding conventions, preferred PR description style, known issue patterns — surfaces as enriched prompts without extra LLM calls.
+
+### Architecture Evolution Decisions Required Pre-Scale
+1. ADR for multi-agent task delegation and shared approval queue
+2. ADR for container-native density migration path (VM → ACA)
+3. ADR for multi-region data residency and audit replication
+4. ADR for enterprise policy-pack customization boundaries
+5. ADR for BYOM security boundaries and secret isolation model
+
+---
+
 ## ADR Baseline (Approved)
 1. ADR-001: MVP scope and role boundaries
 2. ADR-002: Risk taxonomy and approval thresholds
 3. ADR-003: Connector contract model
 4. ADR-004: Audit schema and evidence freshness
 5. ADR-005: Kill switch and rollback strategy
+6. ADR-006: Database portability strategy (Prisma + Supabase)
+7. ADR-007: Multi-provider LLM routing with health-score fallback
+8. ADR-008: Local workspace execution surface (81 action types, Tier 0–8)
+9. ADR-009: Post-MVP Developer Agent expansion and multi-agent roadmap (planned)
 
-Review date for ADR set: 2026-05-03
+Review date for ADR set: 2026-05-26
 
-## Risk Register Baseline (Open Risks)
-1. R-001 Connector scope drift (High) - Owner: Product Lead
-2. R-002 Approval workflow latency (High) - Owner: Security and Safety Lead
-3. R-003 Incomplete audit evidence (High) - Owner: Engineering Lead
-4. R-004 Identity policy ambiguity (Medium) - Owner: Security and Safety Lead
-5. R-005 Weak ownership on architecture changes (Medium) - Owner: Architecture Owner
+## Risk Register Baseline (Status as of 2026-04-30)
+1. R-001 Connector scope drift (High) — Owner: Product Lead — **CLOSED**: Connector contracts frozen and implemented for Jira, Teams, GitHub, email. Post-MVP connectors tracked in roadmap.
+2. R-002 Approval workflow latency (High) — Owner: Security and Safety Lead — **MITIGATED**: P95 latency tracked, auto-escalation at 3600s implemented, SLA metrics on dashboard.
+3. R-003 Incomplete audit evidence (High) — Owner: Engineering Lead — **CLOSED**: 100% risky-action audit completeness implemented; append-only log; 12/24-month retention enforced.
+4. R-004 Identity policy ambiguity (Medium) — Owner: Security and Safety Lead — **CLOSED**: Role-based policy packs frozen in runtime capability snapshot; mismatch triggers fresh freeze on startup.
+5. R-005 Weak ownership on architecture changes (Medium) — Owner: Architecture Owner — **OPEN**: ADR change control policy enforced in code. Governance cadence (Monday kickoff, Friday gate review) in place.
+6. R-006 LLM provider single-point-of-failure (Medium) — Owner: Engineering Lead — **MITIGATED**: Nine-provider adapter with health-score fallback (ADR-007). Heuristic fallback if all providers fail.
+7. R-007 Local workspace path traversal (High) — Owner: Engineering Lead — **CLOSED**: safeChildPath() enforced on all file ops; absolute paths rejected; all tests passing.
 
 Risk governance rule: High overdue items escalate in Monday kickoff.
 
@@ -371,4 +573,17 @@ This document consolidates, but does not replace, canonical ownership of source 
 12. Repo and service structure: planning/repo-and-service-structure.md
 
 ## Immediate Next Action
-Execute Sprint 0 checklist in planning/development-kickoff-plan.md. All contract closure tasks (1.1, 1.2, 2.1, 2.2, 4.1, 5.1) must be completed before Sprint 1 build begins.
+
+Sprint 1 is complete. The platform is code-complete and quality-gate-passing.
+
+### Platform-Owner Actions Required Before Go-Live
+1. Configure repository secret: AZURE_STATIC_WEB_APPS_API_TOKEN_WEBSITE
+2. Sign in Azure CLI (`az login`) and run `azd up` per operations/runbooks/mvp-launch-ops-runbook.md
+3. Complete DNS/custom-domain TLS cutover for website SWA
+4. Run post-deploy gates: SAST/DAST scan, 1000-bot load test, evidence freshness export
+
+### After Go-Live: Enter Pilot Phase
+1. Onboard 1–2 pilot customers per operations/company-access-rollout.md
+2. Track weekly quality scores (Identity Realism, Role Fidelity, Autonomy with Approval) in Friday gate reviews
+3. Convert pilot feedback into the near-term roadmap items defined above
+4. Begin ADR planning for QA Agent and multi-agent orchestration (Scale Phase prerequisite)

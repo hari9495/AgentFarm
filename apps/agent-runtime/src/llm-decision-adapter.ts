@@ -20,6 +20,7 @@ type ParsedLlmDecision = {
     riskLevel: DecisionRisk;
     route: DecisionRoute;
     reason: string;
+    payloadOverrides?: Record<string, unknown>;
 };
 
 type OpenAiLikeUsage = {
@@ -452,6 +453,97 @@ const extractJsonPayload = (raw: string): string => {
     return trimmed;
 };
 
+const sanitizeStringArray = (value: unknown, maxItems = 8): string[] | undefined => {
+    if (!Array.isArray(value)) return undefined;
+    const normalized = value
+        .filter((entry): entry is string => typeof entry === 'string')
+        .map((entry) => entry.trim())
+        .filter((entry) => entry.length > 0)
+        .slice(0, maxItems)
+        .map((entry) => entry.slice(0, 300));
+    return normalized.length > 0 ? normalized : undefined;
+};
+
+const sanitizePlanSteps = (value: unknown): Array<Record<string, unknown>> | undefined => {
+    if (!Array.isArray(value)) return undefined;
+    const steps: Array<Record<string, unknown>> = [];
+    for (const entry of value.slice(0, 6)) {
+        if (!entry || typeof entry !== 'object') continue;
+        const candidate = entry as Record<string, unknown>;
+        const actionsRaw = Array.isArray(candidate['actions']) ? candidate['actions'] : [];
+        const actions = actionsRaw
+            .filter((action): action is Record<string, unknown> => !!action && typeof action === 'object')
+            .map((action) => ({
+                action: action['action'],
+                file_path: typeof action['file_path'] === 'string' ? action['file_path'].slice(0, 300) : undefined,
+                content: typeof action['content'] === 'string' ? action['content'].slice(0, 4000) : undefined,
+                old_text: typeof action['old_text'] === 'string' ? action['old_text'].slice(0, 2000) : undefined,
+                new_text: typeof action['new_text'] === 'string' ? action['new_text'].slice(0, 2000) : undefined,
+                command: typeof action['command'] === 'string' ? action['command'].slice(0, 300) : undefined,
+                replace_all: action['replace_all'] === true ? true : undefined,
+                expected_replacements: typeof action['expected_replacements'] === 'number'
+                    ? Math.max(1, Math.min(20, Math.floor(action['expected_replacements'])))
+                    : undefined,
+            }))
+            .filter((action) => action.action === 'code_edit'
+                || action.action === 'code_edit_patch'
+                || action.action === 'run_tests'
+                || action.action === 'run_build');
+        if (actions.length === 0) continue;
+        steps.push({
+            description: typeof candidate['description'] === 'string' ? candidate['description'].slice(0, 300) : undefined,
+            actions,
+        });
+    }
+    return steps.length > 0 ? steps : undefined;
+};
+
+const sanitizePayloadOverrides = (value: unknown): Record<string, unknown> | undefined => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+    const raw = value as Record<string, unknown>;
+    const sanitized: Record<string, unknown> = {};
+
+    const stringKeys = [
+        'specialist_profile',
+        'workflow',
+        'test_command',
+        'build_command',
+        'issue_title',
+        'issue_body',
+        'objective',
+        'environment',
+        'subscription',
+        'resource_group',
+        'location',
+        'service_name',
+        'summary',
+        'prompt',
+    ];
+    for (const key of stringKeys) {
+        if (typeof raw[key] === 'string' && raw[key].trim()) {
+            sanitized[key] = raw[key].trim().slice(0, key === 'issue_body' ? 4000 : 300);
+        }
+    }
+
+    if (typeof raw['max_attempts'] === 'number') {
+        sanitized['max_attempts'] = Math.max(1, Math.min(10, Math.floor(raw['max_attempts'])));
+    }
+
+    const targetFiles = sanitizeStringArray(raw['target_files']);
+    if (targetFiles) sanitized['target_files'] = targetFiles;
+    const testCommands = sanitizeStringArray(raw['test_commands']);
+    if (testCommands) sanitized['test_commands'] = testCommands;
+    const labels = sanitizeStringArray(raw['labels']);
+    if (labels) sanitized['labels'] = labels;
+
+    const initialPlan = sanitizePlanSteps(raw['initial_plan']);
+    if (initialPlan) sanitized['initial_plan'] = initialPlan;
+    const fixAttempts = sanitizePlanSteps(raw['fix_attempts']);
+    if (fixAttempts) sanitized['fix_attempts'] = fixAttempts;
+
+    return Object.keys(sanitized).length > 0 ? sanitized : undefined;
+};
+
 const parseAndValidateDecision = (raw: string, fallback: ActionDecision): ParsedLlmDecision => {
     const parsed = JSON.parse(extractJsonPayload(raw)) as Record<string, unknown>;
 
@@ -491,12 +583,15 @@ const parseAndValidateDecision = (raw: string, fallback: ActionDecision): Parsed
             ? clamp01(confidenceRaw)
             : fallback.confidence;
 
+    const payloadOverrides = sanitizePayloadOverrides(parsed['payloadOverrides']);
+
     return {
         actionType,
         confidence,
         riskLevel,
         route,
         reason,
+        payloadOverrides,
     };
 };
 
@@ -510,11 +605,22 @@ const createTaskPrompt = (task: TaskEnvelope, heuristicDecision: ActionDecision)
                 riskLevel: 'low | medium | high',
                 route: 'execute | approval',
                 reason: 'short explanation',
+                payloadOverrides: {
+                    specialist_profile: 'optional string',
+                    workflow: 'optional string',
+                    target_files: 'optional string[]',
+                    test_command: 'optional string',
+                    build_command: 'optional string',
+                    initial_plan: 'optional AutonomousStep[]',
+                    fix_attempts: 'optional AutonomousStep[]',
+                },
             },
             policy: [
                 'For medium or high risk, route must be approval.',
                 'Return JSON only. Do not wrap in markdown.',
                 'Use the task payload and heuristic baseline below.',
+                'When choosing workspace_subagent_spawn, include payloadOverrides.initial_plan and payloadOverrides.fix_attempts whenever you can propose a bounded verification-first plan.',
+                'Only use action steps from this set: code_edit, code_edit_patch, run_tests, run_build.',
             ],
             task,
             heuristicDecision,
@@ -616,6 +722,7 @@ const createAnthropicResolver = (input: {
 
         return {
             decision,
+            payloadOverrides: decision.payloadOverrides,
             metadata: {
                 modelProvider: 'anthropic',
                 model: selectedModel,
@@ -683,6 +790,7 @@ const createGoogleResolver = (input: {
 
         return {
             decision,
+            payloadOverrides: decision.payloadOverrides,
             metadata: {
                 modelProvider: 'google',
                 model: selectedModel,
@@ -784,6 +892,7 @@ const createOpenAiResolver = (input: {
 
         return {
             decision,
+            payloadOverrides: decision.payloadOverrides,
             metadata: {
                 modelProvider: 'openai',
                 model: selectedModel,
@@ -849,6 +958,7 @@ const createGitHubModelsResolver = (input: {
 
         return {
             decision,
+            payloadOverrides: decision.payloadOverrides,
             metadata: {
                 modelProvider: 'github_models',
                 model: selectedModel,
@@ -908,6 +1018,7 @@ const createXaiResolver = (input: {
 
         return {
             decision,
+            payloadOverrides: decision.payloadOverrides,
             metadata: {
                 modelProvider: 'xai',
                 model: selectedModel,
@@ -967,6 +1078,7 @@ const createMistralResolver = (input: {
 
         return {
             decision,
+            payloadOverrides: decision.payloadOverrides,
             metadata: {
                 modelProvider: 'mistral',
                 model: selectedModel,
@@ -1026,6 +1138,7 @@ const createTogetherResolver = (input: {
 
         return {
             decision,
+            payloadOverrides: decision.payloadOverrides,
             metadata: {
                 modelProvider: 'together',
                 model: selectedModel,
@@ -1291,6 +1404,7 @@ const createAzureOpenAiResolver = (input: {
 
         return {
             decision,
+            payloadOverrides: decision.payloadOverrides,
             metadata: {
                 modelProvider: 'azure_openai',
                 model: selectedDeployment,

@@ -1,14 +1,18 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { Suspense } from 'react';
+import type { ReactElement } from 'react';
 import { ApprovalQueuePanel } from './components/approval-queue-panel';
 import { ConnectorConfigPanel } from './components/connector-config-panel';
 import { EvidenceCompliancePanel } from './components/evidence-compliance-panel';
 import { RuntimeObservabilityPanel } from './components/runtime-observability-panel';
 import { LlmConfigPanel } from './components/llm-config-panel';
 import { DashboardTabNav } from './components/dashboard-tab-nav';
+import { DashboardMobileShell } from './components/dashboard-mobile-shell';
 import { DashboardDeepLinkBar } from './components/dashboard-deep-link-bar';
 import { DashboardWorkspaceSwitcher } from './components/dashboard-workspace-switcher';
 import { WorkspaceBudgetPanel } from './components/workspace-budget-panel';
+import { OperationalSignalTimeline, type OperationalSignalTimelinePoint } from './components/operational-signal-timeline';
 import type { DashboardTab } from './components/dashboard-navigation';
 import type { WorkspaceBudgetSnapshot } from './components/workspace-budget-panel-utils';
 import { isInternalSessionToken } from './lib/internal-session';
@@ -175,6 +179,29 @@ type InternalLoginPolicySnapshot = {
     deny_all_mode: boolean;
     source: ApiSource;
     fetched_at: string;
+};
+
+type DashboardTone = 'low' | 'warn' | 'high' | 'neutral';
+
+type KpiCard = {
+    label: string;
+    value: string;
+    trend: string;
+    delta: string;
+    deltaTone: DashboardTone;
+    status: string;
+    statusTone: DashboardTone;
+    icon: ReactElement;
+};
+
+type HistoricalMetricSample = {
+    at: string;
+    signal_count: number;
+};
+
+type HistoricalMetricsSnapshot = {
+    points: OperationalSignalTimelinePoint[];
+    source: ApiSource;
 };
 
 const fallbackRuntimeHealth: RuntimeHealthSnapshot = {
@@ -737,6 +764,60 @@ const normalizeTab = (tab: string | undefined): DashboardTab => {
     return 'overview';
 };
 
+const formatMinutes = (seconds: number | null | undefined): string => {
+    if (!seconds || seconds <= 0) {
+        return 'Auto';
+    }
+
+    return `${Math.ceil(seconds / 60)}m`;
+};
+
+const getWorkspaceHistoricalMetrics = async (
+    context: ApiRequestContext,
+    workspaceId: string,
+): Promise<HistoricalMetricsSnapshot> => {
+    try {
+        const response = await fetch(
+            `${context.apiBaseUrl}/v1/dashboard/workspace/${encodeURIComponent(workspaceId)}/historical-metrics?window=12h&bucket=1h`,
+            {
+                headers: context.headers,
+                cache: 'no-store',
+            },
+        );
+
+        if (!response.ok) {
+            return { points: [], source: 'fallback' };
+        }
+
+        const payload = (await response.json()) as {
+            points?: HistoricalMetricSample[];
+            metrics?: HistoricalMetricSample[];
+            timeline?: HistoricalMetricSample[];
+        };
+
+        const inputPoints = payload.points ?? payload.metrics ?? payload.timeline ?? [];
+        const points = inputPoints
+            .map((sample) => {
+                const timestamp = new Date(sample.at).getTime();
+                if (!Number.isFinite(timestamp)) {
+                    return null;
+                }
+
+                return {
+                    label: new Date(timestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+                    value: Math.max(0, Math.round(Number(sample.signal_count) || 0)),
+                    timestamp,
+                };
+            })
+            .filter((point): point is OperationalSignalTimelinePoint => point !== null)
+            .sort((left, right) => left.timestamp - right.timestamp);
+
+        return { points, source: 'live' };
+    } catch {
+        return { points: [], source: 'fallback' };
+    }
+};
+
 export default async function HomePage({
     searchParams,
 }: {
@@ -769,55 +850,135 @@ export default async function HomePage({
     const workspaceBudget = await getWorkspaceBudgetState(context, workspace.workspace_id);
     const runtimeObs = await getRuntimeObservabilityData(workspace.bot_id);
     const internalPolicy = await getInternalLoginPolicySnapshot(context);
+    const historicalMetrics = await getWorkspaceHistoricalMetrics(context, workspace.workspace_id);
 
     const source = summarySource === 'live' && dashboardSlice.source === 'live' ? 'live' : 'fallback';
 
-    const targetKpis = [
-        { label: 'Active Workspaces', value: String(summary.total_workspaces), trend: source === 'live' ? 'live' : 'fallback' },
+    const degradedWorkspaceCount = workspaceOptions.filter(
+        (item) => item.workspace_status === 'degraded' || item.bot_status === 'degraded',
+    ).length;
+    const unhealthyConnectorCount = dashboardSlice.connectors.filter((connector) => getStatusBadgeClass(connector.status) !== 'low').length;
+    const highSeverityAuditCount = dashboardSlice.events.filter((event) => event.severity === 'high' || event.severity === 'critical').length;
+    const approvalP95Minutes = formatMinutes(dashboardSlice.approvalMetrics.p95_decision_latency_seconds);
+    const runtimeFailedTasks = runtimeObs.health.failed_tasks ?? 0;
+    const runtimeRestarts = usageSummary.runtime_restart_count;
+    const provisioningLatencyLabel = `${Math.ceil(dashboardSlice.provisioning.provisioning_latency_ms / 60_000)}m / ${Math.ceil(dashboardSlice.provisioning.sla_target_ms / 60_000)}m`;
+
+    const targetKpis: KpiCard[] = [
+        {
+            label: 'Active Workspaces',
+            value: String(summary.total_workspaces),
+            trend: `${summary.active_bots} bots active`,
+            delta: degradedWorkspaceCount === 0 ? 'No degraded workspaces' : `${degradedWorkspaceCount} degraded`,
+            deltaTone: degradedWorkspaceCount === 0 ? 'low' : 'warn',
+            status: source === 'live' ? 'Live sync' : 'Fallback mode',
+            statusTone: source === 'live' ? 'low' : 'warn',
+            icon: (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <rect x="2" y="3" width="7" height="7" rx="1" /><rect x="15" y="3" width="7" height="7" rx="1" /><rect x="15" y="14" width="7" height="7" rx="1" /><rect x="2" y="14" width="7" height="7" rx="1" />
+                </svg>
+            ),
+        },
         {
             label: 'Approval SLA (P95)',
-            value: dashboardSlice.pendingApprovals.length === 0 ? 'Auto' : `${dashboardSlice.pendingApprovals.length} pending`,
-            trend: 'review queue',
+            value: approvalP95Minutes,
+            trend: `${dashboardSlice.pendingApprovals.length} approvals waiting`,
+            delta: dashboardSlice.pendingApprovals.length === 0 ? 'Queue clear' : `+${dashboardSlice.pendingApprovals.length} pending`,
+            deltaTone: dashboardSlice.pendingApprovals.length === 0 ? 'low' : 'warn',
+            status:
+                dashboardSlice.approvalMetrics.p95_decision_latency_seconds === null ||
+                    dashboardSlice.approvalMetrics.p95_decision_latency_seconds <= 900
+                    ? 'Within SLA'
+                    : 'Needs attention',
+            statusTone:
+                dashboardSlice.approvalMetrics.p95_decision_latency_seconds === null ||
+                    dashboardSlice.approvalMetrics.p95_decision_latency_seconds <= 900
+                    ? 'low'
+                    : 'warn',
+            icon: (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+                </svg>
+            ),
         },
         {
             label: 'Bot Runtime Status',
             value: workspace.bot_status === 'active' ? 'Healthy' : workspace.bot_status,
-            trend: 'live runtime',
+            trend: `${runtimeObs.health.heartbeat_sent ?? 0} heartbeats sent`,
+            delta: runtimeFailedTasks === 0 ? 'No failed tasks' : `${runtimeFailedTasks} failed tasks`,
+            deltaTone: runtimeFailedTasks === 0 ? 'low' : 'high',
+            status: runtimeRestarts === 0 ? 'No restarts' : `${runtimeRestarts} restarts`,
+            statusTone: runtimeRestarts === 0 ? 'low' : 'warn',
+            icon: (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <rect x="4" y="4" width="16" height="16" rx="2" /><rect x="9" y="9" width="6" height="6" /><line x1="9" y1="1" x2="9" y2="4" /><line x1="15" y1="1" x2="15" y2="4" /><line x1="9" y1="20" x2="9" y2="23" /><line x1="15" y1="20" x2="15" y2="23" /><line x1="20" y1="9" x2="23" y2="9" /><line x1="20" y1="14" x2="23" y2="14" /><line x1="1" y1="9" x2="4" y2="9" /><line x1="1" y1="14" x2="4" y2="14" />
+                </svg>
+            ),
         },
         {
             label: 'Provisioning SLA',
             value: dashboardSlice.provisioning.sla_breached ? 'Breached' : 'Within target',
-            trend: `${Math.ceil(dashboardSlice.provisioning.provisioning_latency_ms / 60_000)}m / ${Math.ceil(dashboardSlice.provisioning.sla_target_ms / 60_000)}m`,
+            trend: provisioningLatencyLabel,
+            delta: dashboardSlice.provisioning.is_stuck
+                ? 'Stuck alert active'
+                : dashboardSlice.provisioning.current_step.replace(/_/g, ' '),
+            deltaTone: dashboardSlice.provisioning.is_stuck ? 'high' : 'low',
+            status: dashboardSlice.provisioning.job_status.replace(/_/g, ' '),
+            statusTone:
+                dashboardSlice.provisioning.job_status === 'completed'
+                    ? 'low'
+                    : dashboardSlice.provisioning.job_status === 'failed'
+                        ? 'high'
+                        : 'warn',
+            icon: (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z" /><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z" />
+                </svg>
+            ),
         },
         {
             label: 'Audit Coverage',
             value: dashboardSlice.events.length > 0 ? 'Tracked' : 'Pending',
-            trend: 'recent activity',
+            trend: `${dashboardSlice.events.length} recent events`,
+            delta: highSeverityAuditCount === 0 ? 'No critical findings' : `${highSeverityAuditCount} high severity`,
+            deltaTone: highSeverityAuditCount === 0 ? 'low' : 'high',
+            status: internalPolicy.deny_all_mode ? 'Deny-all default' : 'Scoped access',
+            statusTone: internalPolicy.deny_all_mode ? 'neutral' : 'low',
+            icon: (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><polyline points="9 12 11 14 15 10" />
+                </svg>
+            ),
         },
     ];
 
     return (
-        <main className="dashboard-layout">
-            <aside className="dashboard-sidebar">
-                <p className="eyebrow">AgentFarm Internal</p>
-                <h2 className="dashboard-sidebar-title">Operations Console</h2>
-                <p className="sidebar-current-workspace">
-                    Current workspace: <strong>{workspace.workspace_name}</strong>
-                </p>
-                <DashboardWorkspaceSwitcher
-                    variant="sidebar"
-                    activeWorkspaceId={workspace.workspace_id}
-                    activeTab={activeTab}
-                    workspaces={workspaceOptions.map((item) => ({
-                        workspaceId: item.workspace_id,
-                        workspaceName: item.workspace_name,
-                    }))}
-                    syncFromStorage
-                />
-                <DashboardTabNav activeTab={activeTab} variant="sidebar" syncFromStorage workspaceId={workspace.workspace_id} />
-            </aside>
-
-            <section className="dashboard-main">
+        <Suspense fallback={<div className="dashboard-loading-shell" aria-busy="true" />}>
+            <DashboardMobileShell
+                workspaceName={workspace.workspace_name}
+                sidebar={(
+                    <>
+                        <p className="eyebrow">AgentFarm Internal</p>
+                        <h2 className="dashboard-sidebar-title">Operations Console</h2>
+                        <p className="sidebar-current-workspace">
+                            Current workspace: <strong>{workspace.workspace_name}</strong>
+                        </p>
+                        <DashboardWorkspaceSwitcher
+                            variant="sidebar"
+                            activeWorkspaceId={workspace.workspace_id}
+                            activeTab={activeTab}
+                            workspaces={workspaceOptions.map((item) => ({
+                                workspaceId: item.workspace_id,
+                                workspaceName: item.workspace_name,
+                            }))}
+                            syncFromStorage
+                        />
+                        <Suspense fallback={null}>
+                            <DashboardTabNav activeTab={activeTab} variant="sidebar" syncFromStorage workspaceId={workspace.workspace_id} />
+                        </Suspense>
+                    </>
+                )}
+            >
                 <header className="topbar">
                     <div>
                         <p className="eyebrow topbar-eyebrow">
@@ -843,11 +1004,15 @@ export default async function HomePage({
                     </div>
                 </header>
 
-                <DashboardTabNav activeTab={activeTab} variant="top" workspaceId={workspace.workspace_id} />
-                <DashboardDeepLinkBar activeTab={activeTab} workspaceId={workspace.workspace_id} />
+                <Suspense fallback={null}>
+                    <DashboardTabNav activeTab={activeTab} variant="top" workspaceId={workspace.workspace_id} />
+                </Suspense>
+                <Suspense fallback={null}>
+                    <DashboardDeepLinkBar activeTab={activeTab} workspaceId={workspace.workspace_id} />
+                </Suspense>
 
                 {activeTab === 'overview' && (
-                    <>
+                    <section id="dashboard-panel-overview" role="tabpanel" aria-labelledby="dashboard-tab-overview" className="dashboard-panel">
                         <header className="hero">
                             <p className="eyebrow">Overview</p>
                             <h1>Workspace Operations Summary</h1>
@@ -859,12 +1024,23 @@ export default async function HomePage({
                         <section className="metric-row">
                             {targetKpis.map((kpi) => (
                                 <article key={kpi.label} className="card metric-card">
-                                    <h2>{kpi.label}</h2>
-                                    <p className="metric-value">{kpi.value}</p>
-                                    <p className="metric-trend">{kpi.trend}</p>
+                                    <div className="metric-card-header">
+                                        <span className="metric-card-icon">{kpi.icon}</span>
+                                        <h2>{kpi.label}</h2>
+                                    </div>
+                                    <div className="metric-card-body">
+                                        <p className="metric-value">{kpi.value}</p>
+                                        <p className="metric-trend">{kpi.trend}</p>
+                                    </div>
+                                    <div className="metric-card-footer">
+                                        <span className={`metric-indicator ${kpi.deltaTone}`}>{kpi.delta}</span>
+                                        <span className={`metric-indicator ${kpi.statusTone}`}>{kpi.status}</span>
+                                    </div>
                                 </article>
                             ))}
                         </section>
+
+                        <OperationalSignalTimeline points={historicalMetrics.points} source={historicalMetrics.source} />
 
                         <section className="grid-two">
                             <article className="card">
@@ -941,7 +1117,7 @@ export default async function HomePage({
                                 </code>{' '}
                                 — started{' '}
                                 {dashboardSlice.provisioning.started_at
-                                    ? new Date(dashboardSlice.provisioning.started_at).toLocaleTimeString()
+                                    ? new Date(dashboardSlice.provisioning.started_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
                                     : 'not yet'}
                             </p>
 
@@ -954,7 +1130,7 @@ export default async function HomePage({
                                 </span>
                                 {dashboardSlice.provisioning.timeout_at && (
                                     <span className="badge warn">
-                                        timeout at {new Date(dashboardSlice.provisioning.timeout_at).toLocaleString()}
+                                        timeout at {new Date(dashboardSlice.provisioning.timeout_at).toLocaleString('en-US')}
                                     </span>
                                 )}
                             </div>
@@ -1012,7 +1188,7 @@ export default async function HomePage({
                                 <div className="status-panel success">
                                     Bot provisioned and ready.{' '}
                                     {dashboardSlice.provisioning.completed_at &&
-                                        `Completed at ${new Date(dashboardSlice.provisioning.completed_at).toLocaleTimeString()}.`}
+                                        `Completed at ${new Date(dashboardSlice.provisioning.completed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}.`}
                                 </div>
                             )}
                         </section>
@@ -1047,11 +1223,17 @@ export default async function HomePage({
                             initialConnectors={dashboardSlice.connectors.map(mapConnectorForConfig)}
                         />
                         <LlmConfigPanel workspaceId={workspace.workspace_id} />
-                    </>
+                    </section>
                 )}
 
                 {activeTab === 'approvals' && (
-                    <section aria-label="approval-command-center">
+                    <section
+                        id="dashboard-panel-approvals"
+                        role="tabpanel"
+                        aria-labelledby="dashboard-tab-approvals"
+                        className="dashboard-panel"
+                        aria-label="approval-command-center"
+                    >
                         <ApprovalQueuePanel
                             workspaceId={workspace.workspace_id}
                             initialPending={dashboardSlice.pendingApprovals}
@@ -1063,7 +1245,7 @@ export default async function HomePage({
                 )}
 
                 {activeTab === 'observability' && (
-                    <section>
+                    <section id="dashboard-panel-observability" role="tabpanel" aria-labelledby="dashboard-tab-observability" className="dashboard-panel">
                         <RuntimeObservabilityPanel
                             botId={workspace.bot_id}
                             connectors={dashboardSlice.connectors}
@@ -1083,7 +1265,7 @@ export default async function HomePage({
                 )}
 
                 {activeTab === 'audit' && (
-                    <section>
+                    <section id="dashboard-panel-audit" role="tabpanel" aria-labelledby="dashboard-tab-audit" className="dashboard-panel">
                         <EvidenceCompliancePanel
                             workspaceId={workspace.workspace_id}
                             initialEvents={dashboardSlice.events}
@@ -1091,7 +1273,7 @@ export default async function HomePage({
                         />
                     </section>
                 )}
-            </section>
-        </main>
+            </DashboardMobileShell>
+        </Suspense>
     );
 }

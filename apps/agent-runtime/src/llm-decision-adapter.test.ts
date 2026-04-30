@@ -109,6 +109,75 @@ test('createLlmDecisionResolverFromConfig selects cost_balanced OpenAI model for
     }
 });
 
+test('createLlmDecisionResolverFromConfig parses payloadOverrides for workspace_subagent_spawn', async () => {
+    const originalFetch = globalThis.fetch;
+
+    globalThis.fetch = (async (_url: string | URL | Request, _init?: RequestInit) => new Response(JSON.stringify({
+        choices: [{
+            message: {
+                content: JSON.stringify({
+                    actionType: 'workspace_subagent_spawn',
+                    confidence: 0.94,
+                    riskLevel: 'high',
+                    route: 'approval',
+                    reason: 'Bounded plan required before execution.',
+                    payloadOverrides: {
+                        test_command: 'pnpm --filter @agentfarm/agent-runtime test',
+                        initial_plan: [
+                            {
+                                description: 'run the narrow failing test first',
+                                actions: [{ action: 'run_tests', command: 'pnpm --filter @agentfarm/agent-runtime test' }],
+                            },
+                        ],
+                        fix_attempts: [
+                            {
+                                description: 're-run tests after repair',
+                                actions: [{ action: 'run_tests', command: 'pnpm --filter @agentfarm/agent-runtime test' }],
+                            },
+                        ],
+                    },
+                }),
+            },
+        }],
+        usage: {
+            prompt_tokens: 140,
+            completion_tokens: 55,
+            total_tokens: 195,
+        },
+    }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+    })) as typeof fetch;
+
+    try {
+        const resolver = createLlmDecisionResolverFromConfig({
+            provider: 'openai',
+            openai: {
+                api_key: 'sk-test',
+                model: 'gpt-4o-mini',
+            },
+        });
+
+        assert.ok(resolver);
+        const result = await resolver!({
+            task: makeTask({ action_type: 'workspace_subagent_spawn', prompt: 'Fix the regression' }),
+            heuristicDecision: {
+                actionType: 'workspace_subagent_spawn',
+                confidence: 0.62,
+                riskLevel: 'high',
+                route: 'approval',
+                reason: 'Heuristic fallback',
+            },
+        });
+
+        assert.equal(result.payloadOverrides?.['test_command'], 'pnpm --filter @agentfarm/agent-runtime test');
+        assert.ok(Array.isArray(result.payloadOverrides?.['initial_plan']));
+        assert.ok(Array.isArray(result.payloadOverrides?.['fix_attempts']));
+    } finally {
+        globalThis.fetch = originalFetch;
+    }
+});
+
 test('createLlmDecisionResolverFromConfig selects quality_first Azure deployment for high-complexity tasks', async () => {
     const originalFetch = globalThis.fetch;
     let calledUrl = '';

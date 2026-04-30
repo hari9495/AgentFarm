@@ -1762,6 +1762,11 @@ test('startup freezes capability snapshot and exposes it via runtime endpoint', 
         assert.ok(snapshotBody.snapshot.allowedActions.includes('create_pr'));
         assert.ok(snapshotBody.snapshot.allowedActions.includes('merge_pr'));
         assert.ok(snapshotBody.snapshot.allowedActions.includes('list_prs'));
+        assert.ok(snapshotBody.snapshot.allowedActions.includes('code_edit_patch'));
+        assert.ok(snapshotBody.snapshot.allowedActions.includes('autonomous_loop'));
+        assert.ok(snapshotBody.snapshot.allowedActions.includes('create_pr_from_workspace'));
+        assert.ok(snapshotBody.snapshot.allowedActions.includes('workspace_github_issue_triage'));
+        assert.ok(snapshotBody.snapshot.allowedActions.includes('workspace_azure_deploy_plan'));
     } finally {
         await app.close();
     }
@@ -1781,7 +1786,119 @@ test('startup loads latest persisted capability snapshot by botId when available
                 roleKey: 'developer',
                 roleVersion: 'v1',
                 allowedConnectorTools: ['jira', 'teams', 'github', 'email'],
-                allowedActions: ['read_task', 'create_comment', 'update_status', 'send_message', 'create_pr_comment', 'create_pr', 'merge_pr', 'list_prs', 'send_email'],
+                allowedActions: [
+                    // Connector actions
+                    'read_task',
+                    'create_comment',
+                    'update_status',
+                    'send_message',
+                    'create_pr_comment',
+                    'create_pr',
+                    'merge_pr',
+                    'list_prs',
+                    'send_email',
+                    // Tier 0-1: Local workspace (original)
+                    'git_clone',
+                    'git_branch',
+                    'git_commit',
+                    'git_push',
+                    'git_stash',
+                    'git_log',
+                    'code_read',
+                    'code_edit',
+                    'code_edit_patch',
+                    'code_search_replace',
+                    'apply_patch',
+                    'file_move',
+                    'file_delete',
+                    'run_build',
+                    'run_tests',
+                    'run_linter',
+                    'workspace_install_deps',
+                    'workspace_list_files',
+                    'workspace_grep',
+                    'workspace_scout',
+                    'workspace_checkpoint',
+                    'autonomous_loop',
+                    'workspace_cleanup',
+                    'workspace_diff',
+                    'workspace_memory_write',
+                    'workspace_memory_read',
+                    'run_shell_command',
+                    'create_pr_from_workspace',
+                    // Tier 3: IDE-level capabilities
+                    'workspace_find_references',
+                    'workspace_rename_symbol',
+                    'workspace_extract_function',
+                    'workspace_go_to_definition',
+                    'workspace_hover_type',
+                    'workspace_analyze_imports',
+                    'workspace_code_coverage',
+                    'workspace_complexity_metrics',
+                    'workspace_security_scan',
+                    // Tier 4: Multi-file coordination
+                    'workspace_bulk_refactor',
+                    'workspace_atomic_edit_set',
+                    'workspace_generate_from_template',
+                    'workspace_migration_helper',
+                    'workspace_summarize_folder',
+                    'workspace_dependency_tree',
+                    'workspace_test_impact_analysis',
+                    // Tier 5: External knowledge & experimentation
+                    'workspace_search_docs',
+                    'workspace_package_lookup',
+                    'workspace_ai_code_review',
+                    'workspace_repl_start',
+                    'workspace_repl_execute',
+                    'workspace_repl_stop',
+                    'workspace_debug_breakpoint',
+                    'workspace_profiler_run',
+                    // Tier 6: Language adapters
+                    'workspace_language_adapter_python',
+                    'workspace_language_adapter_java',
+                    'workspace_language_adapter_go',
+                    'workspace_language_adapter_csharp',
+                    // Tier 7: Governance & safety
+                    'workspace_dry_run_with_approval_chain',
+                    'workspace_change_impact_report',
+                    'workspace_rollback_to_checkpoint',
+                    'workspace_generate_test',
+                    'workspace_format_code',
+                    'workspace_version_bump',
+                    'workspace_changelog_generate',
+                    'workspace_git_blame',
+                    'workspace_outline_symbols',
+                    'workspace_create_pr',
+                    'workspace_run_ci_checks',
+                    'workspace_fix_test_failures',
+                    'workspace_security_fix_suggest',
+                    'workspace_pr_review_prepare',
+                    'workspace_dependency_upgrade_plan',
+                    'workspace_release_notes_generate',
+                    'workspace_incident_patch_pack',
+                    'workspace_memory_profile',
+                    'workspace_autonomous_plan_execute',
+                    'workspace_policy_preflight',
+                    'workspace_connector_test',
+                    'workspace_pr_auto_assign',
+                    'workspace_ci_watch',
+                    'workspace_explain_code',
+                    'workspace_add_docstring',
+                    'workspace_refactor_plan',
+                    'workspace_semantic_search',
+                    'workspace_diff_preview',
+                    'workspace_approval_status',
+                    'workspace_audit_export',
+                    'workspace_browser_open',
+                    'workspace_app_launch',
+                    'workspace_meeting_join',
+                    'workspace_subagent_spawn',
+                    'workspace_github_pr_status',
+                    'workspace_github_issue_triage',
+                    'workspace_github_issue_fix',
+                    'workspace_azure_deploy_plan',
+                    'workspace_slack_notify',
+                ],
                 policyPackVersion: 'mvp-v1',
                 frozenAt: new Date().toISOString(),
                 brainConfig: {
@@ -2025,7 +2142,29 @@ test('startup falls back to fresh freeze when persisted snapshot policy pack mis
                 roleKey: 'developer',
                 roleVersion: 'v1',
                 allowedConnectorTools: ['jira', 'teams', 'github', 'email'],
-                allowedActions: ['read_task', 'create_comment', 'update_status', 'send_message', 'create_pr_comment', 'create_pr', 'merge_pr', 'list_prs', 'send_email'],
+                allowedActions: [
+                    'read_task',
+                    'create_comment',
+                    'update_status',
+                    'send_message',
+                    'create_pr_comment',
+                    'create_pr',
+                    'merge_pr',
+                    'list_prs',
+                    'send_email',
+                    'git_clone',
+                    'git_branch',
+                    'git_commit',
+                    'git_push',
+                    'code_read',
+                    'code_edit',
+                    'code_edit_patch',
+                    'run_build',
+                    'run_tests',
+                    'autonomous_loop',
+                    'workspace_cleanup',
+                    'create_pr_from_workspace',
+                ],
                 policyPackVersion: 'legacy-policy-v0',
                 frozenAt: new Date().toISOString(),
                 brainConfig: {
@@ -2168,7 +2307,8 @@ test('runtime blocks disallowed connector execution based on frozen snapshot pol
         assert.ok(failedRecord);
         assert.equal(failedRecord?.status, 'failed');
         assert.equal(failedRecord?.failureClass, 'runtime_exception');
-        assert.ok((failedRecord?.errorMessage ?? '').includes('not allowed'));
+        const message = failedRecord?.errorMessage ?? '';
+        assert.ok(message.includes('not allowed') || message.includes('not in frozen capability snapshot policy'));
     } finally {
         await app.close();
     }
@@ -2815,6 +2955,8 @@ test('task execution record captures llm token usage when llmDecisionResolver is
         assert.equal(written?.['promptTokens'], 90);
         assert.equal(written?.['completionTokens'], 30);
         assert.equal(written?.['totalTokens'], 120);
+        assert.equal(written?.['payloadOverrideSource'], 'none');
+        assert.equal(written?.['payloadOverridesApplied'], false);
     } finally {
         await app.close();
     }
@@ -2866,6 +3008,78 @@ test('task execution record falls back to provider metadata with null token usag
         assert.equal(written?.['promptTokens'], null);
         assert.equal(written?.['completionTokens'], null);
         assert.equal(written?.['totalTokens'], null);
+        assert.equal(written?.['payloadOverrideSource'], 'none');
+        assert.equal(written?.['payloadOverridesApplied'], false);
+    } finally {
+        await app.close();
+    }
+});
+
+test('task execution record marks payload overrides as llm_generated when resolver emits overrides', async () => {
+    const records: Array<Record<string, unknown>> = [];
+    const app = buildRuntimeServer({
+        env: {
+            ...baseEnv(),
+            AF_MODEL_PROVIDER: 'openai',
+        },
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+        llmDecisionResolver: async () => ({
+            decision: {
+                actionType: 'workspace_subagent_spawn',
+                confidence: 0.93,
+                riskLevel: 'high',
+                route: 'approval',
+                reason: 'LLM produced bounded autonomous plan.',
+            },
+            metadata: {
+                modelProvider: 'openai',
+                model: 'gpt-4.1',
+                promptTokens: 140,
+                completionTokens: 52,
+                totalTokens: 192,
+            },
+            payloadOverrides: {
+                initial_plan: [
+                    {
+                        description: 'run targeted tests before edits',
+                        actions: [{ action: 'run_tests', command: 'pnpm --filter @agentfarm/agent-runtime test' }],
+                    },
+                ],
+            },
+        }),
+        taskExecutionRecordWriter: {
+            write: async (input) => {
+                records.push(input as unknown as Record<string, unknown>);
+            },
+        },
+    });
+
+    try {
+        const startupRes = await app.inject({ method: 'POST', url: '/startup' });
+        assert.equal(startupRes.statusCode, 200);
+
+        const intakeRes = await app.inject({
+            method: 'POST',
+            url: '/tasks/intake',
+            payload: {
+                task_id: 'llm-metadata-overrides-1',
+                payload: {
+                    action_type: 'read_task',
+                    summary: 'Collect deployment status',
+                    target: 'deployments',
+                },
+            },
+        });
+        assert.equal(intakeRes.statusCode, 202);
+
+        await new Promise<void>((resolve) => setTimeout(resolve, 80));
+
+        const written = records.find((record) => record['taskId'] === 'llm-metadata-overrides-1');
+        assert.ok(written, 'task execution record should be written');
+        assert.equal(written?.['payloadOverrideSource'], 'llm_generated');
+        assert.equal(written?.['payloadOverridesApplied'], true);
     } finally {
         await app.close();
     }
@@ -2968,6 +3182,81 @@ test('budget hard-stop denial blocks task execution and persists budget decision
         assert.equal(deniedRecord?.budgetLimitScope, 'tenant_daily');
         assert.equal(deniedRecord?.budgetLimitType, 'hard_stop');
         assert.ok(deniedRecord?.errorMessage?.includes('budget hard-stop'));
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/transcripts returns empty list before any tasks are processed', async () => {
+    const app = buildRuntimeServer({
+        env: baseEnv(),
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+    });
+
+    try {
+        const res = await app.inject({ method: 'GET', url: '/runtime/transcripts' });
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as { count: number; total_buffered: number; transcripts: unknown[] };
+        assert.equal(body.count, 0);
+        assert.equal(body.total_buffered, 0);
+        assert.ok(Array.isArray(body.transcripts));
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/transcripts records a transcript entry after a task completes', async () => {
+    const persisted: ActionResultRecord[] = [];
+    const app = buildRuntimeServer({
+        env: baseEnv(),
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+        actionResultWriter: async (r: ActionResultRecord) => { persisted.push(r); },
+    });
+
+    try {
+        const startupRes = await app.inject({ method: 'POST', url: '/startup' });
+        assert.equal(startupRes.statusCode, 200);
+
+        await app.inject({
+            method: 'POST',
+            url: '/tasks/intake',
+            payload: {
+                task_id: 'transcript-task-1',
+                payload: {
+                    action_type: 'read_task',
+                    summary: 'Read a ticket',
+                    target: 'ticket-001',
+                    force_failure: true,
+                },
+            },
+        });
+
+        // Wait for the worker loop to process the task
+        await new Promise<void>((resolve) => setTimeout(resolve, 120));
+
+        const res = await app.inject({ method: 'GET', url: '/runtime/transcripts' });
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as {
+            count: number;
+            total_buffered: number;
+            transcripts: Array<{
+                taskId: string;
+                actionType: string;
+                status: string;
+                durationMs: number;
+                approvalRequired: boolean;
+            }>;
+        };
+        assert.ok(body.count >= 1, 'at least one transcript should be recorded');
+        const entry = body.transcripts.find((t) => t.taskId === 'transcript-task-1');
+        assert.ok(entry, 'transcript entry for transcript-task-1 should exist');
+        assert.equal(entry?.actionType, 'read_task');
+        assert.equal(typeof entry?.durationMs, 'number');
+        assert.ok(entry?.durationMs >= 0);
     } finally {
         await app.close();
     }

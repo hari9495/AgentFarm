@@ -308,6 +308,109 @@ Build end-to-end testing, load testing, and production deployment.
 - Dependency: 8.1, 8.2
 - Due: 2026-05-26
 
+### Workstream 9: Tier 1/2 Local Workspace Actions (Tasks 9.1–9.11)
+Implement the Developer Agent Tier 1 and Tier 2 local workspace actions for Claude Code / Codex parity. All implemented in `apps/agent-runtime/src/local-workspace-executor.ts`.
+
+**Task 9.1: Implement `workspace_list_files`**
+- Recursive directory walk with configurable depth, pattern filter, and include_dirs option
+- Skips `.git`, `node_modules`, `__pycache__`, `dist`, `build` directories
+- Returns JSON string array of relative paths
+- Status: Completed (2026-04-30)
+- Evidence: apps/agent-runtime/src/local-workspace-executor.ts, apps/agent-runtime/src/local-workspace-executor.test.ts
+- Validation: pnpm --filter @agentfarm/agent-runtime test (118/118 pass)
+- Risk: low (no approval required)
+- Due: 2026-04-30
+
+**Task 9.2: Implement `workspace_grep`**
+- Regex search across workspace files with optional file_pattern, context_lines, and max_results
+- Returns JSON `[{file, line, col, text, context_before?, context_after?}]`
+- Status: Completed (2026-04-30)
+- Evidence: apps/agent-runtime/src/local-workspace-executor.ts, apps/agent-runtime/src/local-workspace-executor.test.ts
+- Validation: pnpm --filter @agentfarm/agent-runtime test (118/118 pass)
+- Risk: low (no approval required)
+- Due: 2026-04-30
+
+**Task 9.3: Implement `file_move`**
+- Rename or move a file/directory within the workspace sandbox
+- safeChildPath enforced on both source and destination; parent directories auto-created
+- Status: Completed (2026-04-30)
+- Evidence: apps/agent-runtime/src/local-workspace-executor.ts, apps/agent-runtime/src/local-workspace-executor.test.ts
+- Validation: pnpm --filter @agentfarm/agent-runtime test (118/118 pass)
+- Risk: medium (requires approval)
+- Due: 2026-04-30
+
+**Task 9.4: Implement `file_delete`**
+- Delete a file or directory from the workspace sandbox; supports recursive flag
+- safeChildPath enforced; force:true prevents errors on missing files
+- Status: Completed (2026-04-30)
+- Evidence: apps/agent-runtime/src/local-workspace-executor.ts, apps/agent-runtime/src/local-workspace-executor.test.ts
+- Validation: pnpm --filter @agentfarm/agent-runtime test (118/118 pass)
+- Risk: medium (requires approval)
+- Due: 2026-04-30
+
+**Task 9.5: Implement `workspace_install_deps`**
+- Auto-detects package manager: pnpm-lock.yaml→pnpm, yarn.lock→yarn, go.mod→go mod tidy, requirements.txt→pip, Cargo.toml→cargo build, else→npm
+- Supports explicit override via command field
+- Status: Completed (2026-04-30)
+- Evidence: apps/agent-runtime/src/local-workspace-executor.ts
+- Validation: pnpm --filter @agentfarm/agent-runtime test (118/118 pass)
+- Risk: medium (requires approval)
+- Due: 2026-04-30
+
+**Task 9.6: Implement `run_linter`**
+- Runs ESLint by default; supports fix mode, file_path targeting, max_time_ms, and explicit command override
+- Status: Completed (2026-04-30)
+- Evidence: apps/agent-runtime/src/local-workspace-executor.ts
+- Validation: pnpm --filter @agentfarm/agent-runtime test (118/118 pass)
+- Risk: medium (requires approval)
+- Due: 2026-04-30
+
+**Task 9.7: Implement `apply_patch`**
+- Applies a unified diff string using `git apply`
+- Writes patch to `.agentfarm/patch-<ts>.diff` temp file, cleans up on success or failure
+- Supports check_only mode (dry-run without applying)
+- Status: Completed (2026-04-30)
+- Evidence: apps/agent-runtime/src/local-workspace-executor.ts, apps/agent-runtime/src/local-workspace-executor.test.ts
+- Validation: pnpm --filter @agentfarm/agent-runtime test (118/118 pass)
+- Risk: medium (requires approval)
+- Due: 2026-04-30
+
+**Task 9.8: Implement `git_stash`**
+- Supports push (with optional message), pop, drop, and list operations
+- Status: Completed (2026-04-30)
+- Evidence: apps/agent-runtime/src/local-workspace-executor.ts, apps/agent-runtime/src/local-workspace-executor.test.ts
+- Validation: pnpm --filter @agentfarm/agent-runtime test (118/118 pass)
+- Risk: medium (requires approval)
+- Due: 2026-04-30
+
+**Task 9.9: Implement `git_log`**
+- Returns structured JSON commit history via `git log --pretty=format:%H|%h|%s|%an|%ae|%ai`
+- Output: `[{hash, short_hash, subject, author_name, author_email, date}]`
+- Supports limit, branch, and since filtering
+- Status: Completed (2026-04-30)
+- Evidence: apps/agent-runtime/src/local-workspace-executor.ts, apps/agent-runtime/src/local-workspace-executor.test.ts
+- Validation: pnpm --filter @agentfarm/agent-runtime test (118/118 pass)
+- Risk: low (no approval required)
+- Due: 2026-04-30
+
+**Task 9.10: Implement `workspace_scout`**
+- Returns compact JSON project summary: language, framework, package_manager, test_command, build_command, scripts, readme_excerpt (first 800 chars), dependencies
+- Reads package.json, README.md, go.mod, requirements.txt
+- Status: Completed (2026-04-30)
+- Evidence: apps/agent-runtime/src/local-workspace-executor.ts, apps/agent-runtime/src/local-workspace-executor.test.ts
+- Validation: pnpm --filter @agentfarm/agent-runtime test (118/118 pass)
+- Risk: low (no approval required)
+- Due: 2026-04-30
+
+**Task 9.11: Implement `workspace_checkpoint`**
+- Creates a temp git branch (`agentfarm/checkpoints/<name>`) for safe WIP rollback
+- restore_from mode: `git reset --hard <ref>` for checkpoint restoration
+- Status: Completed (2026-04-30)
+- Evidence: apps/agent-runtime/src/local-workspace-executor.ts
+- Validation: pnpm --filter @agentfarm/agent-runtime test (118/118 pass)
+- Risk: medium (requires approval)
+- Due: 2026-04-30
+
 ## Execution Tracking (Initial Assignment)
 
 | Task ID | Task Name | Owner | Status | Priority | Dependency | Due Date | Scope Check | Notes |

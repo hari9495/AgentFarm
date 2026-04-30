@@ -260,7 +260,7 @@ export function WorkspaceBudgetPanel({ budget, source }: WorkspaceBudgetPanelPro
                 <span className={`badge ${budgetState.isHardStopActive ? 'high' : 'neutral'}`}>
                     Hard-stop: {budgetState.isHardStopActive ? 'active' : 'inactive'}
                 </span>
-                <span className="badge neutral">Daily reset: {new Date(budgetState.lastResetDaily).toLocaleDateString()}</span>
+                <span className="badge neutral">Daily reset: {new Date(budgetState.lastResetDaily).toLocaleDateString('en-US')}</span>
             </div>
 
             <div className="panel-stack">

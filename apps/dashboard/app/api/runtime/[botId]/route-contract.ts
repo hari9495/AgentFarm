@@ -1,4 +1,5 @@
 import {
+    buildCapabilitySnapshotUrl,
     buildHealthUrl,
     buildKillUrl,
     buildLogsUrl,
@@ -52,5 +53,13 @@ export const buildKillRouteContract = (): RouteContract => ({
     requestInit: {
         method: 'POST',
         headers: buildUpstreamHeaders(true),
+    },
+});
+
+export const buildCapabilityRouteContract = (): RouteContract => ({
+    upstreamUrl: buildCapabilitySnapshotUrl(getRuntimeBaseUrl()),
+    requestInit: {
+        headers: buildUpstreamHeaders(),
+        cache: 'no-store',
     },
 });

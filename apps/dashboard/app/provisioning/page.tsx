@@ -145,7 +145,7 @@ export default async function ProvisioningPage({
                 >
                     ✓ Bot provisioned and ready.
                     {job?.completed_at &&
-                        ` Completed at ${new Date(job.completed_at).toLocaleTimeString()}.`}
+                        ` Completed at ${new Date(job.completed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}.`}
                     {' '}
                     <a href="/" style={{ color: '#15803d', textDecoration: 'underline' }}>
                         Go to Dashboard →
@@ -221,13 +221,13 @@ export default async function ProvisioningPage({
                         {job.started_at && (
                             <li>
                                 <span>Started</span>
-                                <strong>{new Date(job.started_at).toLocaleTimeString()}</strong>
+                                <strong>{new Date(job.started_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}</strong>
                             </li>
                         )}
                         {job.timeout_at && !isCompleted && (
                             <li>
                                 <span>Timeout At</span>
-                                <strong>{new Date(job.timeout_at).toLocaleString()}</strong>
+                                <strong>{new Date(job.timeout_at).toLocaleString('en-US')}</strong>
                             </li>
                         )}
                     </ul>

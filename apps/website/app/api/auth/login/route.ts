@@ -9,6 +9,39 @@ type LoginPayload = {
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const COOKIE_NAME = "agentfarm_session";
+const INTERNAL_COOKIE_NAME = "agentfarm_internal_session";
+const API_BASE = process.env.API_GATEWAY_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
+
+const getInternalDashboardUrl = (): string => {
+    const raw = (process.env.AGENTFARM_INTERNAL_DASHBOARD_URL ?? "http://localhost:3001").trim();
+
+    try {
+        const parsed = new URL(raw);
+        return parsed.toString().replace(/\/$/, "");
+    } catch {
+        return "http://localhost:3001";
+    }
+};
+
+const fetchInternalToken = async (email: string, password: string): Promise<string | null> => {
+    try {
+        const response = await fetch(`${API_BASE}/auth/internal-login`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ email, password }),
+            cache: "no-store",
+        });
+
+        if (!response.ok) {
+            return null;
+        }
+
+        const body = (await response.json()) as { token?: string };
+        return typeof body.token === "string" && body.token.length > 0 ? body.token : null;
+    } catch {
+        return null;
+    }
+};
 
 /** Validate a post-login redirect path: must be relative and start with /. */
 function sanitizeFrom(from: unknown): string {
@@ -48,7 +81,12 @@ export async function POST(request: Request) {
 
     const { sessionToken } = createSession(user.id);
 
-    const redirectTo = sanitizeFrom(payload.from);
+    const isInternalUser = user.role === "admin" || user.role === "superadmin";
+    const internalToken = isInternalUser ? await fetchInternalToken(email, password) : null;
+
+    const redirectTo = isInternalUser
+        ? getInternalDashboardUrl()
+        : sanitizeFrom(payload.from);
 
     const response = NextResponse.json({
         status: "ok",
@@ -65,6 +103,18 @@ export async function POST(request: Request) {
         path: "/",
         maxAge: 8 * 60 * 60,
     });
+
+    if (internalToken) {
+        response.cookies.set({
+            name: INTERNAL_COOKIE_NAME,
+            value: internalToken,
+            httpOnly: true,
+            sameSite: "lax",
+            secure: process.env.NODE_ENV === "production",
+            path: "/",
+            maxAge: 8 * 60 * 60,
+        });
+    }
 
     return response;
 }

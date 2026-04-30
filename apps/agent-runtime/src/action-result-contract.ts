@@ -31,6 +31,8 @@ export type ActionResultRecord = {
     budgetDenialReason?: string;
     budgetLimitScope?: string;
     budgetLimitType?: string;
+    payloadOverrideSource?: 'none' | 'llm_generated' | 'executor_inferred';
+    payloadOverridesApplied?: boolean;
 };
 
 export type ActionResultWriter = (record: ActionResultRecord) => Promise<void>;

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+    buildCapabilitySnapshotUrl,
     buildHealthUrl,
     buildKillUrl,
     buildLogsUrl,
@@ -59,4 +60,5 @@ test('build url helpers encode query values correctly', () => {
     assert.equal(buildStateHistoryUrl(baseUrl, '10 0'), 'http://localhost:8080/state/history?limit=10%200');
     assert.equal(buildHealthUrl(baseUrl), 'http://localhost:8080/health/live');
     assert.equal(buildKillUrl(baseUrl), 'http://localhost:8080/kill');
+    assert.equal(buildCapabilitySnapshotUrl(baseUrl), 'http://localhost:8080/runtime/capability-snapshot');
 });

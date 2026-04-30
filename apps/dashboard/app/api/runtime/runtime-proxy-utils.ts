@@ -39,3 +39,5 @@ export const buildStateHistoryUrl = (baseUrl: string, limit: string): string => 
 export const buildHealthUrl = (baseUrl: string): string => `${baseUrl}/health/live`;
 
 export const buildKillUrl = (baseUrl: string): string => `${baseUrl}/kill`;
+
+export const buildCapabilitySnapshotUrl = (baseUrl: string): string => `${baseUrl}/runtime/capability-snapshot`;

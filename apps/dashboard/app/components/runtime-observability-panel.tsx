@@ -23,6 +23,12 @@ type RuntimeHealthSnapshot = {
     failed_tasks?: number;
 };
 
+type CapabilitySnapshotResponse = {
+    snapshot?: {
+        allowedActions?: string[];
+    };
+};
+
 type ConnectorHealth = {
     connector_id: string;
     connector_type: string;
@@ -108,6 +114,7 @@ export function RuntimeObservabilityPanel({
     const [transitions, setTransitions] = useState<RuntimeStateTransition[]>(initialTransitions);
     const [currentState, setCurrentState] = useState<string>(initialCurrentState);
     const [health, setHealth] = useState<RuntimeHealthSnapshot>(initialHealth);
+    const [workspaceActions, setWorkspaceActions] = useState<string[]>([]);
 
     const [logFilter, setLogFilter] = useState<string>('');
     const [showDetails, setShowDetails] = useState<Record<number, boolean>>({});
@@ -124,10 +131,11 @@ export function RuntimeObservabilityPanel({
 
     const refresh = useCallback(async () => {
         try {
-            const [logsRes, stateRes, healthRes] = await Promise.all([
+            const [logsRes, stateRes, healthRes, capabilityRes] = await Promise.all([
                 fetch(`/api/runtime/${encodeURIComponent(botId)}/logs?limit=50`),
                 fetch(`/api/runtime/${encodeURIComponent(botId)}/state?limit=20`),
                 fetch(`/api/runtime/${encodeURIComponent(botId)}/health`),
+                fetch(`/api/runtime/${encodeURIComponent(botId)}/capability`),
             ]);
 
             if (logsRes.ok) {
@@ -142,6 +150,13 @@ export function RuntimeObservabilityPanel({
             if (healthRes.ok) {
                 const healthData = (await healthRes.json()) as RuntimeHealthSnapshot;
                 setHealth(healthData);
+            }
+            if (capabilityRes.ok) {
+                const capabilityData = (await capabilityRes.json()) as CapabilitySnapshotResponse;
+                const actions = Array.isArray(capabilityData.snapshot?.allowedActions)
+                    ? capabilityData.snapshot.allowedActions
+                    : [];
+                setWorkspaceActions(actions.filter((action) => action.startsWith('workspace_')).sort((a, b) => a.localeCompare(b)));
             }
 
             setLastRefreshed(new Date());
@@ -199,6 +214,11 @@ export function RuntimeObservabilityPanel({
     const degradedConnectors = connectors.filter((item) => item.status === 'degraded' || item.status === 'token_expired');
     const hasHeartbeatIncident = (health.heartbeat_failed ?? 0) > 0;
     const hasStateIncident = currentState === 'degraded';
+    const highlightedWorkspaceActions = [
+        'workspace_github_issue_triage',
+        'workspace_azure_deploy_plan',
+        'workspace_subagent_spawn',
+    ];
 
     const renderDrilldown = () => {
         if (!drilldownTarget) {
@@ -261,7 +281,7 @@ export function RuntimeObservabilityPanel({
                     <p className="obs-meta">
                         Bot <code>{botId}</code>
                         {lastRefreshed && (
-                            <> &mdash; last refreshed {lastRefreshed.toLocaleTimeString()}</>
+                            <> &mdash; last refreshed {lastRefreshed.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}</>
                         )}
                         {refreshError && (
                             <> &mdash; <span className="obs-error">{refreshError}</span></>
@@ -428,6 +448,35 @@ export function RuntimeObservabilityPanel({
                             </div>
                         ))}
                     </div>
+                )}
+            </div>
+
+            <div className="obs-section">
+                <p className="obs-section-title">
+                    Available workspace actions ({workspaceActions.length})
+                </p>
+                {workspaceActions.length === 0 ? (
+                    <p className="obs-muted-empty">Capability snapshot not available yet.</p>
+                ) : (
+                    <>
+                        <div className="panel-badge-row" style={{ marginBottom: '0.6rem' }}>
+                            {highlightedWorkspaceActions.map((action) => (
+                                <span
+                                    key={action}
+                                    className={`badge ${workspaceActions.includes(action) ? 'low' : 'warn'}`}
+                                >
+                                    {action}
+                                </span>
+                            ))}
+                        </div>
+                        <div className="obs-transition-list" style={{ maxHeight: '11rem', overflowY: 'auto' }}>
+                            {workspaceActions.map((action) => (
+                                <div key={action} className="obs-transition-item">
+                                    <span className="obs-transition-to" style={{ color: '#1d4ed8' }}>{action}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </>
                 )}
             </div>
 

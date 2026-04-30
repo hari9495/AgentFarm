@@ -286,6 +286,53 @@ test('processDeveloperTask uses llmDecisionResolver output when available', asyn
     assert.equal(result.llmExecution?.modelProvider, 'openai');
     assert.equal(result.llmExecution?.modelProfile, 'speed_first');
     assert.equal(result.llmExecution?.totalTokens, 160);
+    assert.equal(result.payloadOverrideSource, 'none');
+    assert.deepEqual(result.executionPayload, {
+        action_type: 'read_task',
+        summary: 'Post deployment update',
+        target: 'deployments',
+    });
+});
+
+test('processDeveloperTask merges payloadOverrides into executionPayload', async () => {
+    const result = await processDeveloperTask(taskEnvelope({
+        action_type: 'workspace_subagent_spawn',
+        prompt: 'Fix the flaky test',
+    }), {
+        modelProvider: 'openai',
+        llmDecisionResolver: async () => ({
+            decision: {
+                actionType: 'workspace_subagent_spawn',
+                confidence: 0.91,
+                riskLevel: 'high',
+                route: 'approval',
+                reason: 'Planner generated a bounded implementation plan.',
+            },
+            metadata: {
+                modelProvider: 'openai',
+                model: 'gpt-4.1',
+                modelProfile: 'quality_first',
+                promptTokens: 220,
+                completionTokens: 90,
+                totalTokens: 310,
+            },
+            payloadOverrides: {
+                test_command: 'pnpm --filter @agentfarm/agent-runtime test',
+                initial_plan: [
+                    {
+                        description: 'inspect the failing slice',
+                        actions: [{ action: 'run_tests', command: 'pnpm --filter @agentfarm/agent-runtime test' }],
+                    },
+                ],
+            },
+        }),
+    });
+
+    assert.equal(result.status, 'approval_required');
+    assert.equal(result.executionPayload['prompt'], 'Fix the flaky test');
+    assert.equal(result.executionPayload['test_command'], 'pnpm --filter @agentfarm/agent-runtime test');
+    assert.ok(Array.isArray(result.executionPayload['initial_plan']));
+    assert.equal(result.payloadOverrideSource, 'llm_generated');
 });
 
 test('processDeveloperTask falls back to heuristic decision when llmDecisionResolver throws', async () => {

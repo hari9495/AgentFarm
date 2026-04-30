@@ -510,7 +510,7 @@ export function ConnectorConfigPanel({ workspaceId, apiBase, initialConnectors }
 
                             {connector.last_healthcheck_at && !isEditing && (
                                 <p className="panel-inline-note" style={{ color: '#78716c' }}>
-                                    Last checked: {new Date(connector.last_healthcheck_at).toLocaleString()}
+                                    Last checked: {new Date(connector.last_healthcheck_at).toLocaleString('en-US')}
                                 </p>
                             )}
 

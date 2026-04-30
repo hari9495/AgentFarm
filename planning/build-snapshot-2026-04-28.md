@@ -1,11 +1,34 @@
-# AgentFarm Build Snapshot (As of 2026-04-28)
+# AgentFarm Build Snapshot (As of 2026-04-28, updated 2026-04-30)
 
 ## Executive Status
-- Sprint 1 delivery status: 22 of 24 tasks completed.
+- Sprint 1 delivery status: 22 of 24 tasks completed (core sprint), plus 11 Tier 1/2 workspace action tasks completed (Workstream 9).
 - Remaining in progress: Task 7.1 (Website SWA production rollout), Task 8.2 and 8.3 (deployment and pre-launch gates).
 - Quality gate status: PASS for core checks with DB runtime smoke skipped due to missing DB environment.
+- Agent Runtime test count: **118 tests, 0 failures** (as of 2026-04-30).
 
 ## What Is Built End-to-End
+
+### 0. Local Workspace Execution Engine (Added 2026-04-30)
+28 local workspace actions are now fully implemented in `apps/agent-runtime/src/local-workspace-executor.ts`:
+
+**Tier 1 (Claude Code / Codex parity — 2026-04-30):**
+- `workspace_list_files` — Recursive file listing with depth/pattern/include_dirs filters → JSON string array
+- `workspace_grep` — Regex search across workspace files → `[{file, line, col, text}]` with context
+- `file_move` — Sandbox-safe file/directory rename with parent dir creation
+- `file_delete` — Sandbox-safe file/directory deletion with recursive flag
+- `workspace_install_deps` — Auto-detects pnpm/yarn/npm/pip/go/cargo from lockfiles
+
+**Tier 2 (autonomous agent capabilities — 2026-04-30):**
+- `run_linter` — ESLint (default) with fix mode, file targeting, auto command detection
+- `apply_patch` — Unified diff application via `git apply`; supports check_only dry-run
+- `git_stash` — push/pop/list/drop stash operations for WIP isolation
+- `git_log` — Structured JSON commit history `[{hash, short_hash, subject, author_name, author_email, date}]`
+- `workspace_scout` — Compact project summary: language, framework, package_manager, scripts, readme_excerpt
+- `workspace_checkpoint` — Creates rollback git branches; restore via `git reset --hard`
+
+**Previously implemented (17 actions):** `git_clone`, `git_branch`, `git_commit`, `git_push`, `code_read`, `code_edit`, `code_edit_patch`, `code_search_replace`, `run_build`, `run_tests`, `run_shell_command`, `autonomous_loop`, `workspace_cleanup`, `workspace_diff`, `workspace_memory_write`, `workspace_memory_read`, `create_pr_from_workspace`
+
+All 28 actions are covered by 118 tests (0 failures). Risk classification and role policies updated in `execution-engine.ts` and `runtime-server.ts`.
 
 ### 1. Tenant Signup, Auth, Session, and Workspace Isolation
 - Signup and login flows implemented with session token issuance.

@@ -1,0 +1,107 @@
+{
+    "task": "8.2",
+    "status": "pre-deploy-validated",
+    "timestamp": "2025-07-28T00:00:00Z",
+    "qualityGate": {
+        "status": "PASS",
+        "lanes": {
+            "agentRuntime": {
+                "tests": 99,
+                "pass": 99,
+                "coverageLines": "79.91%",
+                "perFileThreshold": "PASS"
+            },
+            "apiGateway": {
+                "typecheck": "PASS",
+                "tests": "PASS"
+            },
+            "dashboard": {
+                "typecheck": "PASS",
+                "smokeRoutes": "PASS"
+            },
+            "website": {
+                "build": "PASS",
+                "smokeAuth": "PASS",
+                "tests": "PASS"
+            },
+            "orchestrator": {
+                "typecheck": "PASS",
+                "tests": 27,
+                "pass": 27
+            },
+            "connectorGateway": {
+                "typecheck": "PASS",
+                "tests": 13,
+                "pass": 13
+            },
+            "approvalService": {
+                "typecheck": "PASS",
+                "tests": 12,
+                "pass": 12
+            },
+            "evidenceService": {
+                "typecheck": "PASS",
+                "tests": 9,
+                "pass": 9
+            },
+            "policyEngine": {
+                "typecheck": "PASS",
+                "tests": 2,
+                "pass": 2
+            },
+            "provisioningService": {
+                "typecheck": "PASS",
+                "tests": 15,
+                "pass": 15
+            },
+            "sharedTypes": {
+                "typecheck": "PASS"
+            },
+            "connectorContracts": {
+                "typecheck": "PASS"
+            },
+            "observability": {
+                "typecheck": "PASS"
+            },
+            "dbLane": {
+                "status": "SKIPPED",
+                "reason": "DATABASE_URL not configured in local environment"
+            }
+        }
+    },
+    "buildArtifacts": {
+        "websiteBuild": "PASS — Next.js 15.5.15, 117 static pages generated",
+        "dashboardBuild": "PASS — Next.js 15.5.15, 24 routes including /dashboard/evidence",
+        "routeManifest": [
+            "/api/approvals",
+            "/api/approvals/[id]",
+            "/api/audit/events",
+            "/api/evidence/export",
+            "/api/evidence/summary",
+            "/dashboard",
+            "/dashboard/approvals",
+            "/dashboard/evidence"
+        ]
+    },
+    "iacArtifacts": {
+        "controlPlane": "infrastructure/control-plane/main.bicep",
+        "runtimePlane": "infrastructure/runtime-plane/main.bicep",
+        "ciCdWorkflow": ".github/workflows/website-swa.yml",
+        "swaConfig": "apps/website/staticwebapp.config.json"
+    },
+    "blockers": [
+        {
+            "id": "AZURE-SUB-ACCESS",
+            "description": "Azure subscription e8618958-e77a-4932-b49e-f94ccbaf90bc returns SubscriptionNotFound on ARM API calls",
+            "impact": "Cannot create resource groups or SWA resource until resolved",
+            "resolution": "Grant Contributor role to hari.m@yukthixconsulting.com on the subscription via Azure Portal IAM"
+        }
+    ],
+    "committedRevision": "584eca1",
+    "sprint": "Sprint 1",
+    "tasks": [
+        "7.1",
+        "8.2",
+        "8.3"
+    ]
+}

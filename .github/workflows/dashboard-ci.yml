@@ -67,3 +67,6 @@ jobs:
 
       - name: Run workspace-tab browser e2e
         run: pnpm --filter @agentfarm/dashboard test:e2e:workspace-tabs http://127.0.0.1:3101
+
+      - name: Run mobile drawer browser e2e
+        run: pnpm --filter @agentfarm/dashboard test:e2e:mobile-drawer http://127.0.0.1:3101

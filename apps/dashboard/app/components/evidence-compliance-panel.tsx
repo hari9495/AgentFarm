@@ -269,84 +269,84 @@ export function EvidenceCompliancePanel({ workspaceId, initialEvents, focusedCor
     return (
         <article className="card">
             <h2>Evidence and Compliance</h2>
-            <p style={{ margin: '-0.5rem 0 0.8rem', fontSize: '0.82rem', color: '#57534e' }}>
-                Evidence freshness: <strong>{freshness.latestAt ? new Date(freshness.latestAt).toLocaleString() : 'No evidence yet'}</strong>{' '}
+            <p className="audit-freshness-row">
+                Evidence freshness: <strong>{freshness.latestAt ? new Date(freshness.latestAt).toLocaleString('en-US') : 'No evidence yet'}</strong>{' '}
                 {freshness.ageMinutes !== null && (
-                    <span className={`badge ${freshness.stale ? 'warn' : 'low'}`} style={{ marginLeft: '0.4rem' }}>
+                    <span className={`badge ${freshness.stale ? 'warn' : 'low'} audit-age-badge`}>
                         age {formatAgeMinutes(freshness.ageMinutes)}
                     </span>
                 )}
             </p>
 
-            <div style={{ display: 'grid', gap: '0.45rem', marginBottom: '0.7rem' }}>
-                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    <select value={preset} onChange={(event) => applyPreset(event.target.value as ExportPreset)}>
+            <div className="audit-filter-grid">
+                <div className="audit-filter-row">
+                    <select className="panel-control" value={preset} onChange={(event) => applyPreset(event.target.value as ExportPreset)}>
                         <option value="workspace_all">preset: workspace all</option>
                         <option value="last_24h">preset: last 24h</option>
                         <option value="last_7d">preset: last 7d</option>
                         <option value="severity_error">preset: severity error</option>
                     </select>
-                    <select value={severity} onChange={(event) => setSeverity(event.target.value)}>
+                    <select className="panel-control" value={severity} onChange={(event) => setSeverity(event.target.value)}>
                         <option value="">all severity</option>
                         <option value="info">info</option>
                         <option value="warn">warn</option>
                         <option value="error">error</option>
                     </select>
                     <input
+                        className="panel-control"
                         type="text"
                         placeholder="event type"
                         value={eventType}
                         onChange={(event) => setEventType(event.target.value)}
-                        style={{ minWidth: 150 }}
                     />
                     <input
+                        className="panel-control"
                         type="text"
                         placeholder="bot id"
                         value={botId}
                         onChange={(event) => setBotId(event.target.value)}
-                        style={{ minWidth: 150 }}
                     />
-                    <input type="datetime-local" value={from} onChange={(event) => setFrom(event.target.value)} />
-                    <input type="datetime-local" value={to} onChange={(event) => setTo(event.target.value)} />
+                    <input className="panel-control" type="datetime-local" value={from} onChange={(event) => setFrom(event.target.value)} />
+                    <input className="panel-control" type="datetime-local" value={to} onChange={(event) => setTo(event.target.value)} />
                     <input
+                        className="panel-control audit-limit-control"
                         type="number"
                         min={1}
                         max={200}
                         value={limit}
                         onChange={(event) => setLimit(event.target.value)}
-                        style={{ width: 88 }}
                         title="result limit"
                     />
                 </div>
-                <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap' }}>
-                    <button type="button" onClick={() => void queryEvents()} disabled={loading}>
+                <div className="audit-actions-row">
+                    <button className="primary-action" type="button" onClick={() => void queryEvents()} disabled={loading}>
                         {loading ? 'Querying…' : 'Query Audit Events'}
                     </button>
-                    <button type="button" onClick={() => void exportAudit('csv')}>Export CSV</button>
-                    <button type="button" onClick={() => void exportAudit('json')}>Export JSON</button>
+                    <button className="secondary-action" type="button" onClick={() => void exportAudit('csv')}>Export CSV</button>
+                    <button className="secondary-action" type="button" onClick={() => void exportAudit('json')}>Export JSON</button>
                 </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '0.45rem', alignItems: 'center', flexWrap: 'wrap', marginBottom: '0.7rem' }}>
+            <div className="audit-retention-row">
                 <input
+                    className="panel-control audit-retention-control"
                     type="number"
                     min={7}
                     value={retentionDays}
                     onChange={(event) => setRetentionDays(event.target.value)}
-                    style={{ width: 90 }}
                     title="retention days"
                 />
-                <span style={{ fontSize: '0.82rem', color: '#57534e' }}>retention days</span>
-                <button type="button" onClick={() => void runRetention(true)} disabled={retentionBusy}>
+                <span className="audit-retention-caption">retention days</span>
+                <button className="warn-action" type="button" onClick={() => void runRetention(true)} disabled={retentionBusy}>
                     Dry-Run Cleanup
                 </button>
-                <button type="button" onClick={() => void runRetention(false)} disabled={retentionBusy}>
+                <button className="danger-action" type="button" onClick={() => void runRetention(false)} disabled={retentionBusy}>
                     Execute Cleanup
                 </button>
             </div>
 
             {message && (
-                <p style={{ margin: '0 0 0.7rem', fontSize: '0.82rem', color: '#155e75' }}>{message}</p>
+                <p className="message-inline">{message}</p>
             )}
 
             <table>
@@ -365,15 +365,15 @@ export function EvidenceCompliancePanel({ workspaceId, initialEvents, focusedCor
                         </tr>
                     ) : (
                         events.map((event) => (
-                            <tr key={event.event_id} style={focusedCorrelationId === event.correlation_id ? { background: '#eff6ff' } : undefined}>
-                                <td>{new Date(event.created_at).toLocaleString()}</td>
+                            <tr key={event.event_id} className={focusedCorrelationId === event.correlation_id ? 'audit-table-row-highlight' : undefined}>
+                                <td>{new Date(event.created_at).toLocaleString('en-US')}</td>
                                 <td>{event.severity}</td>
                                 <td>{event.event_type}</td>
                                 <td>
-                                    <div style={{ display: 'grid', gap: '0.2rem' }}>
+                                    <div className="audit-summary-cell">
                                         <span>{event.summary}</span>
-                                        <span style={{ fontSize: '0.76rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
-                                            corr: {event.correlation_id}
+                                        <span className="audit-summary-meta">
+                                            corr: <code>{event.correlation_id}</code>
                                             <CopyLinkButton
                                                 href={buildDashboardHref(pathname, searchParams.toString(), {
                                                     tab: 'audit',
