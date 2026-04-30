@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { DatabaseSync } from "node:sqlite";
 import {
     createApprovalRequest,
+    escalatePendingApprovals,
     listApprovals,
     listRecentActivity,
     updateApprovalDecision,
@@ -39,10 +40,13 @@ test("approval vertical slice: request -> pending -> decision -> activity", () =
         id: created.id,
         decision: "approved",
         decidedBy: "reviewer@agentfarm.local",
+        reason: "Reviewed rollout scope and deployment blast radius.",
     });
 
     assert.notEqual(decided, null);
     assert.equal(decided?.status, "approved");
+    assert.equal(decided?.decisionReason, "Reviewed rollout scope and deployment blast radius.");
+    assert.equal(typeof decided?.decisionLatencySeconds, "number");
 
     const pendingAfter = listApprovals({ status: "pending", agentSlug: "ai-devops-engineer" });
     assert.equal(
@@ -94,10 +98,13 @@ test("approval vertical slice: rejection path is reflected in state and activity
         id: created.id,
         decision: "rejected",
         decidedBy: "reviewer@agentfarm.local",
+        reason: "Missing rollback and incident fallback plan.",
     });
 
     assert.notEqual(rejected, null);
     assert.equal(rejected?.status, "rejected");
+    assert.equal(rejected?.decisionReason, "Missing rollback and incident fallback plan.");
+    assert.equal(typeof rejected?.decisionLatencySeconds, "number");
 
     const pendingAfter = listApprovals({ status: "pending", agentSlug: "ai-security-engineer" });
     assert.equal(
@@ -124,6 +131,41 @@ test("approval vertical slice: rejection path is reflected in state and activity
         true,
         "activity should include explicit rejected decision signal",
     );
+
+    db.prepare("DELETE FROM approvals WHERE id = ?").run(created.id);
+    db.prepare("DELETE FROM company_audit_events WHERE target_id = ?").run(created.id);
+});
+
+test("approval vertical slice: pending approvals escalate after timeout", () => {
+    const suffix = `${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const db = new DatabaseSync(DB_PATH);
+
+    const created = createApprovalRequest({
+        title: `Escalation timeout validation ${suffix}`,
+        agentSlug: "ai-devops-engineer",
+        agent: "AI DevOps Engineer",
+        requestedBy: "dashboard-control-plane",
+        channel: "Dashboard / Approval Inbox",
+        reason: "Validate timeout escalation workflow for pending approvals.",
+        risk: "high",
+        actorId: "test-suite",
+        actorEmail: "test-suite@agentfarm.local",
+        escalationTimeoutSeconds: 60,
+    });
+
+    const result = escalatePendingApprovals({
+        actorId: "test-suite",
+        actorEmail: "test-suite@agentfarm.local",
+        nowTs: created.createdAt + 61_000,
+    });
+
+    assert.equal(result.escalatedIds.includes(created.id), true);
+
+    const refreshed = listApprovals({ status: "pending", agentSlug: "ai-devops-engineer", limit: 100 })
+        .find((item) => item.id === created.id);
+
+    assert.notEqual(refreshed, undefined);
+    assert.equal(typeof refreshed?.escalatedAt, "number");
 
     db.prepare("DELETE FROM approvals WHERE id = ?").run(created.id);
     db.prepare("DELETE FROM company_audit_events WHERE target_id = ?").run(created.id);

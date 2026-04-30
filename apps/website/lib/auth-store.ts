@@ -35,6 +35,10 @@ export type ApprovalRecord = {
     createdAt: number;
     decidedAt: number | null;
     decidedBy: string | null;
+    decisionReason: string | null;
+    decisionLatencySeconds: number | null;
+    escalationTimeoutSeconds: number;
+    escalatedAt: number | null;
 };
 
 export type ActivityFeedEvent = {
@@ -45,6 +49,31 @@ export type ActivityFeedEvent = {
     detail: string;
     type: "approval";
     approvalOutcome: "requested" | "approved" | "rejected";
+};
+
+export type ComplianceEvidenceSummary = {
+    generatedAt: number;
+    windowHours: number;
+    approvalsRequested: number;
+    approvalsPending: number;
+    approvalsApproved: number;
+    approvalsRejected: number;
+    escalatedApprovals: number;
+    auditEventsCaptured: number;
+    approvalDecisionLatencyP95Seconds: number | null;
+    evidenceFreshnessSeconds: number | null;
+};
+
+export type ComplianceEvidencePack = {
+    generatedAt: number;
+    tenantId: string | null;
+    retentionPolicy: {
+        activeDays: number;
+        archiveDays: number;
+    };
+    summary: ComplianceEvidenceSummary;
+    approvals: ApprovalRecord[];
+    auditEvents: AuditEventRecord[];
 };
 
 export type DeploymentStatus = "queued" | "running" | "succeeded" | "failed" | "canceled";
@@ -319,7 +348,12 @@ db.exec(`
     status TEXT NOT NULL,
     created_at INTEGER NOT NULL,
     decided_at INTEGER,
-    decided_by TEXT
+        decided_by TEXT,
+        decision_reason TEXT,
+        decision_latency_seconds INTEGER,
+        escalation_timeout_seconds INTEGER NOT NULL DEFAULT 3600,
+        escalated_at INTEGER,
+        tenant_id TEXT NOT NULL DEFAULT ''
   );
 
   CREATE INDEX IF NOT EXISTS idx_approvals_agent_slug ON approvals(agent_slug);
@@ -484,8 +518,24 @@ if (!hasRetryAttemptCountColumn) {
 
 const approvalsColumns = db.prepare(`PRAGMA table_info(approvals)`).all() as Array<{ name: string }>;
 const hasApprovalTenantIdColumn = approvalsColumns.some((column) => column.name === "tenant_id");
+const hasApprovalDecisionReasonColumn = approvalsColumns.some((column) => column.name === "decision_reason");
+const hasApprovalDecisionLatencyColumn = approvalsColumns.some((column) => column.name === "decision_latency_seconds");
+const hasApprovalEscalationTimeoutColumn = approvalsColumns.some((column) => column.name === "escalation_timeout_seconds");
+const hasApprovalEscalatedAtColumn = approvalsColumns.some((column) => column.name === "escalated_at");
 if (!hasApprovalTenantIdColumn) {
     db.exec(`ALTER TABLE approvals ADD COLUMN tenant_id TEXT NOT NULL DEFAULT '';`);
+}
+if (!hasApprovalDecisionReasonColumn) {
+    db.exec(`ALTER TABLE approvals ADD COLUMN decision_reason TEXT;`);
+}
+if (!hasApprovalDecisionLatencyColumn) {
+    db.exec(`ALTER TABLE approvals ADD COLUMN decision_latency_seconds INTEGER;`);
+}
+if (!hasApprovalEscalationTimeoutColumn) {
+    db.exec(`ALTER TABLE approvals ADD COLUMN escalation_timeout_seconds INTEGER NOT NULL DEFAULT 3600;`);
+}
+if (!hasApprovalEscalatedAtColumn) {
+    db.exec(`ALTER TABLE approvals ADD COLUMN escalated_at INTEGER;`);
 }
 
 if (!hasExplicitPrivilegedRules) {
@@ -726,6 +776,13 @@ const mapApproval = (row: Record<string, unknown>): ApprovalRecord => {
         createdAt: Number(row.created_at),
         decidedAt: row.decided_at ? Number(row.decided_at) : null,
         decidedBy: row.decided_by ? String(row.decided_by) : null,
+        decisionReason: row.decision_reason ? String(row.decision_reason) : null,
+        decisionLatencySeconds:
+            row.decision_latency_seconds === null || row.decision_latency_seconds === undefined
+                ? null
+                : Number(row.decision_latency_seconds),
+        escalationTimeoutSeconds: Number(row.escalation_timeout_seconds ?? 3600),
+        escalatedAt: row.escalated_at ? Number(row.escalated_at) : null,
     };
 };
 
@@ -1355,21 +1412,23 @@ export const listApprovals = (filters?: {
     status?: ApprovalDecision;
     agentSlug?: string;
     tenantId?: string;
+    limit?: number;
 }): ApprovalRecord[] => {
     const status = filters?.status ?? "pending";
     const agentSlug = filters?.agentSlug;
     const tenantId = filters?.tenantId;
+    const limit = Math.max(1, Math.min(200, Math.floor(filters?.limit ?? 100)));
 
     if (agentSlug) {
         const rows = tenantId
-            ? (db.prepare(`SELECT * FROM approvals WHERE status = ? AND agent_slug = ? AND tenant_id = ? ORDER BY created_at DESC`).all(status, agentSlug, tenantId) as Record<string, unknown>[])
-            : (db.prepare(`SELECT * FROM approvals WHERE status = ? AND agent_slug = ? ORDER BY created_at DESC`).all(status, agentSlug) as Record<string, unknown>[]);
+            ? (db.prepare(`SELECT * FROM approvals WHERE status = ? AND agent_slug = ? AND tenant_id = ? ORDER BY created_at DESC LIMIT ?`).all(status, agentSlug, tenantId, limit) as Record<string, unknown>[])
+            : (db.prepare(`SELECT * FROM approvals WHERE status = ? AND agent_slug = ? ORDER BY created_at DESC LIMIT ?`).all(status, agentSlug, limit) as Record<string, unknown>[]);
         return rows.map(mapApproval);
     }
 
     const rows = tenantId
-        ? (db.prepare(`SELECT * FROM approvals WHERE status = ? AND tenant_id = ? ORDER BY created_at DESC`).all(status, tenantId) as Record<string, unknown>[])
-        : (db.prepare(`SELECT * FROM approvals WHERE status = ? ORDER BY created_at DESC`).all(status) as Record<string, unknown>[]);
+        ? (db.prepare(`SELECT * FROM approvals WHERE status = ? AND tenant_id = ? ORDER BY created_at DESC LIMIT ?`).all(status, tenantId, limit) as Record<string, unknown>[])
+        : (db.prepare(`SELECT * FROM approvals WHERE status = ? ORDER BY created_at DESC LIMIT ?`).all(status, limit) as Record<string, unknown>[]);
     return rows.map(mapApproval);
 };
 
@@ -1382,6 +1441,7 @@ export const createApprovalRequest = (input: {
     reason: string;
     risk: ApprovalRisk;
     tenantId?: string;
+    escalationTimeoutSeconds?: number;
     actorId: string;
     actorEmail: string;
 }): ApprovalRecord => {
@@ -1391,9 +1451,9 @@ export const createApprovalRequest = (input: {
     db.prepare(
         `
       INSERT INTO approvals (
-        id, title, agent_slug, agent, requested_by, channel, reason, risk, status, tenant_id, created_at
+                id, title, agent_slug, agent, requested_by, channel, reason, risk, status, tenant_id, created_at, escalation_timeout_seconds
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?)
     `,
     ).run(
         id,
@@ -1406,6 +1466,7 @@ export const createApprovalRequest = (input: {
         input.risk,
         input.tenantId ?? "",
         createdAt,
+        Math.max(60, Math.floor(input.escalationTimeoutSeconds ?? 3600)),
     );
 
     writeAuditEvent({
@@ -1859,16 +1920,26 @@ export const updateApprovalDecision = (input: {
     id: string;
     decision: "approved" | "rejected";
     decidedBy: string;
+    reason?: string;
 }): ApprovalRecord | null => {
+    const rowBefore = db.prepare(`SELECT * FROM approvals WHERE id = ?`).get(input.id) as Record<string, unknown> | undefined;
+    if (!rowBefore || String(rowBefore.status) !== "pending") {
+        return null;
+    }
+
+    const createdAt = Number(rowBefore.created_at);
+    const decidedAt = now();
+    const decisionLatencySeconds = Math.max(0, Math.floor((decidedAt - createdAt) / 1000));
+
     const result = db
         .prepare(
             `
         UPDATE approvals
-        SET status = ?, decided_at = ?, decided_by = ?
+        SET status = ?, decided_at = ?, decided_by = ?, decision_reason = ?, decision_latency_seconds = ?
         WHERE id = ? AND status = 'pending'
       `,
         )
-        .run(input.decision, now(), input.decidedBy, input.id);
+        .run(input.decision, decidedAt, input.decidedBy, input.reason?.trim() || null, decisionLatencySeconds, input.id);
 
     if (Number(result.changes) === 0) {
         return null;
@@ -1887,11 +1958,67 @@ export const updateApprovalDecision = (input: {
         targetType: "approval",
         targetId: input.id,
         beforeState: { status: "pending" },
-        afterState: { status: updated.status, decidedBy: input.decidedBy },
-        reason: "Approval decision captured via dashboard inbox.",
+        afterState: {
+            status: updated.status,
+            decidedBy: input.decidedBy,
+            decisionLatencySeconds,
+        },
+        reason: input.reason?.trim() || "Approval decision captured via dashboard inbox.",
     });
 
     return updated;
+};
+
+export const escalatePendingApprovals = (input: {
+    tenantId?: string;
+    actorId: string;
+    actorEmail: string;
+    nowTs?: number;
+}): { escalatedCount: number; escalatedIds: string[] } => {
+    const nowTs = input.nowTs ?? now();
+    const rows = input.tenantId
+        ? (db.prepare(
+            `SELECT * FROM approvals
+             WHERE status = 'pending'
+               AND tenant_id = ?
+               AND escalated_at IS NULL
+               AND created_at + (escalation_timeout_seconds * 1000) <= ?
+             ORDER BY created_at ASC`,
+        ).all(input.tenantId, nowTs) as Record<string, unknown>[])
+        : (db.prepare(
+            `SELECT * FROM approvals
+             WHERE status = 'pending'
+               AND escalated_at IS NULL
+               AND created_at + (escalation_timeout_seconds * 1000) <= ?
+             ORDER BY created_at ASC`,
+        ).all(nowTs) as Record<string, unknown>[]);
+
+    const escalatedIds: string[] = [];
+    const update = db.prepare(`UPDATE approvals SET escalated_at = ? WHERE id = ? AND escalated_at IS NULL`);
+
+    for (const row of rows) {
+        const approvalId = String(row.id);
+        const changed = update.run(nowTs, approvalId);
+        if (Number(changed.changes) > 0) {
+            escalatedIds.push(approvalId);
+            writeAuditEvent({
+                actorId: input.actorId,
+                actorEmail: input.actorEmail,
+                action: "approval.request.escalated",
+                targetType: "approval",
+                targetId: approvalId,
+                tenantId: String(row.tenant_id ?? ""),
+                beforeState: { status: "pending", escalatedAt: null },
+                afterState: { status: "pending", escalatedAt: nowTs },
+                reason: `Approval exceeded ${Number(row.escalation_timeout_seconds ?? 3600)} second timeout.`,
+            });
+        }
+    }
+
+    return {
+        escalatedCount: escalatedIds.length,
+        escalatedIds,
+    };
 };
 
 // ── Company control plane (superadmin) ────────────────────────────────────
@@ -2443,6 +2570,8 @@ export const listAuditEvents = (input?: {
     actorEmail?: string;
     tenantId?: string;
     action?: string;
+    sinceTs?: number;
+    untilTs?: number;
     limit?: number;
 }): AuditEventRecord[] => {
     const limit = Math.max(10, Math.min(500, Number(input?.limit ?? 100)));
@@ -2460,6 +2589,14 @@ export const listAuditEvents = (input?: {
     if (input?.action) {
         where.push("action = ?");
         values.push(input.action);
+    }
+    if (input?.sinceTs && Number.isFinite(input.sinceTs)) {
+        where.push("created_at >= ?");
+        values.push(Math.floor(input.sinceTs));
+    }
+    if (input?.untilTs && Number.isFinite(input.untilTs)) {
+        where.push("created_at <= ?");
+        values.push(Math.floor(input.untilTs));
     }
 
     let query = `SELECT * FROM company_audit_events`;
@@ -2483,6 +2620,79 @@ export const listAuditEvents = (input?: {
         reason: String(row.reason),
         createdAt: Number(row.created_at),
     }));
+};
+
+export const getComplianceEvidenceSummary = (input?: {
+    tenantId?: string;
+    windowHours?: number;
+}): ComplianceEvidenceSummary => {
+    const generatedAt = now();
+    const windowHours = Math.max(1, Math.min(24 * 30, Math.floor(input?.windowHours ?? 24)));
+    const sinceTs = generatedAt - windowHours * 60 * 60 * 1000;
+
+    const allApprovals = [
+        ...listApprovals({ status: "pending", tenantId: input?.tenantId, limit: 500 }),
+        ...listApprovals({ status: "approved", tenantId: input?.tenantId, limit: 500 }),
+        ...listApprovals({ status: "rejected", tenantId: input?.tenantId, limit: 500 }),
+    ];
+
+    const inWindow = allApprovals.filter((item) => item.createdAt >= sinceTs || (item.decidedAt ?? 0) >= sinceTs);
+    const approvalsRequested = inWindow.length;
+    const approvalsPending = inWindow.filter((item) => item.status === "pending").length;
+    const approvalsApproved = inWindow.filter((item) => item.status === "approved").length;
+    const approvalsRejected = inWindow.filter((item) => item.status === "rejected").length;
+    const escalatedApprovals = inWindow.filter((item) => (item.escalatedAt ?? 0) >= sinceTs).length;
+
+    const decisionLatencies = inWindow
+        .map((item) => item.decisionLatencySeconds)
+        .filter((value): value is number => typeof value === "number")
+        .sort((a, b) => a - b);
+
+    const p95Index = decisionLatencies.length === 0
+        ? -1
+        : Math.min(decisionLatencies.length - 1, Math.ceil(decisionLatencies.length * 0.95) - 1);
+    const approvalDecisionLatencyP95Seconds = p95Index < 0 ? null : decisionLatencies[p95Index] ?? null;
+
+    const auditEvents = listAuditEvents({ tenantId: input?.tenantId, sinceTs, limit: 500 });
+    const latestAuditAt = auditEvents.reduce((max, item) => Math.max(max, item.createdAt), 0);
+    const latestApprovalAt = allApprovals.reduce((max, item) => Math.max(max, item.decidedAt ?? item.createdAt), 0);
+    const latestEvidenceAt = Math.max(latestAuditAt, latestApprovalAt);
+
+    return {
+        generatedAt,
+        windowHours,
+        approvalsRequested,
+        approvalsPending,
+        approvalsApproved,
+        approvalsRejected,
+        escalatedApprovals,
+        auditEventsCaptured: auditEvents.length,
+        approvalDecisionLatencyP95Seconds,
+        evidenceFreshnessSeconds: latestEvidenceAt > 0 ? Math.max(0, Math.floor((generatedAt - latestEvidenceAt) / 1000)) : null,
+    };
+};
+
+export const exportComplianceEvidencePack = (input?: {
+    tenantId?: string;
+    windowHours?: number;
+}): ComplianceEvidencePack => {
+    const summary = getComplianceEvidenceSummary(input);
+
+    return {
+        generatedAt: summary.generatedAt,
+        tenantId: input?.tenantId ?? null,
+        retentionPolicy: {
+            activeDays: 365,
+            archiveDays: 730,
+        },
+        summary,
+        approvals: [
+            ...listApprovals({ status: "pending", tenantId: input?.tenantId, limit: 500 }),
+            ...listApprovals({ status: "approved", tenantId: input?.tenantId, limit: 500 }),
+            ...listApprovals({ status: "rejected", tenantId: input?.tenantId, limit: 500 }),
+        ],
+        auditEvents: listAuditEvents({ tenantId: input?.tenantId, limit: 500 }),
+    };
 };
 
 export const getProvisioningTimelineForJob = (input: {

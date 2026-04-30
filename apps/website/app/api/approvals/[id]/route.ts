@@ -5,6 +5,7 @@ const COOKIE_NAME = "agentfarm_session";
 
 type ApprovalMutationPayload = {
     action?: "approve" | "reject";
+    reason?: string;
 };
 
 const getCookieValue = (cookieHeader: string | null, name: string): string | null => {
@@ -39,12 +40,18 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
         return NextResponse.json({ error: "Action must be approve or reject." }, { status: 400 });
     }
 
+    const reason = payload.reason?.trim();
+    if (payload.action === "reject" && (!reason || reason.length < 8)) {
+        return NextResponse.json({ error: "Rejection reason must be at least 8 characters." }, { status: 400 });
+    }
+
     const { id } = await context.params;
 
     const updated = updateApprovalDecision({
         id,
         decision: payload.action === "approve" ? "approved" : "rejected",
         decidedBy: user.email,
+        reason,
     });
 
     if (!updated) {

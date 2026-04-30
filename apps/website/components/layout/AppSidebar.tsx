@@ -21,6 +21,7 @@ import {
     X,
     Radio,
     Rocket,
+    FileArchive,
 } from "lucide-react";
 import ThemeToggle from "@/components/shared/ThemeToggle";
 
@@ -30,6 +31,7 @@ const dashboardNav = [
     { href: "/dashboard/deployments", label: "Deployments", icon: Rocket },
     { href: "/dashboard/bots", label: "Bot Status", icon: Radio },
     { href: "/dashboard/approvals", label: "Approvals", icon: ClipboardCheck },
+    { href: "/dashboard/evidence", label: "Evidence", icon: FileArchive },
     { href: "/dashboard/activity", label: "Activity", icon: Activity },
     { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];

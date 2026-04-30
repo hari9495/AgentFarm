@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
-import { createApprovalRequest, getSessionUser, listApprovals } from "@/lib/auth-store";
+import {
+    createApprovalRequest,
+    escalatePendingApprovals,
+    getSessionUser,
+    listApprovals,
+} from "@/lib/auth-store";
 
 const COOKIE_NAME = "agentfarm_session";
 
@@ -21,6 +26,7 @@ type ApprovalCreatePayload = {
     channel?: string;
     reason?: string;
     risk?: "low" | "medium" | "high";
+    escalationTimeoutSeconds?: number;
 };
 
 export async function GET(request: Request) {
@@ -37,6 +43,8 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const agentSlug = searchParams.get("agentSlug") ?? undefined;
     const status = (searchParams.get("status") ?? "pending") as "pending" | "approved" | "rejected";
+    const limitParam = Number.parseInt(searchParams.get("limit") ?? "100", 10);
+    const limit = Number.isFinite(limitParam) ? limitParam : 100;
 
     if (!["pending", "approved", "rejected"].includes(status)) {
         return NextResponse.json({ error: "Invalid status filter." }, { status: 400 });
@@ -46,6 +54,7 @@ export async function GET(request: Request) {
         agentSlug,
         status,
         tenantId: user.tenantId ?? undefined,
+        limit,
     });
 
     return NextResponse.json({
@@ -79,6 +88,7 @@ export async function POST(request: Request) {
     const channel = payload.channel?.trim() ?? "Dashboard";
     const reason = payload.reason?.trim() ?? "";
     const risk = payload.risk;
+    const escalationTimeoutSeconds = payload.escalationTimeoutSeconds;
 
     if (title.length < 6) {
         return NextResponse.json({ error: "Title must be at least 6 characters." }, { status: 400 });
@@ -104,9 +114,34 @@ export async function POST(request: Request) {
         channel,
         reason,
         risk,
+        escalationTimeoutSeconds,
         actorId: user.id,
         actorEmail: user.email,
     });
 
     return NextResponse.json({ status: "ok", approval }, { status: 201 });
+}
+
+export async function PATCH(request: Request) {
+    const token = getCookieValue(request.headers.get("cookie"), COOKIE_NAME);
+    if (!token) {
+        return NextResponse.json({ error: "Authentication required." }, { status: 401 });
+    }
+
+    const user = getSessionUser(token);
+    if (!user) {
+        return NextResponse.json({ error: "Invalid or expired session." }, { status: 401 });
+    }
+
+    const result = escalatePendingApprovals({
+        tenantId: user.tenantId ?? undefined,
+        actorId: user.id,
+        actorEmail: user.email,
+    });
+
+    return NextResponse.json({
+        status: "ok",
+        escalatedCount: result.escalatedCount,
+        escalatedIds: result.escalatedIds,
+    });
 }
