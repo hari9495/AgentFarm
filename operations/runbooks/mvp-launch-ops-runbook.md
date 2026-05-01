@@ -17,10 +17,10 @@ All 24 local Sprint 1 tasks are **completed and validated**. The three tasks bel
 - API Gateway: 209 tests passing, typecheck clean
 - Agent Runtime: 118 tests passing, typecheck clean
 - Website: 28+ tests across 9 suites, typecheck clean
-- Quality gate: 32 checks — 31 PASS, 1 SKIP (DB snapshot, needs Docker)
+- Quality gate: 33 checks — 32 PASS, 1 SKIP (DB snapshot, needs Docker)
 - Approval enforcement + kill-switch: implemented and tested in `services/approval-service`
 - Audit and evidence dashboard: implemented and tested in `apps/website`
-- 13 connector plugin registry: implemented in `packages/connector-contracts`
+- 18 connector plugin registry: implemented in `packages/connector-contracts` (13 named + 5 generic REST)
 
 ## Current Blockers
 1. Azure extension context in this workspace is signed out.

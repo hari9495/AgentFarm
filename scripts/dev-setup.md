@@ -94,7 +94,7 @@ pnpm --filter @agentfarm/website test:deployments:ui
 # Provisioning service — 15 tests
 pnpm --filter @agentfarm/provisioning-service test
 
-# Full quality gate (32 checks)
+# Full quality gate (33 checks)
 pnpm quality:gate
 
 # E2E smoke lane

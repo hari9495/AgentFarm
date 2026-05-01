@@ -1,6 +1,6 @@
 # AgentFarm — Technical Overview
 
-AgentFarm is a TypeScript pnpm monorepo for operating AI agents with enterprise control gates. The platform delivers one production-grade Developer Agent role backed by 13 connectors across 4 categories, risk-based autonomy with human approval enforcement, and a complete audit and evidence path for compliance teams.
+AgentFarm is a TypeScript pnpm monorepo for operating AI agents with enterprise control gates. The platform delivers one production-grade Developer Agent role backed by 18 connectors across 4 categories, risk-based autonomy with human approval enforcement, 12 tiers of local workspace actions, 10 LLM providers with health-score failover, and a complete audit and evidence path for compliance teams.
 
 **Sprint 1 complete as of 2026-05-01.** All 24 local tasks are finished and validated. Three tasks (7.1 SWA deployment, 8.2 Azure production deployment, 8.3 security/load gates) are blocked on external Azure and GitHub secrets and are tracked in [operations/runbooks/mvp-launch-ops-runbook.md](operations/runbooks/mvp-launch-ops-runbook.md).
 
@@ -9,22 +9,28 @@ AgentFarm is a TypeScript pnpm monorepo for operating AI agents with enterprise 
 ## What We Built
 
 ### MVP Outcome
-- One production-grade Developer Agent role operating across Jira, Teams, GitHub, and email
-- 13 connectors in the plugin registry (task trackers, messaging, code, email)
+- One production-grade Developer Agent role operating across Jira, Teams, GitHub, Outlook, and more
+- 18 connectors in the plugin registry (13 named + 5 generic REST variants) across 4 categories
 - Risk-based autonomy: low-risk actions execute immediately, medium/high actions route to the human approval queue
 - Full audit and evidence path: append-only audit log, compliance export (JSON and CSV), evidence freshness dashboard
-- 19 Tier 1/2 local workspace actions for the Developer Agent (file, git, shell, search)
-- 9 LLM providers with Auto mode health-score failover
+- 12-tier local workspace action system with 70+ action types for the Developer Agent
+- 10 LLM providers with Auto mode and health-score-based failover, 4 configurable model profiles
+- Budget policy enforcement: per-workspace daily/monthly limits with hard stop and ledger events
+- Orchestrator with heartbeat wake model, routine scheduling, plugin capability guard
+- 179-agent marketplace catalogue across 29 departments
+- Website with 51 pages, 43 API routes, and superadmin portal
+- Operator dashboard with 14 components, runtime proxy, budget panel, governance workflow panel
 
 ### Core Product Capabilities
 - Tenant and workspace onboarding with HMAC-SHA256 session auth and workspace-scoped row-level security
-- Runtime provisioning: 11-step Azure VM state machine with SLA monitoring, failure recovery, and rollback
+- Runtime provisioning: 11-step Azure VM state machine with SLA monitoring (10-min target, 60-min stuck alert, 24-hr timeout), failure recovery, and rollback
 - Connector authentication, token lifecycle (auto-refresh, revoke, re-consent), and monthly health probes
 - Normalized connector action execution with exponential backoff retry and role-policy enforcement
 - Approval intake, queue, decision enforcement, escalation, kill-switch, and decision webhook fanout
 - Append-only audit log, retention policy (365-day active / 730-day archive), and compliance query API
-- Evidence and compliance dashboard: live KPIs, P95 latency, audit event timeline, compliance export
-- Website onboarding surfaces: signup, connector dashboard, marketplace, approval inbox, evidence view
+- Evidence and compliance dashboard: live KPIs, P95/P50/P99 latency, audit event timeline, compliance export
+- Bot capability snapshots: language tier (base/pro/enterprise), speech/TTS/avatar providers, checksum integrity
+- Website onboarding surfaces: signup, connector dashboard, marketplace, approval inbox, evidence view, superadmin
 
 ---
 
@@ -41,23 +47,23 @@ infrastructure/  Azure control-plane and runtime-plane IaC
 
 ### Applications
 
-| App | Port | Purpose | Test Count |
-|-----|------|---------|-----------|
-| `apps/api-gateway` | 3001 | Control-plane API: auth, session, connector execution, approvals, audit | 209 |
-| `apps/agent-runtime` | — | Per-tenant execution engine: risk classification, LLM dispatch, workspace actions | 118 |
-| `apps/dashboard` | 3000 | Operator UI: approval queue, evidence, runtime health, LLM config panel | — |
-| `apps/website` | 3002 | Product surface: onboarding, connectors, approval inbox, evidence dashboard | 28+ |
-| `apps/orchestrator` | — | Multi-agent workflow coordinator | — |
+| App | Port | Purpose | Tests |
+|-----|------|---------|-------|
+| `apps/api-gateway` | 3001 | Control-plane API: auth, session, connector execution, approvals, audit, budget policy, roles, snapshots, plugin loading, LLM config, governance workflows | 209 |
+| `apps/agent-runtime` | — | Per-tenant execution engine: risk classification, LLM dispatch, 12-tier workspace actions | 118 |
+| `apps/dashboard` | 3000 | Operator UI: approval queue, evidence panel, runtime observability, LLM config, governance workflows, plugin loading, budget panel, workspace switcher | — |
+| `apps/website` | 3002 | Product surface: 51 pages, 43 API routes, auth, connectors, marketplace, approvals, evidence, superadmin | 28+ |
+| `apps/orchestrator` | — | Multi-agent coordinator: heartbeat wake model, routine scheduler, plugin capability guard, state persistence | — |
 
 ### Domain Services
 
 | Service | Purpose | Tests |
 |---------|---------|-------|
-| `services/provisioning-service` | 11-step VM provisioning state machine, bootstrap, SLA | 15 |
+| `services/provisioning-service` | 11-step VM provisioning state machine, bootstrap, SLA monitoring, cleanup | 15 |
 | `services/approval-service` | Approval enforcement, kill-switch, governance workflow manager | 12+ |
-| `services/connector-gateway` | OAuth flows, token lifecycle, adapter dispatch, health probes | passing |
-| `services/policy-engine` | Policy routing and governance rule checks | passing |
-| `services/evidence-service` | Governance KPI events, evidence records | passing |
+| `services/connector-gateway` | OAuth flows, token lifecycle, adapter registry, adapter dispatch, health probes | passing |
+| `services/policy-engine` | Governance routing policy and rule resolution | passing |
+| `services/evidence-service` | Governance KPI calculator (P50/P95/P99, escalation rate, provider fallback rate) | passing |
 | `services/identity-service` | Tenant, workspace, user lifecycle | — |
 | `services/notification-service` | Approval and ops notifications | — |
 
@@ -65,111 +71,445 @@ infrastructure/  Azure control-plane and runtime-plane IaC
 
 | Package | Purpose |
 |---------|---------|
-| `packages/shared-types` | Shared TypeScript contracts, enums, and kill-switch types |
-| `packages/connector-contracts` | 13-connector registry, normalized action types, role policies |
+| `packages/shared-types` | 10 versioned contract records, enums, kill-switch types, budget/governance/evidence types |
+| `packages/connector-contracts` | 18-connector plugin registry, 18 normalized action types, 12 role policy keys |
 | `packages/queue-contracts` | Queue event type definitions |
 | `packages/db-schema` | Prisma schema and migrations |
 | `packages/observability` | Structured telemetry helpers |
 
 ---
 
+## Contract Versioning
+
+`packages/shared-types/src/index.ts` exports `CONTRACT_VERSIONS` — all pinned at `'1.0.0'`:
+
+| Contract | Key |
+|----------|-----|
+| Provisioning job | `PROVISIONING` |
+| Runtime config | `RUNTIME` |
+| Task lease | `TASK_LEASE` |
+| Budget decision | `BUDGET_DECISION` |
+| Connector action | `CONNECTOR_ACTION` |
+| Approval record | `APPROVAL` |
+| Action result | `ACTION` |
+| Audit event | `AUDIT_EVENT` |
+| Governance workflow | `GOVERNANCE_WORKFLOW` |
+| Plugin loading | `PLUGIN_LOADING` |
+
+---
+
 ## Connector Plugin Registry
 
-`packages/connector-contracts/src/index.ts` exports a typed `CONNECTOR_REGISTRY` of 13 (+ generic) connectors:
+`packages/connector-contracts/src/index.ts` exports a typed `CONNECTOR_REGISTRY` of 18 connectors:
 
-| Category | Connectors |
-|----------|-----------|
-| `task_tracker` | Jira, Linear, Asana, Monday, Trello, ClickUp, Generic REST |
-| `messaging` | Microsoft Teams, Slack, Discord, Google Chat, Generic REST |
-| `code` | GitHub, GitLab, Bitbucket, Azure DevOps, Generic REST |
-| `email` | Outlook (Graph), Gmail, Exchange, Generic SMTP, Generic REST |
+| Category | Named Connectors | Custom Connector |
+|----------|-----------------|-----------------|
+| `task_tracker` | Jira, Linear, Asana, Monday, Trello, ClickUp | `generic_rest` |
+| `messaging` | Microsoft Teams, Slack | `generic_rest_messaging` |
+| `code` | GitHub, GitLab, Azure DevOps | `generic_rest_code` |
+| `email` | Outlook (Microsoft Graph), Gmail | `generic_rest_email`, `generic_smtp` |
 
-Each `ConnectorDefinition` carries: `tool`, `label`, `category`, `authMethod`, `configSchema`, `allowedRoles`, `defaultActionPolicyByRole`, and `oauthInitUrl` (for OAuth connectors).
+Auth methods used: `oauth2`, `api_key`, `basic`, `bearer_token`, `generic_rest`
 
-Helper functions: `getConnectorDefinition(tool)`, `getConnectorsByCategory(category)`.
+Each `ConnectorDefinition` carries: `tool`, `label`, `category`, `authMethod`, `configSchema`, `allowedRoles`, `defaultActionPolicyByRole`, and `oauthInitUrl` (OAuth connectors).
 
-### Normalized Action Types (15)
-`read_task`, `create_task`, `update_task`, `delete_task`, `create_comment`, `update_status`, `send_message`, `create_pr`, `create_pr_comment`, `merge_pr`, `send_email`, `read_email`, `deploy_production`, `delete_resource`, `change_permissions`
+Exports: `getConnectorDefinition(tool)`, `getConnectorsByCategory(category)`, `isTrustedPluginPublisher`, `isValidPluginManifest`, `verifyPluginManifestSignature`, `ExternalPluginManifestContract`, `TrustedPublisherRule`.
+
+### Normalized Action Types (18)
+
+| Type | Category |
+|------|----------|
+| `get_task`, `create_task`, `update_task_status`, `add_comment`, `assign_task`, `list_tasks` | Task tracker |
+| `send_message`, `create_channel`, `mention_user` | Messaging |
+| `create_pr`, `add_pr_comment`, `merge_pr`, `list_prs` | Code |
+| `list_emails`, `read_email`, `send_email`, `reply_email`, `read_thread` | Email |
 
 ### Agent Role Keys (12)
-`recruiter`, `developer`, `fullstack_developer`, `tester`, `business_analyst`, `technical_writer`, `content_writer`, `devops_engineer`, `security_engineer`, `data_analyst`, `project_manager`, `support_agent`
+
+| Role Key | Description |
+|----------|-------------|
+| `recruiter` | Recruiter workflows |
+| `developer` | Software development tasks |
+| `fullstack_developer` | Full-stack development tasks |
+| `tester` | QA and test automation |
+| `business_analyst` | Business analysis and requirements |
+| `technical_writer` | Documentation and technical content |
+| `content_writer` | Marketing and general content |
+| `sales_rep` | Sales workflows and outreach |
+| `marketing_specialist` | Marketing campaigns |
+| `corporate_assistant` | Corporate coordination tasks |
+| `customer_support_executive` | Customer support workflows |
+| `project_manager_product_owner_scrum_master` | PM/PO/Scrum combined role |
+
+---
+
+## LLM Decision Adapter
+
+`apps/agent-runtime/src/llm-decision-adapter.ts` — provider failover and decision routing.
+
+### Providers (10)
+
+`agentfarm` | `openai` | `azure_openai` | `github_models` | `anthropic` | `google` | `xai` | `mistral` | `together` | `auto`
+
+`auto` uses health-score-based failover: 5-minute rolling composite (error rate + latency).
+
+### Model Profiles (4)
+
+| Profile | Description |
+|---------|-------------|
+| `quality_first` | Prioritizes highest-capability models |
+| `speed_first` | Prioritizes lowest-latency models |
+| `cost_balanced` | Balances cost vs. quality |
+| `custom` | User-defined per-provider model selection |
+
+Each profile has an `AutoProfileProviderMap` defining the ordered provider priority list for Auto mode.
+
+### Provider Failover Trace
+
+`ProviderFailoverTraceRecord` captures per-attempt: `provider`, `reasonCode` (`rate_limit` | `auth_failure` | `billing_disabled` | `timeout` | `provider_unavailable` | `unclassified`), `disposition` (`attempt_failed` | `skipped_cooldown` | `skipped_unconfigured`).
+
+### LLM Workspace Config
+
+`RuntimeLlmWorkspaceConfig` carries per-provider: `model`, `baseUrl`, `apiKey`, `modelProfiles`. Dashboard LLM config panel shows redacted key display. Routes: `GET/PUT /v1/workspaces/:workspaceId/llm-config`.
+
+---
+
+## Execution Engine and Risk Classification
+
+`apps/agent-runtime/src/execution-engine.ts`
+
+### Risk Classification
+
+**HIGH_RISK_ACTIONS** (17 items):
+`merge_release`, `merge_pr`, `delete_resource`, `change_permissions`, `deploy_production`, `git_push`, `run_shell_command`, `workspace_repl_start`, `workspace_repl_execute`, `workspace_dry_run_with_approval_chain`, `workspace_browser_open`, `workspace_app_launch`, `workspace_meeting_join`, `workspace_meeting_speak`, `workspace_meeting_interview_live`, `workspace_subagent_spawn`, `workspace_github_issue_fix`
+
+**MEDIUM_RISK_ACTIONS** (40+ items): all mutating workspace-tier actions including `code_edit`, `code_edit_patch`, `git_commit`, `autonomous_loop`, `apply_patch`, `workspace_bulk_refactor`, `workspace_atomic_edit_set`, and all Tier 2–10 mutating operations.
+
+Actions with confidence < 0.6 are escalated to medium risk regardless of action type.
+
+### Key Types
+
+- `TaskEnvelope`: `taskId`, `payload`, `lease`
+- `ActionDecision`: `actionType`, `confidence`, `riskLevel`, `route` (`execute_immediately` | `route_to_approval`), `reason`
+- `LlmDecisionMetadata`: `classificationSource`, `modelProvider`, `model`, `modelProfile`, `tokens`, `failoverTrace`
+- `ProcessedTaskResult`: `decision`, `status`, `attempts`, `transientRetries`, `executionPayload`, `payloadOverrideSource`
+
+---
+
+## Developer Agent — 12-Tier Workspace Actions
+
+`apps/agent-runtime/src/local-workspace-executor.ts` — `safeChildPath` sandbox enforcement on all file and shell operations.
+
+### Tier 1 — File and Directory (Claude Code parity)
+`workspace_list_files`, `workspace_grep`, `file_move`, `file_delete`, `workspace_install_deps`
+
+### Tier 2 — Autonomous Agent Operations
+`run_linter`, `apply_patch`, `git_stash`, `git_log`, `workspace_scout`, `workspace_checkpoint`
+
+### Tier 3 — IDE-Level Intelligence
+`workspace_find_references`, `workspace_rename_symbol`, `workspace_extract_function`, `workspace_go_to_definition`, `workspace_hover_type`, `workspace_analyze_imports`, `workspace_code_coverage`, `workspace_complexity_metrics`, `workspace_security_scan`
+
+### Tier 4 — Multi-File Coordination
+`workspace_bulk_refactor`, `workspace_atomic_edit_set`, `workspace_generate_from_template`, `workspace_migration_helper`, `workspace_summarize_folder`, `workspace_dependency_tree`, `workspace_test_impact_analysis`
+
+### Tier 5 — External Knowledge and REPL
+`workspace_search_docs`, `workspace_package_lookup`, `workspace_ai_code_review`, `workspace_repl_start`, `workspace_repl_execute`, `workspace_repl_stop`, `workspace_debug_breakpoint`, `workspace_profiler_run`
+
+### Tier 6 — Language Adapters
+`workspace_language_adapter_python`, `workspace_language_adapter_java`, `workspace_language_adapter_go`, `workspace_language_adapter_csharp`
+
+### Tier 7 — Governance and Safety
+`workspace_dry_run_with_approval_chain` (**HIGH** risk), `workspace_change_impact_report`, `workspace_rollback_to_checkpoint`
+
+### Tier 8 — Release and Collaboration
+`workspace_generate_test`, `workspace_format_code`, `workspace_version_bump`, `workspace_changelog_generate`, `workspace_git_blame`, `workspace_outline_symbols`
+
+### Tier 9 — Productivity Pilot (Roadmap)
+`workspace_create_pr`, `workspace_run_ci_checks`, `workspace_fix_test_failures`, `workspace_security_fix_suggest`, `workspace_pr_review_prepare`, `workspace_dependency_upgrade_plan`, `workspace_release_notes_generate`, `workspace_incident_patch_pack`, `workspace_memory_profile`, `workspace_autonomous_plan_execute`, `workspace_policy_preflight`
+
+### Tier 10 — Hardening and Observability
+`workspace_connector_test`, `workspace_pr_auto_assign`, `workspace_ci_watch`, `workspace_explain_code`, `workspace_add_docstring`, `workspace_refactor_plan`, `workspace_semantic_search`, `workspace_diff_preview`, `workspace_approval_status`, `workspace_audit_export`
+
+### Tier 11 — Desktop and Meeting (**HIGH** risk, requires approval)
+`workspace_browser_open`, `workspace_app_launch`, `workspace_meeting_join`, `workspace_meeting_speak`, `workspace_meeting_interview_live`
+
+### Tier 12 — Sub-Agent Delegation (**HIGH** risk, requires approval)
+`workspace_subagent_spawn`, `workspace_github_pr_status`, `workspace_github_issue_triage`, `workspace_github_issue_fix`, `workspace_azure_deploy_plan`, `workspace_slack_notify`
+
+### Original Action Set
+`git_clone`, `git_branch`, `git_commit`, `git_push`, `code_read`, `code_edit`, `code_edit_patch`, `code_search_replace`, `run_build`, `run_tests`, `autonomous_loop`, `workspace_cleanup`, `workspace_diff`, `workspace_memory_write`, `workspace_memory_read`, `run_shell_command`, `create_pr_from_workspace`
+
+---
+
+## API Gateway Routes
+
+`apps/api-gateway/src/routes/` — 13 route modules:
+
+| Module | Routes |
+|--------|--------|
+| `auth.ts` | POST `/v1/auth/login`, `/v1/auth/logout`, `/v1/auth/session` |
+| `approvals.ts` | POST `/v1/approvals/intake`, `/v1/approvals/escalate`, POST `/v1/approvals/:id/decision` |
+| `audit.ts` | GET `/v1/audit/events` |
+| `budget-policy.ts` | GET/PUT `/v1/workspaces/:id/budget-policy`, GET `/v1/workspaces/:id/budget-status` |
+| `connector-actions.ts` | POST `/v1/connectors/:tool/execute` |
+| `connector-auth.ts` | GET `/v1/connectors/oauth/init`, GET `/v1/connectors/oauth/callback` |
+| `governance-workflows.ts` | Full CRUD for workflow templates, instances, decision submission |
+| `internal-login-policy.ts` | GET `/v1/auth/internal-login-policy` (internal scope only) |
+| `plugin-loading.ts` | POST `/v1/plugins/allowlist/upsert` |
+| `roles.ts` | GET `/v1/roles`, role subscription management |
+| `runtime-llm-config.ts` | GET/PUT `/v1/workspaces/:id/llm-config` |
+| `runtime-tasks.ts` | Task lease and runtime task routing |
+| `snapshots.ts` | GET/PUT bot capability snapshots with checksum integrity |
+
+API Gateway Services (`src/services/`): `azure-provisioning-steps.ts`, `connector-health-worker.ts`, `connector-token-lifecycle-worker.ts`, `provisioning-monitoring.ts`, `provisioning-worker.ts`
+
+### Provisioning SLA Thresholds
+- Target: `SLA_TARGET_MS` = 10 minutes
+- Stuck alert: `STUCK_ALERT_MS` = 60 minutes
+- Timeout: `TIMEOUT_MS` = 24 hours
+- Alert cooldown: `ALERT_COOLDOWN_MS` = 15 minutes
+
+### Connector Token Lifecycle Worker
+- Poll intervals: `POLL_INTERVAL_ACTIVE_MS` = 60s, `POLL_INTERVAL_IDLE_MS` = 5 min
+- Refresh window: `REFRESH_WINDOW_MS` = 5 min before expiry
+- Batch size: 25 connectors per cycle
+- `MetadataStatus` (11 states): `not_configured` → `auth_initiated` → `consent_pending` → `token_received` → `validation_in_progress` → `connected` → `degraded` → `token_expired` → `permission_invalid` → `revoked` → `disconnected`
+- `ErrorClass` (8 types): `oauth_state_mismatch`, `oauth_code_exchange_failed`, `token_refresh_failed`, `token_expired`, `insufficient_scope`, `provider_rate_limited`, `provider_unavailable`, `secret_store_unavailable`
+
+---
+
+## Budget Policy System
+
+`apps/api-gateway/src/routes/budget-policy.ts`
+
+- Per-workspace budget state: `dailySpent`, `dailyLimit`, `monthlySpent`, `monthlyLimit`, `isHardStopActive`, `lastResetDaily`
+- Hard stop: once `isHardStopActive` is true, all new agent actions are blocked
+- `BudgetLedgerEvent`: appended on every action that incurs cost
+- `BudgetDenialReason` (5 reasons): `daily_limit_exceeded`, `monthly_limit_exceeded`, `hard_stop_active`, `workspace_suspended`, `budget_not_configured`
+- `BudgetLimitScope`: `workspace`
+- `BudgetDecisionRecord` in `packages/shared-types`: carries `decision`, `reason`, `dailySpent`, `monthlySpent`, `limits`, `workspaceId`, `actionType`
+
+---
+
+## Orchestrator
+
+`apps/orchestrator/src/` — 5 modules:
+
+### Task Scheduler (`task-scheduler.ts`)
+- **Heartbeat Wake Model** with coalescing
+- `WakeSource`: `timer` | `task_assignment` | `on_demand` | `automation_trigger`
+- `WakeRequest`: source, `dedupeKey`, `targetWorkspaceId`, `priority`
+- `RunCoalescingStore`: merges duplicate wake requests by `dedupeKey`
+- `RunScheduleResult`: whether a new run was created or coalesced
+
+### Routine Scheduler (`routine-scheduler.ts`)
+- `RoutineSchedulerState`: `scheduledTasks`, `featureFlags`, `schedulerErrors`
+
+### Plugin Capability Guard (`plugin-capability-guard.ts`)
+- `evaluatePluginCapabilityGuard`: checks `loaded` + `trusted` + `capability_allowlisted`
+- Denial reasons: `plugin_not_loaded`, `plugin_not_trusted`, `capability_not_allowlisted`
+
+### Orchestrator State Store (`orchestrator-state-store.ts`)
+- `OrchestratorPersistedState`: `version: 1`, `taskScheduler`, `routineScheduler`
+- `OrchestratorStateBackend`: `auto` | `file` | `db`
+- Atomic write: write-then-rename for crash safety
+
+---
+
+## Bot Capability Snapshots
+
+`apps/api-gateway/src/routes/snapshots.ts` and `BotCapabilitySnapshotRecord` in shared-types:
+
+| Field | Values |
+|-------|--------|
+| `languageTier` | `base` | `pro` | `enterprise` |
+| `speechProvider` | provider identifier |
+| `translationProvider` | provider identifier |
+| `ttsProvider` | provider identifier |
+| `avatarEnabled` | boolean |
+| `avatarStyle` | style identifier |
+| `avatarProvider` | provider identifier |
+| `snapshotVersion` | semver string |
+| `snapshotChecksum` | SHA-256 of snapshot payload |
+| `source` | `api` | `manual` |
+
+---
+
+## Evidence Service and Governance KPIs
+
+`services/evidence-service/src/governance-kpi.ts` — `GovernanceKpiCalculator.calculateMetrics()` returns `GovernanceMetrics`:
+
+- `evidenceCompletenessPercent`: percentage of expected evidence records present
+- `approvalP50LatencySeconds`, `approvalP95LatencySeconds`, `approvalP99LatencySeconds`
+- `approvalTimeoutRate`: fraction of approvals that timed out
+- `budgetBlocks`: count of budget-policy denials
+- `providerFallbackRate`: fraction of LLM calls that triggered failover
+
+---
+
+## Policy Engine and Governance Routing
+
+`services/policy-engine/src/governance-routing-policy.ts` — `resolveApproverIds(template, context)`:
+
+- Multi-rule matching with filters: `tenantId`, `workspaceId`, `riskLevel`, `actionTypePrefix`
+- Returns deduplicated approver ID set
+- Used by the approval intake flow to determine routing targets
+
+---
+
+## Connector Gateway and Adapter Registry
+
+`services/connector-gateway/src/adapter-registry.ts` — `AdapterRegistry` class:
+
+- `register(definition)`: registers a connector adapter
+- `unregister(tool)`: removes a registered adapter
+- `discover(category?)`: returns available adapters, optionally filtered by category
+- `healthCheck(tool)`: performs health check on a specific adapter
+- All operations are audit-logged
+- Storage: in-memory `Map` backed, tenant-scoped
+
+---
+
+## Website — Pages and API Routes
+
+### Pages (51+ routes)
+
+| Section | Pages |
+|---------|-------|
+| Marketing | `/`, `/about`, `/blog`, `/changelog`, `/compare`, `/contact`, `/customers`, `/how-it-works`, `/pricing`, `/privacy`, `/product`, `/security`, `/terms`, `/use-cases` |
+| Docs | `/docs`, `/docs/quickstart`, `/docs/concepts`, `/docs/api-reference` |
+| Product | `/book-demo`, `/connectors`, `/checkout`, `/get-started` |
+| Auth | `/login`, `/signup`, `/forgot-password` |
+| Onboarding | `/onboarding`, `/marketplace/[slug]` |
+| Dashboard | `/dashboard`, `/dashboard/activity`, `/dashboard/agents`, `/dashboard/agents/[slug]`, `/dashboard/agents/[slug]/approvals`, `/dashboard/approvals`, `/dashboard/bots`, `/dashboard/deployments`, `/dashboard/evidence`, `/dashboard/settings` |
+| Admin | `/admin`, `/admin/bots`, `/admin/users`, `/admin/integrations`, `/admin/billing`, `/admin/audit`, `/admin/roles`, `/admin/security`, `/admin/superadmin` |
+| Company portal | `/company`, `/company/tenants/[id]` |
+
+### API Routes (43 across 12 groups)
+
+| Route Group | Key Endpoints |
+|-------------|--------------|
+| `auth` | login, logout, session, signup, forgot-password |
+| `activity` | GET activity feed |
+| `admin/bots` | bot management (CRUD) |
+| `admin/users` | user management (CRUD) |
+| `approvals` | list approvals, GET/PATCH by ID |
+| `audit/events` | list audit events |
+| `connectors` | list, create, delete, health per connector |
+| `deployments` | list, latest, get by ID |
+| `evidence` | summary (KPIs), export (CSV/JSON) |
+| `marketplace` | bots catalogue, quick-start, selection |
+| `onboarding` | complete onboarding |
+| `provisioning` | process, retry, status |
+| `superadmin` | audit, billing, fleet (CRUD + bulk), incidents (CRUD + assign/resolve), integrations, logs, overview, sessions, tenants |
+
+### Website Auth Store (`apps/website/lib/auth-store.ts`)
+
+SQLite-backed (`node:sqlite` DatabaseSync), exports:
+`UserRecord`, `SessionRecord`, `ApprovalRecord`, `ActivityFeedEvent`, `ComplianceEvidenceSummary`, `ComplianceEvidencePack`, `DeploymentJobRecord`, `UserOnboardingState`, `CustomerTenantRecord`, `WorkspaceRecord`, `BotRecord`, `ProvisioningQueueEntry`, `AuditEventRecord`
+
+Functions: `getSessionUser`, `createApprovalRequest`, `updateApprovalDecision`, `listApprovals`, `escalatePendingApprovals`, `writeAuditEvent`, `listAuditEvents`, `getComplianceEvidenceSummary`, `exportComplianceEvidencePack`, `listRecentActivity`
+
+### Bot Marketplace Catalogue
+
+`apps/website/lib/bots-catalogue.ts` — 179 agents from the awesome-openclaw-agents list.
+`apps/website/lib/bots.ts` — `BotDepartment` enum with 29 departments including Engineering, DevOps, Security, Healthcare, Legal, Marketing, Sales, HR, Finance, Customer Support, and more.
+
+---
+
+## Operator Dashboard (`apps/dashboard`)
+
+### Components (TypeScript — with tests)
+- `dashboard-navigation.ts` — navigation routing and state
+- `dashboard-tab-storage.ts` — tab persistence
+- `runtime-observability-utils.ts` — runtime metric aggregation
+- `workspace-budget-panel-utils.ts` — budget state formatting
+
+### Components (React TSX)
+- `approval-queue-panel.tsx` — pending approvals by risk level, decision UI
+- `connector-config-panel.tsx` — connector status and configuration
+- `copy-link-button.tsx` — deep link sharing
+- `dashboard-deep-link-bar.tsx` — contextual quick navigation
+- `dashboard-mobile-shell.tsx` — mobile-responsive layout
+- `dashboard-tab-nav.tsx` — tabbed navigation
+- `dashboard-workspace-switcher.tsx` — workspace context switcher
+- `evidence-compliance-panel.tsx` — compliance KPIs and export
+- `governance-workflow-panel.tsx` — workflow template and instance management
+- `llm-config-panel.tsx` — per-provider LLM settings, profile presets
+- `operational-signal-timeline.tsx` — event timeline for runtime operations
+- `plugin-loading-panel.tsx` — trusted publisher allowlist, kill-switch
+- `runtime-observability-panel.tsx` — runtime health, logs, transcripts
+- `workspace-budget-panel.tsx` — daily/monthly spend, hard stop controls
+
+### Dashboard API Routes
+- `approvals/`: decision, escalate, governance diagnostics, plugins (audit/status)
+- `audit/`: events, export, retention policy
+- `auth/`: internal-login
+- `runtime/[botId]/`: route-handler-core, runtime-proxy-utils, capability, health, interview-events, kill, logs, state, transcripts
+- `workspaces/[workspaceId]/`: budget-limits, historical-metrics, llm-config
+
+### Dashboard Pages
+`/` (main), `/connectors`, `/governance`, `/governance/plugins`, `/login`, `/provisioning`, `/signup`, `/target`
 
 ---
 
 ## Key Runtime Flows
 
 ### 1. Signup to Operational Workspace
-1. POST `/auth/signup` → atomic transaction creates: Tenant (status `provisioning`), TenantUser (role `owner`), Workspace, Bot (status `created`), ProvisioningJob (status `queued`)
+1. `POST /auth/signup` → atomic transaction creates: Tenant (`provisioning`), TenantUser (`owner`), Workspace, Bot (`created`), ProvisioningJob (`queued`)
 2. Session token (HMAC-SHA256) returned as `agentfarm_session` HttpOnly cookie
 3. Provisioning worker polls for `queued` jobs and runs 11-step state machine
-4. Steps: `queued → validating → creating_resource_group → creating_vm → bootstrapping_docker → registering_runtime → health_checking → completed` (with failure/cleanup paths)
+4. Steps: `queued → validating → creating_resource_group → creating_vm → bootstrapping_docker → registering_runtime → health_checking → completed` (with `failed`, `cleanup_pending`, `cleanup_complete` paths)
 5. Dashboard provisioning card reflects live state with remediation hints on failure
 
 ### 2. Connector Action Execution with Governance
-1. Agent runtime requests a normalized action via api-gateway
-2. Role policy and connector policy checked against `defaultActionPolicyByRole`
-3. `classifyRisk()` evaluates: `HIGH_RISK_ACTIONS` = `[merge_pr, merge_release, delete_resource, change_permissions, deploy_production]`, `MEDIUM_RISK_ACTIONS` = `[update_status, create_comment, create_pr_comment, create_pr, send_message]`; confidence < 0.6 escalates to medium
+1. Agent runtime requests normalized action via api-gateway
+2. Role policy checked against `defaultActionPolicyByRole`; budget policy evaluated
+3. `classifyRisk()` checks `HIGH_RISK_ACTIONS` (17 items) and `MEDIUM_RISK_ACTIONS` (40+ items); confidence < 0.6 escalates to medium
 4. Low-risk: executes immediately, writes success audit event
-5. Medium/high: creates immutable approval record (status `pending`), returns 201 to runtime
-6. Approved action: executes with `executionToken`, writes audit event
+5. Medium/high: creates immutable approval record (`pending`), returns 201 to runtime
+6. Approved action: executes with `executionToken`, writes audit event + budget ledger entry
 7. Rejected action: returns 403 with reason to caller, writes rejection audit event
 
 ### 3. Approval Lifecycle
 1. Risky action enters `POST /v1/approvals/intake` — immutable approval record created
-2. `ApprovalsQueue` UI at `/dashboard/approvals` shows pending items grouped by risk level (HIGH first)
-3. Approver submits decision via `PATCH /api/approvals/[id]` with optional reason (required on rejection, minimum 8 characters)
+2. `ApprovalsQueue` UI at `/dashboard/approvals` shows pending items grouped by risk (HIGH first)
+3. Approver submits decision via `PATCH /api/approvals/[id]` with optional reason (required on rejection, ≥8 characters)
 4. `decisionLatencySeconds` computed and stored; P95 latency shown on evidence dashboard
 5. `POST /v1/approvals/escalate` marks overdue pending approvals per `escalationTimeoutSeconds` (default 3600s)
-6. Kill-switch: `ApprovalEnforcer.activateKillSwitch()` blocks all new medium/high actions within 30-second control window; resume requires `incidentRef` + `authorizedBy`
+6. Kill-switch: blocks all new medium/high actions within 30-second control window; resume requires `incidentRef` + `authorizedBy`
 
 ### 4. Audit and Evidence
-1. `writeAuditEvent()` appends to `company_audit_events` SQLite table (no UPDATE/DELETE paths)
-2. Events emitted on: signup, login, connector add/remove, approval request, approval decision, action executed, action blocked, provisioning state changes
-3. Query API `GET /api/audit/events?actorEmail=&action=&from=&to=&limit=` with tenant isolation
-4. Evidence summary `GET /api/evidence/summary?windowHours=24` computes: requests, pending, approved, rejected, escalated, P95 latency, freshness seconds
-5. Compliance export `GET /api/evidence/export?format=json|csv` returns full `ComplianceEvidencePack` with 365-day active / 730-day archive retention policy
+1. `writeAuditEvent()` appends to SQLite (no UPDATE/DELETE paths ever)
+2. Events: signup, login, connector add/remove, approval request, approval decision, action executed/blocked, provisioning state changes, budget blocks
+3. Query API with filters: `actorEmail`, `action`, `tenantId`, `from`, `to`, `limit`
+4. Evidence summary computes: requests, pending, approved, rejected, escalated, P95 latency, freshness seconds
+5. Compliance export returns full `ComplianceEvidencePack` (JSON + CSV), 365-day active / 730-day archive retention
 
-### 5. Connector Setup and Token Lifecycle
-1. User visits `/connectors` → connector dashboard UI shows available connectors by category
-2. Click "Connect" → OAuth flow initiates via `oauthInitUrl` with CSRF state nonce
-3. Callback: nonce validated, token stored as Key Vault reference (never in DB), `TenantConnector` record created
-4. Token lifecycle worker: auto-refreshes before expiry, routes `permission_invalid` / `insufficient_scope` → `consent_pending`
-5. Health probe: monthly scope validation, maps remediation: re-auth / re-consent / backoff
+### 5. LLM Provider Failover
+1. Execution engine calls `LLMDecisionAdapter` with action context and workspaceId
+2. Profile resolved: `quality_first`, `speed_first`, `cost_balanced`, `custom`
+3. Auto mode iterates `AutoProfileProviderMap[profile]` ordered by 5-minute rolling health score
+4. Each skip/failure appended to `ProviderFailoverTraceRecord[]`
+5. Heuristic fallback fires if all providers fail
 
-### 6. LLM Decision Adapter
-1. Execution engine calls `LLMDecisionAdapter` with action context
-2. Provider chain resolved by `profile` setting: `ultra_low_cost`, `balanced`, `premium_quality`, or `auto`
-3. Auto mode: iterates priority list ordered by 5-minute rolling health score (composite error-rate + latency)
-4. Heuristic fallback fires if all providers fail
-5. Supported: `openai`, `azure_openai`, `github_models`, `anthropic`, `google`, `xai`, `mistral`, `together`, `agentfarm`
+### 6. Budget Enforcement
+1. Per-task cost estimate evaluated against `WorkspaceBudgetState`
+2. Daily and monthly spend checked; `isHardStopActive` checked
+3. Denial reasons emitted as `BudgetDecisionRecord` and appended to ledger
+4. Hard stop once active blocks all new agent actions until manually cleared by admin
 
----
+### 7. Plugin Loading and Trust
+1. External plugin submitted with manifest + cryptographic signature
+2. `isValidPluginManifest` + `verifyPluginManifestSignature` + `isTrustedPluginPublisher` checked
+3. If all pass: added to allowlist via `POST /v1/plugins/allowlist/upsert`
+4. Orchestrator `evaluatePluginCapabilityGuard` enforces per-capability decisions at runtime
 
-## Developer Agent — Tier 1/2 Local Workspace Actions
-
-Implemented in `apps/agent-runtime/src/local-workspace-executor.ts` with `safeChildPath` sandbox enforcement on all file and shell operations.
-
-| Action | Risk | Description |
-|--------|------|-------------|
-| `workspace_list_files` | low | Recursive dir walk, configurable depth, pattern filter, skips .git/node_modules/dist |
-| `workspace_grep` | low | Regex search, optional context lines, returns `[{file, line, col, text}]` |
-| `workspace_tree` | low | Directory tree with depth limit |
-| `workspace_summary` | low | Token-budget-aware project summary |
-| `workspace_search_symbol` | low | Symbol search across workspace |
-| `file_read` | low | Read file with optional line range |
-| `file_write` | medium | Write/overwrite file, creates parents |
-| `file_patch` | medium | Apply unified diff patch |
-| `file_move` | medium | Rename/move within sandbox |
-| `file_delete` | medium | Delete file/directory, recursive flag |
-| `workspace_replace` | medium | Find-and-replace across workspace |
-| `workspace_apply_patch` | medium | Apply multi-file patch bundle |
-| `git_status` | low | Git status output |
-| `git_diff` | low | Git diff with optional path filter |
-| `git_create_branch` | medium | Create new branch |
-| `git_checkout` | medium | Checkout branch |
-| `git_commit` | medium | Stage and commit with message |
-| `git_push` | high | Push to remote (requires approval) |
-| `shell_run` | high | Execute shell command in sandbox (requires approval) |
+### 8. Orchestrator Wake and Run
+1. Wake request received with `WakeSource` and `dedupeKey`
+2. `RunCoalescingStore` deduplicates inflight requests by `dedupeKey`
+3. Run state written atomically (write-then-rename) to `OrchestratorPersistedState`
+4. Routine scheduler evaluates `scheduledTasks` against `featureFlags`
 
 ---
 
@@ -177,12 +517,15 @@ Implemented in `apps/agent-runtime/src/local-workspace-executor.ts` with `safeCh
 
 - No connector secrets stored in relational records — only Key Vault `kv://` references persisted
 - Workspace and tenant scoping enforced at session and route level with workspace RLS
-- Approval immutability: `409 Conflict` returned on any attempt to re-decide a concluded approval
+- Approval immutability: `409 Conflict` on any attempt to re-decide a concluded approval
 - Kill-switch governance: 30-second control window halts risky execution; authorized resume requires incident reference
 - CSRF nonce validation on all OAuth connector callback flows with replay rejection
 - Timing-safe password hash comparison on login to prevent user enumeration
 - Exponential backoff (50ms → 100ms) on transient connector action failures
 - State-machine cleanup and rollback on provisioning failures
+- Budget hard stop: configurable per-workspace daily/monthly limits; hard stop blocks all agent actions
+- Plugin trust verification: cryptographic signature check before any external plugin is allowlisted
+- Sandbox path enforcement (`safeChildPath`) on all file and shell workspace operations
 
 ---
 
@@ -194,12 +537,12 @@ Implemented in `apps/agent-runtime/src/local-workspace-executor.ts` with `safeCh
 pnpm build               # build all packages
 pnpm test                # run all tests
 pnpm typecheck           # typecheck all packages
-pnpm quality:gate        # run full 32-check quality gate
+pnpm quality:gate        # run full 33-check quality gate
 pnpm smoke:e2e           # E2E auth/session smoke lane
 pnpm verify:website:prod # production website verification
 ```
 
-### Quality Gate Summary (as of 2026-05-01)
+### Quality Gate Summary (as of 2026-05-01) — 33 checks
 
 | Check | Status |
 |-------|--------|
@@ -215,8 +558,8 @@ pnpm verify:website:prod # production website verification
 | Website provisioning progress UI regression | ✅ PASS |
 | Website deployment flow regression | ✅ PASS |
 | Website deployment UI regression | ✅ PASS |
-| **Website approvals regression (Task 5.2/5.3)** | ✅ PASS |
-| **Website evidence compliance regression (Task 6.1/6.2)** | ✅ PASS |
+| Website approvals regression (Task 5.2/5.3) | ✅ PASS |
+| Website evidence compliance regression (Task 6.1/6.2) | ✅ PASS |
 | Website E2E smoke lane | ✅ PASS |
 | Contract versioning and compatibility | ✅ PASS |
 | Import boundary enforcement | ✅ PASS |
@@ -229,7 +572,7 @@ pnpm verify:website:prod # production website verification
 | Connector Contracts typecheck | ✅ PASS |
 | Observability package typecheck | ✅ PASS |
 | Policy Engine typecheck + tests | ✅ PASS |
-| DB Runtime snapshot smoke lane | ⏭ SKIP (no Docker) |
+| DB Runtime snapshot smoke lane | ⏭ SKIP (requires Docker / Postgres) |
 
 ### Coverage Thresholds (≥80% line coverage enforced)
 
@@ -276,20 +619,24 @@ pnpm --filter @agentfarm/dashboard dev
 ### Key Test Commands
 
 ```bash
-# Run all website tests
+# Website test suites (9 files, 28+ tests)
 pnpm --filter @agentfarm/website test:signup
 pnpm --filter @agentfarm/website test:approvals
 pnpm --filter @agentfarm/website test:evidence
 pnpm --filter @agentfarm/website test:permissions
 pnpm --filter @agentfarm/website test:session-auth
+pnpm --filter @agentfarm/website test:provisioning
+pnpm --filter @agentfarm/website test:provisioning-ui
+pnpm --filter @agentfarm/website test:deployments
+pnpm --filter @agentfarm/website test:deployments:ui
 
-# Run all api-gateway tests (209)
+# API Gateway (209 tests)
 pnpm --filter @agentfarm/api-gateway test
 
-# Run all agent-runtime tests (118)
+# Agent Runtime (118 tests)
 pnpm --filter @agentfarm/agent-runtime test
 
-# Full quality gate (32 checks)
+# Full quality gate (33 checks)
 pnpm quality:gate
 ```
 
@@ -314,7 +661,7 @@ Never commit secrets to source. All connector tokens are stored as Key Vault ref
 
 ## Deployment and Operations
 
-- **Infrastructure**: separated into `infrastructure/control-plane/` (PostgreSQL, Redis, Container Registry, Key Vault, monitoring) and `infrastructure/runtime-plane/` (per-tenant VM, NIC, disk, NSG, managed identity)
+- **Infrastructure**: `infrastructure/control-plane/` (PostgreSQL, Redis, Container Registry, Key Vault, monitoring) and `infrastructure/runtime-plane/` (per-tenant VM, NIC, disk, NSG, managed identity)
 - **Website**: Azure Static Web App via `.github/workflows/website-swa.yml` — blocked on `AZURE_STATIC_WEB_APPS_API_TOKEN_WEBSITE` GitHub secret
 - **Production deployment**: tracked in [operations/runbooks/mvp-launch-ops-runbook.md](operations/runbooks/mvp-launch-ops-runbook.md)
 - **Operations docs**: quality reports and runbooks maintained under `operations/`
@@ -333,7 +680,7 @@ Never commit secrets to source. All connector tokens are stored as Key Vault ref
 | 6 — Audit, Evidence, and Observability | 6.1, 6.2 | ✅ All completed |
 | 7 — Website and Marketplace | 7.2 | ✅ Completed; 7.1 blocked on Azure/GitHub |
 | 8 — Testing and Deployment | 8.1 | ✅ Completed; 8.2, 8.3 blocked on Azure |
-| 9 — Tier 1/2 Workspace Actions | 9.1–9.11+ | ✅ All completed |
+| 9 — Workspace Actions (Tier 1–12) | 9.1–9.12 | ✅ All completed |
 
 ---
 
@@ -343,220 +690,3 @@ Never commit secrets to source. All connector tokens are stored as Key Vault ref
 - **AI runtime engineers** implementing governed autonomy with human oversight
 - **Security and compliance teams** requiring auditable decision and execution traces
 - **Product and operations leads** preparing pilot-ready enterprise delivery
-
-## What We Built
-
-### MVP Outcome
-- One high-quality Developer Agent role
-- Four production connectors for action execution
-  - Jira
-  - Microsoft Teams
-  - GitHub
-  - Company email workflow
-- Risk-based autonomy model
-  - Low-risk actions execute directly
-  - Medium and high-risk actions are routed through human approval
-- Full audit and evidence path
-  - Action events
-  - Approval decisions
-  - Query and export capabilities for compliance
-
-### Core Product Capabilities
-- Tenant and workspace onboarding with authenticated sessions
-- Runtime provisioning lifecycle and monitoring
-- Connector authentication, token lifecycle, and health remediation
-- Normalized connector action execution API
-- Approval intake, queue, decisions, escalation, and decision webhooks
-- Append-only audit ingestion, query, retention cleanup
-- Evidence and compliance dashboard views
-- Website and dashboard user experience for operators and approvers
-
-## Product Goals and Gates
-
-The MVP is intentionally governance-first.
-
-### Included in MVP
-- Role-based task handling
-- Identity setup behavior standards
-- Human approval flow for risky actions
-- Action logs and audit trail
-- Weekly quality reporting
-- Connector contracts for Jira, Teams, GitHub, and company email
-- Evidence records for active release gates
-
-### Explicitly Not Included in MVP
-- Multi-role launch at once
-- Deep enterprise customizations
-- Large analytics suite
-- Advanced multi-region scaling
-- Live meeting voice participation
-- HR interview automation mode
-
-### Launch Gate Themes
-- Identity realism
-- Role fidelity and task quality
-- Autonomy with human approval
-- No critical security issues
-- Pilot readiness
-- Architecture gate approvals
-- Architecture exit criteria complete
-
-## System Architecture
-
-AgentFarm is organized into control-plane, runtime-plane, and evidence-plane concerns.
-
-### Monorepo Boundaries
-- apps
-  - Deployable app surfaces and runtime entrypoints
-- services
-  - Domain services for identity, provisioning, approvals, policies, connectors, evidence, notifications
-- packages
-  - Shared types, contracts, schema, and observability
-- infrastructure
-  - Azure control-plane and runtime-plane IaC
-
-### Main Applications
-- apps/api-gateway
-  - Primary API surface
-  - Auth, session scope, route orchestration, connector execution, approvals, audit endpoints
-- apps/agent-runtime
-  - In-runtime execution engine for the Developer Agent
-  - Risk classification and action orchestration
-- apps/dashboard
-  - Operator and governance interface
-  - Approval queue, evidence views, runtime and deployment visibility
-- apps/website
-  - Product and onboarding web experience
-- apps/orchestrator
-  - Workflow coordination layer for multi-agent/runtime orchestration
-
-### Domain Services
-- services/identity-service
-  - Tenant/workspace/user lifecycle
-- services/provisioning-service
-  - Provisioning state machine, bootstrap, cleanup, SLA checks
-- services/approval-service
-  - Approval enforcement and kill-switch governance
-- services/policy-engine
-  - Policy routing and governance checks
-- services/connector-gateway
-  - Connector auth and adapter flows
-- services/evidence-service
-  - Evidence and KPI governance events
-- services/notification-service
-  - Approval and ops notifications
-
-### Shared Packages
-- packages/shared-types
-  - Shared contracts and enums
-- packages/connector-contracts
-  - Connector action and result contract definitions
-- packages/queue-contracts
-  - Queue event contracts
-- packages/db-schema
-  - Prisma schema and migrations
-- packages/observability
-  - Structured telemetry and observability helpers
-
-## Key Runtime Flows
-
-### 1. Signup to Operational Workspace
-1. User signs up
-2. Tenant and workspace entities are created
-3. Provisioning job is enqueued
-4. Runtime resources move through state transitions
-5. Dashboard reflects live provisioning status and remediation hints on failure
-
-### 2. Connector Action Execution with Governance
-1. Runtime requests action execution through API gateway
-2. Role policy and connector policy are checked
-3. Action risk is classified
-4. For medium/high actions, approval is required when approval enforcement is configured
-5. Approved actions execute and write success audit events
-6. Failed actions write failure audit events with mapped severity and reason
-
-### 3. Approval Lifecycle
-1. Risky action enters approval intake
-2. Approval record is created and remains immutable for guarded fields
-3. Approver decides approve/reject/timeout reject with required rationale on rejecting outcomes
-4. Decision can notify runtime by webhook
-5. Escalation endpoint marks overdue pending approvals according to timeout policy
-
-### 4. Audit and Evidence
-1. Events are appended to audit storage
-2. Query API supports filtering and cursor pagination
-3. Retention cleanup supports dry-run and delete execution
-4. Dashboard supports freshness tracking, filtering, and export for compliance
-
-## Security and Reliability Posture
-
-- No connector secrets stored directly in relational records; references are persisted and resolved through secret storage flows
-- Workspace and tenant scoping enforced through session and route checks
-- Approval immutability and kill-switch patterns included
-- Error classification for connector failures (permission, timeout, provider limits, transient failures)
-- Retry and backoff paths for transient execution errors
-- State-machine cleanup and rollback handling for provisioning failures
-
-## Quality and Test Discipline
-
-### Monorepo Quality Commands
-- pnpm build
-- pnpm test
-- pnpm typecheck
-- pnpm quality:gate
-- pnpm smoke:e2e
-- pnpm verify:website:prod
-
-### Current Validation Profile
-- Dedicated quality gate report with broad checks across API gateway, runtime, dashboard, website, services, contracts, and policy modules
-- Coverage thresholds enforced on critical backend targets
-- E2E smoke lane validates core auth/session and protected route behavior
-
-## Repository Quick Start
-
-### Prerequisites
-- Node.js LTS
-- pnpm (workspace package manager)
-- Optional local database/runtime dependencies for full integration paths
-
-### Install
-1. pnpm install
-
-### Run Common Workflows
-- API gateway dev mode
-  - pnpm dev
-- Full workspace test sweep
-  - pnpm test
-- Workspace typecheck
-  - pnpm typecheck
-- Release quality gate
-  - pnpm quality:gate
-
-## Environment and Configuration Notes
-
-- Use .env.example as baseline for environment setup
-- Keep secrets out of source files and environment examples
-- Follow least-privilege assumptions for connector credentials and identity paths
-- Keep app to service boundaries explicit through shared contracts in packages
-
-## Deployment and Operations
-
-- Infrastructure is separated by control-plane and runtime-plane boundaries
-- Website includes static web app deployment workflow and production verification script
-- Operations runbooks and quality reports are maintained under operations
-
-## Current Delivery Snapshot
-
-- Most MVP build tracks are complete and validated in local quality gates
-- Remaining launch-readiness work is primarily release-operations execution and external platform steps (production deployment wiring, domain and DNS, and final security/load/evidence signoff artifacts)
-
-## Who This Repository Is For
-
-- Platform engineers building controlled AI agent systems
-- AI runtime engineers implementing governed autonomy
-- Security and compliance teams requiring auditable decision and execution traces
-- Product and operations leads preparing pilot-ready enterprise delivery
-
----
-
-If you want, the next step is to add a concise README.md that links to this detailed read.md plus a docs index for Architecture, Runbooks, and Quality Evidence.

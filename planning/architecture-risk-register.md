@@ -141,7 +141,7 @@ Track architecture risks before development and keep mitigations owner-driven.
 - Implemented multi-provider Auto fallback chain (ADR-007): runtime tries providers in priority order per model profile and continues to the next on any error.
 - Provider health scoring (5-minute rolling window, composite error-rate + latency score) dynamically reorders the fallback chain at runtime — degraded providers are deprioritized automatically.
 - Heuristic-only `agentfarm` provider is always available as the last-resort fallback with zero external dependency.
-- Dashboard presets allow operators to choose a cost envelope (Ultra Low Cost / Balanced / Premium Quality) without manual provider ordering.
+- Dashboard model profiles allow operators to choose a cost envelope (quality_first / speed_first / cost_balanced / custom) without manual provider ordering.
 5. Mitigation Evidence
 - ADR-007 approved in architecture decision log (2026-04-29).
 - `createAutoResolver` in `apps/agent-runtime/src/llm-decision-adapter.ts` implements health-sorted fallback chain.

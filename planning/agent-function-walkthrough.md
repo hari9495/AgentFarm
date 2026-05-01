@@ -182,11 +182,12 @@ Providers with lower scores are tried first. Providers with no recent data score
 
 **Dashboard presets** (set in the LLM Config panel) apply a one-click provider order:
 
-| Preset | Optimises for |
+| Profile | Optimises for |
 |---|---|
-| Ultra Low Cost | Mistral → xAI → GitHub Models → Together |
-| Balanced | Anthropic → OpenAI → xAI (quality); Google → OpenAI → Mistral (speed) |
-| Premium Quality | Anthropic → OpenAI only |
+| `quality_first` | Anthropic → OpenAI → Azure OpenAI (highest capability) |
+| `speed_first` | Google → GitHub Models → Mistral (lowest latency) |
+| `cost_balanced` | Mistral → Together → xAI (cost vs quality balance) |
+| `custom` | User-defined per-provider model selection |
 
 Each provider within Auto mode also supports per-profile model overrides via `model_profiles.{profile}` config keys.
 

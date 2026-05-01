@@ -14,8 +14,8 @@ Planning-first rule: no feature development starts until architecture baseline a
 - Finalize product architecture and decision records.
 - Approve architecture gates before implementation.
 2. MVP Build (Weeks 7-20) — **COMPLETED 2026-04-30**
-- Built Developer Agent with 92 local workspace actions (Tier 0–9) and 6 connector actions.
-- Nine LLM provider adapters with health-score fallback routing.
+- Built Developer Agent with 70+ local workspace action types across 12 tiers and 6 connector actions.
+- Ten LLM providers with health-score fallback routing (openai, azure_openai, github_models, anthropic, google, xai, mistral, together, agentfarm, auto).
 - Full approval and risk enforcement (HIGH/MEDIUM/LOW) with audit evidence.
 - Azure runtime provisioning, VM bootstrap, Docker runtime lifecycle.
 - Connector auth (Jira, Teams, GitHub, email) with OAuth, token refresh, health monitoring.

@@ -107,7 +107,7 @@ Track architecture decisions with owner, status, and review dates before develop
 - The runtime LLM decision adapter supports nine named providers: openai, azure_openai, github_models, anthropic, google, xai (Grok), mistral, together, and agentfarm (heuristic-only).
 - A tenth mode, `auto`, accepts a per-profile priority list and tries providers in order, falling back to the next on any error.
 - Provider health scoring uses a 5-minute rolling window (max 20 entries per provider). Score = errorRate × 0.7 + (min(avgLatency, 10 000) / 10 000) × 0.3. Providers with lower scores are tried first; providers with no data score 0 and keep their configured order.
-- The API Gateway LLM config route stores and redacts keys for all nine providers. The dashboard LLM Config panel exposes per-provider fields plus three one-click presets: Ultra Low Cost, Balanced, and Premium Quality.
+- The API Gateway LLM config route stores and redacts keys for all ten providers. The dashboard LLM Config panel exposes per-provider fields plus four model profiles: quality_first, speed_first, cost_balanced, and custom.
 2. Owner
 - Engineering Lead / AI Lead
 3. Status
@@ -122,7 +122,7 @@ Track architecture decisions with owner, status, and review dates before develop
 ## ADR-008: Local Workspace Execution Surface (Tier 0–9 Actions)
 1. Decision
 - The Developer Agent operates on two execution surfaces: (a) connector actions via the API Gateway, and (b) local workspace actions executed directly in a sandboxed VM directory.
-- 92 local workspace action types are implemented in `local-workspace-executor.ts`, dispatched from `runtime-server.ts` when the action type is in `LOCAL_WORKSPACE_ACTION_TYPES`.
+- 70+ local workspace action types across 12 tiers are implemented in `local-workspace-executor.ts`, dispatched from `runtime-server.ts` when the action type is in `LOCAL_WORKSPACE_ACTION_TYPES`.
 - Sandbox path: `/tmp/agentfarm-workspaces/<tenantId>/<botId>/<workspaceKey>`. All file operations are enforced by `safeChildPath()`; path traversal and absolute paths are rejected. Shell output is filtered through `redactSecrets()` before returning.
 - Risk classification for local actions follows the same HIGH/MEDIUM/LOW taxonomy already used for connector actions.
   - HIGH: workspace_git_push, workspace_run_command, workspace_shell_exec

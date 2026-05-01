@@ -51,9 +51,9 @@ All 24 Sprint 1 tasks are completed. The AgentFarm MVP Developer Agent is fully 
 - Runtime contract endpoints: POST /startup, GET /health/live, GET /health/ready, POST /kill (5-second graceful shutdown), POST /tasks/intake
 - 7-state runtime lifecycle: created → starting → ready → active → degraded → stopping → stopped
 - Capability snapshot system with version, checksum, role-key, and policy-pack binding; persisted per botId, falls back gracefully on mismatch
-- 92 local workspace action types dispatched from runtime (see Developer Agent Capabilities below)
-- Nine LLM provider adapters: openai, azure_openai, github_models, anthropic, google, xai (Grok), mistral, together, agentfarm (heuristic). Auto mode with 5-minute rolling health-score reordering and heuristic fallback
-- Dashboard LLM Config panel with per-provider fields and three preset modes: Ultra Low Cost, Balanced, Premium Quality
+- 70+ local workspace action types across 12 tiers dispatched from runtime (see Developer Agent Capabilities below)
+- Ten LLM providers: openai, azure_openai, github_models, anthropic, google, xai (Grok), mistral, together, agentfarm (heuristic), auto. Auto mode with 5-minute rolling health-score reordering and heuristic fallback
+- Dashboard LLM Config panel with per-provider fields and four model profiles: quality_first, speed_first, cost_balanced, custom
 
 #### Workstream 4: Connector Auth and Action Execution
 - OAuth initiation and callback for Jira, Microsoft Teams, GitHub, and company email
