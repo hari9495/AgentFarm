@@ -15,6 +15,7 @@
         "test:provisioning": "pnpm exec tsx --test tests/provisioning-worker.test.ts",
         "test:session-auth": "pnpm exec tsx --test tests/session-auth.test.ts",
         "test:provisioning-ui": "pnpm exec tsx --test tests/provisioning-progress-ui.test.ts",
+        "test:evidence": "pnpm exec tsx --test tests/evidence-compliance.test.ts",
         "ui:smoke": "node scripts/ui-smoke.mjs",
         "ui:baseline:verify": "node scripts/verify-ui-baseline.mjs",
         "ui:baseline:update": "node scripts/verify-ui-baseline.mjs --update"

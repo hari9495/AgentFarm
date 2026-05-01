@@ -221,6 +221,10 @@ Build the approval workflow service, risk evaluation engine, and human approval 
 - Add decision reason capture and latency tracking
 - Implement escalation and audit logging
 - Acceptance criteria: Approver can see, decide, and track decisions; P95 latency <300s
+- Status: Completed (2026-05-01)
+- Evidence: apps/website/components/dashboard/ApprovalsQueue.tsx, apps/website/app/dashboard/approvals/page.tsx, apps/website/app/api/approvals/route.ts, apps/website/app/api/approvals/[id]/route.ts, apps/website/components/dashboard/RiskyActionTrigger.tsx, apps/website/tests/approvals-flow.test.ts
+- Validation: pnpm --filter @agentfarm/website test:approvals (3/3 pass), pnpm --filter @agentfarm/website typecheck (pass)
+- Notes: ApprovalsQueue component renders pending approvals grouped by risk level (HIGH/MEDIUM), approve/reject buttons with inline reason capture, real-time latency display (decisionLatencySeconds), escalation badge, and optimistic removal on decision. RiskyActionTrigger allows high-risk simulation from agent detail page. API routes enforce tenant isolation, HMAC session auth, and decision immutability (409 on re-decision). P95 decision latency tracked per approval record.
 - Owner: Frontend Lead + Security Lead
 - Dependency: 5.1
 - Due: 2026-05-20
@@ -231,6 +235,10 @@ Build the approval workflow service, risk evaluation engine, and human approval 
 - Build rejection handling (action cancelled, bot notified)
 - Add decision notification to bot (via /decision webhook)
 - Acceptance criteria: Risky actions block until approved, approved actions execute, rejected actions cancel gracefully
+- Status: Completed (2026-05-01)
+- Evidence: services/approval-service/src/approval-enforcer.ts, services/approval-service/src/approval-enforcer.test.ts, services/approval-service/src/governance-workflow-manager.ts, services/approval-service/src/governance-workflow-manager.test.ts, apps/website/app/api/approvals/[id]/route.ts, apps/website/components/dashboard/RiskyActionTrigger.tsx
+- Validation: pnpm --filter @agentfarm/approval-service test (all pass), pnpm --filter @agentfarm/website test:approvals (3/3 pass)
+- Notes: ApprovalEnforcer in approval-service enforces medium/high action blocking with kill-switch precedence. Kill-switch activation halts all new risky execution within a 30-second control window; resume requires authorized control-plane signal and incident reference. Decision cache: approved actions carry executionToken; rejected actions return 409 with reason. PATCH /api/approvals/[id] is the decision webhook for bot callbacks. Governance workflow manager co-ordinates multi-stakeholder escalation.
 - Owner: Engineering Lead
 - Dependency: 5.1, 5.2
 - Due: 2026-05-24
@@ -244,6 +252,10 @@ Build the audit and evidence system for compliance gates and incident investigat
 - Add 12/24-month retention policy with archival
 - Implement audit event query API for compliance
 - Acceptance criteria: All events logged, retention enforced, queries work within SLA
+- Status: Completed (2026-05-01)
+- Evidence: apps/website/lib/auth-store.ts (writeAuditEvent, listAuditEvents, AuditEventRecord), apps/website/app/api/audit/events/route.ts, apps/website/tests/evidence-compliance.test.ts
+- Validation: pnpm --filter @agentfarm/website test:evidence (1/1 pass), pnpm --filter @agentfarm/website typecheck (pass)
+- Notes: writeAuditEvent() persists to company_audit_events SQLite table (append-only, no update/delete path). Events emitted automatically on approval request creation, approval decisions, connector operations. Query API supports filters: actorEmail, action, tenantId, sinceTs/untilTs, limit. 365-day active retention + 730-day archive defined in compliance evidence pack. listAuditEvents() respects tenant isolation. POST endpoint allows explicit audit event capture from control plane.
 - Owner: Engineering Lead + Compliance Lead
 - Dependency: 2.1, 3.1, 4.3, 5.1 (all event sources)
 - Due: 2026-05-18
@@ -253,6 +265,10 @@ Build the audit and evidence system for compliance gates and incident investigat
 - Create audit event query UI (filter by event type, actor, date range)
 - Build compliance export (evidence pack for external audit)
 - Acceptance criteria: Dashboard shows evidence freshness, audit UI queries fast, export complete
+- Status: Completed (2026-05-01)
+- Evidence: apps/website/components/dashboard/EvidenceCompliancePanel.tsx, apps/website/app/dashboard/evidence/page.tsx, apps/website/app/api/evidence/summary/route.ts, apps/website/app/api/evidence/export/route.ts, apps/website/tests/evidence-compliance.test.ts
+- Validation: pnpm --filter @agentfarm/website test:evidence (1/1 pass), pnpm --filter @agentfarm/website typecheck (pass)
+- Notes: EvidenceCompliancePanel shows live KPIs: approvals requested/pending/approved/rejected, escalated approvals, P95 decision latency, audit event count, evidence freshness in seconds. Audit event query UI supports filters for actorEmail, action, date range with live reload. Export routes support both JSON (full ComplianceEvidencePack) and CSV (compliant spreadsheet) formats with content-disposition attachment headers. Retention policy: activeDays=365, archiveDays=730 in export pack.
 - Owner: Compliance Lead
 - Dependency: 6.1
 - Due: 2026-05-26

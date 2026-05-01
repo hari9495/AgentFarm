@@ -87,6 +87,18 @@ const checks = [
         args: ['--filter', '@agentfarm/website', 'test:deployments:ui'],
     },
     {
+        id: 'website-approvals-regression',
+        title: 'Website approval queue and decision workflow regression (Task 5.2/5.3)',
+        command: 'pnpm',
+        args: ['--filter', '@agentfarm/website', 'test:approvals'],
+    },
+    {
+        id: 'website-evidence-compliance-regression',
+        title: 'Website evidence compliance summary and export regression (Task 6.1/6.2)',
+        command: 'pnpm',
+        args: ['--filter', '@agentfarm/website', 'test:evidence'],
+    },
+    {
         id: 'website-e2e-smoke',
         title: 'Website E2E smoke lane',
         command: 'pnpm',
