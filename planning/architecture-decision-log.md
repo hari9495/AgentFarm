@@ -243,6 +243,27 @@ Track architecture decisions with owner, status, and review dates before develop
 6. Impact
 - Agent federation requests cannot be accepted from uncertified peers. PII cannot leak through connector payloads into audit logs or evidence records. Both controls operate at the gateway boundary before any business logic executes.
 
+## ADR-015: Skill Marketplace Execution Engine
+1. Decision
+- A curated marketplace catalog of 21 developer-agent skills is maintained in `apps/agent-runtime/marketplace/skills.json`.
+- Each catalog entry carries a SHA-256 integrity digest computed deterministically as `sha256(JSON.stringify({id, name, version, permissions: [...permissions].sort(), source}))`.
+- All 21 execution handlers are implemented in `apps/agent-runtime/src/skill-execution-engine.ts` as pure TypeScript functions with no external API dependencies. All output is structured dry-run data.
+- Handlers are registered in `SKILL_HANDLERS: Readonly<Record<string, SkillHandler>>` and exposed via `getSkillHandler(id)` and `listRegisteredSkillIds()`.
+- The uniform output shape is `SkillOutput { ok, skill_id, summary, result, risk_level, requires_approval, actions_taken, duration_ms }`.
+- `AdvancedRuntimeFeatures.executeInstalledSkill()` validates that the skill is installed in the workspace, dispatches to the registered handler, and records an `invoke` usage event via `recordMarketplaceUsage`.
+- A `POST /runtime/marketplace/invoke` endpoint exposes skill execution over HTTP: returns 400 for missing skill_id, 404 for not-installed, 501 for no-handler, and the full SkillOutput otherwise.
+- A Next.js proxy route at `apps/dashboard/app/api/runtime/[botId]/marketplace/invoke/route.ts` provides session-authenticated dashboard access to skill invocation.
+2. Owner
+- Engineering Lead
+3. Status
+- Approved
+4. Decision Date
+- 2026-05-05
+5. Review Date
+- 2026-06-05
+6. Impact
+- Any installed skill can be invoked from the dashboard UI or API without adding new runtime code. The catalog is extensible — new skills require only a `skills.json` entry and a handler registration. Risk and approval metadata is embedded in every SkillOutput, preserving the approval-first autonomy guarantee for high/medium-risk skills. 56 new tests validate all 21 handlers with registry invariant checks.
+
 ## Change Rules
 1. Any architecture change that affects release gates creates a new ADR entry.
 2. Superseded ADRs must link to replacement ADR.

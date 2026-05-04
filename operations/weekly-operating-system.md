@@ -51,3 +51,16 @@ Keep execution clear every week with simple routines.
 3. If ownership is unclear, follow the master plan ownership section.
 4. If architecture changes, update product architecture and related ADRs the same day.
 5. If monthly weighted score drops below threshold, create recovery plan within 48 hours.
+6. When new skills are added to the Skill Marketplace catalog, update `skills.json` digest, register handler in `skill-execution-engine.ts`, add tests, and raise an ADR if a new risk category is introduced.
+
+## Current Sprint Status (as of 2026-05-05)
+
+| Area | Status | Notes |
+|---|---|---|
+| Agent Runtime | ✅ Green | 299 tests passing, 0 failures |
+| API Gateway | ✅ Green | 351 tests passing |
+| Dashboard | ✅ Green | Typecheck clean, 69 UI tests |
+| Skill Marketplace | ✅ Shipped | 21 skills, invoke endpoint, dashboard panel |
+| Website SWA | ⏳ Pending | Awaiting GitHub secret + Azure SWA deploy |
+| Production Deploy | ⏳ Pending | Awaiting Azure CLI context + `azd up` |
+| ADR Log | ✅ Current | ADR-001 through ADR-015 approved |

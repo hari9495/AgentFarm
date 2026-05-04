@@ -22,10 +22,11 @@ AgentFarm combines autonomy with control:
 
 ## How It Works
 1. A company signs up and provisions a tenant workspace
-2. A Developer Agent runtime is deployed in an isolated environment
+2. A Developer Agent runtime is deployed in an isolated Azure VM environment
 3. Connectors are enabled for GitHub, Jira, Teams, and company email
 4. The agent receives tasks, classifies risk, and executes or requests approval
 5. Every step is logged, observable, and reviewable in dashboard views
+6. Teams browse and install developer skills from the built-in Skill Marketplace and invoke them directly from the dashboard
 
 ## Why This Matters
 AgentFarm is designed for real enterprise constraints:
@@ -45,6 +46,7 @@ This creates a practical path from AI assistant to AI teammate.
 2. Approval-driven safety model is part of the core workflow
 3. Evidence and audit model is designed for release-gate and compliance reviews
 4. Clear architecture split across control plane, runtime plane, and evidence plane
+5. **Skill Marketplace**: 21 curated developer-agent skills (code review, testing, incident response, documentation, CI/CD) installable and invocable from the dashboard with zero additional configuration
 
 ## Vision
 Start with the Developer Agent, prove quality and trust, then expand to a full role-based AI team including QA, DevOps, and manager-facing roles under the same governance model.

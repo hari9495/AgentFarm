@@ -6,12 +6,12 @@ This document is the single consolidated source of truth for AgentFarm v1 planni
 It combines approved decisions from strategy, architecture, execution design, release pack, ADRs, risk register, and operating cadence.
 
 ## Document Status
-1. Version: v1.1
+1. Version: v1.3
 2. Baseline date: 2026-04-19
-3. Last updated: 2026-04-30
+3. Last updated: 2026-05-05
 4. Architecture signoff decision: Go
-5. Build status: Sprint 1 complete — all 24 tasks completed; 3 pending platform-owner deployment actions only
-6. Scope mode: MVP scope freeze active; post-MVP roadmap approved for planning
+5. Build status: Sprint 1 + Sprint 2 complete; Skill Marketplace (21 skills) shipped — 299 tests passing
+6. Scope mode: MVP scope freeze active; Skill Marketplace added as approved extension
 7. Change control: Any gate-impacting change requires ADR + risk update on the same day
 
 ## Executive Summary
@@ -31,6 +31,32 @@ Release readiness is anchored on score-5 outcomes for:
 
 ### Summary
 All 24 Sprint 1 tasks are completed. The AgentFarm MVP Developer Agent is fully built, tested, and ready for production deployment. The only remaining actions are external platform-owner steps (Azure credentials, GitHub secret, DNS cutover).
+
+### Sprint 3 Additions (2026-05-05) — Skill Marketplace
+
+#### Workstream 9: Skill Marketplace Execution Engine
+- **21-skill catalog** in `apps/agent-runtime/marketplace/skills.json` — each skill has SHA-256 integrity digest computed from `{id, name, version, permissions (sorted), source}`
+- **Skill Execution Engine** (`apps/agent-runtime/src/skill-execution-engine.ts`):
+  - `SKILL_HANDLERS` registry — `Readonly<Record<string, SkillHandler>>` with all 21 handlers
+  - `getSkillHandler(skillId)` — O(1) lookup with undefined for unknown IDs
+  - `listRegisteredSkillIds()` — returns all 21 IDs
+  - Uniform `SkillOutput` shape: `{ ok, skill_id, summary, result, risk_level, requires_approval, actions_taken, duration_ms }`
+- **`AdvancedRuntimeFeatures.executeInstalledSkill()`** — validates install state, dispatches to handler, records `invoke` usage event via `recordMarketplaceUsage`
+- **`POST /runtime/marketplace/invoke`** endpoint — validates skill_id, sanitizes inputs, routes through `executeInstalledSkill`, returns 404 for not-installed and 501 for no-handler
+- **Dashboard proxy** at `apps/dashboard/app/api/runtime/[botId]/marketplace/invoke/route.ts` — session-authenticated Next.js proxy for skill invocations
+- **`buildMarketplaceInvokeUrl`** helper in `runtime-proxy-utils.ts` and `buildMarketplaceInvokeRouteContract` in `route-contract.ts`
+- **56 new tests** in `skill-execution-engine.test.ts` covering all 21 handlers + registry + cross-cutting `duration_ms` and `skill_id` invariants
+- Total test count: **299 passing, 0 failing**
+
+#### Skills Catalog Summary (21 Skills across 6 Categories)
+| Category | Skills |
+|---|---|
+| Code Review | pr-reviewer-risk-labels, code-review-summarizer, pr-comment-drafter, commit-diff-explainer, pr-description-generator |
+| Testing | test-coverage-reporter, flaky-test-detector, test-generator |
+| CI/CD | ci-failure-explainer |
+| Incident Response | incident-patch-pack, rollback-advisor, error-trace-analyzer, slack-incident-notifier |
+| Documentation | docstring-generator, readme-updater |
+| Project Management | issue-autopilot, branch-manager, dependency-audit, release-notes-generator, api-diff-notifier, jira-issue-linker |
 
 ### What Was Built
 
@@ -91,14 +117,15 @@ All 24 Sprint 1 tasks are completed. The AgentFarm MVP Developer Agent is fully 
 - Release operations runbook at operations/runbooks/mvp-launch-ops-runbook.md
 - .azure/deployment-plan.md at Validated status; blocked on Azure sign-in context for final azd up
 
-### Test Coverage at Sprint 1 Exit
+### Test Coverage at Sprint 3 Exit (2026-05-05)
 | Package | Tests | Result |
 |---|---|---|
-| @agentfarm/agent-runtime | 168 | 164 pass, 4 pre-existing flaky timing failures |
-| @agentfarm/api-gateway | 200 | 200 pass |
+| @agentfarm/agent-runtime | **299** | 299 pass, 0 fail — includes 56 new skill execution engine tests |
+| @agentfarm/api-gateway | 351 | 351 pass |
 | @agentfarm/approval-service | 12 | 12 pass |
+| @agentfarm/notification-service | 31 | 31 pass |
 | @agentfarm/website | Playwright smoke + build | pass |
-| All typechecks | — | pass |
+| All typechecks | — | pass (agent-runtime + dashboard + all services) |
 
 ### Remaining Platform-Owner Actions (Not Code)
 1. Add AZURE_STATIC_WEB_APPS_API_TOKEN_WEBSITE to GitHub repository secrets

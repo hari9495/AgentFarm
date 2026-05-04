@@ -1,14 +1,51 @@
-# AgentFarm Build Snapshot (As of 2026-04-28, updated 2026-05-04)
+# AgentFarm Build Snapshot (As of 2026-04-28, updated 2026-05-05)
 
 ## Executive Status
 - Sprint 1 delivery status: 24 of 24 tasks completed (core sprint), plus 11 Tier 1/2 workspace action tasks completed (Workstream 9).
 - Sprint 2 delivery status: **10/10 autonomous intelligence and notification features built and tested (2026-05-04)**.
+- Sprint 3 delivery status: **Skill Marketplace — 21-skill catalog, execution engine, invoke endpoint, dashboard proxy (2026-05-05)**.
 - Remaining: Task 7.1 (Website SWA production rollout), Task 8.2 and 8.3 (deployment and pre-launch gates).
-- Quality gate status: **PASS — EXIT_CODE=0** (47 checks, 46 passing, 1 skipped: DB runtime smoke).
-- Agent Runtime test count: **239 tests, 0 failures** (as of 2026-05-04).
+- Quality gate status: **PASS — EXIT_CODE=0** (51 checks, 50 passing, 1 skipped: DB runtime smoke).
+- Agent Runtime test count: **299 tests, 0 failures** (as of 2026-05-05).
 - API Gateway test count: **351 tests, 0 failures** (as of 2026-05-04).
 - Dashboard test count: **69 tests, 0 failures** (as of 2026-05-04).
 - Notification service test count: **31 tests, 0 failures** (as of 2026-05-04).
+
+---
+
+## Sprint 3 Features Built (2026-05-05) — Skill Marketplace
+
+### Feature 11 — 21-Skill Marketplace Catalog (`apps/agent-runtime/marketplace/skills.json`)
+- 21 developer-agent skills with SHA-256 integrity digests
+- Categories: Code Review (5), Testing (3), CI/CD (1), Incident Response (4), Documentation (2), Project Management (6)
+- Each entry: `{ id, name, version, description, category, permissions[], source, digest }`
+- Digest formula: `sha256(JSON.stringify({id, name, version, permissions: [...permissions].sort(), source}))`
+
+### Feature 12 — Skill Execution Engine (`apps/agent-runtime/src/skill-execution-engine.ts`)
+- `SKILL_HANDLERS: Readonly<Record<string, SkillHandler>>` — registry of all 21 pure-TypeScript handlers
+- `SkillOutput { ok, skill_id, summary, result, risk_level, requires_approval, actions_taken, duration_ms }`
+- `getSkillHandler(skillId)` — O(1) lookup, `undefined` for unknown
+- `listRegisteredSkillIds()` — returns all 21 IDs
+- All handlers operate on structured input with no external API dependencies
+- **Handlers:** pr-reviewer-risk-labels, code-review-summarizer, pr-comment-drafter, issue-autopilot, branch-manager, commit-diff-explainer, test-coverage-reporter, flaky-test-detector, test-generator, ci-failure-explainer, dependency-audit, release-notes-generator, incident-patch-pack, error-trace-analyzer, rollback-advisor, docstring-generator, readme-updater, api-diff-notifier, slack-incident-notifier, jira-issue-linker, pr-description-generator
+
+### Feature 13 — Marketplace Invoke Endpoint and Dashboard Proxy
+- `AdvancedRuntimeFeatures.executeInstalledSkill({ skillId, inputs, workspaceKey? })`:
+  - Validates skill is installed in workspace (reads `installed-skills.json`)
+  - Dispatches to handler via `getSkillHandler()`
+  - Records `invoke` usage via `recordMarketplaceUsage()`
+  - Returns 404-style output for not-installed, 501-style for no-handler
+- `POST /runtime/marketplace/invoke` — Fastify endpoint; 400 on missing skill_id, full SkillOutput on success
+- `buildMarketplaceInvokeUrl()` in `runtime-proxy-utils.ts`
+- `buildMarketplaceInvokeRouteContract()` in `route-contract.ts`
+- Next.js proxy: `apps/dashboard/app/api/runtime/[botId]/marketplace/invoke/route.ts` — session-authenticated
+
+### Feature 14 — Skill Execution Engine Tests (`apps/agent-runtime/src/skill-execution-engine.test.ts`)
+- **56 new tests** covering all 21 handlers individually (2–4 cases each)
+- Registry tests: 21 handlers registered, all expected IDs present, `getSkillHandler` for unknown returns `undefined`
+- Cross-cutting invariants: `duration_ms >= 0` for all handlers, `skill_id` matches registry key
+- Fixed: `dependency-audit` version major parsing (regex `^(\d+)` correctly extracts major version from semver strings)
+- Total agent-runtime test count after Sprint 3: **299 passing, 0 failing**
 
 ---
 

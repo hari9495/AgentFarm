@@ -181,6 +181,169 @@ Exit criteria:
 ## Developer Build Blueprint (What To Develop)
 This section is the implementation view for engineering teams.
 
+---
+
+## System Architecture Diagram (as of 2026-05-05)
+
+```mermaid
+flowchart TD
+    subgraph "Control Plane (Azure)"
+        IDS[Identity Service]
+        POL[Policy Engine]
+        APR[Approval Service]
+        EVI[Evidence Service]
+        PRV[Provisioning Service]
+        NOT[Notification Service]
+        CGW[Connector Gateway]
+    end
+
+    subgraph "Runtime Plane (Azure VM + Docker)"
+        subgraph "Agent Runtime :8080"
+            RS[Runtime Server\nFastify HTTP]
+            ARF[Advanced Runtime Features\nexecuteInstalledSkill]
+            SEE[Skill Execution Engine\n21 Handlers]
+            LLM[LLM Router\n10 Providers + Auto]
+            ACT[Action Dispatcher\n70+ Action Types / 12 Tiers]
+            CAP[Capability Snapshot]
+            MKT[Marketplace Registry\nskills.json 21 Skills]
+        end
+    end
+
+    subgraph "Dashboard (Next.js / Azure SWA)"
+        DUI[Dashboard UI\nApproval Queue\nEvidence Panel\nLLM Config]
+        MKP[Skill Marketplace Panel\nInstall / Invoke]
+        API[API Routes\n/api/runtime proxy]
+        INV[Invoke Proxy\n/marketplace/invoke]
+    end
+
+    subgraph "Website (Next.js / Azure SWA)"
+        WEB[Marketing Site]
+        SGN[Signup Flow]
+        OB[Onboarding Checkout]
+    end
+
+    subgraph "Connectors"
+        GH[GitHub]
+        JR[Jira]
+        TM[Teams]
+        EM[Email]
+    end
+
+    subgraph "External LLMs"
+        OAI[OpenAI]
+        AOI[Azure OpenAI]
+        ANT[Anthropic]
+        GGL[Google]
+        GHM[GitHub Models]
+        OTH[xAI / Mistral / Together]
+    end
+
+    %% User → Dashboard → Runtime
+    DUI --> API
+    MKP --> INV
+    API --> RS
+    INV --> RS
+
+    %% Runtime internals
+    RS --> ARF
+    RS --> LLM
+    RS --> ACT
+    ARF --> SEE
+    ARF --> MKT
+    SEE --> MKT
+
+    %% Control plane calls
+    RS --> APR
+    RS --> EVI
+    RS --> CGW
+    PRV --> RS
+
+    %% Connectors
+    CGW --> GH
+    CGW --> JR
+    CGW --> TM
+    CGW --> EM
+
+    %% LLM routing
+    LLM --> OAI
+    LLM --> AOI
+    LLM --> ANT
+    LLM --> GGL
+    LLM --> GHM
+    LLM --> OTH
+
+    %% Supporting services
+    APR --> NOT
+    IDS --> POL
+    POL --> APR
+    APR --> EVI
+
+    %% Website
+    WEB --> SGN
+    SGN --> IDS
+    SGN --> PRV
+```
+
+---
+
+## Skill Marketplace Architecture
+
+### Overview
+The Skill Marketplace adds a curated catalog of 21 developer-agent skills that can be installed into any bot workspace and invoked on-demand through the dashboard or the runtime API.
+
+### Components
+| Component | Location | Purpose |
+|---|---|---|
+| `skills.json` | `apps/agent-runtime/marketplace/skills.json` | Catalog of 21 skills with SHA-256 integrity digests |
+| `skill-execution-engine.ts` | `apps/agent-runtime/src/` | Pure TypeScript handlers for all 21 skills |
+| `POST /runtime/marketplace/install` | Runtime Server | Install a skill into a bot workspace |
+| `POST /runtime/marketplace/invoke` | Runtime Server | Execute an installed skill by ID with input payload |
+| `GET /runtime/marketplace/list` | Runtime Server | Browse available skills |
+| `AdvancedRuntimeFeatures.executeInstalledSkill()` | `advanced-runtime-features.ts` | Validates, dispatches, and records invocations |
+| `/api/runtime/[botId]/marketplace/invoke` | Dashboard proxy | Authenticated Next.js proxy for skill invocations |
+| Skill Marketplace Panel | `apps/dashboard/` | Browse, install, and invoke skills from the UI |
+
+### 21 Registered Skill Handlers
+| # | Skill ID | Category | Risk |
+|---|---|---|---|
+| 1 | `pr-reviewer-risk-labels` | Code Review | Low |
+| 2 | `code-review-summarizer` | Code Review | Low |
+| 3 | `pr-comment-drafter` | Code Review | Low |
+| 4 | `issue-autopilot` | Issue Tracking | Medium |
+| 5 | `branch-manager` | Git Operations | Medium |
+| 6 | `commit-diff-explainer` | Code Review | Low |
+| 7 | `test-coverage-reporter` | Testing | Low |
+| 8 | `flaky-test-detector` | Testing | Low |
+| 9 | `test-generator` | Testing | Low |
+| 10 | `ci-failure-explainer` | CI/CD | Low |
+| 11 | `dependency-audit` | Security | Medium |
+| 12 | `release-notes-generator` | Release | Low |
+| 13 | `incident-patch-pack` | Incident Response | High |
+| 14 | `error-trace-analyzer` | Debugging | Low |
+| 15 | `rollback-advisor` | Incident Response | High |
+| 16 | `docstring-generator` | Documentation | Low |
+| 17 | `readme-updater` | Documentation | Low |
+| 18 | `api-diff-notifier` | API Governance | Medium |
+| 19 | `slack-incident-notifier` | Notifications | Low |
+| 20 | `jira-issue-linker` | Issue Tracking | Low |
+| 21 | `pr-description-generator` | Code Review | Low |
+
+### Skill Invocation Flow
+```
+Dashboard (Skill Marketplace Panel)
+  → POST /api/runtime/[botId]/marketplace/invoke
+    → Next.js proxy route (session-validated)
+      → POST /runtime/marketplace/invoke (Fastify)
+        → AdvancedRuntimeFeatures.executeInstalledSkill()
+          → checks installed-skills.json
+          → getSkillHandler(skillId) → SKILL_HANDLERS registry
+          → handler(inputs, startedAt) → SkillOutput
+          → recordMarketplaceUsage(skillId, 'invoke')
+        → returns SkillOutput { ok, summary, result, risk_level, requires_approval, actions_taken, duration_ms }
+```
+
+---
+
 ## Strategic Guardrails (Do Not Drift)
 Use these guardrails to keep every technical decision aligned to product vision.
 
