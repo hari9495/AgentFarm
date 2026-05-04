@@ -249,6 +249,202 @@
             "source": "builtin",
             "manifest_digest": "068a3b5844cbfee54e6acbbf6e3e0dd97b5a9b4e20bc0c57717a1e771f1331d9",
             "signature": "sha256:068a3b5844cbfee54e6acbbf6e3e0dd97b5a9b4e20bc0c57717a1e771f1331d9"
+        },
+        {
+            "id": "stale-pr-detector",
+            "name": "Stale PR Detector",
+            "version": "1.0.0",
+            "permissions": [
+                "read:prs"
+            ],
+            "source": "marketplace",
+            "manifest_digest": "86f173dc0d713aff6b486a329258c221e3c20d8eff736fce89055704a52ee0e0",
+            "signature": "sha256:86f173dc0d713aff6b486a329258c221e3c20d8eff736fce89055704a52ee0e0",
+            "description": "Finds PRs with no activity past a configurable staleness threshold and recommends cleanup actions.",
+            "category": "pull-requests"
+        },
+        {
+            "id": "test-name-reviewer",
+            "name": "Test Name Reviewer",
+            "version": "1.0.0",
+            "permissions": [
+                "read:tests"
+            ],
+            "source": "marketplace",
+            "manifest_digest": "efd160ea482a8736c2b1fda3f5c454f3307fa74463f217e42a2285cfb095eaa6",
+            "signature": "sha256:efd160ea482a8736c2b1fda3f5c454f3307fa74463f217e42a2285cfb095eaa6",
+            "description": "Evaluates test names for clarity, action verbs, and best-practice naming conventions.",
+            "category": "testing"
+        },
+        {
+            "id": "migration-risk-scorer",
+            "name": "Migration Risk Scorer",
+            "version": "1.0.0",
+            "permissions": [
+                "read:migrations"
+            ],
+            "source": "marketplace",
+            "manifest_digest": "1e9583a6e1754a4e5d01f1c256b034457f5694046eb14c20502eb712e4e119bf",
+            "signature": "sha256:1e9583a6e1754a4e5d01f1c256b034457f5694046eb14c20502eb712e4e119bf",
+            "description": "Scores the risk level of a database migration based on detected schema operations.",
+            "category": "database"
+        },
+        {
+            "id": "changelog-diff-validator",
+            "name": "Changelog Diff Validator",
+            "version": "1.0.0",
+            "permissions": [
+                "read:commits",
+                "read:files"
+            ],
+            "source": "marketplace",
+            "manifest_digest": "65348c4b64c7ef3af4431f78d43ce30b80ef7c4c8bf7c3241574e798104cfd52",
+            "signature": "sha256:65348c4b64c7ef3af4431f78d43ce30b80ef7c4c8bf7c3241574e798104cfd52",
+            "description": "Validates that CHANGELOG.md is updated when version-bumping commits are detected.",
+            "category": "release"
+        },
+        {
+            "id": "env-var-auditor",
+            "name": "Env Var Auditor",
+            "version": "1.0.0",
+            "permissions": [
+                "read:env"
+            ],
+            "source": "marketplace",
+            "manifest_digest": "3fc427a807a02b77f441643f7855fe51412f22458de9021efa24ef6a242c45d9",
+            "signature": "sha256:3fc427a807a02b77f441643f7855fe51412f22458de9021efa24ef6a242c45d9",
+            "description": "Audits environment variable usage against a required set and flags missing or extra vars.",
+            "category": "configuration"
+        },
+        {
+            "id": "openapi-spec-linter",
+            "name": "OpenAPI Spec Linter",
+            "version": "1.0.0",
+            "permissions": [
+                "read:files"
+            ],
+            "source": "marketplace",
+            "manifest_digest": "8029f314d51fc84ebc1af4d1a0bb918ac44ccc2423bf1ac5e5c1119d3cd8bc47",
+            "signature": "sha256:8029f314d51fc84ebc1af4d1a0bb918ac44ccc2423bf1ac5e5c1119d3cd8bc47",
+            "description": "Lints OpenAPI spec content for missing descriptions, unversioned paths, and common schema errors.",
+            "category": "api"
+        },
+        {
+            "id": "monorepo-dep-graph",
+            "name": "Monorepo Dep Graph",
+            "version": "1.0.0",
+            "permissions": [
+                "read:packages"
+            ],
+            "source": "marketplace",
+            "manifest_digest": "2c2b6645971710f6ff36f8ee092774b8fd1998ebbff74a46e9e81eaa2e861f8d",
+            "signature": "sha256:2c2b6645971710f6ff36f8ee092774b8fd1998ebbff74a46e9e81eaa2e861f8d",
+            "description": "Builds a full dependency graph for all packages in a pnpm/npm/yarn monorepo workspace.",
+            "category": "monorepo"
+        },
+        {
+            "id": "dead-code-detector",
+            "name": "Dead Code Detector",
+            "version": "1.0.0",
+            "permissions": [
+                "read:code"
+            ],
+            "source": "marketplace",
+            "manifest_digest": "6ed8543751bca76619ea8ef6c747f73a528303c1c75556d74e4ca9500c370919",
+            "signature": "sha256:6ed8543751bca76619ea8ef6c747f73a528303c1c75556d74e4ca9500c370919",
+            "description": "Detects unreachable exports, unused files, and dead function paths across the codebase.",
+            "category": "code-quality"
+        },
+        {
+            "id": "code-churn-analyzer",
+            "name": "Code Churn Analyzer",
+            "version": "1.0.0",
+            "permissions": [
+                "read:commits"
+            ],
+            "source": "marketplace",
+            "manifest_digest": "cfd9fa356887da5518b7da5af2f834b582ff4be8cc8f88ae5015630e5cec5668",
+            "signature": "sha256:cfd9fa356887da5518b7da5af2f834b582ff4be8cc8f88ae5015630e5cec5668",
+            "description": "Identifies high-churn files that are candidates for refactoring or increased test coverage.",
+            "category": "code-quality"
+        },
+        {
+            "id": "pr-size-enforcer",
+            "name": "PR Size Enforcer",
+            "version": "1.0.0",
+            "permissions": [
+                "read:prs"
+            ],
+            "source": "marketplace",
+            "manifest_digest": "d8c06814c1e8eb4f68fcd49f18c38fb12258d620c0baa1c3c3c6495c34717a62",
+            "signature": "sha256:d8c06814c1e8eb4f68fcd49f18c38fb12258d620c0baa1c3c3c6495c34717a62",
+            "description": "Flags PRs that exceed a maximum number of lines changed or files touched.",
+            "category": "pull-requests"
+        },
+        {
+            "id": "commit-message-linter",
+            "name": "Commit Message Linter",
+            "version": "1.0.0",
+            "permissions": [
+                "read:commits"
+            ],
+            "source": "marketplace",
+            "manifest_digest": "347a15b8145a208d1015e2d975d1f178a8c9b4b0791213a781b26f805a33a1e9",
+            "signature": "sha256:347a15b8145a208d1015e2d975d1f178a8c9b4b0791213a781b26f805a33a1e9",
+            "description": "Validates commit messages against the conventional commits specification.",
+            "category": "git"
+        },
+        {
+            "id": "accessibility-checker",
+            "name": "Accessibility Checker",
+            "version": "1.0.0",
+            "permissions": [
+                "read:code"
+            ],
+            "source": "marketplace",
+            "manifest_digest": "83ddadddcc37f53397fca527068703267a0cd523dfdd4afe821e97716f43a269",
+            "signature": "sha256:83ddadddcc37f53397fca527068703267a0cd523dfdd4afe821e97716f43a269",
+            "description": "Scans JSX/HTML component content for common WCAG accessibility violations.",
+            "category": "frontend"
+        },
+        {
+            "id": "type-coverage-reporter",
+            "name": "Type Coverage Reporter",
+            "version": "1.0.0",
+            "permissions": [
+                "read:code"
+            ],
+            "source": "marketplace",
+            "manifest_digest": "9248f8fe0601981d79745dbc26ce4c69e2b037a6611e0985a9f63f4a64bbed4b",
+            "signature": "sha256:9248f8fe0601981d79745dbc26ce4c69e2b037a6611e0985a9f63f4a64bbed4b",
+            "description": "Reports TypeScript type coverage percentage and lists any-typed symbols requiring attention.",
+            "category": "typescript"
+        },
+        {
+            "id": "license-compliance-check",
+            "name": "License Compliance Check",
+            "version": "1.0.0",
+            "permissions": [
+                "read:packages"
+            ],
+            "source": "marketplace",
+            "manifest_digest": "792bab6df48e563bddb77eb7ea090664ae3a5ff8cd1c48e2e6bf05dda06d8a97",
+            "signature": "sha256:792bab6df48e563bddb77eb7ea090664ae3a5ff8cd1c48e2e6bf05dda06d8a97",
+            "description": "Checks all direct dependencies for license compatibility against a configurable allowed set.",
+            "category": "compliance"
+        },
+        {
+            "id": "docker-image-scanner",
+            "name": "Docker Image Scanner",
+            "version": "1.0.0",
+            "permissions": [
+                "read:containers"
+            ],
+            "source": "marketplace",
+            "manifest_digest": "303f576a1e1d013a94c2a488fd73366a7afe15a0ab06002dfb54f1393d5f3fbb",
+            "signature": "sha256:303f576a1e1d013a94c2a488fd73366a7afe15a0ab06002dfb54f1393d5f3fbb",
+            "description": "Scans a Docker image for known CVEs, outdated base image layers, and :latest tag usage.",
+            "category": "security"
         }
     ]
 }
