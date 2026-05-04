@@ -15,6 +15,18 @@ export const CONTRACT_VERSIONS = {
   AUDIT_EVENT: '1.0.0', // AuditEventRecord
   GOVERNANCE_WORKFLOW: '1.0.0', // Governance workflow templates, instances, decisions
   PLUGIN_LOADING: '1.0.0', // External adapter/plugin manifest and load records
+  WORKSPACE_SESSION_STATE: '1.0.0', // Workspace session continuity state snapshot
+  WORKSPACE_CHECKPOINT: '1.0.0', // Workspace rollback/safety checkpoints
+  DESKTOP_PROFILE: '1.0.0', // Workspace browser/desktop profile persistence
+  IDE_STATE: '1.0.0', // Workspace IDE open-files and editor state
+  TERMINAL_SESSION: '1.0.0', // Workspace terminal session history and continuity
+  ACTIVITY_EVENT: '1.0.0', // Unified activity/notification stream events (F5)
+  ENV_PROFILE: '1.0.0', // Environment reconciler profile and drift reports (F8)
+  DESKTOP_ACTION: '1.0.0', // Desktop GUI action runtime results (F3)
+  PR_AUTOMATION: '1.0.0', // PR draft/publish/status records (F6)
+  CI_TRIAGE: '1.0.0', // CI failure triage reports (F7)
+  WORK_MEMORY: '1.0.0', // Workspace work memory and next-action plans (F10)
+  REPRO_PACK: '1.0.0', // Crash recovery and repro pack export records (F9)
 } as const;
 
 export type ContractVersion = (typeof CONTRACT_VERSIONS)[keyof typeof CONTRACT_VERSIONS];
@@ -304,6 +316,164 @@ export interface TaskLeaseRecord {
   correlationId?: string;
   releasedAt?: string;
   lastRenewedAt?: string;
+}
+
+// Frozen 2026-05-01 — workspace session continuity contract (Phase 1 VM realism)
+export interface WorkspaceSessionStateRecord {
+  id: string;
+  contractVersion: string; // CONTRACT_VERSIONS.WORKSPACE_SESSION_STATE
+  tenantId: string;
+  workspaceId: string;
+  version: number;
+  state: Record<string, unknown>;
+  updatedBy: string;
+  updatedAt: string;
+  correlationId: string;
+}
+
+// Frozen 2026-05-01 — workspace checkpoint contract (Phase 1 VM realism)
+export interface WorkspaceCheckpointRecord {
+  id: string;
+  contractVersion: string; // CONTRACT_VERSIONS.WORKSPACE_CHECKPOINT
+  tenantId: string;
+  workspaceId: string;
+  sessionVersion: number;
+  label: string;
+  reason?: string;
+  stateDigest?: string;
+  actor: string;
+  createdAt: string;
+  correlationId: string;
+}
+
+// Frozen 2026-05-01 — desktop profile persistence contract (Phase 1 VM realism)
+export interface DesktopProfileRecord {
+  id: string;
+  contractVersion: string; // CONTRACT_VERSIONS.DESKTOP_PROFILE
+  tenantId: string;
+  workspaceId: string;
+  profileId: string;
+  browser: string;
+  storageRef?: string;
+  tabState: Record<string, unknown>;
+  tokenVersion: number;
+  updatedAt: string;
+  correlationId: string;
+}
+
+// Frozen 2026-05-01 — IDE state persistence contract (Phase 1 VM realism F4)
+export type IdeStateStatus = 'active' | 'suspended' | 'restored';
+
+export interface IdeStateRecord {
+  id: string;
+  contractVersion: string; // CONTRACT_VERSIONS.IDE_STATE
+  tenantId: string;
+  workspaceId: string;
+  openFiles: string[];
+  activeFile?: string;
+  breakpoints: Array<{ file: string; line: number; condition?: string }>;
+  status: IdeStateStatus;
+  updatedAt: string;
+  correlationId: string;
+}
+
+// Frozen 2026-05-01 — Terminal session continuity contract (Phase 1 VM realism F4)
+export type TerminalSessionStatus = 'active' | 'closed' | 'suspended';
+export type TerminalShell = 'bash' | 'zsh' | 'sh' | 'fish' | 'powershell' | 'cmd';
+
+export interface TerminalSessionRecord {
+  id: string;
+  contractVersion: string; // CONTRACT_VERSIONS.TERMINAL_SESSION
+  tenantId: string;
+  workspaceId: string;
+  shell: TerminalShell;
+  cwd: string;
+  lastCommand?: string;
+  history: string[];
+  status: TerminalSessionStatus;
+  updatedAt: string;
+  createdAt: string;
+  correlationId: string;
+}
+
+// Frozen 2026-05-01 — Unified activity/notification stream event contract (Phase 1 F5)
+export type ActivityEventCategory =
+  | 'runtime'
+  | 'approval'
+  | 'ci'
+  | 'connector'
+  | 'provisioning'
+  | 'security'
+  | 'system';
+
+export type ActivityEventStatus = 'unread' | 'read' | 'acked';
+
+export interface ActivityEventRecord {
+  id: string;
+  contractVersion: string; // CONTRACT_VERSIONS.ACTIVITY_EVENT
+  tenantId: string;
+  workspaceId: string;
+  category: ActivityEventCategory;
+  title: string;
+  body?: string;
+  payload?: Record<string, unknown>;
+  status: ActivityEventStatus;
+  sequence: number;
+  createdAt: string;
+  ackedAt?: string;
+  ackedBy?: string;
+  correlationId: string;
+}
+
+// Frozen 2026-05-01 — Environment reconciler profile and drift contract (Phase 1 F8)
+export type EnvReconcileStatus = 'clean' | 'drifted' | 'reconciling' | 'failed';
+export type ToolchainEntryStatus = 'ok' | 'missing' | 'version_mismatch' | 'unknown';
+
+export interface ToolchainEntry {
+  name: string;
+  requiredVersion: string;
+  actualVersion?: string;
+  status: ToolchainEntryStatus;
+}
+
+export interface EnvProfileRecord {
+  id: string;
+  contractVersion: string; // CONTRACT_VERSIONS.ENV_PROFILE
+  tenantId: string;
+  workspaceId: string;
+  toolchain: ToolchainEntry[];
+  reconcileStatus: EnvReconcileStatus;
+  lastReconcileAt?: string;
+  driftReport?: Record<string, unknown>;
+  updatedAt: string;
+  createdAt: string;
+  correlationId: string;
+}
+
+// Frozen 2026-05-01 — Desktop GUI action runtime result contract (Phase 1 F3)
+export type DesktopActionType = 'launch' | 'click' | 'type' | 'upload' | 'screenshot' | 'select_file';
+export type DesktopActionResult = 'success' | 'failed' | 'retrying' | 'approval_pending' | 'blocked';
+export type DesktopActionRisk = 'low' | 'medium' | 'high';
+export type DesktopActionRetryClass = 'retryable' | 'non_retryable';
+
+export interface DesktopActionRecord {
+  id: string;
+  contractVersion: string; // CONTRACT_VERSIONS.DESKTOP_ACTION
+  tenantId: string;
+  workspaceId: string;
+  actionType: DesktopActionType;
+  target?: string;
+  inputPayload?: Record<string, unknown>;
+  result: DesktopActionResult;
+  riskLevel: DesktopActionRisk;
+  retryClass: DesktopActionRetryClass;
+  retryCount: number;
+  screenshotRef?: string;
+  approvalId?: string;
+  errorMessage?: string;
+  completedAt?: string;
+  createdAt: string;
+  correlationId: string;
 }
 
 // Frozen 2026-04-29 — Budget policy decision contract for hard-stop enforcement
@@ -873,5 +1043,173 @@ export interface PluginAuditEvent {
   message: string;
   correlationId: string;
   createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// F6 PR Auto Driver
+// ---------------------------------------------------------------------------
+
+export type PrDraftStatus = 'draft' | 'publishing' | 'published' | 'failed';
+export type PrPublishStatus = 'publishing' | 'published' | 'failed';
+
+export interface PrDraftRecord {
+  id: string;
+  contractVersion: string; // CONTRACT_VERSIONS.PR_AUTOMATION
+  tenantId: string;
+  workspaceId: string;
+  branch: string;
+  targetBranch?: string;
+  changeSummary: string;
+  linkedIssueIds: string[];
+  title: string;
+  body: string;
+  checklist: string[];
+  reviewersSuggested: string[];
+  status: PrDraftStatus;
+  prId?: string;
+  provider?: string;
+  labels?: string[];
+  correlationId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// F7 CI Failure Triage
+// ---------------------------------------------------------------------------
+
+export type CiTriageStatus = 'queued' | 'triaging' | 'complete' | 'failed';
+
+export interface CiFailedJob {
+  jobName: string;
+  step?: string;
+  exitCode?: number;
+  logRef?: string;
+}
+
+export interface CiTriageReport {
+  id: string;
+  contractVersion: string; // CONTRACT_VERSIONS.CI_TRIAGE
+  tenantId: string;
+  workspaceId: string;
+  provider: string;
+  runId: string;
+  repo: string;
+  branch: string;
+  failedJobs: CiFailedJob[];
+  logRefs: string[];
+  status: CiTriageStatus;
+  rootCauseHypothesis?: string;
+  reproSteps?: string[];
+  patchProposal?: string;
+  confidence?: number;
+  blastRadius?: string;
+  correlationId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// F10 Work Memory + Next-Action Planner
+// ---------------------------------------------------------------------------
+
+export interface WorkMemoryEntry {
+  key: string;
+  value: unknown;
+  tags?: string[];
+  updatedAt: string;
+}
+
+export type WorkMemoryMergeMode = 'replace' | 'merge' | 'append';
+
+export interface WorkMemoryRecord {
+  id: string;
+  contractVersion: string; // CONTRACT_VERSIONS.WORK_MEMORY
+  tenantId: string;
+  workspaceId: string;
+  memoryVersion: number;
+  entries: WorkMemoryEntry[];
+  summary?: string;
+  correlationId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NextActionItem {
+  action: string;
+  reason: string;
+  confidence: number;
+  requiresApproval: boolean;
+  priority: 'high' | 'medium' | 'low';
+}
+
+export interface DailyPlanRecord {
+  id: string;
+  tenantId: string;
+  workspaceId: string;
+  objective?: string;
+  constraints?: string[];
+  nextActions: NextActionItem[];
+  risks: string[];
+  approvalsNeeded: string[];
+  correlationId: string;
+  createdAt: string;
+}
+
+// ============================================================================
+// SPRINT 4 — F9: Crash Recovery + Repro Pack Generator
+// Frozen 2026-05-01 — canonical source: planning/phase-1-vm-realism-execution-plan.md
+// ============================================================================
+
+export type ResumeStrategy = 'last_checkpoint' | 'latest_state';
+
+export type ReproPackStatus = 'generating' | 'ready' | 'expired' | 'failed';
+
+export type RunResumeStatus = 'queued' | 'resuming' | 'resumed' | 'failed';
+
+export interface ReproPackManifest {
+  runId: string;
+  workspaceId: string;
+  tenantId: string;
+  includedLogs: boolean;
+  includedScreenshots: boolean;
+  includedDiffs: boolean;
+  includedActionTraces: boolean;
+  actionCount: number;
+  logBundleRef?: string;
+  screenshotRefs: string[];
+  diffRefs: string[];
+  timeline: Array<{ at: string; event: string; actor: string }>;
+}
+
+export interface ReproPackRecord {
+  id: string;
+  contractVersion: string;
+  tenantId: string;
+  workspaceId: string;
+  runId: string;
+  status: ReproPackStatus;
+  manifest: ReproPackManifest;
+  downloadRef?: string;
+  expiresAt: string;
+  exportAuditEventId?: string;
+  correlationId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RunResumeRecord {
+  id: string;
+  contractVersion: string;
+  tenantId: string;
+  workspaceId: string;
+  runId: string;
+  strategy: ResumeStrategy;
+  resumedFrom?: string;
+  status: RunResumeStatus;
+  failureReason?: string;
+  correlationId: string;
+  createdAt: string;
+  updatedAt: string;
 }
 

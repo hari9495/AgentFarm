@@ -18,10 +18,76 @@ type BuildOrchestratorServerOptions = {
     stateBackend?: OrchestratorStateBackend;
     statePath?: string;
     now?: () => number;
+    workspaceSessionFetcher?: (input: {
+        tenantId: string;
+        workspaceId: string;
+        env: NodeJS.ProcessEnv;
+    }) => Promise<{
+        source: 'default' | 'persisted';
+        version: number;
+        state: Record<string, unknown>;
+    } | null>;
 };
 
 const defaultStatePath = process.env.ORCHESTRATOR_STATE_PATH?.trim() || '.orchestrator/state.json';
 const defaultStateBackend = (process.env.ORCHESTRATOR_STATE_BACKEND?.trim().toLowerCase() as OrchestratorStateBackend | undefined) ?? 'auto';
+
+const defaultWorkspaceSessionFetcher = async (input: {
+    tenantId: string;
+    workspaceId: string;
+    env: NodeJS.ProcessEnv;
+}): Promise<{
+    source: 'default' | 'persisted';
+    version: number;
+    state: Record<string, unknown>;
+} | null> => {
+    const baseUrl = input.env.ORCHESTRATOR_SESSION_API_URL?.trim();
+    const token =
+        input.env.RUNTIME_SESSION_SHARED_TOKEN
+        ?? input.env.AF_RUNTIME_SESSION_SHARED_TOKEN
+        ?? input.env.AGENTFARM_RUNTIME_SESSION_SHARED_TOKEN
+        ?? null;
+
+    if (!baseUrl || !token) {
+        return null;
+    }
+
+    try {
+        const url = new URL(
+            `/v1/workspaces/${encodeURIComponent(input.workspaceId)}/session-state`,
+            baseUrl,
+        );
+        url.searchParams.set('tenant_id', input.tenantId);
+        url.searchParams.set('mode', 'restore');
+
+        const response = await fetch(url.toString(), {
+            method: 'GET',
+            headers: {
+                'x-runtime-session-token': token,
+            },
+            signal: AbortSignal.timeout(4_000),
+            cache: 'no-store',
+        });
+
+        if (!response.ok) {
+            return null;
+        }
+
+        const body = await response.json() as {
+            source?: 'default' | 'persisted';
+            version?: number;
+            state?: Record<string, unknown>;
+        };
+
+        return {
+            source: body.source === 'persisted' ? 'persisted' : 'default',
+            version: typeof body.version === 'number' ? body.version : 0,
+            state: typeof body.state === 'object' && body.state !== null ? body.state : {},
+        };
+    } catch {
+        return null;
+    }
+};
 
 const parseWakeSource = (value: unknown): WakeSource | null => {
     if (value === 'timer' || value === 'assignment' || value === 'on_demand' || value === 'automation') {
@@ -54,7 +120,9 @@ const parseScheduleType = (value: unknown): ScheduleType | null => {
 export const buildOrchestratorServer = async (
     options: BuildOrchestratorServerOptions = {},
 ): Promise<FastifyInstance> => {
+    const env = process.env;
     const now = options.now ?? (() => Date.now());
+    const workspaceSessionFetcher = options.workspaceSessionFetcher ?? defaultWorkspaceSessionFetcher;
     const stateStore = options.stateStore ?? createOrchestratorStateStore({
         backend: options.stateBackend ?? defaultStateBackend,
         statePath: options.statePath ?? defaultStatePath,
@@ -117,6 +185,12 @@ export const buildOrchestratorServer = async (
             ? body.timestamp.trim()
             : new Date(now()).toISOString();
 
+        const restoredSession = await workspaceSessionFetcher({
+            tenantId,
+            workspaceId,
+            env,
+        });
+
         const result = await taskScheduler.scheduleWake({
             tenantId,
             workspaceId,
@@ -139,6 +213,13 @@ export const buildOrchestratorServer = async (
             coalesced: result.coalesced,
             message: result.message,
             correlation_id: correlationId,
+            restored_session_state: restoredSession
+                ? {
+                    source: restoredSession.source,
+                    version: restoredSession.version,
+                    state_keys: Object.keys(restoredSession.state),
+                }
+                : null,
         });
     });
 

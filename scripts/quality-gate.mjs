@@ -200,6 +200,69 @@ const checks = [
         command: 'pnpm',
         args: ['--filter', '@agentfarm/policy-engine', 'test'],
     },
+    // -----------------------------------------------------------------------
+    // Phase 1 VM Realism route test lanes (Sprint 3 + Sprint 4)
+    // -----------------------------------------------------------------------
+    {
+        id: 'phase1-activity-events-test',
+        title: 'Phase 1 — F5 Activity Events route tests',
+        command: 'pnpm',
+        args: ['--filter', '@agentfarm/api-gateway', 'exec', 'tsx', '--test', 'src/routes/activity-events.test.ts'],
+    },
+    {
+        id: 'phase1-env-reconciler-test',
+        title: 'Phase 1 — F8 Environment Reconciler route tests',
+        command: 'pnpm',
+        args: ['--filter', '@agentfarm/api-gateway', 'exec', 'tsx', '--test', 'src/routes/env-reconciler.test.ts'],
+    },
+    {
+        id: 'phase1-desktop-actions-test',
+        title: 'Phase 1 — F3 Desktop Actions route tests',
+        command: 'pnpm',
+        args: ['--filter', '@agentfarm/api-gateway', 'exec', 'tsx', '--test', 'src/routes/desktop-actions.test.ts'],
+    },
+    {
+        id: 'phase1-pull-requests-test',
+        title: 'Phase 1 — F6 PR Auto Driver route tests',
+        command: 'pnpm',
+        args: ['--filter', '@agentfarm/api-gateway', 'exec', 'tsx', '--test', 'src/routes/pull-requests.test.ts'],
+    },
+    {
+        id: 'phase1-ci-failures-test',
+        title: 'Phase 1 — F7 CI Failure Triage Loop route tests',
+        command: 'pnpm',
+        args: ['--filter', '@agentfarm/api-gateway', 'exec', 'tsx', '--test', 'src/routes/ci-failures.test.ts'],
+    },
+    {
+        id: 'phase1-work-memory-test',
+        title: 'Phase 1 — F10 Work Memory + Next-Action Planner route tests',
+        command: 'pnpm',
+        args: ['--filter', '@agentfarm/api-gateway', 'exec', 'tsx', '--test', 'src/routes/work-memory.test.ts'],
+    },
+    {
+        id: 'phase1-sprint3-integration',
+        title: 'Phase 1 — Sprint 3 exit-gate integration test',
+        command: 'pnpm',
+        args: ['--filter', '@agentfarm/api-gateway', 'exec', 'tsx', '--test', 'src/routes/sprint3-integration.test.ts'],
+    },
+    {
+        id: 'phase1-repro-packs-test',
+        title: 'Phase 1 — F9 Crash Recovery + Repro Pack Generator route tests',
+        command: 'pnpm',
+        args: ['--filter', '@agentfarm/api-gateway', 'exec', 'tsx', '--test', 'src/routes/repro-packs.test.ts'],
+    },
+    {
+        id: 'phase1-run-recovery-worker-test',
+        title: 'Phase 1 — F9 Run Recovery Worker service tests (95% KPI)',
+        command: 'pnpm',
+        args: ['--filter', '@agentfarm/api-gateway', 'exec', 'tsx', '--test', 'src/services/run-recovery-worker.test.ts'],
+    },
+    {
+        id: 'phase1-sprint4-integration',
+        title: 'Phase 1 — Sprint 4 exit-gate integration test',
+        command: 'pnpm',
+        args: ['--filter', '@agentfarm/api-gateway', 'exec', 'tsx', '--test', 'src/routes/sprint4-integration.test.ts'],
+    },
     {
         id: 'db-runtime-smoke',
         title: 'DB Runtime snapshot smoke lane',

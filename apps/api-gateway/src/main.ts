@@ -28,9 +28,19 @@ import {
 import { registerInternalLoginPolicyRoutes } from './routes/internal-login-policy.js';
 import { registerRuntimeLlmConfigRoutes } from './routes/runtime-llm-config.js';
 import { registerRuntimeTaskRoutes } from './routes/runtime-tasks.js';
+import { registerWorkspaceSessionRoutes } from './routes/workspace-session.js';
+import { registerDesktopProfileRoutes } from './routes/desktop-profile.js';
+import { registerIdeStateRoutes } from './routes/ide-state.js';
 import { registerBudgetPolicyRoutes } from './routes/budget-policy.js';
 import { registerGovernanceWorkflowRoutes } from './routes/governance-workflows.js';
 import { registerPluginLoadingRoutes } from './routes/plugin-loading.js';
+import { registerActivityRoutes } from './routes/activity-events.js';
+import { registerEnvReconcilerRoutes } from './routes/env-reconciler.js';
+import { registerDesktopActionRoutes } from './routes/desktop-actions.js';
+import { registerPrRoutes } from './routes/pull-requests.js';
+import { registerCiFailureRoutes } from './routes/ci-failures.js';
+import { registerWorkMemoryRoutes } from './routes/work-memory.js';
+import { registerReproPackRoutes } from './routes/repro-packs.js';
 
 const app = Fastify({ logger: true });
 const port = Number(process.env.API_GATEWAY_PORT ?? 3000);
@@ -383,6 +393,15 @@ await registerRuntimeLlmConfigRoutes(app, {
 await registerRuntimeTaskRoutes(app, {
     getSession: (request) => readSession(request),
 });
+await registerWorkspaceSessionRoutes(app, {
+    getSession: (request) => readSession(request),
+});
+await registerDesktopProfileRoutes(app, {
+    getSession: (request) => readSession(request),
+});
+await registerIdeStateRoutes(app, {
+    getSession: (request) => readSession(request),
+});
 await registerBudgetPolicyRoutes(app, {
     getSession: (request) => readSession(request),
 });
@@ -398,6 +417,27 @@ await registerPluginLoadingRoutes(app, {
             sourceRepoPrefix: 'https://github.com/agentfarm/',
         },
     ],
+});
+await registerActivityRoutes(app, {
+    getSession: (request) => readSession(request),
+});
+await registerEnvReconcilerRoutes(app, {
+    getSession: (request) => readSession(request),
+});
+await registerDesktopActionRoutes(app, {
+    getSession: (request) => readSession(request),
+});
+await registerPrRoutes(app, {
+    getSession: (request) => readSession(request),
+});
+await registerCiFailureRoutes(app, {
+    getSession: (request) => readSession(request),
+});
+await registerWorkMemoryRoutes(app, {
+    getSession: (request) => readSession(request),
+});
+await registerReproPackRoutes(app, {
+    getSession: (request) => readSession(request),
 });
 
 app.get('/v1/dashboard/summary', async (request, reply) => {

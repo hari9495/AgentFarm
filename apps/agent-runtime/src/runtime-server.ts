@@ -179,6 +179,14 @@ type RuntimeServerOptions = {
         config: RuntimeConfig;
         env: NodeJS.ProcessEnv;
     }) => Promise<RuntimeLlmWorkspaceConfig | null>;
+    workspaceSessionFetcher?: (input: {
+        config: RuntimeConfig;
+        env: NodeJS.ProcessEnv;
+    }) => Promise<{
+        source: 'default' | 'persisted';
+        version: number;
+        state: Record<string, unknown>;
+    } | null>;
 };
 
 type RuntimeLogEntry = {
@@ -1470,6 +1478,65 @@ const defaultLlmConfigFetcher = async (input: {
     }
 };
 
+const defaultWorkspaceSessionFetcher = async (input: {
+    config: RuntimeConfig;
+    env: NodeJS.ProcessEnv;
+}): Promise<{
+    source: 'default' | 'persisted';
+    version: number;
+    state: Record<string, unknown>;
+} | null> => {
+    const token =
+        input.env.RUNTIME_SESSION_SHARED_TOKEN
+        ?? input.env.AF_RUNTIME_SESSION_SHARED_TOKEN
+        ?? input.env.AGENTFARM_RUNTIME_SESSION_SHARED_TOKEN
+        ?? input.env.RUNTIME_CONFIG_SHARED_TOKEN
+        ?? input.env.AF_APPROVAL_INTAKE_SHARED_TOKEN
+        ?? input.env.AGENTFARM_APPROVAL_INTAKE_SHARED_TOKEN
+        ?? input.config.approvalIntakeToken
+        ?? null;
+
+    if (!token) {
+        return null;
+    }
+
+    try {
+        const url = new URL(
+            `/v1/workspaces/${encodeURIComponent(input.config.workspaceId)}/session-state`,
+            input.config.approvalApiUrl,
+        );
+        url.searchParams.set('tenant_id', input.config.tenantId);
+        url.searchParams.set('mode', 'restore');
+
+        const response = await fetch(url.toString(), {
+            method: 'GET',
+            headers: {
+                'x-runtime-session-token': token,
+            },
+            signal: AbortSignal.timeout(4_000),
+            cache: 'no-store',
+        });
+
+        if (!response.ok) {
+            return null;
+        }
+
+        const body = await response.json() as {
+            source?: 'default' | 'persisted';
+            version?: number;
+            state?: Record<string, unknown>;
+        };
+
+        return {
+            source: body.source === 'persisted' ? 'persisted' : 'default',
+            version: typeof body.version === 'number' ? body.version : 0,
+            state: typeof body.state === 'object' && body.state !== null ? body.state : {},
+        };
+    } catch {
+        return null;
+    }
+};
+
 export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyInstance {
     const env = options.env ?? process.env;
     const workerPollMs = options.workerPollMs ?? DEFAULT_WORKER_POLL_MS;
@@ -1494,6 +1561,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         options.taskExecutionRecordWriter
         ?? createDefaultTaskExecutionRecordWriter(env);
     const llmConfigFetcher = options.llmConfigFetcher ?? defaultLlmConfigFetcher;
+    const workspaceSessionFetcher = options.workspaceSessionFetcher ?? defaultWorkspaceSessionFetcher;
     let llmDecisionResolver = options.llmDecisionResolver ?? createLlmDecisionResolver(env);
     let activeModelProvider = env.AF_MODEL_PROVIDER ?? env.AGENTFARM_MODEL_PROVIDER ?? 'agentfarm';
     const sleep = options.sleep ?? defaultSleep;
@@ -1514,6 +1582,11 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
     let configCache: RuntimeConfig | null = null;
     let capabilitySnapshotCache: BotCapabilitySnapshotRecord | null = null;
     let snapshotObservabilityMetadata: SnapshotObservabilityMetadata | null = null;
+    let restoredWorkspaceSessionState: {
+        source: 'default' | 'persisted';
+        version: number;
+        state: Record<string, unknown>;
+    } | null = null;
     const runtimeLogs: RuntimeLogEntry[] = [];
     const stateHistory: RuntimeStateTransition[] = [{
         at: new Date(now()).toISOString(),
@@ -2907,6 +2980,13 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         };
     });
 
+    app.get('/runtime/session-state', async () => {
+        return {
+            restored: restoredWorkspaceSessionState,
+            state: runtimeState,
+        };
+    });
+
     app.post('/startup', async (_request, reply) => {
         startupAttempts += 1;
 
@@ -2930,6 +3010,23 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             emitRuntimeEvent('runtime.policy_loaded', runtimeConfig, {
                 policy_pack_version: runtimeConfig.policyPackVersion,
             });
+
+            const restoredSession = await workspaceSessionFetcher({
+                config: runtimeConfig,
+                env,
+            });
+            restoredWorkspaceSessionState = restoredSession;
+            if (restoredSession) {
+                emitRuntimeEvent('runtime.workspace_session_restored', runtimeConfig, {
+                    source: restoredSession.source,
+                    version: restoredSession.version,
+                    state_keys: Object.keys(restoredSession.state),
+                });
+            } else {
+                emitRuntimeEvent('runtime.workspace_session_restore_skipped', runtimeConfig, {
+                    reason: 'session_state_unavailable',
+                });
+            }
 
             const workspaceLlmConfig = await llmConfigFetcher({
                 config: runtimeConfig,
@@ -3076,6 +3173,9 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 role_key: runtimeConfig.roleKey,
                 capability_snapshot_id: capabilitySnapshotCache.id,
                 capability_snapshot_source: capabilitySnapshotCache.source ?? 'runtime_freeze',
+                session_state_source: restoredSession?.source ?? null,
+                session_state_version: restoredSession?.version ?? null,
+                session_state_keys: restoredSession ? Object.keys(restoredSession.state) : [],
             };
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : String(err);

@@ -468,3 +468,264 @@ enum TaskExecutionOutcome {
   failed
   approval_queued
 }
+
+// Frozen 2026-05-01 — canonical source: planning/phase-1-vm-realism-execution-plan.md (Phase 1)
+model WorkspaceSessionState {
+  id          String   @id @default(cuid())
+  tenantId    String
+  workspaceId String
+  version     Int
+  state       Json
+  updatedBy   String
+  updatedAt   DateTime
+  createdAt   DateTime @default(now())
+
+  @@unique([tenantId, workspaceId])
+  @@index([tenantId])
+  @@index([workspaceId])
+}
+
+// Frozen 2026-05-01 — canonical source: planning/phase-1-vm-realism-execution-plan.md (Phase 1)
+model WorkspaceCheckpoint {
+  id             String   @id @default(cuid())
+  tenantId       String
+  workspaceId    String
+  sessionVersion Int
+  label          String
+  reason         String?
+  stateDigest    String?
+  actor          String
+  createdAt      DateTime
+  correlationId  String
+
+  @@index([tenantId])
+  @@index([workspaceId])
+  @@index([tenantId, workspaceId])
+  @@index([createdAt])
+  @@index([correlationId])
+}
+
+// Frozen 2026-05-01 — canonical source: planning/phase-1-vm-realism-execution-plan.md (Phase 1)
+model DesktopProfile {
+  id           String   @id @default(cuid())
+  tenantId     String
+  workspaceId  String
+  profileId    String   @unique
+  browser      String
+  storageRef   String?
+  tabState     Json
+  tokenVersion Int      @default(1)
+  lastRotatedAt DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([tenantId, workspaceId])
+  @@index([tenantId])
+  @@index([workspaceId])
+}
+
+// Frozen 2026-05-01 — IDE state persistence (Phase 1 VM realism F4)
+model IdeState {
+  id          String   @id @default(cuid())
+  tenantId    String
+  workspaceId String
+  openFiles   Json     @default("[]")
+  activeFile  String?
+  breakpoints Json     @default("[]")
+  status      String   @default("active")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([tenantId, workspaceId])
+  @@index([tenantId])
+  @@index([workspaceId])
+}
+
+// Frozen 2026-05-01 — Terminal session continuity (Phase 1 VM realism F4)
+model TerminalSession {
+  id          String   @id @default(cuid())
+  tenantId    String
+  workspaceId String
+  shell       String   @default("bash")
+  cwd         String   @default("/")
+  lastCommand String?
+  history     Json     @default("[]")
+  status      String   @default("active")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([workspaceId])
+  @@index([tenantId, workspaceId])
+}
+
+// Frozen 2026-05-01 — Unified activity/notification stream events (Phase 1 F5)
+model ActivityEvent {
+  id          String   @id @default(cuid())
+  tenantId    String
+  workspaceId String
+  category    String
+  title       String
+  body        String?
+  payload     Json?
+  status      String   @default("unread")
+  sequence    Int
+  ackedAt     DateTime?
+  ackedBy     String?
+  correlationId String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([workspaceId])
+  @@index([tenantId, workspaceId, sequence])
+  @@index([tenantId, workspaceId, status])
+}
+
+// Frozen 2026-05-01 — Environment reconciler profile (Phase 1 F8)
+model EnvProfile {
+  id               String    @id @default(cuid())
+  tenantId         String
+  workspaceId      String
+  toolchain        Json      @default("[]")
+  reconcileStatus  String    @default("clean")
+  lastReconcileAt  DateTime?
+  driftReport      Json?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@unique([tenantId, workspaceId])
+  @@index([tenantId])
+  @@index([workspaceId])
+}
+
+// Frozen 2026-05-01 — Desktop GUI action runtime records (Phase 1 F3)
+model DesktopAction {
+  id            String    @id @default(cuid())
+  tenantId      String
+  workspaceId   String
+  actionType    String
+  target        String?
+  inputPayload  Json?
+  result        String    @default("success")
+  riskLevel     String    @default("low")
+  retryClass    String    @default("retryable")
+  retryCount    Int       @default(0)
+  screenshotRef String?
+  approvalId    String?
+  errorMessage  String?
+  completedAt   DateTime?
+  correlationId String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([tenantId])
+  @@index([workspaceId])
+  @@index([tenantId, workspaceId])
+  @@index([approvalId])
+}
+
+// Sprint 3 – F6 PR Auto Driver
+model PrDraft {
+  id               String    @id @default(cuid())
+  tenantId         String
+  workspaceId      String
+  branch           String
+  targetBranch     String?
+  changeSummary    String
+  linkedIssueIds   Json      @default("[]")
+  title            String
+  body             String
+  checklist        Json      @default("[]")
+  reviewersSuggested Json    @default("[]")
+  status           String    @default("draft")
+  prId             String?
+  provider         String?
+  labels           Json      @default("[]")
+  correlationId    String
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([tenantId, workspaceId])
+  @@index([tenantId, workspaceId, status])
+}
+
+// Sprint 3 – F7 CI Failure Triage
+model CiTriageReport {
+  id                   String    @id @default(cuid())
+  tenantId             String
+  workspaceId          String
+  provider             String
+  runId                String
+  repo                 String
+  branch               String
+  failedJobs           Json      @default("[]")
+  logRefs              Json      @default("[]")
+  status               String    @default("queued")
+  rootCauseHypothesis  String?
+  reproSteps           Json?
+  patchProposal        String?
+  confidence           Float?
+  blastRadius          String?
+  correlationId        String
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  @@index([tenantId, workspaceId])
+  @@index([tenantId, workspaceId, status])
+  @@unique([tenantId, workspaceId, runId])
+}
+
+// Sprint 3 – F10 Work Memory
+model WorkMemory {
+  id            String    @id @default(cuid())
+  tenantId      String
+  workspaceId   String
+  memoryVersion Int       @default(1)
+  entries       Json      @default("[]")
+  summary       String?
+  correlationId String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([tenantId, workspaceId])
+  @@index([tenantId, workspaceId])
+}
+
+// Sprint 4 — F9: Crash Recovery + Repro Pack Generator
+// Frozen 2026-05-01 — canonical source: planning/phase-1-vm-realism-execution-plan.md
+
+model RunResume {
+  id            String   @id @default(cuid())
+  tenantId      String
+  workspaceId   String
+  runId         String
+  strategy      String
+  resumedFrom   String?
+  status        String   @default("queued")
+  failureReason String?
+  correlationId String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([tenantId, workspaceId])
+  @@index([tenantId, workspaceId, runId])
+}
+
+model ReproPack {
+  id                 String   @id @default(cuid())
+  tenantId           String
+  workspaceId        String
+  runId              String
+  status             String   @default("generating")
+  manifest           Json
+  downloadRef        String?
+  expiresAt          DateTime
+  exportAuditEventId String?
+  correlationId      String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([tenantId, workspaceId])
+  @@index([tenantId, workspaceId, runId])
+}
