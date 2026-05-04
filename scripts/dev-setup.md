@@ -74,11 +74,20 @@ pnpm --filter @agentfarm/dashboard dev
 ## 5. Run Tests
 
 ```bash
-# API Gateway — 209 tests
+# API Gateway — 351 tests
 pnpm --filter @agentfarm/api-gateway test
 
-# Agent Runtime — 118 tests
+# Agent Runtime — 239 tests
 pnpm --filter @agentfarm/agent-runtime test
+
+# Dashboard — 69 tests
+pnpm --filter @agentfarm/dashboard test
+
+# Notification service — 31 tests
+pnpm --filter @agentfarm/notification-service test
+
+# Provisioning service — 15 tests
+pnpm --filter @agentfarm/provisioning-service test
 
 # Website tests (individual suites)
 pnpm --filter @agentfarm/website test:signup
@@ -91,10 +100,7 @@ pnpm --filter @agentfarm/website test:evidence         # Task 6.1/6.2 evidence c
 pnpm --filter @agentfarm/website test:deployments
 pnpm --filter @agentfarm/website test:deployments:ui
 
-# Provisioning service — 15 tests
-pnpm --filter @agentfarm/provisioning-service test
-
-# Full quality gate (33 checks)
+# Full quality gate (47 checks — 46 pass, 1 skipped: DB smoke)
 pnpm quality:gate
 
 # E2E smoke lane
@@ -140,8 +146,9 @@ This validates: signup, login, provisioning status, connector API, approval API,
 |------|---------|
 | Start website only | `pnpm --filter @agentfarm/website dev` |
 | Run all website tests | `pnpm --filter @agentfarm/website test:approvals` (etc.) |
-| Run quality gate | `pnpm quality:gate` |
-| Typecheck website | `pnpm --filter @agentfarm/website typecheck` |
+| Run quality gate | `pnpm quality:gate` || View dependency graph | `node scripts/graphify.mjs` |
+| View graph as DOT | `node scripts/graphify.mjs --dot` |
+| View graph as JSON | `node scripts/graphify.mjs --json` || Typecheck website | `pnpm --filter @agentfarm/website typecheck` |
 | Build for production | `pnpm --filter @agentfarm/website build` |
 
 ---

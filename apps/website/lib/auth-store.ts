@@ -304,9 +304,11 @@ const getEffectiveRole = (email: string, storedRole: UserRole): UserRole => {
     return storedRole;
 };
 
-const db = new DatabaseSync(".auth.sqlite");
+const AUTH_DB_PATH = process.env.WEBSITE_AUTH_DB_PATH ?? ".auth.sqlite";
+const db = new DatabaseSync(AUTH_DB_PATH);
 db.exec(`
     PRAGMA foreign_keys = ON;
+    PRAGMA busy_timeout = 5000;
   PRAGMA journal_mode = WAL;
 
   CREATE TABLE IF NOT EXISTS users (

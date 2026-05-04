@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -120,4 +120,112 @@ test('createOrchestratorStateStore auto backend falls back to file when DATABASE
             process.env.DATABASE_URL = previous;
         }
     }
+});
+
+test('FileOrchestratorStateStore recovery path sanitizes malformed persisted payload instead of crashing', async () => {
+    const tempDir = await mkdtemp(join(tmpdir(), 'agentfarm-orchestrator-file-store-corrupt-'));
+    const statePath = join(tempDir, 'state.json');
+    const store = new FileOrchestratorStateStore(statePath);
+
+    try {
+        const corrupted = {
+            version: 1,
+            taskScheduler: {
+                runs: [{ id: 'run-corrupt-1', status: 'queued' }],
+            },
+            routineScheduler: {
+                scheduledTasks: [{ id: 'task-1' }],
+                featureFlags: {
+                    'scheduler.routine_tasks': true,
+                    invalid_flag_type: 'yes',
+                },
+                schedulerErrors: [{ taskId: 42, error: 'bad', timestamp: null }],
+            },
+        };
+
+        await writeFile(statePath, JSON.stringify(corrupted), 'utf8');
+        const loaded = await store.load();
+
+        assert.ok(loaded);
+        // Task scheduler keeps object rows and ignores scalar noise.
+        assert.equal(loaded?.taskScheduler.runs.length, 1);
+        // Feature flags are strictly boolean-only.
+        assert.equal(loaded?.routineScheduler.featureFlags['scheduler.routine_tasks'], true);
+        assert.equal('invalid_flag_type' in (loaded?.routineScheduler.featureFlags ?? {}), false);
+        // Invalid scheduler error rows are dropped during recovery sanitization.
+        assert.equal(loaded?.routineScheduler.schedulerErrors.length, 0);
+    } finally {
+        await rm(tempDir, { recursive: true, force: true });
+    }
+});
+
+test('PrismaOrchestratorStateStore recovery path returns null for malformed ledger payload', async () => {
+    const fakePrisma = {
+        auditEvent: {
+            async findFirst() {
+                return {
+                    summary: 'ORCHESTRATOR_STATE:{"version":1,"taskScheduler":',
+                };
+            },
+            async create() {
+                return;
+            },
+        },
+    };
+
+    const store = new PrismaOrchestratorStateStore(fakePrisma as never);
+    const loaded = await store.load();
+
+    assert.equal(loaded, null);
+});
+
+test('PrismaOrchestratorStateStore recovery loads the latest persisted state snapshot', async () => {
+    const rows: Array<{ summary: string }> = [];
+    const fakePrisma = {
+        auditEvent: {
+            async findFirst() {
+                if (rows.length === 0) {
+                    return null;
+                }
+                return rows[rows.length - 1] ?? null;
+            },
+            async create(input: { data: { summary: string } }) {
+                rows.push({ summary: input.data.summary });
+                return;
+            },
+        },
+    };
+
+    const store = new PrismaOrchestratorStateStore(fakePrisma as never);
+
+    const first = sampleState();
+    const second: OrchestratorPersistedState = {
+        ...sampleState(),
+        taskScheduler: {
+            runs: [
+                ...sampleState().taskScheduler.runs,
+                {
+                    id: 'run-2',
+                    botId: 'bot-1',
+                    tenantId: 'tenant-1',
+                    workspaceId: 'ws-1',
+                    wakeSource: 'automation',
+                    status: 'queued',
+                    dedupeKey: 'dedupe-2',
+                    activeTaskCount: 0,
+                    startedAt: new Date().toISOString(),
+                    lastHeartbeatAt: new Date().toISOString(),
+                    correlationId: 'corr-2',
+                },
+            ],
+        },
+    };
+
+    await store.save(first);
+    await store.save(second);
+    const loaded = await store.load();
+
+    assert.ok(loaded);
+    assert.equal(loaded?.taskScheduler.runs.length, 2);
+    assert.equal(loaded?.taskScheduler.runs[1]?.id, 'run-2');
 });

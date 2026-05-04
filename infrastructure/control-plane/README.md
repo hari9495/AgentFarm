@@ -6,6 +6,8 @@ This folder contains shared control-plane IaC for AgentFarm.
 
 IaC templates are planned. Production deployment is blocked pending Azure sign-in (Tasks 8.2/8.3). See [operations/runbooks/mvp-launch-ops-runbook.md](../../operations/runbooks/mvp-launch-ops-runbook.md) for execution steps.
 
+Application quality gate: **PASS** (EXIT_CODE=0, 2026-05-04). All service code is production-ready pending infrastructure provisioning.
+
 ## Planned Resources (MVP)
 
 | Resource | Purpose |

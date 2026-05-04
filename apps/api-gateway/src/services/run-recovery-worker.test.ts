@@ -4,7 +4,7 @@
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { assessRecovery, buildManifest } from '../services/run-recovery-worker.js';
+import { assessRecovery, buildManifest } from '../lib/run-recovery-worker.js';
 
 // ---------------------------------------------------------------------------
 // assessRecovery — last_checkpoint strategy

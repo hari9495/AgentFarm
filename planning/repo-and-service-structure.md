@@ -19,16 +19,24 @@ agentfarm/
 │   ├── api-gateway/             # NestJS — control plane API entry point
 │   ├── dashboard/               # Next.js + Tailwind — operator and tenant UI
 │   ├── agent-runtime/           # OpenClaw agent runner (Docker image, per-VM)
-│   └── orchestrator/            # Paperclip multi-agent workflow coordinator
+│   │                            # Skills crystallization (Hermes pattern), 239 tests
+│   ├── orchestrator/            # Paperclip multi-agent workflow coordinator
+│   │                            # GOAP A* planner, heartbeat wake, routine scheduler
+│   └── website/                 # Next.js 14 — public/tenant-facing web
 │
 ├── services/                    # Internal domain services (NestJS/Fastify)
 │   ├── identity-service/        # Tenant, workspace, user, plan management
-│   ├── provisioning-service/    # Azure VM lifecycle and bootstrap
-│   ├── approval-service/        # Approval routing, records, kill-switch
+│   ├── provisioning-service/    # Azure VM lifecycle and bootstrap (11-step state machine)
+│   ├── approval-service/        # Approval routing, records, kill-switch, multi-stakeholder
 │   ├── policy-engine/           # OPA-based risk classification sidecar
-│   ├── connector-gateway/       # Connector auth, token lifecycle, action dispatch
-│   ├── evidence-service/        # Audit record and evidence writes
-│   └── notification-service/   # Approval notifications via Teams and email
+│   ├── connector-gateway/       # Connector auth, token lifecycle, action dispatch,
+│   │                            # mTLS cert verifier, PII-strip middleware
+│   ├── evidence-service/        # Audit record and evidence writes, HNSW vector index,
+│   │                            # governance KPI calculator
+│   ├── notification-service/    # Approval notification gateway: Telegram, Slack, Discord,
+│   │                            # Webhook, Voice (VoxCPM), dispatchApprovalAlert(),
+│   │                            # per-trigger allowlists, 31 tests
+│   └── meeting-agent/           # AI-facilitated meeting lifecycle, voice pipeline (STT/TTS)
 │
 ├── packages/                    # Shared internal libraries (not deployed independently)
 │   ├── shared-types/            # TypeScript interfaces and enums shared across all services
@@ -41,7 +49,14 @@ agentfarm/
 │   ├── control-plane/           # Bicep/Terraform for shared resource group
 │   └── runtime-plane/           # Bicep/Terraform per-tenant VM template
 │
-├── scripts/                     # Developer utility scripts (local setup, seed, etc.)
+├── scripts/                     # Developer utility scripts
+│   ├── quality-gate.mjs         # CI orchestrator — 47 checks
+│   ├── graphify.mjs             # Monorepo package dependency graph (Mermaid/DOT/JSON)
+│   ├── e2e-smoke.mjs            # E2E smoke tests (dashboard + website)
+│   ├── coverage-threshold-check.mjs  # Coverage summary validator
+│   ├── a4-contract-validation.mjs    # Contract versioning validator
+│   ├── a4-import-boundary-check.mjs  # Import boundary enforcer
+│   └── website-swa-verify.mjs   # SWA deployment verifier
 ├── docs/                        # README index pointing to planning/ docs
 ├── .github/                     # CI/CD workflows, PR templates, branch rules
 ├── docker-compose.yml           # Local development stack (PostgreSQL, Redis, OPA)
@@ -57,12 +72,12 @@ agentfarm/
 ## Application Detail
 
 ### apps/api-gateway
-- Framework: NestJS with Fastify adapter
+- Framework: Fastify
 - Role: Single entry point for all control-plane API calls from the dashboard and external clients.
-- Responsibilities: Authentication, authorization, rate limiting, request routing to downstream services.
+- Responsibilities: Authentication, authorization, rate limiting, request routing, SSE task-stream.
 - Port: 3000 (local), proxied via Azure Load Balancer in production.
-- Key modules: AuthModule, TenantModule, BotModule, ProvisioningModule, ApprovalModule, EvidenceModule.
-- Exposes: REST API (JSON), versioned under /v1/.
+- Key routes: auth, approvals, audit, connectors, budget, roles, snapshots, plugins, LLM config, governance, task lease, provisioning workers, SSE `/sse/tasks/:botId`.
+- Tests: 351 passing.
 
 ### apps/dashboard
 - Framework: Next.js (App Router) + Tailwind CSS
@@ -76,16 +91,18 @@ agentfarm/
 - Runtime: OpenClaw agent runner.
 - Role: Runs inside per-tenant Docker container on the isolated Azure VM.
 - Responsibilities: Receive task assignment from orchestrator, execute role steps, call connector-gateway, emit action events.
+- Key modules: `runtime-server.ts` (70+ types, 12 tiers workspace actions, risk classification), `skills-registry.ts` (crystallization lifecycle).
 - Not deployed to control plane. Deployed as Docker image pulled to per-tenant VM.
 - Config source: Environment variables injected at container start by bootstrap script.
 - Health endpoint: /health (used by provisioning health-check loop).
+- Tests: 239 passing.
 
 ### apps/orchestrator
 - Runtime: Paperclip multi-agent workflow coordinator.
 - Role: Routes tasks from API intake to the correct agent-runtime instance.
-- Responsibilities: Task assignment, lifecycle coordination, escalation routing, kill-switch propagation.
+- Responsibilities: Task assignment, lifecycle coordination, escalation routing, kill-switch propagation, goal planning.
+- Key modules: `goap-planner.ts` (A* GOAP), `task-scheduler.ts` (heartbeat wake with coalescing), `routine-scheduler.ts` (feature-flagged routines), `plugin-capability-guard.ts`, `orchestrator-state-store.ts` (file/DB backend).
 - Communicates with agent-runtime via internal RPC (control plane to VM over private network).
-- Sprint 2 primary.
 
 ---
 
@@ -129,40 +146,44 @@ agentfarm/
 ### services/connector-gateway
 - Plane: Control plane (proxied through to runtime plane actions).
 - Domain: Connector auth, token lifecycle, normalized action dispatch.
-- Supported connectors (MVP only): Jira, Microsoft Teams, GitHub, company email.
+- Key additions (Sprint 2): mTLS certificate verification (`mtls-verifier.ts`), PII-strip middleware (`pii-filter.ts`).
+- Supported connectors (MVP only): 18-connector registry in `@agentfarm/connector-contracts`.
 - Key tables: bot_connector_states, connector_tokens (encrypted at rest).
 - Key flows: OAuth initiation, callback, token storage, token refresh, revocation, health check.
 - Action dispatch: receives normalized ConnectorAction, routes to connector-specific adapter.
-- Sprint 2 primary service.
 
 ### services/evidence-service
 - Plane: Evidence plane.
-- Domain: Audit record writes, evidence immutability, retention tagging.
+- Domain: Audit record writes, evidence immutability, retention tagging, semantic evidence retrieval.
 - Key tables: action_records, approval_evidence, provisioning_evidence.
+- Key modules: `hnsw-index.ts` (HNSW approximate nearest-neighbour vector index), `governance-kpi.ts` (KPI calculator, evidence chain completeness).
 - Write policy: Evidence is append-only. No update or delete operations allowed.
 - Retention tag: Set at write time. Active: 12 months. Archive: 24 months.
-- Sprint 2 primary service.
 
 ### services/notification-service
 - Plane: Control plane.
-- Domain: Approval notification delivery via Teams and company email.
-- Triggered by: approval_service on approval_required event.
-- Delivery channels: Microsoft Teams bot message, email via company email connector.
-- Sprint 2 supporting service.
+- Domain: Approval-scoped notification dispatch gateway.
+- Channel adapters: Telegram, Slack, Discord, Webhook (generic HTTP), Voice (VoxCPM/VoIP).
+- Key exports: `dispatch()`, `dispatchApprovalAlert()`, `APPROVAL_TRIGGERS`, channel adapter send/build functions.
+- `NotificationChannelConfig.allowedTriggers?: NotificationEventTrigger[]` — optional per-channel trigger scope.
+- `dispatchApprovalAlert()` enforces approval-only trigger filter; returns `[]` for non-approval calls.
+- Tests: 31 passing.
 
 ---
 
 ## Package Detail
 
 ### packages/shared-types
-- Content: TypeScript interfaces and enums for every cross-service contract.
+- Content: TypeScript interfaces and enums for every cross-service contract (100+ types).
 - Key types:
-  - Tenant, TenantStatus (enum: pending, provisioning, ready, degraded, suspended, terminated)
-  - Bot, BotStatus (enum: created, bootstrapping, connector_setup_required, active, paused, failed)
-  - ProvisioningJob, ProvisioningState (enum: full state machine)
+  - Tenant, TenantStatus, Bot, BotStatus, ProvisioningJob, ProvisioningState
   - ApprovalRequest, ApprovalRecord, ApprovalDecision
   - ActionRecord, EvidenceRecord
-  - ConnectorAction, ConnectorActionResult, RiskLevel (enum: low, medium, high)
+  - ConnectorAction, ConnectorActionResult, RiskLevel
+  - GOAP types: GoalPlan, GoalAction, GoalWorldState
+  - Skills types: SkillRecord, SkillCrystallizationRecord
+  - Voice/Meeting types: MeetingSessionRecord, VoicePipelineConfig
+  - Notification types: NotificationRecord, NotificationChannelConfig (with `allowedTriggers?: NotificationEventTrigger[]`), NotificationDispatchResult
 - Rule: No service imports types from another service. All shared types live here only.
 
 ### packages/db-schema

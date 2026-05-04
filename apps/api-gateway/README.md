@@ -81,3 +81,64 @@ This command validates:
 3. Customer denial path.
 4. Internal diagnostics endpoint allow/deny behavior.
 5. deny_all_mode behavior when policy config is empty.
+
+---
+
+## SSE Task Stream
+
+Real-time task events delivered over Server-Sent Events (SSE), implemented in `src/routes/sse-tasks.ts`.
+
+### Endpoint
+
+```
+GET /sse/tasks/:botId
+```
+
+- Establishes a persistent SSE connection per `botId`.
+- On connect, any queued events for that bot are immediately drained to the client.
+- Heartbeat comment (`: heartbeat`) sent every 30 seconds to keep the connection alive.
+
+### SseTaskQueue
+
+Each `botId` maintains a `SseTaskQueue` (ring buffer, max 512 events).
+
+- Events pushed via `queue.push(event)` from task-execution route handlers.
+- On reconnect, `queue.drain()` sends all buffered events before streaming live events.
+- If the buffer fills, oldest events are dropped (LRU eviction).
+
+### Event Format
+
+```
+id: <eventId>
+event: <eventType>
+data: <JSON payload>
+```
+
+Event types: `task_created`, `task_assigned`, `task_completed`, `task_failed`, `task_cancelled`.
+
+### Auto-Recovery
+
+- If a client disconnects and reconnects within the buffer window, no events are lost.
+- `channelKey(botId)` and `getOrCreateQueue(botId)` are exported for testing and integration.
+
+### Tests
+
+Covered in the api-gateway 351-test suite under `src/routes/sse-tasks.test.ts`.
+
+---
+
+## Test Summary
+
+| Suite | Tests |
+|-------|-------|
+| Auth / Session | covered |
+| Approvals | covered |
+| Audit | covered |
+| Connectors | covered |
+| Budget policy | covered |
+| Governance workflows | covered |
+| SSE task stream | covered |
+| **Total** | **351 passing** |
+
+Last quality gate run: **2026-05-04 — EXIT_CODE=0 (PASS)**
+

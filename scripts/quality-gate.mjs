@@ -106,7 +106,7 @@ const checks = [
     },
     {
         id: 'contract-validation',
-        title: 'Contract versioning and compatibility (Epic A4)',
+        title: 'Contract versioning and compatibility (Epic A4 + Phase 1 WORK_MEMORY/REPRO_PACK)',
         command: 'node',
         args: ['scripts/a4-contract-validation.mjs'],
     },
@@ -262,6 +262,24 @@ const checks = [
         title: 'Phase 1 — Sprint 4 exit-gate integration test',
         command: 'pnpm',
         args: ['--filter', '@agentfarm/api-gateway', 'exec', 'tsx', '--test', 'src/routes/sprint4-integration.test.ts'],
+    },
+    {
+        id: 'phase1-orchestrator-recovery-test',
+        title: 'Phase 1 — Orchestrator resume/recovery tests',
+        command: 'pnpm',
+        args: ['--filter', '@agentfarm/orchestrator', 'exec', 'tsx', '--test', 'src/orchestrator-state-store.test.ts'],
+    },
+    {
+        id: 'phase1-agent-runtime-desktop-actions-test',
+        title: 'Phase 1 — Agent Runtime desktop-action governance tests',
+        command: 'pnpm',
+        args: ['--filter', '@agentfarm/agent-runtime', 'exec', 'tsx', '--test', 'src/desktop-action-governance.test.ts'],
+    },
+    {
+        id: 'phase1-dashboard-activity-stream-test',
+        title: 'Phase 1 — Dashboard activity-stream component tests',
+        command: 'pnpm',
+        args: ['--filter', '@agentfarm/dashboard', 'test', '--', 'app/components/operational-signal-timeline.test.tsx'],
     },
     {
         id: 'db-runtime-smoke',

@@ -10,11 +10,35 @@ const DB_PATH = process.env.WEBSITE_AUTH_DB_PATH ?? ".auth.sqlite";
 const DUMMY_PASSWORD_HASH =
     "scrypt:0000000000000000000000000000000000000000000000000000000000000000:0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
 
+const enableBusyTimeout = (db: DatabaseSync): void => {
+    db.exec("PRAGMA busy_timeout = 5000;");
+};
+
+const withSqliteBusyRetry = <T>(fn: () => T): T => {
+    const MAX_ATTEMPTS = 3;
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+        try {
+            return fn();
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            const isBusy = message.toLowerCase().includes("database is locked");
+            if (!isBusy || attempt === MAX_ATTEMPTS) {
+                throw error;
+            }
+            lastError = error;
+        }
+    }
+    throw lastError;
+};
+
 const createTestUser = (db: DatabaseSync, suffix: string): string => {
     const id = `tst_sig_${suffix}`;
-    db.prepare(
-        "INSERT INTO users (id, email, name, company, role, password_hash, created_at) VALUES (?, ?, ?, ?, 'member', ?, ?)",
-    ).run(id, `${id}@agentfarm.local`, `Signup ${suffix}`, "AgentFarm Test", DUMMY_PASSWORD_HASH, Date.now());
+    withSqliteBusyRetry(() =>
+        db.prepare(
+            "INSERT INTO users (id, email, name, company, role, password_hash, created_at) VALUES (?, ?, ?, ?, 'member', ?, ?)",
+        ).run(id, `${id}@agentfarm.local`, `Signup ${suffix}`, "AgentFarm Test", DUMMY_PASSWORD_HASH, Date.now()),
+    );
     return id;
 };
 
@@ -35,6 +59,7 @@ const cleanupUser = (db: DatabaseSync, userId: string): void => {
 
 test("signup flow: tenant is created with provisioning status after initialization", () => {
     const db = new DatabaseSync(DB_PATH);
+    enableBusyTimeout(db);
     const suffix = `${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     const userId = createTestUser(db, suffix);
 
@@ -50,6 +75,7 @@ test("signup flow: tenant is created with provisioning status after initializati
 
 test("signup flow: default workspace is created with provisioning status and correct fields", () => {
     const db = new DatabaseSync(DB_PATH);
+    enableBusyTimeout(db);
     const suffix = `${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     const userId = createTestUser(db, suffix);
 
@@ -66,6 +92,7 @@ test("signup flow: default workspace is created with provisioning status and cor
 
 test("signup flow: default bot is created with created status and correct fields", () => {
     const db = new DatabaseSync(DB_PATH);
+    enableBusyTimeout(db);
     const suffix = `${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     const userId = createTestUser(db, suffix);
 
@@ -82,6 +109,7 @@ test("signup flow: default bot is created with created status and correct fields
 
 test("signup flow: provisioning queue entry satisfies provisioning.requested contract", () => {
     const db = new DatabaseSync(DB_PATH);
+    enableBusyTimeout(db);
     const suffix = `${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     const userId = createTestUser(db, suffix);
 
@@ -107,6 +135,7 @@ test("signup flow: provisioning queue entry satisfies provisioning.requested con
 
 test("signup flow: initializeTenantWorkspaceAndBot is idempotent on repeated calls", () => {
     const db = new DatabaseSync(DB_PATH);
+    enableBusyTimeout(db);
     const suffix = `${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     const userId = createTestUser(db, suffix);
 

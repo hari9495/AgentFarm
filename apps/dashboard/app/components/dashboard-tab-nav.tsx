@@ -83,6 +83,14 @@ export function DashboardTabNav({ activeTab, variant, syncFromStorage = false, w
             return;
         }
 
+        // If there is no workspaceId in the URL, the workspace switcher will
+        // handle the full redirect (including the correct tab). Skip here to
+        // avoid a race condition where two router.replace() calls fire and the
+        // tab nav overwrites the workspace switcher's redirect.
+        if (!searchParams.get('workspaceId')) {
+            return;
+        }
+
         const workspaceStorageKey = getDashboardTabStorageKey(workspaceId);
         const { storedTab, shouldMigrateLegacy } = resolveDashboardStoredTab({
             workspaceStoredTab: window.localStorage.getItem(workspaceStorageKey),

@@ -9,7 +9,7 @@
 
 import { randomUUID } from 'crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { assessRecovery, buildManifest } from '../services/run-recovery-worker.js';
+import { assessRecovery, buildManifest } from '../lib/run-recovery-worker.js';
 
 // ---------------------------------------------------------------------------
 // Local types

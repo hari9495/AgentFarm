@@ -20,12 +20,24 @@ const content = fs.readFileSync(sharedTypesPath, 'utf-8');
 
 // Contract validation rules
 const expectedContracts = {
-    'SignupProvisioningRequested': ['contractVersion', 'correlationId'],
-    'ProvisioningJobRecord': ['contractVersion', 'correlationId'],
-    'ApprovalRecord': ['contractVersion', 'correlationId'],
-    'AuditEventRecord': ['contractVersion', 'correlationId'],
-    'ConnectorActionRecord': ['contractVersion', 'correlationId'],
+    SignupProvisioningRequested: ['contractVersion', 'correlationId'],
+    ProvisioningJobRecord: ['contractVersion', 'correlationId'],
+    ApprovalRecord: ['contractVersion', 'correlationId'],
+    AuditEventRecord: ['contractVersion', 'correlationId'],
+    ConnectorActionRecord: ['contractVersion', 'correlationId'],
+    WorkMemoryRecord: ['contractVersion', 'correlationId'],
+    ReproPackRecord: ['contractVersion', 'correlationId'],
+    RunResumeRecord: ['contractVersion', 'correlationId'],
 };
+
+const requiredContractVersionKeys = [
+    'PROVISIONING',
+    'APPROVAL',
+    'AUDIT_EVENT',
+    'CONNECTOR_ACTION',
+    'WORK_MEMORY',
+    'REPRO_PACK',
+];
 
 let violations = 0;
 
@@ -77,6 +89,14 @@ if (!content.includes('CONTRACT_VERSIONS')) {
     violations++;
 }
 
+for (const key of requiredContractVersionKeys) {
+    const keyRegex = new RegExp(`\\b${key}\\s*:`);
+    if (!keyRegex.test(content)) {
+        console.error(`❌ FAIL: CONTRACT_VERSIONS missing required key '${key}'`);
+        violations++;
+    }
+}
+
 // Check validateContractMeta validator exists
 if (!content.includes('validateContractMeta')) {
     console.error('❌ FAIL: validateContractMeta validator not found in shared-types');
@@ -90,6 +110,10 @@ if (violations === 0) {
     console.log('   - ApprovalRecord: ✓ versioned');
     console.log('   - AuditEventRecord: ✓ versioned');
     console.log('   - ConnectorActionRecord: ✓ versioned');
+    console.log('   - WorkMemoryRecord: ✓ versioned');
+    console.log('   - ReproPackRecord: ✓ versioned');
+    console.log('   - RunResumeRecord: ✓ versioned');
+    console.log('   - CONTRACT_VERSIONS keys: ✓ PROVISIONING/APPROVAL/AUDIT_EVENT/CONNECTOR_ACTION/WORK_MEMORY/REPRO_PACK');
     console.log('   - validateContractMeta: ✓ validator present');
     console.log('   - CONTRACT_VERSIONS: ✓ constants defined\n');
     process.exit(0);

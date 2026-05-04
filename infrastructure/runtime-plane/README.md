@@ -6,6 +6,8 @@ This folder contains per-tenant runtime IaC templates for AgentFarm.
 
 IaC templates are planned. The provisioning state machine is fully implemented in `services/provisioning-service/src/`. Production deployment is blocked pending Azure sign-in (Tasks 8.2/8.3).
 
+Application quality gate: **PASS** (EXIT_CODE=0, 2026-05-04). Provisioning service has 15 tests passing. All service code is production-ready pending infrastructure provisioning.
+
 ## Planned Resources Per Tenant
 
 | Resource | Purpose |

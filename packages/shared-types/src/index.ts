@@ -27,6 +27,11 @@ export const CONTRACT_VERSIONS = {
   CI_TRIAGE: '1.0.0', // CI failure triage reports (F7)
   WORK_MEMORY: '1.0.0', // Workspace work memory and next-action plans (F10)
   REPRO_PACK: '1.0.0', // Crash recovery and repro pack export records (F9)
+  MEETING_SESSION: '1.0.0', // Meeting lifecycle session records (voice agent)
+  VOICE_TRANSCRIPT: '1.0.0', // STT transcript records from voice pipeline
+  NOTIFICATION: '1.0.0', // Notification dispatch records (Telegram/Slack/Discord)
+  GOAL_PLAN: '1.0.0', // GOAP goal plans and action sequences
+  SKILL: '1.0.0', // Skills registry — crystallized reusable task templates
 } as const;
 
 export type ContractVersion = (typeof CONTRACT_VERSIONS)[keyof typeof CONTRACT_VERSIONS];
@@ -1211,5 +1216,269 @@ export interface RunResumeRecord {
   correlationId: string;
   createdAt: string;
   updatedAt: string;
+}
+
+// ============================================================================
+// VOICE MEETING AGENT CONTRACTS
+// Spec: planning/spec-meeting-agent-teams.md
+// ============================================================================
+
+export type MeetingLifecycleStatus =
+  | 'scheduled'
+  | 'join_requested'
+  | 'joining'
+  | 'joined'
+  | 'listening'
+  | 'speaking'
+  | 'paused'
+  | 'escalation_required'
+  | 'completed'
+  | 'failed';
+
+export type MeetingQuestionHandlingStatus =
+  | 'received'
+  | 'transcribed'
+  | 'classified'
+  | 'grounded'
+  | 'policy_checked'
+  | 'approval_pending'
+  | 'answered'
+  | 'escalated'
+  | 'blocked';
+
+export type MeetingMode = 'standup' | 'interactive_qa' | 'interview_assistant';
+
+export type MeetingPlatform = 'teams' | 'zoom' | 'meet' | 'webex';
+
+export interface MeetingSessionRecord {
+  id: string;
+  contractVersion: string; // CONTRACT_VERSIONS.MEETING_SESSION
+  tenantId: string;
+  workspaceId: string;
+  botId: string;
+  platform: MeetingPlatform;
+  mode: MeetingMode;
+  meetingId: string;
+  meetingUrl?: string;
+  status: MeetingLifecycleStatus;
+  disclosureAnnounced: boolean; // AI disclosure non-negotiable — must be true before any speech
+  transcriptRef?: string;
+  summaryRef?: string;
+  evidenceIds: string[];
+  correlationId: string;
+  scheduledAt?: string;
+  joinedAt?: string;
+  completedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MeetingQuestionRecord {
+  id: string;
+  sessionId: string;
+  tenantId: string;
+  workspaceId: string;
+  speakerId?: string;
+  transcription: string;
+  status: MeetingQuestionHandlingStatus;
+  classifiedRisk?: RiskLevel;
+  groundedResponse?: string;
+  approvalId?: string;
+  escalationReason?: string;
+  confidenceScore?: number;
+  answeredAt?: string;
+  correlationId: string;
+  createdAt: string;
+}
+
+// ============================================================================
+// VOICE PIPELINE CONTRACTS (VoxCPM / Voicebox / Whisper)
+// ============================================================================
+
+export type SttProvider = 'whisper_local' | 'whisper_cloud' | 'azure_speech';
+
+export type TtsProvider = 'voxcpm' | 'voicebox' | 'azure_tts' | 'openai_tts';
+
+export type VoiceQuality = 'standard' | 'high' | 'studio';
+
+export interface VoicePipelineConfig {
+  sttProvider: SttProvider;
+  sttModel?: string; // e.g. 'whisper-turbo', 'whisper-large-v3'
+  ttsProvider: TtsProvider;
+  ttsModel?: string; // e.g. 'openbmb/VoxCPM2'
+  ttsEndpoint?: string; // e.g. 'http://localhost:8000/v1/audio/speech'
+  voiceProfileId?: string; // for voice cloning
+  voiceQuality?: VoiceQuality;
+  languageCode?: string; // BCP-47, e.g. 'en-US'
+  streamingEnabled?: boolean;
+}
+
+export interface VoiceTranscriptRecord {
+  id: string;
+  contractVersion: string; // CONTRACT_VERSIONS.VOICE_TRANSCRIPT
+  sessionId: string;
+  tenantId: string;
+  workspaceId: string;
+  audioRef?: string;
+  transcript: string;
+  confidence?: number;
+  sttProvider: SttProvider;
+  sttModel?: string;
+  languageDetected?: string;
+  durationMs?: number;
+  correlationId: string;
+  createdAt: string;
+}
+
+export interface VoiceSpeechRecord {
+  id: string;
+  sessionId: string;
+  tenantId: string;
+  workspaceId: string;
+  text: string;
+  audioRef?: string;
+  ttsProvider: TtsProvider;
+  ttsModel?: string;
+  voiceProfileId?: string;
+  durationMs?: number;
+  streamingUsed?: boolean;
+  correlationId: string;
+  createdAt: string;
+}
+
+// ============================================================================
+// NOTIFICATION GATEWAY CONTRACTS (Telegram / Slack / Discord / Webhook)
+// ============================================================================
+
+export type NotificationChannel = 'telegram' | 'slack' | 'discord' | 'email' | 'webhook' | 'voice';
+
+export type NotificationEventTrigger =
+  | 'run_completed'
+  | 'run_failed'
+  | 'approval_requested'
+  | 'approval_decided'
+  | 'escalation_created'
+  | 'kill_switch_activated'
+  | 'meeting_completed'
+  | 'skill_crystallized'
+  | 'security_event';
+
+export interface NotificationChannelConfig {
+  channel: NotificationChannel;
+  enabled: boolean;
+  config: Record<string, string>; // botToken, webhookUrl, chatId, etc.
+  /** When set, this channel config only activates for the listed triggers. */
+  allowedTriggers?: NotificationEventTrigger[];
+}
+
+export interface NotificationRecord {
+  id: string;
+  contractVersion: string; // CONTRACT_VERSIONS.NOTIFICATION
+  tenantId: string;
+  workspaceId: string;
+  channel: NotificationChannel;
+  trigger: NotificationEventTrigger;
+  title: string;
+  body: string;
+  payload?: Record<string, unknown>;
+  status: 'pending' | 'sent' | 'failed' | 'retrying';
+  retryCount: number;
+  errorMessage?: string;
+  correlationId: string;
+  scheduledAt?: string;
+  sentAt?: string;
+  createdAt: string;
+}
+
+export interface NotificationDispatchResult {
+  notificationId: string;
+  channel: NotificationChannel;
+  success: boolean;
+  errorMessage?: string;
+  platformMessageId?: string;
+}
+
+// ============================================================================
+// GOAP PLANNER CONTRACTS (Goal-Oriented Action Planning — A*)
+// ============================================================================
+
+export type GoalPlanStatus =
+  | 'pending'
+  | 'planning'
+  | 'executing'
+  | 'completed'
+  | 'failed'
+  | 'replanning';
+
+export type GoalWorldState = Record<string, boolean | string | number | null>;
+
+export interface GoalAction {
+  id: string;
+  name: string;
+  preconditions: GoalWorldState; // conditions that must hold before execution
+  effects: GoalWorldState;       // state changes produced by execution
+  cost: number;                  // A* edge cost
+}
+
+export interface GoalPlan {
+  id: string;
+  contractVersion: string; // CONTRACT_VERSIONS.GOAL_PLAN
+  tenantId: string;
+  workspaceId: string;
+  botId: string;
+  goalDescription: string;
+  currentState: GoalWorldState;
+  targetState: GoalWorldState;
+  actions: GoalAction[];   // ordered sequence produced by planner
+  totalCost: number;
+  status: GoalPlanStatus;
+  currentActionIndex: number;
+  replanCount: number;
+  failedActionId?: string;
+  failureReason?: string;
+  correlationId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ============================================================================
+// SKILLS REGISTRY CONTRACTS (from Hermes Agent / Ruflo SONA)
+// ============================================================================
+
+export type SkillStatus = 'draft' | 'active' | 'deprecated';
+
+export type SkillTrigger = 'manual' | 'auto_crystallized' | 'imported';
+
+export interface SkillRecord {
+  id: string;
+  contractVersion: string; // CONTRACT_VERSIONS.SKILL
+  tenantId: string;
+  workspaceId: string;
+  name: string;
+  description: string;
+  trigger: SkillTrigger;
+  status: SkillStatus;
+  roleKey?: RoleKey;
+  inputPattern: Record<string, unknown>; // template for inputs that activate skill
+  outputTemplate: Record<string, unknown>; // expected output shape
+  stepCount: number;
+  successCount: number;
+  useCount: number;
+  sourceRunId?: string;
+  correlationId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SkillCrystallizationRecord {
+  id: string;
+  skillId: string;
+  runId: string;
+  tenantId: string;
+  workspaceId: string;
+  triggerReason: string;
+  trajectoryCompressed: boolean;
+  correlationId: string;
+  createdAt: string;
 }
 

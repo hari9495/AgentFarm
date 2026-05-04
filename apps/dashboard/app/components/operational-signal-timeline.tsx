@@ -1,3 +1,5 @@
+import React from 'react';
+
 type OperationalSignalTimelinePoint = {
     label: string;
     value: number;

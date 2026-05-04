@@ -135,3 +135,45 @@ The dashboard proxies runtime observability calls through:
 - /api/runtime/[botId]/kill
 
 These routes require internal scope and return 403 when internal scope is not present.
+
+---
+
+## Kanban Board
+
+Pure business-logic Kanban utilities implemented in `app/components/kanban-board-utils.ts`.
+
+### Exports
+
+| Function | Description |
+|----------|-------------|
+| `createBoard(columns)` | Creates a new Kanban board with named columns |
+| `addCard(board, columnId, card)` | Adds a card to a specific column |
+| `moveCard(board, cardId, targetColumnId)` | Moves a card between columns (drag-and-drop support) |
+| `removeCard(board, cardId)` | Removes a card from the board |
+| `getColumnCards(board, columnId)` | Returns all cards in a column |
+| `filterCards(board, predicate)` | Filters cards across all columns by a predicate function |
+
+### Notes
+
+- Pure logic module — no React or DOM dependencies. Can be unit-tested without rendering.
+- WIP limits: Set `maxCards` on a column definition to enforce work-in-progress limits; `addCard` will throw if the limit is reached.
+- Priority support: Cards carry a `priority` field (`low | medium | high | critical`); `filterCards` can filter by priority.
+- Drag-and-drop: `moveCard` is the pure-data backing for drag-and-drop UI gestures.
+
+### Tests
+
+Covered in the dashboard 69-test suite under `app/components/kanban-board-utils.test.ts`.
+
+---
+
+## Test Summary
+
+| Suite | Tests |
+|-------|-------|
+| Kanban board utils | covered |
+| Operational signal timeline | covered |
+| Workspace tab persistence | covered |
+| **Total** | **69 passing** |
+
+Last quality gate run: **2026-05-04 — EXIT_CODE=0 (PASS)**
+

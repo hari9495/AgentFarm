@@ -17,7 +17,7 @@ Planning-first rule: MVP implementation starts only after architecture baseline 
 5. Weekly quality reporting
 6. Connector contracts for Jira, Microsoft Teams, GitHub, and company email
 7. Evidence records for all active release gates
-## Not Included in MVP
+## Not Included in MVP (Original Scope)
 1. Many roles at once
 2. Deep enterprise customization
 3. Large analytics dashboard suite
@@ -46,3 +46,30 @@ Planning-first rule: MVP implementation starts only after architecture baseline 
 5. Pilot customer satisfaction
 6. Approval latency
 7. Audit completeness
+
+---
+
+## Implementation Status (as of 2026-05-04)
+
+All MVP items above are built and tested. Quality gate: **EXIT_CODE=0 — PASS** (47 checks, 46 passing).
+
+### Sprint 2 Features Built Beyond MVP Scope
+
+The following features were built as Sprint 2 open-source-inspired additions:
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Messaging gateway (Telegram/Slack/Discord/Webhook) | **Built** | notification-service, 31 tests |
+| Voice notification channel (VoxCPM/VoIP) | **Built** | voice-adapter.ts — previously listed as "Not Included in MVP" |
+| GOAP A* goal planner | **Built** | orchestrator/goap-planner.ts |
+| SSE task stream with auto-recovery | **Built** | api-gateway/routes/sse-tasks.ts |
+| Skills crystallization (Hermes Agent pattern) | **Built** | agent-runtime/skills-registry.ts |
+| Monorepo dependency graph tool (graphify) | **Built** | scripts/graphify.mjs |
+| mTLS cert verifier + PII-strip middleware | **Built** | connector-gateway |
+| HNSW vector index for evidence retrieval | **Built** | evidence-service/hnsw-index.ts |
+| Kanban board (drag-and-drop logic) | **Built** | dashboard/kanban-board-utils.ts |
+| Approval-only messaging gateway | **Built** | dispatchApprovalAlert() in notification-service |
+| Meeting agent (AI disclosure, voice pipeline) | **Built** | services/meeting-agent/ (bonus) |
+
+Note: Voice notification channel (VoxCPM) has been built. Live meeting participation (voice join to a real meeting call) remains out of scope until a separate safety gate is approved.
+

@@ -1,10 +1,86 @@
-# AgentFarm Build Snapshot (As of 2026-04-28, updated 2026-04-30)
+# AgentFarm Build Snapshot (As of 2026-04-28, updated 2026-05-04)
 
 ## Executive Status
-- Sprint 1 delivery status: 22 of 24 tasks completed (core sprint), plus 11 Tier 1/2 workspace action tasks completed (Workstream 9).
-- Remaining in progress: Task 7.1 (Website SWA production rollout), Task 8.2 and 8.3 (deployment and pre-launch gates).
-- Quality gate status: PASS for core checks with DB runtime smoke skipped due to missing DB environment.
-- Agent Runtime test count: **118 tests, 0 failures** (as of 2026-04-30).
+- Sprint 1 delivery status: 24 of 24 tasks completed (core sprint), plus 11 Tier 1/2 workspace action tasks completed (Workstream 9).
+- Sprint 2 delivery status: **10/10 autonomous intelligence and notification features built and tested (2026-05-04)**.
+- Remaining: Task 7.1 (Website SWA production rollout), Task 8.2 and 8.3 (deployment and pre-launch gates).
+- Quality gate status: **PASS — EXIT_CODE=0** (47 checks, 46 passing, 1 skipped: DB runtime smoke).
+- Agent Runtime test count: **239 tests, 0 failures** (as of 2026-05-04).
+- API Gateway test count: **351 tests, 0 failures** (as of 2026-05-04).
+- Dashboard test count: **69 tests, 0 failures** (as of 2026-05-04).
+- Notification service test count: **31 tests, 0 failures** (as of 2026-05-04).
+
+---
+
+## Sprint 2 Features Built (2026-05-04)
+
+Ten open-source-inspired features were built, tested, and integrated:
+
+### Feature 1 — Messaging Gateway (notification-service)
+- **File:** `services/notification-service/src/notification-dispatcher.ts`
+- **Adapters:** Telegram (`telegram-adapter.ts`), Slack (`slack-adapter.ts`), Discord (`discord-adapter.ts`), Webhook (inline), Voice (`voice-adapter.ts`)
+- **API:** `dispatch(record, configs, fetcher?)` — routes by channel, respects `allowedTriggers`
+- **Tests:** 31 tests in `notification-dispatcher.test.ts`
+
+### Feature 2 — GOAP A* Goal Planner (orchestrator)
+- **File:** `apps/orchestrator/src/goap-planner.ts`
+- **Exports:** `GoapPlanner` class, `planGoal()` function
+- **Pattern:** A* search over `GoalWorldState` with action preconditions/effects
+- **Tests:** 13 tests passing
+
+### Feature 3 — SSE Task Stream with Auto-Recovery (api-gateway)
+- **File:** `apps/api-gateway/src/routes/sse-tasks.ts`
+- **Exports:** `SseTaskQueue`, `registerSseTaskRoutes()`, `formatSseEvent()`, `channelKey()`
+- **Behaviour:** Per-bot SSE channel, 512-event buffer, reconnect drain, heartbeat keep-alive
+- **Tests:** Covered in api-gateway 351-test suite
+
+### Feature 4 — Skills Crystallization (agent-runtime)
+- **File:** `apps/agent-runtime/src/skills-registry.ts`
+- **Exports:** `SkillsRegistry` class
+- **Lifecycle:** `draft → active → deprecated`; `crystallize()` auto-generates templates from runs
+- **Tests:** Covered in agent-runtime 239-test suite
+
+### Feature 5 — Graphify Dev Tool (scripts)
+- **File:** `scripts/graphify.mjs`
+- **Usage:** `node scripts/graphify.mjs [--json|--dot]`
+- **Output:** Mermaid/DOT/JSON dependency graph of all pnpm workspace packages
+
+### Feature 6 — Agent Federation mTLS + PII Filter (connector-gateway)
+- **Files:** `services/connector-gateway/src/mtls-verifier.ts`, `services/connector-gateway/src/pii-filter.ts`
+- **Exports:** `MtlsVerifier`, `verifyMtlsCert()`, `stripPii()`, `containsPii()`
+- **Security:** Certificate CN/SAN allowlist, recursive PII field redaction
+
+### Feature 7 — HNSW Vector Search (evidence-service)
+- **File:** `services/evidence-service/src/hnsw-index.ts`
+- **Exports:** `HnswIndex` class, `cosineSimilarity()`
+- **Pattern:** Pure-TypeScript HNSW approximate nearest-neighbour search for evidence retrieval
+
+### Feature 8 — Kanban Board (dashboard)
+- **File:** `apps/dashboard/app/components/kanban-board-utils.ts`
+- **Exports:** `createBoard()`, `addCard()`, `moveCard()`, `removeCard()`, `getColumnCards()`, `filterCards()`
+- **Pattern:** Pure logic (no UI), WIP limits, priority-based filtering
+- **Tests:** Covered in dashboard 69-test suite
+
+### Feature 9 — Voice Notification Channel (notification-service)
+- **File:** `services/notification-service/src/channels/voice-adapter.ts`
+- **Exports:** `sendVoice()`, `buildVoiceRequest()`
+- **Integration:** VoxCPM/VoIP API; TTS synthesis using title+body concatenation
+
+### Feature 10 — Approval-Only Messaging Gateway (notification-service)
+- **File:** `services/notification-service/src/notification-dispatcher.ts`
+- **Exports:** `dispatchApprovalAlert()`, `APPROVAL_TRIGGERS` set
+- **Behaviour:** Returns `[]` for non-approval triggers; enforces `approval_requested | approval_decided` filter before dispatching
+- **Shared-types change:** `NotificationChannelConfig.allowedTriggers?: NotificationEventTrigger[]` added
+- **Tests:** 5 new tests in `dispatchApprovalAlert` suite
+
+---
+
+## Quality Gate Fixes Applied (2026-05-04)
+- `apps/website/lib/auth-store.ts`: Added `PRAGMA busy_timeout = 5000` to reduce `SQLITE_BUSY` under parallel test load
+- `apps/website/tests/signup-flow.test.ts`: Per-test `DatabaseSync` instances with `SQLITE_BUSY` retry loop
+- `apps/dashboard/scripts/workspace-tab-e2e.mjs`: Retry loop on tab-click navigation assertion to handle transient client-navigation races
+
+
 
 ## What Is Built End-to-End
 

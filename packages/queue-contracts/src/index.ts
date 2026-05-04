@@ -2,6 +2,8 @@
 export const QUEUE_APPROVAL = 'queue_approval';
 export const QUEUE_EVIDENCE = 'queue_evidence';
 export const QUEUE_RUNTIME_TASKS = 'queue_runtime_tasks';
+export const QUEUE_MEETING = 'queue_meeting';
+export const QUEUE_NOTIFICATION = 'queue_notification';
 
 export const TASK_LEASE_ACTIONS = {
     claim: 'claim',

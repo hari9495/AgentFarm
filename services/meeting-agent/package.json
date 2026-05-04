@@ -1,0 +1,21 @@
+{
+    "name": "@agentfarm/meeting-agent",
+    "version": "0.1.0",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "build": "tsc -p tsconfig.json",
+        "dev": "tsx src/index.ts",
+        "start": "node dist/index.js",
+        "typecheck": "tsc -p tsconfig.json --noEmit",
+        "test": "tsx --test src/**/*.test.ts"
+    },
+    "dependencies": {
+        "@agentfarm/shared-types": "workspace:*",
+        "@agentfarm/queue-contracts": "workspace:*"
+    },
+    "devDependencies": {
+        "tsx": "^4.19.2",
+        "typescript": "^5.7.2"
+    }
+}

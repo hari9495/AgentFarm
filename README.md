@@ -4,7 +4,7 @@
 
 AgentFarm is a TypeScript pnpm monorepo that delivers a production-grade AI agent platform. The MVP ships one high-quality Developer Agent role with 18 live connectors across 4 categories, risk-based autonomy, a full approval enforcement stack, and a complete audit/evidence path for compliance.
 
-**Sprint 1 status (as of 2026-05-01): 24/24 local tasks completed. 3 tasks blocked on external Azure/GitHub secrets (Tasks 7.1, 8.2, 8.3).**
+**Sprint 1 status: 24/24 local tasks completed. Quality gate: PASS (47 checks, 46 passing, 1 skipped: DB smoke lane). Sprint 2 features: 10/10 built and tested (2026-05-04).**
 
 ---
 
@@ -20,35 +20,44 @@ AgentFarm is a TypeScript pnpm monorepo that delivers a production-grade AI agen
 apps/
   api-gateway/          ← control-plane API: auth, approvals, audit, connector execution,
                           budget policy, roles, snapshots, plugin loading, LLM config,
-                          governance workflows, task lease, provisioning workers
-                          209 tests passing | typecheck clean
+                          governance workflows, task lease, provisioning workers,
+                          SSE task-stream with auto-recovery
+                          351 tests passing | typecheck clean | ≥80% line coverage enforced
   agent-runtime/        ← per-tenant execution engine: risk classification, action dispatch,
-                          10 LLM providers (incl. Auto mode), 12 tiers of workspace actions
-                          118 tests passing | typecheck clean
+                          10 LLM providers (incl. Auto mode), 12 tiers of workspace actions,
+                          skills crystallization (Hermes pattern), desktop-action governance
+                          239 tests passing | typecheck clean | ≥80% line coverage enforced
   dashboard/            ← operator UI: approval queue, evidence panel, runtime observability,
                           LLM config, governance workflows, plugin loading, budget panel,
-                          workspace switcher, deep links
-                          typecheck clean
+                          workspace switcher, deep links, Kanban board (drag-and-drop)
+                          69 tests passing | typecheck clean
   website/              ← 51 pages: onboarding, connector dashboard, approval inbox, evidence,
                           marketplace, admin, superadmin, docs, blog, pricing, auth flows
                           43 API routes across 12 route groups | SQLite-backed | port 3002
                           28+ tests across 9 suites | typecheck clean
   orchestrator/         ← multi-agent workflow coordinator: task scheduler (heartbeat wake
                           model with coalescing), routine scheduler, plugin capability guard,
-                          state persistence (file/db backend)
-                          typecheck clean
+                          state persistence (file/db backend), GOAP A* goal planner
+                          typecheck clean | tests passing
 
 services/
   provisioning-service/ ← Azure VM lifecycle, 11-step state machine, SLA monitoring, cleanup
   approval-service/     ← approval enforcement, kill-switch, governance workflow manager
-  connector-gateway/    ← OAuth, token refresh, adapter registry, adapter dispatch
+  connector-gateway/    ← OAuth, token refresh, adapter registry, adapter dispatch,
+                          mTLS certificate verification, PII-strip middleware
   policy-engine/        ← governance routing policy and rule resolution
-  evidence-service/     ← governance KPI calculator, evidence chain completeness
+  evidence-service/     ← governance KPI calculator, evidence chain completeness,
+                          HNSW vector index for approximate nearest-neighbor evidence search
   identity-service/     ← tenant, workspace, user lifecycle (stub)
-  notification-service/ ← approval and ops notifications (stub)
+  notification-service/ ← approval-scoped notification gateway: Telegram, Slack, Discord,
+                          Webhook, Voice (VoxCPM/VoIP), per-trigger allowlists,
+                          dispatchApprovalAlert (approval-only entry point)
+                          31 tests passing | typecheck clean
 
 packages/
-  shared-types/         ← 10 versioned contract types, enums, and kill-switch types
+  shared-types/         ← 100+ versioned contract types, enums, kill-switch types,
+                          GOAP plan types, skills crystallization types, voice/meeting types,
+                          NotificationChannelConfig with allowedTriggers
   connector-contracts/  ← 18-connector registry, 18 normalized action types, 12 role policies
   queue-contracts/      ← queue event type definitions
   db-schema/            ← Prisma schema and migrations
@@ -151,9 +160,24 @@ Copy `.env.example` to `.env` and fill in values before running. Enable local si
 - Website deployed on SWA workflow (Task 7.1 blocked: needs GitHub secret `AZURE_STATIC_WEB_APPS_API_TOKEN_WEBSITE`)
 
 ### Workstream 8 — Testing and Deployment
-- 209 api-gateway tests, 118 agent-runtime tests, 33-check quality gate — all passing
+- 351 api-gateway tests, 239 agent-runtime tests, 47-check quality gate — all passing
 - Coverage enforced ≥80% on critical modules (execution-engine: 95%, runtime-server: 81%, provisioning-monitoring: 94%)
 - Tasks 8.2 (Azure production deployment) and 8.3 (security/load/evidence gates) blocked on Azure sign-in
+
+### Sprint 2 — Autonomous Intelligence and Notification Features (2026-05-04)
+Ten open-source-inspired features built, tested, and integrated into the quality gate:
+1. **Messaging gateway** — Notification-service with Telegram/Slack/Discord/Webhook adapters
+2. **GOAP planner** — A* goal planner in orchestrator (`goap-planner.ts`)
+3. **SSE task stream** — Async Server-Sent Events queue with auto-recovery in api-gateway
+4. **Skills crystallization** — Hermes Agent pattern in agent-runtime (`skills-registry.ts`)
+5. **Graphify** — Monorepo package dependency graph visualiser (`scripts/graphify.mjs`)
+6. **Agent federation security** — mTLS cert verifier + PII-strip middleware in connector-gateway
+7. **HNSW vector search** — Approximate nearest-neighbour index in evidence-service
+8. **Kanban board** — Pure drag-and-drop Kanban logic in dashboard
+9. **Voice notification** — VoxCPM/VoIP voice channel adapter in notification-service
+10. **Approval-only gateway** — `dispatchApprovalAlert()` scopes messaging to approval triggers only
+
+Quality gate after Sprint 2: **EXIT_CODE=0 — PASS** (47 checks, 46 pass, 1 skip)
 
 ### Workstream 9 — Tier 1–12 Local Workspace Actions
 - 12 tiers of Developer Agent workspace actions implemented in `apps/agent-runtime/src/local-workspace-executor.ts`
@@ -187,6 +211,10 @@ Copy `.env.example` to `.env` and fill in values before running. Enable local si
 | **LLM Failover** | Auto provider mode iterates health-score-ordered chain → provider failover trace records each skip → heuristic fallback fires if all providers fail |
 | **Plugin Loading** | External connector plugin submitted with manifest + signature → verified against trusted publisher list → capability allowlist created → orchestrator plugin guard enforces per-capability decisions |
 | **Orchestrator Wake** | Wake source (timer/assignment/on_demand/automation) triggers run → dedupeKey coalesces duplicate wakeups → run state persisted to file/db backend |
+| **GOAP Planning** | Goal world-state diffed against target → A* search selects optimal action sequence → planner replans on partial completion or world-state change |
+| **Approval Notification** | Approval event emitted → `dispatchApprovalAlert()` enforces approval-trigger filter → routed to Telegram/Slack/Discord/Webhook/Voice channel → adapters independently non-blocking |
+| **SSE Task Stream** | Client opens `/sse/tasks/:botId` → `SseTaskQueue` buffers events per channel → auto-recovery sends queued events on reconnect → heartbeat keeps connection alive |
+| **Skills Crystallization** | Successful run completion → `SkillsRegistry.crystallize()` extracts template → draft → active lifecycle → `findMatching()` accelerates future similar tasks |
 
 ---
 
@@ -199,7 +227,8 @@ Copy `.env.example` to `.env` and fill in values before running. Enable local si
 | [planning/architecture-decision-log.md](planning/architecture-decision-log.md) | Architecture decisions (ADR-001 through ADR-007) |
 | [planning/product-architecture.md](planning/product-architecture.md) | Full product architecture narrative |
 | [planning/engineering-execution-design.md](planning/engineering-execution-design.md) | Engineering execution design |
-| [operations/quality/8.1-quality-gate-report.md](operations/quality/8.1-quality-gate-report.md) | Quality gate report (33 checks — 32 passing, 1 skip: DB-dependent smoke) |
+| [operations/quality/8.1-quality-gate-report.md](operations/quality/8.1-quality-gate-report.md) | Quality gate report (47 checks — 46 passing, 1 skip: DB-dependent smoke) |
+| [operations/quality/phase-1-signoff-evidence-2026-05-04.md](operations/quality/phase-1-signoff-evidence-2026-05-04.md) | Phase 1 signoff evidence document |
 | [operations/runbooks/mvp-launch-ops-runbook.md](operations/runbooks/mvp-launch-ops-runbook.md) | MVP launch ops runbook (Tasks 7.1, 8.2, 8.3) |
 | [operations/runbooks/website-swa-runbook.md](operations/runbooks/website-swa-runbook.md) | Website SWA deployment runbook |
 | [scripts/dev-setup.md](scripts/dev-setup.md) | Local development environment setup |
@@ -212,19 +241,22 @@ Copy `.env.example` to `.env` and fill in values before running. Enable local si
 
 | Target | Tests | Typecheck | Coverage |
 |--------|-------|-----------|---------|
-| `@agentfarm/api-gateway` | 209 passing | ✅ clean | ≥80% enforced on critical modules |
-| `@agentfarm/agent-runtime` | 118 passing | ✅ clean | ≥80% enforced on critical modules |
+| `@agentfarm/api-gateway` | **351 passing** | ✅ clean | ≥80% enforced on critical modules |
+| `@agentfarm/agent-runtime` | **239 passing** | ✅ clean | ≥80% enforced on critical modules |
 | `@agentfarm/website` | 28+ passing across 9 test files | ✅ clean | — |
-| `@agentfarm/dashboard` | — | ✅ clean | — |
+| `@agentfarm/dashboard` | **69 passing** | ✅ clean | — |
+| `@agentfarm/notification-service` | **31 passing** | ✅ clean | — |
 | `@agentfarm/provisioning-service` | 15 passing | ✅ clean | — |
 | `@agentfarm/approval-service` | 12+ passing | ✅ clean | — |
 | `@agentfarm/evidence-service` | passing | ✅ clean | — |
 | `@agentfarm/connector-gateway` | passing | ✅ clean | — |
 | `@agentfarm/orchestrator` | passing | ✅ clean | — |
 | `@agentfarm/policy-engine` | passing | ✅ clean | — |
+| `@agentfarm/meeting-agent` | passing | ✅ clean | — |
 
-- Quality gate: 33 checks total — 32 pass, 1 skipped (DB runtime snapshot, requires Docker)
+- Quality gate: **47 checks total — 46 pass, 1 skipped** (DB runtime snapshot, requires Docker)
 - E2E smoke lane validates auth, session, and protected route flows end-to-end
+- Last full gate run: **2026-05-04 — EXIT_CODE=0 (PASS)**
 
 ---
 

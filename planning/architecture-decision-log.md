@@ -155,25 +155,93 @@ Track architecture decisions with owner, status, and review dates before develop
 6. Impact
 - Developer Agent can read, write, search, validate, refactor, test, format, version, commit, create PRs, run CI checks, fix failing tests, suggest security patches, generate release notes, bundle incident patches, manage workspace memory profiles, execute autonomous plans with checkpoints, and simulate policy routing — all within the sandboxed workspace. workspace_scout + workspace_checkpoint + autonomous_loop + workspace_autonomous_plan_execute together form a safe, bounded autonomous coding loop with full audit trail. Approval gate for medium/high actions preserves human oversight over all destructive operations.
 
-## ADR-009: Post-MVP Developer Agent Expansion and Multi-Agent Roadmap
+## ADR-010: Approval-Scoped Notification Dispatch (dispatchApprovalAlert)
 1. Decision
-- Post-MVP development follows the phased roadmap defined in the full system architecture document.
-- Near-term (Pilot, Weeks 21–30): Production connector SDK hardening, autonomous coding loop chaining, per-workspace LLM config persistence, approval latency SLA enforcement, evidence freshness automation.
-- Medium-term (Scale, Weeks 31–42): QA Agent role, Manager Agent role, multi-agent orchestration with shared approval queue, additional connectors (Confluence, Slack, Linear, Azure DevOps), container-native density migration from VM to Azure Container Apps.
-- Enterprise (Week 43+): SAML/SSO federation, policy-pack customization per tenant, multi-region deployment, live meeting participation (separate voice pipeline gate required), compliance export automation, AgentFarm Marketplace, BYOM (bring-your-own-model) with same risk/approval layer, Developer Agent persistent workspace memory.
-- Each new agent role requires: its own ADR, the same HIGH/MEDIUM/LOW risk taxonomy, full audit evidence, and capability snapshot binding before launch.
-- Container-native density migration requires a separate ADR and security review before any tenant moves from VM isolation.
-- Live meeting participation (voice join and spoken Q&A) is out of scope until a separate safety gate is established and approved by the Safety Lead.
+- The notification-service now exposes `dispatchApprovalAlert()` as a dedicated entry point that only activates for approval-related triggers.
+- `APPROVAL_TRIGGERS = new Set(['approval_requested', 'approval_decided'])` defines the scope.
+- The existing `dispatch()` function accepts an optional `allowedTriggers?: NotificationEventTrigger[]` on each `NotificationChannelConfig`; when set, channels not matching the current trigger are silently skipped.
+- `dispatchApprovalAlert()` internally sets `allowedTriggers = [...APPROVAL_TRIGGERS]` before calling `dispatch()`.
+- Non-approval trigger calls to `dispatchApprovalAlert()` return `[]` (no dispatches) without error.
 2. Owner
-- Product Lead + Engineering Lead
+- Engineering Lead
 3. Status
-- Planned
+- Approved
 4. Decision Date
-- 2026-04-30
+- 2026-05-04
 5. Review Date
-- 2026-06-30 (Scale Phase entry gate)
+- 2026-06-01
 6. Impact
-- Provides a governed, ADR-backed path from single-agent MVP to multi-agent enterprise platform. Prevents ad-hoc scope creep by requiring each expansion phase to go through the same architecture gate process that governed MVP.
+- Approval notification paths are isolated from general notification dispatch. Accidental mis-trigger of voice/Telegram channels on unrelated events is prevented at the contract level. The `allowedTriggers` field on `NotificationChannelConfig` (packages/shared-types) generalises this pattern for any future per-channel trigger scoping.
+
+## ADR-011: HNSW Vector Index for Evidence-Service Retrieval
+1. Decision
+- A pure-TypeScript HNSW (Hierarchical Navigable Small World) approximate nearest-neighbour index is implemented in `services/evidence-service/src/hnsw-index.ts`.
+- The index uses cosine similarity. Insertion time: O(M log N) per vector. Search time: O(log N) with M-graph layers.
+- No external vector DB dependency (Pinecone, Weaviate, etc.) is required for evidence-service in MVP. The in-process index is rebuilt from stored evidence on startup.
+- When the evidence set exceeds 50K vectors (estimated 12 months post-MVP), a migration to Azure AI Search will be evaluated via a separate ADR.
+2. Owner
+- Engineering Lead
+3. Status
+- Approved
+4. Decision Date
+- 2026-05-04
+5. Review Date
+- 2026-08-01
+6. Impact
+- Evidence retrieval queries can use semantic similarity rather than keyword match. Evidence chain completeness scoring (governance-kpi.ts) can weight similar historical evidence. No infra cost until migration threshold is reached.
+
+## ADR-012: GOAP A* Planning for Orchestrator Goal Resolution
+1. Decision
+- The orchestrator implements Goal-Oriented Action Planning using an A* search over world-state space.
+- `GoalWorldState` is a flat `Record<string, boolean|number|string>`. Each `GoalAction` declares `preconditions` (required state key-values) and `effects` (resulting state changes) plus a numeric `cost`.
+- `GoapPlanner.planGoal(goal, worldState, actions)` returns an ordered list of `GoalAction` names or `null` if no plan is found.
+- Plans are recomputed on partial failure or any world-state change signal from the orchestrator-state-store.
+2. Owner
+- Engineering Lead
+3. Status
+- Approved
+4. Decision Date
+- 2026-05-04
+5. Review Date
+- 2026-07-01
+6. Impact
+- Orchestrator can autonomously sequence multi-step goals without hard-coded task chains. New goals and actions are registered without changing planner internals. Failed mid-plan actions trigger replan, not full task failure.
+
+## ADR-013: Skills Crystallization Lifecycle (Hermes Agent Pattern)
+1. Decision
+- `SkillsRegistry` in `apps/agent-runtime/src/skills-registry.ts` implements the Hermes skill crystallization pattern.
+- Lifecycle: `draft → active → deprecated`. A skill transitions from draft to active via `setStatus()` once confirmed useful.
+- `crystallize(runId, template)` records a new draft skill from a completed run's template.
+- `recordUse(skillId)` increments `useCount` and updates `lastUsedAt`.
+- `findMatching(context)` returns active skills whose template tags overlap with context keys — used to accelerate similar future tasks.
+- Skills are stored in-memory for MVP; persistence to a backing store is planned via the state-store pattern already used by the orchestrator.
+2. Owner
+- Engineering Lead
+3. Status
+- Approved
+4. Decision Date
+- 2026-05-04
+5. Review Date
+- 2026-07-01
+6. Impact
+- Agent learns from successful task executions. Repeated similar tasks benefit from pre-crystallized skill templates rather than cold LLM planning. Skills are available across bot instances within the same agent-runtime process.
+
+## ADR-014: mTLS Certificate Verification and PII Filter for Agent Federation
+1. Decision
+- Inter-agent communication via the connector-gateway is secured by mutual TLS certificate verification implemented in `services/connector-gateway/src/mtls-verifier.ts`.
+- `MtlsVerifier` accepts a `trustedCNs: string[]` allowlist. `verifyMtlsCert()` validates certificate CN and SAN against the allowlist; returns `{ valid: false }` for any cert not on the list.
+- Inbound connector payloads are recursively stripped of PII fields by `stripPii()` in `pii-filter.ts`. `containsPii()` provides a read-only check.
+- Recognized PII fields: `email`, `phone`, `ssn`, `password`, `token`, `secret`, `creditCard`, `dob`, `address`. Nested objects and arrays are traversed recursively.
+2. Owner
+- Security Lead / Engineering Lead
+3. Status
+- Approved
+4. Decision Date
+- 2026-05-04
+5. Review Date
+- 2026-06-15
+6. Impact
+- Agent federation requests cannot be accepted from uncertified peers. PII cannot leak through connector payloads into audit logs or evidence records. Both controls operate at the gateway boundary before any business logic executes.
 
 ## Change Rules
 1. Any architecture change that affects release gates creates a new ADR entry.

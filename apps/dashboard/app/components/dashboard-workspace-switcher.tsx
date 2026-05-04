@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useCallback, useEffect, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -56,6 +56,19 @@ export function DashboardWorkspaceSwitcher({
 
         if (searchParams.get('workspaceId')) {
             window.localStorage.setItem(storageKey, activeWorkspaceId);
+
+            if (syncFromStorage && !searchParams.get('tab')) {
+                const tabKey = getDashboardTabStorageKey(activeWorkspaceId);
+                const { storedTab } = resolveDashboardStoredTab({
+                    workspaceStoredTab: window.localStorage.getItem(tabKey),
+                    legacyStoredTab: null,
+                    workspaceId: activeWorkspaceId,
+                });
+                if (storedTab && storedTab !== activeTab) {
+                    router.replace(buildWorkspaceHref(activeWorkspaceId, storedTab));
+                }
+            }
+
             return;
         }
 
