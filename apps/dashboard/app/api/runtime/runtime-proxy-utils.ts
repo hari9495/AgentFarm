@@ -49,3 +49,21 @@ export const buildHealthUrl = (baseUrl: string): string => `${baseUrl}/health/li
 export const buildKillUrl = (baseUrl: string): string => `${baseUrl}/kill`;
 
 export const buildCapabilitySnapshotUrl = (baseUrl: string): string => `${baseUrl}/runtime/capability-snapshot`;
+
+export const buildMarketplaceSkillsUrl = (baseUrl: string): string => `${baseUrl}/runtime/marketplace/skills`;
+
+export const buildMarketplaceInstallUrl = (baseUrl: string): string => `${baseUrl}/runtime/marketplace/install`;
+
+export const buildMarketplaceUninstallUrl = (baseUrl: string): string => `${baseUrl}/runtime/marketplace/uninstall`;
+
+export const buildMarketplaceTelemetryUrl = (baseUrl: string, limit: string): string => (
+    `${baseUrl}/runtime/marketplace/telemetry?limit=${encodeURIComponent(limit)}`
+);
+
+export const buildMarketplaceCatalogUpsertUrl = (baseUrl: string): string => `${baseUrl}/runtime/marketplace/catalog/skills`;
+
+export const buildMarketplaceCatalogDeleteUrl = (baseUrl: string, skillId: string): string => (
+    `${baseUrl}/runtime/marketplace/catalog/skills/${encodeURIComponent(skillId)}`
+);
+
+export const buildMarketplaceInvokeUrl = (baseUrl: string): string => `${baseUrl}/runtime/marketplace/invoke`;

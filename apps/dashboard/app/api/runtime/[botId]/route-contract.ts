@@ -3,6 +3,13 @@ import {
     buildHealthUrl,
     buildInterviewEventsUrl,
     buildKillUrl,
+    buildMarketplaceCatalogDeleteUrl,
+    buildMarketplaceCatalogUpsertUrl,
+    buildMarketplaceInstallUrl,
+    buildMarketplaceInvokeUrl,
+    buildMarketplaceSkillsUrl,
+    buildMarketplaceTelemetryUrl,
+    buildMarketplaceUninstallUrl,
     buildLogsUrl,
     buildStateHistoryUrl,
     buildTranscriptsUrl,
@@ -89,5 +96,70 @@ export const buildCapabilityRouteContract = (): RouteContract => ({
     requestInit: {
         headers: buildUpstreamHeaders(),
         cache: 'no-store',
+    },
+});
+
+export const buildMarketplaceSkillsRouteContract = (): RouteContract => ({
+    upstreamUrl: buildMarketplaceSkillsUrl(getRuntimeBaseUrl()),
+    requestInit: {
+        headers: buildUpstreamHeaders(),
+        cache: 'no-store',
+    },
+});
+
+export const buildMarketplaceInstallRouteContract = (body: unknown): RouteContract => ({
+    upstreamUrl: buildMarketplaceInstallUrl(getRuntimeBaseUrl()),
+    requestInit: {
+        method: 'POST',
+        headers: buildUpstreamHeaders(true),
+        body: JSON.stringify(body),
+    },
+});
+
+export const buildMarketplaceUninstallRouteContract = (body: unknown): RouteContract => ({
+    upstreamUrl: buildMarketplaceUninstallUrl(getRuntimeBaseUrl()),
+    requestInit: {
+        method: 'POST',
+        headers: buildUpstreamHeaders(true),
+        body: JSON.stringify(body),
+    },
+});
+
+export const buildMarketplaceTelemetryRouteContract = (requestUrl: string): RouteContract => {
+    const { searchParams } = new URL(requestUrl);
+    const limit = resolveLimit(searchParams.get('limit'), '100');
+
+    return {
+        upstreamUrl: buildMarketplaceTelemetryUrl(getRuntimeBaseUrl(), limit),
+        requestInit: {
+            headers: buildUpstreamHeaders(),
+            cache: 'no-store',
+        },
+    };
+};
+
+export const buildMarketplaceCatalogUpsertRouteContract = (body: unknown): RouteContract => ({
+    upstreamUrl: buildMarketplaceCatalogUpsertUrl(getRuntimeBaseUrl()),
+    requestInit: {
+        method: 'POST',
+        headers: buildUpstreamHeaders(true),
+        body: JSON.stringify(body),
+    },
+});
+
+export const buildMarketplaceCatalogDeleteRouteContract = (skillId: string): RouteContract => ({
+    upstreamUrl: buildMarketplaceCatalogDeleteUrl(getRuntimeBaseUrl(), skillId),
+    requestInit: {
+        method: 'DELETE',
+        headers: buildUpstreamHeaders(),
+    },
+});
+
+export const buildMarketplaceInvokeRouteContract = (body: unknown): RouteContract => ({
+    upstreamUrl: buildMarketplaceInvokeUrl(getRuntimeBaseUrl()),
+    requestInit: {
+        method: 'POST',
+        headers: buildUpstreamHeaders(true),
+        body: JSON.stringify(body),
     },
 });

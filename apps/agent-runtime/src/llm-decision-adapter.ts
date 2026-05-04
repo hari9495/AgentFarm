@@ -137,6 +137,7 @@ type PersistedCooldownState = {
     }>>;
 };
 
+
 // ---------------------------------------------------------------------------
 // Provider health scoring
 // ---------------------------------------------------------------------------
@@ -157,6 +158,49 @@ const providerCooldownStore = new Map<AutoProvider, {
     updatedAt: number;
 }>();
 let cooldownStateLoaded = false;
+
+const routingHistoryStore = new Map<string, Partial<Record<AutoProvider, {
+    success: number;
+    failed: number;
+    updatedAt: string;
+}>>>();
+
+const normalizeTaskTypeKey = (actionType: string): string => {
+    const normalized = actionType.trim().toLowerCase().replace(/[^a-z0-9_]+/g, '_');
+    return normalized || 'unknown';
+};
+
+const recordProviderOutcomeByTaskType = (provider: AutoProvider, actionType: string, success: boolean): void => {
+    const taskType = normalizeTaskTypeKey(actionType);
+    const byProvider = routingHistoryStore.get(taskType) ?? {};
+    const current = byProvider[provider] ?? {
+        success: 0,
+        failed: 0,
+        updatedAt: new Date().toISOString(),
+    };
+
+    if (success) {
+        current.success += 1;
+    } else {
+        current.failed += 1;
+    }
+    current.updatedAt = new Date().toISOString();
+    byProvider[provider] = current;
+    routingHistoryStore.set(taskType, byProvider);
+};
+
+const historicalFailureRateForTaskType = (provider: AutoProvider, actionType: string): number => {
+    const taskType = normalizeTaskTypeKey(actionType);
+    const entry = routingHistoryStore.get(taskType)?.[provider];
+    if (!entry) {
+        return 0.5;
+    }
+    const total = entry.success + entry.failed;
+    if (total <= 0) {
+        return 0.5;
+    }
+    return entry.failed / total;
+};
 
 const getCooldownStatePath = (): string => {
     const configured = process.env['AF_PROVIDER_COOLDOWN_STATE_PATH'] ?? process.env['AGENTFARM_PROVIDER_COOLDOWN_STATE_PATH'];
@@ -314,12 +358,14 @@ const readProviderCooldown = (provider: AutoProvider): {
 export const resetProviderRoutingMemory = (): void => {
     healthStore.clear();
     providerCooldownStore.clear();
+    routingHistoryStore.clear();
     cooldownStateLoaded = false;
 };
 
 export const resetProviderRoutingState = (): void => {
     healthStore.clear();
     providerCooldownStore.clear();
+    routingHistoryStore.clear();
     cooldownStateLoaded = true;
     persistCooldownState();
     cooldownStateLoaded = false;
@@ -374,6 +420,16 @@ const scoreProvider = (provider: AutoProvider): number => {
     const avgLatency = entry.latencies.reduce((sum, l) => sum + l, 0) / entry.latencies.length;
     const errorRate = entry.outcomes.filter((o) => !o).length / entry.outcomes.length;
     return errorRate * 0.7 + (Math.min(avgLatency, 10_000) / 10_000) * 0.3;
+};
+
+const providerCostWeight = (provider: AutoProvider): number => {
+    if (provider === 'together' || provider === 'mistral' || provider === 'github_models') {
+        return 0.1;
+    }
+    if (provider === 'google' || provider === 'xai') {
+        return 0.25;
+    }
+    return 0.4;
 };
 
 export const getProviderHealthScores = (): Record<string, {
@@ -1564,9 +1620,25 @@ const createAutoResolver = (input: {
             ? configuredProviders
             : defaultAutoProvidersByProfile(profile);
 
-        // Health-score reordering: sort by ascending composite score (lower = healthier).
-        // Providers with no health data score 0 and remain in their original relative order.
-        const providers = [...baseProviders].sort((a, b) => scoreProvider(a) - scoreProvider(b));
+        const budgetScope = buildBudgetScope(task);
+        const budget = evaluateTokenBudget(budgetScope);
+        const budgetPressure = budget.warning || budget.denied;
+
+        // Composite routing score combines provider health, historical success by task type,
+        // and budget-aware provider cost preference.
+        const providers = [...baseProviders].sort((a, b) => {
+            const healthA = scoreProvider(a);
+            const healthB = scoreProvider(b);
+            const historyA = historicalFailureRateForTaskType(a, heuristicDecision.actionType);
+            const historyB = historicalFailureRateForTaskType(b, heuristicDecision.actionType);
+            const costA = providerCostWeight(a);
+            const costB = providerCostWeight(b);
+            const budgetA = budgetPressure ? costA : 0;
+            const budgetB = budgetPressure ? costB : 0;
+            const scoreA = healthA * 0.45 + historyA * 0.4 + budgetA * 0.15;
+            const scoreB = healthB * 0.45 + historyB * 0.4 + budgetB * 0.15;
+            return scoreA - scoreB;
+        });
 
         let lastError: unknown = null;
         const failoverTrace: ProviderFailoverTraceRecord[] = [];
@@ -1600,6 +1672,7 @@ const createAutoResolver = (input: {
             try {
                 const result = await resolver({ task, heuristicDecision });
                 recordProviderCall(provider, Date.now() - start, true);
+                recordProviderOutcomeByTaskType(provider, heuristicDecision.actionType, true);
                 clearProviderCooldown(provider);
                 return {
                     ...result,
@@ -1614,6 +1687,7 @@ const createAutoResolver = (input: {
                 };
             } catch (error: unknown) {
                 recordProviderCall(provider, Date.now() - start, false);
+                recordProviderOutcomeByTaskType(provider, heuristicDecision.actionType, false);
                 const reasonCode = classifyFailoverReason(error);
                 const cooldownUntil = markProviderCooldown(provider, reasonCode);
                 failoverTrace.push({

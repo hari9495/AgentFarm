@@ -36,6 +36,7 @@ import {
     LOCAL_WORKSPACE_ACTION_TYPES,
     type LocalWorkspaceActionType,
 } from './local-workspace-executor.js';
+import { AdvancedRuntimeFeatures } from './advanced-runtime-features.js';
 import { recordTaskIntelligence } from './task-intelligence-memory.js';
 
 type RuntimeState =
@@ -1742,6 +1743,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         failures: 0,
         lastRunAt: null,
     };
+    const advancedFeatures = new AdvancedRuntimeFeatures(now);
 
     const emitRuntimeEvent = (
         eventType: string,
@@ -1940,6 +1942,12 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         source: 'approval_decision_webhook' | 'approval_decision_cache' | 'direct_execute';
         payloadOverrideSource: PayloadOverrideSource;
     }): Promise<ProcessedTaskResult> => {
+        advancedFeatures.appendTraceStep(input.task.taskId, 'connector_tool_input', {
+            connectorType: input.connectorType,
+            actionType: input.decision.actionType,
+            source: input.source,
+            payloadKeys: Object.keys(input.task.payload),
+        });
         const connectorResponse = await connectorActionExecuteClient({
             baseUrl: input.config.connectorApiUrl,
             token: input.config.connectorExecuteToken,
@@ -1968,6 +1976,11 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         });
 
         if (connectorResponse.ok) {
+            advancedFeatures.appendTraceStep(input.task.taskId, 'connector_tool_output', {
+                ok: true,
+                statusCode: connectorResponse.statusCode,
+                attempts: connectorResponse.attempts ?? 1,
+            });
             emitRuntimeEvent('runtime.connector_action_executed', input.config, {
                 task_id: input.task.taskId,
                 connector_type: input.connectorType,
@@ -2001,6 +2014,12 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             status_code: connectorResponse.statusCode,
             error_message: connectorResponse.errorMessage ?? null,
             source: input.source,
+        });
+        advancedFeatures.appendTraceStep(input.task.taskId, 'connector_tool_output', {
+            ok: false,
+            statusCode: connectorResponse.statusCode,
+            attempts: connectorResponse.attempts ?? 1,
+            error: connectorResponse.errorMessage ?? null,
         });
 
         return {
@@ -2040,6 +2059,11 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         source: 'approval_decision_webhook' | 'approval_decision_cache' | 'direct_execute';
         payloadOverrideSource: PayloadOverrideSource;
     }): Promise<ProcessedTaskResult> => {
+        advancedFeatures.appendTraceStep(input.task.taskId, 'local_tool_input', {
+            actionType: input.decision.actionType,
+            source: input.source,
+            payloadKeys: Object.keys(input.task.payload),
+        });
         const localResult = await executeLocalWorkspaceAction({
             tenantId: input.config.tenantId,
             botId: input.config.botId,
@@ -2049,6 +2073,33 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         });
 
         if (localResult.ok) {
+            advancedFeatures.appendTraceStep(input.task.taskId, 'local_tool_output', {
+                ok: true,
+                exitCode: localResult.exitCode ?? 0,
+                outputPreview: localResult.output.slice(0, 400),
+            });
+
+            const diffScan = advancedFeatures.scanGeneratedDiffForSecrets(localResult.output);
+            if (diffScan.blocked) {
+                advancedFeatures.appendTraceStep(input.task.taskId, 'local_output_secret_blocked', {
+                    matches: diffScan.matches,
+                });
+                return {
+                    decision: {
+                        ...input.decision,
+                        route: 'execute',
+                        reason: 'Local action output appears to contain secrets and was blocked.',
+                    },
+                    status: 'failed',
+                    attempts: 1,
+                    transientRetries: 0,
+                    executionPayload: input.task.payload,
+                    payloadOverrideSource: input.payloadOverrideSource,
+                    failureClass: 'runtime_exception',
+                    errorMessage: 'Local action output contains potential secrets; blocked by policy.',
+                };
+            }
+
             captureInterviewEventsFromLocalOutput({
                 taskId: input.task.taskId,
                 actionType: input.decision.actionType,
@@ -2099,6 +2150,11 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             exit_code: localResult.exitCode ?? 1,
             error_output: localResult.errorOutput ?? null,
             source: input.source,
+        });
+        advancedFeatures.appendTraceStep(input.task.taskId, 'local_tool_output', {
+            ok: false,
+            exitCode: localResult.exitCode ?? 1,
+            errorOutput: (localResult.errorOutput ?? '').slice(0, 400),
         });
 
         return {
@@ -2203,6 +2259,54 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         taskStartTimes.set(task.taskId, now());
 
         const taskDecision = buildDecision(task);
+        advancedFeatures.recordStart(task, taskDecision);
+        const executionPlan = advancedFeatures.createPlan(task, taskDecision);
+        advancedFeatures.registerPlanCheckpoint(task, taskDecision, executionPlan);
+        emitRuntimeEvent('runtime.plan_first_generated', config, {
+            task_id: task.taskId,
+            plan_id: executionPlan.planId,
+            summary: executionPlan.summary,
+            risks: executionPlan.risks,
+            files_hint: executionPlan.filesHint,
+            test_strategy: executionPlan.testStrategy,
+            rollback: executionPlan.rollback,
+        });
+        advancedFeatures.appendTraceStep(task.taskId, 'plan_first_generated', {
+            planId: executionPlan.planId,
+            summary: executionPlan.summary,
+            riskCount: executionPlan.risks.length,
+        });
+
+        const secretScan = advancedFeatures.scanPayloadForSecrets(task.payload);
+        if (secretScan.blocked) {
+            workerLoop.processedTasks += 1;
+            workerLoop.failedTasks += 1;
+            advancedFeatures.appendTraceStep(task.taskId, 'payload_secret_scan_blocked', {
+                matches: secretScan.matches,
+            });
+            emitRuntimeEvent('runtime.security_payload_blocked', config, {
+                task_id: task.taskId,
+                action_type: taskDecision.actionType,
+                matched_patterns: secretScan.matches,
+            });
+
+            await persistActionResultRecord(task, config, {
+                decision: {
+                    ...taskDecision,
+                    route: 'approval',
+                    reason: 'Payload blocked by secret scanning policy.',
+                },
+                status: 'failed',
+                attempts: 0,
+                transientRetries: 0,
+                executionPayload: task.payload,
+                payloadOverrideSource: 'none',
+                failureClass: 'runtime_exception',
+                errorMessage: 'Task payload contains potential secrets; blocked by policy.',
+            });
+            return;
+        }
+
         const connectorTypeForPolicy = normalizeConnectorType(task.payload['connector_type']);
         const snapshotPolicy = evaluateSnapshotExecutionPolicy({
             snapshot: capabilitySnapshotCache,
@@ -2212,6 +2316,10 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         if (!snapshotPolicy.allowed) {
             workerLoop.processedTasks += 1;
             workerLoop.failedTasks += 1;
+            advancedFeatures.appendTraceStep(task.taskId, 'capability_policy_blocked', {
+                reason: snapshotPolicy.reason ?? null,
+                connectorType: connectorTypeForPolicy,
+            });
             emitRuntimeEvent('runtime.capability_policy_blocked', config, {
                 task_id: task.taskId,
                 action_type: taskDecision.actionType,
@@ -2242,6 +2350,10 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
 
         if (cachedApproval && taskDecision.route === 'approval') {
             workerLoop.approvalDecisionCacheHits += 1;
+            advancedFeatures.appendTraceStep(task.taskId, 'approval_decision_cache_hit', {
+                decision: cachedApproval.decision,
+                actor: cachedApproval.actor,
+            });
             emitRuntimeEvent('runtime.approval_decision_cache_hit', config, {
                 task_id: task.taskId,
                 action_type: taskDecision.actionType,
@@ -2290,6 +2402,60 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             ...task,
             payload: result.executionPayload,
         };
+        const scopeCheck = advancedFeatures.validateTaskScope(executionTask.payload);
+        if (!scopeCheck.allowed) {
+            workerLoop.processedTasks += 1;
+            workerLoop.failedTasks += 1;
+            advancedFeatures.appendTraceStep(task.taskId, 'scope_constraint_blocked', {
+                outOfScopePaths: scopeCheck.outOfScopePaths,
+                scope: advancedFeatures.getScopeConstraint(),
+            });
+            await persistActionResultRecord(executionTask, config, {
+                ...result,
+                status: 'failed',
+                failureClass: 'runtime_exception',
+                errorMessage: `Task blocked by scope constraint: ${scopeCheck.outOfScopePaths.join(', ')}`,
+            });
+            return;
+        }
+
+        const policyCheck = advancedFeatures.evaluatePolicyForTask(result.decision.actionType, executionTask.payload);
+        if (policyCheck.blocked) {
+            workerLoop.processedTasks += 1;
+            workerLoop.failedTasks += 1;
+            advancedFeatures.appendTraceStep(task.taskId, 'policy_pack_blocked', {
+                actionType: result.decision.actionType,
+                activePackId: policyCheck.activePackId,
+                reason: policyCheck.reason,
+            });
+            await persistActionResultRecord(executionTask, config, {
+                ...result,
+                status: 'failed',
+                failureClass: 'runtime_exception',
+                errorMessage: policyCheck.reason ?? 'Blocked by active policy pack.',
+            });
+            return;
+        }
+
+        if (typeof executionTask.payload['generated_diff'] === 'string') {
+            const diffScan = advancedFeatures.scanGeneratedDiffForSecrets(
+                executionTask.payload['generated_diff'] as string,
+            );
+            if (diffScan.blocked) {
+                workerLoop.processedTasks += 1;
+                workerLoop.failedTasks += 1;
+                advancedFeatures.appendTraceStep(task.taskId, 'generated_diff_secret_blocked', {
+                    matches: diffScan.matches,
+                });
+                await persistActionResultRecord(executionTask, config, {
+                    ...result,
+                    status: 'failed',
+                    failureClass: 'runtime_exception',
+                    errorMessage: 'Generated diff contains potential secrets; blocked by policy.',
+                });
+                return;
+            }
+        }
         workerLoop.processedTasks += 1;
         workerLoop.retriedAttempts += result.transientRetries;
 
@@ -2305,9 +2471,18 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             payload_override_source: result.payloadOverrideSource,
             payload_overrides_applied: result.payloadOverrideSource !== 'none',
         });
+        advancedFeatures.appendTraceStep(task.taskId, 'task_classified', {
+            actionType: result.decision.actionType,
+            route: result.decision.route,
+            riskLevel: result.decision.riskLevel,
+            classificationSource: result.llmExecution?.classificationSource ?? 'heuristic',
+        });
 
         if (isBudgetDenied(executionTask)) {
             workerLoop.failedTasks += 1;
+            advancedFeatures.appendTraceStep(task.taskId, 'budget_hard_stop_denied', {
+                reason: executionTask.payload['_budget_denial_reason'] ?? null,
+            });
             await persistBudgetDenialRecord(executionTask, config);
             await persistActionResultRecord(executionTask, config, {
                 ...result,
@@ -2318,8 +2493,27 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             return;
         }
 
+        if (advancedFeatures.requiresPlanApproval(result.decision.actionType) && !advancedFeatures.isPlanApproved(task.taskId)) {
+            advancedFeatures.appendTraceStep(task.taskId, 'plan_approval_required', {
+                actionType: result.decision.actionType,
+                reason: 'Mutating action requires explicit plan approval.',
+            });
+            result.status = 'approval_required';
+            result.decision = {
+                ...result.decision,
+                route: 'approval',
+                riskLevel: result.decision.riskLevel === 'low' ? 'medium' : result.decision.riskLevel,
+                reason: 'Plan-first guard requires approval before mutating execution.',
+            };
+        }
+
         if (result.status === 'approval_required') {
             workerLoop.approvalQueuedTasks += 1;
+            advancedFeatures.appendTraceStep(task.taskId, 'approval_required_queued', {
+                actionType: result.decision.actionType,
+                riskLevel: result.decision.riskLevel,
+                confidence: result.decision.confidence,
+            });
             if (result.decision.riskLevel === 'medium' || result.decision.riskLevel === 'high') {
                 const actionId = `${task.taskId}:${result.decision.actionType}`;
                 let actionSummary =
@@ -2456,6 +2650,10 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         );
 
         if (result.status === 'success' && connectorType && directConnectorAction) {
+            advancedFeatures.appendTraceStep(task.taskId, 'connector_execution_started', {
+                connectorType,
+                actionType: result.decision.actionType,
+            });
             const connectorResult = await executeConnectorActionForTask({
                 task: executionTask,
                 config,
@@ -2468,6 +2666,10 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             if (connectorResult.status === 'success') {
                 workerLoop.succeededTasks += 1;
                 workerLoop.retriedAttempts += connectorResult.transientRetries;
+                advancedFeatures.appendTraceStep(task.taskId, 'connector_execution_succeeded', {
+                    attempts: connectorResult.attempts,
+                    retries: connectorResult.transientRetries,
+                });
                 emitRuntimeEvent('runtime.task_processed', config, {
                     task_id: task.taskId,
                     queue_depth: workerLoop.queuedTasks.length,
@@ -2481,6 +2683,11 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             }
 
             workerLoop.failedTasks += 1;
+            advancedFeatures.appendTraceStep(task.taskId, 'connector_execution_failed', {
+                attempts: connectorResult.attempts,
+                retries: connectorResult.transientRetries,
+                failureClass: connectorResult.failureClass ?? 'runtime_exception',
+            });
             emitRuntimeEvent('runtime.task_failed', config, {
                 task_id: task.taskId,
                 attempts: connectorResult.attempts,
@@ -2498,6 +2705,9 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         );
 
         if (result.status === 'success' && isDirectLocalWorkspaceAction) {
+            advancedFeatures.appendTraceStep(task.taskId, 'local_workspace_execution_started', {
+                actionType: result.decision.actionType,
+            });
             const localResult = await executeLocalWorkspaceActionForTask({
                 task: executionTask,
                 config,
@@ -2508,6 +2718,10 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
 
             if (localResult.status === 'success') {
                 workerLoop.succeededTasks += 1;
+                advancedFeatures.appendTraceStep(task.taskId, 'local_workspace_execution_succeeded', {
+                    attempts: localResult.attempts,
+                    retries: localResult.transientRetries,
+                });
                 emitRuntimeEvent('runtime.task_processed', config, {
                     task_id: task.taskId,
                     queue_depth: workerLoop.queuedTasks.length,
@@ -2521,6 +2735,11 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             }
 
             workerLoop.failedTasks += 1;
+            advancedFeatures.appendTraceStep(task.taskId, 'local_workspace_execution_failed', {
+                attempts: localResult.attempts,
+                retries: localResult.transientRetries,
+                failureClass: localResult.failureClass ?? 'runtime_exception',
+            });
             emitRuntimeEvent('runtime.task_failed', config, {
                 task_id: task.taskId,
                 attempts: localResult.attempts,
@@ -2535,6 +2754,10 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
 
         if (result.status === 'success') {
             workerLoop.succeededTasks += 1;
+            advancedFeatures.appendTraceStep(task.taskId, 'task_succeeded', {
+                attempts: result.attempts,
+                retries: result.transientRetries,
+            });
             emitRuntimeEvent('runtime.task_processed', config, {
                 task_id: task.taskId,
                 queue_depth: workerLoop.queuedTasks.length,
@@ -2547,6 +2770,11 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         }
 
         workerLoop.failedTasks += 1;
+        advancedFeatures.appendTraceStep(task.taskId, 'task_failed', {
+            attempts: result.attempts,
+            retries: result.transientRetries,
+            failureClass: result.failureClass ?? 'runtime_exception',
+        });
         emitRuntimeEvent('runtime.task_failed', config, {
             task_id: task.taskId,
             attempts: result.attempts,
@@ -2585,6 +2813,13 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 payloadOverridesApplied: result.payloadOverrideSource !== 'none',
             });
         }
+
+        advancedFeatures.appendTraceStep(task.taskId, 'task_result_persist_start', {
+            status: result.status,
+            actionType: result.decision.actionType,
+            riskLevel: result.decision.riskLevel,
+        });
+        advancedFeatures.recordEnd(task, result);
 
         const claimToken =
             typeof task.payload['_claim_token'] === 'string'
@@ -2973,6 +3208,9 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 return;
             }
             if (runtimeState !== 'active' && runtimeState !== 'degraded') {
+                return;
+            }
+            if (!advancedFeatures.canProcessNextTask()) {
                 return;
             }
             processApprovalEscalations(config);
@@ -3704,6 +3942,14 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             });
         }
 
+        const scopeCheck = advancedFeatures.validateTaskScope(request.body?.payload ?? {});
+        if (!scopeCheck.allowed) {
+            return reply.code(403).send({
+                error: 'scope_constraint_blocked',
+                out_of_scope_paths: scopeCheck.outOfScopePaths,
+            });
+        }
+
         workerLoop.queuedTasks.push({
             taskId,
             payload: request.body?.payload ?? {},
@@ -3783,6 +4029,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         });
 
         if (decision === 'approved') {
+            advancedFeatures.approvePlan(taskId, request.body?.actor?.trim() || 'runtime-approver', request.body?.reason);
             workerLoop.approvedDecisionCache.set(taskId, {
                 decision: 'approved',
                 decidedAt: now(),
@@ -3982,6 +4229,589 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             count: events.length,
             total_buffered: recentInterviewEvents.length,
             events,
+        };
+    });
+
+    app.get<{ Querystring: { limit?: string } }>('/runtime/traces', async (request, reply) => {
+        const rawLimit = Number(request.query?.limit ?? '100');
+        if (!Number.isFinite(rawLimit) || rawLimit <= 0) {
+            return reply.code(400).send({
+                error: 'invalid_limit',
+                message: 'limit must be a positive integer',
+            });
+        }
+
+        const traces = advancedFeatures.listTraces(rawLimit);
+        return {
+            count: traces.length,
+            traces,
+        };
+    });
+
+    app.get<{ Params: { taskId: string } }>('/runtime/traces/:taskId', async (request, reply) => {
+        const trace = advancedFeatures.getTrace(request.params.taskId);
+        if (!trace) {
+            return reply.code(404).send({
+                error: 'trace_not_found',
+                message: `No trace found for task ${request.params.taskId}`,
+            });
+        }
+
+        return {
+            trace,
+        };
+    });
+
+    app.post<{ Params: { taskId: string }; Body: { from_step?: number } }>('/runtime/traces/:taskId/replay', async (request, reply) => {
+        const replay = advancedFeatures.replay(request.params.taskId, request.body?.from_step ?? 0);
+        if (!replay.ok) {
+            return reply.code(404).send({
+                error: 'trace_not_found',
+                message: `No trace found for task ${request.params.taskId}`,
+            });
+        }
+
+        return {
+            status: 'replayed',
+            task_id: request.params.taskId,
+            replayed_steps: replay.replayed,
+        };
+    });
+
+    app.post<{ Body: { blocked_actions?: string[]; sample_size?: number } }>('/runtime/policy/simulate', async (request, reply) => {
+        const blockedActions = Array.isArray(request.body?.blocked_actions)
+            ? request.body?.blocked_actions.filter((entry): entry is string => typeof entry === 'string')
+            : [];
+
+        if (blockedActions.length === 0) {
+            return reply.code(400).send({
+                error: 'invalid_policy_simulation',
+                message: 'blocked_actions must contain at least one action',
+            });
+        }
+
+        const traces = advancedFeatures
+            .listTraces(request.body?.sample_size ?? 100)
+            .map((trace) => ({
+                actionType: trace.decision.actionType,
+                status: trace.status ?? 'unknown',
+            }));
+
+        return {
+            simulation: advancedFeatures.simulatePolicy({
+                blockedActions,
+                traces,
+            }),
+            blocked_actions: blockedActions,
+        };
+    });
+
+    app.post<{ Body: { changed_files?: string[]; summary?: string } }>('/runtime/pr/review', async (request, reply) => {
+        const changedFiles = Array.isArray(request.body?.changed_files)
+            ? request.body?.changed_files.filter((entry): entry is string => typeof entry === 'string')
+            : [];
+        if (changedFiles.length === 0) {
+            return reply.code(400).send({
+                error: 'invalid_pr_review',
+                message: 'changed_files must contain at least one path',
+            });
+        }
+
+        return {
+            review: advancedFeatures.computePrReview({
+                changedFiles,
+                summary: request.body?.summary,
+            }),
+        };
+    });
+
+    app.post<{ Body: { issue_number?: number; title?: string; body?: string } }>('/runtime/autopilot/issue-to-pr', async (request, reply) => {
+        const issueNumber = request.body?.issue_number;
+        const title = request.body?.title?.trim();
+        if (!issueNumber || issueNumber <= 0 || !title) {
+            return reply.code(400).send({
+                error: 'invalid_issue_payload',
+                message: 'issue_number and title are required',
+            });
+        }
+
+        return {
+            autopilot: advancedFeatures.buildIssueToPrAutopilot({
+                issueNumber,
+                title,
+                body: request.body?.body,
+            }),
+        };
+    });
+
+    app.get('/runtime/flaky-tests', async () => {
+        return {
+            flaky_signals: advancedFeatures.getFlakySignals(50),
+        };
+    });
+
+    app.get('/runtime/advanced/status', async () => {
+        return {
+            control: advancedFeatures.getControlState(),
+            traces: advancedFeatures.listTraces(20).length,
+            background_loop_running: backgroundLoop.running,
+            scope_constraint: advancedFeatures.getScopeConstraint(),
+            active_policy_pack: advancedFeatures.getActivePolicyPack(),
+        };
+    });
+
+    app.get<{ Querystring: { limit?: string } }>('/runtime/plan/pending', async (request, reply) => {
+        const rawLimit = Number(request.query?.limit ?? '100');
+        if (!Number.isFinite(rawLimit) || rawLimit <= 0) {
+            return reply.code(400).send({
+                error: 'invalid_limit',
+                message: 'limit must be a positive integer',
+            });
+        }
+
+        const plans = advancedFeatures.listPendingPlans(rawLimit);
+        return {
+            count: plans.length,
+            plans,
+        };
+    });
+
+    app.get<{ Params: { taskId: string } }>('/runtime/plan/:taskId', async (request, reply) => {
+        const plan = advancedFeatures.getPlanCheckpoint(request.params.taskId);
+        if (!plan) {
+            return reply.code(404).send({
+                error: 'plan_not_found',
+                message: `No plan checkpoint found for task ${request.params.taskId}`,
+            });
+        }
+
+        return {
+            plan,
+        };
+    });
+
+    app.post<{ Params: { taskId: string }; Body: { actor?: string; reason?: string } }>('/runtime/plan/:taskId/approve', async (request, reply) => {
+        const actor = request.body?.actor?.trim() || 'runtime-operator';
+        const approved = advancedFeatures.approvePlan(request.params.taskId, actor, request.body?.reason);
+        if (!approved) {
+            return reply.code(404).send({
+                error: 'plan_not_found',
+                message: `No plan checkpoint found for task ${request.params.taskId}`,
+            });
+        }
+
+        return {
+            status: 'approved',
+            plan: approved,
+        };
+    });
+
+    app.post('/runtime/control/pause', async () => {
+        return {
+            status: 'paused',
+            control: advancedFeatures.setPaused(true),
+        };
+    });
+
+    app.post('/runtime/control/resume', async () => {
+        return {
+            status: 'resumed',
+            control: advancedFeatures.setPaused(false),
+        };
+    });
+
+    app.post('/runtime/control/step', async () => {
+        return {
+            status: 'single_step_armed',
+            control: advancedFeatures.allowSingleStep(),
+        };
+    });
+
+    app.post<{ Body: { include_paths?: string[] } }>('/runtime/control/scope', async (request, reply) => {
+        const includePaths = Array.isArray(request.body?.include_paths)
+            ? request.body.include_paths.filter((entry): entry is string => typeof entry === 'string').map((entry) => entry.trim()).filter(Boolean)
+            : [];
+        if (includePaths.length === 0) {
+            return reply.code(400).send({
+                error: 'invalid_scope',
+                message: 'include_paths must contain at least one path',
+            });
+        }
+
+        return {
+            status: 'scope_set',
+            scope: advancedFeatures.setScopeConstraint(includePaths),
+        };
+    });
+
+    app.delete('/runtime/control/scope', async () => {
+        advancedFeatures.clearScopeConstraint();
+        return {
+            status: 'scope_cleared',
+        };
+    });
+
+    app.get<{ Querystring: { task_id?: string } }>('/runtime/control/why', async (request, reply) => {
+        const taskId = request.query?.task_id?.trim();
+        if (!taskId) {
+            return reply.code(400).send({
+                error: 'invalid_task_id',
+                message: 'task_id query parameter is required',
+            });
+        }
+
+        return advancedFeatures.explainWhy(taskId);
+    });
+
+    app.get('/runtime/semantic-graph', async () => {
+        return {
+            graph: advancedFeatures.getSemanticGraph(process.cwd()),
+        };
+    });
+
+    app.get<{ Querystring: { symbol?: string } }>('/runtime/semantic-graph/query', async (request, reply) => {
+        const symbol = request.query?.symbol?.trim();
+        if (!symbol) {
+            return reply.code(400).send({
+                error: 'invalid_symbol',
+                message: 'symbol query parameter is required',
+            });
+        }
+
+        return {
+            result: advancedFeatures.querySemanticGraph(symbol),
+        };
+    });
+
+    app.post<{ Body: { incident_id?: string; service?: string } }>('/runtime/incident/patch-pack', async (request, reply) => {
+        const incidentId = request.body?.incident_id?.trim();
+        const service = request.body?.service?.trim();
+        if (!incidentId || !service) {
+            return reply.code(400).send({
+                error: 'invalid_incident_payload',
+                message: 'incident_id and service are required',
+            });
+        }
+
+        const traces = advancedFeatures.listTraces(100).map((trace) => ({
+            taskId: trace.taskId,
+            status: trace.status ?? 'unknown',
+            actionType: trace.decision.actionType,
+        }));
+
+        return {
+            patch_pack: advancedFeatures.generateIncidentPatchPack({
+                incidentId,
+                service,
+                traces,
+            }),
+        };
+    });
+
+    app.get('/runtime/policy/packs', async () => {
+        return {
+            active_pack: advancedFeatures.getActivePolicyPack(),
+            packs: advancedFeatures.listPolicyPacks(),
+        };
+    });
+
+    app.post<{
+        Body: {
+            id?: string;
+            name?: string;
+            blocked_actions?: string[];
+            blocked_command_patterns?: string[];
+            max_allowed_block_rate?: number;
+        };
+    }>('/runtime/policy/packs', async (request, reply) => {
+        const id = request.body?.id?.trim();
+        const name = request.body?.name?.trim();
+        if (!id || !name) {
+            return reply.code(400).send({
+                error: 'invalid_policy_pack',
+                message: 'id and name are required',
+            });
+        }
+
+        const pack = advancedFeatures.upsertPolicyPack({
+            id,
+            name,
+            blockedActions: Array.isArray(request.body?.blocked_actions)
+                ? request.body.blocked_actions.filter((entry): entry is string => typeof entry === 'string')
+                : [],
+            blockedCommandPatterns: Array.isArray(request.body?.blocked_command_patterns)
+                ? request.body.blocked_command_patterns.filter((entry): entry is string => typeof entry === 'string')
+                : [],
+            maxAllowedBlockRate: request.body?.max_allowed_block_rate,
+        });
+
+        return {
+            status: 'policy_pack_upserted',
+            pack,
+        };
+    });
+
+    app.post<{ Params: { packId: string }; Body: { sample_size?: number } }>('/runtime/policy/packs/:packId/simulate', async (request, reply) => {
+        const sampleSize = Math.max(100, Math.min(500, Math.trunc(Number(request.body?.sample_size ?? 100))));
+        const traces = advancedFeatures
+            .listTraces(sampleSize)
+            .map((trace) => ({
+                actionType: trace.decision.actionType,
+                status: trace.status ?? 'unknown',
+            }));
+        const simulation = advancedFeatures.simulatePolicyPack(request.params.packId, traces);
+        if (!simulation) {
+            return reply.code(404).send({
+                error: 'policy_pack_not_found',
+                message: `No policy pack found for id ${request.params.packId}`,
+            });
+        }
+
+        return {
+            simulation,
+        };
+    });
+
+    app.post<{ Params: { packId: string } }>('/runtime/policy/packs/:packId/enable', async (request, reply) => {
+        const result = advancedFeatures.enablePolicyPack(request.params.packId);
+        if (!result.enabled) {
+            return reply.code(409).send({
+                error: 'policy_pack_enable_failed',
+                reason: result.reason,
+                active_pack_id: result.activePackId,
+            });
+        }
+
+        return {
+            status: 'policy_pack_enabled',
+            active_pack_id: result.activePackId,
+        };
+    });
+
+    app.get('/runtime/flaky-tests/triage', async () => {
+        return {
+            triage: advancedFeatures.triageFlakyTests(),
+        };
+    });
+
+    app.post<{ Body: { issue_number?: number; title?: string; body?: string } }>('/runtime/autopilot/issue-to-pr/execute', async (request, reply) => {
+        const issueNumber = request.body?.issue_number;
+        const title = request.body?.title?.trim();
+        if (!issueNumber || issueNumber <= 0 || !title) {
+            return reply.code(400).send({
+                error: 'invalid_issue_payload',
+                message: 'issue_number and title are required',
+            });
+        }
+
+        return {
+            execution: advancedFeatures.buildIssueToPrExecution({
+                issueNumber,
+                title,
+                body: request.body?.body,
+            }),
+        };
+    });
+
+    app.get('/runtime/marketplace/skills', async () => {
+        return {
+            skills: advancedFeatures.listMarketplaceSkills(),
+        };
+    });
+
+    app.post<{ Body: { skill_id?: string; approved_permissions?: string[]; required_version?: string; pin_version?: string; workspace_key?: string } }>('/runtime/marketplace/install', async (request, reply) => {
+        const skillId = request.body?.skill_id?.trim();
+        const approvedPermissions = Array.isArray(request.body?.approved_permissions)
+            ? request.body.approved_permissions.filter((entry): entry is string => typeof entry === 'string')
+            : [];
+
+        if (!skillId) {
+            return reply.code(400).send({
+                error: 'invalid_install_payload',
+                message: 'skill_id is required',
+            });
+        }
+
+        const installed = advancedFeatures.installMarketplaceSkill({
+            skillId,
+            approvedPermissions,
+            requiredVersion: request.body?.required_version,
+            pinVersion: request.body?.pin_version,
+            workspaceKey: request.body?.workspace_key,
+        });
+
+        if (!installed.installed) {
+            return reply.code(403).send({
+                error: 'skill_install_denied',
+                reason: installed.reason,
+            });
+        }
+
+        return {
+            status: 'installed',
+            skill_id: skillId,
+        };
+    });
+
+    app.post<{ Body: { skill_id?: string; workspace_key?: string } }>('/runtime/marketplace/uninstall', async (request, reply) => {
+        const skillId = request.body?.skill_id?.trim();
+        if (!skillId) {
+            return reply.code(400).send({
+                error: 'invalid_uninstall_payload',
+                message: 'skill_id is required',
+            });
+        }
+
+        const result = advancedFeatures.uninstallMarketplaceSkill({
+            skillId,
+            workspaceKey: request.body?.workspace_key,
+        });
+        if (!result.removed) {
+            return reply.code(404).send({
+                error: 'skill_uninstall_denied',
+                reason: result.reason,
+            });
+        }
+
+        return {
+            status: 'uninstalled',
+            skill_id: skillId,
+        };
+    });
+
+    app.post<{ Body: { id?: string; name?: string; version?: string; permissions?: string[]; source?: string } }>('/runtime/marketplace/catalog/skills', async (request, reply) => {
+        const id = request.body?.id?.trim();
+        const name = request.body?.name?.trim();
+        const version = request.body?.version?.trim();
+        const permissions = Array.isArray(request.body?.permissions)
+            ? request.body.permissions.filter((entry): entry is string => typeof entry === 'string').map((entry) => entry.trim()).filter(Boolean)
+            : [];
+
+        if (!id || !name || !version) {
+            return reply.code(400).send({
+                error: 'invalid_catalog_payload',
+                message: 'id, name, and version are required',
+            });
+        }
+
+        const upserted = advancedFeatures.upsertMarketplaceSkill({
+            id,
+            name,
+            version,
+            permissions,
+            source: request.body?.source,
+        });
+        return {
+            status: upserted.updated ? 'updated' : 'created',
+            skill: upserted.skill,
+        };
+    });
+
+    app.delete<{ Params: { skillId: string } }>('/runtime/marketplace/catalog/skills/:skillId', async (request, reply) => {
+        const skillId = request.params.skillId?.trim();
+        if (!skillId) {
+            return reply.code(400).send({
+                error: 'invalid_skill_id',
+                message: 'skillId path parameter is required',
+            });
+        }
+
+        const removed = advancedFeatures.removeMarketplaceSkill(skillId);
+        if (!removed.removed) {
+            const status = removed.reason === 'builtin_skill_read_only' ? 403 : 404;
+            return reply.code(status).send({
+                error: 'skill_remove_denied',
+                reason: removed.reason,
+            });
+        }
+
+        return {
+            status: 'removed',
+            skill_id: skillId,
+        };
+    });
+
+    app.get<{ Querystring: { limit?: string } }>('/runtime/marketplace/telemetry', async (request, reply) => {
+        const rawLimit = Number(request.query?.limit ?? '100');
+        if (!Number.isFinite(rawLimit) || rawLimit <= 0) {
+            return reply.code(400).send({
+                error: 'invalid_limit',
+                message: 'limit must be a positive integer',
+            });
+        }
+
+        return {
+            events: advancedFeatures.listMarketplaceTelemetry(rawLimit),
+        };
+    });
+
+    app.post<{ Body: { skill_id?: string; workspace_key?: string } }>('/runtime/marketplace/use', async (request, reply) => {
+        const skillId = request.body?.skill_id?.trim();
+        if (!skillId) {
+            return reply.code(400).send({
+                error: 'invalid_skill_id',
+                message: 'skill_id is required',
+            });
+        }
+
+        advancedFeatures.recordMarketplaceUsage({
+            skillId,
+            event: 'invoke',
+            workspaceKey: request.body?.workspace_key?.trim() || 'default',
+        });
+        return {
+            status: 'recorded',
+            skill_id: skillId,
+        };
+    });
+
+    app.post<{ Body: { skill_id?: string; inputs?: Record<string, unknown>; workspace_key?: string } }>('/runtime/marketplace/invoke', async (request, reply) => {
+        const skillId = request.body?.skill_id?.trim();
+        if (!skillId) {
+            return reply.code(400).send({
+                error: 'invalid_invoke_payload',
+                message: 'skill_id is required',
+            });
+        }
+
+        const inputs = typeof request.body?.inputs === 'object' && request.body.inputs !== null
+            ? request.body.inputs as Record<string, unknown>
+            : {};
+
+        const output = advancedFeatures.executeInstalledSkill({
+            skillId,
+            inputs,
+            workspaceKey: request.body?.workspace_key,
+        });
+
+        if (!output.ok && (output.result as Record<string, unknown>)?.['error'] === 'skill_not_installed') {
+            return reply.code(404).send({
+                error: 'skill_not_installed',
+                skill_id: skillId,
+            });
+        }
+
+        if (!output.ok && (output.result as Record<string, unknown>)?.['error'] === 'no_handler_registered') {
+            return reply.code(501).send({
+                error: 'no_handler_registered',
+                skill_id: skillId,
+            });
+        }
+
+        return output;
+    });
+
+    app.get<{ Querystring: { limit?: string } }>('/runtime/provenance/attestations', async (request, reply) => {
+        const rawLimit = Number(request.query?.limit ?? '100');
+        if (!Number.isFinite(rawLimit) || rawLimit <= 0) {
+            return reply.code(400).send({
+                error: 'invalid_limit',
+                message: 'limit must be a positive integer',
+            });
+        }
+
+        return {
+            attestations: advancedFeatures.listProvenanceAttestations(rawLimit),
         };
     });
 

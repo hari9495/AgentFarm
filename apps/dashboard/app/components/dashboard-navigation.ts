@@ -1,4 +1,4 @@
-export type DashboardTab = 'overview' | 'approvals' | 'observability' | 'audit';
+export type DashboardTab = 'overview' | 'approvals' | 'observability' | 'audit' | 'marketplace';
 
 type DashboardNavigationUpdate = {
     tab?: DashboardTab;

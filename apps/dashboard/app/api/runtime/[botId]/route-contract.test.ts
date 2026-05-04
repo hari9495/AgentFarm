@@ -5,6 +5,12 @@ import {
     buildHealthRouteContract,
     buildInterviewEventsRouteContract,
     buildKillRouteContract,
+    buildMarketplaceCatalogDeleteRouteContract,
+    buildMarketplaceCatalogUpsertRouteContract,
+    buildMarketplaceInstallRouteContract,
+    buildMarketplaceSkillsRouteContract,
+    buildMarketplaceTelemetryRouteContract,
+    buildMarketplaceUninstallRouteContract,
     buildLogsRouteContract,
     buildStateRouteContract,
     buildTranscriptsRouteContract,
@@ -77,4 +83,63 @@ test('buildCapabilityRouteContract creates no-store GET request shape', () => {
     assert.equal(contract.requestInit.cache, 'no-store');
     assert.deepEqual(contract.requestInit.headers, {});
     assert.equal(contract.requestInit.method, undefined);
+});
+
+test('buildMarketplaceSkillsRouteContract creates no-store GET request shape', () => {
+    const contract = buildMarketplaceSkillsRouteContract();
+
+    assert.equal(contract.upstreamUrl, 'http://localhost:8080/runtime/marketplace/skills');
+    assert.equal(contract.requestInit.cache, 'no-store');
+    assert.deepEqual(contract.requestInit.headers, {});
+    assert.equal(contract.requestInit.method, undefined);
+});
+
+test('buildMarketplaceInstallRouteContract creates JSON POST request shape', () => {
+    const contract = buildMarketplaceInstallRouteContract({ skill_id: 'skill-one' });
+
+    assert.equal(contract.upstreamUrl, 'http://localhost:8080/runtime/marketplace/install');
+    assert.equal(contract.requestInit.method, 'POST');
+    assert.deepEqual(contract.requestInit.headers, {
+        'content-type': 'application/json',
+    });
+    assert.equal(contract.requestInit.body, JSON.stringify({ skill_id: 'skill-one' }));
+});
+
+test('buildMarketplaceUninstallRouteContract creates JSON POST request shape', () => {
+    const contract = buildMarketplaceUninstallRouteContract({ skill_id: 'skill-one' });
+
+    assert.equal(contract.upstreamUrl, 'http://localhost:8080/runtime/marketplace/uninstall');
+    assert.equal(contract.requestInit.method, 'POST');
+    assert.deepEqual(contract.requestInit.headers, {
+        'content-type': 'application/json',
+    });
+    assert.equal(contract.requestInit.body, JSON.stringify({ skill_id: 'skill-one' }));
+});
+
+test('buildMarketplaceTelemetryRouteContract applies limit fallback and cache shape', () => {
+    const contract = buildMarketplaceTelemetryRouteContract('http://localhost:3001/api/runtime/bot-1/marketplace/telemetry');
+
+    assert.equal(contract.upstreamUrl, 'http://localhost:8080/runtime/marketplace/telemetry?limit=100');
+    assert.equal(contract.requestInit.cache, 'no-store');
+    assert.deepEqual(contract.requestInit.headers, {});
+});
+
+test('buildMarketplaceCatalogUpsertRouteContract creates JSON POST request shape', () => {
+    const contract = buildMarketplaceCatalogUpsertRouteContract({ id: 'managed-one' });
+
+    assert.equal(contract.upstreamUrl, 'http://localhost:8080/runtime/marketplace/catalog/skills');
+    assert.equal(contract.requestInit.method, 'POST');
+    assert.deepEqual(contract.requestInit.headers, {
+        'content-type': 'application/json',
+    });
+    assert.equal(contract.requestInit.body, JSON.stringify({ id: 'managed-one' }));
+});
+
+test('buildMarketplaceCatalogDeleteRouteContract creates DELETE request shape', () => {
+    const contract = buildMarketplaceCatalogDeleteRouteContract('custom/skill');
+
+    assert.equal(contract.upstreamUrl, 'http://localhost:8080/runtime/marketplace/catalog/skills/custom%2Fskill');
+    assert.equal(contract.requestInit.method, 'DELETE');
+    assert.deepEqual(contract.requestInit.headers, {});
+    assert.equal(contract.requestInit.cache, undefined);
 });

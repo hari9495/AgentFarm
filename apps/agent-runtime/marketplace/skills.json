@@ -1,0 +1,254 @@
+{
+    "skills": [
+        {
+            "id": "pr-reviewer-risk-labels",
+            "name": "PR Reviewer Risk Labels",
+            "version": "1.0.0",
+            "permissions": [
+                "read_diff",
+                "read_repo"
+            ],
+            "source": "builtin",
+            "manifest_digest": "44ac7dc2fe9b1c61e4c00ca20b17d74cbbfa746e68715f9c1f935ec271633cdc",
+            "signature": "sha256:44ac7dc2fe9b1c61e4c00ca20b17d74cbbfa746e68715f9c1f935ec271633cdc"
+        },
+        {
+            "id": "issue-autopilot",
+            "name": "Issue To PR Autopilot",
+            "version": "1.0.0",
+            "permissions": [
+                "read_repo",
+                "run_tests",
+                "write_repo"
+            ],
+            "source": "builtin",
+            "manifest_digest": "c59671b570d62dad9e848413407d037987a3ac1f9495413ff2c512952bdd989c",
+            "signature": "sha256:c59671b570d62dad9e848413407d037987a3ac1f9495413ff2c512952bdd989c"
+        },
+        {
+            "id": "incident-patch-pack",
+            "name": "Incident Patch Pack Generator",
+            "version": "1.0.0",
+            "permissions": [
+                "read_repo",
+                "read_runtime_traces"
+            ],
+            "source": "builtin",
+            "manifest_digest": "9487a552e0b6bf0954f1f79d3d4b577184efb0c248f40e8f7645b2d5cd8118b5",
+            "signature": "sha256:9487a552e0b6bf0954f1f79d3d4b577184efb0c248f40e8f7645b2d5cd8118b5"
+        },
+        {
+            "id": "code-review-summarizer",
+            "name": "Code Review Summarizer",
+            "version": "1.0.0",
+            "permissions": [
+                "read_diff",
+                "read_repo"
+            ],
+            "source": "builtin",
+            "manifest_digest": "49b549fe1df165c6c6ab8264e3b4cb07026439a4c36a876ef4473abbbb398b94",
+            "signature": "sha256:49b549fe1df165c6c6ab8264e3b4cb07026439a4c36a876ef4473abbbb398b94"
+        },
+        {
+            "id": "pr-comment-drafter",
+            "name": "PR Comment Drafter",
+            "version": "1.0.0",
+            "permissions": [
+                "read_diff",
+                "read_repo",
+                "write_pr_comments"
+            ],
+            "source": "builtin",
+            "manifest_digest": "52d6df59a3c9a158de0e9a90c154c577681f0832bd9b2e3482a91ea1feca8bfe",
+            "signature": "sha256:52d6df59a3c9a158de0e9a90c154c577681f0832bd9b2e3482a91ea1feca8bfe"
+        },
+        {
+            "id": "branch-manager",
+            "name": "Branch Manager",
+            "version": "1.0.0",
+            "permissions": [
+                "read_repo",
+                "write_repo"
+            ],
+            "source": "builtin",
+            "manifest_digest": "fc9ca4adc6b6eb4a8fa5061390a23c1108c584541090a693e07b1468a1c133ed",
+            "signature": "sha256:fc9ca4adc6b6eb4a8fa5061390a23c1108c584541090a693e07b1468a1c133ed"
+        },
+        {
+            "id": "commit-diff-explainer",
+            "name": "Commit Diff Explainer",
+            "version": "1.0.0",
+            "permissions": [
+                "read_repo"
+            ],
+            "source": "builtin",
+            "manifest_digest": "e8d11fb66f4a71eaae5d2e88f03cf3f0ca9310799ac68651905cc0ff79d272fd",
+            "signature": "sha256:e8d11fb66f4a71eaae5d2e88f03cf3f0ca9310799ac68651905cc0ff79d272fd"
+        },
+        {
+            "id": "test-coverage-reporter",
+            "name": "Test Coverage Reporter",
+            "version": "1.0.0",
+            "permissions": [
+                "read_repo",
+                "run_tests"
+            ],
+            "source": "builtin",
+            "manifest_digest": "3489a29e088b57fb8c29b9aaa4bf16fb95c1deca82fe6edc79106695f3bf6b95",
+            "signature": "sha256:3489a29e088b57fb8c29b9aaa4bf16fb95c1deca82fe6edc79106695f3bf6b95"
+        },
+        {
+            "id": "flaky-test-detector",
+            "name": "Flaky Test Detector",
+            "version": "1.0.0",
+            "permissions": [
+                "read_repo",
+                "run_tests"
+            ],
+            "source": "builtin",
+            "manifest_digest": "65ffb5202796a39cca6340633ba8549680e0916680b0530d4b9cfa98a56eeb33",
+            "signature": "sha256:65ffb5202796a39cca6340633ba8549680e0916680b0530d4b9cfa98a56eeb33"
+        },
+        {
+            "id": "test-generator",
+            "name": "Test Generator",
+            "version": "1.0.0",
+            "permissions": [
+                "read_repo",
+                "run_tests",
+                "write_repo"
+            ],
+            "source": "builtin",
+            "manifest_digest": "c5d975860ef90c1982eede7830dc7f5b87e7fb2bafbf54a9debcaf76ec8aca9f",
+            "signature": "sha256:c5d975860ef90c1982eede7830dc7f5b87e7fb2bafbf54a9debcaf76ec8aca9f"
+        },
+        {
+            "id": "ci-failure-explainer",
+            "name": "CI Failure Explainer",
+            "version": "1.0.0",
+            "permissions": [
+                "read_ci_logs",
+                "read_repo"
+            ],
+            "source": "builtin",
+            "manifest_digest": "e2d1e02b4f51dba04661c1830e18d1289c5540b8de366f139ad5347bc66b6ac2",
+            "signature": "sha256:e2d1e02b4f51dba04661c1830e18d1289c5540b8de366f139ad5347bc66b6ac2"
+        },
+        {
+            "id": "dependency-audit",
+            "name": "Dependency Audit",
+            "version": "1.0.0",
+            "permissions": [
+                "read_repo"
+            ],
+            "source": "builtin",
+            "manifest_digest": "34a4c8324b4564cf910e6f5997582d3725746100ceebeafc2bd77c95be6e4bd8",
+            "signature": "sha256:34a4c8324b4564cf910e6f5997582d3725746100ceebeafc2bd77c95be6e4bd8"
+        },
+        {
+            "id": "release-notes-generator",
+            "name": "Release Notes Generator",
+            "version": "1.0.0",
+            "permissions": [
+                "read_repo"
+            ],
+            "source": "builtin",
+            "manifest_digest": "1e8e599940ae921fdbf5415fdd4c0d8303401f3dc7c2c606228e73b7efec9dc8",
+            "signature": "sha256:1e8e599940ae921fdbf5415fdd4c0d8303401f3dc7c2c606228e73b7efec9dc8"
+        },
+        {
+            "id": "error-trace-analyzer",
+            "name": "Error Trace Analyzer",
+            "version": "1.0.0",
+            "permissions": [
+                "read_runtime_traces"
+            ],
+            "source": "builtin",
+            "manifest_digest": "403d74a0ee88a15d43d791c91d8eb4b4fa4d61435fa096827fb622dcff1ff878",
+            "signature": "sha256:403d74a0ee88a15d43d791c91d8eb4b4fa4d61435fa096827fb622dcff1ff878"
+        },
+        {
+            "id": "rollback-advisor",
+            "name": "Rollback Advisor",
+            "version": "1.0.0",
+            "permissions": [
+                "read_repo",
+                "read_runtime_traces"
+            ],
+            "source": "builtin",
+            "manifest_digest": "d545ed2d9ed5a7b2caf76af6f25ffd0f9e671c8cfa6c57d859936410b1ef110c",
+            "signature": "sha256:d545ed2d9ed5a7b2caf76af6f25ffd0f9e671c8cfa6c57d859936410b1ef110c"
+        },
+        {
+            "id": "docstring-generator",
+            "name": "Docstring Generator",
+            "version": "1.0.0",
+            "permissions": [
+                "read_repo",
+                "write_repo"
+            ],
+            "source": "builtin",
+            "manifest_digest": "0a7620e6690dd1d8b195f1eddccf326236325ec7c8b258fadbc15e866bd519a7",
+            "signature": "sha256:0a7620e6690dd1d8b195f1eddccf326236325ec7c8b258fadbc15e866bd519a7"
+        },
+        {
+            "id": "readme-updater",
+            "name": "README Updater",
+            "version": "1.0.0",
+            "permissions": [
+                "read_repo",
+                "write_repo"
+            ],
+            "source": "builtin",
+            "manifest_digest": "37c7d637fe99ff9b97fd7db9f6424902f9e977a6e53245d7be29eeb26e09e494",
+            "signature": "sha256:37c7d637fe99ff9b97fd7db9f6424902f9e977a6e53245d7be29eeb26e09e494"
+        },
+        {
+            "id": "api-diff-notifier",
+            "name": "API Diff Notifier",
+            "version": "1.0.0",
+            "permissions": [
+                "read_repo"
+            ],
+            "source": "builtin",
+            "manifest_digest": "e692d348dd146e301588c1f331d646d09f1ffa58b91bcd7a90f676c66800f7c8",
+            "signature": "sha256:e692d348dd146e301588c1f331d646d09f1ffa58b91bcd7a90f676c66800f7c8"
+        },
+        {
+            "id": "slack-incident-notifier",
+            "name": "Slack Incident Notifier",
+            "version": "1.0.0",
+            "permissions": [
+                "notify_slack",
+                "read_runtime_traces"
+            ],
+            "source": "builtin",
+            "manifest_digest": "46526e5b19bd41a71dfe5aeea5b859cffd075098eac47e460a98add0147b56a8",
+            "signature": "sha256:46526e5b19bd41a71dfe5aeea5b859cffd075098eac47e460a98add0147b56a8"
+        },
+        {
+            "id": "jira-issue-linker",
+            "name": "Jira Issue Linker",
+            "version": "1.0.0",
+            "permissions": [
+                "read_repo",
+                "read_write_jira"
+            ],
+            "source": "builtin",
+            "manifest_digest": "4be5a131463cda97cdb90862843c55ada4494f68113e3f9b0dc954dd60c2206b",
+            "signature": "sha256:4be5a131463cda97cdb90862843c55ada4494f68113e3f9b0dc954dd60c2206b"
+        },
+        {
+            "id": "pr-description-generator",
+            "name": "PR Description Generator",
+            "version": "1.0.0",
+            "permissions": [
+                "read_diff",
+                "read_repo"
+            ],
+            "source": "builtin",
+            "manifest_digest": "068a3b5844cbfee54e6acbbf6e3e0dd97b5a9b4e20bc0c57717a1e771f1331d9",
+            "signature": "sha256:068a3b5844cbfee54e6acbbf6e3e0dd97b5a9b4e20bc0c57717a1e771f1331d9"
+        }
+    ]
+}

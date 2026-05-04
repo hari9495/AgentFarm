@@ -1,4 +1,5 @@
 import { cookies } from 'next/headers';
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import type { ReactElement } from 'react';
@@ -12,6 +13,7 @@ import { DashboardMobileShell } from './components/dashboard-mobile-shell';
 import { DashboardDeepLinkBar } from './components/dashboard-deep-link-bar';
 import { DashboardWorkspaceSwitcher } from './components/dashboard-workspace-switcher';
 import { WorkspaceBudgetPanel } from './components/workspace-budget-panel';
+import { SkillMarketplacePanel } from './components/skill-marketplace-panel';
 import { OperationalSignalTimeline, type OperationalSignalTimelinePoint } from './components/operational-signal-timeline';
 import type { DashboardTab } from './components/dashboard-navigation';
 import type { WorkspaceBudgetSnapshot } from './components/workspace-budget-panel-utils';
@@ -801,7 +803,7 @@ const mapConnectorForConfig = (connector: ConnectorHealth): ConnectorConfigSumma
 };
 
 const normalizeTab = (tab: string | undefined): DashboardTab => {
-    if (tab === 'approvals' || tab === 'observability' || tab === 'audit') {
+    if (tab === 'approvals' || tab === 'observability' || tab === 'audit' || tab === 'marketplace') {
         return tab;
     }
 
@@ -1054,6 +1056,19 @@ export default async function HomePage({
                 <Suspense fallback={null}>
                     <DashboardDeepLinkBar activeTab={activeTab} workspaceId={workspace.workspace_id} />
                 </Suspense>
+
+                <section className="card" style={{ display: 'flex', gap: '0.55rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--ink-soft)' }}>
+                        Internal skill catalog manager:
+                    </p>
+                    <Link
+                        href={`/internal/skills?workspaceId=${encodeURIComponent(workspace.workspace_id)}&botId=${encodeURIComponent(workspace.bot_id)}`}
+                        className="secondary-action"
+                        style={{ textDecoration: 'none' }}
+                    >
+                        Open Internal Skill Manager
+                    </Link>
+                </section>
 
                 {activeTab === 'overview' && (
                     <section id="dashboard-panel-overview" role="tabpanel" aria-labelledby="dashboard-tab-overview" className="dashboard-panel">
@@ -1317,6 +1332,19 @@ export default async function HomePage({
                             initialEvents={dashboardSlice.events}
                             focusedCorrelationId={focusedCorrelationId}
                         />
+                    </section>
+                )}
+
+                {activeTab === 'marketplace' && (
+                    <section id="dashboard-panel-marketplace" role="tabpanel" aria-labelledby="dashboard-tab-marketplace" className="dashboard-panel">
+                        <header className="hero">
+                            <p className="eyebrow">Marketplace</p>
+                            <h1>Skill Marketplace</h1>
+                            <p>
+                                Install and manage skills for your agent bot. Entitlements control which skills are available to install.
+                            </p>
+                        </header>
+                        <SkillMarketplacePanel workspaceId={workspace.workspace_id} botId={workspace.bot_id} />
                     </section>
                 )}
             </DashboardMobileShell>

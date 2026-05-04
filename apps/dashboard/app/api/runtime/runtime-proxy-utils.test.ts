@@ -5,6 +5,12 @@ import {
     buildHealthUrl,
     buildInterviewEventsUrl,
     buildKillUrl,
+    buildMarketplaceCatalogDeleteUrl,
+    buildMarketplaceCatalogUpsertUrl,
+    buildMarketplaceInstallUrl,
+    buildMarketplaceSkillsUrl,
+    buildMarketplaceTelemetryUrl,
+    buildMarketplaceUninstallUrl,
     buildLogsUrl,
     buildStateHistoryUrl,
     buildTranscriptsUrl,
@@ -65,4 +71,10 @@ test('build url helpers encode query values correctly', () => {
     assert.equal(buildHealthUrl(baseUrl), 'http://localhost:8080/health/live');
     assert.equal(buildKillUrl(baseUrl), 'http://localhost:8080/kill');
     assert.equal(buildCapabilitySnapshotUrl(baseUrl), 'http://localhost:8080/runtime/capability-snapshot');
+    assert.equal(buildMarketplaceSkillsUrl(baseUrl), 'http://localhost:8080/runtime/marketplace/skills');
+    assert.equal(buildMarketplaceInstallUrl(baseUrl), 'http://localhost:8080/runtime/marketplace/install');
+    assert.equal(buildMarketplaceUninstallUrl(baseUrl), 'http://localhost:8080/runtime/marketplace/uninstall');
+    assert.equal(buildMarketplaceTelemetryUrl(baseUrl, '90'), 'http://localhost:8080/runtime/marketplace/telemetry?limit=90');
+    assert.equal(buildMarketplaceCatalogUpsertUrl(baseUrl), 'http://localhost:8080/runtime/marketplace/catalog/skills');
+    assert.equal(buildMarketplaceCatalogDeleteUrl(baseUrl, 'skill/one'), 'http://localhost:8080/runtime/marketplace/catalog/skills/skill%2Fone');
 });
