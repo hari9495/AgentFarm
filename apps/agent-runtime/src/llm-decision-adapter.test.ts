@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, rmSync } from 'fs';
+import { existsSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import assert from 'node:assert/strict';
 import { tmpdir } from 'os';
 import { join } from 'path';
@@ -52,6 +52,39 @@ const withCooldownStatePath = async (suffix: string, callback: (filePath: string
     }
 };
 
+const withTokenBudgetStatePath = async (suffix: string, callback: (filePath: string) => Promise<void>) => {
+    const previousPath = process.env['AF_TOKEN_BUDGET_STATE_PATH'];
+    const previousLimit = process.env['AF_TOKEN_BUDGET_DAILY_LIMIT'];
+    const previousThreshold = process.env['AF_TOKEN_BUDGET_WARNING_THRESHOLD'];
+    const filePath = join(tmpdir(), `agentfarm-token-budget-${suffix}-${Date.now()}.json`);
+    process.env['AF_TOKEN_BUDGET_STATE_PATH'] = filePath;
+    process.env['AF_TOKEN_BUDGET_DAILY_LIMIT'] = '100';
+    process.env['AF_TOKEN_BUDGET_WARNING_THRESHOLD'] = '0.8';
+
+    try {
+        await callback(filePath);
+    } finally {
+        if (previousPath === undefined) {
+            delete process.env['AF_TOKEN_BUDGET_STATE_PATH'];
+        } else {
+            process.env['AF_TOKEN_BUDGET_STATE_PATH'] = previousPath;
+        }
+
+        if (previousLimit === undefined) {
+            delete process.env['AF_TOKEN_BUDGET_DAILY_LIMIT'];
+        } else {
+            process.env['AF_TOKEN_BUDGET_DAILY_LIMIT'] = previousLimit;
+        }
+
+        if (previousThreshold === undefined) {
+            delete process.env['AF_TOKEN_BUDGET_WARNING_THRESHOLD'];
+        } else {
+            process.env['AF_TOKEN_BUDGET_WARNING_THRESHOLD'] = previousThreshold;
+        }
+        rmSync(filePath, { force: true });
+    }
+};
+
 test.beforeEach(() => {
     resetProviderRoutingState();
 });
@@ -60,7 +93,7 @@ test.afterEach(() => {
     resetProviderRoutingState();
 });
 
-test('createLlmDecisionResolverFromConfig selects cost_balanced OpenAI model for low-risk tasks', async () => {
+test('createLlmDecisionResolverFromConfig selects speed_first OpenAI model for low-risk tasks', async () => {
     const originalFetch = globalThis.fetch;
     let calledModel: string | null = null;
 
@@ -88,8 +121,8 @@ test('createLlmDecisionResolverFromConfig selects cost_balanced OpenAI model for
                 api_key: 'sk-test',
                 model: 'gpt-4o-mini',
                 model_profiles: {
-                    cost_balanced: 'gpt-4.1-mini',
-                    speed_first: 'gpt-4o-mini',
+                    cost_balanced: 'gpt-4o-mini',
+                    speed_first: 'gpt-4.1-mini',
                     quality_first: 'gpt-4.1',
                 },
             },
@@ -103,7 +136,7 @@ test('createLlmDecisionResolverFromConfig selects cost_balanced OpenAI model for
 
         assert.equal(calledModel, 'gpt-4.1-mini');
         assert.equal(result.metadata.model, 'gpt-4.1-mini');
-        assert.equal(result.metadata.modelProfile, 'cost_balanced');
+        assert.equal(result.metadata.modelProfile, 'speed_first');
     } finally {
         globalThis.fetch = originalFetch;
     }
@@ -257,7 +290,7 @@ test('createLlmDecisionResolverFromConfig supports github_models provider', asyn
                 base_url: 'https://models.inference.ai.azure.com',
                 model: 'openai/gpt-4.1-mini',
                 model_profiles: {
-                    cost_balanced: 'openai/gpt-4.1-mini',
+                    speed_first: 'openai/gpt-4.1-mini',
                     quality_first: 'openai/gpt-4.1',
                 },
             },
@@ -272,7 +305,7 @@ test('createLlmDecisionResolverFromConfig supports github_models provider', asyn
         assert.match(calledUrl, /models\.inference\.ai\.azure\.com\/chat\/completions/);
         assert.equal(calledModel, 'openai/gpt-4.1-mini');
         assert.equal(result.metadata.modelProvider, 'github_models');
-        assert.equal(result.metadata.modelProfile, 'cost_balanced');
+        assert.equal(result.metadata.modelProfile, 'speed_first');
     } finally {
         globalThis.fetch = originalFetch;
     }
@@ -350,7 +383,7 @@ test('createLlmDecisionResolverFromConfig supports google provider', async () =>
                 api_key: 'google-key',
                 model: 'gemini-1.5-flash',
                 model_profiles: {
-                    cost_balanced: 'gemini-1.5-flash',
+                    speed_first: 'gemini-1.5-flash',
                 },
             },
         });
@@ -363,7 +396,7 @@ test('createLlmDecisionResolverFromConfig supports google provider', async () =>
 
         assert.match(calledUrl, /generativelanguage\.googleapis\.com\/v1beta\/models\//);
         assert.equal(result.metadata.modelProvider, 'google');
-        assert.equal(result.metadata.modelProfile, 'cost_balanced');
+        assert.equal(result.metadata.modelProfile, 'speed_first');
     } finally {
         globalThis.fetch = originalFetch;
     }
@@ -407,7 +440,7 @@ test('createLlmDecisionResolverFromConfig auto mode falls back to next configure
             },
             auto: {
                 profile_providers: {
-                    cost_balanced: ['github_models', 'openai'],
+                    speed_first: ['github_models', 'openai'],
                 },
             },
         });
@@ -469,7 +502,7 @@ test('createLlmDecisionResolverFromConfig auto mode falls back from anthropic to
             },
             auto: {
                 profile_providers: {
-                    cost_balanced: ['anthropic', 'google'],
+                    speed_first: ['anthropic', 'google'],
                 },
             },
         });
@@ -514,7 +547,7 @@ test('createLlmDecisionResolverFromConfig supports xai provider', async () => {
             xai: {
                 api_key: 'xai-key',
                 model: 'grok-beta',
-                model_profiles: { cost_balanced: 'grok-beta' },
+                model_profiles: { speed_first: 'grok-beta' },
             },
         });
 
@@ -527,7 +560,7 @@ test('createLlmDecisionResolverFromConfig supports xai provider', async () => {
         assert.match(calledUrl, /api\.x\.ai\/v1\/chat\/completions/);
         assert.equal(calledModel, 'grok-beta');
         assert.equal(result.metadata.modelProvider, 'xai');
-        assert.equal(result.metadata.modelProfile, 'cost_balanced');
+        assert.equal(result.metadata.modelProfile, 'speed_first');
     } finally {
         globalThis.fetch = originalFetch;
     }
@@ -571,7 +604,7 @@ test('createLlmDecisionResolverFromConfig supports mistral provider', async () =
         assert.match(calledUrl, /api\.mistral\.ai\/v1\/chat\/completions/);
         assert.equal(calledModel, 'mistral-small-latest');
         assert.equal(result.metadata.modelProvider, 'mistral');
-        assert.equal(result.metadata.modelProfile, 'cost_balanced');
+        assert.equal(result.metadata.modelProfile, 'speed_first');
     } finally {
         globalThis.fetch = originalFetch;
     }
@@ -614,7 +647,7 @@ test('createLlmDecisionResolverFromConfig supports together provider', async () 
         assert.match(calledUrl, /api\.together\.xyz\/v1\/chat\/completions/);
         assert.equal(calledModel, 'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo');
         assert.equal(result.metadata.modelProvider, 'together');
-        assert.equal(result.metadata.modelProfile, 'cost_balanced');
+        assert.equal(result.metadata.modelProfile, 'speed_first');
     } finally {
         globalThis.fetch = originalFetch;
     }
@@ -648,7 +681,7 @@ test('createLlmDecisionResolverFromConfig auto mode falls back from mistral to t
             together: { api_key: 'together-key', model: 'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo' },
             auto: {
                 profile_providers: {
-                    cost_balanced: ['mistral', 'together'],
+                    speed_first: ['mistral', 'together'],
                 },
             },
         });
@@ -702,7 +735,7 @@ test('health scoring: failed provider gets deprioritized in subsequent auto call
             mistral: { api_key: 'mistral-key', model: 'mistral-small-latest' },
             auto: {
                 profile_providers: {
-                    cost_balanced: ['xai', 'mistral'],
+                    speed_first: ['xai', 'mistral'],
                 },
             },
         });
@@ -754,7 +787,7 @@ test('auto mode persists cooldown windows and records skipped cooldown reason on
                 openai: { api_key: 'sk-test', model: 'gpt-4o-mini' },
                 auto: {
                     profile_providers: {
-                        cost_balanced: ['xai', 'openai'],
+                        speed_first: ['xai', 'openai'],
                     },
                 },
             });
@@ -780,7 +813,7 @@ test('auto mode persists cooldown windows and records skipped cooldown reason on
                 openai: { api_key: 'sk-test', model: 'gpt-4o-mini' },
                 auto: {
                     profile_providers: {
-                        cost_balanced: ['xai', 'openai'],
+                        speed_first: ['xai', 'openai'],
                     },
                 },
             });
@@ -798,6 +831,98 @@ test('auto mode persists cooldown windows and records skipped cooldown reason on
             assert.equal(secondResult.metadata.failoverTrace?.[0]?.reasonCode, 'rate_limit');
             assert.equal(secondResult.metadata.failoverTrace?.[0]?.disposition, 'skipped_cooldown');
             assert.ok(secondResult.metadata.failoverTrace?.[0]?.cooldownUntil);
+        } finally {
+            globalThis.fetch = originalFetch;
+        }
+    });
+});
+
+test('token budget guard emits warning payload override near limit', async () => {
+    await withTokenBudgetStatePath('warning', async (filePath) => {
+        const originalFetch = globalThis.fetch;
+
+        writeFileSync(filePath, JSON.stringify({
+            version: 1,
+            byScope: {
+                'default-tenant:ws-budget-warning:default-bot': {
+                    day: new Date().toISOString().slice(0, 10),
+                    consumedTokens: 85,
+                    updatedAt: new Date().toISOString(),
+                },
+            },
+        }));
+
+        globalThis.fetch = (async (_url: string | URL | Request, _init?: RequestInit) => new Response(JSON.stringify({
+            choices: [{ message: { content: JSON.stringify(lowRiskDecision) } }],
+            usage: { prompt_tokens: 70, completion_tokens: 20, total_tokens: 90 },
+        }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+        })) as typeof fetch;
+
+        try {
+            const resolver = createLlmDecisionResolverFromConfig({
+                provider: 'openai',
+                openai: {
+                    api_key: 'sk-test',
+                    model: 'gpt-4o-mini',
+                },
+            });
+
+            assert.ok(resolver);
+            const result = await resolver!({
+                task: makeTask({ action_type: 'read_task', workspace_key: 'ws-budget-warning' }, 'task-budget-warning'),
+                heuristicDecision: lowRiskDecision,
+            });
+
+            assert.equal(result.payloadOverrides?.['_budget_decision'], 'warning');
+            assert.equal(result.payloadOverrides?.['_budget_limit_type'], 'daily_token_limit');
+        } finally {
+            globalThis.fetch = originalFetch;
+        }
+    });
+});
+
+test('token budget guard hard-stops and routes to approval when exhausted', async () => {
+    await withTokenBudgetStatePath('deny', async (filePath) => {
+        const originalFetch = globalThis.fetch;
+        let fetchCalled = false;
+
+        writeFileSync(filePath, JSON.stringify({
+            version: 1,
+            byScope: {
+                'default-tenant:ws-budget-deny:default-bot': {
+                    day: new Date().toISOString().slice(0, 10),
+                    consumedTokens: 100,
+                    updatedAt: new Date().toISOString(),
+                },
+            },
+        }));
+
+        globalThis.fetch = (async (_url: string | URL | Request, _init?: RequestInit) => {
+            fetchCalled = true;
+            return new Response('{}', { status: 500 });
+        }) as typeof fetch;
+
+        try {
+            const resolver = createLlmDecisionResolverFromConfig({
+                provider: 'openai',
+                openai: {
+                    api_key: 'sk-test',
+                    model: 'gpt-4o-mini',
+                },
+            });
+
+            assert.ok(resolver);
+            const result = await resolver!({
+                task: makeTask({ action_type: 'read_task', workspace_key: 'ws-budget-deny' }, 'task-budget-deny'),
+                heuristicDecision: lowRiskDecision,
+            });
+
+            assert.equal(fetchCalled, false);
+            assert.equal(result.decision.route, 'approval');
+            assert.equal(result.payloadOverrides?.['_budget_decision'], 'denied');
+            assert.equal(result.metadata.fallbackReason, 'token_budget_exhausted');
         } finally {
             globalThis.fetch = originalFetch;
         }

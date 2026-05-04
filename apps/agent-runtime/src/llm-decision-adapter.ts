@@ -9,6 +9,7 @@ import {
     type LlmDecisionResolver,
     type TaskEnvelope,
 } from './execution-engine.js';
+import { getTaskIntelligenceContext } from './task-intelligence-memory.js';
 
 type DecisionRoute = 'execute' | 'approval';
 
@@ -114,6 +115,18 @@ const DEFAULT_TOGETHER_MODEL = 'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo';
 const DEFAULT_AZURE_OPENAI_API_VERSION = '2024-06-01';
 const DEFAULT_TIMEOUT_MS = 5_000;
 const DEFAULT_COOLDOWN_STATE_PATH = '.agent-runtime/provider-cooldowns.json';
+const DEFAULT_TOKEN_BUDGET_STATE_PATH = '.agent-runtime/token-budget-state.json';
+
+type TaskComplexity = 'simple' | 'moderate' | 'complex';
+
+type TokenBudgetState = {
+    version: 1;
+    byScope: Record<string, {
+        day: string;
+        consumedTokens: number;
+        updatedAt: string;
+    }>;
+};
 
 type PersistedCooldownState = {
     version: 1;
@@ -398,6 +411,111 @@ const clamp01 = (value: number): number => {
     return Number(value.toFixed(2));
 };
 
+const toWorkspaceKey = (task: TaskEnvelope): string => {
+    const direct = task.payload['workspace_key'];
+    if (typeof direct === 'string' && direct.trim()) {
+        return direct.trim();
+    }
+    const workspaceId = task.payload['workspace_id'];
+    if (typeof workspaceId === 'string' && workspaceId.trim()) {
+        return workspaceId.trim();
+    }
+    return 'default';
+};
+
+const estimatePromptLength = (task: TaskEnvelope): number => {
+    const prompt = task.payload['prompt'];
+    const summary = task.payload['summary'];
+    const objective = task.payload['objective'];
+    const joined = [prompt, summary, objective]
+        .filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+        .join(' ');
+    return joined.length;
+};
+
+export const evaluateTaskComplexity = (
+    task: TaskEnvelope,
+    heuristicDecision: ActionDecision,
+): { complexity: TaskComplexity; reasons: string[] } => {
+    const reasons: string[] = [];
+    let score = 0;
+
+    const actionType = heuristicDecision.actionType;
+    const readOnlyActions = new Set([
+        'read_task',
+        'code_read',
+        'workspace_read_file',
+        'workspace_list_files',
+        'workspace_grep',
+        'workspace_scout',
+    ]);
+    const highImpactActions = new Set([
+        'workspace_subagent_spawn',
+        'deploy_production',
+        'git_push',
+        'run_shell_command',
+        'workspace_run_ci_checks',
+        'workspace_create_pr',
+    ]);
+
+    if (highImpactActions.has(actionType) || actionType.includes('deploy') || actionType.includes('provision')) {
+        score += 3;
+        reasons.push('high_impact_action');
+    } else if (readOnlyActions.has(actionType)) {
+        score -= 1;
+        reasons.push('read_only_action');
+    } else {
+        score += 1;
+        reasons.push('mutating_action');
+    }
+
+    if (heuristicDecision.riskLevel === 'high') {
+        score += 3;
+        reasons.push('high_risk');
+    } else if (heuristicDecision.riskLevel === 'medium') {
+        score += 1;
+        reasons.push('medium_risk');
+    }
+
+    const complexityHint = typeof task.payload['complexity'] === 'string'
+        ? task.payload['complexity'].trim().toLowerCase()
+        : '';
+    if (complexityHint === 'high' || complexityHint === 'complex') {
+        score += 3;
+        reasons.push('complexity_hint_high');
+    }
+    if (complexityHint === 'low' || complexityHint === 'simple') {
+        score -= 1;
+        reasons.push('complexity_hint_low');
+    }
+
+    const promptLength = estimatePromptLength(task);
+    if (promptLength > 2_000) {
+        score += 2;
+        reasons.push('large_prompt');
+    }
+
+    const planDepth = Array.isArray(task.payload['initial_plan']) ? task.payload['initial_plan'].length : 0;
+    if (planDepth > 3) {
+        score += 2;
+        reasons.push('deep_plan');
+    }
+
+    const retryAttempt = task.payload['retry_attempt'];
+    if (typeof retryAttempt === 'number' && retryAttempt > 0) {
+        score += 2;
+        reasons.push('retry_attempt');
+    }
+
+    if (score >= 5) {
+        return { complexity: 'complex', reasons };
+    }
+    if (score >= 2) {
+        return { complexity: 'moderate', reasons };
+    }
+    return { complexity: 'simple', reasons };
+};
+
 const readEnv = (env: NodeJS.ProcessEnv, primary: string, fallback: string): string | undefined => {
     return env[primary] ?? env[fallback];
 };
@@ -596,6 +714,13 @@ const parseAndValidateDecision = (raw: string, fallback: ActionDecision): Parsed
 };
 
 const createTaskPrompt = (task: TaskEnvelope, heuristicDecision: ActionDecision): string => {
+    const workspaceKey = toWorkspaceKey(task);
+    const complexity = evaluateTaskComplexity(task, heuristicDecision);
+    const intelligence = getTaskIntelligenceContext({
+        workspaceKey,
+        actionType: heuristicDecision.actionType,
+    });
+
     return JSON.stringify(
         {
             objective: 'Classify AgentFarm task for action type, confidence, risk and route.',
@@ -622,6 +747,9 @@ const createTaskPrompt = (task: TaskEnvelope, heuristicDecision: ActionDecision)
                 'When choosing workspace_subagent_spawn, include payloadOverrides.initial_plan and payloadOverrides.fix_attempts whenever you can propose a bounded verification-first plan.',
                 'Only use action steps from this set: code_edit, code_edit_patch, run_tests, run_build.',
             ],
+            taskComplexity: complexity,
+            workspaceConventions: intelligence.conventionHints,
+            trajectoryHints: intelligence.trajectoryHints,
             task,
             heuristicDecision,
         },
@@ -812,19 +940,183 @@ const parseModelProfile = (value: string | undefined): ModelProfileKey | null =>
 };
 
 const pickModelProfile = (task: TaskEnvelope, heuristicDecision: ActionDecision): ModelProfileKey => {
-    const complexity = typeof task.payload['complexity'] === 'string'
-        ? task.payload['complexity'].trim().toLowerCase()
-        : null;
+    const profileOverride = parseModelProfile(
+        typeof task.payload['model_profile'] === 'string' ? task.payload['model_profile'] : undefined,
+    );
+    if (profileOverride) {
+        return profileOverride;
+    }
 
-    if (heuristicDecision.riskLevel === 'high' || complexity === 'high') {
+    const complexity = evaluateTaskComplexity(task, heuristicDecision).complexity;
+    if (complexity === 'complex') {
         return 'quality_first';
     }
-
-    if (heuristicDecision.riskLevel === 'medium' || complexity === 'medium') {
+    if (complexity === 'simple') {
         return 'speed_first';
     }
-
     return 'cost_balanced';
+};
+
+const getTokenBudgetStatePath = (): string => {
+    const configured = process.env['AF_TOKEN_BUDGET_STATE_PATH'] ?? process.env['AGENTFARM_TOKEN_BUDGET_STATE_PATH'];
+    return resolve(configured?.trim() || DEFAULT_TOKEN_BUDGET_STATE_PATH);
+};
+
+const readTokenBudgetState = (): TokenBudgetState => {
+    const statePath = getTokenBudgetStatePath();
+    if (!existsSync(statePath)) {
+        return { version: 1, byScope: {} };
+    }
+
+    try {
+        const parsed = JSON.parse(readFileSync(statePath, 'utf8')) as TokenBudgetState;
+        return {
+            version: 1,
+            byScope: parsed.byScope ?? {},
+        };
+    } catch {
+        return { version: 1, byScope: {} };
+    }
+};
+
+const writeTokenBudgetState = (state: TokenBudgetState): void => {
+    const statePath = getTokenBudgetStatePath();
+    mkdirSync(dirname(statePath), { recursive: true });
+    writeFileSync(statePath, JSON.stringify(state, null, 2));
+};
+
+const getDailyTokenLimit = (): number => {
+    const raw = process.env['AF_TOKEN_BUDGET_DAILY_LIMIT'] ?? process.env['AGENTFARM_TOKEN_BUDGET_DAILY_LIMIT'];
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+        return 0;
+    }
+    return Math.floor(parsed);
+};
+
+const getWarningThreshold = (): number => {
+    const raw = process.env['AF_TOKEN_BUDGET_WARNING_THRESHOLD'] ?? process.env['AGENTFARM_TOKEN_BUDGET_WARNING_THRESHOLD'];
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed) || parsed <= 0 || parsed >= 1) {
+        return 0.8;
+    }
+    return parsed;
+};
+
+const buildBudgetScope = (task: TaskEnvelope): string => {
+    const tenant = typeof task.payload['tenant_id'] === 'string' ? task.payload['tenant_id'].trim() : 'default-tenant';
+    const workspace = toWorkspaceKey(task);
+    const bot = typeof task.payload['bot_id'] === 'string' ? task.payload['bot_id'].trim() : 'default-bot';
+    return `${tenant}:${workspace}:${bot}`;
+};
+
+const evaluateTokenBudget = (scope: string): {
+    denied: boolean;
+    warning: boolean;
+    limit: number;
+    consumed: number;
+} => {
+    const limit = getDailyTokenLimit();
+    if (limit <= 0) {
+        return {
+            denied: false,
+            warning: false,
+            limit: 0,
+            consumed: 0,
+        };
+    }
+
+    const day = new Date().toISOString().slice(0, 10);
+    const state = readTokenBudgetState();
+    const entry = state.byScope[scope];
+    const consumed = entry && entry.day === day ? entry.consumedTokens : 0;
+    const warning = consumed >= Math.floor(limit * getWarningThreshold());
+
+    return {
+        denied: consumed >= limit,
+        warning,
+        limit,
+        consumed,
+    };
+};
+
+const consumeTokenBudget = (scope: string, tokenCount: number): void => {
+    if (!Number.isFinite(tokenCount) || tokenCount <= 0) {
+        return;
+    }
+
+    const limit = getDailyTokenLimit();
+    if (limit <= 0) {
+        return;
+    }
+
+    const day = new Date().toISOString().slice(0, 10);
+    const state = readTokenBudgetState();
+    const existing = state.byScope[scope];
+    const consumed = existing && existing.day === day ? existing.consumedTokens : 0;
+    state.byScope[scope] = {
+        day,
+        consumedTokens: consumed + tokenCount,
+        updatedAt: new Date().toISOString(),
+    };
+    writeTokenBudgetState(state);
+};
+
+const withTokenBudgetGuard = (
+    resolver: LlmDecisionResolver,
+): LlmDecisionResolver => {
+    return async ({ task, heuristicDecision }) => {
+        const scope = buildBudgetScope(task);
+        const budget = evaluateTokenBudget(scope);
+
+        if (budget.denied) {
+            return {
+                decision: {
+                    ...heuristicDecision,
+                    route: 'approval',
+                    reason: `Token budget exhausted for scope ${scope}.`,
+                },
+                payloadOverrides: {
+                    _budget_decision: 'denied',
+                    _budget_denial_reason: 'token_budget_exhausted',
+                    _budget_limit_scope: scope,
+                    _budget_limit_type: 'daily_token_limit',
+                },
+                metadata: {
+                    modelProvider: 'budget_guard',
+                    model: null,
+                    modelProfile: 'speed_first',
+                    promptTokens: null,
+                    completionTokens: null,
+                    totalTokens: null,
+                    fallbackReason: 'token_budget_exhausted',
+                },
+            };
+        }
+
+        const result = await resolver({ task, heuristicDecision });
+        if (typeof result.metadata.totalTokens === 'number' && result.metadata.totalTokens > 0) {
+            consumeTokenBudget(scope, result.metadata.totalTokens);
+        }
+
+        if (budget.warning) {
+            return {
+                ...result,
+                payloadOverrides: {
+                    ...result.payloadOverrides,
+                    _budget_decision: 'warning',
+                    _budget_limit_scope: scope,
+                    _budget_limit_type: 'daily_token_limit',
+                },
+                metadata: {
+                    ...result.metadata,
+                    fallbackReason: result.metadata.fallbackReason ?? 'token_budget_warning',
+                },
+            };
+        }
+
+        return result;
+    };
 };
 
 const resolveProfileTarget = (
@@ -1428,13 +1720,13 @@ export const createLlmDecisionResolverFromConfig = (
             return undefined;
         }
 
-        return createOpenAiResolver({
+        return withTokenBudgetGuard(createOpenAiResolver({
             apiKey,
             baseUrl: config.openai?.base_url ?? DEFAULT_OPENAI_BASE_URL,
             model: config.openai?.model ?? DEFAULT_OPENAI_MODEL,
             modelProfiles: config.openai?.model_profiles,
             timeoutMs,
-        });
+        }));
     }
 
     if (config.provider === 'azure_openai') {
@@ -1445,14 +1737,14 @@ export const createLlmDecisionResolverFromConfig = (
             return undefined;
         }
 
-        return createAzureOpenAiResolver({
+        return withTokenBudgetGuard(createAzureOpenAiResolver({
             endpoint,
             apiKey,
             deployment,
             deploymentProfiles: config.azure_openai?.deployment_profiles,
             apiVersion: config.azure_openai?.api_version ?? DEFAULT_AZURE_OPENAI_API_VERSION,
             timeoutMs,
-        });
+        }));
     }
 
     if (config.provider === 'github_models') {
@@ -1461,13 +1753,13 @@ export const createLlmDecisionResolverFromConfig = (
             return undefined;
         }
 
-        return createGitHubModelsResolver({
+        return withTokenBudgetGuard(createGitHubModelsResolver({
             apiKey,
             baseUrl: config.github_models?.base_url ?? DEFAULT_GITHUB_MODELS_BASE_URL,
             model: config.github_models?.model ?? 'openai/gpt-4.1-mini',
             modelProfiles: config.github_models?.model_profiles,
             timeoutMs,
-        });
+        }));
     }
 
     if (config.provider === 'anthropic') {
@@ -1476,14 +1768,14 @@ export const createLlmDecisionResolverFromConfig = (
             return undefined;
         }
 
-        return createAnthropicResolver({
+        return withTokenBudgetGuard(createAnthropicResolver({
             apiKey,
             baseUrl: config.anthropic?.base_url ?? DEFAULT_ANTHROPIC_BASE_URL,
             model: config.anthropic?.model ?? DEFAULT_ANTHROPIC_MODEL,
             modelProfiles: config.anthropic?.model_profiles,
             timeoutMs,
             apiVersion: config.anthropic?.api_version ?? DEFAULT_ANTHROPIC_API_VERSION,
-        });
+        }));
     }
 
     if (config.provider === 'xai') {
@@ -1492,13 +1784,13 @@ export const createLlmDecisionResolverFromConfig = (
             return undefined;
         }
 
-        return createXaiResolver({
+        return withTokenBudgetGuard(createXaiResolver({
             apiKey,
             baseUrl: config.xai?.base_url ?? DEFAULT_XAI_BASE_URL,
             model: config.xai?.model ?? DEFAULT_XAI_MODEL,
             modelProfiles: config.xai?.model_profiles,
             timeoutMs,
-        });
+        }));
     }
 
     if (config.provider === 'mistral') {
@@ -1507,13 +1799,13 @@ export const createLlmDecisionResolverFromConfig = (
             return undefined;
         }
 
-        return createMistralResolver({
+        return withTokenBudgetGuard(createMistralResolver({
             apiKey,
             baseUrl: config.mistral?.base_url ?? DEFAULT_MISTRAL_BASE_URL,
             model: config.mistral?.model ?? DEFAULT_MISTRAL_MODEL,
             modelProfiles: config.mistral?.model_profiles,
             timeoutMs,
-        });
+        }));
     }
 
     if (config.provider === 'together') {
@@ -1522,13 +1814,13 @@ export const createLlmDecisionResolverFromConfig = (
             return undefined;
         }
 
-        return createTogetherResolver({
+        return withTokenBudgetGuard(createTogetherResolver({
             apiKey,
             baseUrl: config.together?.base_url ?? DEFAULT_TOGETHER_BASE_URL,
             model: config.together?.model ?? DEFAULT_TOGETHER_MODEL,
             modelProfiles: config.together?.model_profiles,
             timeoutMs,
-        });
+        }));
     }
 
     if (config.provider === 'google') {
@@ -1537,17 +1829,17 @@ export const createLlmDecisionResolverFromConfig = (
             return undefined;
         }
 
-        return createGoogleResolver({
+        return withTokenBudgetGuard(createGoogleResolver({
             apiKey,
             baseUrl: config.google?.base_url ?? DEFAULT_GOOGLE_BASE_URL,
             model: config.google?.model ?? DEFAULT_GOOGLE_MODEL,
             modelProfiles: config.google?.model_profiles,
             timeoutMs,
-        });
+        }));
     }
 
     if (config.provider === 'auto') {
-        return createAutoResolver({
+        const autoResolver = createAutoResolver({
             timeoutMs,
             openai: config.openai,
             azureOpenai: config.azure_openai,
@@ -1559,6 +1851,7 @@ export const createLlmDecisionResolverFromConfig = (
             together: config.together,
             profileProviders: config.auto?.profile_providers,
         });
+        return autoResolver ? withTokenBudgetGuard(autoResolver) : undefined;
     }
 
     return undefined;
@@ -1607,13 +1900,13 @@ export const createLlmDecisionResolver = (env: NodeJS.ProcessEnv): LlmDecisionRe
             modelProfiles[profileOverride] = model;
         }
 
-        return createOpenAiResolver({
+        return withTokenBudgetGuard(createOpenAiResolver({
             apiKey,
             baseUrl,
             model,
             modelProfiles,
             timeoutMs,
-        });
+        }));
     }
 
     if (provider === 'github_models') {
@@ -1632,13 +1925,13 @@ export const createLlmDecisionResolver = (env: NodeJS.ProcessEnv): LlmDecisionRe
                 readEnv(env, 'AF_GITHUB_MODELS_MODEL_CUSTOM', 'AGENTFARM_GITHUB_MODELS_MODEL_CUSTOM'),
         };
 
-        return createGitHubModelsResolver({
+        return withTokenBudgetGuard(createGitHubModelsResolver({
             apiKey: githubApiKey,
             baseUrl: githubBaseUrl,
             model: githubModel,
             modelProfiles: githubModelProfiles,
             timeoutMs,
-        });
+        }));
     }
 
     if (provider === 'anthropic') {
@@ -1647,7 +1940,7 @@ export const createLlmDecisionResolver = (env: NodeJS.ProcessEnv): LlmDecisionRe
             return undefined;
         }
 
-        return createAnthropicResolver({
+        return withTokenBudgetGuard(createAnthropicResolver({
             apiKey: anthropicApiKey,
             baseUrl: readEnv(env, 'AF_ANTHROPIC_BASE_URL', 'AGENTFARM_ANTHROPIC_BASE_URL') ?? DEFAULT_ANTHROPIC_BASE_URL,
             model: readEnv(env, 'AF_ANTHROPIC_MODEL', 'AGENTFARM_ANTHROPIC_MODEL') ?? DEFAULT_ANTHROPIC_MODEL,
@@ -1659,7 +1952,7 @@ export const createLlmDecisionResolver = (env: NodeJS.ProcessEnv): LlmDecisionRe
             },
             timeoutMs,
             apiVersion: readEnv(env, 'AF_ANTHROPIC_API_VERSION', 'AGENTFARM_ANTHROPIC_API_VERSION') ?? DEFAULT_ANTHROPIC_API_VERSION,
-        });
+        }));
     }
 
     if (provider === 'google') {
@@ -1668,7 +1961,7 @@ export const createLlmDecisionResolver = (env: NodeJS.ProcessEnv): LlmDecisionRe
             return undefined;
         }
 
-        return createGoogleResolver({
+        return withTokenBudgetGuard(createGoogleResolver({
             apiKey: googleApiKey,
             baseUrl: readEnv(env, 'AF_GOOGLE_BASE_URL', 'AGENTFARM_GOOGLE_BASE_URL') ?? DEFAULT_GOOGLE_BASE_URL,
             model: readEnv(env, 'AF_GOOGLE_MODEL', 'AGENTFARM_GOOGLE_MODEL') ?? DEFAULT_GOOGLE_MODEL,
@@ -1679,7 +1972,7 @@ export const createLlmDecisionResolver = (env: NodeJS.ProcessEnv): LlmDecisionRe
                 custom: readEnv(env, 'AF_GOOGLE_MODEL_CUSTOM', 'AGENTFARM_GOOGLE_MODEL_CUSTOM'),
             },
             timeoutMs,
-        });
+        }));
     }
 
     if (provider === 'xai') {
@@ -1688,7 +1981,7 @@ export const createLlmDecisionResolver = (env: NodeJS.ProcessEnv): LlmDecisionRe
             return undefined;
         }
 
-        return createXaiResolver({
+        return withTokenBudgetGuard(createXaiResolver({
             apiKey: xaiApiKey,
             baseUrl: readEnv(env, 'AF_XAI_BASE_URL', 'AGENTFARM_XAI_BASE_URL') ?? DEFAULT_XAI_BASE_URL,
             model: readEnv(env, 'AF_XAI_MODEL', 'AGENTFARM_XAI_MODEL') ?? DEFAULT_XAI_MODEL,
@@ -1699,7 +1992,7 @@ export const createLlmDecisionResolver = (env: NodeJS.ProcessEnv): LlmDecisionRe
                 custom: readEnv(env, 'AF_XAI_MODEL_CUSTOM', 'AGENTFARM_XAI_MODEL_CUSTOM'),
             },
             timeoutMs,
-        });
+        }));
     }
 
     if (provider === 'mistral') {
@@ -1708,7 +2001,7 @@ export const createLlmDecisionResolver = (env: NodeJS.ProcessEnv): LlmDecisionRe
             return undefined;
         }
 
-        return createMistralResolver({
+        return withTokenBudgetGuard(createMistralResolver({
             apiKey: mistralApiKey,
             baseUrl: readEnv(env, 'AF_MISTRAL_BASE_URL', 'AGENTFARM_MISTRAL_BASE_URL') ?? DEFAULT_MISTRAL_BASE_URL,
             model: readEnv(env, 'AF_MISTRAL_MODEL', 'AGENTFARM_MISTRAL_MODEL') ?? DEFAULT_MISTRAL_MODEL,
@@ -1719,7 +2012,7 @@ export const createLlmDecisionResolver = (env: NodeJS.ProcessEnv): LlmDecisionRe
                 custom: readEnv(env, 'AF_MISTRAL_MODEL_CUSTOM', 'AGENTFARM_MISTRAL_MODEL_CUSTOM'),
             },
             timeoutMs,
-        });
+        }));
     }
 
     if (provider === 'together') {
@@ -1728,7 +2021,7 @@ export const createLlmDecisionResolver = (env: NodeJS.ProcessEnv): LlmDecisionRe
             return undefined;
         }
 
-        return createTogetherResolver({
+        return withTokenBudgetGuard(createTogetherResolver({
             apiKey: togetherApiKey,
             baseUrl: readEnv(env, 'AF_TOGETHER_BASE_URL', 'AGENTFARM_TOGETHER_BASE_URL') ?? DEFAULT_TOGETHER_BASE_URL,
             model: readEnv(env, 'AF_TOGETHER_MODEL', 'AGENTFARM_TOGETHER_MODEL') ?? DEFAULT_TOGETHER_MODEL,
@@ -1739,7 +2032,7 @@ export const createLlmDecisionResolver = (env: NodeJS.ProcessEnv): LlmDecisionRe
                 custom: readEnv(env, 'AF_TOGETHER_MODEL_CUSTOM', 'AGENTFARM_TOGETHER_MODEL_CUSTOM'),
             },
             timeoutMs,
-        });
+        }));
     }
 
     const azureEndpoint = readEnv(env, 'AF_AZURE_OPENAI_ENDPOINT', 'AGENTFARM_AZURE_OPENAI_ENDPOINT');
@@ -1780,7 +2073,7 @@ export const createLlmDecisionResolver = (env: NodeJS.ProcessEnv): LlmDecisionRe
             custom: normalizeAutoProviders((readEnv(env, 'AF_AUTO_PROVIDERS_CUSTOM', 'AGENTFARM_AUTO_PROVIDERS_CUSTOM') ?? '').split(',').map((entry) => entry.trim()).filter(Boolean)),
         };
 
-        return createAutoResolver({
+        const autoResolver = createAutoResolver({
             timeoutMs,
             openai: {
                 api_key: readEnv(env, 'AF_OPENAI_API_KEY', 'AGENTFARM_OPENAI_API_KEY'),
@@ -1869,18 +2162,19 @@ export const createLlmDecisionResolver = (env: NodeJS.ProcessEnv): LlmDecisionRe
             },
             profileProviders: autoProfiles,
         });
+        return autoResolver ? withTokenBudgetGuard(autoResolver) : undefined;
     }
 
     if (!azureEndpoint || !azureKey || !azureDeployment) {
         return undefined;
     }
 
-    return createAzureOpenAiResolver({
+    return withTokenBudgetGuard(createAzureOpenAiResolver({
         endpoint: azureEndpoint,
         apiKey: azureKey,
         deployment: azureDeployment,
         deploymentProfiles,
         apiVersion: azureApiVersion,
         timeoutMs,
-    });
+    }));
 };

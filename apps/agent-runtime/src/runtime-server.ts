@@ -1,5 +1,7 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import { createHash } from 'crypto';
+import { readdirSync, statSync } from 'fs';
+import { extname, join } from 'path';
 import type {
     BotBrainConfig,
     BotCapabilitySnapshotRecord,
@@ -34,6 +36,7 @@ import {
     LOCAL_WORKSPACE_ACTION_TYPES,
     type LocalWorkspaceActionType,
 } from './local-workspace-executor.js';
+import { recordTaskIntelligence } from './task-intelligence-memory.js';
 
 type RuntimeState =
     | 'created'
@@ -161,6 +164,7 @@ type RuntimeServerOptions = {
     killGraceMs?: number;
     approvalEscalationMs?: number;
     heartbeatIntervalMs?: number;
+    backgroundWorkerIntervalMs?: number;
     maxRuntimeLogs?: number;
     now?: () => number;
     closeOnKill?: boolean;
@@ -217,6 +221,7 @@ type PendingApprovalTask = {
     executionPayload: Record<string, unknown>;
     payloadOverrideSource: PayloadOverrideSource;
     escalated: boolean;
+    slaRiskPredicted: boolean;
 };
 
 type DecisionCacheEntry = {
@@ -267,6 +272,14 @@ type HeartbeatLoop = {
     lastHeartbeatAt: string | null;
 };
 
+type BackgroundLoop = {
+    running: boolean;
+    handle: NodeJS.Timeout | null;
+    ticks: number;
+    failures: number;
+    lastRunAt: string | null;
+};
+
 type SnapshotObservabilityMetadata = {
     snapshot_source: CapabilitySnapshotSource;
     snapshot_version: number;
@@ -312,6 +325,8 @@ const DEFAULT_WORKER_POLL_MS = 250;
 const DEFAULT_KILL_GRACE_MS = 5_000;
 const DEFAULT_APPROVAL_ESCALATION_MS = 60 * 60 * 1000;
 const DEFAULT_HEARTBEAT_INTERVAL_MS = 30_000;
+const DEFAULT_BACKGROUND_WORKER_INTERVAL_MS = 60_000;
+const DEFAULT_APPROVAL_SLA_PREDICTION_MS = 300_000;
 const DEFAULT_MAX_RUNTIME_LOGS = 200;
 const DEFAULT_APPROVAL_INTAKE_MAX_ATTEMPTS = 3;
 const DEFAULT_APPROVAL_INTAKE_BACKOFF_MS = 200;
@@ -1545,6 +1560,8 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
     const now = options.now ?? (() => Date.now());
     const approvalEscalationMs = options.approvalEscalationMs ?? DEFAULT_APPROVAL_ESCALATION_MS;
     const heartbeatIntervalMs = options.heartbeatIntervalMs ?? DEFAULT_HEARTBEAT_INTERVAL_MS;
+    const backgroundWorkerIntervalMs =
+        options.backgroundWorkerIntervalMs ?? DEFAULT_BACKGROUND_WORKER_INTERVAL_MS;
     const maxRuntimeLogs = options.maxRuntimeLogs ?? DEFAULT_MAX_RUNTIME_LOGS;
     const approvalIntakeMaxAttempts =
         Math.max(1, options.approvalIntakeMaxAttempts ?? DEFAULT_APPROVAL_INTAKE_MAX_ATTEMPTS);
@@ -1718,6 +1735,14 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         lastHeartbeatAt: null,
     };
 
+    const backgroundLoop: BackgroundLoop = {
+        running: false,
+        handle: null,
+        ticks: 0,
+        failures: 0,
+        lastRunAt: null,
+    };
+
     const emitRuntimeEvent = (
         eventType: string,
         config: RuntimeConfig | null,
@@ -1829,6 +1854,76 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             clearInterval(heartbeatLoop.handle);
             heartbeatLoop.handle = null;
         }
+    };
+
+    const stopBackgroundLoop = (): void => {
+        backgroundLoop.running = false;
+        if (backgroundLoop.handle) {
+            clearInterval(backgroundLoop.handle);
+            backgroundLoop.handle = null;
+        }
+    };
+
+    const collectFiles = (root: string, out: string[]): void => {
+        let entries: string[] = [];
+        try {
+            entries = readdirSync(root);
+        } catch {
+            return;
+        }
+
+        for (const entry of entries) {
+            const fullPath = join(root, entry);
+            let isDirectory = false;
+            try {
+                isDirectory = statSync(fullPath).isDirectory();
+            } catch {
+                continue;
+            }
+
+            if (isDirectory) {
+                if (entry === 'node_modules' || entry === '.git' || entry === 'coverage' || entry === 'dist') {
+                    continue;
+                }
+                collectFiles(fullPath, out);
+                continue;
+            }
+
+            out.push(fullPath);
+        }
+    };
+
+    const computeWorkspaceTestGapSummary = (workspaceRoot: string): {
+        sourceFileCount: number;
+        testFileCount: number;
+        uncoveredSample: string[];
+    } => {
+        const files: string[] = [];
+        collectFiles(workspaceRoot, files);
+
+        const sourceFiles = files.filter((file) => {
+            const extension = extname(file);
+            return extension === '.ts' || extension === '.tsx';
+        }).filter((file) => !file.endsWith('.test.ts') && !file.endsWith('.spec.ts'));
+
+        const testBaseNames = new Set(
+            files
+                .filter((file) => file.endsWith('.test.ts') || file.endsWith('.spec.ts'))
+                .map((file) => file
+                    .replace(/\.test\.ts$/i, '')
+                    .replace(/\.spec\.ts$/i, '')
+                    .replace(/\\/g, '/')),
+        );
+
+        const uncovered = sourceFiles
+            .filter((file) => !testBaseNames.has(file.replace(/\.(ts|tsx)$/i, '').replace(/\\/g, '/')))
+            .slice(0, 10);
+
+        return {
+            sourceFileCount: sourceFiles.length,
+            testFileCount: testBaseNames.size,
+            uncoveredSample: uncovered,
+        };
     };
 
     const executeConnectorActionForTask = async (input: {
@@ -2211,6 +2306,18 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             payload_overrides_applied: result.payloadOverrideSource !== 'none',
         });
 
+        if (isBudgetDenied(executionTask)) {
+            workerLoop.failedTasks += 1;
+            await persistBudgetDenialRecord(executionTask, config);
+            await persistActionResultRecord(executionTask, config, {
+                ...result,
+                status: 'failed',
+                failureClass: 'runtime_exception',
+                errorMessage: 'Task blocked by token budget hard-stop.',
+            });
+            return;
+        }
+
         if (result.status === 'approval_required') {
             workerLoop.approvalQueuedTasks += 1;
             if (result.decision.riskLevel === 'medium' || result.decision.riskLevel === 'high') {
@@ -2247,6 +2354,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                     executionPayload: executionTask.payload,
                     payloadOverrideSource: result.payloadOverrideSource,
                     escalated: false,
+                    slaRiskPredicted: false,
                 };
 
                 const existingPendingIndex = workerLoop.pendingApprovals
@@ -2584,6 +2692,19 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         }).catch(() => {
             // Non-blocking: task execution record write failures do not affect task outcome
         });
+
+        const workspaceKey =
+            typeof task.payload['workspace_key'] === 'string' && task.payload['workspace_key'].trim()
+                ? task.payload['workspace_key'].trim()
+                : config.workspaceId;
+
+        recordTaskIntelligence({
+            workspaceKey,
+            actionType: result.decision.actionType,
+            riskLevel: result.decision.riskLevel,
+            status: result.status,
+            payload: task.payload,
+        });
     };
 
     const persistCancelledApprovalRecord = async (
@@ -2648,6 +2769,21 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
     const processApprovalEscalations = (config: RuntimeConfig): void => {
         const currentTime = now();
         for (const approval of workerLoop.pendingApprovals) {
+            if (!approval.slaRiskPredicted) {
+                const elapsedMs = currentTime - approval.enqueuedAt;
+                const projectedMs = elapsedMs + DEFAULT_APPROVAL_SLA_PREDICTION_MS;
+                if (projectedMs >= approvalEscalationMs) {
+                    approval.slaRiskPredicted = true;
+                    emitRuntimeEvent('runtime.approval_sla_risk_predicted', config, {
+                        task_id: approval.taskId,
+                        risk_level: approval.riskLevel,
+                        elapsed_ms: elapsedMs,
+                        projected_ms: projectedMs,
+                        escalation_threshold_ms: approvalEscalationMs,
+                    });
+                }
+            }
+
             if (approval.escalated) {
                 continue;
             }
@@ -2663,6 +2799,51 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 task_id: approval.taskId,
                 risk_level: approval.riskLevel,
                 wait_ms: elapsedMs,
+            });
+        }
+    };
+
+    const runBackgroundWorkerTick = (config: RuntimeConfig): void => {
+        backgroundLoop.ticks += 1;
+        backgroundLoop.lastRunAt = new Date(now()).toISOString();
+
+        try {
+            const driftDetected = capabilitySnapshotCache
+                ? capabilitySnapshotCache.roleKey !== config.roleKey
+                || capabilitySnapshotCache.policyPackVersion !== config.policyPackVersion
+                : false;
+            if (driftDetected) {
+                emitRuntimeEvent('runtime.background.connector_policy_drift_detected', config, {
+                    role_key: config.roleKey,
+                    snapshot_role_key: capabilitySnapshotCache?.roleKey ?? null,
+                    policy_pack_version: config.policyPackVersion,
+                    snapshot_policy_pack_version: capabilitySnapshotCache?.policyPackVersion ?? null,
+                });
+            }
+
+            const workspaceRoot = process.cwd();
+            const testGap = computeWorkspaceTestGapSummary(workspaceRoot);
+            emitRuntimeEvent('runtime.background.test_gap_scan', config, {
+                source_files: testGap.sourceFileCount,
+                test_files: testGap.testFileCount,
+                uncovered_sample: testGap.uncoveredSample,
+            });
+
+            emitRuntimeEvent('runtime.background.evidence_freshness_tick', config, {
+                pending_approvals: workerLoop.pendingApprovals.length,
+                transcripts_buffered: recentTranscripts.length,
+            });
+
+            emitRuntimeEvent('runtime.background.cost_burn_rate_tick', config, {
+                processed_tasks: workerLoop.processedTasks,
+                failed_tasks: workerLoop.failedTasks,
+                retried_attempts: workerLoop.retriedAttempts,
+            });
+        } catch (err: unknown) {
+            backgroundLoop.failures += 1;
+            emitRuntimeEvent('runtime.background.tick_failed', config, {
+                error_message: err instanceof Error ? err.message : String(err),
+                failures: backgroundLoop.failures,
             });
         }
     };
@@ -2839,6 +3020,27 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         });
     };
 
+    const startBackgroundLoop = (config: RuntimeConfig): void => {
+        if (backgroundLoop.running && backgroundLoop.handle) {
+            return;
+        }
+
+        backgroundLoop.running = true;
+        backgroundLoop.handle = setInterval(() => {
+            if (!backgroundLoop.running || killSwitchEngaged) {
+                return;
+            }
+            if (runtimeState !== 'active' && runtimeState !== 'degraded') {
+                return;
+            }
+            runBackgroundWorkerTick(config);
+        }, backgroundWorkerIntervalMs);
+
+        emitRuntimeEvent('runtime.background_loop_started', config, {
+            interval_ms: backgroundWorkerIntervalMs,
+        });
+    };
+
     const getReadiness = async (): Promise<{ ready: boolean; checks: Record<string, boolean> }> => {
         try {
             const config = configCache ?? buildConfig(env);
@@ -2881,9 +3083,13 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             startup_attempts: startupAttempts,
             worker_loop_running: workerLoop.running,
             heartbeat_loop_running: heartbeatLoop.running,
+            background_loop_running: backgroundLoop.running,
             heartbeat_sent: heartbeatLoop.sent,
             heartbeat_failed: heartbeatLoop.failed,
             last_heartbeat_at: heartbeatLoop.lastHeartbeatAt,
+            background_ticks: backgroundLoop.ticks,
+            background_failures: backgroundLoop.failures,
+            background_last_run_at: backgroundLoop.lastRunAt,
             task_queue_depth: workerLoop.queuedTasks.length,
             processed_tasks: workerLoop.processedTasks,
             succeeded_tasks: workerLoop.succeededTasks,
@@ -2914,9 +3120,13 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             state: runtimeState,
             checks: readiness.checks,
             heartbeat_loop_running: heartbeatLoop.running,
+            background_loop_running: backgroundLoop.running,
             heartbeat_sent: heartbeatLoop.sent,
             heartbeat_failed: heartbeatLoop.failed,
             last_heartbeat_at: heartbeatLoop.lastHeartbeatAt,
+            background_ticks: backgroundLoop.ticks,
+            background_failures: backgroundLoop.failures,
+            background_last_run_at: backgroundLoop.lastRunAt,
             task_queue_depth: workerLoop.queuedTasks.length,
             processed_tasks: workerLoop.processedTasks,
             succeeded_tasks: workerLoop.succeededTasks,
@@ -2941,9 +3151,13 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             state: runtimeState,
             checks: readiness.checks,
             heartbeat_loop_running: heartbeatLoop.running,
+            background_loop_running: backgroundLoop.running,
             heartbeat_sent: heartbeatLoop.sent,
             heartbeat_failed: heartbeatLoop.failed,
             last_heartbeat_at: heartbeatLoop.lastHeartbeatAt,
+            background_ticks: backgroundLoop.ticks,
+            background_failures: backgroundLoop.failures,
+            background_last_run_at: backgroundLoop.lastRunAt,
             task_queue_depth: workerLoop.queuedTasks.length,
             processed_tasks: workerLoop.processedTasks,
             succeeded_tasks: workerLoop.succeededTasks,
@@ -3153,6 +3367,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
 
             startWorkerLoop(runtimeConfig);
             startHeartbeatLoop(runtimeConfig);
+            startBackgroundLoop(runtimeConfig);
 
             startupCompleted = true;
             setRuntimeState('ready', runtimeConfig);
@@ -3667,6 +3882,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         killSwitchEngaged = true;
         stopWorkerLoop();
         stopHeartbeatLoop();
+        stopBackgroundLoop();
 
         setRuntimeState('stopping', configCache, 'killswitch');
         emitRuntimeEvent('runtime.killswitch_engaged', configCache, {
@@ -3693,6 +3909,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
     app.addHook('onClose', async () => {
         stopWorkerLoop();
         stopHeartbeatLoop();
+        stopBackgroundLoop();
     });
 
     app.get<{ Querystring: { limit?: string } }>('/logs', async (request, reply) => {
