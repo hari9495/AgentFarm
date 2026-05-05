@@ -6,10 +6,11 @@ const footerCols = [
         heading: "Product",
         links: [
             { href: "/product", label: "Features" },
-            { href: "/marketplace", label: "Marketplace" },
+            { href: "/marketplace", label: "Skill Marketplace" },
             { href: "/how-it-works", label: "How It Works" },
             { href: "/pricing", label: "Pricing" },
             { href: "/compare", label: "Compare" },
+            { href: "/product#connectors", label: "Connectors" },
         ],
     },
     {
@@ -28,6 +29,7 @@ const footerCols = [
             { href: "/docs", label: "Documentation" },
             { href: "/use-cases", label: "Use Cases" },
             { href: "/docs/api-reference", label: "API Reference" },
+            { href: "/product#security", label: "Security" },
             { href: "#", label: "Status" },
             { href: "/privacy", label: "Privacy" },
             { href: "/terms", label: "Terms" },
@@ -50,7 +52,7 @@ export default function Footer() {
                             AgentFarm
                         </Link>
                         <p className="mt-3 text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-xs">
-                            Trusted AI teammate platform for engineering teams.
+                            Developer Agent platform for engineering teams — 21 skills, approval gates, full audit trail.
                         </p>
                     </div>
 

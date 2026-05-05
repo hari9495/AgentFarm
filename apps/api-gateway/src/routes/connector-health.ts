@@ -11,7 +11,7 @@ export function registerConnectorHealthRoutes(app: FastifyInstance): void {
         async (req: FastifyRequest<{ Params: ConnectorIdParams }>, reply) => {
             const { globalHealthMonitor } = await import(
                 '@agentfarm/agent-runtime/connector-health-monitor.js'
-            ).catch(() => import('../../agent-runtime-stubs.js'));
+            ).catch(() => import('../agent-runtime-stubs.js'));
             const status = await globalHealthMonitor.pingConnector(req.params.id).catch(() => null);
             if (!status) return reply.status(404).send({ error: 'connector not registered' });
             return reply.send(status);
@@ -22,7 +22,7 @@ export function registerConnectorHealthRoutes(app: FastifyInstance): void {
     app.get('/connectors/health/all', async (_req, reply) => {
         const { globalHealthMonitor } = await import(
             '@agentfarm/agent-runtime/connector-health-monitor.js'
-        ).catch(() => import('../../agent-runtime-stubs.js'));
+        ).catch(() => import('../agent-runtime-stubs.js'));
         return reply.send({ statuses: globalHealthMonitor.getAllStatuses() });
     });
 
@@ -30,7 +30,7 @@ export function registerConnectorHealthRoutes(app: FastifyInstance): void {
     app.post('/connectors/health/ping-all', async (_req, reply) => {
         const { globalHealthMonitor } = await import(
             '@agentfarm/agent-runtime/connector-health-monitor.js'
-        ).catch(() => import('../../agent-runtime-stubs.js'));
+        ).catch(() => import('../agent-runtime-stubs.js'));
         const statuses = await globalHealthMonitor.pingAll();
         return reply.send({ statuses });
     });

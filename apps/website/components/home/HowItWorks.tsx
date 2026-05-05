@@ -6,9 +6,9 @@ import { ArrowRight } from "lucide-react";
 const steps = [
     {
         number: "01",
-        title: "Pick the right role",
+        title: "Install developer skills",
         description:
-            "Choose the role based on real workload: development, QA, customer support, documentation, or operations.",
+            "Browse the Skill Marketplace and install the developer skills your team needs: PR creation, CI fixes, code review, security scanning, and more.",
         image:
             "https://images.unsplash.com/photo-1526628953301-3e589a6a8b74?auto=format&fit=crop&w=1200&q=80",
     },
@@ -16,7 +16,7 @@ const steps = [
         number: "02",
         title: "Connect your tools",
         description:
-            "Securely connect GitHub, Slack, Jira, and docs so the agent can work directly in your existing workflow.",
+            "Securely connect GitHub, Jira, and Microsoft Teams via OAuth so the agent works directly in your existing workflow.",
         image:
             "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?auto=format&fit=crop&w=1200&q=80",
     },
@@ -24,7 +24,7 @@ const steps = [
         number: "03",
         title: "Assign real work",
         description:
-            "Send tasks through tickets or chat commands. AgentFarm executes with context and provides review-ready output.",
+            "Send tasks via Jira tickets or Teams messages. The agent classifies each action by risk level and executes or requests your approval before proceeding.",
         image:
             "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=1200&q=80",
     },
@@ -32,7 +32,7 @@ const steps = [
         number: "04",
         title: "Review, approve, and measure",
         description:
-            "Track outputs, approvals, and outcomes from a single view with clear audit history and delivery metrics.",
+            "Review PRs, approve high-risk actions, and track every outcome from the dashboard — with a complete evidence trail for every task.",
         image:
             "https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=1200&q=80",
     },

@@ -6,9 +6,9 @@ import {
     SKILL_HANDLERS,
 } from './skill-execution-engine.js';
 
-// ── Registry: 36 skills ────────────────────────────────────────────────────
+// ── Registry: 38 skills ────────────────────────────────────────────────────
 
-describe('skill-execution-engine: 36-skill registry', () => {
+describe('skill-execution-engine: 38-skill registry', () => {
     const ALL_SKILL_IDS = [
         // Original 21
         'pr-reviewer-risk-labels', 'code-review-summarizer', 'pr-comment-drafter',
@@ -18,16 +18,18 @@ describe('skill-execution-engine: 36-skill registry', () => {
         'incident-patch-pack', 'error-trace-analyzer', 'rollback-advisor',
         'docstring-generator', 'readme-updater', 'api-diff-notifier',
         'slack-incident-notifier', 'jira-issue-linker', 'pr-description-generator',
-        // New 15 (22-36)
+        // Skills 22-36
         'stale-pr-detector', 'test-name-reviewer', 'migration-risk-scorer',
         'changelog-diff-validator', 'env-var-auditor', 'openapi-spec-linter',
         'monorepo-dep-graph', 'dead-code-detector', 'code-churn-analyzer',
         'pr-size-enforcer', 'commit-message-linter', 'accessibility-checker',
         'type-coverage-reporter', 'license-compliance-check', 'docker-image-scanner',
+        // Skills 37-38
+        'secrets-scanner', 'refactor-advisor',
     ];
 
-    it('registers exactly 36 skill handlers', () => {
-        assert.equal(listRegisteredSkillIds().length, 36);
+    it('registers exactly 38 skill handlers', () => {
+        assert.equal(listRegisteredSkillIds().length, 38);
     });
 
     it('has a handler for every expected skill id', () => {

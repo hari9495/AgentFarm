@@ -51,6 +51,9 @@ importers:
 
   apps/api-gateway:
     dependencies:
+      '@agentfarm/agent-runtime':
+        specifier: workspace:*
+        version: link:../agent-runtime
       '@agentfarm/connector-contracts':
         specifier: workspace:*
         version: link:../../packages/connector-contracts

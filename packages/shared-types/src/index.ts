@@ -1313,6 +1313,88 @@ export interface VoicePipelineConfig {
   streamingEnabled?: boolean;
 }
 
+// ============================================================================
+// AUTONOMOUS SKILL LOOP CONTRACTS (Feature #9 — Self-iteration)
+// ============================================================================
+
+export type {
+  LoopState,
+  LoopDecision,
+  SuccessCriteria,
+  SkillBranch,
+  LoopConfig,
+  LoopStepTrace,
+  LoopRunResult,
+  LearnedPattern,
+} from './autonomous-loop.js';
+
+// ============================================================================
+// SKILL COMPOSITION/DAG CONTRACTS (Feature #8 — Pipeline chaining)
+// ============================================================================
+
+export type {
+  PipelineNodeType,
+  EdgeCondition,
+  CompositionNode,
+  CompositionEdge,
+  SkillCompositionDAG,
+  CompositionRunRecord,
+  CompositionExecutionResult,
+} from './skill-composition.js';
+
+// ============================================================================
+// PROVIDER FAILOVER CONTRACTS (Feature #5 — Resilience)
+// ============================================================================
+
+export type {
+  FailoverReason,
+  ProviderHealthStatus,
+  CooldownRecord,
+  ProviderStateSnapshot,
+  ProviderFailoverPolicy,
+} from './provider-failover.js';
+
+// ============================================================================
+// GOVERNANCE KPI CONTRACTS (Feature #6 — Operator visibility)
+// ============================================================================
+
+export type {
+  KPICategory,
+  KPIMetric,
+  ApprovalKPIs,
+  AuditKPIs,
+  BudgetKPIs,
+  ProviderKPIs,
+  ExecutionKPIs,
+  GovernanceKPISnapshot,
+} from './governance-kpis.js';
+
+// ============================================================================
+// ADAPTER REGISTRY CONTRACTS (Feature #7 — Extensibility)
+// ============================================================================
+
+export type {
+  AdapterManifest,
+  AdapterInstance,
+  CapabilityDiscoveryResult,
+  AdapterHealthCheckResult,
+} from './adapter-registry.js';
+
+// ============================================================================
+// TELEMETRY CONTRACTS (Feature #4 — Observability)
+// ============================================================================
+
+export type {
+  LogLevel,
+  LogEntry,
+  MetricType,
+  Metric,
+  TelemetryEvent,
+  MetricsSnapshot,
+  CorrelationContext,
+  TelemetryExporter,
+} from './telemetry.js';
+
 export interface VoiceTranscriptRecord {
   id: string;
   contractVersion: string; // CONTRACT_VERSIONS.VOICE_TRANSCRIPT

@@ -5,32 +5,32 @@ import ButtonLink from "@/components/shared/ButtonLink";
 export const metadata: Metadata = {
     title: "About — AgentFarm",
     description:
-        "We're building a trusted AI teammate platform that helps engineering teams scale delivery with clear controls.",
+        "We're building a Developer Agent platform that gives engineering teams autonomous execution, approval-driven safety, and a full audit trail on every action.",
 };
 
 const team = [
     {
         name: "Alex Rivera",
         role: "CEO & Co-founder",
-        bio: "Previously lead engineer at Stripe and early Vercel. 10+ years building developer tools.",
+        bio: "Previously lead engineer at Stripe and early Vercel. 10+ years building developer tools and platform infrastructure.",
         photo: "https://images.unsplash.com/photo-1519345182560-3f2917c472ef?auto=format&fit=crop&w=300&q=80",
     },
     {
         name: "Priya Nair",
         role: "CTO & Co-founder",
-        bio: "PhD in distributed systems. Built ML infrastructure at Anthropic before starting AgentFarm.",
+        bio: "PhD in distributed systems. Built ML infrastructure at Anthropic. Designed AgentFarm's risk-classification and evidence plane architecture.",
         photo: "https://images.unsplash.com/photo-1573496799515-eebbb63814f2?auto=format&fit=crop&w=300&q=80",
     },
     {
         name: "Jordan Kim",
         role: "Head of Product",
-        bio: "Former PM at GitHub Actions. Obsessed with developer experience and zero-friction workflows.",
+        bio: "Former PM at GitHub Actions. Shaped the Skill Marketplace and approval workflow to be zero-friction for engineering teams.",
         photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80",
     },
     {
         name: "Sam Okafor",
         role: "Head of Engineering",
-        bio: "Led platform engineering at Linear. Believes great tools should feel like superpowers.",
+        bio: "Led platform engineering at Linear. Built the tenant-isolated Azure runtime and connector auth layer for AgentFarm.",
         photo: "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=300&q=80",
     },
 ];
@@ -40,19 +40,19 @@ const values = [
         icon: Target,
         title: "Developer-first",
         description:
-            "Every decision starts with: does this make developers' lives better? If not, we don't build it.",
+            "Every decision starts with: does this make engineering teams ship faster with stronger controls? If not, we don't build it.",
     },
     {
         icon: Zap,
-        title: "Ruthless velocity",
+        title: "Approval-driven execution",
         description:
-            "We move fast, ship often, and trust teams to make good decisions autonomously.",
+            "Speed without safety is just chaos. Every agent action is risk-classified — LOW runs automatically, MEDIUM and HIGH require human sign-off.",
     },
     {
         icon: Users,
         title: "Radical transparency",
         description:
-            "Open roadmap, public changelogs, and honest communication about what AgentFarm can and can't do.",
+            "Open roadmap, public changelog, and an immutable evidence trail for every action the agent takes. Nothing hidden.",
     },
 ];
 
@@ -76,15 +76,16 @@ export default function AboutPage() {
                     <h1 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight leading-tight">
                         We believe every engineering team
                         <br className="hidden sm:block" />
-                        deserves to move at{" "}
+                        deserves an agent that{" "}
                         <span className="bg-gradient-to-r from-sky-300 via-blue-300 to-violet-300 bg-clip-text text-transparent">
-                            startup speed
+                            actually ships work
                         </span>
                     </h1>
                     <p className="mt-4 text-lg text-slate-300 max-w-2xl leading-relaxed">
                         AgentFarm started from a simple frustration: the best engineers spend
-                        most of their time on work that AI could handle today. We set out to
-                        change that.
+                        most of their time on work a well-governed AI agent could handle today.
+                        We set out to build that agent — with approval gates, audit trails, and
+                        tenant-isolated execution baked in from day one.
                     </p>
                 </div>
             </section>
@@ -93,10 +94,10 @@ export default function AboutPage() {
             <div className="bg-slate-900 dark:bg-slate-950 border-b border-slate-800">
                 <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
                     {[
-                        { value: "2024", label: "Founded" },
-                        { value: "12+", label: "AI roles available" },
-                        { value: "500+", label: "Teams on waitlist" },
-                        { value: "YC-backed", label: "Seed round" },
+                        { value: "2025", label: "Founded" },
+                        { value: "21", label: "Developer skills" },
+                        { value: "299", label: "Tests passing" },
+                        { value: "Azure", label: "Infrastructure" },
                     ].map(({ value, label }) => (
                         <div key={label}>
                             <p className="text-xl font-extrabold text-white">{value}</p>

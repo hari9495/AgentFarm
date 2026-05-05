@@ -54,6 +54,37 @@ export function OperationalSignalTimeline({ points, source }: OperationalSignalT
         .map((point) => `L ${point.x} ${point.y}`)
         .join(' ')} L ${coordinates[coordinates.length - 1].x} ${timelineHeight - timelinePaddingBottom} Z`;
 
+    // Threshold bands — warning at 65% of peak, danger at 85%
+    const chartInnerH = timelineHeight - timelinePaddingTop - timelinePaddingBottom;
+    const chartInnerW = timelineWidth - timelinePaddingX * 2;
+    const warnThresholdY = timelinePaddingTop + (1 - 0.65) * chartInnerH;
+    const dangerThresholdY = timelinePaddingTop + (1 - 0.85) * chartInnerH;
+    const warnBandH = warnThresholdY - timelinePaddingTop;
+    const dangerBandH = dangerThresholdY - timelinePaddingTop;
+
+    // Anomaly markers — points at or above warning threshold
+    const warnThresholdValue = timelinePeak * 0.65;
+    const anomalyCoords = coordinates.filter((c) => c.value >= warnThresholdValue);
+
+    // Forecast ghost-line — linear regression on last 4 points, extrapolate 2 more
+    const forecastPoints = (() => {
+        const n = Math.min(4, coordinates.length);
+        const recent = coordinates.slice(-n);
+        const meanX = recent.reduce((s, p) => s + p.x, 0) / n;
+        const meanY = recent.reduce((s, p) => s + p.y, 0) / n;
+        const denom = recent.reduce((s, p) => s + (p.x - meanX) ** 2, 0) || 1;
+        const slope = recent.reduce((s, p) => s + (p.x - meanX) * (p.y - meanY), 0) / denom;
+        const intercept = meanY - slope * meanX;
+        return [1, 2].map((i) => {
+            const x = coordinates[coordinates.length - 1].x + timelineStepX * i;
+            const y = Math.min(Math.max(intercept + slope * x, timelinePaddingTop), timelineHeight - timelinePaddingBottom);
+            return { x, y };
+        });
+    })();
+    const forecastPath = [coordinates[coordinates.length - 1], ...forecastPoints]
+        .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`)
+        .join(' ');
+
     return (
         <section className="card signal-card" aria-labelledby="operational-signal-title">
             <div className="signal-card-header">
@@ -66,6 +97,7 @@ export function OperationalSignalTimeline({ points, source }: OperationalSignalT
                 <div className="signal-card-badges">
                     <span className="badge neutral">12h window</span>
                     <span className="badge low">{totalTimelineSignals} tracked signals</span>
+                    {anomalyCoords.length > 0 && <span className="badge warn">{anomalyCoords.length} spike{anomalyCoords.length > 1 ? 's' : ''}</span>}
                     <span className={`badge ${source === 'live' ? 'low' : 'warn'}`}>{source === 'live' ? 'live telemetry' : 'fallback telemetry'}</span>
                 </div>
             </div>
@@ -79,12 +111,32 @@ export function OperationalSignalTimeline({ points, source }: OperationalSignalT
                                 <stop offset="100%" stopColor="rgba(99, 102, 241, 0.02)" />
                             </linearGradient>
                         </defs>
+                        {/* Warning threshold band */}
+                        <rect x={timelinePaddingX} y={timelinePaddingTop} width={chartInnerW} height={warnBandH} fill="rgba(245,158,11,0.06)" />
+                        {/* Danger threshold band */}
+                        <rect x={timelinePaddingX} y={timelinePaddingTop} width={chartInnerW} height={dangerBandH} fill="rgba(239,68,68,0.07)" />
+                        {/* Grid lines */}
                         {[0.25, 0.5, 0.75].map((ratio) => {
                             const y = timelinePaddingTop + (timelineHeight - timelinePaddingTop - timelinePaddingBottom) * ratio;
                             return <line key={ratio} x1={timelinePaddingX} y1={y} x2={timelineWidth - timelinePaddingX} y2={y} className="signal-chart-grid" />;
                         })}
+                        {/* Warning threshold line */}
+                        <line x1={timelinePaddingX} y1={warnThresholdY} x2={timelineWidth - timelinePaddingX} y2={warnThresholdY} stroke="rgba(245,158,11,0.5)" strokeWidth="1" strokeDasharray="4 3" />
+                        {/* Danger threshold line */}
+                        <line x1={timelinePaddingX} y1={dangerThresholdY} x2={timelineWidth - timelinePaddingX} y2={dangerThresholdY} stroke="rgba(239,68,68,0.45)" strokeWidth="1" strokeDasharray="4 3" />
+                        {/* Area + main line */}
                         <path d={timelineAreaPath} className="signal-chart-area" />
                         <path d={timelineLinePath} className="signal-chart-line" />
+                        {/* Forecast ghost-line */}
+                        <path d={forecastPath} fill="none" stroke="rgba(99,102,241,0.3)" strokeWidth="1.8" strokeDasharray="5 4" strokeLinecap="round" />
+                        {forecastPoints.map((fp, i) => (
+                            <circle key={`forecast-${i}`} cx={fp.x} cy={fp.y} r="3" fill="none" stroke="rgba(99,102,241,0.35)" strokeWidth="1.5" />
+                        ))}
+                        {/* Anomaly markers */}
+                        {anomalyCoords.map((c) => (
+                            <circle key={`anomaly-${c.timestamp}`} cx={c.x} cy={c.y} r="7" fill="rgba(245,158,11,0.15)" stroke="rgba(245,158,11,0.65)" strokeWidth="1.5" />
+                        ))}
+                        {/* Regular data dots */}
                         {coordinates.map((point) => (
                             <circle key={point.timestamp} cx={point.x} cy={point.y} r="4" className="signal-chart-dot" />
                         ))}

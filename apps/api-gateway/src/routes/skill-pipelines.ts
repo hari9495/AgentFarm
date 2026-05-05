@@ -14,7 +14,7 @@ export function registerSkillPipelineRoutes(app: FastifyInstance): void {
     // List built-in pipelines
     app.get('/pipelines', async (_req, reply) => {
         const { globalPipelineEngine } = await import('@agentfarm/agent-runtime/skill-pipeline.js').catch(
-            () => import('../../agent-runtime-stubs.js'),
+            () => import('../agent-runtime-stubs.js'),
         );
         return reply.send({ pipelines: globalPipelineEngine.listPipelines() });
     });
@@ -29,7 +29,7 @@ export function registerSkillPipelineRoutes(app: FastifyInstance): void {
             }
             const { globalPipelineEngine } = await import(
                 '@agentfarm/agent-runtime/skill-pipeline.js'
-            ).catch(() => import('../../agent-runtime-stubs.js'));
+            ).catch(() => import('../agent-runtime-stubs.js'));
             const result = await globalPipelineEngine.run({ pipeline_id, initial_inputs, dry_run });
             return reply.send(result);
         },
@@ -39,7 +39,7 @@ export function registerSkillPipelineRoutes(app: FastifyInstance): void {
     app.get('/pipelines/runs', async (req: FastifyRequest<{ Querystring: { limit?: string } }>, reply) => {
         const limit = Number(req.query.limit ?? 20);
         const { globalPipelineEngine } = await import('@agentfarm/agent-runtime/skill-pipeline.js').catch(
-            () => import('../../agent-runtime-stubs.js'),
+            () => import('../agent-runtime-stubs.js'),
         );
         return reply.send({ runs: globalPipelineEngine.getRecentRuns(limit) });
     });
@@ -50,7 +50,7 @@ export function registerSkillPipelineRoutes(app: FastifyInstance): void {
         async (req: FastifyRequest<{ Params: RunIdParams }>, reply) => {
             const { globalPipelineEngine } = await import(
                 '@agentfarm/agent-runtime/skill-pipeline.js'
-            ).catch(() => import('../../agent-runtime-stubs.js'));
+            ).catch(() => import('../agent-runtime-stubs.js'));
             const run = globalPipelineEngine.getRunById(req.params.runId);
             if (!run) return reply.status(404).send({ error: 'run not found' });
             return reply.send(run);

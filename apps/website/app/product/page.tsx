@@ -11,91 +11,91 @@ const features = [
     {
         icon: Code2,
         gradient: "from-blue-500 to-blue-600",
-        title: "Code Generation & Review",
+        title: "Developer Agent — End-to-End Execution",
         description:
-            "AI backend teammates that implement features, write APIs, handle DB migrations, and review PRs with full codebase context.",
+            "The Developer Agent implements features, creates branches, opens PRs with full codebase context, and responds to review comments — no human needed for the first pass.",
         image: "https://images.unsplash.com/photo-1518773553398-650c184e0bb3?auto=format&fit=crop&w=800&q=80",
-    },
-    {
-        icon: TestTube2,
-        gradient: "from-green-500 to-green-600",
-        title: "Automated Testing",
-        description:
-            "QA robots that write unit, integration, and E2E test suites — and maintain coverage as your codebase evolves.",
-        image: "https://images.unsplash.com/photo-1516116216624-53e697fedbea?auto=format&fit=crop&w=800&q=80",
-    },
-    {
-        icon: Server,
-        gradient: "from-orange-500 to-orange-600",
-        title: "Infrastructure Automation",
-        description:
-            "DevOps agents that manage CI/CD pipelines, Kubernetes clusters, and deployments with policy-aware guardrails.",
-        image: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=800&q=80",
     },
     {
         icon: Zap,
         gradient: "from-yellow-500 to-amber-500",
-        title: "Instant Task Execution",
+        title: "21-Skill Marketplace",
         description:
-            "Assign a task via Slack or Jira and your AI teammate starts executing in under 30 seconds.",
+            "Install exactly the skills your team needs: Create PR, Run CI Checks, Fix Test Failures, Security Fix Suggest, Dependency Upgrade Plan, Release Notes Generate, Explain Code, Refactor Plan, and 13 more.",
         image: "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?auto=format&fit=crop&w=800&q=80",
     },
     {
         icon: Shield,
         gradient: "from-red-500 to-red-600",
-        title: "Secure Isolated Runtimes",
+        title: "Risk-Classified Approval Gates",
         description:
-            "Each robot runs in a sandboxed container with role-based access control and a complete, immutable audit log.",
+            "Every action is classified as LOW, MEDIUM, or HIGH risk before execution. Low-risk actions auto-execute. Risky changes pause and request human approval via Teams or email — nothing ships without sign-off.",
         image: "https://images.unsplash.com/photo-1555949963-ff9fe0c870eb?auto=format&fit=crop&w=800&q=80",
+    },
+    {
+        icon: Server,
+        gradient: "from-orange-500 to-orange-600",
+        title: "Tenant-Isolated Azure Runtime",
+        description:
+            "Each customer gets a dedicated Azure VM. Your code, tokens, and execution environment are never shared with other tenants — zero cross-customer exposure.",
+        image: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=800&q=80",
+    },
+    {
+        icon: TestTube2,
+        gradient: "from-green-500 to-green-600",
+        title: "CI Checks + Test Failure Fixes",
+        description:
+            "Agent runs CI checks after every PR, identifies test failures, diagnoses root cause, and pushes a targeted fix — all without human intervention for routine failures.",
+        image: "https://images.unsplash.com/photo-1516116216624-53e697fedbea?auto=format&fit=crop&w=800&q=80",
     },
     {
         icon: Activity,
         gradient: "from-violet-500 to-violet-600",
-        title: "Performance Monitoring",
+        title: "Full Evidence & Audit Trail",
         description:
-            "Real-time dashboard showing tasks completed, PRs merged, test coverage deltas, and deployment frequency.",
+            "The evidence plane logs every agent action, approval decision, and outcome. Export audit evidence for compliance, review action history per PR, and track all approvals end-to-end.",
         image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=800&q=80",
     },
     {
         icon: GitBranch,
         gradient: "from-slate-600 to-slate-700",
-        title: "Deep GitHub Integration",
+        title: "Native GitHub & Jira Integration",
         description:
-            "Branch creation, PR authoring, code review comments, and merge - all driven natively by your AI teammates.",
+            "Branch creation, PR authoring, code review comments, CI triggers, and Jira ticket transitions — all driven natively by the agent via OAuth with least-privilege scopes.",
         image: "https://images.unsplash.com/photo-1556075798-4825dfaaf498?auto=format&fit=crop&w=800&q=80",
     },
     {
         icon: Layout,
         gradient: "from-pink-500 to-pink-600",
-        title: "Frontend Engineering",
+        title: "10 LLM Providers with Fallback Routing",
         description:
-            "AI frontend developers build React components, fix UI bugs, and optimize Core Web Vitals automatically.",
+            "AgentFarm routes tasks to the best-performing model across 10 providers — OpenAI, Azure OpenAI, Anthropic, Google, Mistral, GitHub Models, xAI, Together, and more — with health-score fallback.",
         image: "https://images.unsplash.com/photo-1547658719-da2b51169166?auto=format&fit=crop&w=800&q=80",
     },
 ];
 
 const outcomes = [
-    "Teams report first PR from an AI teammate within 15 minutes of setup",
-    "Average 18+ additional pull requests shipped per teammate per week",
-    "Security scan on every PR with human review kept for high-risk changes",
-    "Full audit trail for every agent action, approval, and decision",
+    "First PR from the Developer Agent within 15 minutes of setup",
+    "Every action risk-classified — risky changes require human approval before execution",
+    "Security scan on every PR with evidence stored for compliance review",
+    "Full audit trail for every agent action, approval decision, and outcome",
 ];
 
 const executionFlow = [
     {
         step: "01",
-        title: "Choose role-based teammates",
-        detail: "Start from marketplace roles mapped to your team structure and approval model.",
+        title: "Provision workspace + install skills",
+        detail: "Dedicated Azure VM provisioned in minutes. Install the developer skills your team needs from the marketplace.",
     },
     {
         step: "02",
-        title: "Connect tools and policies",
-        detail: "Wire in GitHub, ticketing, and communication channels with governed access controls.",
+        title: "Connect GitHub, Jira & Teams",
+        detail: "OAuth connections with least-privilege scopes. Agent reads Jira tickets and posts to Teams channels for approvals.",
     },
     {
         step: "03",
-        title: "Ship with human-in-the-loop assurance",
-        detail: "Run production work with traceability, approvals, and a complete audit history.",
+        title: "Ship with approval-driven assurance",
+        detail: "LOW-risk actions auto-execute. MEDIUM and HIGH-risk actions pause for human approval before proceeding.",
     },
 ];
 

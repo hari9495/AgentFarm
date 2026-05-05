@@ -1,10 +1,10 @@
 ﻿import type { Metadata } from "next";
-import { Code2, TestTube2, Server, Layout, Rocket, Users, PenLine, DollarSign, UserCheck, MessageCircle, ShieldCheck, Database, CheckCircle2 } from "lucide-react";
+import { Code2, TestTube2, Server, Rocket, Users, ShieldCheck, CheckCircle2 } from "lucide-react";
 import ButtonLink from "@/components/shared/ButtonLink";
 
 export const metadata: Metadata = {
   title: "Use Cases — AgentFarm",
-  description: "Real-world examples of how engineering teams use AgentFarm AI teammates to ship faster with stronger controls.",
+  description: "Real-world examples of how engineering teams use AgentFarm's Developer Agent to ship faster, safer, and with a full audit trail.",
 };
 
 const cases = [
@@ -13,12 +13,12 @@ const cases = [
     audience: "Solo Founders",
     headline: "Ship an MVP in days, not months",
     story:
-      "A solo founder with a design background and no engineering team activated an AgentFarm Backend Developer and Frontend Developer. Within 6 days they had a working MVP with authentication, a REST API, and a React dashboard shipped to production.",
+      "A solo founder with no engineering background activated the Developer Agent and installed Create PR, Run CI Checks, and Fix Test Failures skills. Within 6 days they had a working REST API and dashboard shipped to production — every change approved and logged.",
     results: [
       "MVP shipped in 6 days",
       "No additional headcount needed",
-      "~$200 total cost",
-      "37 PRs merged autonomously",
+      "All changes reviewed and approved",
+      "Full evidence trail from day one",
     ],
     color: "blue",
     image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=800&q=80",
@@ -26,14 +26,14 @@ const cases = [
   {
     icon: TestTube2,
     audience: "Startups (5–20 engineers)",
-    headline: "Increase QA throughput without adding contractor spend",
+    headline: "Stop losing hours to CI failures and flaky tests",
     story:
-      "A 10-person Series A startup was spending $7,500/month on a part-time QA contractor. They used AgentFarm's QA Engineer to automate regression work, raise coverage, and keep every PR gated by repeatable test checks.",
+      "A 10-person Series A startup was spending 3+ hours per week diagnosing CI failures. With the Run CI Checks and Fix Test Failures skills, the Developer Agent identifies failures, diagnoses root cause, and pushes a targeted fix — before the developer even refreshes the PR.",
     results: [
-      "Coverage: 61% → 94%",
-      "QA cycle time reduced by 38%",
-      "Every PR tested automatically",
-      "0 regressions shipped since",
+      "CI failure resolution: hours → minutes",
+      "Test coverage improved across repos",
+      "Every PR gated automatically",
+      "Developers stop babysitting CI",
     ],
     color: "green",
     image: "https://images.unsplash.com/photo-1516116216624-53e697fedbea?auto=format&fit=crop&w=800&q=80",
@@ -41,14 +41,14 @@ const cases = [
   {
     icon: Code2,
     audience: "Scale-ups (20–100 engineers)",
-    headline: "Double velocity without doubling headcount",
+    headline: "PR review and release notes without the bottleneck",
     story:
-      "A 30-person engineering team was struggling with feature backlog. They deployed 5 AI Backend Developers to handle boilerplate feature work — CRUD endpoints, data migrations, webhook handlers. Their human engineers now focus entirely on architecture and product.",
+      "A 30-person engineering team was bottlenecked on PR reviews and release documentation. With PR Review Prepare and Release Notes Generate skills, the Developer Agent creates structured review summaries and auto-generates CHANGELOG entries from every merged PR.",
     results: [
-      "Feature velocity ×2.1",
-      "Backlog cleared in 8 weeks",
-      "5 AI teammates alongside core team",
-      "Major reduction in incremental delivery cost",
+      "PR review time cut by 40%",
+      "Release notes generated automatically",
+      "Every release audit-ready",
+      "Reviewer fatigue dramatically reduced",
     ],
     color: "purple",
     image: "https://images.unsplash.com/photo-1518773553398-650c184e0bb3?auto=format&fit=crop&w=800&q=80",
@@ -56,137 +56,47 @@ const cases = [
   {
     icon: Server,
     audience: "DevOps-heavy teams",
-    headline: "Automate on-call and infrastructure toil",
+    headline: "Automate dependency upgrades and incident patches",
     story:
-      "A cloud-native company's DevOps team was drowning in Terraform drift alerts, pipeline failures, and Kubernetes incidents. Their AI DevOps Engineer now auto-triages 80% of alerts, fixes common Terraform drift, and restarts failed pods — before a human even wakes up.",
+      "A cloud-native company's DevOps team was drowning in dependency alerts and incident patch work. With the Dependency Upgrade Plan and Incident Patch Pack skills, the Developer Agent generates upgrade plans and patch PRs — humans review and approve before anything merges.",
     results: [
-      "80% of alerts auto-resolved",
-      "Mean time to recovery: -70%",
-      "MTTR from 45min to 9min",
-      "On-call stress dramatically reduced",
+      "Dependency backlog cleared in 2 weeks",
+      "Incident patch packs auto-generated",
+      "Human approval required before merge",
+      "Full audit log for every change",
     ],
     color: "orange",
     image: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    icon: Layout,
-    audience: "Design-led teams",
-    headline: "Turn Figma designs into working components — same day",
-    story:
-      "A product team with strong design but a small frontend team struggled to convert Figma mockups into React components fast enough. Their AI Frontend Developer translates design specs into Tailwind-styled, accessible React components in hours, not sprint cycles.",
-    results: [
-      "Design-to-code: days → hours",
-      "Fully accessible components",
-      "Storybook stories auto-generated",
-      "Design debt cleared in 2 sprints",
-    ],
-    color: "pink",
-    image: "https://images.unsplash.com/photo-1547658719-da2b51169166?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    icon: Users,
-    audience: "Agencies & Consultancies",
-    headline: "Scale client delivery without scaling headcount",
-    story:
-      "A 15-person dev agency uses AgentFarm to staff AI workers on client projects. They can take on 3× more projects with the same team, using AI workers for backend APIs and test suites while human engineers handle architecture and client relationships.",
-    results: [
-      "3× client capacity",
-      "Same headcount",
-      "Per-project AI staffing",
-      "Margin improved significantly",
-    ],
-    color: "teal",
-    image: "https://images.unsplash.com/photo-1600880292203-757bb62b4baf?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    icon: PenLine,
-    audience: "Marketing Teams",
-    headline: "Ship more content without burning out your team",
-    story:
-      "A growth-stage SaaS company's 3-person marketing team was struggling to keep up with blog posts, email campaigns, and SEO work. They deployed an AI Content Writer and AI SEO Specialist. Content output tripled, organic traffic grew 58% in 90 days, and the team finally had time for strategy.",
-    results: [
-      "Content output ×3",
-      "Organic traffic +58%",
-      "Email open rate +22%",
-      "Team focused on strategy",
-    ],
-    color: "pink",
-    image: "https://images.unsplash.com/photo-1533750516457-a7f992034fec?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    icon: DollarSign,
-    audience: "Finance & Ops Teams",
-    headline: "Automate reporting and spend analysis",
-    story:
-      "A mid-market company's finance team was spending 12 hours a week building manual spend reports in Excel. Their AI Finance Analyst now pulls data from QuickBooks, builds variance reports, flags budget overruns automatically, and drafts the CFO board packet every quarter.",
-    results: [
-      "12hrs/week reclaimed",
-      "CFO reports auto-drafted",
-      "Budget overruns caught early",
-      "Audit-ready trail",
-    ],
-    color: "green",
-    image: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    icon: UserCheck,
-    audience: "HR & People Teams",
-    headline: "Hire faster without compromising on fit",
-    story:
-      "A fast-growing startup was taking 8 weeks to fill senior engineer roles. Their AI Technical Recruiter screens inbound applications, schedules first-round calls, writes structured feedback notes, and drafts offer letters — cutting time-to-hire from 8 weeks to 18 days.",
-    results: [
-      "Time-to-hire: 8 wks → 18 days",
-      "100% of applicants screened",
-      "Offer letters in minutes",
-      "HR focuses on top candidates",
-    ],
-    color: "blue",
-    image: "https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    icon: MessageCircle,
-    audience: "Customer Success Teams",
-    headline: "Scale support without scaling headcount",
-    story:
-      "A B2B SaaS company with 500 customers was managing support through a 2-person team. They deployed an AI Customer Support Agent to handle tier-1 issues and an AI Customer Success Manager to run quarterly business reviews. CSAT went from 72 to 91.",
-    results: [
-      "CSAT: 72 → 91",
-      "Tier-1 tickets auto-resolved",
-      "QBRs run automatically",
-      "Churn rate down 31%",
-    ],
-    color: "orange",
-    image: "https://images.unsplash.com/photo-1556740749-887f6717d7e4?auto=format&fit=crop&w=800&q=80",
   },
   {
     icon: ShieldCheck,
     audience: "Security-conscious teams",
     headline: "Catch vulnerabilities before they ship",
     story:
-      "A fintech team was relying on quarterly pen tests to find security issues. Their AI Security Engineer now runs OWASP scans on every PR, tracks vulnerable dependencies daily, and generates security regression tests — shifting security left so issues are caught in seconds, not months.",
+      "A fintech team was relying on quarterly pen tests to find security issues. With the Security Fix Suggest and Dependency Upgrade Plan skills, the agent flags vulnerable dependencies and generates targeted security patches on every PR — shifting security left to seconds, not months.",
     results: [
-      "OWASP scan every PR",
-      "Critical vulns down 94%",
+      "Security check on every PR",
       "Dependency alerts automated",
-      "Security test coverage ×4",
+      "Vulnerable deps patched same sprint",
+      "Audit evidence exported per release",
     ],
-    color: "purple",
+    color: "pink",
     image: "https://images.unsplash.com/photo-1555949963-ff9fe0c870eb?auto=format&fit=crop&w=800&q=80",
   },
   {
-    icon: Database,
-    audience: "Data teams",
-    headline: "Turn raw data into decisions, automatically",
+    icon: Users,
+    audience: "Enterprise engineering teams",
+    headline: "Autonomous execution with enterprise-grade governance",
     story:
-      "A mid-stage startup's data team was bottlenecked: analysts spent 60% of their time writing ad-hoc SQL queries for stakeholders. Their AI Data Analyst now handles routine reporting queries, builds Looker dashboards from specs, and auto-generates weekly business health reports.",
+      "A regulated enterprise needed AI assistance but couldn't accept uncontrolled code changes. AgentFarm's risk-classification model gives them exactly that: LOW-risk actions auto-execute, HIGH-risk changes pause for human approval via Microsoft Teams. Every action is logged in the evidence plane for compliance.",
     results: [
-      "60% of ad-hoc queries automated",
-      "Weekly reports auto-generated",
-      "Analysts focus on insights",
-      "Stakeholder SLA: 2 days → 2 hours",
+      "Full audit trail for every agent action",
+      "Approval gates on all high-risk changes",
+      "Teams notifications for approvals",
+      "Compliance evidence exported on demand",
     ],
     color: "teal",
-    image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=800&q=80",
+    image: "https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=800&q=80",
   },
 ];
 
@@ -219,13 +129,13 @@ export default function UseCasesPage() {
                 Use Cases
               </span>
               <h1 className="mt-3 text-4xl sm:text-6xl font-extrabold text-white tracking-tight">
-                Built for every{" "}
+                Built for{" "}
                 <span className="bg-gradient-to-r from-orange-300 via-red-300 to-pink-300 bg-clip-text text-transparent">
-                  stage of growth
+                  engineering teams
                 </span>
               </h1>
               <p className="mt-5 text-xl text-slate-300 max-w-2xl leading-relaxed">
-                From solo founders to 100-person engineering teams, see how AgentFarm fits your workflow and drives measurable results with clear governance.
+                From solo founders to 100-person engineering orgs — see how AgentFarm's Developer Agent ships real work with approval gates and a full audit trail.
               </p>
             </div>
           </div>

@@ -15,8 +15,8 @@ export default function Architecture() {
                         Built for security and scale
                     </h2>
                     <p className="mt-4 text-lg text-slate-500 dark:text-slate-400">
-                        Every AI worker runs in an isolated container with role-based access
-                        control and a full audit trail.
+                        Every Developer Agent runs in a dedicated, tenant-isolated Azure VM with
+                        approval gates, role-based access control, and a full audit trail on every action.
                     </p>
                 </div>
 
@@ -28,7 +28,7 @@ export default function Architecture() {
                         {[
                             { icon: Monitor, label: "AgentFarm Dashboard", sub: "Assign tasks, review PRs", color: "bg-blue-600" },
                             { icon: GitBranch, label: "GitHub / GitLab", sub: "Source control & PRs", color: "bg-slate-700" },
-                            { icon: Database, label: "Slack / Jira", sub: "Task assignments", color: "bg-indigo-600" },
+                            { icon: Database, label: "Teams / Jira / Email", sub: "Task assignments & approvals", color: "bg-indigo-600" },
                         ].map(({ icon: Icon, label, sub, color }, i) => (
                             <motion.div
                                 key={label}

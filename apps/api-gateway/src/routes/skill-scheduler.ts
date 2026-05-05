@@ -15,7 +15,7 @@ export function registerSkillSchedulerRoutes(app: FastifyInstance): void {
     // List jobs
     app.get('/scheduler/jobs', async (_req, reply) => {
         const { globalScheduler } = await import('@agentfarm/agent-runtime/skill-scheduler.js').catch(
-            () => import('../../agent-runtime-stubs.js'),
+            () => import('../agent-runtime-stubs.js'),
         );
         return reply.send({ jobs: globalScheduler.listJobs() });
     });
@@ -24,17 +24,17 @@ export function registerSkillSchedulerRoutes(app: FastifyInstance): void {
     app.post(
         '/scheduler/jobs',
         async (req: FastifyRequest<{ Body: CreateJobBody }>, reply) => {
-            const body = req.body ?? {};
+            const body = (req.body ?? {}) as CreateJobBody;
             if (!body.name || !body.target || !body.frequency) {
                 return reply.status(400).send({ error: 'name, target, and frequency required' });
             }
             const { globalScheduler } = await import('@agentfarm/agent-runtime/skill-scheduler.js').catch(
-                () => import('../../agent-runtime-stubs.js'),
+                () => import('../agent-runtime-stubs.js'),
             );
             const job = globalScheduler.createJob({
                 name: body.name,
-                target: body.target as Parameters<typeof globalScheduler.createJob>[0]['target'],
-                frequency: body.frequency as Parameters<typeof globalScheduler.createJob>[0]['frequency'],
+                target: body.target,
+                frequency: body.frequency,
                 enabled: body.enabled,
             });
             return reply.status(201).send(job);
@@ -46,7 +46,7 @@ export function registerSkillSchedulerRoutes(app: FastifyInstance): void {
         '/scheduler/jobs/:id',
         async (req: FastifyRequest<{ Params: JobIdParams }>, reply) => {
             const { globalScheduler } = await import('@agentfarm/agent-runtime/skill-scheduler.js').catch(
-                () => import('../../agent-runtime-stubs.js'),
+                () => import('../agent-runtime-stubs.js'),
             );
             const ok = globalScheduler.deleteJob(req.params.id);
             if (!ok) return reply.status(404).send({ error: 'job not found' });
@@ -59,7 +59,7 @@ export function registerSkillSchedulerRoutes(app: FastifyInstance): void {
         '/scheduler/jobs/:id/pause',
         async (req: FastifyRequest<{ Params: JobIdParams }>, reply) => {
             const { globalScheduler } = await import('@agentfarm/agent-runtime/skill-scheduler.js').catch(
-                () => import('../../agent-runtime-stubs.js'),
+                () => import('../agent-runtime-stubs.js'),
             );
             const ok = globalScheduler.pauseJob(req.params.id);
             if (!ok) return reply.status(404).send({ error: 'job not found' });
@@ -72,7 +72,7 @@ export function registerSkillSchedulerRoutes(app: FastifyInstance): void {
         '/scheduler/jobs/:id/resume',
         async (req: FastifyRequest<{ Params: JobIdParams }>, reply) => {
             const { globalScheduler } = await import('@agentfarm/agent-runtime/skill-scheduler.js').catch(
-                () => import('../../agent-runtime-stubs.js'),
+                () => import('../agent-runtime-stubs.js'),
             );
             const ok = globalScheduler.resumeJob(req.params.id);
             if (!ok) return reply.status(404).send({ error: 'job not found' });
@@ -86,7 +86,7 @@ export function registerSkillSchedulerRoutes(app: FastifyInstance): void {
         async (req: FastifyRequest<{ Querystring: { limit?: string } }>, reply) => {
             const limit = Number(req.query.limit ?? 50);
             const { globalScheduler } = await import('@agentfarm/agent-runtime/skill-scheduler.js').catch(
-                () => import('../../agent-runtime-stubs.js'),
+                () => import('../agent-runtime-stubs.js'),
             );
             return reply.send({ history: globalScheduler.getHistory(limit) });
         },

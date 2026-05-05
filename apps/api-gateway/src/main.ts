@@ -41,6 +41,16 @@ import { registerPrRoutes } from './routes/pull-requests.js';
 import { registerCiFailureRoutes } from './routes/ci-failures.js';
 import { registerWorkMemoryRoutes } from './routes/work-memory.js';
 import { registerReproPackRoutes } from './routes/repro-packs.js';
+import { registerSkillPipelineRoutes } from './routes/skill-pipelines.js';
+import { registerSkillSchedulerRoutes } from './routes/skill-scheduler.js';
+import { registerWebhookRoutes } from './routes/webhooks.js';
+import { registerConnectorHealthRoutes } from './routes/connector-health.js';
+import { registerKnowledgeGraphRoutes } from './routes/knowledge-graph.js';
+import { registerAgentFeedbackRoutes } from './routes/agent-feedback.js';
+import { registerAutonomousLoopRoutes } from './routes/autonomous-loops.js';
+import { registerSkillCompositionRoutes } from './routes/skill-composition-execute.js';
+import { registerGovernanceKPIRoutes } from './routes/governance-kpis.js';
+import { registerAdapterRegistryRoutes } from './routes/adapter-registry.js';
 
 const app = Fastify({ logger: true });
 const port = Number(process.env.API_GATEWAY_PORT ?? 3000);
@@ -439,6 +449,16 @@ await registerWorkMemoryRoutes(app, {
 await registerReproPackRoutes(app, {
     getSession: (request) => readSession(request),
 });
+registerSkillPipelineRoutes(app);
+registerSkillSchedulerRoutes(app);
+registerWebhookRoutes(app);
+registerConnectorHealthRoutes(app);
+registerKnowledgeGraphRoutes(app);
+registerAgentFeedbackRoutes(app);
+registerAutonomousLoopRoutes(app);
+registerSkillCompositionRoutes(app);
+registerGovernanceKPIRoutes(app);
+registerAdapterRegistryRoutes(app);
 
 app.get('/v1/dashboard/summary', async (request, reply) => {
     const session = readSession(request);

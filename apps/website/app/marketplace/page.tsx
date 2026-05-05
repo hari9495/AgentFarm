@@ -3,23 +3,23 @@ import Link from "next/link";
 import MarketplaceGrid from "@/components/marketplace/MarketplaceGrid";
 
 export const metadata: Metadata = {
-  title: "Robot Marketplace – AgentFarm",
+  title: "Skill Marketplace – AgentFarm",
   description:
-    "Browse and deploy AI teammates for every engineering role in minutes.",
+    "Browse and deploy 21 developer-agent skills for real engineering work: PR creation, CI fixes, code review, security scanning, and more.",
 };
 
 const launchPaths = [
   {
-    label: "Start with Engineering",
-    detail: "Launch backend, frontend, QA, and DevOps roles for immediate sprint impact.",
+    label: "Start with Core Developer Skills",
+    detail: "Deploy Create PR, Run CI Checks, and Fix Test Failures for immediate sprint impact.",
   },
   {
-    label: "Expand to Operations",
-    detail: "Add support, security, and business operations teammates with clear ownership.",
+    label: "Add Code Intelligence Skills",
+    detail: "Explain Code, Refactor Plan, Semantic Search, and Diff Preview for deeper productivity.",
   },
   {
-    label: "Scale by Department",
-    detail: "Standardize role bundles and approvals for repeatable cross-team rollouts.",
+    label: "Enable Compliance & Governance",
+    detail: "Audit Export, Approval Status, and Policy Preflight for enterprise-ready operations.",
   },
 ];
 
@@ -32,11 +32,11 @@ export default function MarketplacePage() {
             <div>
               <p className="marketplace-eyebrow">Agent Marketplace</p>
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
-                Build a production-ready AI team in one launch sprint
+                Skill Marketplace: 21 developer skills, ready to ship work
               </h1>
               <p className="mt-4 max-w-3xl text-slate-600 dark:text-slate-300 text-base sm:text-lg">
-                Curated agents for engineering, operations, and business workflows. Compare capabilities,
-                launch role by role, and scale your automation stack with clear ownership.
+                Each skill gives your Developer Agent a new capability — from creating PRs and fixing CI failures
+                to explaining code, generating release notes, and exporting audit evidence. Install only what your team needs.
               </p>
               <div className="mt-6 flex flex-col sm:flex-row gap-3">
                 <Link
@@ -55,27 +55,27 @@ export default function MarketplacePage() {
             </div>
             <div className="marketplace-stat-grid" aria-label="Marketplace trust metrics">
               <article>
-                <p className="label">Live roles</p>
-                <p className="value">120+</p>
+                <p className="label">Developer skills</p>
+                <p className="value">21</p>
               </article>
               <article>
                 <p className="label">Avg deploy</p>
                 <p className="value">&lt; 10 min</p>
               </article>
               <article>
-                <p className="label">Top teams</p>
-                <p className="value">2,000+</p>
+                <p className="label">Actions audited</p>
+                <p className="value">100%</p>
               </article>
               <article>
-                <p className="label">Satisfaction</p>
-                <p className="value">4.8/5</p>
+                <p className="label">LLM providers</p>
+                <p className="value">10</p>
               </article>
             </div>
           </div>
 
           <div className="marketplace-chip-row" aria-label="Marketplace value highlights">
-            <span>Role-scoped onboarding</span>
-            <span>Department bundles</span>
+            <span>21 developer skills</span>
+            <span>Approval-driven safety</span>
             <span>Transparent pricing</span>
             <span>Human approval controls</span>
             <span>Audit-ready operations</span>

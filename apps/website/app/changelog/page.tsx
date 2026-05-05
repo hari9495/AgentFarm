@@ -20,153 +20,99 @@ interface Entry {
 
 const entries: Entry[] = [
   {
+    date: "May 2026",
+    version: "v1.0",
+    title: "Skill Marketplace GA — 21 developer skills shipped",
+    description:
+      "The Skill Marketplace reaches general availability with all 21 developer-agent skills live. New REST endpoint: POST /runtime/marketplace/invoke. Architecture Decision Record ADR-015 published. 299 tests passing, 0 failing.",
+    status: "shipped",
+    tags: ["Marketplace", "Milestone", "API"],
+  },
+  {
+    date: "May 2026",
+    version: "v0.9",
+    title: "Tier 10: Code Intelligence + Observability skills",
+    description:
+      "Shipped 10 new skills: workspace_connector_test, workspace_pr_auto_assign, workspace_ci_watch, workspace_explain_code, workspace_add_docstring, workspace_refactor_plan, workspace_semantic_search, workspace_diff_preview, workspace_approval_status, workspace_audit_export. Test suite: 190 passing.",
+    status: "shipped",
+    tags: ["Skills", "Code Intelligence", "Tier 10"],
+  },
+  {
+    date: "April 2026",
+    version: "v0.8",
+    title: "Tier 9: Developer Productivity Wave",
+    description:
+      "Shipped 11 skills: workspace_create_pr, workspace_run_ci_checks, workspace_fix_test_failures, workspace_security_fix_suggest, workspace_pr_review_prepare, workspace_dependency_upgrade_plan, workspace_release_notes_generate, workspace_incident_patch_pack, workspace_memory_profile, workspace_autonomous_plan_execute, workspace_policy_preflight. All 179/179 tests passing.",
+    status: "shipped",
+    tags: ["Skills", "Developer Productivity", "Tier 9"],
+  },
+  {
+    date: "April 2026",
+    version: "v0.7",
+    title: "Azure Isolated Runtime + Docker Lifecycle",
+    description:
+      "Each tenant now runs in a dedicated, isolated Azure VM. Docker lifecycle management for agent containers including provisioning, health monitoring, and graceful teardown. Evidence plane shipping audit logs for every action.",
+    status: "shipped",
+    tags: ["Infrastructure", "Azure", "Runtime"],
+  },
+  {
+    date: "April 2026",
+    version: "v0.6",
+    title: "Connector Auth: GitHub, Jira, Teams, Email",
+    description:
+      "OAuth connector auth shipped for all 4 native connectors — GitHub (PRs, branch management), Jira (ticket tracking), Microsoft Teams (messaging, approval requests), and Email/Outlook. Token refresh, health monitoring, and least-privilege scopes enforced across all connectors.",
+    status: "shipped",
+    tags: ["Connectors", "Auth", "OAuth"],
+  },
+  {
     date: "March 2026",
     version: "v0.5",
-    title: "32-role marketplace with department filters",
+    title: "Approval Workflow + Risk Classification",
     description:
-      "Expanded the marketplace to 32 AI worker roles across 14 departments — from Engineering and DevOps to Marketing, Finance, HR, and Customer Success. New department & availability filters make it easy to find the right worker.",
+      "Every agent action is now classified as LOW, MEDIUM, or HIGH risk before execution. LOW actions auto-execute. MEDIUM and HIGH actions pause and send approval requests via Teams or email. Full approval audit trail in the evidence plane.",
     status: "shipped",
-    tags: ["Marketplace", "UX", "Roles"],
-  },
-  {
-    date: "March 2026",
-    version: "v0.4.2",
-    title: "Analytics dashboard",
-    description:
-      "New dashboard analytics page showing task volume trends, PR merge rates, per-bot performance tables, and estimated monthly cost savings vs equivalent contractors.",
-    status: "shipped",
-    tags: ["Dashboard", "Analytics"],
-  },
-  {
-    date: "March 2026",
-    version: "v0.4.1",
-    title: "Bot config & task history (database-backed)",
-    description:
-      "Bot configuration and task logs are now persisted in a Prisma/SQLite database. Config survives page reloads; task history shows status, timestamps, and output across sessions.",
-    status: "shipped",
-    tags: ["Dashboard", "Core", "Database"],
+    tags: ["Approvals", "Safety", "Core"],
   },
   {
     date: "March 2026",
     version: "v0.4",
-    title: "Robot Marketplace launch",
+    title: "Agent Dashboard + Provisioning Service",
     description:
-      "Browse, hire, and configure AI workers from the marketplace. 4 roles available at launch: Backend Dev, Frontend Dev, QA Engineer, DevOps Engineer.",
+      "Launched the unified agent dashboard for task assignment, approval review, and skill management. Provisioning service handles workspace setup, connector linking, and runtime health checks.",
     status: "shipped",
-    tags: ["Marketplace", "UX"],
-  },
-  {
-    date: "March 2026",
-    version: "v0.3",
-    title: "Jira integration",
-    description:
-      "AI workers can now receive task assignments directly from Jira tickets. Supports Jira Cloud with project-level scoping.",
-    status: "shipped",
-    tags: ["Integration", "Jira"],
-  },
-  {
-    date: "February 2026",
-    version: "v0.2",
-    title: "Slack task assignment",
-    description:
-      "Assign tasks to AI workers by mentioning them in any Slack channel. Workers reply with progress updates and PR links.",
-    status: "shipped",
-    tags: ["Integration", "Slack"],
-  },
-  {
-    date: "January 2026",
-    version: "v0.1",
-    title: "Initial GitHub integration",
-    description:
-      "Connect repositories via GitHub OAuth. AI workers can read, write, and open pull requests with full branch management.",
-    status: "shipped",
-    tags: ["Integration", "GitHub", "Launch"],
-  },
-  {
-    date: "Q2 2026",
-    title: "AI Security Engineer",
-    description:
-      "Automated OWASP scanning on every PR, dependency vulnerability tracking, and security test generation.",
-    status: "in-progress",
-    tags: ["Security", "New Role"],
-  },
-  {
-    date: "Q2 2026",
-    title: "AI Database Administrator",
-    description:
-      "Slow query analysis, schema migration assistance, and index health monitoring across PostgreSQL and MySQL.",
-    status: "in-progress",
-    tags: ["Database", "New Role"],
-  },
-  {
-    date: "Q2 2026",
-    title: "Team accounts & multi-user workspaces",
-    description:
-      "Invite teammates, assign roles (admin / developer / viewer), and share bot configurations across your organisation.",
-    status: "in-progress",
-    tags: ["Teams", "Auth"],
-  },
-  {
-    date: "Q2 2026",
-    title: "Stripe billing integration",
-    description:
-      "Full subscription management with Stripe: plan upgrades, seat-based pricing, invoices, and usage-based overages.",
-    status: "in-progress",
-    tags: ["Billing", "Stripe"],
-  },
-  {
-    date: "Q2 2026",
-    title: "Dashboard v1",
-    description:
-      "Full web dashboard: assign tasks, view worker status, review PRs, and track metrics in one place. Includes team management.",
-    status: "planned",
-    tags: ["Dashboard", "Core"],
-  },
-  {
-    date: "Q2 2026",
-    title: "AI Analytics dashboard (advanced)",
-    description:
-      "Advanced analytics: custom date ranges, export to CSV, per-project breakdown, and anomaly detection for bot task failures.",
-    status: "planned",
-    tags: ["Analytics", "Dashboard"],
+    tags: ["Dashboard", "Provisioning"],
   },
   {
     date: "Q3 2026",
-    title: "GitLab support",
-    description: "Full GitLab integration with merge request management, CI/CD pipeline triggers, and GitLab Issues.",
+    title: "GitLab connector",
+    description:
+      "Full GitLab integration with merge request management, CI/CD pipeline triggers, and GitLab Issues support. Mirrors the GitHub connector's feature set.",
     status: "planned",
     tags: ["Integration", "GitLab"],
   },
   {
     date: "Q3 2026",
-    title: "AI ML Engineer",
+    title: "Confluence + Linear connectors",
     description:
-      "Automated model training pipelines, evaluation dashboards, and cloud deployment for ML/AI projects.",
+      "Enable the agent to read Confluence docs for context, create Confluence pages from release notes, and sync Linear issues for teams not using Jira.",
     status: "planned",
-    tags: ["ML", "New Role"],
+    tags: ["Integration", "Confluence", "Linear"],
   },
   {
     date: "Q3 2026",
-    title: "Custom workflow rules",
+    title: "Multi-tenant team accounts",
     description:
-      "Build no-code automation rules: 'When a Jira ticket is moved to In Progress, assign to backend-dev-01 and notify in Slack.'",
+      "Invite teammates, assign roles (admin / developer / viewer), and share skill configurations and approval policies across your engineering organisation.",
     status: "planned",
-    tags: ["Automation", "Pro"],
+    tags: ["Teams", "Auth", "Enterprise"],
   },
   {
     date: "Q3 2026",
-    title: "HubSpot & Salesforce integration",
+    title: "Custom approval policy rules",
     description:
-      "Let AI Marketing and Customer Success workers sync task outcomes directly into CRM records.",
+      "Build no-code approval rules: 'When action risk is HIGH and touches /src/payments, require 2 approvers from the security team.'",
     status: "planned",
-    tags: ["Integration", "CRM"],
-  },
-  {
-    date: "Q4 2026",
-    title: "On-premises deployment",
-    description: "Run AgentFarm entirely in your own VPC. Full data residency, no external network calls.",
-    status: "planned",
-    tags: ["Enterprise"],
+    tags: ["Approvals", "Policy", "Enterprise"],
   },
   {
     date: "Q4 2026",
@@ -175,6 +121,13 @@ const entries: Entry[] = [
       "Enterprise single sign-on with Okta, Azure AD, and Google Workspace. Team provisioning via SCIM.",
     status: "planned",
     tags: ["Enterprise", "Security"],
+  },
+  {
+    date: "Q4 2026",
+    title: "On-premises deployment",
+    description: "Run AgentFarm entirely in your own VPC. Full data residency, no external network calls.",
+    status: "planned",
+    tags: ["Enterprise", "Infrastructure"],
   },
 ];
 

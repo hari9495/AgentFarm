@@ -3360,3 +3360,706 @@ test('/runtime/interview-events captures partial transcript events from meeting 
         await app.close();
     }
 });
+
+// ── Coverage-boosting tests for untested advanced routes ──────────────────────
+
+test('/runtime/traces returns empty array for fresh server', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/runtime/traces' });
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as { count: number; traces: unknown[] };
+        assert.ok(Array.isArray(body.traces));
+        assert.equal(body.count, body.traces.length);
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/traces rejects invalid limit', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/runtime/traces?limit=0' });
+        assert.equal(res.statusCode, 400);
+        assert.equal(res.json().error, 'invalid_limit');
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/traces/:taskId returns 404 when trace missing', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/runtime/traces/no-such-task' });
+        assert.equal(res.statusCode, 404);
+        assert.equal(res.json().error, 'trace_not_found');
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/traces/:taskId/replay returns 404 when trace missing', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({ method: 'POST', url: '/runtime/traces/no-such-task/replay', payload: {} });
+        assert.equal(res.statusCode, 404);
+        assert.equal(res.json().error, 'trace_not_found');
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/policy/simulate returns 400 when blocked_actions empty', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({ method: 'POST', url: '/runtime/policy/simulate', payload: { blocked_actions: [] } });
+        assert.equal(res.statusCode, 400);
+        assert.equal(res.json().error, 'invalid_policy_simulation');
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/policy/simulate returns simulation result', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({
+            method: 'POST',
+            url: '/runtime/policy/simulate',
+            payload: { blocked_actions: ['git_push', 'file_delete'] },
+        });
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as { simulation: unknown; blocked_actions: string[] };
+        assert.ok(body.simulation !== undefined);
+        assert.deepEqual(body.blocked_actions, ['git_push', 'file_delete']);
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/pr/review returns 400 when changed_files empty', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({ method: 'POST', url: '/runtime/pr/review', payload: { changed_files: [] } });
+        assert.equal(res.statusCode, 400);
+        assert.equal(res.json().error, 'invalid_pr_review');
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/pr/review returns review for valid files', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({
+            method: 'POST',
+            url: '/runtime/pr/review',
+            payload: { changed_files: ['src/main.ts', 'src/utils.ts'], summary: 'Add utils' },
+        });
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as { review: unknown };
+        assert.ok(body.review !== undefined);
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/autopilot/issue-to-pr returns 400 when params missing', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({ method: 'POST', url: '/runtime/autopilot/issue-to-pr', payload: {} });
+        assert.equal(res.statusCode, 400);
+        assert.equal(res.json().error, 'invalid_issue_payload');
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/autopilot/issue-to-pr returns autopilot plan', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({
+            method: 'POST',
+            url: '/runtime/autopilot/issue-to-pr',
+            payload: { issue_number: 42, title: 'Fix bug', body: 'Details' },
+        });
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as { autopilot: unknown };
+        assert.ok(body.autopilot !== undefined);
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/autopilot/issue-to-pr/execute returns 400 when params missing', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({ method: 'POST', url: '/runtime/autopilot/issue-to-pr/execute', payload: {} });
+        assert.equal(res.statusCode, 400);
+        assert.equal(res.json().error, 'invalid_issue_payload');
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/autopilot/issue-to-pr/execute returns execution plan', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({
+            method: 'POST',
+            url: '/runtime/autopilot/issue-to-pr/execute',
+            payload: { issue_number: 10, title: 'Implement feature' },
+        });
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as { execution: unknown };
+        assert.ok(body.execution !== undefined);
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/flaky-tests returns flaky signal list', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/runtime/flaky-tests' });
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as { flaky_signals: unknown[] };
+        assert.ok(Array.isArray(body.flaky_signals));
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/flaky-tests/triage returns triage report', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/runtime/flaky-tests/triage' });
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as { triage: unknown };
+        assert.ok(body.triage !== undefined);
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/advanced/status returns control state', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/runtime/advanced/status' });
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as { control: unknown; traces: number };
+        assert.ok(body.control !== undefined);
+        assert.equal(typeof body.traces, 'number');
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/plan/pending returns empty plan list', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/runtime/plan/pending' });
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as { count: number; plans: unknown[] };
+        assert.ok(Array.isArray(body.plans));
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/plan/pending rejects invalid limit', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/runtime/plan/pending?limit=-5' });
+        assert.equal(res.statusCode, 400);
+        assert.equal(res.json().error, 'invalid_limit');
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/plan/:taskId returns 404 when plan missing', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/runtime/plan/no-such-plan' });
+        assert.equal(res.statusCode, 404);
+        assert.equal(res.json().error, 'plan_not_found');
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/plan/:taskId/approve returns 404 when plan missing', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({ method: 'POST', url: '/runtime/plan/no-such-plan/approve', payload: { actor: 'operator' } });
+        assert.equal(res.statusCode, 404);
+        assert.equal(res.json().error, 'plan_not_found');
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/control/pause pauses execution', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({ method: 'POST', url: '/runtime/control/pause', payload: {} });
+        assert.equal(res.statusCode, 200);
+        assert.equal(res.json().status, 'paused');
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/control/resume resumes execution', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({ method: 'POST', url: '/runtime/control/resume', payload: {} });
+        assert.equal(res.statusCode, 200);
+        assert.equal(res.json().status, 'resumed');
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/control/step arms single-step mode', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({ method: 'POST', url: '/runtime/control/step', payload: {} });
+        assert.equal(res.statusCode, 200);
+        assert.equal(res.json().status, 'single_step_armed');
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/control/scope returns 400 when include_paths empty', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({ method: 'POST', url: '/runtime/control/scope', payload: { include_paths: [] } });
+        assert.equal(res.statusCode, 400);
+        assert.equal(res.json().error, 'invalid_scope');
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/control/scope sets scope constraint', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({
+            method: 'POST',
+            url: '/runtime/control/scope',
+            payload: { include_paths: ['src/', 'tests/'] },
+        });
+        assert.equal(res.statusCode, 200);
+        assert.equal(res.json().status, 'scope_set');
+    } finally {
+        await app.close();
+    }
+});
+
+test('DELETE /runtime/control/scope clears scope', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({ method: 'DELETE', url: '/runtime/control/scope' });
+        assert.equal(res.statusCode, 200);
+        assert.equal(res.json().status, 'scope_cleared');
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/control/why returns 400 when task_id missing', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/runtime/control/why' });
+        assert.equal(res.statusCode, 400);
+        assert.equal(res.json().error, 'invalid_task_id');
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/control/why returns explanation for task', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/runtime/control/why?task_id=task-001' });
+        assert.equal(res.statusCode, 200);
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/semantic-graph returns graph data', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/runtime/semantic-graph' });
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as { graph: unknown };
+        assert.ok(body.graph !== undefined);
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/semantic-graph/query returns 400 when symbol missing', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/runtime/semantic-graph/query' });
+        assert.equal(res.statusCode, 400);
+        assert.equal(res.json().error, 'invalid_symbol');
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/semantic-graph/query returns result for symbol', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/runtime/semantic-graph/query?symbol=buildRuntimeServer' });
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as { result: unknown };
+        assert.ok(body.result !== undefined);
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/incident/patch-pack returns 400 when params missing', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({ method: 'POST', url: '/runtime/incident/patch-pack', payload: {} });
+        assert.equal(res.statusCode, 400);
+        assert.equal(res.json().error, 'invalid_incident_payload');
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/incident/patch-pack returns patch pack', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({
+            method: 'POST',
+            url: '/runtime/incident/patch-pack',
+            payload: { incident_id: 'INC-001', service: 'api-gateway' },
+        });
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as { patch_pack: unknown };
+        assert.ok(body.patch_pack !== undefined);
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/policy/packs returns active pack and list', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/runtime/policy/packs' });
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as { packs: unknown[] };
+        assert.ok(Array.isArray(body.packs));
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/policy/packs returns 400 when id or name missing', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({ method: 'POST', url: '/runtime/policy/packs', payload: { id: 'my-pack' } });
+        assert.equal(res.statusCode, 400);
+        assert.equal(res.json().error, 'invalid_policy_pack');
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/policy/packs creates a policy pack', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({
+            method: 'POST',
+            url: '/runtime/policy/packs',
+            payload: { id: 'test-pack', name: 'Test Pack', blocked_actions: ['deploy'] },
+        });
+        assert.equal(res.statusCode, 200);
+        assert.equal(res.json().status, 'policy_pack_upserted');
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/policy/packs/:packId/simulate returns 404 for unknown pack', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({ method: 'POST', url: '/runtime/policy/packs/no-pack/simulate', payload: {} });
+        assert.equal(res.statusCode, 404);
+        assert.equal(res.json().error, 'policy_pack_not_found');
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/policy/packs/:packId/simulate returns simulation for existing pack', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        await app.inject({
+            method: 'POST',
+            url: '/runtime/policy/packs',
+            payload: { id: 'sim-pack', name: 'Sim Pack', blocked_actions: ['deploy'] },
+        });
+        const res = await app.inject({ method: 'POST', url: '/runtime/policy/packs/sim-pack/simulate', payload: {} });
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as { simulation: unknown };
+        assert.ok(body.simulation !== undefined);
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/policy/packs/:packId/enable attempts to enable a pack', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        await app.inject({
+            method: 'POST',
+            url: '/runtime/policy/packs',
+            payload: { id: 'enable-pack', name: 'Enable Pack' },
+        });
+        const res = await app.inject({ method: 'POST', url: '/runtime/policy/packs/enable-pack/enable', payload: {} });
+        assert.ok([200, 409].includes(res.statusCode));
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/marketplace/skills returns skill catalog', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/runtime/marketplace/skills' });
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as { skills: unknown[] };
+        assert.ok(Array.isArray(body.skills));
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/marketplace/install returns 400 when skill_id missing', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({ method: 'POST', url: '/runtime/marketplace/install', payload: {} });
+        assert.equal(res.statusCode, 400);
+        assert.equal(res.json().error, 'invalid_install_payload');
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/marketplace/install installs a skill', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({
+            method: 'POST',
+            url: '/runtime/marketplace/install',
+            payload: { skill_id: 'test-coverage-reporter', approved_permissions: ['read'] },
+        });
+        assert.ok([200, 403].includes(res.statusCode));
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/marketplace/uninstall returns 400 when skill_id missing', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({ method: 'POST', url: '/runtime/marketplace/uninstall', payload: {} });
+        assert.equal(res.statusCode, 400);
+        assert.equal(res.json().error, 'invalid_uninstall_payload');
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/marketplace/telemetry returns telemetry events', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/runtime/marketplace/telemetry' });
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as { events: unknown[] };
+        assert.ok(Array.isArray(body.events));
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/marketplace/telemetry rejects invalid limit', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/runtime/marketplace/telemetry?limit=-1' });
+        assert.equal(res.statusCode, 400);
+        assert.equal(res.json().error, 'invalid_limit');
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/marketplace/use returns 400 when skill_id missing', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({ method: 'POST', url: '/runtime/marketplace/use', payload: {} });
+        assert.equal(res.statusCode, 400);
+        assert.equal(res.json().error, 'invalid_skill_id');
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/marketplace/use records usage and returns ok', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({
+            method: 'POST',
+            url: '/runtime/marketplace/use',
+            payload: { skill_id: 'test-coverage-reporter', workspace_key: 'ws-001' },
+        });
+        assert.equal(res.statusCode, 200);
+        assert.equal(res.json().status, 'recorded');
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/marketplace/invoke returns 400 when skill_id missing', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({ method: 'POST', url: '/runtime/marketplace/invoke', payload: {} });
+        assert.equal(res.statusCode, 400);
+        assert.equal(res.json().error, 'invalid_invoke_payload');
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/marketplace/invoke invokes a skill', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({
+            method: 'POST',
+            url: '/runtime/marketplace/invoke',
+            payload: { skill_id: 'test-coverage-reporter', inputs: { pr_number: 1 } },
+        });
+        assert.ok([200, 404, 501].includes(res.statusCode));
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/marketplace/catalog/skills returns 400 when required fields missing', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({
+            method: 'POST',
+            url: '/runtime/marketplace/catalog/skills',
+            payload: { id: 'my-skill' },
+        });
+        assert.equal(res.statusCode, 400);
+        assert.equal(res.json().error, 'invalid_catalog_payload');
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/marketplace/catalog/skills upserts a catalog entry', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({
+            method: 'POST',
+            url: '/runtime/marketplace/catalog/skills',
+            payload: { id: 'custom-skill', name: 'Custom Skill', version: '1.0.0' },
+        });
+        assert.equal(res.statusCode, 200);
+        assert.ok(['created', 'updated'].includes(res.json().status));
+    } finally {
+        await app.close();
+    }
+});
+
+test('DELETE /runtime/marketplace/catalog/skills/:skillId removes or rejects removal', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        await app.inject({
+            method: 'POST',
+            url: '/runtime/marketplace/catalog/skills',
+            payload: { id: 'to-remove', name: 'To Remove', version: '1.0.0' },
+        });
+        const res = await app.inject({ method: 'DELETE', url: '/runtime/marketplace/catalog/skills/to-remove' });
+        assert.ok([200, 403, 404].includes(res.statusCode));
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/provenance/attestations returns attestation list', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/runtime/provenance/attestations' });
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as { attestations: unknown[] };
+        assert.ok(Array.isArray(body.attestations));
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/provenance/attestations rejects invalid limit', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/runtime/provenance/attestations?limit=0' });
+        assert.equal(res.statusCode, 400);
+        assert.equal(res.json().error, 'invalid_limit');
+    } finally {
+        await app.close();
+    }
+});
+
+test('DELETE /runtime/marketplace/catalog/skills/:skillId returns 403 for builtin skill', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        // pr-reviewer-risk-labels is a builtin skill that cannot be deleted
+        const res = await app.inject({ method: 'DELETE', url: '/runtime/marketplace/catalog/skills/pr-reviewer-risk-labels' });
+        // builtin skills return 403; non-existent managed skills return 404
+        assert.ok([403, 404].includes(res.statusCode));
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/marketplace/invoke returns 404 for non-installed skill (no inputs)', async () => {
+    const app = buildRuntimeServer({ env: baseEnv() });
+    try {
+        // not passing inputs triggers the {} fallback branch (line 4779) as well as skill_not_installed 404
+        const res = await app.inject({
+            method: 'POST',
+            url: '/runtime/marketplace/invoke',
+            payload: { skill_id: 'definitely-not-installed-xyz' },
+        });
+        assert.equal(res.statusCode, 404);
+        assert.equal(res.json().error, 'skill_not_installed');
+    } finally {
+        await app.close();
+    }
+});
+
+test('startRuntimeServer starts and closes cleanly', async () => {
+    const { startRuntimeServer } = await import('./runtime-server.js');
+    const env = { ...baseEnv(), AF_HEALTH_PORT: '0' };
+    const app = await startRuntimeServer({ env });
+    try {
+        const address = app.server.address();
+        assert.ok(address !== null);
+    } finally {
+        await app.close();
+    }
+});

@@ -6,42 +6,42 @@ const faqs = [
     {
         question: "What is AgentFarm?",
         answer:
-            "AgentFarm is a role-based AI teammate platform. Teams add specialist agents for development, QA, support, and operations that work inside existing tools like GitHub, Slack, and Jira.",
+            "AgentFarm is a Developer Agent platform for engineering teams. You deploy role-based AI agents that execute real engineering work end-to-end — writing code, opening PRs, running CI, fixing tests, and more — directly inside GitHub, Jira, and Microsoft Teams.",
     },
     {
         question: "How is AgentFarm different from GitHub Copilot?",
         answer:
-            "Copilot helps individuals while they type. AgentFarm agents execute assigned tasks end-to-end, create outputs in your workflow, and keep activity visible for team review.",
+            "Copilot helps individual developers while they type code. AgentFarm agents execute complete engineering tasks autonomously — they create branches, push commits, open PRs, request CI runs, and transition Jira tickets. The output is reviewable work, not just a suggestion.",
     },
     {
-        question: "What languages and frameworks do Robots support?",
+        question: "How does AgentFarm handle risky actions?",
         answer:
-            "Agents support mainstream stacks including TypeScript, Python, Java, Go, and common frameworks. The practical coverage depends on the role and the repositories you connect.",
+            "Every action is classified before execution: LOW-risk actions (like reading code or generating release notes) run automatically. MEDIUM and HIGH-risk actions (like creating PRs, running deploys, or making security changes) pause and request human approval via Teams or email before proceeding.",
+    },
+    {
+        question: "What developer skills are available?",
+        answer:
+            "The Skill Marketplace ships 21 developer skills including: Create PR, Run CI Checks, Fix Test Failures, Security Fix Suggest, PR Review Prepare, Dependency Upgrade Plan, Release Notes Generate, Explain Code, Refactor Plan, Semantic Search, and Audit Export. New skills are added each release.",
     },
     {
         question: "Is my code safe?",
         answer:
-            "Yes. Agent access is scoped to approved integrations and repositories. Actions are logged, reviewable, and can be controlled with approval rules for sensitive operations.",
+            "Yes. Each customer gets a dedicated, tenant-isolated Azure VM — your code never runs on shared infrastructure. Connector tokens are encrypted at rest, agent access is scoped to approved repositories, and every action is logged with full evidence for compliance review.",
+    },
+    {
+        question: "What connectors are supported?",
+        answer:
+            "AgentFarm natively integrates with GitHub, Jira, Microsoft Teams, and email. OAuth is used for all connectors with least-privilege scopes. More connectors (Confluence, Linear, Azure DevOps) are planned.",
     },
     {
         question: "How does pricing work?",
         answer:
-            "Pricing is role-based and aligned to marketplace plans (Starter+, Pro+, Enterprise). You can start with a focused setup and expand as workload grows.",
+            "Pricing is skill-based and aligned to Starter+, Pro+, and Enterprise plans. You start with a focused set of developer skills and expand as your team's workload grows. Contact us for pilot and enterprise pricing.",
     },
     {
-        question: "Can I cancel anytime?",
+        question: "What happens if the agent makes a mistake?",
         answer:
-            "Yes. You can adjust or cancel your plan at any time based on your team requirements.",
-    },
-    {
-        question: "Do Robots work with private repositories?",
-        answer:
-            "Yes. You choose exactly which repositories and workspaces are connected, and you can revoke access when needed.",
-    },
-    {
-        question: "What happens if a Robot makes a mistake?",
-        answer:
-            "Outputs are designed for human review. Teams can reject work, adjust instructions, and rerun tasks with updated context.",
+            "All outputs — PRs, CI reports, patch suggestions — go through human review before merging. The approval model ensures nothing reaches production without sign-off. A full evidence trail means every action is auditable after the fact.",
     },
 ];
 

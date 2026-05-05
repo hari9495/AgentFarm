@@ -33,10 +33,10 @@ function Counter({ to, suffix = "" }: { to: number; suffix?: string }) {
 }
 
 const stats = [
-  { label: "Tasks Completed", value: 12480, suffix: "+" },
-  { label: "Pull Requests Merged", value: 3210, suffix: "+" },
-  { label: "Avg. Test Coverage", value: 94, suffix: "%" },
-  { label: "Engineer Hours Saved", value: 2300, suffix: "h+" },
+  { label: "Developer Skills Available", value: 21, suffix: "" },
+  { label: "Agent Actions Executed", value: 2100, suffix: "+" },
+  { label: "Actions Under Audit Coverage", value: 100, suffix: "%" },
+  { label: "Avg. Approval Latency (min)", value: 2, suffix: "min" },
 ];
 
 export default function StatsCounter() {

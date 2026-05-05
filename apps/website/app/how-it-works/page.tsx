@@ -4,7 +4,7 @@ import ButtonLink from "@/components/shared/ButtonLink";
 
 export const metadata: Metadata = {
     title: "How It Works — AgentFarm",
-    description: "Learn how AgentFarm AI teammates integrate with your GitHub, Slack, and Jira workflow.",
+    description: "Learn how AgentFarm AI agents integrate with your GitHub, Jira, and Microsoft Teams workflow.",
 };
 
 const steps = [
@@ -12,9 +12,9 @@ const steps = [
         number: "01",
         icon: ShoppingCart,
         gradient: "from-blue-500 to-blue-600",
-        title: "Browse the Robot Marketplace",
+        title: "Provision Your Workspace",
         description:
-            "Visit the AgentFarm dashboard and explore available AI workers — Backend Dev, Frontend Dev, QA Engineer, DevOps Engineer, and more. Each role comes with a detailed capability sheet.",
+            "Sign up and AgentFarm provisions a dedicated, tenant-isolated Azure VM runtime for your team. Your code and credentials never share infrastructure with other customers.",
         detail: "Takes under 2 minutes",
         image: "https://images.unsplash.com/photo-1526628953301-3e589a6a8b74?auto=format&fit=crop&w=900&q=80",
     },
@@ -22,19 +22,19 @@ const steps = [
         number: "02",
         icon: Rocket,
         gradient: "from-violet-500 to-violet-600",
-        title: "Activate Your First AI Teammate",
+        title: "Install Developer Skills",
         description:
-            "Select a role, choose a plan (Starter, Pro, or Enterprise), and activate your teammate in an isolated runtime with governed access.",
-        detail: "Teammate live in ~30 seconds",
+            "Browse the Skill Marketplace and install the 21 developer skills your team needs — PR creation, CI checks, test fixes, code review, security scanning, release notes, and more.",
+        detail: "Skills live in ~30 seconds",
         image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=900&q=80",
     },
     {
         number: "03",
         icon: LinkIcon,
         gradient: "from-emerald-500 to-emerald-600",
-        title: "Connect GitHub, Slack & Jira",
+        title: "Connect GitHub, Jira & Teams",
         description:
-            "Grant repository access via GitHub OAuth. Link your Slack workspace and Jira board in the integrations panel. AgentFarm uses least-privilege scopes and never stores credentials in plaintext.",
+            "Grant repository access via GitHub OAuth. Link your Jira board and Microsoft Teams workspace in the integrations panel. AgentFarm uses least-privilege scopes and never stores credentials in plaintext.",
         detail: "Setup in under 5 minutes",
         image: "https://images.unsplash.com/photo-1556075798-4825dfaaf498?auto=format&fit=crop&w=900&q=80",
     },
@@ -42,9 +42,9 @@ const steps = [
         number: "04",
         icon: MessageSquare,
         gradient: "from-orange-500 to-orange-600",
-        title: "Assign Tasks",
+        title: "Assign Tasks — Agent Classifies Risk",
         description:
-            "Mention a teammate in Slack, assign a Jira ticket, or create a task directly in AgentFarm. The teammate picks it up, analyzes context, and starts execution.",
+            "Assign a Jira ticket or send a Teams message. The agent classifies each action by risk: LOW actions execute automatically, MEDIUM and HIGH actions pause and request your approval before proceeding.",
         detail: "Execution starts in <30s",
         image: "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?auto=format&fit=crop&w=900&q=80",
     },
@@ -108,8 +108,8 @@ export default function HowItWorksPage() {
             <div className="bg-slate-900 dark:bg-slate-950 border-b border-slate-800">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-wrap justify-center gap-8 text-center">
                     {[
-                        { label: "Browse & activate a role", time: "2 min" },
-                        { label: "Connect GitHub + Slack", time: "5 min" },
+                        { label: "Provision workspace + install skills", time: "2 min" },
+                        { label: "Connect GitHub + Jira + Teams", time: "5 min" },
                         { label: "First task assigned", time: "8 min" },
                         { label: "First review-ready PR", time: "<15 min" },
                     ].map(({ label, time }) => (

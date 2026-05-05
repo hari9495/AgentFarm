@@ -13,6 +13,7 @@
         "test:coverage": "pnpm exec c8 --reporter=text-summary --reporter=json-summary --exclude=src/**/*.test.ts tsx --test src/**/*.test.ts && node ../../scripts/coverage-threshold-check.mjs coverage/coverage-summary.json 80 lines src/services/provisioning-monitoring.ts"
     },
     "dependencies": {
+        "@agentfarm/agent-runtime": "workspace:*",
         "@agentfarm/connector-contracts": "workspace:*",
         "@agentfarm/queue-contracts": "workspace:*",
         "@agentfarm/shared-types": "workspace:*",

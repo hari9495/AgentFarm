@@ -24,7 +24,7 @@ export function registerAgentFeedbackRoutes(app: FastifyInstance): void {
             return reply.status(400).send({ error: 'task_id, skill_id, and rating required' });
         }
         const { globalFeedback } = await import('@agentfarm/agent-runtime/agent-feedback.js').catch(
-            () => import('../../agent-runtime-stubs.js'),
+            () => import('../agent-runtime-stubs.js'),
         );
         const record = globalFeedback.submitFeedback(body);
         return reply.status(201).send(record);
@@ -35,7 +35,7 @@ export function registerAgentFeedbackRoutes(app: FastifyInstance): void {
         '/feedback/:taskId',
         async (req: FastifyRequest<{ Params: TaskIdParams }>, reply) => {
             const { globalFeedback } = await import('@agentfarm/agent-runtime/agent-feedback.js').catch(
-                () => import('../../agent-runtime-stubs.js'),
+                () => import('../agent-runtime-stubs.js'),
             );
             return reply.send({ feedback: globalFeedback.getFeedback(req.params.taskId) });
         },
@@ -46,7 +46,7 @@ export function registerAgentFeedbackRoutes(app: FastifyInstance): void {
         '/feedback/skills/:skillId',
         async (req: FastifyRequest<{ Params: SkillIdParams }>, reply) => {
             const { globalFeedback } = await import('@agentfarm/agent-runtime/agent-feedback.js').catch(
-                () => import('../../agent-runtime-stubs.js'),
+                () => import('../agent-runtime-stubs.js'),
             );
             return reply.send(globalFeedback.getSkillRating(req.params.skillId));
         },
@@ -55,7 +55,7 @@ export function registerAgentFeedbackRoutes(app: FastifyInstance): void {
     // All skill ratings
     app.get('/feedback/skills', async (_req, reply) => {
         const { globalFeedback } = await import('@agentfarm/agent-runtime/agent-feedback.js').catch(
-            () => import('../../agent-runtime-stubs.js'),
+            () => import('../agent-runtime-stubs.js'),
         );
         return reply.send({ skills: globalFeedback.getAllSkillRatings() });
     });
@@ -65,7 +65,7 @@ export function registerAgentFeedbackRoutes(app: FastifyInstance): void {
         '/feedback',
         async (req: FastifyRequest<{ Querystring: { limit?: string } }>, reply) => {
             const { globalFeedback } = await import('@agentfarm/agent-runtime/agent-feedback.js').catch(
-                () => import('../../agent-runtime-stubs.js'),
+                () => import('../agent-runtime-stubs.js'),
             );
             return reply.send({ feedback: globalFeedback.listAll(Number(req.query.limit ?? 100)) });
         },

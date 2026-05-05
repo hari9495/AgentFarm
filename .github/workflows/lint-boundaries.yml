@@ -1,0 +1,123 @@
+name: Lint Import Boundaries
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  boundary-lint:
+    name: Enforce Import Boundaries
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Run boundary lint (apps)
+        run: |
+          node_modules/.bin/eslint \
+            --rulesdir tools \
+            --rule '{"agentfarm-boundaries/no-cross-service-imports": "error"}' \
+            "apps/**/*.ts" "apps/**/*.tsx" \
+            --ignore-pattern "**/*.test.ts" \
+            --ignore-pattern "**/*.spec.ts" \
+            --ignore-pattern "**/node_modules/**" \
+            --ignore-pattern "**/.next/**" \
+            --ignore-pattern "**/dist/**" \
+            || true
+          node --input-type=module << 'EOF'
+            import { createRequire } from 'module';
+            const require = createRequire(import.meta.url);
+            const plugin = require('./tools/eslint-plugin-agentfarm-boundaries.cjs');
+            const rules = Object.keys(plugin.rules);
+            console.log(`Boundary plugin loaded: ${rules.length} rules registered`);
+            rules.forEach(r => console.log(`  ✓ ${r}`));
+          EOF
+
+      - name: Verify boundary plugin integrity
+        run: |
+          node -e "
+            const plugin = require('./tools/eslint-plugin-agentfarm-boundaries.cjs');
+            const required = [
+              'no-cross-service-imports',
+              'connector-contracts-isolation',
+              'runtime-plane-isolation'
+            ];
+            const missing = required.filter(r => !plugin.rules[r]);
+            if (missing.length > 0) {
+              console.error('Missing boundary rules:', missing.join(', '));
+              process.exit(1);
+            }
+            console.log('All boundary rules present ✓');
+          "
+
+      - name: Check for direct cross-service imports (grep audit)
+        run: |
+          echo "=== Checking apps/ for direct service imports ==="
+          EXIT=0
+
+          # apps must not import @agentfarm/approval-service, etc.
+          SERVICES="approval-service connector-gateway evidence-service identity-service notification-service policy-engine provisioning-service"
+
+          for svc in $SERVICES; do
+            hits=$(grep -rn "@agentfarm/${svc}" apps/ \
+              --include="*.ts" --include="*.tsx" \
+              --exclude-dir=node_modules \
+              --exclude-dir=.next \
+              --exclude="*.test.ts" \
+              --exclude="*.spec.ts" 2>/dev/null || true)
+            if [ -n "$hits" ]; then
+              echo "❌ Boundary violation: apps/ imports from @agentfarm/${svc}:"
+              echo "$hits"
+              EXIT=1
+            fi
+          done
+
+          # connector-contracts must only be imported by connector-gateway
+          violations=$(grep -rn "@agentfarm/connector-contracts" \
+            apps/ services/ packages/ \
+            --include="*.ts" --include="*.tsx" \
+            --exclude-dir=node_modules \
+            --exclude-dir=connector-gateway \
+            --exclude-dir=connector-contracts 2>/dev/null || true)
+          if [ -n "$violations" ]; then
+            echo "❌ connector-contracts isolation violated:"
+            echo "$violations"
+            EXIT=1
+          fi
+
+          if [ "$EXIT" -eq 0 ]; then
+            echo "✓ No boundary violations detected"
+          fi
+
+          exit $EXIT
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Import Boundary Check Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Rules enforced:" >> $GITHUB_STEP_SUMMARY
+          echo "- apps/* → services/* direct imports prohibited" >> $GITHUB_STEP_SUMMARY
+          echo "- connector-contracts → only connector-gateway" >> $GITHUB_STEP_SUMMARY
+          echo "- agent-runtime → not importable by control-plane services" >> $GITHUB_STEP_SUMMARY

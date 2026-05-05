@@ -1521,6 +1521,138 @@ const dockerImageScanner: SkillHandler = (input, startedAt) => {
     };
 };
 
+// ── 37. secrets-scanner ───────────────────────────────────────────────────────
+// Scans staged files or a diff for accidentally committed secrets and credentials.
+
+const secretsScanner: SkillHandler = (input, startedAt) => {
+    const diffContent = str(input['diff_content'], '');
+    const filePaths = strArr(input['file_paths']);
+    const content = diffContent + '\n' + filePaths.join('\n');
+
+    const patterns: Array<{ name: string; pattern: RegExp; severity: 'critical' | 'high' | 'medium' }> = [
+        { name: 'AWS Access Key', pattern: /AKIA[0-9A-Z]{16}/g, severity: 'critical' },
+        { name: 'Generic API Key', pattern: /api[_-]?key\s*[:=]\s*["']?[a-zA-Z0-9_\-]{20,}["']?/gi, severity: 'high' },
+        { name: 'Private Key Header', pattern: /-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----/g, severity: 'critical' },
+        { name: 'Bearer Token', pattern: /bearer\s+[a-zA-Z0-9\-._~+/]+=*/gi, severity: 'high' },
+        { name: 'Database Connection String', pattern: /(postgres|mysql|mongodb):\/\/[^:\s]+:[^@\s]+@/gi, severity: 'critical' },
+        { name: 'GitHub PAT', pattern: /ghp_[a-zA-Z0-9]{36}/g, severity: 'critical' },
+        { name: 'Slack Token', pattern: /xox[baprs]-[a-zA-Z0-9\-]+/g, severity: 'high' },
+        { name: 'Generic Password', pattern: /password\s*[:=]\s*["']?[^\s"']{8,}["']?/gi, severity: 'medium' },
+        { name: 'Generic Secret', pattern: /secret\s*[:=]\s*["']?[a-zA-Z0-9_\-]{12,}["']?/gi, severity: 'medium' },
+    ];
+
+    const findings: Array<{ type: string; severity: string; match: string }> = [];
+    for (const { name, pattern, severity } of patterns) {
+        const matches = content.match(pattern) ?? [];
+        for (const match of matches) {
+            findings.push({ type: name, severity, match: match.slice(0, 40) + (match.length > 40 ? '…' : '') });
+        }
+    }
+
+    const criticalCount = findings.filter((f) => f.severity === 'critical').length;
+    const highCount = findings.filter((f) => f.severity === 'high').length;
+
+    return {
+        ok: criticalCount === 0 && highCount === 0,
+        skill_id: 'secrets-scanner',
+        summary: findings.length === 0
+            ? 'No secrets detected in scanned content.'
+            : `Secrets scan: ${findings.length} finding(s) — ${criticalCount} critical, ${highCount} high`,
+        risk_level: criticalCount > 0 ? 'high' : highCount > 0 ? 'medium' : 'low',
+        requires_approval: criticalCount > 0 || highCount > 0,
+        actions_taken: [
+            `Scanned ${filePaths.length} file path(s) and diff content`,
+            `Matched against ${patterns.length} secret patterns`,
+            `Found ${findings.length} potential secret(s)`,
+        ],
+        result: {
+            findings_count: findings.length,
+            critical_count: criticalCount,
+            high_count: highCount,
+            findings,
+            recommendation: findings.length > 0
+                ? 'Remove secrets from source, rotate credentials immediately, and use environment variables or a secrets manager.'
+                : 'No action needed.',
+        },
+        duration_ms: elapsed(startedAt),
+    };
+};
+
+// ── 38. refactor-advisor ──────────────────────────────────────────────────────
+// Analyses a TypeScript/JavaScript file for refactoring opportunities.
+
+const refactorAdvisor: SkillHandler = (input, startedAt) => {
+    const fileContent = str(input['file_content'], '');
+    const filePath = str(input['file_path'], 'unknown.ts');
+    const maxFunctionLines = typeof input['max_function_lines'] === 'number' ? input['max_function_lines'] : 40;
+
+    const suggestions: Array<{ type: string; severity: 'high' | 'medium' | 'low'; detail: string }> = [];
+
+    // Detect long functions (heuristic: count lines between function declarations)
+    const functionMatches = [...fileContent.matchAll(/(?:function\s+\w+|(?:const|let|var)\s+\w+\s*=\s*(?:async\s*)?\([^)]*\)\s*(?::\s*\S+\s*)?=>)\s*\{/g)];
+    if (functionMatches.length > 0) {
+        const lines = fileContent.split('\n');
+        if (lines.length > maxFunctionLines * functionMatches.length) {
+            suggestions.push({ type: 'long-functions', severity: 'medium', detail: `File has ${lines.length} lines across ~${functionMatches.length} function(s). Consider splitting functions exceeding ${maxFunctionLines} lines.` });
+        }
+    }
+
+    // Detect deeply nested callbacks / promise chains
+    const thenChains = (fileContent.match(/\.then\(/g) ?? []).length;
+    if (thenChains >= 3) {
+        suggestions.push({ type: 'promise-chain', severity: 'medium', detail: `Found ${thenChains} .then() chains — consider refactoring to async/await for readability.` });
+    }
+
+    // Detect repeated string literals
+    const stringLiterals = fileContent.match(/'[^']{8,}'|"[^"]{8,}"/g) ?? [];
+    const stringCounts = new Map<string, number>();
+    for (const s of stringLiterals) {
+        stringCounts.set(s, (stringCounts.get(s) ?? 0) + 1);
+    }
+    const repeatedStrings = [...stringCounts.entries()].filter(([, count]) => count >= 3);
+    if (repeatedStrings.length > 0) {
+        suggestions.push({ type: 'magic-strings', severity: 'low', detail: `${repeatedStrings.length} string literal(s) repeated 3+ times — extract to named constants: ${repeatedStrings.map(([s]) => s).slice(0, 3).join(', ')}` });
+    }
+
+    // Detect console.log usage (should use structured logger)
+    const consoleLogs = (fileContent.match(/console\.(log|warn|error|debug)/g) ?? []).length;
+    if (consoleLogs > 0) {
+        suggestions.push({ type: 'console-logging', severity: 'low', detail: `Found ${consoleLogs} console.* call(s) — replace with structured logger (e.g., Pino/Winston) for production readiness.` });
+    }
+
+    // Detect large switch statements
+    const switchCases = (fileContent.match(/^\s*case\s+/gm) ?? []).length;
+    if (switchCases >= 6) {
+        suggestions.push({ type: 'large-switch', severity: 'medium', detail: `Found ${switchCases} case branches — consider a strategy/handler map pattern to reduce branching complexity.` });
+    }
+
+    const highCount = suggestions.filter((s) => s.severity === 'high').length;
+    const medCount = suggestions.filter((s) => s.severity === 'medium').length;
+
+    return {
+        ok: highCount === 0,
+        skill_id: 'refactor-advisor',
+        summary: suggestions.length === 0
+            ? `No refactoring issues found in ${filePath}.`
+            : `Refactor advisor: ${suggestions.length} suggestion(s) for ${filePath} (${highCount} high, ${medCount} medium)`,
+        risk_level: highCount > 0 ? 'high' : medCount > 0 ? 'medium' : 'low',
+        requires_approval: false,
+        actions_taken: [
+            `Analysed ${fileContent.split('\n').length} lines in ${filePath}`,
+            `Generated ${suggestions.length} refactoring suggestion(s)`,
+        ],
+        result: {
+            file_path: filePath,
+            suggestions_count: suggestions.length,
+            suggestions,
+            recommendation: suggestions.length > 0
+                ? 'Address high/medium severity items before merging to main.'
+                : 'File is in good shape — no refactoring required.',
+        },
+        duration_ms: elapsed(startedAt),
+    };
+};
+
 // ── Registry ──────────────────────────────────────────────────────────────────
 
 export const SKILL_HANDLERS: Readonly<Record<string, SkillHandler>> = {
@@ -1561,6 +1693,8 @@ export const SKILL_HANDLERS: Readonly<Record<string, SkillHandler>> = {
     'type-coverage-reporter': typeCoverageReporter,
     'license-compliance-check': licenseComplianceCheck,
     'docker-image-scanner': dockerImageScanner,
+    'secrets-scanner': secretsScanner,
+    'refactor-advisor': refactorAdvisor,
 };
 
 export const getSkillHandler = (skillId: string): SkillHandler | undefined =>

@@ -3,6 +3,38 @@
     "version": "0.1.0",
     "private": true,
     "type": "module",
+    "main": "./src/main.ts",
+    "types": "./src/main.ts",
+    "exports": {
+        ".": {
+            "types": "./src/main.ts",
+            "default": "./src/main.ts"
+        },
+        "./skill-pipeline.js": {
+            "types": "./src/skill-pipeline.ts",
+            "default": "./src/skill-pipeline.ts"
+        },
+        "./skill-scheduler.js": {
+            "types": "./src/skill-scheduler.ts",
+            "default": "./src/skill-scheduler.ts"
+        },
+        "./agent-feedback.js": {
+            "types": "./src/agent-feedback.ts",
+            "default": "./src/agent-feedback.ts"
+        },
+        "./connector-health-monitor.js": {
+            "types": "./src/connector-health-monitor.ts",
+            "default": "./src/connector-health-monitor.ts"
+        },
+        "./repo-knowledge-graph.js": {
+            "types": "./src/repo-knowledge-graph.ts",
+            "default": "./src/repo-knowledge-graph.ts"
+        },
+        "./webhook-ingestion.js": {
+            "types": "./src/webhook-ingestion.ts",
+            "default": "./src/webhook-ingestion.ts"
+        }
+    },
     "scripts": {
         "build": "tsc -p tsconfig.json",
         "dev": "node --loader ts-node/esm src/main.ts",

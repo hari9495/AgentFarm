@@ -33,9 +33,9 @@ describe('skill-execution-engine: registry', () => {
         'pr-description-generator',
     ];
 
-    it('registers all 36 skill handlers', () => {
+    it('registers all 38 skill handlers', () => {
         const registered = listRegisteredSkillIds();
-        assert.equal(registered.length, 36);
+        assert.equal(registered.length, 38);
     });
 
     it('has every expected skill ID', () => {
