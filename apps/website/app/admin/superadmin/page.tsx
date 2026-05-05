@@ -12,7 +12,9 @@ import {
     ShieldCheck,
     Users,
     XCircle,
+    type LucideIcon,
 } from "lucide-react";
+import PremiumIcon from "@/components/shared/PremiumIcon";
 
 type UserRole = "superadmin" | "admin" | "member";
 type BotStatus = "active" | "paused" | "error" | "maintenance";
@@ -149,7 +151,9 @@ export default function TenantSuperAdminPage() {
         return (
             <div className="site-shell min-h-screen flex items-center justify-center p-6">
                 <div className="max-w-lg rounded-2xl border border-rose-200 dark:border-rose-900/40 bg-white dark:bg-slate-900 p-6 text-center">
-                    <XCircle className="w-9 h-9 text-rose-500 mx-auto" />
+                    <div className="mx-auto mb-3 flex justify-center">
+                        <PremiumIcon icon={XCircle} tone="rose" containerClassName="w-9 h-9 rounded-xl bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400" iconClassName="w-5 h-5" />
+                    </div>
                     <h1 className="mt-3 text-xl font-bold text-slate-900 dark:text-slate-100">Tenant superadmin access required</h1>
                     <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">This page is for per-customer tenant controls only.</p>
                     <Link href="/admin" className="mt-4 inline-flex items-center rounded-lg bg-slate-900 dark:bg-slate-100 px-4 py-2 text-sm font-semibold text-white dark:text-slate-900">Return to Admin Console</Link>
@@ -169,14 +173,14 @@ export default function TenantSuperAdminPage() {
             <section className="border-b border-slate-200 dark:border-slate-800 bg-gradient-to-br from-violet-700 via-indigo-700 to-slate-900">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
                     <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-violet-200 mb-4">
-                        <ShieldCheck className="w-3.5 h-3.5" />
+                        <PremiumIcon icon={ShieldCheck} tone="violet" containerClassName="w-5 h-5 rounded-md bg-violet-300/15 text-violet-200 border-violet-200/30" iconClassName="w-3 h-3" />
                         Tenant Superadmin
                     </div>
                     <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">Customer tenant governance</h1>
                     <p className="mt-2 text-violet-100 max-w-3xl">Manage users and monitor bots inside this customer tenant. AgentFarm company portal is separated at /company.</p>
                     <div className="mt-5 flex flex-wrap gap-3">
                         <button onClick={loadData} disabled={loading} className="inline-flex items-center gap-1.5 rounded-lg bg-white/15 border border-white/20 px-3.5 py-2 text-sm font-semibold text-white hover:bg-white/20 disabled:opacity-60">
-                            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />Refresh
+                            <PremiumIcon icon={RefreshCw} tone="slate" containerClassName="w-6 h-6 rounded-lg bg-white/15 text-white border-white/30" iconClassName={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />Refresh
                         </button>
                         <Link href="/admin" className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 border border-white/20 px-3.5 py-2 text-sm font-semibold text-white hover:bg-white/20">Back to Admin</Link>
                         <Link href="/company" className="inline-flex items-center gap-1.5 rounded-lg bg-fuchsia-500/20 border border-fuchsia-300/40 px-3.5 py-2 text-sm font-semibold text-white hover:bg-fuchsia-500/30">Company Portal</Link>
@@ -250,12 +254,12 @@ export default function TenantSuperAdminPage() {
                                             <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{bot.role}</p>
                                         </div>
                                         <div className="inline-flex items-center gap-1 text-xs font-semibold">
-                                            <Activity className={`w-3.5 h-3.5 ${botStatusStyles[bot.status]}`} />
+                                            <PremiumIcon icon={Activity} tone="slate" containerClassName={`w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 ${botStatusStyles[bot.status]}`} iconClassName="w-3.5 h-3.5" />
                                             <span className="capitalize text-slate-600 dark:text-slate-300">{bot.status}</span>
                                         </div>
                                     </div>
                                     <div className="mt-2 flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
-                                        <span className="inline-flex items-center gap-1"><Bot className="w-3.5 h-3.5" />{bot.tasksCompleted} tasks</span>
+                                        <span className="inline-flex items-center gap-1"><PremiumIcon icon={Bot} tone="slate" containerClassName="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400" iconClassName="w-3.5 h-3.5" />{bot.tasksCompleted} tasks</span>
                                         <span>{bot.reliabilityPct}% reliable</span>
                                         <span>{ago(bot.lastActivityAt)}</span>
                                     </div>
@@ -277,7 +281,7 @@ function MetricCard({
 }: {
     label: string;
     value: string;
-    icon: React.ElementType;
+    icon: LucideIcon;
     tone: "fuchsia" | "violet" | "slate" | "emerald" | "rose";
 }) {
     const styleMap: Record<typeof tone, string> = {
@@ -290,9 +294,7 @@ function MetricCard({
 
     return (
         <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
-            <span className={`inline-flex items-center justify-center w-9 h-9 rounded-xl ${styleMap[tone]}`}>
-                <Icon className="w-4.5 h-4.5" />
-            </span>
+            <PremiumIcon icon={Icon} tone="sky" containerClassName={`w-9 h-9 rounded-xl ${styleMap[tone]}`} iconClassName="w-4 h-4" />
             <p className="mt-3 text-2xl font-extrabold text-slate-900 dark:text-slate-100">{value}</p>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{label}</p>
         </div>

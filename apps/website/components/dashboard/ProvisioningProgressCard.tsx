@@ -3,6 +3,7 @@
 import React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, CheckCircle2, Clock3, LoaderCircle, RefreshCw, Wrench } from "lucide-react";
+import PremiumIcon from "@/components/shared/PremiumIcon";
 
 type ProvisioningStatus =
     | "queued"
@@ -109,7 +110,7 @@ export function ProvisioningProgressCardContent(props: {
             <div className="flex items-start justify-between gap-3">
                 <div>
                     <p className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                        <Clock3 className="h-4 w-4 text-sky-600 dark:text-sky-400" />
+                        <PremiumIcon icon={Clock3} tone="sky" containerClassName="w-6 h-6 rounded-lg bg-sky-100 dark:bg-sky-900/40 text-sky-600 dark:text-sky-400" iconClassName="w-3.5 h-3.5" />
                         Provisioning Progress
                     </p>
                     <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Live runtime bootstrap state for your tenant workspace</p>
@@ -118,13 +119,13 @@ export function ProvisioningProgressCardContent(props: {
                     onClick={props.onRefresh}
                     className="inline-flex items-center gap-1 rounded-lg border border-slate-200 dark:border-slate-700 px-2.5 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
                 >
-                    <RefreshCw className="h-3.5 w-3.5" /> Refresh
+                    <PremiumIcon icon={RefreshCw} tone="slate" containerClassName="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400" iconClassName="h-3.5 w-3.5" /> Refresh
                 </button>
             </div>
 
             {props.loading && !props.payload ? (
                 <p className="mt-4 text-xs text-slate-500 dark:text-slate-400 inline-flex items-center gap-2">
-                    <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> Loading provisioning status...
+                    <PremiumIcon icon={LoaderCircle} tone="slate" containerClassName="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400" iconClassName="h-3.5 w-3.5 animate-spin" /> Loading provisioning status...
                 </p>
             ) : props.error ? (
                 <p className="mt-4 text-xs text-rose-600 dark:text-rose-400">{props.error}</p>
@@ -165,7 +166,7 @@ export function ProvisioningProgressCardContent(props: {
                     {alerts.length > 0 ? (
                         <div className="rounded-xl border border-amber-200 dark:border-amber-700/40 bg-amber-50 dark:bg-amber-950/20 p-3.5">
                             <p className="text-sm font-semibold text-amber-700 dark:text-amber-300 inline-flex items-center gap-1.5">
-                                <AlertTriangle className="h-4 w-4" /> Provisioning alert
+                                <PremiumIcon icon={AlertTriangle} tone="amber" containerClassName="w-6 h-6 rounded-lg bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400" iconClassName="w-3.5 h-3.5" /> Provisioning alert
                             </p>
                             {alerts.map((alert) => (
                                 <p key={alert.code} className="mt-1 text-xs text-slate-700 dark:text-slate-300">
@@ -181,7 +182,7 @@ export function ProvisioningProgressCardContent(props: {
                             {timeline.map((step) => (
                                 <li key={`${step.status}-${step.at}`} className="flex items-center justify-between gap-3 text-xs">
                                     <span className="inline-flex items-center gap-1.5 text-slate-700 dark:text-slate-200">
-                                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                                        <PremiumIcon icon={CheckCircle2} tone="emerald" containerClassName="w-6 h-6 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400" iconClassName="h-3.5 w-3.5" />
                                         {toLabel(step.status)}
                                     </span>
                                     <span className="text-slate-400 dark:text-slate-500">{relative(step.at)}</span>
@@ -193,14 +194,14 @@ export function ProvisioningProgressCardContent(props: {
                     {job.status === "failed" ? (
                         <div className="rounded-xl border border-rose-200 dark:border-rose-700/40 bg-rose-50 dark:bg-rose-950/20 p-3.5">
                             <p className="text-sm font-semibold text-rose-700 dark:text-rose-300 inline-flex items-center gap-1.5">
-                                <AlertTriangle className="h-4 w-4" /> Provisioning failed
+                                <PremiumIcon icon={AlertTriangle} tone="rose" containerClassName="w-6 h-6 rounded-lg bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400" iconClassName="w-3.5 h-3.5" /> Provisioning failed
                             </p>
                             {job.failureReason ? (
                                 <p className="mt-1 text-xs text-rose-700 dark:text-rose-300">Failure reason: {job.failureReason}</p>
                             ) : null}
                             {job.remediationHint ? (
                                 <p className="mt-1 text-xs text-slate-600 dark:text-slate-300 inline-flex items-start gap-1.5">
-                                    <Wrench className="mt-0.5 h-3.5 w-3.5" />
+                                    <PremiumIcon icon={Wrench} tone="slate" containerClassName="w-6 h-6 mt-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400" iconClassName="h-3.5 w-3.5" />
                                     Remediation: {job.remediationHint}
                                 </p>
                             ) : null}

@@ -400,6 +400,44 @@ body {
     0 8px 18px rgba(15, 23, 42, 0.12);
 }
 
+.hero-3d-canvas-wrap {
+  width: 100%;
+  height: 460px;
+  border-radius: 26px;
+  overflow: hidden;
+  border: 1px solid rgba(14, 165, 233, 0.28);
+  background:
+    radial-gradient(50% 45% at 26% 18%, rgba(34, 211, 238, 0.22) 0%, rgba(34, 211, 238, 0) 80%),
+    radial-gradient(65% 55% at 84% 82%, rgba(14, 165, 233, 0.2) 0%, rgba(14, 165, 233, 0) 82%),
+    linear-gradient(180deg, #f2f9ff 0%, #e7f2ff 55%, #e4f5fb 100%);
+  box-shadow:
+    0 34px 70px -34px rgba(14, 116, 144, 0.44),
+    0 8px 18px rgba(15, 23, 42, 0.12);
+}
+
+.hero-3d-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.integration-icon-orb {
+  position: relative;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  box-shadow: 0 10px 24px -16px rgba(15, 23, 42, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.integration-icon-orb::after {
+  content: "";
+  position: absolute;
+  right: 4px;
+  top: 4px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.8);
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15);
+}
+
 .hero-3d-ring {
   position: absolute;
   border-radius: 50%;
@@ -469,6 +507,10 @@ body {
   .hero-3d-media {
     height: 400px;
   }
+
+  .hero-3d-canvas-wrap {
+    height: 400px;
+  }
 }
 
 @media (max-width: 640px) {
@@ -479,6 +521,10 @@ body {
   }
 
   .hero-3d-media {
+    height: 320px;
+  }
+
+  .hero-3d-canvas-wrap {
     height: 320px;
   }
 

@@ -12,6 +12,7 @@ import {
     XCircle,
     Zap,
 } from "lucide-react";
+import PremiumIcon from "@/components/shared/PremiumIcon";
 
 type BotStatus = "active" | "paused" | "error" | "maintenance";
 
@@ -37,25 +38,25 @@ const statusMeta: Record<BotStatus, { label: string; dot: string; badge: string;
         label: "Active",
         dot: "bg-emerald-500 animate-pulse",
         badge: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
-        icon: <CheckCircle2 className="w-4 h-4 text-emerald-500" />,
+        icon: <PremiumIcon icon={CheckCircle2} tone="emerald" containerClassName="w-6 h-6 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400" iconClassName="w-4 h-4" />,
     },
     paused: {
         label: "Paused",
         dot: "bg-amber-400",
         badge: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
-        icon: <Clock className="w-4 h-4 text-amber-500" />,
+        icon: <PremiumIcon icon={Clock} tone="amber" containerClassName="w-6 h-6 rounded-lg bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400" iconClassName="w-4 h-4" />,
     },
     error: {
         label: "Error — needs attention",
         dot: "bg-rose-500",
         badge: "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300",
-        icon: <XCircle className="w-4 h-4 text-rose-500" />,
+        icon: <PremiumIcon icon={XCircle} tone="rose" containerClassName="w-6 h-6 rounded-lg bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400" iconClassName="w-4 h-4" />,
     },
     maintenance: {
         label: "Maintenance",
         dot: "bg-slate-400",
         badge: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
-        icon: <RefreshCw className="w-4 h-4 text-slate-400" />,
+        icon: <PremiumIcon icon={RefreshCw} tone="slate" containerClassName="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400" iconClassName="w-4 h-4" />,
     },
 };
 
@@ -125,7 +126,7 @@ export default function DashboardBotsPage() {
                 <div className="flex items-start justify-between gap-4 flex-wrap">
                     <div>
                         <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                            <Bot className="w-5 h-5 text-violet-600 dark:text-violet-400" />
+                            <PremiumIcon icon={Bot} tone="violet" containerClassName="w-8 h-8 rounded-xl bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-400" iconClassName="w-4 h-4" />
                             Bot Status Monitor
                         </h1>
                         <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -141,7 +142,7 @@ export default function DashboardBotsPage() {
                             disabled={loading}
                             className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
                         >
-                            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+                            <PremiumIcon icon={RefreshCw} tone="slate" containerClassName="w-6 h-6 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300" iconClassName={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
                             Refresh
                         </button>
                     </div>
@@ -156,12 +157,12 @@ export default function DashboardBotsPage() {
                         </div>
                         {errorCount > 0 && (
                             <div className="inline-flex items-center gap-2 text-sm">
-                                <AlertTriangle className="w-4 h-4 text-rose-500" />
+                                <PremiumIcon icon={AlertTriangle} tone="rose" containerClassName="w-6 h-6 rounded-lg bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400" iconClassName="w-3.5 h-3.5" />
                                 <span className="font-semibold text-rose-600 dark:text-rose-400">{errorCount} bot{errorCount > 1 ? "s" : ""} need attention</span>
                             </div>
                         )}
                         <div className="inline-flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-                            <Bot className="w-4 h-4" />
+                            <PremiumIcon icon={Bot} tone="slate" containerClassName="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400" iconClassName="w-3.5 h-3.5" />
                             {bots.length} total workers
                         </div>
                     </div>
@@ -179,7 +180,7 @@ export default function DashboardBotsPage() {
                         {/* Error alerts */}
                         {errorCount > 0 && (
                             <div className="mb-6 rounded-xl border border-rose-200 dark:border-rose-900/40 bg-rose-50 dark:bg-rose-950/20 px-4 py-3.5 flex items-start gap-3">
-                                <AlertTriangle className="w-4 h-4 mt-0.5 text-rose-600 shrink-0" />
+                                <PremiumIcon icon={AlertTriangle} tone="rose" containerClassName="w-6 h-6 mt-0.5 shrink-0 rounded-lg bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400" iconClassName="w-3.5 h-3.5" />
                                 <div>
                                     <p className="text-sm font-semibold text-rose-800 dark:text-rose-300">
                                         {errorCount} bot{errorCount > 1 ? "s require" : " requires"} admin attention
@@ -226,19 +227,19 @@ export default function DashboardBotsPage() {
                                                 <div className="rounded-lg bg-slate-50 dark:bg-slate-800 px-3 py-2.5 flex flex-col gap-0.5">
                                                     <span className="text-slate-400 dark:text-slate-500 uppercase tracking-wide text-[10px] font-semibold">Tasks</span>
                                                     <span className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1">
-                                                        <Activity className="w-3 h-3" />{bot.tasksCompleted}
+                                                        <PremiumIcon icon={Activity} tone="slate" containerClassName="w-5 h-5 rounded-md bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300" iconClassName="w-3 h-3" />{bot.tasksCompleted}
                                                     </span>
                                                 </div>
                                                 <div className="rounded-lg bg-slate-50 dark:bg-slate-800 px-3 py-2.5 flex flex-col gap-0.5">
                                                     <span className="text-slate-400 dark:text-slate-500 uppercase tracking-wide text-[10px] font-semibold">Reliability</span>
                                                     <span className={`font-bold flex items-center gap-1 ${bot.reliabilityPct >= 99 ? "text-emerald-600 dark:text-emerald-400" : bot.reliabilityPct >= 97 ? "text-amber-600 dark:text-amber-400" : "text-rose-600 dark:text-rose-400"}`}>
-                                                        <Zap className="w-3 h-3" />{bot.reliabilityPct}%
+                                                        <PremiumIcon icon={Zap} tone="amber" containerClassName="w-5 h-5 rounded-md bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400" iconClassName="w-3 h-3" />{bot.reliabilityPct}%
                                                     </span>
                                                 </div>
                                                 <div className="rounded-lg bg-slate-50 dark:bg-slate-800 px-3 py-2.5 flex flex-col gap-0.5">
                                                     <span className="text-slate-400 dark:text-slate-500 uppercase tracking-wide text-[10px] font-semibold">Last Active</span>
                                                     <span className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1">
-                                                        <Clock className="w-3 h-3" />{formatTime(bot.lastActivityAt)}
+                                                        <PremiumIcon icon={Clock} tone="slate" containerClassName="w-5 h-5 rounded-md bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300" iconClassName="w-3 h-3" />{formatTime(bot.lastActivityAt)}
                                                     </span>
                                                 </div>
                                             </div>
@@ -246,7 +247,7 @@ export default function DashboardBotsPage() {
                                             {/* Config summary */}
                                             <div className="mt-4 flex flex-wrap gap-2 text-xs">
                                                 <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 dark:bg-slate-800 px-2 py-1 text-slate-600 dark:text-slate-300">
-                                                    <ShieldCheck className="w-3 h-3" />{autonomyLabel[bot.autonomyLevel]}
+                                                    <PremiumIcon icon={ShieldCheck} tone="slate" containerClassName="w-5 h-5 rounded-md bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300" iconClassName="w-3 h-3" />{autonomyLabel[bot.autonomyLevel]}
                                                 </span>
                                                 <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 dark:bg-slate-800 px-2 py-1 text-slate-600 dark:text-slate-300">
                                                     {policyLabel[bot.approvalPolicy]}
@@ -255,7 +256,7 @@ export default function DashboardBotsPage() {
 
                                             {/* Shift */}
                                             <div className="mt-3 flex items-center gap-2 text-xs text-slate-400 dark:text-slate-500">
-                                                <Clock className="w-3.5 h-3.5" />
+                                                <PremiumIcon icon={Clock} tone="slate" containerClassName="w-5 h-5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400" iconClassName="w-3 h-3" />
                                                 <span>Works {bot.shiftStart}–{bot.shiftEnd} on {bot.activeDays.toUpperCase()}</span>
                                             </div>
 

@@ -1,6 +1,7 @@
 ﻿import type { Metadata } from "next";
 import { Mail, Clock, MapPin } from "lucide-react";
 import ContactForm from "@/components/shared/ContactForm";
+import PremiumIcon from "@/components/shared/PremiumIcon";
 
 export const metadata: Metadata = {
     title: "Contact — AgentFarm",
@@ -66,9 +67,12 @@ export default function ContactPage() {
                     <div className="lg:col-span-2 space-y-6">
                         {contactItems.map(({ icon: Icon, label, lines, gradient }) => (
                             <div key={label} className="flex gap-4 group">
-                                <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center shrink-0 shadow-sm`}>
-                                    <Icon className="w-5 h-5 text-white" />
-                                </div>
+                                <PremiumIcon
+                                    icon={Icon}
+                                    tone="sky"
+                                    containerClassName={`w-11 h-11 rounded-xl bg-gradient-to-br ${gradient} text-white shrink-0 border-white/20`}
+                                    iconClassName="w-5 h-5"
+                                />
                                 <div>
                                     <p className="font-semibold text-slate-900 dark:text-slate-100 mb-1">{label}</p>
                                     {lines.map((l) => (

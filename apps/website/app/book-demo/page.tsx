@@ -1,5 +1,6 @@
 ﻿import type { Metadata } from "next";
 import { Calendar, Clock, Video, MessageSquare, CheckCircle } from "lucide-react";
+import PremiumIcon from "@/components/shared/PremiumIcon";
 
 export const metadata: Metadata = {
     title: "Book a Discovery Call — AgentFarm",
@@ -71,9 +72,12 @@ export default function BookDemoPage() {
                         <div className="space-y-3 mb-8">
                             {callDetails.map(({ icon: Icon, text, gradient }) => (
                                 <div key={text} className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400">
-                                    <div className={`w-9 h-9 bg-gradient-to-br ${gradient} rounded-xl flex items-center justify-center shrink-0 shadow-sm`}>
-                                        <Icon className="w-4 h-4 text-white" />
-                                    </div>
+                                    <PremiumIcon
+                                        icon={Icon}
+                                        tone="sky"
+                                        containerClassName={`w-9 h-9 bg-gradient-to-br ${gradient} rounded-xl text-white shrink-0 border-white/20`}
+                                        iconClassName="w-4 h-4"
+                                    />
                                     {text}
                                 </div>
                             ))}

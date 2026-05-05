@@ -442,6 +442,38 @@ export default function ConnectorsPage() {
 
             <div className="max-w-5xl mx-auto space-y-8">
 
+                {/* Connector showcase gallery */}
+                <section className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6">
+                    <div className="flex items-center justify-between mb-5">
+                        <div>
+                            <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">Available connectors</h2>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">All tools your agent can connect to. More added every sprint.</p>
+                        </div>
+                        <span className="text-xs font-semibold bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 px-2.5 py-1 rounded-full">12 connectors</span>
+                    </div>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
+                        {[
+                            { name: "GitHub", emoji: "🐙", color: "bg-slate-100 dark:bg-slate-800" },
+                            { name: "Jira", emoji: "🟦", color: "bg-sky-50 dark:bg-sky-900/30" },
+                            { name: "Slack", emoji: "💬", color: "bg-violet-50 dark:bg-violet-900/30" },
+                            { name: "Teams", emoji: "💼", color: "bg-blue-50 dark:bg-blue-900/30" },
+                            { name: "Linear", emoji: "🔷", color: "bg-indigo-50 dark:bg-indigo-900/30" },
+                            { name: "Notion", emoji: "📝", color: "bg-slate-50 dark:bg-slate-800/60" },
+                            { name: "PagerDuty", emoji: "🚨", color: "bg-rose-50 dark:bg-rose-900/20" },
+                            { name: "Datadog", emoji: "🐶", color: "bg-amber-50 dark:bg-amber-900/20" },
+                            { name: "Sentry", emoji: "🔍", color: "bg-slate-50 dark:bg-slate-800/60" },
+                            { name: "Email", emoji: "📧", color: "bg-emerald-50 dark:bg-emerald-900/20" },
+                            { name: "Confluence", emoji: "📚", color: "bg-sky-50 dark:bg-sky-900/30" },
+                            { name: "GitLab", emoji: "🦊", color: "bg-orange-50 dark:bg-orange-900/20" },
+                        ].map(({ name, emoji, color }) => (
+                            <div key={name} className={`flex flex-col items-center gap-2 p-3 rounded-xl ${color} border border-transparent hover:border-slate-200 dark:hover:border-slate-600 transition-colors cursor-default`}>
+                                <span className="text-2xl" role="img" aria-label={name}>{emoji}</span>
+                                <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 text-center leading-none">{name}</span>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+
                 {/* Header */}
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">Integrations</h1>

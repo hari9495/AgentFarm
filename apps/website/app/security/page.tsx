@@ -234,6 +234,35 @@ export default function SecurityPage() {
                 </div>
             </div>
 
+            {/* Compliance checklist */}
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
+                    <div className="grid md:grid-cols-2">
+                        <div className="p-8">
+                            <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/40 px-3 py-1.5 rounded-full border border-emerald-100 dark:border-emerald-800 mb-4">
+                                Compliance checklist
+                            </span>
+                            <h2 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 mb-3">Before you deploy AI workers</h2>
+                            <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-6">A practical checklist your security and compliance teams can use to evaluate AI agent deployments — covering data residency, access controls, audit logging, and approval governance.</p>
+                            <a href="/docs/security-checklist" className="inline-flex items-center gap-2 rounded-xl bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 px-5 py-2.5 text-sm font-semibold hover:opacity-90 transition-opacity">
+                                <CheckCircle2 className="w-4 h-4" /> Download checklist (PDF)
+                            </a>
+                        </div>
+                        <div className="bg-slate-50 dark:bg-slate-800/50 p-8 border-t md:border-t-0 md:border-l border-slate-200 dark:border-slate-800">
+                            <p className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-5">Checklist covers</p>
+                            <ul className="space-y-3">
+                                {["Data residency & sovereignty requirements", "Credential and token isolation per tenant", "Approval gate configuration & policy rules", "Immutable audit log export for compliance evidence", "Role-based access control (RBAC) setup", "SOC 2 / ISO 27001 vendor questionnaire answers", "Incident response contacts and SLA commitments", "GDPR data processing agreement (DPA) request"].map((item) => (
+                                    <li key={item} className="flex items-start gap-2 text-xs text-slate-600 dark:text-slate-300">
+                                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 mt-0.5 shrink-0" />
+                                        {item}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             {/* CTA */}
             <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-sky-900/60 py-20 text-center">
                 <Bot className="w-10 h-10 mx-auto mb-4 text-sky-400" />

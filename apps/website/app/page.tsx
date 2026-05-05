@@ -1,21 +1,27 @@
 ﻿import type { Metadata } from "next";
+import dynamic from "next/dynamic";
 import ButtonLink from "@/components/shared/ButtonLink";
 import { marketplaceBots } from "@/lib/bots";
 import Hero from "@/components/home/Hero";
 import LogosStrip from "@/components/home/LogosStrip";
 import Problem from "@/components/home/Problem";
 import Solution from "@/components/home/Solution";
-import DemoSection from "@/components/home/DemoSection";
-import HowItWorks from "@/components/home/HowItWorks";
-import Integrations from "@/components/home/Integrations";
-import RobotTypes from "@/components/home/RobotTypes";
-import TeamBuilderWizard from "@/components/home/TeamBuilderWizard";
-import StatsCounter from "@/components/home/StatsCounter";
-import Architecture from "@/components/home/Architecture";
-import Testimonials from "@/components/home/Testimonials";
-import PricingSection from "@/components/home/PricingSection";
-import FAQ from "@/components/home/FAQ";
-import CallToAction from "@/components/home/CallToAction";
+
+// Lazy-load below-the-fold sections — improves initial page load
+const DemoSection = dynamic(() => import("@/components/home/DemoSection"));
+const HowItWorks = dynamic(() => import("@/components/home/HowItWorks"));
+const Integrations = dynamic(() => import("@/components/home/Integrations"));
+const RobotTypes = dynamic(() => import("@/components/home/RobotTypes"));
+const TeamBuilderWizard = dynamic(() => import("@/components/home/TeamBuilderWizard"));
+const StatsCounter = dynamic(() => import("@/components/home/StatsCounter"));
+const Architecture = dynamic(() => import("@/components/home/Architecture"));
+const Testimonials = dynamic(() => import("@/components/home/Testimonials"));
+const PricingSection = dynamic(() => import("@/components/home/PricingSection"));
+const FAQ = dynamic(() => import("@/components/home/FAQ"));
+const CallToAction = dynamic(() => import("@/components/home/CallToAction"));
+const SocialProofBar = dynamic(() => import("@/components/home/SocialProofBar"));
+const MetricsTicker = dynamic(() => import("@/components/home/MetricsTicker"));
+const NewsletterCapture = dynamic(() => import("@/components/home/NewsletterCapture"));
 
 export const metadata: Metadata = {
   title: "AgentFarm - Trusted AI Teammates for Engineering Teams",
@@ -30,6 +36,7 @@ export default function Home() {
   return (
     <main className="home-choreo" aria-label="AgentFarm home content">
       <Hero />
+      <SocialProofBar />
       <section className="py-6 sm:py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="site-section-shell rounded-3xl bg-white/85 dark:bg-slate-900/80 backdrop-blur px-5 py-5 sm:px-8 sm:py-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
@@ -55,10 +62,12 @@ export default function Home() {
       <RobotTypes />
       <TeamBuilderWizard />
       <StatsCounter />
+      <MetricsTicker />
       <Architecture />
       <Testimonials />
       <PricingSection />
       <FAQ />
+      <NewsletterCapture />
       <CallToAction />
     </main>
   );

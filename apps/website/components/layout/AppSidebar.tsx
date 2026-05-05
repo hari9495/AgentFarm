@@ -22,17 +22,25 @@ import {
     Radio,
     Rocket,
     FileArchive,
+    Bell,
+    BarChart3,
+    Search,
+    type LucideIcon,
 } from "lucide-react";
+import PremiumIcon from "@/components/shared/PremiumIcon";
 import ThemeToggle from "@/components/shared/ThemeToggle";
+import CommandPalette from "@/components/shared/CommandPalette";
 
 const dashboardNav = [
     { href: "/dashboard", label: "Overview", icon: LayoutDashboard, exact: true },
     { href: "/dashboard/agents", label: "Agents", icon: Bot },
     { href: "/dashboard/deployments", label: "Deployments", icon: Rocket },
     { href: "/dashboard/bots", label: "Bot Status", icon: Radio },
-    { href: "/dashboard/approvals", label: "Approvals", icon: ClipboardCheck },
+    { href: "/dashboard/approvals", label: "Approvals", icon: ClipboardCheck, badgeCount: 3 },
     { href: "/dashboard/evidence", label: "Evidence", icon: FileArchive },
     { href: "/dashboard/activity", label: "Activity", icon: Activity },
+    { href: "/dashboard/reports", label: "Reports", icon: BarChart3 },
+    { href: "/dashboard/notifications", label: "Notifications", icon: Bell, badgeCount: 3 },
     { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
@@ -57,12 +65,14 @@ function NavItem({
     icon: Icon,
     exact,
     onClick,
+    badgeCount,
 }: {
     href: string;
     label: string;
-    icon: React.ElementType;
+    icon: LucideIcon;
     exact?: boolean;
     onClick?: () => void;
+    badgeCount?: number;
 }) {
     const pathname = usePathname();
     const active = exact
@@ -78,8 +88,13 @@ function NavItem({
                 : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100"
                 }`}
         >
-            <Icon className="w-4 h-4 shrink-0" />
-            <span>{label}</span>
+            <PremiumIcon icon={Icon} tone={active ? "sky" : "slate"} containerClassName="h-7 w-7 rounded-lg shrink-0" iconClassName="w-3.5 h-3.5" />
+            <span className="flex-1">{label}</span>
+            {badgeCount && badgeCount > 0 ? (
+                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-rose-500 text-white text-[9px] font-bold shrink-0">
+                    {badgeCount}
+                </span>
+            ) : null}
         </Link>
     );
 }
@@ -116,6 +131,7 @@ function SidebarContent({
     return (
         <aside className="flex flex-col w-60 h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
             {/* Logo */}
+            <CommandPalette />
             <div className="flex items-center gap-2 px-4 h-14 border-b border-slate-200 dark:border-slate-800 shrink-0">
                 <Link
                     href="/"
@@ -139,6 +155,18 @@ function SidebarContent({
 
             {/* Nav */}
             <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-5">
+                {/* D2: ⌘K command palette trigger */}
+                <button
+                    onClick={() => {
+                        const evt = new KeyboardEvent("keydown", { key: "k", ctrlKey: true, bubbles: true });
+                        window.dispatchEvent(evt);
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-xs text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                >
+                    <Search className="w-3.5 h-3.5 shrink-0" />
+                    <span className="flex-1 text-left">Search pages…</span>
+                    <kbd className="inline-flex items-center gap-0.5 text-[9px] font-mono text-slate-400 dark:text-slate-500">⌘K</kbd>
+                </button>
                 <div>
                     <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
                         {navLabel}

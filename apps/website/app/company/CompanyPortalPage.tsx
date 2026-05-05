@@ -25,6 +25,7 @@ import {
     MonitorOff,
     Plus,
     UserCheck,
+    type LucideIcon,
 } from "lucide-react";
 
 type UserRole = "superadmin" | "admin" | "member";
@@ -1559,7 +1560,7 @@ function MetricCard({
 }: {
     label: string;
     value: string;
-    icon: React.ElementType;
+    icon: LucideIcon;
     tone: "fuchsia" | "violet" | "slate" | "emerald" | "rose" | "amber";
 }) {
     const styleMap: Record<typeof tone, string> = {

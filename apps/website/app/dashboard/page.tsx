@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import {
     ArrowUpRight,
     CheckCircle2,
@@ -13,6 +14,23 @@ import {
 import ButtonLink from "@/components/shared/ButtonLink";
 import DeploymentStatusPanel from "@/components/dashboard/DeploymentStatusPanel";
 import ProvisioningProgressCard from "@/components/dashboard/ProvisioningProgressCard";
+import PremiumIcon from "@/components/shared/PremiumIcon";
+
+function Sparkline({ values, strokeClass }: { values: number[]; strokeClass: string }) {
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const range = max - min || 1;
+    const w = 100;
+    const h = 24;
+    const pts = values
+        .map((v, i) => `${(i / (values.length - 1)) * w},${h - ((v - min) / range) * (h - 2) - 1}`)
+        .join(" ");
+    return (
+        <svg viewBox={`0 0 ${w} ${h}`} className={`w-full h-6 ${strokeClass}`} aria-hidden preserveAspectRatio="none">
+            <polyline points={pts} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    );
+}
 
 export const metadata: Metadata = {
     title: "Customer Dashboard - AgentFarm",
@@ -20,10 +38,10 @@ export const metadata: Metadata = {
 };
 
 const stats = [
-    { label: "Tasks Completed", sub: "Last 7 days", value: "184", delta: "+19%", icon: CheckCircle2, iconBg: "bg-sky-100 dark:bg-sky-900/50", iconColor: "text-sky-600 dark:text-sky-400" },
-    { label: "PRs Merged", sub: "Last 7 days", value: "46", delta: "+12%", icon: GitPullRequest, iconBg: "bg-violet-100 dark:bg-violet-900/50", iconColor: "text-violet-600 dark:text-violet-400" },
-    { label: "Median Cycle Time", sub: "vs last week", value: "2h 18m", delta: "−28%", icon: Timer, iconBg: "bg-amber-100 dark:bg-amber-900/50", iconColor: "text-amber-600 dark:text-amber-400" },
-    { label: "Estimated Savings", sub: "Month to date", value: "$18,400", delta: "+$3,200", icon: TrendingUp, iconBg: "bg-emerald-100 dark:bg-emerald-900/50", iconColor: "text-emerald-600 dark:text-emerald-400" },
+    { label: "Tasks Completed", sub: "Last 7 days", value: "184", delta: "+19%", icon: CheckCircle2, iconBg: "bg-sky-100 dark:bg-sky-900/50", iconColor: "text-sky-600 dark:text-sky-400", trend: [140, 152, 165, 158, 172, 181, 184], sparkClass: "text-sky-500" },
+    { label: "PRs Merged", sub: "Last 7 days", value: "46", delta: "+12%", icon: GitPullRequest, iconBg: "bg-violet-100 dark:bg-violet-900/50", iconColor: "text-violet-600 dark:text-violet-400", trend: [32, 38, 41, 43, 40, 44, 46], sparkClass: "text-violet-500" },
+    { label: "Median Cycle Time", sub: "vs last week", value: "2h 18m", delta: "−28%", icon: Timer, iconBg: "bg-amber-100 dark:bg-amber-900/50", iconColor: "text-amber-600 dark:text-amber-400", trend: [220, 208, 195, 182, 170, 160, 138], sparkClass: "text-amber-500" },
+    { label: "Estimated Savings", sub: "Month to date", value: "$18,400", delta: "+$3,200", icon: TrendingUp, iconBg: "bg-emerald-100 dark:bg-emerald-900/50", iconColor: "text-emerald-600 dark:text-emerald-400", trend: [12000, 13200, 14500, 15100, 16800, 17200, 18400], sparkClass: "text-emerald-500" },
 ];
 
 const workers = [
@@ -73,7 +91,7 @@ export default function DashboardPage() {
                 <div className="absolute inset-0 flex items-center">
                     <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8">
                         <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-sky-300 mb-3">
-                            <Zap className="w-3.5 h-3.5" />
+                            <PremiumIcon icon={Zap} tone="sky" containerClassName="w-5 h-5 rounded-md bg-sky-300/15 text-sky-200 border-sky-200/30" iconClassName="w-3 h-3" />
                             Customer Dashboard
                         </div>
                         <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight max-w-xl leading-tight">
@@ -94,16 +112,31 @@ export default function DashboardPage() {
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
 
-                {/* KPI Cards */}
+                {/* D5: Sticky pending-approvals strip */}
+                {approvals.length > 0 && (
+                    <div className="sticky top-0 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+                        <div className="rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/50 px-4 py-2.5 flex items-center justify-between gap-3 shadow-sm">
+                            <div className="flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse shrink-0" />
+                                <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+                                    <span className="text-rose-600 dark:text-rose-400 font-bold">{approvals.length}</span> approvals need your attention
+                                </p>
+                            </div>
+                            <Link href="/dashboard/approvals" className="text-xs font-bold text-amber-700 dark:text-amber-300 hover:underline whitespace-nowrap">
+                                Review now →
+                            </Link>
+                        </div>
+                    </div>
+                )}
+
+                {/* D1: KPI Cards with sparklines */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-                    {stats.map(({ label, sub, value, delta, icon: Icon, iconBg, iconColor }) => (
-                        <div key={label} className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 flex flex-col gap-4">
+                    {stats.map(({ label, sub, value, delta, icon: Icon, iconBg, iconColor, trend, sparkClass }) => (
+                        <div key={label} className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 flex flex-col gap-3">
                             <div className="flex items-center justify-between">
-                                <span className={`inline-flex items-center justify-center w-10 h-10 rounded-xl ${iconBg}`}>
-                                    <Icon className={`w-5 h-5 ${iconColor}`} />
-                                </span>
+                                <PremiumIcon icon={Icon} tone="sky" containerClassName={`w-10 h-10 rounded-xl ${iconBg} ${iconColor}`} iconClassName="w-5 h-5" />
                                 <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 rounded-full px-2.5 py-1">
-                                    <ArrowUpRight className="w-3 h-3" />
+                                    <PremiumIcon icon={ArrowUpRight} tone="emerald" containerClassName="w-5 h-5 rounded-md bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400" iconClassName="w-3 h-3" />
                                     {delta}
                                 </span>
                             </div>
@@ -112,6 +145,7 @@ export default function DashboardPage() {
                                 <p className="mt-1 text-sm font-medium text-slate-700 dark:text-slate-300">{label}</p>
                                 <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{sub}</p>
                             </div>
+                            <Sparkline values={trend} strokeClass={sparkClass} />
                         </div>
                     ))}
                 </div>
@@ -239,7 +273,7 @@ export default function DashboardPage() {
                     <div className="rounded-2xl border border-emerald-200 dark:border-emerald-800/50 bg-gradient-to-br from-emerald-50 to-sky-50 dark:from-emerald-950/30 dark:to-sky-950/20 overflow-hidden">
                         <div className="px-5 py-4 border-b border-emerald-100 dark:border-emerald-900/40">
                             <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                                <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                                <PremiumIcon icon={ShieldCheck} tone="emerald" containerClassName="w-6 h-6 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400" iconClassName="w-3.5 h-3.5" />
                                 Ops Health
                             </h2>
                             <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-0.5 font-medium">All systems normal</p>
@@ -254,7 +288,7 @@ export default function DashboardPage() {
                                 <div key={label} className="flex items-center justify-between rounded-xl bg-white/70 dark:bg-slate-900/50 border border-white dark:border-slate-800 px-4 py-3">
                                     <p className="text-sm text-slate-600 dark:text-slate-300">{label}</p>
                                     <span className={`font-bold text-sm ${highlight ? "text-emerald-600 dark:text-emerald-400 flex items-center gap-1" : "text-slate-900 dark:text-slate-100"}`}>
-                                        {highlight && <ShieldCheck className="w-4 h-4" />}
+                                        {highlight && <PremiumIcon icon={ShieldCheck} tone="emerald" containerClassName="w-6 h-6 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400" iconClassName="w-4 h-4" />}
                                         {value}
                                     </span>
                                 </div>
@@ -263,7 +297,7 @@ export default function DashboardPage() {
                                 <ButtonLink href="/dashboard/activity" variant="outline" size="sm">Live Activity</ButtonLink>
                                 <ButtonLink href="/docs" variant="outline" size="sm">View Runbook</ButtonLink>
                                 <ButtonLink href="/how-it-works" size="sm">
-                                    Scale Teammates <Rocket className="w-4 h-4 ml-1" />
+                                    Scale Teammates <PremiumIcon icon={Rocket} tone="emerald" containerClassName="w-6 h-6 rounded-lg bg-white/60 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 ml-1" iconClassName="w-4 h-4" />
                                 </ButtonLink>
                             </div>
                         </div>

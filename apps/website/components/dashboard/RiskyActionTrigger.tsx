@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { LoaderCircle, ShieldAlert } from "lucide-react";
+import PremiumIcon from "@/components/shared/PremiumIcon";
 
 type Props = {
     agentSlug: string;
@@ -52,7 +53,7 @@ export default function RiskyActionTrigger({ agentSlug, agentName }: Props) {
     return (
         <div className="bg-gradient-to-br from-rose-50 to-amber-50 dark:from-rose-950/20 dark:to-amber-950/20 rounded-2xl border border-rose-200 dark:border-rose-900/40 p-5">
             <div className="flex items-center gap-2 mb-2">
-                <ShieldAlert className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+                <PremiumIcon icon={ShieldAlert} tone="rose" containerClassName="w-6 h-6 rounded-lg bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400" iconClassName="w-3.5 h-3.5" />
                 <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Approval Simulation</span>
             </div>
             <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
@@ -63,7 +64,7 @@ export default function RiskyActionTrigger({ agentSlug, agentName }: Props) {
                 disabled={loading}
                 className="mt-3 inline-flex items-center gap-2 rounded-lg bg-rose-600 px-3 py-2 text-xs font-semibold text-white hover:bg-rose-700 disabled:opacity-60"
             >
-                {loading ? <LoaderCircle className="w-3.5 h-3.5 animate-spin" /> : <ShieldAlert className="w-3.5 h-3.5" />}
+                {loading ? <PremiumIcon icon={LoaderCircle} tone="rose" containerClassName="w-6 h-6 rounded-lg bg-white/15 text-white border-white/30" iconClassName="w-3.5 h-3.5 animate-spin" /> : <PremiumIcon icon={ShieldAlert} tone="rose" containerClassName="w-6 h-6 rounded-lg bg-white/15 text-white border-white/30" iconClassName="w-3.5 h-3.5" />}
                 {loading ? "Submitting..." : "Request High-Risk Approval"}
             </button>
 

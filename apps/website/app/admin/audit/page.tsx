@@ -1,8 +1,10 @@
-import type { Metadata } from "next";
+"use client";
+import { useState } from "react";
 import {
     AlertTriangle,
     CheckCircle2,
     ClipboardList,
+    Download,
     GitPullRequest,
     KeyRound,
     Settings2,
@@ -10,12 +12,9 @@ import {
     UserCheck,
     UserPlus,
     Zap,
+    type LucideIcon,
 } from "lucide-react";
-
-export const metadata: Metadata = {
-    title: "Audit Log - AgentFarm Admin",
-    description: "Complete timestamped event feed of every agent action, user change, and approval decision.",
-};
+import PremiumIcon from "@/components/shared/PremiumIcon";
 
 type EventType = "agent_action" | "approval" | "user_change" | "system";
 
@@ -166,7 +165,7 @@ const events: {
 
 const typeConfig: Record<
     EventType,
-    { label: string; icon: React.ElementType; bg: string; color: string; badge: string }
+    { label: string; icon: LucideIcon; bg: string; color: string; badge: string }
 > = {
     agent_action: {
         label: "Agent Action",
@@ -198,7 +197,7 @@ const typeConfig: Record<
     },
 };
 
-const actionIcon: Record<string, React.ElementType> = {
+const actionIcon: Record<string, LucideIcon> = {
     "PR opened": GitPullRequest,
     "Approved": CheckCircle2,
     "Rejected": AlertTriangle,
@@ -212,16 +211,54 @@ const actionIcon: Record<string, React.ElementType> = {
     "Policy updated": Settings2,
 };
 
+const TIME_RANGES = ["Last hour", "Today", "This week", "All"] as const;
+type TimeRange = (typeof TIME_RANGES)[number];
+
+const TYPE_TABS = ["All", "Agent Actions", "Approvals", "User Changes", "System"] as const;
+type TypeTab = (typeof TYPE_TABS)[number];
+
+function downloadCsv(data: typeof events) {
+    const header = "id,timestamp,ago,type,actor,action,description,meta";
+    const rows = data.map((e) =>
+        [e.id, e.ts, e.ago, e.type, `"${e.actor}"`, `"${e.action}"`, `"${e.description}"`, `"${e.meta ?? ""}"`].join(",")
+    );
+    const csv = [header, ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "audit-log.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
 export default function AuditPage() {
+    const [typeTab, setTypeTab] = useState<TypeTab>("All");
+    const [timeRange, setTimeRange] = useState<TimeRange>("All");
+
+    const filteredEvents = events.filter((evt) => {
+        const typeMatch =
+            typeTab === "All" ||
+            (typeTab === "Agent Actions" && evt.type === "agent_action") ||
+            (typeTab === "Approvals" && evt.type === "approval") ||
+            (typeTab === "User Changes" && evt.type === "user_change") ||
+            (typeTab === "System" && evt.type === "system");
+        const agoNum = parseInt(evt.ago);
+        const timeMatch =
+            timeRange === "All" ||
+            (timeRange === "Last hour" && evt.ago.includes("m ") && agoNum < 60) ||
+            (timeRange === "Today" && (evt.ago.includes("m ") || evt.ago.includes("h "))) ||
+            (timeRange === "This week" && !evt.ago.includes("d ") || evt.ago.includes("h ") || evt.ago.includes("m "));
+        return typeMatch && timeMatch;
+    });
+
     return (
         <div className="site-shell min-h-screen">
             {/* Header */}
             <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-5 md:px-8">
                 <div className="flex flex-wrap items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-xl bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center shrink-0">
-                            <ClipboardList className="w-5 h-5 text-violet-600 dark:text-violet-400" />
-                        </div>
+                        <PremiumIcon icon={ClipboardList} tone="violet" containerClassName="h-9 w-9 rounded-xl bg-violet-100 dark:bg-violet-900/40 shrink-0 text-violet-600 dark:text-violet-400" iconClassName="w-5 h-5" />
                         <div>
                             <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100">Audit Log</h1>
                             <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -234,16 +271,39 @@ export default function AuditPage() {
                             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                             Live
                         </span>
-                        <span className="text-xs text-slate-400 dark:text-slate-500">{events.length} events</span>
+                        <span className="text-xs text-slate-400 dark:text-slate-500">{filteredEvents.length} events</span>
+                        <button
+                            onClick={() => downloadCsv(filteredEvents)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                        >
+                            <Download className="w-3.5 h-3.5" /> Export CSV
+                        </button>
                     </div>
+                </div>
+
+                {/* Time range filters */}
+                <div className="flex gap-1.5 mt-3 flex-wrap">
+                    {TIME_RANGES.map((tr) => (
+                        <button
+                            key={tr}
+                            onClick={() => setTimeRange(tr)}
+                            className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors border ${timeRange === tr
+                                ? "bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 border-slate-900 dark:border-slate-100"
+                                : "border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-slate-400 dark:hover:border-slate-500"
+                                }`}
+                        >
+                            {tr}
+                        </button>
+                    ))}
                 </div>
 
                 {/* Filter tabs */}
                 <div className="flex gap-1 mt-4 flex-wrap">
-                    {(["All", "Agent Actions", "Approvals", "User Changes", "System"] as const).map((tab, i) => (
+                    {TYPE_TABS.map((tab) => (
                         <button
                             key={tab}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${i === 0
+                            onClick={() => setTypeTab(tab)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${typeTab === tab
                                 ? "bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900"
                                 : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
                                 }`}
@@ -261,8 +321,9 @@ export default function AuditPage() {
                     <div className="absolute left-5 top-0 bottom-0 w-px bg-slate-200 dark:bg-slate-800" />
 
                     <div className="space-y-1">
-                        {events.map((evt) => {
+                        {filteredEvents.map((evt) => {
                             const cfg = typeConfig[evt.type];
+                            const TypeIcon = cfg.icon;
                             const ActionIcon = actionIcon[evt.action] ?? Zap;
                             return (
                                 <div
@@ -270,10 +331,13 @@ export default function AuditPage() {
                                     className="relative flex gap-4 pl-14 pr-4 py-4 rounded-xl hover:bg-white dark:hover:bg-slate-900/60 transition-colors group"
                                 >
                                     {/* Timeline dot + icon */}
-                                    <div
-                                        className={`absolute left-2.5 top-4 h-5 w-5 rounded-full ${cfg.bg} flex items-center justify-center ring-2 ring-slate-50 dark:ring-slate-950 shrink-0`}
-                                    >
-                                        <cfg.icon className={`w-3 h-3 ${cfg.color}`} />
+                                    <div className="absolute left-2 top-3.5">
+                                        <PremiumIcon
+                                            icon={TypeIcon}
+                                            tone="sky"
+                                            containerClassName={`h-6 w-6 rounded-full ${cfg.bg} ${cfg.color} ring-2 ring-slate-50 dark:ring-slate-950 shrink-0`}
+                                            iconClassName="w-3.5 h-3.5"
+                                        />
                                     </div>
 
                                     <div className="flex-1 min-w-0">
@@ -301,7 +365,7 @@ export default function AuditPage() {
 
                                             {/* Action badge */}
                                             <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${cfg.badge}`}>
-                                                <ActionIcon className="w-2.5 h-2.5" />
+                                                <PremiumIcon icon={ActionIcon} tone="slate" containerClassName="w-4 h-4 rounded-sm bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400" iconClassName="w-2 h-2" />
                                                 {evt.action}
                                             </span>
 

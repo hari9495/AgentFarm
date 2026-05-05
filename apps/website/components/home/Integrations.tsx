@@ -141,7 +141,7 @@ export default function Integrations() {
                 </div>
 
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                    {integrations.map(({ Icon, iconBg, name, badge, badgeColor, description }, i) => (
+                    {integrations.map(({ Icon, iconBg, iconColor, name, badge, badgeColor, description }, i) => (
                         <motion.div
                             key={name}
                             initial={{ opacity: 0, y: 24 }}
@@ -151,7 +151,7 @@ export default function Integrations() {
                             whileHover={{ y: -3, transition: { duration: 0.15 } }}
                             className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 flex gap-4 hover:shadow-lg hover:border-slate-300 dark:hover:border-slate-600 transition-all duration-200"
                         >
-                            <div className={`w-12 h-12 rounded-xl ${iconBg} flex items-center justify-center shrink-0`}>
+                            <div className={`integration-icon-orb w-12 h-12 rounded-xl ${iconBg} ${iconColor} flex items-center justify-center shrink-0`}>
                                 <Icon />
                             </div>
                             <div className="flex-1 min-w-0">

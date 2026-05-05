@@ -1,6 +1,7 @@
 ﻿import type { Metadata } from "next";
 import { Code2, TestTube2, Server, Rocket, Users, ShieldCheck, CheckCircle2 } from "lucide-react";
 import ButtonLink from "@/components/shared/ButtonLink";
+import PremiumIcon from "@/components/shared/PremiumIcon";
 
 export const metadata: Metadata = {
   title: "Use Cases — AgentFarm",
@@ -163,9 +164,12 @@ export default function UseCasesPage() {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                     <div className="absolute bottom-3 left-4 flex items-center gap-2">
-                      <div className={`w-9 h-9 rounded-xl ${c.bg} flex items-center justify-center`}>
-                        <Icon className={`w-5 h-5 ${c.icon}`} />
-                      </div>
+                      <PremiumIcon
+                        icon={Icon}
+                        tone="cyan"
+                        containerClassName={`w-9 h-9 rounded-xl ${c.bg} ${c.icon}`}
+                        iconClassName="w-5 h-5"
+                      />
                       <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${c.badge}`}>
                         {audience}
                       </span>
@@ -187,6 +191,32 @@ export default function UseCasesPage() {
               );
             })}
           </div>
+        </div>
+      </section>
+
+      {/* ROI Calculator */}
+      <section className="py-16 bg-slate-50 dark:bg-slate-900/50 border-y border-slate-100 dark:border-slate-800">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-8">
+            <p className="text-xs font-semibold uppercase tracking-widest text-blue-600 dark:text-blue-400 mb-2">ROI estimate</p>
+            <h2 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100">How much could your team save?</h2>
+            <p className="text-slate-500 dark:text-slate-400 text-sm mt-2 max-w-lg mx-auto">Based on median outcomes across AgentFarm customers. Actual results vary by workflow.</p>
+          </div>
+          <div className="grid sm:grid-cols-3 gap-4">
+            {[
+              { tier: "Solo / 1–3 engineers", hours: "15–25 hrs/wk", cost: "$24k–$40k/yr", note: "Equivalent to 40% of a full-time junior engineer" },
+              { tier: "Startup / 5–20 engineers", hours: "60–100 hrs/wk", cost: "$96k–$160k/yr", note: "Equivalent to 1.5–2.5 full-time engineers" },
+              { tier: "Scale-up / 25–100 engineers", hours: "200–350 hrs/wk", cost: "$320k–$560k/yr", note: "Equivalent to 5–9 full-time engineers" },
+            ].map(({ tier, hours, cost, note }) => (
+              <div key={tier} className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5">
+                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-3">{tier}</p>
+                <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 leading-none">{hours}</p>
+                <p className="text-xs text-blue-600 dark:text-blue-400 font-semibold mt-1">{cost} saved</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 leading-snug">{note}</p>
+              </div>
+            ))}
+          </div>
+          <p className="text-center text-[11px] text-slate-400 dark:text-slate-500 mt-5">Estimate based on $80/hr blended engineering cost and median AgentFarm task automation rates.</p>
         </div>
       </section>
 

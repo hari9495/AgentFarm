@@ -115,6 +115,9 @@ const categoryColors: Record<string, string> = {
     Insights: "bg-emerald-50 text-emerald-700 border border-emerald-100",
 };
 
+const featuredPost = posts[0];
+const trendingSlug = posts[2].slug;
+
 export default function BlogPage() {
     return (
         <div className="site-shell">
@@ -146,9 +149,32 @@ export default function BlogPage() {
                 </div>
             </section>
 
+            {/* Featured post */}
+            <section className="py-12 border-b border-slate-100 dark:border-slate-800">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-blue-600 dark:text-blue-400 mb-4">Featured post</p>
+                    <Link href={`/blog/${featuredPost.slug}`} className="group flex flex-col md:flex-row gap-6 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden hover:shadow-xl hover:-translate-y-0.5 transition-all">
+                        <div className="relative md:w-2/5 h-52 md:h-auto overflow-hidden shrink-0">
+                            <img src={featuredPost.image} alt={featuredPost.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="eager" />
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent to-black/20" />
+                        </div>
+                        <div className="flex flex-col justify-center px-6 py-6 md:py-8 flex-1">
+                            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full self-start mb-3 ${categoryColors[featuredPost.category]}`}>{featuredPost.category}</span>
+                            <h2 className="text-xl font-extrabold text-slate-900 dark:text-slate-100 leading-snug mb-3 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{featuredPost.title}</h2>
+                            <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-5">{featuredPost.excerpt}</p>
+                            <div className="flex items-center gap-3">
+                                <span className="text-xs text-slate-400">{featuredPost.date} · {featuredPost.readTime}</span>
+                                <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 group-hover:underline">Read now →</span>
+                            </div>
+                        </div>
+                    </Link>
+                </div>
+            </section>
+
             {/* Post grid with cover images */}
             <section className="py-24">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-8">All posts</p>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                         {posts.map((post) => (
                             <Link
@@ -165,10 +191,13 @@ export default function BlogPage() {
                                         loading="lazy"
                                     />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                                    <div className="absolute bottom-3 left-3">
+                                    <div className="absolute bottom-3 left-3 flex items-center gap-2">
                                         <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${categoryColors[post.category]}`}>
                                             {post.category}
                                         </span>
+                                        {post.slug === trendingSlug && (
+                                            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-rose-500 text-white">Trending</span>
+                                        )}
                                     </div>
                                 </div>
                                 <div className="p-6 flex flex-col flex-1">

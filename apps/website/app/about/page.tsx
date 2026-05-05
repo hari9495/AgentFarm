@@ -1,6 +1,7 @@
 ﻿import type { Metadata } from "next";
 import { Bot, Target, Zap, Users, Sparkles, TrendingUp, Award } from "lucide-react";
 import ButtonLink from "@/components/shared/ButtonLink";
+import PremiumIcon from "@/components/shared/PremiumIcon";
 
 export const metadata: Metadata = {
     title: "About — AgentFarm",
@@ -164,8 +165,13 @@ export default function AboutPage() {
                                     key={title}
                                     className="p-6 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:shadow-lg hover:-translate-y-1 transition-all"
                                 >
-                                    <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${gradients[i % gradients.length]} flex items-center justify-center mb-4`}>
-                                        <Icon className="w-5 h-5 text-white" />
+                                    <div className="mb-4">
+                                        <PremiumIcon
+                                            icon={Icon}
+                                            tone="sky"
+                                            containerClassName={`w-10 h-10 rounded-xl bg-gradient-to-br ${gradients[i % gradients.length]} text-white border-white/20`}
+                                            iconClassName="w-5 h-5"
+                                        />
                                     </div>
                                     <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">{title}</h3>
                                     <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">

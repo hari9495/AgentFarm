@@ -1,11 +1,7 @@
-﻿import type { Metadata } from "next";
+﻿"use client";
 import Link from "next/link";
+import { useState } from "react";
 import { CheckCircle, Circle, Clock } from "lucide-react";
-
-export const metadata: Metadata = {
-  title: "Changelog & Roadmap — AgentFarm",
-  description: "What we've shipped, what's in progress, and what's coming next.",
-};
 
 type Status = "shipped" | "in-progress" | "planned";
 
@@ -160,9 +156,30 @@ function toVersionSlug(version?: string) {
   return version.toLowerCase().replace(/\./g, "-");
 }
 
+const ALL_FILTERS = ["All", "Shipped", "In Progress", "Planned"] as const;
+type FilterLabel = (typeof ALL_FILTERS)[number];
+
 export default function ChangelogPage() {
-  const shipped = entries.filter((e) => e.status === "shipped");
-  const upcoming = entries.filter((e) => e.status !== "shipped");
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<FilterLabel>("All");
+
+  const filteredEntries = entries.filter((e) => {
+    const matchesFilter =
+      filter === "All" ||
+      (filter === "Shipped" && e.status === "shipped") ||
+      (filter === "In Progress" && e.status === "in-progress") ||
+      (filter === "Planned" && e.status === "planned");
+    const q = search.toLowerCase();
+    const matchesSearch =
+      !q ||
+      e.title.toLowerCase().includes(q) ||
+      e.description.toLowerCase().includes(q) ||
+      e.tags.some((t) => t.toLowerCase().includes(q));
+    return matchesFilter && matchesSearch;
+  });
+
+  const shipped = filteredEntries.filter((e) => e.status === "shipped");
+  const upcoming = filteredEntries.filter((e) => e.status !== "shipped");
 
   return (
     <div className="site-shell">
@@ -185,6 +202,32 @@ export default function ChangelogPage() {
           </p>
         </div>
       </section>
+
+      {/* Filter bar */}
+      <div className="border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-950">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            {ALL_FILTERS.map((f) => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors ${filter === f ? "bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 border-slate-900 dark:border-slate-100" : "border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-slate-400 dark:hover:border-slate-500"}`}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+          <div className="sm:ml-auto">
+            <input
+              type="search"
+              placeholder="Search entries…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 px-3 py-2 w-52 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+      </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
         <div className="max-w-3xl mx-auto space-y-20">

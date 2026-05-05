@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, ChevronRight, Github, Rocket, Users } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 type StepId = "github" | "team" | "deploy";
 
-const steps: { id: StepId; title: string; subtitle: string; icon: React.ElementType }[] = [
+const steps: { id: StepId; title: string; subtitle: string; icon: LucideIcon }[] = [
     { id: "github", title: "Connect GitHub", subtitle: "Authorize org and repositories", icon: Github },
     { id: "team", title: "Invite Team", subtitle: "Add collaborators and roles", icon: Users },
     { id: "deploy", title: "Deploy First Agent", subtitle: "Choose role and start", icon: Rocket },

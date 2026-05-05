@@ -8,6 +8,7 @@ import {
 import { marketplaceBots, colorMap, DEPARTMENTS } from "@/lib/bots";
 import ButtonLink from "@/components/shared/ButtonLink";
 import { useCompactMotion } from "@/lib/useCompactMotion";
+import PremiumIcon from "@/components/shared/PremiumIcon";
 
 const FEATURED_SLUGS = [
     "ai-technical-recruiter",
@@ -118,9 +119,12 @@ export default function RobotTypes() {
 
                                 <div className="p-5 flex-1 flex flex-col">
                                     <div className="mb-3 flex items-center gap-3">
-                                        <div className={`w-9 h-9 rounded-xl ${c.bg} flex items-center justify-center`}>
-                                            <Icon className={`w-5 h-5 ${c.icon}`} />
-                                        </div>
+                                        <PremiumIcon
+                                            icon={Icon}
+                                            tone="sky"
+                                            containerClassName={`w-9 h-9 rounded-xl ${c.bg} ${c.icon}`}
+                                            iconClassName="w-5 h-5"
+                                        />
                                         <div>
                                             <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{bot.department}</p>
                                             <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm leading-snug">{bot.name}</h3>

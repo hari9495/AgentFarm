@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Monitor, Cpu, Bot, GitBranch, ArrowDown, Lock, ShieldCheck, Database } from "lucide-react";
+import PremiumIcon from "@/components/shared/PremiumIcon";
 
 export default function Architecture() {
     return (
@@ -38,9 +39,7 @@ export default function Architecture() {
                                 transition={{ delay: i * 0.1 }}
                                 className="flex items-center gap-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow"
                             >
-                                <div className={`w-9 h-9 rounded-lg ${color} flex items-center justify-center shrink-0`}>
-                                    <Icon className="w-4 h-4 text-white" />
-                                </div>
+                                <PremiumIcon icon={Icon} tone="sky" containerClassName={`w-9 h-9 rounded-lg ${color} text-white shrink-0 border-white/20`} iconClassName="w-4 h-4" />
                                 <div>
                                     <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{label}</p>
                                     <p className="text-xs text-slate-400">{sub}</p>
@@ -111,9 +110,7 @@ export default function Architecture() {
                                 transition={{ delay: i * 0.1 }}
                                 className="flex items-center gap-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow"
                             >
-                                <div className={`w-9 h-9 rounded-lg ${color} flex items-center justify-center shrink-0`}>
-                                    <Icon className="w-4 h-4 text-white" />
-                                </div>
+                                <PremiumIcon icon={Icon} tone="sky" containerClassName={`w-9 h-9 rounded-lg ${color} text-white shrink-0 border-white/20`} iconClassName="w-4 h-4" />
                                 <div>
                                     <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{label}</p>
                                     <p className="text-xs text-slate-400">{sub}</p>

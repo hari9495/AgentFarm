@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Download, FileArchive, RefreshCw, ShieldCheck } from "lucide-react";
+import PremiumIcon from "@/components/shared/PremiumIcon";
 
 type EvidenceSummary = {
     generatedAt: number;
@@ -134,19 +135,19 @@ export default function EvidenceCompliancePanel() {
                             onClick={() => void loadSummary()}
                             className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
                         >
-                            <RefreshCw className="h-3.5 w-3.5" /> Refresh
+                            <PremiumIcon icon={RefreshCw} tone="slate" containerClassName="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400" iconClassName="h-3.5 w-3.5" /> Refresh
                         </button>
                         <a
                             href="/api/evidence/export?format=json"
                             className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
                         >
-                            <FileArchive className="h-3.5 w-3.5" /> Export JSON
+                            <PremiumIcon icon={FileArchive} tone="slate" containerClassName="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400" iconClassName="h-3.5 w-3.5" /> Export JSON
                         </a>
                         <a
                             href="/api/evidence/export?format=csv"
                             className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 dark:bg-slate-100 px-3 py-1.5 text-xs font-semibold text-white dark:text-slate-900"
                         >
-                            <Download className="h-3.5 w-3.5" /> Export CSV
+                            <PremiumIcon icon={Download} tone="slate" containerClassName="w-6 h-6 rounded-lg bg-white/15 text-white border-white/30 dark:bg-slate-900/10 dark:text-slate-900 dark:border-slate-900/20" iconClassName="h-3.5 w-3.5" /> Export CSV
                         </a>
                     </div>
                 </div>
@@ -192,7 +193,7 @@ export default function EvidenceCompliancePanel() {
 
             <div className="rounded-2xl border border-emerald-200 dark:border-emerald-900/40 bg-emerald-50 dark:bg-emerald-950/20 p-4">
                 <p className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-700 dark:text-emerald-300">
-                    <ShieldCheck className="h-4 w-4" /> Compliance pack ready
+                    <PremiumIcon icon={ShieldCheck} tone="emerald" containerClassName="w-6 h-6 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400" iconClassName="w-3.5 h-3.5" /> Compliance pack ready
                 </p>
                 <p className="mt-1 text-xs text-emerald-700/90 dark:text-emerald-300/90">
                     Exports include approval decisions, decision latency, escalation markers, and append-only audit events for evidence review.
@@ -206,7 +207,7 @@ export default function EvidenceCompliancePanel() {
                         onClick={() => void loadAuditEvents()}
                         className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
                     >
-                        <RefreshCw className="h-3.5 w-3.5" /> Refresh events
+                        <PremiumIcon icon={RefreshCw} tone="slate" containerClassName="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400" iconClassName="h-3.5 w-3.5" /> Refresh events
                     </button>
                 </div>
 

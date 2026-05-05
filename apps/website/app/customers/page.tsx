@@ -41,6 +41,7 @@ const caseStudies = [
         ],
         quote: "Our security engineers stopped being CVE janitors and started doing actual security work. That alone justified the cost.",
         quoteAuthor: "Head of Security, Stack Labs",
+        pdfLabel: "Stack Labs case study",
     },
     {
         company: "Qubit IO",
@@ -57,6 +58,7 @@ const caseStudies = [
         ],
         quote: "We hit our due diligence targets without distracting a single engineer from the roadmap. The agent worked nights and weekends.",
         quoteAuthor: "CTO, Qubit IO",
+        pdfLabel: "Qubit IO case study",
     },
     {
         company: "Verdo AI",
@@ -73,6 +75,7 @@ const caseStudies = [
         ],
         quote: "We went from 4 deploys a week to 27 without any increase in incidents. The agent handles the routine deploys and escalates anything unusual.",
         quoteAuthor: "VP Engineering, Verdo AI",
+        pdfLabel: "Verdo AI case study",
     },
 ];
 
@@ -202,6 +205,19 @@ export default function CustomersPage() {
                                     <p className="text-xs font-semibold text-slate-400 dark:text-slate-500">{cs.quoteAuthor}</p>
                                 </div>
                             </div>
+
+                            {cs.pdfLabel && (
+                                <div className="mt-4">
+                                    <a
+                                        href={`/downloads/${cs.company.toLowerCase().replace(/\s+/g, "-")}-case-study.pdf`}
+                                        download
+                                        className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                                    >
+                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M8 12l4 4m0 0l4-4m-4 4V4" /></svg>
+                                        Download {cs.pdfLabel} (PDF)
+                                    </a>
+                                </div>
+                            )}
                         </div>
                     </div>
                 ))}

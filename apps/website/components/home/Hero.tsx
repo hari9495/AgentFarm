@@ -3,8 +3,8 @@
 import { motion } from "framer-motion";
 import ButtonLink from "@/components/shared/ButtonLink";
 import { ArrowRight, CheckCircle2, Sparkles } from "lucide-react";
-import { marketplaceBots } from "@/lib/bots";
 import { useCompactMotion } from "@/lib/useCompactMotion";
+import HeroScene3D from "@/components/home/HeroScene3D";
 
 const outcomes = [
     "Deploy the Developer Agent in your Azure tenant in under 10 minutes",
@@ -15,8 +15,6 @@ const outcomes = [
 export default function Hero() {
     const compactMotion = useCompactMotion();
     const motionScale = compactMotion ? 0.72 : 1;
-    const availableRoles = marketplaceBots.filter((bot) => bot.available).length;
-    const departmentCount = new Set(marketplaceBots.map((bot) => bot.department)).size;
 
     return (
         <section className="hero-future relative overflow-hidden pt-20 pb-16 sm:pt-28 sm:pb-24">
@@ -101,35 +99,8 @@ export default function Hero() {
                         transition={{ duration: 0.5 * motionScale, delay: 0.08 * motionScale }}
                         className="relative"
                     >
-                        <div className="hero-3d-scene">
-                            <img
-                                src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1400&q=80"
-                                alt="Engineering team collaborating in front of dashboards"
-                                className="hero-3d-media"
-                                loading="eager"
-                            />
-                            <div className="hero-3d-ring hero-3d-ring-a" aria-hidden />
-                            <div className="hero-3d-ring hero-3d-ring-b" aria-hidden />
-                        </div>
-
-                        <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md rounded-xl px-3 py-2 border border-cyan-200 shadow-lg">
-                            <p className="text-[10px] uppercase tracking-wide text-slate-500">Average first-week output</p>
-                            <p className="text-sm font-bold text-slate-900">16 tasks shipped</p>
-                        </div>
-
-                        <div className="absolute -bottom-5 left-4 right-4 bg-white/95 rounded-2xl border border-cyan-200 shadow-xl p-4 grid grid-cols-3 gap-3">
-                            <div>
-                                <p className="text-lg font-extrabold text-slate-900">10m</p>
-                                <p className="text-[11px] text-slate-600">to deploy</p>
-                            </div>
-                            <div>
-                                <p className="text-lg font-extrabold text-slate-900">99.2%</p>
-                                <p className="text-[11px] text-slate-600">test pass</p>
-                            </div>
-                            <div>
-                                <p className="text-lg font-extrabold text-slate-900">24/7</p>
-                                <p className="text-[11px] text-slate-600">task coverage</p>
-                            </div>
+                        <div className="relative">
+                            <HeroScene3D />
                         </div>
                     </motion.div>
                 </div>

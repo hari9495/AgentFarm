@@ -1,10 +1,11 @@
 ﻿"use client";
 
 import { motion } from "framer-motion";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Bot, Link2, ShieldCheck, ClipboardCheck } from "lucide-react";
 
 const steps = [
     {
+        Icon: Bot,
         number: "01",
         title: "Install developer skills",
         description:
@@ -13,6 +14,7 @@ const steps = [
             "https://images.unsplash.com/photo-1526628953301-3e589a6a8b74?auto=format&fit=crop&w=1200&q=80",
     },
     {
+        Icon: Link2,
         number: "02",
         title: "Connect your tools",
         description:
@@ -21,6 +23,7 @@ const steps = [
             "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?auto=format&fit=crop&w=1200&q=80",
     },
     {
+        Icon: ShieldCheck,
         number: "03",
         title: "Assign real work",
         description:
@@ -29,6 +32,7 @@ const steps = [
             "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=1200&q=80",
     },
     {
+        Icon: ClipboardCheck,
         number: "04",
         title: "Review, approve, and measure",
         description:
@@ -73,6 +77,8 @@ export default function HowItWorks() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative">
                     {steps.map((step, i) => {
+                        const StepIcon = step.Icon;
+
                         return (
                             <motion.div
                                 key={step.number}
@@ -89,7 +95,12 @@ export default function HowItWorks() {
                                     loading="lazy"
                                 />
                                 <div className="p-6">
-                                    <p className="text-xs font-semibold text-blue-600 mb-2">Step {step.number}</p>
+                                    <div className="mb-3 flex items-center gap-2">
+                                        <div className="integration-icon-orb h-8 w-8 rounded-lg">
+                                            <StepIcon className="w-4 h-4 text-cyan-700" />
+                                        </div>
+                                        <p className="text-xs font-semibold text-blue-600">Step {step.number}</p>
+                                    </div>
                                     <h3 className="font-bold text-slate-900 dark:text-slate-100 mb-2 text-lg">{step.title}</h3>
                                     <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{step.description}</p>
                                     <a href="/how-it-works" className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700">

@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { marketplaceBots } from "@/lib/bots";
 import { useCart } from "@/lib/cart-store";
+import PremiumIcon from "@/components/shared/PremiumIcon";
 
 type TeamSize = "1-5" | "6-20" | "21-50" | "50+";
 type FocusArea = "engineering" | "marketing" | "finance" | "hr" | "customer-success" | "security" | "product" | "operations";
@@ -92,8 +93,8 @@ export default function TeamBuilderWizard() {
                     {([1, 2, 3] as const).map((s) => (
                         <div key={s} className="flex items-center gap-2">
                             <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${step >= s
-                                    ? "bg-blue-600 text-white"
-                                    : "bg-slate-200 dark:bg-slate-700 text-slate-400"
+                                ? "bg-blue-600 text-white"
+                                : "bg-slate-200 dark:bg-slate-700 text-slate-400"
                                 }`}>
                                 {s}
                             </div>
@@ -121,8 +122,8 @@ export default function TeamBuilderWizard() {
                                         key={size}
                                         onClick={() => { setTeamSize(size); setStep(2); }}
                                         className={`rounded-xl border px-4 py-5 text-center transition-all cursor-pointer ${teamSize === size
-                                                ? "border-blue-600 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 ring-2 ring-blue-600"
-                                                : "border-slate-200 dark:border-slate-700 hover:border-blue-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                                            ? "border-blue-600 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 ring-2 ring-blue-600"
+                                            : "border-slate-200 dark:border-slate-700 hover:border-blue-300 hover:bg-slate-50 dark:hover:bg-slate-800"
                                             }`}
                                     >
                                         <p className="text-xl font-extrabold text-slate-900 dark:text-slate-100">{size}</p>
@@ -152,11 +153,16 @@ export default function TeamBuilderWizard() {
                                             key={value}
                                             onClick={() => toggleFocus(value)}
                                             className={`flex flex-col items-center gap-2 rounded-xl border px-3 py-4 text-center transition-all cursor-pointer ${active
-                                                    ? "border-blue-600 bg-blue-50 dark:bg-blue-950/40 ring-2 ring-blue-600"
-                                                    : "border-slate-200 dark:border-slate-700 hover:border-blue-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                                                ? "border-blue-600 bg-blue-50 dark:bg-blue-950/40 ring-2 ring-blue-600"
+                                                : "border-slate-200 dark:border-slate-700 hover:border-blue-300 hover:bg-slate-50 dark:hover:bg-slate-800"
                                                 }`}
                                         >
-                                            <Icon className={`w-5 h-5 ${active ? "text-blue-600" : "text-slate-400"}`} />
+                                            <PremiumIcon
+                                                icon={Icon}
+                                                tone={active ? "sky" : "slate"}
+                                                containerClassName="w-8 h-8 rounded-lg"
+                                                iconClassName="w-4 h-4"
+                                            />
                                             <span className={`text-xs font-medium ${active ? "text-blue-700 dark:text-blue-300" : "text-slate-600 dark:text-slate-400"}`}>
                                                 {label}
                                             </span>

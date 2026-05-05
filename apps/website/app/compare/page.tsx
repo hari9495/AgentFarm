@@ -79,6 +79,29 @@ export default function ComparePage() {
         </div>
       </section>
 
+      {/* M2: Score summary cards */}
+      <section className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <p className="text-center text-xs font-semibold uppercase tracking-widest text-slate-400 mb-6">Feature coverage score (out of 20)</p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto">
+            {[
+              { label: "AgentFarm", score: 20, pct: 100, highlight: true },
+              { label: "Full-time Hire", score: 12, pct: 60, highlight: false },
+              { label: "Contractor", score: 10, pct: 50, highlight: false },
+              { label: "GitHub Copilot", score: 8, pct: 40, highlight: false },
+            ].map((item) => (
+              <div key={item.label} className={`rounded-2xl p-4 text-center ${item.highlight ? "bg-blue-600 text-white shadow-lg" : "border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"}`}>
+                <p className={`text-3xl font-extrabold tabular-nums ${item.highlight ? "text-white" : "text-slate-900 dark:text-slate-100"}`}>{item.score}<span className={`text-sm font-normal ${item.highlight ? "text-blue-200" : "text-slate-400"}`}>/20</span></p>
+                <div className={`mt-2 w-full h-1.5 rounded-full ${item.highlight ? "bg-blue-500/50" : "bg-slate-100 dark:bg-slate-700"}`}>
+                  <div className={`h-1.5 rounded-full ${item.highlight ? "bg-white" : "bg-slate-400"}`} style={{ width: `${item.pct}%` }} />
+                </div>
+                <p className={`mt-2 text-xs font-semibold ${item.highlight ? "text-blue-100" : "text-slate-600 dark:text-slate-300"}`}>{item.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Comparison table */}
       <section className="py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 overflow-x-auto">

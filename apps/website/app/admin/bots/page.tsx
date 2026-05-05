@@ -16,6 +16,7 @@ import {
     Zap,
 } from "lucide-react";
 import Link from "next/link";
+import PremiumIcon from "@/components/shared/PremiumIcon";
 
 type BotStatus = "active" | "paused" | "error" | "maintenance";
 type AutonomyLevel = "low" | "medium" | "high";
@@ -151,7 +152,9 @@ export default function AdminBotsPage() {
             {/* Toast */}
             {toast && (
                 <div className={`fixed top-4 right-4 z-50 flex items-center gap-2.5 rounded-xl px-4 py-3 text-sm font-semibold shadow-lg ${toast.ok ? "bg-emerald-600 text-white" : "bg-rose-600 text-white"}`}>
-                    {toast.ok ? <ShieldCheck className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
+                    {toast.ok
+                        ? <PremiumIcon icon={ShieldCheck} tone="emerald" containerClassName="w-6 h-6 rounded-lg bg-white/15 text-white border-white/30" iconClassName="w-3.5 h-3.5" />
+                        : <PremiumIcon icon={AlertTriangle} tone="rose" containerClassName="w-6 h-6 rounded-lg bg-white/15 text-white border-white/30" iconClassName="w-3.5 h-3.5" />}
                     {toast.message}
                 </div>
             )}
@@ -160,7 +163,7 @@ export default function AdminBotsPage() {
             <section className="border-b border-slate-200 dark:border-slate-800 bg-gradient-to-br from-slate-800 via-slate-900 to-slate-950">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
                     <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-amber-300 mb-4">
-                        <Bot className="w-3.5 h-3.5" />
+                        <PremiumIcon icon={Bot} tone="amber" containerClassName="w-5 h-5 rounded-md bg-amber-300/15 text-amber-200 border-amber-200/30" iconClassName="w-3 h-3" />
                         Bot Control Panel
                     </div>
                     <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight max-w-xl">
@@ -231,10 +234,10 @@ export default function AdminBotsPage() {
                                         {/* Metrics */}
                                         <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400 shrink-0">
                                             <span className="inline-flex items-center gap-1">
-                                                <Activity className="w-3.5 h-3.5" />{bot.tasksCompleted} tasks
+                                                <PremiumIcon icon={Activity} tone="slate" containerClassName="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400" iconClassName="w-3.5 h-3.5" />{bot.tasksCompleted} tasks
                                             </span>
                                             <span className="inline-flex items-center gap-1">
-                                                <Zap className="w-3.5 h-3.5" />{bot.reliabilityPct}%
+                                                <PremiumIcon icon={Zap} tone="amber" containerClassName="w-6 h-6 rounded-lg bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400" iconClassName="w-3.5 h-3.5" />{bot.reliabilityPct}%
                                             </span>
                                         </div>
 
@@ -253,22 +256,22 @@ export default function AdminBotsPage() {
                                                     : "bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300"
                                                     }`}
                                             >
-                                                {bot.status === "active" ? <><Pause className="w-3.5 h-3.5" />Pause</> : <><Play className="w-3.5 h-3.5" />Resume</>}
+                                                {bot.status === "active" ? <><PremiumIcon icon={Pause} tone="amber" containerClassName="w-6 h-6 rounded-lg bg-amber-200 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300" iconClassName="w-3.5 h-3.5" />Pause</> : <><PremiumIcon icon={Play} tone="emerald" containerClassName="w-6 h-6 rounded-lg bg-emerald-200 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300" iconClassName="w-3.5 h-3.5" />Resume</>}
                                             </button>
                                             <button
                                                 disabled={isSaving || bot.status === "maintenance"}
                                                 onClick={() => setMaintenance(bot)}
                                                 className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
                                             >
-                                                <Wrench className="w-3.5 h-3.5" />Maintenance
+                                                <PremiumIcon icon={Wrench} tone="slate" containerClassName="w-6 h-6 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300" iconClassName="w-3.5 h-3.5" />Maintenance
                                             </button>
                                             <button
                                                 onClick={() => setExpanded(isExpanded ? null : bot.slug)}
                                                 className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 transition-colors"
                                             >
-                                                <Settings2 className="w-3.5 h-3.5" />
+                                                <PremiumIcon icon={Settings2} tone="slate" containerClassName="w-6 h-6 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300" iconClassName="w-3.5 h-3.5" />
                                                 Configure
-                                                {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                                                {isExpanded ? <PremiumIcon icon={ChevronUp} tone="slate" containerClassName="w-5 h-5 rounded-md bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300" iconClassName="w-3 h-3" /> : <PremiumIcon icon={ChevronDown} tone="slate" containerClassName="w-5 h-5 rounded-md bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300" iconClassName="w-3 h-3" />}
                                             </button>
                                         </div>
                                     </div>
@@ -309,7 +312,7 @@ export default function AdminBotsPage() {
                                                 {/* Shift hours */}
                                                 <div>
                                                     <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">
-                                                        <Clock className="inline w-3 h-3 mr-1" />Working Hours
+                                                        <span className="inline-flex items-center gap-1"><PremiumIcon icon={Clock} tone="slate" containerClassName="w-5 h-5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400" iconClassName="w-3 h-3" />Working Hours</span>
                                                     </label>
                                                     <div className="flex items-center gap-2">
                                                         <input

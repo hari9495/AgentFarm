@@ -1,6 +1,9 @@
 ﻿import type { Metadata } from "next";
 import { Code2, Layout, TestTube2, Server, Zap, Shield, Activity, GitBranch, Sparkles, CheckCircle2 } from "lucide-react";
 import ButtonLink from "@/components/shared/ButtonLink";
+import PremiumIcon from "@/components/shared/PremiumIcon";
+import ProductSceneSection from "@/components/product/ProductSceneSection";
+import ProductDemoVideo from "@/components/product/ProductDemoVideo";
 
 export const metadata: Metadata = {
     title: "Product — AgentFarm",
@@ -173,6 +176,18 @@ export default function ProductPage() {
                 </div>
             </section>
 
+            <ProductSceneSection />
+
+            {/* Demo video section */}
+            <section className="py-20 bg-slate-50 dark:bg-slate-900/50">
+                <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-blue-600 dark:text-blue-400 mb-4">See it in action</p>
+                    <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-slate-100 mb-4">Watch an AI worker ship a feature</h2>
+                    <p className="text-slate-500 dark:text-slate-400 text-base mb-8 max-w-xl mx-auto">In 4 minutes, an AgentFarm worker takes a Jira ticket, writes the code, opens a PR, and passes CI. No prompting, no babysitting.</p>
+                    <ProductDemoVideo />
+                </div>
+            </section>
+
             {/* Features grid with images */}
             <section className="py-24">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -198,8 +213,13 @@ export default function ProductPage() {
                                         loading="lazy"
                                     />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                                    <div className={`absolute bottom-3 left-3 w-9 h-9 bg-gradient-to-br ${gradient} rounded-xl flex items-center justify-center shadow`}>
-                                        <Icon className="w-5 h-5 text-white" />
+                                    <div className="absolute bottom-3 left-3">
+                                        <PremiumIcon
+                                            icon={Icon}
+                                            tone="cyan"
+                                            containerClassName={`h-9 w-9 rounded-xl bg-gradient-to-br ${gradient} text-white border-white/20`}
+                                            iconClassName="w-5 h-5"
+                                        />
                                     </div>
                                 </div>
                                 <div className="p-5">

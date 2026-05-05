@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { LoaderCircle, RefreshCw, Rocket } from "lucide-react";
 import toast from "react-hot-toast";
+import PremiumIcon from "@/components/shared/PremiumIcon";
 
 type DeploymentStatus = "queued" | "running" | "succeeded" | "failed" | "canceled";
 
@@ -151,7 +152,7 @@ export default function DeploymentStatusPanel() {
             <div className="flex items-start justify-between gap-3">
                 <div>
                     <p className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                        <Rocket className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                        <PremiumIcon icon={Rocket} tone="emerald" containerClassName="w-6 h-6 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400" iconClassName="w-3.5 h-3.5" />
                         Deployment Status
                     </p>
                     <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Latest marketplace deployment request</p>
@@ -160,13 +161,13 @@ export default function DeploymentStatusPanel() {
                     onClick={() => void load()}
                     className="inline-flex items-center gap-1 rounded-lg border border-slate-200 dark:border-slate-700 px-2.5 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
                 >
-                    <RefreshCw className="w-3.5 h-3.5" /> Refresh
+                    <PremiumIcon icon={RefreshCw} tone="slate" containerClassName="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400" iconClassName="w-3.5 h-3.5" /> Refresh
                 </button>
             </div>
 
             {loading ? (
                 <p className="mt-4 text-xs text-slate-500 dark:text-slate-400 inline-flex items-center gap-2">
-                    <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> Loading deployment...
+                    <PremiumIcon icon={LoaderCircle} tone="slate" containerClassName="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400" iconClassName="h-3.5 w-3.5 animate-spin" /> Loading deployment...
                 </p>
             ) : error ? (
                 <p className="mt-4 text-xs text-rose-600 dark:text-rose-400">{error}</p>

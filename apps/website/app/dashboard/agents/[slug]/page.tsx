@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import ButtonLink from "@/components/shared/ButtonLink";
 import RiskyActionTrigger from "@/components/dashboard/RiskyActionTrigger";
+import PremiumIcon from "@/components/shared/PremiumIcon";
 
 export const metadata: Metadata = {
     title: "Agent Detail - AgentFarm Dashboard",
@@ -207,9 +208,7 @@ export default async function AgentDetailPage({
                 <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-4">
                     {kpis.map(({ label, value, icon: Icon, iconBg, iconColor }) => (
                         <div key={label} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
-                            <div className={`h-8 w-8 rounded-xl ${iconBg} flex items-center justify-center mb-3`}>
-                                <Icon className={`w-4 h-4 ${iconColor}`} />
-                            </div>
+                            <PremiumIcon icon={Icon} tone="sky" containerClassName={`h-8 w-8 rounded-xl ${iconBg} ${iconColor} mb-3`} iconClassName="w-4 h-4" />
                             <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100">{value}</p>
                             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{label}</p>
                         </div>
@@ -285,7 +284,7 @@ export default async function AgentDetailPage({
 
                         <div className="bg-gradient-to-br from-emerald-50 to-sky-50 dark:from-emerald-950/20 dark:to-sky-950/20 rounded-2xl border border-emerald-200 dark:border-emerald-900/40 p-5">
                             <div className="flex items-center gap-2 mb-2">
-                                <ArrowUpRight className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                                <PremiumIcon icon={ArrowUpRight} tone="emerald" containerClassName="w-6 h-6 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400" iconClassName="w-3.5 h-3.5" />
                                 <span className="text-sm font-bold text-slate-900 dark:text-slate-100">This week</span>
                             </div>
                             <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
@@ -302,7 +301,7 @@ export default async function AgentDetailPage({
 
                         {worker.escalationRate > 20 && (
                             <div className="bg-amber-50 dark:bg-amber-950/20 rounded-2xl border border-amber-200 dark:border-amber-900/40 p-4 flex gap-3">
-                                <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+                                <PremiumIcon icon={AlertTriangle} tone="amber" containerClassName="w-6 h-6 mt-0.5 shrink-0 rounded-lg bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400" iconClassName="w-3.5 h-3.5" />
                                 <p className="text-xs text-amber-800 dark:text-amber-300">
                                     Escalation rate above threshold. Review approval gate settings.
                                 </p>

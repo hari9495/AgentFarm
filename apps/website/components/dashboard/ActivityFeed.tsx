@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState, type ElementType } from "react";
-import { Activity, CheckCircle2, GitPullRequest, RefreshCw, ShieldAlert, TestTube2, Zap } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Activity, CheckCircle2, GitPullRequest, RefreshCw, ShieldAlert, TestTube2, Zap, type LucideIcon } from "lucide-react";
+import PremiumIcon from "@/components/shared/PremiumIcon";
 
 type FeedEvent = {
     id: string;
@@ -13,7 +14,7 @@ type FeedEvent = {
     approvalOutcome?: "requested" | "approved" | "rejected";
 };
 
-const iconForType: Record<string, ElementType> = {
+const iconForType: Record<string, LucideIcon> = {
     code: GitPullRequest,
     security: ShieldAlert,
     qa: TestTube2,
@@ -51,6 +52,16 @@ export default function ActivityFeed() {
     const [events, setEvents] = useState<FeedEvent[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [activeFilter, setActiveFilter] = useState<"all" | FeedEvent["type"]>("all");
+
+    const filterTypes = [
+        { key: "all" as const, label: "All" },
+        { key: "code" as const, label: "Code" },
+        { key: "security" as const, label: "Security" },
+        { key: "qa" as const, label: "QA" },
+        { key: "ops" as const, label: "Ops" },
+        { key: "approval" as const, label: "Approvals" },
+    ];
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -94,12 +105,28 @@ export default function ActivityFeed() {
                             onClick={() => void load()}
                             className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
                         >
-                            <RefreshCw className="h-3.5 w-3.5" /> Refresh
+                            <PremiumIcon icon={RefreshCw} tone="slate" containerClassName="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400" iconClassName="h-3.5 w-3.5" /> Refresh
                         </button>
                         <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 px-3 py-1 text-xs font-semibold">
-                            <Activity className="w-3.5 h-3.5" /> Streaming
+                            <PremiumIcon icon={Activity} tone="emerald" containerClassName="w-6 h-6 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400" iconClassName="w-3.5 h-3.5" /> Streaming
                         </span>
                     </div>
+                </div>
+
+                {/* X3: Filter chips */}
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                    {filterTypes.map((f) => (
+                        <button
+                            key={f.key}
+                            onClick={() => setActiveFilter(f.key)}
+                            className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${activeFilter === f.key
+                                    ? "bg-sky-600 text-white"
+                                    : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+                                }`}
+                        >
+                            {f.label}
+                        </button>
+                    ))}
                 </div>
             </div>
 
@@ -112,7 +139,7 @@ export default function ActivityFeed() {
                             onClick={() => void load()}
                             className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-rose-300 dark:border-rose-700 px-3 py-1.5 text-xs font-semibold text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/30"
                         >
-                            <RefreshCw className="h-3.5 w-3.5" /> Retry
+                            <PremiumIcon icon={RefreshCw} tone="rose" containerClassName="w-6 h-6 rounded-lg bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400" iconClassName="h-3.5 w-3.5" /> Retry
                         </button>
                     </div>
                 ) : null}
@@ -139,13 +166,13 @@ export default function ActivityFeed() {
                     <div className="relative pl-8">
                         <div className="absolute left-3 top-0 bottom-0 w-px bg-slate-200 dark:bg-slate-800" />
                         <div className="space-y-4">
-                            {events.map((item) => {
+                            {(activeFilter === "all" ? events : events.filter((e) => e.type === activeFilter)).map((item) => {
                                 const Icon = iconForType[item.type] ?? CheckCircle2;
                                 const outcome = item.type === "approval" ? (item.approvalOutcome ?? "requested") : null;
                                 return (
                                     <div key={item.id} className="relative rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
                                         <span className={`absolute -left-8 top-4 inline-flex h-6 w-6 items-center justify-center rounded-full ${styleForType[item.type]}`}>
-                                            <Icon className="w-3.5 h-3.5" />
+                                            <PremiumIcon icon={Icon} tone="slate" containerClassName="w-6 h-6 rounded-full bg-transparent text-current" iconClassName="w-3.5 h-3.5" />
                                         </span>
                                         <div className="flex flex-wrap items-center justify-between gap-2">
                                             <div className="flex items-center gap-2">
