@@ -35,6 +35,8 @@ export const CONTRACT_VERSIONS = {
   AGENT_MEMORY: '1.0.0', // Agent short-term task memory (Epic A7)
   PROACTIVE_SIGNAL: '1.0.0', // Proactive operational signals (stale PR/ticket, budget warning)
   APPROVAL_BATCH: '1.0.0', // Batched approval grouping and batch decisions
+  QUALITY_SIGNAL: '1.0.0', // LLM quality feedback signals by provider/action type
+  AGENT_HANDOFF: '1.0.0', // Agent-to-agent handoff lifecycle records
 } as const;
 
 export type ContractVersion = (typeof CONTRACT_VERSIONS)[keyof typeof CONTRACT_VERSIONS];
@@ -729,7 +731,7 @@ export interface AuditEventRecord {
 
 // Epic B1: Heartbeat Wake Model with Coalescing
 // Frozen 2026-05-01 — wake source tracking and run deduplication
-export type WakeSource = 'timer' | 'assignment' | 'on_demand' | 'automation';
+export type WakeSource = 'timer' | 'assignment' | 'on_demand' | 'automation' | 'proactive_signal';
 
 export type RunStatus = 'queued' | 'active' | 'completed' | 'cancelled' | 'timeout' | 'failed';
 
@@ -1653,6 +1655,39 @@ export interface ProactiveSignalRecord {
   metadata?: Record<string, unknown>;
   correlationId: string;
   detectedAt: string;
+  updatedAt: string;
+}
+
+export interface QualitySignalRecord {
+  id: string;
+  contractVersion: string; // CONTRACT_VERSIONS.QUALITY_SIGNAL
+  tenantId: string;
+  workspaceId: string;
+  botId: string;
+  provider: string;
+  actionType: string;
+  score: number; // 0-1 normalized quality score
+  reason?: string;
+  metadata?: Record<string, unknown>;
+  correlationId: string;
+  observedAt: string;
+}
+
+export type AgentHandoffStatus = 'requested' | 'accepted' | 'rejected' | 'completed' | 'cancelled';
+
+export interface AgentHandoffRecord {
+  id: string;
+  contractVersion: string; // CONTRACT_VERSIONS.AGENT_HANDOFF
+  tenantId: string;
+  workspaceId: string;
+  taskId: string;
+  fromBotId: string;
+  toBotId: string;
+  reason: string;
+  status: AgentHandoffStatus;
+  handoffContext?: Record<string, unknown>;
+  correlationId: string;
+  createdAt: string;
   updatedAt: string;
 }
 

@@ -7,12 +7,15 @@ import type {
     BotCapabilitySnapshotRecord,
     CapabilitySnapshotSource,
     ModelProfileKey,
+    QualitySignalRecord,
     RoleKey,
     TaskLeaseRecord,
 } from '@agentfarm/shared-types';
+import { CONTRACT_VERSIONS } from '@agentfarm/shared-types';
 import {
     buildDecision,
     processDeveloperTask,
+    processDeveloperTaskWithMemory,
     processApprovedTask,
     type LlmDecisionResolver,
     type PayloadOverrideSource,
@@ -49,6 +52,38 @@ import {
     TESTER_ROLE_ALLOWED_LOCAL_ACTIONS,
     isTesterRoleProfile,
 } from './tester-agent-profile.js';
+import {
+    getProviderQualityPenalty,
+    getQualitySignalSummary,
+    listQualitySignals,
+    type QualitySignalSource,
+    recordQualitySignal,
+} from './llm-quality-tracker.js';
+
+type RuntimeMemoryStore = {
+    readMemoryForTask: (workspaceId: string, maxResults?: number) => Promise<{
+        recentMemories: unknown[];
+        memoryCountThisWeek: number;
+        mostCommonConnectors: string[];
+        approvalRejectionRate: number;
+    }>;
+    writeMemoryAfterTask: (request: {
+        workspaceId: string;
+        tenantId: string;
+        taskId: string;
+        actionsTaken: string[];
+        approvalOutcomes: Array<{
+            action: string;
+            decision: 'approved' | 'rejected';
+            reason?: string;
+        }>;
+        connectorsUsed: string[];
+        llmProvider?: string;
+        executionStatus: 'success' | 'approval_required' | 'failed';
+        summary: string;
+        correlationId: string;
+    }) => Promise<void>;
+};
 
 type RuntimeState =
     | 'created'
@@ -192,6 +227,7 @@ type RuntimeServerOptions = {
     evidenceRecordWriter?: EvidenceRecordWriter;
     capabilitySnapshotPersistenceClient?: CapabilitySnapshotPersistenceClient;
     taskExecutionRecordWriter?: TaskExecutionRecordWriter;
+    memoryStore?: RuntimeMemoryStore;
     llmDecisionResolver?: LlmDecisionResolver;
     llmConfigFetcher?: (input: {
         config: RuntimeConfig;
@@ -458,6 +494,61 @@ const CONNECTOR_ACTION_TYPES = new Set([
     'list_prs',
     'send_email',
 ] as const);
+
+const collectConnectorsUsed = (task: TaskEnvelope, actionType: string): string[] => {
+    const connectors = new Set<string>();
+    const connectorType = normalizeConnectorType(task.payload['connector_type']);
+    if (connectorType) {
+        connectors.add(connectorType);
+    }
+
+    if (LOCAL_WORKSPACE_ACTION_TYPES.has(actionType as LocalWorkspaceActionType)) {
+        connectors.add('local_workspace');
+    }
+
+    return Array.from(connectors.values());
+};
+
+const collectApprovalOutcomes = (
+    result: ProcessedTaskResult,
+): Array<{ action: string; decision: 'approved' | 'rejected' }> => {
+    if (result.decision.route !== 'approval' || result.status === 'approval_required') {
+        return [];
+    }
+
+    return [{
+        action: result.decision.actionType,
+        decision: result.status === 'success' ? 'approved' : 'rejected',
+    }];
+};
+
+const summarizeTaskForMemory = (task: TaskEnvelope, result: ProcessedTaskResult): string => {
+    const summaryCandidateKeys = ['summary', 'objective', 'prompt', 'title'];
+    for (const key of summaryCandidateKeys) {
+        const value = task.payload[key];
+        if (typeof value === 'string' && value.trim().length > 0) {
+            return value.trim().slice(0, 300);
+        }
+    }
+    return `${result.decision.actionType}: ${result.decision.reason}`.slice(0, 300);
+};
+
+const estimateLlmQualityScore = (result: ProcessedTaskResult): number => {
+    if (result.status === 'success') {
+        return 0.9;
+    }
+    if (result.status === 'approval_required') {
+        return 0.6;
+    }
+    return result.failureClass === 'transient_error' ? 0.45 : 0.3;
+};
+
+const parseQualitySignalSource = (value: unknown): QualitySignalSource | null => {
+    if (value === 'runtime_outcome' || value === 'user_feedback' || value === 'evaluator' || value === 'manual') {
+        return value;
+    }
+    return null;
+};
 
 const POST_CHANGE_QUALITY_GATE_ACTIONS = new Set<LocalWorkspaceActionType>([
     'code_edit',
@@ -1756,6 +1847,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
     const evidenceRecordWriter =
         options.evidenceRecordWriter ?? createFileEvidenceRecordWriter(evidenceRecordPath);
     const localWorkspaceActionExecutor = options.localWorkspaceActionExecutor ?? executeLocalWorkspaceAction;
+    const memoryStore = options.memoryStore;
 
     const app = Fastify({
         logger: {
@@ -2757,12 +2849,23 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             return;
         }
 
-        const result = await processDeveloperTask(task, {
-            maxAttempts: 3,
-            modelProvider: activeModelProvider,
-            modelProfile: resolveDefaultModelProfile(capabilitySnapshotCache),
-            llmDecisionResolver,
-        });
+        const result = memoryStore
+            ? await processDeveloperTaskWithMemory(
+                task,
+                memoryStore,
+                {
+                    maxAttempts: 3,
+                    modelProvider: activeModelProvider,
+                    modelProfile: resolveDefaultModelProfile(capabilitySnapshotCache),
+                    llmDecisionResolver,
+                },
+            )
+            : await processDeveloperTask(task, {
+                maxAttempts: 3,
+                modelProvider: activeModelProvider,
+                modelProfile: resolveDefaultModelProfile(capabilitySnapshotCache),
+                llmDecisionResolver,
+            });
         const executionTask: TaskEnvelope = {
             ...task,
             payload: result.executionPayload,
@@ -3401,6 +3504,35 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         }).catch(() => {
             // Non-blocking: task execution record write failures do not affect task outcome
         });
+
+        recordQualitySignal({
+            provider: modelProvider,
+            actionType: result.decision.actionType,
+            score: estimateLlmQualityScore(result),
+            source: 'runtime_outcome',
+            taskId: task.taskId,
+            correlationId: config.correlationId,
+        });
+
+        if (memoryStore) {
+            memoryStore.writeMemoryAfterTask({
+                workspaceId: config.workspaceId,
+                tenantId: config.tenantId,
+                taskId: task.taskId,
+                actionsTaken: [result.decision.actionType],
+                approvalOutcomes: collectApprovalOutcomes(result),
+                connectorsUsed: collectConnectorsUsed(task, result.decision.actionType),
+                llmProvider: modelProvider,
+                executionStatus: result.status,
+                summary: summarizeTaskForMemory(task, result),
+                correlationId: config.correlationId,
+            }).catch((err: unknown) => {
+                emitRuntimeEvent('runtime.memory_record_persist_failed', config, {
+                    task_id: task.taskId,
+                    error_message: err instanceof Error ? err.message : String(err),
+                });
+            });
+        }
 
         const workspaceKey =
             typeof task.payload['workspace_key'] === 'string' && task.payload['workspace_key'].trim()
@@ -4810,6 +4942,151 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 : null,
             period_started_at: new Date(weeklyRoiAccumulator.periodStartedAtMs).toISOString(),
             report: weeklyRoiAccumulator.lastReport,
+        };
+    });
+
+    app.post<{
+        Body: {
+            provider?: string;
+            action_type?: string;
+            score?: number;
+            reason?: string;
+            source?: string;
+            metadata?: Record<string, unknown>;
+            task_id?: string;
+            correlation_id?: string;
+        };
+    }>('/runtime/quality/signals', async (request, reply) => {
+        if (!startupCompleted || (runtimeState !== 'active' && runtimeState !== 'degraded')) {
+            return reply.code(409).send({
+                error: 'runtime_not_ready',
+                state: runtimeState,
+            });
+        }
+
+        const provider = request.body?.provider?.trim();
+        const actionType = request.body?.action_type?.trim();
+        const score = request.body?.score;
+        const source = parseQualitySignalSource(request.body?.source ?? 'manual');
+        if (!provider || !actionType || typeof score !== 'number' || !Number.isFinite(score) || !source) {
+            return reply.code(400).send({
+                error: 'invalid_quality_signal',
+                message: 'provider, action_type, score, and a valid source are required.',
+            });
+        }
+
+        const signal = recordQualitySignal({
+            provider,
+            actionType,
+            score,
+            source,
+            reason: request.body?.reason,
+            metadata:
+                typeof request.body?.metadata === 'object' && request.body?.metadata !== null
+                    ? request.body.metadata
+                    : undefined,
+            taskId: request.body?.task_id,
+            correlationId: request.body?.correlation_id ?? configCache?.correlationId,
+        });
+
+        if (!signal || !configCache) {
+            return reply.code(500).send({
+                error: 'quality_signal_record_failed',
+                message: 'Unable to persist quality signal.',
+            });
+        }
+
+        const qualitySignalRecord: QualitySignalRecord = {
+            id: signal.id,
+            contractVersion: CONTRACT_VERSIONS.QUALITY_SIGNAL,
+            tenantId: configCache.tenantId,
+            workspaceId: configCache.workspaceId,
+            botId: configCache.botId,
+            provider: signal.provider,
+            actionType: signal.actionType,
+            score: signal.score,
+            reason: signal.reason,
+            metadata: signal.metadata,
+            correlationId: signal.correlationId ?? configCache.correlationId,
+            observedAt: signal.observedAt,
+        };
+
+        return reply.code(201).send({
+            quality_signal: qualitySignalRecord,
+            source: signal.source,
+            task_id: signal.taskId ?? null,
+        });
+    });
+
+    app.get<{
+        Querystring: {
+            provider?: string;
+            action_type?: string;
+            source?: string;
+            limit?: string;
+        };
+    }>('/runtime/quality/signals', async (request, reply) => {
+        const source = request.query?.source ? parseQualitySignalSource(request.query.source) : null;
+        if (request.query?.source && !source) {
+            return reply.code(400).send({
+                error: 'invalid_quality_source',
+                message: 'source must be one of runtime_outcome, user_feedback, evaluator, manual.',
+            });
+        }
+
+        const rawLimit = Number(request.query?.limit ?? '100');
+        if (!Number.isFinite(rawLimit) || rawLimit <= 0) {
+            return reply.code(400).send({
+                error: 'invalid_limit',
+                message: 'limit must be a positive integer',
+            });
+        }
+
+        const signals = listQualitySignals({
+            provider: request.query?.provider,
+            actionType: request.query?.action_type,
+            source: source ?? undefined,
+            limit: Math.trunc(rawLimit),
+        });
+
+        return {
+            count: signals.length,
+            signals: signals.map((signal) => ({
+                id: signal.id,
+                provider: signal.provider,
+                action_type: signal.actionType,
+                score: signal.score,
+                source: signal.source,
+                reason: signal.reason ?? null,
+                metadata: signal.metadata ?? null,
+                task_id: signal.taskId ?? null,
+                correlation_id: signal.correlationId ?? null,
+                observed_at: signal.observedAt,
+            })),
+        };
+    });
+
+    app.get<{
+        Querystring: {
+            provider?: string;
+            action_type?: string;
+        };
+    }>('/runtime/quality/signals/summary', async (request) => {
+        const summary = getQualitySignalSummary({
+            provider: request.query?.provider,
+            actionType: request.query?.action_type,
+        });
+
+        return {
+            count: summary.length,
+            summary: summary.map((entry) => ({
+                provider: entry.provider,
+                action_type: entry.actionType,
+                average_score: entry.averageScore,
+                sample_count: entry.sampleCount,
+                penalty: getProviderQualityPenalty(entry.provider, entry.actionType),
+                last_observed_at: entry.lastObservedAt,
+            })),
         };
     });
 

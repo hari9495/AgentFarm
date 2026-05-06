@@ -1,9 +1,11 @@
 import Fastify, { type FastifyInstance, type FastifyReply } from 'fastify';
 import { randomUUID } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
+import { CONTRACT_VERSIONS } from '@agentfarm/shared-types';
 import type { ProactiveSignalType, RunStatus, ScheduleType, ScheduledRunStatus, WakeSource } from '@agentfarm/shared-types';
 import { TaskScheduler, type TaskSchedulerState } from './task-scheduler.js';
 import { RoutineScheduler, type RoutineSchedulerState } from './routine-scheduler.js';
+import { AgentHandoffManager } from './agent-handoff-manager.js';
 import {
     createOrchestratorStateStore,
     type OrchestratorStateBackend,
@@ -90,7 +92,26 @@ const defaultWorkspaceSessionFetcher = async (input: {
 };
 
 const parseWakeSource = (value: unknown): WakeSource | null => {
-    if (value === 'timer' || value === 'assignment' || value === 'on_demand' || value === 'automation') {
+    if (
+        value === 'timer'
+        || value === 'assignment'
+        || value === 'on_demand'
+        || value === 'automation'
+        || value === 'proactive_signal'
+    ) {
+        return value;
+    }
+    return null;
+};
+
+const parseAgentHandoffStatus = (value: unknown): 'requested' | 'accepted' | 'rejected' | 'completed' | 'cancelled' | null => {
+    if (
+        value === 'requested'
+        || value === 'accepted'
+        || value === 'rejected'
+        || value === 'completed'
+        || value === 'cancelled'
+    ) {
         return value;
     }
     return null;
@@ -139,6 +160,7 @@ export const buildOrchestratorServer = async (
     const routineSchedulerState: RoutineSchedulerState | undefined = loadedState?.routineScheduler;
     const taskScheduler = options.taskScheduler ?? new TaskScheduler(taskSchedulerState);
     const routineScheduler = options.routineScheduler ?? new RoutineScheduler(routineSchedulerState);
+    const handoffManager = new AgentHandoffManager();
     const app = Fastify({ logger: false });
 
     const persistSchedulers = async (): Promise<void> => {
@@ -255,6 +277,99 @@ export const buildOrchestratorServer = async (
         }
 
         return reply.code(200).send({ run_id: params.runId, final_status: finalStatus });
+    });
+
+    app.post('/v1/agent-handoffs', async (request, reply) => {
+        const body = (request.body ?? {}) as Record<string, unknown>;
+        const tenantId = typeof body.tenant_id === 'string' ? body.tenant_id.trim() : '';
+        const workspaceId = typeof body.workspace_id === 'string' ? body.workspace_id.trim() : '';
+        const taskId = typeof body.task_id === 'string' ? body.task_id.trim() : '';
+        const fromBotId = typeof body.from_bot_id === 'string' ? body.from_bot_id.trim() : '';
+        const toBotId = typeof body.to_bot_id === 'string' ? body.to_bot_id.trim() : '';
+        const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
+
+        if (!tenantId || !workspaceId || !taskId || !fromBotId || !toBotId || !reason) {
+            return reply.code(400).send({
+                error: 'invalid_request',
+                message: 'tenant_id, workspace_id, task_id, from_bot_id, to_bot_id, and reason are required.',
+            });
+        }
+
+        const correlationId =
+            typeof body.correlation_id === 'string' && body.correlation_id.trim()
+                ? body.correlation_id.trim()
+                : `handoff_${taskId}_${Math.floor(now())}`;
+        const handoffContext =
+            typeof body.handoff_context === 'object' && body.handoff_context !== null
+                ? body.handoff_context as Record<string, unknown>
+                : undefined;
+
+        const record = handoffManager.createHandoff({
+            tenantId,
+            workspaceId,
+            taskId,
+            fromBotId,
+            toBotId,
+            reason,
+            correlationId,
+            handoffContext,
+            contractVersion: CONTRACT_VERSIONS.AGENT_HANDOFF,
+        });
+
+        return reply.code(201).send({ handoff: record });
+    });
+
+    app.get('/v1/agent-handoffs', async (request, reply) => {
+        const query = request.query as Record<string, unknown>;
+        const tenantId = typeof query.tenant_id === 'string' ? query.tenant_id.trim() : undefined;
+        const workspaceId = typeof query.workspace_id === 'string' ? query.workspace_id.trim() : undefined;
+        const status = parseAgentHandoffStatus(query.status);
+        const limit = typeof query.limit === 'number' ? query.limit : Number.parseInt(String(query.limit ?? ''), 10);
+
+        if (query.status !== undefined && !status) {
+            return reply.code(400).send({
+                error: 'invalid_request',
+                message: 'status must be one of requested, accepted, rejected, completed, cancelled.',
+            });
+        }
+
+        const handoffs = handoffManager.listHandoffs({
+            tenantId,
+            workspaceId,
+            status: status ?? undefined,
+            limit: Number.isFinite(limit) ? limit : undefined,
+        });
+
+        return reply.code(200).send({
+            count: handoffs.length,
+            handoffs,
+        });
+    });
+
+    app.post('/v1/agent-handoffs/:handoffId/status', async (request, reply) => {
+        const params = request.params as { handoffId: string };
+        const body = (request.body ?? {}) as Record<string, unknown>;
+        const status = parseAgentHandoffStatus(body.status);
+        if (!status) {
+            return reply.code(400).send({
+                error: 'invalid_request',
+                message: 'status must be one of requested, accepted, rejected, completed, cancelled.',
+            });
+        }
+
+        const updated = handoffManager.updateStatus({
+            handoffId: params.handoffId,
+            status,
+        });
+
+        if (!updated) {
+            return reply.code(404).send({
+                error: 'not_found',
+                message: 'handoff not found',
+            });
+        }
+
+        return reply.code(200).send({ handoff: updated });
     });
 
     app.post('/v1/feature-flags/:featureFlagKey/enable', async (request, reply) => {

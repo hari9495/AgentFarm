@@ -10,6 +10,7 @@ import {
     type TaskEnvelope,
 } from './execution-engine.js';
 import { getTaskIntelligenceContext } from './task-intelligence-memory.js';
+import { getProviderQualityPenalty } from './llm-quality-tracker.js';
 
 type DecisionRoute = 'execute' | 'approval';
 
@@ -1633,10 +1634,12 @@ const createAutoResolver = (input: {
             const historyB = historicalFailureRateForTaskType(b, heuristicDecision.actionType);
             const costA = providerCostWeight(a);
             const costB = providerCostWeight(b);
+            const qualityA = getProviderQualityPenalty(a, heuristicDecision.actionType);
+            const qualityB = getProviderQualityPenalty(b, heuristicDecision.actionType);
             const budgetA = budgetPressure ? costA : 0;
             const budgetB = budgetPressure ? costB : 0;
-            const scoreA = healthA * 0.45 + historyA * 0.4 + budgetA * 0.15;
-            const scoreB = healthB * 0.45 + historyB * 0.4 + budgetB * 0.15;
+            const scoreA = healthA * 0.4 + historyA * 0.3 + budgetA * 0.15 + qualityA * 0.15;
+            const scoreB = healthB * 0.4 + historyB * 0.3 + budgetB * 0.15 + qualityB * 0.15;
             return scoreA - scoreB;
         });
 

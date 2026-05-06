@@ -300,6 +300,266 @@ test('tasks intake rejects before startup and accepts after startup with process
     }
 });
 
+test('runtime writes task memory after processing approval-required task', async () => {
+    const writes: Array<{
+        taskId: string;
+        executionStatus: string;
+        connectorsUsed: string[];
+        actionsTaken: string[];
+    }> = [];
+    let readCalls = 0;
+
+    const app = buildRuntimeServer({
+        env: baseEnv(),
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+        approvalIntakeClient: async () => ({
+            ok: true,
+            statusCode: 202,
+            approvalId: 'approval-mem-1',
+        }),
+        llmDecisionResolver: async ({ heuristicDecision }) => ({
+            decision: {
+                ...heuristicDecision,
+                actionType: 'git_push',
+                riskLevel: 'high',
+                route: 'approval',
+                reason: 'requires approval',
+            },
+            metadata: {
+                modelProvider: 'agentfarm',
+                model: 'test-model',
+                modelProfile: 'quality_first',
+                promptTokens: 12,
+                completionTokens: 6,
+                totalTokens: 18,
+            },
+        }),
+        memoryStore: {
+            readMemoryForTask: async () => {
+                readCalls += 1;
+                return {
+                    recentMemories: [],
+                    memoryCountThisWeek: 0,
+                    mostCommonConnectors: [],
+                    approvalRejectionRate: 0,
+                };
+            },
+            writeMemoryAfterTask: async (request) => {
+                writes.push({
+                    taskId: request.taskId,
+                    executionStatus: request.executionStatus,
+                    connectorsUsed: request.connectorsUsed,
+                    actionsTaken: request.actionsTaken,
+                });
+            },
+        },
+    });
+
+    try {
+        await app.inject({ method: 'POST', url: '/startup' });
+        const intakeResponse = await app.inject({
+            method: 'POST',
+            url: '/tasks/intake',
+            payload: {
+                task_id: 'memory-write-task',
+                payload: {
+                    workspaceId: 'ws_test',
+                    action_type: 'git_push',
+                    connector_type: 'github',
+                    summary: 'Push patch and open PR',
+                },
+            },
+        });
+        assert.equal(intakeResponse.statusCode, 202);
+
+        const memoryWrite = await waitForValue(() => writes[0], { timeoutMs: 2_000, pollMs: 25 });
+        assert.ok(memoryWrite);
+        assert.equal(readCalls, 1);
+        assert.equal(memoryWrite?.taskId, 'memory-write-task');
+        assert.equal(memoryWrite?.executionStatus, 'approval_required');
+        assert.deepEqual(memoryWrite?.actionsTaken, ['git_push']);
+        assert.deepEqual(memoryWrite?.connectorsUsed, ['github', 'local_workspace']);
+    } finally {
+        await app.close();
+    }
+});
+
+test('runtime continues processing when memory write fails', async () => {
+    const app = buildRuntimeServer({
+        env: baseEnv(),
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+        approvalIntakeClient: async () => ({
+            ok: true,
+            statusCode: 202,
+            approvalId: 'approval-mem-2',
+        }),
+        llmDecisionResolver: async ({ heuristicDecision }) => ({
+            decision: {
+                ...heuristicDecision,
+                actionType: 'git_push',
+                riskLevel: 'high',
+                route: 'approval',
+                reason: 'requires approval',
+            },
+            metadata: {
+                modelProvider: 'agentfarm',
+                model: 'test-model',
+                modelProfile: 'quality_first',
+                promptTokens: 12,
+                completionTokens: 6,
+                totalTokens: 18,
+            },
+        }),
+        memoryStore: {
+            readMemoryForTask: async () => ({
+                recentMemories: [],
+                memoryCountThisWeek: 0,
+                mostCommonConnectors: [],
+                approvalRejectionRate: 0,
+            }),
+            writeMemoryAfterTask: async () => {
+                throw new Error('memory_store_unavailable');
+            },
+        },
+    });
+
+    try {
+        await app.inject({ method: 'POST', url: '/startup' });
+        const intakeResponse = await app.inject({
+            method: 'POST',
+            url: '/tasks/intake',
+            payload: {
+                task_id: 'memory-write-failure-task',
+                payload: {
+                    workspaceId: 'ws_test',
+                    action_type: 'git_push',
+                    connector_type: 'github',
+                    summary: 'Push patch and open PR',
+                },
+            },
+        });
+        assert.equal(intakeResponse.statusCode, 202);
+
+        await new Promise<void>((resolve) => setTimeout(resolve, 120));
+
+        const liveResponse = await app.inject({ method: 'GET', url: '/health/live' });
+        assert.equal(liveResponse.statusCode, 200);
+        const liveBody = liveResponse.json() as { processed_tasks: number; state: string };
+        assert.ok(liveBody.processed_tasks >= 1);
+        assert.equal(liveBody.state, 'active');
+    } finally {
+        await app.close();
+    }
+});
+
+test('runtime quality signal endpoints ingest evaluator signals and return summary metrics', async () => {
+    const provider = `eval_provider_${Date.now()}`;
+    const app = buildRuntimeServer({
+        env: baseEnv(),
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+    });
+
+    try {
+        const startupRes = await app.inject({ method: 'POST', url: '/startup' });
+        assert.equal(startupRes.statusCode, 200);
+
+        const createA = await app.inject({
+            method: 'POST',
+            url: '/runtime/quality/signals',
+            payload: {
+                provider,
+                action_type: 'code_edit',
+                score: 0.8,
+                source: 'evaluator',
+                reason: 'post-merge evaluator score',
+                task_id: 'quality-task-1',
+            },
+        });
+        assert.equal(createA.statusCode, 201);
+
+        const createB = await app.inject({
+            method: 'POST',
+            url: '/runtime/quality/signals',
+            payload: {
+                provider,
+                action_type: 'code_edit',
+                score: 0.6,
+                source: 'evaluator',
+                reason: 'regression detected by evaluator',
+                task_id: 'quality-task-2',
+            },
+        });
+        assert.equal(createB.statusCode, 201);
+
+        const listRes = await app.inject({
+            method: 'GET',
+            url: `/runtime/quality/signals?provider=${encodeURIComponent(provider)}&action_type=code_edit&source=evaluator&limit=5`,
+        });
+        assert.equal(listRes.statusCode, 200);
+        const listBody = listRes.json() as {
+            count: number;
+            signals: Array<{ provider: string; action_type: string; source: string }>;
+        };
+        assert.equal(listBody.count, 2);
+        assert.equal(listBody.signals[0]?.provider, provider);
+        assert.equal(listBody.signals[0]?.action_type, 'code_edit');
+        assert.equal(listBody.signals[0]?.source, 'evaluator');
+
+        const summaryRes = await app.inject({
+            method: 'GET',
+            url: `/runtime/quality/signals/summary?provider=${encodeURIComponent(provider)}&action_type=code_edit`,
+        });
+        assert.equal(summaryRes.statusCode, 200);
+        const summaryBody = summaryRes.json() as {
+            count: number;
+            summary: Array<{ average_score: number; sample_count: number; penalty: number }>;
+        };
+        assert.equal(summaryBody.count, 1);
+        assert.equal(summaryBody.summary[0]?.sample_count, 2);
+        assert.equal(summaryBody.summary[0]?.average_score, 0.7);
+        assert.equal(summaryBody.summary[0]?.penalty, 0.3);
+    } finally {
+        await app.close();
+    }
+});
+
+test('runtime quality signal endpoint rejects invalid source', async () => {
+    const app = buildRuntimeServer({
+        env: baseEnv(),
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+    });
+
+    try {
+        const startupRes = await app.inject({ method: 'POST', url: '/startup' });
+        assert.equal(startupRes.statusCode, 200);
+
+        const response = await app.inject({
+            method: 'POST',
+            url: '/runtime/quality/signals',
+            payload: {
+                provider: 'eval_provider_invalid_source',
+                action_type: 'code_edit',
+                score: 0.9,
+                source: 'invalid_source',
+            },
+        });
+
+        assert.equal(response.statusCode, 400);
+        const body = response.json() as { error: string };
+        assert.equal(body.error, 'invalid_quality_signal');
+    } finally {
+        await app.close();
+    }
+});
+
 test('task lease claim supports idempotent retries and conflict protection', async () => {
     const env = baseEnv();
     env.AF_ENFORCE_TASK_LEASE = 'true';

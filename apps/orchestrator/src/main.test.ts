@@ -219,6 +219,77 @@ test('orchestrator proactive signal list rejects invalid signal_type', async () 
     }
 });
 
+test('orchestrator wake scheduling accepts proactive_signal wake source', async () => {
+    const isolated = await createIsolatedApp({ now: () => 1_700_000_333_000 });
+    const { app } = isolated;
+
+    try {
+        const response = await app.inject({
+            method: 'POST',
+            url: '/v1/wake/schedule',
+            payload: {
+                tenant_id: 'tenant-ps',
+                workspace_id: 'ws-ps',
+                bot_id: 'bot-ps',
+                wake_source: 'proactive_signal',
+                correlation_id: 'corr-ps-1',
+            },
+        });
+
+        assert.equal(response.statusCode, 201);
+        const body = response.json() as { wake_source: string };
+        assert.equal(body.wake_source, 'proactive_signal');
+    } finally {
+        await isolated.cleanup();
+    }
+});
+
+test('orchestrator agent handoff routes create, list, and update status', async () => {
+    const isolated = await createIsolatedApp();
+    const { app } = isolated;
+
+    try {
+        const createResponse = await app.inject({
+            method: 'POST',
+            url: '/v1/agent-handoffs',
+            payload: {
+                tenant_id: 'tenant-handoff',
+                workspace_id: 'ws-handoff',
+                task_id: 'task-handoff-1',
+                from_bot_id: 'bot-a',
+                to_bot_id: 'bot-b',
+                reason: 'handoff for specialized review',
+                correlation_id: 'corr-handoff-1',
+            },
+        });
+        assert.equal(createResponse.statusCode, 201);
+        const createBody = createResponse.json() as { handoff: { id: string; status: string } };
+        assert.equal(createBody.handoff.status, 'requested');
+
+        const listResponse = await app.inject({
+            method: 'GET',
+            url: '/v1/agent-handoffs?workspace_id=ws-handoff&status=requested',
+        });
+        assert.equal(listResponse.statusCode, 200);
+        const listBody = listResponse.json() as { count: number; handoffs: Array<{ id: string }> };
+        assert.equal(listBody.count, 1);
+        assert.equal(listBody.handoffs[0]?.id, createBody.handoff.id);
+
+        const updateResponse = await app.inject({
+            method: 'POST',
+            url: `/v1/agent-handoffs/${createBody.handoff.id}/status`,
+            payload: {
+                status: 'accepted',
+            },
+        });
+        assert.equal(updateResponse.statusCode, 200);
+        const updateBody = updateResponse.json() as { handoff: { status: string } };
+        assert.equal(updateBody.handoff.status, 'accepted');
+    } finally {
+        await isolated.cleanup();
+    }
+});
+
 test('orchestrator persists wake and schedule state across server restarts', async () => {
     const tempDir = await mkdtemp(join(tmpdir(), 'agentfarm-orchestrator-state-'));
     const statePath = join(tempDir, 'state.json');
