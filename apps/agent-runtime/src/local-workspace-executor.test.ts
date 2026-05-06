@@ -1318,12 +1318,26 @@ test('workspace_dry_run_with_approval_chain returns changeset preview', async ()
     const result = await executeLocalWorkspaceAction({
         tenantId, botId, taskId: 'task-dryrun',
         actionType: 'workspace_dry_run_with_approval_chain',
-        payload: { workspace_key: workspaceKey, change_description: 'Add new.ts', command: 'tsc' },
+        payload: {
+            workspace_key: workspaceKey,
+            change_description: 'Add new.ts',
+            command: 'tsc',
+            expected_outcomes: ['new.ts'],
+            human_outcome: 'Implemented new.ts and added tests.',
+        },
     });
     assert.equal(result.ok, true, result.errorOutput);
-    const parsed = JSON.parse(result.output) as { success: boolean; changeset: string };
+    const parsed = JSON.parse(result.output) as {
+        success: boolean;
+        changeset: string;
+        shadow_report?: { match_level: string; misses: string[]; risk_notes: string[]; compared: boolean };
+    };
     assert.equal(parsed.success, true);
     assert.ok(typeof parsed.changeset === 'string');
+    assert.equal(parsed.shadow_report?.compared, true);
+    assert.ok(['high', 'partial', 'low', 'unknown'].includes(parsed.shadow_report?.match_level ?? 'unknown'));
+    assert.ok(Array.isArray(parsed.shadow_report?.misses));
+    assert.ok(Array.isArray(parsed.shadow_report?.risk_notes));
 });
 
 test('workspace_change_impact_report returns file and test impact counts', async () => {
@@ -1351,12 +1365,36 @@ test('workspace_change_impact_report returns file and test impact counts', async
     const result = await executeLocalWorkspaceAction({
         tenantId, botId, taskId: 'task-cimp',
         actionType: 'workspace_change_impact_report',
-        payload: { workspace_key: workspaceKey },
+        payload: {
+            workspace_key: workspaceKey,
+            changed_files: [
+                'apps/api-gateway/src/routes/runtime-tasks.ts',
+                'services/evidence-service/src/index.ts',
+            ],
+            reviewer_feedback: {
+                rating: 4.2,
+                notes: 'Predicted packages were accurate for this change set.',
+                unexpected_failures: 1,
+            },
+        },
     });
     assert.equal(result.ok, true, result.errorOutput);
-    const parsed = JSON.parse(result.output) as { files_modified: number; tests_impacted: number };
+    const parsed = JSON.parse(result.output) as {
+        files_modified: number;
+        tests_impacted: number;
+        predicted_impacted_packages: string[];
+        recommended_test_set: string[];
+        reviewer_feedback: { rating: number | null; notes: string | null; unexpected_failures: number | null };
+    };
     assert.ok(typeof parsed.files_modified === 'number');
     assert.ok(typeof parsed.tests_impacted === 'number');
+    assert.deepEqual(parsed.predicted_impacted_packages, ['apps/api-gateway', 'services/evidence-service']);
+    assert.deepEqual(parsed.recommended_test_set, [
+        'pnpm --filter ./apps/api-gateway test',
+        'pnpm --filter ./services/evidence-service test',
+    ]);
+    assert.equal(parsed.reviewer_feedback.rating, 4.2);
+    assert.equal(parsed.reviewer_feedback.unexpected_failures, 1);
 });
 
 test('workspace_rollback_to_checkpoint errors when checkpoint_ref is missing', async () => {

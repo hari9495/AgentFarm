@@ -19,8 +19,32 @@ const FIELD_PREFIXES = {
     test_status: 'Test status:',
 } as const;
 
+const normalizeLineForPrefixMatch = (line: string): string => {
+    return line
+        .trim()
+        .replace(/^[\-\*\u2022]+\s*/, '')
+        .replace(/^\d+[.)]\s*/, '')
+        .toLowerCase();
+};
+
+const extractFieldValue = (line: string, prefix: string): string | null => {
+    const normalized = normalizeLineForPrefixMatch(line);
+    const normalizedPrefix = prefix.toLowerCase();
+    if (!normalized.startsWith(normalizedPrefix)) {
+        return null;
+    }
+
+    const prefixIndex = normalized.indexOf(normalizedPrefix);
+    const rawWithoutDecorators = line
+        .trim()
+        .replace(/^[\-\*\u2022]+\s*/, '')
+        .replace(/^\d+[.)]\s*/, '');
+    const value = rawWithoutDecorators.slice(prefixIndex + prefix.length).trim();
+    return value.length > 0 ? value : null;
+};
+
 export const parseApprovalPacket = (actionSummary: string): ApprovalPacket => {
-    const trimmed = actionSummary.trim();
+    const trimmed = (actionSummary ?? '').trim();
     const lines = trimmed
         .split(/\r?\n/)
         .map((line) => line.trim())
@@ -36,33 +60,39 @@ export const parseApprovalPacket = (actionSummary: string): ApprovalPacket => {
     };
 
     for (const line of lines) {
-        if (line.startsWith(FIELD_PREFIXES.change_summary)) {
-            packet.change_summary = line.slice(FIELD_PREFIXES.change_summary.length).trim();
+        const changeSummary = extractFieldValue(line, FIELD_PREFIXES.change_summary);
+        if (changeSummary !== null) {
+            packet.change_summary = changeSummary;
             continue;
         }
-        if (line.startsWith(FIELD_PREFIXES.impacted_scope)) {
-            packet.impacted_scope = line.slice(FIELD_PREFIXES.impacted_scope.length).trim() || null;
+        const impactedScope = extractFieldValue(line, FIELD_PREFIXES.impacted_scope);
+        if (impactedScope !== null) {
+            packet.impacted_scope = impactedScope;
             continue;
         }
-        if (line.startsWith(FIELD_PREFIXES.risk_reason)) {
-            packet.risk_reason = line.slice(FIELD_PREFIXES.risk_reason.length).trim() || null;
+        const riskReason = extractFieldValue(line, FIELD_PREFIXES.risk_reason);
+        if (riskReason !== null) {
+            packet.risk_reason = riskReason;
             continue;
         }
-        if (line.startsWith(FIELD_PREFIXES.proposed_rollback)) {
-            packet.proposed_rollback = line.slice(FIELD_PREFIXES.proposed_rollback.length).trim() || null;
+        const rollback = extractFieldValue(line, FIELD_PREFIXES.proposed_rollback);
+        if (rollback !== null) {
+            packet.proposed_rollback = rollback;
             continue;
         }
-        if (line.startsWith(FIELD_PREFIXES.lint_status)) {
-            packet.lint_status = line.slice(FIELD_PREFIXES.lint_status.length).trim() || null;
+        const lintStatus = extractFieldValue(line, FIELD_PREFIXES.lint_status);
+        if (lintStatus !== null) {
+            packet.lint_status = lintStatus;
             continue;
         }
-        if (line.startsWith(FIELD_PREFIXES.test_status)) {
-            packet.test_status = line.slice(FIELD_PREFIXES.test_status.length).trim() || null;
+        const testStatus = extractFieldValue(line, FIELD_PREFIXES.test_status);
+        if (testStatus !== null) {
+            packet.test_status = testStatus;
         }
     }
 
     if (!packet.change_summary) {
-        packet.change_summary = trimmed;
+        packet.change_summary = trimmed || 'No change summary provided';
     }
 
     const packetComplete = Boolean(

@@ -15,11 +15,25 @@ const expectQuery = async (page, expected, label) => {
     }
 };
 
-const clickAndExpectQuery = async (page, selector, expected, label) => {
+const activateTabByKeyboardAndExpectQuery = async (page, selector, expected, label) => {
     const maxAttempts = 3;
     let lastError;
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-        await page.click(selector);
+        await page.waitForSelector(selector, { state: 'visible' });
+        await page.waitForFunction((targetSelector) => {
+            const element = document.querySelector(targetSelector);
+            if (!(element instanceof HTMLElement)) {
+                return false;
+            }
+            if (element instanceof HTMLButtonElement) {
+                return !element.disabled;
+            }
+            return true;
+        }, selector);
+
+        await page.focus(selector);
+        await page.keyboard.press('ArrowRight');
+        await page.waitForLoadState('networkidle');
         try {
             await expectQuery(page, expected, label);
             return;
@@ -63,9 +77,9 @@ const main = async () => {
         await page.evaluate(() => window.localStorage.clear());
         await page.goto(`${baseUrl}/?workspaceId=ws_primary_001&tab=overview`, { waitUntil: 'networkidle' });
 
-        await clickAndExpectQuery(
+        await activateTabByKeyboardAndExpectQuery(
             page,
-            '[data-testid="dashboard-tab-top-approvals"]',
+            '[data-testid="dashboard-tab-top-overview"]',
             { workspaceId: 'ws_primary_001', tab: 'approvals' },
             'switching to approvals in workspace 1',
         );
@@ -77,9 +91,9 @@ const main = async () => {
         // interacting with tab buttons in the new workspace context.
         await page.waitForLoadState('networkidle');
 
-        await clickAndExpectQuery(
+        await activateTabByKeyboardAndExpectQuery(
             page,
-            '[data-testid="dashboard-tab-top-observability"]',
+            '[data-testid="dashboard-tab-top-approvals"]',
             { workspaceId: 'ws_release_002', tab: 'observability' },
             'switching to observability in workspace 2',
         );

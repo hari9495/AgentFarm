@@ -29,6 +29,26 @@ Operational checklist for deploying the AgentFarm website to Azure Static Web Ap
    - `pnpm verify:website:prod -- --url https://<your-swa-domain>`
    - report output: `operations/quality/7.1-website-swa-verification.json`
 
+## Approval Evidence Pagination Flag Rollout (Dashboard)
+1. Default state must remain disabled in production:
+   - `NEXT_PUBLIC_APPROVAL_EVIDENCE_PAGINATION=false`
+2. Enable in staging first and verify:
+   - approval drawer Evidence tab loads latest record
+   - Newer/Older controls are visible when total evidence > page size
+   - page indicator and range text match API metadata (`total`, `limit`, `offset`)
+3. Promote to production in one release window only after staging verification:
+   - set `NEXT_PUBLIC_APPROVAL_EVIDENCE_PAGINATION=true`
+   - monitor decision workflow and evidence fetch error rate for 30 minutes
+4. Run smoke checks immediately after promotion:
+   - dashboard approval queue open/close and evidence tab switching
+   - approval details for at least one record with >5 evidence entries
+
+## Approval Evidence Pagination Rollback
+1. Set `NEXT_PUBLIC_APPROVAL_EVIDENCE_PAGINATION=false` in production environment.
+2. Trigger redeploy and verify Evidence tab falls back to single-page evidence retrieval.
+3. Confirm no regression in approval decision submission and escalation sweep.
+4. Record rollback time, actor, and observed symptom in incident notes.
+
 ## Custom Domain Setup
 1. In Azure portal, open Static Web App custom domains.
 2. Add apex and www records as needed.

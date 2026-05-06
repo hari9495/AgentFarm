@@ -240,8 +240,123 @@ type LanguageAdapterMetadata = {
 };
 
 // Tier 7: Governance & Safety
-type ChangeImpact = { files_modified: number; functions_affected: number; tests_impacted: number };
-type DryRunResult = { success: boolean; message: string; changeset: string };
+type ShadowMatchLevel = 'high' | 'partial' | 'low' | 'unknown';
+type ShadowReport = {
+    compared: boolean;
+    match_level: ShadowMatchLevel;
+    misses: string[];
+    risk_notes: string[];
+};
+type ReviewerFeedback = {
+    rating: number | null;
+    notes: string | null;
+    unexpected_failures: number | null;
+};
+type ChangeImpact = {
+    files_modified: number;
+    functions_affected: number;
+    tests_impacted: number;
+    predicted_impacted_packages: string[];
+    recommended_test_set: string[];
+    reviewer_feedback: ReviewerFeedback;
+};
+type DryRunResult = { success: boolean; message: string; changeset: string; shadow_report: ShadowReport };
+
+function normalizePathSlashes(path: string): string {
+    return path.replace(/\\/g, '/').replace(/^\.\//, '').trim();
+}
+
+function collectImpactedPackages(changedFiles: string[]): string[] {
+    const impacted = new Set<string>();
+    for (const rawPath of changedFiles) {
+        const filePath = normalizePathSlashes(rawPath);
+        const parts = filePath.split('/').filter(Boolean);
+        if (parts.length < 2) {
+            continue;
+        }
+
+        const domain = parts[0];
+        if (domain === 'apps' || domain === 'services' || domain === 'packages') {
+            impacted.add(`${domain}/${parts[1]}`);
+        }
+    }
+    return Array.from(impacted).sort();
+}
+
+function buildRecommendedTestSet(impactedPackages: string[]): string[] {
+    return impactedPackages.map((pkg) => `pnpm --filter ./${pkg} test`);
+}
+
+function computeShadowReport(
+    expectedOutcomes: string[],
+    humanOutcome: string,
+    command: string,
+    changeSet: string
+): ShadowReport {
+    const trimmedOutcome = humanOutcome.trim();
+    const hasComparison = expectedOutcomes.length > 0 && trimmedOutcome.length > 0;
+    const normalizedHuman = trimmedOutcome.toLowerCase();
+    const misses = hasComparison
+        ? expectedOutcomes.filter((expected) => !normalizedHuman.includes(expected.toLowerCase()))
+        : [];
+
+    let matchLevel: ShadowMatchLevel = 'unknown';
+    if (hasComparison) {
+        const matched = expectedOutcomes.length - misses.length;
+        const ratio = expectedOutcomes.length > 0 ? matched / expectedOutcomes.length : 0;
+        if (ratio >= 0.8) {
+            matchLevel = 'high';
+        } else if (ratio >= 0.4) {
+            matchLevel = 'partial';
+        } else {
+            matchLevel = 'low';
+        }
+    }
+
+    const riskNotes: string[] = [];
+    if (/\b(push|deploy|delete|reset|force)\b/i.test(command)) {
+        riskNotes.push('High-impact command detected in dry-run preview.');
+    }
+    if (!changeSet.trim() || changeSet.trim() === '(no changes)') {
+        riskNotes.push('Dry-run produced no staged changes; validate plan completeness.');
+    }
+    if (hasComparison && misses.length > 0) {
+        riskNotes.push('Human outcome did not include all expected outcomes from shadow run.');
+    }
+
+    return {
+        compared: hasComparison,
+        match_level: matchLevel,
+        misses,
+        risk_notes: riskNotes,
+    };
+}
+
+function parseReviewerFeedback(payload: Record<string, unknown>): ReviewerFeedback {
+    const rawFeedback = payload['reviewer_feedback'];
+    const feedbackObj = typeof rawFeedback === 'object' && rawFeedback !== null
+        ? (rawFeedback as Record<string, unknown>)
+        : {};
+
+    const rawRating = feedbackObj['rating'];
+    const rating = typeof rawRating === 'number' && Number.isFinite(rawRating)
+        ? Math.min(5, Math.max(1, Math.round(rawRating * 10) / 10))
+        : null;
+
+    const rawNotes = feedbackObj['notes'];
+    const notes = typeof rawNotes === 'string' && rawNotes.trim() ? rawNotes.trim() : null;
+
+    const rawUnexpectedFailures = feedbackObj['unexpected_failures'];
+    const unexpectedFailures = typeof rawUnexpectedFailures === 'number' && Number.isFinite(rawUnexpectedFailures)
+        ? Math.max(0, Math.floor(rawUnexpectedFailures))
+        : null;
+
+    return {
+        rating,
+        notes,
+        unexpected_failures: unexpectedFailures,
+    };
+}
 
 export const LOCAL_WORKSPACE_ACTION_TYPES = new Set<LocalWorkspaceActionType>([
     // Tier 1
@@ -3643,6 +3758,11 @@ export async function executeLocalWorkspaceAction(input: {
         case 'workspace_dry_run_with_approval_chain': {
             const change = typeof payload['change_description'] === 'string' ? payload['change_description'] : '';
             const command = typeof payload['command'] === 'string' ? payload['command'] : '';
+            const expectedOutcomes = Array.isArray(payload['expected_outcomes'])
+                ? payload['expected_outcomes'].filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+                    .map((item) => item.trim())
+                : [];
+            const humanOutcome = typeof payload['human_outcome'] === 'string' ? payload['human_outcome'] : '';
 
             try {
                 // Create checkpoint
@@ -3654,6 +3774,7 @@ export async function executeLocalWorkspaceAction(input: {
                     success: true,
                     message: `Dry-run preview for: ${change}`,
                     changeset: changeSet || '(no changes)',
+                    shadow_report: computeShadowReport(expectedOutcomes, humanOutcome, command, changeSet || '(no changes)'),
                 };
 
                 return { ok: true, output: JSON.stringify(dryRun, null, 2) };
@@ -3668,10 +3789,27 @@ export async function executeLocalWorkspaceAction(input: {
                 const diff = await runCommand(['git', 'diff', 'HEAD', '--stat'], workspaceDir, 30_000);
                 const files = diff.stdout.split('\n').length - 1;
 
+                const changedFilesFromPayload = Array.isArray(payload['changed_files'])
+                    ? payload['changed_files'].filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+                        .map((item) => normalizePathSlashes(item))
+                    : [];
+
+                const changedFiles = changedFilesFromPayload.length > 0
+                    ? changedFilesFromPayload
+                    : (await runCommand(['git', 'diff', 'HEAD', '--name-only'], workspaceDir, 30_000)).stdout
+                        .split('\n')
+                        .map((line) => normalizePathSlashes(line))
+                        .filter((line) => line.length > 0);
+
+                const impactedPackages = collectImpactedPackages(changedFiles);
+
                 const impact: ChangeImpact = {
                     files_modified: files,
                     functions_affected: Math.ceil(files * 0.5), // Stub estimate
                     tests_impacted: Math.ceil(files * 0.3),
+                    predicted_impacted_packages: impactedPackages,
+                    recommended_test_set: buildRecommendedTestSet(impactedPackages),
+                    reviewer_feedback: parseReviewerFeedback(payload),
                 };
 
                 return { ok: true, output: JSON.stringify(impact, null, 2) };

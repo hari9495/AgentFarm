@@ -7,6 +7,31 @@ export type EvidencePaginationState = {
     endIndex: number;
 };
 
+export const normalizeEvidenceOffset = (total: number, limit: number, offset: number): number => {
+    const safeTotal = Number.isFinite(total) && total > 0 ? total : 0;
+    const safeLimit = Number.isFinite(limit) && limit > 0 ? limit : 20;
+    const safeOffset = Number.isFinite(offset) && offset >= 0 ? offset : 0;
+    const maxOffset = safeTotal > safeLimit ? Math.max(0, safeTotal - safeLimit) : 0;
+    return Math.min(safeOffset, maxOffset);
+};
+
+export const applyEvidencePaginationParams = (
+    params: URLSearchParams,
+    paginationEnabled: boolean,
+    limit: number,
+    offset: number,
+): void => {
+    if (!paginationEnabled) {
+        return;
+    }
+    params.set('limit', String(limit));
+    params.set('offset', String(offset));
+};
+
+export const shouldApplyEvidenceResponse = (requestId: number, activeRequestId: number): boolean => {
+    return requestId === activeRequestId;
+};
+
 export const getEvidencePaginationState = (
     total: number,
     limit: number,

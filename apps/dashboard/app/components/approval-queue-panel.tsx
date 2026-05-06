@@ -1,10 +1,16 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { CopyLinkButton } from './copy-link-button';
 import { buildDashboardHref } from './dashboard-navigation';
-import { getEvidencePaginationState, isEvidencePaginationEnabled } from './approval-evidence-pagination';
+import {
+    applyEvidencePaginationParams,
+    getEvidencePaginationState,
+    isEvidencePaginationEnabled,
+    normalizeEvidenceOffset,
+    shouldApplyEvidenceResponse,
+} from './approval-evidence-pagination';
 
 type ApprovalItem = {
     approval_id: string;
@@ -120,9 +126,22 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
         }>;
     } | null>(null);
     const [evidenceOffset, setEvidenceOffset] = useState(0);
+    const evidenceRequestIdRef = useRef(0);
+    const selectedApprovalIdRef = useRef<string | null>(selectedApprovalId);
 
     const evidencePaginationEnabled = isEvidencePaginationEnabled(process.env.NEXT_PUBLIC_APPROVAL_EVIDENCE_PAGINATION);
     const EVIDENCE_PAGE_SIZE = 5;
+
+    useEffect(() => {
+        selectedApprovalIdRef.current = selectedApprovalId;
+    }, [selectedApprovalId]);
+
+    useEffect(() => {
+        evidenceRequestIdRef.current += 1;
+        setEvidenceBusy(false);
+        setEvidenceOffset(0);
+        setEvidenceData(null);
+    }, [selectedApprovalId]);
 
     const PAGE_SIZE = 5;
 
@@ -422,20 +441,34 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
     };
 
     const fetchEvidence = async (approvalId: string, options?: { offset?: number }) => {
-        const offset = options?.offset ?? 0;
+        const offset = Math.max(0, options?.offset ?? 0);
         const params = new URLSearchParams({ workspace_id: workspaceId });
-        if (evidencePaginationEnabled) {
-            params.set('limit', String(EVIDENCE_PAGE_SIZE));
-            params.set('offset', String(offset));
-        }
+        applyEvidencePaginationParams(params, evidencePaginationEnabled, EVIDENCE_PAGE_SIZE, offset);
+
+        const requestId = evidenceRequestIdRef.current + 1;
+        evidenceRequestIdRef.current = requestId;
 
         setEvidenceBusy(true);
         try {
             const response = await fetch(`/api/approvals/${approvalId}/evidence?${params.toString()}`);
             const body = (await response.json().catch(() => ({}))) as typeof evidenceData;
+            if (!shouldApplyEvidenceResponse(requestId, evidenceRequestIdRef.current)) {
+                return;
+            }
+            if (selectedApprovalIdRef.current !== approvalId) {
+                return;
+            }
             if (response.ok && body && 'evidence' in body) {
+                const nextOffset = body.offset ?? offset;
+                if (evidencePaginationEnabled && body.total > 0 && body.evidence.length === 0) {
+                    const normalizedOffset = normalizeEvidenceOffset(body.total, body.limit, nextOffset);
+                    if (normalizedOffset !== nextOffset) {
+                        void fetchEvidence(approvalId, { offset: normalizedOffset });
+                        return;
+                    }
+                }
                 setEvidenceData(body);
-                setEvidenceOffset(body.offset ?? offset);
+                setEvidenceOffset(nextOffset);
             } else {
                 setEvidenceData({
                     approval_id: approvalId,
@@ -448,7 +481,9 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                 setEvidenceOffset(offset);
             }
         } finally {
-            setEvidenceBusy(false);
+            if (shouldApplyEvidenceResponse(requestId, evidenceRequestIdRef.current)) {
+                setEvidenceBusy(false);
+            }
         }
     };
 
@@ -1044,7 +1079,11 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                                                             disabled={!pagination.canPrev || evidenceBusy}
                                                                             onClick={() => {
                                                                                 void fetchEvidence(selectedApproval.approval_id, {
-                                                                                    offset: Math.max(0, evidenceOffset - evidenceData.limit),
+                                                                                    offset: normalizeEvidenceOffset(
+                                                                                        evidenceData.total,
+                                                                                        evidenceData.limit,
+                                                                                        Math.max(0, evidenceOffset - evidenceData.limit),
+                                                                                    ),
                                                                                 });
                                                                             }}
                                                                         >
@@ -1056,7 +1095,11 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                                                             disabled={!pagination.canNext || evidenceBusy}
                                                                             onClick={() => {
                                                                                 void fetchEvidence(selectedApproval.approval_id, {
-                                                                                    offset: evidenceOffset + evidenceData.limit,
+                                                                                    offset: normalizeEvidenceOffset(
+                                                                                        evidenceData.total,
+                                                                                        evidenceData.limit,
+                                                                                        evidenceOffset + evidenceData.limit,
+                                                                                    ),
                                                                                 });
                                                                             }}
                                                                         >

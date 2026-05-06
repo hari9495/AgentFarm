@@ -172,6 +172,7 @@ type RuntimeServerOptions = {
     approvalEscalationMs?: number;
     heartbeatIntervalMs?: number;
     backgroundWorkerIntervalMs?: number;
+    weeklyReportCadenceMs?: number;
     maxRuntimeLogs?: number;
     now?: () => number;
     closeOnKill?: boolean;
@@ -220,17 +221,60 @@ type RuntimeStateTransition = {
     reason: string | null;
 };
 
+type EscalationWhatIfOption = {
+    optionId: string;
+    label: string;
+    tradeoffSpeed: 'fast' | 'balanced' | 'slow';
+    tradeoffRisk: 'high' | 'medium' | 'low';
+    confidence: number;
+    summary: string;
+};
+
 type PendingApprovalTask = {
     taskId: string;
     enqueuedAt: number;
     riskLevel: 'medium' | 'high';
     actionType: string;
     actionSummary: string;
+    escalationOptions: EscalationWhatIfOption[];
     task: TaskEnvelope;
     executionPayload: Record<string, unknown>;
     payloadOverrideSource: PayloadOverrideSource;
     escalated: boolean;
     slaRiskPredicted: boolean;
+};
+
+type WeeklyQualityRoiReport = {
+    reportId: string;
+    generatedAt: string;
+    periodStartedAt: string;
+    periodEndedAt: string;
+    trigger: 'manual' | 'scheduled';
+    completion_quality_pct: number;
+    rework_rate_pct: number;
+    approval_latency_ms: number;
+    audit_completeness_pct: number;
+    time_saved_by_task_category: Array<{
+        category: string;
+        estimated_minutes_saved: number;
+    }>;
+};
+
+type WeeklyRoiAccumulator = {
+    periodStartedAtMs: number;
+    lastGeneratedAtMs: number | null;
+    reportCount: number;
+    totalProcessed: number;
+    totalSucceeded: number;
+    totalFailed: number;
+    totalApprovalQueued: number;
+    reworkEvents: number;
+    approvalLatencyTotalMs: number;
+    approvalLatencySamples: number;
+    actionResultsPersisted: number;
+    evidenceRecordsPersisted: number;
+    timeSavedByCategoryMinutes: Map<string, number>;
+    lastReport: WeeklyQualityRoiReport | null;
 };
 
 type DecisionCacheEntry = {
@@ -335,6 +379,7 @@ const DEFAULT_KILL_GRACE_MS = 5_000;
 const DEFAULT_APPROVAL_ESCALATION_MS = 60 * 60 * 1000;
 const DEFAULT_HEARTBEAT_INTERVAL_MS = 30_000;
 const DEFAULT_BACKGROUND_WORKER_INTERVAL_MS = 60_000;
+const DEFAULT_WEEKLY_REPORT_CADENCE_MS = 7 * 24 * 60 * 60 * 1000;
 const DEFAULT_APPROVAL_SLA_PREDICTION_MS = 300_000;
 const DEFAULT_MAX_RUNTIME_LOGS = 200;
 const DEFAULT_APPROVAL_INTAKE_MAX_ATTEMPTS = 3;
@@ -388,6 +433,89 @@ const POST_CHANGE_QUALITY_GATE_ACTIONS = new Set<LocalWorkspaceActionType>([
     'workspace_format_code',
     'workspace_add_docstring',
 ]);
+
+const clampConfidence = (value: number): number => {
+    if (!Number.isFinite(value)) {
+        return 0;
+    }
+    return Math.max(0, Math.min(1, Math.round(value * 100) / 100));
+};
+
+const categorizeActionForRoi = (actionType: string): string => {
+    if (actionType.startsWith('workspace_') || actionType.startsWith('code_') || actionType.startsWith('file_')) {
+        return 'engineering_changes';
+    }
+    if (actionType.includes('test') || actionType.includes('lint') || actionType.includes('quality')) {
+        return 'quality_validation';
+    }
+    if (actionType.includes('deploy') || actionType.includes('release')) {
+        return 'release_operations';
+    }
+    if (actionType.includes('approval') || actionType.includes('policy')) {
+        return 'governance';
+    }
+    return 'coordination';
+};
+
+const estimateMinutesSavedForAction = (actionType: string): number => {
+    const category = categorizeActionForRoi(actionType);
+    if (category === 'engineering_changes') {
+        return 35;
+    }
+    if (category === 'quality_validation') {
+        return 20;
+    }
+    if (category === 'release_operations') {
+        return 45;
+    }
+    if (category === 'governance') {
+        return 15;
+    }
+    return 10;
+};
+
+const buildEscalationWhatIfOptions = (input: {
+    actionType: string;
+    riskLevel: 'medium' | 'high';
+    confidence: number;
+}): EscalationWhatIfOption[] => {
+    const baseConfidence = clampConfidence(input.confidence);
+    const fastConfidence = clampConfidence(baseConfidence - 0.05);
+    const saferConfidence = clampConfidence(baseConfidence + 0.04);
+    const conservativeConfidence = clampConfidence(baseConfidence + 0.07);
+
+    const options: EscalationWhatIfOption[] = [
+        {
+            optionId: 'fast_track_execution',
+            label: 'Fast-track execution',
+            tradeoffSpeed: 'fast',
+            tradeoffRisk: input.riskLevel === 'high' ? 'high' : 'medium',
+            confidence: fastConfidence,
+            summary: `Proceed immediately with ${input.actionType} after single approver review.`,
+        },
+        {
+            optionId: 'staged_safe_rollout',
+            label: 'Staged safe rollout',
+            tradeoffSpeed: 'balanced',
+            tradeoffRisk: 'medium',
+            confidence: saferConfidence,
+            summary: `Run a staged rollout with checkpoint validation before full apply for ${input.actionType}.`,
+        },
+    ];
+
+    if (input.riskLevel === 'high') {
+        options.push({
+            optionId: 'manual_guarded_execution',
+            label: 'Manual guarded execution',
+            tradeoffSpeed: 'slow',
+            tradeoffRisk: 'low',
+            confidence: conservativeConfidence,
+            summary: `Require paired review and live checklist execution for ${input.actionType}.`,
+        });
+    }
+
+    return options;
+};
 
 type RuntimeConnectorType = 'jira' | 'teams' | 'github' | 'email';
 type RuntimeConnectorActionType =
@@ -1588,6 +1716,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
     const heartbeatIntervalMs = options.heartbeatIntervalMs ?? DEFAULT_HEARTBEAT_INTERVAL_MS;
     const backgroundWorkerIntervalMs =
         options.backgroundWorkerIntervalMs ?? DEFAULT_BACKGROUND_WORKER_INTERVAL_MS;
+    const weeklyReportCadenceMs = options.weeklyReportCadenceMs ?? DEFAULT_WEEKLY_REPORT_CADENCE_MS;
     const maxRuntimeLogs = options.maxRuntimeLogs ?? DEFAULT_MAX_RUNTIME_LOGS;
     const approvalIntakeMaxAttempts =
         Math.max(1, options.approvalIntakeMaxAttempts ?? DEFAULT_APPROVAL_INTAKE_MAX_ATTEMPTS);
@@ -1799,7 +1928,92 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         failures: 0,
         lastRunAt: null,
     };
+    const weeklyRoiAccumulator: WeeklyRoiAccumulator = {
+        periodStartedAtMs: now(),
+        lastGeneratedAtMs: null,
+        reportCount: 0,
+        totalProcessed: 0,
+        totalSucceeded: 0,
+        totalFailed: 0,
+        totalApprovalQueued: 0,
+        reworkEvents: 0,
+        approvalLatencyTotalMs: 0,
+        approvalLatencySamples: 0,
+        actionResultsPersisted: 0,
+        evidenceRecordsPersisted: 0,
+        timeSavedByCategoryMinutes: new Map<string, number>(),
+        lastReport: null,
+    };
     const advancedFeatures = new AdvancedRuntimeFeatures(now);
+
+    const generateWeeklyQualityRoiReport = (
+        config: RuntimeConfig | null,
+        trigger: 'manual' | 'scheduled',
+    ): WeeklyQualityRoiReport => {
+        const generatedAtMs = now();
+        const generatedAtIso = new Date(generatedAtMs).toISOString();
+        const periodStartedAtIso = new Date(weeklyRoiAccumulator.periodStartedAtMs).toISOString();
+
+        const completionQuality = weeklyRoiAccumulator.totalProcessed > 0
+            ? (weeklyRoiAccumulator.totalSucceeded / weeklyRoiAccumulator.totalProcessed) * 100
+            : 100;
+        const reworkRate = weeklyRoiAccumulator.totalProcessed > 0
+            ? (weeklyRoiAccumulator.reworkEvents / weeklyRoiAccumulator.totalProcessed) * 100
+            : 0;
+        const approvalLatencyMs = weeklyRoiAccumulator.approvalLatencySamples > 0
+            ? weeklyRoiAccumulator.approvalLatencyTotalMs / weeklyRoiAccumulator.approvalLatencySamples
+            : 0;
+        const auditCompleteness = weeklyRoiAccumulator.actionResultsPersisted > 0
+            ? (weeklyRoiAccumulator.evidenceRecordsPersisted / weeklyRoiAccumulator.actionResultsPersisted) * 100
+            : 100;
+
+        const timeSavedByTaskCategory = Array.from(weeklyRoiAccumulator.timeSavedByCategoryMinutes.entries())
+            .map(([category, estimatedMinutesSaved]) => ({
+                category,
+                estimated_minutes_saved: Math.round(estimatedMinutesSaved),
+            }))
+            .sort((a, b) => b.estimated_minutes_saved - a.estimated_minutes_saved);
+
+        const report: WeeklyQualityRoiReport = {
+            reportId: `${config?.workspaceId ?? 'workspace'}:${generatedAtMs}`,
+            generatedAt: generatedAtIso,
+            periodStartedAt: periodStartedAtIso,
+            periodEndedAt: generatedAtIso,
+            trigger,
+            completion_quality_pct: Math.round(completionQuality * 100) / 100,
+            rework_rate_pct: Math.round(reworkRate * 100) / 100,
+            approval_latency_ms: Math.round(approvalLatencyMs),
+            audit_completeness_pct: Math.round(auditCompleteness * 100) / 100,
+            time_saved_by_task_category: timeSavedByTaskCategory,
+        };
+
+        weeklyRoiAccumulator.lastGeneratedAtMs = generatedAtMs;
+        weeklyRoiAccumulator.lastReport = report;
+        weeklyRoiAccumulator.reportCount += 1;
+        weeklyRoiAccumulator.periodStartedAtMs = generatedAtMs;
+        weeklyRoiAccumulator.totalProcessed = 0;
+        weeklyRoiAccumulator.totalSucceeded = 0;
+        weeklyRoiAccumulator.totalFailed = 0;
+        weeklyRoiAccumulator.totalApprovalQueued = 0;
+        weeklyRoiAccumulator.reworkEvents = 0;
+        weeklyRoiAccumulator.approvalLatencyTotalMs = 0;
+        weeklyRoiAccumulator.approvalLatencySamples = 0;
+        weeklyRoiAccumulator.actionResultsPersisted = 0;
+        weeklyRoiAccumulator.evidenceRecordsPersisted = 0;
+        weeklyRoiAccumulator.timeSavedByCategoryMinutes.clear();
+
+        emitRuntimeEvent('runtime.weekly_quality_roi_report_generated', config, {
+            report_id: report.reportId,
+            trigger,
+            completion_quality_pct: report.completion_quality_pct,
+            rework_rate_pct: report.rework_rate_pct,
+            approval_latency_ms: report.approval_latency_ms,
+            audit_completeness_pct: report.audit_completeness_pct,
+            categories: report.time_saved_by_task_category.length,
+        });
+
+        return report;
+    };
 
     const emitRuntimeEvent = (
         eventType: string,
@@ -2683,11 +2897,23 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                         ? executionTask.payload['_quality_gate_test_status']
                         : 'not_run';
 
+                const escalationOptions = buildEscalationWhatIfOptions({
+                    actionType: result.decision.actionType,
+                    riskLevel: result.decision.riskLevel,
+                    confidence: result.decision.confidence,
+                });
+
+                const optionLines = escalationOptions.map((option, index) => {
+                    return `Option ${index + 1} (${option.optionId}): ${option.summary} Tradeoff speed: ${option.tradeoffSpeed}, risk: ${option.tradeoffRisk}, confidence: ${option.confidence.toFixed(2)}.`;
+                });
+
                 actionSummary = [
                     `Change summary: ${actionSummary}`,
                     `Impacted scope: ${impactedScope}`,
                     `Risk reason: ${result.decision.reason}`,
                     `Proposed rollback: ${rollbackHint}`,
+                    'What-if options:',
+                    ...optionLines,
                     `Lint status: ${String(lintStatus)}`,
                     `Test status: ${String(testStatus)}`,
                 ].join('\n');
@@ -2715,6 +2941,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                     riskLevel: result.decision.riskLevel,
                     actionType: result.decision.actionType,
                     actionSummary,
+                    escalationOptions,
                     task: executionTask,
                     executionPayload: executionTask.payload,
                     payloadOverrideSource: result.payloadOverrideSource,
@@ -2804,6 +3031,8 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 task_id: task.taskId,
                 risk_level: result.decision.riskLevel,
                 confidence: result.decision.confidence,
+                escalation_options: workerLoop.pendingApprovals.find((pending) => pending.taskId === task.taskId)?.escalationOptions
+                    .map((option) => option.optionId) ?? [],
             });
             await persistActionResultRecord(executionTask, config, result);
             return;
@@ -3059,8 +3288,28 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             approvalSummary: approvalSummary ?? undefined,
         };
 
+        weeklyRoiAccumulator.totalProcessed += 1;
+        if (record.status === 'success') {
+            weeklyRoiAccumulator.totalSucceeded += 1;
+            const category = categorizeActionForRoi(record.actionType);
+            const estimatedMinutes = estimateMinutesSavedForAction(record.actionType);
+            weeklyRoiAccumulator.timeSavedByCategoryMinutes.set(
+                category,
+                (weeklyRoiAccumulator.timeSavedByCategoryMinutes.get(category) ?? 0) + estimatedMinutes,
+            );
+        } else if (record.status === 'approval_required') {
+            weeklyRoiAccumulator.totalApprovalQueued += 1;
+        } else if (record.status === 'failed') {
+            weeklyRoiAccumulator.totalFailed += 1;
+            weeklyRoiAccumulator.reworkEvents += 1;
+        }
+        if (record.retries > 0) {
+            weeklyRoiAccumulator.reworkEvents += record.retries;
+        }
+
         try {
             await actionResultWriter(record);
+            weeklyRoiAccumulator.actionResultsPersisted += 1;
             emitRuntimeEvent('runtime.action_result_persisted', config, {
                 record_id: record.recordId,
                 task_id: task.taskId,
@@ -3090,6 +3339,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 durationMs: executionDurationMs,
             });
             await evidenceRecordWriter(evidence);
+            weeklyRoiAccumulator.evidenceRecordsPersisted += 1;
             emitRuntimeEvent('runtime.evidence_record_persisted', config, {
                 evidence_id: evidence.evidenceId,
                 task_id: task.taskId,
@@ -3286,6 +3536,10 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 failed_tasks: workerLoop.failedTasks,
                 retried_attempts: workerLoop.retriedAttempts,
             });
+
+            if (!weeklyRoiAccumulator.lastGeneratedAtMs || (now() - weeklyRoiAccumulator.lastGeneratedAtMs) >= weeklyReportCadenceMs) {
+                generateWeeklyQualityRoiReport(config, 'scheduled');
+            }
         } catch (err: unknown) {
             backgroundLoop.failures += 1;
             emitRuntimeEvent('runtime.background.tick_failed', config, {
@@ -4180,7 +4434,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         });
     });
 
-    app.post<{ Body: { task_id?: string; decision?: string; reason?: string; actor?: string } }>('/decision', async (request, reply) => {
+    app.post<{ Body: { task_id?: string; decision?: string; reason?: string; actor?: string; selected_option_id?: string } }>('/decision', async (request, reply) => {
         if (!startupCompleted || (runtimeState !== 'active' && runtimeState !== 'degraded')) {
             return reply.code(409).send({
                 error: 'runtime_not_ready',
@@ -4222,7 +4476,24 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             });
         }
 
+        const selectedOptionId = request.body?.selected_option_id?.trim() || null;
+        if (selectedOptionId) {
+            const pending = workerLoop.pendingApprovals[pendingIndex];
+            const knownOption = pending?.escalationOptions.some((option) => option.optionId === selectedOptionId);
+            if (!knownOption) {
+                return reply.code(400).send({
+                    error: 'invalid_selected_option',
+                    message: `selected_option_id ${selectedOptionId} is not valid for task_id ${taskId}`,
+                });
+            }
+        }
+
         const [resolved] = workerLoop.pendingApprovals.splice(pendingIndex, 1);
+        if (resolved) {
+            const latencyMs = Math.max(0, now() - resolved.enqueuedAt);
+            weeklyRoiAccumulator.approvalLatencyTotalMs += latencyMs;
+            weeklyRoiAccumulator.approvalLatencySamples += 1;
+        }
         workerLoop.approvalResolvedTasks += 1;
         if (decision === 'approved') {
             workerLoop.approvalApprovedTasks += 1;
@@ -4237,6 +4508,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             reason: request.body?.reason ?? null,
             was_escalated: resolved?.escalated ?? false,
             risk_level: resolved?.riskLevel ?? null,
+            selected_option_id: selectedOptionId,
             pending_approval_tasks: workerLoop.pendingApprovals.length,
         });
 
@@ -4295,6 +4567,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 decision,
                 execution_status: approvedResult.status,
                 was_escalated: resolved?.escalated ?? false,
+                selected_option_id: selectedOptionId,
                 pending_approval_tasks: workerLoop.pendingApprovals.length,
             };
         }
@@ -4311,6 +4584,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             action_type: resolved.actionType,
             decision,
             reason: request.body?.reason ?? null,
+            selected_option_id: selectedOptionId,
         });
 
         emitRuntimeEvent('runtime.bot_notification_sent', configCache, {
@@ -4326,7 +4600,25 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             decision,
             execution_status: 'cancelled',
             was_escalated: resolved?.escalated ?? false,
+            selected_option_id: selectedOptionId,
             pending_approval_tasks: workerLoop.pendingApprovals.length,
+        };
+    });
+
+    app.get<{ Querystring: { generate?: string } }>('/runtime/reports/weekly-quality-roi', async (request) => {
+        const shouldGenerate = request.query?.generate === 'true';
+        if (shouldGenerate || !weeklyRoiAccumulator.lastReport) {
+            generateWeeklyQualityRoiReport(configCache, 'manual');
+        }
+
+        return {
+            cadence_ms: weeklyReportCadenceMs,
+            report_count: weeklyRoiAccumulator.reportCount,
+            last_generated_at: weeklyRoiAccumulator.lastGeneratedAtMs
+                ? new Date(weeklyRoiAccumulator.lastGeneratedAtMs).toISOString()
+                : null,
+            period_started_at: new Date(weeklyRoiAccumulator.periodStartedAtMs).toISOString(),
+            report: weeklyRoiAccumulator.lastReport,
         };
     });
 
@@ -4569,6 +4861,14 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             background_loop_running: backgroundLoop.running,
             scope_constraint: advancedFeatures.getScopeConstraint(),
             active_policy_pack: advancedFeatures.getActivePolicyPack(),
+            weekly_report: {
+                cadence_ms: weeklyReportCadenceMs,
+                report_count: weeklyRoiAccumulator.reportCount,
+                last_generated_at: weeklyRoiAccumulator.lastGeneratedAtMs
+                    ? new Date(weeklyRoiAccumulator.lastGeneratedAtMs).toISOString()
+                    : null,
+                period_started_at: new Date(weeklyRoiAccumulator.periodStartedAtMs).toISOString(),
+            },
         };
     });
 

@@ -32,3 +32,29 @@ test('parseApprovalPacket falls back to plain summary when packet fields are abs
     assert.equal(packet.test_status, null);
     assert.equal(packet.packet_complete, false);
 });
+
+test('parseApprovalPacket accepts case-insensitive labels with list prefixes', () => {
+    const packet = parseApprovalPacket([
+        '1. change summary: Rotate short-lived connector token handling',
+        '- impacted scope: services/connector-gateway/src/index.ts',
+        '* risk reason: Temporary auth churn can block sync jobs.',
+        '2) proposed rollback: Re-enable prior token refresh branch.',
+        'Lint status: passed',
+        'TEST STATUS: passed',
+    ].join('\n'));
+
+    assert.equal(packet.change_summary, 'Rotate short-lived connector token handling');
+    assert.equal(packet.impacted_scope, 'services/connector-gateway/src/index.ts');
+    assert.equal(packet.risk_reason, 'Temporary auth churn can block sync jobs.');
+    assert.equal(packet.proposed_rollback, 'Re-enable prior token refresh branch.');
+    assert.equal(packet.lint_status, 'passed');
+    assert.equal(packet.test_status, 'passed');
+    assert.equal(packet.packet_complete, true);
+});
+
+test('parseApprovalPacket uses explicit fallback for empty summaries', () => {
+    const packet = parseApprovalPacket('   ');
+
+    assert.equal(packet.change_summary, 'No change summary provided');
+    assert.equal(packet.packet_complete, false);
+});

@@ -632,6 +632,8 @@ test('approval-required task triggers automatic approval intake call', async () 
         assert.match(String(intakeCalls[0]?.actionSummary), /Impacted scope:/);
         assert.match(String(intakeCalls[0]?.actionSummary), /Risk reason:/);
         assert.match(String(intakeCalls[0]?.actionSummary), /Proposed rollback:/);
+        assert.match(String(intakeCalls[0]?.actionSummary), /What-if options:/);
+        assert.match(String(intakeCalls[0]?.actionSummary), /Tradeoff speed:/);
         assert.match(String(intakeCalls[0]?.actionSummary), /Lint status:/);
         assert.match(String(intakeCalls[0]?.actionSummary), /Test status:/);
     } finally {
@@ -1010,6 +1012,113 @@ test('approval decision endpoint resolves escalated approval and tracks rejected
         assert.ok(liveBody.approval_resolved_tasks >= 1);
         assert.ok(liveBody.approval_rejected_tasks >= 1);
         assert.equal(liveBody.failed_tasks, 0);
+    } finally {
+        await app.close();
+    }
+});
+
+test('approval decision accepts selected what-if option and logs it', async () => {
+    const app = buildRuntimeServer({
+        env: baseEnv(),
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+    });
+
+    try {
+        const startupRes = await app.inject({ method: 'POST', url: '/startup' });
+        assert.equal(startupRes.statusCode, 200);
+
+        const intakeRes = await app.inject({
+            method: 'POST',
+            url: '/tasks/intake',
+            payload: {
+                task_id: 'decision-option-1',
+                payload: {
+                    action_type: 'merge_release',
+                    summary: 'Merge release branch into main',
+                    target: 'main',
+                },
+            },
+        });
+        assert.equal(intakeRes.statusCode, 202);
+        await new Promise<void>((resolve) => setTimeout(resolve, 60));
+
+        const decisionRes = await app.inject({
+            method: 'POST',
+            url: '/decision',
+            payload: {
+                task_id: 'decision-option-1',
+                decision: 'approved',
+                reason: 'Selecting safer rollout option.',
+                actor: 'approver_options',
+                selected_option_id: 'staged_safe_rollout',
+            },
+        });
+        assert.equal(decisionRes.statusCode, 200);
+        const decisionBody = decisionRes.json() as {
+            selected_option_id: string | null;
+            execution_status: string;
+        };
+        assert.equal(decisionBody.selected_option_id, 'staged_safe_rollout');
+        assert.equal(decisionBody.execution_status, 'success');
+
+        const logsRes = await app.inject({ method: 'GET', url: '/logs?limit=200' });
+        assert.equal(logsRes.statusCode, 200);
+        const logsBody = logsRes.json() as {
+            logs: Array<{ eventType: string; details?: Record<string, unknown> }>;
+        };
+        const decisionEvent = logsBody.logs.find(
+            (entry) => entry.eventType === 'runtime.approval_decision_received'
+                && entry.details?.['task_id'] === 'decision-option-1',
+        );
+        assert.ok(decisionEvent);
+        assert.equal(decisionEvent?.details?.['selected_option_id'], 'staged_safe_rollout');
+    } finally {
+        await app.close();
+    }
+});
+
+test('approval decision rejects unknown selected option ids', async () => {
+    const app = buildRuntimeServer({
+        env: baseEnv(),
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+    });
+
+    try {
+        const startupRes = await app.inject({ method: 'POST', url: '/startup' });
+        assert.equal(startupRes.statusCode, 200);
+
+        const intakeRes = await app.inject({
+            method: 'POST',
+            url: '/tasks/intake',
+            payload: {
+                task_id: 'decision-option-invalid-1',
+                payload: {
+                    action_type: 'merge_release',
+                    summary: 'Merge release branch into main',
+                    target: 'main',
+                },
+            },
+        });
+        assert.equal(intakeRes.statusCode, 202);
+        await new Promise<void>((resolve) => setTimeout(resolve, 60));
+
+        const decisionRes = await app.inject({
+            method: 'POST',
+            url: '/decision',
+            payload: {
+                task_id: 'decision-option-invalid-1',
+                decision: 'approved',
+                actor: 'approver_options',
+                selected_option_id: 'non_existing_option',
+            },
+        });
+        assert.equal(decisionRes.statusCode, 400);
+        const body = decisionRes.json() as { error: string };
+        assert.equal(body.error, 'invalid_selected_option');
     } finally {
         await app.close();
     }
@@ -3676,6 +3785,94 @@ test('/runtime/advanced/status returns control state', async () => {
         const body = res.json() as { control: unknown; traces: number };
         assert.ok(body.control !== undefined);
         assert.equal(typeof body.traces, 'number');
+    } finally {
+        await app.close();
+    }
+});
+
+test('/runtime/reports/weekly-quality-roi generates manual report with required KPI fields', async () => {
+    const app = buildRuntimeServer({
+        env: baseEnv(),
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+    });
+
+    try {
+        const startupRes = await app.inject({ method: 'POST', url: '/startup' });
+        assert.equal(startupRes.statusCode, 200);
+
+        await app.inject({
+            method: 'POST',
+            url: '/tasks/intake',
+            payload: {
+                task_id: 'weekly-report-seed-1',
+                payload: {
+                    action_type: 'read_task',
+                    summary: 'Collect current release notes',
+                    target: 'release-notes',
+                },
+            },
+        });
+
+        await new Promise<void>((resolve) => setTimeout(resolve, 60));
+
+        const res = await app.inject({ method: 'GET', url: '/runtime/reports/weekly-quality-roi?generate=true' });
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as {
+            report: {
+                trigger: string;
+                completion_quality_pct: number;
+                rework_rate_pct: number;
+                approval_latency_ms: number;
+                audit_completeness_pct: number;
+                time_saved_by_task_category: Array<{ category: string; estimated_minutes_saved: number }>;
+            };
+        };
+        assert.equal(body.report.trigger, 'manual');
+        assert.equal(typeof body.report.completion_quality_pct, 'number');
+        assert.equal(typeof body.report.rework_rate_pct, 'number');
+        assert.equal(typeof body.report.approval_latency_ms, 'number');
+        assert.equal(typeof body.report.audit_completeness_pct, 'number');
+        assert.ok(Array.isArray(body.report.time_saved_by_task_category));
+    } finally {
+        await app.close();
+    }
+});
+
+test('background scheduler auto-generates weekly quality/ROI report on cadence', async () => {
+    let fakeNow = 50_000;
+    const app = buildRuntimeServer({
+        env: baseEnv(),
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+        backgroundWorkerIntervalMs: 10,
+        weeklyReportCadenceMs: 40,
+        now: () => fakeNow,
+    });
+
+    try {
+        const startupRes = await app.inject({ method: 'POST', url: '/startup' });
+        assert.equal(startupRes.statusCode, 200);
+
+        await new Promise<void>((resolve) => setTimeout(resolve, 25));
+        fakeNow += 100;
+        await new Promise<void>((resolve) => setTimeout(resolve, 40));
+
+        const reportRes = await app.inject({ method: 'GET', url: '/runtime/reports/weekly-quality-roi' });
+        assert.equal(reportRes.statusCode, 200);
+        const reportBody = reportRes.json() as { report_count: number; report: { trigger: string } | null };
+        assert.ok(reportBody.report_count >= 1);
+        assert.equal(reportBody.report?.trigger, 'scheduled');
+
+        const statusRes = await app.inject({ method: 'GET', url: '/runtime/advanced/status' });
+        assert.equal(statusRes.statusCode, 200);
+        const statusBody = statusRes.json() as {
+            weekly_report: { report_count: number; last_generated_at: string | null };
+        };
+        assert.ok(statusBody.weekly_report.report_count >= 1);
+        assert.equal(typeof statusBody.weekly_report.last_generated_at, 'string');
     } finally {
         await app.close();
     }

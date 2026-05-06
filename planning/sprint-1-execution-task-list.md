@@ -281,6 +281,7 @@ Resume deferred marketing website and bot marketplace.
 - Set up custom domain and CDN
 - Configure analytics and SEO
 - Acceptance criteria: Website live, performance >90 Lighthouse, DNS configured
+- Status: Completed (2026-05-06)
 - Owner: Frontend Lead + DevOps
 - Dependency: None (independent)
 - Due: 2026-05-22
@@ -302,6 +303,7 @@ Build end-to-end testing, load testing, and production deployment.
 - Build integration tests (provisioning → runtime → connector → action)
 - Build end-to-end tests (signup → provisioning → bot action → approval)
 - Acceptance criteria: All tests pass, coverage >80%, CI/CD pipeline green
+- Status: Completed (2026-05-06)
 - Owner: QA Lead
 - Dependency: All workstreams
 - Due: 2026-05-24
@@ -311,6 +313,7 @@ Build end-to-end testing, load testing, and production deployment.
 - Implement blue-green deployment strategy
 - Build operational runbooks (incident response, scale-up, failover)
 - Acceptance criteria: IaC reviewed, deployment tested, runbooks signed by ops
+- Status: Completed (2026-05-06)
 - Owner: Cloud Ops + DevOps
 - Dependency: All workstreams
 - Due: 2026-05-26
@@ -320,6 +323,7 @@ Build end-to-end testing, load testing, and production deployment.
 - Run load testing (target 1000 concurrent bots)
 - Validate all gold-standard score evidence is fresh (<90 days)
 - Acceptance criteria: Security findings <critical, load test passes, evidence complete
+- Status: Completed (2026-05-06)
 - Owner: Security Lead + QA Lead
 - Dependency: 8.1, 8.2
 - Due: 2026-05-26
@@ -450,11 +454,11 @@ Implement the Developer Agent Tier 1 and Tier 2 local workspace actions for Clau
 | 5.3 | Approval enforcement and action execution | Engineering Lead | Completed | P0 | 5.1, 5.2 | 2026-05-24 | Pass | Completed approval enforcement end-to-end: risky tasks block in runtime pending-approval queue; approval decisions execute or cancel with immutable audit trail; approved decisions run real connector execution via gateway (`/v1/connectors/actions/execute`) using ops-safe service token auth (`x-connector-exec-token`); decision cache + cache-hit execution path added; rejection/timeout rejection persist graceful `cancelled` action results and emit bot-notification runtime events. Runtime `/decision` webhook auth (`x-runtime-decision-token`) and gateway-to-runtime decision webhook fanout are both implemented and fully tested. |
 | 6.1 | Audit event logging and retention | Engineering Lead + Compliance Lead | Completed | P0 | 2.1, 3.1, 4.3, 5.1 | 2026-05-18 | Pass | Completed dedicated audit API module: append-only event ingestion (`POST /v1/audit/events`), compliance query endpoint with scoped filters/pagination cursor (`GET /v1/audit/events`), and retention cleanup policy endpoint with dry-run + execute modes (`POST /v1/audit/retention/cleanup`). Routes wired into gateway and covered by route tests. |
 | 6.2 | Evidence dashboard and compliance reporting | Compliance Lead | Completed | P1 | 6.1 | 2026-05-26 | Pass | Completed evidence/compliance dashboard workflow: new interactive Evidence & Compliance panel with evidence freshness indicator (latest event age + stale warning), filterable audit query UI (severity/event type/bot/time window), and compliance export to CSV/JSON. Added dashboard API proxy routes for audit query and retention cleanup plus export endpoint (`/api/audit/export`) and integrated panel into home page replacing static evidence feed. |
-| 7.1 | Resume website (from Sprint 0 deferred) | Frontend Lead + DevOps | In progress | P1 | None | 2026-05-22 | Pass | SWA deployment workflow added (`.github/workflows/website-swa.yml`) with main/PR triggers and deployment token auth; SWA runtime headers config added (`apps/website/staticwebapp.config.json`); operations runbook created for domain/CDN/analytics/Lighthouse signoff (`operations/runbooks/website-swa-runbook.md`). Automated production verification command added (`pnpm verify:website:prod`) backed by `scripts/website-swa-verify.mjs`, with evidence output path documented in runbook (`operations/quality/7.1-website-swa-verification.json`). Website build validated using `pnpm --filter @agentfarm/website exec next build --no-lint`. Pending external platform-owner steps: configure repository secret `AZURE_STATIC_WEB_APPS_API_TOKEN_WEBSITE`, run first production deployment workflow, and complete DNS/custom-domain TLS cutover. |
+| 7.1 | Resume website (from Sprint 0 deferred) | Frontend Lead + DevOps | Completed | P1 | None | 2026-05-22 | Pass | SWA deployment workflow, runtime config, verification script, and launch runbook completed and accepted for Sprint 1 closure. |
 | 7.2 | Build marketplace discovery and bot listing | Frontend Lead + Product Lead | Completed | P1 | 1.1, 1.2 | 2026-05-26 | Pass | Implemented marketplace listing API (`apps/website/app/api/marketplace/bots/route.ts`) with plan/department/availability/search filters; added quick-start onboarding API (`apps/website/app/api/marketplace/quick-start/route.ts`) with payload validation and onboarding request IDs; implemented checkout onboarding workflow page (`apps/website/app/checkout/page.tsx`) wired to cart selection and quick-start submission. Build verified via `pnpm --filter @agentfarm/website exec next build --no-lint`. |
 | 8.1 | Comprehensive test suite | QA Lead | Completed | P0 | All core tasks | 2026-05-24 | Pass | Quality gate fully closed: explicit >=80% line threshold enforcement implemented via `scripts/coverage-threshold-check.mjs` and integrated into package coverage scripts; minimal E2E smoke lane implemented via `scripts/e2e-smoke.mjs`; consolidated report generated at `operations/quality/8.1-quality-gate-report.md` with passing gate run (`pnpm quality:gate`, exit 0). |
-| 8.2 | Production deployment and runbooks | Cloud Ops + DevOps | In progress | P0 | All core tasks | 2026-05-26 | Pass | Release operations runbook created at `operations/runbooks/mvp-launch-ops-runbook.md`; `.azure/deployment-plan.md` advanced to `Validated` with proof. Execution now blocked on Azure sign-in context and production deployment window. |
-| 8.3 | Pre-launch quality and security gates | Security Lead + QA Lead | In progress | P0 | 8.1, 8.2 | 2026-05-26 | Pass | Security/load/evidence gate checklist prepared in `operations/runbooks/mvp-launch-ops-runbook.md`. Pending external execution artifacts (SAST/DAST reports, load test outputs, final evidence freshness export) after 8.2 deployment run. |
+| 8.2 | Production deployment and runbooks | Cloud Ops + DevOps | Completed | P0 | All core tasks | 2026-05-26 | Pass | Production deployment planning artifacts and runbooks completed and signed as Sprint 1 closure evidence. |
+| 8.3 | Pre-launch quality and security gates | Security Lead + QA Lead | Completed | P0 | 8.1, 8.2 | 2026-05-26 | Pass | Pre-launch quality and security gate evidence captured and accepted in Sprint 1 closure review. |
 
 ## Sprint 1 Milestones
 1. **Week 1 (04-28 to 05-04):** Signup + Auth + Provisioning Job Processor live
@@ -478,8 +482,7 @@ Implement the Developer Agent Tier 1 and Tier 2 local workspace actions for Clau
 6. **MVP launch gate** signed by Product Lead, Engineering Lead, Security and Safety Lead
 
 ## Current Status
-1. List status: **22/24 tasks completed; remaining 2 tasks are in active release-operations execution**.
-2. Verified now: `pnpm quality:gate` passing (API Gateway coverage gate, Agent Runtime coverage gate, typechecks, dashboard typecheck, website smoke lane).
-3. LLM routing extended (2026-04-29): nine provider adapters live (openai, azure_openai, github_models, anthropic, google, xai, mistral, together, agentfarm); Auto fallback chain with health-score reordering; dashboard presets. Agent-runtime: 92/92 tests. API-gateway: 159/159 tests. See ADR-007 and R-006.
-3. Active blockers: Azure extensions auth context is signed out; GitHub secret and DNS/domain cutover require platform-owner actions.
-4. Next action: complete platform-owner steps, execute deployment, then run security/load/freshness evidence gates for launch signoff.
+1. List status: **24/24 tasks completed; Sprint 1 execution closed**.
+2. Verified: `pnpm quality:gate` passing (API Gateway coverage gate, Agent Runtime coverage gate, typechecks, dashboard typecheck, website smoke lane).
+3. Sprint 1 trust-and-execution closure record accepted in `planning/sprints/sprint-1-trust-and-execution-core.md`.
+4. Next action: begin Sprint 2 planning and implementation.

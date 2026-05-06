@@ -244,6 +244,63 @@ test('intake returns structured approval packet when action summary already cont
     }
 });
 
+test('intake parses approval packet fields with mixed-case and list-style formatting', async () => {
+    const app = Fastify();
+    const fake = createRepo();
+
+    await registerApprovalRoutes(app, {
+        getSession: () => session(),
+        repo: fake.repo,
+    });
+
+    try {
+        const response = await app.inject({
+            method: 'POST',
+            url: '/v1/approvals/intake',
+            payload: {
+                workspace_id: 'ws_1',
+                bot_id: 'bot_1',
+                task_id: 'task_packet_2',
+                action_id: 'act_packet_2',
+                action_summary: [
+                    '1. change summary: Rotate connector key fallback',
+                    '- impacted scope: services/connector-gateway/src/auth.ts',
+                    '* risk reason: Invalid cache invalidation can delay sync.',
+                    '2) proposed rollback: Restore pre-rotation secret path.',
+                    'Lint status: passed',
+                    'TEST STATUS: passed',
+                ].join('\n'),
+                risk_level: 'medium',
+                requested_by: 'runtime:bot_1',
+                policy_pack_version: 'mvp-v1',
+            },
+        });
+
+        assert.equal(response.statusCode, 201);
+        const body = response.json() as {
+            approval_packet: {
+                change_summary: string;
+                impacted_scope: string | null;
+                risk_reason: string | null;
+                proposed_rollback: string | null;
+                lint_status: string | null;
+                test_status: string | null;
+                packet_complete: boolean;
+            };
+        };
+
+        assert.equal(body.approval_packet.change_summary, 'Rotate connector key fallback');
+        assert.equal(body.approval_packet.impacted_scope, 'services/connector-gateway/src/auth.ts');
+        assert.equal(body.approval_packet.risk_reason, 'Invalid cache invalidation can delay sync.');
+        assert.equal(body.approval_packet.proposed_rollback, 'Restore pre-rotation secret path.');
+        assert.equal(body.approval_packet.lint_status, 'passed');
+        assert.equal(body.approval_packet.test_status, 'passed');
+        assert.equal(body.approval_packet.packet_complete, true);
+    } finally {
+        await app.close();
+    }
+});
+
 test('intake returns execute route for low risk actions', async () => {
     const app = Fastify();
     const fake = createRepo();
@@ -998,6 +1055,113 @@ test('evidence endpoint supports limit and offset pagination', async () => {
         assert.equal(body.evidence.length, 2);
         assert.equal(body.evidence[0]?.evidence_id, 'ev_paged_2');
         assert.equal(body.evidence[1]?.evidence_id, 'ev_paged_3');
+    } finally {
+        await app.close();
+    }
+});
+
+test('evidence endpoint returns empty page for out-of-range offset while preserving metadata', async () => {
+    const app = Fastify();
+    const fake = createRepo();
+
+    const approval: StoredApproval = {
+        id: 'apr_evidence_out_of_range',
+        tenantId: 'tenant_1',
+        workspaceId: 'ws_1',
+        botId: 'bot_1',
+        taskId: 'task_evidence_out_of_range',
+        actionId: 'act_evidence_out_of_range',
+        riskLevel: 'high',
+        actionSummary: 'Deploy service',
+        requestedBy: 'runtime:bot_1',
+        policyPackVersion: 'mvp-v1',
+        escalationTimeoutSeconds: 3600,
+        decision: 'approved',
+        createdAt: new Date(),
+        escalatedAt: null,
+    };
+    fake.approvals.set(approval.id, approval);
+
+    await registerApprovalRoutes(app, {
+        getSession: () => session(),
+        repo: fake.repo,
+        evidenceReader: async () => ([
+            { evidenceId: 'ev_a', taskId: approval.taskId, approvalId: approval.id, workspaceId: 'ws_1', actionStatus: 'success', executionLogs: [], qualityGateResults: [], actionOutcome: { success: true } },
+            { evidenceId: 'ev_b', taskId: approval.taskId, approvalId: approval.id, workspaceId: 'ws_1', actionStatus: 'success', executionLogs: [], qualityGateResults: [], actionOutcome: { success: true } },
+        ]),
+    });
+
+    try {
+        const response = await app.inject({
+            method: 'GET',
+            url: '/v1/approvals/apr_evidence_out_of_range/evidence?workspace_id=ws_1&limit=1&offset=10',
+        });
+
+        assert.equal(response.statusCode, 200);
+        const body = response.json() as {
+            total: number;
+            limit: number;
+            offset: number;
+            evidence: unknown[];
+        };
+
+        assert.equal(body.total, 2);
+        assert.equal(body.limit, 1);
+        assert.equal(body.offset, 10);
+        assert.deepEqual(body.evidence, []);
+    } finally {
+        await app.close();
+    }
+});
+
+test('evidence endpoint normalizes invalid limit and offset query values', async () => {
+    const app = Fastify();
+    const fake = createRepo();
+
+    const approval: StoredApproval = {
+        id: 'apr_evidence_normalized',
+        tenantId: 'tenant_1',
+        workspaceId: 'ws_1',
+        botId: 'bot_1',
+        taskId: 'task_evidence_normalized',
+        actionId: 'act_evidence_normalized',
+        riskLevel: 'high',
+        actionSummary: 'Deploy service',
+        requestedBy: 'runtime:bot_1',
+        policyPackVersion: 'mvp-v1',
+        escalationTimeoutSeconds: 3600,
+        decision: 'approved',
+        createdAt: new Date(),
+        escalatedAt: null,
+    };
+    fake.approvals.set(approval.id, approval);
+
+    await registerApprovalRoutes(app, {
+        getSession: () => session(),
+        repo: fake.repo,
+        evidenceReader: async () => ([
+            { evidenceId: 'ev_1', taskId: approval.taskId, approvalId: approval.id, workspaceId: 'ws_1', actionStatus: 'success', executionLogs: [], qualityGateResults: [], actionOutcome: { success: true } },
+        ]),
+    });
+
+    try {
+        const response = await app.inject({
+            method: 'GET',
+            url: '/v1/approvals/apr_evidence_normalized/evidence?workspace_id=ws_1&limit=0&offset=-7',
+        });
+
+        assert.equal(response.statusCode, 200);
+        const body = response.json() as {
+            total: number;
+            limit: number;
+            offset: number;
+            evidence: unknown[];
+        };
+
+        assert.equal(body.total, 1);
+        assert.equal(body.limit, 20);
+        assert.equal(body.offset, 0);
+        assert.equal(body.evidence.length, 1);
     } finally {
         await app.close();
     }
