@@ -104,14 +104,24 @@ export class MemoryStore implements IMemoryStore {
       },
     });
 
-    // TODO: Call writeAuditEvent() with event type 'memory_write'
-    // writeAuditEvent({
-    //   tenantId: request.tenantId,
-    //   workspaceId: request.workspaceId,
-    //   eventType: 'memory_write',
-    //   summary: `Memory recorded for task ${request.taskId}`,
-    //   correlationId: request.correlationId,
-    // });
+    this.writeAuditEvent(request).catch(() => {
+      // Non-blocking: audit write failures must never surface to caller
+    });
+  }
+
+  private async writeAuditEvent(request: MemoryWriteRequest): Promise<void> {
+    await this.prisma.auditEvent.create({
+      data: {
+        tenantId: request.tenantId,
+        workspaceId: request.workspaceId,
+        botId: 'system:memory-service',
+        eventType: 'memory_write' as import('@prisma/client').Prisma.AuditEventCreateInput['eventType'],
+        severity: 'info',
+        summary: `Memory recorded for task ${request.taskId} (status: ${request.executionStatus})`,
+        sourceSystem: 'memory-service',
+        correlationId: request.correlationId,
+      },
+    });
   }
 
   /**
@@ -155,11 +165,21 @@ export class MemoryStore implements IMemoryStore {
   }
 }
 
+export interface InMemoryAuditEvent {
+  tenantId: string;
+  workspaceId: string;
+  eventType: string;
+  summary: string;
+  correlationId: string;
+  createdAt: string;
+}
+
 /**
  * In-memory mock store for testing
  */
 export class InMemoryMemoryStore implements IMemoryStore {
   private memories: Map<string, AgentShortTermMemoryRecord[]> = new Map();
+  private auditLog: InMemoryAuditEvent[] = [];
 
   async readMemoryForTask(
     workspaceId: string,
@@ -204,6 +224,23 @@ export class InMemoryMemoryStore implements IMemoryStore {
 
     const existing = this.memories.get(request.workspaceId) ?? [];
     this.memories.set(request.workspaceId, [...existing, record]);
+
+    this.writeAuditEvent(request);
+  }
+
+  private writeAuditEvent(request: MemoryWriteRequest): void {
+    this.auditLog.push({
+      tenantId: request.tenantId,
+      workspaceId: request.workspaceId,
+      eventType: 'memory_write',
+      summary: `Memory recorded for task ${request.taskId} (status: ${request.executionStatus})`,
+      correlationId: request.correlationId,
+      createdAt: new Date().toISOString(),
+    });
+  }
+
+  getAuditEvents(): InMemoryAuditEvent[] {
+    return [...this.auditLog];
   }
 
   async cleanupExpiredMemories(): Promise<number> {

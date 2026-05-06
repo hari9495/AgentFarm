@@ -8,8 +8,7 @@ import {
   InMemoryMemoryStore,
   calculateRejectionRate,
   extractCommonConnectors,
-} from './memory-store.js';
-import type { MemoryWriteRequest } from './memory-types.js';
+} from './memory-store.js';import type { MemoryWriteRequest } from './memory-types.js';
 
 test('Agent Memory Service', async (t) => {
   const store = new InMemoryMemoryStore();
@@ -207,5 +206,54 @@ test('Agent Memory Service', async (t) => {
     const result = await store6.readMemoryForTask('ws-approve');
     assert.equal(result.recentMemories[0].approvalOutcomes.length, 2);
     assert.deepEqual(result.recentMemories[0].approvalOutcomes, approvalOutcomes);
+  });
+
+  // Test 7: Audit event emitted after writeMemoryAfterTask
+  await t.test('should emit audit event after writeMemoryAfterTask', async () => {
+    const storeAudit = new InMemoryMemoryStore();
+
+    await storeAudit.writeMemoryAfterTask({
+      workspaceId: 'ws-audit',
+      tenantId: 'tenant-audit',
+      taskId: 'task-audit-1',
+      actionsTaken: ['create_pr'],
+      approvalOutcomes: [],
+      connectorsUsed: ['github'],
+      executionStatus: 'success',
+      summary: 'Audit test task',
+      correlationId: 'corr-audit-1',
+    });
+
+    const auditEvents = storeAudit.getAuditEvents();
+    assert.equal(auditEvents.length, 1);
+    assert.equal(auditEvents[0].eventType, 'memory_write');
+    assert.equal(auditEvents[0].tenantId, 'tenant-audit');
+    assert.equal(auditEvents[0].workspaceId, 'ws-audit');
+    assert.equal(auditEvents[0].correlationId, 'corr-audit-1');
+    assert.ok(auditEvents[0].summary.includes('task-audit-1'));
+    assert.ok(auditEvents[0].summary.includes('success'));
+  });
+
+  // Test 8: Audit log accumulates across multiple writes
+  await t.test('should accumulate audit events across multiple writes', async () => {
+    const storeMulti = new InMemoryMemoryStore();
+
+    for (let i = 0; i < 3; i++) {
+      await storeMulti.writeMemoryAfterTask({
+        workspaceId: 'ws-multi',
+        tenantId: 'tenant-multi',
+        taskId: `task-multi-${i}`,
+        actionsTaken: [],
+        approvalOutcomes: [],
+        connectorsUsed: [],
+        executionStatus: 'success',
+        summary: `Task ${i}`,
+        correlationId: `corr-multi-${i}`,
+      });
+    }
+
+    const auditEvents = storeMulti.getAuditEvents();
+    assert.equal(auditEvents.length, 3);
+    assert.ok(auditEvents.every((e) => e.eventType === 'memory_write'));
   });
 });

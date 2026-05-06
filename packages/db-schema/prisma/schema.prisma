@@ -142,6 +142,7 @@ enum AuditEventType {
   approval_event
   security_event
   audit_event
+  memory_write
 }
 
 enum AuditSeverity {

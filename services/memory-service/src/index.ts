@@ -15,3 +15,4 @@ export {
   MemoryStore,
   InMemoryMemoryStore,
 } from './memory-store.js';
+export type { InMemoryAuditEvent } from './memory-store.js';
