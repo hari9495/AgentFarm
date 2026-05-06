@@ -97,6 +97,7 @@ type DecisionWebhookNotifier = (input: {
     decision: DecisionStatus;
     reason: string | null;
     actor: string;
+    selectedOptionId: string | null;
 }) => Promise<{
     ok: boolean;
     statusCode: number;
@@ -134,6 +135,7 @@ type DecisionBody = {
     workspace_id?: string;
     decision?: string;
     reason?: string;
+    selected_option_id?: string;
 };
 
 type DecisionParams = {
@@ -454,6 +456,7 @@ const defaultDecisionWebhookNotifier: DecisionWebhookNotifier = async (input) =>
                 decision: input.decision,
                 reason: input.reason,
                 actor: input.actor,
+                selected_option_id: input.selectedOptionId,
             }),
             signal: AbortSignal.timeout(4_000),
         });
@@ -760,6 +763,7 @@ export const registerApprovalRoutes = async (
         }
 
         const reason = request.body?.reason?.trim() ?? null;
+        const selectedOptionId = request.body?.selected_option_id?.trim() ?? null;
         if ((decision === 'rejected' || decision === 'timeout_rejected') && !reason) {
             return reply.code(400).send({
                 error: 'decision_reason_required',
@@ -826,6 +830,7 @@ export const registerApprovalRoutes = async (
                 decision,
                 reason,
                 actor: session.userId,
+                selectedOptionId,
             });
 
             webhookNotified = webhook.ok;
@@ -848,6 +853,7 @@ export const registerApprovalRoutes = async (
             workspace_id: approval.workspaceId,
             decision,
             decision_reason: reason,
+            selected_option_id: selectedOptionId,
             decision_latency_seconds: decisionLatencySeconds,
             decided_at: decidedAt.toISOString(),
             approver_id: session.userId,

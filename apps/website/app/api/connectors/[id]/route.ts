@@ -26,7 +26,11 @@ export async function GET(request: Request, { params }: RouteParams) {
 
     const { id } = await params;
     const connector = connectorStore.get(id);
+    const requestedWorkspaceId = new URL(request.url).searchParams.get("workspaceId");
     if (!connector || connector.tenantId !== user.company) {
+        return NextResponse.json({ error: "Connector not found." }, { status: 404 });
+    }
+    if (requestedWorkspaceId && connector.workspaceId !== requestedWorkspaceId) {
         return NextResponse.json({ error: "Connector not found." }, { status: 404 });
     }
 
@@ -43,7 +47,11 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
     const { id } = await params;
     const connector = connectorStore.get(id);
+    const requestedWorkspaceId = new URL(request.url).searchParams.get("workspaceId");
     if (!connector || connector.tenantId !== user.company) {
+        return NextResponse.json({ error: "Connector not found." }, { status: 404 });
+    }
+    if (requestedWorkspaceId && connector.workspaceId !== requestedWorkspaceId) {
         return NextResponse.json({ error: "Connector not found." }, { status: 404 });
     }
 
@@ -79,7 +87,11 @@ export async function DELETE(request: Request, { params }: RouteParams) {
 
     const { id } = await params;
     const connector = connectorStore.get(id);
+    const requestedWorkspaceId = new URL(request.url).searchParams.get("workspaceId");
     if (!connector || connector.tenantId !== user.company) {
+        return NextResponse.json({ error: "Connector not found." }, { status: 404 });
+    }
+    if (requestedWorkspaceId && connector.workspaceId !== requestedWorkspaceId) {
         return NextResponse.json({ error: "Connector not found." }, { status: 404 });
     }
 

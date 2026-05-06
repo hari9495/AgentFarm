@@ -70,3 +70,37 @@ KPI:
 
 ## Sprint Exit Decision
 Proceed to Sprint 3 only when all Sprint 2 stories meet acceptance criteria and all Sprint 2 KPIs are instrumented and reportable.
+
+## Implementation Closure (2026-05-06)
+
+### Story Status
+
+| Story | Status | Acceptance Criteria Result | Evidence |
+| --- | --- | --- | --- |
+| S2-1 Shadow Mode for safe adoption | Completed | All criteria met | apps/agent-runtime/src/local-workspace-executor.ts, apps/agent-runtime/src/local-workspace-executor.test.ts |
+| S2-2 Monorepo impact awareness | Completed | All criteria met | apps/agent-runtime/src/local-workspace-executor.ts, apps/agent-runtime/src/local-workspace-executor.test.ts |
+| S2-3 Escalation with what-if options | Completed | All criteria met | apps/agent-runtime/src/runtime-server.ts, apps/agent-runtime/src/runtime-server.test.ts, apps/api-gateway/src/routes/approvals.ts, apps/dashboard/app/components/approval-queue-panel.tsx |
+| S2-4 Weekly quality and ROI report | Completed | All criteria met | apps/agent-runtime/src/runtime-server.ts, apps/agent-runtime/src/runtime-server.test.ts, apps/dashboard/app/api/runtime/[botId]/weekly-quality-roi/route.ts, apps/dashboard/app/components/runtime-observability-panel.tsx |
+
+### KPI Instrumentation And Reportability
+
+| KPI | Instrumented | Reportable | Current Status | Source |
+| --- | --- | --- | --- | --- |
+| S2-1.1 Shadow participation across pilot teams >= 10 teams | Yes | Yes | Shadow report contract is live and queryable in dry-run output | apps/agent-runtime/src/local-workspace-executor.ts |
+| S2-1.2 Shadow-to-active conversion >= 30 percent | Yes | Yes | Shadow and human outcome comparison fields are emitted for adoption analytics | apps/agent-runtime/src/local-workspace-executor.ts |
+| S2-1.3 Critical incident rate in shadow = 0 | Yes | Yes | Shadow mode executes without mutation and emits risk notes for review | apps/agent-runtime/src/local-workspace-executor.ts |
+| S2-2.1 Impact prediction precision >= 75 percent | Yes | Yes | Predicted package and recommended test set fields are emitted per report | apps/agent-runtime/src/local-workspace-executor.ts |
+| S2-2.2 Unanticipated downstream failures reduced by 20 percent | Yes | Yes | Reviewer feedback captures unexpected failures for tracking | apps/agent-runtime/src/local-workspace-executor.ts |
+| S2-2.3 Reviewer confidence score >= 4.0 out of 5 | Yes | Yes | Reviewer rating field is captured in impact report output | apps/agent-runtime/src/local-workspace-executor.ts |
+| S2-3.1 High-risk approval turnaround improves by 20 percent | Yes | Yes | What-if options are included in approval summary and decision payload | apps/agent-runtime/src/runtime-server.ts, apps/api-gateway/src/routes/approvals.ts |
+| S2-3.2 Denials due to insufficient context reduced by 30 percent | Yes | Yes | Tradeoff-aware option metadata is included in high-risk escalation context | apps/agent-runtime/src/runtime-server.ts |
+| S2-3.3 Post-approval rework reduced by 15 percent | Yes | Yes | Chosen option ID is captured and surfaced in decision response/UI | apps/api-gateway/src/routes/approvals.ts, apps/dashboard/app/components/approval-queue-panel.tsx |
+| S2-4.1 Weekly report generation success = 100 percent | Yes | Yes | Scheduled and manual generation paths are covered by regression tests | apps/agent-runtime/src/runtime-server.test.ts |
+| S2-4.2 Stakeholder report consumption rate >= 80 percent | Yes | Yes | Weekly report is exposed through dashboard runtime API and UI panel | apps/dashboard/app/api/runtime/[botId]/weekly-quality-roi/route.ts, apps/dashboard/app/components/runtime-observability-panel.tsx |
+| S2-4.3 Demonstrated cycle time improvement >= 15 percent by end of sprint | Yes | Yes | Completion quality/rework/latency and time-saved categories are included in report schema | apps/agent-runtime/src/runtime-server.ts |
+
+### Sprint Exit Decision (Final)
+
+Sprint 2 Adoption And Reliability Scale is accepted and closed.
+
+Decision: Proceed to Sprint 3.

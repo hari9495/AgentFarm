@@ -1127,7 +1127,7 @@ export default async function HomePage({
                     </header>
 
                     <Suspense fallback={null}>
-                        <DashboardTabNav activeTab={activeTab} variant="top" workspaceId={workspace.workspace_id} />
+                        <DashboardTabNav activeTab={activeTab} variant="top" syncFromStorage workspaceId={workspace.workspace_id} />
                     </Suspense>
                     <Suspense fallback={null}>
                         <DashboardDeepLinkBar activeTab={activeTab} workspaceId={workspace.workspace_id} />

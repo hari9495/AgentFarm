@@ -53,9 +53,20 @@ export function DashboardWorkspaceSwitcher({
 
     useEffect(() => {
         const storageKey = getDashboardWorkspaceStorageKey();
+        const tabFromUrl = searchParams.get('tab');
 
         if (searchParams.get('workspaceId')) {
             window.localStorage.setItem(storageKey, activeWorkspaceId);
+
+            if (
+                tabFromUrl === 'overview'
+                || tabFromUrl === 'approvals'
+                || tabFromUrl === 'observability'
+                || tabFromUrl === 'audit'
+                || tabFromUrl === 'marketplace'
+            ) {
+                window.localStorage.setItem(getDashboardTabStorageKey(activeWorkspaceId), tabFromUrl);
+            }
 
             if (syncFromStorage && !searchParams.get('tab')) {
                 const tabKey = getDashboardTabStorageKey(activeWorkspaceId);

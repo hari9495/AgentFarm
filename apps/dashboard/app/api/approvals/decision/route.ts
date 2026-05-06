@@ -6,6 +6,7 @@ type DecisionPayload = {
     workspace_id?: string;
     decision?: 'approved' | 'rejected' | 'timeout_rejected' | string;
     reason?: string;
+    selected_option_id?: string;
 };
 
 const getApiBaseUrl = (): string => process.env.DASHBOARD_API_BASE_URL ?? 'http://localhost:3000';
@@ -26,6 +27,7 @@ export async function POST(request: Request) {
     const workspaceId = payload.workspace_id?.trim();
     const decision = typeof payload.decision === 'string' ? payload.decision.trim() : '';
     const reason = payload.reason?.trim();
+    const selectedOptionId = payload.selected_option_id?.trim();
 
     if (!approvalId || !workspaceId || !decision) {
         return NextResponse.json(
@@ -52,6 +54,7 @@ export async function POST(request: Request) {
             workspace_id: workspaceId,
             decision,
             reason,
+            selected_option_id: selectedOptionId,
         }),
         cache: 'no-store',
     });

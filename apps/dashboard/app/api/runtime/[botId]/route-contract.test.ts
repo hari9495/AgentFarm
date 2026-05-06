@@ -11,6 +11,7 @@ import {
     buildMarketplaceSkillsRouteContract,
     buildMarketplaceTelemetryRouteContract,
     buildMarketplaceUninstallRouteContract,
+    buildWeeklyQualityRoiRouteContract,
     buildLogsRouteContract,
     buildStateRouteContract,
     buildTranscriptsRouteContract,
@@ -142,4 +143,21 @@ test('buildMarketplaceCatalogDeleteRouteContract creates DELETE request shape', 
     assert.equal(contract.requestInit.method, 'DELETE');
     assert.deepEqual(contract.requestInit.headers, {});
     assert.equal(contract.requestInit.cache, undefined);
+});
+
+test('buildWeeklyQualityRoiRouteContract defaults to latest report without generation trigger', () => {
+    const contract = buildWeeklyQualityRoiRouteContract('http://localhost:3001/api/runtime/bot-1/weekly-quality-roi');
+
+    assert.equal(contract.upstreamUrl, 'http://localhost:8080/runtime/reports/weekly-quality-roi');
+    assert.equal(contract.requestInit.cache, 'no-store');
+    assert.deepEqual(contract.requestInit.headers, {});
+    assert.equal(contract.requestInit.method, undefined);
+});
+
+test('buildWeeklyQualityRoiRouteContract forwards generate=true query', () => {
+    const contract = buildWeeklyQualityRoiRouteContract('http://localhost:3001/api/runtime/bot-1/weekly-quality-roi?generate=true');
+
+    assert.equal(contract.upstreamUrl, 'http://localhost:8080/runtime/reports/weekly-quality-roi?generate=true');
+    assert.equal(contract.requestInit.cache, 'no-store');
+    assert.deepEqual(contract.requestInit.headers, {});
 });

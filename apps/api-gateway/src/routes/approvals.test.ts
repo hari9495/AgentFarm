@@ -793,6 +793,67 @@ test('decision endpoint sends runtime /decision webhook with task context when e
         assert.equal(webhookCalls[0]?.runtimeToken, 'runtime-shared-token');
         assert.equal(webhookCalls[0]?.taskId, 'task_webhook_1');
         assert.equal(webhookCalls[0]?.decision, 'approved');
+        assert.equal(webhookCalls[0]?.selectedOptionId, null);
+    } finally {
+        await app.close();
+    }
+});
+
+test('decision endpoint forwards selected_option_id to runtime webhook and response', async () => {
+    const app = Fastify();
+    const fake = createRepo();
+
+    const approval: StoredApproval = {
+        id: 'apr_decide_selected_option',
+        tenantId: 'tenant_1',
+        workspaceId: 'ws_1',
+        botId: 'bot_1',
+        taskId: 'task_selected_option_1',
+        actionId: 'act_selected_option_1',
+        riskLevel: 'high',
+        actionSummary: 'Merge release branch with staged option',
+        requestedBy: 'runtime:bot_1',
+        policyPackVersion: 'mvp-v1',
+        escalationTimeoutSeconds: 3600,
+        decision: 'pending',
+        createdAt: new Date(Date.now() - 10_000),
+        escalatedAt: null,
+    };
+    fake.approvals.set(approval.id, approval);
+    fake.runtimeEndpoints.set('tenant_1:ws_1:bot_1', 'http://runtime.bot.local');
+
+    const webhookCalls: Array<Record<string, unknown>> = [];
+
+    await registerApprovalRoutes(app, {
+        getSession: () => session(),
+        repo: fake.repo,
+        decisionWebhookNotifier: async (input) => {
+            webhookCalls.push(input as unknown as Record<string, unknown>);
+            return {
+                ok: true,
+                statusCode: 200,
+            };
+        },
+    });
+
+    try {
+        const response = await app.inject({
+            method: 'POST',
+            url: '/v1/approvals/apr_decide_selected_option/decision',
+            payload: {
+                workspace_id: 'ws_1',
+                decision: 'approved',
+                reason: 'Approved with staged rollout.',
+                selected_option_id: 'staged_safe_rollout',
+            },
+        });
+
+        assert.equal(response.statusCode, 200);
+        const body = response.json() as { selected_option_id?: string | null };
+        assert.equal(body.selected_option_id, 'staged_safe_rollout');
+
+        assert.equal(webhookCalls.length, 1);
+        assert.equal(webhookCalls[0]?.selectedOptionId, 'staged_safe_rollout');
     } finally {
         await app.close();
     }

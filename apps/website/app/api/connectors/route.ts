@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
-import { getSessionUser } from "@/lib/auth-store";
+import { getSessionUser, listWorkspaceBotsForUser } from "@/lib/auth-store";
 import { connectorStore } from "@/lib/connector-store";
 import {
     CONNECTOR_REGISTRY,
     type ConnectorTool,
     type ConnectorCategory,
     type TenantConnector,
+    type AgentRoleKey,
 } from "@agentfarm/connector-contracts";
 import crypto from "crypto";
 
@@ -20,6 +21,61 @@ function getCookieValue(cookieHeader: string | null, name: string): string | nul
     return cookie ? decodeURIComponent(cookie.slice(name.length + 1)) : null;
 }
 
+type WorkspaceBotContext = {
+    workspaceId: string;
+    workspaceName: string;
+    roleType: AgentRoleKey | string;
+    botId: string;
+    botName: string;
+    botStatus: string;
+    policyPackVersion: string;
+};
+
+const resolveWorkspaceBotContext = (input: {
+    userId: string;
+    requestedWorkspaceId: string | null;
+    requestedBotId: string | null;
+}): {
+    selected: WorkspaceBotContext;
+    all: WorkspaceBotContext[];
+} | null => {
+    const options = listWorkspaceBotsForUser(input.userId).map((item) => ({
+        workspaceId: item.workspaceId,
+        workspaceName: item.workspaceName,
+        roleType: item.roleType,
+        botId: item.botId,
+        botName: item.botName,
+        botStatus: item.botStatus,
+        policyPackVersion: item.policyPackVersion,
+    }));
+
+    if (options.length === 0) {
+        return null;
+    }
+
+    let selected = options[0];
+
+    if (input.requestedWorkspaceId || input.requestedBotId) {
+        const exact = options.find((option) => {
+            const workspaceMatch = input.requestedWorkspaceId ? option.workspaceId === input.requestedWorkspaceId : true;
+            const botMatch = input.requestedBotId ? option.botId === input.requestedBotId : true;
+            return workspaceMatch && botMatch;
+        });
+        if (exact) {
+            selected = exact;
+        }
+    }
+
+    return { selected, all: options };
+};
+
+const isConnectorAllowedForRole = (roleType: string, tool: ConnectorTool): boolean => {
+    const definition = CONNECTOR_REGISTRY.find((item) => item.tool === tool);
+    if (!definition) return false;
+    if (!definition.allowedRoles || definition.allowedRoles.length === 0) return true;
+    return definition.allowedRoles.includes(roleType as AgentRoleKey);
+};
+
 // ── GET /api/connectors — list connectors for the current workspace ────────
 export async function GET(request: Request) {
     const token = getCookieValue(request.headers.get("cookie"), COOKIE_NAME);
@@ -30,13 +86,30 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const category = searchParams.get("category") as ConnectorCategory | null;
+    const requestedWorkspaceId = searchParams.get("workspaceId");
+    const requestedBotId = searchParams.get("botId");
+
+    const context = resolveWorkspaceBotContext({
+        userId: user.id,
+        requestedWorkspaceId,
+        requestedBotId,
+    });
+
+    if (!context) {
+        return NextResponse.json({ error: "No workspace or bot context found for user." }, { status: 404 });
+    }
+
+    const selectedRole = context.selected.roleType;
 
     // Return both: what they have configured + the full registry they can add
     const tenantConnectors = Array.from(connectorStore.values()).filter(
-        (c) => c.tenantId === user.company
+        (c) => c.tenantId === user.company && c.workspaceId === context.selected.workspaceId
     );
 
-    const available = CONNECTOR_REGISTRY.filter((def) =>
+    const allowedDefinitions = CONNECTOR_REGISTRY.filter((def) => isConnectorAllowedForRole(selectedRole, def.tool));
+    const hiddenDefinitionCount = CONNECTOR_REGISTRY.length - allowedDefinitions.length;
+
+    const available = allowedDefinitions.filter((def) =>
         category ? def.category === category : true
     ).map((def) => ({
         tool: def.tool,
@@ -56,6 +129,14 @@ export async function GET(request: Request) {
         status: "ok",
         configured: tenantConnectors,
         available,
+        context: {
+            selectedWorkspaceId: context.selected.workspaceId,
+            selectedBotId: context.selected.botId,
+            selectedRoleKey: selectedRole,
+            selectedPolicyPackVersion: context.selected.policyPackVersion,
+            options: context.all,
+            disallowed_tools_hidden_count: hiddenDefinitionCount,
+        },
     });
 }
 
@@ -74,6 +155,7 @@ export async function POST(request: Request) {
         authMethod?: string;
         configValues?: Record<string, string>;
         workspaceId?: string;
+        botId?: string;
     };
 
     try {
@@ -90,6 +172,25 @@ export async function POST(request: Request) {
         return NextResponse.json(
             { error: `Unknown tool: ${tool}. Check GET /api/connectors for supported tools.` },
             { status: 400 }
+        );
+    }
+
+    const context = resolveWorkspaceBotContext({
+        userId: user.id,
+        requestedWorkspaceId: body.workspaceId ?? null,
+        requestedBotId: body.botId ?? null,
+    });
+    if (!context) {
+        return NextResponse.json({ error: "No workspace or bot context found for user." }, { status: 404 });
+    }
+
+    if (!isConnectorAllowedForRole(context.selected.roleType, tool)) {
+        return NextResponse.json(
+            {
+                error: `Tool '${tool}' is not allowed for role '${context.selected.roleType}'.`,
+                selected_role: context.selected.roleType,
+            },
+            { status: 403 },
         );
     }
 
@@ -121,7 +222,7 @@ export async function POST(request: Request) {
     const connector: TenantConnector = {
         connectorId,
         tenantId: user.company,
-        workspaceId: body.workspaceId ?? "default",
+        workspaceId: context.selected.workspaceId,
         tool,
         category: definition.category,
         displayName: body.displayName?.trim() || definition.displayName,
@@ -149,6 +250,11 @@ export async function POST(request: Request) {
         {
             status: "ok",
             connector,
+            context: {
+                selectedWorkspaceId: context.selected.workspaceId,
+                selectedBotId: context.selected.botId,
+                selectedRoleKey: context.selected.roleType,
+            },
             nextStep:
                 definition.authMethod === "oauth2"
                     ? { action: "oauth", oauthInitUrl, message: "Visit oauthInitUrl to complete authentication." }

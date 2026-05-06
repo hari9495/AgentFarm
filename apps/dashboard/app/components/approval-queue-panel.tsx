@@ -30,6 +30,12 @@ type ApprovalItem = {
     requested_at: string;
     decided_at: string | null;
     decision_reason: string | null;
+    selected_option_id?: string | null;
+};
+
+type WhatIfOption = {
+    optionId: string;
+    summary: string;
 };
 
 type Props = {
@@ -78,7 +84,28 @@ const getApprovalSearchText = (approval: ApprovalItem): string => {
         approval.proposed_rollback ?? '',
         approval.lint_status ?? '',
         approval.test_status ?? '',
+        approval.selected_option_id ?? '',
     ].join(' ').toLowerCase();
+};
+
+const parseWhatIfOptions = (actionSummary: string): WhatIfOption[] => {
+    const lines = actionSummary.split(/\r?\n/);
+    const options: WhatIfOption[] = [];
+
+    for (const line of lines) {
+        const match = line.match(/Option\s+\d+\s*\(([^)]+)\):\s*(.+)$/i);
+        if (!match) {
+            continue;
+        }
+        const optionId = (match[1] ?? '').trim();
+        const summary = (match[2] ?? '').trim();
+        if (!optionId) {
+            continue;
+        }
+        options.push({ optionId, summary });
+    }
+
+    return options;
 };
 
 const getQualityStatus = (approval: ApprovalItem): string => {
@@ -102,6 +129,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
     const [pendingSort, setPendingSort] = useState<SortValue>('risk_desc');
     const [savedView, setSavedView] = useState<SavedView>('all');
     const [selectedApprovals, setSelectedApprovals] = useState<Record<string, boolean>>({});
+    const [selectedOptionByApproval, setSelectedOptionByApproval] = useState<Record<string, string>>({});
     const [bulkDecision, setBulkDecision] = useState<DecisionValue | null>(null);
     const [bulkReason, setBulkReason] = useState('Bulk decision confirmed by operations triage run.');
     const [bulkBusy, setBulkBusy] = useState(false);
@@ -269,6 +297,9 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
 
     const submitDecision = async (approval: ApprovalItem, decision: DecisionValue) => {
         const reason = (reasonByApproval[approval.approval_id] ?? '').trim();
+        const selectedOptionId = decision === 'approved'
+            ? (selectedOptionByApproval[approval.approval_id]?.trim() || undefined)
+            : undefined;
         if ((decision === 'rejected' || decision === 'timeout_rejected') && !reason) {
             setMessage('Reason is required for rejected and timeout decisions.');
             return;
@@ -286,6 +317,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                     workspace_id: workspaceId,
                     decision,
                     reason,
+                    selected_option_id: selectedOptionId,
                 }),
             });
 
@@ -295,6 +327,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                 decided_at?: string;
                 decision_reason?: string | null;
                 decision?: string;
+                selected_option_id?: string | null;
             };
 
             if (!response.ok) {
@@ -307,6 +340,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                 decision_status: body.decision ?? decision,
                 decided_at: body.decided_at ?? new Date().toISOString(),
                 decision_reason: body.decision_reason ?? (reason || null),
+                selected_option_id: body.selected_option_id ?? selectedOptionId ?? null,
             };
 
             setPending((prev) => prev.filter((item) => item.approval_id !== approval.approval_id));
@@ -318,6 +352,11 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                 p95_decision_latency_seconds: computedP95Latency,
             }));
             setReasonByApproval((prev) => ({ ...prev, [approval.approval_id]: '' }));
+            setSelectedOptionByApproval((prev) => {
+                const next = { ...prev };
+                delete next[approval.approval_id];
+                return next;
+            });
             setMessage(`Decision recorded for ${approval.approval_id}.`);
         } finally {
             setBusyByApproval((prev) => ({ ...prev, [approval.approval_id]: false }));
@@ -345,6 +384,9 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
 
         let processed = 0;
         for (const approval of selected) {
+            const selectedOptionId = bulkDecision === 'approved'
+                ? (selectedOptionByApproval[approval.approval_id]?.trim() || undefined)
+                : undefined;
             const response = await fetch('/api/approvals/decision', {
                 method: 'POST',
                 headers: { 'content-type': 'application/json' },
@@ -353,6 +395,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                     workspace_id: workspaceId,
                     decision: bulkDecision,
                     reason: bulkReason.trim(),
+                    selected_option_id: selectedOptionId,
                 }),
             });
 
@@ -364,6 +407,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                 decided_at?: string;
                 decision_reason?: string | null;
                 decision?: string;
+                selected_option_id?: string | null;
             };
 
             const moved: ApprovalItem = {
@@ -371,6 +415,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                 decision_status: body.decision ?? bulkDecision,
                 decided_at: body.decided_at ?? new Date().toISOString(),
                 decision_reason: body.decision_reason ?? bulkReason.trim(),
+                selected_option_id: body.selected_option_id ?? selectedOptionId ?? null,
             };
 
             processed += 1;
@@ -385,6 +430,13 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
             p95_decision_latency_seconds: computedP95Latency,
         }));
         setSelectedApprovals({});
+        setSelectedOptionByApproval((prev) => {
+            const next = { ...prev };
+            for (const approval of selected) {
+                delete next[approval.approval_id];
+            }
+            return next;
+        });
         setBulkDecision(null);
         setBulkBusy(false);
         setMessage(`Bulk decision completed for ${processed} approvals.`);
@@ -629,6 +681,10 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                     ) : (
                         pagedPending.map((approval) => {
                             const busy = busyByApproval[approval.approval_id] === true;
+                            const whatIfOptions = parseWhatIfOptions(approval.action_summary);
+                            const selectedOptionValue = selectedOptionByApproval[approval.approval_id]
+                                ?? approval.selected_option_id
+                                ?? '';
                             return (
                                 <tr
                                     key={approval.approval_id}
@@ -718,6 +774,27 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                                 ))}
                                             </select>
                                             <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+                                                {whatIfOptions.length > 0 && (
+                                                    <select
+                                                        value={selectedOptionValue}
+                                                        onChange={(event) => {
+                                                            const value = event.target.value;
+                                                            setSelectedOptionByApproval((prev) => ({
+                                                                ...prev,
+                                                                [approval.approval_id]: value,
+                                                            }));
+                                                        }}
+                                                        className="approval-select"
+                                                        aria-label="Select what-if option"
+                                                    >
+                                                        <option value="">No option selected</option>
+                                                        {whatIfOptions.map((option) => (
+                                                            <option key={option.optionId} value={option.optionId}>
+                                                                {option.optionId}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                )}
                                                 <button
                                                     type="button"
                                                     disabled={busy}
@@ -793,6 +870,11 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                             <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center', flexWrap: 'wrap' }}>
                                                 {approval.packet_complete && approval.impacted_scope && (
                                                     <span style={{ fontSize: '0.78rem', color: '#57534e' }}>{approval.impacted_scope}</span>
+                                                )}
+                                                {approval.selected_option_id && (
+                                                    <span style={{ fontSize: '0.78rem', color: '#57534e' }}>
+                                                        Option: {approval.selected_option_id}
+                                                    </span>
                                                 )}
                                                 <button
                                                     type="button"
@@ -948,6 +1030,12 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                         <div>
                                             <strong>Decision Reason</strong>
                                             <p style={{ margin: '0.2rem 0 0', color: '#44403c' }}>{selectedApproval.decision_reason}</p>
+                                        </div>
+                                    )}
+                                    {selectedApproval.selected_option_id && (
+                                        <div>
+                                            <strong>Selected What-If Option</strong>
+                                            <p style={{ margin: '0.2rem 0 0', color: '#44403c' }}>{selectedApproval.selected_option_id}</p>
                                         </div>
                                     )}
                                     {selectedApproval.change_summary && selectedApproval.change_summary !== selectedApproval.action_summary && (

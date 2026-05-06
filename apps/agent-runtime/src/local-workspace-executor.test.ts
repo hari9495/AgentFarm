@@ -314,6 +314,153 @@ test('workspace_memory_read returns empty object when memory file does not exist
     assert.equal(readResult.output, '{}');
 });
 
+test('workspace_memory_promote_request and decision enforce controlled org-memory promotion', async () => {
+    const tenantId = 'tenant-local';
+    const botId = 'bot-local';
+    const taskId = 'task-mem-promote-1';
+    const workspaceKey = 'repo-mem-promote-1';
+
+    await executeLocalWorkspaceAction({
+        tenantId,
+        botId,
+        taskId,
+        actionType: 'workspace_memory_write',
+        payload: {
+            workspace_key: workspaceKey,
+            key: 'release_playbook',
+            value: {
+                summary: 'Run quality gate before release',
+                checks: ['typecheck', 'tests', 'smoke'],
+            },
+        },
+    });
+
+    const promoteReq = await executeLocalWorkspaceAction({
+        tenantId,
+        botId,
+        taskId,
+        actionType: 'workspace_memory_promote_request',
+        payload: {
+            workspace_key: workspaceKey,
+            key: 'release_playbook',
+        },
+    });
+    assert.equal(promoteReq.ok, true);
+    const reqBody = JSON.parse(promoteReq.output) as { request_id: string; status: string; review_required: boolean };
+    assert.equal(reqBody.status, 'pending');
+    assert.equal(reqBody.review_required, true);
+
+    const orgBeforeApproval = await executeLocalWorkspaceAction({
+        tenantId,
+        botId,
+        taskId,
+        actionType: 'workspace_memory_org_read',
+        payload: {
+            workspace_key: workspaceKey,
+            key: 'release_playbook',
+        },
+    });
+    assert.equal(orgBeforeApproval.ok, true);
+    assert.equal(JSON.parse(orgBeforeApproval.output).length, 0);
+
+    const rejectDecision = await executeLocalWorkspaceAction({
+        tenantId,
+        botId,
+        taskId,
+        actionType: 'workspace_memory_promote_decide',
+        payload: {
+            workspace_key: workspaceKey,
+            request_id: reqBody.request_id,
+            decision: 'rejected',
+            reason: 'Needs clearer remediation steps.',
+        },
+    });
+    assert.equal(rejectDecision.ok, true);
+    const rejectBody = JSON.parse(rejectDecision.output) as { status: string; remediation_guidance: string };
+    assert.equal(rejectBody.status, 'rejected');
+    assert.ok(rejectBody.remediation_guidance.includes('resubmit'));
+
+    const secondReq = await executeLocalWorkspaceAction({
+        tenantId,
+        botId,
+        taskId,
+        actionType: 'workspace_memory_promote_request',
+        payload: {
+            workspace_key: workspaceKey,
+            key: 'release_playbook',
+        },
+    });
+    assert.equal(secondReq.ok, true);
+    const secondBody = JSON.parse(secondReq.output) as { request_id: string };
+
+    const approveDecision = await executeLocalWorkspaceAction({
+        tenantId,
+        botId,
+        taskId,
+        actionType: 'workspace_memory_promote_decide',
+        payload: {
+            workspace_key: workspaceKey,
+            request_id: secondBody.request_id,
+            decision: 'approved',
+            reviewer: 'governance_reviewer_1',
+        },
+    });
+    assert.equal(approveDecision.ok, true);
+    const approveBody = JSON.parse(approveDecision.output) as { status: string; reviewed_by: string };
+    assert.equal(approveBody.status, 'approved');
+    assert.equal(approveBody.reviewed_by, 'governance_reviewer_1');
+
+    const orgAfterApproval = await executeLocalWorkspaceAction({
+        tenantId,
+        botId,
+        taskId,
+        actionType: 'workspace_memory_org_read',
+        payload: {
+            workspace_key: workspaceKey,
+            key: 'release_playbook',
+        },
+    });
+    assert.equal(orgAfterApproval.ok, true);
+    const approvedEntries = JSON.parse(orgAfterApproval.output) as Array<Record<string, unknown>>;
+    assert.equal(approvedEntries.length, 1);
+    assert.equal(approvedEntries[0]?.['key'], 'release_playbook');
+    assert.equal(approvedEntries[0]?.['source_workspace_key'], workspaceKey);
+});
+
+test('workspace_memory_promote_request blocks sensitive content with remediation guidance', async () => {
+    const tenantId = 'tenant-local';
+    const botId = 'bot-local';
+    const taskId = 'task-mem-promote-2';
+    const workspaceKey = 'repo-mem-promote-2';
+
+    await executeLocalWorkspaceAction({
+        tenantId,
+        botId,
+        taskId,
+        actionType: 'workspace_memory_write',
+        payload: {
+            workspace_key: workspaceKey,
+            key: 'dangerous_pattern',
+            value: 'token=secret_value_do_not_share',
+        },
+    });
+
+    const promoteReq = await executeLocalWorkspaceAction({
+        tenantId,
+        botId,
+        taskId,
+        actionType: 'workspace_memory_promote_request',
+        payload: {
+            workspace_key: workspaceKey,
+            key: 'dangerous_pattern',
+        },
+    });
+    assert.equal(promoteReq.ok, false);
+    const rejection = JSON.parse(promoteReq.output) as { reason: string; remediation_guidance: string };
+    assert.equal(rejection.reason, 'policy_violation_sensitive_data');
+    assert.ok(rejection.remediation_guidance.includes('redact'));
+});
+
 test('autonomous_loop output includes structured JSON with attempt records', async () => {
     const tenantId = 'tenant-local';
     const botId = 'bot-local';

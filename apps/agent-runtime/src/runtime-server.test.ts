@@ -281,11 +281,14 @@ test('tasks intake rejects before startup and accepts after startup with process
 });
 
 test('task lease claim supports idempotent retries and conflict protection', async () => {
+    const env = baseEnv();
+    env.AF_ENFORCE_TASK_LEASE = 'true';
+
     const app = buildRuntimeServer({
-        env: baseEnv(),
+        env,
         closeOnKill: false,
         dependencyProbe: async () => true,
-        workerPollMs: 20,
+        workerPollMs: 1_000,
     });
 
     try {
@@ -342,11 +345,14 @@ test('task lease claim supports idempotent retries and conflict protection', asy
 });
 
 test('task lease renew and release lifecycle works with lease validation', async () => {
+    const env = baseEnv();
+    env.AF_ENFORCE_TASK_LEASE = 'true';
+
     const app = buildRuntimeServer({
-        env: baseEnv(),
+        env,
         closeOnKill: false,
         dependencyProbe: async () => true,
-        workerPollMs: 20,
+        workerPollMs: 1_000,
     });
 
     try {
@@ -411,11 +417,14 @@ test('task lease renew and release lifecycle works with lease validation', async
 });
 
 test('lease claim race allows exactly one winner across 10 concurrent attempts', async () => {
+    const env = baseEnv();
+    env.AF_ENFORCE_TASK_LEASE = 'true';
+
     const app = buildRuntimeServer({
-        env: baseEnv(),
+        env,
         closeOnKill: false,
         dependencyProbe: async () => true,
-        workerPollMs: 20,
+        workerPollMs: 1_000,
     });
 
     try {

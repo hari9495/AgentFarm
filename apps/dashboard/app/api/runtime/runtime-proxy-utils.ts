@@ -67,3 +67,8 @@ export const buildMarketplaceCatalogDeleteUrl = (baseUrl: string, skillId: strin
 );
 
 export const buildMarketplaceInvokeUrl = (baseUrl: string): string => `${baseUrl}/runtime/marketplace/invoke`;
+
+export const buildWeeklyQualityRoiUrl = (baseUrl: string, generate: boolean): string => {
+    const suffix = generate ? '?generate=true' : '';
+    return `${baseUrl}/runtime/reports/weekly-quality-roi${suffix}`;
+};

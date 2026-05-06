@@ -133,6 +133,17 @@ export type CustomerBotRecord = {
     createdAt: number;
 };
 
+export type WorkspaceBotContextRecord = {
+    tenantId: string;
+    workspaceId: string;
+    workspaceName: string;
+    roleType: string;
+    botId: string;
+    botName: string;
+    botStatus: CustomerBotStatus;
+    policyPackVersion: string;
+};
+
 export type ProvisioningJobStatus =
     | "queued"
     | "validating"
@@ -2941,6 +2952,46 @@ export const getProvisioningStatusForUser = (userId: string): {
     const provisioningJob = jobRow ? mapProvisioningQueueEntry(jobRow) : null;
 
     return { tenant, workspace, bot, provisioningJob };
+};
+
+export const listWorkspaceBotsForUser = (userId: string): WorkspaceBotContextRecord[] => {
+    const userRow = db
+        .prepare(`SELECT tenant_id FROM users WHERE id = ?`)
+        .get(userId) as Record<string, unknown> | undefined;
+    const tenantId = userRow?.tenant_id ? String(userRow.tenant_id) : null;
+
+    if (!tenantId) {
+        return [];
+    }
+
+    const rows = db
+        .prepare(
+            `SELECT
+                w.tenant_id,
+                w.id AS workspace_id,
+                w.workspace_name,
+                w.role_type,
+                b.id AS bot_id,
+                b.bot_name,
+                b.bot_status,
+                b.policy_pack_version
+             FROM customer_workspaces w
+             JOIN customer_bots b ON b.workspace_id = w.id
+             WHERE w.tenant_id = ?
+             ORDER BY w.created_at ASC, b.created_at ASC`,
+        )
+        .all(tenantId) as Record<string, unknown>[];
+
+    return rows.map((row) => ({
+        tenantId: String(row.tenant_id),
+        workspaceId: String(row.workspace_id),
+        workspaceName: String(row.workspace_name),
+        roleType: String(row.role_type),
+        botId: String(row.bot_id),
+        botName: String(row.bot_name),
+        botStatus: String(row.bot_status) as CustomerBotStatus,
+        policyPackVersion: String(row.policy_pack_version),
+    }));
 };
 
 export const processProvisioningQueue = (input?: {

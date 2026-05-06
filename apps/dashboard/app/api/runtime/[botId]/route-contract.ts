@@ -7,6 +7,7 @@ import {
     buildMarketplaceCatalogUpsertUrl,
     buildMarketplaceInstallUrl,
     buildMarketplaceInvokeUrl,
+    buildWeeklyQualityRoiUrl,
     buildMarketplaceSkillsUrl,
     buildMarketplaceTelemetryUrl,
     buildMarketplaceUninstallUrl,
@@ -163,3 +164,16 @@ export const buildMarketplaceInvokeRouteContract = (body: unknown): RouteContrac
         body: JSON.stringify(body),
     },
 });
+
+export const buildWeeklyQualityRoiRouteContract = (requestUrl: string): RouteContract => {
+    const { searchParams } = new URL(requestUrl);
+    const generate = searchParams.get('generate') === 'true';
+
+    return {
+        upstreamUrl: buildWeeklyQualityRoiUrl(getRuntimeBaseUrl(), generate),
+        requestInit: {
+            headers: buildUpstreamHeaders(),
+            cache: 'no-store',
+        },
+    };
+};

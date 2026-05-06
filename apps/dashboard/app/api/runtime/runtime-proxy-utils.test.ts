@@ -14,6 +14,7 @@ import {
     buildLogsUrl,
     buildStateHistoryUrl,
     buildTranscriptsUrl,
+    buildWeeklyQualityRoiUrl,
     buildUpstreamHeaders,
     DEFAULT_RUNTIME_BASE_URL,
     getRuntimeBaseUrl,
@@ -77,4 +78,6 @@ test('build url helpers encode query values correctly', () => {
     assert.equal(buildMarketplaceTelemetryUrl(baseUrl, '90'), 'http://localhost:8080/runtime/marketplace/telemetry?limit=90');
     assert.equal(buildMarketplaceCatalogUpsertUrl(baseUrl), 'http://localhost:8080/runtime/marketplace/catalog/skills');
     assert.equal(buildMarketplaceCatalogDeleteUrl(baseUrl, 'skill/one'), 'http://localhost:8080/runtime/marketplace/catalog/skills/skill%2Fone');
+    assert.equal(buildWeeklyQualityRoiUrl(baseUrl, false), 'http://localhost:8080/runtime/reports/weekly-quality-roi');
+    assert.equal(buildWeeklyQualityRoiUrl(baseUrl, true), 'http://localhost:8080/runtime/reports/weekly-quality-roi?generate=true');
 });

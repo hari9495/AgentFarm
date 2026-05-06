@@ -30,6 +30,25 @@ interface AvailableConnector {
     connected: boolean;
 }
 
+interface WorkspaceBotOption {
+    workspaceId: string;
+    workspaceName: string;
+    roleType: string;
+    botId: string;
+    botName: string;
+    botStatus: string;
+    policyPackVersion: string;
+}
+
+interface ConnectorContext {
+    selectedWorkspaceId: string;
+    selectedBotId: string;
+    selectedRoleKey: string;
+    selectedPolicyPackVersion: string;
+    disallowed_tools_hidden_count: number;
+    options: WorkspaceBotOption[];
+}
+
 interface ConfiguredConnector {
     connectorId: string;
     tool: string;
@@ -84,10 +103,14 @@ function ConnectorIcon({ tool, size = 32 }: { tool: string; size?: number }) {
 // ── Add Connector Modal ────────────────────────────────────────────────────
 function AddConnectorModal({
     connector,
+    workspaceId,
+    botId,
     onClose,
     onAdded,
 }: {
     connector: AvailableConnector;
+    workspaceId: string | null;
+    botId: string | null;
     onClose: () => void;
     onAdded: () => void;
 }) {
@@ -110,6 +133,8 @@ function AddConnectorModal({
                     tool: connector.tool,
                     displayName,
                     configValues,
+                    workspaceId,
+                    botId,
                 }),
             });
             const json = await res.json();
@@ -340,23 +365,46 @@ function AvailableCard({
 export default function ConnectorsPage() {
     const [configured, setConfigured] = useState<ConfiguredConnector[]>([]);
     const [available, setAvailable] = useState<AvailableConnector[]>([]);
+    const [context, setContext] = useState<ConnectorContext | null>(null);
     const [loading, setLoading] = useState(true);
     const [activeCategory, setActiveCategory] = useState<ConnectorCategory | "all">("all");
     const [addingConnector, setAddingConnector] = useState<AvailableConnector | null>(null);
     const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+
+    const selectedWorkspaceId = context?.selectedWorkspaceId ?? null;
+    const selectedBotId = context?.selectedBotId ?? null;
+
+    const getSelectedWorkspaceBot = (): WorkspaceBotOption | null => {
+        if (!context) return null;
+        return (
+            context.options.find((option) => option.workspaceId === context.selectedWorkspaceId && option.botId === context.selectedBotId)
+            ?? context.options[0]
+            ?? null
+        );
+    };
 
     function showToast(message: string, type: "success" | "error" = "success") {
         setToast({ message, type });
         setTimeout(() => setToast(null), 3500);
     }
 
-    async function loadConnectors() {
+    async function loadConnectors(scope?: { workspaceId?: string | null; botId?: string | null }) {
         try {
-            const res = await fetch("/api/connectors");
+            const workspaceId = scope?.workspaceId ?? selectedWorkspaceId;
+            const botId = scope?.botId ?? selectedBotId;
+            const params = new URLSearchParams();
+            if (workspaceId) params.set("workspaceId", workspaceId);
+            if (botId) params.set("botId", botId);
+
+            const endpoint = params.size > 0 ? `/api/connectors?${params.toString()}` : "/api/connectors";
+            const res = await fetch(endpoint);
             if (res.ok) {
                 const data = await res.json();
                 setConfigured(data.configured ?? []);
                 setAvailable(data.available ?? []);
+                if (data.context) {
+                    setContext(data.context as ConnectorContext);
+                }
             }
         } catch {
             // silent
@@ -366,12 +414,39 @@ export default function ConnectorsPage() {
     }
 
     useEffect(() => {
-        loadConnectors();
+        const storedBotSelection = window.localStorage.getItem("agentfarm_connectors_selected_bot");
+        if (!storedBotSelection) {
+            void loadConnectors();
+            return;
+        }
+
+        try {
+            const parsed = JSON.parse(storedBotSelection) as { workspaceId?: string; botId?: string };
+            void loadConnectors({ workspaceId: parsed.workspaceId ?? null, botId: parsed.botId ?? null });
+        } catch {
+            void loadConnectors();
+        }
     }, []);
+
+    useEffect(() => {
+        if (!selectedWorkspaceId || !selectedBotId) return;
+        window.localStorage.setItem(
+            "agentfarm_connectors_selected_bot",
+            JSON.stringify({ workspaceId: selectedWorkspaceId, botId: selectedBotId }),
+        );
+    }, [selectedWorkspaceId, selectedBotId]);
+
+    const handleScopeChange = (value: string) => {
+        const [workspaceId, botId] = value.split("::");
+        if (!workspaceId || !botId) return;
+        void loadConnectors({ workspaceId, botId });
+    };
 
     async function handleRemove(connectorId: string, name: string) {
         if (!confirm(`Remove "${name}"? Your agent will lose access to this tool.`)) return;
-        const res = await fetch(`/api/connectors/${connectorId}`, { method: "DELETE" });
+        const params = new URLSearchParams();
+        if (selectedWorkspaceId) params.set("workspaceId", selectedWorkspaceId);
+        const res = await fetch(`/api/connectors/${connectorId}${params.size > 0 ? `?${params.toString()}` : ""}`, { method: "DELETE" });
         if (res.ok) {
             showToast(`"${name}" removed.`);
             await loadConnectors();
@@ -381,7 +456,9 @@ export default function ConnectorsPage() {
     }
 
     async function handleHealthCheck(connectorId: string) {
-        const res = await fetch(`/api/connectors/${connectorId}/health`, { method: "POST" });
+        const params = new URLSearchParams();
+        if (selectedWorkspaceId) params.set("workspaceId", selectedWorkspaceId);
+        const res = await fetch(`/api/connectors/${connectorId}/health${params.size > 0 ? `?${params.toString()}` : ""}`, { method: "POST" });
         const json = await res.json();
         if (json.healthy) {
             showToast(json.message ?? "Connector is healthy.");
@@ -432,6 +509,8 @@ export default function ConnectorsPage() {
             {addingConnector && (
                 <AddConnectorModal
                     connector={addingConnector}
+                    workspaceId={selectedWorkspaceId}
+                    botId={selectedBotId}
                     onClose={() => setAddingConnector(null)}
                     onAdded={() => {
                         showToast(`${addingConnector.displayName} added successfully.`);
@@ -481,6 +560,48 @@ export default function ConnectorsPage() {
                         Connect your tools so your agent can work across your entire stack. Your agent's logic stays the same — only the connector changes.
                     </p>
                 </div>
+
+                {context && context.options.length > 0 && (
+                    <section className="bg-white rounded-xl border border-gray-200 p-4">
+                        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                            <div>
+                                <p className="text-sm font-semibold text-gray-900">Bot-scoped integration context</p>
+                                <p className="text-xs text-gray-500 mt-0.5">
+                                    This catalog is filtered by selected bot role and policy.
+                                </p>
+                            </div>
+                            <select
+                                value={`${context.selectedWorkspaceId}::${context.selectedBotId}`}
+                                onChange={(event) => handleScopeChange(event.target.value)}
+                                className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                                aria-label="Select workspace bot"
+                            >
+                                {context.options.map((option) => (
+                                    <option key={`${option.workspaceId}::${option.botId}`} value={`${option.workspaceId}::${option.botId}`}>
+                                        {option.workspaceName} - {option.botName}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        {(() => {
+                            const selected = getSelectedWorkspaceBot();
+                            if (!selected) return null;
+                            return (
+                                <div className="mt-3 grid grid-cols-1 gap-2 text-xs text-gray-600 sm:grid-cols-3">
+                                    <p>
+                                        Role key: <span className="font-semibold text-gray-800">{context.selectedRoleKey}</span>
+                                    </p>
+                                    <p>
+                                        Policy pack: <span className="font-semibold text-gray-800">{selected.policyPackVersion}</span>
+                                    </p>
+                                    <p>
+                                        Hidden disallowed integrations: <span className="font-semibold text-gray-800">{context.disallowed_tools_hidden_count}</span>
+                                    </p>
+                                </div>
+                            );
+                        })()}
+                    </section>
+                )}
 
                 {/* Connected tools summary */}
                 {configured.length > 0 && (

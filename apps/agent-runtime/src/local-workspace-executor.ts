@@ -148,6 +148,9 @@ export type LocalWorkspaceActionType =
     | 'workspace_diff'
     | 'workspace_memory_write'
     | 'workspace_memory_read'
+    | 'workspace_memory_promote_request'
+    | 'workspace_memory_promote_decide'
+    | 'workspace_memory_org_read'
     | 'run_shell_command'
     | 'create_pr_from_workspace';
 
@@ -488,6 +491,9 @@ export const LOCAL_WORKSPACE_ACTION_TYPES = new Set<LocalWorkspaceActionType>([
     'workspace_diff',
     'workspace_memory_write',
     'workspace_memory_read',
+    'workspace_memory_promote_request',
+    'workspace_memory_promote_decide',
+    'workspace_memory_org_read',
     'run_shell_command',
     'create_pr_from_workspace',
 ]);
@@ -2462,6 +2468,220 @@ export async function executeLocalWorkspaceAction(input: {
                     return { ok: true, output: val !== undefined ? JSON.stringify(val) : '' };
                 }
                 return { ok: true, output: JSON.stringify(memory, null, 2) };
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: String(err) };
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_memory_promote_request: submit project memory for org-level promotion
+        // payload: { key }
+        // ------------------------------------------------------------------
+        case 'workspace_memory_promote_request': {
+            const memKey = typeof payload['key'] === 'string' ? payload['key'].trim() : '';
+            if (!memKey) {
+                return { ok: false, output: '', errorOutput: 'payload.key is required for workspace_memory_promote_request.' };
+            }
+
+            try {
+                const memPath = safeChildPath(workspaceDir, '.agentfarm/memory.json');
+                const storePath = safeChildPath(workspaceDir, '.agentfarm/org-memory-store.json');
+                await mkdir(dirname(storePath), { recursive: true });
+
+                let memory: Record<string, unknown> = {};
+                try {
+                    memory = JSON.parse(await readFile(memPath, 'utf-8')) as Record<string, unknown>;
+                } catch {
+                    return { ok: false, output: '', errorOutput: 'No project memory found to promote.' };
+                }
+
+                if (!(memKey in memory)) {
+                    return { ok: false, output: '', errorOutput: `Memory key '${memKey}' not found.` };
+                }
+
+                const candidate = memory[memKey];
+                const candidateRaw = JSON.stringify(candidate);
+                const policyViolation = /(api[_-]?key|secret|token|password|private[_-]?key)/i.test(candidateRaw);
+                if (policyViolation) {
+                    return {
+                        ok: false,
+                        output: JSON.stringify({
+                            status: 'rejected',
+                            reason: 'policy_violation_sensitive_data',
+                            remediation_guidance: 'Remove or redact sensitive values before requesting promotion.',
+                        }),
+                    };
+                }
+
+                const requestId = `orgmem_req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+                const requestedAt = new Date().toISOString();
+
+                let store: {
+                    requests: Array<Record<string, unknown>>;
+                    approved: Array<Record<string, unknown>>;
+                } = { requests: [], approved: [] };
+                try {
+                    store = JSON.parse(await readFile(storePath, 'utf-8')) as {
+                        requests: Array<Record<string, unknown>>;
+                        approved: Array<Record<string, unknown>>;
+                    };
+                } catch {
+                    // no existing store
+                }
+
+                store.requests.push({
+                    request_id: requestId,
+                    workspace_key: workspaceKey,
+                    key: memKey,
+                    value: candidate,
+                    status: 'pending',
+                    policy_status: 'passed',
+                    requested_at: requestedAt,
+                    requested_by_task_id: input.taskId,
+                });
+
+                await writeFile(storePath, JSON.stringify(store, null, 2), 'utf-8');
+                return {
+                    ok: true,
+                    output: JSON.stringify({
+                        request_id: requestId,
+                        status: 'pending',
+                        policy_status: 'passed',
+                        review_required: true,
+                    }),
+                };
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: String(err) };
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_memory_promote_decide: reviewer decision on org-memory promotion request
+        // payload: { request_id, decision: 'approved'|'rejected', reviewer, reason? }
+        // ------------------------------------------------------------------
+        case 'workspace_memory_promote_decide': {
+            const requestId = typeof payload['request_id'] === 'string' ? payload['request_id'].trim() : '';
+            const decision = typeof payload['decision'] === 'string' ? payload['decision'].trim() : '';
+            const reviewer = typeof payload['reviewer'] === 'string' ? payload['reviewer'].trim() : '';
+            const reason = typeof payload['reason'] === 'string' ? payload['reason'].trim() : '';
+
+            if (!requestId || (decision !== 'approved' && decision !== 'rejected')) {
+                return {
+                    ok: false,
+                    output: '',
+                    errorOutput: 'payload.request_id and payload.decision (approved|rejected) are required for workspace_memory_promote_decide.',
+                };
+            }
+            if (decision === 'approved' && !reviewer) {
+                return { ok: false, output: '', errorOutput: 'payload.reviewer is required when decision=approved.' };
+            }
+            if (decision === 'rejected' && !reason) {
+                return { ok: false, output: '', errorOutput: 'payload.reason is required when decision=rejected.' };
+            }
+
+            try {
+                const storePath = safeChildPath(workspaceDir, '.agentfarm/org-memory-store.json');
+                let store: {
+                    requests: Array<Record<string, unknown>>;
+                    approved: Array<Record<string, unknown>>;
+                } = { requests: [], approved: [] };
+
+                try {
+                    store = JSON.parse(await readFile(storePath, 'utf-8')) as {
+                        requests: Array<Record<string, unknown>>;
+                        approved: Array<Record<string, unknown>>;
+                    };
+                } catch {
+                    return { ok: false, output: '', errorOutput: 'No promotion requests found.' };
+                }
+
+                const requestRecord = store.requests.find((entry) => entry['request_id'] === requestId);
+                if (!requestRecord) {
+                    return { ok: false, output: '', errorOutput: `Promotion request '${requestId}' not found.` };
+                }
+                if (requestRecord['status'] !== 'pending') {
+                    return { ok: false, output: '', errorOutput: `Promotion request '${requestId}' is already resolved.` };
+                }
+                if (requestRecord['policy_status'] !== 'passed') {
+                    return { ok: false, output: '', errorOutput: `Promotion request '${requestId}' did not pass policy checks.` };
+                }
+
+                const decidedAt = new Date().toISOString();
+                requestRecord['status'] = decision;
+                requestRecord['reviewed_by'] = reviewer || null;
+                requestRecord['decided_at'] = decidedAt;
+                requestRecord['decision_reason'] = reason || null;
+
+                if (decision === 'approved') {
+                    store.approved.push({
+                        org_memory_id: `orgmem_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+                        source_request_id: requestId,
+                        key: requestRecord['key'],
+                        value: requestRecord['value'],
+                        source_workspace_key: requestRecord['workspace_key'],
+                        promoted_by: reviewer,
+                        promoted_at: decidedAt,
+                        provenance: {
+                            requested_at: requestRecord['requested_at'],
+                            requested_by_task_id: requestRecord['requested_by_task_id'],
+                        },
+                    });
+                }
+
+                await writeFile(storePath, JSON.stringify(store, null, 2), 'utf-8');
+                if (decision === 'approved') {
+                    return {
+                        ok: true,
+                        output: JSON.stringify({
+                            request_id: requestId,
+                            status: 'approved',
+                            reviewed_by: reviewer,
+                            decided_at: decidedAt,
+                        }),
+                    };
+                }
+
+                return {
+                    ok: true,
+                    output: JSON.stringify({
+                        request_id: requestId,
+                        status: 'rejected',
+                        reason,
+                        remediation_guidance: 'Refine the pattern, remove sensitive content, and resubmit for review.',
+                        decided_at: decidedAt,
+                    }),
+                };
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: String(err) };
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_memory_org_read: read approved org memory entries
+        // payload: { key? }
+        // ------------------------------------------------------------------
+        case 'workspace_memory_org_read': {
+            const readKey = typeof payload['key'] === 'string' ? payload['key'].trim() : '';
+            try {
+                const storePath = safeChildPath(workspaceDir, '.agentfarm/org-memory-store.json');
+                let store: {
+                    requests: Array<Record<string, unknown>>;
+                    approved: Array<Record<string, unknown>>;
+                } = { requests: [], approved: [] };
+
+                try {
+                    store = JSON.parse(await readFile(storePath, 'utf-8')) as {
+                        requests: Array<Record<string, unknown>>;
+                        approved: Array<Record<string, unknown>>;
+                    };
+                } catch {
+                    return { ok: true, output: '[]' };
+                }
+
+                const approved = readKey
+                    ? store.approved.filter((entry) => entry['key'] === readKey)
+                    : store.approved;
+                return { ok: true, output: JSON.stringify(approved, null, 2) };
             } catch (err) {
                 return { ok: false, output: '', errorOutput: String(err) };
             }

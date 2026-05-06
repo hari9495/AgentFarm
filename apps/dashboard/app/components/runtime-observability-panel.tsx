@@ -91,6 +91,30 @@ type Props = {
     initialHealth: RuntimeHealthSnapshot;
 };
 
+type WeeklyQualityRoiReport = {
+    reportId: string;
+    generatedAt: string;
+    periodStartedAt: string;
+    periodEndedAt: string;
+    trigger: 'manual' | 'scheduled';
+    completion_quality_pct: number;
+    rework_rate_pct: number;
+    approval_latency_ms: number;
+    audit_completeness_pct: number;
+    time_saved_by_task_category: Array<{
+        category: string;
+        estimated_minutes_saved: number;
+    }>;
+};
+
+type WeeklyQualityRoiResponse = {
+    cadence_ms: number;
+    report_count: number;
+    last_generated_at: string | null;
+    period_started_at: string;
+    report: WeeklyQualityRoiReport | null;
+};
+
 const STATE_COLORS: Record<string, string> = {
     created: '#6366f1',
     starting: '#f59e0b',
@@ -155,6 +179,8 @@ export function RuntimeObservabilityPanel({
     const [currentState, setCurrentState] = useState<string>(initialCurrentState);
     const [health, setHealth] = useState<RuntimeHealthSnapshot>(initialHealth);
     const [workspaceActions, setWorkspaceActions] = useState<string[]>([]);
+    const [weeklyRoiReport, setWeeklyRoiReport] = useState<WeeklyQualityRoiResponse | null>(null);
+    const [weeklyRoiBusy, setWeeklyRoiBusy] = useState(false);
 
     const [logFilter, setLogFilter] = useState<string>('');
     const [showDetails, setShowDetails] = useState<Record<number, boolean>>({});
@@ -174,13 +200,14 @@ export function RuntimeObservabilityPanel({
 
     const refresh = useCallback(async () => {
         try {
-            const [logsRes, stateRes, healthRes, capabilityRes, transcriptsRes, interviewEventsRes] = await Promise.all([
+            const [logsRes, stateRes, healthRes, capabilityRes, transcriptsRes, interviewEventsRes, weeklyRoiRes] = await Promise.all([
                 fetch(`/api/runtime/${encodeURIComponent(botId)}/logs?limit=50`),
                 fetch(`/api/runtime/${encodeURIComponent(botId)}/state?limit=20`),
                 fetch(`/api/runtime/${encodeURIComponent(botId)}/health`),
                 fetch(`/api/runtime/${encodeURIComponent(botId)}/capability`),
                 fetch(`/api/runtime/${encodeURIComponent(botId)}/transcripts?limit=50`),
                 fetch(`/api/runtime/${encodeURIComponent(botId)}/interview-events?limit=200`),
+                fetch(`/api/runtime/${encodeURIComponent(botId)}/weekly-quality-roi`),
             ]);
 
             if (logsRes.ok) {
@@ -211,11 +238,36 @@ export function RuntimeObservabilityPanel({
                 const interviewData = (await interviewEventsRes.json()) as { events?: RuntimeInterviewEventEntry[] };
                 setInterviewEvents(interviewData.events ?? []);
             }
+            if (weeklyRoiRes.ok) {
+                const weeklyRoiData = (await weeklyRoiRes.json()) as WeeklyQualityRoiResponse;
+                setWeeklyRoiReport(weeklyRoiData);
+            }
 
             setLastRefreshed(new Date());
             setRefreshError(null);
         } catch {
             setRefreshError('Failed to reach runtime.');
+        }
+    }, [botId]);
+
+    const generateWeeklyRoiReport = useCallback(async () => {
+        setWeeklyRoiBusy(true);
+        try {
+            const response = await fetch(`/api/runtime/${encodeURIComponent(botId)}/weekly-quality-roi?generate=true`);
+            if (!response.ok) {
+                const body = (await response.json().catch(() => ({}))) as { message?: string; error?: string };
+                setRefreshError(body.message ?? body.error ?? 'Unable to generate weekly ROI report.');
+                return;
+            }
+
+            const payload = (await response.json()) as WeeklyQualityRoiResponse;
+            setWeeklyRoiReport(payload);
+            setLastRefreshed(new Date());
+            setRefreshError(null);
+        } catch {
+            setRefreshError('Unable to generate weekly ROI report.');
+        } finally {
+            setWeeklyRoiBusy(false);
         }
     }, [botId]);
 
@@ -557,6 +609,65 @@ export function RuntimeObservabilityPanel({
                                     </div>
                                 ))}
                             </div>
+                        </>
+                    )}
+                </div>
+
+                <div className="obs-section">
+                    <div className="obs-log-toolbar">
+                        <p className="obs-section-title" style={{ marginBottom: 0 }}>
+                            Weekly quality and ROI report
+                        </p>
+                        <button
+                            type="button"
+                            className="chip-button"
+                            disabled={weeklyRoiBusy}
+                            onClick={() => void generateWeeklyRoiReport()}
+                        >
+                            {weeklyRoiBusy ? 'Generating…' : 'Generate now'}
+                        </button>
+                    </div>
+
+                    {!weeklyRoiReport?.report && (
+                        <p className="obs-muted-empty">No weekly report generated yet.</p>
+                    )}
+
+                    {weeklyRoiReport?.report && (
+                        <>
+                            <div className="obs-metrics-grid" style={{ marginTop: '0.5rem' }}>
+                                <div>
+                                    <p className="obs-metric-label">Completion quality</p>
+                                    <p className="obs-metric-value">{weeklyRoiReport.report.completion_quality_pct}%</p>
+                                </div>
+                                <div>
+                                    <p className="obs-metric-label">Rework rate</p>
+                                    <p className="obs-metric-value">{weeklyRoiReport.report.rework_rate_pct}%</p>
+                                </div>
+                                <div>
+                                    <p className="obs-metric-label">Approval latency</p>
+                                    <p className="obs-metric-value">{weeklyRoiReport.report.approval_latency_ms}ms</p>
+                                </div>
+                                <div>
+                                    <p className="obs-metric-label">Audit completeness</p>
+                                    <p className="obs-metric-value">{weeklyRoiReport.report.audit_completeness_pct}%</p>
+                                </div>
+                            </div>
+
+                            <p className="obs-muted-empty" style={{ marginTop: '0.45rem' }}>
+                                Trigger: {weeklyRoiReport.report.trigger} · reports: {weeklyRoiReport.report_count} · last generated:{' '}
+                                {weeklyRoiReport.last_generated_at ? formatTs(weeklyRoiReport.last_generated_at) : 'n/a'}
+                            </p>
+
+                            {weeklyRoiReport.report.time_saved_by_task_category.length > 0 && (
+                                <div className="obs-transition-list" style={{ maxHeight: '8rem', overflowY: 'auto' }}>
+                                    {weeklyRoiReport.report.time_saved_by_task_category.map((item) => (
+                                        <div key={item.category} className="obs-transition-item">
+                                            <span className="obs-transition-to" style={{ color: '#1d4ed8' }}>{item.category}</span>
+                                            <span className="obs-muted-empty">{item.estimated_minutes_saved} min saved</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </>
                     )}
                 </div>
