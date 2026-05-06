@@ -6,6 +6,15 @@ AgentFarm is a TypeScript pnpm monorepo that delivers a production-grade AI agen
 
 **Sprint 1 status: 24/24 local tasks completed. Quality gate: PASS (47 checks, 46 passing, 1 skipped: DB smoke lane). Sprint 2 features: 10/10 built and tested (2026-05-04).**
 
+## Current Build Status (2026-05-06)
+
+1. Sprint 6 hardening is completed and documented in `planning/sprints/sprint-6-hardening-quality-gate-and-release-readiness.md`.
+2. Connector scope behavior now fails fast for invalid workspace/bot requests (HTTP 400) with expanded regression coverage.
+3. Latest full quality gate result is PASS:
+  - Started: 2026-05-06T18:03:49.440Z
+  - Ended: 2026-05-06T18:08:14.659Z
+  - Source: `operations/quality/8.1-quality-gate-report.md`
+
 ---
 
 ## Full Documentation
@@ -283,3 +292,6 @@ Quality gate after Sprint 2: **EXIT_CODE=0 — PASS** (47 checks, 46 pass, 1 ski
 
 <!-- doc-sync: 2026-05-06 sprint-6 -->
 > Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
+
+<!-- doc-sync: 2026-05-06 full-pass-2 -->
+> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).

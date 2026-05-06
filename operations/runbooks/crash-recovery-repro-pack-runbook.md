@@ -196,3 +196,6 @@ pnpm --filter @agentfarm/api-gateway exec tsx --test src/routes/sprint4-integrat
 
 <!-- doc-sync: 2026-05-06 sprint-6 -->
 > Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
+
+<!-- doc-sync: 2026-05-06 full-pass-2 -->
+> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
