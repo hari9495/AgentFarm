@@ -160,7 +160,7 @@ export const buildOrchestratorServer = async (
     const routineSchedulerState: RoutineSchedulerState | undefined = loadedState?.routineScheduler;
     const taskScheduler = options.taskScheduler ?? new TaskScheduler(taskSchedulerState);
     const routineScheduler = options.routineScheduler ?? new RoutineScheduler(routineSchedulerState);
-    const handoffManager = new AgentHandoffManager();
+    const handoffManager = new AgentHandoffManager(loadedState?.agentHandoffs);
     const app = Fastify({ logger: false });
 
     const persistSchedulers = async (): Promise<void> => {
@@ -168,6 +168,7 @@ export const buildOrchestratorServer = async (
             version: 1,
             taskScheduler: taskScheduler.exportState(),
             routineScheduler: routineScheduler.exportState(),
+            agentHandoffs: handoffManager.exportState(),
         };
         await stateStore.save(payload);
     };
@@ -316,6 +317,10 @@ export const buildOrchestratorServer = async (
             contractVersion: CONTRACT_VERSIONS.AGENT_HANDOFF,
         });
 
+        if (!(await persistOrFail(reply))) {
+            return;
+        }
+
         return reply.code(201).send({ handoff: record });
     });
 
@@ -367,6 +372,10 @@ export const buildOrchestratorServer = async (
                 error: 'not_found',
                 message: 'handoff not found',
             });
+        }
+
+        if (!(await persistOrFail(reply))) {
+            return;
         }
 
         return reply.code(200).send({ handoff: updated });

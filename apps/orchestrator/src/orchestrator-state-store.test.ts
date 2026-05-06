@@ -37,6 +37,9 @@ const sampleState = (): OrchestratorPersistedState => ({
         schedulerErrors: [],
         proactiveSignals: [],
     },
+    agentHandoffs: {
+        handoffs: [],
+    },
 });
 
 test('FileOrchestratorStateStore saves and loads state', async () => {

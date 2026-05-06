@@ -54,5 +54,6 @@ Monorepo quality gate:
 
 - This week is additive and scoped to dashboard API proxy reliability.
 - The fallback contracts now make workspace-tab smoke behavior deterministic when local upstream services are unavailable.
+- Deferred scaffold-only items tracked from this period were completed in Sprint 8 Week 1: `planning/sprints/sprint-8-durable-handoff-and-evaluator-loop-week-1.md`.
 
 <!-- doc-sync: 2026-05-06 sprint-7-week-5 -->

@@ -56,15 +56,20 @@ Use the following documents when planning the next implementation wave after MVP
 5. planning/sprints/sprint-1-trust-and-execution-core.md
 6. planning/sprints/sprint-2-adoption-and-reliability-scale.md
 7. planning/sprints/sprint-3-memory-and-compliance-packaging.md
+8. planning/sprints/sprint-8-durable-handoff-and-evaluator-loop-week-1.md
 
 Planning guardrail:
 1. Any item that expands scope beyond the current MVP role/integration boundaries must be explicitly approved through architecture and safety governance before implementation starts.
 
 ---
 
-## Implementation Status (as of 2026-05-04)
+## Implementation Status (as of 2026-05-06)
 
-All MVP items above are built and tested. Quality gate: **EXIT_CODE=0 — PASS** (47 checks, 46 passing).
+All MVP items above are built and tested. Quality gate: **EXIT_CODE=0 PASS**.
+
+Latest incremental hardening delivered:
+1. Durable orchestrator persistence for agent handoff records across restarts.
+2. Runtime evaluator feedback loop wiring (outbound webhook + existing evaluator signal ingestion endpoint).
 
 ### Sprint 2 Features Built Beyond MVP Scope
 
@@ -73,7 +78,7 @@ The following features were built as Sprint 2 open-source-inspired additions:
 | Feature | Status | Notes |
 |---------|--------|-------|
 | Messaging gateway (Telegram/Slack/Discord/Webhook) | **Built** | notification-service, 31 tests |
-| Voice notification channel (VoxCPM/VoIP) | **Built** | voice-adapter.ts — previously listed as "Not Included in MVP" |
+| Voice notification channel (VoxCPM/VoIP) | **Built** | voice-adapter.ts ï¿½ previously listed as "Not Included in MVP" |
 | GOAP A* goal planner | **Built** | orchestrator/goap-planner.ts |
 | SSE task stream with auto-recovery | **Built** | api-gateway/routes/sse-tasks.ts |
 | Skills crystallization (Hermes Agent pattern) | **Built** | agent-runtime/skills-registry.ts |

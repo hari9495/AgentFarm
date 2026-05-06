@@ -13,8 +13,26 @@ type CreateHandoffInput = {
     contractVersion: string;
 };
 
+export type AgentHandoffManagerState = {
+    handoffs: AgentHandoffRecord[];
+};
+
 export class AgentHandoffManager {
     private readonly handoffs = new Map<string, AgentHandoffRecord>();
+
+    constructor(initialState?: AgentHandoffManagerState) {
+        if (initialState) {
+            for (const record of initialState.handoffs) {
+                this.handoffs.set(record.id, record);
+            }
+        }
+    }
+
+    exportState(): AgentHandoffManagerState {
+        return {
+            handoffs: Array.from(this.handoffs.values()),
+        };
+    }
 
     createHandoff(input: CreateHandoffInput): AgentHandoffRecord {
         const timestamp = new Date().toISOString();

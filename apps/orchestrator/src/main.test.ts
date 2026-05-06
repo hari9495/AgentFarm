@@ -423,3 +423,58 @@ test('orchestrator persists wake and schedule state across server restarts', asy
         await rm(tempDir, { recursive: true, force: true });
     }
 });
+
+test('orchestrator persists agent handoffs across server restarts', async () => {
+    const tempDir = await mkdtemp(join(tmpdir(), 'agentfarm-orchestrator-handoff-'));
+    const statePath = join(tempDir, 'state.json');
+
+    const appOne = await buildOrchestratorServer({ statePath });
+
+    let handoffId = '';
+
+    try {
+        const createResp = await appOne.inject({
+            method: 'POST',
+            url: '/v1/agent-handoffs',
+            payload: {
+                tenant_id: 'tenant-persist-h',
+                workspace_id: 'ws-persist-h',
+                task_id: 'task-persist-h-1',
+                from_bot_id: 'bot-alpha',
+                to_bot_id: 'bot-beta',
+                reason: 'durable handoff test',
+                correlation_id: 'corr-persist-h-1',
+            },
+        });
+        assert.equal(createResp.statusCode, 201);
+        handoffId = (createResp.json() as { handoff: { id: string } }).handoff.id;
+
+        // Update to accepted before restart
+        const updateResp = await appOne.inject({
+            method: 'POST',
+            url: `/v1/agent-handoffs/${handoffId}/status`,
+            payload: { status: 'accepted' },
+        });
+        assert.equal(updateResp.statusCode, 200);
+    } finally {
+        await appOne.close();
+    }
+
+    // Restart — handoff must survive
+    const appTwo = await buildOrchestratorServer({ statePath });
+
+    try {
+        const listResp = await appTwo.inject({
+            method: 'GET',
+            url: '/v1/agent-handoffs?workspace_id=ws-persist-h',
+        });
+        assert.equal(listResp.statusCode, 200);
+        const listBody = listResp.json() as { count: number; handoffs: Array<{ id: string; status: string }> };
+        assert.equal(listBody.count, 1);
+        assert.equal(listBody.handoffs[0]?.id, handoffId);
+        assert.equal(listBody.handoffs[0]?.status, 'accepted');
+    } finally {
+        await appTwo.close();
+        await rm(tempDir, { recursive: true, force: true });
+    }
+});

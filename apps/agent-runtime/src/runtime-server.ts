@@ -59,6 +59,10 @@ import {
     type QualitySignalSource,
     recordQualitySignal,
 } from './llm-quality-tracker.js';
+import {
+    fireEvaluatorWebhook,
+    resolveEvaluatorWebhookUrl,
+} from './evaluator-webhook.js';
 
 type RuntimeMemoryStore = {
     readMemoryForTask: (workspaceId: string, maxResults?: number) => Promise<{
@@ -3513,6 +3517,30 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             taskId: task.taskId,
             correlationId: config.correlationId,
         });
+
+        const evaluatorWebhookUrl = resolveEvaluatorWebhookUrl(process.env);
+        if (evaluatorWebhookUrl) {
+            const runtimeBaseUrl =
+                process.env.RUNTIME_BASE_URL?.trim()
+                ?? `http://localhost:${process.env.RUNTIME_PORT ?? '4000'}`;
+            fireEvaluatorWebhook({
+                taskId: task.taskId,
+                correlationId: config.correlationId,
+                tenantId: config.tenantId,
+                workspaceId: config.workspaceId,
+                botId: config.botId,
+                provider: modelProvider,
+                actionType: result.decision.actionType,
+                executionStatus: result.status,
+                riskLevel: result.decision.riskLevel,
+                latencyMs,
+                promptTokens: result.llmExecution?.promptTokens ?? null,
+                completionTokens: result.llmExecution?.completionTokens ?? null,
+                heuristicScore: estimateLlmQualityScore(result),
+                callbackUrl: `${runtimeBaseUrl}/runtime/quality/signals`,
+                webhookUrl: evaluatorWebhookUrl,
+            });
+        }
 
         if (memoryStore) {
             memoryStore.writeMemoryAfterTask({

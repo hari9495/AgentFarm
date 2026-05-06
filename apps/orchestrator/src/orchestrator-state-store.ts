@@ -3,11 +3,13 @@ import { randomUUID } from 'node:crypto';
 import { dirname } from 'node:path';
 import type { RoutineSchedulerState } from './routine-scheduler.js';
 import type { TaskSchedulerState } from './task-scheduler.js';
+import type { AgentHandoffManagerState } from './agent-handoff-manager.js';
 
 export interface OrchestratorPersistedState {
     version: 1;
     taskScheduler: TaskSchedulerState;
     routineScheduler: RoutineSchedulerState;
+    agentHandoffs: AgentHandoffManagerState;
 }
 
 export interface OrchestratorStateStore {
@@ -98,6 +100,33 @@ const sanitizeRoutineSchedulerState = (value: unknown): RoutineSchedulerState =>
     };
 };
 
+const sanitizeAgentHandoffState = (value: unknown): AgentHandoffManagerState => {
+    if (typeof value !== 'object' || value === null) {
+        return { handoffs: [] };
+    }
+    const candidate = value as { handoffs?: unknown };
+    return {
+        handoffs: Array.isArray(candidate.handoffs)
+            ? candidate.handoffs.filter((item): item is AgentHandoffManagerState['handoffs'][number] => {
+                if (typeof item !== 'object' || item === null) return false;
+                const row = item as Record<string, unknown>;
+                return typeof row.id === 'string'
+                    && typeof row.contractVersion === 'string'
+                    && typeof row.tenantId === 'string'
+                    && typeof row.workspaceId === 'string'
+                    && typeof row.taskId === 'string'
+                    && typeof row.fromBotId === 'string'
+                    && typeof row.toBotId === 'string'
+                    && typeof row.reason === 'string'
+                    && typeof row.status === 'string'
+                    && typeof row.correlationId === 'string'
+                    && typeof row.createdAt === 'string'
+                    && typeof row.updatedAt === 'string';
+            })
+            : [],
+    };
+};
+
 export class FileOrchestratorStateStore implements OrchestratorStateStore {
     constructor(private readonly filePath: string) { }
 
@@ -108,12 +137,14 @@ export class FileOrchestratorStateStore implements OrchestratorStateStore {
                 version?: unknown;
                 taskScheduler?: unknown;
                 routineScheduler?: unknown;
+                agentHandoffs?: unknown;
             };
 
             return {
                 version: 1,
                 taskScheduler: sanitizeTaskSchedulerState(parsed.taskScheduler),
                 routineScheduler: sanitizeRoutineSchedulerState(parsed.routineScheduler),
+                agentHandoffs: sanitizeAgentHandoffState(parsed.agentHandoffs),
             };
         } catch (error) {
             const err = error as NodeJS.ErrnoException;
@@ -177,12 +208,14 @@ const parsePersistedState = (payload: string): OrchestratorPersistedState | null
             version?: unknown;
             taskScheduler?: unknown;
             routineScheduler?: unknown;
+            agentHandoffs?: unknown;
         };
 
         return {
             version: 1,
             taskScheduler: sanitizeTaskSchedulerState(parsed.taskScheduler),
             routineScheduler: sanitizeRoutineSchedulerState(parsed.routineScheduler),
+            agentHandoffs: sanitizeAgentHandoffState(parsed.agentHandoffs),
         };
     } catch {
         return null;
