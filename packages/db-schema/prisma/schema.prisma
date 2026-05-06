@@ -729,3 +729,25 @@ model ReproPack {
   @@index([tenantId, workspaceId])
   @@index([tenantId, workspaceId, runId])
 }
+
+// Frozen 2026-05-07 — Agent Memory Service (Epic A7)
+// Short-term task memory for agent context injection. 7-day TTL for recent task history.
+model AgentShortTermMemory {
+  id               String   @id @default(cuid())
+  workspaceId      String
+  tenantId         String
+  taskId           String
+  actionsTaken     Json     // string[] of action types
+  approvalOutcomes Json     // { action: string; decision: 'approved' | 'rejected'; reason?: string }[]
+  connectorsUsed   Json     // string[] of connector types
+  llmProvider      String?  // which provider made the decision
+  executionStatus  String   @default("success") // 'success' | 'approval_required' | 'failed'
+  summary          String   // brief task summary for prompt injection
+  correlationId    String
+  createdAt        DateTime @default(now())
+  expiresAt        DateTime // createdAt + 7 days; used for TTL cleanup
+
+  @@index([workspaceId, createdAt])
+  @@index([workspaceId, expiresAt])
+  @@index([tenantId])
+}

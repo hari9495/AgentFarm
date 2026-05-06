@@ -35,6 +35,7 @@ const sampleState = (): OrchestratorPersistedState => ({
             'scheduler.routine_tasks': true,
         },
         schedulerErrors: [],
+        proactiveSignals: [],
     },
 });
 
@@ -140,6 +141,7 @@ test('FileOrchestratorStateStore recovery path sanitizes malformed persisted pay
                     invalid_flag_type: 'yes',
                 },
                 schedulerErrors: [{ taskId: 42, error: 'bad', timestamp: null }],
+                proactiveSignals: [{ id: 1, signalType: 'stale_pr' }],
             },
         };
 
@@ -154,6 +156,8 @@ test('FileOrchestratorStateStore recovery path sanitizes malformed persisted pay
         assert.equal('invalid_flag_type' in (loaded?.routineScheduler.featureFlags ?? {}), false);
         // Invalid scheduler error rows are dropped during recovery sanitization.
         assert.equal(loaded?.routineScheduler.schedulerErrors.length, 0);
+        // Invalid proactive signal rows are dropped during recovery sanitization.
+        assert.equal(loaded?.routineScheduler.proactiveSignals.length, 0);
     } finally {
         await rm(tempDir, { recursive: true, force: true });
     }

@@ -8,7 +8,16 @@
  * - Scheduled runs emit same evidence/approval contracts as manual runs
  */
 
-import type { ScheduledTaskRecord, ScheduleType, ScheduledRunStatus, SchedulePolicy } from '@agentfarm/shared-types';
+import {
+    CONTRACT_VERSIONS,
+    type ProactiveSignalRecord,
+    type ProactiveSignalStatus,
+    type ProactiveSignalType,
+    type SchedulePolicy,
+    type ScheduleType,
+    type ScheduledRunStatus,
+    type ScheduledTaskRecord,
+} from '@agentfarm/shared-types';
 import { randomUUID } from 'crypto';
 
 export interface CreateScheduledTaskRequest {
@@ -24,10 +33,36 @@ export interface CreateScheduledTaskRequest {
     correlationId: string;
 }
 
+export interface ProactivePullRequestInput {
+    id: string;
+    title: string;
+    daysSinceUpdate: number;
+}
+
+export interface ProactiveTicketInput {
+    id: string;
+    title: string;
+    hoursSinceUpdate: number;
+}
+
+export interface ProactiveSignalDetectionInput {
+    tenantId: string;
+    workspaceId: string;
+    botId: string;
+    correlationId: string;
+    pullRequests?: ProactivePullRequestInput[];
+    tickets?: ProactiveTicketInput[];
+    budgetUtilizationRatio?: number;
+    stalePrThresholdDays?: number;
+    staleTicketThresholdHours?: number;
+    budgetWarningThreshold?: number;
+}
+
 export interface RoutineSchedulerState {
     scheduledTasks: ScheduledTaskRecord[];
     featureFlags: Record<string, boolean>;
     schedulerErrors: Array<{ taskId: string; error: string; timestamp: string }>;
+    proactiveSignals: ProactiveSignalRecord[];
 }
 
 export class RoutineScheduler {
@@ -35,6 +70,8 @@ export class RoutineScheduler {
     private tasksByBot = new Map<string, Set<string>>();
     private featureFlags = new Map<string, boolean>(); // Default: all disabled
     private schedulerErrors: Array<{ taskId: string; error: string; timestamp: string }> = [];
+    private proactiveSignals = new Map<string, ProactiveSignalRecord>();
+    private openSignalIdsByKey = new Map<string, string>();
 
     constructor(state?: RoutineSchedulerState) {
         if (!state) {
@@ -54,6 +91,65 @@ export class RoutineScheduler {
         }
 
         this.schedulerErrors = state.schedulerErrors.map((entry) => ({ ...entry }));
+
+        for (const signal of state.proactiveSignals) {
+            const normalized: ProactiveSignalRecord = { ...signal };
+            this.proactiveSignals.set(normalized.id, normalized);
+            if (normalized.status === 'open') {
+                this.openSignalIdsByKey.set(this.toSignalDedupeKey(normalized.signalType, normalized.workspaceId, normalized.sourceRef), normalized.id);
+            }
+        }
+    }
+
+    private toSignalDedupeKey(signalType: ProactiveSignalType, workspaceId: string, sourceRef: string): string {
+        return `${signalType}:${workspaceId}:${sourceRef}`;
+    }
+
+    private upsertSignal(input: {
+        tenantId: string;
+        workspaceId: string;
+        botId: string;
+        correlationId: string;
+        signalType: ProactiveSignalType;
+        severity: 'low' | 'medium' | 'high';
+        summary: string;
+        sourceRef: string;
+        metadata?: Record<string, unknown>;
+        nowIso: string;
+    }): ProactiveSignalRecord {
+        const key = this.toSignalDedupeKey(input.signalType, input.workspaceId, input.sourceRef);
+        const existingId = this.openSignalIdsByKey.get(key);
+        if (existingId) {
+            const existing = this.proactiveSignals.get(existingId);
+            if (existing) {
+                existing.updatedAt = input.nowIso;
+                existing.severity = input.severity;
+                existing.summary = input.summary;
+                existing.metadata = input.metadata;
+                existing.correlationId = input.correlationId;
+                return { ...existing };
+            }
+        }
+
+        const created: ProactiveSignalRecord = {
+            id: randomUUID(),
+            contractVersion: CONTRACT_VERSIONS.PROACTIVE_SIGNAL,
+            tenantId: input.tenantId,
+            workspaceId: input.workspaceId,
+            botId: input.botId,
+            signalType: input.signalType,
+            status: 'open',
+            severity: input.severity,
+            summary: input.summary,
+            sourceRef: input.sourceRef,
+            metadata: input.metadata,
+            correlationId: input.correlationId,
+            detectedAt: input.nowIso,
+            updatedAt: input.nowIso,
+        };
+        this.proactiveSignals.set(created.id, created);
+        this.openSignalIdsByKey.set(key, created.id);
+        return { ...created };
     }
 
     /**
@@ -261,11 +357,115 @@ export class RoutineScheduler {
         };
     }
 
+    async detectProactiveSignals(input: ProactiveSignalDetectionInput): Promise<ProactiveSignalRecord[]> {
+        const stalePrThresholdDays = input.stalePrThresholdDays ?? 14;
+        const staleTicketThresholdHours = input.staleTicketThresholdHours ?? 72;
+        const budgetWarningThreshold = input.budgetWarningThreshold ?? 0.8;
+        const nowIso = new Date().toISOString();
+        const detected: ProactiveSignalRecord[] = [];
+
+        for (const pr of input.pullRequests ?? []) {
+            if (pr.daysSinceUpdate < stalePrThresholdDays) {
+                continue;
+            }
+            detected.push(this.upsertSignal({
+                tenantId: input.tenantId,
+                workspaceId: input.workspaceId,
+                botId: input.botId,
+                correlationId: input.correlationId,
+                signalType: 'stale_pr',
+                severity: 'medium',
+                summary: `PR ${pr.id} is stale for ${pr.daysSinceUpdate} day(s).`,
+                sourceRef: `pr:${pr.id}`,
+                metadata: {
+                    title: pr.title,
+                    days_since_update: pr.daysSinceUpdate,
+                    threshold_days: stalePrThresholdDays,
+                },
+                nowIso,
+            }));
+        }
+
+        for (const ticket of input.tickets ?? []) {
+            if (ticket.hoursSinceUpdate < staleTicketThresholdHours) {
+                continue;
+            }
+            detected.push(this.upsertSignal({
+                tenantId: input.tenantId,
+                workspaceId: input.workspaceId,
+                botId: input.botId,
+                correlationId: input.correlationId,
+                signalType: 'stale_ticket',
+                severity: 'medium',
+                summary: `Ticket ${ticket.id} is stale for ${ticket.hoursSinceUpdate} hour(s).`,
+                sourceRef: `ticket:${ticket.id}`,
+                metadata: {
+                    title: ticket.title,
+                    hours_since_update: ticket.hoursSinceUpdate,
+                    threshold_hours: staleTicketThresholdHours,
+                },
+                nowIso,
+            }));
+        }
+
+        if (typeof input.budgetUtilizationRatio === 'number' && input.budgetUtilizationRatio >= budgetWarningThreshold) {
+            const utilizationPct = Math.round(input.budgetUtilizationRatio * 100);
+            detected.push(this.upsertSignal({
+                tenantId: input.tenantId,
+                workspaceId: input.workspaceId,
+                botId: input.botId,
+                correlationId: input.correlationId,
+                signalType: 'budget_warning',
+                severity: input.budgetUtilizationRatio >= 1 ? 'high' : 'medium',
+                summary: `Budget utilization reached ${utilizationPct}% (threshold ${Math.round(budgetWarningThreshold * 100)}%).`,
+                sourceRef: 'budget:workspace',
+                metadata: {
+                    utilization_ratio: input.budgetUtilizationRatio,
+                    warning_threshold: budgetWarningThreshold,
+                },
+                nowIso,
+            }));
+        }
+
+        return detected;
+    }
+
+    listProactiveSignals(filter?: {
+        workspaceId?: string;
+        signalType?: ProactiveSignalType;
+        status?: ProactiveSignalStatus;
+        limit?: number;
+    }): ProactiveSignalRecord[] {
+        const all = Array.from(this.proactiveSignals.values())
+            .filter((signal) => !filter?.workspaceId || signal.workspaceId === filter.workspaceId)
+            .filter((signal) => !filter?.signalType || signal.signalType === filter.signalType)
+            .filter((signal) => !filter?.status || signal.status === filter.status)
+            .sort((a, b) => b.detectedAt.localeCompare(a.detectedAt));
+
+        if (!filter?.limit || filter.limit <= 0) {
+            return all.map((signal) => ({ ...signal }));
+        }
+        return all.slice(0, filter.limit).map((signal) => ({ ...signal }));
+    }
+
+    resolveProactiveSignal(signalId: string): boolean {
+        const signal = this.proactiveSignals.get(signalId);
+        if (!signal) {
+            return false;
+        }
+
+        signal.status = 'resolved';
+        signal.updatedAt = new Date().toISOString();
+        this.openSignalIdsByKey.delete(this.toSignalDedupeKey(signal.signalType, signal.workspaceId, signal.sourceRef));
+        return true;
+    }
+
     exportState(): RoutineSchedulerState {
         return {
             scheduledTasks: Array.from(this.scheduledTasks.values()).map((task) => ({ ...task })),
             featureFlags: Object.fromEntries(this.featureFlags.entries()),
             schedulerErrors: this.schedulerErrors.map((entry) => ({ ...entry })),
+            proactiveSignals: Array.from(this.proactiveSignals.values()).map((signal) => ({ ...signal })),
         };
     }
 }

@@ -224,3 +224,72 @@ test('B4: getRecentErrors returns error log (non-blocking)', () => {
     assert.equal(errors[0].error, 'Error 2');
     assert.equal(errors[1].error, 'Error 3');
 });
+
+test('B4: detectProactiveSignals detects stale PR, stale ticket, and budget warning', async () => {
+    const scheduler = new RoutineScheduler();
+
+    const detected = await scheduler.detectProactiveSignals({
+        tenantId: 'tenant-9',
+        workspaceId: 'ws-9',
+        botId: 'bot-9',
+        correlationId: 'corr-signals-1',
+        pullRequests: [
+            { id: 'pr-1', title: 'Refactor auth', daysSinceUpdate: 20 },
+            { id: 'pr-2', title: 'Fresh PR', daysSinceUpdate: 2 },
+        ],
+        tickets: [
+            { id: 'ticket-1', title: 'Billing bug', hoursSinceUpdate: 90 },
+            { id: 'ticket-2', title: 'Fresh ticket', hoursSinceUpdate: 4 },
+        ],
+        budgetUtilizationRatio: 0.92,
+    });
+
+    assert.equal(detected.length, 3);
+    assert.equal(detected.some((signal) => signal.signalType === 'stale_pr'), true);
+    assert.equal(detected.some((signal) => signal.signalType === 'stale_ticket'), true);
+    assert.equal(detected.some((signal) => signal.signalType === 'budget_warning'), true);
+
+    const listed = scheduler.listProactiveSignals({ workspaceId: 'ws-9' });
+    assert.equal(listed.length, 3);
+});
+
+test('B4: detectProactiveSignals deduplicates open signals by source', async () => {
+    const scheduler = new RoutineScheduler();
+
+    const first = await scheduler.detectProactiveSignals({
+        tenantId: 'tenant-10',
+        workspaceId: 'ws-10',
+        botId: 'bot-10',
+        correlationId: 'corr-signals-1',
+        pullRequests: [{ id: 'pr-dedupe', title: 'Long running PR', daysSinceUpdate: 16 }],
+    });
+    const second = await scheduler.detectProactiveSignals({
+        tenantId: 'tenant-10',
+        workspaceId: 'ws-10',
+        botId: 'bot-10',
+        correlationId: 'corr-signals-2',
+        pullRequests: [{ id: 'pr-dedupe', title: 'Long running PR', daysSinceUpdate: 18 }],
+    });
+
+    assert.equal(first.length, 1);
+    assert.equal(second.length, 1);
+    assert.equal(first[0]?.id, second[0]?.id);
+    assert.equal(scheduler.listProactiveSignals({ workspaceId: 'ws-10' }).length, 1);
+});
+
+test('B4: resolveProactiveSignal marks signal resolved and removes from open filter', async () => {
+    const scheduler = new RoutineScheduler();
+    const detected = await scheduler.detectProactiveSignals({
+        tenantId: 'tenant-11',
+        workspaceId: 'ws-11',
+        botId: 'bot-11',
+        correlationId: 'corr-signals-1',
+        tickets: [{ id: 'ticket-resolve', title: 'Needs owner', hoursSinceUpdate: 100 }],
+    });
+
+    assert.equal(detected.length, 1);
+    const resolved = scheduler.resolveProactiveSignal(detected[0]!.id);
+    assert.equal(resolved, true);
+    assert.equal(scheduler.listProactiveSignals({ workspaceId: 'ws-11', status: 'open' }).length, 0);
+    assert.equal(scheduler.listProactiveSignals({ workspaceId: 'ws-11', status: 'resolved' }).length, 1);
+});

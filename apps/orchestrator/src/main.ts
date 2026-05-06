@@ -1,7 +1,7 @@
 import Fastify, { type FastifyInstance, type FastifyReply } from 'fastify';
 import { randomUUID } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
-import type { RunStatus, ScheduleType, ScheduledRunStatus, WakeSource } from '@agentfarm/shared-types';
+import type { ProactiveSignalType, RunStatus, ScheduleType, ScheduledRunStatus, WakeSource } from '@agentfarm/shared-types';
 import { TaskScheduler, type TaskSchedulerState } from './task-scheduler.js';
 import { RoutineScheduler, type RoutineSchedulerState } from './routine-scheduler.js';
 import {
@@ -112,6 +112,13 @@ const parseScheduleTerminalStatus = (value: unknown): ScheduledRunStatus | null 
 
 const parseScheduleType = (value: unknown): ScheduleType | null => {
     if (value === 'once' || value === 'hourly' || value === 'daily' || value === 'weekly' || value === 'monthly') {
+        return value;
+    }
+    return null;
+};
+
+const parseProactiveSignalType = (value: unknown): ProactiveSignalType | null => {
+    if (value === 'stale_pr' || value === 'stale_ticket' || value === 'budget_warning') {
         return value;
     }
     return null;
@@ -435,6 +442,124 @@ export const buildOrchestratorServer = async (
             ? Math.floor(parsedLimit)
             : 10;
         return { errors: routineScheduler.getRecentErrors(limit) };
+    });
+
+    app.post('/v1/proactive-signals/detect', async (request, reply) => {
+        const body = (request.body ?? {}) as Record<string, unknown>;
+        const tenantId = typeof body.tenant_id === 'string' ? body.tenant_id.trim() : '';
+        const workspaceId = typeof body.workspace_id === 'string' ? body.workspace_id.trim() : '';
+        const botId = typeof body.bot_id === 'string' ? body.bot_id.trim() : '';
+
+        if (!tenantId || !workspaceId || !botId) {
+            return reply.code(400).send({
+                error: 'invalid_request',
+                message: 'tenant_id, workspace_id, and bot_id are required.',
+            });
+        }
+
+        const correlationId = typeof body.correlation_id === 'string' && body.correlation_id.trim()
+            ? body.correlation_id.trim()
+            : `proactive_signal_${Math.floor(now())}`;
+        const pullRequests = Array.isArray(body.pull_requests)
+            ? body.pull_requests
+                .filter((row): row is { id: string; title: string; days_since_update: number } => {
+                    if (typeof row !== 'object' || row === null) {
+                        return false;
+                    }
+                    const candidate = row as Record<string, unknown>;
+                    return typeof candidate.id === 'string'
+                        && typeof candidate.title === 'string'
+                        && typeof candidate.days_since_update === 'number';
+                })
+                .map((row) => ({ id: row.id, title: row.title, daysSinceUpdate: row.days_since_update }))
+            : [];
+        const tickets = Array.isArray(body.tickets)
+            ? body.tickets
+                .filter((row): row is { id: string; title: string; hours_since_update: number } => {
+                    if (typeof row !== 'object' || row === null) {
+                        return false;
+                    }
+                    const candidate = row as Record<string, unknown>;
+                    return typeof candidate.id === 'string'
+                        && typeof candidate.title === 'string'
+                        && typeof candidate.hours_since_update === 'number';
+                })
+                .map((row) => ({ id: row.id, title: row.title, hoursSinceUpdate: row.hours_since_update }))
+            : [];
+        const budgetUtilizationRatio = typeof body.budget_utilization_ratio === 'number'
+            ? body.budget_utilization_ratio
+            : undefined;
+
+        const detected = await routineScheduler.detectProactiveSignals({
+            tenantId,
+            workspaceId,
+            botId,
+            correlationId,
+            pullRequests,
+            tickets,
+            budgetUtilizationRatio,
+            stalePrThresholdDays: typeof body.stale_pr_threshold_days === 'number' ? body.stale_pr_threshold_days : undefined,
+            staleTicketThresholdHours: typeof body.stale_ticket_threshold_hours === 'number' ? body.stale_ticket_threshold_hours : undefined,
+            budgetWarningThreshold: typeof body.budget_warning_threshold === 'number' ? body.budget_warning_threshold : undefined,
+        });
+
+        if (!(await persistOrFail(reply))) {
+            return;
+        }
+
+        return reply.code(200).send({
+            detected_count: detected.length,
+            signals: detected,
+            correlation_id: correlationId,
+        });
+    });
+
+    app.get('/v1/proactive-signals', async (request, reply) => {
+        const query = request.query as {
+            workspace_id?: string;
+            signal_type?: string;
+            status?: string;
+            limit?: string;
+        };
+        const signalType = query.signal_type ? parseProactiveSignalType(query.signal_type) : null;
+        if (query.signal_type && !signalType) {
+            return reply.code(400).send({
+                error: 'invalid_request',
+                message: 'signal_type must be stale_pr, stale_ticket, or budget_warning.',
+            });
+        }
+
+        const parsedLimit = query.limit ? Number(query.limit) : 50;
+        const limit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.floor(parsedLimit) : 50;
+        const status = query.status === 'open' || query.status === 'resolved' ? query.status : undefined;
+        const signals = routineScheduler.listProactiveSignals({
+            workspaceId: query.workspace_id,
+            signalType: signalType ?? undefined,
+            status,
+            limit,
+        });
+
+        return {
+            count: signals.length,
+            signals,
+        };
+    });
+
+    app.post('/v1/proactive-signals/:signalId/resolve', async (request, reply) => {
+        const { signalId } = request.params as { signalId: string };
+        const found = routineScheduler.resolveProactiveSignal(signalId);
+        if (!found) {
+            return reply.code(404).send({
+                error: 'signal_not_found',
+                message: 'No proactive signal exists for the provided id.',
+            });
+        }
+
+        if (!(await persistOrFail(reply))) {
+            return;
+        }
+
+        return reply.code(200).send({ signal_id: signalId, status: 'resolved' });
     });
 
     return app;

@@ -1133,6 +1133,126 @@ test('approval decision rejects unknown selected option ids', async () => {
     }
 });
 
+test('approval batch route groups pending approvals by risk and action type', async () => {
+    const app = buildRuntimeServer({
+        env: baseEnv(),
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+    });
+
+    try {
+        const startupRes = await app.inject({ method: 'POST', url: '/startup' });
+        assert.equal(startupRes.statusCode, 200);
+
+        for (const taskId of ['batch-group-1', 'batch-group-2']) {
+            const intakeRes = await app.inject({
+                method: 'POST',
+                url: '/tasks/intake',
+                payload: {
+                    task_id: taskId,
+                    payload: {
+                        action_type: 'merge_release',
+                        summary: `Queued for batch ${taskId}`,
+                        target: 'main',
+                    },
+                },
+            });
+            assert.equal(intakeRes.statusCode, 202);
+        }
+
+        await new Promise<void>((resolve) => setTimeout(resolve, 70));
+
+        const batchRes = await app.inject({ method: 'GET', url: '/decision/batches' });
+        assert.equal(batchRes.statusCode, 200);
+        const body = batchRes.json() as {
+            pending_batches: Array<{
+                batch_id: string;
+                batch_key: string;
+                risk_level: string;
+                action_type: string;
+                pending_count: number;
+                task_ids: string[];
+            }>;
+        };
+
+        const mergeBatch = body.pending_batches.find((entry) => entry.action_type === 'merge_release' && entry.risk_level === 'high');
+        assert.ok(mergeBatch);
+        assert.equal(mergeBatch?.pending_count, 2);
+        assert.ok((mergeBatch?.task_ids ?? []).includes('batch-group-1'));
+        assert.ok((mergeBatch?.task_ids ?? []).includes('batch-group-2'));
+    } finally {
+        await app.close();
+    }
+});
+
+test('approval batch decision resolves all tasks in the selected batch', async () => {
+    const app = buildRuntimeServer({
+        env: baseEnv(),
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+    });
+
+    try {
+        const startupRes = await app.inject({ method: 'POST', url: '/startup' });
+        assert.equal(startupRes.statusCode, 200);
+
+        for (const taskId of ['batch-resolve-1', 'batch-resolve-2']) {
+            const intakeRes = await app.inject({
+                method: 'POST',
+                url: '/tasks/intake',
+                payload: {
+                    task_id: taskId,
+                    payload: {
+                        action_type: 'merge_release',
+                        summary: `Resolve in batch ${taskId}`,
+                        target: 'main',
+                    },
+                },
+            });
+            assert.equal(intakeRes.statusCode, 202);
+        }
+
+        await new Promise<void>((resolve) => setTimeout(resolve, 70));
+
+        const batchRes = await app.inject({ method: 'GET', url: '/decision/batches' });
+        assert.equal(batchRes.statusCode, 200);
+        const batchBody = batchRes.json() as {
+            pending_batches: Array<{ batch_id: string; action_type: string; risk_level: string; pending_count: number }>;
+        };
+        const mergeBatch = batchBody.pending_batches.find((entry) => entry.action_type === 'merge_release' && entry.risk_level === 'high');
+        assert.ok(mergeBatch);
+
+        const decisionRes = await app.inject({
+            method: 'POST',
+            url: '/decision/batch',
+            payload: {
+                batch_id: mergeBatch?.batch_id,
+                decision: 'approved',
+                actor: 'batch_approver_1',
+                reason: 'Bulk approve related release actions',
+            },
+        });
+        assert.equal(decisionRes.statusCode, 200);
+        const decisionBody = decisionRes.json() as {
+            status: string;
+            requested_count: number;
+            resolved_count: number;
+            pending_approval_tasks: number;
+            results: Array<{ task_id: string; execution_status: string }>;
+        };
+        assert.equal(decisionBody.status, 'resolved');
+        assert.equal(decisionBody.requested_count, 2);
+        assert.equal(decisionBody.resolved_count, 2);
+        assert.equal(decisionBody.pending_approval_tasks, 0);
+        assert.equal(decisionBody.results.length, 2);
+        assert.equal(decisionBody.results.every((entry) => entry.execution_status === 'success'), true);
+    } finally {
+        await app.close();
+    }
+});
+
 test('approved decision executes deferred risky action and persists success result', async () => {
     const persisted: ActionResultRecord[] = [];
     const app = buildRuntimeServer({
@@ -1971,6 +2091,48 @@ test('startup freezes capability snapshot and exposes it via runtime endpoint', 
         assert.ok(snapshotBody.snapshot.allowedActions.includes('workspace_azure_deploy_plan'));
         assert.ok(snapshotBody.snapshot.allowedActions.includes('workspace_meeting_speak'));
         assert.ok(snapshotBody.snapshot.allowedActions.includes('workspace_meeting_interview_live'));
+    } finally {
+        await app.close();
+    }
+});
+
+test('startup resolves tester aliases and applies tester-only action guardrails', async () => {
+    const app = buildRuntimeServer({
+        env: {
+            ...baseEnv(),
+            AF_ROLE_PROFILE: 'QA Engineer',
+        },
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+    });
+
+    try {
+        const startupRes = await app.inject({ method: 'POST', url: '/startup' });
+        assert.equal(startupRes.statusCode, 200);
+        const startupBody = startupRes.json() as { role_key: string; capability_snapshot_id: string };
+        assert.equal(startupBody.role_key, 'tester');
+        assert.equal(typeof startupBody.capability_snapshot_id, 'string');
+
+        const snapshotRes = await app.inject({ method: 'GET', url: '/runtime/capability-snapshot' });
+        assert.equal(snapshotRes.statusCode, 200);
+        const snapshotBody = snapshotRes.json() as {
+            snapshot: {
+                roleKey: string;
+                allowedConnectorTools: string[];
+                allowedActions: string[];
+            };
+        };
+
+        assert.equal(snapshotBody.snapshot.roleKey, 'tester');
+        assert.deepEqual(snapshotBody.snapshot.allowedConnectorTools.sort(), ['email', 'github', 'jira', 'teams']);
+        assert.ok(snapshotBody.snapshot.allowedActions.includes('list_prs'));
+        assert.ok(snapshotBody.snapshot.allowedActions.includes('create_pr_comment'));
+        assert.ok(snapshotBody.snapshot.allowedActions.includes('run_tests'));
+        assert.ok(snapshotBody.snapshot.allowedActions.includes('workspace_code_coverage'));
+        assert.ok(!snapshotBody.snapshot.allowedActions.includes('merge_pr'));
+        assert.ok(!snapshotBody.snapshot.allowedActions.includes('code_edit_patch'));
+        assert.ok(!snapshotBody.snapshot.allowedActions.includes('workspace_bulk_refactor'));
     } finally {
         await app.close();
     }

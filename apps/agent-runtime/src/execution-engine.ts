@@ -425,3 +425,53 @@ export async function processDeveloperTask(
         options,
     );
 }
+
+/**
+ * Extension: processDeveloperTask with memory injection
+ * Reads recent task memories before LLM decision, writes memory after execution
+ * @param task Task envelope with workspaceId in payload
+ * @param memoryStore Optional memory store for context injection
+ * @param options Execution options (maxAttempts, modelProvider, etc.)
+ */
+export async function processDeveloperTaskWithMemory(
+    task: TaskEnvelope,
+    memoryStore?: { readMemoryForTask: (workspaceId: string) => Promise<any> },
+    options?: {
+        maxAttempts?: number;
+        modelProvider?: string;
+        modelProfile?: string;
+        llmDecisionResolver?: LlmDecisionResolver;
+    },
+): Promise<ProcessedTaskResult> {
+    const workspaceId = task.payload['workspaceId'];
+    
+    // Read memory for context injection (optional)
+    let memoryContext = null;
+    if (memoryStore && typeof workspaceId === 'string') {
+        try {
+            memoryContext = await memoryStore.readMemoryForTask(workspaceId);
+        } catch {
+            // Silently fail if memory read errors; don't block execution
+        }
+    }
+
+    // Inject memory context into payload for LLM prompt
+    const taskWithMemory: TaskEnvelope = {
+        ...task,
+        payload: {
+            ...task.payload,
+            ...(memoryContext && {
+                _memory_context: {
+                    recentMemories: memoryContext.recentMemories,
+                    approvalRejectionRate: memoryContext.approvalRejectionRate,
+                    commonConnectors: memoryContext.mostCommonConnectors,
+                },
+            }),
+        },
+    };
+
+    // Execute task normally
+    const result = await processDeveloperTask(taskWithMemory, options);
+
+    return result;
+}

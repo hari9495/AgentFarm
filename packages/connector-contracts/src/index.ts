@@ -164,6 +164,9 @@ export const CONNECTOR_REGISTRY: ConnectorDefinition[] = [
     logoUrl: '/icons/connectors/jira.svg',
     authMethod: 'oauth2',
     allowedRoles: TASK_ORIENTED_ROLE_KEYS,
+    defaultActionPolicyByRole: {
+      tester: ['get_task', 'list_tasks', 'add_comment', 'update_task_status', 'create_task'],
+    },
     oauthScopes: ['read:jira-work', 'write:jira-work', 'read:jira-user'],
     supportedActions: ['get_task', 'create_task', 'update_task_status', 'add_comment', 'assign_task', 'list_tasks'],
     docsUrl: 'https://developer.atlassian.com/cloud/jira/platform/oauth-2-3lo-apps/',
@@ -283,6 +286,9 @@ export const CONNECTOR_REGISTRY: ConnectorDefinition[] = [
     logoUrl: '/icons/connectors/azure-devops.svg',
     authMethod: 'oauth2',
     allowedRoles: CODE_ORIENTED_ROLE_KEYS,
+    defaultActionPolicyByRole: {
+      tester: ['add_pr_comment', 'list_prs', 'create_task', 'update_task_status'],
+    },
     oauthScopes: ['vso.code', 'vso.work_write'],
     supportedActions: ['create_pr', 'add_pr_comment', 'merge_pr', 'list_prs', 'create_task', 'update_task_status'],
     docsUrl: 'https://learn.microsoft.com/en-us/azure/devops/integrate/get-started/authentication/oauth',
@@ -414,6 +420,33 @@ export function getConnectorDefinition(tool: ConnectorTool): ConnectorDefinition
 
 export function getConnectorsByCategory(category: ConnectorCategory): ConnectorDefinition[] {
   return CONNECTOR_REGISTRY.filter((c) => c.category === category);
+}
+
+export function isRoleAllowedForConnector(tool: ConnectorTool, role: AgentRoleKey): boolean {
+  const connector = getConnectorDefinition(tool);
+  if (!connector) {
+    return false;
+  }
+
+  if (!connector.allowedRoles || connector.allowedRoles.length === 0) {
+    return true;
+  }
+
+  return connector.allowedRoles.includes(role);
+}
+
+export function getConnectorActionsForRole(tool: ConnectorTool, role: AgentRoleKey): NormalizedActionType[] {
+  const connector = getConnectorDefinition(tool);
+  if (!connector) {
+    return [];
+  }
+
+  if (!isRoleAllowedForConnector(tool, role)) {
+    return [];
+  }
+
+  const roleDefaults = connector.defaultActionPolicyByRole?.[role];
+  return roleDefaults ? [...roleDefaults] : [...connector.supportedActions];
 }
 
 // ── External plugin manifest contracts (Phase 3 C2) ─────────────────────

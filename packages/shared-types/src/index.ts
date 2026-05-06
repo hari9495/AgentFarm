@@ -32,6 +32,9 @@ export const CONTRACT_VERSIONS = {
   NOTIFICATION: '1.0.0', // Notification dispatch records (Telegram/Slack/Discord)
   GOAL_PLAN: '1.0.0', // GOAP goal plans and action sequences
   SKILL: '1.0.0', // Skills registry — crystallized reusable task templates
+  AGENT_MEMORY: '1.0.0', // Agent short-term task memory (Epic A7)
+  PROACTIVE_SIGNAL: '1.0.0', // Proactive operational signals (stale PR/ticket, budget warning)
+  APPROVAL_BATCH: '1.0.0', // Batched approval grouping and batch decisions
 } as const;
 
 export type ContractVersion = (typeof CONTRACT_VERSIONS)[keyof typeof CONTRACT_VERSIONS];
@@ -644,6 +647,39 @@ export interface ApprovalRecord {
   correlationId: string; // Traceability across services
   createdAt: string; // Immutable
   decidedAt?: string; // Immutable after set
+}
+
+export type ApprovalBatchStatus = 'pending' | 'resolved';
+
+export interface ApprovalBatchRecord {
+  id: string;
+  contractVersion: string; // CONTRACT_VERSIONS.APPROVAL_BATCH
+  tenantId: string;
+  workspaceId: string;
+  botId: string;
+  batchKey: string;
+  riskLevel: RiskLevel;
+  actionType: string;
+  taskIds: string[];
+  status: ApprovalBatchStatus;
+  correlationId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ApprovalBatchDecisionRecord {
+  id: string;
+  contractVersion: string; // CONTRACT_VERSIONS.APPROVAL_BATCH
+  batchId: string;
+  tenantId: string;
+  workspaceId: string;
+  botId: string;
+  decision: Exclude<ApprovalDecision, 'pending'>;
+  actor: string;
+  reason?: string;
+  taskIds: string[];
+  correlationId: string;
+  decidedAt: string;
 }
 
 // Frozen 2026-04-21 — canonical source: planning/engineering-execution-design.md Section 7
@@ -1562,5 +1598,61 @@ export interface SkillCrystallizationRecord {
   trajectoryCompressed: boolean;
   correlationId: string;
   createdAt: string;
+}
+
+// ============================================================================
+// AGENT MEMORY SERVICE (Epic A7)
+// ============================================================================
+// Short-term task memory for agent context injection (7-day TTL)
+// Frozen 2026-05-07 — Agent Memory Service specification
+
+export interface ApprovalOutcome {
+  action: string;
+  decision: 'approved' | 'rejected';
+  reason?: string;
+}
+
+export interface AgentShortTermMemoryRecord {
+  id: string;
+  workspaceId: string;
+  tenantId: string;
+  taskId: string;
+  actionsTaken: string[]; // action types executed
+  approvalOutcomes: ApprovalOutcome[]; // approval history for this task
+  connectorsUsed: string[]; // connector types used
+  llmProvider?: string; // which provider made the LLM decision
+  executionStatus: 'success' | 'approval_required' | 'failed';
+  summary: string; // brief task summary for LLM prompt injection
+  correlationId: string;
+  createdAt: string;
+  expiresAt: string; // TTL: createdAt + 7 days
+}
+
+export interface AgentMemoryInjectionContext {
+  recentMemories: AgentShortTermMemoryRecord[];
+  memoryCountThisWeek: number;
+  mostCommonConnectors: string[];
+  approvalRejectionRate: number; // 0-1, for prompt bias adjustment
+}
+
+export type ProactiveSignalType = 'stale_pr' | 'stale_ticket' | 'budget_warning';
+
+export type ProactiveSignalStatus = 'open' | 'resolved';
+
+export interface ProactiveSignalRecord {
+  id: string;
+  contractVersion: string; // CONTRACT_VERSIONS.PROACTIVE_SIGNAL
+  tenantId: string;
+  workspaceId: string;
+  botId: string;
+  signalType: ProactiveSignalType;
+  status: ProactiveSignalStatus;
+  severity: RiskLevel;
+  summary: string;
+  sourceRef: string;
+  metadata?: Record<string, unknown>;
+  correlationId: string;
+  detectedAt: string;
+  updatedAt: string;
 }
 

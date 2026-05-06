@@ -41,6 +41,7 @@ const sanitizeRoutineSchedulerState = (value: unknown): RoutineSchedulerState =>
             scheduledTasks: [],
             featureFlags: {},
             schedulerErrors: [],
+            proactiveSignals: [],
         };
     }
 
@@ -48,6 +49,7 @@ const sanitizeRoutineSchedulerState = (value: unknown): RoutineSchedulerState =>
         scheduledTasks?: unknown;
         featureFlags?: unknown;
         schedulerErrors?: unknown;
+        proactiveSignals?: unknown;
     };
 
     const featureFlags: Record<string, boolean> = {};
@@ -73,6 +75,24 @@ const sanitizeRoutineSchedulerState = (value: unknown): RoutineSchedulerState =>
                 return typeof row.taskId === 'string'
                     && typeof row.error === 'string'
                     && typeof row.timestamp === 'string';
+            })
+            : [],
+        proactiveSignals: Array.isArray(candidate.proactiveSignals)
+            ? candidate.proactiveSignals.filter((item): item is RoutineSchedulerState['proactiveSignals'][number] => {
+                if (typeof item !== 'object' || item === null) {
+                    return false;
+                }
+                const row = item as Record<string, unknown>;
+                return typeof row.id === 'string'
+                    && typeof row.signalType === 'string'
+                    && typeof row.status === 'string'
+                    && typeof row.workspaceId === 'string'
+                    && typeof row.tenantId === 'string'
+                    && typeof row.botId === 'string'
+                    && typeof row.summary === 'string'
+                    && typeof row.sourceRef === 'string'
+                    && typeof row.detectedAt === 'string'
+                    && typeof row.updatedAt === 'string';
             })
             : [],
     };

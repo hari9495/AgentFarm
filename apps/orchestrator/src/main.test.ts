@@ -154,6 +154,71 @@ test('orchestrator routine scheduler routes create and deduplicate queued runs',
     }
 });
 
+test('orchestrator proactive signal routes detect, list, and resolve signals', async () => {
+    const isolated = await createIsolatedApp({ now: () => 1_700_000_222_000 });
+    const { app } = isolated;
+
+    try {
+        const detect = await app.inject({
+            method: 'POST',
+            url: '/v1/proactive-signals/detect',
+            payload: {
+                tenant_id: 'tenant-signal',
+                workspace_id: 'ws-signal',
+                bot_id: 'bot-signal',
+                correlation_id: 'corr-signal-1',
+                pull_requests: [{ id: 'pr-1', title: 'Old PR', days_since_update: 17 }],
+                tickets: [{ id: 'ticket-1', title: 'Old Ticket', hours_since_update: 96 }],
+                budget_utilization_ratio: 0.85,
+            },
+        });
+
+        assert.equal(detect.statusCode, 200);
+        const detectBody = detect.json() as { detected_count: number; signals: Array<{ id: string; signalType: string; status: string }> };
+        assert.equal(detectBody.detected_count, 3);
+
+        const listOpen = await app.inject({
+            method: 'GET',
+            url: '/v1/proactive-signals?workspace_id=ws-signal&status=open&limit=10',
+        });
+        assert.equal(listOpen.statusCode, 200);
+        const listOpenBody = listOpen.json() as { count: number; signals: Array<{ id: string }> };
+        assert.equal(listOpenBody.count, 3);
+
+        const resolve = await app.inject({
+            method: 'POST',
+            url: `/v1/proactive-signals/${detectBody.signals[0]!.id}/resolve`,
+        });
+        assert.equal(resolve.statusCode, 200);
+
+        const listResolved = await app.inject({
+            method: 'GET',
+            url: '/v1/proactive-signals?workspace_id=ws-signal&status=resolved&limit=10',
+        });
+        assert.equal(listResolved.statusCode, 200);
+        const listResolvedBody = listResolved.json() as { count: number };
+        assert.equal(listResolvedBody.count, 1);
+    } finally {
+        await isolated.cleanup();
+    }
+});
+
+test('orchestrator proactive signal list rejects invalid signal_type', async () => {
+    const isolated = await createIsolatedApp();
+    const { app } = isolated;
+
+    try {
+        const response = await app.inject({
+            method: 'GET',
+            url: '/v1/proactive-signals?signal_type=unknown',
+        });
+
+        assert.equal(response.statusCode, 400);
+    } finally {
+        await isolated.cleanup();
+    }
+});
+
 test('orchestrator persists wake and schedule state across server restarts', async () => {
     const tempDir = await mkdtemp(join(tmpdir(), 'agentfarm-orchestrator-state-'));
     const statePath = join(tempDir, 'state.json');

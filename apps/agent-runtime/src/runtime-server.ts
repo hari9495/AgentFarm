@@ -44,6 +44,11 @@ import {
 } from './local-workspace-executor.js';
 import { AdvancedRuntimeFeatures } from './advanced-runtime-features.js';
 import { recordTaskIntelligence } from './task-intelligence-memory.js';
+import {
+    TESTER_ROLE_ALLOWED_CONNECTORS,
+    TESTER_ROLE_ALLOWED_LOCAL_ACTIONS,
+    isTesterRoleProfile,
+} from './tester-agent-profile.js';
 
 type RuntimeState =
     | 'created'
@@ -243,6 +248,43 @@ type PendingApprovalTask = {
     escalated: boolean;
     slaRiskPredicted: boolean;
 };
+
+type PendingApprovalBatch = {
+    batchId: string;
+    batchKey: string;
+    riskLevel: 'medium' | 'high';
+    actionType: string;
+    pendingCount: number;
+    taskIds: string[];
+    escalatedCount: number;
+    oldestEnqueuedAt: number;
+    newestEnqueuedAt: number;
+};
+
+type ResolvePendingApprovalInput = {
+    taskId: string;
+    decision: ApprovalDecision;
+    actor: string;
+    reason: string | null;
+    selectedOptionId: string | null;
+};
+
+type ResolvePendingApprovalResult =
+    | {
+        ok: false;
+        statusCode: 400 | 404;
+        error: 'approval_not_found' | 'invalid_selected_option';
+        message: string;
+    }
+    | {
+        ok: true;
+        taskId: string;
+        decision: ApprovalDecision;
+        executionStatus: 'success' | 'failed' | 'approval_required' | 'cancelled';
+        wasEscalated: boolean;
+        selectedOptionId: string | null;
+        pendingApprovalTasks: number;
+    };
 
 type WeeklyQualityRoiReport = {
     reportId: string;
@@ -535,7 +577,7 @@ const ROLE_CONNECTOR_POLICY: Record<RoleKey, RuntimeConnectorType[]> = {
     recruiter: ['teams', 'email'],
     developer: ['jira', 'teams', 'github', 'email'],
     fullstack_developer: ['jira', 'teams', 'github', 'email'],
-    tester: ['jira', 'teams', 'github', 'email'],
+    tester: [...TESTER_ROLE_ALLOWED_CONNECTORS],
     business_analyst: ['jira', 'teams', 'email'],
     technical_writer: ['teams', 'email'],
     content_writer: ['teams', 'email'],
@@ -551,6 +593,14 @@ const CONNECTOR_ACTION_POLICY: Record<RuntimeConnectorType, RuntimeConnectorActi
     teams: ['send_message'],
     github: ['create_pr_comment', 'create_pr', 'merge_pr', 'list_prs'],
     email: ['send_email'],
+};
+
+const ROLE_CONNECTOR_ACTION_OVERRIDES: Partial<
+    Record<RoleKey, Partial<Record<RuntimeConnectorType, RuntimeConnectorActionType[]>>>
+> = {
+    tester: {
+        github: ['create_pr_comment', 'create_pr', 'list_prs'],
+    },
 };
 
 const LOCAL_WORKSPACE_ACTION_POLICY: Record<RoleKey, RuntimeLocalWorkspaceActionType[]> = {
@@ -775,54 +825,7 @@ const LOCAL_WORKSPACE_ACTION_POLICY: Record<RoleKey, RuntimeLocalWorkspaceAction
         'workspace_azure_deploy_plan',
         'workspace_slack_notify',
     ],
-    tester: [
-        'code_read',
-        'run_tests',
-        'run_linter',
-        'workspace_list_files',
-        'workspace_grep',
-        'workspace_scout',
-        'git_log',
-        'workspace_cleanup',
-        'workspace_diff',
-        'workspace_memory_read',
-        // Tier 3: Analysis only (no refactoring)
-        'workspace_find_references',
-        'workspace_go_to_definition',
-        'workspace_hover_type',
-        'workspace_analyze_imports',
-        'workspace_code_coverage',
-        'workspace_complexity_metrics',
-        'workspace_security_scan',
-        // Tier 4: Test impact only
-        'workspace_test_impact_analysis',
-        // Tier 5: Search and package lookup only
-        'workspace_search_docs',
-        'workspace_package_lookup',
-        // Tier 6: Language adapters (info only)
-        'workspace_language_adapter_python',
-        'workspace_language_adapter_java',
-        'workspace_language_adapter_go',
-        'workspace_language_adapter_csharp',
-        // Tier 7: Impact reporting only
-        'workspace_change_impact_report',
-        // Tier 8: Read-only intelligence
-        'workspace_git_blame',
-        'workspace_outline_symbols',
-        // Tier 9: Read-only pilot intelligence
-        'workspace_security_fix_suggest',
-        'workspace_pr_review_prepare',
-        'workspace_dependency_upgrade_plan',
-        'workspace_policy_preflight',
-        // Tier 10: Read-only code intelligence and observability
-        'workspace_connector_test',
-        'workspace_explain_code',
-        'workspace_refactor_plan',
-        'workspace_semantic_search',
-        'workspace_diff_preview',
-        'workspace_approval_status',
-        'workspace_audit_export',
-    ],
+    tester: [...TESTER_ROLE_ALLOWED_LOCAL_ACTIONS],
     business_analyst: [],
     technical_writer: [],
     content_writer: [],
@@ -834,7 +837,10 @@ const LOCAL_WORKSPACE_ACTION_POLICY: Record<RoleKey, RuntimeLocalWorkspaceAction
 };
 
 const getAllowedActionsForRole = (roleKey: RoleKey): string[] => {
-    const connectorActions = ROLE_CONNECTOR_POLICY[roleKey].flatMap((tool) => CONNECTOR_ACTION_POLICY[tool]);
+    const connectorActions = ROLE_CONNECTOR_POLICY[roleKey].flatMap((tool) => {
+        const roleToolOverrides = ROLE_CONNECTOR_ACTION_OVERRIDES[roleKey]?.[tool];
+        return roleToolOverrides ?? CONNECTOR_ACTION_POLICY[tool];
+    });
     const localActions = LOCAL_WORKSPACE_ACTION_POLICY[roleKey] ?? [];
     return Array.from(new Set([...connectorActions, ...localActions]));
 };
@@ -886,6 +892,9 @@ const normalizeRoleKey = (value: string | undefined): RoleKey | null => {
 
 const roleKeyFromRoleProfile = (roleProfile: string): RoleKey | null => {
     const normalized = roleProfile.trim().toLowerCase().replace(/[\s/]+/g, '_');
+    if (isTesterRoleProfile(normalized)) {
+        return 'tester';
+    }
     const aliases: Record<string, RoleKey> = {
         recruiter: 'recruiter',
         developer: 'developer',
@@ -894,6 +903,9 @@ const roleKeyFromRoleProfile = (roleProfile: string): RoleKey | null => {
         full_stack_developer: 'fullstack_developer',
         tester: 'tester',
         qa: 'tester',
+        tester_agent: 'tester',
+        qa_engineer: 'tester',
+        quality_assurance_engineer: 'tester',
         business_analyst: 'business_analyst',
         technical_writer: 'technical_writer',
         content_writer: 'content_writer',
@@ -4434,6 +4446,296 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         });
     });
 
+    const getPendingApprovalBatches = (): PendingApprovalBatch[] => {
+        const grouped = new Map<string, PendingApprovalBatch>();
+        for (const pending of workerLoop.pendingApprovals) {
+            const batchKey = `${pending.riskLevel}:${pending.actionType}`;
+            const existing = grouped.get(batchKey);
+            if (existing) {
+                existing.taskIds.push(pending.taskId);
+                existing.pendingCount += 1;
+                existing.escalatedCount += pending.escalated ? 1 : 0;
+                existing.oldestEnqueuedAt = Math.min(existing.oldestEnqueuedAt, pending.enqueuedAt);
+                existing.newestEnqueuedAt = Math.max(existing.newestEnqueuedAt, pending.enqueuedAt);
+                continue;
+            }
+
+            grouped.set(batchKey, {
+                batchId: createHash('sha1').update(batchKey).digest('hex').slice(0, 16),
+                batchKey,
+                riskLevel: pending.riskLevel,
+                actionType: pending.actionType,
+                pendingCount: 1,
+                taskIds: [pending.taskId],
+                escalatedCount: pending.escalated ? 1 : 0,
+                oldestEnqueuedAt: pending.enqueuedAt,
+                newestEnqueuedAt: pending.enqueuedAt,
+            });
+        }
+
+        return Array.from(grouped.values())
+            .sort((a, b) => a.oldestEnqueuedAt - b.oldestEnqueuedAt);
+    };
+
+    const resolvePendingApproval = async (input: ResolvePendingApprovalInput): Promise<ResolvePendingApprovalResult> => {
+        const pendingIndex = workerLoop.pendingApprovals.findIndex((pending) => pending.taskId === input.taskId);
+        if (pendingIndex < 0) {
+            return {
+                ok: false,
+                statusCode: 404,
+                error: 'approval_not_found',
+                message: `No pending approval found for task_id ${input.taskId}`,
+            };
+        }
+
+        if (input.selectedOptionId) {
+            const pending = workerLoop.pendingApprovals[pendingIndex];
+            const knownOption = pending?.escalationOptions.some((option) => option.optionId === input.selectedOptionId);
+            if (!knownOption) {
+                return {
+                    ok: false,
+                    statusCode: 400,
+                    error: 'invalid_selected_option',
+                    message: `selected_option_id ${input.selectedOptionId} is not valid for task_id ${input.taskId}`,
+                };
+            }
+        }
+
+        const [resolved] = workerLoop.pendingApprovals.splice(pendingIndex, 1);
+        if (!resolved) {
+            return {
+                ok: false,
+                statusCode: 404,
+                error: 'approval_not_found',
+                message: `No pending approval found for task_id ${input.taskId}`,
+            };
+        }
+
+        const latencyMs = Math.max(0, now() - resolved.enqueuedAt);
+        weeklyRoiAccumulator.approvalLatencyTotalMs += latencyMs;
+        weeklyRoiAccumulator.approvalLatencySamples += 1;
+        workerLoop.approvalResolvedTasks += 1;
+        if (input.decision === 'approved') {
+            workerLoop.approvalApprovedTasks += 1;
+        } else {
+            workerLoop.approvalRejectedTasks += 1;
+        }
+
+        emitRuntimeEvent('runtime.approval_decision_received', configCache, {
+            task_id: input.taskId,
+            decision: input.decision,
+            actor: input.actor,
+            reason: input.reason,
+            was_escalated: resolved.escalated,
+            risk_level: resolved.riskLevel,
+            selected_option_id: input.selectedOptionId,
+            pending_approval_tasks: workerLoop.pendingApprovals.length,
+        });
+
+        if (input.decision === 'approved') {
+            advancedFeatures.approvePlan(input.taskId, input.actor || 'runtime-approver', input.reason ?? undefined);
+            workerLoop.approvedDecisionCache.set(input.taskId, {
+                decision: 'approved',
+                decidedAt: now(),
+                actor: input.actor || null,
+                reason: input.reason,
+            });
+
+            const approvedResult = await executeApprovedTask(
+                resolved.task,
+                configCache as RuntimeConfig,
+                'approval_decision_webhook',
+                resolved.payloadOverrideSource,
+            );
+            workerLoop.processedTasks += 1;
+            workerLoop.retriedAttempts += approvedResult.transientRetries;
+
+            if (approvedResult.status === 'success') {
+                workerLoop.succeededTasks += 1;
+                emitRuntimeEvent('runtime.task_processed', configCache, {
+                    task_id: input.taskId,
+                    queue_depth: workerLoop.queuedTasks.length,
+                    processed_tasks: workerLoop.processedTasks,
+                    retries: approvedResult.transientRetries,
+                    attempts: approvedResult.attempts,
+                    source: 'approval_decision_webhook',
+                });
+            } else {
+                workerLoop.failedTasks += 1;
+                emitRuntimeEvent('runtime.task_failed', configCache, {
+                    task_id: input.taskId,
+                    attempts: approvedResult.attempts,
+                    retries: approvedResult.transientRetries,
+                    failure_class: approvedResult.failureClass ?? 'runtime_exception',
+                    error_message: approvedResult.errorMessage ?? null,
+                    source: 'approval_decision_webhook',
+                });
+            }
+
+            await persistActionResultRecord(resolved.task, configCache as RuntimeConfig, approvedResult);
+
+            emitRuntimeEvent('runtime.bot_notification_sent', configCache, {
+                task_id: input.taskId,
+                decision: input.decision,
+                channel: 'decision_webhook',
+                actor: input.actor,
+            });
+
+            return {
+                ok: true,
+                taskId: input.taskId,
+                decision: input.decision,
+                executionStatus: approvedResult.status,
+                wasEscalated: resolved.escalated,
+                selectedOptionId: input.selectedOptionId,
+                pendingApprovalTasks: workerLoop.pendingApprovals.length,
+            };
+        }
+
+        await persistCancelledApprovalRecord({
+            task: resolved.task,
+            actionType: resolved.actionType,
+            riskLevel: resolved.riskLevel,
+            reason: input.reason,
+        }, configCache as RuntimeConfig);
+
+        emitRuntimeEvent('runtime.task_cancelled', configCache, {
+            task_id: input.taskId,
+            action_type: resolved.actionType,
+            decision: input.decision,
+            reason: input.reason,
+            selected_option_id: input.selectedOptionId,
+        });
+
+        emitRuntimeEvent('runtime.bot_notification_sent', configCache, {
+            task_id: input.taskId,
+            decision: input.decision,
+            channel: 'decision_webhook',
+            actor: input.actor,
+        });
+
+        return {
+            ok: true,
+            taskId: input.taskId,
+            decision: input.decision,
+            executionStatus: 'cancelled',
+            wasEscalated: resolved.escalated,
+            selectedOptionId: input.selectedOptionId,
+            pendingApprovalTasks: workerLoop.pendingApprovals.length,
+        };
+    };
+
+    app.get('/decision/batches', async (_request, reply) => {
+        if (!startupCompleted || (runtimeState !== 'active' && runtimeState !== 'degraded')) {
+            return reply.code(409).send({
+                error: 'runtime_not_ready',
+                state: runtimeState,
+            });
+        }
+
+        return {
+            pending_batches: getPendingApprovalBatches().map((batch) => ({
+                batch_id: batch.batchId,
+                batch_key: batch.batchKey,
+                risk_level: batch.riskLevel,
+                action_type: batch.actionType,
+                pending_count: batch.pendingCount,
+                task_ids: batch.taskIds,
+                escalated_count: batch.escalatedCount,
+                oldest_enqueued_at: new Date(batch.oldestEnqueuedAt).toISOString(),
+                newest_enqueued_at: new Date(batch.newestEnqueuedAt).toISOString(),
+            })),
+        };
+    });
+
+    app.post<{ Body: { batch_id?: string; batch_key?: string; decision?: string; reason?: string; actor?: string } }>('/decision/batch', async (request, reply) => {
+        if (!startupCompleted || (runtimeState !== 'active' && runtimeState !== 'degraded')) {
+            return reply.code(409).send({
+                error: 'runtime_not_ready',
+                state: runtimeState,
+            });
+        }
+
+        if (configCache?.decisionWebhookToken) {
+            const provided = readDecisionAuthToken(request.headers as Record<string, unknown>);
+            if (!provided || provided !== configCache.decisionWebhookToken) {
+                return reply.code(401).send({
+                    error: 'unauthorized',
+                    message: 'Missing or invalid runtime decision webhook token.',
+                });
+            }
+        }
+
+        const decision = request.body?.decision as ApprovalDecision | undefined;
+        if (decision !== 'approved' && decision !== 'rejected' && decision !== 'timeout_rejected') {
+            return reply.code(400).send({
+                error: 'invalid_decision',
+                message: 'decision must be one of approved, rejected, timeout_rejected',
+            });
+        }
+
+        const batchId = request.body?.batch_id?.trim() || null;
+        const batchKey = request.body?.batch_key?.trim() || null;
+        if (!batchId && !batchKey) {
+            return reply.code(400).send({
+                error: 'invalid_batch',
+                message: 'batch_id or batch_key is required.',
+            });
+        }
+
+        const batches = getPendingApprovalBatches();
+        const targetBatch = batches.find((batch) => (batchId ? batch.batchId === batchId : false) || (batchKey ? batch.batchKey === batchKey : false));
+        if (!targetBatch) {
+            return reply.code(404).send({
+                error: 'batch_not_found',
+                message: 'No pending approval batch found for the provided identifier.',
+            });
+        }
+
+        const actor = request.body?.actor?.trim() || 'batch_approver';
+        const reason = request.body?.reason?.trim() || null;
+        const results: Array<{ task_id: string; decision: ApprovalDecision; execution_status: 'success' | 'failed' | 'approval_required' | 'cancelled' }> = [];
+        const taskIds = [...targetBatch.taskIds];
+        for (const taskId of taskIds) {
+            const resolved = await resolvePendingApproval({
+                taskId,
+                decision,
+                actor,
+                reason,
+                selectedOptionId: null,
+            });
+            if (!resolved.ok) {
+                continue;
+            }
+            results.push({
+                task_id: resolved.taskId,
+                decision: resolved.decision,
+                execution_status: resolved.executionStatus,
+            });
+        }
+
+        emitRuntimeEvent('runtime.approval_batch_decision_received', configCache, {
+            batch_id: targetBatch.batchId,
+            batch_key: targetBatch.batchKey,
+            decision,
+            actor,
+            requested_count: taskIds.length,
+            resolved_count: results.length,
+            pending_approval_tasks: workerLoop.pendingApprovals.length,
+        });
+
+        return {
+            status: 'resolved',
+            batch_id: targetBatch.batchId,
+            batch_key: targetBatch.batchKey,
+            decision,
+            requested_count: taskIds.length,
+            resolved_count: results.length,
+            results,
+            pending_approval_tasks: workerLoop.pendingApprovals.length,
+        };
+    });
+
     app.post<{ Body: { task_id?: string; decision?: string; reason?: string; actor?: string; selected_option_id?: string } }>('/decision', async (request, reply) => {
         if (!startupCompleted || (runtimeState !== 'active' && runtimeState !== 'degraded')) {
             return reply.code(409).send({
@@ -4468,140 +4770,29 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             });
         }
 
-        const pendingIndex = workerLoop.pendingApprovals.findIndex((pending) => pending.taskId === taskId);
-        if (pendingIndex < 0) {
-            return reply.code(404).send({
-                error: 'approval_not_found',
-                message: `No pending approval found for task_id ${taskId}`,
-            });
-        }
-
         const selectedOptionId = request.body?.selected_option_id?.trim() || null;
-        if (selectedOptionId) {
-            const pending = workerLoop.pendingApprovals[pendingIndex];
-            const knownOption = pending?.escalationOptions.some((option) => option.optionId === selectedOptionId);
-            if (!knownOption) {
-                return reply.code(400).send({
-                    error: 'invalid_selected_option',
-                    message: `selected_option_id ${selectedOptionId} is not valid for task_id ${taskId}`,
-                });
-            }
-        }
-
-        const [resolved] = workerLoop.pendingApprovals.splice(pendingIndex, 1);
-        if (resolved) {
-            const latencyMs = Math.max(0, now() - resolved.enqueuedAt);
-            weeklyRoiAccumulator.approvalLatencyTotalMs += latencyMs;
-            weeklyRoiAccumulator.approvalLatencySamples += 1;
-        }
-        workerLoop.approvalResolvedTasks += 1;
-        if (decision === 'approved') {
-            workerLoop.approvalApprovedTasks += 1;
-        } else {
-            workerLoop.approvalRejectedTasks += 1;
-        }
-
-        emitRuntimeEvent('runtime.approval_decision_received', configCache, {
-            task_id: taskId,
+        const resolved = await resolvePendingApproval({
+            taskId,
             decision,
-            actor: request.body?.actor ?? 'unknown',
-            reason: request.body?.reason ?? null,
-            was_escalated: resolved?.escalated ?? false,
-            risk_level: resolved?.riskLevel ?? null,
-            selected_option_id: selectedOptionId,
-            pending_approval_tasks: workerLoop.pendingApprovals.length,
-        });
-
-        if (decision === 'approved') {
-            advancedFeatures.approvePlan(taskId, request.body?.actor?.trim() || 'runtime-approver', request.body?.reason);
-            workerLoop.approvedDecisionCache.set(taskId, {
-                decision: 'approved',
-                decidedAt: now(),
-                actor: request.body?.actor?.trim() || null,
-                reason: request.body?.reason?.trim() || null,
-            });
-
-            const approvedResult = await executeApprovedTask(
-                resolved.task,
-                configCache as RuntimeConfig,
-                'approval_decision_webhook',
-                resolved.payloadOverrideSource,
-            );
-            workerLoop.processedTasks += 1;
-            workerLoop.retriedAttempts += approvedResult.transientRetries;
-
-            if (approvedResult.status === 'success') {
-                workerLoop.succeededTasks += 1;
-                emitRuntimeEvent('runtime.task_processed', configCache, {
-                    task_id: taskId,
-                    queue_depth: workerLoop.queuedTasks.length,
-                    processed_tasks: workerLoop.processedTasks,
-                    retries: approvedResult.transientRetries,
-                    attempts: approvedResult.attempts,
-                    source: 'approval_decision_webhook',
-                });
-            } else {
-                workerLoop.failedTasks += 1;
-                emitRuntimeEvent('runtime.task_failed', configCache, {
-                    task_id: taskId,
-                    attempts: approvedResult.attempts,
-                    retries: approvedResult.transientRetries,
-                    failure_class: approvedResult.failureClass ?? 'runtime_exception',
-                    error_message: approvedResult.errorMessage ?? null,
-                    source: 'approval_decision_webhook',
-                });
-            }
-
-            await persistActionResultRecord(resolved.task, configCache as RuntimeConfig, approvedResult);
-
-            emitRuntimeEvent('runtime.bot_notification_sent', configCache, {
-                task_id: taskId,
-                decision,
-                channel: 'decision_webhook',
-                actor: request.body?.actor ?? 'unknown',
-            });
-
-            return {
-                status: 'resolved',
-                task_id: taskId,
-                decision,
-                execution_status: approvedResult.status,
-                was_escalated: resolved?.escalated ?? false,
-                selected_option_id: selectedOptionId,
-                pending_approval_tasks: workerLoop.pendingApprovals.length,
-            };
-        }
-
-        await persistCancelledApprovalRecord({
-            task: resolved.task,
-            actionType: resolved.actionType,
-            riskLevel: resolved.riskLevel,
+            actor: request.body?.actor?.trim() || 'unknown',
             reason: request.body?.reason?.trim() || null,
-        }, configCache as RuntimeConfig);
-
-        emitRuntimeEvent('runtime.task_cancelled', configCache, {
-            task_id: taskId,
-            action_type: resolved.actionType,
-            decision,
-            reason: request.body?.reason ?? null,
-            selected_option_id: selectedOptionId,
+            selectedOptionId,
         });
-
-        emitRuntimeEvent('runtime.bot_notification_sent', configCache, {
-            task_id: taskId,
-            decision,
-            channel: 'decision_webhook',
-            actor: request.body?.actor ?? 'unknown',
-        });
+        if (!resolved.ok) {
+            return reply.code(resolved.statusCode).send({
+                error: resolved.error,
+                message: resolved.message,
+            });
+        }
 
         return {
             status: 'resolved',
-            task_id: taskId,
-            decision,
-            execution_status: 'cancelled',
-            was_escalated: resolved?.escalated ?? false,
-            selected_option_id: selectedOptionId,
-            pending_approval_tasks: workerLoop.pendingApprovals.length,
+            task_id: resolved.taskId,
+            decision: resolved.decision,
+            execution_status: resolved.executionStatus,
+            was_escalated: resolved.wasEscalated,
+            selected_option_id: resolved.selectedOptionId,
+            pending_approval_tasks: resolved.pendingApprovalTasks,
         };
     });
 
