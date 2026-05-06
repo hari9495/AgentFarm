@@ -112,3 +112,6 @@ Mitigation: enforce runbook evidence checklist and gate-based closure.
 2. Remaining launch blockers resolved with evidence artifacts.
 3. Product, Engineering, and Security approve launch closure.
 
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

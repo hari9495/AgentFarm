@@ -690,3 +690,6 @@ Never commit secrets to source. All connector tokens are stored as Key Vault ref
 - **AI runtime engineers** implementing governed autonomy with human oversight
 - **Security and compliance teams** requiring auditable decision and execution traces
 - **Product and operations leads** preparing pilot-ready enterprise delivery
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

@@ -181,3 +181,6 @@ Failure:
 2. Runtime registration is required before bot becomes active.
 3. Cleanup behavior is explicit and auditable.
 4. Azure VM plus Docker remains the v1 secure default for entitled plans.
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

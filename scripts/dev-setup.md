@@ -159,3 +159,6 @@ This validates: signup, login, provisioning status, connector API, approval API,
 - **SQLite experimental warning**: Expected on Node.js v24 — not an error
 - **DB runtime snapshot SKIP**: Requires Docker running — safe to skip for local dev
 - **Azure extension not signed in**: Non-blocking for local development; required only for Tasks 7.1/8.2/8.3
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

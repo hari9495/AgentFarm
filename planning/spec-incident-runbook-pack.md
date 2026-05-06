@@ -222,3 +222,6 @@ Define incident classes, response workflows, and operational runbooks required f
 2. planning/spec-docker-runtime-contract.md
 3. planning/spec-connector-auth-flow.md
 4. planning/spec-dashboard-data-model.md
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

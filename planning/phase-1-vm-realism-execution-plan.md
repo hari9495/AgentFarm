@@ -354,3 +354,6 @@ Pass criteria:
 - Security Lead: risk and approval mappings approved
 - QA Lead: acceptance criteria are testable and tracked
 - DevOps Lead: environment reconcile and recovery operational boundaries approved
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

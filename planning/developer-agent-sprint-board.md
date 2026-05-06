@@ -70,3 +70,6 @@ Update this block continuously during execution.
 3. Approval routing tests pass for medium and high risk paths.
 4. Kill-switch behavior verified and documented for affected services.
 5. MVP scope boundaries remain intact or approved exceptions are recorded.
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

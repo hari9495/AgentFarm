@@ -246,3 +246,6 @@ Define a concrete 2-sprint execution backlog with exact epics, owners, dependenc
 - Mitigation: feature-flag rollout + shadow-mode evaluation before enforcement.
 3. Risk: dashboard lag for governance KPIs.
 - Mitigation: pre-aggregated read models for KPI panels.
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

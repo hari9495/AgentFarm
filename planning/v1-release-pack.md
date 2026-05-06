@@ -164,3 +164,6 @@ No implementation work is included in this pack.
 3. Blocking issues (if any): None.
 4. Remediation owners and due dates: None required.
 5. Next review date: 2026-05-03.
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

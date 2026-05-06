@@ -215,3 +215,6 @@ When launch runbook status is reviewed
 Then launch remains in blocked or in-progress state
 And unresolved prerequisites are explicitly listed
 
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

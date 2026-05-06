@@ -32,3 +32,6 @@ AgentFarm is a TypeScript pnpm monorepo with these primary boundaries:
 ## Documentation Rules
 - Update nearby planning or operations docs when architecture-level behavior changes.
 - Keep runbooks and quality docs aligned with actual scripts and workflow names.
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

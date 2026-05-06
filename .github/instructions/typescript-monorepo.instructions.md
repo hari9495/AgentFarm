@@ -27,3 +27,6 @@ applyTo: "apps/**/*.ts,apps/**/*.tsx,services/**/*.ts,packages/**/*.ts,scripts/*
 - Keep pull requests focused on one architectural concern.
 - Prefer minimal diff changes over stylistic churn.
 - If a behavior change is introduced, add corresponding test coverage.
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

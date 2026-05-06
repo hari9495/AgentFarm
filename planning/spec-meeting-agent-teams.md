@@ -385,3 +385,6 @@ Bots must understand a question in the context of the full meeting conversation 
 ## Related Specs
 1. Teams Graph auth and consent
 - planning/spec-teams-graph-auth-and-consent.md
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

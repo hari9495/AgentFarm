@@ -193,3 +193,6 @@ pnpm --filter @agentfarm/api-gateway exec tsx --test src/routes/repro-packs.test
 pnpm --filter @agentfarm/api-gateway exec tsx --test src/services/run-recovery-worker.test.ts
 pnpm --filter @agentfarm/api-gateway exec tsx --test src/routes/sprint4-integration.test.ts
 ```
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

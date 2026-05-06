@@ -121,3 +121,6 @@ Use this scorecard before approving implementation start.
 
 Approval rule:
 Start implementation only when all six scorecard items are marked ready.
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

@@ -185,3 +185,6 @@ Governed Autonomous Throughput: count of production-relevant engineering tasks c
 3. Confirm approval and risk impact classification.
 4. Confirm evidence fields and dashboard visibility changes.
 5. Confirm rollback and kill-switch path.
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

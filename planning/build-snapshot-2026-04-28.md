@@ -199,3 +199,6 @@ All 28 actions are covered by 118 tests (0 failures). Risk classification and ro
 1. Complete production deployment run and capture evidence artifacts.
 2. Finish SWA production rollout prerequisites and first green release.
 3. Execute 8.3 security and load gates, then perform final launch signoff.
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

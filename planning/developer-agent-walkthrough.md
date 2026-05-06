@@ -689,3 +689,6 @@ Developer task submitted
     Emit runtime.connector_action_executed event
     Log entry appears at GET /logs
 ```
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

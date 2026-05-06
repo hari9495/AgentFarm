@@ -63,3 +63,6 @@ All 11 actions are covered by tests in `apps/agent-runtime/src/local-workspace-e
 1. All high-severity rows have approved shared contracts and passing contract tests.
 2. Quality gate includes regression checks for lease semantics, approval enforcement, and evidence completeness.
 3. Operations quality report reflects the new governance KPIs with pass/fail thresholds.
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

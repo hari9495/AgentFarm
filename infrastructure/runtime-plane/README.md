@@ -40,3 +40,6 @@ The VM bootstrap sequence is orchestrated by `services/provisioning-service`:
 - Inline secrets are rejected at the VM bootstrap stage — only Key Vault references are injected
 - Auto-restart policy configured on Docker containers
 - Health probes enabled on the runtime container
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

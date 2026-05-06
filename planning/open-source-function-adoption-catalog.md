@@ -301,3 +301,6 @@ This catalog operationalizes:
 2. 2026-04-25: Added dedicated OpenClaw section with explicit fit, adopt, avoid, and integration stance notes.
 3. 2026-04-25: Added dedicated Paperclip and Claw3D sections with explicit fit, adopt, avoid, and integration stance notes.
 4. 2026-04-25: Added direct source-to-implementation mapping table with AgentFarm targets and week priorities.
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

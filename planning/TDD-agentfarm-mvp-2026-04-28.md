@@ -161,3 +161,6 @@ Supporting controls:
 2. Website SWA secret and DNS/TLS completion evidence.
 3. Final security/load/freshness artifact completion for signoff.
 
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

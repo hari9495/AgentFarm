@@ -64,3 +64,6 @@ Keep execution clear every week with simple routines.
 | Website SWA | ⏳ Pending | Awaiting GitHub secret + Azure SWA deploy |
 | Production Deploy | ⏳ Pending | Awaiting Azure CLI context + `azd up` |
 | ADR Log | ✅ Current | ADR-001 through ADR-015 approved |
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

@@ -109,3 +109,6 @@ Fixes applied to achieve green gate:
 - `apps/dashboard/app/components/operational-signal-timeline.test.tsx`
 - `scripts/a4-contract-validation.mjs`
 - `scripts/quality-gate.mjs`
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

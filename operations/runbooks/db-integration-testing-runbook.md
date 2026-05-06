@@ -195,3 +195,6 @@ Recovery:
 1. Keep migrations provider-agnostic PostgreSQL SQL; avoid platform-only DB features in core paths unless approved ADR exists.
 2. For repeat smoke runs with deterministic first-start behavior, set a new `AF_DB_SMOKE_BOT_ID` per run.
 3. Document every DB incident or migration anomaly in `operations/quality/8.1-quality-gate-report.md`.
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

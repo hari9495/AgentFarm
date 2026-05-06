@@ -290,3 +290,6 @@ agentfarm/
 - Next review: 2026-04-28 (end of Sprint 0).
 - Change control: Any structural change to service boundaries requires Architecture Owner approval.
 - Canonical source map entry: planning/repo-and-service-structure.md.
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

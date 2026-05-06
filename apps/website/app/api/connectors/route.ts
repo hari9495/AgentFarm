@@ -38,6 +38,7 @@ const resolveWorkspaceBotContext = (input: {
 }): {
     selected: WorkspaceBotContext;
     all: WorkspaceBotContext[];
+    invalidRequestedScope: boolean;
 } | null => {
     const options = listWorkspaceBotsForUser(input.userId).map((item) => ({
         workspaceId: item.workspaceId,
@@ -54,6 +55,7 @@ const resolveWorkspaceBotContext = (input: {
     }
 
     let selected = options[0];
+    let invalidRequestedScope = false;
 
     if (input.requestedWorkspaceId || input.requestedBotId) {
         const exact = options.find((option) => {
@@ -63,10 +65,12 @@ const resolveWorkspaceBotContext = (input: {
         });
         if (exact) {
             selected = exact;
+        } else {
+            invalidRequestedScope = true;
         }
     }
 
-    return { selected, all: options };
+    return { selected, all: options, invalidRequestedScope };
 };
 
 const isConnectorAllowedForRole = (roleType: string, tool: ConnectorTool): boolean => {
@@ -97,6 +101,16 @@ export async function GET(request: Request) {
 
     if (!context) {
         return NextResponse.json({ error: "No workspace or bot context found for user." }, { status: 404 });
+    }
+    if (context.invalidRequestedScope) {
+        return NextResponse.json(
+            {
+                error: "Invalid workspaceId/botId scope for current user.",
+                requested_workspace_id: requestedWorkspaceId,
+                requested_bot_id: requestedBotId,
+            },
+            { status: 400 },
+        );
     }
 
     const selectedRole = context.selected.roleType;
@@ -134,6 +148,7 @@ export async function GET(request: Request) {
             selectedBotId: context.selected.botId,
             selectedRoleKey: selectedRole,
             selectedPolicyPackVersion: context.selected.policyPackVersion,
+            scope_model: "workspace_connectors_with_bot_scoped_catalog",
             options: context.all,
             disallowed_tools_hidden_count: hiddenDefinitionCount,
         },
@@ -182,6 +197,16 @@ export async function POST(request: Request) {
     });
     if (!context) {
         return NextResponse.json({ error: "No workspace or bot context found for user." }, { status: 404 });
+    }
+    if (context.invalidRequestedScope) {
+        return NextResponse.json(
+            {
+                error: "Invalid workspaceId/botId scope for current user.",
+                requested_workspace_id: body.workspaceId ?? null,
+                requested_bot_id: body.botId ?? null,
+            },
+            { status: 400 },
+        );
     }
 
     if (!isConnectorAllowedForRole(context.selected.roleType, tool)) {

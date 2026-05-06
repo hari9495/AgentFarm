@@ -280,3 +280,6 @@ Quality gate after Sprint 2: **EXIT_CODE=0 — PASS** (47 checks, 46 pass, 1 ski
 - **Product and operations leads** preparing pilot-ready enterprise delivery
 - **Security and compliance teams** requiring auditable decision and execution traces
 - **Product and operations leads** preparing a pilot-ready enterprise deployment
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

@@ -160,3 +160,6 @@ Define the runtime container contract for MVP bots, including startup, health, r
 1. planning/engineering-execution-design.md
 2. planning/spec-product-structure-model-architecture.md
 3. planning/spec-azure-provisioning-workflow.md
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

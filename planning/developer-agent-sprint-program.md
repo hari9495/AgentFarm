@@ -44,3 +44,6 @@ Convert the MVP Developer Agent roadmap into sprint-wise execution documents tha
 
 ## Delivery Rule
 Execute sprints in order. Do not start Sprint 2 implementation until Sprint 1 exit gate is passed; do not start Sprint 3 implementation until Sprint 2 exit gate is passed.
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

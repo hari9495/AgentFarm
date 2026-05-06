@@ -64,3 +64,6 @@
 - Azure deployment execution is intentionally not triggered in this step.
 - Domain and DNS cutover remain operational tasks tracked in runbook.
 - Azure extension authentication context is currently signed out in this workspace, so resource creation and deployment execution are blocked until sign-in is completed.
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

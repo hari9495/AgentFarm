@@ -129,3 +129,6 @@ This baseline is now integrated into governance workflow:
 - Canonical architecture pack references this approved intake baseline.
 3. operations/weekly-operating-system.md
 - Monthly dependency posture review is part of architecture governance cadence.
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

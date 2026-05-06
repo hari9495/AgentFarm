@@ -33,3 +33,6 @@ pnpm --filter @agentfarm/website test:permissions
 
 ## 5) CI signal
 The repository CI workflow runs website permission tests automatically on pull requests and pushes to main.
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

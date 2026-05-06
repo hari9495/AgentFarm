@@ -619,3 +619,6 @@ For the Developer Bot in AgentFarm, the best rollout path is:
 3. Add repo scan jobs that produce a cached repo profile.
 4. Route developer bot requests through normalized intents before code generation.
 5. Add approval and evidence hooks for risky code changes.
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

@@ -100,3 +100,6 @@ Adopt proven resources from github/awesome-copilot and bind them to AgentFarm do
 - Reduced CI regressions from dependency churn via grouped update policy.
 - Better consistency in SWA workflow and config updates.
 - Faster onboarding time for new contributors using explicit Copilot repo guidance.
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

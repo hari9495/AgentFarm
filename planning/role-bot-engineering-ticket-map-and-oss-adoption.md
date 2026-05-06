@@ -300,3 +300,6 @@ This document extends and operationalizes:
 1. planning/independent-role-bot-operating-model.md
 2. planning/product-architecture.md
 3. planning/engineering-execution-design.md
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

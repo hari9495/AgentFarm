@@ -215,3 +215,6 @@ Requirements:
 3. Teams features are automatically gated by consent state.
 4. Revocation disables meeting actions safely within SLA.
 5. Auth and consent events are queryable in evidence APIs.
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

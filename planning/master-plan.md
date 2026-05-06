@@ -1,4 +1,4 @@
-﻿# AgentFarm Master Plan
+# AgentFarm Master Plan
 ## Purpose
 Build role-based AI agents for companies with clear ownership, clear release gates, and simple weekly execution.
 Planning-first rule: no feature development starts until architecture baseline and decision gates are approved.
@@ -7,13 +7,13 @@ Planning-first rule: no feature development starts until architecture baseline a
 2. Keep strict safety and approval controls.
 3. Launch only when gold-standard quality is proven.
 ## Phases
-1. Validation and Architecture (Weeks 1-6) — **COMPLETED 2026-04-19**
+1. Validation and Architecture (Weeks 1-6) � **COMPLETED 2026-04-19**
 - Validate customer need and workflow fit.
 - Confirm top gold standards and evidence rules.
 - Finalize MVP role scope.
 - Finalize product architecture and decision records.
 - Approve architecture gates before implementation.
-2. MVP Build (Weeks 7-20) — **COMPLETED 2026-04-30**
+2. MVP Build (Weeks 7-20) � **COMPLETED 2026-04-30**
 - Built Developer Agent with 70+ local workspace action types across 12 tiers and 6 connector actions.
 - Ten LLM providers with health-score fallback routing (openai, azure_openai, github_models, anthropic, google, xai, mistral, together, agentfarm, auto).
 - Full approval and risk enforcement (HIGH/MEDIUM/LOW) with audit evidence.
@@ -24,7 +24,7 @@ Planning-first rule: no feature development starts until architecture baseline a
 - Tier 9 Developer Productivity Wave shipped (2026-04-30): workspace_create_pr, workspace_run_ci_checks, workspace_fix_test_failures, workspace_security_fix_suggest, workspace_pr_review_prepare, workspace_dependency_upgrade_plan, workspace_release_notes_generate, workspace_incident_patch_pack, workspace_memory_profile, workspace_autonomous_plan_execute, workspace_policy_preflight.
 - Tier 10 Connector Hardening + Code Intelligence + Observability shipped (2026-05-01): workspace_connector_test, workspace_pr_auto_assign, workspace_ci_watch, workspace_explain_code, workspace_add_docstring, workspace_refactor_plan, workspace_semantic_search, workspace_diff_preview, workspace_approval_status, workspace_audit_export. 190/190 tests passing.
 - **Skill Marketplace shipped (2026-05-05)**: 21 developer-agent skills cataloged, all 21 execution handlers implemented in skill-execution-engine.ts, POST /runtime/marketplace/invoke endpoint, dashboard Skill Marketplace Panel with install and invoke flows. **299 tests passing, 0 failing.** ADR-015 approved.
-3. Pilot (Weeks 21-30) — **ACTIVE**
+3. Pilot (Weeks 21-30) � **ACTIVE**
 - Run with 1-2 customers per operations/company-access-rollout.md.
 - Track quality, safety, and business value weekly.
 - Harden production connector SDK integrations.
@@ -34,7 +34,7 @@ Planning-first rule: no feature development starts until architecture baseline a
 - Add QA Agent and Manager Agent (each requires dedicated ADR and safety gate).
 - Multi-agent orchestration with shared approval queue.
 - Additional connectors: Confluence, Slack, Linear, Azure DevOps.
-- Container-native density migration: VM → Azure Container Apps (requires separate ADR).
+- Container-native density migration: VM ? Azure Container Apps (requires separate ADR).
 - Keep same score-5 gates per role.
 5. Enterprise (Week 43+)
 - SAML/SSO and enterprise identity federation.
@@ -44,7 +44,7 @@ Planning-first rule: no feature development starts until architecture baseline a
 - Compliance export automation (SOC 2, ISO 27001 evidence bundles).
 - AgentFarm Marketplace with partner ecosystem and revenue sharing.
 - Bring-your-own-model (BYOM) with same risk and approval wrapper.
-- Developer Agent persistent workspace memory (✅ delivered as workspace_memory_profile in Tier 9).
+- Developer Agent persistent workspace memory (? delivered as workspace_memory_profile in Tier 9).
 ## Architecture Baseline (Must Finish Before Build)
 1. System boundaries
 - Control plane: identity, policy, approval, and configuration.
@@ -127,3 +127,6 @@ Rule: development starts only after all architecture gates are approved.
 1. Run v1 pack review sequence from planning/v1-release-pack.md.
 2. Complete final approval checklist from planning/v1-release-pack.md.
 3. Development may start only after all checklist items are complete.
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

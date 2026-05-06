@@ -64,3 +64,6 @@ Any proposal that changes scope, release gates, or architecture boundaries must 
 1. Charter status: Active.
 2. Effective date: 2026-04-19.
 3. Next review date: 2026-05-03.
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

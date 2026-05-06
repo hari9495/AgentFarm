@@ -354,3 +354,6 @@ If another document conflicts, this file is the decision source until formally s
 ## Change Log
 1. 2026-04-25: Created canonical model for independent role bots, role-based UI/integration behavior, data model updates, API contracts, and migration plan.
 2. 2026-04-25: Added canonical LLM-first brain model, runtime safety rules, role-brain config requirements, and phased LLM-centric implementation plan.
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

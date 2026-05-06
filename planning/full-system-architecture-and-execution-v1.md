@@ -614,3 +614,6 @@ Sprint 1 is complete. The platform is code-complete and quality-gate-passing.
 2. Track weekly quality scores (Identity Realism, Role Fidelity, Autonomy with Approval) in Friday gate reviews
 3. Convert pilot feedback into the near-term roadmap items defined above
 4. Begin ADR planning for QA Agent and multi-agent orchestration (Scale Phase prerequisite)
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

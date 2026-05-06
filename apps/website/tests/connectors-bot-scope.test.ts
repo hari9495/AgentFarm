@@ -58,38 +58,43 @@ test("connectors GET returns bot-scoped catalog filtered by selected role", asyn
     const db = withDb();
     const suffix = `${Date.now()}_${Math.floor(Math.random() * 1000)}`;
 
-    const user = await createUser({
-        name: `Connector Scope ${suffix}`,
-        email: `connector_scope_${suffix}@agentfarm.local`,
-        company: "AgentFarm Test",
-        password: "Password123!",
-    });
+    let userId: string | null = null;
+    try {
+        const user = await createUser({
+            name: `Connector Scope ${suffix}`,
+            email: `connector_scope_${suffix}@agentfarm.local`,
+            company: "AgentFarm Test",
+            password: "Password123!",
+        });
+        userId = user.id;
 
-    const initialized = initializeTenantWorkspaceAndBot({ userId: user.id, tenantName: "AgentFarm Test" });
-    const alt = addWorkspaceBot(db, initialized.tenant.id, "corporate_assistant");
+        const initialized = initializeTenantWorkspaceAndBot({ userId: user.id, tenantName: "AgentFarm Test" });
+        const alt = addWorkspaceBot(db, initialized.tenant.id, "corporate_assistant");
 
-    const { sessionToken } = createSession(user.id);
+        const { sessionToken } = createSession(user.id);
 
-    const response = await getConnectors(
-        new Request(`http://localhost/api/connectors?workspaceId=${alt.workspaceId}&botId=${alt.botId}`, {
-            headers: { cookie: makeCookieHeader(sessionToken) },
-        }),
-    );
+        const response = await getConnectors(
+            new Request(`http://localhost/api/connectors?workspaceId=${alt.workspaceId}&botId=${alt.botId}`, {
+                headers: { cookie: makeCookieHeader(sessionToken) },
+            }),
+        );
 
-    assert.equal(response.status, 200);
-    const body = await response.json() as {
-        context: { selectedRoleKey: string; selectedWorkspaceId: string; selectedBotId: string };
-        available: Array<{ tool: string }>;
-    };
+        assert.equal(response.status, 200);
+        const body = await response.json() as {
+            context: { selectedRoleKey: string; selectedWorkspaceId: string; selectedBotId: string };
+            available: Array<{ tool: string }>;
+        };
 
-    assert.equal(body.context.selectedRoleKey, "corporate_assistant");
-    assert.equal(body.context.selectedWorkspaceId, alt.workspaceId);
-    assert.equal(body.context.selectedBotId, alt.botId);
-    assert.ok(body.available.some((item) => item.tool === "teams"), "teams should remain available for all roles");
-    assert.ok(!body.available.some((item) => item.tool === "github"), "github must be hidden for non-code role");
-
-    cleanupUserTenant(db, user.id);
-    connectorStore.clear();
+        assert.equal(body.context.selectedRoleKey, "corporate_assistant");
+        assert.equal(body.context.selectedWorkspaceId, alt.workspaceId);
+        assert.equal(body.context.selectedBotId, alt.botId);
+        assert.ok(body.available.some((item) => item.tool === "teams"), "teams should remain available for all roles");
+        assert.ok(!body.available.some((item) => item.tool === "github"), "github must be hidden for non-code role");
+    } finally {
+        if (userId) cleanupUserTenant(db, userId);
+        connectorStore.clear();
+        db.close();
+    }
 });
 
 test("connectors POST rejects disallowed tool for selected bot role", async () => {
@@ -97,39 +102,44 @@ test("connectors POST rejects disallowed tool for selected bot role", async () =
     const db = withDb();
     const suffix = `${Date.now()}_${Math.floor(Math.random() * 1000)}`;
 
-    const user = await createUser({
-        name: `Connector Reject ${suffix}`,
-        email: `connector_reject_${suffix}@agentfarm.local`,
-        company: "AgentFarm Test",
-        password: "Password123!",
-    });
+    let userId: string | null = null;
+    try {
+        const user = await createUser({
+            name: `Connector Reject ${suffix}`,
+            email: `connector_reject_${suffix}@agentfarm.local`,
+            company: "AgentFarm Test",
+            password: "Password123!",
+        });
+        userId = user.id;
 
-    const initialized = initializeTenantWorkspaceAndBot({ userId: user.id, tenantName: "AgentFarm Test" });
-    const alt = addWorkspaceBot(db, initialized.tenant.id, "corporate_assistant");
-    const { sessionToken } = createSession(user.id);
+        const initialized = initializeTenantWorkspaceAndBot({ userId: user.id, tenantName: "AgentFarm Test" });
+        const alt = addWorkspaceBot(db, initialized.tenant.id, "corporate_assistant");
+        const { sessionToken } = createSession(user.id);
 
-    const response = await postConnectors(
-        new Request("http://localhost/api/connectors", {
-            method: "POST",
-            headers: {
-                cookie: makeCookieHeader(sessionToken),
-                "content-type": "application/json",
-            },
-            body: JSON.stringify({
-                tool: "github",
-                workspaceId: alt.workspaceId,
-                botId: alt.botId,
+        const response = await postConnectors(
+            new Request("http://localhost/api/connectors", {
+                method: "POST",
+                headers: {
+                    cookie: makeCookieHeader(sessionToken),
+                    "content-type": "application/json",
+                },
+                body: JSON.stringify({
+                    tool: "github",
+                    workspaceId: alt.workspaceId,
+                    botId: alt.botId,
+                }),
             }),
-        }),
-    );
+        );
 
-    assert.equal(response.status, 403);
-    const body = await response.json() as { error: string; selected_role: string };
-    assert.equal(body.selected_role, "corporate_assistant");
-    assert.ok(body.error.includes("not allowed"));
-
-    cleanupUserTenant(db, user.id);
-    connectorStore.clear();
+        assert.equal(response.status, 403);
+        const body = await response.json() as { error: string; selected_role: string };
+        assert.equal(body.selected_role, "corporate_assistant");
+        assert.ok(body.error.includes("not allowed"));
+    } finally {
+        if (userId) cleanupUserTenant(db, userId);
+        connectorStore.clear();
+        db.close();
+    }
 });
 
 test("connectors are isolated by selected workspace", async () => {
@@ -137,44 +147,124 @@ test("connectors are isolated by selected workspace", async () => {
     const db = withDb();
     const suffix = `${Date.now()}_${Math.floor(Math.random() * 1000)}`;
 
-    const user = await createUser({
-        name: `Connector Isolation ${suffix}`,
-        email: `connector_isolation_${suffix}@agentfarm.local`,
-        company: "AgentFarm Test",
-        password: "Password123!",
-    });
+    let userId: string | null = null;
+    try {
+        const user = await createUser({
+            name: `Connector Isolation ${suffix}`,
+            email: `connector_isolation_${suffix}@agentfarm.local`,
+            company: "AgentFarm Test",
+            password: "Password123!",
+        });
+        userId = user.id;
 
-    const initialized = initializeTenantWorkspaceAndBot({ userId: user.id, tenantName: "AgentFarm Test" });
-    const alt = addWorkspaceBot(db, initialized.tenant.id, "corporate_assistant");
-    const { sessionToken } = createSession(user.id);
+        const initialized = initializeTenantWorkspaceAndBot({ userId: user.id, tenantName: "AgentFarm Test" });
+        const alt = addWorkspaceBot(db, initialized.tenant.id, "corporate_assistant");
+        const { sessionToken } = createSession(user.id);
 
-    const createResponse = await postConnectors(
-        new Request("http://localhost/api/connectors", {
-            method: "POST",
-            headers: {
-                cookie: makeCookieHeader(sessionToken),
-                "content-type": "application/json",
-            },
-            body: JSON.stringify({
-                tool: "teams",
-                workspaceId: initialized.workspace.id,
-                botId: initialized.bot.id,
+        const createResponse = await postConnectors(
+            new Request("http://localhost/api/connectors", {
+                method: "POST",
+                headers: {
+                    cookie: makeCookieHeader(sessionToken),
+                    "content-type": "application/json",
+                },
+                body: JSON.stringify({
+                    tool: "teams",
+                    workspaceId: initialized.workspace.id,
+                    botId: initialized.bot.id,
+                }),
             }),
-        }),
-    );
+        );
 
-    assert.equal(createResponse.status, 201);
+        assert.equal(createResponse.status, 201);
 
-    const altResponse = await getConnectors(
-        new Request(`http://localhost/api/connectors?workspaceId=${alt.workspaceId}&botId=${alt.botId}`, {
-            headers: { cookie: makeCookieHeader(sessionToken) },
-        }),
-    );
-    assert.equal(altResponse.status, 200);
+        const altResponse = await getConnectors(
+            new Request(`http://localhost/api/connectors?workspaceId=${alt.workspaceId}&botId=${alt.botId}`, {
+                headers: { cookie: makeCookieHeader(sessionToken) },
+            }),
+        );
+        assert.equal(altResponse.status, 200);
 
-    const altBody = await altResponse.json() as { configured: Array<{ workspaceId: string }> };
-    assert.equal(altBody.configured.length, 0);
+        const altBody = await altResponse.json() as { configured: Array<{ workspaceId: string }> };
+        assert.equal(altBody.configured.length, 0);
+    } finally {
+        if (userId) cleanupUserTenant(db, userId);
+        connectorStore.clear();
+        db.close();
+    }
+});
 
-    cleanupUserTenant(db, user.id);
+test("connectors GET returns 400 for invalid requested scope instead of silently falling back", async () => {
     connectorStore.clear();
+    const db = withDb();
+    const suffix = `${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+
+    let userId: string | null = null;
+    try {
+        const user = await createUser({
+            name: `Connector Invalid Scope GET ${suffix}`,
+            email: `connector_invalid_scope_get_${suffix}@agentfarm.local`,
+            company: "AgentFarm Test",
+            password: "Password123!",
+        });
+        userId = user.id;
+        initializeTenantWorkspaceAndBot({ userId: user.id, tenantName: "AgentFarm Test" });
+        const { sessionToken } = createSession(user.id);
+
+        const response = await getConnectors(
+            new Request("http://localhost/api/connectors?workspaceId=ws_missing&botId=bot_missing", {
+                headers: { cookie: makeCookieHeader(sessionToken) },
+            }),
+        );
+
+        assert.equal(response.status, 400);
+        const body = await response.json() as { error: string };
+        assert.ok(body.error.includes("Invalid workspaceId/botId scope"));
+    } finally {
+        if (userId) cleanupUserTenant(db, userId);
+        connectorStore.clear();
+        db.close();
+    }
+});
+
+test("connectors POST returns 400 for invalid requested scope instead of silently falling back", async () => {
+    connectorStore.clear();
+    const db = withDb();
+    const suffix = `${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+
+    let userId: string | null = null;
+    try {
+        const user = await createUser({
+            name: `Connector Invalid Scope POST ${suffix}`,
+            email: `connector_invalid_scope_post_${suffix}@agentfarm.local`,
+            company: "AgentFarm Test",
+            password: "Password123!",
+        });
+        userId = user.id;
+        initializeTenantWorkspaceAndBot({ userId: user.id, tenantName: "AgentFarm Test" });
+        const { sessionToken } = createSession(user.id);
+
+        const response = await postConnectors(
+            new Request("http://localhost/api/connectors", {
+                method: "POST",
+                headers: {
+                    cookie: makeCookieHeader(sessionToken),
+                    "content-type": "application/json",
+                },
+                body: JSON.stringify({
+                    tool: "teams",
+                    workspaceId: "ws_missing",
+                    botId: "bot_missing",
+                }),
+            }),
+        );
+
+        assert.equal(response.status, 400);
+        const body = await response.json() as { error: string };
+        assert.ok(body.error.includes("Invalid workspaceId/botId scope"));
+    } finally {
+        if (userId) cleanupUserTenant(db, userId);
+        connectorStore.clear();
+        db.close();
+    }
 });

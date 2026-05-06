@@ -45,6 +45,7 @@ interface ConnectorContext {
     selectedBotId: string;
     selectedRoleKey: string;
     selectedPolicyPackVersion: string;
+    scope_model?: string;
     disallowed_tools_hidden_count: number;
     options: WorkspaceBotOption[];
 }
@@ -528,7 +529,7 @@ export default function ConnectorsPage() {
                             <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">Available connectors</h2>
                             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">All tools your agent can connect to. More added every sprint.</p>
                         </div>
-                        <span className="text-xs font-semibold bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 px-2.5 py-1 rounded-full">12 connectors</span>
+                        <span className="text-xs font-semibold bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 px-2.5 py-1 rounded-full">{available.length} connectors</span>
                     </div>
                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
                         {[
@@ -567,7 +568,7 @@ export default function ConnectorsPage() {
                             <div>
                                 <p className="text-sm font-semibold text-gray-900">Bot-scoped integration context</p>
                                 <p className="text-xs text-gray-500 mt-0.5">
-                                    This catalog is filtered by selected bot role and policy.
+                                        This catalog is filtered by selected bot role and policy. Configured connectors are scoped per workspace.
                                 </p>
                             </div>
                             <select
@@ -597,6 +598,11 @@ export default function ConnectorsPage() {
                                     <p>
                                         Hidden disallowed integrations: <span className="font-semibold text-gray-800">{context.disallowed_tools_hidden_count}</span>
                                     </p>
+                                    {context.scope_model && (
+                                        <p>
+                                            Scope model: <span className="font-semibold text-gray-800">{context.scope_model}</span>
+                                        </p>
+                                    )}
                                 </div>
                             );
                         })()}

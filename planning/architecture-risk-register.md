@@ -154,3 +154,6 @@ Track architecture risks before development and keep mitigations owner-driven.
 - Mitigated (Planning)
 8. Closure Basis
 - Open: operational monitoring of per-provider health scores in production and cost alerting rules are not yet wired to Azure Monitor. Remains open until production observability for provider health is confirmed.
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

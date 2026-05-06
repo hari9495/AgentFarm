@@ -211,3 +211,6 @@ This spec closes Open Decision #1.
 
 Final v1 rule:
 A customer signs up as a tenant, receives one default workspace, and that workspace gets one bot. Future scale happens by adding more workspaces, not by overloading the tenant itself.
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

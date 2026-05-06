@@ -262,3 +262,6 @@ echo "{
 | `infrastructure/runtime-plane/main.bicep` | Per-tenant VM, NSG, VNet, NIC, managed identity, auto-shutdown |
 | `.github/workflows/website-swa.yml` | CI/CD pipeline for website → Azure SWA |
 | `apps/website/staticwebapp.config.json` | SWA routing rules and security headers |
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

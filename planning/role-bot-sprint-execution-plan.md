@@ -292,3 +292,6 @@ Stabilize for release with strict regressions and operational runbook updates.
 2. Every sprint ends with code, tests, docs updates, and explicit owner signoff.
 3. Behavioral changes must include regression tests in the same sprint.
 4. Do not bypass enforcement checks for temporary convenience paths.
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

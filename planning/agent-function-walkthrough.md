@@ -392,3 +392,6 @@ POST /kill
 - The decision webhook uses a separate **runtime decision token** (`x-runtime-decision-token`)
 - Approval records are **immutable** after creation — no modification, only append
 - A bot cannot exceed its role's connector access regardless of payload content
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

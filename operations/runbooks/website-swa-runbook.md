@@ -87,3 +87,19 @@ Operational checklist for deploying the AgentFarm website to Azure Static Web Ap
 - Frontend Lead: website build and UX verification
 - DevOps: deployment workflow and domain configuration
 - Product: launch signoff
+
+## Sprint 6 Connector Scope Hardening Checks
+1. Validate invalid scope requests fail fast:
+   - GET `/api/connectors?workspaceId=<invalid>&botId=<invalid>` must return HTTP 400.
+   - POST `/api/connectors` with invalid `workspaceId`/`botId` must return HTTP 400.
+2. Validate role-aware catalog filtering still applies for selected bot context:
+   - disallowed tool entries are hidden from available catalog for that role.
+3. Validate workspace-level connector isolation remains intact:
+   - connector created in workspace A is absent from configured list for workspace B.
+4. Run focused regression lane before release:
+   - `pnpm --filter @agentfarm/website exec tsx --test tests/connectors-bot-scope.test.ts`
+5. Confirm full quality gate report remains PASS after website connector changes:
+   - `operations/quality/8.1-quality-gate-report.md`
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

@@ -486,3 +486,6 @@ Implement the Developer Agent Tier 1 and Tier 2 local workspace actions for Clau
 2. Verified: `pnpm quality:gate` passing (API Gateway coverage gate, Agent Runtime coverage gate, typechecks, dashboard typecheck, website smoke lane).
 3. Sprint 1 trust-and-execution closure record accepted in `planning/sprints/sprint-1-trust-and-execution-core.md`.
 4. Next action: begin Sprint 2 planning and implementation.
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

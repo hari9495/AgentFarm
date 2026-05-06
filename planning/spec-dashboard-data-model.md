@@ -209,3 +209,6 @@ Bot status rule:
 
 ## Success Condition
 The dashboard gives the customer confidence that the bot is provisioned, healthy, connected, auditable, and under control without exposing internal infrastructure complexity.
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

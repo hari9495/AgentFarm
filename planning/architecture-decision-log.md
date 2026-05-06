@@ -269,3 +269,6 @@ Track architecture decisions with owner, status, and review dates before develop
 2. Superseded ADRs must link to replacement ADR.
 3. ADR status must be reviewed weekly in architecture governance meeting.
 
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

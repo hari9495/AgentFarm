@@ -278,3 +278,6 @@ Ensure each workspace in the internal dashboard remembers its own last active ta
 2. Task 8.2 deployment evidence and runbook signoff complete.
 3. Task 8.3 security, load, and freshness gates complete.
 4. MVP launch signoff approved by Product, Engineering, and Security leads.
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

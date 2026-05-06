@@ -21,3 +21,6 @@ applyTo: "apps/**/*.test.ts,apps/**/*.spec.ts,services/**/*.test.ts,services/**/
 ## Regression Prevention
 - For bug fixes, add a regression test that fails before the fix and passes after.
 - For cross-service changes, validate upstream and downstream contract behavior.
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

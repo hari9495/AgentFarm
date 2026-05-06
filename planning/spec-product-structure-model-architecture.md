@@ -340,3 +340,6 @@ Outputs:
 3. planning/spec-dashboard-data-model.md
 4. planning/engineering-execution-design.md
 5. planning/product-architecture.md
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

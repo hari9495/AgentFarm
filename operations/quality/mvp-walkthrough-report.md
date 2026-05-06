@@ -253,3 +253,6 @@ Walkthrough Status: PASSED
 **Environment:** Windows (Local Development)  
 **Node.js Version:** 24.13.1  
 **Framework:** Next.js 15.5.15 + TypeScript 5.7.2
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

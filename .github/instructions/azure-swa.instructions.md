@@ -21,3 +21,6 @@ applyTo: "apps/website/**,.github/workflows/website-swa.yml"
 ## Operational Readiness
 - For deployment behavior changes, update the related runbook in `operations/runbooks/`.
 - Keep failure messaging clear in workflows so on-call engineers can triage quickly.
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

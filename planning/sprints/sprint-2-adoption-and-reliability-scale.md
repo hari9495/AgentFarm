@@ -104,3 +104,6 @@ Proceed to Sprint 3 only when all Sprint 2 stories meet acceptance criteria and 
 Sprint 2 Adoption And Reliability Scale is accepted and closed.
 
 Decision: Proceed to Sprint 3.
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

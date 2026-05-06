@@ -1,4 +1,4 @@
-﻿# AgentFarm Competitive Gold Standards
+# AgentFarm Competitive Gold Standards
 ## Purpose
 Use a clear scoring system to compare AgentFarm with competitors and protect product quality.
 ## Scoring Model
@@ -243,3 +243,6 @@ Every score entry must include:
 4. Practical example
 5. Owner
 6. Freshness status (within 90 days for high-confidence score)
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

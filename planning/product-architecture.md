@@ -763,3 +763,6 @@ Use this table whenever architecture content changes.
 | 2026-04-18 | Product structure model detail | Added a granular product-structure and model-architecture spec and linked it into the canonical architecture references | Enable minute-level architecture understanding before build execution | Architecture Owner | ADR-001 | R-005 |
 | 2026-04-18 | Runtime and connector auth specs | Linked Docker runtime contract and connector auth flow specs into canonical architecture references | Close MVP execution design gaps and remove remaining architecture ambiguity | Architecture Owner | ADR-003 | R-001 |
 | 2026-04-18 | Incident runbook pack spec | Linked incident/runbook pack spec into canonical architecture references and release pack | Complete MVP operational readiness architecture artifacts | Architecture Owner | ADR-005 | R-002 |
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

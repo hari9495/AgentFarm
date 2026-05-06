@@ -1,4 +1,4 @@
-ï»¿# AgentFarm MVP Scope and Gates
+# AgentFarm MVP Scope and Gates
 ## MVP Goal
 Launch one high-quality role first, prove value, then expand.
 Planning-first rule: MVP implementation starts only after architecture baseline is approved.
@@ -64,7 +64,7 @@ Planning guardrail:
 
 ## Implementation Status (as of 2026-05-04)
 
-All MVP items above are built and tested. Quality gate: **EXIT_CODE=0 â€” PASS** (47 checks, 46 passing).
+All MVP items above are built and tested. Quality gate: **EXIT_CODE=0 — PASS** (47 checks, 46 passing).
 
 ### Sprint 2 Features Built Beyond MVP Scope
 
@@ -73,7 +73,7 @@ The following features were built as Sprint 2 open-source-inspired additions:
 | Feature | Status | Notes |
 |---------|--------|-------|
 | Messaging gateway (Telegram/Slack/Discord/Webhook) | **Built** | notification-service, 31 tests |
-| Voice notification channel (VoxCPM/VoIP) | **Built** | voice-adapter.ts â€” previously listed as "Not Included in MVP" |
+| Voice notification channel (VoxCPM/VoIP) | **Built** | voice-adapter.ts — previously listed as "Not Included in MVP" |
 | GOAP A* goal planner | **Built** | orchestrator/goap-planner.ts |
 | SSE task stream with auto-recovery | **Built** | api-gateway/routes/sse-tasks.ts |
 | Skills crystallization (Hermes Agent pattern) | **Built** | agent-runtime/skills-registry.ts |
@@ -86,3 +86,6 @@ The following features were built as Sprint 2 open-source-inspired additions:
 
 Note: Voice notification channel (VoxCPM) has been built. Live meeting participation (voice join to a real meeting call) remains out of scope until a separate safety gate is approved.
 
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

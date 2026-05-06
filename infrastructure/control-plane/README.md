@@ -35,3 +35,6 @@ azd up
 - No secrets are ever stored in IaC templates or source code
 - All connector credentials must be injected via Key Vault references at runtime
 - Least-privilege managed identities for all service-to-service access
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

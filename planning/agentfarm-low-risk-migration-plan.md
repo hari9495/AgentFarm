@@ -124,3 +124,6 @@ Migrate AgentFarm toward stronger orchestration/governance patterns with minimal
 1. Any gate-impacting behavior change requires same-day ADR and risk register update.
 2. Every phase close must attach quality-gate evidence (tests/typecheck/smoke).
 3. Production rollout decisions require explicit signoff by Engineering Lead and Security and Safety Lead.
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

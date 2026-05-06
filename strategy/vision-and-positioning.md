@@ -1,4 +1,4 @@
-﻿# AgentFarm Vision and Positioning
+# AgentFarm Vision and Positioning
 ## Vision
 Help companies scale output without scaling headcount by using role-based AI agents.
 ## Positioning
@@ -19,3 +19,6 @@ It is an AI workforce system with role-based agents.
 2. Role-based quality, not generic responses
 3. Safe autonomy with mandatory approvals for risk
 4. Clear value tracking and cost visibility
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).

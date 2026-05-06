@@ -221,3 +221,6 @@ This section is planning-only and does not alter MVP scope rules above.
 1. Future work may begin only after explicit architecture and safety signoff confirms scope and risk coverage.
 2. Any proposed expansion that adds new roles, connectors, or privileged runtime actions must be reviewed as out-of-scope by default until approved.
 3. Every post-MVP task must include owner, dependency, acceptance criteria, scope check, and evidence references before implementation begins.
+
+<!-- doc-sync: 2026-05-06 sprint-6 -->
+> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
