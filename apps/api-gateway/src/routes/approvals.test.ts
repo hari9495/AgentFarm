@@ -165,9 +165,80 @@ test('intake queues medium/high risk actions for approval', async () => {
         });
 
         assert.equal(response.statusCode, 201);
-        const body = response.json() as { status: string; approval_id: string };
+        const body = response.json() as {
+            status: string;
+            approval_id: string;
+            approval_packet: {
+                change_summary: string;
+                impacted_scope: string | null;
+                risk_reason: string | null;
+                proposed_rollback: string | null;
+                lint_status: string | null;
+                test_status: string | null;
+                packet_complete: boolean;
+            };
+        };
         assert.equal(body.status, 'queued_for_approval');
         assert.equal(body.approval_id, 'apr_1');
+        assert.equal(body.approval_packet.change_summary, 'Merge release branch');
+        assert.equal(body.approval_packet.packet_complete, false);
+    } finally {
+        await app.close();
+    }
+});
+
+test('intake returns structured approval packet when action summary already contains packet fields', async () => {
+    const app = Fastify();
+    const fake = createRepo();
+
+    await registerApprovalRoutes(app, {
+        getSession: () => session(),
+        repo: fake.repo,
+    });
+
+    try {
+        const response = await app.inject({
+            method: 'POST',
+            url: '/v1/approvals/intake',
+            payload: {
+                workspace_id: 'ws_1',
+                bot_id: 'bot_1',
+                task_id: 'task_packet_1',
+                action_id: 'act_packet_1',
+                action_summary: [
+                    'Change summary: Create PR for connector retry patch',
+                    'Impacted scope: apps/api-gateway/src/routes/connector-auth.ts',
+                    'Risk reason: Action create_pr is medium-risk by policy.',
+                    'Proposed rollback: Revert connector retry changes and restore previous route.',
+                    'Lint status: passed',
+                    'Test status: passed',
+                ].join('\n'),
+                risk_level: 'medium',
+                requested_by: 'runtime:bot_1',
+                policy_pack_version: 'mvp-v1',
+            },
+        });
+
+        assert.equal(response.statusCode, 201);
+        const body = response.json() as {
+            approval_packet: {
+                change_summary: string;
+                impacted_scope: string | null;
+                risk_reason: string | null;
+                proposed_rollback: string | null;
+                lint_status: string | null;
+                test_status: string | null;
+                packet_complete: boolean;
+            };
+        };
+
+        assert.equal(body.approval_packet.change_summary, 'Create PR for connector retry patch');
+        assert.equal(body.approval_packet.impacted_scope, 'apps/api-gateway/src/routes/connector-auth.ts');
+        assert.equal(body.approval_packet.risk_reason, 'Action create_pr is medium-risk by policy.');
+        assert.equal(body.approval_packet.proposed_rollback, 'Revert connector retry changes and restore previous route.');
+        assert.equal(body.approval_packet.lint_status, 'passed');
+        assert.equal(body.approval_packet.test_status, 'passed');
+        assert.equal(body.approval_packet.packet_complete, true);
     } finally {
         await app.close();
     }
@@ -721,6 +792,212 @@ test('decision endpoint records warning audit event when runtime webhook deliver
 
         assert.equal(fake.auditEvents.length, 2);
         assert.ok(fake.auditEvents[1]?.summary.includes('Decision webhook failed'));
+    } finally {
+        await app.close();
+    }
+});
+
+test('evidence endpoint returns no_evidence_yet when no evidence is available', async () => {
+    const app = Fastify();
+    const fake = createRepo();
+
+    const approval: StoredApproval = {
+        id: 'apr_evidence_none',
+        tenantId: 'tenant_1',
+        workspaceId: 'ws_1',
+        botId: 'bot_1',
+        taskId: 'task_evidence_none',
+        actionId: 'act_evidence_none',
+        riskLevel: 'medium',
+        actionSummary: 'Update docs',
+        requestedBy: 'runtime:bot_1',
+        policyPackVersion: 'mvp-v1',
+        escalationTimeoutSeconds: 3600,
+        decision: 'approved',
+        createdAt: new Date(),
+        escalatedAt: null,
+    };
+    fake.approvals.set(approval.id, approval);
+
+    await registerApprovalRoutes(app, {
+        getSession: () => session(),
+        repo: fake.repo,
+        evidenceReader: async () => [],
+    });
+
+    try {
+        const response = await app.inject({
+            method: 'GET',
+            url: '/v1/approvals/apr_evidence_none/evidence?workspace_id=ws_1',
+        });
+
+        assert.equal(response.statusCode, 200);
+        const body = response.json() as {
+            total: number;
+            limit: number;
+            offset: number;
+            evidence: unknown[];
+        };
+        assert.equal(body.total, 0);
+        assert.equal(body.limit, 20);
+        assert.equal(body.offset, 0);
+        assert.deepEqual(body.evidence, []);
+    } finally {
+        await app.close();
+    }
+});
+
+test('evidence endpoint returns persisted evidence when available', async () => {
+    const app = Fastify();
+    const fake = createRepo();
+
+    const approval: StoredApproval = {
+        id: 'apr_evidence_found',
+        tenantId: 'tenant_1',
+        workspaceId: 'ws_1',
+        botId: 'bot_1',
+        taskId: 'task_evidence_found',
+        actionId: 'act_evidence_found',
+        riskLevel: 'high',
+        actionSummary: 'Merge release branch',
+        requestedBy: 'runtime:bot_1',
+        policyPackVersion: 'mvp-v1',
+        escalationTimeoutSeconds: 3600,
+        decision: 'approved',
+        createdAt: new Date(),
+        escalatedAt: null,
+    };
+    fake.approvals.set(approval.id, approval);
+
+    await registerApprovalRoutes(app, {
+        getSession: () => session(),
+        repo: fake.repo,
+        evidenceReader: async () => ([{
+            evidenceId: 'ev_found_1',
+            taskId: 'task_evidence_found',
+            approvalId: 'apr_evidence_found',
+            workspaceId: 'ws_1',
+            actionStatus: 'success',
+            executionLogs: [{
+                timestamp: '2026-05-06T10:00:00.000Z',
+                level: 'info',
+                message: 'runtime.task_processed',
+            }],
+            qualityGateResults: [{
+                checkType: 'lint',
+                status: 'passed',
+                details: 'lint passed',
+            }],
+            actionOutcome: {
+                success: true,
+                resultSummary: 'Action completed',
+            },
+            connectorUsed: 'github',
+            actorId: 'bot_1',
+            approvalReason: 'Policy review passed',
+        }]),
+    });
+
+    try {
+        const response = await app.inject({
+            method: 'GET',
+            url: '/v1/approvals/apr_evidence_found/evidence?workspace_id=ws_1',
+        });
+
+        assert.equal(response.statusCode, 200);
+        const body = response.json() as {
+            total: number;
+            limit: number;
+            offset: number;
+            evidence: Array<{
+                evidence_id: string;
+                status: string;
+                execution_logs: Array<{ message: string }>;
+                quality_gate_results: Array<{ status: string }>;
+                action_outcome: { success: boolean; result_summary: string | null };
+                connector_used: string | null;
+                actor_id: string | null;
+                approval_reason: string | null;
+            }>;
+        };
+
+        assert.equal(body.total, 1);
+        assert.equal(body.limit, 20);
+        assert.equal(body.offset, 0);
+        assert.equal(body.evidence.length, 1);
+        const ev = body.evidence[0]!;
+        assert.equal(ev.evidence_id, 'ev_found_1');
+        assert.equal(ev.status, 'success');
+        assert.equal(ev.execution_logs[0]?.message, 'runtime.task_processed');
+        assert.equal(ev.quality_gate_results[0]?.status, 'passed');
+        assert.equal(ev.action_outcome.success, true);
+        assert.equal(ev.action_outcome.result_summary, 'Action completed');
+        assert.equal(ev.connector_used, 'github');
+        assert.equal(ev.actor_id, 'bot_1');
+        assert.equal(ev.approval_reason, 'Policy review passed');
+    } finally {
+        await app.close();
+    }
+});
+
+test('evidence endpoint supports limit and offset pagination', async () => {
+    const app = Fastify();
+    const fake = createRepo();
+
+    const approval: StoredApproval = {
+        id: 'apr_evidence_paginated',
+        tenantId: 'tenant_1',
+        workspaceId: 'ws_1',
+        botId: 'bot_1',
+        taskId: 'task_evidence_paginated',
+        actionId: 'act_evidence_paginated',
+        riskLevel: 'high',
+        actionSummary: 'Deploy service',
+        requestedBy: 'runtime:bot_1',
+        policyPackVersion: 'mvp-v1',
+        escalationTimeoutSeconds: 3600,
+        decision: 'approved',
+        createdAt: new Date(),
+        escalatedAt: null,
+    };
+    fake.approvals.set(approval.id, approval);
+
+    const makeRecord = (n: number) => ({
+        evidenceId: `ev_paged_${n}`,
+        taskId: 'task_evidence_paginated',
+        approvalId: 'apr_evidence_paginated',
+        workspaceId: 'ws_1',
+        actionStatus: 'success',
+        executionLogs: [],
+        qualityGateResults: [],
+        actionOutcome: { success: true },
+    });
+
+    await registerApprovalRoutes(app, {
+        getSession: () => session(),
+        repo: fake.repo,
+        evidenceReader: async () => [makeRecord(1), makeRecord(2), makeRecord(3)],
+    });
+
+    try {
+        const response = await app.inject({
+            method: 'GET',
+            url: '/v1/approvals/apr_evidence_paginated/evidence?workspace_id=ws_1&limit=2&offset=1',
+        });
+
+        assert.equal(response.statusCode, 200);
+        const body = response.json() as {
+            total: number;
+            limit: number;
+            offset: number;
+            evidence: Array<{ evidence_id: string }>;
+        };
+        assert.equal(body.total, 3);
+        assert.equal(body.limit, 2);
+        assert.equal(body.offset, 1);
+        assert.equal(body.evidence.length, 2);
+        assert.equal(body.evidence[0]?.evidence_id, 'ev_paged_2');
+        assert.equal(body.evidence[1]?.evidence_id, 'ev_paged_3');
     } finally {
         await app.close();
     }

@@ -47,6 +47,19 @@ Planning-first rule: MVP implementation starts only after architecture baseline 
 6. Approval latency
 7. Audit completeness
 
+## Post-MVP Developer Agent Planning References
+Use the following documents when planning the next implementation wave after MVP baseline completion:
+1. planning/developer-agent-mvp-implementation-backlog.md
+2. planning/future-agent-build-playbook.md
+3. planning/developer-agent-sprint-board.md
+4. planning/developer-agent-sprint-program.md
+5. planning/sprints/sprint-1-trust-and-execution-core.md
+6. planning/sprints/sprint-2-adoption-and-reliability-scale.md
+7. planning/sprints/sprint-3-memory-and-compliance-packaging.md
+
+Planning guardrail:
+1. Any item that expands scope beyond the current MVP role/integration boundaries must be explicitly approved through architecture and safety governance before implementation starts.
+
 ---
 
 ## Implementation Status (as of 2026-05-04)

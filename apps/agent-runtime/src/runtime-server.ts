@@ -29,6 +29,12 @@ import {
     type ActionResultWriter,
 } from './action-result-contract.js';
 import { createFileActionResultWriter, resolveActionResultPath } from './action-result-writer.js';
+import type { EvidenceRecordWriter, ExecutionLogEntry } from './evidence-record-contract.js';
+import { assembleEvidenceRecord } from './evidence-assembler.js';
+import {
+    createFileEvidenceRecordWriter,
+    resolveEvidenceRecordPath,
+} from './evidence-record-writer.js';
 import {
     executeLocalWorkspaceAction,
     buildGitPushApprovalSummary,
@@ -177,6 +183,7 @@ type RuntimeServerOptions = {
     sleep?: (ms: number) => Promise<void>;
     exitProcess?: (code: number) => void;
     actionResultWriter?: ActionResultWriter;
+    evidenceRecordWriter?: EvidenceRecordWriter;
     capabilitySnapshotPersistenceClient?: CapabilitySnapshotPersistenceClient;
     taskExecutionRecordWriter?: TaskExecutionRecordWriter;
     llmDecisionResolver?: LlmDecisionResolver;
@@ -192,6 +199,7 @@ type RuntimeServerOptions = {
         version: number;
         state: Record<string, unknown>;
     } | null>;
+    localWorkspaceActionExecutor?: typeof executeLocalWorkspaceAction;
 };
 
 type RuntimeLogEntry = {
@@ -363,6 +371,23 @@ const CONNECTOR_ACTION_TYPES = new Set([
     'list_prs',
     'send_email',
 ] as const);
+
+const POST_CHANGE_QUALITY_GATE_ACTIONS = new Set<LocalWorkspaceActionType>([
+    'code_edit',
+    'code_edit_patch',
+    'code_search_replace',
+    'apply_patch',
+    'file_move',
+    'file_delete',
+    'workspace_fix_test_failures',
+    'workspace_autonomous_plan_execute',
+    'workspace_bulk_refactor',
+    'workspace_atomic_edit_set',
+    'workspace_migration_helper',
+    'workspace_generate_test',
+    'workspace_format_code',
+    'workspace_add_docstring',
+]);
 
 type RuntimeConnectorType = 'jira' | 'teams' | 'github' | 'email';
 type RuntimeConnectorActionType =
@@ -1586,6 +1611,10 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
     const exitProcess = options.exitProcess ?? ((code: number) => process.exit(code));
     const actionResultLogPath = resolveActionResultPath(env);
     const actionResultWriter = options.actionResultWriter ?? createFileActionResultWriter(actionResultLogPath);
+    const evidenceRecordPath = resolveEvidenceRecordPath(env);
+    const evidenceRecordWriter =
+        options.evidenceRecordWriter ?? createFileEvidenceRecordWriter(evidenceRecordPath);
+    const localWorkspaceActionExecutor = options.localWorkspaceActionExecutor ?? executeLocalWorkspaceAction;
 
     const app = Fastify({
         logger: {
@@ -1702,6 +1731,33 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         } catch {
             // Ignore malformed action output payloads for interview stream extraction.
         }
+    };
+
+    const toEvidenceLogLevel = (entry: RuntimeLogEntry): ExecutionLogEntry['level'] => {
+        if (entry.eventType.includes('failed') || entry.eventType.includes('error')) {
+            return 'error';
+        }
+        if (entry.eventType.includes('degraded') || entry.eventType.includes('blocked') || entry.eventType.includes('warn')) {
+            return 'warn';
+        }
+        return 'info';
+    };
+
+    const collectExecutionLogsForTask = (taskId: string): ExecutionLogEntry[] => {
+        return runtimeLogs
+            .filter((entry) => {
+                const detailTaskId =
+                    typeof entry.details?.['task_id'] === 'string'
+                        ? entry.details['task_id']
+                        : undefined;
+                return detailTaskId === taskId;
+            })
+            .map((entry) => ({
+                timestamp: entry.at,
+                level: toEvidenceLogLevel(entry),
+                message: entry.eventType,
+                context: entry.details,
+            }));
     };
 
     const workerLoop: WorkerLoop = {
@@ -2064,7 +2120,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             source: input.source,
             payloadKeys: Object.keys(input.task.payload),
         });
-        const localResult = await executeLocalWorkspaceAction({
+        const localResult = await localWorkspaceActionExecutor({
             tenantId: input.config.tenantId,
             botId: input.config.botId,
             taskId: input.task.taskId,
@@ -2126,6 +2182,89 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 source: input.source,
                 payload_override_source: payloadOverrideSource,
             });
+
+            const actionType = input.decision.actionType as LocalWorkspaceActionType;
+            if (POST_CHANGE_QUALITY_GATE_ACTIONS.has(actionType)) {
+                const lintFixPayload = {
+                    ...input.task.payload,
+                    action_type: 'run_linter',
+                    fix: true,
+                };
+                const lintVerifyPayload = {
+                    ...input.task.payload,
+                    action_type: 'run_linter',
+                    fix: false,
+                };
+                const testsPayload = {
+                    ...input.task.payload,
+                    action_type: 'run_tests',
+                };
+
+                const lintFixResult = await localWorkspaceActionExecutor({
+                    tenantId: input.config.tenantId,
+                    botId: input.config.botId,
+                    taskId: `${input.task.taskId}:quality:lint:fix`,
+                    actionType: 'run_linter',
+                    payload: lintFixPayload,
+                });
+                const lintVerifyResult = await localWorkspaceActionExecutor({
+                    tenantId: input.config.tenantId,
+                    botId: input.config.botId,
+                    taskId: `${input.task.taskId}:quality:lint:verify`,
+                    actionType: 'run_linter',
+                    payload: lintVerifyPayload,
+                });
+                const testsResult = await localWorkspaceActionExecutor({
+                    tenantId: input.config.tenantId,
+                    botId: input.config.botId,
+                    taskId: `${input.task.taskId}:quality:tests`,
+                    actionType: 'run_tests',
+                    payload: testsPayload,
+                });
+
+                const lintStatus = lintVerifyResult.ok ? 'passed' : 'failed';
+                const testStatus = testsResult.ok ? 'passed' : 'failed';
+
+                if (!lintVerifyResult.ok || !testsResult.ok) {
+                    emitRuntimeEvent('runtime.post_change_quality_gate_failed', input.config, {
+                        task_id: input.task.taskId,
+                        action_type: input.decision.actionType,
+                        lint_fix_exit_code: lintFixResult.exitCode ?? (lintFixResult.ok ? 0 : 1),
+                        lint_verify_exit_code: lintVerifyResult.exitCode ?? (lintVerifyResult.ok ? 0 : 1),
+                        tests_exit_code: testsResult.exitCode ?? (testsResult.ok ? 0 : 1),
+                        source: input.source,
+                    });
+
+                    return {
+                        decision: {
+                            ...input.decision,
+                            route: input.decision.route,
+                            reason: 'Post-change quality gate failed. Escalation required for manual review.',
+                        },
+                        status: 'failed',
+                        attempts: 1,
+                        transientRetries: 0,
+                        executionPayload: {
+                            ...input.task.payload,
+                            _quality_gate_lint_status: lintStatus,
+                            _quality_gate_test_status: testStatus,
+                            _quality_gate_escalation: true,
+                        },
+                        payloadOverrideSource,
+                        failureClass: 'runtime_exception',
+                        errorMessage: `QUALITY_GATE_FAILED lint=${lintStatus} test=${testStatus}`,
+                    };
+                }
+
+                emitRuntimeEvent('runtime.post_change_quality_gate_passed', input.config, {
+                    task_id: input.task.taskId,
+                    action_type: input.decision.actionType,
+                    lint_fix_exit_code: lintFixResult.exitCode ?? 0,
+                    lint_verify_exit_code: lintVerifyResult.exitCode ?? 0,
+                    tests_exit_code: testsResult.exitCode ?? 0,
+                    source: input.source,
+                });
+            }
 
             return {
                 decision: {
@@ -2521,6 +2660,38 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                         ? executionTask.payload['summary']
                         : `${result.decision.actionType} requested by runtime`;
 
+                const impactedScope =
+                    typeof executionTask.payload['target'] === 'string' && executionTask.payload['target'].trim()
+                        ? executionTask.payload['target'].trim()
+                        : typeof executionTask.payload['file_path'] === 'string' && executionTask.payload['file_path'].trim()
+                            ? executionTask.payload['file_path'].trim()
+                            : typeof executionTask.payload['workspace_key'] === 'string' && executionTask.payload['workspace_key'].trim()
+                                ? executionTask.payload['workspace_key'].trim()
+                                : 'workspace_scope_not_provided';
+
+                const rollbackHint =
+                    typeof executionTask.payload['rollback_plan'] === 'string' && executionTask.payload['rollback_plan'].trim()
+                        ? executionTask.payload['rollback_plan'].trim()
+                        : 'Use workspace_checkpoint restore and git revert for manual rollback.';
+
+                const lintStatus =
+                    typeof executionTask.payload['_quality_gate_lint_status'] === 'string'
+                        ? executionTask.payload['_quality_gate_lint_status']
+                        : 'not_run';
+                const testStatus =
+                    typeof executionTask.payload['_quality_gate_test_status'] === 'string'
+                        ? executionTask.payload['_quality_gate_test_status']
+                        : 'not_run';
+
+                actionSummary = [
+                    `Change summary: ${actionSummary}`,
+                    `Impacted scope: ${impactedScope}`,
+                    `Risk reason: ${result.decision.reason}`,
+                    `Proposed rollback: ${rollbackHint}`,
+                    `Lint status: ${String(lintStatus)}`,
+                    `Test status: ${String(testStatus)}`,
+                ].join('\n');
+
                 // For git_push, generate a richer preflight summary (branch, commits, diff stat)
                 // so the approver has context about what will be pushed.
                 if (result.decision.actionType === 'git_push') {
@@ -2580,6 +2751,9 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
 
                         lastIntake = intake;
                         if (intake.ok) {
+                            if (intake.approvalId) {
+                                executionTask.payload['_approval_id'] = intake.approvalId;
+                            }
                             emitRuntimeEvent('runtime.approval_intake_queued', config, {
                                 task_id: task.taskId,
                                 action_id: actionId,
@@ -2795,17 +2969,24 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         taskStartTimes.delete(task.taskId);
         const approvalSummary = taskApprovalSummaries.get(task.taskId) ?? null;
         taskApprovalSummaries.delete(task.taskId);
+        const fallbackCompletedAt = now();
+        let executionStartedAtIso = new Date(task.enqueuedAt).toISOString();
+        let executionCompletedAtIso = new Date(fallbackCompletedAt).toISOString();
+        let executionDurationMs = Math.max(0, fallbackCompletedAt - task.enqueuedAt);
         if (startedAt !== undefined) {
-            const completedAt = now();
+            const completedAt = fallbackCompletedAt;
+            executionStartedAtIso = new Date(startedAt).toISOString();
+            executionCompletedAtIso = new Date(completedAt).toISOString();
+            executionDurationMs = Math.max(0, completedAt - startedAt);
             pushTranscript({
                 taskId: task.taskId,
-                startedAt: new Date(startedAt).toISOString(),
-                completedAt: new Date(completedAt).toISOString(),
+                startedAt: executionStartedAtIso,
+                completedAt: executionCompletedAtIso,
                 actionType: result.decision.actionType,
                 riskLevel: result.decision.riskLevel,
                 route: result.decision.route,
                 status: result.status,
-                durationMs: completedAt - startedAt,
+                durationMs: executionDurationMs,
                 errorMessage: result.errorMessage ?? null,
                 approvalRequired: result.status === 'approval_required',
                 approvalSummary,
@@ -2872,6 +3053,10 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             budgetLimitType,
             payloadOverrideSource: result.payloadOverrideSource,
             payloadOverridesApplied: result.payloadOverrideSource !== 'none',
+            actorId: task.lease?.claimedBy,
+            routeReason: result.decision.reason,
+            evidenceLink: `${config.evidenceApiUrl.replace(/\/$/, '')}/v1/evidence/tasks/${encodeURIComponent(task.taskId)}`,
+            approvalSummary: approvalSummary ?? undefined,
         };
 
         try {
@@ -2887,6 +3072,33 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 record_id: record.recordId,
                 task_id: task.taskId,
                 status: record.status,
+                error_message: err instanceof Error ? err.message : String(err),
+            });
+        }
+
+        try {
+            const evidence = assembleEvidenceRecord({
+                task,
+                actionResult: record,
+                executionLogs: collectExecutionLogsForTask(task.taskId),
+                approvalId:
+                    typeof task.payload['_approval_id'] === 'string'
+                        ? task.payload['_approval_id']
+                        : undefined,
+                startedAt: executionStartedAtIso,
+                completedAt: executionCompletedAtIso,
+                durationMs: executionDurationMs,
+            });
+            await evidenceRecordWriter(evidence);
+            emitRuntimeEvent('runtime.evidence_record_persisted', config, {
+                evidence_id: evidence.evidenceId,
+                task_id: task.taskId,
+                action_status: evidence.actionStatus,
+                path: evidenceRecordPath,
+            });
+        } catch (err: unknown) {
+            emitRuntimeEvent('runtime.evidence_record_persist_failed', config, {
+                task_id: task.taskId,
                 error_message: err instanceof Error ? err.message : String(err),
             });
         }

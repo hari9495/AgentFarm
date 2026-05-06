@@ -73,6 +73,9 @@ const main = async () => {
         await page.selectOption('[data-testid="workspace-switcher-topbar"]', 'ws_release_002');
         await page.click('[data-testid="workspace-switcher-open-topbar"]');
         await expectQuery(page, { workspaceId: 'ws_release_002', tab: 'approvals' }, 'switching workspace to ws_release_002');
+        // Wait for the Next.js RSC re-render and React hydration to settle before
+        // interacting with tab buttons in the new workspace context.
+        await page.waitForLoadState('networkidle');
 
         await clickAndExpectQuery(
             page,

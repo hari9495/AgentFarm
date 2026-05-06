@@ -3,6 +3,7 @@ import { rateLimit } from './lib/rate-limit.js';
 import { buildSessionToken, verifySessionToken, type SessionPayload } from './lib/session-auth.js';
 import { prisma } from './lib/db.js';
 import { registerAuthRoutes } from './routes/auth.js';
+import { parseApprovalPacket } from './lib/approval-packet.js';
 import { registerConnectorAuthRoutes } from './routes/connector-auth.js';
 import { registerConnectorActionRoutes } from './routes/connector-actions.js';
 import { createDefaultSecretStore } from './lib/secret-store.js';
@@ -240,6 +241,7 @@ const getApprovals = async (workspaceId: string) => {
     });
 
     return approvals.map((a: any) => ({
+        ...parseApprovalPacket(a.actionSummary),
         approval_id: a.id,
         workspace_id: workspaceId,
         bot_id: a.botId,

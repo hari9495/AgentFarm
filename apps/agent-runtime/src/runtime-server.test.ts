@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { buildRuntimeServer } from './runtime-server.js';
 import type { ActionResultRecord } from './action-result-contract.js';
+import type { EvidenceRecord } from './evidence-record-contract.js';
 
 const baseEnv = (): NodeJS.ProcessEnv => ({
     AF_TENANT_ID: 'tenant_test',
@@ -626,6 +627,89 @@ test('approval-required task triggers automatic approval intake call', async () 
         assert.equal(intakeCalls[0]?.riskLevel, 'high');
         assert.equal(intakeCalls[0]?.token, 'shared-intake-token');
         assert.equal(intakeCalls[0]?.requestedBy, 'runtime:bot_test');
+        assert.equal(typeof intakeCalls[0]?.actionSummary, 'string');
+        assert.match(String(intakeCalls[0]?.actionSummary), /Change summary:/);
+        assert.match(String(intakeCalls[0]?.actionSummary), /Impacted scope:/);
+        assert.match(String(intakeCalls[0]?.actionSummary), /Risk reason:/);
+        assert.match(String(intakeCalls[0]?.actionSummary), /Proposed rollback:/);
+        assert.match(String(intakeCalls[0]?.actionSummary), /Lint status:/);
+        assert.match(String(intakeCalls[0]?.actionSummary), /Test status:/);
+    } finally {
+        await app.close();
+    }
+});
+
+test('approved local edit task fails when post-change quality gate fails', async () => {
+    const app = buildRuntimeServer({
+        env: baseEnv(),
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+        localWorkspaceActionExecutor: async (input) => {
+            if (input.actionType === 'code_edit') {
+                return { ok: true, output: 'edited file', exitCode: 0 };
+            }
+            if (input.actionType === 'run_linter') {
+                const fixEnabled = input.payload['fix'] === true;
+                if (fixEnabled) {
+                    return { ok: true, output: 'autofixed lint issues', exitCode: 0 };
+                }
+                return { ok: false, output: '', errorOutput: 'lint errors remain', exitCode: 1 };
+            }
+            if (input.actionType === 'run_tests') {
+                return { ok: true, output: 'tests passed', exitCode: 0 };
+            }
+            return { ok: true, output: 'noop', exitCode: 0 };
+        },
+    });
+
+    try {
+        const startupRes = await app.inject({ method: 'POST', url: '/startup' });
+        assert.equal(startupRes.statusCode, 200);
+
+        const intakeRes = await app.inject({
+            method: 'POST',
+            url: '/tasks/intake',
+            payload: {
+                task_id: 'quality-gate-approved-1',
+                payload: {
+                    action_type: 'code_edit',
+                    summary: 'Edit the service configuration file',
+                    target: 'services/api/config.ts',
+                    workspace_key: 'quality-gate-approved-1',
+                    file_path: 'services/api/config.ts',
+                    content: 'export const value = 42;\n',
+                },
+            },
+        });
+        assert.equal(intakeRes.statusCode, 202);
+        await new Promise<void>((resolve) => setTimeout(resolve, 70));
+
+        const decisionRes = await app.inject({
+            method: 'POST',
+            url: '/decision',
+            payload: {
+                task_id: 'quality-gate-approved-1',
+                decision: 'approved',
+                reason: 'approved for execution',
+                actor: 'approver_qa',
+            },
+        });
+
+        assert.equal(decisionRes.statusCode, 200);
+        const decisionBody = decisionRes.json() as { execution_status: string };
+        assert.equal(decisionBody.execution_status, 'failed');
+
+        const logsRes = await app.inject({ method: 'GET', url: '/logs?limit=200' });
+        assert.equal(logsRes.statusCode, 200);
+        const logsBody = logsRes.json() as {
+            logs: Array<{ eventType: string; details?: Record<string, unknown> }>;
+        };
+        const qualityGateFailed = logsBody.logs.find(
+            (entry) => entry.eventType === 'runtime.post_change_quality_gate_failed'
+                && entry.details?.['task_id'] === 'quality-gate-approved-1',
+        );
+        assert.ok(qualityGateFailed, 'quality gate failure should be logged');
     } finally {
         await app.close();
     }
@@ -3206,6 +3290,48 @@ test('/runtime/transcripts returns empty list before any tasks are processed', a
         assert.equal(body.count, 0);
         assert.equal(body.total_buffered, 0);
         assert.ok(Array.isArray(body.transcripts));
+    } finally {
+        await app.close();
+    }
+});
+
+test('runtime persists evidence records for completed tasks', async () => {
+    const persistedEvidence: EvidenceRecord[] = [];
+    const app = buildRuntimeServer({
+        env: baseEnv(),
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+        evidenceRecordWriter: async (record) => {
+            persistedEvidence.push(record);
+        },
+    });
+
+    try {
+        const startupRes = await app.inject({ method: 'POST', url: '/startup' });
+        assert.equal(startupRes.statusCode, 200);
+
+        await app.inject({
+            method: 'POST',
+            url: '/tasks/intake',
+            payload: {
+                task_id: 'evidence-task-1',
+                payload: {
+                    action_type: 'read_task',
+                    summary: 'Read evidence test task',
+                    target: 'ticket-123',
+                },
+            },
+        });
+
+        await new Promise<void>((resolve) => setTimeout(resolve, 120));
+
+        const evidence = persistedEvidence.find((entry) => entry.taskId === 'evidence-task-1');
+        assert.ok(evidence, 'evidence record should be persisted for completed task');
+        assert.equal(evidence?.actionStatus, 'success');
+        assert.equal(evidence?.actionOutcome.success, true);
+        assert.equal(typeof evidence?.executionDurationMs, 'number');
+        assert.ok((evidence?.executionLogs.length ?? 0) >= 1);
     } finally {
         await app.close();
     }

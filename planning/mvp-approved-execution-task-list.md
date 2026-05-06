@@ -208,3 +208,16 @@ Update the table at end of day with evidence links and blocker ownership.
 3. Next review date: 2026-04-28 Sprint 0 exit gate + Sprint 1 authorization.
 4. Sprint 0 exit gate deadline: 2026-04-28.
 5. Immediate next action: Sprint 0 exit gate signoff meeting (2026-04-28) before resuming apps/website and apps/marketplace (Sprint 1).
+
+## Post-MVP Developer Agent Extension Planning (No Auto-Start)
+This section is planning-only and does not alter MVP scope rules above.
+
+### Required Planning Inputs
+1. planning/developer-agent-mvp-implementation-backlog.md
+2. planning/future-agent-build-playbook.md
+3. mvp/mvp-scope-and-gates.md
+
+### Execution Rule for Future Agent Work
+1. Future work may begin only after explicit architecture and safety signoff confirms scope and risk coverage.
+2. Any proposed expansion that adds new roles, connectors, or privileged runtime actions must be reviewed as out-of-scope by default until approved.
+3. Every post-MVP task must include owner, dependency, acceptance criteria, scope check, and evidence references before implementation begins.

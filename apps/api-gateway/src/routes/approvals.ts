@@ -1,4 +1,7 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
+import { readFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
+import { parseApprovalPacket } from '../lib/approval-packet.js';
 
 const getPrisma = async () => {
     const db = await import('../lib/db.js');
@@ -107,6 +110,7 @@ type RegisterApprovalRoutesOptions = {
     serviceAuthToken?: string;
     runtimeDecisionToken?: string;
     decisionWebhookNotifier?: DecisionWebhookNotifier;
+    evidenceReader?: EvidenceReader;
 };
 
 type IntakeBody = {
@@ -135,8 +139,66 @@ type DecisionBody = {
 type DecisionParams = {
     approvalId: string;
 };
+type EvidenceParams = {
+    approvalId: string;
+};
+
+type EvidenceQuery = {
+    workspace_id?: string;
+    limit?: string;
+    offset?: string;
+};
+
+type EvidenceExecutionLog = {
+    timestamp: string;
+    level: 'info' | 'warn' | 'error' | 'debug';
+    message: string;
+};
+
+type EvidenceQualityGateResult = {
+    checkType: string;
+    status: 'passed' | 'failed' | 'skipped' | 'not_run';
+    details?: string;
+    errorMessage?: string;
+    executedAt?: string;
+    durationMs?: number;
+};
+
+type EvidenceRecord = {
+    evidenceId: string;
+    taskId: string;
+    approvalId?: string;
+    workspaceId: string;
+    actionStatus: string;
+    executionLogs: EvidenceExecutionLog[];
+    qualityGateResults: EvidenceQualityGateResult[];
+    actionOutcome: {
+        success: boolean;
+        resultSummary?: string;
+        errorReason?: string;
+        failureClass?: string;
+    };
+    connectorUsed?: string;
+    actorId?: string;
+    approvalReason?: string;
+};
+
+type EvidenceReader = (input: {
+    approvalId: string;
+    taskId: string;
+    workspaceId: string;
+}) => Promise<EvidenceRecord[]>;
 
 const DEFAULT_ESCALATION_TIMEOUT_SECONDS = 3600;
+const DEFAULT_EVIDENCE_RECORD_PATH = 'data/evidence-records.ndjson';
+
+const resolveEvidenceRecordPath = (env: NodeJS.ProcessEnv, cwd: string = process.cwd()): string => {
+    const configured = env.AF_EVIDENCE_RECORD_PATH ?? env.AGENTFARM_EVIDENCE_RECORD_PATH;
+    if (!configured || !configured.trim()) {
+        return resolve(cwd, DEFAULT_EVIDENCE_RECORD_PATH);
+    }
+    return resolve(cwd, configured);
+};
 
 const readServiceToken = (request: FastifyRequest): string | null => {
     const direct = request.headers['x-approval-intake-token'];
@@ -420,6 +482,66 @@ const defaultDecisionWebhookNotifier: DecisionWebhookNotifier = async (input) =>
     }
 };
 
+const parseEvidenceRecord = (line: string): EvidenceRecord | null => {
+    if (!line.trim()) {
+        return null;
+    }
+
+    try {
+        const parsed = JSON.parse(line) as Partial<EvidenceRecord>;
+        if (!parsed || typeof parsed !== 'object') {
+            return null;
+        }
+        if (typeof parsed.evidenceId !== 'string' || typeof parsed.taskId !== 'string') {
+            return null;
+        }
+        if (typeof parsed.workspaceId !== 'string' || typeof parsed.actionStatus !== 'string') {
+            return null;
+        }
+        if (!Array.isArray(parsed.executionLogs) || !Array.isArray(parsed.qualityGateResults)) {
+            return null;
+        }
+        if (!parsed.actionOutcome || typeof parsed.actionOutcome !== 'object') {
+            return null;
+        }
+
+        return parsed as EvidenceRecord;
+    } catch {
+        return null;
+    }
+};
+
+const defaultEvidenceReader: EvidenceReader = async (input) => {
+    const evidencePath = resolveEvidenceRecordPath(process.env);
+    let fileContent: string;
+    try {
+        fileContent = await readFile(evidencePath, 'utf8');
+    } catch {
+        return [];
+    }
+
+    const lines = fileContent
+        .split('\n')
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0);
+
+    const matched: EvidenceRecord[] = [];
+    for (let index = lines.length - 1; index >= 0; index -= 1) {
+        const record = parseEvidenceRecord(lines[index] ?? '');
+        if (!record) {
+            continue;
+        }
+        if (record.workspaceId !== input.workspaceId) {
+            continue;
+        }
+        if (record.approvalId === input.approvalId || record.taskId === input.taskId) {
+            matched.push(record);
+        }
+    }
+
+    return matched;
+};
+
 export const registerApprovalRoutes = async (
     app: FastifyInstance,
     options: RegisterApprovalRoutesOptions,
@@ -427,6 +549,7 @@ export const registerApprovalRoutes = async (
     const repo = options.repo ?? defaultRepo;
     const now = options.now ?? (() => Date.now());
     const decisionWebhookNotifier = options.decisionWebhookNotifier ?? defaultDecisionWebhookNotifier;
+    const evidenceReader = options.evidenceReader ?? defaultEvidenceReader;
     const serviceAuthToken =
         options.serviceAuthToken
         ?? process.env.APPROVAL_INTAKE_SHARED_TOKEN
@@ -528,7 +651,9 @@ export const registerApprovalRoutes = async (
                 });
             }
 
+            const approvalPacket = parseApprovalPacket(existing.actionSummary);
             return {
+                approval_packet: approvalPacket,
                 status: 'already_queued',
                 approval_id: existing.id,
                 decision: existing.decision,
@@ -549,7 +674,9 @@ export const registerApprovalRoutes = async (
             escalationTimeoutSeconds,
         });
 
+        const approvalPacket = parseApprovalPacket(created.actionSummary);
         return reply.code(201).send({
+            approval_packet: approvalPacket,
             status: 'queued_for_approval',
             approval_id: created.id,
             decision: created.decision,
@@ -726,6 +853,73 @@ export const registerApprovalRoutes = async (
             approver_id: session.userId,
             webhook_notified: webhookNotified,
             webhook_status_code: webhookStatusCode,
+        };
+    });
+
+    app.get<{ Params: EvidenceParams; Querystring: EvidenceQuery }>('/v1/approvals/:approvalId/evidence', async (request, reply) => {
+        const session = options.getSession(request);
+        if (!session) {
+            return reply.code(401).send({
+                error: 'unauthorized',
+                message: 'A valid authenticated session is required.',
+            });
+        }
+
+        const workspaceId = request.query?.workspace_id ?? session.workspaceIds[0];
+        if (!workspaceId || !session.workspaceIds.includes(workspaceId)) {
+            return reply.code(403).send({
+                error: 'workspace_scope_violation',
+                message: 'workspace_id is not in your authenticated session scope.',
+            });
+        }
+
+        const rawLimit = parseInt(request.query?.limit ?? '20', 10);
+        const rawOffset = parseInt(request.query?.offset ?? '0', 10);
+        const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 100) : 20;
+        const offset = Number.isFinite(rawOffset) && rawOffset >= 0 ? rawOffset : 0;
+
+        const approval = await repo.findById({
+            approvalId: request.params.approvalId,
+            tenantId: session.tenantId,
+            workspaceId,
+        });
+
+        if (!approval) {
+            return reply.code(404).send({
+                error: 'approval_not_found',
+                message: 'Approval record not found in current scope.',
+            });
+        }
+
+        const allRecords = await evidenceReader({
+            approvalId: approval.id,
+            taskId: approval.taskId,
+            workspaceId: approval.workspaceId,
+        });
+
+        const total = allRecords.length;
+        const page = allRecords.slice(offset, offset + limit);
+
+        return {
+            approval_id: approval.id,
+            workspace_id: approval.workspaceId,
+            total,
+            limit,
+            offset,
+            evidence: page.map((record) => ({
+                evidence_id: record.evidenceId,
+                status: record.actionStatus,
+                execution_logs: record.executionLogs,
+                quality_gate_results: record.qualityGateResults,
+                action_outcome: {
+                    success: record.actionOutcome.success,
+                    result_summary: record.actionOutcome.resultSummary ?? null,
+                    error_reason: record.actionOutcome.errorReason ?? null,
+                },
+                connector_used: record.connectorUsed ?? null,
+                actor_id: record.actorId ?? null,
+                approval_reason: record.approvalReason ?? null,
+            })),
         };
     });
 };

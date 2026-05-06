@@ -11,6 +11,13 @@ type ApprovalItem = {
     bot_id: string;
     task_id?: string;
     action_summary: string;
+    change_summary?: string;
+    impacted_scope?: string | null;
+    risk_reason?: string | null;
+    proposed_rollback?: string | null;
+    lint_status?: string | null;
+    test_status?: string | null;
+    packet_complete?: boolean;
     risk_level: 'low' | 'medium' | 'high';
     decision_status: string;
     requested_at: string;
@@ -51,6 +58,26 @@ const riskBadgeClass = (risk: ApprovalItem['risk_level']): string => {
     return 'badge low';
 };
 
+const getApprovalHeadline = (approval: ApprovalItem): string => {
+    return approval.change_summary?.trim() || approval.action_summary;
+};
+
+const getApprovalSearchText = (approval: ApprovalItem): string => {
+    return [
+        approval.action_summary,
+        approval.change_summary ?? '',
+        approval.impacted_scope ?? '',
+        approval.risk_reason ?? '',
+        approval.proposed_rollback ?? '',
+        approval.lint_status ?? '',
+        approval.test_status ?? '',
+    ].join(' ').toLowerCase();
+};
+
+const getQualityStatus = (approval: ApprovalItem): string => {
+    return `Lint ${approval.lint_status ?? 'not_run'} | Test ${approval.test_status ?? 'not_run'}`;
+};
+
 export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent, focusedApprovalId, initialMetrics }: Props) {
     const pathname = usePathname();
     const searchParams = useSearchParams();
@@ -71,6 +98,26 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
     const [bulkDecision, setBulkDecision] = useState<DecisionValue | null>(null);
     const [bulkReason, setBulkReason] = useState('Bulk decision confirmed by operations triage run.');
     const [bulkBusy, setBulkBusy] = useState(false);
+    const [selectedApprovalId, setSelectedApprovalId] = useState<string | null>(focusedApprovalId ?? null);
+    const [drawerTab, setDrawerTab] = useState<'summary' | 'evidence'>('summary');
+    const [evidenceBusy, setEvidenceBusy] = useState(false);
+    const [evidenceData, setEvidenceData] = useState<{
+        approval_id: string;
+        workspace_id: string;
+        total: number;
+        limit: number;
+        offset: number;
+        evidence: Array<{
+            evidence_id: string;
+            status: string;
+            execution_logs?: Array<{ timestamp: string; level: string; message: string }>;
+            quality_gate_results?: Array<{ checkType: string; status: string; details?: string }>;
+            action_outcome?: { success: boolean | null; result_summary?: string | null; error_reason?: string | null };
+            connector_used?: string | null;
+            actor_id?: string | null;
+            approval_reason?: string | null;
+        }>;
+    } | null>(null);
 
     const PAGE_SIZE = 5;
 
@@ -100,6 +147,14 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
 
     const p95Latency = metrics.p95_decision_latency_seconds ?? computedP95Latency;
 
+    const selectedApproval = useMemo(() => {
+        if (!selectedApprovalId) {
+            return null;
+        }
+
+        return [...pending, ...recent].find((approval) => approval.approval_id === selectedApprovalId) ?? null;
+    }, [pending, recent, selectedApprovalId]);
+
     const filteredPending = useMemo(() => {
         const query = search.trim().toLowerCase();
         const filtered = pending.filter((item) => {
@@ -126,7 +181,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                 return true;
             }
             return (
-                item.action_summary.toLowerCase().includes(query)
+                getApprovalSearchText(item).includes(query)
                 || item.approval_id.toLowerCase().includes(query)
                 || (item.task_id ?? '').toLowerCase().includes(query)
             );
@@ -168,7 +223,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                 return true;
             }
             return (
-                item.action_summary.toLowerCase().includes(query)
+                getApprovalSearchText(item).includes(query)
                 || item.approval_id.toLowerCase().includes(query)
                 || (item.task_id ?? '').toLowerCase().includes(query)
             );
@@ -361,6 +416,28 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
         setRecentPage(1);
     };
 
+    const fetchEvidence = async (approvalId: string) => {
+        setEvidenceBusy(true);
+        try {
+            const response = await fetch(`/api/approvals/${approvalId}/evidence?workspace_id=${workspaceId}`);
+            const body = (await response.json().catch(() => ({}))) as typeof evidenceData;
+            if (response.ok && body && 'evidence' in body) {
+                setEvidenceData(body);
+            } else {
+                setEvidenceData({
+                    approval_id: approvalId,
+                    workspace_id: workspaceId,
+                    total: 0,
+                    limit: 20,
+                    offset: 0,
+                    evidence: [],
+                });
+            }
+        } finally {
+            setEvidenceBusy(false);
+        }
+    };
+
     return (
         <article className="card">
             <h2>Approval Queue Workflow</h2>
@@ -522,10 +599,25 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                                         }));
                                                     }}
                                                 />
-                                                <strong>{approval.action_summary}</strong>
+                                                <strong>{getApprovalHeadline(approval)}</strong>
                                             </label>
+                                            {approval.packet_complete && (
+                                                <div style={{ display: 'grid', gap: '0.18rem', fontSize: '0.78rem', color: '#57534e', paddingLeft: '1.55rem' }}>
+                                                    {approval.impacted_scope && <span>Scope: {approval.impacted_scope}</span>}
+                                                    {approval.risk_reason && <span>Risk: {approval.risk_reason}</span>}
+                                                    {approval.proposed_rollback && <span>Rollback: {approval.proposed_rollback}</span>}
+                                                    <span>Quality: {getQualityStatus(approval)}</span>
+                                                </div>
+                                            )}
                                             <span style={{ fontSize: '0.78rem', color: '#57534e', display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
                                                 {approval.approval_id}
+                                                <button
+                                                    type="button"
+                                                    className="chip-button"
+                                                    onClick={() => setSelectedApprovalId(approval.approval_id)}
+                                                >
+                                                    View Details
+                                                </button>
                                                 <CopyLinkButton
                                                     href={buildDashboardHref(pathname, searchParams.toString(), {
                                                         tab: 'approvals',
@@ -641,7 +733,23 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
 
                             return (
                                 <tr key={`${approval.approval_id}:${approval.decided_at ?? 'pending'}`}>
-                                    <td>{approval.action_summary}</td>
+                                    <td>
+                                        <div style={{ display: 'grid', gap: '0.18rem' }}>
+                                            <span>{getApprovalHeadline(approval)}</span>
+                                            <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                                                {approval.packet_complete && approval.impacted_scope && (
+                                                    <span style={{ fontSize: '0.78rem', color: '#57534e' }}>{approval.impacted_scope}</span>
+                                                )}
+                                                <button
+                                                    type="button"
+                                                    className="chip-button"
+                                                    onClick={() => setSelectedApprovalId(approval.approval_id)}
+                                                >
+                                                    View Details
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </td>
                                     <td>{approval.decision_status}</td>
                                     <td>{latency === null ? 'N/A' : `${latency}s`}</td>
                                     <td>{approval.decision_reason ?? '-'}</td>
@@ -658,6 +766,257 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                     <button type="button" onClick={() => setRecentPage((v) => Math.min(recentPageCount, v + 1))} disabled={recentPage >= recentPageCount}>Next</button>
                 </div>
             </div>
+
+            {selectedApproval && (
+                <div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label={`Approval details ${selectedApproval.approval_id}`}
+                    style={{
+                        position: 'fixed',
+                        inset: 0,
+                        background: 'rgba(12, 18, 28, 0.38)',
+                        display: 'flex',
+                        justifyContent: 'flex-end',
+                        zIndex: 40,
+                    }}
+                >
+                    <div
+                        style={{
+                            width: 'min(32rem, 100%)',
+                            height: '100%',
+                            background: '#fffbeb',
+                            borderLeft: '1px solid #d6d3d1',
+                            padding: '1rem',
+                            overflowY: 'auto',
+                            display: 'grid',
+                            gap: '0.9rem',
+                            gridTemplateRows: 'auto auto 1fr',
+                            boxShadow: '-12px 0 32px rgba(15, 23, 42, 0.18)',
+                        }}
+                    >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.75rem' }}>
+                            <div style={{ display: 'grid', gap: '0.3rem' }}>
+                                <span style={{ fontSize: '0.78rem', color: '#57534e' }}>{selectedApproval.approval_id}</span>
+                                <h3 style={{ margin: 0, fontSize: '1.05rem' }}>{getApprovalHeadline(selectedApproval)}</h3>
+                            </div>
+                            <button type="button" className="chip-button" onClick={() => { setSelectedApprovalId(null); setDrawerTab('summary'); setEvidenceData(null); }}>
+                                Close
+                            </button>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '0.25rem', borderBottom: '1px solid #d6d3d1' }}>
+                            <button
+                                type="button"
+                                onClick={() => setDrawerTab('summary')}
+                                style={{
+                                    padding: '0.5rem 0.75rem',
+                                    background: drawerTab === 'summary' ? '#fef3c7' : 'transparent',
+                                    border: 'none',
+                                    borderBottom: drawerTab === 'summary' ? '2px solid #b45309' : 'none',
+                                    cursor: 'pointer',
+                                    fontSize: '0.85rem',
+                                    fontWeight: drawerTab === 'summary' ? 'bold' : 'normal',
+                                }}
+                            >
+                                Summary
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setDrawerTab('evidence');
+                                    if (!evidenceData) {
+                                        void fetchEvidence(selectedApproval.approval_id);
+                                    }
+                                }}
+                                style={{
+                                    padding: '0.5rem 0.75rem',
+                                    background: drawerTab === 'evidence' ? '#fef3c7' : 'transparent',
+                                    border: 'none',
+                                    borderBottom: drawerTab === 'evidence' ? '2px solid #b45309' : 'none',
+                                    cursor: 'pointer',
+                                    fontSize: '0.85rem',
+                                    fontWeight: drawerTab === 'evidence' ? 'bold' : 'normal',
+                                }}
+                            >
+                                Evidence
+                            </button>
+                        </div>
+
+                        <div style={{ overflowY: 'auto', display: 'grid', gap: '0.65rem' }}>
+                            {drawerTab === 'summary' && (
+                                <>
+                                    <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap' }}>
+                                        <span className={riskBadgeClass(selectedApproval.risk_level)}>{selectedApproval.risk_level}</span>
+                                        <span className="badge">{selectedApproval.decision_status}</span>
+                                        <span className="badge">{selectedApproval.packet_complete ? 'packet complete' : 'summary fallback'}</span>
+                                    </div>
+
+                                    <div>
+                                        <strong>Requested</strong>
+                                        <p style={{ margin: '0.2rem 0 0', color: '#44403c' }}>{new Date(selectedApproval.requested_at).toLocaleString()}</p>
+                                    </div>
+                                    {selectedApproval.decided_at && (
+                                        <div>
+                                            <strong>Decided</strong>
+                                            <p style={{ margin: '0.2rem 0 0', color: '#44403c' }}>{new Date(selectedApproval.decided_at).toLocaleString()}</p>
+                                        </div>
+                                    )}
+                                    {selectedApproval.impacted_scope && (
+                                        <div>
+                                            <strong>Impacted Scope</strong>
+                                            <p style={{ margin: '0.2rem 0 0', color: '#44403c' }}>{selectedApproval.impacted_scope}</p>
+                                        </div>
+                                    )}
+                                    {selectedApproval.risk_reason && (
+                                        <div>
+                                            <strong>Risk Reason</strong>
+                                            <p style={{ margin: '0.2rem 0 0', color: '#44403c' }}>{selectedApproval.risk_reason}</p>
+                                        </div>
+                                    )}
+                                    {selectedApproval.proposed_rollback && (
+                                        <div>
+                                            <strong>Rollback Plan</strong>
+                                            <p style={{ margin: '0.2rem 0 0', color: '#44403c' }}>{selectedApproval.proposed_rollback}</p>
+                                        </div>
+                                    )}
+                                    <div>
+                                        <strong>Quality Gate</strong>
+                                        <p style={{ margin: '0.2rem 0 0', color: '#44403c' }}>{getQualityStatus(selectedApproval)}</p>
+                                    </div>
+                                    {selectedApproval.decision_reason && (
+                                        <div>
+                                            <strong>Decision Reason</strong>
+                                            <p style={{ margin: '0.2rem 0 0', color: '#44403c' }}>{selectedApproval.decision_reason}</p>
+                                        </div>
+                                    )}
+                                    {selectedApproval.change_summary && selectedApproval.change_summary !== selectedApproval.action_summary && (
+                                        <div>
+                                            <strong>Raw Action Summary</strong>
+                                            <p style={{ margin: '0.2rem 0 0', color: '#44403c' }}>{selectedApproval.action_summary}</p>
+                                        </div>
+                                    )}
+                                </>
+                            )}
+
+                            {drawerTab === 'evidence' && (
+                                <>
+                                    {evidenceBusy && <p style={{ color: '#57534e', fontSize: '0.85rem' }}>Loading evidence...</p>}
+                                    {!evidenceBusy && evidenceData && (() => {
+                                        const latestRecord = evidenceData.evidence[0];
+                                        return (
+                                            <>
+                                                {evidenceData.total === 0 && (
+                                                    <p style={{ color: '#92400e', fontSize: '0.85rem', fontStyle: 'italic' }}>
+                                                        Evidence record not found for this approval yet.
+                                                    </p>
+                                                )}
+
+                                                {latestRecord && (
+                                                    <>
+                                                        {latestRecord.connector_used && (
+                                                            <div>
+                                                                <strong>Connector</strong>
+                                                                <p style={{ margin: '0.2rem 0 0', color: '#44403c', fontSize: '0.78rem' }}>{latestRecord.connector_used}</p>
+                                                            </div>
+                                                        )}
+
+                                                        {latestRecord.actor_id && (
+                                                            <div>
+                                                                <strong>Actor</strong>
+                                                                <p style={{ margin: '0.2rem 0 0', color: '#44403c', fontSize: '0.78rem' }}>{latestRecord.actor_id}</p>
+                                                            </div>
+                                                        )}
+
+                                                        {latestRecord.approval_reason && (
+                                                            <div>
+                                                                <strong>Approval Reason</strong>
+                                                                <p style={{ margin: '0.2rem 0 0', color: '#44403c', fontSize: '0.78rem' }}>{latestRecord.approval_reason}</p>
+                                                            </div>
+                                                        )}
+
+                                                        {latestRecord.quality_gate_results && latestRecord.quality_gate_results.length > 0 && (
+                                                            <div>
+                                                                <strong>Quality Gate Results</strong>
+                                                                <div style={{ display: 'grid', gap: '0.3rem', marginTop: '0.2rem' }}>
+                                                                    {latestRecord.quality_gate_results.map((check, idx) => (
+                                                                        <div key={idx} style={{ fontSize: '0.78rem', color: '#44403c' }}>
+                                                                            <span
+                                                                                style={{
+                                                                                    display: 'inline-block',
+                                                                                    padding: '0.1rem 0.3rem',
+                                                                                    borderRadius: '0.2rem',
+                                                                                    background:
+                                                                                        check.status === 'passed'
+                                                                                            ? '#dcfce7'
+                                                                                            : check.status === 'failed'
+                                                                                              ? '#fee2e2'
+                                                                                              : '#fef3c7',
+                                                                                    color:
+                                                                                        check.status === 'passed'
+                                                                                            ? '#166534'
+                                                                                            : check.status === 'failed'
+                                                                                              ? '#991b1b'
+                                                                                              : '#92400e',
+                                                                                }}
+                                                                            >
+                                                                                {check.checkType} {check.status}
+                                                                            </span>
+                                                                            {check.details && (
+                                                                                <p style={{ margin: '0.1rem 0 0', fontSize: '0.7rem' }}>{check.details}</p>
+                                                                            )}
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {latestRecord.execution_logs && latestRecord.execution_logs.length > 0 && (
+                                                            <div>
+                                                                <strong>Execution Logs (last 10)</strong>
+                                                                <div style={{ display: 'grid', gap: '0.2rem', marginTop: '0.2rem', maxHeight: '12rem', overflowY: 'auto' }}>
+                                                                    {latestRecord.execution_logs.slice(-10).map((log, idx) => (
+                                                                        <div key={idx} style={{ fontSize: '0.7rem', fontFamily: 'monospace', color: '#44403c' }}>
+                                                                            <span style={{ color: log.level === 'error' ? '#dc2626' : log.level === 'warn' ? '#b45309' : '#57534e' }}>
+                                                                                [{log.timestamp.split('T')[1]?.slice(0, 8)}] {log.level}
+                                                                            </span>
+                                                                            {' '} {log.message}
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {latestRecord.action_outcome && (
+                                                            <div>
+                                                                <strong>Action Outcome</strong>
+                                                                <p style={{ margin: '0.2rem 0 0', color: '#44403c', fontSize: '0.78rem' }}>
+                                                                    {latestRecord.action_outcome.result_summary ?? 'Pending'}
+                                                                </p>
+                                                                {latestRecord.action_outcome.error_reason && (
+                                                                    <p style={{ margin: '0.2rem 0 0', color: '#dc2626', fontSize: '0.78rem' }}>
+                                                                        Error: {latestRecord.action_outcome.error_reason}
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                        )}
+
+                                                        {evidenceData.total > 1 && (
+                                                            <p style={{ fontSize: '0.72rem', color: '#57534e', marginTop: '0.25rem' }}>
+                                                                Showing latest of {evidenceData.total} evidence records.
+                                                            </p>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </>
+                                        );
+                                    })()}
+                                </>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </article>
     );
 }

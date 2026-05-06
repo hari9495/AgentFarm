@@ -115,6 +115,13 @@ type ApprovalItem = {
     bot_id: string;
     task_id?: string;
     action_summary: string;
+    change_summary?: string;
+    impacted_scope?: string | null;
+    risk_reason?: string | null;
+    proposed_rollback?: string | null;
+    lint_status?: string | null;
+    test_status?: string | null;
+    packet_complete?: boolean;
     risk_level: 'low' | 'medium' | 'high';
     decision_status: string;
     requested_at: string;
@@ -421,6 +428,13 @@ const fallbackApprovals: ApprovalItem[] = [
         workspace_id: 'ws_primary_001',
         bot_id: 'bot_dev_001',
         action_summary: 'Merge release PR #221',
+        change_summary: 'Merge release PR #221',
+        impacted_scope: 'github:repo/main',
+        risk_reason: 'Action merge_pr is high-risk by policy.',
+        proposed_rollback: 'Re-open rollback branch and revert merge commit if release validation fails.',
+        lint_status: 'passed',
+        test_status: 'passed',
+        packet_complete: true,
         risk_level: 'high',
         decision_status: 'pending',
         requested_at: '2026-04-20T09:11:39Z',
@@ -432,6 +446,13 @@ const fallbackApprovals: ApprovalItem[] = [
         workspace_id: 'ws_primary_001',
         bot_id: 'bot_dev_001',
         action_summary: 'Update Jira release ticket',
+        change_summary: 'Update Jira release ticket',
+        impacted_scope: 'jira:REL-221',
+        risk_reason: 'Action update_status is medium-risk by policy.',
+        proposed_rollback: 'Restore prior release ticket status and remove agent comment.',
+        lint_status: 'not_run',
+        test_status: 'not_run',
+        packet_complete: true,
         risk_level: 'medium',
         decision_status: 'pending',
         requested_at: '2026-04-20T09:12:10Z',
@@ -443,6 +464,13 @@ const fallbackApprovals: ApprovalItem[] = [
         workspace_id: 'ws_primary_001',
         bot_id: 'bot_dev_001',
         action_summary: 'Notify release channel',
+        change_summary: 'Notify release channel',
+        impacted_scope: 'teams:release-room',
+        risk_reason: 'Action send_message is low-risk and was auto-approved by policy.',
+        proposed_rollback: 'Post follow-up clarification message if notification content is wrong.',
+        lint_status: 'not_run',
+        test_status: 'not_run',
+        packet_complete: true,
         risk_level: 'low',
         decision_status: 'approved',
         requested_at: '2026-04-20T09:08:10Z',
