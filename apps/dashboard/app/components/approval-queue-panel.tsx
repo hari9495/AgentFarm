@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { CopyLinkButton } from './copy-link-button';
 import { buildDashboardHref } from './dashboard-navigation';
+import { getEvidencePaginationState, isEvidencePaginationEnabled } from './approval-evidence-pagination';
 
 type ApprovalItem = {
     approval_id: string;
@@ -118,6 +119,10 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
             approval_reason?: string | null;
         }>;
     } | null>(null);
+    const [evidenceOffset, setEvidenceOffset] = useState(0);
+
+    const evidencePaginationEnabled = isEvidencePaginationEnabled(process.env.NEXT_PUBLIC_APPROVAL_EVIDENCE_PAGINATION);
+    const EVIDENCE_PAGE_SIZE = 5;
 
     const PAGE_SIZE = 5;
 
@@ -416,22 +421,31 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
         setRecentPage(1);
     };
 
-    const fetchEvidence = async (approvalId: string) => {
+    const fetchEvidence = async (approvalId: string, options?: { offset?: number }) => {
+        const offset = options?.offset ?? 0;
+        const params = new URLSearchParams({ workspace_id: workspaceId });
+        if (evidencePaginationEnabled) {
+            params.set('limit', String(EVIDENCE_PAGE_SIZE));
+            params.set('offset', String(offset));
+        }
+
         setEvidenceBusy(true);
         try {
-            const response = await fetch(`/api/approvals/${approvalId}/evidence?workspace_id=${workspaceId}`);
+            const response = await fetch(`/api/approvals/${approvalId}/evidence?${params.toString()}`);
             const body = (await response.json().catch(() => ({}))) as typeof evidenceData;
             if (response.ok && body && 'evidence' in body) {
                 setEvidenceData(body);
+                setEvidenceOffset(body.offset ?? offset);
             } else {
                 setEvidenceData({
                     approval_id: approvalId,
                     workspace_id: workspaceId,
                     total: 0,
-                    limit: 20,
-                    offset: 0,
+                    limit: evidencePaginationEnabled ? EVIDENCE_PAGE_SIZE : 20,
+                    offset,
                     evidence: [],
                 });
+                setEvidenceOffset(offset);
             }
         } finally {
             setEvidenceBusy(false);
@@ -614,7 +628,12 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                                 <button
                                                     type="button"
                                                     className="chip-button"
-                                                    onClick={() => setSelectedApprovalId(approval.approval_id)}
+                                                    onClick={() => {
+                                                        setSelectedApprovalId(approval.approval_id);
+                                                        setDrawerTab('summary');
+                                                        setEvidenceOffset(0);
+                                                        setEvidenceData(null);
+                                                    }}
                                                 >
                                                     View Details
                                                 </button>
@@ -743,7 +762,12 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                                 <button
                                                     type="button"
                                                     className="chip-button"
-                                                    onClick={() => setSelectedApprovalId(approval.approval_id)}
+                                                    onClick={() => {
+                                                        setSelectedApprovalId(approval.approval_id);
+                                                        setDrawerTab('summary');
+                                                        setEvidenceOffset(0);
+                                                        setEvidenceData(null);
+                                                    }}
                                                 >
                                                     View Details
                                                 </button>
@@ -800,7 +824,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                 <span style={{ fontSize: '0.78rem', color: '#57534e' }}>{selectedApproval.approval_id}</span>
                                 <h3 style={{ margin: 0, fontSize: '1.05rem' }}>{getApprovalHeadline(selectedApproval)}</h3>
                             </div>
-                            <button type="button" className="chip-button" onClick={() => { setSelectedApprovalId(null); setDrawerTab('summary'); setEvidenceData(null); }}>
+                            <button type="button" className="chip-button" onClick={() => { setSelectedApprovalId(null); setDrawerTab('summary'); setEvidenceOffset(0); setEvidenceData(null); }}>
                                 Close
                             </button>
                         </div>
@@ -825,8 +849,9 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                 type="button"
                                 onClick={() => {
                                     setDrawerTab('evidence');
+                                    setEvidenceOffset(0);
                                     if (!evidenceData) {
-                                        void fetchEvidence(selectedApproval.approval_id);
+                                        void fetchEvidence(selectedApproval.approval_id, { offset: 0 });
                                     }
                                 }}
                                 style={{
@@ -904,6 +929,11 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                     {evidenceBusy && <p style={{ color: '#57534e', fontSize: '0.85rem' }}>Loading evidence...</p>}
                                     {!evidenceBusy && evidenceData && (() => {
                                         const latestRecord = evidenceData.evidence[0];
+                                        const pagination = getEvidencePaginationState(
+                                            evidenceData.total,
+                                            evidenceData.limit,
+                                            evidenceData.offset,
+                                        );
                                         return (
                                             <>
                                                 {evidenceData.total === 0 && (
@@ -1002,9 +1032,42 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                                         )}
 
                                                         {evidenceData.total > 1 && (
-                                                            <p style={{ fontSize: '0.72rem', color: '#57534e', marginTop: '0.25rem' }}>
-                                                                Showing latest of {evidenceData.total} evidence records.
-                                                            </p>
+                                                            <div style={{ display: 'grid', gap: '0.25rem', marginTop: '0.25rem' }}>
+                                                                <p style={{ fontSize: '0.72rem', color: '#57534e', margin: 0 }}>
+                                                                    Showing {pagination.startIndex}-{pagination.endIndex} of {evidenceData.total} evidence records.
+                                                                </p>
+                                                                {evidencePaginationEnabled && (
+                                                                    <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+                                                                        <button
+                                                                            type="button"
+                                                                            className="chip-button"
+                                                                            disabled={!pagination.canPrev || evidenceBusy}
+                                                                            onClick={() => {
+                                                                                void fetchEvidence(selectedApproval.approval_id, {
+                                                                                    offset: Math.max(0, evidenceOffset - evidenceData.limit),
+                                                                                });
+                                                                            }}
+                                                                        >
+                                                                            Newer
+                                                                        </button>
+                                                                        <button
+                                                                            type="button"
+                                                                            className="chip-button"
+                                                                            disabled={!pagination.canNext || evidenceBusy}
+                                                                            onClick={() => {
+                                                                                void fetchEvidence(selectedApproval.approval_id, {
+                                                                                    offset: evidenceOffset + evidenceData.limit,
+                                                                                });
+                                                                            }}
+                                                                        >
+                                                                            Older
+                                                                        </button>
+                                                                        <span style={{ fontSize: '0.72rem', color: '#57534e' }}>
+                                                                            Page {pagination.page} of {pagination.pageCount}
+                                                                        </span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
                                                         )}
                                                     </>
                                                 )}
