@@ -1227,3 +1227,89 @@ test('evidence endpoint normalizes invalid limit and offset query values', async
         await app.close();
     }
 });
+
+test('approval batch intake creates a pending batch', async () => {
+    const app = Fastify();
+    const fake = createRepo();
+
+    await registerApprovalRoutes(app, {
+        getSession: () => session(),
+        repo: fake.repo,
+    });
+
+    try {
+        const response = await app.inject({
+            method: 'POST',
+            url: '/v1/approvals/batch/intake',
+            payload: {
+                workspace_id: 'ws_1',
+                task_id: 'task_batch_1',
+                actions: [
+                    { task_id: 'task_batch_1', action_type: 'workspace_format_code', risk_level: 'medium', payload: {} },
+                    { task_id: 'task_batch_1', action_type: 'workspace_generate_test', risk_level: 'high', payload: {} },
+                ],
+            },
+        });
+
+        assert.equal(response.statusCode, 201);
+        const body = response.json() as {
+            batch: {
+                batchId: string;
+                status: string;
+                totalCount: number;
+                actions: Array<{ actionType: string }>;
+            };
+        };
+
+        assert.ok(body.batch.batchId.length > 0);
+        assert.equal(body.batch.status, 'pending');
+        assert.equal(body.batch.totalCount, 2);
+        assert.equal(body.batch.actions[0]?.actionType, 'workspace_format_code');
+    } finally {
+        await app.close();
+    }
+});
+
+test('approval batch decision updates batch status', async () => {
+    const app = Fastify();
+    const fake = createRepo();
+
+    await registerApprovalRoutes(app, {
+        getSession: () => session(),
+        repo: fake.repo,
+    });
+
+    try {
+        const created = await app.inject({
+            method: 'POST',
+            url: '/v1/approvals/batch/intake',
+            payload: {
+                workspace_id: 'ws_1',
+                task_id: 'task_batch_2',
+                actions: [
+                    { task_id: 'task_batch_2', action_type: 'workspace_run_ci_checks', risk_level: 'high', payload: {} },
+                ],
+            },
+        });
+        assert.equal(created.statusCode, 201);
+        const createdBody = created.json() as { batch: { batchId: string } };
+
+        const decided = await app.inject({
+            method: 'POST',
+            url: `/v1/approvals/batch/${createdBody.batch.batchId}/decision`,
+            payload: {
+                workspace_id: 'ws_1',
+                decision: 'approve_all',
+                reason: 'Safe batch',
+            },
+        });
+
+        assert.equal(decided.statusCode, 200);
+        const decidedBody = decided.json() as { batch: { status: string; decision: string; reason?: string } };
+        assert.equal(decidedBody.batch.status, 'approved_all');
+        assert.equal(decidedBody.batch.decision, 'approve_all');
+        assert.equal(decidedBody.batch.reason, 'Safe batch');
+    } finally {
+        await app.close();
+    }
+});

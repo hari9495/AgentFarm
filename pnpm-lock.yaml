@@ -54,6 +54,9 @@ importers:
       '@agentfarm/agent-runtime':
         specifier: workspace:*
         version: link:../agent-runtime
+      '@agentfarm/approval-service':
+        specifier: workspace:*
+        version: link:../../services/approval-service
       '@agentfarm/connector-contracts':
         specifier: workspace:*
         version: link:../../packages/connector-contracts

@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { randomUUID } from 'node:crypto';
 import { parseApprovalPacket } from '../lib/approval-packet.js';
 
 const getPrisma = async () => {
@@ -107,6 +108,7 @@ type DecisionWebhookNotifier = (input: {
 type RegisterApprovalRoutesOptions = {
     getSession: (request: FastifyRequest) => SessionContext | null;
     repo?: ApprovalRepo;
+    approvalBatcher?: ApprovalBatcher;
     now?: () => number;
     serviceAuthToken?: string;
     runtimeDecisionToken?: string;
@@ -140,6 +142,74 @@ type DecisionBody = {
 
 type DecisionParams = {
     approvalId: string;
+};
+
+type BatchDecision = 'approve_all' | 'reject_all' | 'review_individually';
+
+type BatchAction = {
+    taskId: string;
+    actionType: string;
+    riskLevel: 'medium' | 'high';
+    payload: Record<string, unknown>;
+};
+
+type BatchRecord = {
+    batchId: string;
+    taskId: string;
+    workspaceId: string;
+    tenantId: string;
+    actions: BatchAction[];
+    totalCount: number;
+    status: 'pending' | 'approved_all' | 'rejected_all' | 'partial';
+    decision?: BatchDecision;
+    decidedBy?: string;
+    decidedAt?: string;
+    reason?: string;
+    createdAt: string;
+    updatedAt: string;
+};
+
+type BatchIntakeBody = {
+    workspace_id?: string;
+    task_id?: string;
+    actions?: Array<{
+        task_id?: string;
+        action_type?: string;
+        risk_level?: string;
+        payload?: Record<string, unknown>;
+    }>;
+};
+
+type BatchDecisionBody = {
+    workspace_id?: string;
+    decision?: BatchDecision;
+    reason?: string;
+};
+
+type BatchParams = {
+    batchId: string;
+};
+
+type ApprovalBatcher = {
+    createBatch(input: {
+        tenantId: string;
+        workspaceId: string;
+        taskId: string;
+        actions: BatchAction[];
+    }): Promise<BatchRecord>;
+    decideBatch(input: {
+        batchId: string;
+        tenantId: string;
+        workspaceId: string;
+        decision: BatchDecision;
+        actor: string;
+        reason: string | null;
+    }): Promise<BatchRecord | null>;
+    getBatch(input: {
+        batchId: string;
+        tenantId: string;
+        workspaceId: string;
+    }): Promise<BatchRecord | null>;
 };
 type EvidenceParams = {
     approvalId: string;
@@ -193,6 +263,61 @@ type EvidenceReader = (input: {
 
 const DEFAULT_ESCALATION_TIMEOUT_SECONDS = 3600;
 const DEFAULT_EVIDENCE_RECORD_PATH = 'data/evidence-records.ndjson';
+
+const createInMemoryApprovalBatcher = (): ApprovalBatcher => {
+    const batches = new Map<string, BatchRecord>();
+
+    return {
+        async createBatch(input) {
+            const nowIso = new Date().toISOString();
+            const record: BatchRecord = {
+                batchId: randomUUID(),
+                taskId: input.taskId,
+                workspaceId: input.workspaceId,
+                tenantId: input.tenantId,
+                actions: input.actions,
+                totalCount: input.actions.length,
+                status: 'pending',
+                createdAt: nowIso,
+                updatedAt: nowIso,
+            };
+            batches.set(record.batchId, record);
+            return record;
+        },
+        async decideBatch(input) {
+            const existing = batches.get(input.batchId);
+            if (!existing || existing.tenantId !== input.tenantId || existing.workspaceId !== input.workspaceId) {
+                return null;
+            }
+
+            const status =
+                input.decision === 'approve_all'
+                    ? 'approved_all'
+                    : input.decision === 'reject_all'
+                        ? 'rejected_all'
+                        : 'partial';
+
+            const updated: BatchRecord = {
+                ...existing,
+                decision: input.decision,
+                status,
+                reason: input.reason ?? undefined,
+                decidedBy: input.actor,
+                decidedAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+            };
+            batches.set(updated.batchId, updated);
+            return updated;
+        },
+        async getBatch(input) {
+            const existing = batches.get(input.batchId);
+            if (!existing || existing.tenantId !== input.tenantId || existing.workspaceId !== input.workspaceId) {
+                return null;
+            }
+            return existing;
+        },
+    };
+};
 
 const resolveEvidenceRecordPath = (env: NodeJS.ProcessEnv, cwd: string = process.cwd()): string => {
     const configured = env.AF_EVIDENCE_RECORD_PATH ?? env.AGENTFARM_EVIDENCE_RECORD_PATH;
@@ -550,6 +675,7 @@ export const registerApprovalRoutes = async (
     options: RegisterApprovalRoutesOptions,
 ): Promise<void> => {
     const repo = options.repo ?? defaultRepo;
+    const approvalBatcher = options.approvalBatcher ?? createInMemoryApprovalBatcher();
     const now = options.now ?? (() => Date.now());
     const decisionWebhookNotifier = options.decisionWebhookNotifier ?? defaultDecisionWebhookNotifier;
     const evidenceReader = options.evidenceReader ?? defaultEvidenceReader;
@@ -859,6 +985,140 @@ export const registerApprovalRoutes = async (
             approver_id: session.userId,
             webhook_notified: webhookNotified,
             webhook_status_code: webhookStatusCode,
+        };
+    });
+
+    app.post<{ Body: BatchIntakeBody }>('/v1/approvals/batch/intake', async (request, reply) => {
+        const session = options.getSession(request);
+        if (!session) {
+            return reply.code(401).send({
+                error: 'unauthorized',
+                message: 'A valid authenticated session is required.',
+            });
+        }
+
+        const workspaceId = request.body?.workspace_id ?? session.workspaceIds[0];
+        if (!workspaceId || !session.workspaceIds.includes(workspaceId)) {
+            return reply.code(403).send({
+                error: 'workspace_scope_violation',
+                message: 'workspace_id is not in your authenticated session scope.',
+            });
+        }
+
+        const rawActions = request.body?.actions ?? [];
+        if (!Array.isArray(rawActions) || rawActions.length === 0) {
+            return reply.code(400).send({
+                error: 'invalid_request',
+                message: 'actions is required and must contain at least one action.',
+            });
+        }
+
+        const actions: BatchAction[] = [];
+        for (const action of rawActions) {
+            const taskId = typeof action.task_id === 'string' ? action.task_id.trim() : '';
+            const actionType = typeof action.action_type === 'string' ? action.action_type.trim() : '';
+            const riskLevel = action.risk_level === 'medium' || action.risk_level === 'high' ? action.risk_level : null;
+            if (!taskId || !actionType || !riskLevel) {
+                return reply.code(400).send({
+                    error: 'invalid_request',
+                    message: 'each action requires task_id, action_type, and risk_level (medium/high).',
+                });
+            }
+
+            actions.push({
+                taskId,
+                actionType,
+                riskLevel,
+                payload: typeof action.payload === 'object' && action.payload !== null ? action.payload : {},
+            });
+        }
+
+        const taskId = request.body?.task_id?.trim() || actions[0]?.taskId || 'batch_task';
+        const batch = await approvalBatcher.createBatch({
+            tenantId: session.tenantId,
+            workspaceId,
+            taskId,
+            actions,
+        });
+
+        return reply.code(201).send({ batch });
+    });
+
+    app.get<{ Params: BatchParams; Querystring: { workspace_id?: string } }>('/v1/approvals/batch/:batchId', async (request, reply) => {
+        const session = options.getSession(request);
+        if (!session) {
+            return reply.code(401).send({
+                error: 'unauthorized',
+                message: 'A valid authenticated session is required.',
+            });
+        }
+
+        const workspaceId = request.query?.workspace_id ?? session.workspaceIds[0];
+        if (!workspaceId || !session.workspaceIds.includes(workspaceId)) {
+            return reply.code(403).send({
+                error: 'workspace_scope_violation',
+                message: 'workspace_id is not in your authenticated session scope.',
+            });
+        }
+
+        const batch = await approvalBatcher.getBatch({
+            batchId: request.params.batchId,
+            tenantId: session.tenantId,
+            workspaceId,
+        });
+        if (!batch) {
+            return reply.code(404).send({
+                error: 'batch_not_found',
+                message: 'Approval batch not found in current scope.',
+            });
+        }
+
+        return { batch };
+    });
+
+    app.post<{ Params: BatchParams; Body: BatchDecisionBody }>('/v1/approvals/batch/:batchId/decision', async (request, reply) => {
+        const session = options.getSession(request);
+        if (!session) {
+            return reply.code(401).send({
+                error: 'unauthorized',
+                message: 'A valid authenticated session is required.',
+            });
+        }
+
+        const workspaceId = request.body?.workspace_id ?? session.workspaceIds[0];
+        if (!workspaceId || !session.workspaceIds.includes(workspaceId)) {
+            return reply.code(403).send({
+                error: 'workspace_scope_violation',
+                message: 'workspace_id is not in your authenticated session scope.',
+            });
+        }
+
+        const decision = request.body?.decision;
+        if (decision !== 'approve_all' && decision !== 'reject_all' && decision !== 'review_individually') {
+            return reply.code(400).send({
+                error: 'invalid_decision',
+                message: 'decision must be one of approve_all, reject_all, review_individually.',
+            });
+        }
+
+        const updated = await approvalBatcher.decideBatch({
+            batchId: request.params.batchId,
+            tenantId: session.tenantId,
+            workspaceId,
+            decision,
+            actor: session.userId,
+            reason: request.body?.reason?.trim() ?? null,
+        });
+
+        if (!updated) {
+            return reply.code(404).send({
+                error: 'batch_not_found',
+                message: 'Approval batch not found in current scope.',
+            });
+        }
+
+        return {
+            batch: updated,
         };
     });
 

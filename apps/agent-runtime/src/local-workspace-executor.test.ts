@@ -9,7 +9,41 @@ process.env.AF_WORKSPACE_BASE = workspaceBase;
 
 const {
     executeLocalWorkspaceAction,
+    executeLocalWorkspaceActionWithMemoryMirror,
 } = await import('./local-workspace-executor.js');
+
+test('executeLocalWorkspaceActionWithMemoryMirror invokes mirror callback', async () => {
+    const mirrored: Array<{ actionType: string; executionStatus: string; taskId: string }> = [];
+
+    const result = await executeLocalWorkspaceActionWithMemoryMirror({
+        execution: {
+            tenantId: 'tenant-mirror',
+            botId: 'bot-mirror',
+            taskId: 'task-mirror-1',
+            actionType: 'code_edit',
+            payload: {
+                workspace_key: 'repo-mirror',
+                file_path: 'README.md',
+                content: 'mirror-hook\n',
+            },
+        },
+        onMemoryMirror: (record: { actionType: string; executionStatus: string; taskId: string }) => {
+            mirrored.push({
+                actionType: record.actionType,
+                executionStatus: record.executionStatus,
+                taskId: record.taskId,
+            });
+        },
+    });
+
+    assert.equal(result.ok, true);
+    assert.equal(mirrored.length, 1);
+    assert.deepEqual(mirrored[0], {
+        actionType: 'code_edit',
+        executionStatus: 'success',
+        taskId: 'task-mirror-1',
+    });
+});
 
 test('code_edit_patch replaces exact snippet in workspace file', async () => {
     const tenantId = 'tenant-local';

@@ -161,6 +161,19 @@ export type LocalWorkspaceResult = {
     exitCode?: number;
 };
 
+export type LocalWorkspaceMemoryMirrorRecord = {
+    tenantId: string;
+    botId: string;
+    taskId: string;
+    workspaceKey: string;
+    actionType: LocalWorkspaceActionType;
+    executionStatus: 'success' | 'failed';
+    summary: string;
+    outputPreview: string;
+    errorPreview: string | null;
+    exitCode: number | null;
+};
+
 type AutonomousPlanAction =
     | {
         action: 'code_edit';
@@ -6900,4 +6913,45 @@ export async function executeLocalWorkspaceAction(input: {
             return { ok: false, output: '', errorOutput: `Unknown local workspace action: ${_exhaustive as string}` };
         }
     }
+}
+
+export async function executeLocalWorkspaceActionWithMemoryMirror(input: {
+    execution: {
+        tenantId: string;
+        botId: string;
+        taskId: string;
+        actionType: LocalWorkspaceActionType;
+        payload: Record<string, unknown>;
+    };
+    onMemoryMirror?: (record: LocalWorkspaceMemoryMirrorRecord) => Promise<void> | void;
+    executor?: typeof executeLocalWorkspaceAction;
+}): Promise<LocalWorkspaceResult> {
+    const result = await (input.executor ?? executeLocalWorkspaceAction)(input.execution);
+    if (!input.onMemoryMirror) {
+        return result;
+    }
+
+    const payload = input.execution.payload;
+    const workspaceKey = typeof payload['workspace_key'] === 'string' && payload['workspace_key'].trim()
+        ? payload['workspace_key'].trim()
+        : input.execution.taskId;
+    const outputPreview = result.output.slice(0, 240);
+    const errorPreview = result.errorOutput ? result.errorOutput.slice(0, 240) : null;
+
+    await input.onMemoryMirror({
+        tenantId: input.execution.tenantId,
+        botId: input.execution.botId,
+        taskId: input.execution.taskId,
+        workspaceKey,
+        actionType: input.execution.actionType,
+        executionStatus: result.ok ? 'success' : 'failed',
+        summary: result.ok
+            ? `Local workspace action '${input.execution.actionType}' completed successfully.`
+            : `Local workspace action '${input.execution.actionType}' failed.`,
+        outputPreview,
+        errorPreview,
+        exitCode: result.exitCode ?? null,
+    });
+
+    return result;
 }

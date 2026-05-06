@@ -1,3 +1,12 @@
 ﻿export const serviceName = 'approval-service';
-console.log(serviceName, 'service scaffold ready');
+
+export {
+	InMemoryApprovalBatcher,
+	shouldBatch,
+} from './approval-batcher.js';
+
+export type {
+	ActionDecision,
+	ApprovalBatchRecord,
+} from './approval-batcher.js';
 

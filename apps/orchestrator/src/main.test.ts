@@ -244,6 +244,31 @@ test('orchestrator wake scheduling accepts proactive_signal wake source', async 
     }
 });
 
+test('orchestrator wake scheduling accepts agent_handoff wake source', async () => {
+    const isolated = await createIsolatedApp({ now: () => 1_700_000_333_500 });
+    const { app } = isolated;
+
+    try {
+        const response = await app.inject({
+            method: 'POST',
+            url: '/v1/wake/schedule',
+            payload: {
+                tenant_id: 'tenant-hs',
+                workspace_id: 'ws-hs',
+                bot_id: 'bot-hs',
+                wake_source: 'agent_handoff',
+                correlation_id: 'corr-hs-1',
+            },
+        });
+
+        assert.equal(response.statusCode, 201);
+        const body = response.json() as { wake_source: string };
+        assert.equal(body.wake_source, 'agent_handoff');
+    } finally {
+        await isolated.cleanup();
+    }
+});
+
 test('orchestrator agent handoff routes create, list, and update status', async () => {
     const isolated = await createIsolatedApp();
     const { app } = isolated;

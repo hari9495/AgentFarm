@@ -98,6 +98,7 @@ const parseWakeSource = (value: unknown): WakeSource | null => {
         || value === 'on_demand'
         || value === 'automation'
         || value === 'proactive_signal'
+        || value === 'agent_handoff'
     ) {
         return value;
     }

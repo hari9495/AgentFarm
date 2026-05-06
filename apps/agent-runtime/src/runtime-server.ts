@@ -40,6 +40,7 @@ import {
 } from './evidence-record-writer.js';
 import {
     executeLocalWorkspaceAction,
+    executeLocalWorkspaceActionWithMemoryMirror,
     buildGitPushApprovalSummary,
     getWorkspaceDir,
     LOCAL_WORKSPACE_ACTION_TYPES,
@@ -2442,12 +2443,37 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             source: input.source,
             payloadKeys: Object.keys(input.task.payload),
         });
-        const localResult = await localWorkspaceActionExecutor({
-            tenantId: input.config.tenantId,
-            botId: input.config.botId,
-            taskId: input.task.taskId,
-            actionType: input.decision.actionType as LocalWorkspaceActionType,
-            payload: input.task.payload,
+        const localResult = await executeLocalWorkspaceActionWithMemoryMirror({
+            execution: {
+                tenantId: input.config.tenantId,
+                botId: input.config.botId,
+                taskId: input.task.taskId,
+                actionType: input.decision.actionType as LocalWorkspaceActionType,
+                payload: input.task.payload,
+            },
+            executor: localWorkspaceActionExecutor,
+            onMemoryMirror: memoryStore
+                ? (record) => memoryStore.writeMemoryAfterTask({
+                    workspaceId: input.config.workspaceId,
+                    tenantId: input.config.tenantId,
+                    taskId: record.taskId,
+                    actionsTaken: [record.actionType],
+                    approvalOutcomes: input.source === 'direct_execute'
+                        ? []
+                        : [{ action: record.actionType, decision: 'approved' }],
+                    connectorsUsed: [],
+                    llmProvider: undefined,
+                    executionStatus: record.executionStatus,
+                    summary: `${record.summary} ${record.outputPreview}`.trim(),
+                    correlationId: input.config.correlationId,
+                }).catch((err: unknown) => {
+                    emitRuntimeEvent('runtime.memory_record_persist_failed', input.config, {
+                        task_id: input.task.taskId,
+                        error_message: err instanceof Error ? err.message : String(err),
+                        hook: 'local_workspace_executor',
+                    });
+                })
+                : undefined,
         });
 
         if (localResult.ok) {

@@ -731,7 +731,7 @@ export interface AuditEventRecord {
 
 // Epic B1: Heartbeat Wake Model with Coalescing
 // Frozen 2026-05-01 — wake source tracking and run deduplication
-export type WakeSource = 'timer' | 'assignment' | 'on_demand' | 'automation' | 'proactive_signal';
+export type WakeSource = 'timer' | 'assignment' | 'on_demand' | 'automation' | 'proactive_signal' | 'agent_handoff';
 
 export type RunStatus = 'queued' | 'active' | 'completed' | 'cancelled' | 'timeout' | 'failed';
 

@@ -38,6 +38,15 @@ type WhatIfOption = {
     summary: string;
 };
 
+type ApprovalBatchCard = {
+    batchId: string;
+    taskId: string;
+    status: 'pending' | 'approved_all' | 'rejected_all' | 'partial';
+    totalCount: number;
+    decision?: 'approve_all' | 'reject_all' | 'review_individually';
+    reason?: string;
+};
+
 type Props = {
     workspaceId: string;
     initialPending: ApprovalItem[];
@@ -133,6 +142,8 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
     const [bulkDecision, setBulkDecision] = useState<DecisionValue | null>(null);
     const [bulkReason, setBulkReason] = useState('Bulk decision confirmed by operations triage run.');
     const [bulkBusy, setBulkBusy] = useState(false);
+    const [batchCards, setBatchCards] = useState<ApprovalBatchCard[]>([]);
+    const [batchBusy, setBatchBusy] = useState(false);
     const [selectedApprovalId, setSelectedApprovalId] = useState<string | null>(focusedApprovalId ?? null);
     const [drawerTab, setDrawerTab] = useState<'summary' | 'evidence'>('summary');
     const [evidenceBusy, setEvidenceBusy] = useState(false);
@@ -442,6 +453,110 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
         setMessage(`Bulk decision completed for ${processed} approvals.`);
     };
 
+    const createBatchFromSelection = async () => {
+        const selected = pending.filter((item) => selectedApprovals[item.approval_id]);
+        if (selected.length === 0) {
+            setMessage('Select at least one approval to create a batch card.');
+            return;
+        }
+
+        setBatchBusy(true);
+        setMessage(null);
+
+        try {
+            const response = await fetch('/api/approvals/batch/intake', {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({
+                    workspace_id: workspaceId,
+                    task_id: selected[0]?.task_id ?? 'batch_task',
+                    actions: selected.map((approval) => ({
+                        task_id: approval.task_id ?? approval.approval_id,
+                        action_type: approval.action_summary,
+                        risk_level: approval.risk_level === 'high' ? 'high' : 'medium',
+                        payload: { approval_id: approval.approval_id },
+                    })),
+                }),
+            });
+
+            const body = (await response.json().catch(() => ({}))) as {
+                batch?: {
+                    batchId: string;
+                    taskId: string;
+                    status: 'pending' | 'approved_all' | 'rejected_all' | 'partial';
+                    totalCount: number;
+                    decision?: 'approve_all' | 'reject_all' | 'review_individually';
+                    reason?: string;
+                };
+                error?: string;
+                message?: string;
+            };
+
+            if (!response.ok || !body.batch) {
+                setMessage(body.message ?? body.error ?? 'Failed to create approval batch.');
+                return;
+            }
+
+            setBatchCards((prev) => [
+                {
+                    batchId: body.batch!.batchId,
+                    taskId: body.batch!.taskId,
+                    status: body.batch!.status,
+                    totalCount: body.batch!.totalCount,
+                    decision: body.batch!.decision,
+                    reason: body.batch!.reason,
+                },
+                ...prev,
+            ].slice(0, 10));
+            setMessage(`Created batch ${body.batch.batchId} with ${body.batch.totalCount} approvals.`);
+        } finally {
+            setBatchBusy(false);
+        }
+    };
+
+    const decideBatchCard = async (
+        batchId: string,
+        decision: 'approve_all' | 'reject_all' | 'review_individually',
+    ) => {
+        setBatchBusy(true);
+        setMessage(null);
+
+        try {
+            const response = await fetch(`/api/approvals/batch/${encodeURIComponent(batchId)}/decision`, {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({
+                    workspace_id: workspaceId,
+                    decision,
+                    reason: bulkReason.trim() || undefined,
+                }),
+            });
+
+            const body = (await response.json().catch(() => ({}))) as {
+                batch?: ApprovalBatchCard;
+                error?: string;
+                message?: string;
+            };
+
+            if (!response.ok || !body.batch) {
+                setMessage(body.message ?? body.error ?? 'Failed to decide approval batch.');
+                return;
+            }
+
+            setBatchCards((prev) => prev.map((batch) => (batch.batchId === batchId
+                ? {
+                    ...batch,
+                    status: body.batch!.status,
+                    decision: body.batch!.decision,
+                    reason: body.batch!.reason,
+                }
+                : batch)));
+            setMessage(`Batch ${batchId} marked as ${body.batch.status}.`);
+        } finally {
+            setBatchBusy(false);
+        }
+    };
+
     const applyReasonTemplate = (approvalId: string, value: string) => {
         if (!value) {
             return;
@@ -633,7 +748,41 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                 <span style={{ fontSize: '0.8rem', color: '#57534e' }}>
                     Selected: {Object.values(selectedApprovals).filter(Boolean).length}
                 </span>
+                <button
+                    type="button"
+                    className="chip-button"
+                    onClick={() => void createBatchFromSelection()}
+                    disabled={batchBusy}
+                >
+                    {batchBusy ? 'Batching…' : 'Create Batch Card'}
+                </button>
             </div>
+
+            {batchCards.length > 0 && (
+                <div style={{ display: 'grid', gap: '0.45rem', marginBottom: '0.85rem' }}>
+                    {batchCards.map((batch) => (
+                        <div key={batch.batchId} className="message-inline" style={{ display: 'grid', gap: '0.35rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.4rem' }}>
+                                <span>
+                                    Batch <strong>{batch.batchId.slice(0, 12)}</strong> | Task <strong>{batch.taskId}</strong> | Count <strong>{batch.totalCount}</strong>
+                                </span>
+                                <span className={batch.status === 'pending' ? 'badge medium' : 'badge low'}>{batch.status}</span>
+                            </div>
+                            <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                                <button type="button" className="secondary-action" disabled={batchBusy || batch.status !== 'pending'} onClick={() => void decideBatchCard(batch.batchId, 'approve_all')}>
+                                    Approve All
+                                </button>
+                                <button type="button" className="danger-action" disabled={batchBusy || batch.status !== 'pending'} onClick={() => void decideBatchCard(batch.batchId, 'reject_all')}>
+                                    Reject All
+                                </button>
+                                <button type="button" className="warn-action" disabled={batchBusy || batch.status !== 'pending'} onClick={() => void decideBatchCard(batch.batchId, 'review_individually')}>
+                                    Review Individually
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
 
             {bulkDecision && (
                 <div className="message-inline" style={{ marginBottom: '0.8rem' }}>

@@ -52,6 +52,7 @@ import { registerAutonomousLoopRoutes } from './routes/autonomous-loops.js';
 import { registerSkillCompositionRoutes } from './routes/skill-composition-execute.js';
 import { registerGovernanceKPIRoutes } from './routes/governance-kpis.js';
 import { registerAdapterRegistryRoutes } from './routes/adapter-registry.js';
+import { registerHandoffRoutes } from './routes/handoffs.js';
 
 const app = Fastify({ logger: true });
 const port = Number(process.env.API_GATEWAY_PORT ?? 3000);
@@ -449,6 +450,9 @@ await registerWorkMemoryRoutes(app, {
     getSession: (request) => readSession(request),
 });
 await registerReproPackRoutes(app, {
+    getSession: (request) => readSession(request),
+});
+await registerHandoffRoutes(app, {
     getSession: (request) => readSession(request),
 });
 registerSkillPipelineRoutes(app);
