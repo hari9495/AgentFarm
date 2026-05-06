@@ -36,6 +36,26 @@ const fallbackEnv = (): NodeJS.ProcessEnv => ({
     AF_ACTION_RESULT_LOG_PATH: join(tmpdir(), `agent-runtime-fallback-${process.pid}-${Date.now()}-${Math.random()}.ndjson`),
 });
 
+const waitForValue = async <T>(
+    getValue: () => T | undefined,
+    options: { timeoutMs?: number; pollMs?: number } = {},
+): Promise<T | undefined> => {
+    const timeoutMs = options.timeoutMs ?? 1_200;
+    const pollMs = options.pollMs ?? 20;
+    const startedAt = Date.now();
+
+    while (Date.now() - startedAt < timeoutMs) {
+        const value = getValue();
+        if (value !== undefined) {
+            return value;
+        }
+
+        await new Promise<void>((resolve) => setTimeout(resolve, pollMs));
+    }
+
+    return getValue();
+};
+
 test('startup starts worker loop and health/ready is true when dependencies are reachable', async () => {
     const app = buildRuntimeServer({
         env: baseEnv(),
@@ -3442,9 +3462,10 @@ test('task execution record marks payload overrides as llm_generated when resolv
         });
         assert.equal(intakeRes.statusCode, 202);
 
-        await new Promise<void>((resolve) => setTimeout(resolve, 80));
-
-        const written = records.find((record) => record['taskId'] === 'llm-metadata-overrides-1');
+        const written = await waitForValue(
+            () => records.find((record) => record['taskId'] === 'llm-metadata-overrides-1'),
+            { timeoutMs: 1_500 },
+        );
         assert.ok(written, 'task execution record should be written');
         assert.equal(written?.['payloadOverrideSource'], 'llm_generated');
         assert.equal(written?.['payloadOverridesApplied'], true);
@@ -3494,9 +3515,10 @@ test('startup applies workspace LLM provider from llmConfigFetcher for task exec
         });
         assert.equal(intakeRes.statusCode, 202);
 
-        await new Promise<void>((resolve) => setTimeout(resolve, 70));
-
-        const written = records.find((record) => record['taskId'] === 'workspace-provider-1');
+        const written = await waitForValue(
+            () => records.find((record) => record['taskId'] === 'workspace-provider-1'),
+            { timeoutMs: 1_500 },
+        );
         assert.ok(written, 'task execution record should be written');
         assert.equal(written?.['modelProvider'], 'openai');
     } finally {
@@ -3604,9 +3626,10 @@ test('runtime persists evidence records for completed tasks', async () => {
             },
         });
 
-        await new Promise<void>((resolve) => setTimeout(resolve, 120));
-
-        const evidence = persistedEvidence.find((entry) => entry.taskId === 'evidence-task-1');
+        const evidence = await waitForValue(
+            () => persistedEvidence.find((entry) => entry.taskId === 'evidence-task-1'),
+            { timeoutMs: 1_800 },
+        );
         assert.ok(evidence, 'evidence record should be persisted for completed task');
         assert.equal(evidence?.actionStatus, 'success');
         assert.equal(evidence?.actionOutcome.success, true);
