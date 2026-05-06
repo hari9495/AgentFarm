@@ -279,6 +279,19 @@ Stabilize for release with strict regressions and operational runbook updates.
 3. pnpm quality:gate passes.
 4. No Sev-1 or Sev-2 unresolved findings.
 
+### Sprint 6 Implementation Closure (2026-05-06)
+1. Connector scope hardening completed:
+- invalid workspace/bot scope for website connector GET and POST now returns HTTP 400 instead of fallback.
+2. Focused website regression lane passed:
+- `tests/connectors-bot-scope.test.ts` passed (5/5).
+3. Full quality gate completed with PASS:
+- Started: 2026-05-06T18:03:49.440Z
+- Ended: 2026-05-06T18:08:14.659Z
+- Report: `operations/quality/8.1-quality-gate-report.md`.
+4. Runbook and sprint closure artifacts updated:
+- `operations/runbooks/website-swa-runbook.md`
+- `planning/sprints/sprint-6-hardening-quality-gate-and-release-readiness.md`
+
 ## Ticket Mapping (Reference)
 1. Sprint 1: AF-RB-007 completion, AF-RB-012 snapshot persistence, AF-RB-014 runtime regression expansion.
 2. Sprint 2: AF-RB-008 and AF-RB-009.

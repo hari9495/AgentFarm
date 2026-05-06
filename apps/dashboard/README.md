@@ -175,7 +175,11 @@ Covered in the dashboard 69-test suite under `app/components/kanban-board-utils.
 | Workspace tab persistence | covered |
 | **Total** | **69 passing** |
 
-Last quality gate run: **2026-05-04 — EXIT_CODE=0 (PASS)**
+Last quality gate run: **2026-05-06 — EXIT_CODE=0 (PASS)**
+
+Sprint 6 release-readiness note:
+1. Dashboard observability and workspace/tab persistence lanes remain green in the latest full quality gate.
+2. Website connector hardening changes were validated alongside dashboard smoke and browser e2e lanes in the same run.
 
 
 <!-- doc-sync: 2026-05-06 sprint-6 -->

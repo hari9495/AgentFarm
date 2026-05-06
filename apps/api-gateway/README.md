@@ -140,7 +140,11 @@ Covered in the api-gateway 351-test suite under `src/routes/sse-tasks.test.ts`.
 | SSE task stream | covered |
 | **Total** | **351 passing** |
 
-Last quality gate run: **2026-05-04 — EXIT_CODE=0 (PASS)**
+Last quality gate run: **2026-05-06 — EXIT_CODE=0 (PASS)**
+
+Sprint 6 coordination note:
+1. Website connector scope hardening now returns HTTP 400 for invalid workspace/bot context requests.
+2. This improves deterministic behavior when api-gateway actions are triggered from connector-backed website flows.
 
 
 <!-- doc-sync: 2026-05-06 sprint-6 -->
