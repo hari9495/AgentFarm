@@ -15,8 +15,58 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');
 
 const violations = [];
+const packageJsonCache = new Map();
 
 const SERVICE_DIRS = ['apps', 'services'];
+
+function findNearestPackageJson(filePath) {
+    let currentDir = path.dirname(filePath);
+
+    while (currentDir.startsWith(rootDir)) {
+        const candidate = path.join(currentDir, 'package.json');
+        if (fs.existsSync(candidate)) {
+            return candidate;
+        }
+
+        const parentDir = path.dirname(currentDir);
+        if (parentDir === currentDir) {
+            break;
+        }
+        currentDir = parentDir;
+    }
+
+    return null;
+}
+
+function loadDeclaredWorkspaceDeps(filePath) {
+    const packageJsonPath = findNearestPackageJson(filePath);
+    if (!packageJsonPath) {
+        return new Set();
+    }
+
+    if (packageJsonCache.has(packageJsonPath)) {
+        return packageJsonCache.get(packageJsonPath);
+    }
+
+    let parsed;
+    try {
+        parsed = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
+    } catch {
+        const empty = new Set();
+        packageJsonCache.set(packageJsonPath, empty);
+        return empty;
+    }
+
+    const declared = new Set([
+        ...Object.keys(parsed.dependencies ?? {}),
+        ...Object.keys(parsed.devDependencies ?? {}),
+        ...Object.keys(parsed.peerDependencies ?? {}),
+        ...Object.keys(parsed.optionalDependencies ?? {}),
+    ]);
+
+    packageJsonCache.set(packageJsonPath, declared);
+    return declared;
+}
 
 // Scan a file for violations
 function scanFile(filePath) {
@@ -32,6 +82,7 @@ function scanFile(filePath) {
 
     const lines = content.split('\n');
     let lineNumber = 0;
+    const declaredWorkspaceDeps = loadDeclaredWorkspaceDeps(filePath);
 
     for (const line of lines) {
         lineNumber++;
@@ -44,12 +95,19 @@ function scanFile(filePath) {
         if (agentfarmImports) {
             for (const imp of agentfarmImports) {
                 const match = imp.match(/@agentfarm\/([a-z\-]+)/);
-                if (match && !['shared-types', 'queue-contracts', 'connector-contracts', 'observability'].includes(match[1])) {
+                const importPath = imp.replace(/^from\s+|['"]/g, '');
+                const packageName = match ? `@agentfarm/${match[1]}` : null;
+
+                if (
+                    match
+                    && !['shared-types', 'queue-contracts', 'connector-contracts', 'observability'].includes(match[1])
+                    && !(packageName && declaredWorkspaceDeps.has(packageName))
+                ) {
                     violations.push({
                         file: filePath,
                         line: lineNumber,
                         content: line.trim(),
-                        violatingImport: imp.replace(/^from\s+|['"]/g, ''),
+                        violatingImport: importPath,
                     });
                 }
             }

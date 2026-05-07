@@ -170,7 +170,7 @@ const defaultRepo: AuditRepo = {
 
     async listEvents(input) {
         const prisma = await getPrisma();
-        const events = await prisma.auditEvent.findMany({
+        const events = (await prisma.auditEvent.findMany({
             where: {
                 tenantId: input.tenantId,
                 workspaceId: input.workspaceId,
@@ -188,9 +188,9 @@ const defaultRepo: AuditRepo = {
                 { id: 'desc' },
             ],
             take: input.limit,
-        });
+        })) as AuditEventRecord[];
 
-        return events.map((event) => ({
+        return events.map((event: AuditEventRecord) => ({
             id: event.id,
             tenantId: event.tenantId,
             workspaceId: event.workspaceId,

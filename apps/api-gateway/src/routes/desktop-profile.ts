@@ -1,3 +1,4 @@
+import type { Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 
@@ -178,7 +179,14 @@ const createDbRepo = (): DesktopProfileRepo => {
     return {
         async getProfile(input) {
             const prisma = await getPrisma();
-            const rows = await prisma.$queryRawUnsafe<Array<{
+            const rows = (await prisma.$queryRawUnsafe(
+                `SELECT "tenantId", "workspaceId", "profileId", "browser", "storageRef", "tabState", "tokenVersion", "updatedAt"
+                 FROM "DesktopProfile"
+                 WHERE "tenantId" = $1 AND "workspaceId" = $2
+                 LIMIT 1`,
+                input.tenantId,
+                input.workspaceId,
+            )) as Array<{
                 tenantId: string;
                 workspaceId: string;
                 profileId: string;
@@ -187,14 +195,7 @@ const createDbRepo = (): DesktopProfileRepo => {
                 tabState: Record<string, unknown> | string;
                 tokenVersion: number;
                 updatedAt: Date;
-            }>>(
-                `SELECT "tenantId", "workspaceId", "profileId", "browser", "storageRef", "tabState", "tokenVersion", "updatedAt"
-                 FROM "DesktopProfile"
-                 WHERE "tenantId" = $1 AND "workspaceId" = $2
-                 LIMIT 1`,
-                input.tenantId,
-                input.workspaceId,
-            );
+            }>;
 
             if (!rows[0]) {
                 return null;
@@ -214,23 +215,22 @@ const createDbRepo = (): DesktopProfileRepo => {
         },
         async upsertProfile(input) {
             const prisma = await getPrisma();
-
-            return prisma.$transaction(async (tx) => {
-                const rows = await tx.$queryRawUnsafe<Array<{
-                    id: string;
-                    profileId: string;
-                    browser: string;
-                    storageRef: string | null;
-                    tabState: Record<string, unknown> | string;
-                    tokenVersion: number;
-                }>>(
+            return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+                const rows = (await tx.$queryRawUnsafe(
                     `SELECT "id", "profileId", "browser", "storageRef", "tabState", "tokenVersion"
                      FROM "DesktopProfile"
                      WHERE "tenantId" = $1 AND "workspaceId" = $2
                      LIMIT 1`,
                     input.tenantId,
                     input.workspaceId,
-                );
+                )) as Array<{
+                    id: string;
+                    profileId: string;
+                    browser: string;
+                    storageRef: string | null;
+                    tabState: Record<string, unknown> | string;
+                    tokenVersion: number;
+                }>;
 
                 const existing = rows[0];
                 if (existing) {
@@ -290,23 +290,22 @@ const createDbRepo = (): DesktopProfileRepo => {
         },
         async rotateProfile(input) {
             const prisma = await getPrisma();
-
-            return prisma.$transaction(async (tx) => {
-                const rows = await tx.$queryRawUnsafe<Array<{
-                    id: string;
-                    profileId: string;
-                    browser: string;
-                    storageRef: string | null;
-                    tabState: Record<string, unknown> | string;
-                    tokenVersion: number;
-                }>>(
+            return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+                const rows = (await tx.$queryRawUnsafe(
                     `SELECT "id", "profileId", "browser", "storageRef", "tabState", "tokenVersion"
                      FROM "DesktopProfile"
                      WHERE "tenantId" = $1 AND "workspaceId" = $2
                      LIMIT 1`,
                     input.tenantId,
                     input.workspaceId,
-                );
+                )) as Array<{
+                    id: string;
+                    profileId: string;
+                    browser: string;
+                    storageRef: string | null;
+                    tabState: Record<string, unknown> | string;
+                    tokenVersion: number;
+                }>;
 
                 const existing = rows[0];
                 const nextProfileId = randomUUID();

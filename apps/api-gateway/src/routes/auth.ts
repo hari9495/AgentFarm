@@ -1,3 +1,4 @@
+import type { Prisma } from '@prisma/client';
 import type { FastifyInstance } from 'fastify';
 import { hashPassword, verifyPassword } from '../lib/password.js';
 import { buildSessionToken } from '../lib/session-auth.js';
@@ -43,12 +44,13 @@ export type AuthRepo = {
 
 const getPrismaRepo = async (): Promise<AuthRepo> => {
     const { prisma } = await import('../lib/db.js');
+
     return {
         async findUserByEmail(email) {
             return prisma.tenantUser.findUnique({ where: { email } });
         },
         async runSignupTransaction({ companyName, email, name, passwordHash }) {
-            return prisma.$transaction(async (tx) => {
+            return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
                 const tenant = await tx.tenant.create({
                     data: { name: companyName, status: 'pending' },
                 });

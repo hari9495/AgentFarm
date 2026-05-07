@@ -17,6 +17,9 @@ export const TESTER_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = [
     'workspace_go_to_definition',
     'workspace_hover_type',
     'workspace_analyze_imports',
+    'workspace_generate_test',
+    'workspace_run_ci_checks',
+    'workspace_fix_test_failures',
     'workspace_code_coverage',
     'workspace_complexity_metrics',
     'workspace_security_scan',
@@ -45,20 +48,18 @@ export const TESTER_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = [
 
 export const TESTER_ROLE_BLOCKED_ACTIONS = [
     'merge_pr',
-    'git_push',
+    'deploy_production',
+    'delete_resource',
+    'workspace_subagent_spawn',
+    'run_shell_command',
+    'change_permissions',
     'code_edit_patch',
     'workspace_bulk_refactor',
-    'workspace_browser_open',
-    'workspace_app_launch',
-    'run_shell_command',
 ] as const;
 
 export const TESTER_ROLE_HIGH_RISK_ACTIONS = [
-    'merge_pr',
-    'git_push',
-    'run_shell_command',
-    'workspace_browser_open',
-    'workspace_app_launch',
+    'workspace_autonomous_plan_execute',
+    'workspace_github_issue_fix',
 ] as const;
 
 export const TESTER_ROLE_PROFILE_ALIASES = new Set([

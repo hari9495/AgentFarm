@@ -56,7 +56,7 @@ export function generateSessionId(agentInstanceId: string): string {
  */
 export function generateActionId(sessionId: string, sequence: number): string {
     const parts = sessionId.split('_');
-    const sesShort = parts[parts.length - 2]; // The random part before timestamp
+    const sesShort = parts[parts.length - 1]; // The trailing random segment is the session short id
     if (!sesShort || sesShort.length === 0) {
         throw new Error(`Invalid sessionId format: ${sessionId}`);
     }
@@ -72,7 +72,7 @@ export function generateActionId(sessionId: string, sequence: number): string {
  */
 export function generateRecordingId(sessionId: string): string {
     const parts = sessionId.split('_');
-    const sesShort = parts[parts.length - 2];
+    const sesShort = parts[parts.length - 1];
     if (!sesShort || sesShort.length === 0) {
         throw new Error(`Invalid sessionId format: ${sessionId}`);
     }
@@ -97,13 +97,13 @@ export function generateScreenshotId(actionId: string, timing: 'before' | 'after
  * Useful for finding all actions in a session from just the action ID.
  */
 export function decodeSessionIdFromActionId(actionId: string): string {
-    // act_ses_9b2f_001 -> ses_agt_9b2f_... (reconstruct partially)
-    // Note: We return the prefix pattern, full ID requires database lookup
+    // act_ses_9b2f_001 -> ses_agt_*_*_9b2f (reconstruct query pattern only)
+    // Full session metadata still requires a backing index or database lookup.
     const match = actionId.match(/act_ses_([a-f0-9]+)_\d+/);
     if (!match) {
         throw new Error(`Invalid actionId format: ${actionId}`);
     }
-    return `ses_agt_${match[1]}_*`; // Prefix pattern for querying
+    return `ses_agt_*_*_${match[1]}`;
 }
 
 /**
@@ -111,13 +111,22 @@ export function decodeSessionIdFromActionId(actionId: string): string {
  * Useful for role-based queries without database joins.
  */
 export function decodeAgentInstanceIdFromSessionId(sessionId: string): string {
-    // ses_agt_4e1d_20250507T143022_9b2f -> agt_<tenShort>_<role>_4e1d
-    // Note: We can only recover the last segment; role/tenant require database
-    const match = sessionId.match(/ses_agt_([a-f0-9]+)_/);
-    if (!match) {
+    // ses_agt_4e1d_20250507T143022_9b2f -> agt_*_*_4e1d
+    // ses_agt_*_*_9b2f -> agt_*_*_* when only a query pattern is available
+    const match = sessionId.match(/^ses_agt_([a-f0-9]+)_/);
+    if (match) {
+        return `agt_*_*_${match[1]}`;
+    }
+
+    const wildcardMatch = sessionId.match(/^ses_agt_\*_\*_([a-f0-9]+)$/);
+    if (wildcardMatch) {
+        return 'agt_*_*_*';
+    }
+
+    if (!match && !wildcardMatch) {
         throw new Error(`Invalid sessionId format: ${sessionId}`);
     }
-    return `agt_*_*_${match[1]}`; // Prefix pattern for querying
+    return 'agt_*_*_*';
 }
 
 /**
@@ -126,6 +135,9 @@ export function decodeAgentInstanceIdFromSessionId(sessionId: string): string {
 export function decodeTenantIdFromAgentInstanceId(agentInstanceId: string): string {
     // agt_7f3a9c2b_developer_4e1d -> ten_7f3a9c2b
     const match = agentInstanceId.match(/agt_([a-f0-9]+)_/);
+    if (!match && /^agt_\*_\*_\*$/.test(agentInstanceId)) {
+        return 'ten_*';
+    }
     if (!match) {
         throw new Error(`Invalid agentInstanceId format: ${agentInstanceId}`);
     }

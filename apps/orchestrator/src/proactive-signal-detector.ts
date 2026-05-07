@@ -1,5 +1,7 @@
 import type { ProactiveSignalType } from '@agentfarm/shared-types';
 
+type ConnectorDefinition = { tool: string };
+
 export interface ProactivePullRequestInput {
     id: string;
     title: string;
@@ -126,6 +128,7 @@ export const detectCiFailure = (
             branch: failure.branch,
             failure_count: failure.failureCount,
             threshold_count: ciFailureThresholdCount,
+            recommended_action: 'workspace_run_ci_checks',
         },
     }));
 
@@ -144,6 +147,7 @@ export const detectDependencyCve = (
             cve_id: vulnerability.cveId,
             vulnerability_severity: vulnerability.severity,
             threshold_severity: dependencySeverityThreshold,
+            recommended_action: 'workspace_dependency_audit',
         },
     }));
 
@@ -163,4 +167,61 @@ export const detectProactiveSignals = (
         ...detectCiFailure(input.ciFailures ?? [], ciFailureThresholdCount),
         ...detectDependencyCve(input.dependencyVulnerabilities ?? [], dependencySeverityThreshold),
     ];
+};
+
+export const runProactiveDetection = async (
+    workspaceId: string,
+    connectors: ConnectorDefinition[],
+    input?: Omit<ProactiveSignalDetectionInput, 'workspaceId'>,
+    writeAuditEvent?: (event: {
+        action: 'proactive_signal_detected';
+        actorEmail: string;
+        tenantId: string;
+        workspaceId: string;
+        metadata: Record<string, unknown>;
+    }) => void,
+): Promise<DetectedProactiveSignalInput[]> => {
+    const signalInput: ProactiveSignalDetectionInput = {
+        tenantId: input?.tenantId ?? 'unknown_tenant',
+        workspaceId,
+        botId: input?.botId ?? 'system:proactive-detector',
+        correlationId: input?.correlationId ?? `proactive_detection_${Date.now()}`,
+        pullRequests: input?.pullRequests,
+        tickets: input?.tickets,
+        budgetUtilizationRatio: input?.budgetUtilizationRatio,
+        ciFailures: input?.ciFailures,
+        dependencyVulnerabilities: input?.dependencyVulnerabilities,
+        stalePrThresholdDays: input?.stalePrThresholdDays,
+        staleTicketThresholdHours: input?.staleTicketThresholdHours,
+        budgetWarningThreshold: input?.budgetWarningThreshold,
+        ciFailureThresholdCount: input?.ciFailureThresholdCount,
+        dependencySeverityThreshold: input?.dependencySeverityThreshold,
+    };
+
+    const connectorHints = connectors.map((connector) => connector.tool);
+    const detected = detectProactiveSignals(signalInput);
+    const withMetadata = detected.map((signal) => ({
+        ...signal,
+        metadata: {
+            ...signal.metadata,
+            connectors_considered: connectorHints,
+        },
+    }));
+
+    if (writeAuditEvent) {
+        for (const signal of withMetadata) {
+            writeAuditEvent({
+                action: 'proactive_signal_detected',
+                actorEmail: 'agent@system',
+                tenantId: signalInput.tenantId,
+                workspaceId,
+                metadata: {
+                    signalType: signal.signalType,
+                    severity: signal.severity,
+                },
+            });
+        }
+    }
+
+    return withMetadata;
 };

@@ -365,6 +365,86 @@ test('orchestrator run completion records task memory when task details are prov
     }
 });
 
+test('orchestrator task slot routes dispatch and manage slot lifecycle', async () => {
+    const isolated = await createIsolatedApp();
+    const { app } = isolated;
+
+    try {
+        const dispatch = await app.inject({
+            method: 'POST',
+            url: '/v1/workspaces/ws-slots/task-slots/dispatch',
+            payload: {
+                tenant_id: 'tenant-slots',
+                plan_tier: 'pro',
+                pending_tasks: [
+                    { task_id: 'task-1', priority: 10 },
+                    { task_id: 'task-2', priority: 8 },
+                    { task_id: 'task-3', priority: 6 },
+                    { task_id: 'task-4', priority: 4 },
+                ],
+            },
+        });
+
+        assert.equal(dispatch.statusCode, 200);
+        const dispatchBody = dispatch.json() as {
+            started_count: number;
+            started: Array<{ slotId: string }>;
+            slots: Array<{ slotId: string; status: string }>;
+        };
+        assert.equal(dispatchBody.started_count, 3);
+        assert.equal(dispatchBody.slots.length, 3);
+
+        const slotId = dispatchBody.started[0]?.slotId;
+        assert.ok(typeof slotId === 'string' && slotId.length > 0);
+
+        const parked = await app.inject({
+            method: 'POST',
+            url: `/v1/workspaces/ws-slots/task-slots/${slotId}/park`,
+            payload: {
+                reason: 'waiting_approval',
+                unblock_condition: 'approval_received',
+            },
+        });
+        assert.equal(parked.statusCode, 200);
+
+        const listedAfterPark = await app.inject({
+            method: 'GET',
+            url: '/v1/workspaces/ws-slots/task-slots',
+        });
+        assert.equal(listedAfterPark.statusCode, 200);
+        const listedAfterParkBody = listedAfterPark.json() as {
+            slots: Array<{ slotId: string; status: string }>;
+        };
+        const parkedSlot = listedAfterParkBody.slots.find((slot) => slot.slotId === slotId);
+        assert.equal(parkedSlot?.status, 'waiting_approval');
+
+        const unblocked = await app.inject({
+            method: 'POST',
+            url: `/v1/workspaces/ws-slots/task-slots/${slotId}/unblock`,
+        });
+        assert.equal(unblocked.statusCode, 200);
+
+        const released = await app.inject({
+            method: 'POST',
+            url: `/v1/workspaces/ws-slots/task-slots/${slotId}/release`,
+        });
+        assert.equal(released.statusCode, 200);
+
+        const listedAfterRelease = await app.inject({
+            method: 'GET',
+            url: '/v1/workspaces/ws-slots/task-slots',
+        });
+        assert.equal(listedAfterRelease.statusCode, 200);
+        const listedAfterReleaseBody = listedAfterRelease.json() as {
+            slots: Array<{ slotId: string; status: string }>;
+        };
+        const releasedSlot = listedAfterReleaseBody.slots.find((slot) => slot.slotId === slotId);
+        assert.equal(releasedSlot?.status, 'idle');
+    } finally {
+        await isolated.cleanup();
+    }
+});
+
 test('orchestrator agent handoff routes create, list, and update status', async () => {
     const isolated = await createIsolatedApp();
     const { app } = isolated;

@@ -125,11 +125,16 @@ export class MemoryStore implements IMemoryStore {
       },
     });
 
+    const codeReviewPatterns = (await this.readLongTermMemory(workspaceId, 0.5))
+      .slice(0, maxResults)
+      .map((memory) => memory.pattern);
+
     return {
       recentMemories: memories,
       memoryCountThisWeek,
       mostCommonConnectors,
       approvalRejectionRate,
+      codeReviewPatterns,
     };
   }
 
@@ -187,7 +192,7 @@ export class MemoryStore implements IMemoryStore {
       ORDER BY confidence DESC, "lastSeen" DESC
     `;
 
-    return rows.map((row) => this.longTermRowToRecord(row));
+    return rows.map((row: AgentLongTermMemoryRow) => this.longTermRowToRecord(row));
   }
 
   async updateMemoryConfidence(id: string, newObservation: string): Promise<void> {
@@ -223,7 +228,7 @@ export class MemoryStore implements IMemoryStore {
         tenantId: request.tenantId,
         workspaceId: request.workspaceId,
         botId: 'system:memory-service',
-        eventType: 'memory_write' as import('@prisma/client').Prisma.AuditEventCreateInput['eventType'],
+        eventType: 'memory_write',
         severity: 'info',
         summary: `Memory recorded for task ${request.taskId} (status: ${request.executionStatus})`,
         sourceSystem: 'memory-service',
@@ -322,11 +327,18 @@ export class InMemoryMemoryStore implements IMemoryStore {
       )
       .slice(0, maxResults);
 
+    const codeReviewPatterns = (this.longTermMemories.get(workspaceId) ?? [])
+      .filter((memory) => memory.confidence >= 0.5)
+      .sort((a, b) => b.confidence - a.confidence || Date.parse(b.lastSeen) - Date.parse(a.lastSeen))
+      .slice(0, maxResults)
+      .map((memory) => memory.pattern);
+
     return {
       recentMemories: memories,
       memoryCountThisWeek: memories.length,
       mostCommonConnectors: extractCommonConnectors(memories),
       approvalRejectionRate: calculateRejectionRate(memories),
+      codeReviewPatterns,
     };
   }
 

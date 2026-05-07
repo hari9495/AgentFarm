@@ -261,6 +261,9 @@ test('Agent Memory Service', async (t) => {
     assert.equal(filtered.length, 1);
     assert.equal(filtered[0].id, longTerm.id);
     assert.equal(filtered[0].pattern, 'Prefer opening a draft PR before merge');
+
+    const injected = await store.readMemoryForTask('ws-123');
+    assert.deepEqual(injected.codeReviewPatterns, ['Prefer opening a draft PR before merge']);
   });
 
   // Test 9: Long-term memory confidence can be updated from new observations

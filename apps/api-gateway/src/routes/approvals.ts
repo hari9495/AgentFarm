@@ -149,6 +149,7 @@ type QualitySignalNotifier = (input: {
     model: string;
     actionType: string;
     signal: 'action_approved' | 'action_rejected' | 'action_escalated';
+    weight: number;
     reason: string | null;
     taskId: string;
     correlationId: string;
@@ -698,7 +699,7 @@ const defaultQualitySignalNotifier: QualitySignalNotifier = async (input) => {
                 model: input.model,
                 action_type: input.actionType,
                 signal: input.signal,
-                weight: 1,
+                weight: input.weight,
                 source: 'user_feedback',
                 reason: input.reason,
                 task_id: input.taskId,
@@ -1217,6 +1218,7 @@ export const registerApprovalRoutes = async (
                         model: approval.llmModel,
                         actionType,
                         signal: decision === 'approved' ? 'action_approved' : decision === 'rejected' ? 'action_rejected' : 'action_escalated',
+                        weight: decision === 'approved' ? 0.1 : decision === 'rejected' ? -0.3 : -0.5,
                         reason,
                         taskId: approval.taskId,
                         correlationId: `approval_quality_${approval.id}_${Math.floor(now())}`,

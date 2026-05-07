@@ -52,6 +52,7 @@ import { recordTaskIntelligence } from './task-intelligence-memory.js';
 import {
     TESTER_ROLE_ALLOWED_CONNECTORS,
     TESTER_ROLE_ALLOWED_LOCAL_ACTIONS,
+    TESTER_ROLE_BLOCKED_ACTIONS,
     isTesterRoleProfile,
 } from './tester-agent-profile.js';
 import {
@@ -66,6 +67,10 @@ import {
     resolveEvaluatorWebhookUrl,
 } from './evaluator-webhook.js';
 import { getAuditLogWriter } from './action-observability.js';
+import { estimateTaskEffort, formatEstimateForApproval } from './effort-estimator.js';
+import { buildErrorQuery, researchForTask, type FetchFn } from './web-research-service.js';
+import { analyzeImage, type VisionLLMCallerFn, type VisionProvider } from './vision-service.js';
+import { FanOutProgressSink, NoopProgressSink, type ProgressMilestone, type ProgressSink } from './task-progress-reporter.js';
 
 type RuntimeMemoryStore = {
     readMemoryForTask: (workspaceId: string, maxResults?: number) => Promise<{
@@ -73,6 +78,7 @@ type RuntimeMemoryStore = {
         memoryCountThisWeek: number;
         mostCommonConnectors: string[];
         approvalRejectionRate: number;
+        codeReviewPatterns?: string[];
     }>;
     writeMemoryAfterTask: (request: {
         workspaceId: string;
@@ -217,6 +223,7 @@ type TaskExecutionRecordWriter = {
 type RuntimeServerOptions = {
     env?: NodeJS.ProcessEnv;
     workerPollMs?: number;
+    maxConcurrentTasks?: number;
     killGraceMs?: number;
     approvalEscalationMs?: number;
     heartbeatIntervalMs?: number;
@@ -242,6 +249,8 @@ type RuntimeServerOptions = {
         config: RuntimeConfig;
         env: NodeJS.ProcessEnv;
     }) => Promise<RuntimeLlmWorkspaceConfig | null>;
+    visionCaller?: VisionLLMCallerFn;
+    visionProvider?: VisionProvider;
     workspaceSessionFetcher?: (input: {
         config: RuntimeConfig;
         env: NodeJS.ProcessEnv;
@@ -377,6 +386,7 @@ type WorkerLoop = {
     running: boolean;
     handle: NodeJS.Timeout | null;
     tickBusy: boolean;
+    activeTaskIds: Set<string>;
     queuedTasks: TaskEnvelope[];
     processedTasks: number;
     succeededTasks: number;
@@ -462,6 +472,7 @@ type RuntimeInterviewEvent = {
 };
 
 const DEFAULT_WORKER_POLL_MS = 250;
+const DEFAULT_MAX_CONCURRENT_TASKS = 1;
 const DEFAULT_KILL_GRACE_MS = 5_000;
 const DEFAULT_APPROVAL_ESCALATION_MS = 60 * 60 * 1000;
 const DEFAULT_HEARTBEAT_INTERVAL_MS = 30_000;
@@ -943,6 +954,13 @@ const getAllowedActionsForRole = (roleKey: RoleKey): string[] => {
     });
     const localActions = LOCAL_WORKSPACE_ACTION_POLICY[roleKey] ?? [];
     return Array.from(new Set([...connectorActions, ...localActions]));
+};
+
+const isTesterBlockedAction = (roleKey: RoleKey, actionType: string): boolean => {
+    if (roleKey !== 'tester') {
+        return false;
+    }
+    return TESTER_ROLE_BLOCKED_ACTIONS.includes(actionType as (typeof TESTER_ROLE_BLOCKED_ACTIONS)[number]);
 };
 
 const defaultSleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
@@ -1823,6 +1841,11 @@ const defaultWorkspaceSessionFetcher = async (input: {
 export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyInstance {
     const env = options.env ?? process.env;
     const workerPollMs = options.workerPollMs ?? DEFAULT_WORKER_POLL_MS;
+    const maxConcurrentTasks = Math.max(
+        1,
+        options.maxConcurrentTasks
+        ?? Number(env.AF_MAX_CONCURRENT_TASKS ?? DEFAULT_MAX_CONCURRENT_TASKS),
+    );
     const killGraceMs = options.killGraceMs ?? DEFAULT_KILL_GRACE_MS;
     const closeOnKill = options.closeOnKill ?? true;
     const now = options.now ?? (() => Date.now());
@@ -1859,6 +1882,8 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         options.evidenceRecordWriter ?? createFileEvidenceRecordWriter(evidenceRecordPath);
     const localWorkspaceActionExecutor = options.localWorkspaceActionExecutor ?? executeLocalWorkspaceAction;
     const memoryStore = options.memoryStore;
+    const visionCaller = options.visionCaller;
+    const visionProvider = options.visionProvider ?? 'anthropic';
 
     const app = Fastify({
         logger: {
@@ -2008,6 +2033,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         running: false,
         handle: null,
         tickBusy: false,
+        activeTaskIds: new Set<string>(),
         queuedTasks: [],
         processedTasks: 0,
         succeededTasks: 0,
@@ -2313,6 +2339,168 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         };
     };
 
+    const buildProgressMessage = (task: TaskEnvelope, milestone: ProgressMilestone, detail: string): string => {
+        return `[${task.taskId}] ${milestone}: ${detail}`;
+    };
+
+    const buildProgressSinkForTask = (task: TaskEnvelope, config: RuntimeConfig): ProgressSink => {
+        const targets = Array.isArray(task.payload['progress_targets'])
+            ? task.payload['progress_targets'].filter((target): target is Record<string, unknown> => typeof target === 'object' && target !== null)
+            : [];
+        const normalizedTargets = [...targets];
+
+        if (normalizedTargets.length === 0 && typeof task.payload['connector_type'] === 'string') {
+            if (task.payload['connector_type'] === 'jira' && typeof task.payload['issue_key'] === 'string') {
+                normalizedTargets.push({ connector_type: 'jira', issue_key: task.payload['issue_key'] });
+            }
+            if (
+                task.payload['connector_type'] === 'teams'
+                && typeof task.payload['team_id'] === 'string'
+                && typeof task.payload['channel_id'] === 'string'
+            ) {
+                normalizedTargets.push({
+                    connector_type: 'teams',
+                    team_id: task.payload['team_id'],
+                    channel_id: task.payload['channel_id'],
+                });
+            }
+            if (task.payload['connector_type'] === 'email' && typeof task.payload['to'] === 'string') {
+                normalizedTargets.push({ connector_type: 'email', to: task.payload['to'] });
+            }
+        }
+
+        if (normalizedTargets.length === 0) {
+            return new NoopProgressSink();
+        }
+
+        const sinks: ProgressSink[] = normalizedTargets.map((target) => ({
+            send: async (event) => {
+                const connectorType = target['connector_type'];
+                const message = buildProgressMessage(task, event.milestone, event.detail);
+                if (connectorType === 'jira' && typeof target['issue_key'] === 'string') {
+                    await connectorActionExecuteClient({
+                        baseUrl: config.connectorApiUrl,
+                        token: config.connectorExecuteToken,
+                        tenantId: config.tenantId,
+                        workspaceId: config.workspaceId,
+                        botId: config.botId,
+                        roleKey: config.roleKey,
+                        connectorType: 'jira',
+                        actionType: 'create_comment',
+                        payload: {
+                            issue_key: target['issue_key'],
+                            body: message,
+                        },
+                        correlationId: `${config.correlationId}:${task.taskId}:progress:${event.milestone}`,
+                    });
+                    return;
+                }
+
+                if (
+                    connectorType === 'teams'
+                    && typeof target['team_id'] === 'string'
+                    && typeof target['channel_id'] === 'string'
+                ) {
+                    await connectorActionExecuteClient({
+                        baseUrl: config.connectorApiUrl,
+                        token: config.connectorExecuteToken,
+                        tenantId: config.tenantId,
+                        workspaceId: config.workspaceId,
+                        botId: config.botId,
+                        roleKey: config.roleKey,
+                        connectorType: 'teams',
+                        actionType: 'send_message',
+                        payload: {
+                            team_id: target['team_id'],
+                            channel_id: target['channel_id'],
+                            text: message,
+                        },
+                        correlationId: `${config.correlationId}:${task.taskId}:progress:${event.milestone}`,
+                    });
+                    return;
+                }
+
+                if (connectorType === 'email' && typeof target['to'] === 'string') {
+                    await connectorActionExecuteClient({
+                        baseUrl: config.connectorApiUrl,
+                        token: config.connectorExecuteToken,
+                        tenantId: config.tenantId,
+                        workspaceId: config.workspaceId,
+                        botId: config.botId,
+                        roleKey: config.roleKey,
+                        connectorType: 'email',
+                        actionType: 'send_email',
+                        payload: {
+                            to: target['to'],
+                            subject: typeof target['subject'] === 'string' ? target['subject'] : `AgentFarm task progress ${task.taskId}`,
+                            body: message,
+                        },
+                        correlationId: `${config.correlationId}:${task.taskId}:progress:${event.milestone}`,
+                    });
+                }
+            },
+        }));
+
+        return new FanOutProgressSink(sinks);
+    };
+
+    const enrichTaskWithVision = async (task: TaskEnvelope): Promise<TaskEnvelope> => {
+        const imageBase64 = typeof task.payload['image_base64'] === 'string' ? task.payload['image_base64'] : null;
+        const mimeType = typeof task.payload['image_mime_type'] === 'string' ? task.payload['image_mime_type'] : null;
+        const intent = typeof task.payload['vision_intent'] === 'string' ? task.payload['vision_intent'] : null;
+
+        if (!imageBase64 || !mimeType || !intent) {
+            return task;
+        }
+
+        if (!visionCaller) {
+            return {
+                ...task,
+                payload: {
+                    ...task.payload,
+                    _vision_status: 'skipped',
+                    _vision_error: 'vision_not_configured',
+                },
+            };
+        }
+
+        try {
+            const analysis = await analyzeImage(
+                {
+                    imageBase64,
+                    mimeType: mimeType as 'image/png' | 'image/jpeg' | 'image/webp',
+                    intent: intent as 'ui_bug_report' | 'architecture_diagram' | 'whiteboard_photo' | 'error_screenshot' | 'figma_mockup',
+                },
+                {
+                    tenantId: configCache?.tenantId ?? 'unknown_tenant',
+                    workspaceId: configCache?.workspaceId ?? 'unknown_workspace',
+                    taskId: task.taskId,
+                    correlationId: configCache?.correlationId ?? `task-${task.taskId}`,
+                },
+                visionCaller,
+                visionProvider,
+            );
+
+            return {
+                ...task,
+                payload: {
+                    ...task.payload,
+                    _vision_status: 'analyzed',
+                    _vision_analysis: analysis,
+                },
+            };
+        } catch (err: unknown) {
+            return {
+                ...task,
+                payload: {
+                    ...task.payload,
+                    _vision_status: 'failed',
+                    _vision_error: err instanceof Error ? err.message : String(err),
+                },
+            };
+        }
+    };
+
     const executeConnectorActionForTask = async (input: {
         task: TaskEnvelope;
         config: RuntimeConfig;
@@ -2444,43 +2632,104 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         source: 'approval_decision_webhook' | 'approval_decision_cache' | 'direct_execute';
         payloadOverrideSource: PayloadOverrideSource;
     }): Promise<ProcessedTaskResult> => {
+        const tryAttachFailureResearch = async (errorMessage: string): Promise<Record<string, unknown>> => {
+            if (!errorMessage.trim()) {
+                return {};
+            }
+
+            try {
+                const fetchFn: FetchFn = async (url: string) => {
+                    const response = await fetch(url, { signal: AbortSignal.timeout(75) });
+                    return {
+                        ok: response.ok,
+                        status: response.status,
+                        text: async () => response.text(),
+                    };
+                };
+
+                const research = await researchForTask(
+                    buildErrorQuery(errorMessage),
+                    {
+                        tenantId: input.config.tenantId,
+                        workspaceId: input.config.workspaceId,
+                        taskId: input.task.taskId,
+                        correlationId: input.config.correlationId,
+                    },
+                    fetchFn,
+                );
+
+                if (research.sources.length === 0 && !research.synthesizedAnswer) {
+                    return {};
+                }
+
+                return {
+                    _research_query: errorMessage,
+                    _research_summary: research.synthesizedAnswer,
+                    _research_sources: research.sources.map((entry) => ({
+                        url: entry.url,
+                        source: entry.source,
+                        relevance: entry.relevance,
+                    })),
+                };
+            } catch {
+                return {};
+            }
+        };
+
+        const executeLocalPayload = async (payload: Record<string, unknown>) => {
+            return executeLocalWorkspaceActionWithMemoryMirror({
+                execution: {
+                    tenantId: input.config.tenantId,
+                    botId: input.config.botId,
+                    taskId: input.task.taskId,
+                    actionType: input.decision.actionType as LocalWorkspaceActionType,
+                    payload,
+                },
+                executor: localWorkspaceActionExecutor,
+                onMemoryMirror: memoryStore
+                    ? (record) => memoryStore.writeMemoryAfterTask({
+                        workspaceId: input.config.workspaceId,
+                        tenantId: input.config.tenantId,
+                        taskId: record.taskId,
+                        actionsTaken: [record.actionType],
+                        approvalOutcomes: input.source === 'direct_execute'
+                            ? []
+                            : [{ action: record.actionType, decision: 'approved' }],
+                        connectorsUsed: [],
+                        llmProvider: undefined,
+                        executionStatus: record.executionStatus,
+                        summary: `${record.summary} ${record.outputPreview}`.trim(),
+                        correlationId: input.config.correlationId,
+                    }).catch((err: unknown) => {
+                        emitRuntimeEvent('runtime.memory_record_persist_failed', input.config, {
+                            task_id: input.task.taskId,
+                            error_message: err instanceof Error ? err.message : String(err),
+                            hook: 'local_workspace_executor',
+                        });
+                    })
+                    : undefined,
+            });
+        };
+
         advancedFeatures.appendTraceStep(input.task.taskId, 'local_tool_input', {
             actionType: input.decision.actionType,
             source: input.source,
             payloadKeys: Object.keys(input.task.payload),
         });
-        const localResult = await executeLocalWorkspaceActionWithMemoryMirror({
-            execution: {
-                tenantId: input.config.tenantId,
-                botId: input.config.botId,
-                taskId: input.task.taskId,
-                actionType: input.decision.actionType as LocalWorkspaceActionType,
-                payload: input.task.payload,
-            },
-            executor: localWorkspaceActionExecutor,
-            onMemoryMirror: memoryStore
-                ? (record) => memoryStore.writeMemoryAfterTask({
-                    workspaceId: input.config.workspaceId,
-                    tenantId: input.config.tenantId,
-                    taskId: record.taskId,
-                    actionsTaken: [record.actionType],
-                    approvalOutcomes: input.source === 'direct_execute'
-                        ? []
-                        : [{ action: record.actionType, decision: 'approved' }],
-                    connectorsUsed: [],
-                    llmProvider: undefined,
-                    executionStatus: record.executionStatus,
-                    summary: `${record.summary} ${record.outputPreview}`.trim(),
-                    correlationId: input.config.correlationId,
-                }).catch((err: unknown) => {
-                    emitRuntimeEvent('runtime.memory_record_persist_failed', input.config, {
-                        task_id: input.task.taskId,
-                        error_message: err instanceof Error ? err.message : String(err),
-                        hook: 'local_workspace_executor',
-                    });
-                })
-                : undefined,
-        });
+        let executionPayload = { ...input.task.payload };
+        let localResult = await executeLocalPayload(executionPayload);
+
+        if (!localResult.ok && executionPayload['_research_retry_attempted'] !== true) {
+            const researchPayload = await tryAttachFailureResearch(localResult.output || 'local workspace action failed');
+            if (Object.keys(researchPayload).length > 0) {
+                executionPayload = {
+                    ...executionPayload,
+                    ...researchPayload,
+                    _research_retry_attempted: true,
+                };
+                localResult = await executeLocalPayload(executionPayload);
+            }
+        }
 
         if (localResult.ok) {
             advancedFeatures.appendTraceStep(input.task.taskId, 'local_tool_output', {
@@ -2503,7 +2752,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                     status: 'failed',
                     attempts: 1,
                     transientRetries: 0,
-                    executionPayload: input.task.payload,
+                    executionPayload,
                     payloadOverrideSource: input.payloadOverrideSource,
                     failureClass: 'runtime_exception',
                     errorMessage: 'Local action output contains potential secrets; blocked by policy.',
@@ -2632,7 +2881,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 status: 'success',
                 attempts: 1,
                 transientRetries: 0,
-                executionPayload: input.task.payload,
+                executionPayload,
                 payloadOverrideSource,
             };
         }
@@ -2650,6 +2899,10 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             errorOutput: (localResult.errorOutput ?? '').slice(0, 400),
         });
 
+        const researchPayload = await tryAttachFailureResearch(
+            localResult.errorOutput ?? `Local workspace action '${input.decision.actionType}' failed.`,
+        );
+
         return {
             decision: {
                 ...input.decision,
@@ -2662,7 +2915,10 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             status: 'failed',
             attempts: 1,
             transientRetries: 0,
-            executionPayload: input.task.payload,
+            executionPayload: {
+                ...input.task.payload,
+                ...researchPayload,
+            },
             payloadOverrideSource: input.payloadOverrideSource,
             failureClass: 'runtime_exception',
             errorMessage: localResult.errorOutput ?? `Local workspace action '${input.decision.actionType}' failed.`,
@@ -2675,7 +2931,24 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         source: 'approval_decision_webhook' | 'approval_decision_cache',
         payloadOverrideSource: PayloadOverrideSource = 'none',
     ): Promise<ProcessedTaskResult> => {
+        const progressSink = buildProgressSinkForTask(task, config);
         const decision = buildDecision(task);
+        if (isTesterBlockedAction(config.roleKey, decision.actionType)) {
+            return {
+                decision: {
+                    ...decision,
+                    route: 'execute',
+                    reason: `Action '${decision.actionType}' is explicitly blocked for tester role.`,
+                },
+                status: 'failed',
+                attempts: 0,
+                transientRetries: 0,
+                executionPayload: task.payload,
+                payloadOverrideSource,
+                failureClass: 'runtime_exception',
+                errorMessage: `Tester role blocked action '${decision.actionType}'.`,
+            };
+        }
         const connectorType = normalizeConnectorType(task.payload['connector_type']);
         const snapshotPolicy = evaluateSnapshotExecutionPolicy({
             snapshot: capabilitySnapshotCache,
@@ -2744,12 +3017,16 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             maxAttempts: 3,
             modelProvider: activeModelProvider,
             modelProfile: resolveDefaultModelProfile(capabilitySnapshotCache),
+            progressSink,
         });
     };
 
     const processOneTask = async (task: TaskEnvelope, config: RuntimeConfig): Promise<void> => {
         // Record task start time for transcript
         taskStartTimes.set(task.taskId, now());
+
+        task = await enrichTaskWithVision(task);
+        const progressSink = buildProgressSinkForTask(task, config);
 
         const taskDecision = buildDecision(task);
         advancedFeatures.recordStart(task, taskDecision);
@@ -2894,6 +3171,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                     modelProvider: activeModelProvider,
                     modelProfile: resolveDefaultModelProfile(capabilitySnapshotCache),
                     llmDecisionResolver,
+                    progressSink,
                 },
             )
             : await processDeveloperTask(task, {
@@ -2901,6 +3179,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 modelProvider: activeModelProvider,
                 modelProfile: resolveDefaultModelProfile(capabilitySnapshotCache),
                 llmDecisionResolver,
+                progressSink,
             });
         const executionTask: TaskEnvelope = {
             ...task,
@@ -2982,6 +3261,20 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             classificationSource: result.llmExecution?.classificationSource ?? 'heuristic',
         });
 
+        if (isTesterBlockedAction(config.roleKey, result.decision.actionType)) {
+            workerLoop.failedTasks += 1;
+            advancedFeatures.appendTraceStep(task.taskId, 'tester_role_action_blocked', {
+                actionType: result.decision.actionType,
+            });
+            await persistActionResultRecord(executionTask, config, {
+                ...result,
+                status: 'failed',
+                failureClass: 'runtime_exception',
+                errorMessage: `Tester role blocked action '${result.decision.actionType}'.`,
+            });
+            return;
+        }
+
         if (isBudgetDenied(executionTask)) {
             workerLoop.failedTasks += 1;
             advancedFeatures.appendTraceStep(task.taskId, 'budget_hard_stop_denied', {
@@ -3018,6 +3311,29 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 riskLevel: result.decision.riskLevel,
                 confidence: result.decision.confidence,
             });
+
+            const effortEstimate = estimateTaskEffort({
+                tenantId: config.tenantId,
+                workspaceId: config.workspaceId,
+                taskId: task.taskId,
+                description:
+                    typeof executionTask.payload['summary'] === 'string'
+                        ? executionTask.payload['summary']
+                        : result.decision.reason,
+                targetFiles: Array.isArray(executionTask.payload['target_files'])
+                    ? executionTask.payload['target_files'].filter((entry): entry is string => typeof entry === 'string')
+                    : typeof executionTask.payload['file_path'] === 'string' && executionTask.payload['file_path'].trim()
+                        ? [executionTask.payload['file_path']]
+                        : [],
+                riskLevel: result.decision.riskLevel,
+                hasExistingTests: executionTask.payload['has_existing_tests'] !== false,
+                correlationId: config.correlationId,
+            });
+            executionTask.payload['_effort_estimated_minutes'] = effortEstimate.estimatedMinutes;
+            executionTask.payload['_effort_complexity'] = effortEstimate.complexity;
+            executionTask.payload['_effort_confidence'] = effortEstimate.confidenceScore;
+            const effortSummary = formatEstimateForApproval(effortEstimate);
+
             if (result.decision.riskLevel === 'medium' || result.decision.riskLevel === 'high') {
                 const actionId = `${task.taskId}:${result.decision.actionType}`;
                 let actionSummary =
@@ -3060,6 +3376,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
 
                 actionSummary = [
                     `Change summary: ${actionSummary}`,
+                    effortSummary,
                     `Impacted scope: ${impactedScope}`,
                     `Risk reason: ${result.decision.reason}`,
                     `Proposed rollback: ${rollbackHint}`,
@@ -3886,25 +4203,33 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 return;
             }
             processApprovalEscalations(config);
-            const task = dequeueNextProcessableTask(config);
-            if (!task) {
-                return;
-            }
-            if (isBudgetDenied(task)) {
-                workerLoop.tickBusy = true;
-                void persistBudgetDenialRecord(task, config).finally(() => {
-                    workerLoop.tickBusy = false;
-                });
-                return;
-            }
             workerLoop.tickBusy = true;
-            void processOneTask(task, config).finally(() => {
+            while (workerLoop.activeTaskIds.size < maxConcurrentTasks) {
+                const task = dequeueNextProcessableTask(config);
+                if (!task) {
+                    break;
+                }
+                if (isBudgetDenied(task)) {
+                    void persistBudgetDenialRecord(task, config);
+                    continue;
+                }
+                workerLoop.activeTaskIds.add(task.taskId);
+                void processOneTask(task, config).finally(() => {
+                    workerLoop.activeTaskIds.delete(task.taskId);
+                });
+            }
+            if (workerLoop.activeTaskIds.size === 0) {
+                workerLoop.tickBusy = false;
+                return;
+            }
+            queueMicrotask(() => {
                 workerLoop.tickBusy = false;
             });
         }, workerPollMs);
 
         emitRuntimeEvent('runtime.worker_loops_started', config, {
             poll_interval_ms: workerPollMs,
+            max_concurrent_tasks: maxConcurrentTasks,
         });
     };
 
@@ -4001,6 +4326,8 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             background_failures: backgroundLoop.failures,
             background_last_run_at: backgroundLoop.lastRunAt,
             task_queue_depth: workerLoop.queuedTasks.length,
+            active_task_slots: workerLoop.activeTaskIds.size,
+            max_concurrent_tasks: maxConcurrentTasks,
             processed_tasks: workerLoop.processedTasks,
             succeeded_tasks: workerLoop.succeededTasks,
             failed_tasks: workerLoop.failedTasks,
@@ -4038,6 +4365,8 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             background_failures: backgroundLoop.failures,
             background_last_run_at: backgroundLoop.lastRunAt,
             task_queue_depth: workerLoop.queuedTasks.length,
+            active_task_slots: workerLoop.activeTaskIds.size,
+            max_concurrent_tasks: maxConcurrentTasks,
             processed_tasks: workerLoop.processedTasks,
             succeeded_tasks: workerLoop.succeededTasks,
             failed_tasks: workerLoop.failedTasks,
@@ -4069,6 +4398,8 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             background_failures: backgroundLoop.failures,
             background_last_run_at: backgroundLoop.lastRunAt,
             task_queue_depth: workerLoop.queuedTasks.length,
+            active_task_slots: workerLoop.activeTaskIds.size,
+            max_concurrent_tasks: maxConcurrentTasks,
             processed_tasks: workerLoop.processedTasks,
             succeeded_tasks: workerLoop.succeededTasks,
             failed_tasks: workerLoop.failedTasks,

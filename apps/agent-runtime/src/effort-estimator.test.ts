@@ -1,9 +1,10 @@
 /**
- * Feature #4 — Effort Estimator tests
+ * Feature #4 - Effort Estimator tests
  * Frozen 2026-05-07
  */
 
-import { describe, it, expect } from 'vitest';
+import assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
 import { estimateTaskEffort, formatEstimateForApproval, type EstimationInput } from './effort-estimator.js';
 
 const base: EstimationInput = {
@@ -17,8 +18,8 @@ const base: EstimationInput = {
 describe('estimateTaskEffort', () => {
     it('classifies a single-file low-risk task as trivial or small', () => {
         const estimate = estimateTaskEffort({ ...base, targetFiles: ['src/button.tsx'] });
-        expect(['trivial', 'small']).toContain(estimate.complexity);
-        expect(estimate.estimatedMinutes).toBeLessThanOrEqual(20);
+        assert.ok(['trivial', 'small'].includes(estimate.complexity));
+        assert.ok(estimate.estimatedMinutes <= 20);
     });
 
     it('classifies a large multi-file task correctly', () => {
@@ -28,8 +29,8 @@ describe('estimateTaskEffort', () => {
             targetFiles: Array.from({ length: 15 }, (_, i) => `src/file${i}.ts`),
             riskLevel: 'high',
         });
-        expect(['large', 'epic']).toContain(estimate.complexity);
-        expect(estimate.estimatedMinutes).toBeGreaterThanOrEqual(180);
+        assert.ok(['large', 'epic'].includes(estimate.complexity));
+        assert.ok(estimate.estimatedMinutes >= 180);
     });
 
     it('detects auth risk factor', () => {
@@ -37,13 +38,13 @@ describe('estimateTaskEffort', () => {
             ...base,
             description: 'update authentication token handling',
         });
-        expect(estimate.riskFactors).toContain('touches auth module');
+        assert.ok(estimate.riskFactors.includes('touches auth module'));
     });
 
     it('confidence decreases with more risk', () => {
         const low = estimateTaskEffort({ ...base, riskLevel: 'low' });
         const high = estimateTaskEffort({ ...base, riskLevel: 'high', description: 'breaking change to auth' });
-        expect(high.confidenceScore).toBeLessThan(low.confidenceScore);
+        assert.ok(high.confidenceScore < low.confidenceScore);
     });
 
     it('breakdown sums to estimated minutes (approximately)', () => {
@@ -51,13 +52,13 @@ describe('estimateTaskEffort', () => {
         const { researchMinutes, codingMinutes, testingMinutes, reviewMinutes } = estimate.breakdown;
         const total = researchMinutes + codingMinutes + testingMinutes + reviewMinutes;
         // Due to rounding, allow ±5 minutes delta
-        expect(Math.abs(total - estimate.estimatedMinutes)).toBeLessThanOrEqual(5);
+        assert.ok(Math.abs(total - estimate.estimatedMinutes) <= 5);
     });
 
     it('returns a valid estimate even with an empty description', () => {
         const estimate = estimateTaskEffort({ ...base, description: '' });
-        expect(estimate.taskId).toBe('task-1');
-        expect(estimate.estimatedMinutes).toBeGreaterThan(0);
+        assert.equal(estimate.taskId, 'task-1');
+        assert.ok(estimate.estimatedMinutes > 0);
     });
 });
 
@@ -65,15 +66,15 @@ describe('formatEstimateForApproval', () => {
     it('includes the estimated minutes and complexity', () => {
         const estimate = estimateTaskEffort(base);
         const text = formatEstimateForApproval(estimate);
-        expect(text).toContain('min');
-        expect(text).toContain('confidence');
+        assert.match(text, /min/);
+        assert.match(text, /confidence/);
     });
 
     it('includes risk factors when present', () => {
         const estimate = estimateTaskEffort({ ...base, description: 'update authentication module' });
         const text = formatEstimateForApproval(estimate);
         if (estimate.riskFactors.length > 0) {
-            expect(text).toContain('Risk:');
+            assert.match(text, /Risk:/);
         }
     });
 });

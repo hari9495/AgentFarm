@@ -777,6 +777,18 @@ const createTaskPrompt = (task: TaskEnvelope, heuristicDecision: ActionDecision)
         workspaceKey,
         actionType: heuristicDecision.actionType,
     });
+    const memoryContext = typeof task.payload['_memory_context'] === 'object' && task.payload['_memory_context'] !== null
+        ? task.payload['_memory_context'] as {
+            codeReviewPatterns?: unknown;
+            codeReviewPrompt?: unknown;
+        }
+        : null;
+    const codeReviewPatterns = Array.isArray(memoryContext?.codeReviewPatterns)
+        ? memoryContext.codeReviewPatterns.filter((entry): entry is string => typeof entry === 'string')
+        : [];
+    const codeReviewPrompt = typeof memoryContext?.codeReviewPrompt === 'string'
+        ? memoryContext.codeReviewPrompt
+        : '';
 
     return JSON.stringify(
         {
@@ -807,6 +819,8 @@ const createTaskPrompt = (task: TaskEnvelope, heuristicDecision: ActionDecision)
             taskComplexity: complexity,
             workspaceConventions: intelligence.conventionHints,
             trajectoryHints: intelligence.trajectoryHints,
+            learnedWorkspaceRules: codeReviewPatterns,
+            learnedWorkspaceRulePrompt: codeReviewPrompt,
             task,
             heuristicDecision,
         },

@@ -20,7 +20,7 @@ import {
 } from '@agentfarm/shared-types';
 import { randomUUID } from 'crypto';
 import {
-    detectProactiveSignals as detectSignals,
+    runProactiveDetection,
     type ProactiveCiFailureInput,
     type ProactiveDependencyCveInput,
 } from './proactive-signal-detector.js';
@@ -72,6 +72,14 @@ export interface RoutineSchedulerState {
     featureFlags: Record<string, boolean>;
     schedulerErrors: Array<{ taskId: string; error: string; timestamp: string }>;
     proactiveSignals: ProactiveSignalRecord[];
+    auditEvents?: Array<{
+        action: string;
+        actorEmail: string;
+        tenantId: string;
+        workspaceId: string;
+        metadata?: Record<string, unknown>;
+        occurredAt: string;
+    }>;
 }
 
 export class RoutineScheduler {
@@ -81,6 +89,14 @@ export class RoutineScheduler {
     private schedulerErrors: Array<{ taskId: string; error: string; timestamp: string }> = [];
     private proactiveSignals = new Map<string, ProactiveSignalRecord>();
     private openSignalIdsByKey = new Map<string, string>();
+    private auditEvents: Array<{
+        action: string;
+        actorEmail: string;
+        tenantId: string;
+        workspaceId: string;
+        metadata?: Record<string, unknown>;
+        occurredAt: string;
+    }> = [];
 
     constructor(state?: RoutineSchedulerState) {
         if (!state) {
@@ -100,6 +116,7 @@ export class RoutineScheduler {
         }
 
         this.schedulerErrors = state.schedulerErrors.map((entry) => ({ ...entry }));
+        this.auditEvents = (state.auditEvents ?? []).map((entry) => ({ ...entry }));
 
         for (const signal of state.proactiveSignals) {
             const normalized: ProactiveSignalRecord = { ...signal };
@@ -107,6 +124,22 @@ export class RoutineScheduler {
             if (normalized.status === 'open') {
                 this.openSignalIdsByKey.set(this.toSignalDedupeKey(normalized.signalType, normalized.workspaceId, normalized.sourceRef), normalized.id);
             }
+        }
+    }
+
+    private writeAuditEvent(event: {
+        action: string;
+        actorEmail: string;
+        tenantId: string;
+        workspaceId: string;
+        metadata?: Record<string, unknown>;
+    }): void {
+        this.auditEvents.push({
+            ...event,
+            occurredAt: new Date().toISOString(),
+        });
+        if (this.auditEvents.length > 1_000) {
+            this.auditEvents.shift();
         }
     }
 
@@ -368,18 +401,44 @@ export class RoutineScheduler {
 
     async detectProactiveSignals(input: ProactiveSignalDetectionInput): Promise<ProactiveSignalRecord[]> {
         const nowIso = new Date().toISOString();
-        return detectSignals(input).map((signal) => this.upsertSignal({
-            tenantId: input.tenantId,
-            workspaceId: input.workspaceId,
-            botId: input.botId,
-            correlationId: input.correlationId,
-            signalType: signal.signalType,
-            severity: signal.severity,
-            summary: signal.summary,
-            sourceRef: signal.sourceRef,
-            metadata: signal.metadata,
-            nowIso,
-        }));
+        const {
+            tenantId,
+            workspaceId,
+            botId,
+            correlationId,
+            ...rest
+        } = input;
+        const detected = await runProactiveDetection(workspaceId, [], {
+            tenantId,
+            botId,
+            correlationId,
+            ...rest,
+        });
+        return detected.map((signal) => {
+            const upserted = this.upsertSignal({
+                tenantId,
+                workspaceId,
+                botId,
+                correlationId,
+                signalType: signal.signalType,
+                severity: signal.severity,
+                summary: signal.summary,
+                sourceRef: signal.sourceRef,
+                metadata: signal.metadata,
+                nowIso,
+            });
+            this.writeAuditEvent({
+                action: 'proactive_signal_detected',
+                actorEmail: 'agent@system',
+                tenantId,
+                workspaceId,
+                metadata: {
+                    signalType: signal.signalType,
+                    severity: signal.severity,
+                },
+            });
+            return upserted;
+        });
     }
 
     listProactiveSignals(filter?: {
@@ -418,6 +477,7 @@ export class RoutineScheduler {
             featureFlags: Object.fromEntries(this.featureFlags.entries()),
             schedulerErrors: this.schedulerErrors.map((entry) => ({ ...entry })),
             proactiveSignals: Array.from(this.proactiveSignals.values()).map((signal) => ({ ...signal })),
+            auditEvents: this.auditEvents.map((entry) => ({ ...entry })),
         };
     }
 }

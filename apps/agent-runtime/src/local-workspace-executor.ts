@@ -18,6 +18,7 @@ import {
     type ObservabilityActionCategory,
     type ObservabilityRiskLevel,
 } from './action-observability.js';
+import { safePackageOperation } from './package-manager-service.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -2973,9 +2974,57 @@ export async function executeLocalWorkspaceAction(input: {
 
         // ------------------------------------------------------------------
         // workspace_install_deps: install dependencies using detected package manager
-        // payload: { command? }
+        // payload: { command?, manager?, operation?, packages?, dev? }
         // ------------------------------------------------------------------
         case 'workspace_install_deps': {
+            const managerFromPayload = typeof payload['manager'] === 'string' ? payload['manager'].trim().toLowerCase() : '';
+            const operationFromPayload = typeof payload['operation'] === 'string' ? payload['operation'].trim().toLowerCase() : '';
+            const packages = Array.isArray(payload['packages'])
+                ? payload['packages'].filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+                : [];
+            const isDev = payload['dev'] === true;
+
+            const detectManager = async (): Promise<'pnpm' | 'npm' | 'yarn'> => {
+                if (managerFromPayload === 'pnpm' || managerFromPayload === 'npm' || managerFromPayload === 'yarn') {
+                    return managerFromPayload;
+                }
+
+                const hasPnpmLock = await readFile(join(workspaceDir, 'pnpm-lock.yaml'), 'utf-8').then(() => true, () => false);
+                const hasYarnLock = await readFile(join(workspaceDir, 'yarn.lock'), 'utf-8').then(() => true, () => false);
+                if (hasPnpmLock) return 'pnpm';
+                if (hasYarnLock) return 'yarn';
+                return 'npm';
+            };
+
+            if (packages.length > 0) {
+                try {
+                    const manager = await detectManager();
+                    const operation = operationFromPayload === 'uninstall' || operationFromPayload === 'update'
+                        ? operationFromPayload
+                        : 'install';
+                    const record = await safePackageOperation({
+                        tenantId,
+                        workspaceId: workspaceKey,
+                        taskId,
+                        operation,
+                        packages,
+                        manager,
+                        isDev,
+                        workspacePath: workspaceDir,
+                        correlationId: `${taskId}:${manager}:${operation}`,
+                    });
+
+                    return {
+                        ok: record.success,
+                        output: JSON.stringify(record, null, 2),
+                        errorOutput: record.success ? undefined : 'Safe package operation failed.',
+                        exitCode: record.success ? 0 : 1,
+                    };
+                } catch (err) {
+                    return { ok: false, output: '', errorOutput: String(err) };
+                }
+            }
+
             let installCmd: string;
             if (typeof payload['command'] === 'string' && payload['command'].trim()) {
                 installCmd = payload['command'].trim();

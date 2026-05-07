@@ -4,6 +4,8 @@ import Fastify from 'fastify';
 import { registerQuestionRoutes } from './questions.js';
 import { PrismaClient } from '@prisma/client';
 
+process.env.DATABASE_URL ??= 'postgresql://agentfarm:agentfarm@localhost:5432/agentfarm';
+
 test('POST /questions creates and GET /questions lists pending questions', async () => {
     const app = Fastify({ logger: false });
     const prisma = new PrismaClient();
@@ -27,9 +29,9 @@ test('POST /questions creates and GET /questions lists pending questions', async
         });
 
         assert.equal(create.statusCode, 201);
-        const created = create.json() as { status: string; id: string };
-        assert.equal(created.status, 'pending');
-        assert.ok(created.id);
+        const created = create.json() as { question: { status: string; id: string } };
+        assert.equal(created.question.status, 'pending');
+        assert.ok(created.question.id);
 
         const list = await app.inject({
             method: 'GET',
@@ -39,7 +41,7 @@ test('POST /questions creates and GET /questions lists pending questions', async
         assert.equal(list.statusCode, 200);
         const body = list.json() as { pendingCount: number; questions: Array<{ id: string; status: string }> };
         assert.equal(body.pendingCount >= 1, true);
-        assert.equal(body.questions.some((q) => q.id === created.id && q.status === 'pending'), true);
+        assert.equal(body.questions.some((q) => q.id === created.question.id && q.status === 'pending'), true);
     } finally {
         await app.close();
         await prisma.$disconnect();
@@ -68,11 +70,11 @@ test('POST /questions/:id/answer resolves a pending question', async () => {
             },
         });
 
-        const created = create.json() as { id: string };
+        const created = create.json() as { question: { id: string } };
 
         const answer = await app.inject({
             method: 'POST',
-            url: `/api/v1/questions/${created.id}/answer`,
+            url: `/api/v1/questions/${created.question.id}/answer`,
             payload: {
                 answer: 'Yes, proceed with tests first.',
                 answeredBy: 'user_1',
@@ -80,10 +82,10 @@ test('POST /questions/:id/answer resolves a pending question', async () => {
         });
 
         assert.equal(answer.statusCode, 200);
-        const answered = answer.json() as { status: string; answer: string; answeredBy: string };
-        assert.equal(answered.status, 'answered');
-        assert.equal(answered.answer, 'Yes, proceed with tests first.');
-        assert.equal(answered.answeredBy, 'user_1');
+        const answered = answer.json() as { question: { status: string; answer: string; answeredBy: string } };
+        assert.equal(answered.question.status, 'answered');
+        assert.equal(answered.question.answer, 'Yes, proceed with tests first.');
+        assert.equal(answered.question.answeredBy, 'user_1');
     } finally {
         await app.close();
         await prisma.$disconnect();

@@ -1,9 +1,10 @@
 /**
- * Feature #6 — Package Manager Service tests
+ * Feature #6 - Package Manager Service tests
  * Frozen 2026-05-07
  */
 
-import { describe, it, expect } from 'vitest';
+import assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
 import {
     isValidPackageName,
     safePackageOperation,
@@ -41,38 +42,38 @@ const auditRunner: ShellRunnerFn = async (_cmd, args) => {
 
 describe('isValidPackageName', () => {
     it('accepts standard names', () => {
-        expect(isValidPackageName('lodash')).toBe(true);
-        expect(isValidPackageName('@types/node')).toBe(true);
-        expect(isValidPackageName('react-dom')).toBe(true);
-        expect(isValidPackageName('lodash@4.17.21')).toBe(true);
+        assert.equal(isValidPackageName('lodash'), true);
+        assert.equal(isValidPackageName('@types/node'), true);
+        assert.equal(isValidPackageName('react-dom'), true);
+        assert.equal(isValidPackageName('lodash@4.17.21'), true);
     });
 
     it('rejects names with shell metacharacters', () => {
-        expect(isValidPackageName('lodash; rm -rf /')).toBe(false);
-        expect(isValidPackageName('pkg && evil')).toBe(false);
-        expect(isValidPackageName('$(evil)')).toBe(false);
-        expect(isValidPackageName('')).toBe(false);
+        assert.equal(isValidPackageName('lodash; rm -rf /'), false);
+        assert.equal(isValidPackageName('pkg && evil'), false);
+        assert.equal(isValidPackageName('$(evil)'), false);
+        assert.equal(isValidPackageName(''), false);
     });
 });
 
 describe('safePackageOperation', () => {
     it('returns success record on install', async () => {
         const record = await safePackageOperation(base, okRunner);
-        expect(record.success).toBe(true);
-        expect(record.operation).toBe('install');
-        expect(record.packages).toEqual(['lodash']);
-        expect(record.contractVersion).toBeDefined();
+        assert.equal(record.success, true);
+        assert.equal(record.operation, 'install');
+        assert.deepEqual(record.packages, ['lodash']);
+        assert.ok(record.contractVersion);
     });
 
     it('returns failure record when runner exits non-zero', async () => {
         const record = await safePackageOperation(base, failRunner);
-        expect(record.success).toBe(false);
-        expect(record.lockfileChanged).toBe(false);
+        assert.equal(record.success, false);
+        assert.equal(record.lockfileChanged, false);
     });
 
     it('detects high-severity vulnerabilities after install', async () => {
         const record = await safePackageOperation(base, auditRunner);
-        expect(record.newVulnerabilities).toContain('lodash (high)');
+        assert.ok(record.newVulnerabilities.includes('lodash (high)'));
     });
 
     it('classifies uninstall as high risk', async () => {
@@ -80,20 +81,21 @@ describe('safePackageOperation', () => {
             { ...base, operation: 'uninstall' },
             okRunner,
         );
-        expect(record.riskLevel).toBe('high');
+        assert.equal(record.riskLevel, 'high');
     });
 
     it('throws on invalid package name before touching shell', async () => {
         const runner: ShellRunnerFn = async () => {
             throw new Error('shell should not have been called');
         };
-        await expect(
-            safePackageOperation({ ...base, packages: ['evil; rm -rf /'] }, runner),
-        ).rejects.toThrow('Invalid package name');
+        await assert.rejects(
+            () => safePackageOperation({ ...base, packages: ['evil; rm -rf /'] }, runner),
+            /Invalid package name/,
+        );
     });
 
     it('marks dev installs correctly', async () => {
         const record = await safePackageOperation({ ...base, isDev: true }, okRunner);
-        expect(record.isDev).toBe(true);
+        assert.equal(record.isDev, true);
     });
 });
