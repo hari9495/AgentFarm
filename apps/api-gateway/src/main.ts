@@ -53,6 +53,7 @@ import { registerSkillCompositionRoutes } from './routes/skill-composition-execu
 import { registerGovernanceKPIRoutes } from './routes/governance-kpis.js';
 import { registerAdapterRegistryRoutes } from './routes/adapter-registry.js';
 import { registerHandoffRoutes } from './routes/handoffs.js';
+import { registerObservabilityRoutes } from './routes/observability.js';
 import { questionsRoutes } from './routes/questions.js';
 
 const app = Fastify({ logger: true });
@@ -454,6 +455,9 @@ await registerReproPackRoutes(app, {
     getSession: (request) => readSession(request),
 });
 await registerHandoffRoutes(app, {
+    getSession: (request) => readSession(request),
+});
+await registerObservabilityRoutes(app, {
     getSession: (request) => readSession(request),
 });
 app.register(questionsRoutes);

@@ -13,6 +13,11 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import { mkdir, writeFile, readFile, rm, rename, readdir, stat } from 'node:fs/promises';
 import { tmpdir, platform } from 'node:os';
 import { dirname, join, resolve, relative, basename, extname } from 'node:path';
+import {
+    executeObservedAction,
+    type ObservabilityActionCategory,
+    type ObservabilityRiskLevel,
+} from './action-observability.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -1942,6 +1947,54 @@ export async function buildGitPushApprovalSummary(
 // ---------------------------------------------------------------------------
 // Main dispatcher
 // ---------------------------------------------------------------------------
+
+const resolveObservabilitySessionId = (taskId: string, payload: Record<string, unknown>): string => {
+    const directSessionId = typeof payload['session_id'] === 'string' ? payload['session_id'].trim() : '';
+    if (directSessionId) {
+        return directSessionId.slice(0, 120);
+    }
+
+    const directExecutionSession = typeof payload['execution_session_id'] === 'string'
+        ? payload['execution_session_id'].trim()
+        : '';
+    if (directExecutionSession) {
+        return directExecutionSession.slice(0, 120);
+    }
+
+    const workspaceKey = typeof payload['workspace_key'] === 'string' ? payload['workspace_key'].trim() : '';
+    return workspaceKey ? workspaceKey.slice(0, 120) : taskId;
+};
+
+const executeTier11ObservedAction = async <T>(input: {
+    tenantId: string;
+    botId: string;
+    taskId: string;
+    actionType: LocalWorkspaceActionType;
+    category: ObservabilityActionCategory;
+    target: string;
+    payload: Record<string, unknown>;
+    riskLevel?: ObservabilityRiskLevel;
+    execute: () => Promise<T>;
+}): Promise<T> => {
+    const workspaceId = typeof input.payload['workspace_id'] === 'string' && input.payload['workspace_id'].trim()
+        ? input.payload['workspace_id'].trim()
+        : resolveObservabilitySessionId(input.taskId, input.payload);
+
+    return executeObservedAction(
+        {
+            agentId: input.botId,
+            workspaceId,
+            taskId: input.taskId,
+            sessionId: resolveObservabilitySessionId(input.taskId, input.payload),
+            type: input.category,
+            action: input.actionType,
+            target: input.target,
+            payload: input.payload,
+            riskLevel: input.riskLevel,
+        },
+        input.execute,
+    );
+};
 
 export async function executeLocalWorkspaceAction(input: {
     tenantId: string;
@@ -5432,10 +5485,23 @@ export async function executeLocalWorkspaceAction(input: {
             }
 
             try {
-                await launchDetached(cmd, [urlRaw]);
+                const output = await executeTier11ObservedAction({
+                    tenantId,
+                    botId,
+                    taskId,
+                    actionType,
+                    category: 'browser',
+                    target: urlRaw,
+                    payload,
+                    riskLevel: 'medium',
+                    execute: async () => {
+                        await launchDetached(cmd, [urlRaw]);
+                        return JSON.stringify({ launched: true, command: cmd, url: urlRaw, platform: os }, null, 2);
+                    },
+                });
                 return {
                     ok: true,
-                    output: JSON.stringify({ launched: true, command: cmd, url: urlRaw, platform: os }, null, 2),
+                    output,
                 };
             } catch (err) {
                 return { ok: false, output: '', errorOutput: `Failed to launch browser command '${cmd}': ${String(err)}` };
@@ -5477,10 +5543,23 @@ export async function executeLocalWorkspaceAction(input: {
             }
 
             try {
-                await launchDetached(cmd, finalArgs);
+                const output = await executeTier11ObservedAction({
+                    tenantId,
+                    botId,
+                    taskId,
+                    actionType,
+                    category: 'desktop',
+                    target: app,
+                    payload,
+                    riskLevel: 'medium',
+                    execute: async () => {
+                        await launchDetached(cmd, finalArgs);
+                        return JSON.stringify({ launched: true, app, command: cmd, args: finalArgs, platform: os }, null, 2);
+                    },
+                });
                 return {
                     ok: true,
-                    output: JSON.stringify({ launched: true, app, command: cmd, args: finalArgs, platform: os }, null, 2),
+                    output,
                 };
             } catch (err) {
                 return { ok: false, output: '', errorOutput: `Failed to launch app '${app}' using '${cmd}': ${String(err)}` };
@@ -5553,10 +5632,23 @@ export async function executeLocalWorkspaceAction(input: {
             }
 
             try {
-                await launchDetached(cmd, args);
+                const output = await executeTier11ObservedAction({
+                    tenantId,
+                    botId,
+                    taskId,
+                    actionType,
+                    category: mode === 'teams' ? 'desktop' : 'browser',
+                    target: meetingUrlRaw,
+                    payload,
+                    riskLevel: 'high',
+                    execute: async () => {
+                        await launchDetached(cmd, args);
+                        return JSON.stringify({ joined: true, meeting_url: meetingUrlRaw, mode, command: cmd, platform: os }, null, 2);
+                    },
+                });
                 return {
                     ok: true,
-                    output: JSON.stringify({ joined: true, meeting_url: meetingUrlRaw, mode, command: cmd, platform: os }, null, 2),
+                    output,
                 };
             } catch (err) {
                 return { ok: false, output: '', errorOutput: `Failed to open meeting link: ${String(err)}` };
@@ -5650,24 +5742,37 @@ export async function executeLocalWorkspaceAction(input: {
             }
 
             try {
-                if (sessionId && interruptible) {
-                    await launchInterruptibleSpeech(sessionId, invocation.command, invocation.args);
-                } else {
-                    await launchDetached(invocation.command, invocation.args);
-                }
+                const output = await executeTier11ObservedAction({
+                    tenantId,
+                    botId,
+                    taskId,
+                    actionType,
+                    category: 'desktop',
+                    target: sessionId || mode,
+                    payload,
+                    riskLevel: 'medium',
+                    execute: async () => {
+                        if (sessionId && interruptible) {
+                            await launchInterruptibleSpeech(sessionId, invocation.command, invocation.args);
+                        } else {
+                            await launchDetached(invocation.command, invocation.args);
+                        }
+                        return JSON.stringify({
+                            spoken: true,
+                            mode,
+                            engine: invocation.engine,
+                            command: invocation.command,
+                            platform: os,
+                            pace_seconds: paceSeconds,
+                            segment_count: segments.length,
+                            session_id: sessionId || null,
+                            interruptible: Boolean(sessionId && interruptible),
+                        }, null, 2);
+                    },
+                });
                 return {
                     ok: true,
-                    output: JSON.stringify({
-                        spoken: true,
-                        mode,
-                        engine: invocation.engine,
-                        command: invocation.command,
-                        platform: os,
-                        pace_seconds: paceSeconds,
-                        segment_count: segments.length,
-                        session_id: sessionId || null,
-                        interruptible: Boolean(sessionId && interruptible),
-                    }, null, 2),
+                    output,
                 };
             } catch (err) {
                 return {

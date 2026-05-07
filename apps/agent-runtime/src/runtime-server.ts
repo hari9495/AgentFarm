@@ -65,6 +65,7 @@ import {
     fireEvaluatorWebhook,
     resolveEvaluatorWebhookUrl,
 } from './evaluator-webhook.js';
+import { getAuditLogWriter } from './action-observability.js';
 
 type RuntimeMemoryStore = {
     readMemoryForTask: (workspaceId: string, maxResults?: number) => Promise<{
@@ -5004,6 +5005,178 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             period_started_at: new Date(weeklyRoiAccumulator.periodStartedAtMs).toISOString(),
             report: weeklyRoiAccumulator.lastReport,
         };
+    });
+
+    app.get<{ Params: { sessionId: string } }>('/runtime/observability/sessions/:sessionId/actions', async (request, reply) => {
+        const sessionId = request.params.sessionId?.trim();
+        if (!sessionId) {
+            return reply.code(400).send({
+                error: 'invalid_session_id',
+                message: 'sessionId path parameter is required.',
+            });
+        }
+
+        try {
+            const writer = getAuditLogWriter();
+            const actions = writer.listSession(sessionId);
+            return {
+                session_id: sessionId,
+                count: actions.length,
+                actions: actions.map((entry) => ({
+                    id: entry.actionId,
+                    agent_id: entry.agentId,
+                    workspace_id: entry.workspaceId,
+                    task_id: entry.taskId,
+                    session_id: entry.sessionId,
+                    action_type: entry.actionType,
+                    target: entry.target,
+                    payload: entry.payload,
+                    screenshot_before_url: entry.screenshotBefore,
+                    screenshot_after_url: entry.screenshotAfter,
+                    dom_snapshot_before: entry.domSnapshotBefore ?? null,
+                    dom_snapshot_after: entry.domSnapshotAfter ?? null,
+                    risk_level: entry.riskLevel,
+                    success: entry.success,
+                    verified: entry.verified,
+                    error_message: entry.errorMessage ?? null,
+                    started_at: entry.startedAt.toISOString(),
+                    completed_at: entry.completedAt.toISOString(),
+                    duration_ms: entry.durationMs,
+                })),
+            };
+        } catch (error) {
+            return reply.code(500).send({
+                error: 'observability_lookup_failed',
+                message: error instanceof Error ? error.message : 'Failed to load observability events.',
+            });
+        }
+    });
+
+    app.post<{
+        Body: {
+            provider?: string;
+            model?: string;
+            action_type?: string;
+            correctness_score?: number;
+            verified_actions?: number;
+            total_actions?: number;
+            assertion_passed?: number;
+            assertion_total?: number;
+            source?: string;
+            reason?: string;
+            metadata?: Record<string, unknown>;
+            task_id?: string;
+            correlation_id?: string;
+        };
+    }>('/runtime/quality/correctness', async (request, reply) => {
+        if (!startupCompleted || (runtimeState !== 'active' && runtimeState !== 'degraded')) {
+            return reply.code(409).send({
+                error: 'runtime_not_ready',
+                state: runtimeState,
+            });
+        }
+
+        const provider = request.body?.provider?.trim();
+        const actionType = request.body?.action_type?.trim() || 'workspace_observed_action';
+        const source = parseQualitySignalSource(request.body?.source ?? 'runtime_outcome');
+
+        if (!provider || !source) {
+            return reply.code(400).send({
+                error: 'invalid_quality_correctness',
+                message: 'provider and a valid source are required.',
+            });
+        }
+
+        let score: number | null = null;
+        const directScore = request.body?.correctness_score;
+        if (typeof directScore === 'number' && Number.isFinite(directScore)) {
+            const normalized = directScore > 1 ? directScore / 100 : directScore;
+            score = Math.max(0, Math.min(1, normalized));
+        }
+
+        const totalActions = request.body?.total_actions;
+        const verifiedActions = request.body?.verified_actions;
+        if (
+            score === null
+            && typeof totalActions === 'number'
+            && typeof verifiedActions === 'number'
+            && Number.isFinite(totalActions)
+            && Number.isFinite(verifiedActions)
+            && totalActions > 0
+        ) {
+            score = Math.max(0, Math.min(1, verifiedActions / totalActions));
+        }
+
+        const assertionTotal = request.body?.assertion_total;
+        const assertionPassed = request.body?.assertion_passed;
+        if (
+            score === null
+            && typeof assertionTotal === 'number'
+            && typeof assertionPassed === 'number'
+            && Number.isFinite(assertionTotal)
+            && Number.isFinite(assertionPassed)
+            && assertionTotal > 0
+        ) {
+            score = Math.max(0, Math.min(1, assertionPassed / assertionTotal));
+        }
+
+        if (score === null || !configCache) {
+            return reply.code(400).send({
+                error: 'invalid_quality_correctness',
+                message: 'Provide correctness_score, or verified_actions/total_actions, or assertion_passed/assertion_total.',
+            });
+        }
+
+        const signal = recordQualitySignal({
+            provider,
+            model: request.body?.model,
+            actionType,
+            score,
+            signal: 'action_succeeded',
+            source,
+            reason: request.body?.reason ?? 'runtime_correctness_signal',
+            metadata: {
+                ...(request.body?.metadata ?? {}),
+                verified_actions: request.body?.verified_actions ?? null,
+                total_actions: request.body?.total_actions ?? null,
+                assertion_passed: request.body?.assertion_passed ?? null,
+                assertion_total: request.body?.assertion_total ?? null,
+            },
+            taskId: request.body?.task_id,
+            correlationId: request.body?.correlation_id ?? configCache.correlationId,
+        });
+
+        if (!signal) {
+            return reply.code(500).send({
+                error: 'quality_signal_record_failed',
+                message: 'Unable to persist correctness signal.',
+            });
+        }
+
+        const qualitySignalRecord: QualitySignalRecord = {
+            id: signal.id,
+            contractVersion: CONTRACT_VERSIONS.QUALITY_SIGNAL,
+            tenantId: configCache.tenantId,
+            workspaceId: configCache.workspaceId,
+            botId: configCache.botId,
+            provider: signal.provider,
+            model: signal.model,
+            actionType: signal.actionType,
+            score: signal.score,
+            signal: signal.signal,
+            weight: signal.weight,
+            source: signal.source,
+            reason: signal.reason,
+            metadata: signal.metadata,
+            correlationId: signal.correlationId ?? configCache.correlationId,
+            observedAt: signal.observedAt,
+        };
+
+        return reply.code(201).send({
+            quality_signal: qualitySignalRecord,
+            source: signal.source,
+            task_id: signal.taskId ?? null,
+        });
     });
 
     app.post<{
