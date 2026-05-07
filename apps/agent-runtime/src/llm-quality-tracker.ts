@@ -107,7 +107,7 @@ const resolveScore = (input: QualitySignalInput): { score: number; signal?: Qual
     }
 
     const weight = typeof input.weight === 'number' && Number.isFinite(input.weight)
-        ? Math.max(0, Math.min(1, input.weight))
+        ? Math.max(-1, Math.min(1, input.weight))
         : 1;
     const score = clampScore(0.5 + ((SIGNAL_BASE_SCORES[signal] - 0.5) * weight));
     return {
@@ -194,7 +194,7 @@ const getAverageQuality = (provider: string, actionType: string): number | null 
     return total / state.samples.length;
 };
 
-export const getProviderQualityPenalty = (provider: string, actionType: string): number => {
+export const getProviderQualityPenalty = (provider: string, actionType: string = 'unknown'): number => {
     const avg = getAverageQuality(provider, actionType);
     if (avg === null) {
         return 0.5;
@@ -202,25 +202,9 @@ export const getProviderQualityPenalty = (provider: string, actionType: string):
     return Number((1 - avg).toFixed(3));
 };
 
-export const getProviderQualityScore = (provider: string, actionType?: string): number | null => {
-    if (actionType) {
-        const avg = getAverageQuality(provider, actionType);
-        return avg === null ? null : Number(avg.toFixed(3));
-    }
-
-    const normalizedProvider = provider.trim().toLowerCase();
-    if (!normalizedProvider) {
-        return null;
-    }
-
-    const summaries = getQualitySignalSummary({ provider: normalizedProvider });
-    if (summaries.length === 0) {
-        return null;
-    }
-
-    const weightedTotal = summaries.reduce((sum, summary) => sum + (summary.averageScore * summary.sampleCount), 0);
-    const totalSamples = summaries.reduce((sum, summary) => sum + summary.sampleCount, 0);
-    return totalSamples === 0 ? null : Number((weightedTotal / totalSamples).toFixed(3));
+export const getProviderQualityScore = async (provider: string): Promise<number> => {
+    const penalty = getProviderQualityPenalty(provider);
+    return Number((1 - penalty).toFixed(3));
 };
 
 export const listQualitySignals = (filter?: {

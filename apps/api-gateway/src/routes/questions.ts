@@ -44,6 +44,36 @@ const providerExecutor = createRealProviderExecutor(secretStore);
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null;
 
+const normalizeQuestionContext = (value: unknown): string | null => {
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        return trimmed.length > 0 ? trimmed : null;
+    }
+
+    if (value === null || value === undefined) {
+        return null;
+    }
+
+    try {
+        return JSON.stringify(value);
+    } catch {
+        return null;
+    }
+};
+
+const normalizeQuestionOptions = (value: unknown): string[] | undefined => {
+    if (!Array.isArray(value)) {
+        return undefined;
+    }
+
+    const normalized = value
+        .filter((item): item is string => typeof item === 'string')
+        .map((item) => item.trim())
+        .filter((item) => item.length > 0);
+
+    return normalized;
+};
+
 const parseNotificationTarget = (value: unknown): QuestionNotificationTarget | null => {
     if (!isRecord(value)) {
         return null;
@@ -332,7 +362,10 @@ export async function registerQuestionRoutes(app: FastifyInstance, prisma: Prism
                 notificationTarget,
             } = body;
 
-            if (!tenantId || !workspaceId || !taskId || !botId || !question || !context) {
+            const normalizedContext = normalizeQuestionContext(context);
+            const normalizedOptions = normalizeQuestionOptions(options);
+
+            if (!tenantId || !workspaceId || !taskId || !botId || !question || !normalizedContext) {
                 return res.status(400).send({
                     error: 'Missing required: tenantId, workspaceId, taskId, botId, question, context',
                 });
@@ -349,8 +382,8 @@ export async function registerQuestionRoutes(app: FastifyInstance, prisma: Prism
                     taskId,
                     botId,
                     question,
-                    context,
-                    options,
+                    context: normalizedContext,
+                    options: normalizedOptions,
                     askedVia,
                     timeoutMs,
                     onTimeout,

@@ -16,15 +16,34 @@ type CreateHandoffInput = {
 
 export type AgentHandoffManagerState = {
     handoffs: AgentHandoffRecord[];
+    auditEvents?: Array<{
+        action: 'handoff_initiated' | 'handoff_completed' | 'handoff_timed_out';
+        actorEmail: string;
+        tenantId: string;
+        workspaceId: string;
+        metadata: Record<string, unknown>;
+        occurredAt: string;
+    }>;
 };
 
 export class AgentHandoffManager {
     private readonly handoffs = new Map<string, AgentHandoffRecord>();
+    private readonly auditEvents: Array<{
+        action: 'handoff_initiated' | 'handoff_completed' | 'handoff_timed_out';
+        actorEmail: string;
+        tenantId: string;
+        workspaceId: string;
+        metadata: Record<string, unknown>;
+        occurredAt: string;
+    }> = [];
 
     constructor(initialState?: AgentHandoffManagerState) {
         if (initialState) {
             for (const record of initialState.handoffs) {
                 this.handoffs.set(record.id, record);
+            }
+            for (const event of initialState.auditEvents ?? []) {
+                this.auditEvents.push({ ...event });
             }
         }
     }
@@ -32,7 +51,24 @@ export class AgentHandoffManager {
     exportState(): AgentHandoffManagerState {
         return {
             handoffs: Array.from(this.handoffs.values()),
+            auditEvents: this.auditEvents.map((event) => ({ ...event })),
         };
+    }
+
+    private writeAuditEvent(event: {
+        action: 'handoff_initiated' | 'handoff_completed' | 'handoff_timed_out';
+        actorEmail: string;
+        tenantId: string;
+        workspaceId: string;
+        metadata: Record<string, unknown>;
+    }): void {
+        this.auditEvents.push({
+            ...event,
+            occurredAt: new Date().toISOString(),
+        });
+        if (this.auditEvents.length > 1000) {
+            this.auditEvents.shift();
+        }
     }
 
     createHandoff(input: CreateHandoffInput): AgentHandoffRecord {
@@ -55,6 +91,17 @@ export class AgentHandoffManager {
         };
 
         this.handoffs.set(record.id, record);
+        this.writeAuditEvent({
+            action: 'handoff_initiated',
+            actorEmail: input.fromBotId,
+            tenantId: input.tenantId,
+            workspaceId: input.workspaceId,
+            metadata: {
+                handoffId: record.id,
+                fromRole: input.fromBotId,
+                toRole: input.toBotId,
+            },
+        });
         return record;
     }
 
@@ -89,6 +136,19 @@ export class AgentHandoffManager {
             updatedAt: new Date().toISOString(),
         };
         this.handoffs.set(input.handoffId, updated);
+        if (input.status === 'completed') {
+            this.writeAuditEvent({
+                action: 'handoff_completed',
+                actorEmail: existing.fromBotId,
+                tenantId: existing.tenantId,
+                workspaceId: existing.workspaceId,
+                metadata: {
+                    handoffId: existing.id,
+                    fromRole: existing.fromBotId,
+                    toRole: existing.toBotId,
+                },
+            });
+        }
         return updated;
     }
 
@@ -111,6 +171,17 @@ export class AgentHandoffManager {
                 updatedAt: asOf.toISOString(),
             };
             this.handoffs.set(handoff.id, updated);
+            this.writeAuditEvent({
+                action: 'handoff_timed_out',
+                actorEmail: handoff.fromBotId,
+                tenantId: handoff.tenantId,
+                workspaceId: handoff.workspaceId,
+                metadata: {
+                    handoffId: handoff.id,
+                    fromRole: handoff.fromBotId,
+                    toRole: handoff.toBotId,
+                },
+            });
             timedOut.push(updated);
         }
 

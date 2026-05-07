@@ -457,6 +457,236 @@ test('runtime continues processing when memory write fails', async () => {
     }
 });
 
+test('runtime injects learned code review patterns into memory context before llm resolution', async () => {
+    let capturedPatterns: string[] | null = null;
+
+    const app = buildRuntimeServer({
+        env: baseEnv(),
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+        memoryStore: {
+            readMemoryForTask: async () => ({
+                recentMemories: [],
+                memoryCountThisWeek: 0,
+                mostCommonConnectors: [],
+                approvalRejectionRate: 0,
+                codeReviewPatterns: ['Always add a regression test for bug fixes'],
+            }),
+            writeMemoryAfterTask: async () => undefined,
+        },
+        llmDecisionResolver: async ({ task, heuristicDecision }) => {
+            const memoryContext = task.payload['_memory_context'] as { codeReviewPatterns?: string[] } | undefined;
+            capturedPatterns = memoryContext?.codeReviewPatterns ?? null;
+            return {
+                decision: heuristicDecision,
+                metadata: {
+                    modelProvider: 'agentfarm',
+                    model: 'test-model',
+                    modelProfile: 'quality_first',
+                    promptTokens: 12,
+                    completionTokens: 4,
+                    totalTokens: 16,
+                },
+            };
+        },
+    });
+
+    try {
+        await app.inject({ method: 'POST', url: '/startup' });
+        const intakeRes = await app.inject({
+            method: 'POST',
+            url: '/tasks/intake',
+            payload: {
+                task_id: 'memory-pattern-task-1',
+                payload: {
+                    workspaceId: 'ws_test',
+                    action_type: 'read_task',
+                    summary: 'Read current deployment status',
+                    target: 'deployments',
+                },
+            },
+        });
+        assert.equal(intakeRes.statusCode, 202);
+
+        const patterns = await waitForValue(() => capturedPatterns ?? undefined, { timeoutMs: 1_500, pollMs: 25 });
+        assert.deepEqual(patterns, ['Always add a regression test for bug fixes']);
+    } finally {
+        await app.close();
+    }
+});
+
+test('runtime enriches task payload with vision analysis before llm resolution', async () => {
+    let capturedVisionStatus: string | null = null;
+    let capturedVisionDescription: string | null = null;
+
+    const app = buildRuntimeServer({
+        env: baseEnv(),
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+        visionCaller: async () => ({
+            rawDescription: 'Issue: Save button overlaps the dialog footer.\nFix spacing around the primary action.',
+            provider: 'anthropic',
+        }),
+        llmDecisionResolver: async ({ task, heuristicDecision }) => {
+            capturedVisionStatus = typeof task.payload['_vision_status'] === 'string' ? task.payload['_vision_status'] : null;
+            const vision = task.payload['_vision_analysis'] as { description?: string } | undefined;
+            capturedVisionDescription = typeof vision?.description === 'string' ? vision.description : null;
+            return {
+                decision: heuristicDecision,
+                metadata: {
+                    modelProvider: 'agentfarm',
+                    model: 'test-model',
+                    modelProfile: 'quality_first',
+                    promptTokens: 9,
+                    completionTokens: 3,
+                    totalTokens: 12,
+                },
+            };
+        },
+    });
+
+    try {
+        await app.inject({ method: 'POST', url: '/startup' });
+        const intakeRes = await app.inject({
+            method: 'POST',
+            url: '/tasks/intake',
+            payload: {
+                task_id: 'vision-task-1',
+                payload: {
+                    action_type: 'read_task',
+                    summary: 'Inspect the attached screenshot before classifying the work',
+                    target: 'ui',
+                    image_base64: 'aGVsbG8=',
+                    image_mime_type: 'image/png',
+                    vision_intent: 'ui_bug_report',
+                },
+            },
+        });
+        assert.equal(intakeRes.statusCode, 202);
+
+        const status = await waitForValue(() => capturedVisionStatus ?? undefined, { timeoutMs: 1_500, pollMs: 25 });
+        assert.equal(status, 'analyzed');
+        assert.match(String(capturedVisionDescription), /Save button overlaps/);
+    } finally {
+        await app.close();
+    }
+});
+
+test('runtime fans out progress milestones to external connector sinks', async () => {
+    const connectorCalls: Array<{ connectorType: string; actionType: string }> = [];
+
+    const app = buildRuntimeServer({
+        env: baseEnv(),
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+        connectorActionExecuteClient: async (input) => {
+            connectorCalls.push({
+                connectorType: input.connectorType,
+                actionType: input.actionType,
+            });
+            return { ok: true, statusCode: 200 };
+        },
+    });
+
+    try {
+        await app.inject({ method: 'POST', url: '/startup' });
+        const intakeRes = await app.inject({
+            method: 'POST',
+            url: '/tasks/intake',
+            payload: {
+                task_id: 'progress-fanout-task-1',
+                payload: {
+                    action_type: 'read_task',
+                    summary: 'Read status and broadcast progress updates',
+                    target: 'deployments',
+                    progress_targets: [
+                        { connector_type: 'jira', issue_key: 'AF-101' },
+                        { connector_type: 'teams', team_id: 'team-1', channel_id: 'channel-1' },
+                        { connector_type: 'email', to: 'ops@example.com', subject: 'Task progress' },
+                    ],
+                },
+            },
+        });
+        assert.equal(intakeRes.statusCode, 202);
+
+        const calls = await waitForValue(
+            () => connectorCalls.length >= 3 ? connectorCalls : undefined,
+            { timeoutMs: 1_500, pollMs: 25 },
+        );
+        assert.ok(calls);
+        assert.ok(calls?.some((call) => call.connectorType === 'jira' && call.actionType === 'create_comment'));
+        assert.ok(calls?.some((call) => call.connectorType === 'teams' && call.actionType === 'send_message'));
+        assert.ok(calls?.some((call) => call.connectorType === 'email' && call.actionType === 'send_email'));
+    } finally {
+        await app.close();
+    }
+});
+
+test('runtime worker loop dispatches multiple tasks in parallel when configured', async () => {
+    let activeExecutions = 0;
+    let maxActiveExecutions = 0;
+
+    const app = buildRuntimeServer({
+        env: baseEnv(),
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+        maxConcurrentTasks: 2,
+        localWorkspaceActionExecutor: async (input) => {
+            activeExecutions += 1;
+            maxActiveExecutions = Math.max(maxActiveExecutions, activeExecutions);
+            await new Promise<void>((resolve) => setTimeout(resolve, 75));
+            activeExecutions -= 1;
+            return {
+                ok: true,
+                output: `completed ${input.taskId}`,
+                exitCode: 0,
+            };
+        },
+    });
+
+    try {
+        await app.inject({ method: 'POST', url: '/startup' });
+        const firstIntake = await app.inject({
+            method: 'POST',
+            url: '/tasks/intake',
+            payload: {
+                task_id: 'parallel-task-1',
+                payload: {
+                    action_type: 'workspace_list_files',
+                    summary: 'List workspace files for the first task',
+                    target: 'workspace',
+                },
+            },
+        });
+        const secondIntake = await app.inject({
+            method: 'POST',
+            url: '/tasks/intake',
+            payload: {
+                task_id: 'parallel-task-2',
+                payload: {
+                    action_type: 'workspace_list_files',
+                    summary: 'List workspace files for the second task',
+                    target: 'workspace',
+                },
+            },
+        });
+        assert.equal(firstIntake.statusCode, 202);
+        assert.equal(secondIntake.statusCode, 202);
+
+        await waitForValue(() => maxActiveExecutions >= 2 ? maxActiveExecutions : undefined, {
+            timeoutMs: 2_000,
+            pollMs: 25,
+        });
+        assert.equal(maxActiveExecutions, 2);
+    } finally {
+        await app.close();
+    }
+});
+
 test('runtime quality signal endpoints ingest evaluator signals and return summary metrics', async () => {
     const provider = `eval_provider_${Date.now()}`;
     const app = buildRuntimeServer({

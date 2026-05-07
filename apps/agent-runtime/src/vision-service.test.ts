@@ -1,9 +1,10 @@
 /**
- * Feature #3 — Vision Service tests
+ * Feature #3 - Vision Service tests
  * Frozen 2026-05-07
  */
 
-import { describe, it, expect } from 'vitest';
+import assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
 import {
     analyzeImage,
     getVisionProviders,
@@ -35,11 +36,11 @@ describe('analyzeImage', () => {
             intent: 'error_screenshot',
         };
         const result = await analyzeImage(input, ctx, mockCaller);
-        expect(result.intent).toBe('error_screenshot');
-        expect(result.mimeType).toBe('image/png');
-        expect(result.contractVersion).toBeDefined();
-        expect(result.llmProvider).toBe('anthropic');
-        expect(result.description.length).toBeGreaterThan(0);
+        assert.equal(result.intent, 'error_screenshot');
+        assert.equal(result.mimeType, 'image/png');
+        assert.ok(result.contractVersion);
+        assert.equal(result.llmProvider, 'anthropic');
+        assert.ok(result.description.length > 0);
     });
 
     it('extracts suggested actions from LLM output', async () => {
@@ -49,12 +50,12 @@ describe('analyzeImage', () => {
             intent: 'ui_bug_report',
         };
         const result = await analyzeImage(input, ctx, mockCaller);
-        expect(result.suggestedActions.some((s) => /fix|add|update/i.test(s))).toBe(true);
+        assert.ok(result.suggestedActions.some((s) => /fix|add|update/i.test(s)));
     });
 
     it('throws on unsupported mime type', async () => {
         const input = { imageBase64: TINY_PNG_B64, mimeType: 'image/gif' as never, intent: 'error_screenshot' as const };
-        await expect(analyzeImage(input, ctx, mockCaller)).rejects.toThrow('Unsupported mimeType');
+        await assert.rejects(() => analyzeImage(input, ctx, mockCaller), /Unsupported mimeType/);
     });
 
     it('throws when image exceeds max size', async () => {
@@ -65,7 +66,7 @@ describe('analyzeImage', () => {
             mimeType: 'image/png',
             intent: 'architecture_diagram',
         };
-        await expect(analyzeImage(input, ctx, mockCaller)).rejects.toThrow('exceeds maximum size');
+        await assert.rejects(() => analyzeImage(input, ctx, mockCaller), /exceeds maximum size/);
     });
 
     it('uses openai provider when specified', async () => {
@@ -75,12 +76,12 @@ describe('analyzeImage', () => {
             intent: 'figma_mockup',
         };
         const result = await analyzeImage(input, ctx, mockCaller, 'openai');
-        expect(result.llmProvider).toBe('openai');
+        assert.equal(result.llmProvider, 'openai');
     });
 });
 
 describe('getVisionProviders', () => {
     it('returns at least one vision provider', () => {
-        expect(getVisionProviders().length).toBeGreaterThan(0);
+        assert.ok(getVisionProviders().length > 0);
     });
 });

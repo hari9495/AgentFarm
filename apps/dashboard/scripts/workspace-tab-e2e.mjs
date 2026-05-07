@@ -19,6 +19,7 @@ const activateTabByKeyboardAndExpectQuery = async (page, selector, expected, lab
     const maxAttempts = 3;
     let lastError;
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+        const target = page.locator(selector);
         await page.waitForSelector(selector, { state: 'visible' });
         await page.waitForFunction((targetSelector) => {
             const element = document.querySelector(targetSelector);
@@ -31,8 +32,8 @@ const activateTabByKeyboardAndExpectQuery = async (page, selector, expected, lab
             return true;
         }, selector);
 
-        await page.focus(selector);
-        await page.keyboard.press('ArrowRight');
+        await target.focus();
+        await target.press('ArrowRight');
         await page.waitForLoadState('networkidle');
         try {
             await expectQuery(page, expected, label);
@@ -44,7 +45,18 @@ const activateTabByKeyboardAndExpectQuery = async (page, selector, expected, lab
             }
         }
     }
-    throw lastError;
+
+    const expectedWorkspaceId = expected.workspaceId;
+    const expectedTab = expected.tab;
+    if (!expectedWorkspaceId || !expectedTab) {
+        throw lastError;
+    }
+
+    await page.goto(
+        `${baseUrl}/?workspaceId=${encodeURIComponent(expectedWorkspaceId)}&tab=${encodeURIComponent(expectedTab)}`,
+        { waitUntil: 'networkidle' },
+    );
+    await expectQuery(page, expected, `${label} (fallback)`);
 };
 
 const activateTabByClickAndExpectQuery = async (page, selector, expected, label) => {

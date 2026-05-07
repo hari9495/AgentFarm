@@ -30,6 +30,7 @@ export interface MemoryReadResponse {
   memoryCountThisWeek: number;
   mostCommonConnectors: string[];
   approvalRejectionRate: number;
+  codeReviewPatterns: string[];
 }
 
 export interface LongTermMemoryWriteRequest {

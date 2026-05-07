@@ -178,6 +178,7 @@ test('processDeveloperTask marks exhausted transient retries as transient_error'
         summary: 'Read status and notify owner',
         target: 'deployments',
         simulate_transient_failures: 3,
+        disable_auto_research_retry: true,
     }), {
         maxAttempts: 3,
     });
@@ -186,6 +187,36 @@ test('processDeveloperTask marks exhausted transient retries as transient_error'
     assert.equal(failed.failureClass, 'transient_error');
     assert.equal(failed.attempts, 3);
     assert.equal(failed.transientRetries, 2);
+});
+
+test('processDeveloperTask performs one research-assisted retry after repeated failures', async () => {
+    const originalFetch = globalThis.fetch;
+    const fetchCalls: string[] = [];
+    globalThis.fetch = (async (input: string | URL | Request) => {
+        fetchCalls.push(String(input));
+        return new Response('<html><body>Retry guidance for transient failures.</body></html>', {
+            status: 200,
+            headers: { 'content-type': 'text/html' },
+        });
+    }) as typeof fetch;
+
+    try {
+        const result = await processDeveloperTask(taskEnvelope({
+            action_type: 'read_task',
+            summary: 'Read status and recover after repeated failures',
+            target: 'deployments',
+            simulate_transient_failures: 2,
+        }), {
+            maxAttempts: 2,
+        });
+
+        assert.equal(result.status, 'success');
+        assert.equal(result.attempts, 3);
+        assert.equal(result.executionPayload['_research_retry_attempted'], true);
+        assert.ok(fetchCalls.length > 0, 'research fetch should run before the extra retry');
+    } finally {
+        globalThis.fetch = originalFetch;
+    }
 });
 
 test('processApprovedTask executes approved risky action through retry flow', async () => {

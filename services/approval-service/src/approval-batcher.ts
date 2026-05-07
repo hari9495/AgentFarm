@@ -28,6 +28,30 @@ export function shouldBatch(actions: ActionDecision[]): boolean {
 
 export class InMemoryApprovalBatcher {
     private readonly batches = new Map<string, ApprovalBatchRecord>();
+    private readonly auditEvents: Array<{
+        action: string;
+        actorEmail: string;
+        tenantId: string;
+        workspaceId: string;
+        metadata: Record<string, unknown>;
+        occurredAt: string;
+    }> = [];
+
+    private writeAuditEvent(event: {
+        action: string;
+        actorEmail: string;
+        tenantId: string;
+        workspaceId: string;
+        metadata: Record<string, unknown>;
+    }): void {
+        this.auditEvents.push({
+            ...event,
+            occurredAt: new Date().toISOString(),
+        });
+        if (this.auditEvents.length > 1000) {
+            this.auditEvents.shift();
+        }
+    }
 
     async createApprovalBatch(actions: ActionDecision[], workspaceId: string): Promise<ApprovalBatchRecord> {
         if (actions.length === 0) {
@@ -47,6 +71,16 @@ export class InMemoryApprovalBatcher {
         };
 
         this.batches.set(record.batchId, record);
+        this.writeAuditEvent({
+            action: 'approval_batch_created',
+            actorEmail: 'agent@system',
+            tenantId: 'unknown_tenant',
+            workspaceId,
+            metadata: {
+                batchId: record.batchId,
+                totalCount: record.totalCount,
+            },
+        });
         return record;
     }
 

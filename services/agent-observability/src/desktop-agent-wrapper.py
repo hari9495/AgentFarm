@@ -24,6 +24,20 @@ from typing import Any, Dict, Optional
 import mss
 import pyautogui
 
+# Optional: Accessibility tree capture (Windows)
+try:
+    from pywinauto import GetForegroundWindow
+    HAS_PYWINAUTO = True
+except ImportError:
+    HAS_PYWINAUTO = False
+
+# Optional: Accessibility tree capture (Linux)
+try:
+    import pyatspi
+    HAS_PYATSPI = True
+except ImportError:
+    HAS_PYATSPI = False
+
 
 def now_iso() -> str:
     return datetime.now(tz=timezone.utc).isoformat()
@@ -35,6 +49,45 @@ def screenshot_base64() -> str:
         shot = sct.grab(monitor)
         raw = mss.tools.to_png(shot.rgb, shot.size)
         return "data:image/png;base64," + base64.b64encode(raw).decode("ascii")
+
+
+def capture_accessibility_tree() -> Optional[Dict[str, Any]]:
+    """
+    Capture accessibility tree from active window.
+    Returns structured accessibility data or None if unavailable.
+    """
+    if HAS_PYWINAUTO:
+        try:
+            window = GetForegroundWindow()
+            if window:
+                return {
+                    "platform": "windows",
+                    "windowTitle": window.window_text(),
+                    "processName": window.process_name(),
+                    "role": "window",
+                    # Note: Full tree would require deeper introspection
+                    # For now, return top-level window info
+                }
+        except Exception:  # pylint: disable=broad-except
+            pass
+
+    if HAS_PYATSPI:
+        try:
+            desktop = pyatspi.Registry.getDesktop(0)
+            if desktop:
+                window = desktop.get_childCount() > 0 and desktop[0] or None
+                if window:
+                    return {
+                        "platform": "linux",
+                        "windowName": window.get_name(),
+                        "role": window.get_role_name(),
+                        "childCount": window.get_childCount(),
+                    }
+        except Exception:  # pylint: disable=broad-except
+            pass
+
+    # Fallback: return None if accessibility tree unavailable
+    return None
 
 
 @dataclass
@@ -52,6 +105,7 @@ class DesktopActionExecutor:
     def execute(action: DesktopActionRequest) -> Dict[str, Any]:
         started = time.time()
         before = screenshot_base64()
+        before_accessibility = capture_accessibility_tree()
 
         success = True
         error_message: Optional[str] = None
@@ -74,6 +128,7 @@ class DesktopActionExecutor:
             error_message = str(exc)
 
         after = screenshot_base64()
+        after_accessibility = capture_accessibility_tree()
         completed = time.time()
 
         return {
@@ -87,14 +142,14 @@ class DesktopActionExecutor:
             "payload": action.payload,
             "screenshotBefore": before,
             "screenshotAfter": after,
+            "accessibilityTreeBefore": before_accessibility,
+            "accessibilityTreeAfter": after_accessibility,
             "startedAt": datetime.fromtimestamp(started, tz=timezone.utc).isoformat(),
             "completedAt": datetime.fromtimestamp(completed, tz=timezone.utc).isoformat(),
             "durationMs": int((completed - started) * 1000),
             "success": success,
             "errorMessage": error_message,
             "riskLevel": "medium",
-            "activeWindowTitle": "unknown",
-            "activeProcessName": "unknown",
             "recordedAt": now_iso(),
         }
 

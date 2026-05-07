@@ -367,6 +367,7 @@ export const buildOrchestratorServer = async (
     const routineScheduler = options.routineScheduler ?? new RoutineScheduler(routineSchedulerState);
     const handoffManager = new AgentHandoffManager(loadedState?.agentHandoffs);
     const app = Fastify({ logger: false });
+    const handoffTimeoutSweepMs = 15 * 60 * 1_000;
 
     const persistSchedulers = async (): Promise<void> => {
         const payload: OrchestratorPersistedState = {
@@ -390,6 +391,22 @@ export const buildOrchestratorServer = async (
             return false;
         }
     };
+
+    const handoffTimeoutSweepTimer = setInterval(() => {
+        void (async () => {
+            const timedOut = handoffManager.checkAndTimeoutHandoffs(new Date(now()));
+            if (timedOut.length === 0) {
+                return;
+            }
+            await persistSchedulers();
+        })().catch(() => {
+            // Non-blocking sweep: failures are intentionally ignored.
+        });
+    }, handoffTimeoutSweepMs);
+
+    app.addHook('onClose', async () => {
+        clearInterval(handoffTimeoutSweepTimer);
+    });
 
     app.get('/health', async () => ({ status: 'ok', service: 'orchestrator' }));
 
@@ -459,6 +476,143 @@ export const buildOrchestratorServer = async (
                 : null,
             question_sweep: questionSweep,
             memory_context: memoryContext,
+        });
+    });
+
+    app.post('/v1/workspaces/:workspaceId/task-slots/dispatch', async (request, reply) => {
+        const { workspaceId } = request.params as { workspaceId: string };
+        const body = (request.body ?? {}) as Record<string, unknown>;
+        const tenantId = typeof body.tenant_id === 'string' ? body.tenant_id.trim() : '';
+        const planTier = typeof body.plan_tier === 'string' && body.plan_tier.trim() ? body.plan_tier.trim() : 'free';
+        const pendingTasksRaw = Array.isArray(body.pending_tasks) ? body.pending_tasks : [];
+
+        if (!workspaceId.trim() || !tenantId) {
+            return reply.code(400).send({
+                error: 'invalid_request',
+                message: 'workspaceId and tenant_id are required.',
+            });
+        }
+
+        const pendingTasks = pendingTasksRaw
+            .filter((entry): entry is { task_id: string; priority?: number } => {
+                if (typeof entry !== 'object' || entry === null) {
+                    return false;
+                }
+                const candidate = entry as Record<string, unknown>;
+                return typeof candidate.task_id === 'string' && candidate.task_id.trim().length > 0;
+            })
+            .map((entry) => ({
+                taskId: entry.task_id.trim(),
+                priority: typeof entry.priority === 'number' && Number.isFinite(entry.priority)
+                    ? entry.priority
+                    : undefined,
+            }));
+
+        const started = await taskScheduler.dispatchPendingTasks({
+            workspaceId: workspaceId.trim(),
+            tenantId,
+            planTier,
+            pendingTasks,
+            executor: async () => {
+                return;
+            },
+        });
+
+        if (!(await persistOrFail(reply))) {
+            return;
+        }
+
+        return reply.code(200).send({
+            started_count: started.length,
+            started,
+            slots: taskScheduler.listTaskSlots(workspaceId.trim()),
+        });
+    });
+
+    app.get('/v1/workspaces/:workspaceId/task-slots', async (request, reply) => {
+        const { workspaceId } = request.params as { workspaceId: string };
+        if (!workspaceId.trim()) {
+            return reply.code(400).send({
+                error: 'invalid_request',
+                message: 'workspaceId is required.',
+            });
+        }
+
+        const slots = taskScheduler.listTaskSlots(workspaceId.trim());
+        return reply.code(200).send({
+            count: slots.length,
+            slots,
+        });
+    });
+
+    app.post('/v1/workspaces/:workspaceId/task-slots/:slotId/park', async (request, reply) => {
+        const { workspaceId, slotId } = request.params as { workspaceId: string; slotId: string };
+        const body = (request.body ?? {}) as Record<string, unknown>;
+        const reason = body.reason;
+        const unblockCondition = body.unblock_condition;
+
+        if (
+            reason !== 'waiting_ci'
+            && reason !== 'waiting_approval'
+            && reason !== 'waiting_answer'
+        ) {
+            return reply.code(400).send({
+                error: 'invalid_request',
+                message: 'reason must be waiting_ci, waiting_approval, or waiting_answer.',
+            });
+        }
+
+        if (
+            unblockCondition !== 'ci_complete'
+            && unblockCondition !== 'approval_received'
+            && unblockCondition !== 'question_answered'
+        ) {
+            return reply.code(400).send({
+                error: 'invalid_request',
+                message: 'unblock_condition must be ci_complete, approval_received, or question_answered.',
+            });
+        }
+
+        taskScheduler.parkTaskSlot(workspaceId.trim(), slotId.trim(), reason, unblockCondition);
+
+        if (!(await persistOrFail(reply))) {
+            return;
+        }
+
+        return reply.code(200).send({
+            workspace_id: workspaceId,
+            slot_id: slotId,
+            status: 'parked',
+        });
+    });
+
+    app.post('/v1/workspaces/:workspaceId/task-slots/:slotId/unblock', async (request, reply) => {
+        const { workspaceId, slotId } = request.params as { workspaceId: string; slotId: string };
+        taskScheduler.unblockTaskSlot(workspaceId.trim(), slotId.trim());
+
+        if (!(await persistOrFail(reply))) {
+            return;
+        }
+
+        return reply.code(200).send({
+            workspace_id: workspaceId,
+            slot_id: slotId,
+            status: 'active',
+        });
+    });
+
+    app.post('/v1/workspaces/:workspaceId/task-slots/:slotId/release', async (request, reply) => {
+        const { workspaceId, slotId } = request.params as { workspaceId: string; slotId: string };
+        taskScheduler.releaseTaskSlot(workspaceId.trim(), slotId.trim());
+
+        if (!(await persistOrFail(reply))) {
+            return;
+        }
+
+        return reply.code(200).send({
+            workspace_id: workspaceId,
+            slot_id: slotId,
+            status: 'idle',
         });
     });
 

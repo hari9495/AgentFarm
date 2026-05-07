@@ -9,7 +9,8 @@
         "test": "tsx --test src/**/*.test.ts"
     },
     "dependencies": {
-        "@agentfarm/shared-types": "workspace:*"
+        "@agentfarm/shared-types": "workspace:*",
+        "@agentfarm/audit-storage": "workspace:*"
     },
     "devDependencies": {
         "tsx": "^4.20.6",

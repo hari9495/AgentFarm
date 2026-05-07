@@ -29,6 +29,12 @@ importers:
 
   apps/agent-runtime:
     dependencies:
+      '@agentfarm/agent-observability':
+        specifier: workspace:*
+        version: link:../../services/agent-observability
+      '@agentfarm/audit-storage':
+        specifier: workspace:*
+        version: link:../../services/audit-storage
       '@agentfarm/shared-types':
         specifier: workspace:*
         version: link:../../packages/shared-types
@@ -266,6 +272,9 @@ importers:
 
   services/agent-observability:
     dependencies:
+      '@agentfarm/audit-storage':
+        specifier: workspace:*
+        version: link:../audit-storage
       '@agentfarm/shared-types':
         specifier: workspace:*
         version: link:../../packages/shared-types

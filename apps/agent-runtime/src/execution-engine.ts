@@ -1,5 +1,6 @@
 import type { ProviderFailoverTraceRecord } from '@agentfarm/shared-types';
 import { type ProgressSink, NoopProgressSink, reportProgress } from './task-progress-reporter.js';
+import { buildErrorQuery, researchForTask, type FetchFn } from './web-research-service.js';
 
 export type RiskLevel = 'low' | 'medium' | 'high';
 
@@ -299,19 +300,22 @@ async function executeTaskWithRetries(
     options?: { maxAttempts?: number },
 ): Promise<ProcessedTaskResult> {
     const maxAttempts = options?.maxAttempts ?? 3;
+    let allowedAttempts = maxAttempts;
     let attempts = 0;
     let transientRetries = 0;
+    let researchRetryTriggered = false;
+    let currentPayload: Record<string, unknown> = { ...task.payload };
 
-    while (attempts < maxAttempts) {
+    while (attempts < allowedAttempts) {
         attempts += 1;
         try {
-            await executeLowRiskAction(task, attempts);
+            await executeLowRiskAction({ ...task, payload: currentPayload }, attempts);
             return {
                 decision,
                 status: 'success',
                 attempts,
                 transientRetries,
-                executionPayload: task.payload,
+                executionPayload: currentPayload,
                 payloadOverrideSource,
                 llmExecution,
             };
@@ -324,12 +328,74 @@ async function executeTaskWithRetries(
                 continue;
             }
 
+            const enrichedPayload: Record<string, unknown> = { ...currentPayload };
+            const shouldAutoResearchRetry =
+                currentPayload['disable_auto_research_retry'] !== true
+                && !researchRetryTriggered
+                && attempts >= 2;
+
+            if (shouldAutoResearchRetry) {
+                researchRetryTriggered = true;
+                allowedAttempts += 1;
+            }
+
+            if (shouldAutoResearchRetry || currentPayload['enable_web_research'] === true) {
+                try {
+                    const tenantId = typeof currentPayload['tenantId'] === 'string'
+                        ? currentPayload['tenantId']
+                        : 'unknown_tenant';
+                    const workspaceId = typeof currentPayload['workspaceId'] === 'string'
+                        ? currentPayload['workspaceId']
+                        : 'unknown_workspace';
+                    const fetchFn: FetchFn = async (url: string) => {
+                        const response = await fetch(url, { signal: AbortSignal.timeout(75) });
+                        return {
+                            ok: response.ok,
+                            status: response.status,
+                            text: async () => response.text(),
+                        };
+                    };
+                    const query = buildErrorQuery(message);
+                    const research = await researchForTask(
+                        query,
+                        {
+                            tenantId,
+                            workspaceId,
+                            taskId: task.taskId,
+                            correlationId:
+                                typeof task.lease?.correlationId === 'string'
+                                    ? task.lease.correlationId
+                                    : `task-${task.taskId}`,
+                        },
+                        fetchFn,
+                    );
+
+                    if (research.sources.length > 0 || research.synthesizedAnswer) {
+                        enrichedPayload['_research_query'] = message;
+                        enrichedPayload['_research_summary'] = research.synthesizedAnswer;
+                        enrichedPayload['_research_sources'] = research.sources.map((entry) => ({
+                            url: entry.url,
+                            source: entry.source,
+                            relevance: entry.relevance,
+                        }));
+                    }
+                } catch {
+                    // Best-effort enrichment only.
+                }
+            }
+
+            if (shouldAutoResearchRetry) {
+                enrichedPayload['_research_retry_attempted'] = true;
+                currentPayload = enrichedPayload;
+                continue;
+            }
+
             return {
                 decision,
                 status: 'failed',
                 attempts,
                 transientRetries,
-                executionPayload: task.payload,
+                executionPayload: enrichedPayload,
                 payloadOverrideSource,
                 failureClass: isTransient ? 'transient_error' : 'runtime_exception',
                 errorMessage: message,
@@ -343,7 +409,7 @@ async function executeTaskWithRetries(
         status: 'failed',
         attempts,
         transientRetries,
-        executionPayload: task.payload,
+        executionPayload: currentPayload,
         payloadOverrideSource,
         failureClass: 'runtime_exception',
         errorMessage: 'Failed after exhausting retry attempts.',
@@ -516,6 +582,12 @@ export async function processDeveloperTaskWithMemory(
                     recentMemories: memoryContext.recentMemories,
                     approvalRejectionRate: memoryContext.approvalRejectionRate,
                     commonConnectors: memoryContext.mostCommonConnectors,
+                    codeReviewPatterns: Array.isArray(memoryContext.codeReviewPatterns)
+                        ? memoryContext.codeReviewPatterns
+                        : [],
+                    codeReviewPrompt: Array.isArray(memoryContext.codeReviewPatterns)
+                        ? memoryContext.codeReviewPatterns.join('\n')
+                        : '',
                 },
             }),
         },

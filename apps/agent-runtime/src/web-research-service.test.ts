@@ -1,9 +1,10 @@
 /**
- * Feature #1 — Web Research Service tests
+ * Feature #1 - Web Research Service tests
  * Frozen 2026-05-07
  */
 
-import { describe, it, expect } from 'vitest';
+import assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
 import {
     researchForTask,
     buildErrorQuery,
@@ -35,24 +36,24 @@ describe('researchForTask', () => {
     it('returns a result with sources when fetch succeeds', async () => {
         const query = buildErrorQuery('TypeError cannot read properties of undefined');
         const result = await researchForTask(query, ctx, okFetch);
-        expect(result.sources.length).toBeGreaterThan(0);
-        expect(result.synthesizedAnswer).toContain('TypeError');
-        expect(result.contractVersion).toBeDefined();
-        expect(result.taskId).toBe('task-1');
+        assert.ok(result.sources.length > 0);
+        assert.match(result.synthesizedAnswer, /TypeError/);
+        assert.ok(result.contractVersion);
+        assert.equal(result.taskId, 'task-1');
     });
 
     it('returns an empty sources array when all fetches fail', async () => {
         const query = buildErrorQuery('some error');
         const result = await researchForTask(query, ctx, failFetch);
-        expect(result.sources).toHaveLength(0);
-        expect(result.synthesizedAnswer).toContain('No results found');
+        assert.equal(result.sources.length, 0);
+        assert.match(result.synthesizedAnswer, /No results found/);
     });
 
     it('respects maxResults cap', async () => {
         const query = buildErrorQuery('error', []);
         query.maxResults = 1;
         const result = await researchForTask(query, ctx, okFetch);
-        expect(result.sources.length).toBeLessThanOrEqual(1);
+        assert.ok(result.sources.length <= 1);
     });
 
     it('rejects URLs outside the allowed source base', async () => {
@@ -65,8 +66,8 @@ describe('researchForTask', () => {
         const query = buildErrorQuery('test', ['npm_registry']);
         const result = await researchForTask(query, ctx, maliciousFetch);
         for (const source of result.sources) {
-            expect(source.url).not.toContain('evil.com');
-            expect(source.url.startsWith('https://registry.npmjs.org')).toBe(true);
+            assert.ok(!source.url.includes('evil.com'));
+            assert.ok(source.url.startsWith('https://registry.npmjs.org'));
         }
     });
 });
@@ -74,11 +75,11 @@ describe('researchForTask', () => {
 describe('defaultSynthesise', () => {
     it('returns a no-results message when snippets is empty', async () => {
         const answer = await defaultSynthesise('my query', []);
-        expect(answer).toContain('No results found');
+        assert.match(answer, /No results found/);
     });
 
     it('includes the query in the summary', async () => {
         const answer = await defaultSynthesise('useEffect cleanup', ['some doc content']);
-        expect(answer).toContain('useEffect cleanup');
+        assert.match(answer, /useEffect cleanup/);
     });
 });
