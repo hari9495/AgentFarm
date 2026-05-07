@@ -8,9 +8,28 @@
 
 import type { RunRecord, WakeSource, RunStatus } from '@agentfarm/shared-types';
 import { randomUUID } from 'crypto';
+import {
+    type TaskSlot,
+    type SlotUnblockCondition,
+} from '@agentfarm/shared-types';
+import {
+    ParallelTaskManager,
+    getParallelConfig,
+    type PendingTask,
+    type TaskExecutorFn,
+} from './parallel-task-manager.js';
 
 export interface TaskSchedulerState {
     runs: RunRecord[];
+    parallelSlotsByWorkspace?: Record<string, TaskSlot[]>;
+}
+
+export interface DispatchPendingTasksInput {
+    workspaceId: string;
+    tenantId: string;
+    planTier: string;
+    pendingTasks: PendingTask[];
+    executor: TaskExecutorFn;
 }
 
 export interface WakeRequest {
@@ -85,11 +104,63 @@ class RunCoalescingStore {
 
 export class TaskScheduler {
     private store = new RunCoalescingStore();
+    private readonly parallelManagers = new Map<string, ParallelTaskManager>();
 
     constructor(state?: TaskSchedulerState) {
         if (state) {
             this.store.loadRuns(state.runs);
+            if (state.parallelSlotsByWorkspace) {
+                for (const [workspaceId, slots] of Object.entries(state.parallelSlotsByWorkspace)) {
+                    const tenantId = slots[0]?.tenantId ?? 'unknown_tenant';
+                    const manager = new ParallelTaskManager(
+                        workspaceId,
+                        tenantId,
+                        { maxConcurrentTasks: slots.length || 1, allowedWaitReasons: ['waiting_ci', 'waiting_approval', 'waiting_answer'] },
+                        slots,
+                    );
+                    this.parallelManagers.set(workspaceId, manager);
+                }
+            }
         }
+    }
+
+    private getOrCreateParallelManager(workspaceId: string, tenantId: string, planTier: string): ParallelTaskManager {
+        const existing = this.parallelManagers.get(workspaceId);
+        if (existing) {
+            return existing;
+        }
+        const manager = new ParallelTaskManager(workspaceId, tenantId, getParallelConfig(planTier));
+        this.parallelManagers.set(workspaceId, manager);
+        return manager;
+    }
+
+    async dispatchPendingTasks(input: DispatchPendingTasksInput): Promise<Array<{ taskId: string; slotId: string }>> {
+        const manager = this.getOrCreateParallelManager(input.workspaceId, input.tenantId, input.planTier);
+        return manager.tick(input.pendingTasks, input.executor);
+    }
+
+    parkTaskSlot(
+        workspaceId: string,
+        slotId: string,
+        reason: 'waiting_ci' | 'waiting_approval' | 'waiting_answer',
+        unblockCondition: SlotUnblockCondition,
+    ): void {
+        const manager = this.parallelManagers.get(workspaceId);
+        manager?.parkSlot(slotId, reason, unblockCondition);
+    }
+
+    unblockTaskSlot(workspaceId: string, slotId: string): void {
+        const manager = this.parallelManagers.get(workspaceId);
+        manager?.unblockSlot(slotId);
+    }
+
+    releaseTaskSlot(workspaceId: string, slotId: string): void {
+        const manager = this.parallelManagers.get(workspaceId);
+        manager?.releaseSlot(slotId);
+    }
+
+    listTaskSlots(workspaceId: string): ReadonlyArray<TaskSlot> {
+        return this.parallelManagers.get(workspaceId)?.getSlots() ?? [];
     }
 
     /**
@@ -179,8 +250,14 @@ export class TaskScheduler {
     }
 
     exportState(): TaskSchedulerState {
+        const parallelSlotsByWorkspace: Record<string, TaskSlot[]> = {};
+        for (const [workspaceId, manager] of this.parallelManagers.entries()) {
+            parallelSlotsByWorkspace[workspaceId] = manager.snapshot().map((slot) => ({ ...slot }));
+        }
+
         return {
             runs: this.store.listRuns(),
+            parallelSlotsByWorkspace,
         };
     }
 }

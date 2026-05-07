@@ -158,3 +158,49 @@ test('B1: assignment wakeups generate time-based dedupe keys', () => {
     assert.ok(key !== undefined, 'Expected assignment wake source to produce a dedupe key');
     assert.match(key!, /^assign:bot-6:\d+$/);
 });
+
+test('B8: dispatchPendingTasks respects plan slot limit', async () => {
+    const scheduler = new TaskScheduler();
+    const started = await scheduler.dispatchPendingTasks({
+        workspaceId: 'ws-8',
+        tenantId: 'tenant-8',
+        planTier: 'pro',
+        pendingTasks: [
+            { taskId: 'task-a' },
+            { taskId: 'task-b' },
+            { taskId: 'task-c' },
+            { taskId: 'task-d' },
+        ],
+        executor: async () => {
+            return;
+        },
+    });
+
+    assert.equal(started.length, 3);
+    assert.equal(scheduler.listTaskSlots('ws-8').length, 3);
+});
+
+test('B8: slot park/unblock/release lifecycle updates scheduler state', async () => {
+    const scheduler = new TaskScheduler();
+    const started = await scheduler.dispatchPendingTasks({
+        workspaceId: 'ws-9',
+        tenantId: 'tenant-9',
+        planTier: 'free',
+        pendingTasks: [{ taskId: 'task-a' }],
+        executor: async () => {
+            return;
+        },
+    });
+
+    assert.equal(started.length, 1);
+    const slotId = started[0]!.slotId;
+
+    scheduler.parkTaskSlot('ws-9', slotId, 'waiting_approval', 'approval_received');
+    assert.equal(scheduler.listTaskSlots('ws-9')[0]?.status, 'waiting_approval');
+
+    scheduler.unblockTaskSlot('ws-9', slotId);
+    assert.equal(scheduler.listTaskSlots('ws-9')[0]?.status, 'active');
+
+    scheduler.releaseTaskSlot('ws-9', slotId);
+    assert.equal(scheduler.listTaskSlots('ws-9')[0]?.status, 'idle');
+});

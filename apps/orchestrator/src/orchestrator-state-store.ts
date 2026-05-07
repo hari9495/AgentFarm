@@ -26,14 +26,37 @@ export interface CreateOrchestratorStateStoreOptions {
 
 const sanitizeTaskSchedulerState = (value: unknown): TaskSchedulerState => {
     if (typeof value !== 'object' || value === null) {
-        return { runs: [] };
+        return { runs: [], parallelSlotsByWorkspace: {} };
     }
 
-    const candidate = value as { runs?: unknown };
+    const candidate = value as { runs?: unknown; parallelSlotsByWorkspace?: unknown };
+    const parallelSlotsByWorkspace: NonNullable<TaskSchedulerState['parallelSlotsByWorkspace']> = {};
+    if (typeof candidate.parallelSlotsByWorkspace === 'object' && candidate.parallelSlotsByWorkspace !== null) {
+        for (const [workspaceId, slots] of Object.entries(candidate.parallelSlotsByWorkspace as Record<string, unknown>)) {
+            if (!Array.isArray(slots)) {
+                continue;
+            }
+            parallelSlotsByWorkspace[workspaceId] = slots.filter((item): item is NonNullable<TaskSchedulerState['parallelSlotsByWorkspace']>[string][number] => {
+                if (typeof item !== 'object' || item === null) {
+                    return false;
+                }
+                const row = item as Record<string, unknown>;
+                return typeof row.slotId === 'string'
+                    && typeof row.contractVersion === 'string'
+                    && typeof row.workspaceId === 'string'
+                    && typeof row.tenantId === 'string'
+                    && typeof row.status === 'string'
+                    && typeof row.createdAt === 'string'
+                    && typeof row.updatedAt === 'string';
+            });
+        }
+    }
+
     return {
         runs: Array.isArray(candidate.runs)
             ? candidate.runs.filter((item): item is TaskSchedulerState['runs'][number] => typeof item === 'object' && item !== null)
             : [],
+        parallelSlotsByWorkspace,
     };
 };
 
