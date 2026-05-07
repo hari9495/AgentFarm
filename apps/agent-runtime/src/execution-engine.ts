@@ -1,4 +1,5 @@
 import type { ProviderFailoverTraceRecord } from '@agentfarm/shared-types';
+import { type ProgressSink, NoopProgressSink, reportProgress } from './task-progress-reporter.js';
 
 export type RiskLevel = 'low' | 'medium' | 'high';
 
@@ -256,6 +257,30 @@ function shouldFailTransiently(payload: Record<string, unknown>, attempt: number
     return attempt <= transientFailures;
 }
 
+function buildProgressReporterContext(task: TaskEnvelope): {
+    tenantId: string;
+    workspaceId: string;
+    taskId: string;
+    botId: string;
+    correlationId: string;
+} {
+    const tenantId = typeof task.payload['tenantId'] === 'string' ? task.payload['tenantId'] : 'unknown_tenant';
+    const workspaceId = typeof task.payload['workspaceId'] === 'string' ? task.payload['workspaceId'] : 'unknown_workspace';
+    const botId = typeof task.payload['botId'] === 'string' ? task.payload['botId'] : 'agent-runtime';
+    const correlationId =
+        typeof task.lease?.correlationId === 'string'
+            ? task.lease.correlationId
+            : `task-${task.taskId}`;
+
+    return {
+        tenantId,
+        workspaceId,
+        taskId: task.taskId,
+        botId,
+        correlationId,
+    };
+}
+
 async function executeLowRiskAction(task: TaskEnvelope, attempt: number): Promise<void> {
     if (shouldFailTransiently(task.payload, attempt)) {
         throw new Error('TRANSIENT_EXECUTOR_ERROR');
@@ -328,8 +353,11 @@ async function executeTaskWithRetries(
 
 export async function processApprovedTask(
     task: TaskEnvelope,
-    options?: { maxAttempts?: number; modelProvider?: string; modelProfile?: string },
+    options?: { maxAttempts?: number; modelProvider?: string; modelProfile?: string; progressSink?: ProgressSink },
 ): Promise<ProcessedTaskResult> {
+    const sink: ProgressSink = options?.progressSink ?? new NoopProgressSink();
+    const progressCtx = buildProgressReporterContext(task);
+    await reportProgress(progressCtx, 'task_received', 'Task received for approved execution.', sink);
     const baseDecision = buildDecision(task);
     const approvedDecision: ActionDecision = {
         ...baseDecision,
@@ -348,7 +376,15 @@ export async function processApprovedTask(
         fallbackReason: 'human_approved_path',
     };
 
-    return executeTaskWithRetries(task, approvedDecision, 'none', llmExecution, options);
+    await reportProgress(progressCtx, 'coding_started', 'Executing approved task.', sink);
+    const result = await executeTaskWithRetries(task, approvedDecision, 'none', llmExecution, options);
+    await reportProgress(
+        progressCtx,
+        result.status === 'success' ? 'completed' : 'failed',
+        result.status === 'success' ? 'Approved task execution completed.' : `Approved task execution failed: ${result.errorMessage ?? 'Unknown error'}`,
+        sink,
+    );
+    return result;
 }
 
 export async function processDeveloperTask(
@@ -358,8 +394,12 @@ export async function processDeveloperTask(
         modelProvider?: string;
         modelProfile?: string;
         llmDecisionResolver?: LlmDecisionResolver;
+        progressSink?: ProgressSink;
     },
 ): Promise<ProcessedTaskResult> {
+    const sink: ProgressSink = options?.progressSink ?? new NoopProgressSink();
+    const progressCtx = buildProgressReporterContext(task);
+    await reportProgress(progressCtx, 'task_received', 'Task received for developer execution.', sink);
     const heuristicDecision = buildDecision(task);
     const fallbackProvider = options?.modelProvider ?? 'agentfarm';
     let decision = heuristicDecision;
@@ -406,6 +446,7 @@ export async function processDeveloperTask(
     }
 
     if (decision.route === 'approval') {
+        await reportProgress(progressCtx, 'waiting_for_approval', 'Task requires human approval before execution.', sink);
         return {
             decision,
             status: 'approval_required',
@@ -417,13 +458,22 @@ export async function processDeveloperTask(
         };
     }
 
-    return executeTaskWithRetries(
+    await reportProgress(progressCtx, 'coding_started', 'Executing low-risk developer task.', sink);
+    const execResult = await executeTaskWithRetries(
         { ...task, payload: executionPayload },
         decision,
         payloadOverrideSource,
         llmExecution,
         options,
     );
+    await reportProgress(
+        progressCtx,
+        execResult.status === 'success' ? 'completed' : 'failed',
+        execResult.status === 'success' ? 'Developer task execution completed.' : `Developer task execution failed: ${execResult.errorMessage ?? 'Unknown error'}`,
+        sink,
+    );
+    return execResult;
+
 }
 
 /**
@@ -441,10 +491,11 @@ export async function processDeveloperTaskWithMemory(
         modelProvider?: string;
         modelProfile?: string;
         llmDecisionResolver?: LlmDecisionResolver;
+        progressSink?: ProgressSink;
     },
 ): Promise<ProcessedTaskResult> {
     const workspaceId = task.payload['workspaceId'];
-    
+
     // Read memory for context injection (optional)
     let memoryContext = null;
     if (memoryStore && typeof workspaceId === 'string') {
