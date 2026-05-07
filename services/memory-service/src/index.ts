@@ -6,6 +6,7 @@ export type {
   IMemoryStore,
   MemoryReadResponse,
   MemoryWriteRequest,
+  LongTermMemoryWriteRequest,
 } from './memory-types.js';
 export {
   calculateRejectionRate,
