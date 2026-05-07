@@ -1,56 +1,70 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import Fastify from 'fastify';
-import questionsRoutes from './questions.js';
+import { registerQuestionRoutes } from './questions.js';
+import { PrismaClient } from '@prisma/client';
 
 test('POST /questions creates and GET /questions lists pending questions', async () => {
     const app = Fastify({ logger: false });
-    await app.register(questionsRoutes);
+    const prisma = new PrismaClient();
+
+    await registerQuestionRoutes(app, prisma);
 
     try {
         const create = await app.inject({
             method: 'POST',
-            url: '/questions',
+            url: '/api/v1/questions',
             payload: {
                 tenantId: 'tenant_1',
                 workspaceId: 'ws_1',
                 taskId: 'task_1',
-                questionText: 'Should we update auth middleware first?',
+                botId: 'bot_1',
+                question: 'Should we update auth middleware first?',
+                context: {},
+                options: [],
+                askedVia: 'dashboard',
             },
         });
 
         assert.equal(create.statusCode, 201);
-        const created = create.json() as { id: string; status: string };
+        const created = create.json() as { status: string; id: string };
         assert.equal(created.status, 'pending');
         assert.ok(created.id);
 
         const list = await app.inject({
             method: 'GET',
-            url: '/questions?tenantId=tenant_1&workspaceId=ws_1&status=pending',
+            url: '/api/v1/workspaces/ws_1/questions/pending',
         });
 
         assert.equal(list.statusCode, 200);
-        const body = list.json() as { total: number; items: Array<{ id: string; status: string }> };
-        assert.equal(body.total >= 1, true);
-        assert.equal(body.items.some((q) => q.id === created.id && q.status === 'pending'), true);
+        const body = list.json() as { pendingCount: number; questions: Array<{ id: string; status: string }> };
+        assert.equal(body.pendingCount >= 1, true);
+        assert.equal(body.questions.some((q) => q.id === created.id && q.status === 'pending'), true);
     } finally {
         await app.close();
+        await prisma.$disconnect();
     }
 });
 
 test('POST /questions/:id/answer resolves a pending question', async () => {
     const app = Fastify({ logger: false });
-    await app.register(questionsRoutes);
+    const prisma = new PrismaClient();
+
+    await registerQuestionRoutes(app, prisma);
 
     try {
         const create = await app.inject({
             method: 'POST',
-            url: '/questions',
+            url: '/api/v1/questions',
             payload: {
                 tenantId: 'tenant_2',
                 workspaceId: 'ws_2',
                 taskId: 'task_2',
-                questionText: 'Proceed with package upgrade?',
+                botId: 'bot_2',
+                question: 'Proceed with package upgrade?',
+                context: {},
+                options: [],
+                askedVia: 'dashboard',
             },
         });
 
@@ -58,12 +72,10 @@ test('POST /questions/:id/answer resolves a pending question', async () => {
 
         const answer = await app.inject({
             method: 'POST',
-            url: `/questions/${created.id}/answer`,
+            url: `/api/v1/questions/${created.id}/answer`,
             payload: {
-                tenantId: 'tenant_2',
-                workspaceId: 'ws_2',
-                answeredBy: 'user_1',
                 answer: 'Yes, proceed with tests first.',
+                answeredBy: 'user_1',
             },
         });
 
@@ -74,5 +86,6 @@ test('POST /questions/:id/answer resolves a pending question', async () => {
         assert.equal(answered.answeredBy, 'user_1');
     } finally {
         await app.close();
+        await prisma.$disconnect();
     }
 });

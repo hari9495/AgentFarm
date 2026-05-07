@@ -54,7 +54,8 @@ import { registerGovernanceKPIRoutes } from './routes/governance-kpis.js';
 import { registerAdapterRegistryRoutes } from './routes/adapter-registry.js';
 import { registerHandoffRoutes } from './routes/handoffs.js';
 import { registerObservabilityRoutes } from './routes/observability.js';
-import { questionsRoutes } from './routes/questions.js';
+import { registerQuestionRoutes } from './routes/questions.js';
+import { registerMemoryRoutes } from './routes/memory.js';
 
 const app = Fastify({ logger: true });
 const port = Number(process.env.API_GATEWAY_PORT ?? 3000);
@@ -460,7 +461,8 @@ await registerHandoffRoutes(app, {
 await registerObservabilityRoutes(app, {
     getSession: (request) => readSession(request),
 });
-app.register(questionsRoutes);
+await registerQuestionRoutes(app, prisma);
+await registerMemoryRoutes(app, prisma);
 registerSkillPipelineRoutes(app);
 registerSkillSchedulerRoutes(app);
 registerWebhookRoutes(app);

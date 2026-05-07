@@ -9,7 +9,8 @@
         "test": "vitest run"
     },
     "dependencies": {
-        "@agentfarm/shared-types": "workspace:*"
+        "@agentfarm/shared-types": "workspace:*",
+        "@prisma/client": "^6.19.3"
     },
     "devDependencies": {
         "typescript": "^5.7.2",

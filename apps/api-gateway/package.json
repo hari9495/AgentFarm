@@ -14,7 +14,9 @@
     },
     "dependencies": {
         "@agentfarm/agent-runtime": "workspace:*",
+        "@agentfarm/agent-question-service": "workspace:*",
         "@agentfarm/connector-contracts": "workspace:*",
+        "@agentfarm/memory-service": "workspace:*",
         "@agentfarm/queue-contracts": "workspace:*",
         "@agentfarm/shared-types": "workspace:*",
         "@azure/arm-compute": "^23.3.0",

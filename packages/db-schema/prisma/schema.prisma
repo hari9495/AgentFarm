@@ -904,3 +904,53 @@ model RetentionPolicy {
   @@index([tenantId, workspaceId])
   @@index([tenantId, status])
 }
+
+// Frozen 2026-05-07 — Agent Question Service (Feature #2)
+// Allows agent to ask human a question, park task, resume when answered
+enum AgentQuestionStatus {
+  pending
+  answered
+  timed_out
+}
+
+enum AgentQuestionChannel {
+  slack
+  teams
+  dashboard
+}
+
+enum AgentQuestionTimeoutPolicy {
+  proceed_with_best_guess
+  escalate
+  abandon_task
+}
+
+model AgentQuestion {
+  id            String                      @id @default(cuid())
+  contractVersion String
+  tenantId      String
+  workspaceId   String
+  taskId        String
+  botId         String
+  question      String
+  context       String
+  options       String[]                    @default([])
+  askedVia      AgentQuestionChannel
+  status        AgentQuestionStatus         @default(pending)
+  timeoutMs     Int                         @default(14400000) // 4 hours
+  onTimeout     AgentQuestionTimeoutPolicy  @default(escalate)
+  answer        String?
+  answeredBy    String?
+  answeredAt    DateTime?
+  expiresAt     DateTime
+  correlationId String
+  createdAt     DateTime                    @default(now())
+  updatedAt     DateTime                    @updatedAt
+
+  @@index([tenantId])
+  @@index([workspaceId])
+  @@index([taskId])
+  @@index([status])
+  @@index([expiresAt])
+  @@index([tenantId, status])
+}

@@ -54,12 +54,18 @@ importers:
 
   apps/api-gateway:
     dependencies:
+      '@agentfarm/agent-question-service':
+        specifier: workspace:*
+        version: link:../../services/agent-question-service
       '@agentfarm/agent-runtime':
         specifier: workspace:*
         version: link:../agent-runtime
       '@agentfarm/connector-contracts':
         specifier: workspace:*
         version: link:../../packages/connector-contracts
+      '@agentfarm/memory-service':
+        specifier: workspace:*
+        version: link:../../services/memory-service
       '@agentfarm/queue-contracts':
         specifier: workspace:*
         version: link:../../packages/queue-contracts
@@ -276,6 +282,9 @@ importers:
       '@agentfarm/shared-types':
         specifier: workspace:*
         version: link:../../packages/shared-types
+      '@prisma/client':
+        specifier: ^6.19.3
+        version: 6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3)
     devDependencies:
       typescript:
         specifier: ^5.7.2
