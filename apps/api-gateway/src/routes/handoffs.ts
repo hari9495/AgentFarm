@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { AgentHandoffStatus } from '@agentfarm/shared-types';
 
 type SessionContext = {
     userId: string;
@@ -10,6 +11,19 @@ type SessionContext = {
 type RegisterHandoffRoutesOptions = {
     getSession: (request: FastifyRequest) => SessionContext | null;
     orchestratorBaseUrl?: string;
+};
+
+const parseCompletionStatus = (value: unknown): AgentHandoffStatus | null => {
+    if (
+        value === 'pending'
+        || value === 'accepted'
+        || value === 'completed'
+        || value === 'failed'
+        || value === 'timed_out'
+    ) {
+        return value;
+    }
+    return null;
 };
 
 const DEFAULT_ORCHESTRATOR_BASE_URL = process.env.ORCHESTRATOR_API_BASE_URL ?? 'http://localhost:3011';
@@ -78,7 +92,16 @@ export const registerHandoffRoutes = async (
         return reply.code(response.status).send(body);
     });
 
-    app.post<{ Params: { handoffId: string }; Body: { workspace_id?: string; reason?: string } }>(
+    app.post<{
+        Params: { handoffId: string };
+        Body: {
+            workspace_id?: string;
+            status?: AgentHandoffStatus;
+            reason?: string;
+            result?: Record<string, unknown>;
+            completion_context?: Record<string, unknown>;
+        };
+    }>(
         '/v1/handoffs/:handoffId/complete',
         async (request, reply) => {
             const session = options.getSession(request);
@@ -97,10 +120,23 @@ export const registerHandoffRoutes = async (
                 });
             }
 
+            const status = parseCompletionStatus(request.body?.status) ?? 'completed';
+
             const response = await fetch(`${orchestratorBaseUrl}/v1/agent-handoffs/${encodeURIComponent(request.params.handoffId)}/status`, {
                 method: 'POST',
                 headers: { 'content-type': 'application/json' },
-                body: JSON.stringify({ status: 'completed', reason: request.body?.reason ?? null }),
+                body: JSON.stringify({
+                    status,
+                    reason: request.body?.reason ?? null,
+                    result:
+                        typeof request.body?.result === 'object' && request.body.result !== null
+                            ? request.body.result
+                            : null,
+                    completion_context:
+                        typeof request.body?.completion_context === 'object' && request.body.completion_context !== null
+                            ? request.body.completion_context
+                            : null,
+                }),
             });
 
             const body = await response.json().catch(() => ({
@@ -132,7 +168,7 @@ export const registerHandoffRoutes = async (
         const url = new URL(`${orchestratorBaseUrl}/v1/agent-handoffs`);
         url.searchParams.set('tenant_id', session.tenantId);
         url.searchParams.set('workspace_id', workspaceId);
-        url.searchParams.set('status', 'requested');
+        url.searchParams.set('status', 'pending');
         url.searchParams.set('limit', '200');
 
         const response = await fetch(url.toString(), {

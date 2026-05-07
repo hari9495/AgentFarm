@@ -170,12 +170,14 @@ test('orchestrator proactive signal routes detect, list, and resolve signals', a
                 pull_requests: [{ id: 'pr-1', title: 'Old PR', days_since_update: 17 }],
                 tickets: [{ id: 'ticket-1', title: 'Old Ticket', hours_since_update: 96 }],
                 budget_utilization_ratio: 0.85,
+                ci_failures: [{ workflow_name: 'ci-main', branch: 'main', failure_count: 2 }],
+                dependency_vulnerabilities: [{ dependency_name: 'openssl', cve_id: 'CVE-2026-0001', severity: 'critical' }],
             },
         });
 
         assert.equal(detect.statusCode, 200);
         const detectBody = detect.json() as { detected_count: number; signals: Array<{ id: string; signalType: string; status: string }> };
-        assert.equal(detectBody.detected_count, 3);
+        assert.equal(detectBody.detected_count, 5);
 
         const listOpen = await app.inject({
             method: 'GET',
@@ -183,7 +185,7 @@ test('orchestrator proactive signal routes detect, list, and resolve signals', a
         });
         assert.equal(listOpen.statusCode, 200);
         const listOpenBody = listOpen.json() as { count: number; signals: Array<{ id: string }> };
-        assert.equal(listOpenBody.count, 3);
+        assert.equal(listOpenBody.count, 5);
 
         const resolve = await app.inject({
             method: 'POST',
@@ -289,11 +291,11 @@ test('orchestrator agent handoff routes create, list, and update status', async 
         });
         assert.equal(createResponse.statusCode, 201);
         const createBody = createResponse.json() as { handoff: { id: string; status: string } };
-        assert.equal(createBody.handoff.status, 'requested');
+        assert.equal(createBody.handoff.status, 'pending');
 
         const listResponse = await app.inject({
             method: 'GET',
-            url: '/v1/agent-handoffs?workspace_id=ws-handoff&status=requested',
+            url: '/v1/agent-handoffs?workspace_id=ws-handoff&status=pending',
         });
         assert.equal(listResponse.statusCode, 200);
         const listBody = listResponse.json() as { count: number; handoffs: Array<{ id: string }> };

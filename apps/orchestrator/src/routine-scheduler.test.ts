@@ -225,7 +225,7 @@ test('B4: getRecentErrors returns error log (non-blocking)', () => {
     assert.equal(errors[1].error, 'Error 3');
 });
 
-test('B4: detectProactiveSignals detects stale PR, stale ticket, and budget warning', async () => {
+test('B4: detectProactiveSignals detects stale PR, stale ticket, budget warning, CI failures, and dependency CVEs', async () => {
     const scheduler = new RoutineScheduler();
 
     const detected = await scheduler.detectProactiveSignals({
@@ -242,15 +242,25 @@ test('B4: detectProactiveSignals detects stale PR, stale ticket, and budget warn
             { id: 'ticket-2', title: 'Fresh ticket', hoursSinceUpdate: 4 },
         ],
         budgetUtilizationRatio: 0.92,
+        ciFailures: [
+            { workflowName: 'ci-main', branch: 'main', failureCount: 2 },
+            { workflowName: 'ci-feature', branch: 'feature/refactor', failureCount: 5 },
+        ],
+        dependencyVulnerabilities: [
+            { dependencyName: 'openssl', cveId: 'CVE-2026-0001', severity: 'critical' },
+            { dependencyName: 'left-pad', cveId: 'CVE-2026-0002', severity: 'low' },
+        ],
     });
 
-    assert.equal(detected.length, 3);
+    assert.equal(detected.length, 5);
     assert.equal(detected.some((signal) => signal.signalType === 'stale_pr'), true);
     assert.equal(detected.some((signal) => signal.signalType === 'stale_ticket'), true);
     assert.equal(detected.some((signal) => signal.signalType === 'budget_warning'), true);
+    assert.equal(detected.some((signal) => signal.signalType === 'ci_failure_on_main'), true);
+    assert.equal(detected.some((signal) => signal.signalType === 'dependency_cve'), true);
 
     const listed = scheduler.listProactiveSignals({ workspaceId: 'ws-9' });
-    assert.equal(listed.length, 3);
+    assert.equal(listed.length, 5);
 });
 
 test('B4: detectProactiveSignals deduplicates open signals by source', async () => {

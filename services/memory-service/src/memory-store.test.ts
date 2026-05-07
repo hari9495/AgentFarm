@@ -4,11 +4,14 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import type { MemoryWriteRequest } from './memory-types.js';
 import {
   InMemoryMemoryStore,
+} from './memory-store.js';
+import {
   calculateRejectionRate,
   extractCommonConnectors,
-} from './memory-store.js';import type { MemoryWriteRequest } from './memory-types.js';
+} from './memory-types.js';
 
 test('Agent Memory Service', async (t) => {
   const store = new InMemoryMemoryStore();
@@ -234,7 +237,55 @@ test('Agent Memory Service', async (t) => {
     assert.ok(auditEvents[0].summary.includes('success'));
   });
 
-  // Test 8: Audit log accumulates across multiple writes
+  // Test 8: Long-term memories can be filtered by confidence
+  await t.test('should persist and filter long-term memories', async () => {
+    const longTerm = await store.writeLongTermMemory({
+      tenantId: 'tenant-123',
+      workspaceId: 'ws-123',
+      pattern: 'Prefer opening a draft PR before merge',
+      confidence: 0.72,
+      observedCount: 3,
+      lastSeen: '2026-05-07T00:00:00.000Z',
+    });
+
+    await store.writeLongTermMemory({
+      tenantId: 'tenant-123',
+      workspaceId: 'ws-123',
+      pattern: 'Escalate permission changes',
+      confidence: 0.45,
+      observedCount: 1,
+      lastSeen: '2026-05-06T00:00:00.000Z',
+    });
+
+    const filtered = await store.readLongTermMemory('ws-123', 0.5);
+    assert.equal(filtered.length, 1);
+    assert.equal(filtered[0].id, longTerm.id);
+    assert.equal(filtered[0].pattern, 'Prefer opening a draft PR before merge');
+  });
+
+  // Test 9: Long-term memory confidence can be updated from new observations
+  await t.test('should update long-term memory confidence from new observations', async () => {
+    const storeLongTerm = new InMemoryMemoryStore();
+    const longTerm = await storeLongTerm.writeLongTermMemory({
+      tenantId: 'tenant-123',
+      workspaceId: 'ws-123',
+      pattern: 'Retry flaky CI once before escalation',
+      confidence: 0.4,
+      observedCount: 2,
+      lastSeen: '2026-05-05T00:00:00.000Z',
+    });
+
+    await storeLongTerm.updateMemoryConfidence(longTerm.id, '2026-05-08T00:00:00.000Z');
+
+    const updated = await storeLongTerm.readLongTermMemory('ws-123');
+    const refreshed = updated.find((memory) => memory.id === longTerm.id);
+    assert.ok(refreshed);
+    assert.equal(refreshed.confidence, 0.5);
+    assert.equal(refreshed.observedCount, 3);
+    assert.equal(refreshed.lastSeen, '2026-05-08T00:00:00.000Z');
+  });
+
+  // Test 10: Audit log accumulates across multiple writes
   await t.test('should accumulate audit events across multiple writes', async () => {
     const storeMulti = new InMemoryMemoryStore();
 

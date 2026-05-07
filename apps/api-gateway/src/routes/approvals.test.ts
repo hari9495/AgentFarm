@@ -10,6 +10,8 @@ type StoredApproval = {
     botId: string;
     taskId: string;
     actionId: string;
+    llmProvider?: string;
+    llmModel?: string;
     riskLevel: 'medium' | 'high';
     actionSummary: string;
     requestedBy: string;
@@ -31,11 +33,13 @@ const createRepo = () => {
     const approvals = new Map<string, StoredApproval>();
     const auditEvents: Array<{ summary: string; severity?: 'info' | 'warn' | 'error' }> = [];
     const runtimeEndpoints = new Map<string, string>();
+    const actionTypes = new Map<string, string>();
 
     return {
         approvals,
         auditEvents,
         runtimeEndpoints,
+        actionTypes,
         repo: {
             async findByAction(input: { tenantId: string; workspaceId: string; actionId: string }) {
                 for (const approval of approvals.values()) {
@@ -72,6 +76,8 @@ const createRepo = () => {
                 requestedBy: string;
                 policyPackVersion: string;
                 escalationTimeoutSeconds: number;
+                llmProvider?: string;
+                llmModel?: string;
             }) {
                 const id = `apr_${approvals.size + 1}`;
                 const record: StoredApproval = {
@@ -81,6 +87,8 @@ const createRepo = () => {
                     botId: input.botId,
                     taskId: input.taskId,
                     actionId: input.actionId,
+                    llmProvider: input.llmProvider,
+                    llmModel: input.llmModel,
                     riskLevel: input.riskLevel,
                     actionSummary: input.actionSummary,
                     requestedBy: input.requestedBy,
@@ -134,6 +142,9 @@ const createRepo = () => {
             async findRuntimeDecisionEndpoint(input: { tenantId: string; workspaceId: string; botId: string }) {
                 const key = `${input.tenantId}:${input.workspaceId}:${input.botId}`;
                 return runtimeEndpoints.get(key) ?? null;
+            },
+            async findActionTypeByActionId(input: { actionId: string }) {
+                return actionTypes.get(input.actionId) ?? null;
             },
         },
     };
@@ -794,6 +805,68 @@ test('decision endpoint sends runtime /decision webhook with task context when e
         assert.equal(webhookCalls[0]?.taskId, 'task_webhook_1');
         assert.equal(webhookCalls[0]?.decision, 'approved');
         assert.equal(webhookCalls[0]?.selectedOptionId, null);
+    } finally {
+        await app.close();
+    }
+});
+
+test('decision endpoint emits runtime quality signal when approval has LLM metadata', async () => {
+    const app = Fastify();
+    const fake = createRepo();
+
+    const approval: StoredApproval = {
+        id: 'apr_decide_quality_signal',
+        tenantId: 'tenant_1',
+        workspaceId: 'ws_1',
+        botId: 'bot_1',
+        taskId: 'task_quality_signal_1',
+        actionId: 'act_quality_signal_1',
+        llmProvider: 'openai',
+        llmModel: 'gpt-4.1',
+        riskLevel: 'high',
+        actionSummary: 'Deploy production service',
+        requestedBy: 'runtime:bot_1',
+        policyPackVersion: 'mvp-v1',
+        escalationTimeoutSeconds: 3600,
+        decision: 'pending',
+        createdAt: new Date(Date.now() - 10_000),
+        escalatedAt: null,
+    };
+    fake.approvals.set(approval.id, approval);
+    fake.runtimeEndpoints.set('tenant_1:ws_1:bot_1', 'http://runtime.bot.local');
+    fake.actionTypes.set('act_quality_signal_1', 'deploy_production');
+
+    const qualitySignalCalls: Array<Record<string, unknown>> = [];
+
+    await registerApprovalRoutes(app, {
+        getSession: () => session(),
+        repo: fake.repo,
+        qualitySignalNotifier: async (input) => {
+            qualitySignalCalls.push(input as unknown as Record<string, unknown>);
+            return {
+                ok: true,
+                statusCode: 201,
+            };
+        },
+    });
+
+    try {
+        const response = await app.inject({
+            method: 'POST',
+            url: '/v1/approvals/apr_decide_quality_signal/decision',
+            payload: {
+                workspace_id: 'ws_1',
+                decision: 'approved',
+                reason: 'Looks safe',
+            },
+        });
+
+        assert.equal(response.statusCode, 200);
+        assert.equal(qualitySignalCalls.length, 1);
+        assert.equal(qualitySignalCalls[0]?.provider, 'openai');
+        assert.equal(qualitySignalCalls[0]?.model, 'gpt-4.1');
+        assert.equal(qualitySignalCalls[0]?.actionType, 'deploy_production');
+        assert.equal(qualitySignalCalls[0]?.signal, 'action_approved');
     } finally {
         await app.close();
     }

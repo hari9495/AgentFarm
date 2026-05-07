@@ -651,7 +651,9 @@ export interface ApprovalRecord {
   decidedAt?: string; // Immutable after set
 }
 
-export type ApprovalBatchStatus = 'pending' | 'resolved';
+export type ApprovalBatchStatus = 'pending' | 'approved_all' | 'rejected_all' | 'partial';
+
+export type ApprovalBatchDecision = 'approve_all' | 'reject_all' | 'review_individually';
 
 export interface ApprovalBatchRecord {
   id: string;
@@ -664,6 +666,7 @@ export interface ApprovalBatchRecord {
   actionType: string;
   taskIds: string[];
   status: ApprovalBatchStatus;
+  decision?: ApprovalBatchDecision;
   correlationId: string;
   createdAt: string;
   updatedAt: string;
@@ -1630,6 +1633,19 @@ export interface AgentShortTermMemoryRecord {
   expiresAt: string; // TTL: createdAt + 7 days
 }
 
+export type ShortTermMemory = AgentShortTermMemoryRecord;
+
+export interface LongTermMemory {
+  id: string;
+  tenantId: string;
+  workspaceId: string;
+  pattern: string;
+  confidence: number;
+  observedCount: number;
+  lastSeen: string;
+  createdAt: string;
+}
+
 export interface AgentMemoryInjectionContext {
   recentMemories: AgentShortTermMemoryRecord[];
   memoryCountThisWeek: number;
@@ -1637,9 +1653,17 @@ export interface AgentMemoryInjectionContext {
   approvalRejectionRate: number; // 0-1, for prompt bias adjustment
 }
 
-export type ProactiveSignalType = 'stale_pr' | 'stale_ticket' | 'budget_warning';
+export type ProactiveSignalType = 'stale_pr' | 'stale_ticket' | 'budget_warning' | 'ci_failure_on_main' | 'dependency_cve';
 
 export type ProactiveSignalStatus = 'open' | 'resolved';
+
+export interface ProactiveSignal {
+  signalType: ProactiveSignalType;
+  workspaceId: string;
+  severity: 'low' | 'medium' | 'high';
+  payload: Record<string, unknown>;
+  detectedAt: string;
+}
 
 export interface ProactiveSignalRecord {
   id: string;
@@ -1665,15 +1689,30 @@ export interface QualitySignalRecord {
   workspaceId: string;
   botId: string;
   provider: string;
+  model?: string;
   actionType: string;
   score: number; // 0-1 normalized quality score
+  signal?: QualitySignalType;
+  weight?: number;
+  source?: 'runtime_outcome' | 'user_feedback' | 'evaluator' | 'manual';
   reason?: string;
   metadata?: Record<string, unknown>;
   correlationId: string;
   observedAt: string;
 }
 
-export type AgentHandoffStatus = 'requested' | 'accepted' | 'rejected' | 'completed' | 'cancelled';
+export type QualitySignalType = 'action_approved' | 'action_rejected' | 'action_escalated' | 'action_succeeded' | 'action_retried';
+
+export interface QualitySignal {
+  provider: string;
+  model: string;
+  taskId: string;
+  signal: QualitySignalType;
+  weight: number;
+  timestamp: string;
+}
+
+export type AgentHandoffStatus = 'pending' | 'accepted' | 'completed' | 'failed' | 'timed_out';
 
 export interface AgentHandoffRecord {
   id: string;
@@ -1685,9 +1724,12 @@ export interface AgentHandoffRecord {
   toBotId: string;
   reason: string;
   status: AgentHandoffStatus;
+  escalateOnTimeoutMs: number;
   handoffContext?: Record<string, unknown>;
   correlationId: string;
   createdAt: string;
   updatedAt: string;
 }
+
+export type AgentHandoffContract = AgentHandoffRecord;
 

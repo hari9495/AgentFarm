@@ -529,6 +529,57 @@ test('runtime quality signal endpoints ingest evaluator signals and return summa
     }
 });
 
+test('runtime quality signal endpoint accepts taxonomy-based signals with model metadata', async () => {
+    const provider = `signal_provider_${Date.now()}`;
+    const app = buildRuntimeServer({
+        env: baseEnv(),
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+    });
+
+    try {
+        const startupRes = await app.inject({ method: 'POST', url: '/startup' });
+        assert.equal(startupRes.statusCode, 200);
+
+        const create = await app.inject({
+            method: 'POST',
+            url: '/runtime/quality/signals',
+            payload: {
+                provider,
+                model: 'gpt-4.1',
+                action_type: 'deploy_production',
+                signal: 'action_rejected',
+                weight: 1,
+                source: 'user_feedback',
+                reason: 'Human approver rejected unsafe rollout',
+                task_id: 'quality-signal-task-1',
+            },
+        });
+        assert.equal(create.statusCode, 201);
+        const createBody = create.json() as { quality_signal: { model?: string; signal?: string; weight?: number } };
+        assert.equal(createBody.quality_signal.model, 'gpt-4.1');
+        assert.equal(createBody.quality_signal.signal, 'action_rejected');
+        assert.equal(createBody.quality_signal.weight, 1);
+
+        const listRes = await app.inject({
+            method: 'GET',
+            url: `/runtime/quality/signals?provider=${encodeURIComponent(provider)}&action_type=deploy_production&source=user_feedback&limit=5`,
+        });
+        assert.equal(listRes.statusCode, 200);
+        const listBody = listRes.json() as {
+            count: number;
+            signals: Array<{ model: string | null; signal: string | null; weight: number | null }>;
+        };
+        assert.equal(listBody.count, 1);
+        assert.equal(listBody.signals[0]?.model, 'gpt-4.1');
+        assert.equal(listBody.signals[0]?.signal, 'action_rejected');
+        assert.equal(listBody.signals[0]?.weight, 1);
+    } finally {
+        await app.close();
+    }
+});
+
 test('runtime quality signal endpoint rejects invalid source', async () => {
     const app = buildRuntimeServer({
         env: baseEnv(),

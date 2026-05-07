@@ -9,6 +9,7 @@ import {
     resetProviderRoutingMemory,
     resetProviderRoutingState,
 } from './llm-decision-adapter.js';
+import { recordQualitySignal, resetQualitySignals } from './llm-quality-tracker.js';
 import type { ActionDecision, TaskEnvelope } from './execution-engine.js';
 
 const makeTask = (payload: Record<string, unknown>, taskId = 'task-1'): TaskEnvelope => ({
@@ -87,10 +88,12 @@ const withTokenBudgetStatePath = async (suffix: string, callback: (filePath: str
 
 test.beforeEach(() => {
     resetProviderRoutingState();
+    resetQualitySignals();
 });
 
 test.afterEach(() => {
     resetProviderRoutingState();
+    resetQualitySignals();
 });
 
 test('createLlmDecisionResolverFromConfig selects speed_first OpenAI model for low-risk tasks', async () => {
@@ -753,6 +756,76 @@ test('health scoring: failed provider gets deprioritized in subsequent auto call
         const scores = getProviderHealthScores();
         assert.ok(scores['xai'], 'xai should have health data after a failed call');
         assert.ok((scores['xai']?.errorRate ?? 0) > 0, 'xai error rate should be > 0');
+    } finally {
+        globalThis.fetch = originalFetch;
+    }
+});
+
+test('auto provider routing prioritizes lower quality penalty using composite score', async () => {
+    const originalFetch = globalThis.fetch;
+    const calledUrls: string[] = [];
+
+    // Degrade OpenAI quality and boost Anthropic quality for read_task.
+    recordQualitySignal({ provider: 'openai', actionType: 'read_task', score: 0.1, source: 'runtime_outcome' });
+    recordQualitySignal({ provider: 'anthropic', actionType: 'read_task', score: 0.95, source: 'runtime_outcome' });
+
+    globalThis.fetch = (async (url: string | URL | Request, _init?: RequestInit) => {
+        const normalizedUrl = String(url);
+        calledUrls.push(normalizedUrl);
+
+        if (normalizedUrl.includes('api.anthropic.com')) {
+            return new Response(JSON.stringify({
+                content: [{ text: JSON.stringify(lowRiskDecision) }],
+                usage: {
+                    input_tokens: 80,
+                    output_tokens: 12,
+                },
+            }), {
+                status: 200,
+                headers: { 'content-type': 'application/json' },
+            });
+        }
+
+        return new Response(JSON.stringify({
+            choices: [{ message: { content: JSON.stringify(lowRiskDecision) } }],
+            usage: {
+                prompt_tokens: 80,
+                completion_tokens: 12,
+                total_tokens: 92,
+            },
+        }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+        });
+    }) as typeof fetch;
+
+    try {
+        const resolver = createLlmDecisionResolverFromConfig({
+            provider: 'auto',
+            openai: {
+                api_key: 'sk-test',
+                model: 'gpt-4o-mini',
+            },
+            anthropic: {
+                api_key: 'anthropic-key',
+                model: 'claude-3-5-haiku-latest',
+            },
+            auto: {
+                profile_providers: {
+                    speed_first: ['openai', 'anthropic'],
+                },
+            },
+        });
+
+        assert.ok(resolver);
+        const result = await resolver!({
+            task: makeTask({ action_type: 'read_task', complexity: 'low' }, 'task-quality-priority-1'),
+            heuristicDecision: lowRiskDecision,
+        });
+
+        assert.equal(calledUrls.length, 1);
+        assert.match(calledUrls[0] ?? '', /api\.anthropic\.com/);
+        assert.equal(result.metadata.modelProvider, 'anthropic');
     } finally {
         globalThis.fetch = originalFetch;
     }

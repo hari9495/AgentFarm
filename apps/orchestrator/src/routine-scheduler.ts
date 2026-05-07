@@ -19,6 +19,11 @@ import {
     type ScheduledTaskRecord,
 } from '@agentfarm/shared-types';
 import { randomUUID } from 'crypto';
+import {
+    detectProactiveSignals as detectSignals,
+    type ProactiveCiFailureInput,
+    type ProactiveDependencyCveInput,
+} from './proactive-signal-detector.js';
 
 export interface CreateScheduledTaskRequest {
     botId: string;
@@ -53,9 +58,13 @@ export interface ProactiveSignalDetectionInput {
     pullRequests?: ProactivePullRequestInput[];
     tickets?: ProactiveTicketInput[];
     budgetUtilizationRatio?: number;
+    ciFailures?: ProactiveCiFailureInput[];
+    dependencyVulnerabilities?: ProactiveDependencyCveInput[];
     stalePrThresholdDays?: number;
     staleTicketThresholdHours?: number;
     budgetWarningThreshold?: number;
+    ciFailureThresholdCount?: number;
+    dependencySeverityThreshold?: 'medium' | 'high' | 'critical';
 }
 
 export interface RoutineSchedulerState {
@@ -358,76 +367,19 @@ export class RoutineScheduler {
     }
 
     async detectProactiveSignals(input: ProactiveSignalDetectionInput): Promise<ProactiveSignalRecord[]> {
-        const stalePrThresholdDays = input.stalePrThresholdDays ?? 14;
-        const staleTicketThresholdHours = input.staleTicketThresholdHours ?? 72;
-        const budgetWarningThreshold = input.budgetWarningThreshold ?? 0.8;
         const nowIso = new Date().toISOString();
-        const detected: ProactiveSignalRecord[] = [];
-
-        for (const pr of input.pullRequests ?? []) {
-            if (pr.daysSinceUpdate < stalePrThresholdDays) {
-                continue;
-            }
-            detected.push(this.upsertSignal({
-                tenantId: input.tenantId,
-                workspaceId: input.workspaceId,
-                botId: input.botId,
-                correlationId: input.correlationId,
-                signalType: 'stale_pr',
-                severity: 'medium',
-                summary: `PR ${pr.id} is stale for ${pr.daysSinceUpdate} day(s).`,
-                sourceRef: `pr:${pr.id}`,
-                metadata: {
-                    title: pr.title,
-                    days_since_update: pr.daysSinceUpdate,
-                    threshold_days: stalePrThresholdDays,
-                },
-                nowIso,
-            }));
-        }
-
-        for (const ticket of input.tickets ?? []) {
-            if (ticket.hoursSinceUpdate < staleTicketThresholdHours) {
-                continue;
-            }
-            detected.push(this.upsertSignal({
-                tenantId: input.tenantId,
-                workspaceId: input.workspaceId,
-                botId: input.botId,
-                correlationId: input.correlationId,
-                signalType: 'stale_ticket',
-                severity: 'medium',
-                summary: `Ticket ${ticket.id} is stale for ${ticket.hoursSinceUpdate} hour(s).`,
-                sourceRef: `ticket:${ticket.id}`,
-                metadata: {
-                    title: ticket.title,
-                    hours_since_update: ticket.hoursSinceUpdate,
-                    threshold_hours: staleTicketThresholdHours,
-                },
-                nowIso,
-            }));
-        }
-
-        if (typeof input.budgetUtilizationRatio === 'number' && input.budgetUtilizationRatio >= budgetWarningThreshold) {
-            const utilizationPct = Math.round(input.budgetUtilizationRatio * 100);
-            detected.push(this.upsertSignal({
-                tenantId: input.tenantId,
-                workspaceId: input.workspaceId,
-                botId: input.botId,
-                correlationId: input.correlationId,
-                signalType: 'budget_warning',
-                severity: input.budgetUtilizationRatio >= 1 ? 'high' : 'medium',
-                summary: `Budget utilization reached ${utilizationPct}% (threshold ${Math.round(budgetWarningThreshold * 100)}%).`,
-                sourceRef: 'budget:workspace',
-                metadata: {
-                    utilization_ratio: input.budgetUtilizationRatio,
-                    warning_threshold: budgetWarningThreshold,
-                },
-                nowIso,
-            }));
-        }
-
-        return detected;
+        return detectSignals(input).map((signal) => this.upsertSignal({
+            tenantId: input.tenantId,
+            workspaceId: input.workspaceId,
+            botId: input.botId,
+            correlationId: input.correlationId,
+            signalType: signal.signalType,
+            severity: signal.severity,
+            summary: signal.summary,
+            sourceRef: signal.sourceRef,
+            metadata: signal.metadata,
+            nowIso,
+        }));
     }
 
     listProactiveSignals(filter?: {

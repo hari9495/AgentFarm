@@ -7,6 +7,7 @@
 import { PrismaClient } from '@prisma/client';
 import type {
   IMemoryStore,
+  LongTermMemoryWriteRequest,
   MemoryReadResponse,
   MemoryWriteRequest,
 } from './memory-types.js';
@@ -14,7 +15,60 @@ import {
   calculateRejectionRate,
   extractCommonConnectors,
 } from './memory-types.js';
-import type { AgentShortTermMemoryRecord } from '@agentfarm/shared-types';
+import type { AgentShortTermMemoryRecord, ApprovalOutcome, LongTermMemory } from '@agentfarm/shared-types';
+
+type AgentShortTermMemoryRow = {
+  id: string;
+  workspaceId: string;
+  tenantId: string;
+  taskId: string;
+  actionsTaken: string[];
+  approvalOutcomes: ApprovalOutcome[];
+  connectorsUsed: string[];
+  llmProvider: string | null;
+  executionStatus: 'success' | 'approval_required' | 'failed';
+  summary: string;
+  correlationId: string;
+  createdAt: Date;
+  expiresAt: Date;
+};
+
+type ShortTermMemoryDelegate = {
+  findMany(args: {
+    where: {
+      workspaceId: string;
+      expiresAt?: { gt: Date };
+      createdAt?: { gte: Date };
+    };
+    orderBy?: { createdAt: 'desc' | 'asc' };
+    take?: number;
+  }): Promise<AgentShortTermMemoryRow[]>;
+  count(args: {
+    where: {
+      workspaceId: string;
+      createdAt?: { gte: Date };
+    };
+  }): Promise<number>;
+  create(args: {
+    data: Omit<AgentShortTermMemoryRow, 'id'>;
+  }): Promise<AgentShortTermMemoryRow>;
+  deleteMany(args: {
+    where: {
+      expiresAt: { lt: Date };
+    };
+  }): Promise<{ count: number }>;
+};
+
+type AgentLongTermMemoryRow = {
+  id: string;
+  tenantId: string;
+  workspaceId: string;
+  pattern: string;
+  confidence: number;
+  observedCount: number;
+  lastSeen: Date;
+  createdAt: Date;
+};
 
 /**
  * Production memory store backed by Prisma + Postgres
@@ -35,9 +89,10 @@ export class MemoryStore implements IMemoryStore {
     maxResults: number = 5
   ): Promise<MemoryReadResponse> {
     const now = new Date();
+    const shortTermMemory = this.getShortTermMemoryDelegate();
 
     // Query: get recent memories within 7 days
-    const recentMemories = await this.prisma.agentShortTermMemory.findMany({
+    const recentMemories = await shortTermMemory.findMany({
       where: {
         workspaceId,
         expiresAt: {
@@ -51,7 +106,7 @@ export class MemoryStore implements IMemoryStore {
     });
 
     // Convert Prisma records to domain types
-    const memories: AgentShortTermMemoryRecord[] = recentMemories.map((m) =>
+    const memories: AgentShortTermMemoryRecord[] = recentMemories.map((m: AgentShortTermMemoryRow) =>
       this.prismaToRecord(m)
     );
 
@@ -61,7 +116,7 @@ export class MemoryStore implements IMemoryStore {
 
     // Count total this week (for prompt context)
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const memoryCountThisWeek = await this.prisma.agentShortTermMemory.count({
+    const memoryCountThisWeek = await shortTermMemory.count({
       where: {
         workspaceId,
         createdAt: {
@@ -86,8 +141,9 @@ export class MemoryStore implements IMemoryStore {
   async writeMemoryAfterTask(request: MemoryWriteRequest): Promise<void> {
     const now = new Date();
     const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // +7 days
+    const shortTermMemory = this.getShortTermMemoryDelegate();
 
-    await this.prisma.agentShortTermMemory.create({
+    await shortTermMemory.create({
       data: {
         workspaceId: request.workspaceId,
         tenantId: request.tenantId,
@@ -107,6 +163,58 @@ export class MemoryStore implements IMemoryStore {
     this.writeAuditEvent(request).catch(() => {
       // Non-blocking: audit write failures must never surface to caller
     });
+  }
+
+  async writeLongTermMemory(request: LongTermMemoryWriteRequest): Promise<LongTermMemory> {
+    const [row] = await this.prisma.$queryRaw<AgentLongTermMemoryRow[]>`
+      INSERT INTO "AgentLongTermMemory" (
+        "tenantId", "workspaceId", pattern, confidence, "observedCount", "lastSeen"
+      ) VALUES (
+        ${request.tenantId}, ${request.workspaceId}, ${request.pattern}, ${request.confidence}, ${request.observedCount}, ${new Date(request.lastSeen)}
+      )
+      RETURNING id, "tenantId", "workspaceId", pattern, confidence, "observedCount", "lastSeen", "createdAt"
+    `;
+
+    return this.longTermRowToRecord(row);
+  }
+
+  async readLongTermMemory(workspaceId: string, minConfidence: number = 0): Promise<LongTermMemory[]> {
+    const rows = await this.prisma.$queryRaw<AgentLongTermMemoryRow[]>`
+      SELECT id, "tenantId", "workspaceId", pattern, confidence, "observedCount", "lastSeen", "createdAt"
+      FROM "AgentLongTermMemory"
+      WHERE "workspaceId" = ${workspaceId}
+        AND confidence >= ${minConfidence}
+      ORDER BY confidence DESC, "lastSeen" DESC
+    `;
+
+    return rows.map((row) => this.longTermRowToRecord(row));
+  }
+
+  async updateMemoryConfidence(id: string, newObservation: string): Promise<void> {
+    const [existing] = await this.prisma.$queryRaw<AgentLongTermMemoryRow[]>`
+      SELECT id, "tenantId", "workspaceId", pattern, confidence, "observedCount", "lastSeen", "createdAt"
+      FROM "AgentLongTermMemory"
+      WHERE id = ${id}
+      LIMIT 1
+    `;
+
+    if (!existing) {
+      return;
+    }
+
+    const nextObservedCount = existing.observedCount + 1;
+    const nextConfidence = Number(
+      Math.max(existing.confidence, Math.min(1, existing.confidence + 0.1)).toFixed(3)
+    );
+    const lastSeen = new Date(newObservation);
+
+    await this.prisma.$executeRaw`
+      UPDATE "AgentLongTermMemory"
+      SET confidence = ${nextConfidence},
+          "observedCount" = ${nextObservedCount},
+          "lastSeen" = ${lastSeen}
+      WHERE id = ${id}
+    `;
   }
 
   private async writeAuditEvent(request: MemoryWriteRequest): Promise<void> {
@@ -131,7 +239,7 @@ export class MemoryStore implements IMemoryStore {
    */
   async cleanupExpiredMemories(): Promise<number> {
     const now = new Date();
-    const result = await this.prisma.agentShortTermMemory.deleteMany({
+    const result = await this.getShortTermMemoryDelegate().deleteMany({
       where: {
         expiresAt: {
           lt: now,
@@ -145,7 +253,7 @@ export class MemoryStore implements IMemoryStore {
    * Helper: convert Prisma record to domain type
    */
   private prismaToRecord(
-    prismaRecord: any
+    prismaRecord: AgentShortTermMemoryRow
   ): AgentShortTermMemoryRecord {
     return {
       id: prismaRecord.id,
@@ -155,12 +263,31 @@ export class MemoryStore implements IMemoryStore {
       actionsTaken: prismaRecord.actionsTaken as string[],
       approvalOutcomes: prismaRecord.approvalOutcomes as any[],
       connectorsUsed: prismaRecord.connectorsUsed as string[],
-      llmProvider: prismaRecord.llmProvider,
+      llmProvider: prismaRecord.llmProvider ?? undefined,
       executionStatus: prismaRecord.executionStatus as 'success' | 'approval_required' | 'failed',
       summary: prismaRecord.summary,
       correlationId: prismaRecord.correlationId,
       createdAt: prismaRecord.createdAt.toISOString(),
       expiresAt: prismaRecord.expiresAt.toISOString(),
+    };
+  }
+
+  private getShortTermMemoryDelegate(): ShortTermMemoryDelegate {
+    return (this.prisma as PrismaClient & {
+      agentShortTermMemory: ShortTermMemoryDelegate;
+    }).agentShortTermMemory;
+  }
+
+  private longTermRowToRecord(row: AgentLongTermMemoryRow): LongTermMemory {
+    return {
+      id: row.id,
+      tenantId: row.tenantId,
+      workspaceId: row.workspaceId,
+      pattern: row.pattern,
+      confidence: Number(row.confidence),
+      observedCount: row.observedCount,
+      lastSeen: row.lastSeen.toISOString(),
+      createdAt: row.createdAt.toISOString(),
     };
   }
 }
@@ -179,6 +306,7 @@ export interface InMemoryAuditEvent {
  */
 export class InMemoryMemoryStore implements IMemoryStore {
   private memories: Map<string, AgentShortTermMemoryRecord[]> = new Map();
+  private longTermMemories: Map<string, LongTermMemory[]> = new Map();
   private auditLog: InMemoryAuditEvent[] = [];
 
   async readMemoryForTask(
@@ -226,6 +354,42 @@ export class InMemoryMemoryStore implements IMemoryStore {
     this.memories.set(request.workspaceId, [...existing, record]);
 
     this.writeAuditEvent(request);
+  }
+
+  async writeLongTermMemory(request: LongTermMemoryWriteRequest): Promise<LongTermMemory> {
+    const record: LongTermMemory = {
+      id: `ltm-${Date.now()}-${Math.random()}`,
+      tenantId: request.tenantId,
+      workspaceId: request.workspaceId,
+      pattern: request.pattern,
+      confidence: request.confidence,
+      observedCount: request.observedCount,
+      lastSeen: request.lastSeen,
+      createdAt: new Date().toISOString(),
+    };
+    const existing = this.longTermMemories.get(request.workspaceId) ?? [];
+    this.longTermMemories.set(request.workspaceId, [...existing, record]);
+    return record;
+  }
+
+  async readLongTermMemory(workspaceId: string, minConfidence: number = 0): Promise<LongTermMemory[]> {
+    return (this.longTermMemories.get(workspaceId) ?? [])
+      .filter((memory) => memory.confidence >= minConfidence)
+      .sort((a, b) => b.confidence - a.confidence || Date.parse(b.lastSeen) - Date.parse(a.lastSeen));
+  }
+
+  async updateMemoryConfidence(id: string, newObservation: string): Promise<void> {
+    for (const [workspaceId, memories] of this.longTermMemories.entries()) {
+      const updated = memories.map((memory) => memory.id !== id
+        ? memory
+        : {
+          ...memory,
+          confidence: Number(Math.min(1, memory.confidence + 0.1).toFixed(3)),
+          observedCount: memory.observedCount + 1,
+          lastSeen: newObservation,
+        });
+      this.longTermMemories.set(workspaceId, updated);
+    }
   }
 
   private writeAuditEvent(request: MemoryWriteRequest): void {

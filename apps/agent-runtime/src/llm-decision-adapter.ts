@@ -1625,21 +1625,21 @@ const createAutoResolver = (input: {
         const budget = evaluateTokenBudget(budgetScope);
         const budgetPressure = budget.warning || budget.denied;
 
-        // Composite routing score combines provider health, historical success by task type,
-        // and budget-aware provider cost preference.
+        // Composite routing score intentionally keeps routing simple and predictable.
+        // Lower score wins: availability penalty (health) + quality penalty.
         const providers = [...baseProviders].sort((a, b) => {
-            const healthA = scoreProvider(a);
-            const healthB = scoreProvider(b);
-            const historyA = historicalFailureRateForTaskType(a, heuristicDecision.actionType);
-            const historyB = historicalFailureRateForTaskType(b, heuristicDecision.actionType);
-            const costA = providerCostWeight(a);
-            const costB = providerCostWeight(b);
+            const availabilityA = scoreProvider(a);
+            const availabilityB = scoreProvider(b);
             const qualityA = getProviderQualityPenalty(a, heuristicDecision.actionType);
             const qualityB = getProviderQualityPenalty(b, heuristicDecision.actionType);
-            const budgetA = budgetPressure ? costA : 0;
-            const budgetB = budgetPressure ? costB : 0;
-            const scoreA = healthA * 0.4 + historyA * 0.3 + budgetA * 0.15 + qualityA * 0.15;
-            const scoreB = healthB * 0.4 + historyB * 0.3 + budgetB * 0.15 + qualityB * 0.15;
+
+            const scoreA = availabilityA * 0.6 + qualityA * 0.4;
+            const scoreB = availabilityB * 0.6 + qualityB * 0.4;
+
+            // Preserve budget-aware tie breaking when scores are effectively equal.
+            if (Math.abs(scoreA - scoreB) < 0.0001 && budgetPressure) {
+                return providerCostWeight(a) - providerCostWeight(b);
+            }
             return scoreA - scoreB;
         });
 

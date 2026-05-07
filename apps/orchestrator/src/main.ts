@@ -105,13 +105,13 @@ const parseWakeSource = (value: unknown): WakeSource | null => {
     return null;
 };
 
-const parseAgentHandoffStatus = (value: unknown): 'requested' | 'accepted' | 'rejected' | 'completed' | 'cancelled' | null => {
+const parseAgentHandoffStatus = (value: unknown): 'pending' | 'accepted' | 'completed' | 'failed' | 'timed_out' | null => {
     if (
-        value === 'requested'
+        value === 'pending'
         || value === 'accepted'
-        || value === 'rejected'
         || value === 'completed'
-        || value === 'cancelled'
+        || value === 'failed'
+        || value === 'timed_out'
     ) {
         return value;
     }
@@ -140,7 +140,13 @@ const parseScheduleType = (value: unknown): ScheduleType | null => {
 };
 
 const parseProactiveSignalType = (value: unknown): ProactiveSignalType | null => {
-    if (value === 'stale_pr' || value === 'stale_ticket' || value === 'budget_warning') {
+    if (
+        value === 'stale_pr'
+        || value === 'stale_ticket'
+        || value === 'budget_warning'
+        || value === 'ci_failure_on_main'
+        || value === 'dependency_cve'
+    ) {
         return value;
     }
     return null;
@@ -305,6 +311,11 @@ export const buildOrchestratorServer = async (
             typeof body.handoff_context === 'object' && body.handoff_context !== null
                 ? body.handoff_context as Record<string, unknown>
                 : undefined;
+        const escalateOnTimeoutMs = typeof body.escalate_on_timeout_ms === 'number'
+            && Number.isFinite(body.escalate_on_timeout_ms)
+            && body.escalate_on_timeout_ms > 0
+            ? Math.floor(body.escalate_on_timeout_ms)
+            : undefined;
 
         const record = handoffManager.createHandoff({
             tenantId,
@@ -315,6 +326,7 @@ export const buildOrchestratorServer = async (
             reason,
             correlationId,
             handoffContext,
+            escalateOnTimeoutMs,
             contractVersion: CONTRACT_VERSIONS.AGENT_HANDOFF,
         });
 
@@ -335,7 +347,7 @@ export const buildOrchestratorServer = async (
         if (query.status !== undefined && !status) {
             return reply.code(400).send({
                 error: 'invalid_request',
-                message: 'status must be one of requested, accepted, rejected, completed, cancelled.',
+                message: 'status must be one of pending, accepted, completed, failed, timed_out.',
             });
         }
 
@@ -359,7 +371,7 @@ export const buildOrchestratorServer = async (
         if (!status) {
             return reply.code(400).send({
                 error: 'invalid_request',
-                message: 'status must be one of requested, accepted, rejected, completed, cancelled.',
+                message: 'status must be one of pending, accepted, completed, failed, timed_out.',
             });
         }
 
@@ -614,6 +626,40 @@ export const buildOrchestratorServer = async (
         const budgetUtilizationRatio = typeof body.budget_utilization_ratio === 'number'
             ? body.budget_utilization_ratio
             : undefined;
+        const ciFailures = Array.isArray(body.ci_failures)
+            ? body.ci_failures
+                .filter((row): row is { workflow_name: string; branch: string; failure_count: number } => {
+                    if (typeof row !== 'object' || row === null) {
+                        return false;
+                    }
+                    const candidate = row as Record<string, unknown>;
+                    return typeof candidate.workflow_name === 'string'
+                        && typeof candidate.branch === 'string'
+                        && typeof candidate.failure_count === 'number';
+                })
+                .map((row) => ({
+                    workflowName: row.workflow_name,
+                    branch: row.branch,
+                    failureCount: row.failure_count,
+                }))
+            : [];
+        const dependencyVulnerabilities = Array.isArray(body.dependency_vulnerabilities)
+            ? body.dependency_vulnerabilities
+                .filter((row): row is { dependency_name: string; cve_id: string; severity: 'low' | 'medium' | 'high' | 'critical' } => {
+                    if (typeof row !== 'object' || row === null) {
+                        return false;
+                    }
+                    const candidate = row as Record<string, unknown>;
+                    return typeof candidate.dependency_name === 'string'
+                        && typeof candidate.cve_id === 'string'
+                        && (candidate.severity === 'low' || candidate.severity === 'medium' || candidate.severity === 'high' || candidate.severity === 'critical');
+                })
+                .map((row) => ({
+                    dependencyName: row.dependency_name,
+                    cveId: row.cve_id,
+                    severity: row.severity,
+                }))
+            : [];
 
         const detected = await routineScheduler.detectProactiveSignals({
             tenantId,
@@ -623,9 +669,15 @@ export const buildOrchestratorServer = async (
             pullRequests,
             tickets,
             budgetUtilizationRatio,
+            ciFailures,
+            dependencyVulnerabilities,
             stalePrThresholdDays: typeof body.stale_pr_threshold_days === 'number' ? body.stale_pr_threshold_days : undefined,
             staleTicketThresholdHours: typeof body.stale_ticket_threshold_hours === 'number' ? body.stale_ticket_threshold_hours : undefined,
             budgetWarningThreshold: typeof body.budget_warning_threshold === 'number' ? body.budget_warning_threshold : undefined,
+            ciFailureThresholdCount: typeof body.ci_failure_threshold_count === 'number' ? body.ci_failure_threshold_count : undefined,
+            dependencySeverityThreshold: body.dependency_severity_threshold === 'medium' || body.dependency_severity_threshold === 'high' || body.dependency_severity_threshold === 'critical'
+                ? body.dependency_severity_threshold
+                : undefined,
         });
 
         if (!(await persistOrFail(reply))) {
@@ -650,7 +702,7 @@ export const buildOrchestratorServer = async (
         if (query.signal_type && !signalType) {
             return reply.code(400).send({
                 error: 'invalid_request',
-                message: 'signal_type must be stale_pr, stale_ticket, or budget_warning.',
+                message: 'signal_type must be stale_pr, stale_ticket, budget_warning, ci_failure_on_main, or dependency_cve.',
             });
         }
 

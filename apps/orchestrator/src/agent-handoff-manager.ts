@@ -10,6 +10,7 @@ type CreateHandoffInput = {
     reason: string;
     correlationId: string;
     handoffContext?: Record<string, unknown>;
+    escalateOnTimeoutMs?: number;
     contractVersion: string;
 };
 
@@ -45,8 +46,9 @@ export class AgentHandoffManager {
             fromBotId: input.fromBotId,
             toBotId: input.toBotId,
             reason: input.reason,
-            status: 'requested',
+            status: 'pending',
             handoffContext: input.handoffContext,
+            escalateOnTimeoutMs: input.escalateOnTimeoutMs ?? 3_600_000,
             correlationId: input.correlationId,
             createdAt: timestamp,
             updatedAt: timestamp,
@@ -88,5 +90,30 @@ export class AgentHandoffManager {
         };
         this.handoffs.set(input.handoffId, updated);
         return updated;
+    }
+
+    checkAndTimeoutHandoffs(asOf: Date = new Date()): AgentHandoffRecord[] {
+        const timedOut: AgentHandoffRecord[] = [];
+
+        for (const handoff of this.handoffs.values()) {
+            if (handoff.status !== 'pending' || typeof handoff.escalateOnTimeoutMs !== 'number') {
+                continue;
+            }
+
+            const expiresAt = Date.parse(handoff.createdAt) + handoff.escalateOnTimeoutMs;
+            if (expiresAt > asOf.getTime()) {
+                continue;
+            }
+
+            const updated: AgentHandoffRecord = {
+                ...handoff,
+                status: 'timed_out',
+                updatedAt: asOf.toISOString(),
+            };
+            this.handoffs.set(handoff.id, updated);
+            timedOut.push(updated);
+        }
+
+        return timedOut;
     }
 }

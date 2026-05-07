@@ -1,7 +1,12 @@
+import type { QualitySignalType } from '@agentfarm/shared-types';
+
 type QualitySignalInput = {
     provider: string;
     actionType: string;
-    score: number;
+    model?: string;
+    score?: number;
+    signal?: QualitySignalType;
+    weight?: number;
     source?: QualitySignalSource;
     reason?: string;
     metadata?: Record<string, unknown>;
@@ -15,8 +20,11 @@ export type QualitySignalSource = 'runtime_outcome' | 'user_feedback' | 'evaluat
 export type QualitySignalEvent = {
     id: string;
     provider: string;
+    model?: string;
     actionType: string;
     score: number;
+    signal?: QualitySignalType;
+    weight?: number;
     source: QualitySignalSource;
     reason?: string;
     metadata?: Record<string, unknown>;
@@ -32,6 +40,14 @@ type ProviderActionQualityState = {
 const QUALITY_WINDOW_MS = 7 * 24 * 60 * 60 * 1_000;
 const MAX_SAMPLES = 100;
 const MAX_SIGNAL_EVENTS = 500;
+
+const SIGNAL_BASE_SCORES: Record<QualitySignalType, number> = {
+    action_approved: 0.8,
+    action_rejected: 0.2,
+    action_escalated: 0.35,
+    action_succeeded: 0.9,
+    action_retried: 0.45,
+};
 
 const qualityStore = new Map<string, ProviderActionQualityState>();
 const qualityEvents: QualitySignalEvent[] = [];
@@ -62,6 +78,45 @@ const parseSource = (value: unknown): QualitySignalSource => {
     return 'runtime_outcome';
 };
 
+const parseSignal = (value: unknown): QualitySignalType | undefined => {
+    if (
+        value === 'action_approved'
+        || value === 'action_rejected'
+        || value === 'action_escalated'
+        || value === 'action_succeeded'
+        || value === 'action_retried'
+    ) {
+        return value;
+    }
+
+    return undefined;
+};
+
+const resolveScore = (input: QualitySignalInput): { score: number; signal?: QualitySignalType; weight?: number } | null => {
+    if (typeof input.score === 'number' && Number.isFinite(input.score)) {
+        return {
+            score: clampScore(input.score),
+            signal: parseSignal(input.signal),
+            weight: input.weight,
+        };
+    }
+
+    const signal = parseSignal(input.signal);
+    if (!signal) {
+        return null;
+    }
+
+    const weight = typeof input.weight === 'number' && Number.isFinite(input.weight)
+        ? Math.max(0, Math.min(1, input.weight))
+        : 1;
+    const score = clampScore(0.5 + ((SIGNAL_BASE_SCORES[signal] - 0.5) * weight));
+    return {
+        score,
+        signal,
+        weight: Number(weight.toFixed(3)),
+    };
+};
+
 const pruneSamples = (state: ProviderActionQualityState, now: number): void => {
     const cutoff = now - QUALITY_WINDOW_MS;
     while (state.samples.length > 0 && (state.samples[0]?.at ?? 0) < cutoff) {
@@ -79,11 +134,16 @@ export const recordQualitySignal = (input: QualitySignalInput): QualitySignalEve
         return null;
     }
 
+    const resolved = resolveScore(input);
+    if (!resolved) {
+        return null;
+    }
+
     const key = makeKey(provider, actionType);
     const now = input.recordedAtMs ?? Date.now();
     const state = qualityStore.get(key) ?? { samples: [] };
     pruneSamples(state, now);
-    const score = clampScore(input.score);
+    const score = resolved.score;
     state.samples.push({ score, at: now });
     pruneSamples(state, now);
     qualityStore.set(key, state);
@@ -91,8 +151,11 @@ export const recordQualitySignal = (input: QualitySignalInput): QualitySignalEve
     const event: QualitySignalEvent = {
         id: `${key}:${now}:${state.samples.length}`,
         provider: provider.trim().toLowerCase(),
+        model: typeof input.model === 'string' && input.model.trim() ? input.model.trim() : undefined,
         actionType: actionType.trim().toLowerCase(),
         score,
+        signal: resolved.signal,
+        weight: resolved.weight,
         source: parseSource(input.source),
         reason: typeof input.reason === 'string' && input.reason.trim() ? input.reason.trim() : undefined,
         metadata:
@@ -139,6 +202,27 @@ export const getProviderQualityPenalty = (provider: string, actionType: string):
     return Number((1 - avg).toFixed(3));
 };
 
+export const getProviderQualityScore = (provider: string, actionType?: string): number | null => {
+    if (actionType) {
+        const avg = getAverageQuality(provider, actionType);
+        return avg === null ? null : Number(avg.toFixed(3));
+    }
+
+    const normalizedProvider = provider.trim().toLowerCase();
+    if (!normalizedProvider) {
+        return null;
+    }
+
+    const summaries = getQualitySignalSummary({ provider: normalizedProvider });
+    if (summaries.length === 0) {
+        return null;
+    }
+
+    const weightedTotal = summaries.reduce((sum, summary) => sum + (summary.averageScore * summary.sampleCount), 0);
+    const totalSamples = summaries.reduce((sum, summary) => sum + summary.sampleCount, 0);
+    return totalSamples === 0 ? null : Number((weightedTotal / totalSamples).toFixed(3));
+};
+
 export const listQualitySignals = (filter?: {
     provider?: string;
     actionType?: string;
@@ -150,11 +234,13 @@ export const listQualitySignals = (filter?: {
     const source = filter?.source;
     const limit = Math.max(1, Math.min(filter?.limit ?? 100, 500));
 
-    return qualityEvents
+    const filtered = qualityEvents
         .filter((event) => !provider || event.provider === provider)
         .filter((event) => !actionType || event.actionType === actionType)
-        .filter((event) => !source || event.source === source)
-        .slice(Math.max(0, qualityEvents.length - limit))
+        .filter((event) => !source || event.source === source);
+
+    return filtered
+        .slice(Math.max(0, filtered.length - limit))
         .reverse();
 };
 

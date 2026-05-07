@@ -318,6 +318,8 @@ model Approval {
   botId                    String
   taskId                   String
   actionId                 String
+  llmProvider              String?
+  llmModel                 String?
   riskLevel                RiskLevel
   actionSummary            String
   requestedBy              String
@@ -751,4 +753,18 @@ model AgentShortTermMemory {
   @@index([workspaceId, createdAt])
   @@index([workspaceId, expiresAt])
   @@index([tenantId])
+}
+
+model AgentLongTermMemory {
+  id            String   @id @default(cuid())
+  tenantId      String
+  workspaceId   String
+  pattern       String
+  confidence    Float
+  observedCount Int      @default(1)
+  lastSeen      DateTime
+  createdAt     DateTime @default(now())
+
+  @@index([workspaceId, confidence])
+  @@index([tenantId, workspaceId])
 }

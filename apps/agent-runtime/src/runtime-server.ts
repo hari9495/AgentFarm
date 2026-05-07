@@ -8,6 +8,7 @@ import type {
     CapabilitySnapshotSource,
     ModelProfileKey,
     QualitySignalRecord,
+    QualitySignalType,
     RoleKey,
     TaskLeaseRecord,
 } from '@agentfarm/shared-types';
@@ -136,6 +137,8 @@ type ApprovalIntakeClient = (input: {
     riskLevel: 'medium' | 'high';
     requestedBy: string;
     policyPackVersion: string;
+    llmProvider?: string;
+    llmModel?: string;
 }) => Promise<{
     ok: boolean;
     statusCode: number;
@@ -1531,6 +1534,8 @@ const defaultApprovalIntakeClient: ApprovalIntakeClient = async (input) => {
                 risk_level: input.riskLevel,
                 requested_by: input.requestedBy,
                 policy_pack_version: input.policyPackVersion,
+                llm_provider: input.llmProvider,
+                llm_model: input.llmModel,
             }),
             signal: AbortSignal.timeout(4_000),
         });
@@ -3119,6 +3124,8 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                             riskLevel: result.decision.riskLevel,
                             requestedBy: `runtime:${config.botId}`,
                             policyPackVersion: config.policyPackVersion,
+                            llmProvider: result.llmExecution?.modelProvider,
+                            llmModel: result.llmExecution?.model ?? undefined,
                         });
 
                         lastIntake = intake;
@@ -5002,8 +5009,11 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
     app.post<{
         Body: {
             provider?: string;
+            model?: string;
             action_type?: string;
             score?: number;
+            signal?: QualitySignalType;
+            weight?: number;
             reason?: string;
             source?: string;
             metadata?: Record<string, unknown>;
@@ -5021,18 +5031,28 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         const provider = request.body?.provider?.trim();
         const actionType = request.body?.action_type?.trim();
         const score = request.body?.score;
+        const signalType = request.body?.signal;
         const source = parseQualitySignalSource(request.body?.source ?? 'manual');
-        if (!provider || !actionType || typeof score !== 'number' || !Number.isFinite(score) || !source) {
+        const hasScore = typeof score === 'number' && Number.isFinite(score);
+        const hasSignal = signalType === 'action_approved'
+            || signalType === 'action_rejected'
+            || signalType === 'action_escalated'
+            || signalType === 'action_succeeded'
+            || signalType === 'action_retried';
+        if (!provider || !actionType || !source || (!hasScore && !hasSignal)) {
             return reply.code(400).send({
                 error: 'invalid_quality_signal',
-                message: 'provider, action_type, score, and a valid source are required.',
+                message: 'provider, action_type, and either score or signal with a valid source are required.',
             });
         }
 
         const signal = recordQualitySignal({
             provider,
+            model: request.body?.model,
             actionType,
             score,
+            signal: signalType,
+            weight: request.body?.weight,
             source,
             reason: request.body?.reason,
             metadata:
@@ -5057,8 +5077,12 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             workspaceId: configCache.workspaceId,
             botId: configCache.botId,
             provider: signal.provider,
+            model: signal.model,
             actionType: signal.actionType,
             score: signal.score,
+            signal: signal.signal,
+            weight: signal.weight,
+            source: signal.source,
             reason: signal.reason,
             metadata: signal.metadata,
             correlationId: signal.correlationId ?? configCache.correlationId,
@@ -5108,8 +5132,11 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             signals: signals.map((signal) => ({
                 id: signal.id,
                 provider: signal.provider,
+                model: signal.model ?? null,
                 action_type: signal.actionType,
                 score: signal.score,
+                signal: signal.signal ?? null,
+                weight: signal.weight ?? null,
                 source: signal.source,
                 reason: signal.reason ?? null,
                 metadata: signal.metadata ?? null,

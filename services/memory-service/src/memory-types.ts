@@ -4,7 +4,7 @@
 // Frozen 2026-05-07 — Agent Memory Service (Epic A7, Week 1)
 // Short-term task memory for agent context injection (7-day TTL)
 
-import type { AgentShortTermMemoryRecord, ApprovalOutcome } from '@agentfarm/shared-types';
+import type { AgentShortTermMemoryRecord, ApprovalOutcome, LongTermMemory } from '@agentfarm/shared-types';
 
 /**
  * Memory write request: called after task execution completes
@@ -32,6 +32,15 @@ export interface MemoryReadResponse {
   approvalRejectionRate: number;
 }
 
+export interface LongTermMemoryWriteRequest {
+  tenantId: string;
+  workspaceId: string;
+  pattern: string;
+  confidence: number;
+  observedCount: number;
+  lastSeen: string;
+}
+
 /**
  * Memory store interface — implementation can use SQLite, Postgres, etc.
  */
@@ -48,6 +57,12 @@ export interface IMemoryStore {
    * @param request Memory write request with task execution details
    */
   writeMemoryAfterTask(request: MemoryWriteRequest): Promise<void>;
+
+  writeLongTermMemory(request: LongTermMemoryWriteRequest): Promise<LongTermMemory>;
+
+  readLongTermMemory(workspaceId: string, minConfidence?: number): Promise<LongTermMemory[]>;
+
+  updateMemoryConfidence(id: string, newObservation: string): Promise<void>;
 
   /**
    * Clean up expired memories (TTL > 7 days)

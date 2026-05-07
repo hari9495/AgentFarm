@@ -13,7 +13,6 @@ export const TESTER_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = [
     'workspace_cleanup',
     'workspace_diff',
     'workspace_memory_read',
-    // Tier 3: Analysis only (no refactoring)
     'workspace_find_references',
     'workspace_go_to_definition',
     'workspace_hover_type',
@@ -21,27 +20,20 @@ export const TESTER_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = [
     'workspace_code_coverage',
     'workspace_complexity_metrics',
     'workspace_security_scan',
-    // Tier 4: Test impact only
     'workspace_test_impact_analysis',
-    // Tier 5: Search and package lookup only
     'workspace_search_docs',
     'workspace_package_lookup',
-    // Tier 6: Language adapters (info only)
     'workspace_language_adapter_python',
     'workspace_language_adapter_java',
     'workspace_language_adapter_go',
     'workspace_language_adapter_csharp',
-    // Tier 7: Impact reporting only
     'workspace_change_impact_report',
-    // Tier 8: Read-only intelligence
     'workspace_git_blame',
     'workspace_outline_symbols',
-    // Tier 9: Read-only pilot intelligence
     'workspace_security_fix_suggest',
     'workspace_pr_review_prepare',
     'workspace_dependency_upgrade_plan',
     'workspace_policy_preflight',
-    // Tier 10: Read-only code intelligence and observability
     'workspace_connector_test',
     'workspace_explain_code',
     'workspace_refactor_plan',
@@ -50,6 +42,24 @@ export const TESTER_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = [
     'workspace_approval_status',
     'workspace_audit_export',
 ];
+
+export const TESTER_ROLE_BLOCKED_ACTIONS = [
+    'merge_pr',
+    'git_push',
+    'code_edit_patch',
+    'workspace_bulk_refactor',
+    'workspace_browser_open',
+    'workspace_app_launch',
+    'run_shell_command',
+] as const;
+
+export const TESTER_ROLE_HIGH_RISK_ACTIONS = [
+    'merge_pr',
+    'git_push',
+    'run_shell_command',
+    'workspace_browser_open',
+    'workspace_app_launch',
+] as const;
 
 export const TESTER_ROLE_PROFILE_ALIASES = new Set([
     'tester',

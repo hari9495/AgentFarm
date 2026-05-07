@@ -26,6 +26,8 @@ type ApprovalRecord = {
     botId: string;
     taskId: string;
     actionId: string;
+    llmProvider?: string;
+    llmModel?: string;
     riskLevel: RiskLevel;
     actionSummary: string;
     requestedBy: string;
@@ -58,6 +60,8 @@ type ApprovalRepo = {
         requestedBy: string;
         policyPackVersion: string;
         escalationTimeoutSeconds: number;
+        llmProvider?: string;
+        llmModel?: string;
     }): Promise<ApprovalRecord>;
     listEscalationCandidates(input: {
         tenantId: string;
@@ -89,6 +93,11 @@ type ApprovalRepo = {
         workspaceId: string;
         botId: string;
     }): Promise<string | null>;
+    findActionTypeByActionId(input: {
+        tenantId: string;
+        workspaceId: string;
+        actionId: string;
+    }): Promise<string | null>;
 };
 
 type DecisionWebhookNotifier = (input: {
@@ -113,6 +122,7 @@ type RegisterApprovalRoutesOptions = {
     serviceAuthToken?: string;
     runtimeDecisionToken?: string;
     decisionWebhookNotifier?: DecisionWebhookNotifier;
+    qualitySignalNotifier?: QualitySignalNotifier;
     evidenceReader?: EvidenceReader;
 };
 
@@ -127,7 +137,25 @@ type IntakeBody = {
     requested_by?: string;
     policy_pack_version?: string;
     escalation_timeout_seconds?: number;
+    llm_provider?: string;
+    llm_model?: string;
 };
+
+type QualitySignalNotifier = (input: {
+    runtimeEndpoint: string;
+    runtimeToken: string | null;
+    provider: string;
+    model: string;
+    actionType: string;
+    signal: 'action_approved' | 'action_rejected' | 'action_escalated';
+    reason: string | null;
+    taskId: string;
+    correlationId: string;
+}) => Promise<{
+    ok: boolean;
+    statusCode: number;
+    errorMessage?: string;
+}>;
 
 type EscalateBody = {
     workspace_id?: string;
@@ -383,6 +411,24 @@ const immutableFieldsMatch = (existing: ApprovalRecord, incoming: {
         && existing.escalationTimeoutSeconds === incoming.escalationTimeoutSeconds;
 };
 
+const fetchApprovalLlmMetadata = async (
+    prisma: Awaited<ReturnType<typeof getPrisma>>,
+    approvalId: string,
+): Promise<{ llmProvider?: string; llmModel?: string }> => {
+    const rows = await prisma.$queryRaw<Array<{ llmProvider: string | null; llmModel: string | null }>>`
+        SELECT "llmProvider", "llmModel"
+        FROM "Approval"
+        WHERE id = ${approvalId}
+        LIMIT 1
+    `;
+    const row = rows[0];
+
+    return {
+        llmProvider: row?.llmProvider ?? undefined,
+        llmModel: row?.llmModel ?? undefined,
+    };
+};
+
 const defaultRepo: ApprovalRepo = {
     async findById(input) {
         const prisma = await getPrisma();
@@ -405,6 +451,7 @@ const defaultRepo: ApprovalRepo = {
             botId: approval.botId,
             taskId: approval.taskId,
             actionId: approval.actionId,
+            ...(await fetchApprovalLlmMetadata(prisma, approval.id)),
             riskLevel: approval.riskLevel as RiskLevel,
             actionSummary: approval.actionSummary,
             requestedBy: approval.requestedBy,
@@ -435,6 +482,7 @@ const defaultRepo: ApprovalRepo = {
             botId: approval.botId,
             taskId: approval.taskId,
             actionId: approval.actionId,
+            ...(await fetchApprovalLlmMetadata(prisma, approval.id)),
             riskLevel: approval.riskLevel as RiskLevel,
             actionSummary: approval.actionSummary,
             requestedBy: approval.requestedBy,
@@ -462,6 +510,14 @@ const defaultRepo: ApprovalRepo = {
                 decision: 'pending',
             },
         });
+        if (input.llmProvider || input.llmModel) {
+            await prisma.$executeRaw`
+                UPDATE "Approval"
+                SET "llmProvider" = ${input.llmProvider ?? null},
+                    "llmModel" = ${input.llmModel ?? null}
+                WHERE id = ${created.id}
+            `;
+        }
         return {
             id: created.id,
             tenantId: created.tenantId,
@@ -469,6 +525,8 @@ const defaultRepo: ApprovalRepo = {
             botId: created.botId,
             taskId: created.taskId,
             actionId: created.actionId,
+            llmProvider: input.llmProvider,
+            llmModel: input.llmModel,
             riskLevel: created.riskLevel as RiskLevel,
             actionSummary: created.actionSummary,
             requestedBy: created.requestedBy,
@@ -565,6 +623,21 @@ const defaultRepo: ApprovalRepo = {
 
         return runtime?.endpoint ?? null;
     },
+    async findActionTypeByActionId(input) {
+        const prisma = await getPrisma();
+        const action = await prisma.actionRecord.findFirst({
+            where: {
+                id: input.actionId,
+                tenantId: input.tenantId,
+                workspaceId: input.workspaceId,
+            },
+            select: {
+                actionType: true,
+            },
+        });
+
+        return action?.actionType ?? null;
+    },
 };
 
 const defaultDecisionWebhookNotifier: DecisionWebhookNotifier = async (input) => {
@@ -582,6 +655,53 @@ const defaultDecisionWebhookNotifier: DecisionWebhookNotifier = async (input) =>
                 reason: input.reason,
                 actor: input.actor,
                 selected_option_id: input.selectedOptionId,
+            }),
+            signal: AbortSignal.timeout(4_000),
+        });
+
+        let errorMessage: string | undefined;
+        if (!response.ok) {
+            try {
+                const body = await response.json() as { message?: string; error?: string };
+                errorMessage = body.message ?? body.error;
+            } catch {
+                errorMessage = undefined;
+            }
+        }
+
+        return {
+            ok: response.ok,
+            statusCode: response.status,
+            errorMessage,
+        };
+    } catch (err: unknown) {
+        return {
+            ok: false,
+            statusCode: 0,
+            errorMessage: err instanceof Error ? err.message : String(err),
+        };
+    }
+};
+
+const defaultQualitySignalNotifier: QualitySignalNotifier = async (input) => {
+    try {
+        const url = new URL('/runtime/quality/signals', input.runtimeEndpoint).toString();
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'content-type': 'application/json',
+                ...(input.runtimeToken ? { 'x-runtime-decision-token': input.runtimeToken } : {}),
+            },
+            body: JSON.stringify({
+                provider: input.provider,
+                model: input.model,
+                action_type: input.actionType,
+                signal: input.signal,
+                weight: 1,
+                source: 'user_feedback',
+                reason: input.reason,
+                task_id: input.taskId,
+                correlation_id: input.correlationId,
             }),
             signal: AbortSignal.timeout(4_000),
         });
@@ -678,6 +798,7 @@ export const registerApprovalRoutes = async (
     const approvalBatcher = options.approvalBatcher ?? createInMemoryApprovalBatcher();
     const now = options.now ?? (() => Date.now());
     const decisionWebhookNotifier = options.decisionWebhookNotifier ?? defaultDecisionWebhookNotifier;
+    const qualitySignalNotifier = options.qualitySignalNotifier ?? defaultQualitySignalNotifier;
     const evidenceReader = options.evidenceReader ?? defaultEvidenceReader;
     const serviceAuthToken =
         options.serviceAuthToken
@@ -801,6 +922,8 @@ export const registerApprovalRoutes = async (
             requestedBy,
             policyPackVersion,
             escalationTimeoutSeconds,
+            llmProvider: request.body?.llm_provider?.trim() || undefined,
+            llmModel: request.body?.llm_model?.trim() || undefined,
         });
 
         const approvalPacket = parseApprovalPacket(created.actionSummary);
@@ -972,6 +1095,39 @@ export const registerApprovalRoutes = async (
                     severity: 'warn',
                 });
             }
+
+            if (approval.llmProvider && approval.llmModel) {
+                const actionType = await repo.findActionTypeByActionId({
+                    tenantId: approval.tenantId,
+                    workspaceId: approval.workspaceId,
+                    actionId: approval.actionId,
+                });
+
+                if (actionType) {
+                    const qualitySignal = await qualitySignalNotifier({
+                        runtimeEndpoint,
+                        runtimeToken: runtimeDecisionToken,
+                        provider: approval.llmProvider,
+                        model: approval.llmModel,
+                        actionType,
+                        signal: decision === 'approved' ? 'action_approved' : decision === 'rejected' ? 'action_rejected' : 'action_escalated',
+                        reason,
+                        taskId: approval.taskId,
+                        correlationId: `approval_quality_${approval.id}_${Math.floor(now())}`,
+                    });
+
+                    if (!qualitySignal.ok) {
+                        await repo.createAuditEvent({
+                            tenantId: approval.tenantId,
+                            workspaceId: approval.workspaceId,
+                            botId: approval.botId,
+                            summary: `Quality signal webhook failed for approval ${approval.id} (status ${qualitySignal.statusCode}).`,
+                            correlationId: `approval_quality_webhook_${approval.id}_${Math.floor(now())}`,
+                            severity: 'warn',
+                        });
+                    }
+                }
+            }
         }
 
         return {
@@ -1039,6 +1195,15 @@ export const registerApprovalRoutes = async (
             workspaceId,
             taskId,
             actions,
+        });
+
+        await repo.createAuditEvent({
+            tenantId: session.tenantId,
+            workspaceId,
+            botId: 'system:approval-batcher',
+            summary: `Approval batch ${batch.batchId} created with ${batch.totalCount} action(s).`,
+            correlationId: `approval_batch_create_${batch.batchId}`,
+            severity: 'info',
         });
 
         return reply.code(201).send({ batch });
@@ -1116,6 +1281,15 @@ export const registerApprovalRoutes = async (
                 message: 'Approval batch not found in current scope.',
             });
         }
+
+        await repo.createAuditEvent({
+            tenantId: session.tenantId,
+            workspaceId,
+            botId: 'system:approval-batcher',
+            summary: `Approval batch ${updated.batchId} decided as ${decision} by ${session.userId}.`,
+            correlationId: `approval_batch_decision_${updated.batchId}`,
+            severity: decision === 'approve_all' ? 'info' : 'warn',
+        });
 
         return {
             batch: updated,
