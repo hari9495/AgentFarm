@@ -205,3 +205,12 @@ Recovery:
 
 ## Current Implementation Pointer (2026-05-07)
 1. For the latest built-state summary and file map, see planning/build-snapshot-2026-05-07.md.
+
+## Audit Replay Persistence Update (2026-05-08)
+1. Runtime observed browser/desktop actions now persist into Prisma `AgentSession` and `BrowserActionEvent` on the live action path.
+2. Dashboard session replay API now reads Prisma first (`AgentSession` with ordered `BrowserActionEvent` rows) for evidence timeline rendering.
+3. Historical legacy rows can be backfilled into Prisma with:
+```powershell
+pnpm db:backfill:replay
+```
+4. Replay endpoint is now Prisma-only; legacy sessions must be backfilled before strict replay mode can return data.

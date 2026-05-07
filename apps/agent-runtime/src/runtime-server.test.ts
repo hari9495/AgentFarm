@@ -57,6 +57,26 @@ const waitForValue = async <T>(
     return getValue();
 };
 
+const waitForAsyncValue = async <T>(
+    getValue: () => Promise<T | undefined>,
+    options: { timeoutMs?: number; pollMs?: number } = {},
+): Promise<T | undefined> => {
+    const timeoutMs = options.timeoutMs ?? 1_200;
+    const pollMs = options.pollMs ?? 20;
+    const startedAt = Date.now();
+
+    while (Date.now() - startedAt < timeoutMs) {
+        const value = await getValue();
+        if (value !== undefined) {
+            return value;
+        }
+
+        await new Promise<void>((resolve) => setTimeout(resolve, pollMs));
+    }
+
+    return getValue();
+};
+
 test('startup starts worker loop and health/ready is true when dependencies are reachable', async () => {
     const app = buildRuntimeServer({
         env: baseEnv(),
@@ -861,6 +881,7 @@ test('runtime observability replay endpoint returns dom hash, network summaries,
 
         await executeObservedAction(
             {
+                tenantId: 'ten_deadbeef',
                 agentId: 'bot_test',
                 workspaceId: 'ws_test',
                 taskId: 'task-observe-1',
@@ -1861,22 +1882,27 @@ test('approval batch route groups pending approvals by risk and action type', as
             assert.equal(intakeRes.statusCode, 202);
         }
 
-        await new Promise<void>((resolve) => setTimeout(resolve, 70));
+        const mergeBatch = await waitForAsyncValue(async () => {
+            const batchRes = await app.inject({ method: 'GET', url: '/decision/batches' });
+            if (batchRes.statusCode !== 200) {
+                return undefined;
+            }
 
-        const batchRes = await app.inject({ method: 'GET', url: '/decision/batches' });
-        assert.equal(batchRes.statusCode, 200);
-        const body = batchRes.json() as {
-            pending_batches: Array<{
-                batch_id: string;
-                batch_key: string;
-                risk_level: string;
-                action_type: string;
-                pending_count: number;
-                task_ids: string[];
-            }>;
-        };
+            const body = batchRes.json() as {
+                pending_batches: Array<{
+                    batch_id: string;
+                    batch_key: string;
+                    risk_level: string;
+                    action_type: string;
+                    pending_count: number;
+                    task_ids: string[];
+                }>;
+            };
 
-        const mergeBatch = body.pending_batches.find((entry) => entry.action_type === 'merge_release' && entry.risk_level === 'high');
+            const pendingMergeBatch = body.pending_batches.find((entry) => entry.action_type === 'merge_release' && entry.risk_level === 'high');
+            return pendingMergeBatch?.pending_count === 2 ? pendingMergeBatch : undefined;
+        }, { timeoutMs: 2_000, pollMs: 25 });
+
         assert.ok(mergeBatch);
         assert.equal(mergeBatch?.pending_count, 2);
         assert.ok((mergeBatch?.task_ids ?? []).includes('batch-group-1'));
@@ -1914,14 +1940,19 @@ test('approval batch decision resolves all tasks in the selected batch', async (
             assert.equal(intakeRes.statusCode, 202);
         }
 
-        await new Promise<void>((resolve) => setTimeout(resolve, 70));
+        const mergeBatch = await waitForAsyncValue(async () => {
+            const batchRes = await app.inject({ method: 'GET', url: '/decision/batches' });
+            if (batchRes.statusCode !== 200) {
+                return undefined;
+            }
 
-        const batchRes = await app.inject({ method: 'GET', url: '/decision/batches' });
-        assert.equal(batchRes.statusCode, 200);
-        const batchBody = batchRes.json() as {
-            pending_batches: Array<{ batch_id: string; action_type: string; risk_level: string; pending_count: number }>;
-        };
-        const mergeBatch = batchBody.pending_batches.find((entry) => entry.action_type === 'merge_release' && entry.risk_level === 'high');
+            const batchBody = batchRes.json() as {
+                pending_batches: Array<{ batch_id: string; action_type: string; risk_level: string; pending_count: number }>;
+            };
+            const pendingMergeBatch = batchBody.pending_batches.find((entry) => entry.action_type === 'merge_release' && entry.risk_level === 'high');
+            return pendingMergeBatch?.pending_count === 2 ? pendingMergeBatch : undefined;
+        }, { timeoutMs: 2_000, pollMs: 25 });
+
         assert.ok(mergeBatch);
 
         const decisionRes = await app.inject({
@@ -4015,9 +4046,10 @@ test('task execution record captures llm token usage when llmDecisionResolver is
         });
         assert.equal(intakeRes.statusCode, 202);
 
-        await new Promise<void>((resolve) => setTimeout(resolve, 70));
-
-        const written = records.find((record) => record['taskId'] === 'llm-metadata-1');
+        const written = await waitForValue(
+            () => records.find((record) => record['taskId'] === 'llm-metadata-1'),
+            { timeoutMs: 2_000, pollMs: 25 },
+        );
         assert.ok(written, 'task execution record should be written');
         assert.equal(written?.['modelProvider'], 'openai');
         assert.equal(written?.['promptTokens'], 90);
@@ -4068,9 +4100,10 @@ test('task execution record falls back to provider metadata with null token usag
         });
         assert.equal(intakeRes.statusCode, 202);
 
-        await new Promise<void>((resolve) => setTimeout(resolve, 70));
-
-        const written = records.find((record) => record['taskId'] === 'llm-metadata-fallback-1');
+        const written = await waitForValue(
+            () => records.find((record) => record['taskId'] === 'llm-metadata-fallback-1'),
+            { timeoutMs: 2_000, pollMs: 25 },
+        );
         assert.ok(written, 'task execution record should be written');
         assert.equal(written?.['modelProvider'], 'openai');
         assert.equal(written?.['promptTokens'], null);

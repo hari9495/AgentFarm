@@ -386,6 +386,25 @@ test('processDeveloperTask merges payloadOverrides into executionPayload', async
     assert.equal(result.payloadOverrideSource, 'llm_generated');
 });
 
+test('processDeveloperTask injects audit ancestry when runtime context is present', async () => {
+    const result = await processDeveloperTask(taskEnvelope({
+        action_type: 'workspace_browser_open',
+        summary: 'Open the website workspace in the browser',
+        target: 'https://example.com',
+        tenantId: 'ten_deadbeef',
+        workspaceId: 'ws_runtime',
+        botId: 'bot_runtime',
+        roleKey: 'developer',
+    }));
+
+    assert.equal(result.status, 'approval_required');
+    assert.match(String(result.executionPayload['audit_agent_instance_id']), /^agt_deadbeef_developer_[a-f0-9]{4}$/);
+    assert.match(String(result.executionPayload['session_id']), /^ses_agt_[a-f0-9]{4}_\d{8}T\d{6}_[a-f0-9]{4}$/);
+    assert.match(String(result.executionPayload['recording_id']), /^rec_ses_[a-f0-9]{4}$/);
+    assert.equal(result.executionPayload['audit_tenant_id'], 'ten_deadbeef');
+    assert.equal(result.executionPayload['audit_role'], 'developer');
+});
+
 test('processDeveloperTask falls back to heuristic decision when llmDecisionResolver throws', async () => {
     const result = await processDeveloperTask(taskEnvelope({
         action_type: 'read_task',

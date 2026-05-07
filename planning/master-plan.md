@@ -25,12 +25,15 @@ Planning-first rule: no feature development starts until architecture baseline a
 - Tier 10 Connector Hardening + Code Intelligence + Observability shipped (2026-05-01): workspace_connector_test, workspace_pr_auto_assign, workspace_ci_watch, workspace_explain_code, workspace_add_docstring, workspace_refactor_plan, workspace_semantic_search, workspace_diff_preview, workspace_approval_status, workspace_audit_export. 190/190 tests passing.
 - **Skill Marketplace shipped (2026-05-05)**: 21 developer-agent skills cataloged, all 21 execution handlers implemented in skill-execution-engine.ts, POST /runtime/marketplace/invoke endpoint, dashboard Skill Marketplace Panel with install and invoke flows. **299 tests passing, 0 failing.** ADR-015 approved.
 - **Six-priority spec-alignment wave shipped (2026-05-07)**: long-term memory model + hooks, proactive CI/CVE signals, approval batching end-to-end, tester policy hardening, quality feedback loop into provider routing, and handoff protocol normalization. See planning/build-snapshot-2026-05-07.md.
+- **Question escalation + memory continuation shipped (2026-05-07)**: question creation/answer/pending/sweep routes, webhook answer handling, and code-review memory ingestion are wired in api-gateway and memory-service.
+- **Browser/Desktop evidence foundation shipped (2026-05-08)**: Azure Blob screenshot uploader, browser-action upload wrapper scaffold, desktop accessibility-tree capture, runtime audit integration scaffold, and dashboard session replay/evidence viewer are in repo. Targeted package tests/typechecks pass; repo-wide `pnpm quality:gate` is currently blocked by two failing question-route tests in api-gateway.
 3. Pilot (Weeks 21-30) � **ACTIVE**
 - Run with 1-2 customers per operations/company-access-rollout.md.
 - Track quality, safety, and business value weekly.
 - Harden production connector SDK integrations.
 - Implement autonomous coding loop chaining.
 - Convert pilot feedback into near-term roadmap items.
+- Close the current API gateway question-route regression and finish runtime execution wiring for screenshot upload plus BrowserActionEvent persistence.
 4. Scale (Weeks 31-42)
 - Add QA Agent and Manager Agent (each requires dedicated ADR and safety gate).
 - Multi-agent orchestration with shared approval queue.
@@ -85,7 +88,7 @@ Rule: development starts only after all architecture gates are approved.
 6. Gap matrix (current vs desired): planning/agentfarm-gap-matrix-current-vs-desired.md
 7. Two-sprint backlog (safety and orchestration): planning/agentfarm-two-sprint-backlog-safety-and-orchestration.md
 8. Low-risk migration plan (boundary-safe): planning/agentfarm-low-risk-migration-plan.md
-9. Six-priority implementation snapshot (2026-05-07): planning/build-snapshot-2026-05-07.md
+9. Six-priority implementation snapshot with 2026-05-08 continuation updates: planning/build-snapshot-2026-05-07.md
 ## Non-Negotiable Release Gates
 1. Identity Realism = 5
 2. Role Fidelity and Task Quality = 5
@@ -138,3 +141,6 @@ Rule: development starts only after all architecture gates are approved.
 
 <!-- doc-sync: 2026-05-07 six-priority-closure -->
 > Last synchronized: 2026-05-07 (Six-priority implementation closure and validation snapshot).
+
+<!-- doc-sync: 2026-05-08 observability-and-question-continuation -->
+> Last synchronized: 2026-05-08 (Question/memory continuation plus browser-desktop evidence foundation, with current quality-gate blocker recorded).

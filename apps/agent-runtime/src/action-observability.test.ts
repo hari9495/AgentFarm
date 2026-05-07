@@ -23,10 +23,11 @@ test('executeObservedAction persists dom hash, network summaries, and evidence b
     resetObservabilityForTests();
 
     try {
-        const sessionId = `session-${Date.now()}`;
+        const sessionId = generateSessionId(generateAgentInstanceId('ten_deadbeef', 'developer'));
 
         await executeObservedAction(
             {
+                tenantId: 'ten_deadbeef',
                 agentId: 'bot_1',
                 workspaceId: 'ws_1',
                 taskId: 'task_1',
@@ -54,6 +55,7 @@ test('executeObservedAction persists dom hash, network summaries, and evidence b
 
         const event = events[0];
         assert.equal(event.actionType, 'workspace_browser_open');
+        assert.match(event.actionId, /^act_ses_[a-z0-9]{4}_000$/);
         assert.equal(event.success, true);
         assert.equal(event.verified, true);
         assert.equal(event.domSnapshotBefore, undefined);
@@ -84,10 +86,11 @@ test('executeObservedAction keeps inline dom snapshots when checkpoint is not re
     resetObservabilityForTests();
 
     try {
-        const sessionId = `session-${Date.now()}-inline`;
+        const sessionId = generateSessionId(generateAgentInstanceId('ten_deadbeef', 'developer'));
 
         await executeObservedAction(
             {
+                tenantId: 'ten_deadbeef',
                 agentId: 'bot_2',
                 workspaceId: 'ws_2',
                 taskId: 'task_2',

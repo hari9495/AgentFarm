@@ -11,6 +11,7 @@ that every engineer uses from day one. This is the source of truth for "where do
 
 ## Latest Build Snapshot
 - Current cross-service implementation closure reference: planning/build-snapshot-2026-05-07.md
+- Current continuation and blocker reference: planning/session-handoff-2026-05-07-d-drive.md
 
 ---
 
@@ -28,17 +29,23 @@ agentfarm/
 │   └── website/                 # Next.js 14 — public/tenant-facing web
 │
 ├── services/                    # Internal domain services (NestJS/Fastify)
+│   ├── agent-question-service/  # Human-in-the-loop question lifecycle and timeout sweep helpers
+│   ├── agent-observability/     # Browser/desktop evidence capture primitives and audit wrappers
 │   ├── identity-service/        # Tenant, workspace, user, plan management
 │   ├── provisioning-service/    # Azure VM lifecycle and bootstrap (11-step state machine)
 │   ├── approval-service/        # Approval routing, records, kill-switch, multi-stakeholder
 │   ├── policy-engine/           # OPA-based risk classification sidecar
 │   ├── connector-gateway/       # Connector auth, token lifecycle, action dispatch,
 │   │                            # mTLS cert verifier, PII-strip middleware
+│   ├── audit-storage/           # Azure Blob-backed evidence artifact storage and signed URL helpers
+│   ├── memory-service/          # Short-term and long-term memory read/write service layer
 │   ├── evidence-service/        # Audit record and evidence writes, HNSW vector index,
 │   │                            # governance KPI calculator
+│   ├── compliance-export/       # Compliance evidence export packaging
 │   ├── notification-service/    # Approval notification gateway: Telegram, Slack, Discord,
 │   │                            # Webhook, Voice (VoxCPM), dispatchApprovalAlert(),
 │   │                            # per-trigger allowlists, 31 tests
+│   ├── retention-cleanup/       # Retention enforcement and cleanup routines
 │   └── meeting-agent/           # AI-facilitated meeting lifecycle, voice pipeline (STT/TTS)
 │
 ├── packages/                    # Shared internal libraries (not deployed independently)
@@ -163,6 +170,30 @@ agentfarm/
 - Write policy: Evidence is append-only. No update or delete operations allowed.
 - Retention tag: Set at write time. Active: 12 months. Archive: 24 months.
 
+### services/audit-storage
+- Plane: Evidence plane.
+- Domain: Blob-backed storage for screenshots and other audit artifacts.
+- Key modules: `azure-blob-storage.ts`, `screenshot-uploader.ts`.
+- Current role: uploads browser evidence artifacts and returns signed URLs for dashboard/session replay consumption.
+- Workspace note: package metadata is source-first so fresh workspace installs resolve without a prior build.
+
+### services/agent-observability
+- Plane: Runtime/evidence boundary.
+- Domain: Browser and desktop action capture, assertion helpers, and audit-log writing.
+- Key modules: `browser-agent-wrapper.ts`, `browser-action-with-upload.ts`, `desktop-agent-wrapper.py`, `audit-log-writer.ts`, `diff-verifier.ts`.
+- Current role: provides browser action executors, desktop sidecar evidence capture, and accessibility-tree collection for Windows/Linux.
+
+### services/memory-service
+- Plane: Evidence/control-plane bridge.
+- Domain: Short-term task memory and long-term learned-pattern storage.
+- Key modules: `memory-store.ts`, `memory-types.ts`.
+- Current role: injects memory into runtime decisions, persists post-task memory, and records code-review learned patterns.
+
+### services/agent-question-service
+- Plane: Control plane.
+- Domain: Human follow-up questions raised by agents and resolved through dashboard/webhook paths.
+- Current role: create, answer, list pending, and sweep expired questions for orchestrator/runtime workflows.
+
 ### services/notification-service
 - Plane: Control plane.
 - Domain: Approval-scoped notification dispatch gateway.
@@ -217,6 +248,14 @@ agentfarm/
 - Trace context propagation: W3C TraceContext headers on all inter-service HTTP calls.
 - Log format: JSON structured log with trace_id, span_id, service, level, message, timestamp.
 - Metrics: Prometheus counters and histograms registered per service for key operations.
+
+---
+
+## Current Documentation Notes (2026-05-08)
+
+1. The browser/desktop evidence foundation is present in repo via `services/audit-storage`, `services/agent-observability`, dashboard session replay pages, and `apps/agent-runtime/src/runtime-audit-integration.ts`.
+2. The question and learned-pattern continuation work is present in `apps/api-gateway/src/routes/questions.ts`, `apps/api-gateway/src/routes/webhooks.ts`, and `services/memory-service`.
+3. Repo-wide `pnpm quality:gate` is currently blocked by two failing tests in `apps/api-gateway/src/routes/questions.test.ts`; do not treat the entire workspace as green until that regression is fixed.
 
 ---
 

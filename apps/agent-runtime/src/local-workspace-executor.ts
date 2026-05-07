@@ -1980,13 +1980,21 @@ const executeTier11ObservedAction = async <T>(input: {
     const workspaceId = typeof input.payload['workspace_id'] === 'string' && input.payload['workspace_id'].trim()
         ? input.payload['workspace_id'].trim()
         : resolveObservabilitySessionId(input.taskId, input.payload);
+    const agentId = typeof input.payload['audit_agent_instance_id'] === 'string' && input.payload['audit_agent_instance_id'].trim()
+        ? input.payload['audit_agent_instance_id'].trim()
+        : input.botId;
+    const role = typeof input.payload['audit_role'] === 'string' && input.payload['audit_role'].trim()
+        ? input.payload['audit_role'].trim()
+        : 'developer';
 
     return executeObservedAction(
         {
-            agentId: input.botId,
+            tenantId: input.tenantId,
+            agentId,
             workspaceId,
             taskId: input.taskId,
             sessionId: resolveObservabilitySessionId(input.taskId, input.payload),
+            role,
             type: input.category,
             action: input.actionType,
             target: input.target,

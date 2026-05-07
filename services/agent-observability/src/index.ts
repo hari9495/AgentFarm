@@ -20,7 +20,7 @@ export type {
 } from './browser-agent-wrapper.js';
 export { BrowserActionExecutor } from './browser-agent-wrapper.js';
 
-export type { BrowserActionWithUploadOptions } from './browser-action-with-upload.js';
+export type { BrowserActionWithUploadOptions, BrowserActionUploadResult } from './browser-action-with-upload.js';
 export { BrowserActionWithUpload } from './browser-action-with-upload.js';
 
 export type {

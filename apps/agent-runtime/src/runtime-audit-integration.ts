@@ -1,19 +1,12 @@
-/**
- * Runtime audit integration layer for browser and desktop actions.
- * Bridges Gap 2: Documents integration patterns for ScreenshotUploader and audit services.
- *
- * This module provides reference implementations for:
- * 1. Uploading action screenshots to Azure Blob Storage (Gap 1)
- * 2. Capturing accessibility trees (Gap 3)
- * 3. Persisting audit events to Prisma
- *
- * Used by: processApprovedTask → executeTaskWithRetries → executeLowRiskAction
- * (Once browser/desktop actions are properly routed through the execution engine)
- *
- * Frozen 2026-05-07 — Completes observability gap chain.
- */
-
+import { createHash } from 'node:crypto';
 import type { PrismaClient } from '@prisma/client';
+import {
+    generateAgentInstanceId,
+    generateRecordingId,
+    generateScreenshotId,
+    generateSessionId,
+    recordingPath,
+} from '@agentfarm/shared-types';
 
 export interface RuntimeAuditConfig {
     azureStorageAccountUrl: string;
@@ -26,19 +19,159 @@ export interface AuditContext {
     workspaceId: string;
     sessionId: string;
     taskId: string;
+    role: string;
+    recordingId: string;
+    recordingUrl: string;
 }
 
 export interface BrowserActionAuditPayload {
     actionId: string;
+    sequence: number;
     actionType: 'click' | 'fill' | 'navigate' | 'select' | 'type' | string;
     targetSelector?: string;
+    targetText?: string;
+    inputValue?: string;
+    pageUrl?: string;
     success: boolean;
+    screenshotBeforeId?: string;
+    screenshotAfterId?: string;
     screenshotBeforeUrl?: string;
     screenshotAfterUrl?: string;
-    networkLog?: Record<string, unknown>;
+    networkLog?: unknown[];
+    durationMs?: number;
     domSnapshotHashBefore?: string;
     domSnapshotHashAfter?: string;
     assertions?: Record<string, unknown>;
+    errorMessage?: string;
+    failureClass?: string;
+    timestamp?: Date;
+}
+
+type AuditPrismaClient = PrismaClient & {
+    agentSession: {
+        upsert: (args: Record<string, unknown>) => Promise<unknown>;
+        update: (args: Record<string, unknown>) => Promise<unknown>;
+    };
+    browserActionEvent: {
+        create: (args: Record<string, unknown>) => Promise<unknown>;
+    };
+};
+
+const BROWSER_ACTION_TYPES = new Set(['click', 'fill', 'navigate', 'select', 'submit', 'key_press', 'screenshot', 'hover', 'scroll', 'wait']);
+
+const sanitizeRole = (role: string): string => role.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+
+const normalizeActionType = (value: string): 'click' | 'fill' | 'navigate' | 'select' | 'submit' | 'key_press' | 'screenshot' | 'hover' | 'scroll' | 'wait' => {
+    if (BROWSER_ACTION_TYPES.has(value)) {
+        return value as 'click' | 'fill' | 'navigate' | 'select' | 'submit' | 'key_press' | 'screenshot' | 'hover' | 'scroll' | 'wait';
+    }
+
+    if (value.includes('navigate') || value.includes('browser_open')) {
+        return 'navigate';
+    }
+    if (value.includes('fill') || value.includes('type')) {
+        return 'fill';
+    }
+    if (value.includes('select')) {
+        return 'select';
+    }
+    if (value.includes('submit')) {
+        return 'submit';
+    }
+    if (value.includes('hover')) {
+        return 'hover';
+    }
+    if (value.includes('scroll')) {
+        return 'scroll';
+    }
+    return 'click';
+};
+
+const toSignedBlobUrl = (path: string, env: NodeJS.ProcessEnv): string => {
+    const accountUrl = env.AGENT_OBSERVABILITY_BLOB_ACCOUNT_URL?.trim() ?? '';
+    const container = env.AGENT_OBSERVABILITY_BLOB_CONTAINER?.trim() ?? '';
+    const readSas = (env.AGENT_OBSERVABILITY_BLOB_READ_SAS_TOKEN ?? env.AGENT_OBSERVABILITY_BLOB_WRITE_SAS_TOKEN ?? '').trim().replace(/^\?/, '');
+
+    if (!accountUrl || !container) {
+        return path;
+    }
+
+    const base = `${accountUrl.replace(/\/+$/, '')}/${container}/${path.replace(/^\/+/, '')}`;
+    return readSas ? `${base}?${readSas}` : base;
+};
+
+export function buildRuntimeAuditContext(input: {
+    tenantId: string;
+    role: string;
+    taskId: string;
+    workspaceId: string;
+    sessionId?: string;
+    agentInstanceId?: string;
+    env?: NodeJS.ProcessEnv;
+}): AuditContext {
+    const agentId = input.agentInstanceId?.trim() || generateAgentInstanceId(input.tenantId, sanitizeRole(input.role));
+    const sessionId = input.sessionId?.trim() || generateSessionId(agentId);
+    const recordingId = generateRecordingId(sessionId);
+    const recordingUrl = toSignedBlobUrl(recordingPath(input.tenantId, agentId, recordingId), input.env ?? process.env);
+
+    return {
+        tenantId: input.tenantId,
+        agentId,
+        workspaceId: input.workspaceId,
+        sessionId,
+        taskId: input.taskId,
+        role: sanitizeRole(input.role),
+        recordingId,
+        recordingUrl,
+    };
+}
+
+export async function ensureAgentSession(
+    prisma: PrismaClient,
+    context: AuditContext,
+): Promise<void> {
+    const client = prisma as AuditPrismaClient;
+    await client.agentSession.upsert({
+        where: { id: context.sessionId },
+        create: {
+            id: context.sessionId,
+            tenantId: context.tenantId,
+            agentInstanceId: context.agentId,
+            taskId: context.taskId,
+            role: context.role,
+            recordingId: context.recordingId,
+            recordingUrl: context.recordingUrl,
+            startedAt: new Date(),
+            actionCount: 0,
+            status: 'running',
+        },
+        update: {
+            tenantId: context.tenantId,
+            agentInstanceId: context.agentId,
+            taskId: context.taskId,
+            role: context.role,
+            recordingId: context.recordingId,
+            recordingUrl: context.recordingUrl,
+            status: 'running',
+        },
+    });
+}
+
+export async function completeAgentSession(
+    prisma: PrismaClient,
+    context: AuditContext,
+    input: { status: 'completed' | 'failed' | 'error'; actionCount: number; failureReason?: string },
+): Promise<void> {
+    const client = prisma as AuditPrismaClient;
+    await client.agentSession.update({
+        where: { id: context.sessionId },
+        data: {
+            endedAt: new Date(),
+            actionCount: input.actionCount,
+            status: input.status,
+            failureReason: input.failureReason,
+        },
+    });
 }
 
 /**
@@ -89,19 +222,36 @@ export async function persistBrowserActionAudit(
     context: AuditContext,
     action: BrowserActionAuditPayload,
 ): Promise<void> {
-    // This is a documentation stub. The actual implementation will:
-    // 1. Collect all required fields (targetText, pageUrl, etc.) during execution
-    // 2. Call uploader.uploadActionScreenshots() to store images in Azure Blob
-    // 3. Generate signed URLs for screenshotBeforeUrl and screenshotAfterUrl
-    // 4. Create BrowserActionEvent record with all fields populated
-    //
-    // See: apps/agent-runtime/src/execution-engine.ts executeTaskWithRetries()
-    // for where this integration hook should be called.
     try {
-        console.log(
-            `[RuntimeAudit] Recording ${action.actionType} action ${action.actionId} for session ${context.sessionId}`,
-        );
-        // Implementation deferred: awaiting execution engine integration
+        const client = prisma as AuditPrismaClient;
+        await ensureAgentSession(prisma, context);
+        await client.browserActionEvent.create({
+            data: {
+                id: action.actionId,
+                sessionId: context.sessionId,
+                tenantId: context.tenantId,
+                agentInstanceId: context.agentId,
+                sequence: action.sequence,
+                actionType: normalizeActionType(action.actionType),
+                targetSelector: action.targetSelector ?? '',
+                targetText: action.targetText ?? action.targetSelector ?? '',
+                inputValue: action.inputValue ?? undefined,
+                pageUrl: action.pageUrl ?? '',
+                screenshotBeforeId: action.screenshotBeforeId ?? generateScreenshotId(action.actionId, 'before'),
+                screenshotAfterId: action.screenshotAfterId ?? generateScreenshotId(action.actionId, 'after'),
+                screenshotBeforeUrl: action.screenshotBeforeUrl ?? '',
+                screenshotAfterUrl: action.screenshotAfterUrl ?? '',
+                domSnapshotHashBefore: action.domSnapshotHashBefore ?? undefined,
+                domSnapshotHashAfter: action.domSnapshotHashAfter ?? undefined,
+                networkLog: action.networkLog ?? [],
+                durationMs: action.durationMs ?? 0,
+                success: action.success,
+                errorMessage: action.errorMessage ?? undefined,
+                failureClass: action.failureClass ?? undefined,
+                timestamp: action.timestamp ?? new Date(),
+                correctnessAssertion: action.assertions ?? undefined,
+            },
+        });
     } catch (err) {
         console.error(
             `[RuntimeAudit] Failed to persist browser action audit for action ${action.actionId}:`,
@@ -132,6 +282,31 @@ export async function validateAuditInfrastructure(
         valid: errors.length === 0,
         errors,
     };
+}
+
+export function buildAuditContextPayload(context: AuditContext): Record<string, unknown> {
+    return {
+        session_id: context.sessionId,
+        audit_session_id: context.sessionId,
+        audit_agent_instance_id: context.agentId,
+        audit_tenant_id: context.tenantId,
+        audit_role: context.role,
+        recording_id: context.recordingId,
+        recording_url: context.recordingUrl,
+    };
+}
+
+export function deriveSequenceFromActionId(actionId: string): number {
+    const match = actionId.match(/_(\d{3})$/);
+    return match ? Number.parseInt(match[1], 10) : 0;
+}
+
+export function hashDomSnapshot(snapshot?: string): string | undefined {
+    if (!snapshot) {
+        return undefined;
+    }
+
+    return createHash('sha256').update(snapshot).digest('hex');
 }
 
 /**

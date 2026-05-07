@@ -4,8 +4,8 @@
 Provide a concrete capability gap matrix mapped to existing AgentFarm apps, services, and shared packages.
 
 ## Baseline
-- Date: 2026-04-30
-- Inputs: architecture baseline, repo/service structure, sprint execution evidence, ADR-007, Tier 1/2 workspace action implementation
+- Date: 2026-05-08
+- Inputs: architecture baseline, repo/service structure, sprint execution evidence, ADR-007, Tier 1/2 workspace action implementation, planning/build-snapshot-2026-05-07.md, planning/session-handoff-2026-05-07-d-drive.md
 - Scope guard: MVP freeze remains active (Developer Agent + Jira/Teams/GitHub/company email)
 
 ## Legend
@@ -41,7 +41,7 @@ All 11 actions are covered by tests in `apps/agent-runtime/src/local-workspace-e
 | Provider cooldown classes and reason taxonomy | Auto fallback + health-score reordering live (ADR-007) | Standard failover classes (rate_limit, auth, billing_disable, timeout, provider_unavailable, unclassified) with cooldown persistence | Missing durable reason taxonomy and cooldown state storage | Medium | Contract + Behavior | agent-runtime, api-gateway | evidence-service | shared-types, observability |
 | Adapter registry for runtimes/connectors | Provider and connector paths are implemented, but adapter registration is mostly code-wired and static | Registry-driven adapter lifecycle (register/unregister/discover/health-check) surfaced in server and dashboard | Missing central adapter registry contract and management surface | Medium | Contract + Behavior | api-gateway, dashboard, orchestrator | connector-gateway | shared-types, connector-contracts |
 | Approval enforcement fidelity | Medium/high approvals required by policy design; runtime blocking contract needs stricter cross-service guarantee | Runtime cannot execute medium/high actions without signed approval artifact; kill-switch precedence enforced | Missing strict enforcement contract and denial reason propagation | High | Contract + Behavior | agent-runtime, api-gateway, dashboard | approval-service, policy-engine | shared-types |
-| Evidence completeness at attempt level | Evidence model is append-only and retention policy is defined | Every risky action includes full chain: proposed action -> policy decision -> approval decision -> execution result -> provider attempt details | Missing unified attempt-chain schema and linkage IDs | High | Contract + Observability | api-gateway, agent-runtime, dashboard | evidence-service, approval-service | shared-types, observability |
+| Evidence completeness at attempt level | Evidence model is append-only and retention policy is defined; BrowserActionEvent schema, dashboard session replay, evidence viewer, screenshot uploader, desktop accessibility-tree capture, and runtime audit scaffolding now exist | Every risky action includes full chain: proposed action -> policy decision -> approval decision -> execution result -> provider attempt details | Remaining gap is mandatory end-to-end wiring from execution-engine into screenshot upload, BrowserActionEvent persistence, approval linkage IDs, and provider-attempt joins | High | Contract + Observability | api-gateway, agent-runtime, dashboard | evidence-service, approval-service, audit-storage, agent-observability | shared-types, observability |
 | Connector execution gating | Connector auth state machine is frozen and implemented in API paths | Runtime blocks connector actions when connector state is token_expired/permission_invalid/revoked/disconnected | Missing strict runtime-side gating check at execution edge for all connectors | Medium | Behavior | agent-runtime, api-gateway | connector-gateway, policy-engine | connector-contracts, shared-types |
 | Policy explainability and auditability | Policy engine returns risk + reason; evidence freshness gates defined | Deterministic policy reason codes and policy pack version attached to each approval request and action record | Missing stable reason-code taxonomy and required fields in all records | Medium | Contract | api-gateway, dashboard | policy-engine, approval-service, evidence-service | shared-types |
 | Governance KPIs in operator UI | Quality gate reporting exists in operations docs/scripts | Live KPI surfaces: approval P95, risky-action audit completeness, budget block rate, fallback-chain degradation rate | Missing dedicated metrics wiring and dashboard views for governance SLOs | Medium | Observability | dashboard, api-gateway | approval-service, evidence-service | observability |
@@ -70,6 +70,10 @@ All 11 actions are covered by tests in `apps/agent-runtime/src/local-workspace-e
 <!-- doc-sync: 2026-05-06 full-pass-2 -->
 > Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
 
+<!-- doc-sync: 2026-05-08 observability-foundation -->
+> Last synchronized: 2026-05-08 (Evidence/session-replay foundation reflected; attempt-chain gap remains open pending execution-path wiring).
+
 
 ## Current Implementation Pointer (2026-05-07)
 1. For the latest built-state summary and file map, see planning/build-snapshot-2026-05-07.md.
+2. For the latest D-drive continuation details and current blocker notes, see planning/session-handoff-2026-05-07-d-drive.md.

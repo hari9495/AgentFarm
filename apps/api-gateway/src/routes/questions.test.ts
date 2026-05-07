@@ -3,14 +3,16 @@ import assert from 'node:assert/strict';
 import Fastify from 'fastify';
 import { registerQuestionRoutes } from './questions.js';
 import { PrismaClient } from '@prisma/client';
+import { InMemoryQuestionStore } from '@agentfarm/agent-question-service';
 
 process.env.DATABASE_URL ??= 'postgresql://agentfarm:agentfarm@localhost:5432/agentfarm';
 
 test('POST /questions creates and GET /questions lists pending questions', async () => {
     const app = Fastify({ logger: false });
     const prisma = new PrismaClient();
+    const questionStore = new InMemoryQuestionStore();
 
-    await registerQuestionRoutes(app, prisma);
+    await registerQuestionRoutes(app, prisma, { questionStore });
 
     try {
         const create = await app.inject({
@@ -51,8 +53,9 @@ test('POST /questions creates and GET /questions lists pending questions', async
 test('POST /questions/:id/answer resolves a pending question', async () => {
     const app = Fastify({ logger: false });
     const prisma = new PrismaClient();
+    const questionStore = new InMemoryQuestionStore();
 
-    await registerQuestionRoutes(app, prisma);
+    await registerQuestionRoutes(app, prisma, { questionStore });
 
     try {
         const create = await app.inject({
@@ -71,6 +74,8 @@ test('POST /questions/:id/answer resolves a pending question', async () => {
         });
 
         const created = create.json() as { question: { id: string } };
+        assert.equal(create.statusCode, 201, `question create failed: ${create.body}`);
+        assert.ok(created.question?.id);
 
         const answer = await app.inject({
             method: 'POST',

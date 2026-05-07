@@ -76,7 +76,8 @@ export class AzureBlobAuditStorage {
      * @param expirySeconds How long the URL remains valid (default: 1 day)
      * @returns Full signed URL
      */
-    private generateSignedUrl(path: string, expirySeconds: number = 86400): string {
+    generateSignedUrl(path: string, expirySeconds: number = 86400): string {
+        void expirySeconds;
         const containerClient = this.blobServiceClient.getContainerClient(this.container);
         const blockBlobClient = containerClient.getBlockBlobClient(path);
 

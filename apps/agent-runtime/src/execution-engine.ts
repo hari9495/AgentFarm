@@ -1,6 +1,7 @@
 import type { ProviderFailoverTraceRecord } from '@agentfarm/shared-types';
 import { type ProgressSink, NoopProgressSink, reportProgress } from './task-progress-reporter.js';
 import { buildErrorQuery, researchForTask, type FetchFn } from './web-research-service.js';
+import { buildAuditContextPayload, buildRuntimeAuditContext } from './runtime-audit-integration.js';
 
 export type RiskLevel = 'low' | 'medium' | 'high';
 
@@ -282,6 +283,48 @@ function buildProgressReporterContext(task: TaskEnvelope): {
     };
 }
 
+function enrichPayloadWithAuditContext(payload: Record<string, unknown>, taskId: string): Record<string, unknown> {
+    const tenantId = typeof payload['tenantId'] === 'string' ? payload['tenantId'].trim() : '';
+    const workspaceId = typeof payload['workspaceId'] === 'string' ? payload['workspaceId'].trim() : '';
+    const role = typeof payload['roleKey'] === 'string'
+        ? payload['roleKey']
+        : typeof payload['roleProfile'] === 'string'
+            ? payload['roleProfile']
+            : typeof payload['audit_role'] === 'string'
+                ? payload['audit_role']
+                : '';
+
+    const agentInstanceId = typeof payload['audit_agent_instance_id'] === 'string'
+        ? payload['audit_agent_instance_id']
+        : typeof payload['botId'] === 'string' && payload['botId'].startsWith('agt_')
+            ? payload['botId']
+            : undefined;
+    const sessionId = typeof payload['session_id'] === 'string'
+        ? payload['session_id']
+        : typeof payload['audit_session_id'] === 'string'
+            ? payload['audit_session_id']
+            : undefined;
+
+    if (!tenantId || !workspaceId || !role) {
+        return payload;
+    }
+
+    const context = buildRuntimeAuditContext({
+        tenantId,
+        workspaceId,
+        role,
+        taskId,
+        sessionId,
+        agentInstanceId,
+        env: process.env,
+    });
+
+    return {
+        ...payload,
+        ...buildAuditContextPayload(context),
+    };
+}
+
 async function executeLowRiskAction(task: TaskEnvelope, attempt: number): Promise<void> {
     if (shouldFailTransiently(task.payload, attempt)) {
         throw new Error('TRANSIENT_EXECUTOR_ERROR');
@@ -421,10 +464,14 @@ export async function processApprovedTask(
     task: TaskEnvelope,
     options?: { maxAttempts?: number; modelProvider?: string; modelProfile?: string; progressSink?: ProgressSink },
 ): Promise<ProcessedTaskResult> {
+    const taskWithAuditContext: TaskEnvelope = {
+        ...task,
+        payload: enrichPayloadWithAuditContext(task.payload, task.taskId),
+    };
     const sink: ProgressSink = options?.progressSink ?? new NoopProgressSink();
-    const progressCtx = buildProgressReporterContext(task);
+    const progressCtx = buildProgressReporterContext(taskWithAuditContext);
     await reportProgress(progressCtx, 'task_received', 'Task received for approved execution.', sink);
-    const baseDecision = buildDecision(task);
+    const baseDecision = buildDecision(taskWithAuditContext);
     const approvedDecision: ActionDecision = {
         ...baseDecision,
         route: 'execute',
@@ -443,7 +490,7 @@ export async function processApprovedTask(
     };
 
     await reportProgress(progressCtx, 'coding_started', 'Executing approved task.', sink);
-    const result = await executeTaskWithRetries(task, approvedDecision, 'none', llmExecution, options);
+    const result = await executeTaskWithRetries(taskWithAuditContext, approvedDecision, 'none', llmExecution, options);
     await reportProgress(
         progressCtx,
         result.status === 'success' ? 'completed' : 'failed',
@@ -463,13 +510,17 @@ export async function processDeveloperTask(
         progressSink?: ProgressSink;
     },
 ): Promise<ProcessedTaskResult> {
+    const taskWithAuditContext: TaskEnvelope = {
+        ...task,
+        payload: enrichPayloadWithAuditContext(task.payload, task.taskId),
+    };
     const sink: ProgressSink = options?.progressSink ?? new NoopProgressSink();
-    const progressCtx = buildProgressReporterContext(task);
+    const progressCtx = buildProgressReporterContext(taskWithAuditContext);
     await reportProgress(progressCtx, 'task_received', 'Task received for developer execution.', sink);
-    const heuristicDecision = buildDecision(task);
+    const heuristicDecision = buildDecision(taskWithAuditContext);
     const fallbackProvider = options?.modelProvider ?? 'agentfarm';
     let decision = heuristicDecision;
-    let executionPayload = task.payload;
+    let executionPayload = taskWithAuditContext.payload;
     let payloadOverrideSource: PayloadOverrideSource = 'none';
     let llmExecution: LlmDecisionMetadata = {
         classificationSource: 'heuristic',
@@ -485,7 +536,7 @@ export async function processDeveloperTask(
     if (options?.llmDecisionResolver) {
         try {
             const llmResult = await options.llmDecisionResolver({
-                task,
+                task: taskWithAuditContext,
                 heuristicDecision,
             });
 
@@ -493,7 +544,7 @@ export async function processDeveloperTask(
                 decision = llmResult.decision;
                 if (llmResult.payloadOverrides && typeof llmResult.payloadOverrides === 'object') {
                     executionPayload = {
-                        ...task.payload,
+                        ...taskWithAuditContext.payload,
                         ...llmResult.payloadOverrides,
                     };
                     payloadOverrideSource = 'llm_generated';
@@ -526,7 +577,7 @@ export async function processDeveloperTask(
 
     await reportProgress(progressCtx, 'coding_started', 'Executing low-risk developer task.', sink);
     const execResult = await executeTaskWithRetries(
-        { ...task, payload: executionPayload },
+        { ...taskWithAuditContext, payload: executionPayload },
         decision,
         payloadOverrideSource,
         llmExecution,

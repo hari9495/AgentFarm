@@ -1,27 +1,35 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import {
-    generateSessionId,
     generateActionId,
-    generateRecordingId,
     generateScreenshotId,
+    screenshotPath,
+    domSnapshotPath,
 } from '@agentfarm/shared-types';
 import type {
     BrowserActionAuditEvent,
     SessionAuditRecord,
 } from '@agentfarm/shared-types';
+import {
+    buildRuntimeAuditContext,
+    deriveSequenceFromActionId,
+    hashDomSnapshot,
+    persistBrowserActionAudit,
+} from './runtime-audit-integration.js';
 
 export type ObservabilityActionCategory = 'browser' | 'desktop';
 export type ObservabilityRiskLevel = 'low' | 'medium' | 'high';
 
 export type ObservabilityActionRequest = {
+    tenantId: string;
     agentId: string;
     workspaceId: string;
     taskId: string;
     sessionId: string;
+    role?: string;
     type: ObservabilityActionCategory;
     action: string;
     target: string;
@@ -40,6 +48,8 @@ export type ObservabilityActionEvent = {
     payload: unknown;
     screenshotBefore: string;
     screenshotAfter: string;
+    screenshotBeforeArtifact?: ArtifactReference;
+    screenshotAfterArtifact?: ArtifactReference;
     domSnapshotBefore?: string;
     domSnapshotAfter?: string;
     startedAt: Date;
@@ -76,12 +86,13 @@ export type EvidenceBundle = {
 
 type CaptureSnapshot = {
     screenshot: string;
+    screenshotReference: ArtifactReference;
     domSnapshot?: string;
 };
 
 type ActionCaptureAdapter = {
-    captureBefore(action: ObservabilityActionRequest): Promise<CaptureSnapshot>;
-    captureAfter(action: ObservabilityActionRequest): Promise<CaptureSnapshot>;
+    captureBefore(action: ObservabilityActionRequest, actionId: string): Promise<CaptureSnapshot>;
+    captureAfter(action: ObservabilityActionRequest, actionId: string): Promise<CaptureSnapshot>;
 };
 
 type ActionEventSink = {
@@ -92,6 +103,7 @@ type InterceptorHooks = {
     capture: ActionCaptureAdapter;
     eventSink: ActionEventSink;
     riskClassifier?: (action: ObservabilityActionRequest) => ObservabilityRiskLevel;
+    nextSequence?: (sessionId: string) => number;
 };
 
 const CREATE_TABLE_SQL = `
@@ -293,6 +305,11 @@ export class AuditLogWriter {
         );
     }
 
+    nextSequence(sessionId: string): number {
+        const row = this.db.prepare('SELECT COUNT(1) as count FROM agent_action_events WHERE session_id = ?;').get(sessionId) as { count?: number } | undefined;
+        return typeof row?.count === 'number' ? row.count : 0;
+    }
+
     listSession(sessionId: string): ActionAuditRecord[] {
         const rows = this.db.prepare(SELECT_SESSION_SQL).all(sessionId) as Array<{
             id: string;
@@ -368,13 +385,14 @@ class ActionInterceptor {
 
     async execute<T>(action: ObservabilityActionRequest, executeAction: () => Promise<T>): Promise<T> {
         const startedAt = new Date();
-        const actionId = randomUUID();
+        const sequence = (this.hooks.nextSequence?.(action.sessionId) ?? 0);
+        const actionId = generateActionId(action.sessionId, sequence);
         const riskLevel = (this.hooks.riskClassifier ?? classifyObservabilityRisk)(action);
-        const before = await this.hooks.capture.captureBefore(action);
+        const before = await this.hooks.capture.captureBefore(action, actionId);
 
         try {
             const output = await executeAction();
-            const after = await this.hooks.capture.captureAfter(action);
+            const after = await this.hooks.capture.captureAfter(action, actionId);
             const completedAt = new Date();
             await this.hooks.eventSink.emit({
                 actionId,
@@ -387,6 +405,8 @@ class ActionInterceptor {
                 payload: action.payload,
                 screenshotBefore: before.screenshot,
                 screenshotAfter: after.screenshot,
+                screenshotBeforeArtifact: before.screenshotReference,
+                screenshotAfterArtifact: after.screenshotReference,
                 domSnapshotBefore: before.domSnapshot,
                 domSnapshotAfter: after.domSnapshot,
                 startedAt,
@@ -397,7 +417,7 @@ class ActionInterceptor {
             });
             return output;
         } catch (error) {
-            const after = await this.hooks.capture.captureAfter(action);
+            const after = await this.hooks.capture.captureAfter(action, actionId);
             const completedAt = new Date();
             await this.hooks.eventSink.emit({
                 actionId,
@@ -410,6 +430,8 @@ class ActionInterceptor {
                 payload: action.payload,
                 screenshotBefore: before.screenshot,
                 screenshotAfter: after.screenshot,
+                screenshotBeforeArtifact: before.screenshotReference,
+                screenshotAfterArtifact: after.screenshotReference,
                 domSnapshotBefore: before.domSnapshot,
                 domSnapshotAfter: after.domSnapshot,
                 startedAt,
@@ -426,6 +448,7 @@ class ActionInterceptor {
 
 let sharedWriter: AuditLogWriter | null = null;
 let sharedSink: ArtifactSink | null = null;
+let sharedPrismaClient: unknown | null | undefined;
 
 export const resolveObservabilityDbPath = (env: NodeJS.ProcessEnv): string => {
     const raw = env['AGENT_OBSERVABILITY_DB_PATH']?.trim();
@@ -527,40 +550,59 @@ const normalizeNetworkRequests = (payload: unknown): NetworkRequestSummary[] => 
         .slice(0, 50);
 };
 
-const buildArtifactPath = (request: ObservabilityActionRequest, name: string): string => {
-    const safeSession = request.sessionId.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 80) || 'session';
-    const safeTask = request.taskId.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 80) || 'task';
-    const safeAction = request.action.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 80) || 'action';
-    const stamp = Date.now();
-    return `${safeSession}/${safeTask}/${safeAction}/${stamp}-${name}`;
+const buildDomCheckpointPath = (request: ObservabilityActionRequest, actionId: string): string => {
+    return domSnapshotPath(request.tenantId, request.sessionId, actionId);
 };
 
 const createCaptureAdapter = (sink: ArtifactSink): ActionCaptureAdapter => ({
-    async captureBefore(action) {
+    async captureBefore(action, actionId) {
         const artifact = await sink.uploadBinary({
-            path: buildArtifactPath(action, 'before.svg'),
+            path: screenshotPath(action.tenantId, action.agentId, action.sessionId, generateScreenshotId(actionId, 'before')),
             contentType: 'image/svg+xml',
             bytes: buildPlaceholderImage(action, 'before'),
         });
 
         return {
             screenshot: artifact.url,
+            screenshotReference: artifact,
             domSnapshot: buildDomSnapshot(action, 'before'),
         };
     },
-    async captureAfter(action) {
+    async captureAfter(action, actionId) {
         const artifact = await sink.uploadBinary({
-            path: buildArtifactPath(action, 'after.svg'),
+            path: screenshotPath(action.tenantId, action.agentId, action.sessionId, generateScreenshotId(actionId, 'after')),
             contentType: 'image/svg+xml',
             bytes: buildPlaceholderImage(action, 'after'),
         });
 
         return {
             screenshot: artifact.url,
+            screenshotReference: artifact,
             domSnapshot: buildDomSnapshot(action, 'after'),
         };
     },
 });
+
+const getAuditPrismaClient = async (): Promise<unknown | null> => {
+    if (sharedPrismaClient !== undefined) {
+        return sharedPrismaClient;
+    }
+
+    if (!process.env.DATABASE_URL?.trim()) {
+        sharedPrismaClient = null;
+        return sharedPrismaClient;
+    }
+
+    try {
+        const prismaModule = await import('@prisma/client');
+        const PrismaClientCtor = prismaModule.PrismaClient;
+        sharedPrismaClient = new PrismaClientCtor();
+        return sharedPrismaClient;
+    } catch {
+        sharedPrismaClient = null;
+        return sharedPrismaClient;
+    }
+};
 
 export const executeObservedAction = async <T>(
     request: ObservabilityActionRequest,
@@ -568,20 +610,32 @@ export const executeObservedAction = async <T>(
 ): Promise<T> => {
     const writer = getAuditLogWriter();
     const sink = resolveArtifactSink();
+    const auditContext = buildRuntimeAuditContext({
+        tenantId: request.tenantId,
+        role: request.role ?? 'developer',
+        taskId: request.taskId,
+        workspaceId: request.workspaceId,
+        sessionId: request.sessionId,
+        agentInstanceId: request.agentId,
+        env: process.env,
+    });
     const interceptor = new ActionInterceptor({
         capture: createCaptureAdapter(sink),
+        nextSequence: (sessionId) => writer.nextSequence(sessionId),
         eventSink: {
             async emit(event) {
                 const domSnapshotAfter = event.domSnapshotAfter ?? '';
-                const domSnapshotHash = domSnapshotAfter
-                    ? createHash('sha256').update(domSnapshotAfter).digest('hex')
-                    : undefined;
+                const domSnapshotHash = hashDomSnapshot(domSnapshotAfter);
+                const domSnapshotHashBefore = hashDomSnapshot(event.domSnapshotBefore);
                 const domCheckpointRequested = shouldPersistDomCheckpoint(request);
+                const screenshotBeforeId = generateScreenshotId(event.actionId, 'before');
+                const screenshotAfterId = generateScreenshotId(event.actionId, 'after');
+                const sequence = deriveSequenceFromActionId(event.actionId);
 
                 let domCheckpoint: ArtifactReference | null = null;
                 if (domCheckpointRequested && domSnapshotAfter) {
                     domCheckpoint = await sink.uploadBinary({
-                        path: buildArtifactPath(request, 'dom-checkpoint.json'),
+                        path: buildDomCheckpointPath(request, event.actionId),
                         contentType: 'application/json',
                         bytes: Buffer.from(domSnapshotAfter, 'utf8'),
                     });
@@ -600,14 +654,14 @@ export const executeObservedAction = async <T>(
                     domSnapshotHash,
                     networkRequests: normalizeNetworkRequests(request.payload),
                     evidenceBundle: {
-                        screenshotBefore: {
+                        screenshotBefore: event.screenshotBeforeArtifact ?? {
                             url: screenshotBefore,
                             sha256: createHash('sha256').update(screenshotBefore).digest('hex'),
                             sizeBytes: screenshotBefore.length,
                             contentType: 'image/svg+xml',
                             provider: screenshotBefore.startsWith('http') ? 'azure_blob' : 'inline',
                         },
-                        screenshotAfter: {
+                        screenshotAfter: event.screenshotAfterArtifact ?? {
                             url: screenshotAfter,
                             sha256: createHash('sha256').update(screenshotAfter).digest('hex'),
                             sizeBytes: screenshotAfter.length,
@@ -618,6 +672,34 @@ export const executeObservedAction = async <T>(
                         domSnapshotStored: domCheckpointRequested,
                     },
                 });
+
+                const prisma = await getAuditPrismaClient();
+                if (prisma) {
+                    await persistBrowserActionAudit(prisma as never, auditContext, {
+                        actionId: event.actionId,
+                        sequence,
+                        actionType: request.action,
+                        targetSelector: request.target,
+                        targetText: request.target,
+                        inputValue: typeof request.payload === 'object' && request.payload !== null && typeof (request.payload as Record<string, unknown>)['value'] === 'string'
+                            ? (request.payload as Record<string, unknown>)['value'] as string
+                            : undefined,
+                        pageUrl: request.target.startsWith('http') ? request.target : undefined,
+                        success: event.success,
+                        screenshotBeforeId,
+                        screenshotAfterId,
+                        screenshotBeforeUrl: screenshotBefore,
+                        screenshotAfterUrl: screenshotAfter,
+                        networkLog: normalizeNetworkRequests(request.payload),
+                        durationMs: event.durationMs,
+                        domSnapshotHashBefore,
+                        domSnapshotHashAfter: domSnapshotHash,
+                        assertions: { verified: event.success },
+                        errorMessage: event.errorMessage,
+                        failureClass: event.success ? undefined : 'runtime_exception',
+                        timestamp: event.completedAt,
+                    });
+                }
             },
         },
     });
@@ -640,4 +722,5 @@ const parseJson = <T>(value: string | null): T | undefined => {
 export const resetObservabilityForTests = (): void => {
     sharedWriter = null;
     sharedSink = null;
+    sharedPrismaClient = undefined;
 };

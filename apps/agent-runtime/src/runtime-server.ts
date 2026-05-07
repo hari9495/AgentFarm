@@ -68,6 +68,10 @@ import {
 } from './evaluator-webhook.js';
 import { getAuditLogWriter } from './action-observability.js';
 import { estimateTaskEffort, formatEstimateForApproval } from './effort-estimator.js';
+import {
+    buildRuntimeAuditContext,
+    completeAgentSession,
+} from './runtime-audit-integration.js';
 import { buildErrorQuery, researchForTask, type FetchFn } from './web-research-service.js';
 import { analyzeImage, type VisionLLMCallerFn, type VisionProvider } from './vision-service.js';
 import { FanOutProgressSink, NoopProgressSink, type ProgressMilestone, type ProgressSink } from './task-progress-reporter.js';
@@ -131,6 +135,18 @@ type RuntimeConfig = {
     enforceTaskLease: boolean;
     defaultTaskLeaseTtlSeconds: number;
 };
+
+const enrichTaskWithRuntimeContext = (task: TaskEnvelope, config: RuntimeConfig): TaskEnvelope => ({
+    ...task,
+    payload: {
+        ...task.payload,
+        tenantId: config.tenantId,
+        workspaceId: config.workspaceId,
+        botId: config.botId,
+        roleKey: config.roleKey,
+        roleProfile: config.roleProfile,
+    },
+});
 
 type ApprovalIntakeClient = (input: {
     baseUrl: string;
@@ -2632,6 +2648,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         source: 'approval_decision_webhook' | 'approval_decision_cache' | 'direct_execute';
         payloadOverrideSource: PayloadOverrideSource;
     }): Promise<ProcessedTaskResult> => {
+        const runtimeScopedTask = enrichTaskWithRuntimeContext(input.task, input.config);
         const tryAttachFailureResearch = async (errorMessage: string): Promise<Record<string, unknown>> => {
             if (!errorMessage.trim()) {
                 return {};
@@ -2652,7 +2669,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                     {
                         tenantId: input.config.tenantId,
                         workspaceId: input.config.workspaceId,
-                        taskId: input.task.taskId,
+                        taskId: runtimeScopedTask.taskId,
                         correlationId: input.config.correlationId,
                     },
                     fetchFn,
@@ -2676,12 +2693,55 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             }
         };
 
+        const finalizeAuditSession = async (
+            payload: Record<string, unknown>,
+            status: 'completed' | 'failed',
+            failureReason?: string,
+        ): Promise<void> => {
+            const sessionId = typeof payload['session_id'] === 'string' ? payload['session_id'].trim() : '';
+            const auditAgentInstanceId = typeof payload['audit_agent_instance_id'] === 'string'
+                ? payload['audit_agent_instance_id'].trim()
+                : '';
+            const auditRole = typeof payload['audit_role'] === 'string'
+                ? payload['audit_role'].trim()
+                : String(input.config.roleKey);
+
+            if (!sessionId || !auditAgentInstanceId || !process.env.DATABASE_URL?.trim()) {
+                return;
+            }
+
+            try {
+                const prismaModule = await import('@prisma/client');
+                const prisma = new prismaModule.PrismaClient();
+                try {
+                    const auditContext = buildRuntimeAuditContext({
+                        tenantId: input.config.tenantId,
+                        workspaceId: input.config.workspaceId,
+                        role: auditRole,
+                        taskId: runtimeScopedTask.taskId,
+                        sessionId,
+                        agentInstanceId: auditAgentInstanceId,
+                        env: process.env,
+                    });
+                    await completeAgentSession(prisma as never, auditContext, {
+                        status,
+                        actionCount: getAuditLogWriter().listSession(sessionId).length,
+                        failureReason,
+                    });
+                } finally {
+                    await prisma.$disconnect().catch(() => undefined);
+                }
+            } catch {
+                // Best-effort audit completion only.
+            }
+        };
+
         const executeLocalPayload = async (payload: Record<string, unknown>) => {
             return executeLocalWorkspaceActionWithMemoryMirror({
                 execution: {
                     tenantId: input.config.tenantId,
                     botId: input.config.botId,
-                    taskId: input.task.taskId,
+                    taskId: runtimeScopedTask.taskId,
                     actionType: input.decision.actionType as LocalWorkspaceActionType,
                     payload,
                 },
@@ -2702,7 +2762,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                         correlationId: input.config.correlationId,
                     }).catch((err: unknown) => {
                         emitRuntimeEvent('runtime.memory_record_persist_failed', input.config, {
-                            task_id: input.task.taskId,
+                            task_id: runtimeScopedTask.taskId,
                             error_message: err instanceof Error ? err.message : String(err),
                             hook: 'local_workspace_executor',
                         });
@@ -2711,12 +2771,12 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             });
         };
 
-        advancedFeatures.appendTraceStep(input.task.taskId, 'local_tool_input', {
+        advancedFeatures.appendTraceStep(runtimeScopedTask.taskId, 'local_tool_input', {
             actionType: input.decision.actionType,
             source: input.source,
-            payloadKeys: Object.keys(input.task.payload),
+            payloadKeys: Object.keys(runtimeScopedTask.payload),
         });
-        let executionPayload = { ...input.task.payload };
+        let executionPayload = { ...runtimeScopedTask.payload };
         let localResult = await executeLocalPayload(executionPayload);
 
         if (!localResult.ok && executionPayload['_research_retry_attempted'] !== true) {
@@ -2732,7 +2792,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         }
 
         if (localResult.ok) {
-            advancedFeatures.appendTraceStep(input.task.taskId, 'local_tool_output', {
+            advancedFeatures.appendTraceStep(runtimeScopedTask.taskId, 'local_tool_output', {
                 ok: true,
                 exitCode: localResult.exitCode ?? 0,
                 outputPreview: localResult.output.slice(0, 400),
@@ -2740,9 +2800,10 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
 
             const diffScan = advancedFeatures.scanGeneratedDiffForSecrets(localResult.output);
             if (diffScan.blocked) {
-                advancedFeatures.appendTraceStep(input.task.taskId, 'local_output_secret_blocked', {
+                advancedFeatures.appendTraceStep(runtimeScopedTask.taskId, 'local_output_secret_blocked', {
                     matches: diffScan.matches,
                 });
+                await finalizeAuditSession(executionPayload, 'failed', 'Local action output contains potential secrets; blocked by policy.');
                 return {
                     decision: {
                         ...input.decision,
@@ -2760,7 +2821,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             }
 
             captureInterviewEventsFromLocalOutput({
-                taskId: input.task.taskId,
+                taskId: runtimeScopedTask.taskId,
                 actionType: input.decision.actionType,
                 output: localResult.output,
             });
@@ -2778,7 +2839,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             }
 
             emitRuntimeEvent('runtime.local_workspace_action_executed', input.config, {
-                task_id: input.task.taskId,
+                task_id: runtimeScopedTask.taskId,
                 action_type: input.decision.actionType,
                 output_length: localResult.output.length,
                 exit_code: localResult.exitCode ?? 0,
@@ -2789,17 +2850,17 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             const actionType = input.decision.actionType as LocalWorkspaceActionType;
             if (POST_CHANGE_QUALITY_GATE_ACTIONS.has(actionType)) {
                 const lintFixPayload = {
-                    ...input.task.payload,
+                    ...runtimeScopedTask.payload,
                     action_type: 'run_linter',
                     fix: true,
                 };
                 const lintVerifyPayload = {
-                    ...input.task.payload,
+                    ...runtimeScopedTask.payload,
                     action_type: 'run_linter',
                     fix: false,
                 };
                 const testsPayload = {
-                    ...input.task.payload,
+                    ...runtimeScopedTask.payload,
                     action_type: 'run_tests',
                 };
 
@@ -2830,13 +2891,24 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
 
                 if (!lintVerifyResult.ok || !testsResult.ok) {
                     emitRuntimeEvent('runtime.post_change_quality_gate_failed', input.config, {
-                        task_id: input.task.taskId,
+                        task_id: runtimeScopedTask.taskId,
                         action_type: input.decision.actionType,
                         lint_fix_exit_code: lintFixResult.exitCode ?? (lintFixResult.ok ? 0 : 1),
                         lint_verify_exit_code: lintVerifyResult.exitCode ?? (lintVerifyResult.ok ? 0 : 1),
                         tests_exit_code: testsResult.exitCode ?? (testsResult.ok ? 0 : 1),
                         source: input.source,
                     });
+
+                    await finalizeAuditSession(
+                        {
+                            ...executionPayload,
+                            _quality_gate_lint_status: lintStatus,
+                            _quality_gate_test_status: testStatus,
+                            _quality_gate_escalation: true,
+                        },
+                        'failed',
+                        `QUALITY_GATE_FAILED lint=${lintStatus} test=${testStatus}`,
+                    );
 
                     return {
                         decision: {
@@ -2848,7 +2920,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                         attempts: 1,
                         transientRetries: 0,
                         executionPayload: {
-                            ...input.task.payload,
+                            ...runtimeScopedTask.payload,
                             _quality_gate_lint_status: lintStatus,
                             _quality_gate_test_status: testStatus,
                             _quality_gate_escalation: true,
@@ -2860,7 +2932,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 }
 
                 emitRuntimeEvent('runtime.post_change_quality_gate_passed', input.config, {
-                    task_id: input.task.taskId,
+                    task_id: runtimeScopedTask.taskId,
                     action_type: input.decision.actionType,
                     lint_fix_exit_code: lintFixResult.exitCode ?? 0,
                     lint_verify_exit_code: lintVerifyResult.exitCode ?? 0,
@@ -2868,6 +2940,8 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                     source: input.source,
                 });
             }
+
+            await finalizeAuditSession(executionPayload, 'completed');
 
             return {
                 decision: {
@@ -2887,19 +2961,24 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         }
 
         emitRuntimeEvent('runtime.local_workspace_action_failed', input.config, {
-            task_id: input.task.taskId,
+            task_id: runtimeScopedTask.taskId,
             action_type: input.decision.actionType,
             exit_code: localResult.exitCode ?? 1,
             error_output: localResult.errorOutput ?? null,
             source: input.source,
         });
-        advancedFeatures.appendTraceStep(input.task.taskId, 'local_tool_output', {
+        advancedFeatures.appendTraceStep(runtimeScopedTask.taskId, 'local_tool_output', {
             ok: false,
             exitCode: localResult.exitCode ?? 1,
             errorOutput: (localResult.errorOutput ?? '').slice(0, 400),
         });
 
         const researchPayload = await tryAttachFailureResearch(
+            localResult.errorOutput ?? `Local workspace action '${input.decision.actionType}' failed.`,
+        );
+        await finalizeAuditSession(
+            executionPayload,
+            'failed',
             localResult.errorOutput ?? `Local workspace action '${input.decision.actionType}' failed.`,
         );
 
@@ -2916,7 +2995,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             attempts: 1,
             transientRetries: 0,
             executionPayload: {
-                ...input.task.payload,
+                ...runtimeScopedTask.payload,
                 ...researchPayload,
             },
             payloadOverrideSource: input.payloadOverrideSource,
@@ -2931,6 +3010,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         source: 'approval_decision_webhook' | 'approval_decision_cache',
         payloadOverrideSource: PayloadOverrideSource = 'none',
     ): Promise<ProcessedTaskResult> => {
+        task = enrichTaskWithRuntimeContext(task, config);
         const progressSink = buildProgressSinkForTask(task, config);
         const decision = buildDecision(task);
         if (isTesterBlockedAction(config.roleKey, decision.actionType)) {
@@ -2950,6 +3030,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             };
         }
         const connectorType = normalizeConnectorType(task.payload['connector_type']);
+        task = enrichTaskWithRuntimeContext(task, config);
         const snapshotPolicy = evaluateSnapshotExecutionPolicy({
             snapshot: capabilitySnapshotCache,
             actionType: decision.actionType,

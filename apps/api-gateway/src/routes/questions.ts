@@ -15,6 +15,7 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { PrismaClient } from '@prisma/client';
 import { createQuestion, answerQuestion, sweepExpiredQuestions } from '@agentfarm/agent-question-service';
 import { PrismaQuestionStore } from '@agentfarm/agent-question-service';
+import type { IQuestionStore } from '@agentfarm/agent-question-service';
 import { createDefaultSecretStore } from '../lib/secret-store.js';
 import { createRealProviderExecutor } from '../lib/provider-clients.js';
 
@@ -341,8 +342,12 @@ const processTimeoutPolicy = async (
     };
 };
 
-export async function registerQuestionRoutes(app: FastifyInstance, prisma: PrismaClient) {
-    const questionStore = new PrismaQuestionStore(prisma);
+export async function registerQuestionRoutes(
+    app: FastifyInstance,
+    prisma: PrismaClient,
+    options?: { questionStore?: IQuestionStore },
+) {
+    const questionStore = options?.questionStore ?? new PrismaQuestionStore(prisma);
 
     // ========== CREATE QUESTION (from agent) ==========
     app.post('/api/v1/questions', async (req: FastifyRequest, res: FastifyReply) => {

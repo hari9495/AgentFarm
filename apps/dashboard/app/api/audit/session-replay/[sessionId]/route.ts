@@ -1,65 +1,106 @@
-import { DatabaseSync } from 'node:sqlite';
 import { NextResponse } from 'next/server';
 import { getInternalSessionAuthHeader } from '../../../../lib/internal-session';
+import type { BrowserActionType, PrismaClient } from '@prisma/client';
 
-type AuditRow = {
-    id: string;
-    agent_id: string;
-    workspace_id: string;
-    task_id: string;
-    session_id: string;
-    action_type: string;
-    target: string;
-    payload: string;
-    screenshot_before_url: string;
-    screenshot_after_url: string;
-    diff_image_url: string | null;
-    assertions: string | null;
-    verified: number;
-    dom_snapshot_hash: string | null;
-    network_requests: string | null;
-    evidence_bundle: string | null;
-    risk_level: string;
-    started_at: string;
-    completed_at: string;
-    duration_ms: number;
-    success: number;
-    error_message: string | null;
+let prismaClientSingleton: PrismaClient | undefined;
+
+const resolveRiskLevelFromActionType = (actionType: BrowserActionType): 'low' | 'medium' | 'high' => {
+    switch (actionType) {
+        case 'submit':
+            return 'high';
+        case 'fill':
+        case 'select':
+        case 'key_press':
+            return 'medium';
+        default:
+            return 'low';
+    }
 };
 
-const DB_PATH = process.env.AGENT_OBSERVABILITY_DB_PATH ?? '.agent-observability.sqlite';
-
-const SELECT_SQL = `
-SELECT
-  id, agent_id, workspace_id, task_id, session_id, action_type, target, payload,
-    screenshot_before_url, screenshot_after_url, diff_image_url, assertions, verified,
-    dom_snapshot_hash, network_requests, evidence_bundle,
-  risk_level, started_at, completed_at, duration_ms, success, error_message
-FROM agent_action_events
-WHERE session_id = ?
-ORDER BY started_at ASC;
-`;
-
-const SELECT_SQL_FALLBACK = `
-SELECT
-    id, agent_id, workspace_id, task_id, session_id, action_type, target, payload,
-    screenshot_before_url, screenshot_after_url, diff_image_url, assertions, verified,
-    risk_level, started_at, completed_at, duration_ms, success, error_message
-FROM agent_action_events
-WHERE session_id = ?
-ORDER BY started_at ASC;
-`;
-
-const parseJson = <T>(value: string | null): T | null => {
-    if (!value) {
-        return null;
+const getPrismaClient = async (): Promise<PrismaClient> => {
+    if (prismaClientSingleton !== undefined) {
+        return prismaClientSingleton;
     }
+
+    if (!process.env.DATABASE_URL?.trim()) {
+        throw new Error('DATABASE_URL is required for Prisma-backed session replay.');
+    }
+
     try {
-        return JSON.parse(value) as T;
+        const prismaModule = await import('@prisma/client');
+        prismaClientSingleton = new prismaModule.PrismaClient();
+        return prismaClientSingleton;
     } catch {
-        return null;
+        throw new Error('Failed to initialize @prisma/client for session replay route.');
     }
 };
+
+const mapPrismaReplayRows = (session: {
+    taskId: string;
+    tenantId: string;
+    agentInstanceId: string;
+    id: string;
+    actions: Array<{
+        id: string;
+        actionType: BrowserActionType;
+        targetSelector: string;
+        targetText: string;
+        inputValue: string | null;
+        pageUrl: string;
+        screenshotBeforeUrl: string;
+        screenshotAfterUrl: string;
+        domSnapshotHashAfter: string | null;
+        networkLog: unknown;
+        durationMs: number;
+        success: boolean;
+        errorMessage: string | null;
+        timestamp: Date;
+        correctnessAssertion: unknown;
+    }>;
+}) => session.actions.map((action) => {
+    const completedAt = action.timestamp.toISOString();
+    const startedAt = new Date(action.timestamp.getTime() - Math.max(0, action.durationMs)).toISOString();
+    const target = action.targetSelector || action.targetText || action.pageUrl;
+    const networkRequests = Array.isArray(action.networkLog)
+        ? action.networkLog as Array<{ method: string; url: string; status?: number }>
+        : [];
+
+    return {
+        id: action.id,
+        agentId: session.agentInstanceId,
+        workspaceId: '',
+        taskId: session.taskId,
+        sessionId: session.id,
+        actionType: action.actionType,
+        target,
+        payload: {
+            targetText: action.targetText,
+            inputValue: action.inputValue,
+            pageUrl: action.pageUrl,
+        },
+        screenshotBeforeUrl: action.screenshotBeforeUrl,
+        screenshotAfterUrl: action.screenshotAfterUrl,
+        diffImageUrl: null,
+        assertions: Array.isArray(action.correctnessAssertion)
+            ? action.correctnessAssertion as Array<{ id: string; description: string; passed: boolean }>
+            : [],
+        verified: action.success,
+        domSnapshotHash: action.domSnapshotHashAfter,
+        networkRequests,
+        evidenceBundle: {
+            screenshotBefore: { url: action.screenshotBeforeUrl, provider: action.screenshotBeforeUrl.startsWith('http') ? 'azure_blob' : 'inline' },
+            screenshotAfter: { url: action.screenshotAfterUrl, provider: action.screenshotAfterUrl.startsWith('http') ? 'azure_blob' : 'inline' },
+            domCheckpoint: null,
+            domSnapshotStored: false,
+        },
+        riskLevel: resolveRiskLevelFromActionType(action.actionType),
+        startedAt,
+        completedAt,
+        durationMs: action.durationMs,
+        success: action.success,
+        errorMessage: action.errorMessage,
+    };
+});
 
 export async function GET(
     _request: Request,
@@ -76,47 +117,50 @@ export async function GET(
     }
 
     try {
-        const db = new DatabaseSync(DB_PATH);
-        let rows: AuditRow[];
-        try {
-            rows = db.prepare(SELECT_SQL).all(sessionId) as AuditRow[];
-        } catch {
-            const legacyRows = db.prepare(SELECT_SQL_FALLBACK).all(sessionId) as Array<Omit<AuditRow, 'dom_snapshot_hash' | 'network_requests' | 'evidence_bundle'>>;
-            rows = legacyRows.map((row) => ({
-                ...row,
-                dom_snapshot_hash: null,
-                network_requests: null,
-                evidence_bundle: null,
+        const prisma = await getPrismaClient();
+        const session = await prisma.agentSession.findUnique({
+            where: { id: sessionId },
+            select: {
+                id: true,
+                taskId: true,
+                tenantId: true,
+                agentInstanceId: true,
+                actions: {
+                    orderBy: { sequence: 'asc' },
+                    select: {
+                        id: true,
+                        actionType: true,
+                        targetSelector: true,
+                        targetText: true,
+                        inputValue: true,
+                        pageUrl: true,
+                        screenshotBeforeUrl: true,
+                        screenshotAfterUrl: true,
+                        domSnapshotHashAfter: true,
+                        networkLog: true,
+                        durationMs: true,
+                        success: true,
+                        errorMessage: true,
+                        timestamp: true,
+                        correctnessAssertion: true,
+                    },
+                },
+            },
+        });
+
+        if (session) {
+            const items = mapPrismaReplayRows(session).map((item) => ({
+                ...item,
+                sessionId,
             }));
+
+            return NextResponse.json({ sessionId, total: items.length, source: 'prisma', items });
         }
-        db.close();
 
-        const items = rows.map((row) => ({
-            id: row.id,
-            agentId: row.agent_id,
-            workspaceId: row.workspace_id,
-            taskId: row.task_id,
-            sessionId: row.session_id,
-            actionType: row.action_type,
-            target: row.target,
-            payload: parseJson<unknown>(row.payload),
-            screenshotBeforeUrl: row.screenshot_before_url,
-            screenshotAfterUrl: row.screenshot_after_url,
-            diffImageUrl: row.diff_image_url,
-            assertions: parseJson<unknown[]>(row.assertions) ?? [],
-            verified: row.verified === 1,
-            domSnapshotHash: row.dom_snapshot_hash,
-            networkRequests: parseJson<Array<{ method: string; url: string; status?: number }>>(row.network_requests) ?? [],
-            evidenceBundle: parseJson<Record<string, unknown>>(row.evidence_bundle),
-            riskLevel: row.risk_level,
-            startedAt: row.started_at,
-            completedAt: row.completed_at,
-            durationMs: row.duration_ms,
-            success: row.success === 1,
-            errorMessage: row.error_message,
-        }));
-
-        return NextResponse.json({ sessionId, total: items.length, items });
+        return NextResponse.json(
+            { error: 'session_not_found', message: 'Session not found in Prisma-backed audit store.' },
+            { status: 404 },
+        );
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown database error';
         return NextResponse.json(

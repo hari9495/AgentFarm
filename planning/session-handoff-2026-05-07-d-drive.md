@@ -77,3 +77,31 @@ Date: 2026-05-07
   - `pnpm --filter @agentfarm/api-gateway exec tsx --test src/routes/audit.test.ts src/routes/auth.internal-login-policy.test.ts src/routes/auth.test.ts src/routes/desktop-profile.test.ts src/routes/workspace-session.test.ts` (pass)
   - `pnpm --filter @agentfarm/api-gateway typecheck` (pass)
   - `pnpm --filter @agentfarm/memory-service test` (pass)
+
+## Continuation update (2026-05-08)
+
+- Revalidated the browser/desktop evidence foundation that was added after the six-priority wave.
+- Confirmed these implementation anchors exist:
+  - `services/audit-storage/src/screenshot-uploader.ts`
+  - `services/agent-observability/src/browser-action-with-upload.ts`
+  - `services/agent-observability/src/desktop-agent-wrapper.py`
+  - `apps/agent-runtime/src/runtime-audit-integration.ts`
+  - `apps/dashboard/app/audit/session-replay/page.tsx`
+  - `apps/dashboard/app/components/evidence-viewer.tsx`
+- Fixed a missing workspace dependency in `services/agent-observability/package.json` by adding `@agentfarm/audit-storage`.
+- Validation run after dependency fix:
+  - `pnpm install` (pass)
+  - `pnpm --filter @agentfarm/audit-storage typecheck` (pass)
+  - `pnpm --filter @agentfarm/agent-observability typecheck` (pass)
+  - `pnpm --filter @agentfarm/agent-runtime typecheck` (pass)
+  - `pnpm --filter @agentfarm/audit-storage test` (pass)
+  - `pnpm --filter @agentfarm/agent-observability test` (pass)
+  - `pnpm --filter @agentfarm/agent-runtime test` (pass)
+- Current blocker:
+  - `pnpm quality:gate` is not green at repo scope.
+  - The current failure is isolated to `apps/api-gateway/src/routes/questions.test.ts`:
+    - `POST /questions creates and GET /questions lists pending questions`
+    - `POST /questions/:id/answer resolves a pending question`
+- Important interpretation:
+  - Observability package work is validated at package scope.
+  - Release-readiness language should continue to note the open API gateway question-route regression until those two tests are fixed.
