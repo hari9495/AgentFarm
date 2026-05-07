@@ -9,6 +9,9 @@ that every engineer uses from day one. This is the source of truth for "where do
 - Engineering design: planning/engineering-execution-design.md
 - Toolset: TypeScript + Node.js LTS, NestJS/Fastify, Next.js/Tailwind, PostgreSQL/Prisma, Redis/BullMQ, OPA, OpenTelemetry
 
+## Latest Build Snapshot
+- Current cross-service implementation closure reference: planning/build-snapshot-2026-05-07.md
+
 ---
 
 ## Top-Level Monorepo Structure

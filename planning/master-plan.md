@@ -7,13 +7,13 @@ Planning-first rule: no feature development starts until architecture baseline a
 2. Keep strict safety and approval controls.
 3. Launch only when gold-standard quality is proven.
 ## Phases
-1. Validation and Architecture (Weeks 1-6) — **COMPLETED 2026-04-19**
+1. Validation and Architecture (Weeks 1-6) ï¿½ **COMPLETED 2026-04-19**
 - Validate customer need and workflow fit.
 - Confirm top gold standards and evidence rules.
 - Finalize MVP role scope.
 - Finalize product architecture and decision records.
 - Approve architecture gates before implementation.
-2. MVP Build (Weeks 7-20) — **COMPLETED 2026-04-30**
+2. MVP Build (Weeks 7-20) ï¿½ **COMPLETED 2026-04-30**
 - Built Developer Agent with 70+ local workspace action types across 12 tiers and 6 connector actions.
 - Ten LLM providers with health-score fallback routing (openai, azure_openai, github_models, anthropic, google, xai, mistral, together, agentfarm, auto).
 - Full approval and risk enforcement (HIGH/MEDIUM/LOW) with audit evidence.
@@ -24,7 +24,8 @@ Planning-first rule: no feature development starts until architecture baseline a
 - Tier 9 Developer Productivity Wave shipped (2026-04-30): workspace_create_pr, workspace_run_ci_checks, workspace_fix_test_failures, workspace_security_fix_suggest, workspace_pr_review_prepare, workspace_dependency_upgrade_plan, workspace_release_notes_generate, workspace_incident_patch_pack, workspace_memory_profile, workspace_autonomous_plan_execute, workspace_policy_preflight.
 - Tier 10 Connector Hardening + Code Intelligence + Observability shipped (2026-05-01): workspace_connector_test, workspace_pr_auto_assign, workspace_ci_watch, workspace_explain_code, workspace_add_docstring, workspace_refactor_plan, workspace_semantic_search, workspace_diff_preview, workspace_approval_status, workspace_audit_export. 190/190 tests passing.
 - **Skill Marketplace shipped (2026-05-05)**: 21 developer-agent skills cataloged, all 21 execution handlers implemented in skill-execution-engine.ts, POST /runtime/marketplace/invoke endpoint, dashboard Skill Marketplace Panel with install and invoke flows. **299 tests passing, 0 failing.** ADR-015 approved.
-3. Pilot (Weeks 21-30) — **ACTIVE**
+- **Six-priority spec-alignment wave shipped (2026-05-07)**: long-term memory model + hooks, proactive CI/CVE signals, approval batching end-to-end, tester policy hardening, quality feedback loop into provider routing, and handoff protocol normalization. See planning/build-snapshot-2026-05-07.md.
+3. Pilot (Weeks 21-30) ï¿½ **ACTIVE**
 - Run with 1-2 customers per operations/company-access-rollout.md.
 - Track quality, safety, and business value weekly.
 - Harden production connector SDK integrations.
@@ -84,6 +85,7 @@ Rule: development starts only after all architecture gates are approved.
 6. Gap matrix (current vs desired): planning/agentfarm-gap-matrix-current-vs-desired.md
 7. Two-sprint backlog (safety and orchestration): planning/agentfarm-two-sprint-backlog-safety-and-orchestration.md
 8. Low-risk migration plan (boundary-safe): planning/agentfarm-low-risk-migration-plan.md
+9. Six-priority implementation snapshot (2026-05-07): planning/build-snapshot-2026-05-07.md
 ## Non-Negotiable Release Gates
 1. Identity Realism = 5
 2. Role Fidelity and Task Quality = 5
@@ -133,3 +135,6 @@ Rule: development starts only after all architecture gates are approved.
 
 <!-- doc-sync: 2026-05-06 full-pass-2 -->
 > Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
+
+<!-- doc-sync: 2026-05-07 six-priority-closure -->
+> Last synchronized: 2026-05-07 (Six-priority implementation closure and validation snapshot).

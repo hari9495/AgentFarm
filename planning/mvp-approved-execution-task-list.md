@@ -212,6 +212,21 @@ Update the table at end of day with evidence links and blocker ownership.
 ## Post-MVP Developer Agent Extension Planning (No Auto-Start)
 This section is planning-only and does not alter MVP scope rules above.
 
+## Six-Priority Spec-Alignment Closure (2026-05-07)
+Execution summary:
+1. Priority 1 complete: long-term memory schema, service APIs, runtime read/write hooks.
+2. Priority 2 complete: proactive detection extraction and CI/CVE signal types.
+3. Priority 3 complete: approval batching service + API + dashboard + audit events.
+4. Priority 4 complete: tester policy contract and runtime enforcement.
+5. Priority 5 complete: approval metadata to quality-signal feedback and provider routing composite update.
+6. Priority 6 complete: handoff status normalization, timeout semantics, gateway wrapper alignment.
+
+Reference:
+1. planning/build-snapshot-2026-05-07.md
+
+Validation reference:
+1. Focused typecheck and tests listed in planning/build-snapshot-2026-05-07.md passed on 2026-05-07.
+
 ### Required Planning Inputs
 1. planning/developer-agent-mvp-implementation-backlog.md
 2. planning/future-agent-build-playbook.md
@@ -227,3 +242,6 @@ This section is planning-only and does not alter MVP scope rules above.
 
 <!-- doc-sync: 2026-05-06 full-pass-2 -->
 > Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
+
+<!-- doc-sync: 2026-05-07 six-priority-closure -->
+> Last synchronized: 2026-05-07 (Execution task list updated with six-priority closure state).

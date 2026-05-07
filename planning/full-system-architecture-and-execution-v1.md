@@ -8,11 +8,29 @@ It combines approved decisions from strategy, architecture, execution design, re
 ## Document Status
 1. Version: v1.3
 2. Baseline date: 2026-04-19
-3. Last updated: 2026-05-05
+3. Last updated: 2026-05-07
 4. Architecture signoff decision: Go
-5. Build status: Sprint 1 + Sprint 2 complete; Skill Marketplace (21 skills) shipped — 299 tests passing
+5. Build status: Sprint 1 + Sprint 2 complete; Skill Marketplace (21 skills) shipped; six-priority spec-alignment closure shipped on 2026-05-07
 6. Scope mode: MVP scope freeze active; Skill Marketplace added as approved extension
 7. Change control: Any gate-impacting change requires ADR + risk update on the same day
+
+## Six-Priority Spec-Alignment Closure (2026-05-07)
+
+### Summary
+The post-marketplace hardening wave closed six cross-service priorities required for runtime reliability and contract consistency.
+
+### Delivered areas
+1. Long-term memory model and runtime hooks completed.
+2. Proactive signal detection expanded for CI failures on main and dependency CVEs.
+3. Approval batching delivered across approval-service, API gateway, and dashboard.
+4. Tester-role policy hardened as explicit contract + runtime enforcement.
+5. Quality feedback loop wired from approvals into provider routing behavior.
+6. Handoff protocol normalized with timeout semantics and gateway wrapper alignment.
+
+### Canonical evidence
+1. planning/build-snapshot-2026-05-07.md
+2. planning/architecture-decision-log.md (ADR-016)
+3. planning/architecture-risk-register.md (R-007 closure)
 
 ## Executive Summary
 AgentFarm v1 is approved to build as a shared SaaS control plane with isolated per-workspace runtime in Azure VM plus Docker.

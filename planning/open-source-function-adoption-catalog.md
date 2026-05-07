@@ -307,3 +307,7 @@ This catalog operationalizes:
 
 <!-- doc-sync: 2026-05-06 full-pass-2 -->
 > Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
+
+
+## Current Implementation Pointer (2026-05-07)
+1. For the latest built-state summary and file map, see planning/build-snapshot-2026-05-07.md.

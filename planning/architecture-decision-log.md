@@ -259,6 +259,31 @@ Track architecture decisions with owner, status, and review dates before develop
 - Approved
 4. Decision Date
 - 2026-05-05
+
+## ADR-016: Cross-Service Contract Alignment for Memory, Signals, Approvals, and Handoffs
+1. Decision
+- Promote six cross-service behaviors from implementation intent to enforced contracts across runtime, gateway, orchestrator, and shared packages.
+- The aligned set includes:
+  - Long-term memory contract + schema + service APIs + runtime hooks.
+  - Proactive signal expansion to include `ci_failure_on_main` and `dependency_cve`.
+  - Approval batching as a first-class workflow from service to API and dashboard.
+  - Explicit tester role policy contract with runtime enforcement.
+  - Quality feedback signals that propagate approval outcomes back into provider routing.
+  - Handoff protocol normalization to `pending | accepted | completed | failed | timed_out`, including timeout semantics.
+- Auto-provider routing now applies composite score:
+  - `score = availability_penalty * 0.6 + quality_penalty * 0.4`
+  - lower score is preferred.
+2. Owner
+- Engineering Lead / AI Lead
+3. Status
+- Approved
+4. Decision Date
+- 2026-05-07
+5. Review Date
+- 2026-06-07
+6. Impact
+- Reduces contract drift across planes, improves explainability of routing decisions, and keeps approvals, quality learning, and handoffs behaviorally consistent.
+- Snapshot evidence and file map are captured in planning/build-snapshot-2026-05-07.md.
 5. Review Date
 - 2026-06-05
 6. Impact

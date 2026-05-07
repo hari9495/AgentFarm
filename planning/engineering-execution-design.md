@@ -9,6 +9,10 @@ Translate the approved product architecture into a build-ready engineering desig
 3. Covers runtime provisioning, Docker isolation, connector auth, logs, approvals, and observability.
 4. Does not include implementation code or final IaC templates yet.
 
+## Implementation Snapshot Link (2026-05-07)
+1. Latest implementation closure for cross-service behavior alignment is documented in planning/build-snapshot-2026-05-07.md.
+2. This includes memory model evolution, proactive signal expansion, approval batching, tester policy hardening, quality feedback routing, and handoff protocol normalization.
+
 ## MVP Scope Freeze (Original Zone)
 1. One role only: Developer Agent.
 2. One integration set only: Jira, Microsoft Teams, GitHub, and company email.

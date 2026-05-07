@@ -155,8 +155,35 @@ Track architecture risks before development and keep mitigations owner-driven.
 8. Closure Basis
 - Open: operational monitoring of per-provider health scores in production and cost alerting rules are not yet wired to Azure Monitor. Remains open until production observability for provider health is confirmed.
 
+## R-007: Cross-Service Contract Drift Across Runtime, Gateway, and Orchestrator
+1. Risk
+- Shared contract union changes (handoff statuses, proactive signal types, approval/quality payloads) can drift from route validators and silently break runtime behavior.
+2. Severity
+- High
+3. Owner
+- Engineering Lead
+4. Mitigation
+- Normalize shared unions in packages/shared-types and update all consumer validators and route wrappers in the same change.
+- Add focused tests for handoff wrappers and provider quality routing.
+- Record a canonical implementation snapshot for maintainability.
+5. Mitigation Evidence
+- Handoff protocol normalized and covered in apps/api-gateway/src/routes/handoffs.ts and apps/api-gateway/src/routes/handoffs.test.ts.
+- Orchestrator handoff parsing/statuses aligned in apps/orchestrator/src/main.ts and apps/orchestrator/src/agent-handoff-manager.ts.
+- Proactive signal expansion integrated in apps/orchestrator/src/proactive-signal-detector.ts and apps/orchestrator/src/routine-scheduler.ts.
+- Quality routing composite and tests in apps/agent-runtime/src/llm-decision-adapter.ts and apps/agent-runtime/src/llm-decision-adapter.test.ts.
+- Snapshot captured in planning/build-snapshot-2026-05-07.md.
+6. Due Date
+- 2026-05-07
+7. Status
+- Closed
+8. Closure Basis
+- Six-priority spec-alignment implementation completed with focused typecheck and test validation.
+
 <!-- doc-sync: 2026-05-06 sprint-6 -->
 > Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
 
 <!-- doc-sync: 2026-05-06 full-pass-2 -->
 > Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
+
+<!-- doc-sync: 2026-05-07 six-priority-closure -->
+> Last synchronized: 2026-05-07 (Cross-service contract drift risk closure and implementation snapshot linkage).

@@ -142,6 +142,21 @@ No implementation work is included in this pack.
 9. Completed: Named owners confirmed for all roles in signoff matrix.
 10. Completed: Start condition met and planning-first pre-development gate closed.
 
+## Post-Build Implementation Snapshot (2026-05-07)
+1. Snapshot document
+- planning/build-snapshot-2026-05-07.md
+2. Why this matters
+- Captures the implementation-level closure of the six-priority spec-alignment wave across runtime, gateway, orchestrator, memory-service, dashboard, and shared contracts.
+3. Scope closed in snapshot
+- Long-term memory model and hooks
+- Proactive CI/CVE signal expansion
+- Approval batching end-to-end
+- Tester role policy hardening
+- Quality feedback loop into provider routing
+- Handoff protocol normalization and payload alignment
+4. Validation evidence
+- Focused typecheck and test commands are listed in the snapshot and recorded as passing.
+
 ## Signoff Meeting Record
 1. Meeting type
 - Final architecture and release-readiness signoff.
@@ -170,3 +185,6 @@ No implementation work is included in this pack.
 
 <!-- doc-sync: 2026-05-06 full-pass-2 -->
 > Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
+
+<!-- doc-sync: 2026-05-07 six-priority-closure -->
+> Last synchronized: 2026-05-07 (Post-build six-priority implementation snapshot added).
