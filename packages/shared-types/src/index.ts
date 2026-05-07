@@ -46,6 +46,8 @@ export const CONTRACT_VERSIONS = {
   PACKAGE_OPERATION: '1.0.0', // Safe package install/uninstall operations
   VISION_ANALYSIS: '1.0.0',   // Image/screenshot analysis result
   TASK_SLOT: '1.0.0',         // Parallel task slot for concurrent execution
+  // ---- Browser Audit System (2026-05-07) ----
+  BROWSER_AUDIT: '1.0.0', // Browser action audit events with evidence chain and retention policy
 } as const;
 
 export type ContractVersion = (typeof CONTRACT_VERSIONS)[keyof typeof CONTRACT_VERSIONS];
@@ -1994,4 +1996,13 @@ export interface ParallelConfig {
   maxConcurrentTasks: number; // 1=free, 3=pro, 10=enterprise
   allowedWaitReasons: TaskSlotStatus[];
 }
+
+// ============================================================================
+// BROWSER AUDIT SYSTEM (2026-05-07)
+// Unified audit ID scheme with embedded ancestry, storage paths, and retention policies
+// ============================================================================
+
+export * from './audit-ids.js';
+export * from './browser-audit.js';
+export * from './storage-paths.js';
 
