@@ -47,7 +47,8 @@ export const CONTRACT_VERSIONS = {
   VISION_ANALYSIS: '1.0.0',   // Image/screenshot analysis result
   TASK_SLOT: '1.0.0',         // Parallel task slot for concurrent execution
   // ---- Browser Audit System (2026-05-07) ----
-  BROWSER_AUDIT: '1.0.0', // Browser action audit events with evidence chain and retention policy
+  BROWSER_AUDIT: '1.0.0',     // Browser action audit events with evidence chain
+  RETENTION_POLICY: '1.0.0',  // Customer-configurable audit artifact retention policies
 } as const;
 
 export type ContractVersion = (typeof CONTRACT_VERSIONS)[keyof typeof CONTRACT_VERSIONS];
@@ -2005,4 +2006,5 @@ export interface ParallelConfig {
 export * from './audit-ids.js';
 export * from './browser-audit.js';
 export * from './storage-paths.js';
+export * from './retention-policy.js';
 

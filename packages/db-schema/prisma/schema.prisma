@@ -768,3 +768,139 @@ model AgentLongTermMemory {
   @@index([workspaceId, confidence])
   @@index([tenantId, workspaceId])
 }
+
+// ============================================================================
+// BROWSER AUDIT SYSTEM (2026-05-07)
+// Frozen specification: packages/shared-types/src/audit-ids.ts, browser-audit.ts
+// ============================================================================
+
+enum BrowserActionType {
+  click
+  fill
+  navigate
+  select
+  submit
+  key_press
+  screenshot
+  hover
+  scroll
+  wait
+}
+
+enum SessionAuditStatus {
+  running
+  completed
+  failed
+  error
+}
+
+enum RetentionPolicyAction {
+  never_delete
+  manual_delete
+  auto_delete_after_days
+}
+
+enum RetentionPolicyScope {
+  tenant
+  workspace
+  role
+}
+
+enum RetentionPolicyStatus {
+  active
+  archived
+  superseded
+}
+
+// Agent session for a task — root of audit hierarchy
+model AgentSession {
+  id                 String              @id // ses_agt_<agent-short>_<timestamp>_<random>
+  tenantId           String              // ten_<random> — root tenant
+  agentInstanceId    String              // agt_<tenant-short>_<role>_<random> — agent identity
+  taskId             String              // link to existing TaskRecord
+  role               String              // agent role (e.g., 'developer')
+  recordingId        String              // rec_ses_<session-short>
+  recordingUrl       String              // signed URL to .mp4 in blob storage
+  startedAt          DateTime
+  endedAt            DateTime?
+  actionCount        Int                 @default(0)
+  status             SessionAuditStatus  @default(running)
+  failureReason      String?
+  retentionExpiresAt DateTime?           // null = never auto-delete (compliance mode)
+  retentionPolicyId  String?             // customer-configured policy ID
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  actions            BrowserActionEvent[]
+
+  @@unique([id]) // Session ID is globally unique
+  @@index([tenantId])
+  @@index([agentInstanceId])
+  @@index([taskId])
+  @@index([tenantId, startedAt]) // for compliance period queries
+  @@index([status])
+  @@index([retentionExpiresAt]) // for cleanup jobs
+}
+
+// Individual browser action within a session
+model BrowserActionEvent {
+  id                    String              @id // act_ses_<session-short>_<sequence>
+  sessionId             String              // ses_agt_<agent-short>_<timestamp>_<random>
+  tenantId              String              // ten_<random> — embedded for zero-join queries
+  agentInstanceId       String              // agt_<tenant-short>_<role>_<random> — embedded ancestry
+  sequence              Int                 // 0, 1, 2, ... within session
+  actionType            BrowserActionType
+  targetSelector        String
+  targetText            String
+  inputValue            String?
+  pageUrl               String
+  screenshotBeforeId    String              // scr_<action-id>_before
+  screenshotAfterId     String              // scr_<action-id>_after
+  screenshotBeforeUrl   String              // signed URL
+  screenshotAfterUrl    String              // signed URL
+  domSnapshotHashBefore String?
+  domSnapshotHashAfter  String?
+  networkLog            Json                @default("[]") // NetworkEntry[]
+  durationMs            Int
+  success               Boolean
+  errorMessage          String?
+  failureClass          String?
+  timestamp             DateTime
+  correctnessAssertion  Json?               // { screenshotDiffPercentage, domChangesDetected, ... }
+  createdAt             DateTime            @default(now())
+  session               AgentSession        @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([id])
+  @@index([sessionId]) // reconstruct full session
+  @@index([tenantId]) // list all actions for tenant
+  @@index([agentInstanceId]) // list all actions by agent
+  @@index([tenantId, actionType]) // role-based compliance queries
+  @@index([timestamp]) // time-range queries
+  @@index([tenantId, timestamp]) // compliance exports
+}
+
+// Customer-configured retention policy — determines artifact cleanup
+model RetentionPolicy {
+  id                 String                @id @default(cuid())
+  tenantId           String
+  workspaceId        String?
+  roleKey            String?               // optional: role-scoped policy
+  name               String
+  description        String?
+  scope              RetentionPolicyScope  @default(tenant)
+  action             RetentionPolicyAction @default(never_delete)
+  retentionDays      Int?                  // null if action != auto_delete_after_days
+  deletionTrigger    String?               // 'user_initiated' | 'scheduled' | 'api_triggered'
+  deletionSchedule   String?               // cron expression for scheduled deletions
+  effectiveFrom      DateTime
+  expiredAt          DateTime?
+  status             RetentionPolicyStatus @default(active)
+  createdBy          String
+  updatedBy          String
+  correlationId      String
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+
+  @@index([tenantId])
+  @@index([tenantId, workspaceId])
+  @@index([tenantId, status])
+}

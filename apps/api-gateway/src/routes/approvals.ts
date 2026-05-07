@@ -957,7 +957,7 @@ export const registerApprovalRoutes = async (
                 });
             }
 
-        // Fetch evidence bundle for high-risk actions if session ID is available
+            // Fetch evidence bundle for high-risk actions if session ID is available
             let evidenceBundle: EvidenceBundle | undefined;
             const sessionId = request.body?.session_id?.trim();
             if ((existing.riskLevel === 'high' || existing.riskLevel === 'medium') && sessionId) {

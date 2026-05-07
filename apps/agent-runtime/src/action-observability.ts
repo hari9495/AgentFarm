@@ -3,6 +3,16 @@ import { mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
+import {
+    generateSessionId,
+    generateActionId,
+    generateRecordingId,
+    generateScreenshotId,
+} from '@agentfarm/shared-types';
+import type {
+    BrowserActionAuditEvent,
+    SessionAuditRecord,
+} from '@agentfarm/shared-types';
 
 export type ObservabilityActionCategory = 'browser' | 'desktop';
 export type ObservabilityRiskLevel = 'low' | 'medium' | 'high';

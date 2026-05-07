@@ -37,16 +37,16 @@ export interface BrowserActionAuditEvent {
 
     /** Type of browser action performed */
     actionType:
-        | 'click'
-        | 'fill'
-        | 'navigate'
-        | 'select'
-        | 'submit'
-        | 'key_press'
-        | 'screenshot'
-        | 'hover'
-        | 'scroll'
-        | 'wait';
+    | 'click'
+    | 'fill'
+    | 'navigate'
+    | 'select'
+    | 'submit'
+    | 'key_press'
+    | 'screenshot'
+    | 'hover'
+    | 'scroll'
+    | 'wait';
 
     /** CSS selector or XPath of the target element */
     targetSelector: string;
