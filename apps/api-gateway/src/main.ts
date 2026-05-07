@@ -465,7 +465,7 @@ await registerQuestionRoutes(app, prisma);
 await registerMemoryRoutes(app, prisma);
 registerSkillPipelineRoutes(app);
 registerSkillSchedulerRoutes(app);
-registerWebhookRoutes(app);
+registerWebhookRoutes(app, prisma);
 registerConnectorHealthRoutes(app);
 registerKnowledgeGraphRoutes(app);
 registerAgentFeedbackRoutes(app);

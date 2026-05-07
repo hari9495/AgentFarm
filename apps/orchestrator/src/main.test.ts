@@ -1,21 +1,31 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { buildOrchestratorServer } from './main.js';
+import type { OrchestratorPersistedState, OrchestratorStateStore } from './orchestrator-state-store.js';
 
-const createIsolatedApp = async (options?: { now?: () => number }) => {
-    const tempDir = await mkdtemp(join(tmpdir(), 'agentfarm-orchestrator-test-'));
+const createInMemoryStateStore = (): OrchestratorStateStore => {
+    let current: OrchestratorPersistedState | null = null;
+    return {
+        async load() {
+            return current ? structuredClone(current) : null;
+        },
+        async save(state) {
+            current = structuredClone(state);
+        },
+    };
+};
+
+const createIsolatedApp = async (options?: Parameters<typeof buildOrchestratorServer>[0] & { now?: () => number }) => {
     const app = await buildOrchestratorServer({
+        ...options,
         now: options?.now,
-        statePath: join(tempDir, 'state.json'),
+        statePath: options?.statePath ?? '.orchestrator-test-state.json',
+        stateStore: options?.stateStore ?? createInMemoryStateStore(),
     });
     return {
         app,
         cleanup: async () => {
             await app.close();
-            await rm(tempDir, { recursive: true, force: true });
         },
     };
 };
@@ -271,6 +281,90 @@ test('orchestrator wake scheduling accepts agent_handoff wake source', async () 
     }
 });
 
+test('orchestrator wake route fetches question sweep and memory context', async () => {
+    const isolated = await createIsolatedApp({
+        questionSweepFetcher: async () => ({
+            expiredCount: 1,
+            resolutions: [{ questionId: 'q-1', taskId: 'task-1', policy: 'escalate', action: 'escalated' }],
+        }),
+        workspaceMemoryFetcher: async () => ({
+            recentMemoryCount: 2,
+            memoryCountThisWeek: 5,
+            mostCommonConnectors: ['github', 'teams'],
+            approvalRejectionRate: 0.2,
+        }),
+    });
+    const { app } = isolated;
+
+    try {
+        const response = await app.inject({
+            method: 'POST',
+            url: '/v1/wake/schedule',
+            payload: {
+                tenant_id: 'tenant-hooks',
+                workspace_id: 'ws-hooks',
+                bot_id: 'bot-hooks',
+                wake_source: 'automation',
+            },
+        });
+
+        assert.equal(response.statusCode, 201);
+        const body = response.json() as {
+            question_sweep: { expiredCount: number };
+            memory_context: { recentMemoryCount: number; mostCommonConnectors: string[] };
+        };
+        assert.equal(body.question_sweep.expiredCount, 1);
+        assert.equal(body.memory_context.recentMemoryCount, 2);
+        assert.deepEqual(body.memory_context.mostCommonConnectors, ['github', 'teams']);
+    } finally {
+        await isolated.cleanup();
+    }
+});
+
+test('orchestrator run completion records task memory when task details are provided', async () => {
+    let recorded = false;
+    const isolated = await createIsolatedApp({
+        taskMemoryRecorder: async (input) => {
+            recorded = input.taskId === 'task-memory' && input.summary === 'Completed connector sync';
+            return true;
+        },
+    });
+    const { app } = isolated;
+
+    try {
+        const scheduled = await app.inject({
+            method: 'POST',
+            url: '/v1/wake/schedule',
+            payload: {
+                tenant_id: 'tenant-memory',
+                workspace_id: 'ws-memory',
+                bot_id: 'bot-memory',
+                wake_source: 'on_demand',
+            },
+        });
+        const runId = (scheduled.json() as { run_id: string }).run_id;
+
+        const response = await app.inject({
+            method: 'POST',
+            url: `/v1/wake/runs/${runId}/complete`,
+            payload: {
+                final_status: 'completed',
+                task_id: 'task-memory',
+                summary: 'Completed connector sync',
+                actions_taken: ['read_task', 'update_status'],
+                connectors_used: ['github'],
+            },
+        });
+
+        assert.equal(response.statusCode, 200);
+        const body = response.json() as { memory_recorded: boolean };
+        assert.equal(body.memory_recorded, true);
+        assert.equal(recorded, true);
+    } finally {
+        await isolated.cleanup();
+    }
+});
+
 test('orchestrator agent handoff routes create, list, and update status', async () => {
     const isolated = await createIsolatedApp();
     const { app } = isolated;
@@ -318,12 +412,12 @@ test('orchestrator agent handoff routes create, list, and update status', async 
 });
 
 test('orchestrator persists wake and schedule state across server restarts', async () => {
-    const tempDir = await mkdtemp(join(tmpdir(), 'agentfarm-orchestrator-state-'));
-    const statePath = join(tempDir, 'state.json');
+    const stateStore = createInMemoryStateStore();
 
     const appOne = await buildOrchestratorServer({
         now: () => 1_700_000_500_000,
-        statePath,
+        statePath: '.orchestrator-persist-test.json',
+        stateStore,
     });
 
     let firstRunId = '';
@@ -388,7 +482,8 @@ test('orchestrator persists wake and schedule state across server restarts', asy
 
     const appTwo = await buildOrchestratorServer({
         now: () => 1_700_000_600_000,
-        statePath,
+        statePath: '.orchestrator-persist-test.json',
+        stateStore,
     });
 
     try {
@@ -447,15 +542,13 @@ test('orchestrator persists wake and schedule state across server restarts', asy
         assert.equal(scheduleTwoBody.enabled, true);
     } finally {
         await appTwo.close();
-        await rm(tempDir, { recursive: true, force: true });
     }
 });
 
 test('orchestrator persists agent handoffs across server restarts', async () => {
-    const tempDir = await mkdtemp(join(tmpdir(), 'agentfarm-orchestrator-handoff-'));
-    const statePath = join(tempDir, 'state.json');
+    const stateStore = createInMemoryStateStore();
 
-    const appOne = await buildOrchestratorServer({ statePath });
+    const appOne = await buildOrchestratorServer({ statePath: '.orchestrator-handoff-test.json', stateStore });
 
     let handoffId = '';
 
@@ -488,7 +581,7 @@ test('orchestrator persists agent handoffs across server restarts', async () => 
     }
 
     // Restart — handoff must survive
-    const appTwo = await buildOrchestratorServer({ statePath });
+    const appTwo = await buildOrchestratorServer({ statePath: '.orchestrator-handoff-test.json', stateStore });
 
     try {
         const listResp = await appTwo.inject({
@@ -502,6 +595,5 @@ test('orchestrator persists agent handoffs across server restarts', async () => 
         assert.equal(listBody.handoffs[0]?.status, 'accepted');
     } finally {
         await appTwo.close();
-        await rm(tempDir, { recursive: true, force: true });
     }
 });

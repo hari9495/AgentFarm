@@ -15,6 +15,301 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { PrismaClient } from '@prisma/client';
 import { createQuestion, answerQuestion, sweepExpiredQuestions } from '@agentfarm/agent-question-service';
 import { PrismaQuestionStore } from '@agentfarm/agent-question-service';
+import { createDefaultSecretStore } from '../lib/secret-store.js';
+import { createRealProviderExecutor } from '../lib/provider-clients.js';
+
+type QuestionNotificationTarget = {
+    channelId?: string;
+    teamId?: string;
+    webhookUrl?: string;
+};
+
+type QuestionNotificationResult = {
+    attempted: boolean;
+    delivered: boolean;
+    channel: 'slack' | 'teams' | 'dashboard';
+    message: string;
+};
+
+type TimeoutResolutionSummary = {
+    questionId: string;
+    taskId: string;
+    policy: 'proceed_with_best_guess' | 'escalate' | 'abandon_task';
+    action: 'continue' | 'escalated' | 'abandon_task';
+    notification?: QuestionNotificationResult;
+};
+
+const secretStore = createDefaultSecretStore();
+const providerExecutor = createRealProviderExecutor(secretStore);
+
+const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null;
+
+const parseNotificationTarget = (value: unknown): QuestionNotificationTarget | null => {
+    if (!isRecord(value)) {
+        return null;
+    }
+
+    const channelId = typeof value.channelId === 'string' ? value.channelId.trim() : '';
+    const teamId = typeof value.teamId === 'string' ? value.teamId.trim() : '';
+    const webhookUrl = typeof value.webhookUrl === 'string' ? value.webhookUrl.trim() : '';
+
+    if (!channelId && !teamId && !webhookUrl) {
+        return null;
+    }
+
+    return {
+        channelId: channelId || undefined,
+        teamId: teamId || undefined,
+        webhookUrl: webhookUrl || undefined,
+    };
+};
+
+const buildQuestionMessage = (record: {
+    id: string;
+    taskId: string;
+    botId: string;
+    question: string;
+    expiresAt: string;
+    context: string;
+    options?: string[];
+}): string => {
+    const options = Array.isArray(record.options) && record.options.length > 0
+        ? `\nOptions: ${record.options.join(' | ')}`
+        : '';
+    const context = record.context ? `\nContext: ${record.context}` : '';
+    return [
+        `Agent question from ${record.botId}`,
+        `Task: ${record.taskId}`,
+        `Question: ${record.question}`,
+        `Question ID: ${record.id}`,
+        `Expires: ${new Date(record.expiresAt).toLocaleString('en-US')}`,
+        context,
+        options,
+        '\nReply through the dashboard or the question webhook with question_id and answer.',
+    ].join('\n');
+};
+
+const sendSlackNotification = async (
+    record: {
+        id: string;
+        taskId: string;
+        botId: string;
+        question: string;
+        expiresAt: string;
+        context: string;
+        options?: string[];
+    },
+    target: QuestionNotificationTarget | null,
+): Promise<QuestionNotificationResult> => {
+    const webhookUrl = target?.webhookUrl ?? process.env.AGENT_QUESTION_SLACK_WEBHOOK_URL?.trim();
+    if (!webhookUrl) {
+        return {
+            attempted: false,
+            delivered: false,
+            channel: 'slack',
+            message: 'Slack webhook URL is not configured.',
+        };
+    }
+
+    const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ text: buildQuestionMessage(record) }),
+    }).catch(() => null);
+
+    if (!response?.ok) {
+        return {
+            attempted: true,
+            delivered: false,
+            channel: 'slack',
+            message: `Slack notification failed${response ? ` with ${response.status}` : '.'}`,
+        };
+    }
+
+    return {
+        attempted: true,
+        delivered: true,
+        channel: 'slack',
+        message: 'Slack notification delivered.',
+    };
+};
+
+const sendTeamsNotification = async (
+    prisma: PrismaClient,
+    record: {
+        tenantId: string;
+        workspaceId: string;
+        botId: string;
+        id: string;
+        taskId: string;
+        question: string;
+        expiresAt: string;
+        context: string;
+        options?: string[];
+    },
+    target: QuestionNotificationTarget | null,
+): Promise<QuestionNotificationResult> => {
+    if (!target?.teamId || !target.channelId) {
+        return {
+            attempted: false,
+            delivered: false,
+            channel: 'teams',
+            message: 'Teams notification requires teamId and channelId.',
+        };
+    }
+
+    const connectorId = `teams:${record.tenantId}:${record.workspaceId}`;
+    const metadata = await prisma.connectorAuthMetadata.findUnique({
+        where: { connectorId },
+        select: { secretRefId: true },
+    });
+
+    if (!metadata?.secretRefId) {
+        return {
+            attempted: false,
+            delivered: false,
+            channel: 'teams',
+            message: 'Teams connector is not configured for this workspace.',
+        };
+    }
+
+    const result = await providerExecutor({
+        connectorType: 'teams',
+        actionType: 'send_message',
+        attempt: 1,
+        secretRefId: metadata.secretRefId,
+        payload: {
+            team_id: target.teamId,
+            channel_id: target.channelId,
+            message: buildQuestionMessage(record),
+        },
+    });
+
+    return {
+        attempted: true,
+        delivered: result.ok,
+        channel: 'teams',
+        message: result.ok
+            ? result.resultSummary ?? 'Teams notification delivered.'
+            : result.errorMessage ?? 'Teams notification failed.',
+    };
+};
+
+const notifyQuestionCreated = async (
+    prisma: PrismaClient,
+    record: {
+        tenantId: string;
+        workspaceId: string;
+        botId: string;
+        id: string;
+        taskId: string;
+        question: string;
+        expiresAt: string;
+        context: string;
+        options?: string[];
+        askedVia: 'slack' | 'teams' | 'dashboard';
+    },
+    target: QuestionNotificationTarget | null,
+): Promise<QuestionNotificationResult> => {
+    if (record.askedVia === 'dashboard') {
+        return {
+            attempted: false,
+            delivered: true,
+            channel: 'dashboard',
+            message: 'Question is available in the dashboard queue.',
+        };
+    }
+
+    if (record.askedVia === 'slack') {
+        return sendSlackNotification(record, target);
+    }
+
+    return sendTeamsNotification(prisma, record, target);
+};
+
+const writeTimeoutAudit = async (
+    prisma: PrismaClient,
+    input: {
+        tenantId: string;
+        workspaceId: string;
+        botId: string;
+        correlationId: string;
+        summary: string;
+        severity: 'info' | 'warn' | 'error';
+    },
+): Promise<void> => {
+    await prisma.auditEvent.create({
+        data: {
+            tenantId: input.tenantId,
+            workspaceId: input.workspaceId,
+            botId: input.botId,
+            eventType: 'audit_event',
+            severity: input.severity,
+            summary: input.summary,
+            sourceSystem: 'agent-question-service',
+            correlationId: input.correlationId,
+        },
+    });
+};
+
+const processTimeoutPolicy = async (
+    prisma: PrismaClient,
+    expired: { policy: 'proceed_with_best_guess' | 'escalate' | 'abandon_task'; record: any },
+): Promise<TimeoutResolutionSummary> => {
+    const { policy, record } = expired;
+
+    if (policy === 'proceed_with_best_guess') {
+        await writeTimeoutAudit(prisma, {
+            tenantId: record.tenantId,
+            workspaceId: record.workspaceId,
+            botId: record.botId,
+            correlationId: record.correlationId,
+            severity: 'info',
+            summary: `Question ${record.id} timed out. Proceed with best guess for task ${record.taskId}.`,
+        });
+        return {
+            questionId: record.id,
+            taskId: record.taskId,
+            policy,
+            action: 'continue',
+        };
+    }
+
+    if (policy === 'abandon_task') {
+        await writeTimeoutAudit(prisma, {
+            tenantId: record.tenantId,
+            workspaceId: record.workspaceId,
+            botId: record.botId,
+            correlationId: record.correlationId,
+            severity: 'error',
+            summary: `Question ${record.id} timed out. Abandon task ${record.taskId} and request manual intervention.`,
+        });
+        return {
+            questionId: record.id,
+            taskId: record.taskId,
+            policy,
+            action: 'abandon_task',
+        };
+    }
+
+    await writeTimeoutAudit(prisma, {
+        tenantId: record.tenantId,
+        workspaceId: record.workspaceId,
+        botId: record.botId,
+        correlationId: record.correlationId,
+        severity: 'warn',
+        summary: `Question ${record.id} timed out. Escalation required for task ${record.taskId}.`,
+    });
+
+    const notification = await notifyQuestionCreated(prisma, record, null);
+    return {
+        questionId: record.id,
+        taskId: record.taskId,
+        policy,
+        action: 'escalated',
+        notification,
+    };
+};
 
 export async function registerQuestionRoutes(app: FastifyInstance, prisma: PrismaClient) {
     const questionStore = new PrismaQuestionStore(prisma);
@@ -34,6 +329,7 @@ export async function registerQuestionRoutes(app: FastifyInstance, prisma: Prism
                 askedVia,
                 timeoutMs,
                 onTimeout,
+                notificationTarget,
             } = body;
 
             if (!tenantId || !workspaceId || !taskId || !botId || !question || !context) {
@@ -63,8 +359,13 @@ export async function registerQuestionRoutes(app: FastifyInstance, prisma: Prism
                 questionStore
             );
 
-            // TODO: Send notification via Slack/Teams connector
-            return res.status(201).send({ question: record });
+            const notification = await notifyQuestionCreated(
+                prisma,
+                record,
+                parseNotificationTarget(notificationTarget),
+            );
+
+            return res.status(201).send({ question: record, notification });
         } catch (error) {
             const msg = error instanceof Error ? error.message : 'Unknown error';
             return res.status(500).send({ error: `Failed to create question: ${msg}` });
@@ -130,13 +431,13 @@ export async function registerQuestionRoutes(app: FastifyInstance, prisma: Prism
             const { workspaceId } = params;
 
             const expired = await sweepExpiredQuestions(workspaceId, questionStore);
-
-            // TODO: Process timeout policies per record.onTimeout
+            const resolutions = await Promise.all(expired.map((entry) => processTimeoutPolicy(prisma, entry)));
 
             return res.send({
                 workspaceId,
                 expiredCount: expired.length,
                 policies: expired.map((e: any) => e.policy),
+                resolutions,
             });
         } catch (error) {
             const msg = error instanceof Error ? error.message : 'Unknown error';

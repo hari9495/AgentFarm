@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import type { ReactElement } from 'react';
 import { ApprovalQueuePanel } from './components/approval-queue-panel';
+import { AgentMemoryPatternPanel } from './components/agent-memory-pattern-panel';
 import { AgentQuestionPanel } from './components/agent-question-panel';
 import { ConnectorConfigPanel } from './components/connector-config-panel';
 import { EvidenceCompliancePanel } from './components/evidence-compliance-panel';
@@ -142,11 +143,19 @@ type AgentQuestionItem = {
     workspaceId: string;
     taskId: string;
     questionText: string;
-    status: 'pending' | 'answered' | 'timed_out' | 'abandoned';
+    status: 'pending' | 'answered' | 'timed_out';
     askedAt: string;
     answeredAt: string | null;
     expiresAt: string;
     answer: string | null;
+};
+
+type LearnedPattern = {
+    id: string;
+    pattern: string;
+    confidence: number;
+    observedCount: number;
+    lastSeen: string;
 };
 
 type AuditEvent = {
@@ -922,7 +931,7 @@ const getPendingAgentQuestions = async (
 ): Promise<AgentQuestionItem[]> => {
     try {
         const response = await fetch(
-            `${context.apiBaseUrl}/questions?workspaceId=${encodeURIComponent(workspaceId)}&tenantId=${encodeURIComponent(tenantId)}&status=pending`,
+            `${context.apiBaseUrl}/api/v1/workspaces/${encodeURIComponent(workspaceId)}/questions/pending`,
             {
                 headers: context.headers,
                 cache: 'no-store',
@@ -933,8 +942,68 @@ const getPendingAgentQuestions = async (
             return [];
         }
 
-        const payload = (await response.json()) as { items?: AgentQuestionItem[] };
-        return Array.isArray(payload.items) ? payload.items : [];
+        const payload = (await response.json()) as {
+            questions?: Array<{
+                id: string;
+                tenantId: string;
+                workspaceId: string;
+                taskId: string;
+                question: string;
+                status: 'pending' | 'answered' | 'timed_out';
+                createdAt: string;
+                answeredAt?: string;
+                expiresAt: string;
+                answer?: string;
+            }>;
+        };
+
+        return Array.isArray(payload.questions)
+            ? payload.questions.map((question) => ({
+                id: question.id,
+                tenantId: question.tenantId,
+                workspaceId: question.workspaceId,
+                taskId: question.taskId,
+                questionText: question.question,
+                status: question.status,
+                askedAt: question.createdAt,
+                answeredAt: question.answeredAt ?? null,
+                expiresAt: question.expiresAt,
+                answer: question.answer ?? null,
+            }))
+            : [];
+    } catch {
+        return [];
+    }
+};
+
+const getLearnedPatterns = async (
+    context: ApiRequestContext,
+    workspaceId: string,
+): Promise<LearnedPattern[]> => {
+    try {
+        const response = await fetch(
+            `${context.apiBaseUrl}/api/v1/workspaces/${encodeURIComponent(workspaceId)}/memory/patterns?minConfidence=0.55`,
+            {
+                headers: context.headers,
+                cache: 'no-store',
+            },
+        );
+
+        if (!response.ok) {
+            return [];
+        }
+
+        const payload = (await response.json()) as {
+            patterns?: Array<{
+                id: string;
+                pattern: string;
+                confidence: number;
+                observedCount: number;
+                lastSeen: string;
+            }>;
+        };
+
+        return Array.isArray(payload.patterns) ? payload.patterns : [];
     } catch {
         return [];
     }
@@ -977,6 +1046,7 @@ export default async function HomePage({
     const internalPolicy = await getInternalLoginPolicySnapshot(context);
     const historicalMetrics = await getWorkspaceHistoricalMetrics(context, workspace.workspace_id);
     const pendingAgentQuestions = await getPendingAgentQuestions(context, workspace.workspace_id, workspace.tenant_id);
+    const learnedPatterns = await getLearnedPatterns(context, workspace.workspace_id);
 
     const source = summarySource === 'live' && dashboardSlice.source === 'live' ? 'live' : 'fallback';
 
@@ -1507,6 +1577,7 @@ export default async function HomePage({
                                 tenantId={workspace.tenant_id}
                                 initialQuestions={pendingAgentQuestions}
                             />
+                            <AgentMemoryPatternPanel patterns={learnedPatterns} />
                         </section>
                     )}
 

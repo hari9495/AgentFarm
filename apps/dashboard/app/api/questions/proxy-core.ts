@@ -23,7 +23,6 @@ export async function proxyQuestionsGet(input: QuestionsGetInput): Promise<Route
     const url = new URL(requestUrl);
     const workspaceId = url.searchParams.get('workspaceId')?.trim();
     const tenantId = url.searchParams.get('tenantId')?.trim();
-    const status = url.searchParams.get('status')?.trim() ?? 'pending';
 
     if (!workspaceId || !tenantId) {
         return {
@@ -35,7 +34,7 @@ export async function proxyQuestionsGet(input: QuestionsGetInput): Promise<Route
         };
     }
 
-    const upstreamUrl = `${apiBaseUrl}/questions?workspaceId=${encodeURIComponent(workspaceId)}&tenantId=${encodeURIComponent(tenantId)}&status=${encodeURIComponent(status)}`;
+    const upstreamUrl = `${apiBaseUrl}/api/v1/workspaces/${encodeURIComponent(workspaceId)}/questions/pending`;
 
     try {
         const response = await fetchImpl(upstreamUrl, {

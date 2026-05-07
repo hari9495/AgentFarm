@@ -172,7 +172,6 @@ export class TaskScheduler {
             request.botId,
             request.dedupeKey
         );
-
         if (existingRun) {
             // Duplicate wakeup within coalescing window
             return {
@@ -206,6 +205,10 @@ export class TaskScheduler {
             coalesced: false,
             message: `Created new run ${newRun.id} from wake source: ${request.wakeSource}`,
         };
+    }
+
+    listRuns(): RunRecord[] {
+        return this.store.listRuns();
     }
 
     /**

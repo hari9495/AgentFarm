@@ -43,18 +43,18 @@ test('proxyQuestionsGet forwards request to upstream and returns upstream body',
             capturedAuth = String((init?.headers as Record<string, string>).Authorization);
             return {
                 status: 200,
-                json: async () => ({ items: [{ id: 'q1' }], total: 1 }),
+                json: async () => ({ questions: [{ id: 'q1' }], pendingCount: 1 }),
             } as Response;
         }) as typeof fetch,
     });
 
     assert.equal(
         capturedUrl,
-        'http://localhost:3000/questions?workspaceId=ws%20one&tenantId=t%2F1&status=pending',
+        'http://localhost:3000/api/v1/workspaces/ws%20one/questions/pending',
     );
     assert.equal(capturedAuth, 'Bearer internal-token');
     assert.equal(result.status, 200);
-    assert.deepEqual(result.body, { items: [{ id: 'q1' }], total: 1 });
+    assert.deepEqual(result.body, { questions: [{ id: 'q1' }], pendingCount: 1 });
 });
 
 test('proxyQuestionsGet returns upstream parse error body when JSON parsing fails', async () => {

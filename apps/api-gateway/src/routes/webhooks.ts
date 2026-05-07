@@ -1,4 +1,7 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { PrismaClient } from '@prisma/client';
+import { answerQuestion, PrismaQuestionStore } from '@agentfarm/agent-question-service';
+import { MemoryStore } from '@agentfarm/memory-service';
 
 type WebhookRegisterBody = {
     provider: string;
@@ -22,7 +25,85 @@ type IngestBody = {
     registration_id?: string;
 };
 
-export function registerWebhookRoutes(app: FastifyInstance): void {
+type QuestionWebhookPayload = {
+    question_id?: string;
+    answer?: string;
+    answered_by?: string;
+    event?: {
+        text?: string;
+        user?: string;
+    };
+    value?: {
+        questionId?: string;
+        answer?: string;
+        answeredBy?: string;
+    };
+    data?: {
+        questionId?: string;
+        answerText?: string;
+        answeredBy?: string;
+    };
+};
+
+type CodeReviewPayload = {
+    tenantId?: string;
+    workspaceId?: string;
+    sourceTaskId?: string;
+    sourcePrUrl?: string;
+    patternConfidence?: number;
+    comments?: Array<{ body?: string }>;
+    review_comments?: string[];
+    review?: { body?: string };
+    comment?: { body?: string };
+    pull_request?: { html_url?: string };
+};
+
+const trimString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
+
+const extractAnswerPayload = (payload: QuestionWebhookPayload): { questionId: string; answer: string; answeredBy: string } | null => {
+    const questionId = trimString(payload.question_id)
+        || trimString(payload.value?.questionId)
+        || trimString(payload.data?.questionId);
+    const answer = trimString(payload.answer)
+        || trimString(payload.value?.answer)
+        || trimString(payload.data?.answerText)
+        || trimString(payload.event?.text);
+    const answeredBy = trimString(payload.answered_by)
+        || trimString(payload.value?.answeredBy)
+        || trimString(payload.data?.answeredBy)
+        || trimString(payload.event?.user)
+        || 'external_operator';
+
+    if (!questionId || !answer) {
+        return null;
+    }
+
+    return { questionId, answer, answeredBy };
+};
+
+const normalizePattern = (comment: string): string | null => {
+    const cleaned = comment
+        .replace(/`+/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    if (!cleaned) {
+        return null;
+    }
+
+    const direct = cleaned.match(/(?:prefer|use|avoid|always|ensure|do not|don't)\s+(.+?)(?:[.!?]|$)/i);
+    if (direct?.[0]) {
+        return direct[0][0].toUpperCase() + direct[0].slice(1);
+    }
+
+    const sentence = cleaned.split(/[.!?]/)[0]?.trim();
+    return sentence ? sentence[0].toUpperCase() + sentence.slice(1) : null;
+};
+
+export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient): void {
+    const questionStore = new PrismaQuestionStore(prisma);
+    const memoryStore = new MemoryStore(prisma);
+
     // List registrations
     app.get('/webhooks', async (_req, reply) => {
         const { globalWebhookEngine } = await import('@agentfarm/agent-runtime/webhook-ingestion.js').catch(
@@ -107,6 +188,99 @@ export function registerWebhookRoutes(app: FastifyInstance): void {
                 registrationId: body.registration_id,
             });
             return reply.send(result);
+        },
+    );
+
+    app.post(
+        '/api/v1/questions/webhooks/slack',
+        async (req: FastifyRequest<{ Body: QuestionWebhookPayload }>, reply) => {
+            const payload = extractAnswerPayload(req.body ?? {});
+            if (!payload) {
+                return reply.code(400).send({
+                    error: 'invalid_request',
+                    message: 'question_id and answer are required in the Slack payload.',
+                });
+            }
+
+            const question = await answerQuestion(payload.questionId, payload.answer, payload.answeredBy, questionStore);
+            if (!question) {
+                return reply.code(404).send({ error: 'not_found', message: 'Pending question not found.' });
+            }
+
+            return reply.send({ question, message: 'Slack answer accepted.' });
+        },
+    );
+
+    app.post(
+        '/api/v1/questions/webhooks/teams',
+        async (req: FastifyRequest<{ Body: QuestionWebhookPayload }>, reply) => {
+            const payload = extractAnswerPayload(req.body ?? {});
+            if (!payload) {
+                return reply.code(400).send({
+                    error: 'invalid_request',
+                    message: 'question_id and answer are required in the Teams payload.',
+                });
+            }
+
+            const question = await answerQuestion(payload.questionId, payload.answer, payload.answeredBy, questionStore);
+            if (!question) {
+                return reply.code(404).send({ error: 'not_found', message: 'Pending question not found.' });
+            }
+
+            return reply.send({ question, message: 'Teams answer accepted.' });
+        },
+    );
+
+    app.post(
+        '/api/v1/memory/patterns/code-review',
+        async (req: FastifyRequest<{ Body: CodeReviewPayload }>, reply) => {
+            const body = req.body ?? {};
+            const tenantId = trimString(body.tenantId);
+            const workspaceId = trimString(body.workspaceId);
+
+            if (!tenantId || !workspaceId) {
+                return reply.code(400).send({
+                    error: 'invalid_request',
+                    message: 'tenantId and workspaceId are required.',
+                });
+            }
+
+            const comments = [
+                ...(Array.isArray(body.review_comments) ? body.review_comments : []),
+                ...(Array.isArray(body.comments) ? body.comments.map((entry) => trimString(entry.body)) : []),
+                trimString(body.review?.body),
+                trimString(body.comment?.body),
+            ].filter((value): value is string => Boolean(value));
+
+            if (comments.length === 0) {
+                return reply.code(400).send({
+                    error: 'invalid_request',
+                    message: 'At least one review comment is required.',
+                });
+            }
+
+            const normalizedPatterns = [...new Set(comments.map(normalizePattern).filter((value): value is string => Boolean(value)))];
+            const confidenceBase = typeof body.patternConfidence === 'number' && Number.isFinite(body.patternConfidence)
+                ? Math.max(0.1, Math.min(1, body.patternConfidence))
+                : 0.65;
+
+            const learned = await Promise.all(
+                normalizedPatterns.map(async (pattern, index) => memoryStore.writeLongTermMemory({
+                    tenantId,
+                    workspaceId,
+                    pattern,
+                    confidence: Math.max(0.1, Math.min(1, confidenceBase + (normalizedPatterns.length > 1 ? 0.05 : 0) - index * 0.01)),
+                    observedCount: comments.filter((comment) => normalizePattern(comment) === pattern).length || 1,
+                    lastSeen: new Date().toISOString(),
+                })),
+            );
+
+            return reply.code(201).send({
+                learnedCount: learned.length,
+                patterns: learned,
+                sourceTaskId: trimString(body.sourceTaskId) || undefined,
+                sourcePrUrl: trimString(body.sourcePrUrl) || trimString(body.pull_request?.html_url) || undefined,
+            });
         },
     );
 }

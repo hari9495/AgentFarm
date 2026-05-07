@@ -29,6 +29,58 @@ type BuildOrchestratorServerOptions = {
         version: number;
         state: Record<string, unknown>;
     } | null>;
+    questionSweepFetcher?: (input: {
+        workspaceId: string;
+        env: NodeJS.ProcessEnv;
+    }) => Promise<{
+        expiredCount: number;
+        resolutions: Array<{
+            questionId: string;
+            taskId: string;
+            policy: string;
+            action: string;
+        }>;
+    } | null>;
+    workspaceMemoryFetcher?: (input: {
+        workspaceId: string;
+        env: NodeJS.ProcessEnv;
+    }) => Promise<{
+        recentMemoryCount: number;
+        memoryCountThisWeek: number;
+        mostCommonConnectors: string[];
+        approvalRejectionRate: number;
+    } | null>;
+    taskMemoryRecorder?: (input: {
+        tenantId: string;
+        workspaceId: string;
+        taskId: string;
+        correlationId: string;
+        actionsTaken: string[];
+        approvalOutcomes: Array<{ action: string; decision: 'approved' | 'rejected'; reason?: string }>;
+        connectorsUsed: string[];
+        llmProvider?: string;
+        executionStatus: 'success' | 'approval_required' | 'failed';
+        summary: string;
+        env: NodeJS.ProcessEnv;
+    }) => Promise<boolean>;
+};
+
+const getGatewayHeaders = (env: NodeJS.ProcessEnv): Record<string, string> => {
+    const headers: Record<string, string> = { 'content-type': 'application/json' };
+    const bearerToken = env.ORCHESTRATOR_GATEWAY_BEARER_TOKEN?.trim();
+    if (bearerToken) {
+        headers.Authorization = `Bearer ${bearerToken}`;
+    }
+    const opsToken = env.ORCHESTRATOR_GATEWAY_OPS_TOKEN?.trim();
+    if (opsToken) {
+        headers['x-ops-token'] = opsToken;
+    }
+    return headers;
+};
+
+const getGatewayBaseUrl = (env: NodeJS.ProcessEnv): string | null => {
+    const baseUrl = env.ORCHESTRATOR_GATEWAY_API_URL?.trim() ?? env.API_GATEWAY_URL?.trim() ?? '';
+    return baseUrl || null;
 };
 
 const defaultStatePath = process.env.ORCHESTRATOR_STATE_PATH?.trim() || '.orchestrator/state.json';
@@ -88,6 +140,149 @@ const defaultWorkspaceSessionFetcher = async (input: {
         };
     } catch {
         return null;
+    }
+};
+
+const defaultQuestionSweepFetcher = async (input: {
+    workspaceId: string;
+    env: NodeJS.ProcessEnv;
+}): Promise<{
+    expiredCount: number;
+    resolutions: Array<{
+        questionId: string;
+        taskId: string;
+        policy: string;
+        action: string;
+    }>;
+} | null> => {
+    const baseUrl = getGatewayBaseUrl(input.env);
+    if (!baseUrl) {
+        return null;
+    }
+
+    try {
+        const response = await fetch(
+            `${baseUrl}/api/v1/workspaces/${encodeURIComponent(input.workspaceId)}/questions/sweep-expired`,
+            {
+                method: 'POST',
+                headers: getGatewayHeaders(input.env),
+                signal: AbortSignal.timeout(4_000),
+            },
+        );
+        if (!response.ok) {
+            return null;
+        }
+
+        const body = await response.json() as {
+            expiredCount?: number;
+            resolutions?: Array<{ questionId?: string; taskId?: string; policy?: string; action?: string }>;
+        };
+
+        return {
+            expiredCount: typeof body.expiredCount === 'number' ? body.expiredCount : 0,
+            resolutions: Array.isArray(body.resolutions)
+                ? body.resolutions
+                    .filter((entry): entry is { questionId: string; taskId: string; policy: string; action: string } => (
+                        typeof entry.questionId === 'string'
+                        && typeof entry.taskId === 'string'
+                        && typeof entry.policy === 'string'
+                        && typeof entry.action === 'string'
+                    ))
+                : [],
+        };
+    } catch {
+        return null;
+    }
+};
+
+const defaultWorkspaceMemoryFetcher = async (input: {
+    workspaceId: string;
+    env: NodeJS.ProcessEnv;
+}): Promise<{
+    recentMemoryCount: number;
+    memoryCountThisWeek: number;
+    mostCommonConnectors: string[];
+    approvalRejectionRate: number;
+} | null> => {
+    const baseUrl = getGatewayBaseUrl(input.env);
+    if (!baseUrl) {
+        return null;
+    }
+
+    try {
+        const response = await fetch(
+            `${baseUrl}/api/v1/workspaces/${encodeURIComponent(input.workspaceId)}/memory?maxResults=5`,
+            {
+                method: 'GET',
+                headers: getGatewayHeaders(input.env),
+                signal: AbortSignal.timeout(4_000),
+                cache: 'no-store',
+            },
+        );
+        if (!response.ok) {
+            return null;
+        }
+
+        const body = await response.json() as {
+            recentMemories?: unknown[];
+            memoryCountThisWeek?: number;
+            mostCommonConnectors?: string[];
+            approvalRejectionRate?: number;
+        };
+
+        return {
+            recentMemoryCount: Array.isArray(body.recentMemories) ? body.recentMemories.length : 0,
+            memoryCountThisWeek: typeof body.memoryCountThisWeek === 'number' ? body.memoryCountThisWeek : 0,
+            mostCommonConnectors: Array.isArray(body.mostCommonConnectors) ? body.mostCommonConnectors.filter((entry): entry is string => typeof entry === 'string') : [],
+            approvalRejectionRate: typeof body.approvalRejectionRate === 'number' ? body.approvalRejectionRate : 0,
+        };
+    } catch {
+        return null;
+    }
+};
+
+const defaultTaskMemoryRecorder = async (input: {
+    tenantId: string;
+    workspaceId: string;
+    taskId: string;
+    correlationId: string;
+    actionsTaken: string[];
+    approvalOutcomes: Array<{ action: string; decision: 'approved' | 'rejected'; reason?: string }>;
+    connectorsUsed: string[];
+    llmProvider?: string;
+    executionStatus: 'success' | 'approval_required' | 'failed';
+    summary: string;
+    env: NodeJS.ProcessEnv;
+}): Promise<boolean> => {
+    const baseUrl = getGatewayBaseUrl(input.env);
+    if (!baseUrl) {
+        return false;
+    }
+
+    try {
+        const response = await fetch(
+            `${baseUrl}/api/v1/workspaces/${encodeURIComponent(input.workspaceId)}/memory`,
+            {
+                method: 'POST',
+                headers: getGatewayHeaders(input.env),
+                signal: AbortSignal.timeout(4_000),
+                body: JSON.stringify({
+                    workspaceId: input.workspaceId,
+                    tenantId: input.tenantId,
+                    taskId: input.taskId,
+                    actionsTaken: input.actionsTaken,
+                    approvalOutcomes: input.approvalOutcomes,
+                    connectorsUsed: input.connectorsUsed,
+                    llmProvider: input.llmProvider,
+                    executionStatus: input.executionStatus,
+                    summary: input.summary,
+                    correlationId: input.correlationId,
+                }),
+            },
+        );
+        return response.ok;
+    } catch {
+        return false;
     }
 };
 
@@ -158,6 +353,9 @@ export const buildOrchestratorServer = async (
     const env = process.env;
     const now = options.now ?? (() => Date.now());
     const workspaceSessionFetcher = options.workspaceSessionFetcher ?? defaultWorkspaceSessionFetcher;
+    const questionSweepFetcher = options.questionSweepFetcher ?? defaultQuestionSweepFetcher;
+    const workspaceMemoryFetcher = options.workspaceMemoryFetcher ?? defaultWorkspaceMemoryFetcher;
+    const taskMemoryRecorder = options.taskMemoryRecorder ?? defaultTaskMemoryRecorder;
     const stateStore = options.stateStore ?? createOrchestratorStateStore({
         backend: options.stateBackend ?? defaultStateBackend,
         statePath: options.statePath ?? defaultStatePath,
@@ -227,6 +425,8 @@ export const buildOrchestratorServer = async (
             workspaceId,
             env,
         });
+        const questionSweep = await questionSweepFetcher({ workspaceId, env });
+        const memoryContext = await workspaceMemoryFetcher({ workspaceId, env });
 
         const result = await taskScheduler.scheduleWake({
             tenantId,
@@ -257,12 +457,15 @@ export const buildOrchestratorServer = async (
                     state_keys: Object.keys(restoredSession.state),
                 }
                 : null,
+            question_sweep: questionSweep,
+            memory_context: memoryContext,
         });
     });
 
     app.post('/v1/wake/runs/:runId/complete', async (request, reply) => {
         const params = request.params as { runId: string };
         const body = (request.body ?? {}) as Record<string, unknown>;
+        const run = taskScheduler.listRuns().find((entry) => entry.id === params.runId);
         const finalStatus = parseRunTerminalStatus(body.final_status);
         if (!finalStatus) {
             return reply.code(400).send({
@@ -284,7 +487,48 @@ export const buildOrchestratorServer = async (
             return;
         }
 
-        return reply.code(200).send({ run_id: params.runId, final_status: finalStatus });
+        const taskId = typeof body.task_id === 'string' ? body.task_id.trim() : '';
+        const summary = typeof body.summary === 'string' ? body.summary.trim() : '';
+        const actionsTaken = Array.isArray(body.actions_taken)
+            ? body.actions_taken.filter((entry): entry is string => typeof entry === 'string')
+            : [];
+        const connectorsUsed = Array.isArray(body.connectors_used)
+            ? body.connectors_used.filter((entry): entry is string => typeof entry === 'string')
+            : [];
+        const approvalOutcomes = Array.isArray(body.approval_outcomes)
+            ? body.approval_outcomes.filter((entry): entry is { action: string; decision: 'approved' | 'rejected'; reason?: string } => {
+                if (typeof entry !== 'object' || entry === null) {
+                    return false;
+                }
+                const candidate = entry as Record<string, unknown>;
+                return typeof candidate.action === 'string'
+                    && (candidate.decision === 'approved' || candidate.decision === 'rejected')
+                    && (candidate.reason === undefined || typeof candidate.reason === 'string');
+            })
+            : [];
+        const executionStatus = finalStatus === 'completed'
+            ? (approvalOutcomes.some((entry) => entry.decision === 'rejected') ? 'approval_required' : 'success')
+            : 'failed';
+        const llmProvider = typeof body.llm_provider === 'string' && body.llm_provider.trim()
+            ? body.llm_provider.trim()
+            : undefined;
+        const memoryRecorded = run && taskId && summary
+            ? await taskMemoryRecorder({
+                tenantId: run.tenantId,
+                workspaceId: run.workspaceId,
+                taskId,
+                correlationId: run.correlationId,
+                actionsTaken,
+                approvalOutcomes,
+                connectorsUsed,
+                llmProvider,
+                executionStatus,
+                summary,
+                env,
+            })
+            : false;
+
+        return reply.code(200).send({ run_id: params.runId, final_status: finalStatus, memory_recorded: memoryRecorded });
     });
 
     app.post('/v1/agent-handoffs', async (request, reply) => {

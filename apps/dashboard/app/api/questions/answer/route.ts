@@ -44,7 +44,7 @@ export async function POST(request: Request) {
         );
     }
 
-    const response = await fetch(`${getApiBaseUrl()}/questions/${encodeURIComponent(questionId)}/answer`, {
+    const response = await fetch(`${getApiBaseUrl()}/api/v1/questions/${encodeURIComponent(questionId)}/answer`, {
         method: 'POST',
         headers: {
             'content-type': 'application/json',
@@ -53,8 +53,6 @@ export async function POST(request: Request) {
         body: JSON.stringify({
             answer,
             answeredBy,
-            tenantId,
-            workspaceId,
         }),
         cache: 'no-store',
     });
