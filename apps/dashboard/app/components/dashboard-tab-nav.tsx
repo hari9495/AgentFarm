@@ -14,6 +14,7 @@ type DashboardTabNavProps = {
     variant: 'sidebar' | 'top';
     syncFromStorage?: boolean;
     workspaceId?: string;
+    pendingQuestionCount?: number;
 };
 
 const tabs: Array<{ key: DashboardTab; label: string; icon: ReactNode }> = [
@@ -67,7 +68,13 @@ const tabs: Array<{ key: DashboardTab; label: string; icon: ReactNode }> = [
 const isDashboardTab = (value: string | null): value is DashboardTab =>
     value === 'overview' || value === 'approvals' || value === 'observability' || value === 'audit' || value === 'marketplace';
 
-export function DashboardTabNav({ activeTab, variant, syncFromStorage = false, workspaceId }: DashboardTabNavProps) {
+export function DashboardTabNav({
+    activeTab,
+    variant,
+    syncFromStorage = false,
+    workspaceId,
+    pendingQuestionCount = 0,
+}: DashboardTabNavProps) {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
@@ -169,6 +176,11 @@ export function DashboardTabNav({ activeTab, variant, syncFromStorage = false, w
                     >
                         {tab.icon}
                         <span>{tab.label}</span>
+                        {tab.key === 'approvals' && pendingQuestionCount > 0 && (
+                            <span className="badge warn" aria-label={`${pendingQuestionCount} pending agent questions`}>
+                                {pendingQuestionCount}
+                            </span>
+                        )}
                     </button>
                 ))}
             </nav>
@@ -193,6 +205,11 @@ export function DashboardTabNav({ activeTab, variant, syncFromStorage = false, w
                 >
                     <span className="tab-link-icon" aria-hidden="true">{tab.icon}</span>
                     <span>{tab.label}</span>
+                    {tab.key === 'approvals' && pendingQuestionCount > 0 && (
+                        <span className="badge warn" aria-label={`${pendingQuestionCount} pending agent questions`}>
+                            {pendingQuestionCount}
+                        </span>
+                    )}
                 </button>
             ))}
         </div>

@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import type { ReactElement } from 'react';
 import { ApprovalQueuePanel } from './components/approval-queue-panel';
+import { AgentQuestionPanel } from './components/agent-question-panel';
 import { ConnectorConfigPanel } from './components/connector-config-panel';
 import { EvidenceCompliancePanel } from './components/evidence-compliance-panel';
 import { RuntimeObservabilityPanel } from './components/runtime-observability-panel';
@@ -133,6 +134,19 @@ type ApprovalMetrics = {
     pending_count: number;
     decision_count: number;
     p95_decision_latency_seconds: number | null;
+};
+
+type AgentQuestionItem = {
+    id: string;
+    tenantId: string;
+    workspaceId: string;
+    taskId: string;
+    questionText: string;
+    status: 'pending' | 'answered' | 'timed_out' | 'abandoned';
+    askedAt: string;
+    answeredAt: string | null;
+    expiresAt: string;
+    answer: string | null;
 };
 
 type AuditEvent = {
@@ -901,6 +915,31 @@ const getWorkspaceHistoricalMetrics = async (
     }
 };
 
+const getPendingAgentQuestions = async (
+    context: ApiRequestContext,
+    workspaceId: string,
+    tenantId: string,
+): Promise<AgentQuestionItem[]> => {
+    try {
+        const response = await fetch(
+            `${context.apiBaseUrl}/questions?workspaceId=${encodeURIComponent(workspaceId)}&tenantId=${encodeURIComponent(tenantId)}&status=pending`,
+            {
+                headers: context.headers,
+                cache: 'no-store',
+            },
+        );
+
+        if (!response.ok) {
+            return [];
+        }
+
+        const payload = (await response.json()) as { items?: AgentQuestionItem[] };
+        return Array.isArray(payload.items) ? payload.items : [];
+    } catch {
+        return [];
+    }
+};
+
 export default async function HomePage({
     searchParams,
 }: {
@@ -937,6 +976,7 @@ export default async function HomePage({
     const runtimeObs = await getRuntimeObservabilityData(workspace.bot_id);
     const internalPolicy = await getInternalLoginPolicySnapshot(context);
     const historicalMetrics = await getWorkspaceHistoricalMetrics(context, workspace.workspace_id);
+    const pendingAgentQuestions = await getPendingAgentQuestions(context, workspace.workspace_id, workspace.tenant_id);
 
     const source = summarySource === 'live' && dashboardSlice.source === 'live' ? 'live' : 'fallback';
 
@@ -1091,7 +1131,13 @@ export default async function HomePage({
                             syncFromStorage
                         />
                         <Suspense fallback={null}>
-                            <DashboardTabNav activeTab={activeTab} variant="sidebar" syncFromStorage workspaceId={workspace.workspace_id} />
+                            <DashboardTabNav
+                                activeTab={activeTab}
+                                variant="sidebar"
+                                syncFromStorage
+                                workspaceId={workspace.workspace_id}
+                                pendingQuestionCount={pendingAgentQuestions.length}
+                            />
                         </Suspense>
                     </>
                 )}
@@ -1127,7 +1173,13 @@ export default async function HomePage({
                     </header>
 
                     <Suspense fallback={null}>
-                        <DashboardTabNav activeTab={activeTab} variant="top" syncFromStorage workspaceId={workspace.workspace_id} />
+                        <DashboardTabNav
+                            activeTab={activeTab}
+                            variant="top"
+                            syncFromStorage
+                            workspaceId={workspace.workspace_id}
+                            pendingQuestionCount={pendingAgentQuestions.length}
+                        />
                     </Suspense>
                     <Suspense fallback={null}>
                         <DashboardDeepLinkBar activeTab={activeTab} workspaceId={workspace.workspace_id} />
@@ -1438,12 +1490,22 @@ export default async function HomePage({
                             style={{ '--stagger-index': '1' } as React.CSSProperties}
                         >
                             {unifiedView && <p className="mission-section-label">Section 02 · Approval Command Center</p>}
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.45rem' }}>
+                                <span className={`badge ${pendingAgentQuestions.length > 0 ? 'warn' : 'low'}`}>
+                                    {pendingAgentQuestions.length} pending question{pendingAgentQuestions.length === 1 ? '' : 's'}
+                                </span>
+                            </div>
                             <ApprovalQueuePanel
                                 workspaceId={workspace.workspace_id}
                                 initialPending={dashboardSlice.pendingApprovals}
                                 initialRecent={dashboardSlice.recentDecisions}
                                 focusedApprovalId={focusedApprovalId}
                                 initialMetrics={dashboardSlice.approvalMetrics}
+                            />
+                            <AgentQuestionPanel
+                                workspaceId={workspace.workspace_id}
+                                tenantId={workspace.tenant_id}
+                                initialQuestions={pendingAgentQuestions}
                             />
                         </section>
                     )}

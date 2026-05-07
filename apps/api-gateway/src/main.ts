@@ -53,6 +53,7 @@ import { registerSkillCompositionRoutes } from './routes/skill-composition-execu
 import { registerGovernanceKPIRoutes } from './routes/governance-kpis.js';
 import { registerAdapterRegistryRoutes } from './routes/adapter-registry.js';
 import { registerHandoffRoutes } from './routes/handoffs.js';
+import { questionsRoutes } from './routes/questions.js';
 
 const app = Fastify({ logger: true });
 const port = Number(process.env.API_GATEWAY_PORT ?? 3000);
@@ -455,6 +456,7 @@ await registerReproPackRoutes(app, {
 await registerHandoffRoutes(app, {
     getSession: (request) => readSession(request),
 });
+app.register(questionsRoutes);
 registerSkillPipelineRoutes(app);
 registerSkillSchedulerRoutes(app);
 registerWebhookRoutes(app);

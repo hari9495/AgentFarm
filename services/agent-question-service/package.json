@@ -1,0 +1,18 @@
+{
+    "name": "@agentfarm/agent-question-service",
+    "version": "0.1.0",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "build": "tsc -p tsconfig.json",
+        "typecheck": "tsc -p tsconfig.json --noEmit",
+        "test": "vitest run"
+    },
+    "dependencies": {
+        "@agentfarm/shared-types": "workspace:*"
+    },
+    "devDependencies": {
+        "typescript": "^5.7.2",
+        "vitest": "^2.0.0"
+    }
+}
