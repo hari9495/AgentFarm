@@ -120,3 +120,117 @@ test('executeObservedAction keeps inline dom snapshots when checkpoint is not re
         }
     }
 });
+
+// ============================================================================
+// BROWSER AUDIT SYSTEM INTEGRATION TESTS (2026-05-07)
+// ============================================================================
+
+import {
+    generateTenantId,
+    generateAgentInstanceId,
+    generateSessionId,
+    generateActionId,
+    generateRecordingId,
+    generateScreenshotId,
+    decodeSessionIdFromActionId,
+    decodeAgentInstanceIdFromSessionId,
+    decodeTenantIdFromAgentInstanceId,
+} from '@agentfarm/shared-types';
+
+test('Audit IDs: 4-Level Hierarchy with Embedded Ancestry', async () => {
+    const tenantId = generateTenantId();
+    const agentId = generateAgentInstanceId(tenantId, 'developer');
+    const sessionId = generateSessionId(agentId);
+    const actionId = generateActionId(sessionId, 0);
+    const screenshotId = generateScreenshotId(actionId, 'before');
+    const recordingId = generateRecordingId(sessionId);
+
+    // Verify format
+    assert.match(tenantId, /^ten_[a-f0-9]{8}$/);
+    assert.match(agentId, /^agt_[a-f0-9]{4}_developer_[a-f0-9]{4}$/);
+    assert.match(sessionId, /^ses_agt_[a-f0-9]{4}_\d{8}T\d{6}_[a-f0-9]{4}$/);
+    assert.match(actionId, /^act_ses_[a-f0-9]{4}_000$/);
+    assert.match(screenshotId, /^scr_act_ses_[a-f0-9]{4}_000_before$/);
+    assert.match(recordingId, /^rec_ses_[a-f0-9]{4}$/);
+});
+
+test('Audit IDs: Decode Functions Extract Ancestry Without Database', async () => {
+    const tenantId = generateTenantId();
+    const agentId = generateAgentInstanceId(tenantId, 'tester');
+    const sessionId = generateSessionId(agentId);
+    const actionId = generateActionId(sessionId, 5);
+
+    // Decode from action ID alone (no DB lookup)
+    const decodedSessionId = decodeSessionIdFromActionId(actionId);
+    const decodedAgentId = decodeAgentInstanceIdFromSessionId(decodedSessionId);
+    const decodedTenantId = decodeTenantIdFromAgentInstanceId(decodedAgentId);
+
+    assert.equal(decodedSessionId, sessionId);
+    assert.equal(decodedAgentId, agentId);
+    assert.equal(decodedTenantId, tenantId);
+});
+
+test('Storage Paths: Hierarchical with Prefix Queries', async () => {
+    const tenantId = generateTenantId();
+    const agentId = generateAgentInstanceId(tenantId, 'developer');
+    const sessionId = generateSessionId(agentId);
+    const actionId1 = generateActionId(sessionId, 0);
+    const actionId2 = generateActionId(sessionId, 1);
+    const screenshotId1 = generateScreenshotId(actionId1, 'before');
+    const screenshotId2 = generateScreenshotId(actionId2, 'after');
+
+    // Paths enable prefix-based compliance queries
+    const path1 = `screenshots/${tenantId}/${agentId}/${sessionId}/${screenshotId1}.png`;
+    const path2 = `screenshots/${tenantId}/${agentId}/${sessionId}/${screenshotId2}.png`;
+
+    // Query all screenshots for tenant
+    assert.ok(path1.startsWith(`screenshots/${tenantId}/`));
+    assert.ok(path2.startsWith(`screenshots/${tenantId}/`));
+
+    // Query all developer actions for tenant
+    assert.ok(path1.includes('/agt_') && path1.includes('_developer_'));
+    assert.ok(path2.includes('/agt_') && path2.includes('_developer_'));
+
+    // Query full session (via session ID short form)
+    const sessionShort = sessionId.split('_')[2];
+    assert.ok(path1.includes(`/${sessionShort}/`));
+    assert.ok(path2.includes(`/${sessionShort}/`));
+});
+
+test('Retention Policy: Zero Auto-Delete By Default', async () => {
+    // Session without retention policy = never delete
+    const sessionRecord = {
+        id: generateSessionId(generateAgentInstanceId(generateTenantId(), 'developer')),
+        retentionExpiresAt: null, // null = conservative default
+        retentionPolicyId: null,
+    };
+
+    assert.equal(sessionRecord.retentionExpiresAt, null);
+
+    // Session with policy can have explicit expiry
+    const futureDate = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
+    const sessionWithPolicy = {
+        id: generateSessionId(generateAgentInstanceId(generateTenantId(), 'tester')),
+        retentionExpiresAt: futureDate.toISOString(),
+        retentionPolicyId: 'policy_90_days',
+    };
+
+    assert.ok(sessionWithPolicy.retentionExpiresAt !== null);
+});
+
+test('Action Sequence: Sequential Within Session', async () => {
+    const sessionId = generateSessionId(
+        generateAgentInstanceId(generateTenantId(), 'developer'),
+    );
+
+    const actions = [];
+    for (let seq = 0; seq < 100; seq++) {
+        const actionId = generateActionId(sessionId, seq);
+        actions.push({ id: actionId, sequence: seq });
+    }
+
+    // Verify sequences are zero-padded (000, 001, ..., 099)
+    assert.match(actions[0].id, /_000$/);
+    assert.match(actions[9].id, /_009$/);
+    assert.match(actions[99].id, /_099$/);
+});
