@@ -187,7 +187,7 @@ export class MemoryStore implements IMemoryStore {
       ORDER BY confidence DESC, "lastSeen" DESC
     `;
 
-    return rows.map((row) => this.longTermRowToRecord(row));
+    return rows.map((row: AgentLongTermMemoryRow) => this.longTermRowToRecord(row));
   }
 
   async updateMemoryConfidence(id: string, newObservation: string): Promise<void> {
@@ -223,7 +223,7 @@ export class MemoryStore implements IMemoryStore {
         tenantId: request.tenantId,
         workspaceId: request.workspaceId,
         botId: 'system:memory-service',
-        eventType: 'memory_write' as import('@prisma/client').Prisma.AuditEventCreateInput['eventType'],
+        eventType: 'memory_write',
         severity: 'info',
         summary: `Memory recorded for task ${request.taskId} (status: ${request.executionStatus})`,
         sourceSystem: 'memory-service',

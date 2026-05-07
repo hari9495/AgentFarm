@@ -1,3 +1,4 @@
+import type { Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 
@@ -194,21 +195,21 @@ const createDbRepo = (): WorkspaceSessionRepo => {
     return {
         async getState(input) {
             const prisma = await getPrisma();
-            const rows = await prisma.$queryRawUnsafe<Array<{
-                tenantId: string;
-                workspaceId: string;
-                version: number;
-                state: Record<string, unknown> | string;
-                updatedAt: Date;
-                updatedBy: string;
-            }>>(
+            const rows = (await prisma.$queryRawUnsafe(
                 `SELECT "tenantId", "workspaceId", "version", "state", "updatedAt", "updatedBy"
                  FROM "WorkspaceSessionState"
                  WHERE "tenantId" = $1 AND "workspaceId" = $2
                  LIMIT 1`,
                 input.tenantId,
                 input.workspaceId,
-            );
+            )) as Array<{
+                tenantId: string;
+                workspaceId: string;
+                version: number;
+                state: Record<string, unknown> | string;
+                updatedAt: Date;
+                updatedBy: string;
+            }>;
 
             if (!rows[0]) {
                 return null;
@@ -226,13 +227,12 @@ const createDbRepo = (): WorkspaceSessionRepo => {
         },
         async upsertState(input) {
             const prisma = await getPrisma();
-
-            return prisma.$transaction(async (tx) => {
-                const existingRows = await tx.$queryRawUnsafe<Array<{ version: number }>>(
+            return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+                const existingRows = (await tx.$queryRawUnsafe(
                     `SELECT "version" FROM "WorkspaceSessionState" WHERE "tenantId" = $1 AND "workspaceId" = $2 LIMIT 1`,
                     input.tenantId,
                     input.workspaceId,
-                );
+                )) as Array<{ version: number }>;
 
                 const currentVersion = existingRows[0]?.version ?? 0;
                 if (input.expectedVersion !== undefined && input.expectedVersion !== currentVersion) {
@@ -286,11 +286,11 @@ const createDbRepo = (): WorkspaceSessionRepo => {
             const prisma = await getPrisma();
             const correlationId = randomUUID();
             const checkpointId = randomUUID();
-            const stateRows = await prisma.$queryRawUnsafe<Array<{ version: number }>>(
+            const stateRows = (await prisma.$queryRawUnsafe(
                 `SELECT "version" FROM "WorkspaceSessionState" WHERE "tenantId" = $1 AND "workspaceId" = $2 LIMIT 1`,
                 input.tenantId,
                 input.workspaceId,
-            );
+            )) as Array<{ version: number }>;
             const sessionVersion = stateRows[0]?.version ?? 0;
 
             await prisma.$executeRawUnsafe(
@@ -323,7 +323,14 @@ const createDbRepo = (): WorkspaceSessionRepo => {
         },
         async listCheckpoints(input) {
             const prisma = await getPrisma();
-            const rows = await prisma.$queryRawUnsafe<Array<{
+            const rows = (await prisma.$queryRawUnsafe(
+                `SELECT "id", "tenantId", "workspaceId", "sessionVersion", "label", "reason", "stateDigest", "actor", "createdAt"
+                 FROM "WorkspaceCheckpoint"
+                 WHERE "tenantId" = $1 AND "workspaceId" = $2
+                 ORDER BY "createdAt" DESC`,
+                input.tenantId,
+                input.workspaceId,
+            )) as Array<{
                 id: string;
                 tenantId: string;
                 workspaceId: string;
@@ -333,16 +340,19 @@ const createDbRepo = (): WorkspaceSessionRepo => {
                 stateDigest: string | null;
                 actor: string;
                 createdAt: Date;
-            }>>(
-                `SELECT "id", "tenantId", "workspaceId", "sessionVersion", "label", "reason", "stateDigest", "actor", "createdAt"
-                 FROM "WorkspaceCheckpoint"
-                 WHERE "tenantId" = $1 AND "workspaceId" = $2
-                 ORDER BY "createdAt" DESC`,
-                input.tenantId,
-                input.workspaceId,
-            );
+            }>;
 
-            return rows.map((row) => ({
+            return rows.map((row: {
+                id: string;
+                tenantId: string;
+                workspaceId: string;
+                sessionVersion: number;
+                label: string;
+                reason: string | null;
+                stateDigest: string | null;
+                actor: string;
+                createdAt: Date;
+            }) => ({
                 checkpointId: row.id,
                 tenantId: row.tenantId,
                 workspaceId: row.workspaceId,
