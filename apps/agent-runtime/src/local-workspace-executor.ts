@@ -19,6 +19,7 @@ import {
     type ObservabilityRiskLevel,
 } from './action-observability.js';
 import { safePackageOperation } from './package-manager-service.js';
+import { getDesktopOperator } from './desktop-operator-factory.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -5496,6 +5497,14 @@ export async function executeLocalWorkspaceAction(input: {
 
         // workspace_browser_open: open an http(s) URL in a local browser.
         case 'workspace_browser_open': {
+            if (process.env['DESKTOP_OPERATOR'] === 'mock') {
+                const op = getDesktopOperator();
+                const result = await op.browserOpen(
+                    typeof payload['url'] === 'string' ? payload['url'] : '',
+                    typeof payload['browser'] === 'string' ? payload['browser'] : 'default'
+                );
+                return { ok: result.ok, output: result.output, errorOutput: result.errorOutput };
+            }
             const urlRaw = typeof payload['url'] === 'string' ? payload['url'].trim() : '';
             const browser = typeof payload['browser'] === 'string' ? payload['browser'].trim().toLowerCase() : 'default';
             const dryRun = payload['dry_run'] === true;
@@ -5559,6 +5568,14 @@ export async function executeLocalWorkspaceAction(input: {
 
         // workspace_app_launch: launch an allowlisted local developer application.
         case 'workspace_app_launch': {
+            if (process.env['DESKTOP_OPERATOR'] === 'mock') {
+                const op = getDesktopOperator();
+                const result = await op.appLaunch(
+                    typeof payload['app'] === 'string' ? payload['app'] : '',
+                    []
+                );
+                return { ok: result.ok, output: result.output, errorOutput: result.errorOutput };
+            }
             const app = typeof payload['app'] === 'string' ? payload['app'].trim().toLowerCase() : '';
             const args = normalizeStringArray(payload['args']);
             const dryRun = payload['dry_run'] === true;
@@ -5617,6 +5634,14 @@ export async function executeLocalWorkspaceAction(input: {
 
         // workspace_meeting_join: open a recognized meeting URL via browser or Teams app.
         case 'workspace_meeting_join': {
+            if (process.env['DESKTOP_OPERATOR'] === 'mock') {
+                const op = getDesktopOperator();
+                const result = await op.meetingJoin(
+                    typeof payload['meeting_url'] === 'string' ? payload['meeting_url'] : '',
+                    typeof payload['mode'] === 'string' ? payload['mode'] : 'browser'
+                );
+                return { ok: result.ok, output: result.output, errorOutput: result.errorOutput };
+            }
             const meetingUrlRaw = typeof payload['meeting_url'] === 'string' ? payload['meeting_url'].trim() : '';
             const mode = typeof payload['mode'] === 'string' ? payload['mode'].trim().toLowerCase() : 'browser';
             const browser = typeof payload['browser'] === 'string' ? payload['browser'].trim().toLowerCase() : 'default';
@@ -5706,6 +5731,13 @@ export async function executeLocalWorkspaceAction(input: {
 
         // workspace_meeting_speak: speak scripted prompts in a live meeting.
         case 'workspace_meeting_speak': {
+            if (process.env['DESKTOP_OPERATOR'] === 'mock') {
+                const op = getDesktopOperator();
+                const result = await op.meetingSpeak(
+                    typeof payload['text'] === 'string' ? payload['text'] : ''
+                );
+                return { ok: result.ok, output: result.output, errorOutput: result.errorOutput };
+            }
             const mode = typeof payload['mode'] === 'string' ? payload['mode'].trim().toLowerCase() : 'statement';
             const text = typeof payload['text'] === 'string' ? payload['text'].trim() : '';
             const voice = typeof payload['voice'] === 'string' ? payload['voice'].trim() : '';
