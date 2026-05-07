@@ -15,6 +15,12 @@ type SessionContext = {
 
 type RegisterObservabilityRoutesOptions = {
     getSession: (request: FastifyRequest) => SessionContext | null;
+    findRuntimeEndpoint?: (input: {
+        tenantId: string;
+        workspaceId: string;
+        botId: string;
+    }) => Promise<string | null>;
+    fetchImpl?: typeof fetch;
 };
 
 const resolveRuntimeToken = (): string | null => {
@@ -66,6 +72,9 @@ export const registerObservabilityRoutes = async (
     app: FastifyInstance,
     options: RegisterObservabilityRoutesOptions,
 ): Promise<void> => {
+    const resolveEndpoint = options.findRuntimeEndpoint ?? findRuntimeEndpoint;
+    const fetchImpl = options.fetchImpl ?? fetch;
+
     app.get<{
         Params: { workspaceId: string; sessionId: string };
         Querystring: { tenant_id?: string; bot_id?: string };
@@ -96,7 +105,7 @@ export const registerObservabilityRoutes = async (
             });
         }
 
-        const runtimeEndpoint = await findRuntimeEndpoint({
+        const runtimeEndpoint = await resolveEndpoint({
             tenantId,
             workspaceId,
             botId,
@@ -114,11 +123,12 @@ export const registerObservabilityRoutes = async (
             runtimeEndpoint,
         ).toString();
 
+        const runtimeToken = resolveRuntimeToken();
         try {
-            const response = await fetch(runtimeUrl, {
+            const response = await fetchImpl(runtimeUrl, {
                 method: 'GET',
                 headers: {
-                    ...(resolveRuntimeToken() ? { 'x-runtime-task-token': resolveRuntimeToken() as string } : {}),
+                    ...(runtimeToken ? { 'x-runtime-task-token': runtimeToken } : {}),
                 },
                 signal: AbortSignal.timeout(8_000),
             });
@@ -187,7 +197,7 @@ export const registerObservabilityRoutes = async (
             });
         }
 
-        const runtimeEndpoint = await findRuntimeEndpoint({
+        const runtimeEndpoint = await resolveEndpoint({
             tenantId,
             workspaceId,
             botId,
@@ -200,13 +210,14 @@ export const registerObservabilityRoutes = async (
             });
         }
 
+        const runtimeToken = resolveRuntimeToken();
         const runtimeUrl = new URL('/runtime/quality/correctness', runtimeEndpoint).toString();
         try {
-            const response = await fetch(runtimeUrl, {
+            const response = await fetchImpl(runtimeUrl, {
                 method: 'POST',
                 headers: {
                     'content-type': 'application/json',
-                    ...(resolveRuntimeToken() ? { 'x-runtime-task-token': resolveRuntimeToken() as string } : {}),
+                    ...(runtimeToken ? { 'x-runtime-task-token': runtimeToken } : {}),
                 },
                 body: JSON.stringify({
                     provider: request.body?.provider,

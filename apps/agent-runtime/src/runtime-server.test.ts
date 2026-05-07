@@ -611,6 +611,80 @@ test('runtime quality signal endpoint rejects invalid source', async () => {
     }
 });
 
+test('runtime correctness endpoint maps verification counts to normalized quality score', async () => {
+    const provider = `correctness_provider_${Date.now()}`;
+    const app = buildRuntimeServer({
+        env: baseEnv(),
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+    });
+
+    try {
+        const startupRes = await app.inject({ method: 'POST', url: '/startup' });
+        assert.equal(startupRes.statusCode, 200);
+
+        const create = await app.inject({
+            method: 'POST',
+            url: '/runtime/quality/correctness',
+            payload: {
+                provider,
+                action_type: 'workspace_browser_open',
+                verified_actions: 3,
+                total_actions: 4,
+                source: 'runtime_outcome',
+                task_id: 'correctness-task-1',
+            },
+        });
+        assert.equal(create.statusCode, 201);
+        const createBody = create.json() as { quality_signal: { score?: number; source?: string } };
+        assert.equal(createBody.quality_signal.score, 0.75);
+        assert.equal(createBody.quality_signal.source, 'runtime_outcome');
+
+        const listRes = await app.inject({
+            method: 'GET',
+            url: `/runtime/quality/signals?provider=${encodeURIComponent(provider)}&action_type=workspace_browser_open&source=runtime_outcome&limit=5`,
+        });
+        assert.equal(listRes.statusCode, 200);
+        const listBody = listRes.json() as { count: number; signals: Array<{ score: number; task_id: string | null }> };
+        assert.equal(listBody.count, 1);
+        assert.equal(listBody.signals[0]?.score, 0.75);
+        assert.equal(listBody.signals[0]?.task_id, 'correctness-task-1');
+    } finally {
+        await app.close();
+    }
+});
+
+test('runtime correctness endpoint rejects missing correctness inputs', async () => {
+    const app = buildRuntimeServer({
+        env: baseEnv(),
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+    });
+
+    try {
+        const startupRes = await app.inject({ method: 'POST', url: '/startup' });
+        assert.equal(startupRes.statusCode, 200);
+
+        const response = await app.inject({
+            method: 'POST',
+            url: '/runtime/quality/correctness',
+            payload: {
+                provider: 'correctness_provider_invalid',
+                action_type: 'workspace_browser_open',
+                source: 'runtime_outcome',
+            },
+        });
+
+        assert.equal(response.statusCode, 400);
+        const body = response.json() as { error: string };
+        assert.equal(body.error, 'invalid_quality_correctness');
+    } finally {
+        await app.close();
+    }
+});
+
 test('task lease claim supports idempotent retries and conflict protection', async () => {
     const env = baseEnv();
     env.AF_ENFORCE_TASK_LEASE = 'true';
