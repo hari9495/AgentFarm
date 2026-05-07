@@ -16,6 +16,9 @@ type AuditRow = {
     diff_image_url: string | null;
     assertions: string | null;
     verified: number;
+    dom_snapshot_hash: string | null;
+    network_requests: string | null;
+    evidence_bundle: string | null;
     risk_level: string;
     started_at: string;
     completed_at: string;
@@ -29,8 +32,19 @@ const DB_PATH = process.env.AGENT_OBSERVABILITY_DB_PATH ?? '.agent-observability
 const SELECT_SQL = `
 SELECT
   id, agent_id, workspace_id, task_id, session_id, action_type, target, payload,
-  screenshot_before_url, screenshot_after_url, diff_image_url, assertions, verified,
+    screenshot_before_url, screenshot_after_url, diff_image_url, assertions, verified,
+    dom_snapshot_hash, network_requests, evidence_bundle,
   risk_level, started_at, completed_at, duration_ms, success, error_message
+FROM agent_action_events
+WHERE session_id = ?
+ORDER BY started_at ASC;
+`;
+
+const SELECT_SQL_FALLBACK = `
+SELECT
+    id, agent_id, workspace_id, task_id, session_id, action_type, target, payload,
+    screenshot_before_url, screenshot_after_url, diff_image_url, assertions, verified,
+    risk_level, started_at, completed_at, duration_ms, success, error_message
 FROM agent_action_events
 WHERE session_id = ?
 ORDER BY started_at ASC;
@@ -63,7 +77,18 @@ export async function GET(
 
     try {
         const db = new DatabaseSync(DB_PATH);
-        const rows = db.prepare(SELECT_SQL).all(sessionId) as AuditRow[];
+        let rows: AuditRow[];
+        try {
+            rows = db.prepare(SELECT_SQL).all(sessionId) as AuditRow[];
+        } catch {
+            const legacyRows = db.prepare(SELECT_SQL_FALLBACK).all(sessionId) as Array<Omit<AuditRow, 'dom_snapshot_hash' | 'network_requests' | 'evidence_bundle'>>;
+            rows = legacyRows.map((row) => ({
+                ...row,
+                dom_snapshot_hash: null,
+                network_requests: null,
+                evidence_bundle: null,
+            }));
+        }
         db.close();
 
         const items = rows.map((row) => ({
@@ -80,6 +105,9 @@ export async function GET(
             diffImageUrl: row.diff_image_url,
             assertions: parseJson<unknown[]>(row.assertions) ?? [],
             verified: row.verified === 1,
+            domSnapshotHash: row.dom_snapshot_hash,
+            networkRequests: parseJson<Array<{ method: string; url: string; status?: number }>>(row.network_requests) ?? [],
+            evidenceBundle: parseJson<Record<string, unknown>>(row.evidence_bundle),
             riskLevel: row.risk_level,
             startedAt: row.started_at,
             completedAt: row.completed_at,

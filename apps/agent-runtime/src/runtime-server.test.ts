@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { buildRuntimeServer } from './runtime-server.js';
 import type { ActionResultRecord } from './action-result-contract.js';
 import type { EvidenceRecord } from './evidence-record-contract.js';
+import { executeObservedAction, resetObservabilityForTests } from './action-observability.js';
 
 const baseEnv = (): NodeJS.ProcessEnv => ({
     AF_TENANT_ID: 'tenant_test',
@@ -608,6 +609,70 @@ test('runtime quality signal endpoint rejects invalid source', async () => {
         assert.equal(body.error, 'invalid_quality_signal');
     } finally {
         await app.close();
+    }
+});
+
+test('runtime observability replay endpoint returns dom hash, network summaries, and evidence bundle refs', async () => {
+    const dbPath = join(tmpdir(), `agent-runtime-observability-${process.pid}-${Date.now()}.sqlite`);
+    const originalDbPath = process.env.AGENT_OBSERVABILITY_DB_PATH;
+    process.env.AGENT_OBSERVABILITY_DB_PATH = dbPath;
+    resetObservabilityForTests();
+
+    const app = buildRuntimeServer({
+        env: baseEnv(),
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+    });
+
+    try {
+        const startupRes = await app.inject({ method: 'POST', url: '/startup' });
+        assert.equal(startupRes.statusCode, 200);
+
+        await executeObservedAction(
+            {
+                agentId: 'bot_test',
+                workspaceId: 'ws_test',
+                taskId: 'task-observe-1',
+                sessionId: 'session-observe-1',
+                type: 'browser',
+                action: 'workspace_browser_open',
+                target: 'https://example.com',
+                payload: {
+                    dom_checkpoint: true,
+                    network_requests: [{ method: 'GET', url: 'https://example.com/api', status: 200 }],
+                },
+            },
+            async () => ({ ok: true }),
+        );
+
+        const replayRes = await app.inject({
+            method: 'GET',
+            url: '/runtime/observability/sessions/session-observe-1/actions',
+        });
+        assert.equal(replayRes.statusCode, 200);
+
+        const replayBody = replayRes.json() as {
+            count: number;
+            actions: Array<{
+                dom_snapshot_hash: string | null;
+                network_requests: Array<{ method: string; url: string; status?: number }>;
+                evidence_bundle: { domSnapshotStored: boolean } | null;
+            }>;
+        };
+        assert.equal(replayBody.count, 1);
+        assert.equal(replayBody.actions[0]?.dom_snapshot_hash?.length, 64);
+        assert.equal(replayBody.actions[0]?.network_requests?.length, 1);
+        assert.equal(replayBody.actions[0]?.network_requests?.[0]?.method, 'GET');
+        assert.equal(replayBody.actions[0]?.evidence_bundle?.domSnapshotStored, true);
+    } finally {
+        await app.close();
+        resetObservabilityForTests();
+        if (originalDbPath) {
+            process.env.AGENT_OBSERVABILITY_DB_PATH = originalDbPath;
+        } else {
+            delete process.env.AGENT_OBSERVABILITY_DB_PATH;
+        }
     }
 });
 

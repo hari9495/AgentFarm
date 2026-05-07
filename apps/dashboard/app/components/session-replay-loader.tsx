@@ -11,7 +11,15 @@ type ReplayItem = {
     screenshotAfterUrl: string;
     diffImageUrl: string | null;
     assertions: Array<{ id: string; description: string; passed: boolean }>;
+    networkRequests: Array<{ method: string; url: string; status?: number }>;
     verified: boolean;
+    domSnapshotHash: string | null;
+    evidenceBundle: {
+        screenshotBefore?: { url?: string; provider?: string };
+        screenshotAfter?: { url?: string; provider?: string };
+        domCheckpoint?: { url?: string } | null;
+        domSnapshotStored?: boolean;
+    } | null;
     riskLevel: string;
     success: boolean;
     errorMessage: string | null;

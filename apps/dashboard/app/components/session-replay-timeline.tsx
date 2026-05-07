@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { EvidenceViewer } from './evidence-viewer';
 
 type SessionReplayItem = {
     id: string;
@@ -10,7 +11,15 @@ type SessionReplayItem = {
     screenshotAfterUrl: string;
     diffImageUrl: string | null;
     assertions: Array<{ id: string; description: string; passed: boolean }>;
+    networkRequests: Array<{ method: string; url: string; status?: number }>;
     verified: boolean;
+    domSnapshotHash: string | null;
+    evidenceBundle: {
+        screenshotBefore?: { url?: string; provider?: string };
+        screenshotAfter?: { url?: string; provider?: string };
+        domCheckpoint?: { url?: string } | null;
+        domSnapshotStored?: boolean;
+    } | null;
     riskLevel: string;
     success: boolean;
     errorMessage: string | null;
@@ -76,39 +85,7 @@ export function SessionReplayTimeline({
 
                             <p style={{ margin: 0 }}><strong>Target:</strong> {selected.target}</p>
                             <p style={{ margin: 0 }}><strong>Duration:</strong> {selected.durationMs}ms</p>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.65rem' }}>
-                                <figure style={{ margin: 0 }}>
-                                    <figcaption className="muted">Before</figcaption>
-                                    <img src={selected.screenshotBeforeUrl} alt="Before action state" style={{ width: '100%', borderRadius: 10, border: '1px solid rgba(148,163,184,0.3)' }} />
-                                </figure>
-                                <figure style={{ margin: 0 }}>
-                                    <figcaption className="muted">After</figcaption>
-                                    <img src={selected.screenshotAfterUrl} alt="After action state" style={{ width: '100%', borderRadius: 10, border: '1px solid rgba(148,163,184,0.3)' }} />
-                                </figure>
-                            </div>
-
-                            {selected.diffImageUrl && (
-                                <figure style={{ margin: 0 }}>
-                                    <figcaption className="muted">Diff</figcaption>
-                                    <img src={selected.diffImageUrl} alt="Action diff image" style={{ width: '100%', borderRadius: 10, border: '1px solid rgba(148,163,184,0.3)' }} />
-                                </figure>
-                            )}
-
-                            <section>
-                                <h3 style={{ marginBottom: '0.35rem' }}>Assertions</h3>
-                                {selected.assertions.length === 0 ? (
-                                    <p className="muted">No assertions recorded.</p>
-                                ) : (
-                                    <ul style={{ margin: 0, paddingLeft: '1rem' }}>
-                                        {selected.assertions.map((assertion) => (
-                                            <li key={assertion.id}>
-                                                {assertion.description} · {assertion.passed ? 'pass' : 'fail'}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                )}
-                            </section>
+                            <EvidenceViewer item={selected} />
 
                             {selected.errorMessage && (
                                 <div className="status-panel warning">
