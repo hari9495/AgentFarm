@@ -1,3 +1,18 @@
+export type ArtifactReference = {
+    url: string;
+    sha256: string;
+    sizeBytes: number;
+    contentType: string;
+    provider: 'azure_blob' | 'inline';
+};
+
+export type EvidenceBundle = {
+    screenshotBefore: ArtifactReference;
+    screenshotAfter: ArtifactReference;
+    domCheckpoint: ArtifactReference | null;
+    domSnapshotStored: boolean;
+};
+
 export type ApprovalPacket = {
     change_summary: string;
     impacted_scope: string | null;
@@ -6,9 +21,10 @@ export type ApprovalPacket = {
     lint_status: string | null;
     test_status: string | null;
     packet_complete: boolean;
+    evidence_bundle?: EvidenceBundle;
 };
 
-type ParsedApprovalPacketFields = Omit<ApprovalPacket, 'packet_complete'>;
+type ParsedApprovalPacketFields = Omit<ApprovalPacket, 'packet_complete' | 'evidence_bundle'>;
 
 const FIELD_PREFIXES = {
     change_summary: 'Change summary:',
@@ -43,7 +59,7 @@ const extractFieldValue = (line: string, prefix: string): string | null => {
     return value.length > 0 ? value : null;
 };
 
-export const parseApprovalPacket = (actionSummary: string): ApprovalPacket => {
+export const parseApprovalPacket = (actionSummary: string, evidenceBundle?: EvidenceBundle): ApprovalPacket => {
     const trimmed = (actionSummary ?? '').trim();
     const lines = trimmed
         .split(/\r?\n/)
@@ -107,5 +123,6 @@ export const parseApprovalPacket = (actionSummary: string): ApprovalPacket => {
     return {
         ...packet,
         packet_complete: packetComplete,
+        ...(evidenceBundle ? { evidence_bundle: evidenceBundle } : {}),
     };
 };

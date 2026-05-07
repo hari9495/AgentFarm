@@ -58,3 +58,41 @@ test('parseApprovalPacket uses explicit fallback for empty summaries', () => {
     assert.equal(packet.change_summary, 'No change summary provided');
     assert.equal(packet.packet_complete, false);
 });
+
+test('parseApprovalPacket includes evidence_bundle when provided', () => {
+    const evidenceBundle = {
+        screenshotBefore: {
+            url: 'https://example.blob.core.windows.net/evidence/before.png',
+            sha256: 'abc123',
+            sizeBytes: 1024,
+            contentType: 'image/png',
+            provider: 'azure_blob' as const,
+        },
+        screenshotAfter: {
+            url: 'https://example.blob.core.windows.net/evidence/after.png',
+            sha256: 'def456',
+            sizeBytes: 2048,
+            contentType: 'image/png',
+            provider: 'azure_blob' as const,
+        },
+        domCheckpoint: null,
+        domSnapshotStored: false,
+    };
+
+    const packet = parseApprovalPacket(
+        'Change summary: Test action with evidence',
+        evidenceBundle,
+    );
+
+    assert.equal(packet.change_summary, 'Test action with evidence');
+    assert.ok(packet.evidence_bundle);
+    assert.equal(packet.evidence_bundle.screenshotBefore.url, 'https://example.blob.core.windows.net/evidence/before.png');
+    assert.equal(packet.evidence_bundle.screenshotAfter.url, 'https://example.blob.core.windows.net/evidence/after.png');
+});
+
+test('parseApprovalPacket omits evidence_bundle when not provided', () => {
+    const packet = parseApprovalPacket('Change summary: Test action without evidence');
+
+    assert.equal(packet.change_summary, 'Test action without evidence');
+    assert.equal(packet.evidence_bundle, undefined);
+});

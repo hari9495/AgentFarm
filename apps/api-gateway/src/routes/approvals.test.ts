@@ -1386,3 +1386,133 @@ test('approval batch decision updates batch status', async () => {
         await app.close();
     }
 });
+
+test('intake enriches high-risk approval with evidence bundle when session_id is provided', async () => {
+    const app = Fastify();
+    const fake = createRepo();
+
+    // Mock runtime endpoint with evidence data
+    fake.runtimeEndpoints.set('tenant_1:ws_1:bot_1', 'http://localhost:3001');
+
+    // Mock fetch to return evidence bundle
+    const originalFetch = globalThis.fetch;
+    const mockFetch = async (url: string | URL) => {
+        const urlStr = url instanceof URL ? url.toString() : url;
+        if (urlStr.includes('/runtime/observability/sessions/sess_1/actions')) {
+            return new Response(JSON.stringify({
+                actions: [{
+                    id: 'act_evidence_1',
+                    sessionId: 'sess_1',
+                    evidenceBundle: {
+                        screenshotBefore: {
+                            url: 'https://example.blob.core.windows.net/evidence/before.png',
+                            sha256: 'abc123',
+                            sizeBytes: 1024,
+                            contentType: 'image/png',
+                            provider: 'azure_blob',
+                        },
+                        screenshotAfter: {
+                            url: 'https://example.blob.core.windows.net/evidence/after.png',
+                            sha256: 'def456',
+                            sizeBytes: 2048,
+                            contentType: 'image/png',
+                            provider: 'azure_blob',
+                        },
+                        domCheckpoint: null,
+                        domSnapshotStored: false,
+                    },
+                }],
+            }), { status: 200, headers: { 'content-type': 'application/json' } });
+        }
+        return originalFetch(url);
+    };
+    globalThis.fetch = mockFetch as unknown as typeof fetch;
+
+    try {
+        await registerApprovalRoutes(app, {
+            getSession: () => session(),
+            repo: fake.repo,
+        });
+
+        const response = await app.inject({
+            method: 'POST',
+            url: '/v1/approvals/intake',
+            payload: {
+                workspace_id: 'ws_1',
+                bot_id: 'bot_1',
+                task_id: 'task_evidence_1',
+                action_id: 'act_evidence_1',
+                action_summary: 'Perform risky action',
+                risk_level: 'high',
+                requested_by: 'runtime:bot_1',
+                policy_pack_version: 'mvp-v1',
+                session_id: 'sess_1',
+            },
+        });
+
+        assert.equal(response.statusCode, 201);
+        const body = response.json() as {
+            approval_packet: {
+                change_summary: string;
+                evidence_bundle?: {
+                    screenshotBefore: { url: string };
+                    screenshotAfter: { url: string };
+                };
+            };
+        };
+
+        assert.equal(body.approval_packet.change_summary, 'Perform risky action');
+        assert.ok(body.approval_packet.evidence_bundle, 'evidence_bundle should be included');
+        assert.equal(
+            body.approval_packet.evidence_bundle.screenshotBefore.url,
+            'https://example.blob.core.windows.net/evidence/before.png',
+        );
+        assert.equal(
+            body.approval_packet.evidence_bundle.screenshotAfter.url,
+            'https://example.blob.core.windows.net/evidence/after.png',
+        );
+    } finally {
+        globalThis.fetch = originalFetch;
+        await app.close();
+    }
+});
+
+test('intake does not include evidence bundle when session_id is not provided', async () => {
+    const app = Fastify();
+    const fake = createRepo();
+
+    await registerApprovalRoutes(app, {
+        getSession: () => session(),
+        repo: fake.repo,
+    });
+
+    try {
+        const response = await app.inject({
+            method: 'POST',
+            url: '/v1/approvals/intake',
+            payload: {
+                workspace_id: 'ws_1',
+                bot_id: 'bot_1',
+                task_id: 'task_no_session',
+                action_id: 'act_no_session',
+                action_summary: 'Risky action without evidence',
+                risk_level: 'high',
+                requested_by: 'runtime:bot_1',
+                policy_pack_version: 'mvp-v1',
+            },
+        });
+
+        assert.equal(response.statusCode, 201);
+        const body = response.json() as {
+            approval_packet: {
+                change_summary: string;
+                evidence_bundle?: unknown;
+            };
+        };
+
+        assert.equal(body.approval_packet.change_summary, 'Risky action without evidence');
+        assert.equal(body.approval_packet.evidence_bundle, undefined, 'evidence_bundle should not be included');
+    } finally {
+        await app.close();
+    }
+});

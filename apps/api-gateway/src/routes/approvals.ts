@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { parseApprovalPacket } from '../lib/approval-packet.js';
+import { parseApprovalPacket, type ArtifactReference, type EvidenceBundle } from '../lib/approval-packet.js';
 
 const getPrisma = async () => {
     const db = await import('../lib/db.js');
@@ -139,6 +139,7 @@ type IntakeBody = {
     escalation_timeout_seconds?: number;
     llm_provider?: string;
     llm_model?: string;
+    session_id?: string;
 };
 
 type QualitySignalNotifier = (input: {
@@ -790,6 +791,61 @@ const defaultEvidenceReader: EvidenceReader = async (input) => {
     return matched;
 };
 
+type FetchedActionData = {
+    id: string;
+    sessionId: string;
+    evidenceBundle?: EvidenceBundle;
+    domSnapshotHash?: string;
+    networkRequests?: Array<{ method: string; url: string; status?: number }>;
+};
+
+const fetchActionEvidenceFromRuntime = async (input: {
+    runtimeEndpoint: string;
+    runtimeToken: string | null;
+    workspaceId: string;
+    sessionId: string;
+    actionId: string;
+}): Promise<FetchedActionData | null> => {
+    try {
+        const url = new URL(
+            `/runtime/observability/sessions/${encodeURIComponent(input.sessionId)}/actions`,
+            input.runtimeEndpoint,
+        ).toString();
+
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'content-type': 'application/json',
+                ...(input.runtimeToken ? { 'x-runtime-decision-token': input.runtimeToken } : {}),
+            },
+            signal: AbortSignal.timeout(5_000),
+        });
+
+        if (!response.ok) {
+            return null;
+        }
+
+        const data = await response.json() as {
+            actions?: Array<{
+                id: string;
+                sessionId: string;
+                evidenceBundle?: EvidenceBundle;
+                domSnapshotHash?: string;
+                networkRequests?: Array<{ method: string; url: string; status?: number }>;
+            }>;
+        };
+
+        if (!data.actions || !Array.isArray(data.actions)) {
+            return null;
+        }
+
+        const action = data.actions.find((a) => a.id === input.actionId);
+        return action ?? null;
+    } catch {
+        return null;
+    }
+};
+
 export const registerApprovalRoutes = async (
     app: FastifyInstance,
     options: RegisterApprovalRoutesOptions,
@@ -901,7 +957,32 @@ export const registerApprovalRoutes = async (
                 });
             }
 
-            const approvalPacket = parseApprovalPacket(existing.actionSummary);
+        // Fetch evidence bundle for high-risk actions if session ID is available
+            let evidenceBundle: EvidenceBundle | undefined;
+            const sessionId = request.body?.session_id?.trim();
+            if ((existing.riskLevel === 'high' || existing.riskLevel === 'medium') && sessionId) {
+                const runtimeEndpoint = await repo.findRuntimeDecisionEndpoint({
+                    tenantId,
+                    workspaceId,
+                    botId,
+                });
+
+                if (runtimeEndpoint) {
+                    const actionEvidence = await fetchActionEvidenceFromRuntime({
+                        runtimeEndpoint,
+                        runtimeToken: runtimeDecisionToken,
+                        workspaceId,
+                        sessionId,
+                        actionId,
+                    });
+
+                    if (actionEvidence?.evidenceBundle) {
+                        evidenceBundle = actionEvidence.evidenceBundle;
+                    }
+                }
+            }
+
+            const approvalPacket = parseApprovalPacket(existing.actionSummary, evidenceBundle);
             return {
                 approval_packet: approvalPacket,
                 status: 'already_queued',
@@ -926,7 +1007,32 @@ export const registerApprovalRoutes = async (
             llmModel: request.body?.llm_model?.trim() || undefined,
         });
 
-        const approvalPacket = parseApprovalPacket(created.actionSummary);
+        // Fetch evidence bundle for high-risk actions if session ID is available
+        let evidenceBundle: EvidenceBundle | undefined;
+        const sessionId = request.body?.session_id?.trim();
+        if ((riskLevel === 'high' || riskLevel === 'medium') && sessionId) {
+            const runtimeEndpoint = await repo.findRuntimeDecisionEndpoint({
+                tenantId,
+                workspaceId,
+                botId,
+            });
+
+            if (runtimeEndpoint) {
+                const actionEvidence = await fetchActionEvidenceFromRuntime({
+                    runtimeEndpoint,
+                    runtimeToken: runtimeDecisionToken,
+                    workspaceId,
+                    sessionId,
+                    actionId,
+                });
+
+                if (actionEvidence?.evidenceBundle) {
+                    evidenceBundle = actionEvidence.evidenceBundle;
+                }
+            }
+        }
+
+        const approvalPacket = parseApprovalPacket(created.actionSummary, evidenceBundle);
         return reply.code(201).send({
             approval_packet: approvalPacket,
             status: 'queued_for_approval',
