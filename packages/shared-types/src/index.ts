@@ -37,6 +37,15 @@ export const CONTRACT_VERSIONS = {
   APPROVAL_BATCH: '1.0.0', // Batched approval grouping and batch decisions
   QUALITY_SIGNAL: '1.0.0', // LLM quality feedback signals by provider/action type
   AGENT_HANDOFF: '1.0.0', // Agent-to-agent handoff lifecycle records
+  // ---- 8 Human-Parity Features (2026-05-07) ----
+  TASK_PROGRESS: '1.0.0',     // Live task milestone progress events
+  AGENT_QUESTION: '1.0.0',    // Agent async Q&A with human teammates
+  WEB_RESEARCH: '1.0.0',      // Web research query and synthesised result
+  REVIEW_LESSON: '1.0.0',     // Code review lesson ingested from PR feedback
+  EFFORT_ESTIMATE: '1.0.0',   // Task effort estimation before execution
+  PACKAGE_OPERATION: '1.0.0', // Safe package install/uninstall operations
+  VISION_ANALYSIS: '1.0.0',   // Image/screenshot analysis result
+  TASK_SLOT: '1.0.0',         // Parallel task slot for concurrent execution
 } as const;
 
 export type ContractVersion = (typeof CONTRACT_VERSIONS)[keyof typeof CONTRACT_VERSIONS];
@@ -1732,4 +1741,257 @@ export interface AgentHandoffRecord {
 }
 
 export type AgentHandoffContract = AgentHandoffRecord;
+
+// ============================================================================
+// FEATURE #5 — LIVE TASK PROGRESS REPORTER
+// Frozen 2026-05-07
+// ============================================================================
+export type ProgressMilestone =
+  | 'task_received'
+  | 'research_started'
+  | 'root_cause_identified'
+  | 'coding_started'
+  | 'tests_running'
+  | 'pr_created'
+  | 'waiting_for_approval'
+  | 'blocked_on_question'
+  | 'completed'
+  | 'failed';
+
+export interface TaskProgressEvent {
+  id: string;
+  contractVersion: string; // CONTRACT_VERSIONS.TASK_PROGRESS
+  tenantId: string;
+  workspaceId: string;
+  taskId: string;
+  botId: string;
+  milestone: ProgressMilestone;
+  detail: string;
+  occurredAt: string;
+  correlationId: string;
+}
+
+// ============================================================================
+// FEATURE #2 — AGENT QUESTION SERVICE
+// Frozen 2026-05-07
+// ============================================================================
+export type AgentQuestionStatus = 'pending' | 'answered' | 'timed_out';
+export type AgentQuestionChannel = 'slack' | 'teams' | 'dashboard';
+export type AgentQuestionTimeoutPolicy =
+  | 'proceed_with_best_guess'
+  | 'escalate'
+  | 'abandon_task';
+
+export interface AgentQuestionRecord {
+  id: string;
+  contractVersion: string; // CONTRACT_VERSIONS.AGENT_QUESTION
+  tenantId: string;
+  workspaceId: string;
+  taskId: string;
+  botId: string;
+  question: string;
+  context: string;
+  options?: string[];
+  askedVia: AgentQuestionChannel;
+  status: AgentQuestionStatus;
+  answer?: string;
+  answeredBy?: string;
+  answeredAt?: string;
+  timeoutMs: number;
+  onTimeout: AgentQuestionTimeoutPolicy;
+  expiresAt: string;
+  createdAt: string;
+  correlationId: string;
+}
+
+// ============================================================================
+// FEATURE #1 — WEB RESEARCH SERVICE
+// Frozen 2026-05-07
+// ============================================================================
+export type WebResearchIntent =
+  | 'error_lookup'
+  | 'docs_lookup'
+  | 'package_info'
+  | 'stackoverflow';
+
+export type WebResearchSource =
+  | 'npm_registry'
+  | 'mdn'
+  | 'github_issues'
+  | 'typescript_docs'
+  | 'nodejs_docs'
+  | 'prisma_docs'
+  | 'react_docs'
+  | 'azure_docs';
+
+export interface WebResearchQuery {
+  query: string;
+  intent: WebResearchIntent;
+  allowedSources: WebResearchSource[];
+  maxResults: number;
+}
+
+export interface WebResearchResultItem {
+  url: string;
+  source: WebResearchSource;
+  summary: string;
+  relevance: number; // 0-1
+}
+
+export interface WebResearchResult {
+  id: string;
+  contractVersion: string; // CONTRACT_VERSIONS.WEB_RESEARCH
+  tenantId: string;
+  workspaceId: string;
+  taskId: string;
+  query: WebResearchQuery;
+  sources: WebResearchResultItem[];
+  synthesizedAnswer: string;
+  usedInDecision: boolean;
+  fetchedAt: string;
+  correlationId: string;
+}
+
+// ============================================================================
+// FEATURE #7 — CODE REVIEW LEARNING SERVICE
+// Frozen 2026-05-07
+// ============================================================================
+export type ReviewLessonCategory =
+  | 'style'
+  | 'security'
+  | 'performance'
+  | 'architecture'
+  | 'testing'
+  | 'naming';
+
+export interface ReviewLesson {
+  id: string;
+  contractVersion: string; // CONTRACT_VERSIONS.REVIEW_LESSON
+  tenantId: string;
+  workspaceId: string;
+  sourceTaskId: string;
+  sourcePrUrl: string;
+  feedback: string;
+  category: ReviewLessonCategory;
+  appliedToFutureTask: boolean;
+  learnedAt: string;
+  correlationId: string;
+}
+
+// ============================================================================
+// FEATURE #4 — EFFORT ESTIMATOR
+// Frozen 2026-05-07
+// ============================================================================
+export type TaskComplexity = 'trivial' | 'small' | 'medium' | 'large' | 'epic';
+
+export interface EffortEstimate {
+  id: string;
+  contractVersion: string; // CONTRACT_VERSIONS.EFFORT_ESTIMATE
+  tenantId: string;
+  workspaceId: string;
+  taskId: string;
+  estimatedMinutes: number;
+  confidenceScore: number; // 0-1
+  complexity: TaskComplexity;
+  breakdown: {
+    researchMinutes: number;
+    codingMinutes: number;
+    testingMinutes: number;
+    reviewMinutes: number;
+  };
+  riskFactors: string[];
+  similarPastTaskIds: string[];
+  estimatedAt: string;
+  correlationId: string;
+}
+
+// ============================================================================
+// FEATURE #6 — PACKAGE MANAGER SERVICE
+// Frozen 2026-05-07
+// ============================================================================
+export type PackageManagerKind = 'npm' | 'pnpm' | 'yarn' | 'pip' | 'cargo' | 'maven';
+export type PackageOperationKind = 'install' | 'uninstall' | 'update' | 'audit';
+export type PackageRiskLevel = 'low' | 'medium' | 'high';
+
+export interface PackageOperationRecord {
+  id: string;
+  contractVersion: string; // CONTRACT_VERSIONS.PACKAGE_OPERATION
+  tenantId: string;
+  workspaceId: string;
+  taskId: string;
+  operation: PackageOperationKind;
+  packages: string[];
+  manager: PackageManagerKind;
+  isDev: boolean;
+  riskLevel: PackageRiskLevel;
+  success: boolean;
+  lockfileChanged: boolean;
+  newVulnerabilities: string[];
+  executedAt: string;
+  correlationId: string;
+}
+
+// ============================================================================
+// FEATURE #3 — VISION SERVICE
+// Frozen 2026-05-07
+// ============================================================================
+export type VisionIntent =
+  | 'ui_bug_report'
+  | 'architecture_diagram'
+  | 'whiteboard_photo'
+  | 'error_screenshot'
+  | 'figma_mockup';
+
+export type VisionMimeType = 'image/png' | 'image/jpeg' | 'image/webp';
+
+export interface VisionAnalysisRecord {
+  id: string;
+  contractVersion: string; // CONTRACT_VERSIONS.VISION_ANALYSIS
+  tenantId: string;
+  workspaceId: string;
+  taskId: string;
+  intent: VisionIntent;
+  mimeType: VisionMimeType;
+  description: string;
+  extractedText: string[];
+  actionableInsights: string[];
+  suggestedActions: string[];
+  llmProvider: string;
+  analyzedAt: string;
+  correlationId: string;
+}
+
+// ============================================================================
+// FEATURE #8 — PARALLEL TASK SLOTS
+// Frozen 2026-05-07
+// ============================================================================
+export type TaskSlotStatus =
+  | 'idle'
+  | 'active'
+  | 'waiting_ci'
+  | 'waiting_approval'
+  | 'waiting_answer';
+
+export type SlotUnblockCondition =
+  | 'ci_complete'
+  | 'approval_received'
+  | 'question_answered';
+
+export interface TaskSlot {
+  slotId: string;
+  contractVersion: string; // CONTRACT_VERSIONS.TASK_SLOT
+  workspaceId: string;
+  tenantId: string;
+  status: TaskSlotStatus;
+  currentTaskId?: string;
+  blockedReason?: string;
+  unblockCondition?: SlotUnblockCondition;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ParallelConfig {
+  maxConcurrentTasks: number; // 1=free, 3=pro, 10=enterprise
+  allowedWaitReasons: TaskSlotStatus[];
+}
 
