@@ -176,7 +176,7 @@ type ConnectorActionExecuteClient = (input: {
     workspaceId: string;
     botId: string;
     roleKey: RoleKey;
-    connectorType: 'jira' | 'teams' | 'github' | 'email';
+    connectorType: 'jira' | 'teams' | 'github' | 'email' | 'slack';
     actionType:
     | 'read_task'
     | 'create_comment'
@@ -2744,6 +2744,18 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                     taskId: runtimeScopedTask.taskId,
                     actionType: input.decision.actionType as LocalWorkspaceActionType,
                     payload,
+                    connectorActionExecuteClient: async (connInput) => connectorActionExecuteClient({
+                        baseUrl: input.config.connectorApiUrl,
+                        token: input.config.connectorExecuteToken,
+                        tenantId: input.config.tenantId,
+                        workspaceId: input.config.workspaceId,
+                        botId: input.config.botId,
+                        roleKey: input.config.roleKey,
+                        connectorType: connInput.connectorType as 'slack',
+                        actionType: connInput.actionType as 'send_message',
+                        payload: connInput.payload,
+                        correlationId: `${input.config.correlationId}:${runtimeScopedTask.taskId}:local_workspace`,
+                    }),
                 },
                 executor: localWorkspaceActionExecutor,
                 onMemoryMirror: memoryStore
