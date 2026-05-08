@@ -4,6 +4,7 @@ import type {
     NotificationRecord,
 } from '@agentfarm/shared-types';
 import { sendDiscord } from './channels/discord-adapter.js';
+import { sendEmail } from './channels/email-adapter.js';
 import { sendSlack } from './channels/slack-adapter.js';
 import { sendTelegram } from './channels/telegram-adapter.js';
 import { sendVoice } from './channels/voice-adapter.js';
@@ -81,13 +82,7 @@ function routeToAdapter(
         case 'voice':
             return sendVoice(record, cfg, fetcher);
         case 'email':
-            // Email adapter is not yet wired — fail gracefully
-            return Promise.resolve({
-                notificationId: record.id,
-                channel: 'email',
-                success: false,
-                errorMessage: 'email adapter not yet implemented',
-            });
+            return sendEmail(record, cfg, fetcher);
         default: {
             const exhaustive: never = cfg.channel;
             return Promise.resolve({

@@ -144,8 +144,11 @@ export class RetentionCleanupJob {
     /**
      * Determine if a retention policy permits deletion.
      * Zero-delete-by-default: only delete if policy explicitly allows.
+     *
+     * @param allowManual When true, manual_delete policies are also permitted
+     *   (used by triggerManualDelete for explicit user-driven cleanup).
      */
-    private canDelete(policy: any): boolean {
+    private canDelete(policy: any, allowManual = false): boolean {
         if (!policy) {
             // No policy = never delete (conservative default)
             return false;
@@ -156,8 +159,8 @@ export class RetentionCleanupJob {
         }
 
         if (policy.action === 'manual_delete') {
-            // Only delete if explicitly triggered by user (not implemented here)
-            return false;
+            // Only delete when explicitly triggered by a user — not during scheduled runs
+            return allowManual;
         }
 
         if (policy.action === 'auto_delete_after_days') {
@@ -166,6 +169,140 @@ export class RetentionCleanupJob {
         }
 
         return false;
+    }
+
+    /**
+     * Explicitly trigger deletion of all expired sessions whose retention policy
+     * is set to `manual_delete` for the given tenant.
+     *
+     * This should be called in response to a verified user action (e.g. a POST
+     * from the admin dashboard or the /trigger-manual-delete HTTP endpoint in
+     * the service entrypoint).
+     *
+     * @param tenantId Required — limits deletion to one tenant's sessions.
+     * @param workspaceId Optional — reserved for future schema-level filtering
+     *   (AgentSession does not currently carry a workspaceId column).
+     */
+    async triggerManualDelete(tenantId: string, workspaceId?: string): Promise<CleanupStats> {
+        console.log(
+            `[RetentionCleanupJob] triggerManualDelete: tenantId=${tenantId}${workspaceId ? ` workspaceId=${workspaceId}` : ''
+            }`,
+        );
+
+        const jobId = this.generateJobId();
+        const startedAt = new Date();
+        const errors: string[] = [];
+
+        let sessionsScanned = 0;
+        let sessionsDeleted = 0;
+        let artifactsDeleted = 0;
+        let totalBytesFreed = 0;
+        let failedDeletions = 0;
+
+        try {
+            // Only fetch sessions that have already expired — manual_delete means
+            // "wait for a human to pull the trigger", not "skip expiry entirely".
+            const sessions = await this.prisma.agentSession.findMany({
+                where: {
+                    tenantId,
+                    retentionExpiresAt: { lt: new Date() },
+                    status: { in: ['completed', 'failed', 'error'] },
+                },
+                include: {
+                    actions: {
+                        select: {
+                            id: true,
+                            screenshotBeforeUrl: true,
+                            screenshotAfterUrl: true,
+                        },
+                    },
+                },
+            });
+
+            sessionsScanned = sessions.length;
+            console.log(
+                `[RetentionCleanupJob] triggerManualDelete: found ${sessionsScanned} expired session(s) for tenant=${tenantId}`,
+            );
+
+            for (const session of sessions) {
+                try {
+                    const policy = session.retentionPolicyId
+                        ? await this.getRetentionPolicy(session.retentionPolicyId)
+                        : null;
+
+                    if (!this.canDelete(policy, true)) {
+                        continue;
+                    }
+
+                    // Delete artifacts
+                    for (const action of session.actions) {
+                        try {
+                            if (action.screenshotBeforeUrl) {
+                                await this.storage.deleteArtifact(action.screenshotBeforeUrl);
+                                artifactsDeleted++;
+                            }
+                            if (action.screenshotAfterUrl) {
+                                await this.storage.deleteArtifact(action.screenshotAfterUrl);
+                                artifactsDeleted++;
+                            }
+                        } catch (error) {
+                            failedDeletions++;
+                            const msg = error instanceof Error ? error.message : 'Unknown error';
+                            errors.push(`Failed to delete artifact for action ${action.id}: ${msg}`);
+                        }
+                    }
+
+                    // Delete recording
+                    if (session.recordingUrl) {
+                        try {
+                            await this.storage.deleteArtifact(session.recordingUrl);
+                            artifactsDeleted++;
+                        } catch (error) {
+                            failedDeletions++;
+                            const msg = error instanceof Error ? error.message : 'Unknown error';
+                            errors.push(`Failed to delete recording for session ${session.id}: ${msg}`);
+                        }
+                    }
+
+                    // Delete session record (cascades to actions via Prisma relations)
+                    await this.prisma.agentSession.delete({ where: { id: session.id } });
+
+                    sessionsDeleted++;
+                    totalBytesFreed += this.estimateSessionSize(session);
+                    console.log(
+                        `[RetentionCleanupJob] triggerManualDelete: deleted session ${session.id} (tenant=${tenantId})`,
+                    );
+                } catch (error) {
+                    failedDeletions++;
+                    const msg = error instanceof Error ? error.message : 'Unknown error';
+                    errors.push(`Failed to process session ${session.id}: ${msg}`);
+                }
+            }
+        } catch (error) {
+            const msg = error instanceof Error ? error.message : 'Unknown error';
+            errors.push(`Manual delete job failed: ${msg}`);
+        }
+
+        const completedAt = new Date();
+        const durationMs = completedAt.getTime() - startedAt.getTime();
+
+        console.log(
+            `[RetentionCleanupJob] triggerManualDelete done: deleted=${sessionsDeleted} scanned=${sessionsScanned} durationMs=${durationMs}`,
+        );
+
+        return {
+            jobId,
+            tenantId,
+            sessionsScanned,
+            sessionsDeleted,
+            artifactsDeleted,
+            totalBytesFreed,
+            failedDeletions,
+            errors,
+            startedAt: startedAt.toISOString(),
+            completedAt: completedAt.toISOString(),
+            durationMs,
+        };
     }
 
     /**

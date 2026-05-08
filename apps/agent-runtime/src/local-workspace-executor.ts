@@ -2442,7 +2442,53 @@ export async function executeLocalWorkspaceAction(input: {
                     base_branch: baseBranch,
                 };
 
-                return { ok: true, output: JSON.stringify(prMetadata, null, 2) };
+                const githubToken = process.env['GITHUB_TOKEN'];
+                const githubOwner = process.env['GITHUB_OWNER'];
+                const githubRepo = process.env['GITHUB_REPO'];
+
+                if (!githubToken) {
+                    return {
+                        ok: true,
+                        output: JSON.stringify({ ...prMetadata, warning: 'GITHUB_TOKEN not configured — PR metadata only' }, null, 2),
+                    };
+                }
+
+                const apiUrl = `https://api.github.com/repos/${githubOwner}/${githubRepo}/pulls`;
+                const prResponse = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${githubToken}`,
+                        Accept: 'application/vnd.github+json',
+                        'X-GitHub-Api-Version': '2022-11-28',
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        title: prMetadata.pr_title,
+                        body: prMetadata.pr_body,
+                        head: prMetadata.head_branch,
+                        base: prMetadata.base_branch,
+                        draft: false,
+                    }),
+                });
+
+                if (!prResponse.ok) {
+                    const errText = await prResponse.text().catch(() => '');
+                    return {
+                        ok: false,
+                        output: JSON.stringify(prMetadata, null, 2),
+                        errorOutput: `GitHub API error ${prResponse.status}: ${errText.slice(0, 500)}`,
+                    };
+                }
+
+                const prData = await prResponse.json() as { number: number; html_url: string };
+                return {
+                    ok: true,
+                    output: JSON.stringify({
+                        ...prMetadata,
+                        pr_number: prData.number,
+                        pr_url: prData.html_url,
+                    }, null, 2),
+                };
             } catch (err) {
                 return { ok: false, output: '', errorOutput: String(err) };
             }
@@ -4063,11 +4109,77 @@ export async function executeLocalWorkspaceAction(input: {
 
         // workspace_profiler_run: run performance profiler
         case 'workspace_profiler_run': {
-            const command = typeof payload['command'] === 'string' ? payload['command'].trim() : 'npm test';
+            // Accept 'target' (preferred) or fall back to 'command' for the entry point to profile.
+            const rawTarget = payload['target'] ?? payload['command'];
+            const target = typeof rawTarget === 'string' ? rawTarget.trim() : '';
+            const languageHint = typeof payload['language'] === 'string'
+                ? payload['language'].toLowerCase()
+                : '';
+
+            if (!target) {
+                return { ok: false, output: '', errorOutput: 'workspace_profiler_run: missing target in payload' };
+            }
+
+            // Infer language from file extension or explicit hint.
+            const isPython =
+                languageHint === 'python' ||
+                languageHint === 'python3' ||
+                target.endsWith('.py');
 
             try {
-                // Stub: would run with profiler
-                return { ok: true, output: JSON.stringify({ command, status: 'profiler:stub', message: 'Profiler integration not yet implemented.' }, null, 2) };
+                if (isPython) {
+                    // python3 -m cProfile -s cumtime <target>  — outputs stats table to stderr/stdout
+                    const pythonBin = platform() === 'win32' ? 'python' : 'python3';
+                    const profResult = await runCommand(
+                        [pythonBin, '-m', 'cProfile', '-s', 'cumtime', target],
+                        workspaceDir,
+                        30_000,
+                    );
+                    const profileOutput = (profResult.stdout + profResult.stderr).trim();
+                    return {
+                        ok: true,
+                        output: JSON.stringify(
+                            { status: 'ok', target, profile_output: profileOutput },
+                            null,
+                            2,
+                        ),
+                    };
+                } else {
+                    // node --prof <target>  — writes isolate-*-v8.log in workspaceDir
+                    await runCommand(['node', '--prof', target], workspaceDir, 30_000);
+
+                    // Locate the generated isolate log (there may be one per V8 isolate).
+                    const files = await readdir(workspaceDir);
+                    const logFile = files.find(
+                        (f) => f.startsWith('isolate-') && f.endsWith('-v8.log'),
+                    );
+
+                    let profileOutput = '';
+                    if (logFile) {
+                        // node --prof-process converts the binary log to human-readable text.
+                        const procResult = await runCommand(
+                            ['node', '--prof-process', logFile],
+                            workspaceDir,
+                            30_000,
+                        );
+                        profileOutput = (procResult.stdout + procResult.stderr).trim();
+                        // Clean up the isolate log — it's large and not needed after processing.
+                        try {
+                            await rm(join(workspaceDir, logFile));
+                        } catch {
+                            // Non-fatal: leave orphan log rather than masking the result.
+                        }
+                    }
+
+                    return {
+                        ok: true,
+                        output: JSON.stringify(
+                            { status: 'ok', target, profile_output: profileOutput },
+                            null,
+                            2,
+                        ),
+                    };
+                }
             } catch (err) {
                 return { ok: false, output: '', errorOutput: String(err) };
             }
@@ -4578,15 +4690,60 @@ export async function executeLocalWorkspaceAction(input: {
                     }
                 }
 
+                const githubToken = process.env['GITHUB_TOKEN'];
+                const githubOwner = process.env['GITHUB_OWNER'];
+                const githubRepo = process.env['GITHUB_REPO'];
+
+                const prMetadata = {
+                    title,
+                    body: sections.join('\n\n'),
+                    head_branch: headBranch,
+                    base_branch: baseBranch,
+                    commits,
+                    diff_stat: diffStat,
+                };
+
+                if (!githubToken) {
+                    return {
+                        ok: true,
+                        output: JSON.stringify({ ...prMetadata, warning: 'GITHUB_TOKEN not configured — PR metadata only' }, null, 2),
+                    };
+                }
+
+                const apiUrl = `https://api.github.com/repos/${githubOwner}/${githubRepo}/pulls`;
+                const prResponse = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${githubToken}`,
+                        Accept: 'application/vnd.github+json',
+                        'X-GitHub-Api-Version': '2022-11-28',
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        title: prMetadata.title,
+                        body: prMetadata.body,
+                        head: prMetadata.head_branch,
+                        base: prMetadata.base_branch,
+                        draft: false,
+                    }),
+                });
+
+                if (!prResponse.ok) {
+                    const errText = await prResponse.text().catch(() => '');
+                    return {
+                        ok: false,
+                        output: JSON.stringify(prMetadata, null, 2),
+                        errorOutput: `GitHub API error ${prResponse.status}: ${errText.slice(0, 500)}`,
+                    };
+                }
+
+                const prData = await prResponse.json() as { number: number; html_url: string };
                 return {
                     ok: true,
                     output: JSON.stringify({
-                        title,
-                        body: sections.join('\n\n'),
-                        head_branch: headBranch,
-                        base_branch: baseBranch,
-                        commits,
-                        diff_stat: diffStat,
+                        ...prMetadata,
+                        pr_number: prData.number,
+                        pr_url: prData.html_url,
                     }, null, 2),
                 };
             } catch (err) {

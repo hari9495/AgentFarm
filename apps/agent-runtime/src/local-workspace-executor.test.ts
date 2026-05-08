@@ -1454,17 +1454,67 @@ test('workspace_debug_breakpoint sets breakpoint successfully', async () => {
     assert.match(parsed.status, /breakpoint:set/);
 });
 
-test('workspace_profiler_run returns stub status', async () => {
+test('workspace_profiler_run (node) profiles a JS target and returns ok', async () => {
+    const { executeLocalWorkspaceAction, getWorkspaceDir } = await import('./local-workspace-executor.js');
+    const { writeFile, mkdir } = await import('node:fs/promises');
+    const { join: pjoin } = await import('node:path');
+
+    const tenantId = 't1'; const botId = 'b1'; const workspaceKey = 'repo-prof-js';
+    const wsDir = getWorkspaceDir(tenantId, botId, workspaceKey);
+    await mkdir(wsDir, { recursive: true });
+
+    // Trivial JS file that gives the profiler something to measure
+    await writeFile(pjoin(wsDir, 'prof-target.js'), 'let x = 0; for (let i = 0; i < 500000; i++) x += i; console.log(x);\n', 'utf-8');
+
+    const result = await executeLocalWorkspaceAction({
+        tenantId, botId, taskId: 'task-prof',
+        actionType: 'workspace_profiler_run',
+        payload: { workspace_key: workspaceKey, target: 'prof-target.js' },
+    });
+    assert.equal(result.ok, true, result.errorOutput);
+    const parsed = JSON.parse(result.output) as { status: string; target: string; profile_output: string };
+    assert.equal(parsed.status, 'ok');
+    assert.equal(parsed.target, 'prof-target.js');
+    assert.ok(typeof parsed.profile_output === 'string', 'profile_output should be a string');
+});
+
+test('workspace_profiler_run (python) profiles a .py target and returns ok', async () => {
+    const { executeLocalWorkspaceAction, getWorkspaceDir } = await import('./local-workspace-executor.js');
+    const { writeFile, mkdir } = await import('node:fs/promises');
+    const { join: pjoin } = await import('node:path');
+    const { execSync } = await import('node:child_process');
+
+    // Skip if Python is not available on this machine
+    try { execSync('python --version 2>&1'); } catch { return; }
+
+    const tenantId = 't1'; const botId = 'b1'; const workspaceKey = 'repo-prof-py';
+    const wsDir = getWorkspaceDir(tenantId, botId, workspaceKey);
+    await mkdir(wsDir, { recursive: true });
+
+    await writeFile(pjoin(wsDir, 'prof-target.py'), 'x = sum(range(500000))\nprint(x)\n', 'utf-8');
+
+    const result = await executeLocalWorkspaceAction({
+        tenantId, botId, taskId: 'task-prof-py',
+        actionType: 'workspace_profiler_run',
+        payload: { workspace_key: workspaceKey, target: 'prof-target.py', language: 'python' },
+    });
+    assert.equal(result.ok, true, result.errorOutput);
+    const parsed = JSON.parse(result.output) as { status: string; target: string; profile_output: string };
+    assert.equal(parsed.status, 'ok');
+    assert.equal(parsed.target, 'prof-target.py');
+    assert.ok(typeof parsed.profile_output === 'string');
+});
+
+test('workspace_profiler_run returns error when target is missing', async () => {
     const { executeLocalWorkspaceAction } = await import('./local-workspace-executor.js');
 
     const result = await executeLocalWorkspaceAction({
-        tenantId: 't1', botId: 'b1', taskId: 'task-prof',
+        tenantId: 't1', botId: 'b1', taskId: 'task-prof-missing',
         actionType: 'workspace_profiler_run',
-        payload: { workspace_key: 'repo-x', command: 'npm test' },
+        payload: { workspace_key: 'repo-x' },
     });
-    assert.equal(result.ok, true, result.errorOutput);
-    const parsed = JSON.parse(result.output) as { status: string };
-    assert.match(parsed.status, /stub/);
+    assert.equal(result.ok, false);
+    assert.match(result.errorOutput ?? '', /missing target/);
 });
 
 // ===========================================================================

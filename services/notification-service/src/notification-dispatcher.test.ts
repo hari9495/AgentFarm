@@ -178,15 +178,47 @@ describe('dispatch — webhook', () => {
     });
 });
 
-describe('dispatch — email (not implemented)', () => {
-    it('returns graceful failure', async () => {
+describe('dispatch — email', () => {
+    it('returns success when relay URL and to address are configured', async () => {
+        const record = makeRecord('email');
+        const configs: NotificationChannelConfig[] = [
+            { channel: 'email', enabled: true, config: { to: 'admin@example.com', relayUrl: 'https://mail-relay.internal' } },
+        ];
+        const fakeFetch = async (_url: string, _body: Record<string, unknown>) => 'msg-email-1';
+        const [result] = await dispatch(record, configs, fakeFetch);
+        assert.equal(result.success, true);
+        assert.equal(result.platformMessageId, 'msg-email-1');
+    });
+
+    it('returns failure when to address is missing', async () => {
+        const record = makeRecord('email');
+        const configs: NotificationChannelConfig[] = [
+            { channel: 'email', enabled: true, config: { relayUrl: 'https://mail-relay.internal' } },
+        ];
+        const [result] = await dispatch(record, configs);
+        assert.equal(result.success, false);
+        assert.match(result.errorMessage ?? '', /to/);
+    });
+
+    it('returns failure when relayUrl is missing', async () => {
         const record = makeRecord('email');
         const configs: NotificationChannelConfig[] = [
             { channel: 'email', enabled: true, config: { to: 'admin@example.com' } },
         ];
         const [result] = await dispatch(record, configs);
         assert.equal(result.success, false);
-        assert.match(result.errorMessage ?? '', /not yet implemented/);
+        assert.match(result.errorMessage ?? '', /relayUrl/);
+    });
+
+    it('returns failure when fetcher throws', async () => {
+        const record = makeRecord('email');
+        const configs: NotificationChannelConfig[] = [
+            { channel: 'email', enabled: true, config: { to: 'admin@example.com', relayUrl: 'https://mail-relay.internal' } },
+        ];
+        const fakeFetch = async () => { throw new Error('SMTP relay unreachable'); };
+        const [result] = await dispatch(record, configs, fakeFetch);
+        assert.equal(result.success, false);
+        assert.match(result.errorMessage ?? '', /SMTP relay unreachable/);
     });
 });
 

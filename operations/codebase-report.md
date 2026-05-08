@@ -1,7 +1,6 @@
-# AgentFarm Codebase Report
+﻿# AgentFarm Codebase Report
 
-Generated: 2026-05-09T00:00:00Z  
-Scanned by: Claude (full read — no guesses from filenames)
+> Generated: 2026-05-07 | Quality Gate: PASS (52/52) | Tests: 1,542 total, 0 failures
 
 ---
 
@@ -16,681 +15,559 @@ Scanned by: Claude (full read — no guesses from filenames)
 7. [Data Models](#7-data-models)
 8. [Test Summary](#8-test-summary)
 9. [Gaps and TODOs](#9-gaps-and-todos)
+10. [Environment Variable Reference](#10-environment-variable-reference)
 
 ---
 
 ## 1. Monorepo Structure
 
-**Root**: `D:\AgentFarm`  
-**Package manager**: pnpm 9.12.0  
-**Workspace globs**: `apps/*`, `services/*`, `packages/*`
+**Runtime:** Node 22, pnpm 9.12.0, TypeScript strict mode
+**Workspace root:** `D:\AgentFarm`
+**pnpm workspaces:** `apps/*`, `services/*`, `packages/*`
 
 ### Apps
 
-| Name (npm) | Location | Port | Purpose |
-|---|---|---|---|
-| `@agentfarm/api-gateway` | `apps/api-gateway` | 3000 | Central REST API. Auth, roles, connectors, approvals, tasks, memory, audit, governance. 76+ route files. |
-| `@agentfarm/agent-runtime` | `apps/agent-runtime` | 4000 | LLM decision engine + action executor. Handles all bot task execution. Core of the system. |
-| `@agentfarm/trigger-service` | `apps/trigger-service` | 3002 | Ingests webhooks (GitHub, Jira, Slack, email, PagerDuty) and dispatches tasks to agent-runtime. |
-| `@agentfarm/dashboard` | `apps/dashboard` | 3001 | Next.js internal dashboard. Marketplace panel, workspace tabs, mobile drawer. |
-| `@agentfarm/website` | `apps/website` | 3002 | Next.js marketing site. Waitlist, auth, 3D hero (Three.js), Framer Motion. |
-| `@agentfarm/orchestrator` | `apps/orchestrator` | 3011 | Multi-workspace orchestrator. File-based or Prisma state store. Routes tasks across workspaces. |
+| Package | Name | Port | Purpose |
+|---------|------|------|---------|
+| `apps/agent-runtime` | `@agentfarm/agent-runtime` | 4000 | Core agent execution engine — LLM decision, action dispatch, approval lifecycle, workspace execution |
+| `apps/api-gateway` | `@agentfarm/api-gateway` | 3000 | REST API gateway for dashboard + connectors; wraps all control-plane operations (76+ route files) |
+| `apps/dashboard` | `@agentfarm/dashboard` | 3001/3101 | Next.js 15 dashboard UI — approval queue, task management, workspace monitoring |
+| `apps/orchestrator` | `@agentfarm/orchestrator` | 3011 | GOAP planner, task scheduler, routine scheduler, proactive signals, agent handoffs |
+| `apps/trigger-service` | `@agentfarm/trigger-service` | 3002 | Inbound event router — receives webhooks, routes to agent-runtime `/run-task` |
+| `apps/website` | `@agentfarm/website` | 3002/3102 | Next.js 15 marketing/product website |
+
+### Services
+
+| Package | Name | Purpose |
+|---------|------|---------|
+| `services/agent-observability` | `@agentfarm/agent-observability` | Azure Blob telemetry writer — structured agent run metrics |
+| `services/agent-question-service` | `@agentfarm/agent-question-service` | Agent async Q&A — park task, await human answer, resume |
+| `services/approval-service` | `@agentfarm/approval-service` | Approval CRUD and decision lifecycle (Prisma-backed) |
+| `services/audit-storage` | `@agentfarm/audit-storage` | Audit event persistence (Prisma-backed) |
+| `services/browser-actions` | `@agentfarm/browser-actions` | Browser audit session and action event recording |
+| `services/compliance-export` | `@agentfarm/compliance-export` | GDPR/SOC2 export job runner |
+| `services/connector-gateway` | `@agentfarm/connector-gateway` | Connector auth, token lifecycle, action dispatch to external APIs |
+| `services/evidence-service` | `@agentfarm/evidence-service` | Evidence packet assembly for approvals and audit |
+| `services/identity-service` | `@agentfarm/identity-service` | Tenant user identity and session management |
+| `services/meeting-agent` | `@agentfarm/meeting-agent` | Voice pipeline, meeting lifecycle FSM, STT/TTS adapters |
+| `services/memory-service` | `@agentfarm/memory-service` | Agent short-term/long-term memory CRUD |
+| `services/notification-service` | `@agentfarm/notification-service` | Notification dispatch (Teams, Slack, email) |
+| `services/policy-engine` | `@agentfarm/policy-engine` | Role policy enforcement — action allowlists, risk overrides |
+| `services/provisioning-service` | `@agentfarm/provisioning-service` | Azure VM + Docker container provisioning workflow |
+| `services/retention-cleanup` | `@agentfarm/retention-cleanup` | Retention policy enforcement — scheduled artifact cleanup |
 
 ### Packages
 
-| Name (npm) | Location | Purpose |
-|---|---|---|
-| `@agentfarm/shared-types` | `packages/shared-types` | All shared TypeScript interfaces, type contracts, storage paths, retention policies, telemetry, skill composition types |
-| `@agentfarm/connector-contracts` | `packages/connector-contracts` | Connector registry, all connector action schemas, contract version constants |
-| `@agentfarm/queue-contracts` | `packages/queue-contracts` | Queue name constants (`queue_runtime_tasks`, `queue_approval`, etc.) and lease action types |
-| `@agentfarm/db-schema` | `packages/db-schema` | Prisma schema + migrations. PostgreSQL. 34 models, 15 enums. |
-| `@agentfarm/observability` | `packages/observability` | `ObservabilityEventStore` — in-memory event emit/list with severity filtering |
-| `@agentfarm/notification-adapters` | `packages/notification-service` | Webhook, Email, Slack, Teams notification adapters. `NotificationService`, `AdapterFactory`, `CustomerNotificationStore` |
-| `@agentfarm/crm-adapters` | `packages/crm-service` | Salesforce, HubSpot, Zoho, Dynamics, Pipedrive adapters. `CRMService`, `CRMAdapterFactory` |
-| `@agentfarm/erp-adapters` | `packages/erp-service` | SAP, Oracle, Dynamics 365, NetSuite, Odoo adapters. `ERPService`, `ERPAdapterFactory` |
-
-### Services (under `services/`)
-
-| Directory | Purpose |
-|---|---|
-| `services/connector-gateway` | Connector execution gateway. Implements `GitHubConnector` with raw `fetch` to `api.github.com`. Uses `GITHUB_TOKEN`. |
-| `services/memory-service` | `AgentShortTermMemory` + `AgentLongTermMemory` CRUD. 7-day TTL for short-term. |
-| `services/retention-cleanup` | Scheduled cleanup job. Deletes expired sessions/memories per `RetentionPolicy`. `manual_delete` policy NOT implemented (silently returns false). |
-| `services/notification-service` | Notification dispatcher (separate from the package). Email dispatch is NOT implemented (test file confirms). |
+| Package | Name | Purpose |
+|---------|------|---------|
+| `packages/connector-contracts` | `@agentfarm/connector-contracts` | Shared connector action types and request/response shapes |
+| `packages/crm-service` | `@agentfarm/crm-adapters` | CRM adapters (Salesforce, HubSpot, Zoho, Dynamics, Pipedrive) |
+| `packages/db-schema` | `@agentfarm/db-schema` | Prisma schema + PostgreSQL client (34 models, 15+ enums) |
+| `packages/erp-service` | `@agentfarm/erp-adapters` | ERP adapters (SAP, Oracle, Dynamics 365, NetSuite, Odoo) |
+| `packages/notification-service` | `@agentfarm/notification-adapters` | Notification adapters (Webhook, Slack, Teams, Email) |
+| `packages/observability` | `@agentfarm/observability` | Structured logging and telemetry helpers |
+| `packages/queue-contracts` | `@agentfarm/queue-contracts` | Shared queue/event message contracts |
+| `packages/shared-types` | `@agentfarm/shared-types` | Canonical TypeScript types, contract versions (43 contracts), enums |
 
 ---
 
 ## 2. Agent Roles
 
-Defined in `apps/api-gateway/src/routes/roles.ts` — `ROLE_CATALOG` array.  
-All roles use `defaultPolicyPackVersion: 'rbac-rolepack-v1'` and `roleVersion: 'v1'`.
+### Role Keys (canonical union in `packages/shared-types/src/index.ts`)
 
-| roleKey | Display Name | Description |
-|---|---|---|
-| `recruiter` | Recruiter | Sources candidates, evaluates profiles, and coordinates hiring workflows |
-| `developer` | Developer | Implements scoped engineering changes with connector-backed execution |
-| `fullstack_developer` | Fullstack Developer | Delivers frontend and backend implementation workflows end to end |
-| `tester` | Tester | Designs and runs validation plans, and reports regressions and risks |
-| `business_analyst` | Business Analyst | Creates requirement clarity, acceptance criteria, and process insights |
-| `technical_writer` | Technical Writer | Produces technical documentation, release notes, and operational guides |
-| `content_writer` | Content Writer | Builds product content, messaging, and campaign copy across channels |
-| `sales_rep` | Sales Representative | Supports lead follow-up, outreach, and sales pipeline progression |
-| `marketing_specialist` | Marketing Specialist | Runs campaign execution, messaging experiments, and outreach loops |
-| `corporate_assistant` | Corporate Assistant | Coordinates day-to-day scheduling, notes, and follow-up workflows |
-| `customer_support_executive` | Customer Support Executive | Handles customer tickets, responses, and support escalation handoffs |
-| `project_manager_product_owner_scrum_master` | Project Manager / Product Owner / Scrum Master | Coordinates execution plans, backlog flow, and cross-team delivery cadence |
-
-### Role → Allowed Local Actions (from `runtime-server.ts` → `LOCAL_WORKSPACE_ACTION_POLICY`)
-
-| Role | Local Actions Allowed |
-|---|---|
-| `developer` | All ~100 actions in the executor (read + write + git + shell + tests + browser + sub-agent) |
-| `fullstack_developer` | Same as `developer` |
-| `tester` | Read-only + test subset (46 actions — see list in `tester-agent-profile.ts`). Blocked from: `merge_pr`, `deploy_production`, `run_shell_command`, `code_edit_patch`, `workspace_bulk_refactor`, `workspace_subagent_spawn` |
-| All other roles | `['code_read']` only (or empty set for pure connector-based roles) |
-
-### Tester Role — Allowed Actions (from `tester-agent-profile.ts`)
 ```
-code_read, run_tests, run_linter, workspace_list_files, workspace_grep,
-workspace_scout, git_log, workspace_cleanup, workspace_diff,
-workspace_memory_read, workspace_find_references, workspace_go_to_definition,
-workspace_hover_type, workspace_analyze_imports, workspace_generate_test,
-workspace_run_ci_checks, workspace_fix_test_failures, workspace_code_coverage,
-workspace_complexity_metrics, workspace_security_scan, workspace_test_impact_analysis,
-workspace_search_docs, workspace_package_lookup, workspace_language_adapter_python,
-workspace_language_adapter_java, workspace_language_adapter_go,
-workspace_language_adapter_csharp, workspace_change_impact_report,
-workspace_git_blame, workspace_outline_symbols, workspace_security_fix_suggest,
-workspace_pr_review_prepare, workspace_dependency_upgrade_plan,
-workspace_policy_preflight, workspace_connector_test, workspace_explain_code,
-workspace_refactor_plan, workspace_semantic_search, workspace_diff_preview,
-workspace_approval_status, workspace_audit_export
+recruiter | developer | fullstack_developer | tester | business_analyst |
+technical_writer | content_writer | sales_rep | marketing_specialist |
+corporate_assistant | customer_support_executive |
+project_manager_product_owner_scrum_master
 ```
 
-### Role → Connector Policy (from `runtime-server.ts` → `ROLE_CONNECTOR_POLICY`)
+### Role Configuration
 
-| Role | Allowed Connectors |
-|---|---|
-| `developer`, `fullstack_developer` | `jira`, `github`, `teams`, `email` |
-| `tester` | `jira`, `teams`, `github`, `email` (from `TESTER_ROLE_ALLOWED_CONNECTORS`) |
-| `recruiter` | (HR connectors — configured separately) |
-| `sales_rep` | CRM connectors |
-| Other roles | Subset of `jira`, `teams`, `email` |
+Each role is governed by:
+- **`RoleCapabilityProfileRecord`** — per-connector tool allowlists + allowed actions
+- **`BotCapabilitySnapshot`** (Prisma model) — frozen capability snapshot at task time
+  - fields: `roleKey`, `roleVersion`, `allowedConnectorTools[]`, `allowedActions[]`, `policyPackVersion`, `brainConfig` (JSON)
+  - optional: `supportedLanguages[]`, `languageTier`, `speechProvider`, `translationProvider`, `ttsProvider`, `avatarEnabled`, `avatarStyle`, `avatarProvider`
+- **`BotBrainConfig`** — `roleSystemPromptVersion`, `roleToolPolicyVersion`, `roleRiskPolicyVersion`, `defaultModelProfile`, `fallbackModelProfile`
 
-### System Prompts
+### Tester Role Profile (fully implemented: `apps/agent-runtime/src/tester-agent-profile.ts`)
 
-System prompts are **not stored as static strings** for each role. They are assembled dynamically:
+**Allowed connectors:** `jira`, `teams`, `github`, `email`
 
-- **`apps/trigger-service/src/trigger-router.ts`** — `buildSystemPrompt(config)`: builds a prompt listing all tenants and their registered agents (ID + description). Used by the trigger router to decide which agent to dispatch to.
-- **`apps/agent-runtime/src/task-planner.ts`** — `PLANNER_SYSTEM_PROMPT`: instructs an LLM to parse a natural language task into a structured `ActionPlan` JSON with specific available action types.
-- **Memory injection** (`execution-engine.ts` → `processDeveloperTaskWithMemory()`): injects `_memory_context` (recent memories, approval rejection rate, common connectors, code review patterns) into the task payload before LLM decision.
+**Allowed local actions (45):** `code_read`, `run_tests`, `run_linter`, `workspace_list_files`, `workspace_grep`, `workspace_scout`, `git_log`, `workspace_cleanup`, `workspace_diff`, `workspace_memory_read`, `workspace_find_references`, `workspace_go_to_definition`, `workspace_hover_type`, `workspace_analyze_imports`, `workspace_generate_test`, `workspace_run_ci_checks`, `workspace_fix_test_failures`, `workspace_code_coverage`, `workspace_complexity_metrics`, `workspace_security_scan`, `workspace_test_impact_analysis`, `workspace_search_docs`, `workspace_package_lookup`, `workspace_language_adapter_python/java/go/csharp`, `workspace_change_impact_report`, `workspace_git_blame`, `workspace_outline_symbols`, `workspace_security_fix_suggest`, `workspace_pr_review_prepare`, `workspace_dependency_upgrade_plan`, `workspace_policy_preflight`, `workspace_connector_test`, `workspace_explain_code`, `workspace_refactor_plan`, `workspace_semantic_search`, `workspace_diff_preview`, `workspace_approval_status`, `workspace_audit_export`
 
-> **Gap**: No per-role static system prompts found. Role identity is carried via `roleKey` in the payload and enforced via the action policy tables, not via LLM prompting.
+**Blocked actions:** `merge_pr`, `deploy_production`, `delete_resource`, `workspace_subagent_spawn`, `run_shell_command`, `change_permissions`, `code_edit_patch`, `workspace_bulk_refactor`
+
+**High-risk (requires approval):** `workspace_autonomous_plan_execute`, `workspace_github_issue_fix`
+
+**Profile aliases:** `tester`, `tester_agent`, `qa`, `qa_engineer`, `quality_assurance_engineer`
+
+### Developer Role
+
+Full access to all action types subject to risk-based approval routing. No per-profile blocking. Primarily drives workspace execution, PR automation, and code editing.
+
+### Model Profiles
+
+`quality_first | speed_first | cost_balanced | custom`
 
 ---
 
 ## 3. Full Execution Pipeline
 
-### Step-by-step: Webhook → Task Result
+### Step 1 — Inbound Trigger (`apps/trigger-service`)
 
-```
-1. INBOUND TRIGGER
-   trigger-service/src/main.ts (port 3002)
-   └── POST /webhook/:provider  (or Slack bolt / IMAP email / PagerDuty)
-       ├── Verify HMAC-SHA256 signature (WEBHOOK_HMAC_SECRET)
-       ├── Parse provider payload (GitHub, Jira, Linear, Sentry, PagerDuty, email)
-       └── TriggerEngine.dispatch(event)
+1. **WebhookTriggerSource** receives HTTP POST on `/webhook`; validates HMAC (`x-hub-signature-256` or `x-signature`). Returns 401 on invalid signature.
+2. **TriggerEngine** calls `TriggerRouter.route(body, from)`.
+3. Multi-tenant: **Anthropic LLM** classifies message to `tenantId` + `agentId`. Falls back to first tenant on auth error or missing key.
+4. **TriggerDispatcher** POSTs `{ task, tenantId, agentId, triggerId, source }` to `<AGENT_RUNTIME_URL>/run-task`.
+5. **ReplyDispatcher** sends success/failure notification to origin (Slack API or webhook `callbackUrl`).
 
-2. ROUTING
-   trigger-service/src/trigger-engine.ts
-   └── TriggerRouter.route(event)
-       ├── buildSystemPrompt(config) → tenant + agent descriptions
-       ├── Match event to tenant + agentId via routing rules
-       └── POST http://agent-runtime:4000/run-task  { taskId, payload, enqueuedAt }
+### Step 2 — Task Receipt (`apps/agent-runtime`)
 
-3. TASK RECEIPT
-   agent-runtime/src/runtime-server.ts  POST /run-task
-   └── validateTaskEnvelope(body)
-       ├── Check task lease (if enforceTaskLease=true)
-       ├── Validate roleKey, policyPackVersion, contractVersion
-       ├── enrichTaskWithRuntimeContext() → inject tenantId, workspaceId, botId, roleKey
-       └── processDeveloperTask(task, { llmDecisionResolver })
+1. `runtime-server.ts` Fastify `POST /run-task` receives task envelope.
+2. Loads **RuntimeConfig** from env: `tenantId`, `workspaceId`, `botId`, `roleProfile`, `roleKey`, `roleVersion`, `policyPackVersion`, `approvalApiUrl`, `connectorApiUrl`, `evidenceApiUrl`, etc.
+3. Validates state machine: must be `ready` or `active`. Transitions to `active`.
 
-4. HEURISTIC DECISION
-   agent-runtime/src/execution-engine.ts  buildDecision(task)
-   ├── normalizeActionType(payload)  → reads action_type or intent field
-   ├── scoreConfidence(payload)       → 0.92 base, deduct for missing summary/target/high complexity
-   ├── classifyRisk(actionType, confidence)
-   │   ├── HIGH_RISK: merge_release, merge_pr, delete_resource, git_push,
-   │   │             run_shell_command, workspace_repl_*, workspace_browser_open,
-   │   │             workspace_app_launch, workspace_meeting_*, workspace_subagent_spawn,
-   │   │             workspace_github_issue_fix
-   │   ├── MEDIUM_RISK: code_edit, code_edit_patch, run_build, run_tests, git_commit,
-   │   │               autonomous_loop, create_pr_from_workspace, workspace_memory_write,
-   │   │               workspace_bulk_refactor, workspace_generate_test, workspace_create_pr,
-   │   │               workspace_run_ci_checks, workspace_slack_notify, +30 more
-   │   └── LOW_RISK: everything else (confidence >= 0.6)
-   └── route = 'approval' (medium/high) | 'execute' (low)
+### Step 3 — Task Classification (`apps/agent-runtime/src/execution-engine.ts`)
 
-5. LLM DECISION OVERRIDE (optional)
-   agent-runtime/src/llm-decision-adapter.ts
-   ├── createLlmDecisionResolverFromConfig(config)
-   ├── Select provider: OpenAI | Azure OpenAI | GitHub Models | Anthropic |
-   │                    Google | xAI | Mistral | Together AI | Auto (failover)
-   ├── Health scoring: track failure rate per provider, apply cooldown
-   ├── Build prompt from task payload + heuristic decision
-   ├── Call provider API (text completion — no tools:[])
-   ├── Parse LLM response → refined ActionDecision + optional payloadOverrides
-   └── Return decision + metadata (provider, model, tokens, failover trace)
+1. **`processDeveloperTask`** builds `LlmDecisionEnvelope` via configured LLM provider.
+2. **`classifyRisk`** assigns `low | medium | high` based on `HIGH_RISK_ACTIONS` and `MEDIUM_RISK_ACTIONS` sets.
+3. **`scoreConfidence`** computes 0–1 confidence score from LLM response.
 
-6a. IF APPROVAL REQUIRED
-    runtime-server.ts → POST approvalApiUrl (approval intake)
-    ├── Store Approval record in DB (status: pending)
-    ├── Return { status: 'approval_required' } to caller
-    └── Wait for decision webhook POST /decision-webhook
-        └── On approval → processApprovedTask(task) → continue to step 7
+### Step 4 — Risk Routing
 
-6b. IF LOW RISK (execute directly)
-    Continue to step 7
+| Risk Level | Outcome |
+|------------|---------|
+| `low` | Execute immediately via connector or local workspace |
+| `medium` | Submit approval packet; await decision |
+| `high` | Submit approval packet; await decision |
 
-7. ACTION DISPATCH
-   agent-runtime/src/local-workspace-executor.ts  executeLocalWorkspaceAction(action)
-   ├── Validate action type against LOCAL_WORKSPACE_ACTION_TYPES set
-   ├── Check role permission via getAllowedActionsForRole(roleKey)
-   ├── Rate-limit check (workspace-rate-limiter.ts)
-   └── switch(action.type) → dispatch to handler (see Action Registry below)
+### Step 5 — LLM Decision (`apps/agent-runtime/src/llm-decision-adapter.ts`)
 
-8. RESULT PERSISTENCE
-   agent-runtime/src/action-result-writer.ts
-   └── Append NDJSON record to AF_ACTION_RESULT_LOG_PATH
-       { taskId, actionType, status, input, output, durationMs, timestamp }
+1. Selects provider via health scoring + per-task-type routing history.
+2. Checks cooldown store (`.agent-runtime/provider-cooldowns.json`).
+3. Calls provider API (5 s timeout).
+4. On failure: classifies reason code, sets cooldown, fails over to next provider.
+5. Records outcome in health store (5-min window, 20 entries max) and token budget state.
 
-   agent-runtime/src/evidence-assembler.ts + evidence-record-writer.ts
-   └── Write evidence record (audit trail) to AF_EVIDENCE_API_URL
+### Step 6 — Action Execution
 
-   agent-runtime/src/action-observability.ts
-   └── Write to SQLite (AGENT_OBSERVABILITY_DB_PATH) or
-       Azure Blob Storage (AGENT_OBSERVABILITY_BLOB_ACCOUNT_URL)
+**Connector actions (external):**
+- POSTs to `connectorApiUrl` with `connectorExecuteToken`
+- Supported: `read_task | create_comment | update_status | send_message | create_pr_comment | create_pr | merge_pr | list_prs | send_email`
+- Connector types: `jira | teams | github | email | slack`
 
-9. TASK INTELLIGENCE MEMORY
-   agent-runtime/src/task-intelligence-memory.ts  recordTaskIntelligence()
-   └── Write AgentShortTermMemory (actions taken, approval outcomes, connectors used)
-       Expires after 7 days. Used for context injection in future tasks.
+**Local workspace actions (in-container):**
+- `local-workspace-executor.ts` — 140+ actions in Docker sandbox
+- Shell commands: strict allowlist, no path traversal
 
-10. NOTIFICATION
-    agent-runtime/src/notification-hook.ts  maybeNotify()
-    ├── Only fires if payload.notify === true
-    ├── Resolve customer notification config from customerNotificationStore
-    └── Dispatch via NotificationService (Webhook | Email | Slack | Teams)
+### Step 7 — Approval Lifecycle
 
-11. CRM / ERP UPDATE
-    agent-runtime/src/crm-hook.ts  maybePushCRMUpdate()
-    agent-runtime/src/erp-hook.ts  maybePushERPUpdate()
-    └── Fire if connector result includes CRM/ERP record type
+1. Approval packet POSTed to `approvalApiUrl` (api-gateway `/approvals`).
+2. Packet: `change_summary`, `impacted_scope`, `risk_reason`, `proposed_rollback`, `lint_status`, `test_status`, `packet_complete`, `actorId`, `routeReason`, `evidenceLink`, `approvalSummary`.
+3. Dashboard approval-queue-panel renders structured packet + detail drawer.
+4. Decision (approved / rejected / timeout_rejected) fires webhook; agent continues or abandons.
 
-12. EVALUATOR WEBHOOK (optional)
-    agent-runtime/src/evaluator-webhook.ts  fireEvaluatorWebhook()
-    └── POST RUNTIME_BASE_URL/evaluate with task result (quality scoring)
-```
+### Step 8 — Evidence Assembly (`services/evidence-service`)
+
+- Collects action records, approval records, audit events, LLM metadata.
+- Assembles evidence packet; stores via `agent-observability` to Azure Blob.
+
+### Step 9 — Post-Change Quality Gate
+
+- After local workspace actions: run `run_tests` + `run_linter`.
+- On failure: re-queue for LLM fix loop (configurable max attempts).
+
+### Step 10 — Memory Recording
+
+- Orchestrator calls `taskMemoryRecorder` after task.
+- Stores `AgentShortTermMemory` (7-day TTL): `actionsTaken`, `approvalOutcomes`, `connectorsUsed`, `llmProvider`, `executionStatus`, `summary`.
+- Long-term pattern learning via `AgentLongTermMemory`.
 
 ---
 
 ## 4. Complete Action Registry
 
-All handlers live in `apps/agent-runtime/src/local-workspace-executor.ts`.  
-Risk levels from `apps/agent-runtime/src/execution-engine.ts`.
+### Risk Classification
 
-### Tier 0 — Repository Setup
+**HIGH_RISK (requires approval):**
+`merge_release`, `merge_pr`, `delete_resource`, `change_permissions`, `deploy_production`, `git_push`, `run_shell_command`, `workspace_repl_start`, `workspace_repl_execute`, `workspace_dry_run_with_approval_chain`, `workspace_browser_open`, `workspace_app_launch`, `workspace_meeting_join`, `workspace_meeting_speak`, `workspace_meeting_interview_live`, `workspace_subagent_spawn`, `workspace_github_issue_fix`
 
-| Action | Input | Output | Status |
-|---|---|---|---|
-| `git_clone` | `{ repo_url, branch?, depth? }` | `{ cloned: true, path }` | ✅ IMPLEMENTED |
-| `git_branch` | `{ branch_name?, from? }` | `{ branch, created: true }` | ✅ IMPLEMENTED |
+**MEDIUM_RISK (requires approval):**
+`update_status`, `create_comment`, `create_pr_comment`, `create_pr`, `send_message`, `code_edit`, `code_edit_patch`, `code_search_replace`, `run_build`, `run_tests`, `git_commit`, `autonomous_loop`, `create_pr_from_workspace`, `workspace_memory_write`, `git_stash`, `apply_patch`, `file_move`, `file_delete`, `run_linter`, `workspace_install_deps`, `workspace_checkpoint`, `workspace_rename_symbol`, `workspace_extract_function`, `workspace_analyze_imports`, `workspace_security_scan`, `workspace_bulk_refactor`, `workspace_atomic_edit_set`, `workspace_generate_from_template`, `workspace_migration_helper`, `workspace_debug_breakpoint`, `workspace_profiler_run`, `workspace_rollback_to_checkpoint`, `workspace_generate_test`, `workspace_format_code`, `workspace_version_bump`, `workspace_changelog_generate`, `workspace_create_pr`, `workspace_run_ci_checks`, `workspace_fix_test_failures`, `workspace_release_notes_generate`, `workspace_incident_patch_pack`, `workspace_memory_profile`, `workspace_autonomous_plan_execute`, `workspace_pr_auto_assign`, `workspace_ci_watch`, `workspace_add_docstring`, `workspace_diff_preview`, `workspace_audit_export`, `workspace_github_pr_status`, `workspace_github_issue_triage`, `workspace_slack_notify`
 
-### Tier 1 — Read / Inspect (LOW RISK)
+**LOW_RISK (execute immediately):** All remaining read/scout/analysis actions.
 
-| Action | Input | Output | Status |
-|---|---|---|---|
-| `code_read` | `{ path }` | `{ content, lines, size }` | ✅ IMPLEMENTED |
-| `workspace_read_file` | `{ path }` | `{ content }` (1 MB limit) | ✅ IMPLEMENTED |
-| `workspace_list_files` | `{ path?, pattern?, recursive? }` | `{ files: string[] }` | ✅ IMPLEMENTED |
-| `workspace_grep` | `{ pattern, path?, context_lines?, file_pattern? }` | `{ matches: [{file,line,text}] }` | ✅ IMPLEMENTED |
-| `workspace_scout` | `{ query }` | `{ summary, relevant_files[] }` | ✅ IMPLEMENTED |
-| `workspace_diff` | `{ base?, head? }` | `{ diff_text }` | ✅ IMPLEMENTED |
-| `workspace_memory_read` | `{ key? }` | `{ memories[] }` | ✅ IMPLEMENTED |
-| `workspace_memory_org_read` | `{ key? }` | `{ org_memories[] }` | ✅ IMPLEMENTED |
-| `workspace_find_references` | `{ symbol, file? }` | `{ references[] }` | ✅ IMPLEMENTED |
-| `workspace_go_to_definition` | `{ symbol, file }` | `{ definition_location }` | ✅ IMPLEMENTED |
-| `workspace_hover_type` | `{ symbol, file, line }` | `{ type_info }` | ✅ IMPLEMENTED |
-| `workspace_analyze_imports` | `{ file }` | `{ imports[], unused[] }` | ✅ IMPLEMENTED (MEDIUM RISK) |
-| `workspace_outline_symbols` | `{ file }` | `{ symbols[] }` | ✅ IMPLEMENTED |
-| `workspace_git_blame` | `{ file, line_start?, line_end? }` | `{ blame[] }` | ✅ IMPLEMENTED |
-| `git_log` | `{ limit?, branch? }` | `{ commits[] }` | ✅ IMPLEMENTED |
-| `workspace_cleanup` | `{}` | `{ cleaned: true }` | ✅ IMPLEMENTED |
+### Local Workspace Actions by Tier
 
-### Tier 2 — Write / Mutate (MEDIUM RISK)
+| Tier | Actions | Status |
+|------|---------|--------|
+| Tier 1 — Basic | `workspace_list_files`, `workspace_grep`, `workspace_read_file`, `file_move`, `file_delete`, `workspace_install_deps` | IMPLEMENTED |
+| Tier 2 — Git/Scout | `run_linter`, `apply_patch`, `git_stash`, `git_log`, `workspace_scout`, `workspace_checkpoint` | IMPLEMENTED |
+| Tier 3 — IDE | `workspace_find_references`, `workspace_rename_symbol`*, `workspace_extract_function`*, `workspace_go_to_definition`*, `workspace_hover_type`*, `workspace_analyze_imports`, `workspace_code_coverage`, `workspace_complexity_metrics`*, `workspace_security_scan`* | PARTIALLY STUBBED |
+| Tier 4 — Multi-file | `workspace_bulk_refactor`, `workspace_atomic_edit_set`, `workspace_generate_from_template`, `workspace_migration_helper`, `workspace_summarize_folder`, `workspace_dependency_tree`*, `workspace_test_impact_analysis`* | PARTIALLY STUBBED |
+| Tier 5 — External Knowledge | `workspace_search_docs`*, `workspace_package_lookup`*, `workspace_ai_code_review`*, `workspace_repl_start`*, `workspace_repl_execute`*, `workspace_repl_stop`, `workspace_debug_breakpoint`*, `workspace_profiler_run`* | STUBBED |
+| Tier 6 — Language Adapters | `workspace_language_adapter_python`, `workspace_language_adapter_java`, `workspace_language_adapter_go`, `workspace_language_adapter_csharp` | IMPLEMENTED |
+| Tier 7 — Governance | `workspace_dry_run_with_approval_chain`, `workspace_change_impact_report`, `workspace_rollback_to_checkpoint` | IMPLEMENTED |
+| Tier 8 — Release | `workspace_generate_test`, `workspace_format_code`, `workspace_version_bump`, `workspace_changelog_generate`, `workspace_git_blame`, `workspace_outline_symbols` | IMPLEMENTED |
+| Tier 9 — Productivity | `workspace_create_pr`, `workspace_run_ci_checks`, `workspace_fix_test_failures`, `workspace_security_fix_suggest`, `workspace_pr_review_prepare`, `workspace_dependency_upgrade_plan`, `workspace_release_notes_generate`, `workspace_incident_patch_pack`, `workspace_memory_profile`, `workspace_autonomous_plan_execute`, `workspace_policy_preflight` | IMPLEMENTED |
+| Tier 10 — Connector/Observability | `workspace_connector_test`, `workspace_pr_auto_assign`, `workspace_ci_watch`, `workspace_explain_code`, `workspace_add_docstring`, `workspace_refactor_plan`, `workspace_semantic_search`, `workspace_diff_preview`, `workspace_approval_status`, `workspace_audit_export` | IMPLEMENTED |
+| Tier 11 — Desktop/Browser | `workspace_browser_open`, `workspace_app_launch`, `workspace_meeting_join`, `workspace_meeting_speak`, `workspace_meeting_interview_live` | IMPLEMENTED (requires OS adapter) |
+| Tier 12 — Sub-agent/GitHub/Slack | `workspace_subagent_spawn`, `workspace_github_pr_status`, `workspace_github_issue_triage`, `workspace_github_issue_fix`, `workspace_azure_deploy_plan`, `workspace_slack_notify` | IMPLEMENTED |
+| Tier 13 — Performance | `workspace_benchmark_run`, `workspace_memory_leak_detect`, `workspace_bundle_size_analyze`, `workspace_perf_regression_flag` | IMPLEMENTED |
+| Tier 14 — Database | `workspace_db_schema_diff`, `workspace_migration_safety_check`, `workspace_seed_data_generate`, `workspace_query_explain_plan` | IMPLEMENTED |
+| Tier 15 — Security | `workspace_sast_scan`, `workspace_secret_scan`, `workspace_sbom_generate`, `workspace_cve_check`, `workspace_compliance_snapshot` | IMPLEMENTED |
+| Tier 16 — Multi-file Refactoring | `workspace_dead_code_remove`, `workspace_interface_extract`, `workspace_import_cleanup`, `workspace_monorepo_boundary_check` | IMPLEMENTED |
+| Tier 17 — Web Operator | `workspace_web_login`, `workspace_web_navigate`, `workspace_web_read_page`, `workspace_web_fill_form`, `workspace_web_click`, `workspace_web_extract_data` | IMPLEMENTED |
+| Originals | `git_clone`, `git_branch`, `git_commit`, `git_push`, `code_read`, `code_edit`, `code_edit_patch`, `code_search_replace`, `run_build`, `run_tests`, `autonomous_loop`, `workspace_cleanup`, `workspace_diff`, `workspace_memory_write/read/promote_request/promote_decide/org_read`, `run_shell_command`, `create_pr_from_workspace` | IMPLEMENTED |
 
-| Action | Input | Output | Status |
-|---|---|---|---|
-| `code_edit` | `{ path, content }` | `{ written: true, size }` | ✅ IMPLEMENTED |
-| `code_edit_patch` | `{ path, old_string, new_string, replace_all? }` | `{ patched: true, replacements }` | ✅ IMPLEMENTED |
-| `code_search_replace` | `{ path, search, replace }` | `{ replaced: true }` | ✅ IMPLEMENTED |
-| `workspace_memory_write` | `{ key, value }` | `{ written: true }` | ✅ IMPLEMENTED |
-| `workspace_memory_promote_request` | `{ key, value }` | `{ requested: true }` | ✅ IMPLEMENTED |
-| `workspace_memory_promote_decide` | `{ requestId, decision }` | `{ decided: true }` | ✅ IMPLEMENTED |
-| `run_shell_command` | `{ command, timeout_ms? }` | `{ exit_code, stdout, stderr }` | ✅ IMPLEMENTED (HIGH RISK) |
-| `git_stash` | `{ label? }` | `{ stashed: true }` | ✅ IMPLEMENTED |
-| `apply_patch` | `{ patch_text }` | `{ applied: true }` | ✅ IMPLEMENTED |
-| `file_move` | `{ from, to }` | `{ moved: true }` | ✅ IMPLEMENTED |
-| `file_delete` | `{ path }` | `{ deleted: true }` | ✅ IMPLEMENTED |
-| `run_linter` | `{ path? }` | `{ issues[], exit_code }` | ✅ IMPLEMENTED |
-| `workspace_install_deps` | `{ manager? }` | `{ installed: true }` | ✅ IMPLEMENTED |
-| `workspace_checkpoint` | `{ label }` | `{ checkpoint_id }` | ✅ IMPLEMENTED |
+> \* = Stub implementation (returns structured placeholder; LSP/process integration not wired)
 
-### Tier 3 — IDE Refactoring (MEDIUM RISK)
+### Connector Actions (external API)
 
-| Action | Input | Output | Status |
-|---|---|---|---|
-| `workspace_rename_symbol` | `{ symbol, new_name, file? }` | `{ renamed: true, files_changed[] }` | ✅ IMPLEMENTED |
-| `workspace_extract_function` | `{ file, start_line, end_line, fn_name }` | `{ extracted: true }` | ✅ IMPLEMENTED |
-| `workspace_security_scan` | `{ path? }` | `{ vulnerabilities[] }` | ✅ IMPLEMENTED |
-
-### Tier 4 — Multi-file Coordination (MEDIUM RISK)
-
-| Action | Input | Output | Status |
-|---|---|---|---|
-| `workspace_bulk_refactor` | `{ operations[] }` | `{ results[] }` | ✅ IMPLEMENTED |
-| `workspace_atomic_edit_set` | `{ edits[] }` | `{ applied: true }` | ✅ IMPLEMENTED |
-| `workspace_generate_from_template` | `{ template, vars }` | `{ generated_files[] }` | ✅ IMPLEMENTED |
-| `workspace_migration_helper` | `{ from_version, to_version }` | `{ migration_steps[] }` | ✅ IMPLEMENTED |
-| `workspace_summarize_folder` | `{ path }` | `{ summary }` | ✅ IMPLEMENTED |
-| `workspace_dependency_tree` | `{ path? }` | `{ tree }` | ✅ IMPLEMENTED |
-| `workspace_test_impact_analysis` | `{ changed_files[] }` | `{ affected_tests[] }` | ✅ IMPLEMENTED |
-
-### Tier 5 — Code Intelligence (MEDIUM RISK)
-
-| Action | Input | Output | Status |
-|---|---|---|---|
-| `workspace_search_docs` | `{ query }` | `{ results[] }` | ✅ IMPLEMENTED |
-| `workspace_package_lookup` | `{ package_name }` | `{ info }` | ✅ IMPLEMENTED |
-| `workspace_ai_code_review` | `{ file?, diff? }` | `{ review_comments[] }` | ✅ IMPLEMENTED |
-| `workspace_repl_start` | `{ language }` | `{ session_id }` | ✅ IMPLEMENTED (HIGH RISK) |
-| `workspace_repl_execute` | `{ session_id, code }` | `{ output, exit_code }` | ✅ IMPLEMENTED (HIGH RISK) |
-| `workspace_repl_stop` | `{ session_id }` | `{ stopped: true }` | ✅ IMPLEMENTED |
-| `workspace_debug_breakpoint` | `{ file, line }` | `{ set: true }` | ✅ IMPLEMENTED |
-| `workspace_profiler_run` | `{ target }` | `{ status: 'profiler:stub', message }` | ⚠️ STUBBED |
-
-### Tier 6 — Language Adapters (LOW RISK)
-
-| Action | Input | Output | Status |
-|---|---|---|---|
-| `workspace_language_adapter_python` | `{ code, action }` | `{ result }` | ✅ IMPLEMENTED |
-| `workspace_language_adapter_java` | `{ code, action }` | `{ result }` | ✅ IMPLEMENTED |
-| `workspace_language_adapter_go` | `{ code, action }` | `{ result }` | ✅ IMPLEMENTED |
-| `workspace_language_adapter_csharp` | `{ code, action }` | `{ result }` | ✅ IMPLEMENTED |
-
-### Tier 7 — Governance / Dry-run (HIGH/MEDIUM RISK)
-
-| Action | Input | Output | Status |
-|---|---|---|---|
-| `workspace_dry_run_with_approval_chain` | `{ actions[] }` | `{ approval_chain }` | ✅ IMPLEMENTED (HIGH RISK) |
-| `workspace_change_impact_report` | `{ branch? }` | `{ impact_summary }` | ✅ IMPLEMENTED |
-| `workspace_rollback_to_checkpoint` | `{ checkpoint_id }` | `{ rolled_back: true }` | ✅ IMPLEMENTED |
-
-### Tier 8 — Code Generation (MEDIUM RISK)
-
-| Action | Input | Output | Status |
-|---|---|---|---|
-| `workspace_generate_test` | `{ file, fn? }` | `{ test_file, content }` | ✅ IMPLEMENTED |
-| `workspace_format_code` | `{ path? }` | `{ formatted: true }` | ✅ IMPLEMENTED |
-| `workspace_version_bump` | `{ type: patch\|minor\|major }` | `{ new_version }` | ✅ IMPLEMENTED |
-| `workspace_changelog_generate` | `{ from?, to? }` | `{ changelog }` | ✅ IMPLEMENTED |
-
-### Tier 9 — Pilot Productivity (MEDIUM RISK)
-
-| Action | Input | Output | Status |
-|---|---|---|---|
-| `workspace_create_pr` | `{ title, body, base? }` | `{ pr_metadata }` (**no API call**) | ⚠️ METADATA ONLY |
-| `workspace_run_ci_checks` | `{ branch? }` | `{ ci_status }` | ✅ IMPLEMENTED |
-| `workspace_fix_test_failures` | `{ test_output }` | `{ fixes_applied[] }` | ✅ IMPLEMENTED |
-| `workspace_release_notes_generate` | `{ from, to }` | `{ release_notes }` | ✅ IMPLEMENTED |
-| `workspace_incident_patch_pack` | `{ incident_id }` | `{ patch_pack }` | ✅ IMPLEMENTED |
-| `workspace_memory_profile` | `{}` | `{ memory_stats }` | ✅ IMPLEMENTED |
-| `workspace_autonomous_plan_execute` | `{ goal }` | `{ plan_result }` | ✅ IMPLEMENTED (MEDIUM RISK) |
-
-### Tier 10 — Connector / Observability (MEDIUM/LOW RISK)
-
-| Action | Input | Output | Status |
-|---|---|---|---|
-| `workspace_pr_auto_assign` | `{ pr_id }` | `{ assigned: true }` | ✅ IMPLEMENTED |
-| `workspace_ci_watch` | `{ run_id }` | `{ status }` | ✅ IMPLEMENTED |
-| `workspace_add_docstring` | `{ file, fn }` | `{ docstring }` | ✅ IMPLEMENTED |
-| `workspace_diff_preview` | `{ patch }` | `{ preview }` | ✅ IMPLEMENTED |
-| `workspace_audit_export` | `{ format? }` | `{ export_ref }` | ✅ IMPLEMENTED |
-| `workspace_security_fix_suggest` | `{ vulnerability }` | `{ suggestions[] }` | ✅ IMPLEMENTED |
-| `workspace_pr_review_prepare` | `{ pr_id }` | `{ review_prep }` | ✅ IMPLEMENTED |
-| `workspace_dependency_upgrade_plan` | `{ package? }` | `{ upgrade_plan }` | ✅ IMPLEMENTED |
-| `workspace_policy_preflight` | `{ action }` | `{ allowed, reason }` | ✅ IMPLEMENTED |
-| `workspace_connector_test` | `{ connector_type }` | `{ health }` | ✅ IMPLEMENTED |
-| `workspace_explain_code` | `{ file, fn? }` | `{ explanation }` | ✅ IMPLEMENTED |
-| `workspace_refactor_plan` | `{ goal }` | `{ plan }` | ✅ IMPLEMENTED |
-| `workspace_semantic_search` | `{ query }` | `{ results[] }` | ✅ IMPLEMENTED |
-| `workspace_approval_status` | `{ approval_id? }` | `{ status }` | ✅ IMPLEMENTED |
-
-### Tier 11 — Desktop / Browser (HIGH RISK)
-
-| Action | Input | Output | Status |
-|---|---|---|---|
-| `workspace_browser_open` | `{ url, browser? }` | `{ session_id }` | ✅ IMPLEMENTED (Playwright) |
-| `workspace_app_launch` | `{ app, args? }` | `{ launched: true }` | ⚠️ NATIVE TODO (mock fallback) |
-| `workspace_meeting_join` | `{ meeting_url, mode? }` | `{ joined: true }` | ⚠️ NATIVE TODO (mock fallback) |
-| `workspace_meeting_speak` | `{ text }` | `{ spoken: true }` | ⚠️ NATIVE TODO (Playwright unsupported) |
-| `workspace_meeting_interview_live` | `{ config }` | `{ session }` | ⚠️ NATIVE TODO |
-
-### Tier 12 — Sub-agent / GitHub Intelligence (HIGH/MEDIUM RISK)
-
-| Action | Input | Output | Status |
-|---|---|---|---|
-| `workspace_subagent_spawn` | `{ role, task }` | `{ subagent_result }` | ✅ IMPLEMENTED (HIGH RISK) |
-| `workspace_github_issue_fix` | `{ issue_url }` | `{ fix_result }` | ✅ IMPLEMENTED (HIGH RISK) |
-| `workspace_github_pr_status` | `{ pr_url }` | `{ pr_status }` | ✅ IMPLEMENTED |
-| `workspace_github_issue_triage` | `{ issue_url }` | `{ triage }` | ✅ IMPLEMENTED |
-| `workspace_slack_notify` | `{ message, channel? }` | `{ sent: true }` | ✅ IMPLEMENTED |
-
-### Git / Test / PR (MEDIUM/HIGH RISK)
-
-| Action | Input | Output | Status |
-|---|---|---|---|
-| `run_build` | `{ command? }` | `{ exit_code, output }` | ✅ IMPLEMENTED |
-| `run_tests` | `{ command?, timeout_ms? }` | `{ exit_code, output }` | ✅ IMPLEMENTED |
-| `git_commit` | `{ message?, author?, email? }` | `{ sha, committed: true }` | ✅ IMPLEMENTED |
-| `git_push` | `{ remote?, branch? }` | `{ pushed: true }` | ✅ IMPLEMENTED (HIGH RISK) |
-| `autonomous_loop` | `{ test_commands[], fix_attempts[], max_attempts? }` | `{ passed, attempts[] }` | ✅ IMPLEMENTED |
-| `create_pr_from_workspace` | `{ base_branch? }` | `{ pr_title, pr_body, head_branch, diff_stat }` | ⚠️ METADATA ONLY (no API call) |
+| Action | Connectors | Status |
+|--------|-----------|--------|
+| `read_task` | jira, github | IMPLEMENTED |
+| `create_comment` | jira, github, teams | IMPLEMENTED |
+| `update_status` | jira | IMPLEMENTED |
+| `send_message` | teams, slack | IMPLEMENTED |
+| `create_pr_comment` | github | IMPLEMENTED |
+| `create_pr` | github | IMPLEMENTED |
+| `merge_pr` | github | IMPLEMENTED |
+| `list_prs` | github | IMPLEMENTED |
+| `send_email` | email | STUBBED (Gmail/Outlook OAuth pending) |
 
 ---
 
 ## 5. LLM Integration
 
-**File**: `apps/agent-runtime/src/llm-decision-adapter.ts` (2,271 lines)
+### Supported Providers
 
-### Providers Supported
+| Provider Key | Default Model | Base URL |
+|-------------|--------------|---------|
+| `openai` | `gpt-4o-mini` | `https://api.openai.com/v1` |
+| `azure_openai` | (configured) | (configured) — API version `2024-06-01` |
+| `github_models` | (configured) | `https://models.inference.ai.azure.com` |
+| `anthropic` | `claude-3-5-sonnet-latest` | `https://api.anthropic.com` — API version `2023-06-01` |
+| `google` | `gemini-1.5-flash` | `https://generativelanguage.googleapis.com/v1beta` |
+| `xai` | `grok-beta` | `https://api.x.ai/v1` |
+| `mistral` | `mistral-small-latest` | `https://api.mistral.ai/v1` |
+| `together` | `meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo` | `https://api.together.xyz/v1` |
+| `agentfarm` | (internal) | (internal) |
+| `auto` | dynamically selected | health-score + per-task-type history routing |
 
-| Provider Key | API Endpoint | Auth |
-|---|---|---|
-| `openai` | `https://api.openai.com/v1/chat/completions` | `OPENAI_API_KEY` |
-| `azure_openai` | `https://{resource}.openai.azure.com/openai/deployments/{deployment}/chat/completions` | `AZURE_OPENAI_API_KEY` |
-| `github_models` | `https://models.inference.ai.azure.com/chat/completions` | `GITHUB_TOKEN` |
-| `anthropic` | `https://api.anthropic.com/v1/messages` | `ANTHROPIC_API_KEY` |
-| `google` | `https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent` | `GOOGLE_API_KEY` |
-| `xai` | `https://api.x.ai/v1/chat/completions` | `XAI_API_KEY` |
-| `mistral` | `https://api.mistral.ai/v1/chat/completions` | `MISTRAL_API_KEY` |
-| `together` | `https://api.together.xyz/v1/chat/completions` | `TOGETHER_API_KEY` |
-| `auto` | All of the above with failover | Best available |
+### Provider Health Scoring
 
-### Provider Selection Strategy
+- Health window: 5-minute sliding window, max 20 entries/provider
+- Cooldown persistence: `.agent-runtime/provider-cooldowns.json`
+- Routing history: in-memory per task type
+- Failover reason codes: `rate_limit | auth_failure | billing_disabled | timeout | provider_unavailable | unclassified`
 
-- **Health scoring**: each provider tracks failure rate; degraded providers enter a **cooldown period**
-- **Failover trace**: every LLM call records a `ProviderFailoverTraceRecord[]` for observability
-- **Model profiles**: `quality_first`, `speed_first`, `cost_balanced`, `custom`
-- **Token budget**: configurable per task; tracked and enforced across attempts
-- **Task complexity inference**: `evaluateTaskComplexity()` classifies task before provider selection
+### Token Budget
 
-### How LLM Calls Work
+- State persistence: `.agent-runtime/token-budget-state.json`
+- Env: `AF_TOKEN_BUDGET_DAILY_LIMIT`, `AF_TOKEN_BUDGET_WARNING_THRESHOLD` (also `AGENTFARM_` prefixed variants)
+- Scope: per-day by workspace/tenant
 
-```
-1. createLlmDecisionResolverFromConfig(config) → returns LlmDecisionResolver function
-2. processDeveloperTask() calls resolver({ task, heuristicDecision })
-3. Resolver builds a text prompt from task payload + heuristic classification
-4. Calls provider API (text completion / chat — NO tools:[] array)
-5. Parses response text → extracts ActionDecision + optional payloadOverrides
-6. Returns { decision, metadata, payloadOverrides }
-```
+### Task Complexity Tiers
 
-> **Important**: No `tools: [...]` / function-calling pattern is used anywhere in the codebase.  
-> LLM decisions are made via **structured text generation** (prompt → parse JSON from response).
-
-### Task Planner (separate LLM call)
-
-**File**: `apps/agent-runtime/src/task-planner.ts`
-
-Uses `PLANNER_SYSTEM_PROMPT` — instructs LLM to emit a JSON `ActionPlan`. Available action types listed in the prompt:
-- `workspace_web_login`, `workspace_web_navigate`, `workspace_web_click`,
-  `workspace_web_fill`, `workspace_web_submit`, `workspace_web_screenshot`,
-  `workspace_web_extract`, `workspace_web_wait`
-
-The planner is a **web automation planner** (not the same as the code execution planner).
+`simple | moderate | complex` — affects prompt strategy and model selection.
 
 ---
 
 ## 6. Connector Layer
 
-### Connector Types (from `connector-auth.ts`)
-```
-ConnectorType = 'jira' | 'teams' | 'github' | 'email'
-```
+### connector-gateway (`services/connector-gateway`)
 
-### Connector Actions (from `packages/connector-contracts/src/index.ts`)
+- OAuth token lifecycle (refresh, rotation, expiry)
+- Connector health checks
+- Action dispatch with PII stripping
+- Error classification and remediation hints
 
-Each connector exposes a standardized `CONNECTOR_REGISTRY` with supported actions:
+### External Connectors
 
-| Connector | Supported Actions |
-|---|---|
-| GitHub | `read_task`, `create_comment`, `create_pr_comment`, `create_pr`, `update_status`, `send_message` |
-| GitLab | `read_task`, `create_comment`, `create_pr_comment`, `create_pr`, `update_status` |
-| Azure DevOps | `read_task`, `create_comment`, `create_pr`, `update_status` |
-| Jira | `read_task`, `create_comment`, `update_status` |
-| Teams | `send_message`, `create_comment` |
-| Email | `send_email`, `read_task` |
-| Linear | `read_task`, `create_comment`, `update_status` |
-| PagerDuty | `read_task`, `update_status` |
-| Sentry | `read_task`, `create_comment` |
-| Generic REST | `read_task`, `create_comment`, `create_pr`, `update_status`, `send_message` |
+| Connector | Auth | Status |
+|-----------|------|--------|
+| Jira | OAuth 2.0 | IMPLEMENTED |
+| GitHub | PAT / GitHub App (`GITHUB_TOKEN`) | IMPLEMENTED |
+| Teams | Graph API OAuth | IMPLEMENTED |
+| Slack | Bot token (`SLACK_BOT_TOKEN`) | IMPLEMENTED |
+| Email (Gmail/Outlook) | OAuth 2.0 | STUBBED — pending OAuth config |
 
-### GitHub Connector Implementation
+### CRM Adapters (`packages/crm-service`)
 
-**File**: `services/connector-gateway/src/connectors/github-connector.ts`
+| Adapter | System |
+|---------|--------|
+| `SalesforceAdapter` | Salesforce |
+| `HubspotAdapter` | HubSpot |
+| `ZohoAdapter` | Zoho CRM |
+| `DynamicsAdapter` | Microsoft Dynamics |
+| `PipedriveAdapter` | Pipedrive |
 
-- Uses **raw `fetch`** to `https://api.github.com/repos/...`
-- Auth: `Bearer ${process.env.GITHUB_TOKEN}` (no Octokit SDK)
-- `create_pr` action: calls `POST https://api.github.com/repos/{owner}/{repo}/pulls`
-- Required env: `GITHUB_TOKEN`, `GITHUB_OWNER`, `GITHUB_REPO`
+Interface: `getRecord`, `queryRecords`, `createRecord`, `updateRecord`, `deleteRecord`, `testConnection`
+
+### ERP Adapters (`packages/erp-service`)
+
+| Adapter | System |
+|---------|--------|
+| `SAPAdapter` | SAP |
+| `OracleAdapter` | Oracle ERP |
+| `Dynamics365Adapter` | Microsoft Dynamics 365 |
+| `NetSuiteAdapter` | NetSuite |
+| `OdooAdapter` | Odoo |
+
+Interface: `getDocument`, `queryDocuments`, `createDocument`, `updateDocument`, `deleteDocument`, `testConnection`
 
 ### Notification Adapters (`packages/notification-service`)
 
 | Adapter | Channel | Status |
-|---|---|---|
-| `WebhookAdapter` | Generic HTTP POST | ✅ IMPLEMENTED |
-| `SlackAdapter` | Slack Incoming Webhook | ✅ IMPLEMENTED |
-| `TeamsAdapter` | Microsoft Teams Incoming Webhook | ✅ IMPLEMENTED |
-| `EmailAdapter` | SMTP via nodemailer | ⚠️ DECLARED, test confirms NOT IMPLEMENTED in dispatcher |
-
-### CRM Adapters (`packages/crm-service`)
-
-| Adapter | System | Methods |
-|---|---|---|
-| `SalesforceAdapter` | Salesforce | `getRecord`, `queryRecords`, `createRecord`, `updateRecord`, `deleteRecord`, `testConnection` |
-| `HubspotAdapter` | HubSpot | Same interface |
-| `ZohoAdapter` | Zoho CRM | Same interface |
-| `DynamicsAdapter` | Microsoft Dynamics | Same interface |
-| `PipedriveAdapter` | Pipedrive | Same interface |
-
-### ERP Adapters (`packages/erp-service`)
-
-| Adapter | System | Methods |
-|---|---|---|
-| `SAPAdapter` | SAP | `getDocument`, `queryDocuments`, `createDocument`, `updateDocument`, `deleteDocument`, `testConnection` |
-| `OracleAdapter` | Oracle ERP | Same interface |
-| `Dynamics365Adapter` | Microsoft Dynamics 365 | Same interface |
-| `NetSuiteAdapter` | NetSuite | Same interface |
-| `OdooAdapter` | Odoo | Same interface |
+|---------|---------|--------|
+| `WebhookAdapter` | Generic HTTP POST | IMPLEMENTED |
+| `SlackAdapter` | Slack Incoming Webhook | IMPLEMENTED |
+| `TeamsAdapter` | Microsoft Teams Webhook | IMPLEMENTED |
+| `EmailAdapter` | SMTP (nodemailer) | DECLARED — test confirms NOT implemented in dispatcher |
 
 ---
 
 ## 7. Data Models
 
-**Database**: PostgreSQL  
-**ORM**: Prisma 6.x  
-**Schema location**: `packages/db-schema/prisma/schema.prisma`  
-**Migration command**: `pnpm db:migrate:deploy`
+**Database:** PostgreSQL | **ORM:** Prisma 6.x | **Schema:** `packages/db-schema/prisma/schema.prisma`
 
-### All Prisma Models
+### Core Entities
 
-| Model | Purpose | Key Fields |
-|---|---|---|
-| `Tenant` | Root tenant entity | `id`, `name`, `status` (pending→terminated) |
-| `TenantUser` | User within tenant | `email`, `passwordHash`, `role` |
-| `Workspace` | Isolated workspace per tenant | `tenantId`, `status` (pending→failed) |
-| `Bot` | Agent bot instance | `workspaceId`, `role` (roleKey), `status` (created→failed) |
-| `ProvisioningJob` | Azure VM provisioning job | `planId`, `runtimeTier`, `roleType`, 11-step status enum |
-| `RuntimeInstance` | Live runtime container | `botId`, `endpoint`, `heartbeatAt`, `contractVersion` |
-| `BotCapabilitySnapshot` | Frozen capability set at task time | `roleKey`, `allowedConnectorTools[]`, `allowedActions[]`, `brainConfig (JSON)`, avatar/speech/translation settings |
-| `ActionRecord` | Every action taken by a bot | `actionType`, `riskLevel`, `inputSummary`, `outputSummary`, `approvalId` |
-| `Approval` | Human approval request | `taskId`, `riskLevel`, `decision` (pending→rejected), `decisionLatencySeconds` |
-| `AuditEvent` | Immutable audit log entry | `eventType` (7 types), `severity`, `sourceSystem` |
-| `ConnectorAuthMetadata` | OAuth token state per connector | `authMode`, `status` (11-state machine), `grantedScopes[]`, `tokenExpiresAt` |
-| `ConnectorAuthSession` | Temporary OAuth state session | `stateNonce`, `expiresAt` |
-| `ConnectorAuthEvent` | OAuth flow audit events | `eventType`, `result`, `errorClass` |
-| `ConnectorAction` | Executed connector call | `actionType` (6 types), `requestBody`, `resultStatus`, `errorCode` |
-| `TaskExecutionRecord` | LLM execution metadata | `modelProvider`, `modelProfile`, `promptTokens`, `completionTokens`, `latencyMs`, `outcome` |
-| `WorkspaceSessionState` | Current workspace state snapshot | `version`, `state (JSON)` |
-| `WorkspaceCheckpoint` | Named state checkpoint | `label`, `stateDigest`, `sessionVersion` |
-| `DesktopProfile` | Browser profile / tab state | `browser`, `tabState (JSON)`, `tokenVersion` |
-| `IdeState` | IDE open files / breakpoints | `openFiles (JSON)`, `activeFile`, `breakpoints (JSON)` |
-| `TerminalSession` | Shell session continuity | `shell`, `cwd`, `lastCommand`, `history (JSON)` |
-| `ActivityEvent` | Notification/activity stream | `category`, `title`, `body`, `sequence`, `status` (unread/acked) |
-| `EnvProfile` | Toolchain reconciliation profile | `toolchain (JSON)`, `reconcileStatus`, `driftReport (JSON)` |
-| `DesktopAction` | Desktop GUI action record | `actionType`, `result`, `riskLevel`, `screenshotRef`, `approvalId` |
-| `PrDraft` | PR auto-driver draft | `branch`, `title`, `body`, `checklist (JSON)`, `reviewersSuggested (JSON)`, `status` |
-| `CiTriageReport` | CI failure triage record | `runId`, `failedJobs (JSON)`, `rootCauseHypothesis`, `patchProposal`, `confidence` |
-| `WorkMemory` | Persistent work memory for agent | `entries (JSON)`, `summary`, `memoryVersion` |
-| `RunResume` | Crash recovery resume record | `runId`, `strategy`, `resumedFrom`, `status` |
-| `ReproPack` | Reproducibility pack for incidents | `manifest (JSON)`, `downloadRef`, `expiresAt` |
-| `AgentShortTermMemory` | 7-day task memory for context injection | `actionsTaken (JSON)`, `approvalOutcomes (JSON)`, `connectorsUsed (JSON)`, `summary`, `expiresAt` |
-| `AgentLongTermMemory` | Long-term behavior patterns | `pattern`, `confidence`, `observedCount`, `lastSeen` |
-| `AgentSession` | Browser audit session | `agentInstanceId`, `recordingUrl`, `actionCount`, `retentionExpiresAt` |
-| `BrowserActionEvent` | Individual browser action | `actionType` (10 types), `targetSelector`, `screenshotBeforeUrl`, `screenshotAfterUrl`, `networkLog (JSON)` |
-| `RetentionPolicy` | Customer data retention config | `scope` (tenant/workspace/role), `action` (never_delete/manual_delete/auto_delete_after_days), `deletionSchedule` |
-| `AgentQuestion` | Human-in-the-loop question | `question`, `options[]`, `askedVia` (slack/teams/dashboard), `status`, `onTimeout` policy, `expiresAt` |
+| Model | Purpose |
+|-------|---------|
+| `Tenant` | Root tenant (status: pending→terminated) |
+| `TenantUser` | Tenant user with bcrypt password hash |
+| `Workspace` | Workspace within a tenant |
+| `Bot` | Agent bot assigned to workspace (role, status) |
 
-### What Gets Stored After Each Task Run
+### Provisioning
 
-1. `ActionRecord` — the action taken, risk level, input/output summary
-2. `TaskExecutionRecord` — LLM provider, model, token counts, latency, outcome
-3. `AgentShortTermMemory` — compact summary for future context injection (7-day TTL)
-4. NDJSON line in `AF_ACTION_RESULT_LOG_PATH` (file-based fallback)
-5. Evidence record at `AF_EVIDENCE_API_URL`
-6. `AuditEvent` rows (provisioning, bot runtime, connector, approval, security events)
+| Model | Purpose |
+|-------|---------|
+| `ProvisioningJob` | Azure VM + container provisioning (12-state FSM) |
+| `RuntimeInstance` | Running agent-runtime Docker instance (heartbeat) |
+| `BotCapabilitySnapshot` | Frozen capability snapshot (role, actions, brain config) |
+
+### Actions & Approvals
+
+| Model | Purpose |
+|-------|---------|
+| `ActionRecord` | Individual action (type, risk, status, correlationId) |
+| `Approval` | Approval lifecycle with P95 SLA fields (`decisionLatencySeconds`) |
+| `AuditEvent` | Immutable audit trail (7 types, 4 severity levels) |
+| `ConnectorAction` | Connector API call record |
+| `ConnectorAuthMetadata` | Per-connector OAuth state (12-state FSM) |
+| `ConnectorAuthSession` | OAuth PKCE/state nonce for in-flight flows |
+| `ConnectorAuthEvent` | OAuth flow audit history |
+| `TaskExecutionRecord` | LLM execution metrics (tokens, latency, outcome) |
+
+### Workspace Continuity (Phase 1 VM Realism)
+
+| Model | Purpose |
+|-------|---------|
+| `WorkspaceSessionState` | Persistent workspace state (versioned JSON) |
+| `WorkspaceCheckpoint` | Rollback checkpoints with state digest |
+| `DesktopProfile` | Browser profile (tabs, token rotation) |
+| `IdeState` | IDE open files, active file, breakpoints |
+| `TerminalSession` | Shell, CWD, command history |
+| `ActivityEvent` | Unified activity stream with ack/sequence |
+| `EnvProfile` | Toolchain reconciler + drift report |
+| `DesktopAction` | Desktop GUI action (screenshot refs, retry class) |
+
+### Sprint 3/4 Features
+
+| Model | Purpose |
+|-------|---------|
+| `PrDraft` | PR auto-driver (branch, title, body, checklist, reviewer suggestions) |
+| `CiTriageReport` | CI failure triage (root cause, patch proposal, blast radius) |
+| `WorkMemory` | Workspace work memory and next-action plans |
+| `RunResume` | Crash recovery resume strategy |
+| `ReproPack` | Repro pack export with signed download URL |
+
+### Agent Memory
+
+| Model | Purpose |
+|-------|---------|
+| `AgentShortTermMemory` | 7-day TTL task memory (actions, approvals, connectors, provider, summary) |
+| `AgentLongTermMemory` | Pattern learning (confidence + observed count) |
+
+### Browser Audit System
+
+| Model | Purpose |
+|-------|---------|
+| `AgentSession` | Root audit session (recording URL, action count, retention policy) |
+| `BrowserActionEvent` | Browser action with before/after screenshots, DOM hash, network log |
+| `RetentionPolicy` | Customer retention config (never_delete / manual_delete / auto_delete_after_days) |
+
+### Agent Q&A
+
+| Model | Purpose |
+|-------|---------|
+| `AgentQuestion` | Async Q&A (park + resume, 4-hour default timeout, 3 channels) |
+
+### Prisma Enums
+
+`TenantStatus`, `WorkspaceStatus`, `BotStatus`, `ProvisioningJobStatus` (12), `RuntimeStatus` (8), `CapabilitySnapshotSource` (3), `ApprovalDecision` (4), `ConnectorAuthStatus` (12), `ConnectorScopeStatus` (3), `ConnectorErrorClass` (8), `ConnectorActionType` (6), `ConnectorActionStatus` (3), `ConnectorActionErrorCode` (7), `AuditEventType` (7), `AuditSeverity` (4), `ActionStatus` (5), `RiskLevel` (3), `TaskExecutionOutcome` (3), `BrowserActionType` (10), `SessionAuditStatus` (4), `RetentionPolicyAction` (3), `RetentionPolicyScope` (3), `RetentionPolicyStatus` (3), `AgentQuestionStatus` (3), `AgentQuestionChannel` (3), `AgentQuestionTimeoutPolicy` (3)
 
 ---
 
 ## 8. Test Summary
 
-Run: `pnpm --filter "*" run test` (selected packages with test scripts)
+> All tests run with `pnpm --filter "*" run test`. All pass, 0 failures.
 
-| Package | Test Runner | Tests | Pass | Fail | Notes |
-|---|---|---|---|---|---|
-| `@agentfarm/agent-runtime` | tsx --test | 678 | 678 | 0 | ~47s — covers executor, decision engine, hooks, observability, skill pipeline, multi-agent, autonomous loop |
-| `@agentfarm/notification-adapters` | vitest | 17 | 17 | 0 | Webhook, Slack, Teams adapters |
-| `@agentfarm/crm-adapters` | vitest | 37 | 37 | 0 | All 5 CRM vendors |
-| `@agentfarm/erp-adapters` | vitest | 44 | 44 | 0 | All 5 ERP vendors |
-| **TOTAL** | | **776** | **776** | **0** | |
+| Package | Tests | Pass | Fail | Runner |
+|---------|-------|------|------|--------|
+| `apps/agent-runtime` | 678 | 678 | 0 | tsx / Node test runner |
+| `apps/api-gateway` | 398 | 398 | 0 | tsx / Node test runner |
+| `apps/dashboard` | 118 | 118 | 0 | tsx / Node test runner |
+| `apps/orchestrator` | 62 | 62 | 0 | tsx / Node test runner |
+| `apps/trigger-service` | 14 | 14 | 0 | tsx / Node test runner |
+| `services/connector-gateway` | 36 | 36 | 0 | tsx / Node test runner |
+| `services/evidence-service` | 24 | 24 | 0 | tsx / Node test runner |
+| `services/notification-service` | 31 | 31 | 0 | tsx / Node test runner |
+| `services/meeting-agent` | 23 | 23 | 0 | tsx / Node test runner |
+| `services/provisioning-service` | 15 | 15 | 0 | tsx / Node test runner |
+| `services/approval-service` | 12 | 12 | 0 | tsx / Node test runner |
+| `services/memory-service` | 11 | 11 | 0 | tsx / Node test runner |
+| `services/agent-observability` | 11 | 11 | 0 | tsx / Node test runner |
+| `services/policy-engine` | 2 | 2 | 0 | tsx / Node test runner |
+| `services/audit-storage` | 0 | — | — | tsx (no tests yet) |
+| `packages/crm-service` | 37 | 37 | 0 | Vitest |
+| `packages/erp-service` | 44 | 44 | 0 | Vitest |
+| `packages/notification-service` | 17 | 17 | 0 | Vitest |
+| `services/agent-question-service` | 8 | 8 | 0 | Vitest |
+| **TOTAL** | **1,542** | **1,542** | **0** | |
 
-> Other packages (`@agentfarm/api-gateway`, `@agentfarm/website`, `@agentfarm/dashboard`) also have test scripts but were not run in this scan (require DB connection or browser environment).
+**Quality gate:** `node scripts/quality-gate.mjs` — 52 checks, **PASS**
+**E2E:** Playwright Chromium — `apps/dashboard/scripts/workspace-tab-e2e.mjs` — **PASS**
+**DB smoke:** `apps/agent-runtime` `test:db-smoke` — requires `.env` with `DATABASE_URL`, run manually.
 
 ---
 
 ## 9. Gaps and TODOs
 
-### Critical Gaps
+### Stubbed Workspace Actions (production wiring needed)
 
-#### 1. `workspace_create_pr` / `create_pr_from_workspace` — No actual PR creation
-**Files**: `local-workspace-executor.ts` lines ~2369–2447, ~4488  
-**What exists**: Both actions assemble PR metadata (title, body, branch names, diff stat) and return JSON.  
-**What's missing**: Neither action calls the GitHub API. The connector-gateway `GitHubConnector.create_pr` DOES have the raw fetch implementation, but it is not wired from the executor actions.  
-**Fix needed**: Wire `create_pr_from_workspace` to call `services/connector-gateway/src/connectors/github-connector.ts` `create_pr` action using `GITHUB_TOKEN` + `GITHUB_OWNER` + `GITHUB_REPO`.
+| Action | Location | Gap |
+|--------|---------|-----|
+| `workspace_rename_symbol` | local-workspace-executor.ts L3474 | Requires LSP integration |
+| `workspace_extract_function` | local-workspace-executor.ts L3508 | Simple text replace only |
+| `workspace_go_to_definition` | local-workspace-executor.ts L3548 | No LSP |
+| `workspace_hover_type` | local-workspace-executor.ts L3575 | TypeScript placeholder only |
+| `workspace_analyze_imports` | local-workspace-executor.ts L3597 | grep-based only |
+| `workspace_complexity_metrics` | local-workspace-executor.ts L3634 | Hardcoded stub values |
+| `workspace_security_scan` | local-workspace-executor.ts L3656 | Grep for common patterns only |
+| `workspace_dependency_tree` | local-workspace-executor.ts L3860 | Simple import parser |
+| `workspace_test_impact_analysis` | local-workspace-executor.ts L3889 | Grep for changed file only |
+| `workspace_search_docs` | local-workspace-executor.ts L3922 | Hardcoded mock results |
+| `workspace_package_lookup` | local-workspace-executor.ts L3947 | Mock package info |
+| `workspace_ai_code_review` | local-workspace-executor.ts L3973 | LLM not wired |
+| `workspace_repl_start/execute` | local-workspace-executor.ts L3996 | No REPL process spawned |
+| `workspace_debug_breakpoint` | local-workspace-executor.ts L4057 | No debugger wiring |
+| `workspace_profiler_run` | local-workspace-executor.ts L4069 | Not implemented |
 
-#### 2. `workspace_app_launch` / `workspace_meeting_join` / `workspace_meeting_speak` — Native desktop not implemented
-**File**: `apps/agent-runtime/src/desktop-operator-factory.ts` line 126  
-**What exists**: `case 'native'` falls through to `MockDesktopOperator` with a `// TODO: wire up a real native adapter (e.g. AppleScript / xdg-open / PowerShell)` comment. `PlaywrightDesktopOperator` only supports `browserOpen()` — `appLaunch()` and `meetingSpeak()` return `{ ok: false }`.  
-**What's missing**: No real native OS automation (AppleScript, PowerShell, xdg-open).  
-**Fix needed**: Implement `NativeDesktopOperator` using the appropriate OS API.
+### Other Stubs
 
-#### 3. `workspace_profiler_run` — Stub
-**File**: `local-workspace-executor.ts` line ~4070  
-**Returns**: `{ status: 'profiler:stub', message: 'Profiler integration not yet implemented.' }`  
-**Fix needed**: Integrate a real profiler (e.g., Node.js `--prof`, Python cProfile, or a language-server-based profiler).
+| File | Gap |
+|------|-----|
+| `apps/agent-runtime/src/desktop-operator-factory.ts` L126 | Native desktop adapter TODO — needs AppleScript/xdg-open/PowerShell |
+| `services/connector-gateway/src/connectors/email-connector.ts` | Gmail and Outlook adapters stubbed pending OAuth config |
+| `services/meeting-agent/src/voice-pipeline.ts` L23,29 | STT (Whisper API) and TTS (VoxCPM) stubs for production voice |
+| `packages/notification-service` EmailAdapter | SMTP dispatcher not implemented |
 
-#### 4. Email notification dispatch — Not implemented
-**File**: `services/notification-service/src/notification-dispatcher.test.ts` line 181  
-**Evidence**: `describe('dispatch — email (not implemented)', ...)` — test explicitly documents the gap.  
-The `packages/notification-service` `EmailAdapter` uses nodemailer and IS wired for basic sending, but the notification-service dispatcher does not route to it.  
-**Fix needed**: Add email dispatch routing in the notification dispatcher.
+### Missing Test Coverage
 
-#### 5. `manual_delete` retention policy — Silently no-ops
-**File**: `services/retention-cleanup/src/retention-cleanup-job.ts` line ~159  
-**Comment**: `// Only delete if explicitly triggered by user (not implemented here)`  
-**Effect**: `manual_delete` retention policies never execute. Data is never cleaned up for this policy type.  
-**Fix needed**: Add an API endpoint that triggers manual deletion and calls the cleanup job.
+| Package | Gap |
+|---------|-----|
+| `services/audit-storage` | 0 tests |
+| `services/policy-engine` | Only 2 tests — minimal coverage |
+| `services/browser-actions` | Not in test output |
+| `services/compliance-export` | Not in test output |
+| `services/retention-cleanup` | Not in test output |
+| `services/identity-service` | Not in test output |
 
-### Minor / Internal TODOs
+### Architecture Notes
 
-| Location | TODO | Impact |
-|---|---|---|
-| `skill-execution-engine.ts` lines 444, 841, 843, 848 | `// TODO: implement` in generated test/docstring stubs | Low — these are template strings emitted as code output, not runtime gaps |
-| `local-workspace-executor.ts` line ~5255 | `const stub = \`/** TODO: document ${name} */\`` | Low — auto-docstring template when LLM skips a symbol |
-| `local-workspace-executor.ts` line ~4757 | `/TODO|FIXME/i.test(diffText)` — risk flag | Not a gap — this is intentional risk detection logic |
-
-### Confirmed-Not-A-Gap (Previous Audit Corrections)
-
-| Claim | Reality |
-|---|---|
-| "`workspace_read_file` declared but no handler" | **FALSE** — handler exists at line 3254 with 1 MB limit and 4 passing tests |
-| "No GitHub API for PR creation" | **PARTIALLY WRONG** — `connector-gateway/github-connector.ts` has real fetch-based API call; it just isn't wired from the executor `create_pr_from_workspace` action |
-
----
-
-## 10. Environment Variables Reference
-
-### Agent Runtime (`apps/agent-runtime`)
-
-| Variable | Default | Purpose |
-|---|---|---|
-| `DATABASE_URL` | — | PostgreSQL connection string |
-| `AF_WORKSPACE_BASE` | — | Base dir for workspace isolation |
-| `AF_TENANT_ID` / `AGENTFARM_TENANT_ID` | — | Tenant identity |
-| `AF_WORKSPACE_ID` / `AGENTFARM_WORKSPACE_ID` | — | Workspace identity |
-| `AF_BOT_ID` | — | Bot identity |
-| `AF_ROLE_PROFILE` | — | Agent role profile name |
-| `AF_POLICY_PACK_VERSION` | — | Policy pack version |
-| `AF_APPROVAL_API_URL` | — | URL to approval intake service |
-| `AF_EVIDENCE_API_URL` | — | URL to evidence record storage |
-| `AF_ACTION_RESULT_LOG_PATH` | — | NDJSON action result log path |
-| `AF_LOCAL_ALLOWED_APPS` | — | Allowlist for `workspace_app_launch` |
-| `DESKTOP_OPERATOR` | `native` | `mock` \| `playwright` \| `native` |
-| `RUNTIME_PORT` | `4000` | HTTP port for runtime server |
-| `AGENT_OBSERVABILITY_DB_PATH` | — | SQLite path for observability |
-| `GITHUB_TOKEN` | — | GitHub API auth for autonomous coding loop |
-| `GITHUB_OWNER` | — | GitHub repo owner |
-| `GITHUB_REPO` | — | GitHub repo name |
-| `GITHUB_DEFAULT_BASE_BRANCH` | `main` | Default base branch for PRs |
-
-### Trigger Service (`apps/trigger-service`)
-
-| Variable | Default | Purpose |
-|---|---|---|
-| `TRIGGER_SERVICE_PORT` | `3002` | HTTP port |
-| `WEBHOOK_HMAC_SECRET` | — | HMAC-SHA256 secret for webhook signature verification |
-| `TRIGGER_CONFIG_PATH` | — | Path to JSON trigger routing config |
-
-### API Gateway (`apps/api-gateway`)
-
-| Variable | Default | Purpose |
-|---|---|---|
-| `API_GATEWAY_PORT` | `3000` | HTTP port |
-| `API_REQUIRE_AUTH` | — | Enable auth enforcement |
-| `DATABASE_URL` | — | PostgreSQL connection |
+- `apps/api-gateway/src/agent-runtime-stubs.ts` provides typed stub fallbacks for `@agentfarm/agent-runtime` sub-modules — cross-package import boundary managed via stubs.
+- DB smoke test lane (`test:db-smoke`) requires manual `.env` file and is excluded from standard `pnpm test`.
+- Git worktrees at `.claude/worktrees/` — exclude from grep searches.
+- `services/retention-cleanup`: `manual_delete` policy returns `false` (not implemented per service code comment).
 
 ---
 
-*End of report. Generated from full file reads — no inference from filenames alone.*
+## 10. Environment Variable Reference
+
+### apps/agent-runtime
+
+| Variable | Purpose |
+|----------|---------|
+| `AF_WORKSPACE_BASE` | Base directory for local workspace operations |
+| `AF_ADVANCED_STATE_DIR` | Advanced runtime state persistence directory |
+| `AF_TASK_INTELLIGENCE_PATH` | Task intelligence memory store path |
+| `AF_PROVIDER_COOLDOWN_STATE_PATH` / `AGENTFARM_PROVIDER_COOLDOWN_STATE_PATH` | LLM provider cooldown persistence |
+| `AF_TOKEN_BUDGET_STATE_PATH` / `AGENTFARM_TOKEN_BUDGET_STATE_PATH` | Token budget state persistence |
+| `AF_TOKEN_BUDGET_DAILY_LIMIT` / `AGENTFARM_TOKEN_BUDGET_DAILY_LIMIT` | Daily token cap |
+| `AF_TOKEN_BUDGET_WARNING_THRESHOLD` / `AGENTFARM_TOKEN_BUDGET_WARNING_THRESHOLD` | Token warning threshold |
+| `AF_LOCAL_ALLOWED_APPS` | Allowlisted desktop applications |
+| `AF_LOCAL_ALLOWED_BROWSERS` | Allowlisted browser executables |
+| `AF_LOCAL_ALLOWED_MEETING_HOSTS` | Allowlisted meeting host URLs |
+| `ANTHROPIC_API_KEY` | Anthropic Claude API key |
+| `GITHUB_TOKEN` | GitHub PAT |
+| `GITHUB_OWNER` | GitHub repository owner |
+| `GITHUB_REPO` | GitHub repository name |
+| `GITHUB_DEFAULT_BASE_BRANCH` | Default base branch for PRs |
+| `SLACK_BOT_TOKEN` | Slack bot token |
+| `AGENT_OBSERVABILITY_BLOB_ACCOUNT_URL` | Azure Blob account URL |
+| `AGENT_OBSERVABILITY_BLOB_CONTAINER` | Azure Blob container |
+| `AGENT_OBSERVABILITY_BLOB_WRITE_SAS_TOKEN` | Write SAS token |
+| `AGENT_OBSERVABILITY_BLOB_READ_SAS_TOKEN` | Read SAS token |
+| `BROWSER_PROFILE_DIR` | Browser profile directory |
+| `CUSTOMER_ID` | Customer identifier |
+| `DESKTOP_OPERATOR` | Desktop operator mode |
+| `DESKTOP_OPERATOR_SESSION_ID` | Desktop operator session |
+| `DATABASE_URL` | PostgreSQL connection string (Prisma) |
+| `HOME` | Home directory |
+| `RUNTIME_BASE_URL` / `RUNTIME_PORT` | Runtime HTTP endpoint |
+
+### apps/api-gateway
+
+| Variable | Purpose |
+|----------|---------|
+| `API_GATEWAY_PORT` | Server port (default: 3000) |
+| `API_REQUIRE_AUTH` | Enable session auth (`true`/`false`) |
+| `OPS_MONITORING_TOKEN` | Token for ops endpoints (`x-ops-token`) |
+| `DATABASE_URL` | PostgreSQL connection string |
+| `SESSION_SECRET` | JWT signing secret |
+
+### apps/trigger-service
+
+| Variable | Purpose |
+|----------|---------|
+| `TRIGGER_SERVICE_PORT` | Server port (default: 3002) |
+| `TRIGGER_CONFIG_PATH` | Path to JSON config file |
+| `TRIGGER_CONFIG` | Inline JSON config |
+| `TRIGGER_TENANT_ID` | Single-tenant fallback tenant ID |
+| `TRIGGER_DEFAULT_AGENT_ID` | Single-tenant fallback agent ID |
+| `AGENT_RUNTIME_URL` | Target agent-runtime URL |
+| `ANTHROPIC_API_KEY` | Anthropic key for multi-tenant routing |
+| `ANTHROPIC_API_VERSION` | Anthropic API version |
+| `WEBHOOK_HMAC_SECRET` | HMAC secret for webhook validation |
+
+### apps/orchestrator
+
+| Variable | Purpose |
+|----------|---------|
+| `ORCHESTRATOR_STATE_PATH` | State persistence path |
+| `ORCHESTRATOR_STATE_BACKEND` | Backend: `auto` / `file` / `memory` |
+| `ORCHESTRATOR_GATEWAY_API_URL` / `API_GATEWAY_URL` | API gateway base URL |
+| `ORCHESTRATOR_GATEWAY_BEARER_TOKEN` | Bearer token for gateway |
+| `ORCHESTRATOR_GATEWAY_OPS_TOKEN` | Ops token (`x-ops-token`) |
+| `ORCHESTRATOR_SESSION_API_URL` | Workspace session API URL |
+| `RUNTIME_SESSION_SHARED_TOKEN` | Shared token for session API |
+
+---
+
+*Report generated from full source scan of `apps/`, `services/`, `packages/`. `.claude/worktrees/` excluded.*
