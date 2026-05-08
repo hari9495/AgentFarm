@@ -5467,6 +5467,26 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         }
     });
 
+    app.get<{ Params: { sessionId: string } }>('/v1/audit/sessions/:sessionId/actions', async (request, reply) => {
+        const sessionId = request.params.sessionId?.trim();
+        if (!sessionId) {
+            return reply.code(400).send({
+                error: 'invalid_session_id',
+                message: 'sessionId path parameter is required.',
+            });
+        }
+
+        try {
+            const actions = getAuditLogWriter().listSession(sessionId);
+            return reply.send({ sessionId, actions });
+        } catch (error) {
+            return reply.code(500).send({
+                error: 'audit_lookup_failed',
+                message: error instanceof Error ? error.message : 'Failed to load audit actions.',
+            });
+        }
+    });
+
     app.post<{
         Body: {
             provider?: string;
