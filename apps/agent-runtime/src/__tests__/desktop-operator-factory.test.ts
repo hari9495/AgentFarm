@@ -17,9 +17,9 @@ describe('desktop-operator-factory', () => {
     }
   });
 
-  it('getDesktopOperator returns defined with DESKTOP_OPERATOR=mock', () => {
+  it('getDesktopOperator returns defined with DESKTOP_OPERATOR=mock', async () => {
     process.env.DESKTOP_OPERATOR = 'mock';
-    const operator = getDesktopOperator();
+    const operator = await getDesktopOperator();
     assert.ok(operator, 'operator should be defined');
     assert.equal(typeof operator.browserOpen, 'function');
     assert.equal(typeof operator.appLaunch, 'function');
@@ -29,7 +29,7 @@ describe('desktop-operator-factory', () => {
 
   it('mock browserOpen returns ok:true and output contains "mock"', async () => {
     process.env.DESKTOP_OPERATOR = 'mock';
-    const operator = getDesktopOperator();
+    const operator = await getDesktopOperator();
     const result = await operator.browserOpen('https://example.com');
     assert.equal(result.ok, true);
     assert.ok(result.output.includes('mock'), `expected output to contain "mock", got: ${result.output}`);
@@ -37,7 +37,7 @@ describe('desktop-operator-factory', () => {
 
   it('mock appLaunch returns ok:true', async () => {
     process.env.DESKTOP_OPERATOR = 'mock';
-    const operator = getDesktopOperator();
+    const operator = await getDesktopOperator();
     const result = await operator.appLaunch('vscode', ['--new-window']);
     assert.equal(result.ok, true);
   });

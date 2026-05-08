@@ -112,11 +112,15 @@ class MockDesktopOperator implements DesktopOperator {
   }
 }
 
-export function getDesktopOperator(): DesktopOperator {
+export async function getDesktopOperator(): Promise<DesktopOperator> {
   const provider = process.env.DESKTOP_OPERATOR ?? 'native';
   switch (provider) {
     case 'mock':
       return new MockDesktopOperator();
+    case 'playwright': {
+      const { PlaywrightDesktopOperator } = await import('./desktop-operator-playwright.js');
+      return new PlaywrightDesktopOperator();
+    }
     case 'native':
     default:
       // TODO: wire up a real native adapter (e.g. AppleScript / xdg-open / PowerShell)
