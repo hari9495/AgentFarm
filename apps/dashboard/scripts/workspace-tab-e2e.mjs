@@ -40,9 +40,6 @@ const activateTabByKeyboardAndExpectQuery = async (page, selector, expected, lab
             return;
         } catch (error) {
             lastError = error;
-            if (attempt === maxAttempts) {
-                throw error;
-            }
         }
     }
 

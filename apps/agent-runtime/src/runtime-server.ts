@@ -562,6 +562,40 @@ const collectApprovalOutcomes = (
     }];
 };
 
+// ---------------------------------------------------------------------------
+// CRM update — fires a non-fatal outbound CRM record update when the task
+// payload opts in via `_crm_record_id`. Matches the same fire-and-forget
+// pattern as maybeNotify.
+// ---------------------------------------------------------------------------
+async function maybePushCRMUpdate(
+    payload: Record<string, unknown>,
+    result: ProcessedTaskResult,
+    config: RuntimeConfig,
+): Promise<void> {
+    const recordId = typeof payload['_crm_record_id'] === 'string' ? payload['_crm_record_id'] : '';
+    if (!recordId) return;
+
+    const objectType = typeof payload['_crm_object_type'] === 'string' ? payload['_crm_object_type'] : 'Task';
+    const customerId = config.tenantId;
+
+    if (!customerCRMStore.hasCustomer(customerId)) return;
+
+    try {
+        await crmService.updateRecord(customerId, recordId, {
+            type: objectType,
+            fields: {
+                task_id: typeof payload['taskId'] === 'string' ? payload['taskId'] : undefined,
+                status: result.status,
+                completed_at: new Date().toISOString(),
+                action_type: result.decision.actionType,
+                error_message: result.errorMessage ?? undefined,
+            },
+        });
+    } catch {
+        // CRM update failure is non-fatal — do not disrupt the main pipeline
+    }
+}
+
 const summarizeTaskForMemory = (task: TaskEnvelope, result: ProcessedTaskResult): string => {
     const summaryCandidateKeys = ['summary', 'objective', 'prompt', 'title'];
     for (const key of summaryCandidateKeys) {
@@ -3736,6 +3770,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 attempts: result.attempts,
             });
             await maybeNotify(executionTask.payload, result);
+            await maybePushCRMUpdate(executionTask.payload, result, config);
             await persistActionResultRecord(executionTask, config, result);
             return;
         }
@@ -3754,6 +3789,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             error_message: result.errorMessage ?? null,
         });
         await maybeNotify(executionTask.payload, result);
+        await maybePushCRMUpdate(executionTask.payload, result, config);
         await persistActionResultRecord(executionTask, config, result);
     };
 

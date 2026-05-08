@@ -4785,6 +4785,87 @@ test('background scheduler auto-generates weekly quality/ROI report on cadence',
     }
 });
 
+// ── CRM wiring (maybePushCRMUpdate) ────────────────────────────────────────
+
+test('runtime processes task without error when task payload includes _crm_record_id but no CRM config is registered', async () => {
+    let processedTasks = 0;
+
+    const app = buildRuntimeServer({
+        env: baseEnv(),
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+    });
+
+    try {
+        const startupRes = await app.inject({ method: 'POST', url: '/startup' });
+        assert.equal(startupRes.statusCode, 200);
+
+        // Submit a task with CRM opt-in fields — no CRM config registered, so it must be a no-op
+        const intakeRes = await app.inject({
+            method: 'POST',
+            url: '/tasks/intake',
+            payload: {
+                task_id: `crm-noop-test-${Date.now()}`,
+                payload: {
+                    kind: 'noop',
+                    _crm_record_id: 'rec_00001',
+                    _crm_object_type: 'Case',
+                },
+            },
+        });
+        assert.equal(intakeRes.statusCode, 202);
+
+        // Allow worker to process
+        await new Promise<void>((resolve) => setTimeout(resolve, 80));
+
+        const liveRes = await app.inject({ method: 'GET', url: '/health/live' });
+        assert.equal(liveRes.statusCode, 200);
+        const liveBody = liveRes.json() as { processed_tasks: number };
+        processedTasks = liveBody.processed_tasks;
+        assert.ok(processedTasks >= 1, 'task should have been processed without crashing');
+    } finally {
+        await app.close();
+    }
+});
+
+test('runtime processes task without error when task payload has _crm_record_id with empty string (no-op guard)', async () => {
+    const app = buildRuntimeServer({
+        env: baseEnv(),
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+    });
+
+    try {
+        const startupRes = await app.inject({ method: 'POST', url: '/startup' });
+        assert.equal(startupRes.statusCode, 200);
+
+        const intakeRes = await app.inject({
+            method: 'POST',
+            url: '/tasks/intake',
+            payload: {
+                task_id: `crm-empty-id-test-${Date.now()}`,
+                payload: {
+                    kind: 'noop',
+                    _crm_record_id: '',
+                    _crm_object_type: 'Task',
+                },
+            },
+        });
+        assert.equal(intakeRes.statusCode, 202);
+
+        await new Promise<void>((resolve) => setTimeout(resolve, 80));
+
+        const liveRes = await app.inject({ method: 'GET', url: '/health/live' });
+        assert.equal(liveRes.statusCode, 200);
+        const liveBody = liveRes.json() as { processed_tasks: number };
+        assert.ok(liveBody.processed_tasks >= 1, 'task should have been processed without crashing');
+    } finally {
+        await app.close();
+    }
+});
+
 test('/runtime/plan/pending returns empty plan list', async () => {
     const app = buildRuntimeServer({ env: baseEnv() });
     try {

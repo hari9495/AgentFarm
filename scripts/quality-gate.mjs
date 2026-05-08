@@ -341,6 +341,7 @@ for (const check of checks) {
             result.output.includes('connect ETIMEDOUT') ||
             result.output.includes('Can\'t reach database server') ||
             result.output.includes('Environment variable not found: DATABASE_URL') ||
+            result.output.includes('Missing required environment variable DATABASE_URL') ||
             result.output.includes('P1012') ||
             result.output.includes('P1001'));
 

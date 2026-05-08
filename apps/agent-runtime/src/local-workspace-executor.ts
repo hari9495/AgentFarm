@@ -33,6 +33,7 @@ export type LocalWorkspaceActionType =
     // Tier 1 (Claude Code parity)
     | 'workspace_list_files'
     | 'workspace_grep'
+    | 'workspace_read_file'
     | 'file_move'
     | 'file_delete'
     | 'workspace_install_deps'
@@ -402,6 +403,7 @@ export const LOCAL_WORKSPACE_ACTION_TYPES = new Set<LocalWorkspaceActionType>([
     // Tier 1
     'workspace_list_files',
     'workspace_grep',
+    'workspace_read_file',
     'file_move',
     'file_delete',
     'workspace_install_deps',
@@ -3241,6 +3243,55 @@ export async function executeLocalWorkspaceAction(input: {
                 return { ok: true, output: JSON.stringify(matches, null, 2) };
             } catch (err) {
                 return { ok: false, output: '', errorOutput: String(err) };
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_read_file: read the full content of a single file
+        // payload: { path: string }
+        // Returns: JSON { success, path, content } or { success, path, error }
+        // ------------------------------------------------------------------
+        case 'workspace_read_file': {
+            const filePath = typeof payload['path'] === 'string' ? payload['path'].trim() : '';
+            if (!filePath) {
+                return { ok: false, output: '', errorOutput: 'payload.path is required for workspace_read_file.' };
+            }
+
+            let safePath: string;
+            try {
+                safePath = safeChildPath(workspaceDir, filePath);
+            } catch (err) {
+                return {
+                    ok: false,
+                    output: JSON.stringify({ success: false, path: filePath, error: String(err) }),
+                    errorOutput: String(err),
+                };
+            }
+
+            const MAX_READ_BYTES = 1_048_576; // 1 MB
+
+            try {
+                const fileStat = await stat(safePath);
+                if (fileStat.size > MAX_READ_BYTES) {
+                    const msg = `File exceeds 1 MB limit (${fileStat.size} bytes): ${filePath}`;
+                    return {
+                        ok: false,
+                        output: JSON.stringify({ success: false, path: filePath, error: msg }),
+                        errorOutput: msg,
+                    };
+                }
+                const content = await readFile(safePath, 'utf-8');
+                return {
+                    ok: true,
+                    output: JSON.stringify({ success: true, path: filePath, content }),
+                };
+            } catch (err) {
+                const msg = String(err);
+                return {
+                    ok: false,
+                    output: JSON.stringify({ success: false, path: filePath, error: msg }),
+                    errorOutput: msg,
+                };
             }
         }
 

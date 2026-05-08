@@ -41,7 +41,7 @@
         "start": "node dist/main.js",
         "typecheck": "tsc -p tsconfig.json --noEmit",
         "test": "tsx --test src/**/*.test.ts",
-        "test:db-smoke": "node --import tsx src/db-snapshot-smoke.ts",
+        "test:db-smoke": "node --env-file=.env --import tsx src/db-snapshot-smoke.ts",
         "test:coverage": "pnpm exec c8 --reporter=text-summary --reporter=json-summary --exclude=src/**/*.test.ts tsx --test src/**/*.test.ts && node ../../scripts/coverage-threshold-check.mjs coverage/coverage-summary.json 80 lines src/runtime-server.ts src/execution-engine.ts src/action-result-writer.ts"
     },
     "devDependencies": {

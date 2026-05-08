@@ -615,6 +615,98 @@ test('workspace_grep finds regex matches in workspace files', async () => {
     assert.ok(matches[0]?.text.includes('TODO'));
 });
 
+test('workspace_read_file reads content of existing file', async () => {
+    const { executeLocalWorkspaceAction, getWorkspaceDir } = await import('./local-workspace-executor.js');
+    const { writeFile, mkdir } = await import('node:fs/promises');
+
+    const tenantId = 'tenant-wrf';
+    const botId = 'bot-wrf';
+    const workspaceKey = 'repo-wrf-1';
+    const wsDir = getWorkspaceDir(tenantId, botId, workspaceKey);
+    await mkdir(wsDir, { recursive: true });
+    await writeFile(join(wsDir, 'hello.ts'), 'export const hello = "world";', 'utf-8');
+
+    const result = await executeLocalWorkspaceAction({
+        tenantId, botId, taskId: 'task-wrf',
+        actionType: 'workspace_read_file',
+        payload: { workspace_key: workspaceKey, path: 'hello.ts' },
+    });
+
+    assert.equal(result.ok, true, result.errorOutput ?? '');
+    const parsed = JSON.parse(result.output) as { success: boolean; path: string; content: string };
+    assert.equal(parsed.success, true);
+    assert.equal(parsed.path, 'hello.ts');
+    assert.ok(parsed.content.includes('hello'));
+});
+
+test('workspace_read_file returns error for non-existent file', async () => {
+    const { executeLocalWorkspaceAction, getWorkspaceDir } = await import('./local-workspace-executor.js');
+    const { mkdir } = await import('node:fs/promises');
+
+    const tenantId = 'tenant-wrf-missing';
+    const botId = 'bot-wrf-missing';
+    const workspaceKey = 'repo-wrf-missing';
+    const wsDir = getWorkspaceDir(tenantId, botId, workspaceKey);
+    await mkdir(wsDir, { recursive: true });
+
+    const result = await executeLocalWorkspaceAction({
+        tenantId, botId, taskId: 'task-wrf-missing',
+        actionType: 'workspace_read_file',
+        payload: { workspace_key: workspaceKey, path: 'does-not-exist.ts' },
+    });
+
+    assert.equal(result.ok, false);
+    const parsed = JSON.parse(result.output) as { success: boolean; path: string; error: string };
+    assert.equal(parsed.success, false);
+    assert.ok(parsed.error.length > 0);
+});
+
+test('workspace_read_file returns error if file exceeds 1 MB', async () => {
+    const { executeLocalWorkspaceAction, getWorkspaceDir } = await import('./local-workspace-executor.js');
+    const { writeFile, mkdir } = await import('node:fs/promises');
+
+    const tenantId = 'tenant-wrf-large';
+    const botId = 'bot-wrf-large';
+    const workspaceKey = 'repo-wrf-large';
+    const wsDir = getWorkspaceDir(tenantId, botId, workspaceKey);
+    await mkdir(wsDir, { recursive: true });
+    // 1 MB + 1 byte
+    await writeFile(join(wsDir, 'big.bin'), Buffer.alloc(1_048_577, 0x41), 'utf-8');
+
+    const result = await executeLocalWorkspaceAction({
+        tenantId, botId, taskId: 'task-wrf-large',
+        actionType: 'workspace_read_file',
+        payload: { workspace_key: workspaceKey, path: 'big.bin' },
+    });
+
+    assert.equal(result.ok, false);
+    const parsed = JSON.parse(result.output) as { success: boolean; error: string };
+    assert.equal(parsed.success, false);
+    assert.ok(parsed.error.includes('1 MB'));
+});
+
+test('workspace_read_file blocks path traversal', async () => {
+    const { executeLocalWorkspaceAction, getWorkspaceDir } = await import('./local-workspace-executor.js');
+    const { mkdir } = await import('node:fs/promises');
+
+    const tenantId = 'tenant-wrf-trav';
+    const botId = 'bot-wrf-trav';
+    const workspaceKey = 'repo-wrf-trav';
+    const wsDir = getWorkspaceDir(tenantId, botId, workspaceKey);
+    await mkdir(wsDir, { recursive: true });
+
+    const result = await executeLocalWorkspaceAction({
+        tenantId, botId, taskId: 'task-wrf-trav',
+        actionType: 'workspace_read_file',
+        payload: { workspace_key: workspaceKey, path: '../../etc/passwd' },
+    });
+
+    assert.equal(result.ok, false);
+    const parsed = JSON.parse(result.output) as { success: boolean; error: string };
+    assert.equal(parsed.success, false);
+    assert.ok(parsed.error.toLowerCase().includes('traversal') || parsed.error.toLowerCase().includes('escapes'));
+});
+
 test('file_move renames a file within the workspace', async () => {
     const { executeLocalWorkspaceAction, getWorkspaceDir } = await import('./local-workspace-executor.js');
     const { writeFile, mkdir, access } = await import('node:fs/promises');

@@ -14,6 +14,7 @@ import { writeFile, readFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { getSkillHandler } from './skill-execution-engine.js';
+import { executeLocalWorkspaceAction } from './local-workspace-executor.js';
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -25,6 +26,7 @@ export type LoopStep =
     | 'implement_changes'
     | 'run_tests'
     | 'fix_failures'
+    | 'commit_push'
     | 'create_pr'
     | 'done';
 
@@ -49,9 +51,17 @@ export type AutonomousLoopInput = {
     issue_number?: number;
     /** Files the implementation should touch (hint for workspace actions) */
     target_files?: string[];
+    /** Explicit per-file content to write in live (non-dry-run) mode */
+    file_edits?: Array<{ file: string; content: string }>;
+    /** Tenant ID — required for real workspace execution */
+    tenantId?: string;
+    /** Bot ID — required for real workspace execution */
+    botId?: string;
+    /** Workspace key — defaults to the loop ID when not provided */
+    workspace_key?: string;
     /** Maximum fix-attempt cycles before giving up */
     max_fix_attempts?: number;
-    /** Skip real git operations (dry-run mode) */
+    /** Skip real git/file operations — when true (or omitted) uses plan-only mode */
     dry_run?: boolean;
 };
 
@@ -166,48 +176,104 @@ function runCreateBranch(branchName: string, dryRun: boolean): LoopStepRecord {
     };
 }
 
-function runImplementChanges(input: AutonomousLoopInput, branchName: string): LoopStepRecord {
+async function runImplementChanges(
+    input: AutonomousLoopInput,
+    branchName: string,
+    workspaceKey: string,
+): Promise<LoopStepRecord> {
     const record: LoopStepRecord = { step: 'implement_changes', status: 'running', started_at: new Date().toISOString(), attempt: 1 };
-    // In production this would orchestrate workspace_atomic_edit_set or code_edit
-    // against the sandboxed workspace. Here we produce a structured plan.
-    const changes = (input.target_files ?? ['src/index.ts']).map((file) => ({
-        file,
-        action: 'edit',
-        summary: `Apply fix for: ${input.task_description}`,
-        dry_run: input.dry_run ?? true,
-    }));
+
+    // Dry-run: return a structured plan without executing any file writes
+    if (input.dry_run !== false) {
+        const changes = (input.target_files ?? ['src/index.ts']).map((file) => ({
+            file,
+            action: 'edit',
+            summary: `Apply fix for: ${input.task_description}`,
+        }));
+        return {
+            ...record,
+            status: 'success',
+            completed_at: new Date().toISOString(),
+            output: { branch: branchName, changes, note: 'Dry-run mode — no actual edits applied. Set dry_run=false to apply.' },
+        };
+    }
+
+    // Live mode: call code_edit for each file that has content provided
+    const tenantId = input.tenantId ?? '';
+    const botId = input.botId ?? '';
+    if (!tenantId || !botId) {
+        return { ...record, status: 'failed', completed_at: new Date().toISOString(), error: 'tenantId and botId are required for live code_edit execution.' };
+    }
+
+    const targetFiles = input.target_files ?? [];
+    const fileEdits = input.file_edits ?? [];
+
+    if (targetFiles.length === 0) {
+        return { ...record, status: 'success', completed_at: new Date().toISOString(), output: { branch: branchName, note: 'No target_files specified — nothing to write.' } };
+    }
+
+    const results: Array<{ file: string; ok?: boolean; output?: string; error?: string; skipped?: boolean }> = [];
+    for (const file of targetFiles) {
+        const edit = fileEdits.find((e) => e.file === file);
+        if (!edit) {
+            results.push({ file, skipped: true });
+            continue;
+        }
+        const editResult = await executeLocalWorkspaceAction({
+            tenantId,
+            botId,
+            taskId: workspaceKey,
+            actionType: 'code_edit',
+            payload: { workspace_key: workspaceKey, file_path: file, content: edit.content },
+        });
+        results.push({ file, ok: editResult.ok, output: editResult.output, error: editResult.errorOutput });
+    }
+
+    const anyFailed = results.some((r) => r.ok === false);
     return {
         ...record,
-        status: 'success',
+        status: anyFailed ? 'failed' : 'success',
         completed_at: new Date().toISOString(),
-        output: {
-            branch: branchName,
-            changes,
-            note: input.dry_run
-                ? 'Dry-run mode — no actual edits applied. Set dry_run=false to apply.'
-                : `${changes.length} change(s) applied to workspace.`,
-        },
+        output: { branch: branchName, results },
+        error: anyFailed ? 'One or more file edits failed — see output.results for detail.' : undefined,
     };
 }
 
-function runTests(repo: string): LoopStepRecord {
+async function runTests(input: AutonomousLoopInput, workspaceKey: string): Promise<LoopStepRecord> {
     const record: LoopStepRecord = { step: 'run_tests', status: 'running', started_at: new Date().toISOString(), attempt: 1 };
-    // In a live loop this would shell out to pnpm test via executeLocalWorkspaceAction
-    // and parse exit code. Here we model the output structure.
-    const passed = Math.floor(Math.random() * 50) + 250;
-    const failed = 0;
+
+    // Dry-run: return simulated passing result
+    if (input.dry_run !== false) {
+        const passed = Math.floor(Math.random() * 50) + 250;
+        return {
+            ...record,
+            status: 'success',
+            completed_at: new Date().toISOString(),
+            output: { repo: input.repo ?? 'agentfarm/monorepo', passed, failed: 0, skipped: 0, summary: `All ${passed} tests passed.` },
+        };
+    }
+
+    // Live mode: execute the workspace test runner
+    const tenantId = input.tenantId ?? '';
+    const botId = input.botId ?? '';
+    if (!tenantId || !botId) {
+        return { ...record, status: 'failed', completed_at: new Date().toISOString(), error: 'tenantId and botId are required for live test execution.' };
+    }
+
+    const result = await executeLocalWorkspaceAction({
+        tenantId,
+        botId,
+        taskId: workspaceKey,
+        actionType: 'run_tests',
+        payload: { workspace_key: workspaceKey },
+    });
+
     return {
         ...record,
-        status: failed === 0 ? 'success' : 'failed',
+        status: result.ok ? 'success' : 'failed',
         completed_at: new Date().toISOString(),
-        output: {
-            repo,
-            passed,
-            failed,
-            skipped: 0,
-            summary: failed === 0 ? `All ${passed} tests passed.` : `${failed} test(s) failed.`,
-        },
-        error: failed > 0 ? `${failed} test(s) failed` : undefined,
+        output: { output: result.output, errorOutput: result.errorOutput ?? null },
+        error: result.ok ? undefined : (result.errorOutput ?? 'Tests failed'),
     };
 }
 
@@ -230,32 +296,210 @@ function runFixFailures(taskDescription: string, testOutput: unknown, attempt: n
     };
 }
 
-function runCreatePr(input: AutonomousLoopInput, branchName: string, steps: LoopStepRecord[]): LoopStepRecord {
+// ---------------------------------------------------------------------------
+// Commit and push: stage all changes, commit, push branch to remote
+// ---------------------------------------------------------------------------
+
+async function runCommitAndPush(
+    input: AutonomousLoopInput,
+    branchName: string,
+    workspaceKey: string,
+): Promise<LoopStepRecord> {
+    const record: LoopStepRecord = { step: 'commit_push', status: 'running', started_at: new Date().toISOString(), attempt: 1 };
+
+    // Dry-run: skip real git operations
+    if (input.dry_run !== false) {
+        return {
+            ...record,
+            status: 'success',
+            completed_at: new Date().toISOString(),
+            output: { branch: branchName, note: 'Dry-run: no git commit or push performed.' },
+        };
+    }
+
+    const tenantId = input.tenantId ?? '';
+    const botId = input.botId ?? '';
+    if (!tenantId || !botId) {
+        return { ...record, status: 'failed', completed_at: new Date().toISOString(), error: 'tenantId and botId are required for git commit/push.' };
+    }
+
+    // Stage + commit
+    const commitResult = await executeLocalWorkspaceAction({
+        tenantId,
+        botId,
+        taskId: workspaceKey,
+        actionType: 'git_commit',
+        payload: {
+            workspace_key: workspaceKey,
+            message: `feat: ${input.task_description}`,
+            auto_message: false,
+        },
+    });
+
+    if (!commitResult.ok) {
+        return {
+            ...record,
+            status: 'failed',
+            completed_at: new Date().toISOString(),
+            output: { commit: commitResult.output },
+            error: commitResult.errorOutput ?? 'git commit failed',
+        };
+    }
+
+    // Push branch to remote
+    const pushResult = await executeLocalWorkspaceAction({
+        tenantId,
+        botId,
+        taskId: workspaceKey,
+        actionType: 'git_push',
+        payload: { workspace_key: workspaceKey, remote: 'origin', branch: branchName },
+    });
+
+    return {
+        ...record,
+        status: pushResult.ok ? 'success' : 'failed',
+        completed_at: new Date().toISOString(),
+        output: { branch: branchName, commit: commitResult.output, push: pushResult.output },
+        error: pushResult.ok ? undefined : (pushResult.errorOutput ?? 'git push failed'),
+    };
+}
+
+// ---------------------------------------------------------------------------
+// GitHub PR creation (real REST API call)
+// ---------------------------------------------------------------------------
+
+export type GitHubPRResult =
+    | { ok: true; prNumber: number; prUrl: string }
+    | { ok: false; error: string };
+
+/**
+ * Calls the GitHub REST API to open a pull request.
+ * Accepts an optional fetchImpl for unit-test injection.
+ */
+export async function createGitHubPR(params: {
+    token: string;
+    owner: string;
+    repo: string;
+    title: string;
+    body: string;
+    head: string;
+    base: string;
+    draft?: boolean;
+    fetchImpl?: typeof fetch;
+}): Promise<GitHubPRResult> {
+    const { token, owner, repo, title, body, head, base, draft = false } = params;
+    const fetchImpl = params.fetchImpl ?? fetch;
+    try {
+        const response = await fetchImpl(`https://api.github.com/repos/${owner}/${repo}/pulls`, {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: 'application/vnd.github+json',
+                'X-GitHub-Api-Version': '2022-11-28',
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ title, body, head, base, draft }),
+        });
+        if (!response.ok) {
+            const errorText = await response.text();
+            return { ok: false, error: `GitHub API error ${response.status}: ${errorText.slice(0, 200)}` };
+        }
+        const data = await response.json() as { number: number; html_url: string };
+        return { ok: true, prNumber: data.number, prUrl: data.html_url };
+    } catch (err) {
+        return { ok: false, error: `PR creation failed: ${String(err)}` };
+    }
+}
+
+async function runCreatePr(input: AutonomousLoopInput, branchName: string, steps: LoopStepRecord[]): Promise<LoopStepRecord> {
     const record: LoopStepRecord = { step: 'create_pr', status: 'running', started_at: new Date().toISOString(), attempt: 1 };
+
     const handler = getSkillHandler('pr-description-generator');
     if (!handler) {
         return { ...record, status: 'failed', error: 'pr-description-generator not registered', completed_at: new Date().toISOString() };
     }
-    const result = handler({
+    const descResult = handler({
         pr_title: input.task_description,
         commits: [`feat: ${input.task_description}`],
         changed_files: input.target_files ?? [],
         issue_ref: input.issue_number ? `#${input.issue_number}` : undefined,
         dry_run: input.dry_run ?? true,
     }, Date.now());
+
     const completedSteps = steps.filter((s) => s.status === 'success').length;
+
+    // Dry-run: skip real GitHub call
+    if (input.dry_run) {
+        return {
+            ...record,
+            status: descResult.ok ? 'success' : 'failed',
+            completed_at: new Date().toISOString(),
+            output: {
+                branch: branchName,
+                pr_title: input.task_description,
+                description_result: descResult,
+                steps_completed: completedSteps,
+                note: 'Dry-run: PR not actually opened.',
+            },
+            error: descResult.ok ? undefined : descResult.summary,
+        };
+    }
+
+    // Live mode: call GitHub REST API
+    const token = process.env['GITHUB_TOKEN'] ?? '';
+    const owner = process.env['GITHUB_OWNER'] ?? '';
+    const repo = process.env['GITHUB_REPO'] ?? '';
+    const base = process.env['GITHUB_DEFAULT_BASE_BRANCH'] ?? 'main';
+
+    if (!token || !owner || !repo) {
+        const msg = 'Missing GITHUB_TOKEN, GITHUB_OWNER, or GITHUB_REPO — PR creation skipped.';
+        console.warn(`[autonomous-loop] ${msg}`);
+        return {
+            ...record,
+            status: 'failed',
+            completed_at: new Date().toISOString(),
+            error: msg,
+            output: { branch: branchName, pr_title: input.task_description, note: msg },
+        };
+    }
+
+    const prBody = (descResult.ok && typeof (descResult as { summary?: string }).summary === 'string')
+        ? (descResult as { summary: string }).summary
+        : input.task_description;
+
+    const prResult = await createGitHubPR({
+        token,
+        owner,
+        repo,
+        title: input.task_description,
+        body: prBody,
+        head: branchName,
+        base,
+        draft: false,
+    });
+
+    if (!prResult.ok) {
+        console.warn(`[autonomous-loop] GitHub PR creation failed: ${prResult.error}`);
+        return {
+            ...record,
+            status: 'failed',
+            completed_at: new Date().toISOString(),
+            error: prResult.error,
+            output: { branch: branchName, pr_title: input.task_description, note: 'PR creation failure — loop continues.' },
+        };
+    }
+
     return {
         ...record,
-        status: result.ok ? 'success' : 'failed',
+        status: 'success',
         completed_at: new Date().toISOString(),
         output: {
             branch: branchName,
             pr_title: input.task_description,
-            description_result: result,
+            pr_number: prResult.prNumber,
+            pr_url: prResult.prUrl,
             steps_completed: completedSteps,
-            note: input.dry_run ? 'Dry-run: PR not actually opened.' : 'PR created.',
         },
-        error: result.ok ? undefined : result.summary,
     };
 }
 
@@ -268,12 +512,14 @@ export async function runAutonomousLoop(input: AutonomousLoopInput): Promise<Aut
     const maxFixAttempts = input.max_fix_attempts ?? 3;
     const branchName = buildBranchName(input.task_description, input.issue_number);
     const loopId = makeLoopId(input.task_description, input.issue_number);
+    const workspaceKey = input.workspace_key ?? loopId;
 
     const steps: LoopStepRecord[] = [
         stepRecord('analyze_issue'),
         stepRecord('create_branch'),
         stepRecord('implement_changes'),
         stepRecord('run_tests'),
+        stepRecord('commit_push'),
         stepRecord('create_pr'),
     ];
 
@@ -285,18 +531,18 @@ export async function runAutonomousLoop(input: AutonomousLoopInput): Promise<Aut
     }
 
     // Step 2: Create branch
-    steps[1] = runCreateBranch(branchName, input.dry_run ?? true);
+    steps[1] = runCreateBranch(branchName, input.dry_run !== false);
     await saveCheckpoint(loopId, steps);
     if (steps[1].status === 'failed') {
         return buildResult(input, steps, branchName, loopId, startTime, 'Branch creation failed — loop aborted.');
     }
 
-    // Step 3: Implement changes
-    steps[2] = runImplementChanges(input, branchName);
+    // Step 3: Implement changes (calls code_edit in live mode)
+    steps[2] = await runImplementChanges(input, branchName, workspaceKey);
     await saveCheckpoint(loopId, steps);
 
-    // Step 4: Run tests + self-heal loop
-    let testRecord = runTests(input.repo ?? 'agentfarm/monorepo');
+    // Step 4: Run tests + self-heal loop (calls run_tests executor in live mode)
+    let testRecord = await runTests(input, workspaceKey);
     let fixAttempts = 0;
     const fixRecords: LoopStepRecord[] = [];
 
@@ -305,12 +551,13 @@ export async function runAutonomousLoop(input: AutonomousLoopInput): Promise<Aut
         const fixRecord = runFixFailures(input.task_description, testRecord.output, fixAttempts);
         fixRecords.push(fixRecord);
         await saveCheckpoint(loopId, [...steps, ...fixRecords]);
-        testRecord = runTests(input.repo ?? 'agentfarm/monorepo');
+        testRecord = await runTests(input, workspaceKey);
     }
 
-    steps[3] = testRecord;
+    const runTestsIdx = steps.findIndex((s) => s.step === 'run_tests');
+    steps[runTestsIdx] = testRecord;
     if (fixRecords.length > 0) {
-        steps.splice(3, 0, ...fixRecords);
+        steps.splice(runTestsIdx, 0, ...fixRecords);
     }
     await saveCheckpoint(loopId, steps);
 
@@ -318,9 +565,18 @@ export async function runAutonomousLoop(input: AutonomousLoopInput): Promise<Aut
         return buildResult(input, steps, branchName, loopId, startTime, `Tests still failing after ${fixAttempts} fix attempt(s) — loop aborted.`);
     }
 
-    // Step 5: Create PR
+    // Step 5: Commit + push (calls git_commit then git_push in live mode)
+    const commitPushIdx = steps.findIndex((s) => s.step === 'commit_push');
+    steps[commitPushIdx] = await runCommitAndPush(input, branchName, workspaceKey);
+    await saveCheckpoint(loopId, steps);
+
+    if (steps[commitPushIdx].status === 'failed') {
+        return buildResult(input, steps, branchName, loopId, startTime, 'Commit/push failed — loop aborted.');
+    }
+
+    // Step 6: Create PR
     const prIndex = steps.findIndex((s) => s.step === 'create_pr');
-    steps[prIndex] = runCreatePr(input, branchName, steps);
+    steps[prIndex] = await runCreatePr(input, branchName, steps);
     const checkpointFile = await saveCheckpoint(loopId, steps);
 
     const allOk = steps.every((s) => s.status === 'success' || s.status === 'skipped');
