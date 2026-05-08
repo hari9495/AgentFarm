@@ -168,6 +168,12 @@ export type LocalWorkspaceResult = {
     exitCode?: number;
 };
 
+export type LocalWorkspaceConnectorClient = (input: {
+    connectorType: string;
+    actionType: string;
+    payload: Record<string, unknown>;
+}) => Promise<{ ok: boolean; statusCode: number; errorMessage?: string; attempts?: number }>;
+
 export type LocalWorkspaceMemoryMirrorRecord = {
     tenantId: string;
     botId: string;
@@ -2012,8 +2018,9 @@ export async function executeLocalWorkspaceAction(input: {
     taskId: string;
     actionType: LocalWorkspaceActionType;
     payload: Record<string, unknown>;
+    connectorActionExecuteClient?: LocalWorkspaceConnectorClient;
 }): Promise<LocalWorkspaceResult> {
-    const { tenantId, botId, taskId, actionType, payload } = input;
+    const { tenantId, botId, taskId, actionType, payload, connectorActionExecuteClient } = input;
     const workspaceKey = typeof payload['workspace_key'] === 'string' && payload['workspace_key'].trim()
         ? payload['workspace_key'].trim()
         : taskId;
@@ -6610,15 +6617,10 @@ export async function executeLocalWorkspaceAction(input: {
         }
 
         // ------------------------------------------------------------------
-        // workspace_slack_notify: send a Slack message to a channel or user.
-        // Requires SLACK_BOT_TOKEN env var.
-        // payload: { channel, message, thread_ts? }
+        // workspace_slack_notify: send a Slack message via the connector client.
+        // payload: { channel, message }
         // ------------------------------------------------------------------
         case 'workspace_slack_notify': {
-            const slackToken = process.env['SLACK_BOT_TOKEN'] ?? '';
-            if (!slackToken) {
-                return { ok: false, output: '', errorOutput: 'SLACK_BOT_TOKEN env var is required for workspace_slack_notify.' };
-            }
             const channel = typeof payload['channel'] === 'string' ? payload['channel'].trim() : '';
             if (!channel) {
                 return { ok: false, output: '', errorOutput: 'payload.channel is required for workspace_slack_notify.' };
@@ -6627,66 +6629,28 @@ export async function executeLocalWorkspaceAction(input: {
             if (!message) {
                 return { ok: false, output: '', errorOutput: 'payload.message is required for workspace_slack_notify.' };
             }
-            const threadTs = typeof payload['thread_ts'] === 'string' ? payload['thread_ts'].trim() : '';
-
-            const body: Record<string, unknown> = {
-                channel,
-                text: message.slice(0, 4000),
-            };
-            if (threadTs) {
-                body['thread_ts'] = threadTs;
+            if (!connectorActionExecuteClient) {
+                return { ok: false, output: '', errorOutput: 'connectorActionExecuteClient is required for workspace_slack_notify.' };
             }
-
-            const bodyJson = JSON.stringify(body);
-
-            // Use curl which is available on all platforms in VM environments
-            const curlArgs = [
-                '-s',
-                '-X', 'POST',
-                'https://slack.com/api/chat.postMessage',
-                '-H', 'Content-Type: application/json',
-                '-H', `Authorization: Bearer ${slackToken}`,
-                '-d', bodyJson,
-            ];
-
-            // curl must be available — add it to allowed commands check bypass since
-            // it's a trusted outbound call with a validated token
-            const curlResult = await new Promise<{ stdout: string; stderr: string; exitCode: number }>((res, rej) => {
-                const proc = spawn('curl', curlArgs, {
-                    cwd: workspaceDir,
-                    stdio: ['ignore', 'pipe', 'pipe'],
-                });
-                let stdout = '';
-                let stderr = '';
-                proc.stdout.on('data', (chunk: Buffer) => { stdout += chunk.toString(); });
-                proc.stderr.on('data', (chunk: Buffer) => { stderr += chunk.toString(); });
-                const timer = setTimeout(() => { proc.kill('SIGTERM'); rej(new Error('Slack notify timed out.')); }, 15_000);
-                proc.on('close', (code) => { clearTimeout(timer); res({ stdout, stderr, exitCode: code ?? 1 }); });
-                proc.on('error', (err) => { clearTimeout(timer); rej(err); });
+            const connectorResult = await connectorActionExecuteClient({
+                connectorType: 'slack',
+                actionType: 'send_message',
+                payload: { channel, message },
             });
-
-            if (curlResult.exitCode !== 0) {
-                return { ok: false, output: '', errorOutput: `curl failed: ${curlResult.stderr}` };
+            if (!connectorResult.ok) {
+                return {
+                    ok: false,
+                    output: '',
+                    errorOutput: connectorResult.errorMessage ?? `Slack connector failed with status ${connectorResult.statusCode}.`,
+                };
             }
-
-            let slackResp: Record<string, unknown> = {};
-            try {
-                slackResp = JSON.parse(curlResult.stdout) as Record<string, unknown>;
-            } catch {
-                return { ok: false, output: '', errorOutput: `Unexpected Slack response: ${curlResult.stdout.slice(0, 200)}` };
-            }
-
-            if (slackResp['ok'] !== true) {
-                const slackError = typeof slackResp['error'] === 'string' ? slackResp['error'] : 'unknown_error';
-                return { ok: false, output: '', errorOutput: `Slack API error: ${slackError}` };
-            }
-
             return {
                 ok: true,
                 output: JSON.stringify({
                     sent: true,
                     channel,
-                    ts: slackResp['ts'] ?? null,
+                    statusCode: connectorResult.statusCode,
+                    attempts: connectorResult.attempts ?? 1,
                     specialist_profile: 'slack_notify',
                     imported_sources: [{ kind: 'skill', name: 'slack', decision: 'keep' }],
                 }, null, 2),
@@ -7116,6 +7080,7 @@ export async function executeLocalWorkspaceActionWithMemoryMirror(input: {
         taskId: string;
         actionType: LocalWorkspaceActionType;
         payload: Record<string, unknown>;
+        connectorActionExecuteClient?: LocalWorkspaceConnectorClient;
     };
     onMemoryMirror?: (record: LocalWorkspaceMemoryMirrorRecord) => Promise<void> | void;
     executor?: typeof executeLocalWorkspaceAction;
