@@ -11,6 +11,7 @@
         "test": "tsx --test src/**/*.test.ts"
     },
     "devDependencies": {
+        "@types/nodemailer": "^6.4.17",
         "ts-node": "^10.9.2",
         "tsx": "^4.19.2",
         "typescript": "^5.7.2"
@@ -18,6 +19,7 @@
     "dependencies": {
         "@agentfarm/connector-contracts": "workspace:*",
         "@agentfarm/observability": "workspace:*",
-        "@agentfarm/shared-types": "workspace:*"
+        "@agentfarm/shared-types": "workspace:*",
+        "nodemailer": "^6.9.16"
     }
 }
