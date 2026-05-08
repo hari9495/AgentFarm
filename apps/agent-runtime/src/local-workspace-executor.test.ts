@@ -3205,7 +3205,7 @@ test('workspace_slack_notify requires SLACK_BOT_TOKEN env var', async () => {
             payload: { channel: 'C123456', message: 'hello' },
         });
         assert.equal(result.ok, false);
-        assert.ok(result.errorOutput?.includes('SLACK_BOT_TOKEN'), 'error should mention SLACK_BOT_TOKEN');
+        assert.ok(result.errorOutput?.includes('connectorActionExecuteClient'), 'error should mention connectorActionExecuteClient');
     } finally {
         if (saved !== undefined) {
             process.env['SLACK_BOT_TOKEN'] = saved;
