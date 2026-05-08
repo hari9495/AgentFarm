@@ -370,7 +370,13 @@ importers:
       '@agentfarm/shared-types':
         specifier: workspace:*
         version: link:../../packages/shared-types
+      nodemailer:
+        specifier: ^6.9.16
+        version: 6.10.1
     devDependencies:
+      '@types/nodemailer':
+        specifier: ^6.4.17
+        version: 6.4.23
       ts-node:
         specifier: ^10.9.2
         version: 10.9.2(@types/node@22.19.17)(typescript@5.9.3)
@@ -1624,6 +1630,9 @@ packages:
 
   '@types/node@22.19.17':
     resolution: {integrity: sha512-wGdMcf+vPYM6jikpS/qhg6WiqSV/OhG+jeeHT/KlVqxYfD40iYJf9/AE1uQxVWFvU7MipKRkRv8NSHiCGgPr8Q==}
+
+  '@types/nodemailer@6.4.23':
+    resolution: {integrity: sha512-aFV3/NsYFLSx9mbb5gtirBSXJnAlrusoKNuPbxsASWc7vrKLmIrTQRpdcxNcSFL3VW2A2XpeLEavwb2qMi6nlQ==}
 
   '@types/offscreencanvas@2019.7.3':
     resolution: {integrity: sha512-ieXiYmgSRXUDeOntE1InxjWyvEelZGP63M+cGuquuRLuIKKT1osnkXjxev9B7d1nXSug5vpunx+gNlbVxMlC9A==}
@@ -3209,6 +3218,10 @@ packages:
 
   node-fetch-native@1.6.7:
     resolution: {integrity: sha512-g9yhqoedzIUm0nTnTqAQvueMPVOuIY16bqgAJJC8XOOubYFNwz6IER9qs0Gq2Xd0+CecCKFjtdDTMA4u4xG06Q==}
+
+  nodemailer@6.10.1:
+    resolution: {integrity: sha512-Z+iLaBGVaSjbIzQ4pX6XV41HrooLsQ10ZWPUehGmuantvzWoDVBnmsdUcOIDM1t+yPor5pDhVlDESgOMEGxhHA==}
+    engines: {node: '>=6.0.0'}
 
   nypm@0.6.5:
     resolution: {integrity: sha512-K6AJy1GMVyfyMXRVB88700BJqNUkByijGJM8kEHpLdcAt+vSQAVfkWWHYzuRXHSY6xA2sNc5RjTj0p9rE2izVQ==}
@@ -5023,6 +5036,10 @@ snapshots:
     dependencies:
       undici-types: 6.21.0
 
+  '@types/nodemailer@6.4.23':
+    dependencies:
+      '@types/node': 22.19.17
+
   '@types/offscreencanvas@2019.7.3': {}
 
   '@types/react-dom@19.2.3(@types/react@19.2.14)':
@@ -6823,6 +6840,8 @@ snapshots:
       semver: 6.3.1
 
   node-fetch-native@1.6.7: {}
+
+  nodemailer@6.10.1: {}
 
   nypm@0.6.5:
     dependencies:

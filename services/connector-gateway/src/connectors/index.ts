@@ -7,6 +7,9 @@
 export { SlackConnector } from './slack-connector.js';
 export type { SlackConnectorConfig, SlackMessage, SlackMessageResult, SlackChannelInfo, SlackUserInfo, SlackIncidentAlert } from './slack-connector.js';
 
+export { EmailConnector } from './email-connector.js';
+export type { EmailConnectorConfig, SendEmailInput, EmailConnectorResult } from './email-connector.js';
+
 export { LinearConnector } from './linear-connector.js';
 export type { LinearConnectorConfig, LinearIssue, CreateLinearIssueInput, LinearPriority, LinearQueryResult } from './linear-connector.js';
 
