@@ -7,13 +7,9 @@
         "typecheck": "tsc -p tsconfig.json --noEmit"
     },
     "exports": {
-        "./salesforce-actions.js": {
-            "types": "./src/salesforce-actions.ts",
-            "default": "./src/salesforce-actions.ts"
-        },
-        "./sap-actions.js": {
-            "types": "./src/sap-actions.ts",
-            "default": "./src/sap-actions.ts"
+        "./web-actions.js": {
+            "types": "./src/web-actions.ts",
+            "default": "./src/web-actions.ts"
         }
     },
     "devDependencies": {

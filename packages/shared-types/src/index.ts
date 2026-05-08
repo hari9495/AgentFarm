@@ -2008,4 +2008,8 @@ export * from './browser-audit.js';
 export * from './storage-paths.js';
 export * from './retention-policy.js';
 export * from './desktop-operator.js';
+export * from './task-plan.js';
+export type { AgentNotificationChannel, NotificationConfig, NotificationPayload, NotificationResult, CustomerNotificationConfig } from './notification.js';
+export type { CRMVendor, CRMConfig, CRMRecord, CRMQuery, CRMWritePayload, CRMResult, CustomerCRMConfig } from './crm.js';
+export type { ERPVendor, ERPConfig, ERPDocument, ERPQuery, ERPWritePayload, ERPResult, CustomerERPConfig } from './erp.js';
 

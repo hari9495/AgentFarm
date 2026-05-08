@@ -1,0 +1,29 @@
+{
+    "name": "@agentfarm/notification-adapters",
+    "version": "0.1.0",
+    "private": true,
+    "type": "module",
+    "main": "./src/index.ts",
+    "types": "./src/index.ts",
+    "exports": {
+        ".": {
+            "types": "./src/index.ts",
+            "default": "./src/index.ts"
+        }
+    },
+    "scripts": {
+        "build": "tsc -p tsconfig.json",
+        "typecheck": "tsc -p tsconfig.json --noEmit",
+        "test": "vitest run"
+    },
+    "dependencies": {
+        "@agentfarm/shared-types": "workspace:*",
+        "nodemailer": "^6.10.1"
+    },
+    "devDependencies": {
+        "@types/nodemailer": "^6.4.17",
+        "@types/node": "^22.0.0",
+        "typescript": "^5.7.2",
+        "vitest": "^2.1.8"
+    }
+}

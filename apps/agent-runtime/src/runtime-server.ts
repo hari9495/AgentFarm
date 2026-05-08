@@ -23,6 +23,10 @@ import {
     type ProcessedTaskResult,
     type TaskEnvelope,
 } from './execution-engine.js';
+import { maybeNotify, customerNotificationStore } from './notification-hook.js';
+import { loadNotificationConfigFromEnv } from './config/notification-config.js';
+import { customerCRMStore, crmService, loadCRMConfigFromEnv } from './crm-hook.js';
+import { customerERPStore, erpService, loadERPConfigFromEnv } from './erp-hook.js';
 import {
     createLlmDecisionResolver,
     createLlmDecisionResolverFromConfig,
@@ -3731,6 +3735,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 retries: result.transientRetries,
                 attempts: result.attempts,
             });
+            await maybeNotify(executionTask.payload, result);
             await persistActionResultRecord(executionTask, config, result);
             return;
         }
@@ -3748,6 +3753,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             failure_class: result.failureClass ?? 'runtime_exception',
             error_message: result.errorMessage ?? null,
         });
+        await maybeNotify(executionTask.payload, result);
         await persistActionResultRecord(executionTask, config, result);
     };
 
@@ -6501,6 +6507,26 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
 
 export async function startRuntimeServer(options: RuntimeServerOptions = {}): Promise<FastifyInstance> {
     const env = options.env ?? process.env;
+
+    // Auto-register notification config from environment variables at startup
+    const notifConfig = loadNotificationConfigFromEnv();
+    const customerId = env['CUSTOMER_ID'];
+    if (notifConfig && customerId) {
+        customerNotificationStore.registerCustomer({ customerId, config: notifConfig });
+    }
+
+    // Auto-register CRM config from environment variables at startup
+    const crmConfig = loadCRMConfigFromEnv(env as NodeJS.ProcessEnv);
+    if (crmConfig && customerId) {
+        customerCRMStore.registerCustomer({ customerId, config: crmConfig });
+    }
+
+    // Auto-register ERP config from environment variables at startup
+    const erpConfig = loadERPConfigFromEnv(env as NodeJS.ProcessEnv);
+    if (erpConfig && customerId) {
+        customerERPStore.registerCustomer({ customerId, config: erpConfig });
+    }
+
     const app = buildRuntimeServer(options);
     const port = Number(env.AF_HEALTH_PORT ?? env.AGENTFARM_HEALTH_PORT ?? 8080);
     await app.listen({ host: '0.0.0.0', port });

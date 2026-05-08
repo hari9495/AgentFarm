@@ -10,8 +10,11 @@
  */
 
 import { spawn, type ChildProcess } from 'node:child_process';
+import * as fs from 'node:fs';
 import { mkdir, writeFile, readFile, rm, rename, readdir, stat } from 'node:fs/promises';
+import * as os from 'node:os';
 import { tmpdir, platform } from 'node:os';
+import * as path from 'node:path';
 import { dirname, join, resolve, relative, basename, extname } from 'node:path';
 import {
     executeObservedAction,
@@ -20,18 +23,7 @@ import {
 } from './action-observability.js';
 import { safePackageOperation } from './package-manager-service.js';
 import { getDesktopOperator } from './desktop-operator-factory.js';
-import {
-    salesforceLogin,
-    salesforceReadRecord,
-    salesforceUpdateField,
-    salesforceRunReport,
-} from '@agentfarm/browser-actions/salesforce-actions.js';
-import {
-    sapLogin,
-    sapNavigateTransaction,
-    sapReadScreen,
-    sapFillForm,
-} from '@agentfarm/browser-actions/sap-actions.js';
+import { webLogin, webNavigate, webReadPage, webFillForm, webClick, webExtractData } from '@agentfarm/browser-actions/web-actions.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -151,15 +143,13 @@ export type LocalWorkspaceActionType =
     | 'workspace_interface_extract'
     | 'workspace_import_cleanup'
     | 'workspace_monorepo_boundary_check'
-    // Tier 17 (Salesforce & SAP browser automation)
-    | 'workspace_salesforce_login'
-    | 'workspace_salesforce_read_record'
-    | 'workspace_salesforce_update_field'
-    | 'workspace_salesforce_run_report'
-    | 'workspace_sap_login'
-    | 'workspace_sap_navigate_transaction'
-    | 'workspace_sap_read_screen'
-    | 'workspace_sap_fill_form'
+    // Tier 17 (Generic Web Operator)
+    | 'workspace_web_login'
+    | 'workspace_web_navigate'
+    | 'workspace_web_read_page'
+    | 'workspace_web_fill_form'
+    | 'workspace_web_click'
+    | 'workspace_web_extract_data'
     // Original actions (preserved)
     | 'git_clone'
     | 'git_branch'
@@ -523,14 +513,12 @@ export const LOCAL_WORKSPACE_ACTION_TYPES = new Set<LocalWorkspaceActionType>([
     'workspace_import_cleanup',
     'workspace_monorepo_boundary_check',
     // Tier 17
-    'workspace_salesforce_login',
-    'workspace_salesforce_read_record',
-    'workspace_salesforce_update_field',
-    'workspace_salesforce_run_report',
-    'workspace_sap_login',
-    'workspace_sap_navigate_transaction',
-    'workspace_sap_read_screen',
-    'workspace_sap_fill_form',
+    'workspace_web_login',
+    'workspace_web_navigate',
+    'workspace_web_read_page',
+    'workspace_web_fill_form',
+    'workspace_web_click',
+    'workspace_web_extract_data',
     // Original
     'git_clone',
     'git_branch',
@@ -2042,26 +2030,24 @@ const executeTier11ObservedAction = async <T>(input: {
     );
 };
 
-// ---------------------------------------------------------------------------
-// Tier 17: Playwright session registry (Salesforce / SAP)
-// ---------------------------------------------------------------------------
-// Module-level singleton so that login and subsequent data actions share
-// the same browser session within the agent process lifetime.
-let _tier17Browser: import('playwright').Browser | null = null;
-const _tier17Pages = new Map<string, import('playwright').Page>();
+// Tier 17 — Generic Web Operator Session Registry
+const _webContextCache = new Map<string, import('playwright').BrowserContext>();
 
-async function getTier17Page(sessionKey: string): Promise<import('playwright').Page> {
-    if (!_tier17Browser || !_tier17Browser.isConnected()) {
-        const { chromium } = await import('playwright');
-        _tier17Browser = await chromium.launch({ headless: false });
+async function getWebContext(tenantId: string, botId: string): Promise<import('playwright').BrowserContext> {
+    const profileKey = `${tenantId}:${botId}`;
+    if (_webContextCache.has(profileKey)) {
+        return _webContextCache.get(profileKey)!;
     }
-    const existing = _tier17Pages.get(sessionKey);
-    if (existing && !existing.isClosed()) {
-        return existing;
-    }
-    const page = await _tier17Browser.newPage();
-    _tier17Pages.set(sessionKey, page);
-    return page;
+    const profileBaseDir = process.env['BROWSER_PROFILE_DIR'] ?? path.join(os.tmpdir(), 'agentfarm-profiles');
+    const profilePath = path.join(profileBaseDir, profileKey);
+    await fs.promises.mkdir(profilePath, { recursive: true });
+    const { chromium } = await import('playwright');
+    const context = await chromium.launchPersistentContext(profilePath, {
+        headless: false,
+        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    });
+    _webContextCache.set(profileKey, context);
+    return context;
 }
 
 export async function executeLocalWorkspaceAction(input: {
@@ -7118,278 +7104,40 @@ export async function executeLocalWorkspaceAction(input: {
             };
         }
 
-        // ------------------------------------------------------------------
-        // Tier 17 (Salesforce & SAP browser automation)
-        // ------------------------------------------------------------------
-
-        case 'workspace_salesforce_login': {
-            const loginUrl =
-                typeof payload['login_url'] === 'string' && payload['login_url'].trim()
-                    ? payload['login_url'].trim()
-                    : process.env['SALESFORCE_LOGIN_URL'] ?? 'https://login.salesforce.com';
-            const sfUsername =
-                typeof payload['username'] === 'string' && payload['username'].trim()
-                    ? payload['username'].trim()
-                    : process.env['SALESFORCE_USERNAME'] ?? '';
-            const sfPassword =
-                typeof payload['password'] === 'string'
-                    ? payload['password']
-                    : process.env['SALESFORCE_PASSWORD'] ?? '';
-            if (!sfUsername) {
-                return { ok: false, output: '', errorOutput: 'payload.username or SALESFORCE_USERNAME is required.' };
-            }
-            if (!sfPassword) {
-                return { ok: false, output: '', errorOutput: 'payload.password or SALESFORCE_PASSWORD is required.' };
-            }
-            try {
-                const output = await executeTier11ObservedAction({
-                    tenantId, botId, taskId, actionType,
-                    category: 'browser',
-                    target: loginUrl,
-                    payload,
-                    riskLevel: 'high',
-                    execute: async () => {
-                        const page = await getTier17Page(`salesforce:${tenantId}:${botId}`);
-                        const result = await salesforceLogin(page, { loginUrl, username: sfUsername, password: sfPassword });
-                        if (!result.ok) throw new Error(result.errorOutput ?? 'salesforceLogin failed');
-                        return result.output;
-                    },
-                });
-                return { ok: true, output };
-            } catch (err) {
-                return { ok: false, output: '', errorOutput: String(err) };
-            }
+        case 'workspace_web_login': {
+            const context = await getWebContext(input.tenantId, input.botId);
+            const result = await webLogin(context, input.payload as { url: string; username: string; password: string });
+            return { ok: result.ok, output: result.output, errorOutput: result.reason };
         }
 
-        case 'workspace_salesforce_read_record': {
-            const recordUrl =
-                typeof payload['record_url'] === 'string' && payload['record_url'].trim()
-                    ? payload['record_url'].trim()
-                    : '';
-            const fields =
-                Array.isArray(payload['fields'])
-                    ? (payload['fields'] as unknown[]).filter((f) => typeof f === 'string') as string[]
-                    : [];
-            if (!recordUrl) {
-                return { ok: false, output: '', errorOutput: 'payload.record_url is required.' };
-            }
-            try {
-                const output = await executeTier11ObservedAction({
-                    tenantId, botId, taskId, actionType,
-                    category: 'browser',
-                    target: recordUrl,
-                    payload,
-                    riskLevel: 'medium',
-                    execute: async () => {
-                        const page = await getTier17Page(`salesforce:${tenantId}:${botId}`);
-                        const result = await salesforceReadRecord(page, { recordUrl, fields });
-                        if (!result.ok) throw new Error(result.errorOutput ?? 'salesforceReadRecord failed');
-                        return result.output;
-                    },
-                });
-                return { ok: true, output };
-            } catch (err) {
-                return { ok: false, output: '', errorOutput: String(err) };
-            }
+        case 'workspace_web_navigate': {
+            const context = await getWebContext(input.tenantId, input.botId);
+            const result = await webNavigate(context, input.payload as { url: string });
+            return { ok: result.ok, output: result.output, errorOutput: result.reason };
         }
 
-        case 'workspace_salesforce_update_field': {
-            const sfUpdateUrl =
-                typeof payload['record_url'] === 'string' && payload['record_url'].trim()
-                    ? payload['record_url'].trim()
-                    : '';
-            const sfField =
-                typeof payload['field'] === 'string' && payload['field'].trim()
-                    ? payload['field'].trim()
-                    : '';
-            const sfFieldValue =
-                typeof payload['value'] === 'string' ? payload['value'] : '';
-            if (!sfUpdateUrl) {
-                return { ok: false, output: '', errorOutput: 'payload.record_url is required.' };
-            }
-            if (!sfField) {
-                return { ok: false, output: '', errorOutput: 'payload.field is required.' };
-            }
-            try {
-                const output = await executeTier11ObservedAction({
-                    tenantId, botId, taskId, actionType,
-                    category: 'browser',
-                    target: sfUpdateUrl,
-                    payload,
-                    riskLevel: 'high',
-                    execute: async () => {
-                        const page = await getTier17Page(`salesforce:${tenantId}:${botId}`);
-                        const result = await salesforceUpdateField(page, { recordUrl: sfUpdateUrl, field: sfField, value: sfFieldValue });
-                        if (!result.ok) throw new Error(result.errorOutput ?? 'salesforceUpdateField failed');
-                        return result.output;
-                    },
-                });
-                return { ok: true, output };
-            } catch (err) {
-                return { ok: false, output: '', errorOutput: String(err) };
-            }
+        case 'workspace_web_read_page': {
+            const context = await getWebContext(input.tenantId, input.botId);
+            const result = await webReadPage(context, input.payload as { url?: string });
+            return { ok: result.ok, output: result.output, errorOutput: result.reason };
         }
 
-        case 'workspace_salesforce_run_report': {
-            const reportUrl =
-                typeof payload['report_url'] === 'string' && payload['report_url'].trim()
-                    ? payload['report_url'].trim()
-                    : '';
-            if (!reportUrl) {
-                return { ok: false, output: '', errorOutput: 'payload.report_url is required.' };
-            }
-            try {
-                const output = await executeTier11ObservedAction({
-                    tenantId, botId, taskId, actionType,
-                    category: 'browser',
-                    target: reportUrl,
-                    payload,
-                    riskLevel: 'medium',
-                    execute: async () => {
-                        const page = await getTier17Page(`salesforce:${tenantId}:${botId}`);
-                        const result = await salesforceRunReport(page, { reportUrl });
-                        if (!result.ok) throw new Error(result.errorOutput ?? 'salesforceRunReport failed');
-                        return result.output;
-                    },
-                });
-                return { ok: true, output };
-            } catch (err) {
-                return { ok: false, output: '', errorOutput: String(err) };
-            }
+        case 'workspace_web_fill_form': {
+            const context = await getWebContext(input.tenantId, input.botId);
+            const result = await webFillForm(context, input.payload as { url?: string; fields: Record<string, string>; submit: boolean });
+            return { ok: result.ok, output: result.output, errorOutput: result.reason };
         }
 
-        case 'workspace_sap_login': {
-            const sapLoginUrl =
-                typeof payload['login_url'] === 'string' && payload['login_url'].trim()
-                    ? payload['login_url'].trim()
-                    : process.env['SAP_LOGIN_URL'] ?? '';
-            const sapUsername =
-                typeof payload['username'] === 'string' && payload['username'].trim()
-                    ? payload['username'].trim()
-                    : process.env['SAP_USERNAME'] ?? '';
-            const sapPassword =
-                typeof payload['password'] === 'string'
-                    ? payload['password']
-                    : process.env['SAP_PASSWORD'] ?? '';
-            const sapClient =
-                typeof payload['client'] === 'string' && payload['client'].trim()
-                    ? payload['client'].trim()
-                    : process.env['SAP_CLIENT'];
-            if (!sapLoginUrl) {
-                return { ok: false, output: '', errorOutput: 'payload.login_url or SAP_LOGIN_URL is required.' };
-            }
-            if (!sapUsername) {
-                return { ok: false, output: '', errorOutput: 'payload.username or SAP_USERNAME is required.' };
-            }
-            try {
-                const output = await executeTier11ObservedAction({
-                    tenantId, botId, taskId, actionType,
-                    category: 'browser',
-                    target: sapLoginUrl,
-                    payload,
-                    riskLevel: 'high',
-                    execute: async () => {
-                        const page = await getTier17Page(`sap:${tenantId}:${botId}`);
-                        const result = await sapLogin(page, { loginUrl: sapLoginUrl, username: sapUsername, password: sapPassword, client: sapClient });
-                        if (!result.ok) throw new Error(result.reason ?? result.errorOutput ?? 'sapLogin failed');
-                        return result.output;
-                    },
-                });
-                return { ok: true, output };
-            } catch (err) {
-                return { ok: false, output: '', errorOutput: String(err) };
-            }
+        case 'workspace_web_click': {
+            const context = await getWebContext(input.tenantId, input.botId);
+            const result = await webClick(context, input.payload as { url?: string; target: string });
+            return { ok: result.ok, output: result.output, errorOutput: result.reason };
         }
 
-        case 'workspace_sap_navigate_transaction': {
-            const sapBaseUrl =
-                typeof payload['base_url'] === 'string' && payload['base_url'].trim()
-                    ? payload['base_url'].trim()
-                    : process.env['SAP_LOGIN_URL'] ?? '';
-            const sapTransaction =
-                typeof payload['transaction'] === 'string' && payload['transaction'].trim()
-                    ? payload['transaction'].trim()
-                    : '';
-            if (!sapBaseUrl) {
-                return { ok: false, output: '', errorOutput: 'payload.base_url or SAP_LOGIN_URL is required.' };
-            }
-            if (!sapTransaction) {
-                return { ok: false, output: '', errorOutput: 'payload.transaction is required.' };
-            }
-            try {
-                const output = await executeTier11ObservedAction({
-                    tenantId, botId, taskId, actionType,
-                    category: 'browser',
-                    target: sapBaseUrl,
-                    payload,
-                    riskLevel: 'medium',
-                    execute: async () => {
-                        const page = await getTier17Page(`sap:${tenantId}:${botId}`);
-                        const result = await sapNavigateTransaction(page, { baseUrl: sapBaseUrl, transaction: sapTransaction });
-                        if (!result.ok) throw new Error(result.reason ?? result.errorOutput ?? 'sapNavigateTransaction failed');
-                        return result.output;
-                    },
-                });
-                return { ok: true, output };
-            } catch (err) {
-                return { ok: false, output: '', errorOutput: String(err) };
-            }
-        }
-
-        case 'workspace_sap_read_screen': {
-            const sapReadFields =
-                Array.isArray(payload['fields'])
-                    ? (payload['fields'] as unknown[]).filter((f) => typeof f === 'string') as string[]
-                    : undefined;
-            try {
-                const output = await executeTier11ObservedAction({
-                    tenantId, botId, taskId, actionType,
-                    category: 'browser',
-                    target: 'sap_screen',
-                    payload,
-                    riskLevel: 'low',
-                    execute: async () => {
-                        const page = await getTier17Page(`sap:${tenantId}:${botId}`);
-                        const result = await sapReadScreen(page, { fields: sapReadFields });
-                        if (!result.ok) throw new Error(result.reason ?? result.errorOutput ?? 'sapReadScreen failed');
-                        return result.output;
-                    },
-                });
-                return { ok: true, output };
-            } catch (err) {
-                return { ok: false, output: '', errorOutput: String(err) };
-            }
-        }
-
-        case 'workspace_sap_fill_form': {
-            const sapFormFields =
-                payload['fields'] !== null &&
-                    typeof payload['fields'] === 'object' &&
-                    !Array.isArray(payload['fields'])
-                    ? (payload['fields'] as Record<string, unknown>)
-                    : {};
-            const sapFormFieldsStr: Record<string, string> = Object.fromEntries(
-                Object.entries(sapFormFields).map(([k, v]) => [k, String(v ?? '')]),
-            );
-            const sapSubmit = payload['submit'] === true;
-            try {
-                const output = await executeTier11ObservedAction({
-                    tenantId, botId, taskId, actionType,
-                    category: 'browser',
-                    target: 'sap_form',
-                    payload,
-                    riskLevel: 'high',
-                    execute: async () => {
-                        const page = await getTier17Page(`sap:${tenantId}:${botId}`);
-                        const result = await sapFillForm(page, { fields: sapFormFieldsStr, submit: sapSubmit });
-                        if (!result.ok) throw new Error(result.reason ?? result.errorOutput ?? 'sapFillForm failed');
-                        return result.output;
-                    },
-                });
-                return { ok: true, output };
-            } catch (err) {
-                return { ok: false, output: '', errorOutput: String(err) };
-            }
+        case 'workspace_web_extract_data': {
+            const context = await getWebContext(input.tenantId, input.botId);
+            const result = await webExtractData(context, input.payload as { url?: string; target: 'table' | 'list' | 'fields' | 'all' });
+            return { ok: result.ok, output: result.output, errorOutput: result.reason };
         }
 
         default: {
