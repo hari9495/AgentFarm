@@ -5506,7 +5506,7 @@ export async function executeLocalWorkspaceAction(input: {
         // workspace_browser_open: open an http(s) URL in a local browser.
         case 'workspace_browser_open': {
             if (process.env['DESKTOP_OPERATOR'] === 'mock') {
-                const op = getDesktopOperator();
+                const op = await getDesktopOperator();
                 const result = await op.browserOpen(
                     typeof payload['url'] === 'string' ? payload['url'] : '',
                     typeof payload['browser'] === 'string' ? payload['browser'] : 'default'
@@ -5577,7 +5577,7 @@ export async function executeLocalWorkspaceAction(input: {
         // workspace_app_launch: launch an allowlisted local developer application.
         case 'workspace_app_launch': {
             if (process.env['DESKTOP_OPERATOR'] === 'mock') {
-                const op = getDesktopOperator();
+                const op = await getDesktopOperator();
                 const result = await op.appLaunch(
                     typeof payload['app'] === 'string' ? payload['app'] : '',
                     []
@@ -5643,7 +5643,7 @@ export async function executeLocalWorkspaceAction(input: {
         // workspace_meeting_join: open a recognized meeting URL via browser or Teams app.
         case 'workspace_meeting_join': {
             if (process.env['DESKTOP_OPERATOR'] === 'mock') {
-                const op = getDesktopOperator();
+                const op = await getDesktopOperator();
                 const result = await op.meetingJoin(
                     typeof payload['meeting_url'] === 'string' ? payload['meeting_url'] : '',
                     typeof payload['mode'] === 'string' ? payload['mode'] : 'browser'
@@ -5740,7 +5740,7 @@ export async function executeLocalWorkspaceAction(input: {
         // workspace_meeting_speak: speak scripted prompts in a live meeting.
         case 'workspace_meeting_speak': {
             if (process.env['DESKTOP_OPERATOR'] === 'mock') {
-                const op = getDesktopOperator();
+                const op = await getDesktopOperator();
                 const result = await op.meetingSpeak(
                     typeof payload['text'] === 'string' ? payload['text'] : ''
                 );
