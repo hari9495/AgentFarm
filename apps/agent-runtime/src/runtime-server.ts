@@ -53,6 +53,7 @@ import {
 } from './local-workspace-executor.js';
 import { AdvancedRuntimeFeatures } from './advanced-runtime-features.js';
 import { recordTaskIntelligence } from './task-intelligence-memory.js';
+import { postTaskCloseOut } from './post-task-closeout.js';
 import {
     TESTER_ROLE_ALLOWED_CONNECTORS,
     TESTER_ROLE_ALLOWED_LOCAL_ACTIONS,
@@ -3798,6 +3799,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         config: RuntimeConfig,
         result: ProcessedTaskResult,
     ): Promise<void> => {
+        await postTaskCloseOut(task, result, localWorkspaceActionExecutor).catch(() => {});
         // Write compact execution transcript before flushing the action result
         const startedAt = taskStartTimes.get(task.taskId);
         taskStartTimes.delete(task.taskId);

@@ -23,6 +23,7 @@ import {
 } from './action-observability.js';
 import { safePackageOperation } from './package-manager-service.js';
 import { getDesktopOperator } from './desktop-operator-factory.js';
+import { evaluateEscalation } from './escalation-engine.js';
 import { webLogin, webNavigate, webReadPage, webFillForm, webClick, webExtractData } from '@agentfarm/browser-actions/web-actions.js';
 
 // ---------------------------------------------------------------------------
@@ -1901,6 +1902,18 @@ async function executeAutonomousLoop(
             };
         }
 
+        // Phase 5: Escalation check — stop retrying blindly when escalation criteria are met
+        const loopEscalation = evaluateEscalation({ payload }, attempt, testResult.stderr);
+        if (loopEscalation.shouldEscalate) {
+            attemptRecords.push(attemptRecord);
+            return {
+                ok: false,
+                output: JSON.stringify({ log: logs.join('\n'), attempts: attemptRecords, status: 'escalated' }),
+                errorOutput: loopEscalation.message,
+                exitCode: testResult.exitCode,
+            };
+        }
+
         const fixStep = fixAttempts[attempt - 1];
         if (!fixStep) {
             attemptRecords.push(attemptRecord);
@@ -2158,6 +2171,27 @@ export async function executeLocalWorkspaceAction(input: {
                 // Ensure parent directory exists
                 await mkdir(dirname(safePath), { recursive: true });
                 await writeFile(safePath, content, 'utf-8');
+
+                if (process.env['AF_TEST_AFTER_EDIT'] === 'true') {
+                    const testCommand = typeof payload['test_command'] === 'string' && payload['test_command'].trim()
+                        ? payload['test_command'].trim()
+                        : 'pnpm test';
+                    let testProbe: { passed: boolean | null; output?: string; error?: string } = { passed: null };
+                    try {
+                        const testResult = await runCommand(parseCommand(testCommand), workspaceDir, 300_000);
+                        testProbe = {
+                            passed: testResult.exitCode === 0,
+                            output: (testResult.stdout + testResult.stderr).slice(0, 2000),
+                        };
+                    } catch (testErr) {
+                        testProbe = { passed: false, error: String(testErr) };
+                    }
+                    return {
+                        ok: true,
+                        output: JSON.stringify({ message: `Written ${filePath} (${content.length} bytes).`, test_probe: testProbe }),
+                    };
+                }
+
                 return { ok: true, output: `Written ${filePath} (${content.length} bytes).` };
             } catch (err) {
                 return { ok: false, output: '', errorOutput: String(err) };
@@ -2193,6 +2227,26 @@ export async function executeLocalWorkspaceAction(input: {
                     replace_all: replaceAll,
                     expected_replacements: expectedReplacements,
                 });
+
+                if (step.ok && process.env['AF_TEST_AFTER_EDIT'] === 'true') {
+                    const testCommand = typeof payload['test_command'] === 'string' && payload['test_command'].trim()
+                        ? payload['test_command'].trim()
+                        : 'pnpm test';
+                    let testProbe: { passed: boolean | null; output?: string; error?: string } = { passed: null };
+                    try {
+                        const testResult = await runCommand(parseCommand(testCommand), workspaceDir, 300_000);
+                        testProbe = {
+                            passed: testResult.exitCode === 0,
+                            output: (testResult.stdout + testResult.stderr).slice(0, 2000),
+                        };
+                    } catch (testErr) {
+                        testProbe = { passed: false, error: String(testErr) };
+                    }
+                    return {
+                        ok: true,
+                        output: JSON.stringify({ message: step.output, test_probe: testProbe }),
+                    };
+                }
 
                 return {
                     ok: step.ok,

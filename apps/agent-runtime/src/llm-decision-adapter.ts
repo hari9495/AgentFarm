@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { dirname, resolve } from 'path';
+import { getRoleSystemPrompt } from './role-system-prompts.js';
 import type {
     ProviderFailoverReasonCode,
     ProviderFailoverTraceRecord,
@@ -886,7 +887,7 @@ const createAnthropicResolver = (input: {
                 model: selectedModel,
                 max_tokens: 512,
                 temperature: 0,
-                system: 'You are a strict JSON classification engine for task routing.',
+                system: getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : ''),
                 messages: [
                     {
                         role: 'user',
@@ -960,7 +961,7 @@ const createGoogleResolver = (input: {
                 contents: [
                     {
                         role: 'user',
-                        parts: [{ text: createTaskPrompt(task, heuristicDecision) }],
+                        parts: [{ text: `${getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : '')}\n\n${createTaskPrompt(task, heuristicDecision)}` }],
                     },
                 ],
             }),
@@ -1225,7 +1226,7 @@ const createOpenAiResolver = (input: {
                 messages: [
                     {
                         role: 'system',
-                        content: 'You are a strict JSON classification engine for task routing.',
+                        content: getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : ''),
                     },
                     {
                         role: 'user',
@@ -1291,7 +1292,7 @@ const createGitHubModelsResolver = (input: {
                 messages: [
                     {
                         role: 'system',
-                        content: 'You are a strict JSON classification engine for task routing.',
+                        content: getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : ''),
                     },
                     {
                         role: 'user',
@@ -1355,7 +1356,7 @@ const createXaiResolver = (input: {
                 temperature: 0,
                 response_format: { type: 'json_object' },
                 messages: [
-                    { role: 'system', content: 'You are a strict JSON classification engine for task routing.' },
+                    { role: 'system', content: getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : '') },
                     { role: 'user', content: createTaskPrompt(task, heuristicDecision) },
                 ],
             }),
@@ -1415,7 +1416,7 @@ const createMistralResolver = (input: {
                 temperature: 0,
                 response_format: { type: 'json_object' },
                 messages: [
-                    { role: 'system', content: 'You are a strict JSON classification engine for task routing.' },
+                    { role: 'system', content: getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : '') },
                     { role: 'user', content: createTaskPrompt(task, heuristicDecision) },
                 ],
             }),
@@ -1475,7 +1476,7 @@ const createTogetherResolver = (input: {
                 temperature: 0,
                 response_format: { type: 'json_object' },
                 messages: [
-                    { role: 'system', content: 'You are a strict JSON classification engine for task routing.' },
+                    { role: 'system', content: getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : '') },
                     { role: 'user', content: createTaskPrompt(task, heuristicDecision) },
                 ],
             }),
@@ -1757,7 +1758,7 @@ const createAzureOpenAiResolver = (input: {
                 messages: [
                     {
                         role: 'system',
-                        content: 'You are a strict JSON classification engine for task routing.',
+                        content: getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : ''),
                     },
                     {
                         role: 'user',

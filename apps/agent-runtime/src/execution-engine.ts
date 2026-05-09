@@ -2,6 +2,9 @@ import type { ProviderFailoverTraceRecord } from '@agentfarm/shared-types';
 import { type ProgressSink, NoopProgressSink, reportProgress } from './task-progress-reporter.js';
 import { buildErrorQuery, researchForTask, type FetchFn } from './web-research-service.js';
 import { buildAuditContextPayload, buildRuntimeAuditContext } from './runtime-audit-integration.js';
+import { preTaskScout } from './pre-task-scout.js';
+import { evaluateEscalation } from './escalation-engine.js';
+import { executeLocalWorkspaceAction } from './local-workspace-executor.js';
 
 export type RiskLevel = 'low' | 'medium' | 'high';
 
@@ -533,10 +536,32 @@ export async function processDeveloperTask(
         fallbackReason: 'llm_provider_unconfigured',
     };
 
+    // Phase 2: Scout the codebase before handing context to the LLM
+    const scoutContext = await preTaskScout(taskWithAuditContext, executeLocalWorkspaceAction as Parameters<typeof preTaskScout>[1]).catch(() => '');
+    const taskForLlm: TaskEnvelope = scoutContext
+        ? { ...taskWithAuditContext, payload: { ...taskWithAuditContext.payload, _scout_context: scoutContext } }
+        : taskWithAuditContext;
+
+    // Phase 5: Check for ambiguous task before LLM call
+    const preEscalation = evaluateEscalation(taskWithAuditContext, 0);
+    if (preEscalation.shouldEscalate && preEscalation.reason === 'ambiguous_task') {
+        return {
+            decision: heuristicDecision,
+            status: 'failed',
+            attempts: 0,
+            transientRetries: 0,
+            executionPayload: taskWithAuditContext.payload,
+            payloadOverrideSource: 'none',
+            llmExecution,
+            failureClass: 'runtime_exception',
+            errorMessage: preEscalation.message,
+        };
+    }
+
     if (options?.llmDecisionResolver) {
         try {
             const llmResult = await options.llmDecisionResolver({
-                task: taskWithAuditContext,
+                task: taskForLlm,
                 heuristicDecision,
             });
 
