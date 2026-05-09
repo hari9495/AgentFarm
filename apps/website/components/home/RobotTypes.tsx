@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { motion, type Variants } from "framer-motion";
 import {
@@ -34,6 +34,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
     "ai-customer-support-agent": MessageCircle,
 };
 
+// Role-specific cover images (abstract/code/tech themes — product-appropriate)
 const ROLE_IMAGES: Record<string, string> = {
     "ai-technical-recruiter": "https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=1200&q=80",
     "ai-backend-developer": "https://images.unsplash.com/photo-1518773553398-650c184e0bb3?auto=format&fit=crop&w=1200&q=80",
@@ -63,17 +64,18 @@ export default function RobotTypes() {
     const activeDepts = DEPARTMENTS.filter((d) => marketplaceBots.some((b) => b.department === d));
 
     return (
-        <section id="robots" className="bg-slate-50 dark:bg-slate-900 py-24">
+        <section id="teammates" className="bg-slate-50 dark:bg-slate-900 py-24">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="max-w-3xl mx-auto text-center mb-16">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-blue-600">
-                        Robot Marketplace
+                    <span className="text-xs font-semibold uppercase tracking-wider text-sky-600 dark:text-sky-400">
+                        AI Teammate Marketplace
                     </span>
                     <h2 className="mt-3 text-3xl sm:text-4xl font-bold text-slate-900 dark:text-slate-100">
-                        Specialists You Can Assign Real Work To
+                        Specialists you can assign real engineering work to
                     </h2>
                     <p className="mt-4 text-lg text-slate-500 dark:text-slate-400">
-                        {marketplaceBots.length} role-based agents across {activeDepts.length} departments. Clear scope, measurable outcomes, and integration-ready from day one.
+                        {marketplaceBots.length} role-based AI teammates across {activeDepts.length} departments.
+                        Clear scope, measurable outcomes, and integration-ready from day one.
                     </p>
                 </div>
 
@@ -101,19 +103,19 @@ export default function RobotTypes() {
                                     }),
                                 }}
                                 whileHover={{ y: hoverLift, transition: { duration: 0.22 * motionScale } }}
-                                className="group bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden hover:shadow-xl hover:border-blue-200 dark:hover:border-blue-700 transition-all duration-200 flex flex-col cursor-pointer"
+                                className="group bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden hover:shadow-xl hover:border-sky-200 dark:hover:border-sky-700 transition-all duration-200 flex flex-col cursor-pointer"
                             >
                                 <div className="relative h-36">
                                     <img
                                         src={ROLE_IMAGES[bot.slug] ?? "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1200&q=80"}
-                                        alt={`${bot.name} role visual`}
+                                        alt={`${bot.name} AI teammate`}
                                         className="w-full h-full object-cover"
                                         loading="lazy"
                                     />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-slate-900/15 to-transparent" />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/70 via-slate-900/20 to-transparent" />
                                     <span className="absolute top-3 right-3 flex items-center gap-1.5 text-[10px] font-semibold text-emerald-700 bg-emerald-50/95 px-2.5 py-1 rounded-full">
                                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                        Online
+                                        Ready to deploy
                                     </span>
                                 </div>
 
@@ -143,7 +145,7 @@ export default function RobotTypes() {
                                         {bot.skills.slice(0, 3).map((s) => (
                                             <span
                                                 key={s}
-                                                className="text-xs bg-slate-100 dark:bg-slate-700 group-hover:bg-blue-50 dark:group-hover:bg-blue-900/20 group-hover:text-blue-600 dark:group-hover:text-blue-400 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-md font-medium transition-colors duration-150"
+                                                className="text-xs bg-slate-100 dark:bg-slate-700 group-hover:bg-sky-50 dark:group-hover:bg-sky-900/20 group-hover:text-sky-600 dark:group-hover:text-sky-400 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-md font-medium transition-colors duration-150"
                                             >
                                                 {s}
                                             </span>
@@ -158,12 +160,10 @@ export default function RobotTypes() {
 
                 <div className="mt-10 text-center">
                     <ButtonLink href="/marketplace" variant="outline" size="md">
-                        View all {marketplaceBots.length} roles {"->"}
+                        View all {marketplaceBots.length} AI teammate roles →
                     </ButtonLink>
                 </div>
             </div>
         </section>
     );
 }
-
-

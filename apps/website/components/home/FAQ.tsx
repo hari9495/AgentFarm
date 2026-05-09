@@ -52,7 +52,7 @@ export default function FAQ() {
         <section className="py-24 bg-white dark:bg-slate-950 border-t border-slate-100 dark:border-slate-800">
             <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="text-center mb-14">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-blue-600">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-sky-600 dark:text-sky-400">
                         FAQ
                     </span>
                     <h2 className="mt-3 text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-slate-100">

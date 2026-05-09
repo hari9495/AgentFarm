@@ -8,35 +8,38 @@ import { useCompactMotion } from "@/lib/useCompactMotion";
 const plans = [
     {
         name: "Starter",
-        price: "$99",
+        price: "$299",
         period: "/ month",
-        description: "Perfect for small teams trying AI workers for the first time.",
+        description: "Best for teams proving AI teammate workflows with one to two core engineering roles.",
         features: [
-            "1 AI Worker",
-            "5 GitHub repos",
-            "Slack integration",
-            "500 task executions / mo",
+            "2 AI Teammates",
+            "Up to 10 GitHub repos",
+            "GitHub + Jira integration",
+            "2,000 task executions / mo",
+            "Risk-classified approval gates",
+            "Full audit trail",
             "Email support",
         ],
-        cta: "Start Free Trial",
+        cta: "Start 14-day free trial",
         ctaHref: "/#waitlist",
         highlighted: false,
     },
     {
         name: "Pro",
-        price: "$499",
+        price: "$599",
         period: "/ month",
-        description: "For growing teams that need multiple AI workers shipping in parallel.",
+        description: "For growing teams deploying multiple AI teammates in parallel across departments.",
         features: [
-            "5 AI Workers",
+            "5 AI Teammates",
             "Unlimited repos",
-            "GitHub + Slack + Jira",
-            "5,000 task executions / mo",
+            "GitHub + Jira + Teams + Email",
+            "10,000 task executions / mo",
             "Priority support",
-            "Custom workflows",
+            "Custom approval workflows",
             "Analytics dashboard",
+            "14-day free trial",
         ],
-        cta: "Start Free Trial",
+        cta: "Start 14-day free trial",
         ctaHref: "/#waitlist",
         highlighted: true,
     },
@@ -44,18 +47,19 @@ const plans = [
         name: "Enterprise",
         price: "Custom",
         period: "",
-        description: "For large orgs needing unlimited scale, SLAs, and enterprise SSO.",
+        description: "For regulated orgs needing unlimited scale, SLAs, SSO, and on-prem options.",
         features: [
-            "Unlimited AI Workers",
-            "Unlimited executions",
+            "Unlimited AI Teammates",
+            "Unlimited task executions",
             "SSO / SAML",
-            "Custom integrations",
-            "Dedicated support",
-            "On-prem option",
+            "Tenant-isolated Azure runtime",
+            "Dedicated onboarding support",
+            "On-premises deployment option",
             "SLA guarantee",
+            "Custom connector integrations",
         ],
         cta: "Contact Sales",
-        ctaHref: "#",
+        ctaHref: "/book-demo",
         highlighted: false,
     },
 ];
@@ -76,10 +80,10 @@ export default function PricingSection() {
                         Pricing
                     </span>
                     <h2 className="mt-3 text-3xl sm:text-4xl font-bold text-slate-900 dark:text-slate-100">
-                        Marketplace-Aligned Pricing
+                        Simple, predictable pricing
                     </h2>
                     <p className="mt-4 text-lg text-slate-500 dark:text-slate-400">
-                        Start with one role, expand by workflow, and keep pricing transparent as usage grows.
+                        Start with the AI teammates your team needs today. Scale by role and expand when you see measurable outcomes.
                     </p>
                 </div>
 
@@ -143,7 +147,7 @@ export default function PricingSection() {
 
                 <div className="mt-8 text-center">
                     <ButtonLink href="/pricing" variant="outline" size="md">
-                        View detailed marketplace pricing {"->"}
+                        View full pricing & plan details →
                     </ButtonLink>
                 </div>
             </div>

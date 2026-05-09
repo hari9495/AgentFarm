@@ -51,7 +51,7 @@ export default function HowItWorks() {
                         initial={{ opacity: 0, y: -6 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
-                        className="text-xs font-semibold uppercase tracking-wider text-blue-600"
+                        className="text-xs font-semibold uppercase tracking-wider text-sky-600 dark:text-sky-400"
                     >
                         How It Works
                     </motion.span>
