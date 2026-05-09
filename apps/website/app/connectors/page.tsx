@@ -61,6 +61,12 @@ interface ConfiguredConnector {
     lastErrorClass: string | null;
 }
 
+interface HealthCheckResult {
+    healthy: boolean;
+    message?: string;
+    nextStep?: { oauthInitUrl?: string } | null;
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────
 const CATEGORY_LABELS: Record<ConnectorCategory, string> = {
     task_tracker: "Task Trackers",
@@ -138,9 +144,13 @@ function AddConnectorModal({
                     botId,
                 }),
             });
-            const json = await res.json();
+            const json = await res.json() as { error?: string; nextStep?: { action: string; oauthUrl?: string } };
             if (!res.ok) {
                 setError(json.error ?? "Failed to add connector.");
+                return;
+            }
+            if (json.nextStep?.action === "oauth" && typeof json.nextStep.oauthUrl === "string") {
+                window.location.href = json.nextStep.oauthUrl;
                 return;
             }
             onAdded();
@@ -280,14 +290,28 @@ function ConnectorCard({
 }: {
     connector: ConfiguredConnector;
     onRemove: () => void;
-    onHealthCheck: () => void;
+    onHealthCheck: () => Promise<HealthCheckResult>;
 }) {
-    const [checking, setChecking] = useState(false);
+    const [checking, setChecking] = useState(true);
+    const [healthResult, setHealthResult] = useState<HealthCheckResult | null>(null);
+
+    useEffect(() => {
+        let cancelled = false;
+        fetch(`/api/connectors/${connector.connectorId}/health`, { method: "POST" })
+            .then((r) => r.json() as Promise<HealthCheckResult>)
+            .then((result) => { if (!cancelled) { setHealthResult(result); setChecking(false); } })
+            .catch(() => { if (!cancelled) { setChecking(false); } });
+        return () => { cancelled = true; };
+    }, [connector.connectorId]);
 
     async function runHealthCheck() {
         setChecking(true);
-        await onHealthCheck();
+        const result = await onHealthCheck();
+        setHealthResult(result);
         setChecking(false);
+        if (result.healthy) {
+            setTimeout(() => setHealthResult(null), 3000);
+        }
     }
 
     return (
@@ -296,9 +320,19 @@ function ConnectorCard({
             <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                     <p className="font-medium text-gray-900 text-sm truncate">{connector.displayName}</p>
-                    <span className={`text-xs rounded-full px-2 py-0.5 font-medium ${STATUS_COLORS[connector.status]}`}>
-                        {STATUS_LABELS[connector.status]}
-                    </span>
+                    {checking ? (
+                        <span className="text-xs rounded-full px-2 py-0.5 font-medium bg-gray-100 text-gray-500">
+                            ⬤ Checking...
+                        </span>
+                    ) : healthResult !== null ? (
+                        <span className={`text-xs rounded-full px-2 py-0.5 font-medium ${healthResult.healthy ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
+                            {healthResult.healthy ? "⬤ Healthy" : "⬤ Degraded"}
+                        </span>
+                    ) : (
+                        <span className={`text-xs rounded-full px-2 py-0.5 font-medium ${STATUS_COLORS[connector.status]}`}>
+                            {STATUS_LABELS[connector.status]}
+                        </span>
+                    )}
                 </div>
                 <p className="text-xs text-gray-400 mt-0.5 capitalize">{connector.category.replace("_", " ")} · {connector.authMethod.replace("_", " ")}</p>
                 {connector.lastHealthcheckAt && (
@@ -311,6 +345,17 @@ function ConnectorCard({
                 )}
             </div>
             <div className="flex items-center gap-2">
+                {healthResult !== null && !healthResult.healthy && healthResult.nextStep?.oauthInitUrl && (
+                    <button
+                        onClick={() => {
+                            const oauthInitUrl = healthResult.nextStep?.oauthInitUrl;
+                            if (oauthInitUrl) { window.location.href = oauthInitUrl; }
+                        }}
+                        className="text-xs text-amber-600 hover:text-amber-800 border border-amber-200 hover:border-amber-400 rounded-lg px-3 py-1.5 transition"
+                    >
+                        Re-authenticate
+                    </button>
+                )}
                 <button
                     onClick={runHealthCheck}
                     disabled={checking}
@@ -332,9 +377,11 @@ function ConnectorCard({
 // ── Available Connector Card ───────────────────────────────────────────────
 function AvailableCard({
     connector,
+    configuredStatus,
     onAdd,
 }: {
     connector: AvailableConnector;
+    configuredStatus: ConnectorStatus | null;
     onAdd: () => void;
 }) {
     return (
@@ -347,9 +394,18 @@ function AvailableCard({
                 </p>
             </div>
             {connector.connected ? (
-                <span className="text-xs bg-green-100 text-green-700 rounded-full px-2 py-0.5 font-medium">
-                    Connected
-                </span>
+                configuredStatus === "error" || configuredStatus === "pending_auth" ? (
+                    <button
+                        onClick={onAdd}
+                        className="text-xs bg-amber-500 text-white rounded-lg px-3 py-1.5 hover:bg-amber-600 transition font-medium"
+                    >
+                        Reconnect
+                    </button>
+                ) : (
+                    <span className="text-xs bg-green-100 text-green-700 rounded-full px-2 py-0.5 font-medium">
+                        Connected
+                    </span>
+                )
             ) : (
                 <button
                     onClick={onAdd}
@@ -456,17 +512,18 @@ export default function ConnectorsPage() {
         }
     }
 
-    async function handleHealthCheck(connectorId: string) {
+    async function handleHealthCheck(connectorId: string): Promise<HealthCheckResult> {
         const params = new URLSearchParams();
         if (selectedWorkspaceId) params.set("workspaceId", selectedWorkspaceId);
         const res = await fetch(`/api/connectors/${connectorId}/health${params.size > 0 ? `?${params.toString()}` : ""}`, { method: "POST" });
-        const json = await res.json();
+        const json = await res.json() as HealthCheckResult;
         if (json.healthy) {
             showToast(json.message ?? "Connector is healthy.");
         } else {
             showToast(json.message ?? "Connector check failed.", "error");
         }
         await loadConnectors();
+        return json;
     }
 
     const filteredAvailable = available.filter((c) =>
@@ -532,25 +589,31 @@ export default function ConnectorsPage() {
                         <span className="text-xs font-semibold bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 px-2.5 py-1 rounded-full">{available.length} connectors</span>
                     </div>
                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
-                        {[
-                            { name: "GitHub", emoji: "🐙", color: "bg-slate-100 dark:bg-slate-800" },
-                            { name: "Jira", emoji: "🟦", color: "bg-sky-50 dark:bg-sky-900/30" },
-                            { name: "Slack", emoji: "💬", color: "bg-violet-50 dark:bg-violet-900/30" },
-                            { name: "Teams", emoji: "💼", color: "bg-blue-50 dark:bg-blue-900/30" },
-                            { name: "Linear", emoji: "🔷", color: "bg-indigo-50 dark:bg-indigo-900/30" },
-                            { name: "Notion", emoji: "📝", color: "bg-slate-50 dark:bg-slate-800/60" },
-                            { name: "PagerDuty", emoji: "🚨", color: "bg-rose-50 dark:bg-rose-900/20" },
-                            { name: "Datadog", emoji: "🐶", color: "bg-amber-50 dark:bg-amber-900/20" },
-                            { name: "Sentry", emoji: "🔍", color: "bg-slate-50 dark:bg-slate-800/60" },
-                            { name: "Email", emoji: "📧", color: "bg-emerald-50 dark:bg-emerald-900/20" },
-                            { name: "Confluence", emoji: "📚", color: "bg-sky-50 dark:bg-sky-900/30" },
-                            { name: "GitLab", emoji: "🦊", color: "bg-orange-50 dark:bg-orange-900/20" },
-                        ].map(({ name, emoji, color }) => (
-                            <div key={name} className={`flex flex-col items-center gap-2 p-3 rounded-xl ${color} border border-transparent hover:border-slate-200 dark:hover:border-slate-600 transition-colors cursor-default`}>
-                                <span className="text-2xl" role="img" aria-label={name}>{emoji}</span>
-                                <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 text-center leading-none">{name}</span>
-                            </div>
-                        ))}
+                        {loading ? (
+                            Array.from({ length: 12 }).map((_, i) => (
+                                <div key={i} className="flex flex-col items-center gap-2 p-3 rounded-xl bg-gray-100 dark:bg-slate-800 border border-transparent animate-pulse">
+                                    <div className="w-7 h-7 rounded bg-gray-200 dark:bg-slate-700" />
+                                    <div className="h-2.5 w-10 rounded bg-gray-200 dark:bg-slate-700" />
+                                </div>
+                            ))
+                        ) : available.length === 0 ? (
+                            <div className="col-span-full text-center py-6 text-sm text-slate-400 dark:text-slate-500">No connectors available.</div>
+                        ) : (
+                            available.slice(0, 12).map((c) => {
+                                const categoryColor: Record<ConnectorCategory, string> = {
+                                    task_tracker: "bg-sky-50 dark:bg-sky-900/30",
+                                    messaging: "bg-violet-50 dark:bg-violet-900/30",
+                                    code: "bg-slate-100 dark:bg-slate-800",
+                                    email: "bg-emerald-50 dark:bg-emerald-900/20",
+                                };
+                                return (
+                                    <div key={c.tool} className={`flex flex-col items-center gap-2 p-3 rounded-xl ${categoryColor[c.category]} border border-transparent hover:border-slate-200 dark:hover:border-slate-600 transition-colors cursor-default`}>
+                                        <ConnectorIcon tool={c.tool} size={28} />
+                                        <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 text-center leading-none">{c.displayName}</span>
+                                    </div>
+                                );
+                            })
+                        )}
                     </div>
                 </section>
 
@@ -568,7 +631,7 @@ export default function ConnectorsPage() {
                             <div>
                                 <p className="text-sm font-semibold text-gray-900">Bot-scoped integration context</p>
                                 <p className="text-xs text-gray-500 mt-0.5">
-                                        This catalog is filtered by selected bot role and policy. Configured connectors are scoped per workspace.
+                                    This catalog is filtered by selected bot role and policy. Configured connectors are scoped per workspace.
                                 </p>
                             </div>
                             <select
@@ -676,6 +739,7 @@ export default function ConnectorsPage() {
                                                 <AvailableCard
                                                     key={c.tool}
                                                     connector={c}
+                                                    configuredStatus={configured.find((cc) => cc.tool === c.tool)?.status ?? null}
                                                     onAdd={() => setAddingConnector(c)}
                                                 />
                                             ))}

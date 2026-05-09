@@ -1,0 +1,12 @@
+version: "3.9"
+
+services:
+  voxcpm2:
+    build: ./docker/voxcpm2
+    ports:
+      - "8765:8765"
+    restart: unless-stopped
+    environment:
+      MODEL_PATH: /models/voxcpm2
+      SAMPLE_RATE: 48000
+      VOXCPM2_MODEL_ID: ${VOXCPM2_MODEL_ID:-TODO/voxcpm2-placeholder}

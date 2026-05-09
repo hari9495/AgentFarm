@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { authenticateUser, createSession } from "@/lib/auth-store";
+import { authenticateUser, createSession, updateUserGatewayToken } from "@/lib/auth-store";
 
 type LoginPayload = {
     email?: string;
@@ -26,6 +26,26 @@ const getInternalDashboardUrl = (): string => {
 const fetchInternalToken = async (email: string, password: string): Promise<string | null> => {
     try {
         const response = await fetch(`${API_BASE}/auth/internal-login`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ email, password }),
+            cache: "no-store",
+        });
+
+        if (!response.ok) {
+            return null;
+        }
+
+        const body = (await response.json()) as { token?: string };
+        return typeof body.token === "string" && body.token.length > 0 ? body.token : null;
+    } catch {
+        return null;
+    }
+};
+
+const fetchGatewayToken = async (email: string, password: string): Promise<string | null> => {
+    try {
+        const response = await fetch(`${API_BASE}/auth/login`, {
             method: "POST",
             headers: { "content-type": "application/json" },
             body: JSON.stringify({ email, password }),
@@ -82,7 +102,14 @@ export async function POST(request: Request) {
     const { sessionToken } = createSession(user.id);
 
     const isInternalUser = user.role === "admin" || user.role === "superadmin";
-    const internalToken = isInternalUser ? await fetchInternalToken(email, password) : null;
+    const [internalToken, gatewayToken] = await Promise.all([
+        isInternalUser ? fetchInternalToken(email, password) : Promise.resolve(null),
+        fetchGatewayToken(email, password),
+    ]);
+
+    if (gatewayToken) {
+        updateUserGatewayToken({ userId: user.id, gatewayToken });
+    }
 
     const redirectTo = isInternalUser
         ? getInternalDashboardUrl()
@@ -110,6 +137,18 @@ export async function POST(request: Request) {
             value: internalToken,
             httpOnly: true,
             sameSite: "lax",
+            secure: process.env.NODE_ENV === "production",
+            path: "/",
+            maxAge: 8 * 60 * 60,
+        });
+    }
+
+    if (gatewayToken) {
+        response.cookies.set({
+            name: "agentfarm_gateway_session",
+            value: gatewayToken,
+            httpOnly: true,
+            sameSite: "strict",
             secure: process.env.NODE_ENV === "production",
             path: "/",
             maxAge: 8 * 60 * 60,

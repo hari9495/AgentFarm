@@ -7,6 +7,7 @@ import PremiumIcon from "@/components/shared/PremiumIcon";
 const integrations = [
     {
         name: "Slack Workspace",
+        toolSlug: "slack" as string | null,
         status: "connected",
         detail: "acme-workspace · 6 channels authorized",
         icon: Slack,
@@ -15,6 +16,7 @@ const integrations = [
     },
     {
         name: "GitHub Organization",
+        toolSlug: "github" as string | null,
         status: "connected",
         detail: "acme-org · 27 repositories",
         icon: Github,
@@ -23,6 +25,7 @@ const integrations = [
     },
     {
         name: "SSO (SAML)",
+        toolSlug: null as string | null,
         status: "connected",
         detail: "Okta · SCIM provisioning enabled",
         icon: UserCircle2,
@@ -31,6 +34,7 @@ const integrations = [
     },
     {
         name: "Jira",
+        toolSlug: "jira" as string | null,
         status: "disconnected",
         detail: "No workspace linked",
         icon: Link2,
@@ -45,15 +49,95 @@ export default function AdminIntegrationsPage() {
     const [jiraWizardOpen, setJiraWizardOpen] = useState(false);
     const [jiraStep, setJiraStep] = useState(0);
     const [jiraAuthMethod, setJiraAuthMethod] = useState<"oauth" | "apikey">("oauth");
+    const [jiraLoading, setJiraLoading] = useState(false);
+    const [jiraError, setJiraError] = useState<string | null>(null);
+    const [jiraBaseUrl, setJiraBaseUrl] = useState("");
+    const [jiraEmail, setJiraEmail] = useState("");
+    const [jiraApiToken, setJiraApiToken] = useState("");
+    const [connectedTools, setConnectedTools] = useState<string[]>([]);
+    const [connectorIdByTool, setConnectorIdByTool] = useState<Record<string, string>>({});
+    const [integrationLoading, setIntegrationLoading] = useState(false);
+    const [adminToast, setAdminToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
     useEffect(() => {
         setLoading(false);
         setError(null);
+        setIntegrationLoading(true);
+        fetch("/api/connectors")
+            .then((r) => r.json() as Promise<{ configured?: Array<{ connectorId: string; tool: string }> }>)
+            .then((data) => {
+                const tools = (data.configured ?? []).map((c) => c.tool);
+                setConnectedTools(tools);
+                const idMap: Record<string, string> = {};
+                for (const c of data.configured ?? []) {
+                    idMap[c.tool] = c.connectorId;
+                }
+                setConnectorIdByTool(idMap);
+            })
+            .catch(() => { /* silent */ })
+            .finally(() => setIntegrationLoading(false));
     }, []);
 
+    async function handleJiraConnect() {
+        setJiraLoading(true);
+        setJiraError(null);
+        try {
+            const res = await fetch("/api/connectors", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    tool: "jira",
+                    authMethod: jiraAuthMethod === "oauth" ? "oauth2" : "api_key",
+                    configValues: jiraAuthMethod === "apikey" ? {
+                        baseUrl: jiraBaseUrl,
+                        email: jiraEmail,
+                        apiToken: jiraApiToken,
+                    } : {},
+                }),
+            });
+            const json = await res.json() as { error?: string; nextStep?: { action: string; oauthUrl?: string } };
+            if (!res.ok) {
+                setJiraError(json.error ?? "Failed to connect Jira.");
+                return;
+            }
+            if (json.nextStep?.action === "oauth" && typeof json.nextStep.oauthUrl === "string") {
+                window.location.href = json.nextStep.oauthUrl;
+                return;
+            }
+            setJiraStep(2);
+        } catch {
+            setJiraError("Network error. Please try again.");
+        } finally {
+            setJiraLoading(false);
+        }
+    }
+
+    async function handleManage(toolSlug: string) {
+        const connectorId = connectorIdByTool[toolSlug];
+        if (!connectorId) return;
+        try {
+            const res = await fetch(`/api/connectors/${connectorId}/health`, { method: "POST" });
+            const json = await res.json() as { healthy?: boolean; message?: string };
+            setAdminToast({
+                message: json.message ?? (json.healthy === true ? "Connector is healthy." : "Connector check failed."),
+                type: json.healthy === true ? "success" : "error",
+            });
+            setTimeout(() => setAdminToast(null), 3500);
+        } catch {
+            setAdminToast({ message: "Health check failed.", type: "error" });
+            setTimeout(() => setAdminToast(null), 3500);
+        }
+    }
+
     const hasData = !loading && !error && integrations.length > 0;
+
     return (
         <div className="site-shell min-h-screen">
+            {adminToast && (
+                <div className={`fixed top-4 right-4 z-50 rounded-xl px-4 py-3 text-sm font-medium shadow-lg ${adminToast.type === "success" ? "bg-green-600 text-white" : "bg-red-600 text-white"}`}>
+                    {adminToast.message}
+                </div>
+            )}
             <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-5 md:px-8">
                 <div className="flex items-center gap-3">
                     <PremiumIcon icon={Link2} tone="sky" containerClassName="h-9 w-9 rounded-xl bg-sky-100 dark:bg-sky-900/40 text-sky-600 dark:text-sky-400" iconClassName="w-5 h-5" />
@@ -110,8 +194,11 @@ export default function AdminIntegrationsPage() {
                                         <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">{i.name}</h2>
                                         <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">{i.detail}</p>
                                     </div>
-                                    {i.status === "connected" ? (
-                                        <button className="inline-flex items-center gap-1 rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800">
+                                    {(i.toolSlug === null ? i.status === "connected" : connectedTools.includes(i.toolSlug)) ? (
+                                        <button
+                                            onClick={() => { const slug = i.toolSlug; if (slug !== null) { void handleManage(slug); } }}
+                                            className="inline-flex items-center gap-1 rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                                        >
                                             <PremiumIcon icon={CheckCircle2} tone="emerald" containerClassName="w-6 h-6 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400" iconClassName="w-3.5 h-3.5" /> Manage
                                         </button>
                                     ) : (
@@ -176,21 +263,24 @@ export default function AdminIntegrationsPage() {
                                         <>
                                             <div>
                                                 <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">Jira base URL</label>
-                                                <input type="url" placeholder="https://your-org.atlassian.net" className="w-full text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500" />
+                                                <input type="url" placeholder="https://your-org.atlassian.net" value={jiraBaseUrl} onChange={(e) => setJiraBaseUrl(e.target.value)} className="w-full text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500" />
                                             </div>
                                             <div>
                                                 <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">Email address</label>
-                                                <input type="email" placeholder="you@company.com" className="w-full text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500" />
+                                                <input type="email" placeholder="you@company.com" value={jiraEmail} onChange={(e) => setJiraEmail(e.target.value)} className="w-full text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500" />
                                             </div>
                                             <div>
                                                 <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">API token</label>
-                                                <input type="password" placeholder="••••••••••••••••" className="w-full text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500" />
+                                                <input type="password" placeholder="················" value={jiraApiToken} onChange={(e) => setJiraApiToken(e.target.value)} className="w-full text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500" />
                                             </div>
                                         </>
                                     ) : (
                                         <div className="rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-4 text-xs text-slate-500 dark:text-slate-400">
                                             Clicking &quot;Next&quot; will open an Atlassian authorisation page. Return here after granting access.
                                         </div>
+                                    )}
+                                    {jiraError && (
+                                        <p className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2">{jiraError}</p>
                                     )}
                                 </div>
                             )}
@@ -211,8 +301,12 @@ export default function AdminIntegrationsPage() {
                                 {jiraStep === 0 ? "Cancel" : "Back"}
                             </button>
                             {jiraStep < 2 ? (
-                                <button onClick={() => setJiraStep(s => s + 1)} className="rounded-lg bg-sky-600 px-4 py-2 text-xs font-semibold text-white hover:bg-sky-700">
-                                    {jiraStep === 1 && jiraAuthMethod === "oauth" ? "Authorise with Atlassian" : "Next"}
+                                <button
+                                    onClick={jiraStep === 1 ? () => void handleJiraConnect() : () => setJiraStep(s => s + 1)}
+                                    disabled={jiraStep === 1 && jiraLoading}
+                                    className="rounded-lg bg-sky-600 px-4 py-2 text-xs font-semibold text-white hover:bg-sky-700 disabled:opacity-50"
+                                >
+                                    {jiraStep === 1 && jiraLoading ? "Connecting…" : jiraStep === 1 && jiraAuthMethod === "oauth" ? "Authorise with Atlassian" : "Next"}
                                 </button>
                             ) : (
                                 <button onClick={() => setJiraWizardOpen(false)} className="rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700">

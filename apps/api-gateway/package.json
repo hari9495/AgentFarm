@@ -13,8 +13,8 @@
         "test:coverage": "pnpm exec c8 --reporter=text-summary --reporter=json-summary --exclude=src/**/*.test.ts tsx --test src/**/*.test.ts && node ../../scripts/coverage-threshold-check.mjs coverage/coverage-summary.json 80 lines src/services/provisioning-monitoring.ts"
     },
     "dependencies": {
-        "@agentfarm/agent-runtime": "workspace:*",
         "@agentfarm/agent-question-service": "workspace:*",
+        "@agentfarm/agent-runtime": "workspace:*",
         "@agentfarm/connector-contracts": "workspace:*",
         "@agentfarm/memory-service": "workspace:*",
         "@agentfarm/queue-contracts": "workspace:*",
@@ -24,9 +24,13 @@
         "@azure/arm-resources": "^7.0.0",
         "@azure/identity": "^4.13.1",
         "@prisma/client": "^6.19.3",
-        "fastify": "^5.2.1"
+        "fastify": "^5.2.1",
+        "pdfkit": "^0.18.0",
+        "razorpay": "^2.9.6",
+        "stripe": "^22.1.1"
     },
     "devDependencies": {
+        "@types/pdfkit": "^0.17.6",
         "ts-node": "^10.9.2",
         "tsx": "^4.21.0",
         "typescript": "^5.7.2"

@@ -16,6 +16,7 @@
  *   Custom: { "base_url": "https://api.example.com", "auth_type": "api_key|bearer_token|basic_auth|none",
  *              "api_key"?: "...", "api_key_header"?: "X-API-Key",
  *              "bearer_token"?: "...", "basic_user"?: "...", "basic_pass"?: "..." }
+ *   Slack:  { "botToken": "xoxb-...", "defaultChannel"?: "#general" }
  *
  * All actions accept a typed payload object (see ActionPayload* below).
  */
@@ -26,7 +27,7 @@ import type { SecretStore } from './secret-store.js';
 // Re-exported types that connector-actions.ts uses
 // ---------------------------------------------------------------------------
 
-export type ConnectorType = 'jira' | 'teams' | 'github' | 'email' | 'custom_api';
+export type ConnectorType = 'jira' | 'teams' | 'github' | 'email' | 'custom_api' | 'slack';
 export type ConnectorActionType =
     | 'read_task'
     | 'create_comment'
@@ -91,6 +92,7 @@ export type ConnectorHealthProbe = (input: {
 type JiraCredentials = { access_token: string; base_url: string };
 type TeamsCredentials = { access_token: string };
 type GitHubCredentials = { access_token: string };
+type SlackCredentials = { botToken: string; defaultChannel?: string };
 type SmtpCredentials = {
     type: 'smtp';
     smtp_host: string;
@@ -888,6 +890,89 @@ const executeEmail = async (
 };
 
 // ---------------------------------------------------------------------------
+// Slack connector
+// ---------------------------------------------------------------------------
+
+const executeSlack = async (
+    actionType: ConnectorActionType,
+    payload: Record<string, unknown>,
+    credentials: SlackCredentials,
+    fetcher: FetchFn,
+): Promise<ProviderExecutionResult> => {
+    if (actionType !== 'send_message') {
+        return {
+            ok: false,
+            providerResponseCode: '400',
+            resultSummary: `Action ${actionType} is not supported by the Slack connector`,
+            errorCode: 'unsupported_action',
+            errorMessage: 'Slack connector supports: send_message',
+        };
+    }
+
+    const text = String(payload['text'] ?? '').trim();
+    if (!text) {
+        return {
+            ok: false,
+            providerResponseCode: '400',
+            resultSummary: 'Missing required field: text',
+            errorCode: 'invalid_format',
+            errorMessage: 'text is required for send_message',
+            remediationHint: 'Provide a non-empty text field in the payload.',
+        };
+    }
+
+    const channel =
+        (typeof payload['channel'] === 'string' && payload['channel'].trim())
+            ? payload['channel'].trim()
+            : (credentials.defaultChannel ?? '#general');
+
+    let res: Response;
+    try {
+        res = await fetcher('https://slack.com/api/chat.postMessage', {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${credentials.botToken}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ channel, text }),
+        });
+    } catch (err) {
+        return {
+            ok: false,
+            providerResponseCode: '0',
+            resultSummary: 'Network error reaching Slack',
+            transient: true,
+            errorCode: 'provider_unavailable',
+            errorMessage: String(err),
+            remediationHint: 'Check network connectivity to slack.com.',
+        };
+    }
+
+    if (!res.ok) {
+        return failFromStatus(res.status, `Slack API returned HTTP ${res.status}`);
+    }
+
+    // Slack always returns 200 with an ok/error field in the JSON body.
+    const body = (await res.json()) as { ok: boolean; ts?: string; error?: string };
+    if (!body.ok) {
+        return {
+            ok: false,
+            providerResponseCode: '200',
+            resultSummary: `Slack message failed: ${body.error ?? 'slack_error'}`,
+            errorCode: 'provider_unavailable',
+            errorMessage: body.error ?? 'slack_error',
+            remediationHint: 'Check bot token scopes and channel membership.',
+        };
+    }
+
+    return {
+        ok: true,
+        providerResponseCode: '200',
+        resultSummary: `Slack message posted to ${channel} (ts=${body.ts ?? 'n/a'})`,
+    };
+};
+
+// ---------------------------------------------------------------------------
 // Health probe helpers
 // ---------------------------------------------------------------------------
 
@@ -1116,6 +1201,33 @@ const probeCustomApi = async (
     return { outcome: 'ok', message: `Custom API health check passed (${response.status}).` };
 };
 
+const probeSlack = async (
+    credentials: SlackCredentials,
+    fetcher: FetchFn,
+): Promise<HealthProbeResult> => {
+    try {
+        const res = await fetcher('https://slack.com/api/auth.test', {
+            headers: { Authorization: `Bearer ${credentials.botToken}` },
+        });
+        if (!res.ok) {
+            if (res.status === 401 || res.status === 403) {
+                return { outcome: 'auth_failure', message: `Slack auth.test returned HTTP ${res.status}` };
+            }
+            if (res.status === 429) {
+                return { outcome: 'rate_limited', message: 'Slack rate limit reached' };
+            }
+            return { outcome: 'network_timeout', message: `Slack auth.test returned HTTP ${res.status}` };
+        }
+        const body = (await res.json()) as { ok: boolean; error?: string };
+        if (body.ok) {
+            return { outcome: 'ok', message: 'Slack auth.test passed' };
+        }
+        return { outcome: 'auth_failure', message: `Slack auth.test failed: ${body.error ?? 'unknown'}` };
+    } catch {
+        return { outcome: 'network_timeout', message: 'Slack unreachable' };
+    }
+};
+
 // ---------------------------------------------------------------------------
 // Credential-absent fallback (health probe with no credentials)
 // ---------------------------------------------------------------------------
@@ -1239,6 +1351,21 @@ export const createRealProviderExecutor = (
         return executeCustomApi(actionType, payload, creds, fetcher);
     }
 
+    if (connectorType === 'slack') {
+        const creds = parseCredentials<SlackCredentials>(rawSecret);
+        if (!creds?.botToken) {
+            return {
+                ok: false,
+                providerResponseCode: '401',
+                resultSummary: 'Invalid Slack credentials format',
+                errorCode: 'upgrade_required',
+                errorMessage: 'Slack credentials must include botToken.',
+                remediationHint: 'Re-configure the Slack connector with a valid bot token.',
+            };
+        }
+        return executeSlack(actionType, payload, creds, fetcher);
+    }
+
     return {
         ok: false,
         providerResponseCode: '400',
@@ -1304,6 +1431,14 @@ export const createRealConnectorHealthProbe = (
             return { outcome: 'auth_failure', message: 'Custom API credentials missing base_url' };
         }
         return probeCustomApi(creds, fetcher);
+    }
+
+    if (connectorType === 'slack') {
+        const creds = parseCredentials<SlackCredentials>(rawSecret);
+        if (!creds?.botToken) {
+            return { outcome: 'auth_failure', message: 'Slack credentials missing botToken' };
+        }
+        return probeSlack(creds, fetcher);
     }
 
     return { outcome: 'ok', message: `No live probe implemented for ${connectorType}` };

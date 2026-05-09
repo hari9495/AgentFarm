@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AgentFarm — Full Architecture Diagram</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1c2128;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --accent: #58a6ff;
+    --accent2: #3fb950;
+    --accent3: #f78166;
+    --accent4: #d2a8ff;
+    --accent5: #ffa657;
+    --accent6: #39d353;
+    --yellow: #e3b341;
+    --pink: #f778ba;
+    --teal: #56d364;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-size: 13px;
+    line-height: 1.4;
+    padding: 24px;
+  }
+  h1 {
+    text-align: center;
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 4px;
+    letter-spacing: -0.5px;
+  }
+  .subtitle {
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+    margin-bottom: 28px;
+  }
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    margin: 0 3px;
+  }
+  .badge-blue { background: rgba(88,166,255,.15); color: var(--accent); border: 1px solid rgba(88,166,255,.3); }
+  .badge-green { background: rgba(63,185,80,.15); color: var(--accent2); border: 1px solid rgba(63,185,80,.3); }
+  .badge-red { background: rgba(247,129,102,.15); color: var(--accent3); border: 1px solid rgba(247,129,102,.3); }
+  .badge-purple { background: rgba(210,168,255,.15); color: var(--accent4); border: 1px solid rgba(210,168,255,.3); }
+  .badge-orange { background: rgba(255,166,87,.15); color: var(--accent5); border: 1px solid rgba(255,166,87,.3); }
+  .badge-yellow { background: rgba(227,179,65,.15); color: var(--yellow); border: 1px solid rgba(227,179,65,.3); }
+  .badge-pink { background: rgba(247,120,186,.15); color: var(--pink); border: 1px solid rgba(247,120,186,.3); }
+
+  /* ── LAYOUT ── */
+  .arch-wrapper {
+    max-width: 1600px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* Rows */
+  .row { display: flex; gap: 12px; align-items: stretch; }
+  .row.three { }
+  .col-1 { flex: 1; }
+  .col-2 { flex: 2; }
+  .col-3 { flex: 3; }
+
+  /* Zone styles */
+  .zone {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    position: relative;
+  }
+  .zone.blue  { border-color: rgba(88,166,255,.4);  background: rgba(88,166,255,.05); }
+  .zone.green { border-color: rgba(63,185,80,.4);   background: rgba(63,185,80,.05); }
+  .zone.red   { border-color: rgba(247,129,102,.4); background: rgba(247,129,102,.05); }
+  .zone.purple{ border-color: rgba(210,168,255,.4); background: rgba(210,168,255,.05); }
+  .zone.orange{ border-color: rgba(255,166,87,.4);  background: rgba(255,166,87,.05); }
+  .zone.yellow{ border-color: rgba(227,179,65,.4);  background: rgba(227,179,65,.05); }
+  .zone.pink  { border-color: rgba(247,120,186,.4); background: rgba(247,120,186,.05); }
+  .zone.teal  { border-color: rgba(86,211,100,.4);  background: rgba(86,211,100,.05); }
+
+  .zone-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .zone-title .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .zone.blue  .zone-title .dot { background: var(--accent); }
+  .zone.green .zone-title .dot { background: var(--accent2); }
+  .zone.red   .zone-title .dot { background: var(--accent3); }
+  .zone.purple.zone-title .dot { background: var(--accent4); }
+  .zone.orange.zone-title .dot { background: var(--accent5); }
+  .zone.yellow.zone-title .dot { background: var(--yellow); }
+  .zone.pink  .zone-title .dot { background: var(--pink); }
+  .zone.teal  .zone-title .dot { background: var(--teal); }
+
+  /* Box-in-box (service cards) */
+  .card-grid {
+    display: grid;
+    gap: 8px;
+  }
+  .card-grid.cols-2 { grid-template-columns: 1fr 1fr; }
+  .card-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .card-grid.cols-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+  .card-grid.cols-5 { grid-template-columns: repeat(5, 1fr); }
+
+  .card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    cursor: default;
+    transition: border-color 0.15s, transform 0.15s;
+  }
+  .card:hover { transform: translateY(-1px); }
+  .card.blue   { border-color: rgba(88,166,255,.3);  }  .card.blue:hover  { border-color: var(--accent); }
+  .card.green  { border-color: rgba(63,185,80,.3);   }  .card.green:hover { border-color: var(--accent2); }
+  .card.red    { border-color: rgba(247,129,102,.3); }  .card.red:hover   { border-color: var(--accent3); }
+  .card.purple { border-color: rgba(210,168,255,.3); }  .card.purple:hover{ border-color: var(--accent4); }
+  .card.orange { border-color: rgba(255,166,87,.3);  }  .card.orange:hover{ border-color: var(--accent5); }
+  .card.yellow { border-color: rgba(227,179,65,.3);  }  .card.yellow:hover{ border-color: var(--yellow); }
+  .card.pink   { border-color: rgba(247,120,186,.3); }  .card.pink:hover  { border-color: var(--pink); }
+  .card.teal   { border-color: rgba(86,211,100,.3);  }  .card.teal:hover  { border-color: var(--teal); }
+
+  .card-name {
+    font-weight: 700;
+    font-size: 12px;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .card-name .icon { font-size: 14px; }
+  .card-desc {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  .pill-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 6px;
+  }
+  .pill {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 500;
+    background: rgba(139,148,158,.1);
+    color: var(--muted);
+    border: 1px solid rgba(139,148,158,.2);
+  }
+  .pill.blue   { background: rgba(88,166,255,.12);  color: var(--accent);  border-color: rgba(88,166,255,.25); }
+  .pill.green  { background: rgba(63,185,80,.12);   color: var(--accent2); border-color: rgba(63,185,80,.25); }
+  .pill.red    { background: rgba(247,129,102,.12); color: var(--accent3); border-color: rgba(247,129,102,.25); }
+  .pill.purple { background: rgba(210,168,255,.12); color: var(--accent4); border-color: rgba(210,168,255,.25); }
+  .pill.orange { background: rgba(255,166,87,.12);  color: var(--accent5); border-color: rgba(255,166,87,.25); }
+  .pill.yellow { background: rgba(227,179,65,.12);  color: var(--yellow);  border-color: rgba(227,179,65,.25); }
+  .pill.pink   { background: rgba(247,120,186,.12); color: var(--pink);    border-color: rgba(247,120,186,.25); }
+  .pill.teal   { background: rgba(86,211,100,.12);  color: var(--teal);    border-color: rgba(86,211,100,.25); }
+
+  /* Arrow connectors */
+  .arrow-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0;
+    padding: 4px 0;
+    color: var(--muted);
+    font-size: 11px;
+  }
+  .arrow-down {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    flex: 1;
+  }
+  .arrow-line { width: 2px; height: 16px; background: var(--border); }
+  .arrow-tip  { width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid var(--border); }
+  .arrow-label { font-size: 10px; color: var(--muted); text-align: center; margin-top: 2px; }
+
+  /* Section label */
+  .section-label {
+    text-align: center;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  /* Stat bar */
+  .stat-bar {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  .stat {
+    text-align: center;
+    min-width: 80px;
+  }
+  .stat-num {
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .stat-label {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 2px;
+  }
+
+  /* Flow arrows vertical */
+  .flow-arrow {
+    display: flex;
+    justify-content: center;
+    padding: 6px 0;
+  }
+  .flow-arrow svg { opacity: 0.4; }
+
+  /* Legend */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 20px;
+    padding: 12px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .legend-dot { width: 10px; height: 10px; border-radius: 3px; }
+
+  /* Data flow section */
+  .flow-section {
+    margin-top: 4px;
+  }
+  .flow-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .flow-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  .flow-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+  }
+  .flow-card-title {
+    font-weight: 700;
+    font-size: 12px;
+    margin-bottom: 8px;
+    color: var(--accent);
+  }
+  .flow-step {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    margin-bottom: 5px;
+  }
+  .flow-num {
+    min-width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: rgba(88,166,255,.2);
+    color: var(--accent);
+    font-size: 10px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .flow-text {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  /* Security boundaries */
+  .security-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  .sec-item {
+    display: flex;
+    gap: 6px;
+    align-items: flex-start;
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  .sec-icon { font-size: 14px; flex-shrink: 0; margin-top: -1px; }
+
+  hr.sep { border: none; border-top: 1px solid var(--border); margin: 8px 0; }
+
+  .port-badge {
+    font-size: 10px;
+    color: var(--accent5);
+    font-weight: 600;
+    background: rgba(255,166,87,.1);
+    border: 1px solid rgba(255,166,87,.2);
+    border-radius: 4px;
+    padding: 1px 5px;
+    margin-left: 4px;
+  }
+
+  .test-badge {
+    font-size: 10px;
+    color: var(--accent2);
+    font-weight: 600;
+    background: rgba(63,185,80,.1);
+    border: 1px solid rgba(63,185,80,.2);
+    border-radius: 4px;
+    padding: 1px 5px;
+    margin-left: 4px;
+  }
+</style>
+</head>
+<body>
+
+<h1>🌾 AgentFarm — Full Architecture Diagram</h1>
+<div class="subtitle">
+  Enterprise AI Agent Platform · TypeScript Monorepo · pnpm Workspaces
+</div>
+
+<!-- Stats -->
+<div class="stat-bar">
+  <div class="stat"><div class="stat-num" style="color:var(--accent)">5</div><div class="stat-label">Apps</div></div>
+  <div class="stat"><div class="stat-num" style="color:var(--accent2)">15</div><div class="stat-label">Services</div></div>
+  <div class="stat"><div class="stat-num" style="color:var(--accent4)">8</div><div class="stat-label">Packages</div></div>
+  <div class="stat"><div class="stat-num" style="color:var(--accent5)">40+</div><div class="stat-label">DB Models</div></div>
+  <div class="stat"><div class="stat-num" style="color:var(--yellow)">50+</div><div class="stat-label">API Routes</div></div>
+  <div class="stat"><div class="stat-num" style="color:var(--teal)">1,392</div><div class="stat-label">Tests ✓</div></div>
+  <div class="stat"><div class="stat-num" style="color:var(--pink)">10</div><div class="stat-label">LLM Providers</div></div>
+  <div class="stat"><div class="stat-num" style="color:var(--accent3)">18</div><div class="stat-label">Connectors</div></div>
+</div>
+
+<div class="arch-wrapper">
+
+  <!-- ═══════════════════════ LAYER 1: EXTERNAL ═══════════════════════ -->
+  <div class="section-label">External Integrations & Cloud Services</div>
+  <div class="zone orange">
+    <div class="zone-title"><div class="dot" style="background:var(--accent5)"></div>External Services</div>
+    <div class="card-grid cols-5">
+      <div class="card orange">
+        <div class="card-name"><span class="icon">🤖</span> LLM Providers</div>
+        <div class="pill-row">
+          <span class="pill orange">OpenAI</span><span class="pill orange">Anthropic</span><span class="pill orange">Google</span><span class="pill orange">Azure OpenAI</span><span class="pill orange">xAI</span><span class="pill orange">Mistral</span><span class="pill orange">Together AI</span><span class="pill orange">GitHub Models</span><span class="pill orange">AgentFarm</span><span class="pill orange">Auto Mode ↺</span>
+        </div>
+      </div>
+      <div class="card yellow">
+        <div class="card-name"><span class="icon">🔗</span> Connectors (18)</div>
+        <div class="pill-row">
+          <span class="pill yellow">GitHub</span><span class="pill yellow">GitLab</span><span class="pill yellow">Azure DevOps</span><span class="pill yellow">Jira</span><span class="pill yellow">Linear</span><span class="pill yellow">Asana</span><span class="pill yellow">Monday</span><span class="pill yellow">Trello</span><span class="pill yellow">ClickUp</span><span class="pill yellow">Slack</span><span class="pill yellow">Teams</span><span class="pill yellow">Gmail</span><span class="pill yellow">Outlook</span>
+        </div>
+      </div>
+      <div class="card pink">
+        <div class="card-name"><span class="icon">💳</span> Payments & Signing</div>
+        <div class="pill-row">
+          <span class="pill pink">Stripe</span><span class="pill pink">Razorpay</span><span class="pill pink">Zoho Sign</span>
+        </div>
+        <div class="card-desc" style="margin-top:6px">USD/INR · HMAC webhooks · PDF contract · e-signature</div>
+      </div>
+      <div class="card teal">
+        <div class="card-name"><span class="icon">☁️</span> Azure Cloud</div>
+        <div class="pill-row">
+          <span class="pill teal">Azure VMs</span><span class="pill teal">Blob Storage</span><span class="pill teal">Key Vault</span><span class="pill teal">ARM API</span><span class="pill teal">Static Web Apps</span>
+        </div>
+      </div>
+      <div class="card purple">
+        <div class="card-name"><span class="icon">🎙️</span> Voice & Policy</div>
+        <div class="pill-row">
+          <span class="pill purple">VoxCPM2</span><span class="pill purple">Voicebox :17493</span><span class="pill purple">OPA :8181</span><span class="pill purple">Playwright</span><span class="pill purple">Nodemailer</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flow-arrow">
+    <svg width="400" height="20"><line x1="200" y1="0" x2="200" y2="14" stroke="#30363d" stroke-width="2"/><polygon points="195,14 205,14 200,20" fill="#30363d"/></svg>
+  </div>
+
+  <!-- ═══════════════════════ LAYER 2: USER INTERFACES ═══════════════════════ -->
+  <div class="section-label">User Interface Layer</div>
+  <div class="row">
+    <div class="zone blue col-1">
+      <div class="zone-title"><div class="dot" style="background:var(--accent)"></div>Website<span class="port-badge">:3002</span><span class="test-badge">118 tests</span></div>
+      <div class="card blue">
+        <div class="card-name">Next.js 15 · React 19</div>
+        <div class="card-desc">51-page public SPA for onboarding, marketplace, billing</div>
+        <div class="pill-row">
+          <span class="pill blue">Onboarding</span><span class="pill blue">Connectors</span><span class="pill blue">Marketplace</span><span class="pill blue">Billing</span><span class="pill blue">Admin Portal</span><span class="pill blue">Superadmin</span><span class="pill blue">Docs & Blog</span><span class="pill blue">Pricing</span>
+        </div>
+        <hr class="sep"/>
+        <div class="card-desc">43 API routes · Stripe/Razorpay webhooks · Zoho Sign OAuth · pdfkit contracts</div>
+      </div>
+    </div>
+    <div class="zone green col-1">
+      <div class="zone-title"><div class="dot" style="background:var(--accent2)"></div>Dashboard<span class="port-badge">:3001</span><span class="test-badge">118 tests</span></div>
+      <div class="card green">
+        <div class="card-name">Next.js 15 · React 19 · Three.js</div>
+        <div class="card-desc">Operator UI for runtime observability and governance</div>
+        <div class="pill-row">
+          <span class="pill green">Approval Queue</span><span class="pill green">Evidence/Audit</span><span class="pill green">Observability</span><span class="pill green">LLM Config</span><span class="pill green">Agent Chat</span><span class="pill green">Kanban</span><span class="pill green">Cost Dashboard</span><span class="pill green">Adapters</span>
+        </div>
+        <hr class="sep"/>
+        <div class="card-desc">framer-motion · lucide-react · tailwindcss 4 · real-time SSE streaming</div>
+      </div>
+    </div>
+    <div class="zone purple col-1">
+      <div class="zone-title"><div class="dot" style="background:var(--accent4)"></div>Orchestrator<span class="test-badge">62 tests</span></div>
+      <div class="card purple">
+        <div class="card-name">Fastify · TypeScript · ES Modules</div>
+        <div class="card-desc">Multi-agent workflow coordinator and task scheduler</div>
+        <div class="pill-row">
+          <span class="pill purple">Task Scheduler</span><span class="pill purple">Routine Scheduler</span><span class="pill purple">GOAP Planner (A*)</span><span class="pill purple">Agent Handoff</span><span class="pill purple">Plugin Guard</span><span class="pill purple">Proactive Signals</span>
+        </div>
+        <hr class="sep"/>
+        <div class="card-desc">Wake model · dedupeKey coalescing · world-state diffing · file/DB state backend</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flow-arrow">
+    <svg width="400" height="20"><line x1="200" y1="0" x2="200" y2="14" stroke="#30363d" stroke-width="2"/><polygon points="195,14 205,14 200,20" fill="#30363d"/></svg>
+  </div>
+
+  <!-- ═══════════════════════ LAYER 3: API GATEWAY ═══════════════════════ -->
+  <div class="section-label">Control Plane</div>
+  <div class="zone blue">
+    <div class="zone-title"><div class="dot" style="background:var(--accent)"></div>API Gateway<span class="port-badge">:3000</span><span class="test-badge">388 tests</span> — Fastify 5 · TypeScript</div>
+    <div class="card-grid cols-4">
+      <div class="card blue">
+        <div class="card-name">🔐 Auth & Identity</div>
+        <div class="pill-row">
+          <span class="pill blue">/auth/signup</span><span class="pill blue">/auth/login</span><span class="pill blue">/auth/logout</span><span class="pill blue">/auth/session</span><span class="pill blue">/auth/password</span>
+        </div>
+        <div class="card-desc" style="margin-top:6px">HMAC-SHA256 tokens · agentfarm_session cookie · timing-safe comparison · workspace-scoped RLS</div>
+      </div>
+      <div class="card green">
+        <div class="card-name">🔗 Connector Orchestration</div>
+        <div class="pill-row">
+          <span class="pill green">/connectors</span><span class="pill green">/connectors/:id/auth</span><span class="pill green">/connectors/:id/actions</span><span class="pill green">/connectors/:id/health</span>
+        </div>
+        <div class="card-desc" style="margin-top:6px">OAuth flows · token lifecycle · adapter registry · mTLS verification</div>
+      </div>
+      <div class="card red">
+        <div class="card-name">✅ Approvals & Governance</div>
+        <div class="pill-row">
+          <span class="pill red">/approvals</span><span class="pill red">/approvals/:id/decide</span><span class="pill red">/governance/workflows</span><span class="pill red">/budget-policy</span><span class="pill red">/permissions</span>
+        </div>
+        <div class="card-desc" style="margin-top:6px">Risk routing · kill-switch control · immutable records · 409 on re-decision</div>
+      </div>
+      <div class="card purple">
+        <div class="card-name">⚡ Runtime & Tasks</div>
+        <div class="pill-row">
+          <span class="pill purple">/runtime/tasks</span><span class="pill purple">/runtime/tasks/:id/lease</span><span class="pill purple">/runtime/llm-config</span><span class="pill purple">/sse/tasks/:botId</span>
+        </div>
+        <div class="card-desc" style="margin-top:6px">SSE streaming · task lease model · LLM config · crash recovery</div>
+      </div>
+      <div class="card orange">
+        <div class="card-name">🗂️ Workspace State</div>
+        <div class="pill-row">
+          <span class="pill orange">/workspace/:id/session</span><span class="pill orange">/workspace/:id/checkpoint</span><span class="pill orange">/workspace/:id/ide-state</span><span class="pill orange">/activity</span>
+        </div>
+        <div class="card-desc" style="margin-top:6px">Session continuity · checkpoint restore · IDE state · activity streams</div>
+      </div>
+      <div class="card yellow">
+        <div class="card-name">📊 Audit & Evidence</div>
+        <div class="pill-row">
+          <span class="pill yellow">/audit</span><span class="pill yellow">/evidence</span><span class="pill yellow">/memory</span><span class="pill yellow">/questions</span><span class="pill yellow">/mcp-registry</span>
+        </div>
+        <div class="card-desc" style="margin-top:6px">Append-only audit log · evidence chain · async Q&A · MCP tool discovery</div>
+      </div>
+      <div class="card pink">
+        <div class="card-name">💰 Billing & Payments</div>
+        <div class="pill-row">
+          <span class="pill pink">/billing/orders</span><span class="pill pink">/billing/invoices</span><span class="pill pink">/webhooks</span><span class="pill pink">/zoho-sign-webhook</span>
+        </div>
+        <div class="card-desc" style="margin-top:6px">Stripe + Razorpay · pdfkit contracts · Zoho Sign · order lifecycle</div>
+      </div>
+      <div class="card teal">
+        <div class="card-name">👑 Admin & Provisioning</div>
+        <div class="pill-row">
+          <span class="pill teal">/admin/provision</span><span class="pill teal">/admin/bots</span><span class="pill teal">/admin/users</span><span class="pill teal">/provisioning/jobs</span>
+        </div>
+        <div class="card-desc" style="margin-top:6px">Azure VM provisioning · 11-step state machine · SLA monitoring · cleanup</div>
+      </div>
+    </div>
+    <hr class="sep"/>
+    <div style="margin-top:8px">
+      <div class="zone-title" style="margin-bottom:8px"><div class="dot" style="background:var(--muted)"></div>Background Workers</div>
+      <div class="card-grid cols-4">
+        <div class="card"><div class="card-name">⚙️ Provisioning Worker</div><div class="card-desc">11-step Azure VM state machine (queued → completed)</div></div>
+        <div class="card"><div class="card-name">🔄 Token Lifecycle Worker</div><div class="card-desc">Auto-refresh, revoke, permission_invalid routing</div></div>
+        <div class="card"><div class="card-name">❤️ Connector Health Worker</div><div class="card-desc">Monthly health probes per connector</div></div>
+        <div class="card"><div class="card-name">🔁 Run Recovery Worker</div><div class="card-desc">Crash recovery, repro pack generation</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flow-arrow">
+    <svg width="400" height="20"><line x1="200" y1="0" x2="200" y2="14" stroke="#30363d" stroke-width="2"/><polygon points="195,14 205,14 200,20" fill="#30363d"/></svg>
+  </div>
+
+  <!-- ═══════════════════════ LAYER 4: AGENT RUNTIME ═══════════════════════ -->
+  <div class="section-label">Execution Engine</div>
+  <div class="zone green">
+    <div class="zone-title"><div class="dot" style="background:var(--accent2)"></div>Agent Runtime (Per-Tenant)<span class="port-badge">:8000</span><span class="test-badge">661 tests</span> — Fastify 5 · TypeScript · ES Modules</div>
+
+    <div class="row" style="gap:10px; align-items:flex-start">
+      <!-- Left: Execution -->
+      <div style="flex:1.2">
+        <div class="card green" style="margin-bottom:8px">
+          <div class="card-name">🧠 Execution Engine</div>
+          <div class="card-desc">Decision routing · risk classification · LLM resolution</div>
+          <hr class="sep"/>
+          <div style="font-size:11px; color:var(--muted); margin-bottom:4px; font-weight:600">Risk Levels</div>
+          <div class="pill-row">
+            <span class="pill teal">LOW → execute immediately</span>
+            <span class="pill yellow">MEDIUM → approval queue</span>
+            <span class="pill red">HIGH → approval required</span>
+          </div>
+        </div>
+        <div class="card orange" style="margin-bottom:8px">
+          <div class="card-name">🔄 Multi-LLM Decision Resolver</div>
+          <div class="card-desc">10 providers · health-score failover (5-min rolling) · 4 model profiles</div>
+          <div class="pill-row" style="margin-top:6px">
+            <span class="pill orange">quality_first</span><span class="pill orange">speed_first</span><span class="pill orange">cost_balanced</span><span class="pill orange">custom</span>
+          </div>
+          <div class="card-desc" style="margin-top:4px">Auto mode: error rate + latency composite → failover chain → ProviderFailoverTraceRecord</div>
+        </div>
+        <div class="card purple">
+          <div class="card-name">🌐 Browser & Desktop (Tier 11-12)</div>
+          <div class="card-desc">Playwright automation · DesktopOperatorFactory (mock/native)</div>
+          <div class="pill-row" style="margin-top:6px">
+            <span class="pill purple">browser_open</span><span class="pill purple">app_launch</span><span class="pill purple">meeting_join</span><span class="pill purple">subagent_spawn</span><span class="pill purple">github_issue_fix</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Center: Workspace Actions tiers -->
+      <div style="flex:1.5">
+        <div class="card blue">
+          <div class="card-name">🗂️ Local Workspace Executor — 12 Tiers</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:5px; margin-top:8px">
+            <div style="font-size:10px; color:var(--muted)"><span style="color:var(--teal);font-weight:700">T1</span> File ops, grep, read, move, delete, install</div>
+            <div style="font-size:10px; color:var(--muted)"><span style="color:var(--teal);font-weight:700">T2</span> Linting, patching, git stash/log, scout</div>
+            <div style="font-size:10px; color:var(--muted)"><span style="color:var(--accent);font-weight:700">T3</span> IDE refactoring, rename, extract, imports</div>
+            <div style="font-size:10px; color:var(--muted)"><span style="color:var(--accent);font-weight:700">T4</span> Multi-file coordination, bulk refactor</div>
+            <div style="font-size:10px; color:var(--muted)"><span style="color:var(--accent);font-weight:700">T5</span> REPL, debugger, profiler</div>
+            <div style="font-size:10px; color:var(--muted)"><span style="color:var(--accent4);font-weight:700">T6</span> Language adapters (Py, Java, Go, C#)</div>
+            <div style="font-size:10px; color:var(--muted)"><span style="color:var(--accent4);font-weight:700">T7</span> Governance, rollback, approval chains</div>
+            <div style="font-size:10px; color:var(--muted)"><span style="color:var(--accent4);font-weight:700">T8</span> Test gen, formatting, version bumps</div>
+            <div style="font-size:10px; color:var(--muted)"><span style="color:var(--yellow);font-weight:700">T9</span> PR creation, CI checks, release notes</div>
+            <div style="font-size:10px; color:var(--muted)"><span style="color:var(--yellow);font-weight:700">T10</span> Connector hardening, observability</div>
+            <div style="font-size:10px; color:var(--muted)"><span style="color:var(--accent3);font-weight:700">T11</span> ⚠️ Browser/app/meeting control</div>
+            <div style="font-size:10px; color:var(--muted)"><span style="color:var(--accent3);font-weight:700">T12</span> ⚠️ Sub-agent spawn, GitHub issue auto-fix</div>
+          </div>
+          <hr class="sep"/>
+          <div style="font-size:10px; color:var(--muted)">
+            <span style="color:var(--accent3); font-weight:700">17 HIGH-RISK actions</span>: merge_pr, delete_resource, deploy_production, git_push, run_shell_command, workspace_repl_execute, workspace_browser_open, workspace_app_launch, workspace_meeting_join/speak, workspace_subagent_spawn, workspace_github_issue_fix<br/>
+            <span style="color:var(--yellow); font-weight:700">40+ MEDIUM-RISK actions</span>: update_status, create_comment, create_pr, send_message, code_edit, run_tests, git_commit, autonomous_loop
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Advanced Features -->
+      <div style="flex:1.2">
+        <div class="card-grid cols-1" style="gap:6px">
+          <div class="card teal">
+            <div class="card-name">💎 Skills System (Hermes)</div>
+            <div class="card-desc">Crystallization (draft→active) · dependency DAG · skill composition engine · deduplication coalescing</div>
+          </div>
+          <div class="card yellow">
+            <div class="card-name">🧠 Memory Management</div>
+            <div class="card-desc">Short-term (7d TTL) · long-term patterns · repo knowledge graph · Prisma-backed</div>
+          </div>
+          <div class="card pink">
+            <div class="card-name">♾️ Autonomous Loops</div>
+            <div class="card-desc">Autonomous coding loop · multi-agent orchestrator · GOAP planner · loop learning store</div>
+          </div>
+          <div class="card">
+            <div class="card-name">🔬 Observability</div>
+            <div class="card-desc">Action audit writer · browser screenshot diff · evidence assembly · correctness scoring</div>
+          </div>
+          <div class="card">
+            <div class="card-name">📡 Pre-task & Estimation</div>
+            <div class="card-desc">Pre-task scout · effort estimator · progress reporter · escalation engine (1hr SLA) · web research · vision service</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flow-arrow">
+    <svg width="800" height="20">
+      <line x1="200" y1="0" x2="200" y2="14" stroke="#30363d" stroke-width="2"/>
+      <polygon points="195,14 205,14 200,20" fill="#30363d"/>
+      <line x1="600" y1="0" x2="600" y2="14" stroke="#30363d" stroke-width="2"/>
+      <polygon points="595,14 605,14 600,20" fill="#30363d"/>
+    </svg>
+  </div>
+
+  <!-- ═══════════════════════ LAYER 5: SERVICES ═══════════════════════ -->
+  <div class="section-label">Domain Services</div>
+  <div class="zone red">
+    <div class="zone-title"><div class="dot" style="background:var(--accent3)"></div>Domain Services (15 total)</div>
+    <div class="card-grid cols-5">
+      <div class="card red">
+        <div class="card-name">🛡️ Approval Service</div>
+        <div class="card-desc">ApprovalEnforcer · kill-switch (30s window) · governance workflow manager</div>
+        <div class="pill-row"><span class="pill red">12 tests</span></div>
+      </div>
+      <div class="card blue">
+        <div class="card-name">🖥️ Provisioning Service</div>
+        <div class="card-desc">Azure VM lifecycle · 11-step state machine · SLA monitoring · cleanup on timeout (24h)</div>
+        <div class="pill-row"><span class="pill blue">15 tests</span></div>
+      </div>
+      <div class="card green">
+        <div class="card-name">🔌 Connector Gateway</div>
+        <div class="card-desc">OAuth flows · token refresh · adapter registry · plugin loader · mTLS verifier · PII-strip middleware</div>
+        <div class="pill-row"><span class="pill green">36 tests</span></div>
+      </div>
+      <div class="card purple">
+        <div class="card-name">📜 Policy Engine</div>
+        <div class="card-desc">Governance routing · OPA-backed rule resolution · PolicyResolver</div>
+        <div class="pill-row"><span class="pill purple">2 tests</span></div>
+      </div>
+      <div class="card yellow">
+        <div class="card-name">🔍 Evidence Service</div>
+        <div class="card-desc">KPI aggregation · HNSW vector search · compliance export · evidence chain completeness</div>
+        <div class="pill-row"><span class="pill yellow">24 tests</span></div>
+      </div>
+      <div class="card teal">
+        <div class="card-name">📹 Agent Observability</div>
+        <div class="card-desc">Action interception · browser audit capture · screenshot diff · correctness scoring</div>
+        <div class="pill-row"><span class="pill teal">9 tests</span></div>
+      </div>
+      <div class="card pink">
+        <div class="card-name">🔔 Notification Service</div>
+        <div class="card-desc">Approval-scoped gateway: Telegram · Slack · Discord · Webhook · Voice (VoxCPM/VoIP)</div>
+        <div class="pill-row"><span class="pill pink">31 tests</span></div>
+      </div>
+      <div class="card orange">
+        <div class="card-name">🎙️ Meeting Agent</div>
+        <div class="card-desc">Meeting lifecycle state machine · voice pipeline · STT/TTS adapters · transcription</div>
+        <div class="pill-row"><span class="pill orange">23 tests</span></div>
+      </div>
+      <div class="card blue">
+        <div class="card-name">🧠 Memory Service</div>
+        <div class="card-desc">Long-term memory store · read/write/update · post-task crystallization · PatternExtractor</div>
+        <div class="pill-row"><span class="pill blue">11 tests</span></div>
+      </div>
+      <div class="card">
+        <div class="card-name">❓ Question Service</div>
+        <div class="card-desc">Async agent Q&A with human teammates · QuestionQueue · timeout/expiry sweeper</div>
+      </div>
+      <div class="card">
+        <div class="card-name">☁️ Audit Storage</div>
+        <div class="card-desc">Azure Blob uploader · audit evidence persistence · signed URL generator</div>
+      </div>
+      <div class="card">
+        <div class="card-name">📤 Compliance Export</div>
+        <div class="card-desc">JSON/CSV evidence packs · 365-day active retention · 730-day archive retention</div>
+      </div>
+      <div class="card">
+        <div class="card-name">🗑️ Retention Cleanup</div>
+        <div class="card-desc">Scheduled cleanup job · active/archive policy enforcement</div>
+      </div>
+      <div class="card">
+        <div class="card-name">👤 Identity Service</div>
+        <div class="card-desc">Tenant · workspace · user lifecycle · IdentityResolver (stub)</div>
+      </div>
+      <div class="card">
+        <div class="card-name">🌐 Browser Actions</div>
+        <div class="card-desc">Web automation library · login, navigate, fill, click, extract · WebDriver · ElementSelector</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flow-arrow">
+    <svg width="400" height="20"><line x1="200" y1="0" x2="200" y2="14" stroke="#30363d" stroke-width="2"/><polygon points="195,14 205,14 200,20" fill="#30363d"/></svg>
+  </div>
+
+  <!-- ═══════════════════════ LAYER 6: DATA ═══════════════════════ -->
+  <div class="section-label">Data & Persistence Layer</div>
+  <div class="row">
+    <div class="zone blue" style="flex:2">
+      <div class="zone-title"><div class="dot" style="background:var(--accent)"></div>PostgreSQL 16 (via Prisma ORM) — 40+ Models</div>
+      <div class="card-grid cols-4">
+        <div class="card blue">
+          <div class="card-name">🏢 Tenant & Identity</div>
+          <div class="pill-row"><span class="pill blue">Tenant</span><span class="pill blue">TenantUser</span><span class="pill blue">Workspace</span><span class="pill blue">Bot</span></div>
+        </div>
+        <div class="card green">
+          <div class="card-name">⚙️ Provisioning</div>
+          <div class="pill-row"><span class="pill green">ProvisioningJob</span><span class="pill green">RuntimeInstance</span><span class="pill green">BotCapabilitySnapshot</span></div>
+        </div>
+        <div class="card red">
+          <div class="card-name">✅ Approvals</div>
+          <div class="pill-row"><span class="pill red">Approval</span><span class="pill red">ApprovalDecision</span></div>
+          <div class="card-desc" style="margin-top:4px">Immutable after creation · 409 on re-decide</div>
+        </div>
+        <div class="card yellow">
+          <div class="card-name">📋 Audit (Append-Only)</div>
+          <div class="pill-row"><span class="pill yellow">AuditEvent</span><span class="pill yellow">ConnectorAction</span><span class="pill yellow">ConnectorAuthEvent</span></div>
+        </div>
+        <div class="card purple">
+          <div class="card-name">🔗 Connectors</div>
+          <div class="pill-row"><span class="pill purple">ConnectorAuthMetadata</span><span class="pill purple">ConnectorAuthSession</span></div>
+        </div>
+        <div class="card teal">
+          <div class="card-name">🧠 Agent Memory</div>
+          <div class="pill-row"><span class="pill teal">AgentShortTermMemory</span><span class="pill teal">AgentLongTermMemory</span><span class="pill teal">AgentRepoKnowledge</span></div>
+        </div>
+        <div class="card orange">
+          <div class="card-name">📹 Browser Audit</div>
+          <div class="pill-row"><span class="pill orange">AgentSession</span><span class="pill orange">BrowserActionEvent</span></div>
+          <div class="card-desc" style="margin-top:4px">Before/after screenshots · DOM snapshots</div>
+        </div>
+        <div class="card pink">
+          <div class="card-name">🗂️ Workspace State</div>
+          <div class="pill-row"><span class="pill pink">WorkspaceSessionState</span><span class="pill pink">WorkspaceCheckpoint</span><span class="pill pink">IdeState</span><span class="pill pink">TerminalSession</span></div>
+        </div>
+        <div class="card">
+          <div class="card-name">💰 Payments</div>
+          <div class="pill-row"><span class="pill">Plan</span><span class="pill">Order</span><span class="pill">Invoice</span></div>
+        </div>
+        <div class="card">
+          <div class="card-name">🎙️ Meetings</div>
+          <div class="pill-row"><span class="pill">MeetingSession</span><span class="pill">TenantLanguageConfig</span><span class="pill">UserLanguageProfile</span></div>
+        </div>
+        <div class="card">
+          <div class="card-name">🎯 Execution</div>
+          <div class="pill-row"><span class="pill">ActionRecord</span><span class="pill">TaskExecutionRecord</span><span class="pill">PrDraft</span><span class="pill">CiTriageReport</span><span class="pill">ReproPack</span></div>
+        </div>
+        <div class="card">
+          <div class="card-name">⚙️ Config & Policy</div>
+          <div class="pill-row"><span class="pill">RetentionPolicy</span><span class="pill">TenantMcpServer</span><span class="pill">EnvProfile</span><span class="pill">DesktopProfile</span><span class="pill">AgentQuestion</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="zone red" style="flex:1">
+      <div class="zone-title"><div class="dot" style="background:var(--accent3)"></div>Redis 7</div>
+      <div class="card-grid cols-1">
+        <div class="card red">
+          <div class="card-name">⚡ Session State</div>
+          <div class="card-desc">Auth sessions · workspace context · cookie-backed HMAC tokens</div>
+        </div>
+        <div class="card red">
+          <div class="card-name">📬 Task Queues</div>
+          <div class="card-desc">Approval intake queue · task routing · reconnect event buffer</div>
+        </div>
+        <div class="card red">
+          <div class="card-name">🚦 Rate Limiting</div>
+          <div class="card-desc">Per-tenant rate limits · LLM provider throttling</div>
+        </div>
+        <div class="card red">
+          <div class="card-name">📡 SSE Event Buffer</div>
+          <div class="card-desc">SseTaskQueue buffers per channel · auto-recovery on reconnect</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════ SHARED PACKAGES ═══════════════════════ -->
+  <div class="section-label" style="margin-top:8px">Shared Package Libraries</div>
+  <div class="zone teal">
+    <div class="zone-title"><div class="dot" style="background:var(--teal)"></div>Shared Packages (8 libraries)</div>
+    <div class="card-grid cols-4">
+      <div class="card teal">
+        <div class="card-name">📦 shared-types</div>
+        <div class="card-desc">100+ versioned contract types, enums, interfaces (frozen for compatibility)</div>
+        <div class="pill-row"><span class="pill teal">RoleKey</span><span class="pill teal">RiskLevel</span><span class="pill teal">BotStatus</span><span class="pill teal">TaskLeaseRecord</span><span class="pill teal">ApprovalRecord</span><span class="pill teal">DesktopOperator</span></div>
+      </div>
+      <div class="card teal">
+        <div class="card-name">🔌 connector-contracts</div>
+        <div class="card-desc">18-connector registry · normalized action types · 12 role policies</div>
+        <div class="pill-row"><span class="pill teal">ConnectorDefinition</span><span class="pill teal">NormalizedActionType</span><span class="pill teal">AgentRoleKey</span><span class="pill teal">ConnectorCategory</span></div>
+      </div>
+      <div class="card teal">
+        <div class="card-name">🗄️ db-schema</div>
+        <div class="card-desc">Prisma ORM schema (40+ models) · migrations · @prisma/client 6.19.3</div>
+      </div>
+      <div class="card teal">
+        <div class="card-name">📮 queue-contracts</div>
+        <div class="card-desc">Queue event type definitions: TaskQueueEvent · RouteSource · ProcessedTaskResult</div>
+      </div>
+      <div class="card teal">
+        <div class="card-name">📊 observability</div>
+        <div class="card-desc">Structured telemetry helpers: TelemetryCollector · MetricRecorder</div>
+      </div>
+      <div class="card teal">
+        <div class="card-name">💼 crm-adapters</div>
+        <div class="card-desc">CRM integration hooks: Salesforce · HubSpot · CrmService · CrmHook</div>
+      </div>
+      <div class="card teal">
+        <div class="card-name">🏭 erp-adapters</div>
+        <div class="card-desc">ERP integration hooks: SAP · Oracle · ErpService · ErpHook</div>
+      </div>
+      <div class="card teal">
+        <div class="card-name">🔔 notification-adapters</div>
+        <div class="card-desc">Telegram · Slack · Discord · Webhook · Voice channel implementations</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════ KEY DATA FLOWS ═══════════════════════ -->
+  <div class="section-label" style="margin-top:8px">Key Data Flows</div>
+  <div class="zone" style="background:var(--surface); border-color:var(--border)">
+    <div class="flow-title">Critical Workflows</div>
+    <div class="flow-grid">
+      <div class="flow-card">
+        <div class="flow-card-title">A. Signup → VM Provisioning</div>
+        <div class="flow-step"><div class="flow-num">1</div><div class="flow-text">POST /auth/signup → create Tenant, Workspace, Bot, ProvisioningJob atomically</div></div>
+        <div class="flow-step"><div class="flow-num">2</div><div class="flow-text">Provisioning-worker picks up job (queued → validating → creating_resources → bootstrapping_vm)</div></div>
+        <div class="flow-step"><div class="flow-num">3</div><div class="flow-text">Azure VM provisioned, Docker installed, bot image pulled with Key Vault env vars</div></div>
+        <div class="flow-step"><div class="flow-num">4</div><div class="flow-text">Runtime registers heartbeat → RuntimeInstance status → ready</div></div>
+        <div class="flow-step"><div class="flow-num">5</div><div class="flow-text">Dashboard shows live provisioning progress card via SSE</div></div>
+      </div>
+      <div class="flow-card">
+        <div class="flow-card-title">B. Connector Action Execution</div>
+        <div class="flow-step"><div class="flow-num">1</div><div class="flow-text">Runtime task requests action (e.g., create_comment on Jira)</div></div>
+        <div class="flow-step"><div class="flow-num">2</div><div class="flow-text">Role-policy checked via connector-gateway · heuristic risk classification</div></div>
+        <div class="flow-step"><div class="flow-num">3</div><div class="flow-text">LOW → execute immediately. MEDIUM/HIGH → approval-service intake queue</div></div>
+        <div class="flow-step"><div class="flow-num">4</div><div class="flow-text">Dashboard shows pending by risk level · user approves/rejects with reason</div></div>
+        <div class="flow-step"><div class="flow-num">5</div><div class="flow-text">Decision → connector dispatch (exponential backoff) → ConnectorAction audit event</div></div>
+      </div>
+      <div class="flow-card">
+        <div class="flow-card-title">C. Payment → Contract → VM</div>
+        <div class="flow-step"><div class="flow-num">1</div><div class="flow-text">User selects plan → POST /billing/orders (Order: pending)</div></div>
+        <div class="flow-step"><div class="flow-num">2</div><div class="flow-text">Stripe/Razorpay webhook verifies HMAC → Order.status → paid</div></div>
+        <div class="flow-step"><div class="flow-num">3</div><div class="flow-text">pdfkit generates contract PDF · Zoho Sign OAuth: upload, submit for signature</div></div>
+        <div class="flow-step"><div class="flow-num">4</div><div class="flow-text">Zoho Sign webhook on completion → POST /webhooks/zoho-sign</div></div>
+        <div class="flow-step"><div class="flow-num">5</div><div class="flow-text">Order: signed → ProvisioningJob created → VM provisioning begins</div></div>
+      </div>
+      <div class="flow-card">
+        <div class="flow-card-title">D. Multi-LLM Auto Failover</div>
+        <div class="flow-step"><div class="flow-num">1</div><div class="flow-text">Execution engine: heuristic risk classification (confidence threshold: 0.6)</div></div>
+        <div class="flow-step"><div class="flow-num">2</div><div class="flow-text">If confidence &lt; 0.6 → LLM resolution required via createLlmDecisionResolver</div></div>
+        <div class="flow-step"><div class="flow-num">3</div><div class="flow-text">Iterate health-score-ordered provider chain (5-min rolling error rate + latency)</div></div>
+        <div class="flow-step"><div class="flow-num">4</div><div class="flow-text">On failure → record ProviderFailoverTraceRecord[] → try next provider</div></div>
+        <div class="flow-step"><div class="flow-num">5</div><div class="flow-text">Heuristic fallback if all fail · all traces logged for debugging</div></div>
+      </div>
+      <div class="flow-card">
+        <div class="flow-card-title">E. Browser Action Audit (Tier 11)</div>
+        <div class="flow-step"><div class="flow-num">1</div><div class="flow-text">Desktop action triggered (workspace_browser_open, workspace_app_launch, etc.)</div></div>
+        <div class="flow-step"><div class="flow-num">2</div><div class="flow-text">DESKTOP_OPERATOR=mock → short-circuit; native → Playwright automation</div></div>
+        <div class="flow-step"><div class="flow-num">3</div><div class="flow-text">action-observability.executeObservedAction() intercepts · screenshot before</div></div>
+        <div class="flow-step"><div class="flow-num">4</div><div class="flow-text">Action executed → screenshot after · DOM hash · network log · correctness assertion</div></div>
+        <div class="flow-step"><div class="flow-num">5</div><div class="flow-text">All data → BrowserActionEvent in AgentSession · retention policy applied</div></div>
+      </div>
+      <div class="flow-card">
+        <div class="flow-card-title">F. Skills Crystallization (Hermes)</div>
+        <div class="flow-step"><div class="flow-num">1</div><div class="flow-text">Task completes successfully</div></div>
+        <div class="flow-step"><div class="flow-num">2</div><div class="flow-text">SkillsRegistry.crystallize() extracts template from execution</div></div>
+        <div class="flow-step"><div class="flow-num">3</div><div class="flow-text">State: draft → active lifecycle</div></div>
+        <div class="flow-step"><div class="flow-num">4</div><div class="flow-text">Future tasks call findMatching() to accelerate similar requests</div></div>
+        <div class="flow-step"><div class="flow-num">5</div><div class="flow-text">Skill composition engine chains multi-skill dependency DAGs</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════ SECURITY BOUNDARIES ═══════════════════════ -->
+  <div class="section-label">Security Boundaries & Critical Invariants</div>
+  <div class="zone red">
+    <div class="zone-title"><div class="dot" style="background:var(--accent3)"></div>Security Model — 11 Critical Boundaries</div>
+    <div class="security-grid">
+      <div class="sec-item"><span class="sec-icon">🔑</span><div><strong>No Secrets in DB</strong><br/><span style="color:var(--muted)">Only Azure Key Vault references persisted — no raw connector secrets</span></div></div>
+      <div class="sec-item"><span class="sec-icon">🏠</span><div><strong>Workspace RLS</strong><br/><span style="color:var(--muted)">All routes scoped by workspace at session level (Row-Level Security)</span></div></div>
+      <div class="sec-item"><span class="sec-icon">🔒</span><div><strong>Approval Immutability</strong><br/><span style="color:var(--muted)">409 on re-decision; createdAt/decidedAt immutable after creation</span></div></div>
+      <div class="sec-item"><span class="sec-icon">☠️</span><div><strong>Kill-Switch</strong><br/><span style="color:var(--muted)">30-second control window; incident-reference-gated resume</span></div></div>
+      <div class="sec-item"><span class="sec-icon">🎯</span><div><strong>CSRF Nonce</strong><br/><span style="color:var(--muted)">OAuth flows validate state nonces before token exchange</span></div></div>
+      <div class="sec-item"><span class="sec-icon">⏱️</span><div><strong>Timing-Safe Comparison</strong><br/><span style="color:var(--muted)">Password hashing prevents user enumeration attacks</span></div></div>
+      <div class="sec-item"><span class="sec-icon">🔄</span><div><strong>Exponential Backoff</strong><br/><span style="color:var(--muted)">Transient connector failures retry safely without amplification</span></div></div>
+      <div class="sec-item"><span class="sec-icon">📁</span><div><strong>safeChildPath Sandbox</strong><br/><span style="color:var(--muted)">All file/shell operations sandboxed to workspace root</span></div></div>
+      <div class="sec-item"><span class="sec-icon">🔐</span><div><strong>Plugin Trust Verification</strong><br/><span style="color:var(--muted)">Cryptographic signature check before allowlist for external plugins</span></div></div>
+      <div class="sec-item"><span class="sec-icon">📜</span><div><strong>mTLS Certificate Verification</strong><br/><span style="color:var(--muted)">Federation security in connector-gateway for agent-to-agent trust</span></div></div>
+      <div class="sec-item"><span class="sec-icon">🫥</span><div><strong>PII-Strip Middleware</strong><br/><span style="color:var(--muted)">Data redaction before any external dispatch or connector call</span></div></div>
+      <div class="sec-item"><span class="sec-icon">📊</span><div><strong>Audit Append-Only</strong><br/><span style="color:var(--muted)">AuditEvent model has no update/delete operations in schema</span></div></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════ DEPLOYMENT ═══════════════════════ -->
+  <div class="section-label">Deployment Architecture</div>
+  <div class="row">
+    <div class="zone" style="flex:1">
+      <div class="zone-title"><div class="dot" style="background:var(--muted)"></div>Local Dev (docker-compose)</div>
+      <div class="card-grid cols-2">
+        <div class="card"><div class="card-name">🐘 PostgreSQL 16</div><div class="card-desc">Primary database</div></div>
+        <div class="card"><div class="card-name">⚡ Redis 7</div><div class="card-desc">Sessions & queues</div></div>
+        <div class="card"><div class="card-name">🛡️ OPA :8181</div><div class="card-desc">Policy engine</div></div>
+        <div class="card"><div class="card-name">🎙️ Voicebox :17493</div><div class="card-desc">Voice synthesis</div></div>
+      </div>
+    </div>
+    <div class="zone blue" style="flex:1">
+      <div class="zone-title"><div class="dot" style="background:var(--accent)"></div>Azure Production</div>
+      <div class="card-grid cols-2">
+        <div class="card blue"><div class="card-name">🌐 Static Web Apps</div><div class="card-desc">Website SWA deployment</div></div>
+        <div class="card blue"><div class="card-name">🖥️ Azure VMs</div><div class="card-desc">Per-tenant runtime instances</div></div>
+        <div class="card blue"><div class="card-name">🔑 Key Vault</div><div class="card-desc">Connector secrets storage</div></div>
+        <div class="card blue"><div class="card-name">☁️ Blob Storage</div><div class="card-desc">Audit evidence, screenshots</div></div>
+      </div>
+    </div>
+    <div class="zone green" style="flex:1">
+      <div class="zone-title"><div class="dot" style="background:var(--accent2)"></div>Quality Gate</div>
+      <div class="pill-row" style="flex-wrap:wrap; gap:5px">
+        <span class="pill green">1,392 tests passing</span>
+        <span class="pill green">47-check gate</span>
+        <span class="pill green">≥80% coverage</span>
+        <span class="pill green">TSC strict</span>
+        <span class="pill green">ESLint 9</span>
+        <span class="pill green">Prettier 3</span>
+        <span class="pill green">E2E smoke lane</span>
+        <span class="pill green">DB migration CI</span>
+      </div>
+      <hr class="sep"/>
+      <div class="card-desc">execution-engine: 95% · runtime-server: 81% · provisioning-monitoring: 94%</div>
+    </div>
+  </div>
+
+  <!-- Legend -->
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div>UI / Control Plane</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--accent2)"></div>Execution Engine</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--accent3)"></div>Approval / Security</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--accent4)"></div>Orchestration</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--accent5)"></div>External / Payment</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--yellow)"></div>Audit / Evidence</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--pink)"></div>Notifications / Voice</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--teal)"></div>Shared Libraries / Packages</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--muted)"></div>Infrastructure / Deployment</div>
+  </div>
+
+  <div style="text-align:center; color:var(--muted); font-size:11px; margin-top:12px; padding-bottom:8px">
+    AgentFarm Architecture · Generated 2026-05-10 · TypeScript 5.7 · Node.js ES2022 · pnpm Workspaces
+  </div>
+
+</div>
+
+</body>
+</html>

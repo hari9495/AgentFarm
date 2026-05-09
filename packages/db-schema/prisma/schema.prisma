@@ -229,6 +229,9 @@ model ProvisioningJob {
   completedAt       DateTime?
   createdAt         DateTime              @default(now())
   updatedAt         DateTime              @updatedAt
+  orderId           String?
+  triggeredBy       String?
+  metadata          String?
 
   @@index([tenantId])
   @@index([workspaceId])
@@ -972,4 +975,136 @@ model AgentQuestion {
   @@index([status])
   @@index([expiresAt])
   @@index([tenantId, status])
+}
+
+model TenantMcpServer {
+  id          String   @id @default(cuid())
+  tenantId    String
+  workspaceId String?
+  name        String
+  url         String
+  headers     Json?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@index([tenantId, isActive])
+}
+
+model TenantLanguageConfig {
+  id               String   @id @default(cuid())
+  tenantId         String   @unique
+  defaultLanguage  String   @default("en")
+  ticketLanguage   String   @default("en")
+  autoDetect       Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
+model WorkspaceLanguageConfig {
+  id                String   @id @default(cuid())
+  tenantId          String
+  workspaceId       String
+  preferredLanguage String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([tenantId, workspaceId])
+  @@index([tenantId])
+}
+
+model UserLanguageProfile {
+  id                String    @id @default(cuid())
+  tenantId          String
+  userId            String
+  detectedLanguage  String?
+  preferredLanguage String?
+  confidence        Float     @default(0.0)
+  lastDetectedAt    DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@unique([tenantId, userId])
+  @@index([tenantId])
+  @@index([tenantId, userId])
+}
+
+// Frozen 2026-05-09 — Meeting transcription pipeline sessions
+model MeetingSession {
+  id               String    @id @default(cuid())
+  tenantId         String
+  workspaceId      String
+  agentId          String
+  meetingUrl       String
+  platform         String    // "teams" | "zoom" | "google_meet" | "webex"
+  status           String    @default("joining")  // joining | recording | transcribing | summarizing | done | error | deleted
+  language         String?
+  transcriptRaw    String?   @db.Text
+  summaryText      String?   @db.Text
+  actionItems      String?   @db.Text  // JSON array string
+  agentVoiceId     String?   // VoxCPM2 cloned voice ID for this session
+  speakingEnabled  Boolean   @default(false)
+  resolvedLanguage String?   // language code e.g. "en", "ja"
+  startedAt        DateTime  @default(now())
+  endedAt          DateTime?
+  updatedAt        DateTime  @updatedAt
+
+  @@index([tenantId])
+  @@index([workspaceId])
+  @@index([tenantId, workspaceId])
+  @@index([tenantId, status])
+}
+
+model Plan {
+  id          String   @id @default(cuid())
+  name        String
+  priceInr    Int
+  priceUsd    Int
+  agentSlots  Int
+  features    String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  orders      Order[]
+}
+
+model Order {
+  id                String      @id @default(cuid())
+  tenantId          String
+  planId            String
+  plan              Plan        @relation(fields: [planId], references: [id])
+  amountCents       Int
+  currency          String
+  status            String      @default("pending")
+  paymentProvider   String
+  providerOrderId   String?
+  providerPaymentId String?
+  providerSignature String?
+  customerEmail     String
+  customerCountry   String?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  invoice           Invoice?
+  contractPdfUrl    String?
+  zohoSignRequestId String?
+  signatureStatus   String?     @default("pending")
+  signedAt          DateTime?
+  contractSentAt    DateTime?
+}
+
+model Invoice {
+  id          String   @id @default(cuid())
+  orderId     String   @unique
+  order       Order    @relation(fields: [orderId], references: [id])
+  tenantId    String
+  number      String   @unique
+  amountCents Int
+  currency    String
+  pdfUrl      String?
+  sentAt      DateTime?
+  paidAt      DateTime?
+  createdAt   DateTime @default(now())
 }

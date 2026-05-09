@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createSession, createUser, findUserByEmail, initializeTenantWorkspaceAndBot } from "@/lib/auth-store";
+import { createSession, createUser, findUserByEmail, initializeTenantWorkspaceAndBot, updateUserGatewayIds } from "@/lib/auth-store";
 
 type SignupPayload = {
     name?: string;
@@ -11,6 +11,8 @@ type SignupPayload = {
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const COOKIE_NAME = "agentfarm_session";
+const GATEWAY_COOKIE_NAME = "agentfarm_gateway_session";
+const API_GATEWAY_URL = process.env.API_GATEWAY_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
 
 const parseCsvEnv = (value: string | undefined): string[] => {
     if (!value) return [];
@@ -100,6 +102,45 @@ export async function POST(request: Request) {
         tenantName: company,
     });
 
+    // Attempt gateway signup to create Prisma-side records and obtain HMAC token.
+    // Failure is non-fatal — the website signup is already committed.
+    let gatewaySessionToken: string | null = null;
+    try {
+        const gwResponse = await fetch(`${API_GATEWAY_URL}/auth/signup`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ name, email, password, companyName: company }),
+            cache: "no-store",
+        });
+        if (gwResponse.ok) {
+            const gwBody = (await gwResponse.json()) as {
+                token?: string;
+                tenant_id?: string;
+                workspace_id?: string;
+                bot_id?: string;
+            };
+            if (
+                typeof gwBody.token === "string" &&
+                typeof gwBody.tenant_id === "string" &&
+                typeof gwBody.workspace_id === "string" &&
+                typeof gwBody.bot_id === "string"
+            ) {
+                gatewaySessionToken = gwBody.token;
+                updateUserGatewayIds({
+                    userId: user.id,
+                    gatewayTenantId: gwBody.tenant_id,
+                    gatewayWorkspaceId: gwBody.workspace_id,
+                    gatewayBotId: gwBody.bot_id,
+                    gatewayToken: gwBody.token,
+                });
+            }
+        } else {
+            console.error("[signup] Gateway signup returned", gwResponse.status, "— continuing without gateway IDs");
+        }
+    } catch (err) {
+        console.error("[signup] Gateway signup call failed:", err);
+    }
+
     const { sessionToken } = createSession(user.id);
 
     const response = NextResponse.json({
@@ -119,6 +160,18 @@ export async function POST(request: Request) {
         path: "/",
         maxAge: 8 * 60 * 60,
     });
+
+    if (gatewaySessionToken) {
+        response.cookies.set({
+            name: GATEWAY_COOKIE_NAME,
+            value: gatewaySessionToken,
+            httpOnly: true,
+            sameSite: "strict",
+            secure: process.env.NODE_ENV === "production",
+            path: "/",
+            maxAge: 8 * 60 * 60,
+        });
+    }
 
     return response;
 }

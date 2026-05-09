@@ -5,6 +5,8 @@ import { prisma } from './lib/db.js';
 import { registerAuthRoutes } from './routes/auth.js';
 import { parseApprovalPacket } from './lib/approval-packet.js';
 import { registerConnectorAuthRoutes } from './routes/connector-auth.js';
+import { registerMcpRegistryRoutes } from './routes/mcp-registry.js';
+import { registerLanguageRoutes } from './routes/language.js';
 import { registerConnectorActionRoutes } from './routes/connector-actions.js';
 import { createDefaultSecretStore } from './lib/secret-store.js';
 import { registerApprovalRoutes } from './routes/approvals.js';
@@ -56,6 +58,10 @@ import { registerHandoffRoutes } from './routes/handoffs.js';
 import { registerObservabilityRoutes } from './routes/observability.js';
 import { registerQuestionRoutes } from './routes/questions.js';
 import { registerMemoryRoutes } from './routes/memory.js';
+import { registerMeetingRoutes } from './routes/meetings.js';
+import { registerBillingRoutes } from './routes/billing.js';
+import { registerAdminProvisionRoutes } from './routes/admin-provision.js';
+import { registerZohoSignWebhookRoutes } from './routes/zoho-sign-webhook.js';
 
 const app = Fastify({ logger: true });
 const port = Number(process.env.API_GATEWAY_PORT ?? 3000);
@@ -383,6 +389,12 @@ await registerConnectorAuthRoutes(app, {
     getSession: (request) => readSession(request),
     secretStore: createDefaultSecretStore(),
 });
+await registerMcpRegistryRoutes(app, {
+    getSession: (request) => readSession(request),
+});
+await registerLanguageRoutes(app, {
+    getSession: (request) => readSession(request),
+});
 await registerConnectorActionRoutes(app, {
     getSession: (request) => readSession(request),
     secretStore: createDefaultSecretStore(),
@@ -463,6 +475,16 @@ await registerObservabilityRoutes(app, {
 });
 await registerQuestionRoutes(app, prisma);
 await registerMemoryRoutes(app, prisma);
+await registerMeetingRoutes(app, {
+    getSession: (request) => readSession(request),
+});
+await registerBillingRoutes(app, {
+    getSession: (request) => readSession(request),
+});
+await registerAdminProvisionRoutes(app, {
+    getSession: (request) => readSession(request),
+});
+await registerZohoSignWebhookRoutes(app);
 registerSkillPipelineRoutes(app);
 registerSkillSchedulerRoutes(app);
 registerWebhookRoutes(app, prisma);

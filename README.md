@@ -1,4 +1,4 @@
-# AgentFarm
+# AgentFarm — Trusted AI Teammates for Engineering Teams
 
 > Operate AI agents with enterprise control gates — human approval, audit trails, and governed autonomy from day one.
 
@@ -17,7 +17,14 @@ AgentFarm is a TypeScript pnpm monorepo that delivers a production-grade AI agen
 
 ## Full Documentation
 
-→ **[read.md](read.md)** — complete technical reference: architecture, contracts, flows, tier table, quality posture, and quick start
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — Full system architecture, data flows, database schema
+- [docs/API.md](docs/API.md) — All API routes with request/response examples
+- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — Environment setup, local dev, Azure production deployment
+- [docs/AGENT_ROLES.md](docs/AGENT_ROLES.md) — 12 agent roles, capabilities, risk posture, connector policies
+- [docs/PAYMENTS.md](docs/PAYMENTS.md) — Stripe + Razorpay payments, Zoho Sign e-signature, provisioning trigger
+- [docs/TESTING.md](docs/TESTING.md) — Testing patterns, quality gate, test locations
+
+→ **[read.md](read.md)** — extended technical reference: full tier table, connector registry, quality posture
 
 ---
 
@@ -205,7 +212,17 @@ Copy `.env.example` to `.env` and fill in values before running. Enable local si
 9. **Voice notification** — VoxCPM/VoIP voice channel adapter in notification-service
 10. **Approval-only gateway** — `dispatchApprovalAlert()` scopes messaging to approval triggers only
 
-### Desktop Operator Abstraction
+### Workstream 10 — Payments, E-Signature, and Provisioning Trigger
+- Dual-provider payment infrastructure: **Stripe** (international, USD) + **Razorpay** (India, INR)
+- Webhook handlers with HMAC/signature verification for both providers
+- After payment: **pdfkit** contract PDF generated, uploaded to **Zoho Sign**, submitted for e-signature
+- **Zoho Sign OAuth client** (`client_credentials` grant, `Zoho-oauthtoken` header): `getZohoSignAccessToken`, `uploadContractDocument`, `submitDocumentForSigning`, `getDocumentStatus`, `downloadSignedDocument`
+- **Zoho Sign webhook** (`POST /v1/webhooks/zoho-sign` + website proxy) with token verification, idempotent `ProvisioningJob` creation
+- Order lifecycle: `pending → paid → contract_sent (signatureStatus=sent) → signed → VM provisioned`
+- All payment code tested: 450/450 tests passing (billing + zoho-sign-client + contract-generator + zoho-sign-webhook)
+- See [docs/PAYMENTS.md](docs/PAYMENTS.md) for full flow and runbook
+
+
 - Frozen `DesktopOperator` interface in `packages/shared-types/src/desktop-operator.ts` (2026-05-08): `browserOpen`, `appLaunch`, `meetingJoin`, `meetingSpeak`
 - `MockDesktopOperator` and `getDesktopOperator()` factory in `apps/agent-runtime/src/desktop-operator-factory.ts` — reads `DESKTOP_OPERATOR` env var
 - Mock short-circuits wired into all four Tier 11 cases in `local-workspace-executor.ts` — native paths untouched when `DESKTOP_OPERATOR` is unset or `native`

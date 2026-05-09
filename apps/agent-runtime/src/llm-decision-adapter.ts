@@ -1,6 +1,8 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { dirname, resolve } from 'path';
 import { getRoleSystemPrompt } from './role-system-prompts.js';
+import { buildSystemPrompt } from './system-prompt-builder.js';
+import { resolveLanguage } from './language-resolver.js';
 import type {
     ProviderFailoverReasonCode,
     ProviderFailoverTraceRecord,
@@ -865,6 +867,23 @@ const defaultAutoProvidersByProfile = (profile: ModelProfileKey): AutoProvider[]
     return ['openai', 'anthropic', 'google', 'xai', 'mistral', 'together', 'github_models', 'azure_openai'];
 };
 
+// ---------------------------------------------------------------------------
+// Language helper (shared by all resolvers)
+// ---------------------------------------------------------------------------
+
+async function resolveTaskOutputLanguage(task: TaskEnvelope): Promise<string> {
+    const fromPayload = task.payload['resolvedLanguage'];
+    if (typeof fromPayload === 'string' && fromPayload) return fromPayload;
+    const resolved = await resolveLanguage({
+        tenantId: typeof task.payload['tenantId'] === 'string' ? task.payload['tenantId'] : '',
+        workspaceId: typeof task.payload['workspaceId'] === 'string' ? task.payload['workspaceId'] : undefined,
+        userId: typeof task.payload['userId'] === 'string' ? task.payload['userId'] : undefined,
+    }).catch(() => null);
+    return resolved?.language ?? 'en';
+}
+
+// ---------------------------------------------------------------------------
+
 const createAnthropicResolver = (input: {
     apiKey: string;
     baseUrl: string;
@@ -874,6 +893,7 @@ const createAnthropicResolver = (input: {
     apiVersion: string;
 }): LlmDecisionResolver => {
     return async ({ task, heuristicDecision }) => {
+        const resolvedLanguage = await resolveTaskOutputLanguage(task);
         const modelProfile = pickModelProfile(task, heuristicDecision);
         const selectedModel = resolveProfileTarget(input.model, input.modelProfiles, modelProfile);
         const response = await fetch(`${input.baseUrl.replace(/\/+$/, '')}/v1/messages`, {
@@ -887,7 +907,7 @@ const createAnthropicResolver = (input: {
                 model: selectedModel,
                 max_tokens: 512,
                 temperature: 0,
-                system: getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : '', process.env['GITHUB_REPO'] ?? undefined),
+                system: buildSystemPrompt({ basePrompt: getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : '', process.env['GITHUB_REPO'] ?? undefined), language: resolvedLanguage }),
                 messages: [
                     {
                         role: 'user',
@@ -943,6 +963,7 @@ const createGoogleResolver = (input: {
     timeoutMs: number;
 }): LlmDecisionResolver => {
     return async ({ task, heuristicDecision }) => {
+        const resolvedLanguage = await resolveTaskOutputLanguage(task);
         const modelProfile = pickModelProfile(task, heuristicDecision);
         const selectedModel = resolveProfileTarget(input.model, input.modelProfiles, modelProfile);
         const base = input.baseUrl.replace(/\/+$/, '');
@@ -961,7 +982,7 @@ const createGoogleResolver = (input: {
                 contents: [
                     {
                         role: 'user',
-                        parts: [{ text: `${getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : '', process.env['GITHUB_REPO'] ?? undefined)}\n\n${createTaskPrompt(task, heuristicDecision)}` }],
+                        parts: [{ text: `${buildSystemPrompt({ basePrompt: getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : '', process.env['GITHUB_REPO'] ?? undefined), language: resolvedLanguage })}\n\n${createTaskPrompt(task, heuristicDecision)}` }],
                     },
                 ],
             }),
@@ -1211,6 +1232,7 @@ const createOpenAiResolver = (input: {
     timeoutMs: number;
 }): LlmDecisionResolver => {
     return async ({ task, heuristicDecision }) => {
+        const resolvedLanguage = await resolveTaskOutputLanguage(task);
         const modelProfile = pickModelProfile(task, heuristicDecision);
         const selectedModel = resolveProfileTarget(input.model, input.modelProfiles, modelProfile);
         const response = await fetch(`${input.baseUrl.replace(/\/+$/, '')}/chat/completions`, {
@@ -1226,7 +1248,7 @@ const createOpenAiResolver = (input: {
                 messages: [
                     {
                         role: 'system',
-                        content: getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : '', process.env['GITHUB_REPO'] ?? undefined),
+                        content: buildSystemPrompt({ basePrompt: getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : '', process.env['GITHUB_REPO'] ?? undefined), language: resolvedLanguage }),
                     },
                     {
                         role: 'user',
@@ -1277,6 +1299,7 @@ const createGitHubModelsResolver = (input: {
     timeoutMs: number;
 }): LlmDecisionResolver => {
     return async ({ task, heuristicDecision }) => {
+        const resolvedLanguage = await resolveTaskOutputLanguage(task);
         const modelProfile = pickModelProfile(task, heuristicDecision);
         const selectedModel = resolveProfileTarget(input.model, input.modelProfiles, modelProfile);
         const response = await fetch(`${input.baseUrl.replace(/\/+$/, '')}/chat/completions`, {
@@ -1292,7 +1315,7 @@ const createGitHubModelsResolver = (input: {
                 messages: [
                     {
                         role: 'system',
-                        content: getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : '', process.env['GITHUB_REPO'] ?? undefined),
+                        content: buildSystemPrompt({ basePrompt: getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : '', process.env['GITHUB_REPO'] ?? undefined), language: resolvedLanguage }),
                     },
                     {
                         role: 'user',
@@ -1343,6 +1366,7 @@ const createXaiResolver = (input: {
     timeoutMs: number;
 }): LlmDecisionResolver => {
     return async ({ task, heuristicDecision }) => {
+        const resolvedLanguage = await resolveTaskOutputLanguage(task);
         const modelProfile = pickModelProfile(task, heuristicDecision);
         const selectedModel = resolveProfileTarget(input.model, input.modelProfiles, modelProfile);
         const response = await fetch(`${input.baseUrl.replace(/\/+$/, '')}/chat/completions`, {
@@ -1356,7 +1380,7 @@ const createXaiResolver = (input: {
                 temperature: 0,
                 response_format: { type: 'json_object' },
                 messages: [
-                    { role: 'system', content: getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : '', process.env['GITHUB_REPO'] ?? undefined) },
+                    { role: 'system', content: buildSystemPrompt({ basePrompt: getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : '', process.env['GITHUB_REPO'] ?? undefined), language: resolvedLanguage }) },
                     { role: 'user', content: createTaskPrompt(task, heuristicDecision) },
                 ],
             }),
@@ -1403,6 +1427,7 @@ const createMistralResolver = (input: {
     timeoutMs: number;
 }): LlmDecisionResolver => {
     return async ({ task, heuristicDecision }) => {
+        const resolvedLanguage = await resolveTaskOutputLanguage(task);
         const modelProfile = pickModelProfile(task, heuristicDecision);
         const selectedModel = resolveProfileTarget(input.model, input.modelProfiles, modelProfile);
         const response = await fetch(`${input.baseUrl.replace(/\/+$/, '')}/chat/completions`, {
@@ -1416,7 +1441,7 @@ const createMistralResolver = (input: {
                 temperature: 0,
                 response_format: { type: 'json_object' },
                 messages: [
-                    { role: 'system', content: getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : '', process.env['GITHUB_REPO'] ?? undefined) },
+                    { role: 'system', content: buildSystemPrompt({ basePrompt: getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : '', process.env['GITHUB_REPO'] ?? undefined), language: resolvedLanguage }) },
                     { role: 'user', content: createTaskPrompt(task, heuristicDecision) },
                 ],
             }),
@@ -1463,6 +1488,7 @@ const createTogetherResolver = (input: {
     timeoutMs: number;
 }): LlmDecisionResolver => {
     return async ({ task, heuristicDecision }) => {
+        const resolvedLanguage = await resolveTaskOutputLanguage(task);
         const modelProfile = pickModelProfile(task, heuristicDecision);
         const selectedModel = resolveProfileTarget(input.model, input.modelProfiles, modelProfile);
         const response = await fetch(`${input.baseUrl.replace(/\/+$/, '')}/chat/completions`, {
@@ -1476,7 +1502,7 @@ const createTogetherResolver = (input: {
                 temperature: 0,
                 response_format: { type: 'json_object' },
                 messages: [
-                    { role: 'system', content: getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : '', process.env['GITHUB_REPO'] ?? undefined) },
+                    { role: 'system', content: buildSystemPrompt({ basePrompt: getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : '', process.env['GITHUB_REPO'] ?? undefined), language: resolvedLanguage }) },
                     { role: 'user', content: createTaskPrompt(task, heuristicDecision) },
                 ],
             }),
@@ -1739,6 +1765,7 @@ const createAzureOpenAiResolver = (input: {
     const normalizedEndpoint = input.endpoint.replace(/\/+$/, '');
 
     return async ({ task, heuristicDecision }) => {
+        const resolvedLanguage = await resolveTaskOutputLanguage(task);
         const modelProfile = pickModelProfile(task, heuristicDecision);
         const selectedDeployment = resolveProfileTarget(
             input.deployment,
@@ -1758,7 +1785,7 @@ const createAzureOpenAiResolver = (input: {
                 messages: [
                     {
                         role: 'system',
-                        content: getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : '', process.env['GITHUB_REPO'] ?? undefined),
+                        content: buildSystemPrompt({ basePrompt: getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : '', process.env['GITHUB_REPO'] ?? undefined), language: resolvedLanguage }),
                     },
                     {
                         role: 'user',

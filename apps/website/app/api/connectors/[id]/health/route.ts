@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth-store";
-import { connectorStore } from "@/lib/connector-store";
-import { CONNECTOR_REGISTRY, type TenantConnector, type ConnectorStatus } from "@agentfarm/connector-contracts";
 
-const COOKIE_NAME = "agentfarm_session";
+const SESSION_COOKIE = "agentfarm_session";
+const GATEWAY_COOKIE = "agentfarm_gateway_session";
+
+const API_GATEWAY_URL =
+    process.env.API_GATEWAY_URL ??
+    process.env.NEXT_PUBLIC_API_URL ??
+    "http://localhost:3000";
 
 function getCookieValue(cookieHeader: string | null, name: string): string | null {
     if (!cookieHeader) return null;
@@ -14,102 +18,56 @@ function getCookieValue(cookieHeader: string | null, name: string): string | nul
     return cookie ? decodeURIComponent(cookie.slice(name.length + 1)) : null;
 }
 
+async function gatewayFetch(
+    path: string,
+    options: RequestInit,
+    gatewayToken: string
+): Promise<Response> {
+    return fetch(`${API_GATEWAY_URL}${path}`, {
+        ...options,
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${gatewayToken}`,
+            ...(options.headers ?? {}),
+        },
+    });
+}
+
 type RouteParams = { params: Promise<{ id: string }> };
 
-// ── POST /api/connectors/[id]/health — run a connectivity check ────────────
+// ── POST /api/connectors/[id]/health ─────────────────────────────────────────
 export async function POST(request: Request, { params }: RouteParams) {
-    const token = getCookieValue(request.headers.get("cookie"), COOKIE_NAME);
+    const cookies = request.headers.get("cookie");
+    const token = getCookieValue(cookies, SESSION_COOKIE);
     if (!token) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
 
     const user = getSessionUser(token);
     if (!user) return NextResponse.json({ error: "Invalid session." }, { status: 401 });
 
+    const gatewayToken = getCookieValue(cookies, GATEWAY_COOKIE);
+    if (!gatewayToken) {
+        return NextResponse.json({ error: "connector_bridge_unavailable" }, { status: 503 });
+    }
+
     const { id } = await params;
-    const connector = connectorStore.get(id);
-    const requestedWorkspaceId = new URL(request.url).searchParams.get("workspaceId");
-    if (!connector || connector.tenantId !== user.company) {
-        return NextResponse.json({ error: "Connector not found." }, { status: 404 });
-    }
-    if (requestedWorkspaceId && connector.workspaceId !== requestedWorkspaceId) {
-        return NextResponse.json({ error: "Connector not found." }, { status: 404 });
-    }
+    const workspaceId = new URL(request.url).searchParams.get("workspaceId");
 
-    const definition = CONNECTOR_REGISTRY.find((d) => d.tool === connector.tool);
-    if (!definition) {
-        return NextResponse.json({ error: "Connector definition missing." }, { status: 500 });
-    }
-
-    // For OAuth connectors: check if token ref is set (actual token validation
-    // happens in the api-gateway against the provider — this is the website-side check)
-    if (connector.authMethod === "oauth2") {
-        if (!connector.secretRefId) {
-            const updated: TenantConnector = {
-                ...connector,
-                status: "pending_auth",
-                lastHealthcheckAt: new Date().toISOString(),
-                lastErrorClass: "token_missing",
-                updatedAt: new Date().toISOString(),
-            };
-            connectorStore.set(id, updated);
-            return NextResponse.json({
-                status: "pending_auth",
-                healthy: false,
-                message: "OAuth not completed. Please authenticate via the Connect button.",
-                nextStep: { action: "oauth", oauthInitUrl: `/api/connectors/${id}/oauth/start` },
-            });
+    try {
+        const res = await gatewayFetch(
+            "/v1/connectors/health/check",
+            {
+                method: "POST",
+                body: JSON.stringify({ connectorId: id, workspaceId }),
+            },
+            gatewayToken
+        );
+        const body: unknown = await res.json();
+        if (!res.ok) {
+            return NextResponse.json({ error: "gateway_error", detail: body }, { status: 502 });
         }
-
-        // Token ref is present — mark healthy (real validation deferred to api-gateway)
-        const updated: TenantConnector = {
-            ...connector,
-            status: "connected",
-            lastHealthcheckAt: new Date().toISOString(),
-            lastErrorClass: null,
-            updatedAt: new Date().toISOString(),
-        };
-        connectorStore.set(id, updated);
-        return NextResponse.json({ status: "ok", healthy: true, message: "Connector authenticated and ready." });
+        return NextResponse.json(body);
+    } catch (err) {
+        const detail = err instanceof Error ? err.message : String(err);
+        return NextResponse.json({ error: "gateway_error", detail }, { status: 502 });
     }
-
-    // For API key / generic_rest: validate base URL is reachable (lightweight ping)
-    if (connector.authMethod === "api_key" || connector.authMethod === "generic_rest") {
-        const baseUrl = connector.baseUrl ?? connector.configValues?.baseUrl;
-        if (!baseUrl) {
-            return NextResponse.json({ status: "error", healthy: false, message: "No base URL configured." });
-        }
-
-        try {
-            const url = new URL(baseUrl);
-            // Verify URL structure is valid — actual network call deferred to api-gateway
-            const updated: TenantConnector = {
-                ...connector,
-                status: "connected",
-                lastHealthcheckAt: new Date().toISOString(),
-                lastErrorClass: null,
-                updatedAt: new Date().toISOString(),
-            };
-            connectorStore.set(id, updated);
-            return NextResponse.json({
-                status: "ok",
-                healthy: true,
-                message: `Connector configured for ${url.hostname}. Live test will run on next agent action.`,
-            });
-        } catch {
-            const updated: TenantConnector = {
-                ...connector,
-                status: "error",
-                lastHealthcheckAt: new Date().toISOString(),
-                lastErrorClass: "invalid_base_url",
-                updatedAt: new Date().toISOString(),
-            };
-            connectorStore.set(id, updated);
-            return NextResponse.json({
-                status: "error",
-                healthy: false,
-                message: "Base URL is invalid. Please check your configuration.",
-            });
-        }
-    }
-
-    return NextResponse.json({ status: "ok", healthy: true, message: "Connector ready." });
 }

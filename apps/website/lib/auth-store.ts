@@ -11,6 +11,10 @@ type UserRecord = {
     company: string;
     role: UserRole;
     tenantId: string | null;
+    gatewayTenantId: string | null;
+    gatewayWorkspaceId: string | null;
+    gatewayBotId: string | null;
+    gatewayToken: string | null;
 };
 
 type SessionRecord = {
@@ -484,6 +488,28 @@ if (!hasTenantIdColumn) {
     db.exec(`ALTER TABLE users ADD COLUMN tenant_id TEXT;`);
 }
 
+// Use try/catch in addition to PRAGMA guards — Next.js build spawns parallel
+// workers that can all read PRAGMA before any ALTER commits, causing a race.
+const hasGatewayTenantIdColumn = userColumns.some((column) => column.name === "gateway_tenant_id");
+if (!hasGatewayTenantIdColumn) {
+    try { db.exec(`ALTER TABLE users ADD COLUMN gateway_tenant_id TEXT;`); } catch { /* already added by parallel worker */ }
+}
+
+const hasGatewayWorkspaceIdColumn = userColumns.some((column) => column.name === "gateway_workspace_id");
+if (!hasGatewayWorkspaceIdColumn) {
+    try { db.exec(`ALTER TABLE users ADD COLUMN gateway_workspace_id TEXT;`); } catch { /* already added by parallel worker */ }
+}
+
+const hasGatewayBotIdColumn = userColumns.some((column) => column.name === "gateway_bot_id");
+if (!hasGatewayBotIdColumn) {
+    try { db.exec(`ALTER TABLE users ADD COLUMN gateway_bot_id TEXT;`); } catch { /* already added by parallel worker */ }
+}
+
+const hasGatewayTokenColumn = userColumns.some((column) => column.name === "gateway_token");
+if (!hasGatewayTokenColumn) {
+    try { db.exec(`ALTER TABLE users ADD COLUMN gateway_token TEXT;`); } catch { /* already added by parallel worker */ }
+}
+
 const deploymentColumns = db.prepare(`PRAGMA table_info(deployment_jobs)`).all() as Array<{ name: string }>;
 const hasLastActionTypeColumn = deploymentColumns.some((column) => column.name === "last_action_type");
 const hasLastActionByColumn = deploymentColumns.some((column) => column.name === "last_action_by");
@@ -771,7 +797,11 @@ const mapUser = (row: Record<string, unknown> | undefined): UserRecord | null =>
         name: String(row.name),
         company: String(row.company),
         role,
-        tenantId: row.tenant_id ? String(row.tenant_id) : null,
+        tenantId: row.tenant_id != null ? String(row.tenant_id) : null,
+        gatewayTenantId: row.gateway_tenant_id != null ? String(row.gateway_tenant_id) : null,
+        gatewayWorkspaceId: row.gateway_workspace_id != null ? String(row.gateway_workspace_id) : null,
+        gatewayBotId: row.gateway_bot_id != null ? String(row.gateway_bot_id) : null,
+        gatewayToken: row.gateway_token != null ? String(row.gateway_token) : null,
     };
 };
 
@@ -1091,7 +1121,11 @@ export const authenticateUser = async (email: string, password: string): Promise
         name: String(row.name),
         company: String(row.company),
         role: effectiveRole,
-        tenantId: row.tenant_id ? String(row.tenant_id) : null,
+        tenantId: row.tenant_id != null ? String(row.tenant_id) : null,
+        gatewayTenantId: null,
+        gatewayWorkspaceId: null,
+        gatewayBotId: null,
+        gatewayToken: null,
     };
 };
 
@@ -1115,6 +1149,27 @@ export const createSession = (userId: string): { sessionToken: string; session: 
     };
 };
 
+export const updateUserGatewayIds = (input: {
+    userId: string;
+    gatewayTenantId: string;
+    gatewayWorkspaceId: string;
+    gatewayBotId: string;
+    gatewayToken: string;
+}): void => {
+    db.prepare(
+        `UPDATE users
+         SET gateway_tenant_id = ?, gateway_workspace_id = ?, gateway_bot_id = ?, gateway_token = ?
+         WHERE id = ?`,
+    ).run(input.gatewayTenantId, input.gatewayWorkspaceId, input.gatewayBotId, input.gatewayToken, input.userId);
+};
+
+export const updateUserGatewayToken = (input: {
+    userId: string;
+    gatewayToken: string;
+}): void => {
+    db.prepare(`UPDATE users SET gateway_token = ? WHERE id = ?`).run(input.gatewayToken, input.userId);
+};
+
 export const getSessionUser = (sessionToken: string): UserRecord | null => {
     const tokenHash = hashSessionToken(sessionToken);
 
@@ -1129,7 +1184,11 @@ export const getSessionUser = (sessionToken: string): UserRecord | null => {
           users.name AS name,
                     users.company AS company,
                     users.role AS role,
-                    users.tenant_id AS tenant_id
+                    users.tenant_id AS tenant_id,
+          users.gateway_tenant_id AS gateway_tenant_id,
+          users.gateway_workspace_id AS gateway_workspace_id,
+          users.gateway_bot_id AS gateway_bot_id,
+          users.gateway_token AS gateway_token
         FROM sessions
         INNER JOIN users ON users.id = sessions.user_id
         WHERE sessions.token_hash = ?
@@ -1145,6 +1204,10 @@ export const getSessionUser = (sessionToken: string): UserRecord | null => {
             company: string;
             role: UserRole;
             tenant_id: string | null;
+            gateway_tenant_id: string | null;
+            gateway_workspace_id: string | null;
+            gateway_bot_id: string | null;
+            gateway_token: string | null;
         }
         | undefined;
 
@@ -1165,7 +1228,11 @@ export const getSessionUser = (sessionToken: string): UserRecord | null => {
         name: String(row.name),
         company: String(row.company),
         role: String(row.role) === "superadmin" ? "superadmin" : String(row.role) === "admin" ? "admin" : "member",
-        tenantId: row.tenant_id ? String(row.tenant_id) : null,
+        tenantId: row.tenant_id != null ? String(row.tenant_id) : null,
+        gatewayTenantId: row.gateway_tenant_id != null ? String(row.gateway_tenant_id) : null,
+        gatewayWorkspaceId: row.gateway_workspace_id != null ? String(row.gateway_workspace_id) : null,
+        gatewayBotId: row.gateway_bot_id != null ? String(row.gateway_bot_id) : null,
+        gatewayToken: row.gateway_token != null ? String(row.gateway_token) : null,
     };
 };
 

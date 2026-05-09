@@ -1,4 +1,5 @@
 import type { ActionPlan } from '@agentfarm/shared-types';
+import { buildSystemPrompt } from './system-prompt-builder.js';
 
 const ANTHROPIC_BASE_URL = 'https://api.anthropic.com';
 const ANTHROPIC_API_VERSION = '2023-06-01';
@@ -40,7 +41,7 @@ export class PlannerError extends Error {
     }
 }
 
-export async function planTask(task: string, context?: string): Promise<ActionPlan> {
+export async function planTask(task: string, context?: string, language?: string): Promise<ActionPlan> {
     const apiKey = process.env['ANTHROPIC_API_KEY'];
     if (!apiKey) {
         throw new Error('ANTHROPIC_API_KEY environment variable is not set');
@@ -60,7 +61,7 @@ export async function planTask(task: string, context?: string): Promise<ActionPl
         body: JSON.stringify({
             model: PLANNER_MODEL,
             max_tokens: 1024,
-            system: PLANNER_SYSTEM_PROMPT,
+            system: buildSystemPrompt({ basePrompt: PLANNER_SYSTEM_PROMPT, language: language ?? 'en' }),
             messages: [{ role: 'user', content: userMessage }],
         }),
     });

@@ -1,41 +1,59 @@
-import type { Metadata } from "next";
-import { ArrowUpRight, CreditCard, Download, Receipt, TrendingUp, Users, Zap } from "lucide-react";
+"use client";
+
+import { useEffect, useState } from "react";
+import { ArrowUpRight, CreditCard, Download, TrendingUp, Users, Zap } from "lucide-react";
+import Link from "next/link";
 import ButtonLink from "@/components/shared/ButtonLink";
 import PremiumIcon from "@/components/shared/PremiumIcon";
 
-export const metadata: Metadata = {
-    title: "Admin Billing - AgentFarm",
-    description: "Track plan usage, seats, invoices, and monthly spend across your AgentFarm workspace.",
+type ApiOrder = {
+    id: string;
+    tenantId: string;
+    planId: string;
+    amountCents: number;
+    currency: string;
+    status: string;
+    customerEmail: string;
+    createdAt: string;
+    invoice: { id: string; number: string; pdfUrl?: string | null } | null;
 };
+
+type ProvisionState = 'idle' | 'loading' | 'done' | 'error';
 
 const plans = [
     {
+        id: "starter",
         name: "Starter+",
         seats: "Up to 10 seats",
         price: "$99",
         unit: "/ worker / mo",
         features: ["10 AI workers", "Basic approvals", "Community support"],
         current: false,
+        isEnterprise: false,
     },
     {
+        id: "pro",
         name: "Pro+",
         seats: "Up to 50 seats",
         price: "$249",
         unit: "/ worker / mo",
         features: ["50 AI workers", "Policy engine", "Priority support", "Audit logs"],
         current: true,
+        isEnterprise: false,
     },
     {
+        id: "enterprise",
         name: "Enterprise",
         seats: "Custom",
         price: "Custom",
         unit: "contract",
         features: ["Unlimited workers", "SSO + SAML", "SLA guarantee", "Dedicated CSM"],
         current: false,
+        isEnterprise: true,
     },
 ];
 
-const invoices = [
+const fallbackInvoices = [
     { id: "INV-2026-041", amount: "$6,920", status: "Paid", date: "Apr 01, 2026" },
     { id: "INV-2026-032", amount: "$6,340", status: "Paid", date: "Mar 01, 2026" },
     { id: "INV-2026-022", amount: "$5,980", status: "Paid", date: "Feb 01, 2026" },
@@ -43,7 +61,66 @@ const invoices = [
 
 const seatPct = Math.round((46 / 50) * 100);
 
+function formatOrderAmount(amountCents: number, currency: string): string {
+    const amount = amountCents / 100;
+    if (currency.toUpperCase() === "INR") {
+        return `₹${amount.toLocaleString("en-IN")}`;
+    }
+    return `$${amount.toLocaleString("en-US")}`;
+}
+
+function formatOrderDate(iso: string): string {
+    try {
+        return new Date(iso).toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "short",
+            day: "2-digit",
+        });
+    } catch {
+        return iso;
+    }
+}
+
 export default function AdminBillingPage() {
+    const [orders, setOrders] = useState<ApiOrder[]>([]);
+    const [ordersLoading, setOrdersLoading] = useState(true);
+    const [provisionStates, setProvisionStates] = useState<Record<string, ProvisionState>>({});
+    const [provisionErrors, setProvisionErrors] = useState<Record<string, string>>({});
+
+    async function provisionOrder(order: ApiOrder) {
+        setProvisionStates((s) => ({ ...s, [order.id]: 'loading' }));
+        setProvisionErrors((e) => { const next = { ...e }; delete next[order.id]; return next; });
+        try {
+            const res = await fetch('/api/admin/provision', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tenantId: order.tenantId, orderId: order.id }),
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({ error: 'Request failed' }));
+                throw new Error((err as { error?: string }).error ?? 'Request failed');
+            }
+            setProvisionStates((s) => ({ ...s, [order.id]: 'done' }));
+        } catch (e) {
+            setProvisionStates((s) => ({ ...s, [order.id]: 'error' }));
+            setProvisionErrors((prev) => ({ ...prev, [order.id]: (e as Error).message ?? 'Unknown error' }));
+        }
+    }
+
+    useEffect(() => {
+        fetch("/api/billing/orders", { credentials: "include" })
+            .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+            .then((data: { orders?: ApiOrder[] }) => {
+                if (Array.isArray(data.orders) && data.orders.length > 0) {
+                    setOrders(data.orders);
+                }
+            })
+            .catch(() => {
+                // Fall back to hardcoded invoices — no-op, orders stays empty
+            })
+            .finally(() => setOrdersLoading(false));
+    }, []);
     return (
         <div className="site-shell min-h-screen">
 
@@ -151,9 +228,18 @@ export default function AdminBillingPage() {
                                         ))}
                                     </ul>
                                     {!plan.current && (
-                                        <button className="mt-auto text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 py-1.5 transition-colors">
-                                            Switch Plan
-                                        </button>
+                                        plan.isEnterprise ? (
+                                            <ButtonLink href="/book-demo" size="sm" className="mt-auto w-full justify-center text-xs">
+                                                Talk to Sales
+                                            </ButtonLink>
+                                        ) : (
+                                            <Link
+                                                href={`/checkout/billing?planId=${plan.id}&country=IN`}
+                                                className="mt-auto text-xs font-bold rounded-lg border border-emerald-400 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 py-1.5 transition-colors text-center block"
+                                            >
+                                                Upgrade Plan
+                                            </Link>
+                                        )
                                     )}
                                 </div>
                             ))}
@@ -222,45 +308,129 @@ export default function AdminBillingPage() {
                     </div>
                 </div>
 
-                {/* Invoice table */}
+                {/* Invoice / Orders table */}
                 <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
                     <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                         <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Invoice History</h2>
-                        <span className="text-xs text-slate-400 dark:text-slate-500">{invoices.length} invoices</span>
+                        {!ordersLoading && (
+                            <span className="text-xs text-slate-400 dark:text-slate-500">
+                                {orders.length > 0 ? `${orders.length} orders` : `${fallbackInvoices.length} invoices`}
+                            </span>
+                        )}
                     </div>
                     <div className="overflow-x-auto">
-                        <table className="w-full min-w-[520px] text-sm">
-                            <thead>
-                                <tr className="bg-slate-50 dark:bg-slate-800/50 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                                    <th className="text-left px-5 py-3">Invoice</th>
-                                    <th className="text-left px-4 py-3">Date</th>
-                                    <th className="text-left px-4 py-3">Amount</th>
-                                    <th className="text-left px-4 py-3">Status</th>
-                                    <th className="text-left px-4 py-3">Receipt</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/70">
-                                {invoices.map((inv) => (
-                                    <tr key={inv.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                                        <td className="px-5 py-3.5 font-semibold text-slate-900 dark:text-slate-100 font-mono text-xs">{inv.id}</td>
-                                        <td className="px-4 py-3.5 text-slate-600 dark:text-slate-300">{inv.date}</td>
-                                        <td className="px-4 py-3.5 font-bold text-slate-900 dark:text-slate-100">{inv.amount}</td>
-                                        <td className="px-4 py-3.5">
-                                            <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/40 rounded-full px-2.5 py-1">
-                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                                                {inv.status}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3.5">
-                                            <button className="inline-flex items-center gap-1.5 text-xs font-semibold text-sky-600 dark:text-sky-400 hover:text-sky-800 dark:hover:text-sky-200 transition-colors">
-                                                <PremiumIcon icon={Download} tone="sky" containerClassName="w-5 h-5 rounded-md bg-sky-100 dark:bg-sky-900/40 text-sky-600 dark:text-sky-400" iconClassName="w-3 h-3" />
-                                                Download
-                                            </button>
-                                        </td>
-                                    </tr>
+                        {ordersLoading ? (
+                            <div className="px-5 py-6 animate-pulse space-y-3">
+                                {[0, 1, 2].map((i) => (
+                                    <div key={i} className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-full" />
                                 ))}
-                            </tbody>
-                        </table>
+                            </div>
+                        ) : orders.length > 0 ? (
+                            <table className="w-full min-w-[520px] text-sm">
+                                <thead>
+                                    <tr className="bg-slate-50 dark:bg-slate-800/50 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                        <th className="text-left px-5 py-3">Order ID</th>
+                                        <th className="text-left px-4 py-3">Date</th>
+                                        <th className="text-left px-4 py-3">Amount</th>
+                                        <th className="text-left px-4 py-3">Status</th>
+                                        <th className="text-left px-4 py-3">Invoice</th>
+                                        <th className="text-left px-4 py-3">Provision</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/70">
+                                    {orders.map((order) => (
+                                        <tr key={order.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                                            <td className="px-5 py-3.5 font-semibold text-slate-900 dark:text-slate-100 font-mono text-xs">
+                                                {order.invoice?.number ?? order.id.slice(0, 12)}
+                                            </td>
+                                            <td className="px-4 py-3.5 text-slate-600 dark:text-slate-300">{formatOrderDate(order.createdAt)}</td>
+                                            <td className="px-4 py-3.5 font-bold text-slate-900 dark:text-slate-100">
+                                                {formatOrderAmount(order.amountCents, order.currency)}
+                                            </td>
+                                            <td className="px-4 py-3.5">
+                                                <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/40 rounded-full px-2.5 py-1">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                                    {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3.5">
+                                                {order.invoice?.pdfUrl ? (
+                                                    <a
+                                                        href={order.invoice.pdfUrl}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-sky-600 dark:text-sky-400 hover:text-sky-800 dark:hover:text-sky-200 transition-colors"
+                                                    >
+                                                        <PremiumIcon icon={Download} tone="sky" containerClassName="w-5 h-5 rounded-md bg-sky-100 dark:bg-sky-900/40 text-sky-600 dark:text-sky-400" iconClassName="w-3 h-3" />
+                                                        Download
+                                                    </a>
+                                                ) : (
+                                                    <span className="text-xs text-slate-400 dark:text-slate-500">Pending</span>
+                                                )}
+                                            </td>
+                                            <td className="px-4 py-3.5">
+                                                {order.status === 'paid' ? (
+                                                    provisionStates[order.id] === 'done' ? (
+                                                        <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/40 rounded-full px-2.5 py-1">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                                            Started
+                                                        </span>
+                                                    ) : provisionStates[order.id] === 'error' ? (
+                                                        <span title={provisionErrors[order.id]} className="inline-flex items-center gap-1 text-xs font-bold text-rose-700 dark:text-rose-300 bg-rose-100 dark:bg-rose-900/40 rounded-full px-2.5 py-1 cursor-help">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                                                            Error
+                                                        </span>
+                                                    ) : (
+                                                        <button
+                                                            disabled={provisionStates[order.id] === 'loading'}
+                                                            onClick={() => provisionOrder(order)}
+                                                            className="text-xs font-bold rounded-lg border border-emerald-400 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 px-3 py-1 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                        >
+                                                            {provisionStates[order.id] === 'loading' ? 'Starting…' : 'Provision'}
+                                                        </button>
+                                                    )
+                                                ) : (
+                                                    <span className="text-xs text-slate-400 dark:text-slate-500">—</span>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        ) : (
+                            <table className="w-full min-w-[520px] text-sm">
+                                <thead>
+                                    <tr className="bg-slate-50 dark:bg-slate-800/50 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                        <th className="text-left px-5 py-3">Invoice</th>
+                                        <th className="text-left px-4 py-3">Date</th>
+                                        <th className="text-left px-4 py-3">Amount</th>
+                                        <th className="text-left px-4 py-3">Status</th>
+                                        <th className="text-left px-4 py-3">Receipt</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/70">
+                                    {fallbackInvoices.map((inv) => (
+                                        <tr key={inv.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                                            <td className="px-5 py-3.5 font-semibold text-slate-900 dark:text-slate-100 font-mono text-xs">{inv.id}</td>
+                                            <td className="px-4 py-3.5 text-slate-600 dark:text-slate-300">{inv.date}</td>
+                                            <td className="px-4 py-3.5 font-bold text-slate-900 dark:text-slate-100">{inv.amount}</td>
+                                            <td className="px-4 py-3.5">
+                                                <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/40 rounded-full px-2.5 py-1">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                                    {inv.status}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3.5">
+                                                <button className="inline-flex items-center gap-1.5 text-xs font-semibold text-sky-600 dark:text-sky-400 hover:text-sky-800 dark:hover:text-sky-200 transition-colors">
+                                                    <PremiumIcon icon={Download} tone="sky" containerClassName="w-5 h-5 rounded-md bg-sky-100 dark:bg-sky-900/40 text-sky-600 dark:text-sky-400" iconClassName="w-3 h-3" />
+                                                    Download
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        )}
                     </div>
                 </div>
 
