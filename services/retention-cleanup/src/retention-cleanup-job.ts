@@ -118,6 +118,10 @@ export class RetentionCleanupJob {
                     errors.push(`Failed to process session ${session.id}: ${msg}`);
                 }
             }
+
+            // Sweep expired short-term memory rows
+            const memoryRowsDeleted = await this.sweepExpiredShortTermMemory();
+            console.log(`[RetentionCleanupJob] swept ${memoryRowsDeleted} expired AgentShortTermMemory row(s)`);
         } catch (error) {
             const msg = error instanceof Error ? error.message : 'Unknown error';
             errors.push(`Cleanup job failed: ${msg}`);
@@ -335,5 +339,21 @@ export class RetentionCleanupJob {
         const timestamp = Date.now().toString(36);
         const random = randomBytes(4).toString('hex');
         return `job_${timestamp}_${random}`;
+    }
+
+    /**
+     * Delete all AgentShortTermMemory rows whose expiresAt is in the past.
+     * Skips permanent rows (expiresAt = null).
+     */
+    private async sweepExpiredShortTermMemory(): Promise<number> {
+        const result = await this.prisma.agentShortTermMemory.deleteMany({
+            where: {
+                expiresAt: {
+                    not: null,
+                    lt: new Date(),
+                },
+            },
+        });
+        return result.count;
     }
 }

@@ -747,8 +747,9 @@ model AgentShortTermMemory {
   executionStatus  String   @default("success") // 'success' | 'approval_required' | 'failed'
   summary          String   // brief task summary for prompt injection
   correlationId    String
+  repoName         String?  // optional repo scope for per-repo memory isolation
   createdAt        DateTime @default(now())
-  expiresAt        DateTime // createdAt + 7 days; used for TTL cleanup
+  expiresAt        DateTime? // createdAt + 7 days; null for permanent records; used for TTL cleanup
 
   @@index([workspaceId, createdAt])
   @@index([workspaceId, expiresAt])
@@ -760,13 +761,31 @@ model AgentLongTermMemory {
   tenantId      String
   workspaceId   String
   pattern       String
+  repoName      String?  // optional repo scope for per-repo memory isolation
   confidence    Float
   observedCount Int      @default(1)
   lastSeen      DateTime
   createdAt     DateTime @default(now())
 
+  @@unique([tenantId, pattern])
   @@index([workspaceId, confidence])
   @@index([tenantId, workspaceId])
+}
+
+model AgentRepoKnowledge {
+  id          String   @id @default(cuid())
+  tenantId    String
+  workspaceId String
+  repoName    String
+  role        String
+  key         String
+  value       Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([tenantId, repoName, role, key])
+  @@index([tenantId, repoName, role])
+  @@index([workspaceId])
 }
 
 // ============================================================================

@@ -159,7 +159,11 @@ const DEFAULT_SYSTEM_PROMPT =
  * Falls back to the generic JSON classification engine prompt if the roleKey is
  * unknown or empty — preserving backwards-compatible behaviour for all providers.
  */
-export function getRoleSystemPrompt(roleKey: string): string {
+export function getRoleSystemPrompt(roleKey: string, repoName?: string): string {
     const normalised = (roleKey ?? '').trim().toLowerCase();
-    return ROLE_SYSTEM_PROMPTS[normalised] ?? DEFAULT_SYSTEM_PROMPT;
+    const basePrompt = ROLE_SYSTEM_PROMPTS[normalised] ?? DEFAULT_SYSTEM_PROMPT;
+    if (repoName && repoName.trim()) {
+        return `${basePrompt}\nCurrent repo: ${repoName}. All memory and actions are scoped to this repo.`;
+    }
+    return basePrompt;
 }

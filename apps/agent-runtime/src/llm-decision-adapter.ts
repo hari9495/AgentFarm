@@ -887,7 +887,7 @@ const createAnthropicResolver = (input: {
                 model: selectedModel,
                 max_tokens: 512,
                 temperature: 0,
-                system: getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : ''),
+                system: getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : '', process.env['GITHUB_REPO'] ?? undefined),
                 messages: [
                     {
                         role: 'user',
@@ -961,7 +961,7 @@ const createGoogleResolver = (input: {
                 contents: [
                     {
                         role: 'user',
-                        parts: [{ text: `${getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : '')}\n\n${createTaskPrompt(task, heuristicDecision)}` }],
+                        parts: [{ text: `${getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : '', process.env['GITHUB_REPO'] ?? undefined)}\n\n${createTaskPrompt(task, heuristicDecision)}` }],
                     },
                 ],
             }),
@@ -1226,7 +1226,7 @@ const createOpenAiResolver = (input: {
                 messages: [
                     {
                         role: 'system',
-                        content: getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : ''),
+                        content: getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : '', process.env['GITHUB_REPO'] ?? undefined),
                     },
                     {
                         role: 'user',
@@ -1292,7 +1292,7 @@ const createGitHubModelsResolver = (input: {
                 messages: [
                     {
                         role: 'system',
-                        content: getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : ''),
+                        content: getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : '', process.env['GITHUB_REPO'] ?? undefined),
                     },
                     {
                         role: 'user',
@@ -1356,7 +1356,7 @@ const createXaiResolver = (input: {
                 temperature: 0,
                 response_format: { type: 'json_object' },
                 messages: [
-                    { role: 'system', content: getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : '') },
+                    { role: 'system', content: getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : '', process.env['GITHUB_REPO'] ?? undefined) },
                     { role: 'user', content: createTaskPrompt(task, heuristicDecision) },
                 ],
             }),
@@ -1416,7 +1416,7 @@ const createMistralResolver = (input: {
                 temperature: 0,
                 response_format: { type: 'json_object' },
                 messages: [
-                    { role: 'system', content: getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : '') },
+                    { role: 'system', content: getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : '', process.env['GITHUB_REPO'] ?? undefined) },
                     { role: 'user', content: createTaskPrompt(task, heuristicDecision) },
                 ],
             }),
@@ -1476,7 +1476,7 @@ const createTogetherResolver = (input: {
                 temperature: 0,
                 response_format: { type: 'json_object' },
                 messages: [
-                    { role: 'system', content: getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : '') },
+                    { role: 'system', content: getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : '', process.env['GITHUB_REPO'] ?? undefined) },
                     { role: 'user', content: createTaskPrompt(task, heuristicDecision) },
                 ],
             }),
@@ -1758,7 +1758,7 @@ const createAzureOpenAiResolver = (input: {
                 messages: [
                     {
                         role: 'system',
-                        content: getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : ''),
+                        content: getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : '', process.env['GITHUB_REPO'] ?? undefined),
                     },
                     {
                         role: 'user',

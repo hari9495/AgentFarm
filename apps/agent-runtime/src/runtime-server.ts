@@ -80,6 +80,7 @@ import {
 import { buildErrorQuery, researchForTask, type FetchFn } from './web-research-service.js';
 import { analyzeImage, type VisionLLMCallerFn, type VisionProvider } from './vision-service.js';
 import { FanOutProgressSink, NoopProgressSink, type ProgressMilestone, type ProgressSink } from './task-progress-reporter.js';
+import { createPrismaMemoryStore } from './prisma-memory-store.js';
 
 type RuntimeMemoryStore = {
     readMemoryForTask: (workspaceId: string, maxResults?: number) => Promise<{
@@ -3799,7 +3800,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         config: RuntimeConfig,
         result: ProcessedTaskResult,
     ): Promise<void> => {
-        await postTaskCloseOut(task, result, localWorkspaceActionExecutor).catch(() => {});
+        await postTaskCloseOut(task, result, localWorkspaceActionExecutor).catch(() => { });
         // Write compact execution transcript before flushing the action result
         const startedAt = taskStartTimes.get(task.taskId);
         taskStartTimes.delete(task.taskId);
@@ -6565,7 +6566,22 @@ export async function startRuntimeServer(options: RuntimeServerOptions = {}): Pr
         customerERPStore.registerCustomer({ customerId, config: erpConfig });
     }
 
-    const app = buildRuntimeServer(options);
+    // Auto-create Prisma-backed memory store when DATABASE_URL is configured and no store was injected
+    let resolvedOptions: RuntimeServerOptions = options;
+    if (!options.memoryStore) {
+        const databaseUrl = env['DATABASE_URL'];
+        if (databaseUrl && databaseUrl.trim()) {
+            try {
+                const { PrismaClient } = await import('@prisma/client') as { PrismaClient: new () => import('@prisma/client').PrismaClient };
+                const memoryPrisma = new PrismaClient();
+                resolvedOptions = { ...options, memoryStore: createPrismaMemoryStore(memoryPrisma) };
+            } catch {
+                // Prisma unavailable or misconfigured — proceed without memory store
+            }
+        }
+    }
+
+    const app = buildRuntimeServer(resolvedOptions);
     const port = Number(env.AF_HEALTH_PORT ?? env.AGENTFARM_HEALTH_PORT ?? 8080);
     await app.listen({ host: '0.0.0.0', port });
     app.log.info({ port }, 'agent-runtime listening');
