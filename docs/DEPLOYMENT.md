@@ -1,7 +1,6 @@
-# Deployment Guide
+# AgentFarm Deployment Guide
 
-> AgentFarm production deployment reference.
-> Last updated: 2026-05-10
+> Last updated: May 10, 2026 | AgentFarm monorepo audit
 
 ---
 
@@ -26,73 +25,66 @@ Copy `.env.example` to `.env` at the repo root. All services read from environme
 cp .env.example .env
 ```
 
-### Core
+### Complete Environment Variable Reference
 
-```env
-DATABASE_URL=postgresql://agentfarm:agentfarm@localhost:5432/agentfarm
-REDIS_URL=redis://localhost:6379
-OPA_BASE_URL=http://localhost:8181
-API_GATEWAY_PORT=3000
-```
-
-### Voice / TTS
-
-```env
-VOICEBOX_URL=http://voicebox:17493
-VOXCPM2_MODEL_ID=openbmb/VoxCPM2
-```
-
-### Auth / Signup Control
-
-```env
-AGENTFARM_COMPANY_EMAILS=           # comma-separated allowed emails
-AGENTFARM_COMPANY_DOMAINS=          # comma-separated allowed domains
-AGENTFARM_COMPANY_FALLBACK_DOMAINS=agentfarm.local
-AGENTFARM_DISABLE_COMPANY_FALLBACK=false
-```
-
-Enable open signup in local dev:
-```env
-AGENTFARM_ALLOWED_SIGNUP_DOMAINS=agentfarm.local
-```
-
-### Email (SMTP)
-
-```env
-SMTP_HOST=smtp.example.com
-SMTP_PORT=587
-SMTP_USER=user@example.com
-SMTP_PASS=your-smtp-password
-```
-
-### Desktop Operator
-
-```env
-DESKTOP_OPERATOR=native            # native | mock
-DESKTOP_OPERATOR_SESSION_ID=       # optional platform session ID
-BROWSER_PROFILE_DIR=./data/browser-profiles
-```
-
-Set `DESKTOP_OPERATOR=mock` to route all Tier 11/12 desktop actions through the `MockDesktopOperator` without executing real platform automation (safe for dev/CI).
-
-### Payments
-
-```env
-STRIPE_SECRET_KEY=sk_test_placeholder
-STRIPE_WEBHOOK_SECRET=whsec_placeholder
-RAZORPAY_KEY_ID=rzp_test_placeholder
-RAZORPAY_KEY_SECRET=rzp_secret_placeholder
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_placeholder
-NEXT_PUBLIC_RAZORPAY_KEY_ID=rzp_test_placeholder
-```
-
-### Zoho Sign (E-signature)
-
-```env
-ZOHO_CLIENT_ID=zoho_client_id_placeholder
-ZOHO_CLIENT_SECRET=zoho_client_secret_placeholder
-ZOHO_SIGN_WEBHOOK_TOKEN=zoho_webhook_token_placeholder
-```
+| Variable | Service | Required | Default | Description |
+|---|---|---|---|---|
+| `DATABASE_URL` | all | ✅ | — | PostgreSQL 16 connection string |
+| `REDIS_URL` | api-gateway | ✅ | — | Redis 7 connection string |
+| `API_SESSION_SECRET` | api-gateway | ✅ | `agentfarm-dev-secret` | HMAC-SHA256 signing secret for session tokens |
+| `API_GATEWAY_PORT` | api-gateway | ❌ | `3000` | HTTP port for api-gateway |
+| `API_GATEWAY_URL` | agent-runtime, trigger-service | ✅ | — | Base URL for api-gateway (e.g. `http://localhost:3000`) |
+| `AGENT_RUNTIME_PORT` | agent-runtime | ❌ | `3003` | HTTP port for agent-runtime |
+| `TRIGGER_SERVICE_PORT` | trigger-service | ❌ | — | HTTP port for trigger-service |
+| `OPS_MONITORING_TOKEN` | api-gateway | ✅ | — | Secret for `x-ops-token` monitoring header |
+| `LLM_PROVIDER` | agent-runtime | ❌ | `auto` | LLM provider: `openai`, `azure_openai`, `anthropic`, `google`, `xai`, `mistral`, `together`, `github_models`, `auto` |
+| `OPENAI_API_KEY` | agent-runtime | ❌ | — | OpenAI API key (required if `LLM_PROVIDER=openai` or `auto`) |
+| `AZURE_OPENAI_ENDPOINT` | agent-runtime | ❌ | — | Azure OpenAI endpoint URL |
+| `AZURE_OPENAI_DEPLOYMENT_NAME` | agent-runtime | ❌ | — | Azure OpenAI deployment name |
+| `AZURE_OPENAI_API_KEY` | agent-runtime | ❌ | — | Azure OpenAI API key |
+| `ANTHROPIC_API_KEY` | agent-runtime, trigger-service | ❌ | — | Anthropic API key |
+| `GOOGLE_API_KEY` | agent-runtime | ❌ | — | Google Gemini API key |
+| `XAI_API_KEY` | agent-runtime | ❌ | — | xAI Grok API key |
+| `MISTRAL_API_KEY` | agent-runtime | ❌ | — | Mistral API key |
+| `TOGETHER_API_KEY` | agent-runtime | ❌ | — | Together AI API key |
+| `GITHUB_MODELS_TOKEN` | agent-runtime | ❌ | — | GitHub Models API token |
+| `DESKTOP_OPERATOR` | agent-runtime | ❌ | `mock` | Desktop operator: `mock`, `native`, `playwright` |
+| `DESKTOP_OPERATOR_SESSION_ID` | agent-runtime | ❌ | — | Optional platform session ID for native operator |
+| `DESKTOP_SCREENSHOT_STORAGE` | agent-runtime | ❌ | — | Path or blob URL for screenshot storage |
+| `PLAYWRIGHT_HEADLESS` | agent-runtime | ❌ | `true` | Run Playwright in headless mode |
+| `PLAYWRIGHT_SLOW_MO` | agent-runtime | ❌ | `0` | Playwright slow-motion delay (ms) |
+| `AF_WORKSPACE_BASE` | agent-runtime | ❌ | — | Base directory for local workspace files |
+| `GITHUB_REPO` | agent-runtime | ❌ | — | Default GitHub repo for workspace tasks (`owner/repo`) |
+| `AF_TEST_AFTER_EDIT` | agent-runtime | ❌ | — | If set, runs tests automatically after every code edit |
+| `WEBHOOK_SECRET` | trigger-service | ✅ | — | HMAC-SHA256 secret for `X-Hub-Signature-256` verification |
+| `SLACK_SIGNING_SECRET` | trigger-service | ❌ | — | Slack signing secret for `X-Slack-Signature` verification |
+| `EMAIL_POLL_INTERVAL_MS` | trigger-service | ❌ | `60000` | IMAP polling interval in milliseconds |
+| `IMAP_HOST` | trigger-service | ❌ | — | IMAP server hostname |
+| `IMAP_PORT` | trigger-service | ❌ | `993` | IMAP server port |
+| `IMAP_USER` | trigger-service | ❌ | — | IMAP account username |
+| `IMAP_PASSWORD` | trigger-service | ❌ | — | IMAP account password |
+| `STRIPE_SECRET_KEY` | api-gateway | ❌ | — | Stripe secret key (`sk_live_...` or `sk_test_...`) |
+| `STRIPE_WEBHOOK_SECRET` | api-gateway | ❌ | — | Stripe webhook signing secret (`whsec_...`) |
+| `RAZORPAY_KEY_ID` | api-gateway | ❌ | — | Razorpay key ID (`rzp_live_...` or `rzp_test_...`) |
+| `RAZORPAY_KEY_SECRET` | api-gateway | ❌ | — | Razorpay key secret |
+| `ZOHO_SIGN_CLIENT_ID` | api-gateway | ❌ | — | ZohoSign OAuth client ID |
+| `ZOHO_SIGN_CLIENT_SECRET` | api-gateway | ❌ | — | ZohoSign OAuth client secret |
+| `ZOHO_SIGN_WEBHOOK_TOKEN` | api-gateway | ❌ | — | ZohoSign webhook verification token |
+| `VOICEBOX_URL` | agent-runtime | ❌ | `http://voicebox:17493` | VoxCPM2 TTS server URL |
+| `VOXCPM2_MODEL_ID` | agent-runtime | ❌ | `openbmb/VoxCPM2` | VoxCPM2 model ID |
+| `SMTP_HOST` | notification-service | ❌ | — | SMTP server hostname |
+| `SMTP_PORT` | notification-service | ❌ | `587` | SMTP server port |
+| `SMTP_USER` | notification-service | ❌ | — | SMTP account username |
+| `SMTP_PASS` | notification-service | ❌ | — | SMTP account password |
+| `OPA_BASE_URL` | policy-engine | ❌ | `http://localhost:8181` | Open Policy Agent base URL |
+| `BROWSER_PROFILE_DIR` | agent-runtime | ❌ | `./data/browser-profiles` | Directory for persistent browser profiles |
+| `AGENTFARM_COMPANY_EMAILS` | api-gateway, website | ❌ | — | Comma-separated allowed signup emails |
+| `AGENTFARM_COMPANY_DOMAINS` | api-gateway, website | ❌ | — | Comma-separated allowed signup domains |
+| `AGENTFARM_COMPANY_FALLBACK_DOMAINS` | api-gateway, website | ❌ | `agentfarm.local` | Fallback domain for local dev signups |
+| `AGENTFARM_DISABLE_COMPANY_FALLBACK` | api-gateway, website | ❌ | `false` | Disable fallback domain in production |
+| `AGENTFARM_ALLOWED_SIGNUP_DOMAINS` | api-gateway, website | ❌ | — | Open signup domain allow-list |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | website | ❌ | — | Stripe publishable key for frontend |
+| `NEXT_PUBLIC_RAZORPAY_KEY_ID` | website | ❌ | — | Razorpay key ID for frontend |
 
 ---
 
@@ -140,11 +132,11 @@ pnpm --filter @agentfarm/website dev
 # Dashboard (port 3001)
 pnpm --filter @agentfarm/dashboard dev
 
-# Trigger Service (port 3003)
-pnpm --filter @agentfarm/trigger-service dev
-
-# Agent Runtime
+# Agent Runtime (port 3003)
 pnpm --filter @agentfarm/agent-runtime dev
+
+# Trigger Service (port: TRIGGER_SERVICE_PORT)
+pnpm --filter @agentfarm/trigger-service dev
 ```
 
 Or start everything with the walkthrough script:
@@ -163,19 +155,25 @@ All Prisma commands run through the `@agentfarm/db-schema` package.
 
 ```bash
 # Generate Prisma client after schema changes
-pnpm --filter @agentfarm/db-schema generate
+pnpm --filter @agentfarm/db-schema prisma generate
 
-# Create a new migration
-pnpm --filter @agentfarm/db-schema migrate:dev -- --name add_feature_x
+# Create a new migration (dev)
+pnpm --filter @agentfarm/db-schema prisma migrate dev --name add_feature_x
 
 # Apply migrations in production
-pnpm --filter @agentfarm/db-schema migrate:deploy
+pnpm --filter @agentfarm/db-schema prisma migrate deploy
+
+# Validate schema
+pnpm --filter @agentfarm/db-schema prisma validate
+
+# Seed pricing plans (Starter / Professional / Enterprise)
+pnpm --filter @agentfarm/api-gateway seed
 
 # Reset DB (dev only — destructive)
-pnpm --filter @agentfarm/db-schema db:reset
+pnpm --filter @agentfarm/db-schema prisma migrate reset
 
 # Open Prisma Studio (GUI)
-pnpm --filter @agentfarm/db-schema studio
+pnpm --filter @agentfarm/db-schema prisma studio
 ```
 
 ---
@@ -215,6 +213,19 @@ pnpm build           # Full production build
 | `postgres` | `postgres:16` | 5432 | Primary PostgreSQL database |
 | `redis` | `redis:7` | 6379 | Session cache and task queue |
 | `voxcpm2` | `docker/voxcpm2/` | 17493 | VoxCPM2 TTS voice synthesis |
+
+### Application Port Map
+
+| Service | Default Port | Env Override |
+|---|---|---|
+| `api-gateway` | 3000 | `API_GATEWAY_PORT` |
+| `dashboard` | 3001 | — |
+| `website` | 3002 | — |
+| `agent-runtime` | 3003 | `AGENT_RUNTIME_PORT` |
+| `trigger-service` | — | `TRIGGER_SERVICE_PORT` |
+| `postgres` | 5432 | (in DATABASE_URL) |
+| `redis` | 6379 | (in REDIS_URL) |
+| `voxcpm2` | 17493 | (in VOICEBOX_URL) |
 
 ---
 

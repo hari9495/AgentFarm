@@ -1,7 +1,7 @@
-# Architecture
+# AgentFarm Architecture — Full System
 
+> Last updated: May 10, 2026 | AgentFarm monorepo audit
 > AgentFarm — Multi-tenant AI agent platform with enterprise control gates, audit trails, and governed autonomy.
-> Last updated: 2026-05-10
 
 ---
 
