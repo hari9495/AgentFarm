@@ -1999,6 +1999,29 @@ export interface ParallelConfig {
 }
 
 // ============================================================================
+// EVIDENCE BUNDLE (2026-05-10)
+// Canonical evidence bundle for a single agent task — stored in evidence-service
+// ============================================================================
+
+export interface EvidenceBundle {
+  taskId: string
+  tenantId: string
+  workspaceId: string
+  botId: string
+  actionType: string
+  riskLevel: 'low' | 'medium' | 'high'
+  routeDecision: string
+  llmProvider: string
+  inputTokens: number
+  outputTokens: number
+  screenshots: string[]
+  approvalId?: string
+  signature?: string
+  finalised: boolean
+  createdAt: string
+}
+
+// ============================================================================
 // BROWSER AUDIT SYSTEM (2026-05-07)
 // Unified audit ID scheme with embedded ancestry, storage paths, and retention policies
 // ============================================================================
@@ -2012,4 +2035,58 @@ export * from './task-plan.js';
 export type { AgentNotificationChannel, NotificationConfig, NotificationPayload, NotificationResult, CustomerNotificationConfig } from './notification.js';
 export type { CRMVendor, CRMConfig, CRMRecord, CRMQuery, CRMWritePayload, CRMResult, CustomerCRMConfig } from './crm.js';
 export type { ERPVendor, ERPConfig, ERPDocument, ERPQuery, ERPWritePayload, ERPResult, CustomerERPConfig } from './erp.js';
+
+// ============================================================================
+// MCP (Model Context Protocol) types
+// ============================================================================
+
+export interface McpTool {
+  name: string;
+  description: string;
+  inputSchema: {
+    type: 'object';
+    properties: Record<string, unknown>;
+    required?: string[];
+  };
+}
+
+export interface McpToolCallResult {
+  content: Array<{ type: 'text' | 'image' | 'resource'; text?: string; data?: string; mimeType?: string }>;
+  isError?: boolean;
+}
+
+export interface McpServerInfo {
+  serverId: string;
+  name: string;
+  url: string;
+  protocolVersion: string;
+  tools: McpTool[];
+  lastHealthCheck: string;
+  healthy: boolean;
+}
+
+// ============================================================================
+// AGENT DISPATCH CONTRACTS
+// Frozen 2026-05-10 — cross-process agent dispatch via POST /v1/agents/dispatch
+// ============================================================================
+
+export interface AgentDispatchRequest {
+  fromAgentId: string;       // the agent initiating the dispatch
+  toAgentId: string;         // target agent to wake
+  workspaceId: string;
+  tenantId: string;
+  taskDescription: string;   // natural language goal for the target agent
+  requiredCapability?: string; // optional capability hint
+  timeoutMs?: number;          // default 30000
+  callbackRunId?: string;      // if set, POST result back to /v1/wake/runs/:id/complete
+}
+
+export interface AgentDispatchResult {
+  dispatchId: string;
+  fromAgentId: string;
+  toAgentId: string;
+  status: 'queued' | 'dispatched' | 'failed';
+  queuedAt: string;  // ISO
+  error?: string;
+}
 

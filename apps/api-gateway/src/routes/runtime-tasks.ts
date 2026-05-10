@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { TaskLeaseRecord } from '@agentfarm/shared-types';
+import { parseGoal } from '@agentfarm/agent-runtime/natural-language-parser.js';
 
 const getPrisma = async () => {
     const db = await import('../lib/db.js');
@@ -73,6 +74,24 @@ type RegisterRuntimeTaskRoutesOptions = {
     serviceAuthToken?: string;
     runtimeTaskToken?: string;
     dispatcher?: RuntimeTaskDispatcher;
+    listTaskRecords?: (
+        workspaceId: string,
+        limit: number,
+        cursor?: string,
+    ) => Promise<{
+        tasks: Array<{
+            id: string;
+            taskId: string;
+            modelProvider: string;
+            modelProfile: string;
+            outcome: string;
+            latencyMs: number;
+            estimatedCostUsd: number | null;
+            modelTier: string | null;
+            executedAt: Date;
+        }>;
+        nextCursor: string | null;
+    }>;
 };
 
 type RuntimeTaskParams = {
@@ -874,4 +893,79 @@ export async function registerRuntimeTaskRoutes(
             downstream_status: dispatchResult.statusCode,
         });
     });
+
+    const defaultListTaskRecords = async (
+        workspaceId: string,
+        limit: number,
+        cursor?: string,
+    ) => {
+        const prisma = await getPrisma();
+        const results = await prisma.taskExecutionRecord.findMany({
+            where: { workspaceId },
+            orderBy: { executedAt: 'desc' },
+            take: limit + 1,
+            skip: cursor ? 1 : 0,
+            cursor: cursor ? { id: cursor } : undefined,
+            select: {
+                id: true,
+                taskId: true,
+                modelProvider: true,
+                modelProfile: true,
+                outcome: true,
+                latencyMs: true,
+                estimatedCostUsd: true,
+                modelTier: true,
+                executedAt: true,
+            },
+        });
+
+        let nextCursor: string | null = null;
+        if (results.length > limit) {
+            nextCursor = results[limit]!.id;
+            results.splice(limit);
+        }
+
+        return { tasks: results, nextCursor };
+    };
+
+    const listTaskRecords = options.listTaskRecords ?? defaultListTaskRecords;
+
+    app.get<{ Params: RuntimeTaskParams; Querystring: { limit?: string; cursor?: string } }>(
+        '/v1/workspaces/:workspaceId/tasks',
+        async (request, reply) => {
+            const session = options.getSession(request);
+            if (!session) {
+                return reply.code(401).send({ error: 'unauthorized', message: 'Authentication required.' });
+            }
+
+            const { workspaceId } = request.params;
+            if (!session.workspaceIds.includes(workspaceId)) {
+                return reply.code(403).send({ error: 'forbidden', message: 'workspace_id is not in your session scope.' });
+            }
+
+            const rawLimit = parseInt(request.query.limit ?? '50', 10);
+            const limit = Number.isNaN(rawLimit) ? 50 : Math.min(Math.max(rawLimit, 1), 100);
+            const cursor = request.query.cursor?.trim() || undefined;
+
+            const result = await listTaskRecords(workspaceId, limit, cursor);
+            return reply.send(result);
+        },
+    );
+
+    /**
+     * POST /v1/tasks/parse-goal
+     * Pure parsing utility — no DB writes, no auth required.
+     * Body: { description: string }
+     * Response: GoalPlan (with empty tenantId/workspaceId/botId)
+     */
+    app.post<{ Body: { description?: string } }>(
+        '/v1/tasks/parse-goal',
+        async (request, reply) => {
+            const description = typeof request.body?.description === 'string'
+                ? request.body.description
+                : '';
+            const plan = parseGoal(description);
+            return reply.code(200).send(plan);
+        },
+    );
 }

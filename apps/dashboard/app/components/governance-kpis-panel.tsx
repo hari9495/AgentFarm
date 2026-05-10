@@ -115,9 +115,20 @@ const MOCK_KPI: KPIData = {
     snapshot_at: new Date().toISOString(),
 };
 
-type Props = { workspaceId?: string };
+const LABELS: Record<string, Record<string, string>> = {
+    en: { approvals: 'Approvals', executions: 'Executions', budget: 'Budget', sla: 'SLA Compliance' },
+    ja: { approvals: '承認', executions: '実行', budget: '予算', sla: 'SLA準拠' },
+    ar: { approvals: 'موافقات', executions: 'تنفيذات', budget: 'ميزانية', sla: 'امتثال SLA' },
+    ko: { approvals: '승인', executions: '실행', budget: '예산', sla: 'SLA 준수' },
+};
 
-export function GovernanceKPIPanel({ workspaceId }: Props) {
+function getLabel(lang: string, key: keyof typeof LABELS['en']): string {
+    return LABELS[lang]?.[key] ?? LABELS['en'][key];
+}
+
+type Props = { workspaceId?: string; language?: string };
+
+export function GovernanceKPIPanel({ workspaceId, language = 'en' }: Props) {
     const [kpis, setKpis] = useState<KPIData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -126,9 +137,10 @@ export function GovernanceKPIPanel({ workspaceId }: Props) {
     const fetch_kpis = useCallback(async () => {
         setError(null);
         try {
+            const langParam = language ? `&language=${encodeURIComponent(language)}` : '';
             const url = workspaceId
-                ? `${API_BASE}/v1/governance/kpis?workspace_id=${encodeURIComponent(workspaceId)}&time_window_seconds=86400`
-                : `${API_BASE}/v1/governance/kpis?time_window_seconds=86400`;
+                ? `${API_BASE}/v1/governance/kpis?workspace_id=${encodeURIComponent(workspaceId)}&time_window_seconds=86400${langParam}`
+                : `${API_BASE}/v1/governance/kpis?time_window_seconds=86400${langParam}`;
 
             const res = await fetch(url, { cache: 'no-store' });
             const body = (await res.json().catch(() => null)) as Partial<KPIData> & { message?: string } | null;
@@ -146,7 +158,7 @@ export function GovernanceKPIPanel({ workspaceId }: Props) {
             setLoading(false);
             setLastRefresh(new Date());
         }
-    }, [workspaceId]);
+    }, [workspaceId, language]);
 
     useEffect(() => {
         void fetch_kpis();
@@ -183,14 +195,14 @@ export function GovernanceKPIPanel({ workspaceId }: Props) {
                     {/* SLA strip */}
                     <div style={{ padding: '0.6rem 0.9rem', background: slaStatus(kpis.sla_compliance_pct) === 'healthy' ? '#f0fdf4' : slaStatus(kpis.sla_compliance_pct) === 'watch' ? '#fefce8' : '#fef2f2', borderRadius: 8, marginBottom: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                         <span style={{ fontWeight: 700, fontSize: '1.15rem' }}>{kpis.sla_compliance_pct.toFixed(1)}%</span>
-                        <span style={{ fontSize: '0.85rem', color: '#57534e' }}>Overall SLA Compliance</span>
+                        <span style={{ fontSize: '0.85rem', color: '#57534e' }}>Overall {getLabel(language, 'sla')}</span>
                         <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: '#78716c' }}>
                             {new Date(kpis.snapshot_at).toLocaleString()}
                         </span>
                     </div>
 
                     {/* Approval KPIs */}
-                    <h3 style={{ margin: '0 0 0.45rem', fontSize: '0.85rem', color: '#57534e', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Approvals</h3>
+                    <h3 style={{ margin: '0 0 0.45rem', fontSize: '0.85rem', color: '#57534e', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{getLabel(language, 'approvals')}</h3>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '0.5rem', marginBottom: '1rem' }}>
                         <KPICard title="P95 Latency" value={kpis.approvals.p95_latency_ms} unit="ms"
                             status={kpis.approvals.p95_latency_ms < 5000 ? 'healthy' : kpis.approvals.p95_latency_ms < 15000 ? 'watch' : 'degraded'}
@@ -218,7 +230,7 @@ export function GovernanceKPIPanel({ workspaceId }: Props) {
                     </div>
 
                     {/* Budget KPIs */}
-                    <h3 style={{ margin: '0 0 0.45rem', fontSize: '0.85rem', color: '#57534e', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Budget</h3>
+                    <h3 style={{ margin: '0 0 0.45rem', fontSize: '0.85rem', color: '#57534e', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{getLabel(language, 'budget')}</h3>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '0.5rem', marginBottom: '1rem' }}>
                         <KPICard title="Tokens Remaining" value={kpis.budget.tokens_remaining.toLocaleString()}
                             status={budgetStatus(kpis.budget.overage_risk)}

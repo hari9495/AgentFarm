@@ -1,5 +1,13 @@
+import { initObservability } from '@agentfarm/observability';
+initObservability({
+    serviceName: 'api-gateway',
+    azureConnectionString: process.env.APPLICATIONINSIGHTS_CONNECTION_STRING,
+    otlpEndpoint: process.env.OTEL_EXPORTER_OTLP_ENDPOINT,
+});
+
 import Fastify from 'fastify';
-import { rateLimit } from './lib/rate-limit.js';
+import type { FastifyError } from 'fastify';
+import { rateLimit, rateLimitTenant } from './lib/rate-limit.js';
 import { buildSessionToken, verifySessionToken, type SessionPayload } from './lib/session-auth.js';
 import { prisma } from './lib/db.js';
 import { registerAuthRoutes } from './routes/auth.js';
@@ -61,7 +69,11 @@ import { registerMemoryRoutes } from './routes/memory.js';
 import { registerMeetingRoutes } from './routes/meetings.js';
 import { registerBillingRoutes } from './routes/billing.js';
 import { registerAdminProvisionRoutes } from './routes/admin-provision.js';
+import { registerAgentDispatchRoutes } from './routes/agent-dispatch.js';
 import { registerZohoSignWebhookRoutes } from './routes/zoho-sign-webhook.js';
+import { registerNotificationRoutes } from './routes/notifications.js';
+import { registerRetentionPolicyRoutes } from './routes/retention-policy.js';
+import { registerSseTaskRoutes } from './routes/sse-tasks.js';
 
 const app = Fastify({ logger: true });
 const port = Number(process.env.API_GATEWAY_PORT ?? 3000);
@@ -317,7 +329,32 @@ const getActivityEvents = async (workspaceId: string) => {
     }));
 };
 
-app.get('/health', async () => ({ status: 'ok', service: 'api-gateway' }));
+app.get('/health', async () => ({
+    status: 'ok',
+    service: 'api-gateway',
+    ts: new Date().toISOString(),
+}));
+
+// Detailed health — requires internal session
+app.get('/health/detail', async (request, reply) => {
+    const session = readSession(request);
+    if (!session || session.scope !== 'internal') {
+        return reply.code(401).send({ error: 'unauthorized' });
+    }
+    let dbOk = false;
+    try {
+        await prisma.$queryRaw`SELECT 1`;
+        dbOk = true;
+    } catch { /* db unreachable */ }
+    return {
+        status: dbOk ? 'ok' : 'degraded',
+        service: 'api-gateway',
+        db: dbOk ? 'connected' : 'unreachable',
+        uptime: process.uptime(),
+        memoryMb: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+        ts: new Date().toISOString(),
+    };
+});
 
 // Dev-only session helper — disabled in production
 app.get('/v1/auth/dev-session', async (_request, reply) => {
@@ -342,6 +379,16 @@ const isPublicPath = (url: string): boolean => {
     return PUBLIC_PATHS.has(path) || path === '/auth/logout';
 };
 
+// Security headers on every response
+app.addHook('onSend', async (_request, reply) => {
+    reply.header('X-Content-Type-Options', 'nosniff');
+    reply.header('X-Frame-Options', 'DENY');
+    reply.header('X-XSS-Protection', '1; mode=block');
+    reply.header('Referrer-Policy', 'strict-origin-when-cross-origin');
+    reply.header('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+    reply.header('Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'");
+});
+
 app.addHook('preHandler', async (request, reply) => {
     // Always rate-limit (auth endpoints use tighter limit to slow brute-force)
     const isAuthEndpoint = request.url.startsWith('/auth/');
@@ -357,6 +404,38 @@ app.addHook('preHandler', async (request, reply) => {
             message: 'Too many requests. Retry after the reset window.',
         });
         return;
+    }
+
+    // CORS origin validation
+    const allowedOriginsEnv = process.env['ALLOWED_ORIGINS'];
+    const origin = request.headers['origin'];
+    if (allowedOriginsEnv && typeof origin === 'string') {
+        const allowedList = allowedOriginsEnv.split(',').map((s) => s.trim());
+        if (!allowedList.includes(origin)) {
+            reply.header('Vary', 'Origin');
+            void reply.code(403).send({ error: 'origin not allowed' });
+            return;
+        }
+        reply.header('Access-Control-Allow-Origin', origin);
+        reply.header('Vary', 'Origin');
+    }
+
+    // Per-tenant rate limit (only when a session exists)
+    const tenantSession = readSession(request);
+    if (tenantSession?.tenantId) {
+        const tenantResult = rateLimitTenant(tenantSession.tenantId, {
+            limit: 600,
+            windowMs: 60_000,
+        });
+        reply.header('x-ratelimit-tenant-remaining', String(tenantResult.remaining));
+        if (!tenantResult.allowed) {
+            void reply.code(429).send({
+                error: 'rate_limit_exceeded',
+                scope: 'tenant',
+                retryAfterMs: tenantResult.resetIn,
+            });
+            return;
+        }
     }
 
     // Public paths do not require session
@@ -474,27 +553,33 @@ await registerObservabilityRoutes(app, {
     getSession: (request) => readSession(request),
 });
 await registerQuestionRoutes(app, prisma);
-await registerMemoryRoutes(app, prisma);
+await registerMemoryRoutes(app, prisma, { getSession: (request) => readSession(request) });
 await registerMeetingRoutes(app, {
     getSession: (request) => readSession(request),
 });
 await registerBillingRoutes(app, {
     getSession: (request) => readSession(request),
 });
+await registerAgentDispatchRoutes(app, {
+    getSession: (request) => readSession(request),
+});
 await registerAdminProvisionRoutes(app, {
     getSession: (request) => readSession(request),
 });
 await registerZohoSignWebhookRoutes(app);
-registerSkillPipelineRoutes(app);
-registerSkillSchedulerRoutes(app);
+registerNotificationRoutes(app, { getSession: (request) => readSession(request) });
+registerSkillPipelineRoutes(app, { getSession: (request) => readSession(request) });
+registerSkillSchedulerRoutes(app, { getSession: (request) => readSession(request) });
 registerWebhookRoutes(app, prisma);
 registerConnectorHealthRoutes(app);
-registerKnowledgeGraphRoutes(app);
-registerAgentFeedbackRoutes(app);
+registerKnowledgeGraphRoutes(app, { getSession: (request) => readSession(request) });
+registerAgentFeedbackRoutes(app, { getSession: (request) => readSession(request) });
 registerAutonomousLoopRoutes(app);
 registerSkillCompositionRoutes(app);
 registerGovernanceKPIRoutes(app);
 registerAdapterRegistryRoutes(app);
+await registerRetentionPolicyRoutes(app, prisma);
+await registerSseTaskRoutes(app, { getSession: (request) => readSession(request) });
 
 app.get('/v1/dashboard/summary', async (request, reply) => {
     const session = readSession(request);
@@ -854,6 +939,16 @@ app.get<{ Params: JobIdParams }>('/v1/provisioning/jobs/:jobId', async (request,
         timeout_at: new Date(anchor.getTime() + PROVISIONING_TIMEOUT_MS).toISOString(),
         step_history: stepHistory,
     };
+});
+
+// Global error handler — prevents stack traces leaking to clients
+app.setErrorHandler((error: FastifyError, _request, reply) => {
+    const status = error.statusCode ?? 500;
+    if (status >= 500) {
+        console.error('[unhandled-error]', error);
+        return reply.code(500).send({ error: 'internal server error' });
+    }
+    return reply.code(status).send({ error: error.message ?? 'bad request' });
 });
 
 const start = async (): Promise<void> => {

@@ -1,5 +1,5 @@
 import { NotificationService, CustomerNotificationStore } from '@agentfarm/notification-adapters';
-import type { NotificationPayload } from '@agentfarm/shared-types';
+import type { NotificationPayload, NotificationResult } from '@agentfarm/shared-types';
 import type { ProcessedTaskResult } from './execution-engine.js';
 
 /**
@@ -51,10 +51,26 @@ export async function maybeNotify(
         },
     };
 
+    let notifResult: NotificationResult = { success: false, adapter: 'unknown' };
     try {
-        await service.send(customerId, notifPayload);
+        notifResult = await service.send(customerId, notifPayload);
     } catch (err) {
         // Notifications are best-effort — never let them crash the agent runtime
         console.error('[notification-hook] send error:', err);
+        notifResult = { success: false, adapter: 'unknown', error: String(err) };
     }
+
+    const logUrl = process.env['API_GATEWAY_URL'] ?? 'http://localhost:3000';
+    fetch(`${logUrl}/v1/notifications/log`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            tenantId: customerId,
+            workspaceId: payload['workspaceId'] ?? null,
+            channel: notifResult.adapter,
+            eventTrigger: 'task_complete',
+            status: notifResult.success ? 'sent' : 'failed',
+            error: notifResult.error ?? null,
+        }),
+    }).catch((err: unknown) => console.error('[notif-log]', err));
 }

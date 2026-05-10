@@ -1,3 +1,10 @@
+import { initObservability } from '@agentfarm/observability';
+initObservability({
+    serviceName: 'orchestrator',
+    azureConnectionString: process.env.APPLICATIONINSIGHTS_CONNECTION_STRING,
+    otlpEndpoint: process.env.OTEL_EXPORTER_OTLP_ENDPOINT,
+});
+
 import Fastify, { type FastifyInstance, type FastifyReply } from 'fastify';
 import { randomUUID } from 'node:crypto';
 import { pathToFileURL } from 'node:url';

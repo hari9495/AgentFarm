@@ -9,11 +9,14 @@ import type {
 } from '@agentfarm/shared-types';
 import {
     type ActionDecision,
+    classifyRisk,
     type LlmDecisionResolver,
     type TaskEnvelope,
 } from './execution-engine.js';
 import { getTaskIntelligenceContext } from './task-intelligence-memory.js';
 import { getProviderQualityPenalty } from './llm-quality-tracker.js';
+import { getRoutingAdvice } from './routing-history-advisor.js';
+import { emitBudgetAlert } from './budget-alert-emitter.js';
 
 type DecisionRoute = 'execute' | 'approval';
 
@@ -38,7 +41,7 @@ type ModelProfileKey = 'quality_first' | 'speed_first' | 'cost_balanced' | 'cust
 
 type ModelProfileMap = Partial<Record<ModelProfileKey, string>>;
 
-type RuntimeModelProvider = 'agentfarm' | 'openai' | 'azure_openai' | 'github_models' | 'anthropic' | 'google' | 'xai' | 'mistral' | 'together' | 'auto';
+type RuntimeModelProvider = 'agentfarm' | 'openai' | 'azure_openai' | 'github_models' | 'anthropic' | 'google' | 'xai' | 'mistral' | 'together' | 'auto' | 'mock';
 
 type AutoProvider = 'openai' | 'azure_openai' | 'github_models' | 'anthropic' | 'google' | 'xai' | 'mistral' | 'together';
 
@@ -609,6 +612,9 @@ const normalizeProvider = (value: string | undefined): RuntimeModelProvider => {
     if (normalized === 'auto') {
         return 'auto';
     }
+    if (normalized === 'mock' || normalized === 'mock_llm') {
+        return 'mock';
+    }
     return 'agentfarm';
 };
 
@@ -1096,6 +1102,11 @@ const getWarningThreshold = (): number => {
     return parsed;
 };
 
+const getCriticalThreshold = (): number => {
+    const v = parseFloat(process.env['AF_TOKEN_BUDGET_CRITICAL_THRESHOLD'] ?? '0.9');
+    return isNaN(v) || v <= 0 || v >= 1 ? 0.9 : v;
+};
+
 const buildBudgetScope = (task: TaskEnvelope): string => {
     const tenant = typeof task.payload['tenant_id'] === 'string' ? task.payload['tenant_id'].trim() : 'default-tenant';
     const workspace = toWorkspaceKey(task);
@@ -1105,6 +1116,7 @@ const buildBudgetScope = (task: TaskEnvelope): string => {
 
 const evaluateTokenBudget = (scope: string): {
     denied: boolean;
+    critical: boolean;
     warning: boolean;
     limit: number;
     consumed: number;
@@ -1113,6 +1125,7 @@ const evaluateTokenBudget = (scope: string): {
     if (limit <= 0) {
         return {
             denied: false,
+            critical: false,
             warning: false,
             limit: 0,
             consumed: 0,
@@ -1124,9 +1137,11 @@ const evaluateTokenBudget = (scope: string): {
     const entry = state.byScope[scope];
     const consumed = entry && entry.day === day ? entry.consumedTokens : 0;
     const warning = consumed >= Math.floor(limit * getWarningThreshold());
+    const critical = consumed >= Math.floor(limit * getCriticalThreshold());
 
     return {
         denied: consumed >= limit,
+        critical,
         warning,
         limit,
         consumed,
@@ -1161,8 +1176,13 @@ const withTokenBudgetGuard = (
     return async ({ task, heuristicDecision }) => {
         const scope = buildBudgetScope(task);
         const budget = evaluateTokenBudget(scope);
+        const scopeParts = scope.split(':');
+        const tenantId = scopeParts[0];
+        const workspaceId = scopeParts[1];
 
         if (budget.denied) {
+            console.warn(`[token-budget] EXHAUSTED scope=${scope} consumed=${budget.consumed}/${budget.limit}`);
+            emitBudgetAlert({ scope, level: 'exhausted', consumed: budget.consumed, limit: budget.limit, tenantId, workspaceId }).catch(() => { });
             return {
                 decision: {
                     ...heuristicDecision,
@@ -1185,6 +1205,12 @@ const withTokenBudgetGuard = (
                     fallbackReason: 'token_budget_exhausted',
                 },
             };
+        } else if (budget.critical) {
+            console.warn(`[token-budget] CRITICAL (90%) scope=${scope} consumed=${budget.consumed}/${budget.limit}`);
+            emitBudgetAlert({ scope, level: 'warning', consumed: budget.consumed, limit: budget.limit, tenantId, workspaceId }).catch(() => { });
+        } else if (budget.warning) {
+            console.warn(`[token-budget] WARNING (80%) scope=${scope} consumed=${budget.consumed}/${budget.limit}`);
+            emitBudgetAlert({ scope, level: 'warning', consumed: budget.consumed, limit: budget.limit, tenantId, workspaceId }).catch(() => { });
         }
 
         const result = await resolver({ task, heuristicDecision });
@@ -1541,6 +1567,70 @@ const createTogetherResolver = (input: {
     };
 };
 
+// ---------------------------------------------------------------------------
+// Mock resolver — deterministic, no API calls, for testing and demo deployments
+// ---------------------------------------------------------------------------
+
+const getMockDelayMs = (): number => {
+    const raw = process.env['MOCK_LLM_DELAY_MS'];
+    if (!raw) return 0;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 0;
+};
+
+export const createMockResolver = (): LlmDecisionResolver => {
+    return async ({ task, heuristicDecision }) => {
+        if (process.env['NODE_ENV'] === 'production') {
+            console.warn(
+                '[AgentFarm] WARNING: mock_llm provider is active in production — this is intentional only for demo deployments',
+            );
+        }
+
+        const delayMs = getMockDelayMs();
+        if (delayMs > 0) {
+            await new Promise<void>((resolve) => setTimeout(resolve, delayMs));
+        }
+
+        const actionType =
+            typeof task.payload['action_type'] === 'string' && task.payload['action_type'].trim()
+                ? task.payload['action_type'].trim().toLowerCase()
+                : heuristicDecision.actionType;
+
+        const target =
+            typeof task.payload['target'] === 'string' && task.payload['target'].trim()
+                ? task.payload['target'].trim()
+                : 'README.md';
+
+        const { riskLevel, reason: riskReason } = classifyRisk(actionType, 0.85, task.payload);
+        const route: 'execute' | 'approval' = riskLevel === 'low' ? 'execute' : 'approval';
+
+        const decision: ActionDecision = {
+            actionType,
+            confidence: 0.85,
+            riskLevel,
+            route,
+            reason: 'Mock LLM — deterministic response for testing',
+        };
+
+        return {
+            decision,
+            payloadOverrides: {
+                target,
+                _mock_provider: true,
+                _mock_risk_reason: riskReason,
+            },
+            metadata: {
+                modelProvider: 'mock',
+                model: 'mock-v1',
+                modelProfile: 'speed_first',
+                promptTokens: 0,
+                completionTokens: 0,
+                totalTokens: 0,
+            },
+        };
+    };
+};
+
 const createAutoResolver = (input: {
     timeoutMs: number;
     openai?: RuntimeLlmWorkspaceConfig['openai'];
@@ -1684,6 +1774,23 @@ const createAutoResolver = (input: {
             return scoreA - scoreB;
         });
 
+        // DB-backed routing history: apply score adjustments from prior workspace outcomes.
+        // A 200 ms timeout guards against slow DB; on expiry or error the sort is unchanged.
+        const workspaceId = typeof task.payload['workspaceId'] === 'string'
+            ? task.payload['workspaceId']
+            : '';
+        const taskComplexity = evaluateTaskComplexity(task, heuristicDecision).complexity;
+        const advicePromise = getRoutingAdvice(
+            { workspaceId, taskComplexity, candidateProviders: [...providers] },
+        );
+        const adviceTimeout = new Promise<Map<string, number>>(
+            (res) => setTimeout(() => res(new Map()), 200),
+        );
+        const advice = await Promise.race([advicePromise, adviceTimeout]);
+        if (advice.size > 0) {
+            providers.sort((a, b) => (advice.get(a) ?? 0) - (advice.get(b) ?? 0));
+        }
+
         let lastError: unknown = null;
         const failoverTrace: ProviderFailoverTraceRecord[] = [];
         for (const provider of providers) {
@@ -1744,6 +1851,19 @@ const createAutoResolver = (input: {
                 });
                 lastError = error;
             }
+        }
+
+        if (process.env['ALLOW_MOCK_FALLBACK'] === 'true') {
+            const mockResolver = createMockResolver();
+            const mockResult = await mockResolver({ task, heuristicDecision });
+            return {
+                ...mockResult,
+                metadata: {
+                    ...mockResult.metadata,
+                    fallbackReason: 'mock_fallback_all_providers_unavailable',
+                    failoverTrace: failoverTrace.length > 0 ? failoverTrace : undefined,
+                },
+            };
         }
 
         if (lastError instanceof Error) {
@@ -1957,6 +2077,10 @@ export const createLlmDecisionResolverFromConfig = (
         }));
     }
 
+    if (config.provider === 'mock') {
+        return createMockResolver();
+    }
+
     if (config.provider === 'auto') {
         const autoResolver = createAutoResolver({
             timeoutMs,
@@ -1980,6 +2104,10 @@ export const createLlmDecisionResolver = (env: NodeJS.ProcessEnv): LlmDecisionRe
     const provider = normalizeProvider(readEnv(env, 'AF_MODEL_PROVIDER', 'AGENTFARM_MODEL_PROVIDER'));
     if (provider === 'agentfarm') {
         return undefined;
+    }
+
+    if (provider === 'mock') {
+        return createMockResolver();
     }
 
     const timeoutMs = parseTimeoutMs(readEnv(env, 'AF_LLM_TIMEOUT_MS', 'AGENTFARM_LLM_TIMEOUT_MS'));

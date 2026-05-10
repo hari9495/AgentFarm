@@ -16,6 +16,9 @@
         "typescript": "^5.7.2"
     },
     "dependencies": {
-        "@agentfarm/shared-types": "workspace:*"
+        "@agentfarm/shared-types": "workspace:*",
+        "@agentfarm/audit-storage": "workspace:*",
+        "@prisma/client": "^6.19.3",
+        "fastify": "^5.2.1"
     }
 }

@@ -227,6 +227,7 @@ model ProvisioningJob {
   requestedBy       String
   startedAt         DateTime?
   completedAt       DateTime?
+  failedAt          DateTime?
   createdAt         DateTime              @default(now())
   updatedAt         DateTime              @updatedAt
   orderId           String?
@@ -458,6 +459,8 @@ model TaskExecutionRecord {
   promptTokens     Int?
   completionTokens Int?
   totalTokens      Int?
+  estimatedCostUsd Float?
+  modelTier        String?
   latencyMs        Int
   outcome          TaskExecutionOutcome
   executedAt       DateTime
@@ -698,6 +701,33 @@ model WorkMemory {
   @@index([tenantId, workspaceId])
 }
 
+// Added 2026-05-10 — Evidence Service bundle storage (evidence-service)
+// Stores per-task evidence bundles with optional blob-signed screenshots and audit signing.
+model StoredEvidenceBundle {
+  id            String    @id @default(cuid())
+  taskId        String
+  tenantId      String
+  workspaceId   String
+  botId         String
+  actionType    String
+  riskLevel     String
+  routeDecision String
+  llmProvider   String
+  inputTokens   Int
+  outputTokens  Int
+  screenshots   String[]
+  approvalId    String?
+  signature     String?
+  finalised     Boolean   @default(false)
+  finalisedAt   DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([tenantId])
+  @@index([workspaceId])
+  @@index([taskId])
+  @@index([tenantId, workspaceId])
+}
+
 // Sprint 4 — F9: Crash Recovery + Repro Pack Generator
 // Frozen 2026-05-01 — canonical source: planning/phase-1-vm-realism-execution-plan.md
 
@@ -734,6 +764,24 @@ model ReproPack {
 
   @@index([tenantId, workspaceId])
   @@index([tenantId, workspaceId, runId])
+}
+
+// Frozen 2026-05-10 — Agent Dispatch Records
+// Persists cross-process agent dispatch events for audit and status tracking.
+model AgentDispatchRecord {
+  id              String   @id @default(cuid())
+  fromAgentId     String
+  toAgentId       String
+  workspaceId     String
+  tenantId        String
+  taskDescription String
+  status          String   @default("queued")
+  wakeSource      String   @default("agent_handoff")
+  queuedAt        DateTime @default(now())
+  createdAt       DateTime @default(now())
+
+  @@index([tenantId, workspaceId])
+  @@index([tenantId, queuedAt])
 }
 
 // Frozen 2026-05-07 — Agent Memory Service (Epic A7)
@@ -1107,4 +1155,69 @@ model Invoice {
   sentAt      DateTime?
   paidAt      DateTime?
   createdAt   DateTime @default(now())
+}
+
+model ExternalPluginLoad {
+  id              String   @id @default(cuid())
+  tenantId        String
+  pluginKey       String
+  version         String
+  status          String
+  trustLevel      String
+  rejectionReason String?
+  loadedAt        DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([tenantId, pluginKey])
+}
+
+model PluginKillSwitch {
+  id        String   @id @default(cuid())
+  tenantId  String
+  pluginKey String
+  reason    String?
+  killedAt  DateTime @default(now())
+  killedBy  String?
+
+  @@unique([tenantId, pluginKey])
+}
+
+model PluginAllowlist {
+  id           String   @id @default(cuid())
+  tenantId     String
+  pluginKey    String
+  capabilities String[]
+  grantedAt    DateTime @default(now())
+
+  @@unique([tenantId, pluginKey])
+}
+
+model NotificationLog {
+  id           String   @id @default(cuid())
+  tenantId     String
+  workspaceId  String?
+  channel      String
+  eventTrigger String
+  status       String
+  payload      Json?
+  error        String?
+  sentAt       DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([tenantId, sentAt])
+}
+
+model QualitySignalLog {
+  id          String   @id @default(cuid())
+  tenantId    String
+  workspaceId String
+  taskId      String?
+  signalType  String?
+  source      String?
+  score       Float?
+  metadata    Json?
+  recordedAt  DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([workspaceId, taskId])
 }

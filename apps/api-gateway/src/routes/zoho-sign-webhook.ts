@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
+import { verifyTimingSafeEqual } from '../lib/webhook-verify.js';
 
 const getPrisma = async () => {
     const db = await import('../lib/db.js');
@@ -46,7 +47,8 @@ export async function registerZohoSignWebhookRoutes(
             // Verify webhook token
             const incomingToken = request.headers['x-zoho-webhook-token'];
             const expectedToken = process.env['ZOHO_SIGN_WEBHOOK_TOKEN'];
-            if (!incomingToken || !expectedToken || incomingToken !== expectedToken) {
+            if (!incomingToken || !expectedToken ||
+                !verifyTimingSafeEqual(incomingToken as string, expectedToken)) {
                 return reply.code(401).send({ error: 'Unauthorized' });
             }
 

@@ -12,6 +12,8 @@ import {
 } from '../services/payment-service.js';
 import { generateContractPdf } from '../services/contract-generator.js';
 import { uploadContractDocument, submitDocumentForSigning } from '../services/zoho-sign-client.js';
+import { writeAuditEvent } from '../lib/audit-writer.js';
+import { validate } from '../lib/validate.js';
 
 const getPrisma = async () => {
     const db = await import('../lib/db.js');
@@ -62,7 +64,25 @@ export async function registerBillingRoutes(
     app.post<{ Body: CreateOrderBody }>(
         '/v1/billing/create-order',
         async (request, reply) => {
+            const session = options.getSession(request);
+            if (!session) {
+                return reply.code(401).send({ error: 'Unauthorized' });
+            }
             const { planId, customerEmail, customerCountry = 'US', tenantId } = request.body;
+            if (session.tenantId !== tenantId) {
+                return reply.code(403).send({ error: 'forbidden' });
+            }
+
+            const { valid: bodyValid, errors: bodyErrors } = validate(request.body, {
+                planId: { required: true, type: 'string', maxLength: 128 },
+                tenantId: { required: true, type: 'string', maxLength: 128 },
+                customerEmail: {
+                    required: true, type: 'string', maxLength: 256,
+                    pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+                },
+            });
+            if (!bodyValid) return reply.code(400).send({ error: bodyErrors[0] });
+
             const prisma = await resolvePrisma();
 
             const plan = await prisma.plan.findFirst({ where: { id: planId, isActive: true } });
@@ -90,6 +110,14 @@ export async function registerBillingRoutes(
                     customerEmail,
                     customerCountry,
                 });
+                void writeAuditEvent({
+                    prisma,
+                    tenantId,
+                    eventType: 'provisioning_event',
+                    severity: 'info',
+                    summary: `Order created for plan ${planId}`,
+                    metadata: { orderId: dbOrder.id, planId, customerEmail },
+                });
                 return reply.send({
                     provider,
                     orderId: dbOrder.id,
@@ -113,6 +141,14 @@ export async function registerBillingRoutes(
                     providerOrderId: providerData.razorpayOrderId,
                     customerEmail,
                     customerCountry,
+                });
+                void writeAuditEvent({
+                    prisma,
+                    tenantId,
+                    eventType: 'provisioning_event',
+                    severity: 'info',
+                    summary: `Order created for plan ${planId}`,
+                    metadata: { orderId: dbOrder.id, planId, customerEmail },
                 });
                 return reply.send({
                     provider,
@@ -155,12 +191,22 @@ export async function registerBillingRoutes(
                     amountCents: order.amountCents,
                     currency: order.currency,
                 }).catch(() => null);
+                void resolvePrisma().then((p) =>
+                    writeAuditEvent({
+                        prisma: p,
+                        tenantId: order.tenantId,
+                        eventType: 'audit_event',
+                        severity: 'info',
+                        summary: 'Stripe payment received',
+                        metadata: { orderId: order.id, providerOrderId: result.providerOrderId },
+                    }),
+                );
 
                 // Generate contract and send for signing (non-blocking)
                 setImmediate(async () => {
                     try {
                         const prisma = await resolvePrisma();
-                        const fullOrder = await prisma.order.findUnique({
+                        const fullOrder = await prisma.order.findFirst({
                             where: { providerOrderId: result.providerOrderId },
                             include: { plan: true },
                         });
@@ -213,7 +259,11 @@ export async function registerBillingRoutes(
     app.post<{ Body: RazorpayWebhookBody }>(
         '/v1/billing/webhook/razorpay',
         async (request, reply) => {
-            const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = request.body;
+            const body = request.body ?? {};
+            const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = body;
+            if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+                return reply.code(400).send({ error: 'Missing required webhook fields' });
+            }
 
             const valid = verifyRazorpayWebhook({
                 orderId: razorpay_order_id,
@@ -237,12 +287,22 @@ export async function registerBillingRoutes(
                     amountCents: order.amountCents,
                     currency: order.currency,
                 }).catch(() => null);
+                void resolvePrisma().then((p) =>
+                    writeAuditEvent({
+                        prisma: p,
+                        tenantId: order.tenantId,
+                        eventType: 'audit_event',
+                        severity: 'info',
+                        summary: 'Razorpay payment received',
+                        metadata: { orderId: order.id, providerOrderId: razorpay_order_id },
+                    }),
+                );
 
                 // Generate contract and send for signing (non-blocking)
                 setImmediate(async () => {
                     try {
                         const prisma = await resolvePrisma();
-                        const fullOrder = await prisma.order.findUnique({
+                        const fullOrder = await prisma.order.findFirst({
                             where: { providerOrderId: razorpay_order_id },
                             include: { plan: true },
                         });
@@ -300,6 +360,9 @@ export async function registerBillingRoutes(
                 return reply.code(401).send({ error: 'Unauthorized' });
             }
             const { tenantId } = request.params;
+            if (session.tenantId !== tenantId) {
+                return reply.code(403).send({ error: 'forbidden' });
+            }
             const prisma = await resolvePrisma();
             const orders = await prisma.order.findMany({
                 where: { tenantId },
@@ -307,6 +370,45 @@ export async function registerBillingRoutes(
                 orderBy: { createdAt: 'desc' },
             });
             return reply.send({ orders });
+        },
+    );
+
+    // -----------------------------------------------------------------------
+    // GET /v1/billing/cost-summary
+    // -----------------------------------------------------------------------
+    app.get<{ Querystring: { tenantId?: string; from?: string; to?: string } }>(
+        '/v1/billing/cost-summary',
+        async (request, reply) => {
+            const session = options.getSession(request);
+            if (!session) {
+                return reply.code(401).send({ error: 'Unauthorized' });
+            }
+            const { tenantId, from, to } = request.query;
+            if (!tenantId) {
+                return reply.code(400).send({ error: 'tenantId is required' });
+            }
+            if (session.tenantId !== tenantId) {
+                return reply.code(403).send({ error: 'forbidden' });
+            }
+            const toDate = to ? new Date(to) : new Date();
+            const fromDate = from
+                ? new Date(from)
+                : new Date(toDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+            const prisma = await resolvePrisma();
+            const result = await prisma.taskExecutionRecord.aggregate({
+                where: { tenantId, executedAt: { gte: fromDate, lte: toDate } },
+                _sum: { estimatedCostUsd: true, promptTokens: true, completionTokens: true },
+                _count: { id: true },
+            });
+            return reply.send({
+                tenantId,
+                from: fromDate.toISOString(),
+                to: toDate.toISOString(),
+                taskCount: result._count.id,
+                totalCostUsd: result._sum.estimatedCostUsd ?? 0,
+                totalPromptTokens: result._sum.promptTokens ?? 0,
+                totalCompletionTokens: result._sum.completionTokens ?? 0,
+            });
         },
     );
 

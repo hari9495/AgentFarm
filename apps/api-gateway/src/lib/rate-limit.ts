@@ -45,3 +45,8 @@ export const rateLimit = (key: string, options: RateLimitOptions = {}): RateLimi
         resetIn: Math.max(0, existing.resetAt - now),
     };
 };
+
+export const rateLimitTenant = (
+    tenantId: string,
+    opts: { limit: number; windowMs: number },
+): RateLimitResult => rateLimit(`tenant:${tenantId}`, opts);

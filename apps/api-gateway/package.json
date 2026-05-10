@@ -9,10 +9,12 @@
         "start": "node dist/main.js",
         "typecheck": "tsc -p tsconfig.json --noEmit",
         "test": "tsx --test src/**/*.test.ts",
+        "test:db-smoke": "tsx --test src/__tests__/db-smoke.test.ts",
         "test:internal-login-policy": "tsx --test src/routes/auth.internal-login-policy.test.ts src/routes/internal-login-policy.test.ts",
         "test:coverage": "pnpm exec c8 --reporter=text-summary --reporter=json-summary --exclude=src/**/*.test.ts tsx --test src/**/*.test.ts && node ../../scripts/coverage-threshold-check.mjs coverage/coverage-summary.json 80 lines src/services/provisioning-monitoring.ts"
     },
     "dependencies": {
+        "@agentfarm/observability": "workspace:*",
         "@agentfarm/agent-question-service": "workspace:*",
         "@agentfarm/agent-runtime": "workspace:*",
         "@agentfarm/connector-contracts": "workspace:*",

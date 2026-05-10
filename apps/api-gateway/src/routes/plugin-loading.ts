@@ -22,11 +22,23 @@ type SessionContext = {
     expiresAt: number;
 };
 
+type PluginPrismaClient = {
+    externalPluginLoad: {
+        create: (args: { data: Record<string, unknown> }) => Promise<unknown>;
+        findMany: (args: Record<string, unknown>) => Promise<unknown[]>;
+    };
+    pluginKillSwitch: {
+        upsert: (args: Record<string, unknown>) => Promise<unknown>;
+        findUnique: (args: { where: Record<string, unknown> }) => Promise<Record<string, unknown> | null>;
+    };
+};
+
 type RegisterPluginLoadingRoutesOptions = {
     getSession: (request: FastifyRequest) => SessionContext | null;
     now?: () => number;
     featureEnabled?: boolean;
     trustedPublishers?: TrustedPublisherRule[];
+    getPrisma?: () => Promise<PluginPrismaClient>;
 };
 
 const buildAllowlistKey = (tenantId: string, workspaceId: string, pluginKey: string): string => {
@@ -71,6 +83,10 @@ export const registerPluginLoadingRoutes = async (
     const now = options.now ?? (() => Date.now());
     const trustedPublishers = options.trustedPublishers ?? [];
     const featureEnabled = options.featureEnabled ?? false;
+    const getPrisma: () => Promise<PluginPrismaClient> = options.getPrisma ?? (async () => {
+        const db = await import('../lib/db.js');
+        return db.prisma as unknown as PluginPrismaClient;
+    });
 
     app.post('/v1/plugins/allowlist/upsert', async (request, reply) => {
         const session = options.getSession(request);
@@ -136,12 +152,18 @@ export const registerPluginLoadingRoutes = async (
         if (!featureEnabled) {
             const rejected = buildRejectedRecord(session.tenantId, workspaceId, session.userId, correlationId, 'feature_flag_disabled', undefined, now());
             pluginState.loadRecords.push(rejected);
+            void getPrisma().then((p) =>
+                p.externalPluginLoad.create({ data: { tenantId: rejected.tenantId, pluginKey: rejected.pluginKey, version: rejected.manifestVersion, status: 'rejected', trustLevel: rejected.trustLevel, rejectionReason: rejected.rejectionReason } })
+            ).catch((err: unknown) => console.error('[plugin-load]', err));
             return reply.code(409).send(rejected);
         }
 
         if (!isValidPluginManifest(rawManifest)) {
             const rejected = buildRejectedRecord(session.tenantId, workspaceId, session.userId, correlationId, 'invalid_manifest', undefined, now());
             pluginState.loadRecords.push(rejected);
+            void getPrisma().then((p) =>
+                p.externalPluginLoad.create({ data: { tenantId: rejected.tenantId, pluginKey: rejected.pluginKey, version: rejected.manifestVersion, status: 'rejected', trustLevel: rejected.trustLevel, rejectionReason: rejected.rejectionReason } })
+            ).catch((err: unknown) => console.error('[plugin-load]', err));
             return reply.code(400).send(rejected);
         }
 
@@ -149,7 +171,27 @@ export const registerPluginLoadingRoutes = async (
         if (!verifyPluginManifestSignature(manifest)) {
             const rejected = buildRejectedRecord(session.tenantId, workspaceId, session.userId, correlationId, 'invalid_signature', manifest, now());
             pluginState.loadRecords.push(rejected);
+            void getPrisma().then((p) =>
+                p.externalPluginLoad.create({ data: { tenantId: rejected.tenantId, pluginKey: rejected.pluginKey, version: rejected.manifestVersion, status: 'rejected', trustLevel: rejected.trustLevel, rejectionReason: rejected.rejectionReason } })
+            ).catch((err: unknown) => console.error('[plugin-load]', err));
             return reply.code(400).send(rejected);
+        }
+
+        try {
+            const prisma = await getPrisma();
+            const dbKill = await prisma.pluginKillSwitch.findUnique({
+                where: { tenantId_pluginKey: { tenantId: session.tenantId, pluginKey: manifest.plugin_key } },
+            });
+            if (dbKill) {
+                const rejected = buildRejectedRecord(session.tenantId, workspaceId, session.userId, correlationId, 'kill_switch_active', manifest, now());
+                pluginState.loadRecords.push(rejected);
+                void getPrisma().then((p) =>
+                    p.externalPluginLoad.create({ data: { tenantId: rejected.tenantId, pluginKey: rejected.pluginKey, version: rejected.manifestVersion, status: 'rejected', trustLevel: rejected.trustLevel, rejectionReason: rejected.rejectionReason } })
+                ).catch((err: unknown) => console.error('[plugin-load]', err));
+                return reply.code(409).send(rejected);
+            }
+        } catch {
+            // DB unavailable — fall through to in-memory check
         }
 
         const killSwitch = pluginState.killSwitches.get(manifest.plugin_key);
@@ -164,6 +206,9 @@ export const registerPluginLoadingRoutes = async (
                 now(),
             );
             pluginState.loadRecords.push(rejected);
+            void getPrisma().then((p) =>
+                p.externalPluginLoad.create({ data: { tenantId: rejected.tenantId, pluginKey: rejected.pluginKey, version: rejected.manifestVersion, status: 'rejected', trustLevel: rejected.trustLevel, rejectionReason: rejected.rejectionReason } })
+            ).catch((err: unknown) => console.error('[plugin-load]', err));
             return reply.code(409).send(rejected);
         }
 
@@ -171,6 +216,9 @@ export const registerPluginLoadingRoutes = async (
         if (!trusted) {
             const rejected = buildRejectedRecord(session.tenantId, workspaceId, session.userId, correlationId, 'untrusted_publisher', manifest, now());
             pluginState.loadRecords.push(rejected);
+            void getPrisma().then((p) =>
+                p.externalPluginLoad.create({ data: { tenantId: rejected.tenantId, pluginKey: rejected.pluginKey, version: rejected.manifestVersion, status: 'rejected', trustLevel: rejected.trustLevel, rejectionReason: rejected.rejectionReason } })
+            ).catch((err: unknown) => console.error('[plugin-load]', err));
             return reply.code(403).send(rejected);
         }
 
@@ -178,6 +226,9 @@ export const registerPluginLoadingRoutes = async (
         if (!allowlist) {
             const rejected = buildRejectedRecord(session.tenantId, workspaceId, session.userId, correlationId, 'missing_allowlist', manifest, now());
             pluginState.loadRecords.push(rejected);
+            void getPrisma().then((p) =>
+                p.externalPluginLoad.create({ data: { tenantId: rejected.tenantId, pluginKey: rejected.pluginKey, version: rejected.manifestVersion, status: 'rejected', trustLevel: rejected.trustLevel, rejectionReason: rejected.rejectionReason } })
+            ).catch((err: unknown) => console.error('[plugin-load]', err));
             return reply.code(403).send(rejected);
         }
 
@@ -193,6 +244,9 @@ export const registerPluginLoadingRoutes = async (
                 now(),
             );
             pluginState.loadRecords.push(rejected);
+            void getPrisma().then((p) =>
+                p.externalPluginLoad.create({ data: { tenantId: rejected.tenantId, pluginKey: rejected.pluginKey, version: rejected.manifestVersion, status: 'rejected', trustLevel: rejected.trustLevel, rejectionReason: rejected.rejectionReason } })
+            ).catch((err: unknown) => console.error('[plugin-load]', err));
             return reply.code(403).send(rejected);
         }
 
@@ -212,6 +266,9 @@ export const registerPluginLoadingRoutes = async (
         };
 
         pluginState.loadRecords.push(record);
+        void getPrisma().then((p) =>
+            p.externalPluginLoad.create({ data: { tenantId: record.tenantId, pluginKey: record.pluginKey, version: record.manifestVersion, status: 'loaded', trustLevel: record.trustLevel } })
+        ).catch((err: unknown) => console.error('[plugin-load]', err));
         pluginState.auditEvents.push({
             pluginKey: manifest.plugin_key,
             tenantId: session.tenantId,
@@ -246,6 +303,13 @@ export const registerPluginLoadingRoutes = async (
         };
 
         pluginState.killSwitches.set(params.pluginKey, record);
+        void getPrisma().then((p) =>
+            p.pluginKillSwitch.upsert({
+                where: { tenantId_pluginKey: { tenantId: session.tenantId, pluginKey: params.pluginKey } },
+                create: { tenantId: session.tenantId, pluginKey: params.pluginKey, reason, killedBy: session.userId },
+                update: { reason, killedAt: new Date() },
+            })
+        ).catch((err: unknown) => console.error('[plugin-load]', err));
         pluginState.auditEvents.push({
             pluginKey: params.pluginKey,
             tenantId: session.tenantId,
@@ -330,5 +394,28 @@ export const registerPluginLoadingRoutes = async (
         });
 
         return reply.code(200).send({ events });
+    });
+
+    app.get('/v1/plugins/history', async (request, reply) => {
+        const session = options.getSession(request);
+        if (!session) {
+            return reply.code(401).send({ error: 'unauthorized', message: 'A valid authenticated session is required.' });
+        }
+
+        const query = request.query as { pluginKey?: string; limit?: string };
+        const pluginKey = typeof query.pluginKey === 'string' ? query.pluginKey.trim() : '';
+        const take = Math.min(parseInt(query.limit ?? '50', 10), 200);
+
+        try {
+            const prisma = await getPrisma();
+            const records = await prisma.externalPluginLoad.findMany({
+                where: { tenantId: session.tenantId, ...(pluginKey ? { pluginKey } : {}) },
+                orderBy: { loadedAt: 'desc' },
+                take,
+            });
+            return reply.code(200).send({ records });
+        } catch {
+            return reply.code(200).send({ records: [] });
+        }
     });
 };

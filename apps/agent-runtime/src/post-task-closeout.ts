@@ -1,5 +1,8 @@
+import { randomUUID } from 'crypto';
 import { executeBrowserAction } from './browser-action-executor.js';
 import { resolveLanguage, getOutputLanguage, type LanguageContext } from './language-resolver.js';
+import { parseGoal } from './natural-language-parser.js';
+import { publishTaskProgress } from './task-progress-publisher.js';
 
 /**
  * Post-task close-out.
@@ -355,8 +358,41 @@ export async function postTaskCloseOutV2(
     executor?: CloseOutExecutor,
 ): Promise<{ resolvedLanguage: string } | undefined> {
     try {
+        // Infer action_type from natural language when missing or unknown.
+        // payload is Record<string, unknown> and is mutable.
+        const existingActionType = task.payload['action_type'];
+        if (!existingActionType || existingActionType === 'unknown') {
+            const description = String(
+                task.payload['description'] ?? task.payload['summary'] ?? '',
+            );
+            const parsed = parseGoal(description);
+            const inferred = parsed.actions[0]?.name;
+            if (inferred && inferred !== 'unknown') {
+                task.payload['action_type'] = inferred;
+            }
+        }
+
         const outputLang = await resolveTaskLanguage(task).catch(() => 'en');
         const summary = buildCloseOutSummary(task, result, outputLang);
+
+        const wsId = String(task.payload['workspaceId'] ?? '');
+        const tenantId = String(task.payload['tenantId'] ?? '');
+        const botId = String(task.payload['botId'] ?? '');
+        const correlationId = String(task.payload['correlationId'] ?? task.taskId);
+
+        await publishTaskProgress(wsId, {
+            id: randomUUID(),
+            contractVersion: '1.0.0',
+            tenantId,
+            workspaceId: wsId,
+            taskId: task.taskId,
+            botId,
+            milestone: 'task_received',
+            detail: 'Starting close-out for task',
+            occurredAt: new Date().toISOString(),
+            correlationId,
+        });
+
         if (connectorMeta && connectorMeta.length > 0 && executor) {
             const jiraMeta = connectorMeta.find((m) => m.provider === 'jira');
             const teamsMeta = connectorMeta.find((m) => m.provider === 'teams');
@@ -401,6 +437,19 @@ export async function postTaskCloseOutV2(
                     .catch(() => undefined);
             }
 
+            await publishTaskProgress(wsId, {
+                id: randomUUID(),
+                contractVersion: '1.0.0',
+                tenantId,
+                workspaceId: wsId,
+                taskId: task.taskId,
+                botId,
+                milestone: result.status === 'success' ? 'completed' : 'failed',
+                detail: summary,
+                occurredAt: new Date().toISOString(),
+                correlationId,
+            });
+
             return { resolvedLanguage: outputLang };
         }
 
@@ -410,6 +459,20 @@ export async function postTaskCloseOutV2(
             maybeNotifySlack(task, result),
             maybeUpdateGitHubPR(task, result),
         ]);
+
+        await publishTaskProgress(wsId, {
+            id: randomUUID(),
+            contractVersion: '1.0.0',
+            tenantId,
+            workspaceId: wsId,
+            taskId: task.taskId,
+            botId,
+            milestone: result.status === 'success' ? 'completed' : 'failed',
+            detail: summary,
+            occurredAt: new Date().toISOString(),
+            correlationId,
+        });
+
         return { resolvedLanguage: outputLang };
     } catch {
         // Close-out failures must never surface to the caller

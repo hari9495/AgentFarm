@@ -21,6 +21,7 @@ import { HealthRing } from './components/health-ring';
 import { CommandPalette } from './components/command-palette';
 import { WorkspaceBudgetPanel } from './components/workspace-budget-panel';
 import { SkillMarketplacePanel } from './components/skill-marketplace-panel';
+import { GovernanceKPIPanel } from './components/governance-kpis-panel';
 import { OperationalSignalTimeline, type OperationalSignalTimelinePoint } from './components/operational-signal-timeline';
 import type { DashboardTab } from './components/dashboard-navigation';
 import type { WorkspaceBudgetSnapshot } from './components/workspace-budget-panel-utils';
@@ -976,6 +977,33 @@ const getPendingAgentQuestions = async (
     }
 };
 
+const getDashboardLanguage = async (
+    workspaceId: string,
+    authHeader: string,
+): Promise<{ tenantLanguage: string; workspaceLanguage: string | null }> => {
+    const apiBaseUrl = process.env.DASHBOARD_API_BASE_URL ?? 'http://localhost:3000';
+    try {
+        const [tenantRes, wsRes] = await Promise.all([
+            fetch(`${apiBaseUrl}/v1/language/tenant`, {
+                headers: { Authorization: authHeader },
+                cache: 'no-store',
+            }),
+            fetch(`${apiBaseUrl}/v1/language/workspace/${encodeURIComponent(workspaceId)}`, {
+                headers: { Authorization: authHeader },
+                cache: 'no-store',
+            }),
+        ]);
+        const tenantConfig = (await tenantRes.json().catch(() => null)) as { defaultLanguage?: string } | null;
+        const wsConfig = (await wsRes.json().catch(() => null)) as { preferredLanguage?: string | null } | null;
+        return {
+            tenantLanguage: tenantConfig?.defaultLanguage ?? 'en',
+            workspaceLanguage: wsConfig?.preferredLanguage ?? null,
+        };
+    } catch {
+        return { tenantLanguage: 'en', workspaceLanguage: null };
+    }
+};
+
 const getLearnedPatterns = async (
     context: ApiRequestContext,
     workspaceId: string,
@@ -1047,6 +1075,8 @@ export default async function HomePage({
     const historicalMetrics = await getWorkspaceHistoricalMetrics(context, workspace.workspace_id);
     const pendingAgentQuestions = await getPendingAgentQuestions(context, workspace.workspace_id, workspace.tenant_id);
     const learnedPatterns = await getLearnedPatterns(context, workspace.workspace_id);
+    const authHeaderStr = (context.headers as Record<string, string>)['Authorization'] ?? '';
+    const dashboardLanguage = await getDashboardLanguage(workspace.workspace_id, authHeaderStr);
 
     const source = summarySource === 'live' && dashboardSlice.source === 'live' ? 'live' : 'fallback';
 
@@ -1547,6 +1577,10 @@ export default async function HomePage({
                                 initialConnectors={dashboardSlice.connectors.map(mapConnectorForConfig)}
                             />
                             <LlmConfigPanel workspaceId={workspace.workspace_id} />
+                            <GovernanceKPIPanel
+                                workspaceId={workspace.workspace_id}
+                                language={dashboardLanguage.workspaceLanguage ?? dashboardLanguage.tenantLanguage}
+                            />
                         </section>
                     )}
 

@@ -90,11 +90,28 @@ function createStore(): Store {
 }
 
 // ---------------------------------------------------------------------------
+// Prisma client type (narrow subset — injected for testability)
+// ---------------------------------------------------------------------------
+
+type ReproPackPrismaClient = {
+    reproPack: {
+        create: (args: { data: Record<string, unknown> }) => Promise<{ id: string; status: string;[key: string]: unknown }>;
+        findUnique: (args: { where: { id: string } }) => Promise<Record<string, unknown> | null>;
+        update: (args: { where: { id: string }; data: Record<string, unknown> }) => Promise<{ id: string; status: string;[key: string]: unknown }>;
+    };
+    runResume: {
+        create: (args: { data: Record<string, unknown> }) => Promise<{ id: string; status: string;[key: string]: unknown }>;
+        findUnique: (args: { where: { id: string } }) => Promise<Record<string, unknown> | null>;
+    };
+};
+
+// ---------------------------------------------------------------------------
 // Route options
 // ---------------------------------------------------------------------------
 
 export type ReproPackRouteOptions = {
     getSession?: (request: FastifyRequest) => SessionContext | null;
+    getPrisma?: () => Promise<ReproPackPrismaClient>;
 };
 
 // ---------------------------------------------------------------------------
@@ -155,6 +172,12 @@ export async function registerReproPackRoutes(
     options: ReproPackRouteOptions = {},
 ): Promise<void> {
     const store = createStore();
+
+    const defaultGetPrisma = async (): Promise<ReproPackPrismaClient> => {
+        const db = await import('../lib/db.js');
+        return db.prisma as unknown as ReproPackPrismaClient;
+    };
+    const getPrisma = options.getPrisma ?? defaultGetPrisma;
 
     // -------------------------------------------------------------------------
     // POST /v1/runs/:runId/resume
@@ -377,6 +400,230 @@ export async function registerReproPackRoutes(
                 createdAt: record.createdAt,
                 correlationId: record.correlationId,
             });
+        },
+    );
+
+    // -------------------------------------------------------------------------
+    // POST /v1/repro-packs
+    // Create a repro pack record (Prisma-backed, flat path).
+    // Body: { tenantId, workspaceId, taskId, expiresInMs? }
+    // Response 201: { id, status: 'capturing' }
+    // -------------------------------------------------------------------------
+    type CreateReproPackFlatBody = {
+        tenantId?: unknown;
+        workspaceId?: unknown;
+        taskId?: unknown;
+        expiresInMs?: unknown;
+    };
+
+    app.post<{ Body: CreateReproPackFlatBody }>(
+        '/v1/repro-packs',
+        async (request, reply) => {
+            const session = resolveSession(request, options);
+            if (!session) return reply.status(401).send({ error: 'unauthorized' });
+
+            const { tenantId, workspaceId, taskId, expiresInMs } = request.body ?? {};
+
+            if (typeof tenantId !== 'string' || !tenantId.trim()) {
+                return reply.status(400).send({ error: 'tenantId is required' });
+            }
+            if (typeof workspaceId !== 'string' || !workspaceId.trim()) {
+                return reply.status(400).send({ error: 'workspaceId is required' });
+            }
+            if (typeof taskId !== 'string' || !taskId.trim()) {
+                return reply.status(400).send({ error: 'taskId is required' });
+            }
+
+            const ttlMs = typeof expiresInMs === 'number' && expiresInMs > 0
+                ? expiresInMs
+                : 7 * 24 * 60 * 60 * 1000;
+            const expiresAt = new Date(Date.now() + ttlMs);
+            const correlationId = randomUUID();
+
+            try {
+                const prisma = await getPrisma();
+                const row = await prisma.reproPack.create({
+                    data: {
+                        tenantId,
+                        workspaceId,
+                        runId: taskId,
+                        status: 'capturing',
+                        manifest: {},
+                        expiresAt,
+                        correlationId,
+                    },
+                });
+                return reply.status(201).send({ id: row['id'], status: row['status'] });
+            } catch (err) {
+                console.error('[repro-packs] create error:', err);
+                return reply.status(500).send({ error: 'internal_error' });
+            }
+        },
+    );
+
+    // -------------------------------------------------------------------------
+    // GET /v1/repro-packs/:id
+    // Fetch a repro pack by id.
+    // Response 200: record | 404
+    // -------------------------------------------------------------------------
+    type ReproPackIdParam = { id: string };
+
+    app.get<{ Params: ReproPackIdParam }>(
+        '/v1/repro-packs/:id',
+        async (request, reply) => {
+            const session = resolveSession(request, options);
+            if (!session) return reply.status(401).send({ error: 'unauthorized' });
+
+            const { id } = request.params;
+
+            try {
+                const prisma = await getPrisma();
+                const row = await prisma.reproPack.findUnique({ where: { id } });
+                if (!row) return reply.status(404).send({ error: 'not_found' });
+                if (row['tenantId'] !== session.tenantId) {
+                    return reply.status(403).send({ error: 'forbidden' });
+                }
+                return reply.status(200).send(row);
+            } catch (err) {
+                console.error('[repro-packs] fetch error:', err);
+                return reply.status(500).send({ error: 'internal_error' });
+            }
+        },
+    );
+
+    // -------------------------------------------------------------------------
+    // POST /v1/repro-packs/:id/ready
+    // Mark a repro pack as ready.
+    // Body: { archiveUrl?, manifest? }
+    // Response 200: { id, status: 'ready' }
+    // -------------------------------------------------------------------------
+    type MarkReadyParam = { id: string };
+    type MarkReadyBody = { archiveUrl?: unknown; manifest?: unknown };
+
+    app.post<{ Params: MarkReadyParam; Body: MarkReadyBody }>(
+        '/v1/repro-packs/:id/ready',
+        async (request, reply) => {
+            const session = resolveSession(request, options);
+            if (!session) return reply.status(401).send({ error: 'unauthorized' });
+
+            const { id } = request.params;
+            const { archiveUrl, manifest } = request.body ?? {};
+
+            try {
+                const prisma = await getPrisma();
+                const existing = await prisma.reproPack.findUnique({ where: { id } });
+                if (!existing) return reply.status(404).send({ error: 'not_found' });
+                if (existing['tenantId'] !== session.tenantId) {
+                    return reply.status(403).send({ error: 'forbidden' });
+                }
+
+                const updateData: Record<string, unknown> = { status: 'ready' };
+                if (typeof archiveUrl === 'string' && archiveUrl) {
+                    updateData['downloadRef'] = archiveUrl;
+                }
+                if (manifest !== undefined && manifest !== null) {
+                    updateData['manifest'] = manifest;
+                }
+
+                const updated = await prisma.reproPack.update({ where: { id }, data: updateData });
+                return reply.status(200).send({ id: updated['id'], status: updated['status'] });
+            } catch (err) {
+                console.error('[repro-packs] mark-ready error:', err);
+                return reply.status(500).send({ error: 'internal_error' });
+            }
+        },
+    );
+
+    // -------------------------------------------------------------------------
+    // POST /v1/run-resume
+    // Create a run-resume record (Prisma-backed).
+    // Body: { tenantId, workspaceId, originalRunId, resumeStrategy, reproPackId? }
+    // Response 202: { id, status: 'pending' }
+    // -------------------------------------------------------------------------
+    type CreateRunResumeBody = {
+        tenantId?: unknown;
+        workspaceId?: unknown;
+        originalRunId?: unknown;
+        resumeStrategy?: unknown;
+        reproPackId?: unknown;
+    };
+
+    app.post<{ Body: CreateRunResumeBody }>(
+        '/v1/run-resume',
+        async (request, reply) => {
+            const session = resolveSession(request, options);
+            if (!session) return reply.status(401).send({ error: 'unauthorized' });
+
+            const { tenantId, workspaceId, originalRunId, resumeStrategy, reproPackId } = request.body ?? {};
+
+            if (typeof tenantId !== 'string' || !tenantId.trim()) {
+                return reply.status(400).send({ error: 'tenantId is required' });
+            }
+            if (typeof workspaceId !== 'string' || !workspaceId.trim()) {
+                return reply.status(400).send({ error: 'workspaceId is required' });
+            }
+            if (typeof originalRunId !== 'string' || !originalRunId.trim()) {
+                return reply.status(400).send({ error: 'originalRunId is required' });
+            }
+            if (resumeStrategy !== 'last_checkpoint' && resumeStrategy !== 'latest_state') {
+                return reply.status(400).send({
+                    error: 'invalid_strategy',
+                    message: 'resumeStrategy must be "last_checkpoint" or "latest_state"',
+                });
+            }
+
+            const correlationId = randomUUID();
+
+            try {
+                const prisma = await getPrisma();
+                const row = await prisma.runResume.create({
+                    data: {
+                        tenantId,
+                        workspaceId,
+                        runId: originalRunId as string,
+                        strategy: resumeStrategy as string,
+                        status: 'pending',
+                        correlationId,
+                        ...(typeof reproPackId === 'string' && reproPackId
+                            ? { resumedFrom: reproPackId }
+                            : {}),
+                    },
+                });
+                return reply.status(202).send({ id: row['id'], status: row['status'] });
+            } catch (err) {
+                console.error('[run-resume] create error:', err);
+                return reply.status(500).send({ error: 'internal_error' });
+            }
+        },
+    );
+
+    // -------------------------------------------------------------------------
+    // GET /v1/run-resume/:id
+    // Fetch a run-resume record by id.
+    // Response 200: record | 404
+    // -------------------------------------------------------------------------
+    type RunResumeIdParam = { id: string };
+
+    app.get<{ Params: RunResumeIdParam }>(
+        '/v1/run-resume/:id',
+        async (request, reply) => {
+            const session = resolveSession(request, options);
+            if (!session) return reply.status(401).send({ error: 'unauthorized' });
+
+            const { id } = request.params;
+
+            try {
+                const prisma = await getPrisma();
+                const row = await prisma.runResume.findUnique({ where: { id } });
+                if (!row) return reply.status(404).send({ error: 'not_found' });
+                if (row['tenantId'] !== session.tenantId) {
+                    return reply.status(403).send({ error: 'forbidden' });
+                }
+                return reply.status(200).send(row);
+            } catch (err) {
+                console.error('[run-resume] fetch error:', err);
+                return reply.status(500).send({ error: 'internal_error' });
+            }
         },
     );
 }

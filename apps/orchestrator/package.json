@@ -16,6 +16,7 @@
         "typescript": "^5.7.2"
     },
     "dependencies": {
+        "@agentfarm/observability": "workspace:*",
         "@prisma/client": "^5.22.0",
         "@agentfarm/shared-types": "workspace:*",
         "fastify": "^5.0.0"

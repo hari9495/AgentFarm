@@ -19,6 +19,7 @@ import {
     hashDomSnapshot,
     persistBrowserActionAudit,
 } from './runtime-audit-integration.js';
+import { recordAgentAction } from '@agentfarm/observability';
 
 export type ObservabilityActionCategory = 'browser' | 'desktop';
 export type ObservabilityRiskLevel = 'low' | 'medium' | 'high';
@@ -671,6 +672,16 @@ export const executeObservedAction = async <T>(
                         domCheckpoint,
                         domSnapshotStored: domCheckpointRequested,
                     },
+                });
+
+                recordAgentAction({
+                    taskId: request.taskId,
+                    agentId: request.agentId,
+                    workspaceId: request.workspaceId,
+                    actionType: request.action,
+                    success: event.success,
+                    durationMs: event.durationMs,
+                    errorMessage: event.errorMessage,
                 });
 
                 const prisma = await getAuditPrismaClient();

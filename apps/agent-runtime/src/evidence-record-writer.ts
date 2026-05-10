@@ -25,5 +25,24 @@ export const createFileEvidenceRecordWriter = (targetPath: string): EvidenceReco
         await mkdir(directory, { recursive: true });
         const line = `${JSON.stringify(record)}\n`;
         await appendFile(targetPath, line, { encoding: 'utf8', flag: 'a' });
+
+        // Fire-and-forget POST to evidence-service
+        // EVIDENCE_SERVICE_URL — base URL of the evidence-service (default: http://localhost:3005)
+        // EVIDENCE_SERVICE_TOKEN — shared service token sent in x-service-token header
+        const evidenceServiceUrl = process.env.EVIDENCE_SERVICE_URL ?? 'http://localhost:3005';
+        try {
+            void fetch(`${evidenceServiceUrl}/v1/evidence`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-service-token': process.env.EVIDENCE_SERVICE_TOKEN ?? '',
+                },
+                body: JSON.stringify(record),
+            }).catch((err: unknown) => {
+                console.error('[evidence-record-writer] evidence-service POST failed:', err);
+            });
+        } catch (err: unknown) {
+            console.error('[evidence-record-writer] evidence-service fire-and-forget setup error:', err);
+        }
     };
 };

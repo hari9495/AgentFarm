@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
 import { answerQuestion, PrismaQuestionStore } from '@agentfarm/agent-question-service';
 import { MemoryStore } from '@agentfarm/memory-service';
+import { verifyHmacSha256 } from '../lib/webhook-verify.js';
 
 type WebhookRegisterBody = {
     provider: string;
@@ -176,6 +177,16 @@ export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient
     app.post(
         '/webhooks/ingest/:provider',
         async (req: FastifyRequest<{ Params: ProviderParams; Body: IngestBody }>, reply) => {
+            const ingestSecret = process.env['WEBHOOK_INGEST_SECRET'];
+            if (ingestSecret) {
+                const sig = (req.headers['x-hub-signature-256'] as string)
+                    ?? (req.headers['x-signature'] as string)
+                    ?? '';
+                const rawPayload = JSON.stringify(req.body);
+                if (!verifyHmacSha256(rawPayload, ingestSecret, sig.replace('sha256=', ''))) {
+                    return reply.code(401).send({ error: 'invalid signature' });
+                }
+            }
             const body = req.body ?? {};
             const { globalWebhookEngine } = await import(
                 '@agentfarm/agent-runtime/webhook-ingestion.js'
@@ -194,6 +205,15 @@ export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient
     app.post(
         '/api/v1/questions/webhooks/slack',
         async (req: FastifyRequest<{ Body: QuestionWebhookPayload }>, reply) => {
+            const slackSecret = process.env['SLACK_WEBHOOK_SECRET'];
+            if (slackSecret) {
+                const sig = (req.headers['x-hub-signature-256'] as string)
+                    ?? (req.headers['x-signature'] as string)
+                    ?? '';
+                if (!verifyHmacSha256(JSON.stringify(req.body), slackSecret, sig.replace('sha256=', ''))) {
+                    return reply.code(401).send({ error: 'invalid signature' });
+                }
+            }
             const payload = extractAnswerPayload(req.body ?? {});
             if (!payload) {
                 return reply.code(400).send({
@@ -214,6 +234,15 @@ export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient
     app.post(
         '/api/v1/questions/webhooks/teams',
         async (req: FastifyRequest<{ Body: QuestionWebhookPayload }>, reply) => {
+            const teamsSecret = process.env['TEAMS_WEBHOOK_SECRET'];
+            if (teamsSecret) {
+                const sig = (req.headers['x-hub-signature-256'] as string)
+                    ?? (req.headers['x-signature'] as string)
+                    ?? '';
+                if (!verifyHmacSha256(JSON.stringify(req.body), teamsSecret, sig.replace('sha256=', ''))) {
+                    return reply.code(401).send({ error: 'invalid signature' });
+                }
+            }
             const payload = extractAnswerPayload(req.body ?? {});
             if (!payload) {
                 return reply.code(400).send({
@@ -234,6 +263,15 @@ export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient
     app.post(
         '/api/v1/memory/patterns/code-review',
         async (req: FastifyRequest<{ Body: CodeReviewPayload }>, reply) => {
+            const memorySecret = process.env['MEMORY_WEBHOOK_SECRET'];
+            if (memorySecret) {
+                const sig = (req.headers['x-hub-signature-256'] as string)
+                    ?? (req.headers['x-signature'] as string)
+                    ?? '';
+                if (!verifyHmacSha256(JSON.stringify(req.body), memorySecret, sig.replace('sha256=', ''))) {
+                    return reply.code(401).send({ error: 'invalid signature' });
+                }
+            }
             const body = req.body ?? {};
             const tenantId = trimString(body.tenantId);
             const workspaceId = trimString(body.workspaceId);

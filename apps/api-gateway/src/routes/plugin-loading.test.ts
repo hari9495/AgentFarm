@@ -175,3 +175,143 @@ test('C2: plugin kill-switch disables globally and appears in status', async () 
         await app.close();
     }
 });
+
+// ---------------------------------------------------------------------------
+// Prisma persistence tests
+// ---------------------------------------------------------------------------
+
+test('plugin load writes to Prisma on success', async () => {
+    const created: unknown[] = [];
+    const mockPrisma = {
+        externalPluginLoad: {
+            create: async (args: unknown) => { created.push(args); return {}; },
+            findMany: async () => [],
+        },
+        pluginKillSwitch: {
+            upsert: async () => ({}),
+            findUnique: async () => null,
+        },
+    };
+
+    const app = Fastify();
+    await registerPluginLoadingRoutes(app, {
+        getSession: () => session(),
+        featureEnabled: true,
+        trustedPublishers: [{ publisher: 'agentfarm-plugins', sourceRepoPrefix: 'https://github.com/agentfarm/' }],
+        getPrisma: async () => mockPrisma as Parameters<typeof registerPluginLoadingRoutes>[1]['getPrisma'] extends (() => Promise<infer T>) | undefined ? T : never,
+    });
+
+    try {
+        await app.inject({ method: 'POST', url: '/v1/plugins/allowlist/upsert', payload: { workspace_id: 'ws-1', plugin_key: 'jira_external', allowed_capabilities: ['ticket.create', 'ticket.read'] } });
+        const res = await app.inject({ method: 'POST', url: '/v1/plugins/load', payload: { workspace_id: 'ws-1', manifest: buildManifest(), correlation_id: 'corr-prisma-1' } });
+        assert.equal(res.statusCode, 201);
+
+        // Give the fire-and-forget a tick to resolve
+        await new Promise((r) => setImmediate(r));
+        assert.ok(created.length >= 1, 'Prisma create should have been called at least once');
+        const row = (created[0] as { data: { status: string; pluginKey: string } }).data;
+        assert.equal(row.status, 'loaded');
+        assert.equal(row.pluginKey, 'jira_external');
+    } finally {
+        await app.close();
+    }
+});
+
+test('plugin disable upserts kill switch to Prisma', async () => {
+    const upserted: unknown[] = [];
+    const mockPrisma = {
+        externalPluginLoad: {
+            create: async () => ({}),
+            findMany: async () => [],
+        },
+        pluginKillSwitch: {
+            upsert: async (args: unknown) => { upserted.push(args); return {}; },
+            findUnique: async () => null,
+        },
+    };
+
+    const app = Fastify();
+    await registerPluginLoadingRoutes(app, {
+        getSession: () => session(),
+        featureEnabled: true,
+        trustedPublishers: [],
+        getPrisma: async () => mockPrisma as Parameters<typeof registerPluginLoadingRoutes>[1]['getPrisma'] extends (() => Promise<infer T>) | undefined ? T : never,
+    });
+
+    try {
+        const res = await app.inject({ method: 'POST', url: '/v1/plugins/jira_external/disable', payload: { reason: 'security-incident' } });
+        assert.equal(res.statusCode, 200);
+
+        await new Promise((r) => setImmediate(r));
+        assert.ok(upserted.length >= 1, 'Prisma upsert should have been called');
+        const call = upserted[0] as { create: { pluginKey: string; reason: string } };
+        assert.equal(call.create.pluginKey, 'jira_external');
+        assert.equal(call.create.reason, 'security-incident');
+    } finally {
+        await app.close();
+    }
+});
+
+test('plugin load is blocked when DB kill switch exists', async () => {
+    const mockPrisma = {
+        externalPluginLoad: {
+            create: async () => ({}),
+            findMany: async () => [],
+        },
+        pluginKillSwitch: {
+            upsert: async () => ({}),
+            findUnique: async () => ({ id: 'ks-1', tenantId: 'tenant-1', pluginKey: 'jira_external', reason: 'db-blocked', killedAt: new Date() }),
+        },
+    };
+
+    const app = Fastify();
+    await registerPluginLoadingRoutes(app, {
+        getSession: () => session(),
+        featureEnabled: true,
+        trustedPublishers: [{ publisher: 'agentfarm-plugins', sourceRepoPrefix: 'https://github.com/agentfarm/' }],
+        getPrisma: async () => mockPrisma as Parameters<typeof registerPluginLoadingRoutes>[1]['getPrisma'] extends (() => Promise<infer T>) | undefined ? T : never,
+    });
+
+    try {
+        await app.inject({ method: 'POST', url: '/v1/plugins/allowlist/upsert', payload: { workspace_id: 'ws-1', plugin_key: 'jira_external', allowed_capabilities: ['ticket.create', 'ticket.read'] } });
+        const res = await app.inject({ method: 'POST', url: '/v1/plugins/load', payload: { workspace_id: 'ws-1', manifest: buildManifest(), correlation_id: 'corr-dbkill' } });
+        assert.equal(res.statusCode, 409);
+        assert.equal((res.json() as { rejectionReason: string }).rejectionReason, 'kill_switch_active');
+    } finally {
+        await app.close();
+    }
+});
+
+test('GET /v1/plugins/history returns records from Prisma', async () => {
+    const fakeRecords = [
+        { id: 'rec-1', tenantId: 'tenant-1', pluginKey: 'jira_external', version: '1.0.0', status: 'loaded', trustLevel: 'trusted', loadedAt: new Date() },
+    ];
+    const mockPrisma = {
+        externalPluginLoad: {
+            create: async () => ({}),
+            findMany: async () => fakeRecords,
+        },
+        pluginKillSwitch: {
+            upsert: async () => ({}),
+            findUnique: async () => null,
+        },
+    };
+
+    const app = Fastify();
+    await registerPluginLoadingRoutes(app, {
+        getSession: () => session(),
+        featureEnabled: true,
+        trustedPublishers: [],
+        getPrisma: async () => mockPrisma as Parameters<typeof registerPluginLoadingRoutes>[1]['getPrisma'] extends (() => Promise<infer T>) | undefined ? T : never,
+    });
+
+    try {
+        const res = await app.inject({ method: 'GET', url: '/v1/plugins/history' });
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as { records: unknown[] };
+        assert.ok(Array.isArray(body.records));
+        assert.equal(body.records.length, 1);
+    } finally {
+        await app.close();
+    }
+});

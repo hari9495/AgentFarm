@@ -152,6 +152,8 @@ export type LocalWorkspaceActionType =
     | 'workspace_web_fill_form'
     | 'workspace_web_click'
     | 'workspace_web_extract_data'
+    // MCP tool invocation
+    | 'mcp_tool_call'
     // Original actions (preserved)
     | 'git_clone'
     | 'git_branch'
@@ -522,6 +524,8 @@ export const LOCAL_WORKSPACE_ACTION_TYPES = new Set<LocalWorkspaceActionType>([
     'workspace_web_fill_form',
     'workspace_web_click',
     'workspace_web_extract_data',
+    // MCP
+    'mcp_tool_call',
     // Original
     'git_clone',
     'git_branch',
@@ -7400,6 +7404,48 @@ export async function executeLocalWorkspaceAction(input: {
             const context = await getWebContext(input.tenantId, input.botId);
             const result = await webExtractData(context, input.payload as { url?: string; target: 'table' | 'list' | 'fields' | 'all' });
             return { ok: result.ok, output: result.output, errorOutput: result.reason };
+        }
+
+        // ------------------------------------------------------------------
+        // mcp_tool_call: invoke a tool on a registered MCP server
+        // payload: { mcpServerUrl, mcpHeaders?, toolName, toolArgs? }
+        // ------------------------------------------------------------------
+        case 'mcp_tool_call': {
+            const mcpServerUrl = typeof payload['mcpServerUrl'] === 'string' ? payload['mcpServerUrl'].trim() : '';
+            if (!mcpServerUrl) {
+                return { ok: false, output: '', errorOutput: 'payload.mcpServerUrl is required for mcp_tool_call.' };
+            }
+
+            const toolName = typeof payload['toolName'] === 'string' ? payload['toolName'].trim() : '';
+            if (!toolName) {
+                return { ok: false, output: '', errorOutput: 'payload.toolName is required for mcp_tool_call.' };
+            }
+
+            const rawHeaders = payload['mcpHeaders'];
+            const mcpHeaders: Record<string, string> =
+                rawHeaders !== null && typeof rawHeaders === 'object' && !Array.isArray(rawHeaders)
+                    ? (rawHeaders as Record<string, string>)
+                    : {};
+
+            const toolArgs: Record<string, unknown> =
+                payload['toolArgs'] !== null && typeof payload['toolArgs'] === 'object' && !Array.isArray(payload['toolArgs'])
+                    ? (payload['toolArgs'] as Record<string, unknown>)
+                    : {};
+
+            try {
+                const { invokeMcpTool } = await import('./mcp-registry-client.js');
+                const mcpResult = await invokeMcpTool(mcpServerUrl, mcpHeaders, toolName, toolArgs);
+                const textContent = mcpResult.content
+                    .filter((c) => c.type === 'text' && typeof c.text === 'string')
+                    .map((c) => c.text as string)
+                    .join('\n');
+                return {
+                    ok: true,
+                    output: textContent || JSON.stringify(mcpResult.content),
+                };
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: String(err) };
+            }
         }
 
         default: {

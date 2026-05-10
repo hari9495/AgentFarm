@@ -30,3 +30,12 @@ export type { NotionConnectorConfig, NotionPage, NotionDatabase, NotionBlock, No
 
 export { ConfluenceConnector } from './confluence-connector.js';
 export type { ConfluenceConnectorConfig, ConfluencePage, ConfluenceSpace, ConfluenceComment, ConfluenceSearchResult, ConfluenceQueryResult } from './confluence-connector.js';
+
+export { JiraConnector } from './jira-connector.js';
+export type { JiraConnectorConfig, JiraIssue, JiraComment, JiraTransition, JiraProject, JiraUser, JiraQueryResult, JiraIssueFilters } from './jira-connector.js';
+
+export { TeamsConnector } from './teams-connector.js';
+export type { TeamsConnectorConfig, TeamsMessage, TeamsChannel, TeamsTeam, TeamsMeeting, TeamsQueryResult } from './teams-connector.js';
+
+export { GitLabConnector } from './gitlab-connector.js';
+export type { GitLabConnectorConfig, GitLabIssue, GitLabMergeRequest, GitLabPipeline, GitLabProject, GitLabCommit, GitLabNote, GitLabQueryResult, GitLabIssueFilters, GitLabMRFilters, GitLabPipelineFilters } from './gitlab-connector.js';

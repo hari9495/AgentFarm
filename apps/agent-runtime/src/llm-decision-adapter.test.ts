@@ -959,7 +959,7 @@ test('token budget guard emits warning payload override near limit', async () =>
 test('token budget guard hard-stops and routes to approval when exhausted', async () => {
     await withTokenBudgetStatePath('deny', async (filePath) => {
         const originalFetch = globalThis.fetch;
-        let fetchCalled = false;
+        let llmFetchCalled = false;
 
         writeFileSync(filePath, JSON.stringify({
             version: 1,
@@ -972,8 +972,12 @@ test('token budget guard hard-stops and routes to approval when exhausted', asyn
             },
         }));
 
-        globalThis.fetch = (async (_url: string | URL | Request, _init?: RequestInit) => {
-            fetchCalled = true;
+        globalThis.fetch = (async (url: string | URL | Request, _init?: RequestInit) => {
+            const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url;
+            // Track only LLM API calls, not internal notification-log calls
+            if (!urlStr.includes('/v1/notifications/log')) {
+                llmFetchCalled = true;
+            }
             return new Response('{}', { status: 500 });
         }) as typeof fetch;
 
@@ -992,7 +996,7 @@ test('token budget guard hard-stops and routes to approval when exhausted', asyn
                 heuristicDecision: lowRiskDecision,
             });
 
-            assert.equal(fetchCalled, false);
+            assert.equal(llmFetchCalled, false);
             assert.equal(result.decision.route, 'approval');
             assert.equal(result.payloadOverrides?.['_budget_decision'], 'denied');
             assert.equal(result.metadata.fallbackReason, 'token_budget_exhausted');

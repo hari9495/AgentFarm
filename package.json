@@ -13,6 +13,7 @@
         "db:migrate:deploy": "pnpm --filter @agentfarm/db-schema prisma:migrate:deploy",
         "db:backfill:replay": "node scripts/backfill-audit-replay-to-prisma.mjs",
         "test:db-smoke": "pnpm --filter @agentfarm/agent-runtime test:db-smoke",
+        "test:db": "bash scripts/run-db-tests.sh",
         "test:db-lane": "pnpm db:migrate:deploy && pnpm test:db-smoke",
         "smoke:e2e": "node scripts/e2e-smoke.mjs",
         "verify:website:prod": "node scripts/website-swa-verify.mjs",

@@ -1,5 +1,16 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 
+type SessionContext = {
+    userId: string;
+    tenantId: string;
+    workspaceIds: string[];
+    expiresAt: number;
+};
+
+type Options = {
+    getSession: (request: FastifyRequest) => SessionContext | null;
+};
+
 type CreateJobBody = {
     name: string;
     target: Record<string, unknown>;
@@ -11,7 +22,7 @@ type JobIdParams = {
     id: string;
 };
 
-export function registerSkillSchedulerRoutes(app: FastifyInstance): void {
+export function registerSkillSchedulerRoutes(app: FastifyInstance, options: Options): void {
     // List jobs
     app.get('/scheduler/jobs', async (_req, reply) => {
         const { globalScheduler } = await import('@agentfarm/agent-runtime/skill-scheduler.js').catch(
@@ -24,6 +35,8 @@ export function registerSkillSchedulerRoutes(app: FastifyInstance): void {
     app.post(
         '/scheduler/jobs',
         async (req: FastifyRequest<{ Body: CreateJobBody }>, reply) => {
+            const session = options.getSession(req);
+            if (!session) return reply.code(401).send({ error: 'unauthorized' });
             const body = (req.body ?? {}) as CreateJobBody;
             if (!body.name || !body.target || !body.frequency) {
                 return reply.status(400).send({ error: 'name, target, and frequency required' });
@@ -31,11 +44,11 @@ export function registerSkillSchedulerRoutes(app: FastifyInstance): void {
             const { globalScheduler } = await import('@agentfarm/agent-runtime/skill-scheduler.js').catch(
                 () => import('../agent-runtime-stubs.js'),
             );
-            const job = globalScheduler.createJob({
+            const job = await globalScheduler.createJob({
                 name: body.name,
                 target: body.target,
                 frequency: body.frequency,
-                enabled: body.enabled,
+                active: body.enabled ?? true,
             });
             return reply.status(201).send(job);
         },
@@ -45,6 +58,8 @@ export function registerSkillSchedulerRoutes(app: FastifyInstance): void {
     app.delete(
         '/scheduler/jobs/:id',
         async (req: FastifyRequest<{ Params: JobIdParams }>, reply) => {
+            const session = options.getSession(req);
+            if (!session) return reply.code(401).send({ error: 'unauthorized' });
             const { globalScheduler } = await import('@agentfarm/agent-runtime/skill-scheduler.js').catch(
                 () => import('../agent-runtime-stubs.js'),
             );
@@ -58,6 +73,8 @@ export function registerSkillSchedulerRoutes(app: FastifyInstance): void {
     app.post(
         '/scheduler/jobs/:id/pause',
         async (req: FastifyRequest<{ Params: JobIdParams }>, reply) => {
+            const session = options.getSession(req);
+            if (!session) return reply.code(401).send({ error: 'unauthorized' });
             const { globalScheduler } = await import('@agentfarm/agent-runtime/skill-scheduler.js').catch(
                 () => import('../agent-runtime-stubs.js'),
             );
@@ -71,6 +88,8 @@ export function registerSkillSchedulerRoutes(app: FastifyInstance): void {
     app.post(
         '/scheduler/jobs/:id/resume',
         async (req: FastifyRequest<{ Params: JobIdParams }>, reply) => {
+            const session = options.getSession(req);
+            if (!session) return reply.code(401).send({ error: 'unauthorized' });
             const { globalScheduler } = await import('@agentfarm/agent-runtime/skill-scheduler.js').catch(
                 () => import('../agent-runtime-stubs.js'),
             );

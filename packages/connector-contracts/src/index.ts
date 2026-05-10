@@ -304,10 +304,10 @@ export const CONNECTOR_REGISTRY: ConnectorDefinition[] = [
     category: 'code',
     displayName: 'GitLab',
     logoUrl: '/icons/connectors/gitlab.svg',
-    authMethod: 'oauth2',
+    authMethod: 'bearer_token',
     allowedRoles: CODE_ORIENTED_ROLE_KEYS,
     oauthScopes: ['api', 'read_user', 'read_repository'],
-    supportedActions: ['create_pr', 'add_pr_comment', 'list_prs'],
+    supportedActions: ['create_pr', 'add_pr_comment', 'list_prs', 'merge_pr', 'get_task', 'create_task', 'list_tasks', 'add_comment'],
     docsUrl: 'https://docs.gitlab.com/ee/api/oauth2.html',
   },
   {

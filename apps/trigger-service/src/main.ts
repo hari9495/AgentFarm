@@ -1,11 +1,17 @@
+import { fileURLToPath } from 'node:url';
 import Fastify from 'fastify';
 import { loadConfig } from './config-loader.js';
 import { TriggerEngine } from './trigger-engine.js';
 import { WebhookTriggerSource } from './sources/webhook-trigger.js';
+import { EmailTriggerSource } from './sources/email-trigger.js';
+import { SlackTriggerSource } from './sources/slack-trigger.js';
+import type { TriggerSource } from './types.js';
 
 const PORT = parseInt(process.env['TRIGGER_SERVICE_PORT'] ?? '3002', 10);
 
-async function main(): Promise<void> {
+export function buildApp(
+    env: Record<string, string | undefined> = process.env as Record<string, string | undefined>,
+) {
     const config = loadConfig();
     const fastify = Fastify({ logger: true });
 
@@ -14,17 +20,37 @@ async function main(): Promise<void> {
     // -----------------------------------------------------------------------
 
     const webhookSource = new WebhookTriggerSource({
-        hmacSecret: process.env['WEBHOOK_HMAC_SECRET'],
+        hmacSecret: env['WEBHOOK_HMAC_SECRET'],
     });
 
-    const sources = [webhookSource];
+    const sources: TriggerSource[] = [webhookSource];
+
+    const emailEnabled = !!env['EMAIL_IMAP_HOST'];
+    if (emailEnabled) {
+        const emailSource = new EmailTriggerSource({
+            host: env['EMAIL_IMAP_HOST']!,
+            port: parseInt(env['EMAIL_IMAP_PORT'] ?? '993'),
+            secure: env['EMAIL_IMAP_TLS'] !== 'false',
+            user: env['EMAIL_IMAP_USER']!,
+            pass: env['EMAIL_IMAP_PASSWORD']!,
+        });
+        sources.push(emailSource);
+    }
+
+    const slackEnabled = !!env['SLACK_BOT_TOKEN'];
+    if (slackEnabled) {
+        const slackSource = new SlackTriggerSource({
+            token: env['SLACK_BOT_TOKEN']!,
+            signingSecret: env['SLACK_SIGNING_SECRET'] ?? '',
+        });
+        sources.push(slackSource);
+    }
 
     // -----------------------------------------------------------------------
     // Engine
     // -----------------------------------------------------------------------
 
     const engine = new TriggerEngine(config, sources);
-    await engine.start();
 
     // -----------------------------------------------------------------------
     // Routes
@@ -37,7 +63,11 @@ async function main(): Promise<void> {
         port: PORT,
         tenants: config.tenants.map((t) => ({ tenantId: t.tenantId, agents: t.agents.length })),
         agentRuntimeUrl: config.agentRuntimeUrl,
-        sources: sources.map((s) => s.kind),
+        sources: {
+            webhook: true,
+            email: emailEnabled,
+            slack: slackEnabled,
+        },
         timestamp: new Date().toISOString(),
     }));
 
@@ -63,6 +93,13 @@ async function main(): Promise<void> {
         },
     );
 
+    return { fastify, engine };
+}
+
+async function main(): Promise<void> {
+    const { fastify, engine } = buildApp();
+    await engine.start();
+
     // -----------------------------------------------------------------------
     // Shutdown
     // -----------------------------------------------------------------------
@@ -85,7 +122,10 @@ async function main(): Promise<void> {
     console.log(`trigger-service listening on port ${PORT}`);
 }
 
-main().catch((err) => {
-    console.error('trigger-service fatal:', err);
-    process.exit(1);
-});
+// ESM guard — prevents auto-start when imported by tests
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+    main().catch((err) => {
+        console.error('trigger-service fatal:', err);
+        process.exit(1);
+    });
+}

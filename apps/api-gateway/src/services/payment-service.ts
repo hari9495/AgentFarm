@@ -1,6 +1,7 @@
 import Stripe from 'stripe';
 import Razorpay from 'razorpay';
 import crypto from 'node:crypto';
+import { verifyHmacSha256 } from '../lib/webhook-verify.js';
 import type { PrismaClient, Order, Invoice } from '@prisma/client';
 
 const getPrisma = async (): Promise<PrismaClient> => {
@@ -130,8 +131,7 @@ export function verifyRazorpayWebhook(params: {
 }): boolean {
     const keySecret = process.env['RAZORPAY_KEY_SECRET'] ?? '';
     const body = `${params.orderId}|${params.paymentId}`;
-    const expectedSignature = crypto.createHmac('sha256', keySecret).update(body).digest('hex');
-    return expectedSignature === params.signature;
+    return verifyHmacSha256(body, keySecret, params.signature, 'hex');
 }
 
 // ---------------------------------------------------------------------------

@@ -1,0 +1,70 @@
+name: DB Integration Tests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  db-smoke:
+    name: DB Smoke Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: agentfarm_test
+          POSTGRES_PASSWORD: agentfarm_test
+          POSTGRES_DB: agentfarm_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U agentfarm_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://agentfarm_test:agentfarm_test@localhost:5432/agentfarm_test
+      # FORCE_DB_SMOKE overrides the ':5433' skip check — required when the
+      # GitHub Actions native postgres service binds to port 5432.
+      FORCE_DB_SMOKE: "true"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Apply DB migrations
+        run: pnpm db:migrate:deploy
+
+      - name: Run api-gateway db-smoke
+        run: pnpm --filter @agentfarm/api-gateway test:db-smoke
+
+      - name: Run agent-runtime db-smoke
+        run: pnpm --filter @agentfarm/agent-runtime test:db-smoke
+
+      - name: Upload test results on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-smoke-results
+          path: |
+            apps/api-gateway/coverage/
+            apps/agent-runtime/coverage/
+          retention-days: 7

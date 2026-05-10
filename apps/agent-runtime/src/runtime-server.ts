@@ -1,3 +1,10 @@
+import { initObservability } from '@agentfarm/observability';
+initObservability({
+    serviceName: 'agent-runtime',
+    azureConnectionString: process.env.APPLICATIONINSIGHTS_CONNECTION_STRING,
+    otlpEndpoint: process.env.OTEL_EXPORTER_OTLP_ENDPOINT,
+});
+
 import Fastify, { type FastifyInstance } from 'fastify';
 import { createHash } from 'crypto';
 import { readdirSync, statSync } from 'fs';
@@ -81,6 +88,8 @@ import { buildErrorQuery, researchForTask, type FetchFn } from './web-research-s
 import { analyzeImage, type VisionLLMCallerFn, type VisionProvider } from './vision-service.js';
 import { FanOutProgressSink, NoopProgressSink, type ProgressMilestone, type ProgressSink } from './task-progress-reporter.js';
 import { createPrismaMemoryStore } from './prisma-memory-store.js';
+import { estimateCostUsd } from './cost-calculator.js';
+import { globalScheduler } from './skill-scheduler.js';
 
 type RuntimeMemoryStore = {
     readMemoryForTask: (workspaceId: string, maxResults?: number) => Promise<{
@@ -234,6 +243,8 @@ type TaskExecutionRecordWriter = {
         promptTokens: number | null;
         completionTokens: number | null;
         totalTokens: number | null;
+        estimatedCostUsd: number | null;
+        modelTier: string | null;
         latencyMs: number;
         outcome: TaskExecutionOutcome;
         payloadOverrideSource: PayloadOverrideSource;
@@ -625,6 +636,28 @@ const parseQualitySignalSource = (value: unknown): QualitySignalSource | null =>
     }
     return null;
 };
+
+// ---------------------------------------------------------------------------
+// emitQualitySignal — fire-and-forget bridge that forwards a QualitySignalRecord
+// to the api-gateway /v1/feedback/quality-signal endpoint for Prisma persistence.
+// Failures are logged but never block the caller.
+// ---------------------------------------------------------------------------
+function emitQualitySignal(signal: QualitySignalRecord, taskId?: string): void {
+    const gwUrl = process.env.API_GATEWAY_URL ?? 'http://localhost:3000';
+    fetch(`${gwUrl}/v1/feedback/quality-signal`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            tenantId: signal.tenantId,
+            workspaceId: signal.workspaceId,
+            taskId: taskId ?? null,
+            signalType: signal.signal ?? null,
+            source: signal.source ?? null,
+            score: signal.score ?? null,
+            metadata: signal.metadata ?? null,
+        }),
+    }).catch((err: unknown) => console.error('[quality-signal]', err));
+}
 
 const POST_CHANGE_QUALITY_GATE_ACTIONS = new Set<LocalWorkspaceActionType>([
     'code_edit',
@@ -1767,6 +1800,8 @@ const createDefaultTaskExecutionRecordWriter = (env: NodeJS.ProcessEnv): TaskExe
                         promptTokens: input.promptTokens ?? undefined,
                         completionTokens: input.completionTokens ?? undefined,
                         totalTokens: input.totalTokens ?? undefined,
+                        estimatedCostUsd: input.estimatedCostUsd ?? undefined,
+                        modelTier: input.modelTier ?? undefined,
                         latencyMs: input.latencyMs,
                         outcome: input.outcome,
                         executedAt: input.executedAt,
@@ -3979,6 +4014,13 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             ?? 'agentfarm';
         const latencyMs = Math.max(0, now() - task.enqueuedAt);
 
+        const promptTokens = result.llmExecution?.promptTokens ?? null;
+        const completionTokens = result.llmExecution?.completionTokens ?? null;
+        const costResult =
+            promptTokens !== null && completionTokens !== null
+                ? estimateCostUsd({ modelProvider, modelProfile, promptTokens, completionTokens })
+                : null;
+
         taskExecutionRecordWriter.write({
             botId: config.botId,
             tenantId: config.tenantId,
@@ -3986,9 +4028,11 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             taskId: task.taskId,
             modelProvider,
             modelProfile,
-            promptTokens: result.llmExecution?.promptTokens ?? null,
-            completionTokens: result.llmExecution?.completionTokens ?? null,
+            promptTokens,
+            completionTokens,
             totalTokens: result.llmExecution?.totalTokens ?? null,
+            estimatedCostUsd: costResult?.costUsd ?? null,
+            modelTier: costResult?.modelTier ?? null,
             latencyMs,
             outcome: taskOutcome,
             payloadOverrideSource: result.payloadOverrideSource,
@@ -3998,14 +4042,36 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             // Non-blocking: task execution record write failures do not affect task outcome
         });
 
-        recordQualitySignal({
-            provider: modelProvider,
-            actionType: result.decision.actionType,
-            score: estimateLlmQualityScore(result),
-            source: 'runtime_outcome',
-            taskId: task.taskId,
-            correlationId: config.correlationId,
-        });
+        {
+            const _qs = recordQualitySignal({
+                provider: modelProvider,
+                actionType: result.decision.actionType,
+                score: estimateLlmQualityScore(result),
+                source: 'runtime_outcome',
+                taskId: task.taskId,
+                correlationId: config.correlationId,
+            });
+            if (_qs) {
+                emitQualitySignal({
+                    id: _qs.id,
+                    contractVersion: CONTRACT_VERSIONS.QUALITY_SIGNAL,
+                    tenantId: config.tenantId,
+                    workspaceId: config.workspaceId,
+                    botId: config.botId,
+                    provider: _qs.provider,
+                    model: _qs.model,
+                    actionType: _qs.actionType,
+                    score: _qs.score,
+                    signal: _qs.signal,
+                    weight: _qs.weight,
+                    source: _qs.source,
+                    reason: _qs.reason,
+                    metadata: _qs.metadata,
+                    correlationId: _qs.correlationId ?? config.correlationId,
+                    observedAt: _qs.observedAt,
+                }, task.taskId);
+            }
+        }
 
         const evaluatorWebhookUrl = resolveEvaluatorWebhookUrl(process.env);
         if (evaluatorWebhookUrl) {
@@ -5664,6 +5730,8 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             observedAt: signal.observedAt,
         };
 
+        emitQualitySignal(qualitySignalRecord, signal.taskId);
+
         return reply.code(201).send({
             quality_signal: qualitySignalRecord,
             source: signal.source,
@@ -5753,6 +5821,8 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             correlationId: signal.correlationId ?? configCache.correlationId,
             observedAt: signal.observedAt,
         };
+
+        emitQualitySignal(qualitySignalRecord, signal.taskId);
 
         return reply.code(201).send({
             quality_signal: qualitySignalRecord,
@@ -6582,6 +6652,30 @@ export async function startRuntimeServer(options: RuntimeServerOptions = {}): Pr
     }
 
     const app = buildRuntimeServer(resolvedOptions);
+
+    // Wire scheduler dispatch to POST /tasks/intake
+    const agentRuntimeBase = (env['AGENT_RUNTIME_BASE_URL'] as string | undefined) ?? 'http://localhost:3001';
+    globalScheduler.setRunCallback(async (target, dryRun) => {
+        if (dryRun) {
+            return { ok: true, summary: '[dry-run]' };
+        }
+        const taskId = target.kind === 'skill' ? target.skill_id : target.pipeline_id;
+        const res = await fetch(`${agentRuntimeBase}/tasks/intake`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                task_id: taskId,
+                payload: { scheduled: true, skill_target: taskId },
+            }),
+        });
+        if (!res.ok) {
+            throw new Error(`tasks/intake failed: ${res.status}`);
+        }
+        return { ok: true, summary: 'queued' };
+    });
+    await globalScheduler.loadJobs();
+    globalScheduler.start();
+
     const port = Number(env.AF_HEALTH_PORT ?? env.AGENTFARM_HEALTH_PORT ?? 8080);
     await app.listen({ host: '0.0.0.0', port });
     app.log.info({ port }, 'agent-runtime listening');

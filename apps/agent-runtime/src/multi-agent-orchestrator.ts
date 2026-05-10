@@ -284,6 +284,27 @@ export class MultiAgentOrchestrator {
 
         auditTrail.push({ step: 'agents_selected', ts: ts(), detail: matchingAgents.map((a) => a.id).join(', ') });
 
+        // Fire-and-forget dispatch notification to the api-gateway if configured
+        const dispatchUrl = process.env.AGENT_DISPATCH_URL;
+        if (dispatchUrl && matchingAgents.length > 0) {
+            const firstAgent = matchingAgents[0];
+            fetch(`${dispatchUrl}/v1/agents/dispatch`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    fromAgentId: 'orchestrator',
+                    toAgentId: firstAgent.id,
+                    workspaceId: 'default',
+                    tenantId: 'system',
+                    taskDescription: task.description,
+                    requiredCapability: task.required_capabilities[0],
+                    timeoutMs: task.agent_timeout_ms ?? 30_000,
+                }),
+            }).catch((err: unknown) => {
+                console.error('[dispatch]', err instanceof Error ? err.message : String(err));
+            });
+        }
+
         // Dispatch each skill invocation to matching agents
         for (const invocation of task.skill_invocations) {
             auditTrail.push({ step: 'skill_dispatch', ts: ts(), detail: `skill=${invocation.skill_id}` });

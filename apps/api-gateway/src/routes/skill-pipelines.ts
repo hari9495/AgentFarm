@@ -1,5 +1,16 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 
+type SessionContext = {
+    userId: string;
+    tenantId: string;
+    workspaceIds: string[];
+    expiresAt: number;
+};
+
+type Options = {
+    getSession: (request: FastifyRequest) => SessionContext | null;
+};
+
 type PipelineRunBody = {
     pipeline_id: string;
     initial_inputs?: Record<string, unknown>;
@@ -10,7 +21,7 @@ type RunIdParams = {
     runId: string;
 };
 
-export function registerSkillPipelineRoutes(app: FastifyInstance): void {
+export function registerSkillPipelineRoutes(app: FastifyInstance, options: Options): void {
     // List built-in pipelines
     app.get('/pipelines', async (_req, reply) => {
         const { globalPipelineEngine } = await import('@agentfarm/agent-runtime/skill-pipeline.js').catch(
@@ -23,6 +34,8 @@ export function registerSkillPipelineRoutes(app: FastifyInstance): void {
     app.post(
         '/pipelines/run',
         async (req: FastifyRequest<{ Body: PipelineRunBody }>, reply) => {
+            const session = options.getSession(req);
+            if (!session) return reply.code(401).send({ error: 'unauthorized' });
             const { pipeline_id, initial_inputs, dry_run } = req.body ?? {};
             if (!pipeline_id) {
                 return reply.status(400).send({ error: 'pipeline_id required' });

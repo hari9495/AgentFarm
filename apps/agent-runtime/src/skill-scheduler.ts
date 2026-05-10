@@ -150,6 +150,10 @@ export class SkillScheduler {
         this.runCallback = callback;
     }
 
+    setRunCallback(cb: (target: ScheduledJobTarget, dryRun: boolean) => Promise<{ ok: boolean; summary: string }>): void {
+        this.runCallback = cb;
+    }
+
     // ── Job management ─────────────────────────────────────────────────────
 
     async createJob(input: {

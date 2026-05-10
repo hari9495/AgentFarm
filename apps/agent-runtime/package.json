@@ -33,6 +33,10 @@
         "./webhook-ingestion.js": {
             "types": "./src/webhook-ingestion.ts",
             "default": "./src/webhook-ingestion.ts"
+        },
+        "./natural-language-parser.js": {
+            "types": "./src/natural-language-parser.ts",
+            "default": "./src/natural-language-parser.ts"
         }
     },
     "scripts": {
@@ -41,7 +45,7 @@
         "start": "node dist/main.js",
         "typecheck": "tsc -p tsconfig.json --noEmit",
         "test": "tsx --test src/**/*.test.ts",
-        "test:db-smoke": "node --env-file=.env --import tsx src/db-snapshot-smoke.ts",
+        "test:db-smoke": "tsx --test src/__tests__/db-smoke.test.ts",
         "test:coverage": "pnpm exec c8 --reporter=text-summary --reporter=json-summary --exclude=src/**/*.test.ts tsx --test src/**/*.test.ts && node ../../scripts/coverage-threshold-check.mjs coverage/coverage-summary.json 80 lines src/runtime-server.ts src/execution-engine.ts src/action-result-writer.ts"
     },
     "devDependencies": {
@@ -52,6 +56,7 @@
     },
     "dependencies": {
         "@agentfarm/agent-observability": "workspace:*",
+        "@agentfarm/observability": "workspace:*",
         "@agentfarm/audit-storage": "workspace:*",
         "@agentfarm/browser-actions": "workspace:*",
         "@agentfarm/crm-adapters": "workspace:*",

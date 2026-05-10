@@ -14,9 +14,24 @@ type IndexBody = {
     root_dir?: string;
 };
 
-export function registerKnowledgeGraphRoutes(app: FastifyInstance): void {
+type SessionContext = {
+    userId: string;
+    tenantId: string;
+    workspaceIds: string[];
+    expiresAt: number;
+};
+
+export type RegisterKnowledgeGraphRoutesOptions = {
+    getSession: (request: FastifyRequest) => SessionContext | null;
+};
+
+export function registerKnowledgeGraphRoutes(app: FastifyInstance, options: RegisterKnowledgeGraphRoutesOptions): void {
+    const getSession = options.getSession;
+
     // Get full snapshot (all symbols + edges)
-    app.get('/knowledge-graph/snapshot', async (_req, reply) => {
+    app.get('/knowledge-graph/snapshot', async (req, reply) => {
+        const session = getSession(req);
+        if (!session) return reply.status(401).send({ error: 'unauthorized' });
         const { globalKnowledgeGraph } = await import(
             '@agentfarm/agent-runtime/repo-knowledge-graph.js'
         ).catch(() => import('../agent-runtime-stubs.js'));
@@ -33,6 +48,8 @@ export function registerKnowledgeGraphRoutes(app: FastifyInstance): void {
     app.get(
         '/knowledge-graph/symbols',
         async (req: FastifyRequest<{ Querystring: SymbolQuery }>, reply) => {
+            const session = getSession(req);
+            if (!session) return reply.status(401).send({ error: 'unauthorized' });
             const { q, kind, limit } = req.query;
             const { globalKnowledgeGraph } = await import(
                 '@agentfarm/agent-runtime/repo-knowledge-graph.js'
@@ -53,6 +70,8 @@ export function registerKnowledgeGraphRoutes(app: FastifyInstance): void {
     app.get(
         '/knowledge-graph/callers',
         async (req: FastifyRequest<{ Querystring: { symbol: string } }>, reply) => {
+            const session = getSession(req);
+            if (!session) return reply.status(401).send({ error: 'unauthorized' });
             const { symbol } = req.query;
             if (!symbol) return reply.status(400).send({ error: 'symbol required' });
             const { globalKnowledgeGraph } = await import(
@@ -65,6 +84,8 @@ export function registerKnowledgeGraphRoutes(app: FastifyInstance): void {
 
     // Index workspace
     app.post('/knowledge-graph/index', async (req: FastifyRequest<{ Body: IndexBody }>, reply) => {
+        const session = getSession(req);
+        if (!session) return reply.status(401).send({ error: 'unauthorized' });
         const rootDir = req.body?.root_dir ?? '.';
         const { globalKnowledgeGraph } = await import(
             '@agentfarm/agent-runtime/repo-knowledge-graph.js'
@@ -77,6 +98,8 @@ export function registerKnowledgeGraphRoutes(app: FastifyInstance): void {
     app.get(
         '/knowledge-graph/suggestions',
         async (req: FastifyRequest<{ Querystring: SuggestionsQuery }>, reply) => {
+            const session = getSession(req);
+            if (!session) return reply.status(401).send({ error: 'unauthorized' });
             const context = req.query.context;
             const { globalKnowledgeGraph } = await import(
                 '@agentfarm/agent-runtime/repo-knowledge-graph.js'

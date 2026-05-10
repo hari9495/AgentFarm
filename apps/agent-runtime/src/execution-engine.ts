@@ -156,6 +156,8 @@ const MEDIUM_RISK_ACTIONS = new Set([
     'workspace_github_pr_status',
     'workspace_github_issue_triage',
     'workspace_slack_notify',
+    // MCP tool invocation — external side-effects possible, content unknown
+    'mcp_tool_call',
 ]);
 function clamp01(value: number): number {
     if (value < 0) {

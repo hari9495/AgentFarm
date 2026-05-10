@@ -390,3 +390,89 @@ test('dispatch returns budget_denied and persists rejected action/audit records 
         await app.close();
     }
 });
+
+// ──────────────────────────────────────────────────────────────
+// GET /v1/workspaces/:workspaceId/tasks
+// ──────────────────────────────────────────────────────────────
+
+const buildMinimalApp = async (
+    listTaskRecords: Required<Parameters<typeof registerRuntimeTaskRoutes>[1]>['listTaskRecords'],
+    session: typeof internalSession | null = internalSession,
+) => {
+    const app = Fastify();
+    await registerRuntimeTaskRoutes(app, {
+        getSession: () => session,
+        repo: {
+            async findRuntimeEndpoint() { return 'http://runtime.local'; },
+            async createAuditEvent() { /* no-op */ },
+            async createActionRecord() { /* no-op */ },
+        },
+        listTaskRecords,
+    });
+    return app;
+};
+
+test('GET /v1/workspaces/:workspaceId/tasks returns 200 with tasks array', async () => {
+    const records = [
+        { id: 'rec_1', taskId: 'task_1', modelProvider: 'openai', modelProfile: 'gpt-4o', outcome: 'success', latencyMs: 120, estimatedCostUsd: 0.002, modelTier: 'standard', executedAt: new Date('2025-01-01T00:00:00Z') },
+        { id: 'rec_2', taskId: 'task_2', modelProvider: 'openai', modelProfile: 'gpt-4o-mini', outcome: 'failed', latencyMs: 80, estimatedCostUsd: null, modelTier: null, executedAt: new Date('2025-01-01T01:00:00Z') },
+    ];
+
+    const app = await buildMinimalApp(async () => ({ tasks: records, nextCursor: null }));
+
+    try {
+        const res = await app.inject({ method: 'GET', url: '/v1/workspaces/ws_1/tasks' });
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as { tasks: typeof records; nextCursor: string | null };
+        assert.equal(body.tasks.length, 2);
+        assert.equal(body.tasks[0]?.id, 'rec_1');
+        assert.equal(body.nextCursor, null);
+    } finally {
+        await app.close();
+    }
+});
+
+test('GET /v1/workspaces/:workspaceId/tasks forwards limit param to listTaskRecords', async () => {
+    let capturedLimit = 0;
+    const app = await buildMinimalApp(async (_ws, limit) => {
+        capturedLimit = limit;
+        return { tasks: [], nextCursor: null };
+    });
+
+    try {
+        const res = await app.inject({ method: 'GET', url: '/v1/workspaces/ws_1/tasks?limit=10' });
+        assert.equal(res.statusCode, 200);
+        assert.equal(capturedLimit, 10);
+    } finally {
+        await app.close();
+    }
+});
+
+test('GET /v1/workspaces/:workspaceId/tasks returns nextCursor when more results exist', async () => {
+    const app = await buildMinimalApp(async () => ({
+        tasks: [{ id: 'rec_a', taskId: 't_a', modelProvider: 'openai', modelProfile: 'gpt-4o', outcome: 'success', latencyMs: 50, estimatedCostUsd: 0.001, modelTier: 'standard', executedAt: new Date() }],
+        nextCursor: 'rec_a',
+    }));
+
+    try {
+        const res = await app.inject({ method: 'GET', url: '/v1/workspaces/ws_1/tasks' });
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as { tasks: unknown[]; nextCursor: string };
+        assert.equal(body.nextCursor, 'rec_a');
+    } finally {
+        await app.close();
+    }
+});
+
+test('GET /v1/workspaces/:workspaceId/tasks returns 401 when no session', async () => {
+    const app = await buildMinimalApp(async () => ({ tasks: [], nextCursor: null }), null);
+
+    try {
+        const res = await app.inject({ method: 'GET', url: '/v1/workspaces/ws_1/tasks' });
+        assert.equal(res.statusCode, 401);
+        const body = res.json() as { error: string };
+        assert.equal(body.error, 'unauthorized');
+    } finally {
+        await app.close();
+    }
+});

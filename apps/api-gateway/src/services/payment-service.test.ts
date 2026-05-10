@@ -26,6 +26,11 @@ const stubOrder: Order = {
     customerCountry: 'US',
     createdAt: new Date('2026-05-09T10:00:00Z'),
     updatedAt: new Date('2026-05-09T10:00:00Z'),
+    contractPdfUrl: null,
+    zohoSignRequestId: null,
+    signatureStatus: null,
+    signedAt: null,
+    contractSentAt: null,
 };
 
 describe('payment-service', () => {

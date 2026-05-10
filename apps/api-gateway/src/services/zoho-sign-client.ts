@@ -112,7 +112,7 @@ export async function uploadContractDocument(
     form.append('data', JSON.stringify(requestData));
     form.append(
         'file',
-        new Blob([params.pdfBuffer], { type: 'application/pdf' }),
+        new Blob([new Uint8Array(params.pdfBuffer)], { type: 'application/pdf' }),
         params.fileName,
     );
 

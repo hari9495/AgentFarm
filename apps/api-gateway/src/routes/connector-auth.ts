@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { URL } from 'node:url';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { createInMemorySecretStore, type SecretStore } from '../lib/secret-store.js';
+import { writeAuditEvent } from '../lib/audit-writer.js';
 
 const getPrisma = async () => {
     const db = await import('../lib/db.js');
@@ -668,6 +669,16 @@ export const registerConnectorAuthRoutes = async (
             correlationId: `corr_connector_auth_${now()}`,
             actor: session.userId,
         });
+        void getPrisma().then((p) =>
+            writeAuditEvent({
+                prisma: p,
+                tenantId: session.tenantId,
+                workspaceId,
+                eventType: 'connector_event',
+                severity: 'info',
+                summary: `OAuth initiated for connector ${connectorId}`,
+            }),
+        );
 
         return reply.code(201).send({
             connector_id: connectorId,
@@ -1050,6 +1061,16 @@ export const registerConnectorAuthRoutes = async (
             correlationId: `corr_connector_auth_${now()}`,
             actor: session.userId,
         });
+        void getPrisma().then((p) =>
+            writeAuditEvent({
+                prisma: p,
+                tenantId: session.tenantId,
+                workspaceId,
+                eventType: 'connector_event',
+                severity: 'info',
+                summary: `Reauth triggered for connector ${connectorId}`,
+            }),
+        );
 
         return {
             status: 'refreshed',
@@ -1113,6 +1134,17 @@ export const registerConnectorAuthRoutes = async (
             correlationId: `corr_connector_auth_${now()}`,
             actor: session.userId,
         });
+        void getPrisma().then((p) =>
+            writeAuditEvent({
+                prisma: p,
+                tenantId: session.tenantId,
+                workspaceId,
+                eventType: 'connector_event',
+                severity: 'warning',
+                summary: `Auth revoked for connector ${connectorId}`,
+                metadata: { connectorId },
+            }),
+        );
 
         return {
             status: 'revoked',

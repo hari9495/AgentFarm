@@ -12,6 +12,7 @@
 
 import { randomUUID } from 'crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { TaskProgressEvent } from '@agentfarm/shared-types';
 
 // ── Event model ───────────────────────────────────────────────────────────────
 
@@ -214,14 +215,58 @@ export async function registerSseTaskRoutes(
 
     /**
      * Internal POST /sse/tasks/push — allows services to emit task events.
-     * In production this would be behind an internal-only auth check.
+     * Protected by SSE_INTERNAL_TOKEN when set.
+     * Accepts either the legacy format { tenantId, workspaceId, type, taskId?, payload? }
+     * or the publisher format { workspaceId, event: TaskProgressEvent }.
      */
     app.post<{
-        Body: { tenantId: string; workspaceId: string; type: SseEventType; taskId?: string; payload?: Record<string, unknown> };
+        Body: {
+            tenantId?: string;
+            workspaceId?: string;
+            type?: SseEventType;
+            taskId?: string;
+            payload?: Record<string, unknown>;
+            event?: TaskProgressEvent;
+        };
     }>(
         '/sse/tasks/push',
         async (req, reply) => {
-            const { tenantId, workspaceId, type, taskId, payload } = req.body ?? {};
+            const internalToken = process.env['SSE_INTERNAL_TOKEN'];
+            if (internalToken) {
+                const auth = req.headers['x-internal-token'];
+                if (auth !== internalToken) {
+                    return reply.code(401).send({ error: 'unauthorized' });
+                }
+            }
+
+            const body = req.body ?? {};
+
+            // New format: { workspaceId, event: TaskProgressEvent }
+            if (body.event) {
+                const evt = body.event;
+                const workspaceId = body.workspaceId ?? evt.workspaceId;
+                const tenantId = evt.tenantId;
+                if (!tenantId || !workspaceId) {
+                    return reply.code(400).send({ error: 'workspaceId and event.tenantId are required' });
+                }
+                const milestoneToType = (milestone: string): SseEventType => {
+                    if (milestone === 'completed') return 'task_completed';
+                    if (milestone === 'failed') return 'task_failed';
+                    return 'task_started';
+                };
+                const queue = resolveQueue(tenantId, workspaceId);
+                const sseEvent = queue.push({
+                    type: milestoneToType(evt.milestone),
+                    tenantId,
+                    workspaceId,
+                    taskId: evt.taskId,
+                    payload: evt as unknown as Record<string, unknown>,
+                });
+                return reply.code(200).send({ eventId: sseEvent.eventId });
+            }
+
+            // Legacy format: { tenantId, workspaceId, type, taskId?, payload? }
+            const { tenantId, workspaceId, type, taskId, payload } = body;
             if (!tenantId || !workspaceId || !type) {
                 return reply.code(400).send({ error: 'tenantId, workspaceId, and type are required' });
             }

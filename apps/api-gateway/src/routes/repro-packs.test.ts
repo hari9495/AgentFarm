@@ -291,3 +291,286 @@ describe('GET /v1/workspaces/:workspaceId/repro-packs/:reproPackId', () => {
         assert.strictEqual(res.statusCode, 403);
     });
 });
+
+// ---------------------------------------------------------------------------
+// Prisma-backed route helpers
+// ---------------------------------------------------------------------------
+
+type MockReproPackRow = { id: string; status: string; tenantId: string;[key: string]: unknown };
+type MockRunResumeRow = { id: string; status: string; tenantId: string;[key: string]: unknown };
+
+function makePrismaMock(
+    packStore: Map<string, MockReproPackRow>,
+    resumeStore: Map<string, MockRunResumeRow>,
+) {
+    return async () => ({
+        reproPack: {
+            create: async (args: { data: Record<string, unknown> }) => {
+                const row: MockReproPackRow = {
+                    id: `pack-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+                    status: String(args.data['status'] ?? 'capturing'),
+                    tenantId: String(args.data['tenantId'] ?? ''),
+                    ...args.data,
+                };
+                packStore.set(row.id, row);
+                return row;
+            },
+            findUnique: async (args: { where: { id: string } }) =>
+                packStore.get(args.where.id) ?? null,
+            update: async (args: { where: { id: string }; data: Record<string, unknown> }) => {
+                const existing = packStore.get(args.where.id);
+                if (!existing) throw new Error('not found');
+                const updated = { ...existing, ...args.data };
+                packStore.set(args.where.id, updated);
+                return updated;
+            },
+        },
+        runResume: {
+            create: async (args: { data: Record<string, unknown> }) => {
+                const row: MockRunResumeRow = {
+                    id: `resume-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+                    status: String(args.data['status'] ?? 'pending'),
+                    tenantId: String(args.data['tenantId'] ?? ''),
+                    ...args.data,
+                };
+                resumeStore.set(row.id, row);
+                return row;
+            },
+            findUnique: async (args: { where: { id: string } }) =>
+                resumeStore.get(args.where.id) ?? null,
+        },
+    });
+}
+
+function buildPrismaApp(packStore: Map<string, MockReproPackRow>, resumeStore: Map<string, MockRunResumeRow>) {
+    const app = Fastify({ logger: false });
+    registerReproPackRoutes(app, {
+        getSession: () => makeSession(),
+        getPrisma: makePrismaMock(packStore, resumeStore),
+    });
+    return app;
+}
+
+// ---------------------------------------------------------------------------
+// POST /v1/repro-packs (Prisma-backed)
+// ---------------------------------------------------------------------------
+
+describe('POST /v1/repro-packs', () => {
+    it('creates a repro pack and returns 201 with id and status capturing', async () => {
+        const packs = new Map<string, MockReproPackRow>();
+        const app = buildPrismaApp(packs, new Map());
+        const res = await app.inject({
+            method: 'POST',
+            url: '/v1/repro-packs',
+            payload: { tenantId: 'tenant-1', workspaceId: 'ws-1', taskId: 'task-abc' },
+        });
+        assert.strictEqual(res.statusCode, 201);
+        const body = JSON.parse(res.body);
+        assert.ok(body.id, 'id must be present');
+        assert.strictEqual(body.status, 'capturing');
+        assert.strictEqual(packs.size, 1);
+    });
+
+    it('returns 400 when taskId is missing', async () => {
+        const app = buildPrismaApp(new Map(), new Map());
+        const res = await app.inject({
+            method: 'POST',
+            url: '/v1/repro-packs',
+            payload: { tenantId: 'tenant-1', workspaceId: 'ws-1' },
+        });
+        assert.strictEqual(res.statusCode, 400);
+    });
+
+    it('returns 401 when no session', async () => {
+        const app = Fastify({ logger: false });
+        registerReproPackRoutes(app, {
+            getSession: () => null,
+            getPrisma: makePrismaMock(new Map(), new Map()),
+        });
+        const res = await app.inject({
+            method: 'POST',
+            url: '/v1/repro-packs',
+            payload: { tenantId: 'tenant-1', workspaceId: 'ws-1', taskId: 'task-x' },
+        });
+        assert.strictEqual(res.statusCode, 401);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// GET /v1/repro-packs/:id (Prisma-backed)
+// ---------------------------------------------------------------------------
+
+describe('GET /v1/repro-packs/:id', () => {
+    it('returns 200 with pack row when found', async () => {
+        const packs = new Map<string, MockReproPackRow>();
+        const app = buildPrismaApp(packs, new Map());
+
+        const createRes = await app.inject({
+            method: 'POST',
+            url: '/v1/repro-packs',
+            payload: { tenantId: 'tenant-1', workspaceId: 'ws-1', taskId: 'task-get-test' },
+        });
+        const { id } = JSON.parse(createRes.body);
+
+        const res = await app.inject({ method: 'GET', url: `/v1/repro-packs/${id}` });
+        assert.strictEqual(res.statusCode, 200);
+        const body = JSON.parse(res.body);
+        assert.strictEqual(body.id, id);
+    });
+
+    it('returns 404 for unknown id', async () => {
+        const app = buildPrismaApp(new Map(), new Map());
+        const res = await app.inject({ method: 'GET', url: '/v1/repro-packs/does-not-exist' });
+        assert.strictEqual(res.statusCode, 404);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// POST /v1/repro-packs/:id/ready (Prisma-backed)
+// ---------------------------------------------------------------------------
+
+describe('POST /v1/repro-packs/:id/ready', () => {
+    it('marks pack as ready and returns 200', async () => {
+        const packs = new Map<string, MockReproPackRow>();
+        const app = buildPrismaApp(packs, new Map());
+
+        const createRes = await app.inject({
+            method: 'POST',
+            url: '/v1/repro-packs',
+            payload: { tenantId: 'tenant-1', workspaceId: 'ws-1', taskId: 'task-ready' },
+        });
+        const { id } = JSON.parse(createRes.body);
+
+        const res = await app.inject({
+            method: 'POST',
+            url: `/v1/repro-packs/${id}/ready`,
+            payload: { archiveUrl: 'https://storage/pack.zip' },
+        });
+        assert.strictEqual(res.statusCode, 200);
+        const body = JSON.parse(res.body);
+        assert.strictEqual(body.id, id);
+        assert.strictEqual(body.status, 'ready');
+        assert.strictEqual(packs.get(id)?.['downloadRef'], 'https://storage/pack.zip');
+    });
+
+    it('returns 404 for unknown id', async () => {
+        const app = buildPrismaApp(new Map(), new Map());
+        const res = await app.inject({
+            method: 'POST',
+            url: '/v1/repro-packs/ghost-id/ready',
+            payload: {},
+        });
+        assert.strictEqual(res.statusCode, 404);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// POST /v1/run-resume (Prisma-backed)
+// ---------------------------------------------------------------------------
+
+describe('POST /v1/run-resume', () => {
+    it('creates a run-resume and returns 202 with id and status pending', async () => {
+        const resumes = new Map<string, MockRunResumeRow>();
+        const app = buildPrismaApp(new Map(), resumes);
+        const res = await app.inject({
+            method: 'POST',
+            url: '/v1/run-resume',
+            payload: {
+                tenantId: 'tenant-1',
+                workspaceId: 'ws-1',
+                originalRunId: 'run-orig-001',
+                resumeStrategy: 'last_checkpoint',
+            },
+        });
+        assert.strictEqual(res.statusCode, 202);
+        const body = JSON.parse(res.body);
+        assert.ok(body.id);
+        assert.strictEqual(body.status, 'pending');
+        assert.strictEqual(resumes.size, 1);
+    });
+
+    it('returns 400 for invalid resumeStrategy', async () => {
+        const app = buildPrismaApp(new Map(), new Map());
+        const res = await app.inject({
+            method: 'POST',
+            url: '/v1/run-resume',
+            payload: {
+                tenantId: 'tenant-1',
+                workspaceId: 'ws-1',
+                originalRunId: 'run-orig-002',
+                resumeStrategy: 'full_rollback',
+            },
+        });
+        assert.strictEqual(res.statusCode, 400);
+        const body = JSON.parse(res.body);
+        assert.strictEqual(body.error, 'invalid_strategy');
+    });
+
+    it('returns 400 when originalRunId is missing', async () => {
+        const app = buildPrismaApp(new Map(), new Map());
+        const res = await app.inject({
+            method: 'POST',
+            url: '/v1/run-resume',
+            payload: {
+                tenantId: 'tenant-1',
+                workspaceId: 'ws-1',
+                resumeStrategy: 'latest_state',
+            },
+        });
+        assert.strictEqual(res.statusCode, 400);
+    });
+
+    it('returns 401 when no session', async () => {
+        const app = Fastify({ logger: false });
+        registerReproPackRoutes(app, {
+            getSession: () => null,
+            getPrisma: makePrismaMock(new Map(), new Map()),
+        });
+        const res = await app.inject({
+            method: 'POST',
+            url: '/v1/run-resume',
+            payload: {
+                tenantId: 'tenant-1',
+                workspaceId: 'ws-1',
+                originalRunId: 'run-x',
+                resumeStrategy: 'last_checkpoint',
+            },
+        });
+        assert.strictEqual(res.statusCode, 401);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// GET /v1/run-resume/:id (Prisma-backed)
+// ---------------------------------------------------------------------------
+
+describe('GET /v1/run-resume/:id', () => {
+    it('returns 200 with resume row when found', async () => {
+        const resumes = new Map<string, MockRunResumeRow>();
+        const app = buildPrismaApp(new Map(), resumes);
+
+        const createRes = await app.inject({
+            method: 'POST',
+            url: '/v1/run-resume',
+            payload: {
+                tenantId: 'tenant-1',
+                workspaceId: 'ws-1',
+                originalRunId: 'run-get-test',
+                resumeStrategy: 'latest_state',
+            },
+        });
+        const { id } = JSON.parse(createRes.body);
+
+        const res = await app.inject({ method: 'GET', url: `/v1/run-resume/${id}` });
+        assert.strictEqual(res.statusCode, 200);
+        const body = JSON.parse(res.body);
+        assert.strictEqual(body.id, id);
+    });
+
+    it('returns 404 for unknown id', async () => {
+        const app = buildPrismaApp(new Map(), new Map());
+        const res = await app.inject({ method: 'GET', url: '/v1/run-resume/no-such-id' });
+        assert.strictEqual(res.statusCode, 404);
+    });
+});
+
