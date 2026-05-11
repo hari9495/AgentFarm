@@ -87,6 +87,9 @@ import { registerMarketplaceRoutes } from './routes/marketplace.js';
 import { registerAbTestRoutes } from './routes/ab-tests.js';
 import { registerCircuitBreakerRoutes } from './routes/circuit-breakers.js';
 import { registerTaskQueueRoutes } from './routes/task-queue.js';
+import { registerScheduledReportRoutes } from './routes/scheduled-reports.js';
+import { registerApiKeyRoutes } from './routes/api-keys.js';
+import { validateApiKey } from './lib/api-key-auth.js';
 import { startDrainSweep, stopDrainSweep } from './lib/task-queue.js';
 
 const app = Fastify({ logger: true });
@@ -152,6 +155,12 @@ const readSessionToken = (request: { headers: Record<string, unknown> }): string
 };
 
 const readSession = (request: { headers: Record<string, unknown> }): SessionPayload | null => {
+    // Check for API-key-injected session (set by preHandler when Bearer af_ key is validated)
+    const injected = (request as any)._injectedSession as SessionPayload | undefined;
+    if (injected) {
+        return injected;
+    }
+
     const token = readSessionToken(request);
     if (!token) {
         return null;
@@ -390,7 +399,12 @@ app.get('/v1/auth/dev-session', async (_request, reply) => {
 const PUBLIC_PATHS = new Set(['/health', '/auth/signup', '/auth/login', '/auth/internal-login']);
 const isPublicPath = (url: string): boolean => {
     const path = url.split('?')[0] ?? '';
-    return PUBLIC_PATHS.has(path) || path === '/auth/logout';
+    return (
+        PUBLIC_PATHS.has(path) ||
+        path === '/auth/logout' ||
+        // Webhook event catalog is public — consumers read it without credentials
+        path.startsWith('/v1/webhooks/events')
+    );
 };
 
 // Security headers on every response
@@ -466,7 +480,29 @@ app.addHook('preHandler', async (request, reply) => {
         return;
     }
 
-    const session = readSession(request);
+    let session = readSession(request);
+
+    // API key fallback — Bearer af_<key> is a long-lived programmatic key
+    if (!session) {
+        const authHeader = request.headers['authorization'] as string | undefined;
+        if (typeof authHeader === 'string' && authHeader.startsWith('Bearer af_')) {
+            const rawKey = authHeader.slice(7);
+            const keyData = await validateApiKey(rawKey, prisma);
+            if (keyData) {
+                const injected: SessionPayload = {
+                    userId: keyData.apiKeyId,
+                    tenantId: keyData.tenantId,
+                    workspaceIds: [],
+                    scope: 'customer',
+                    role: keyData.role,
+                    expiresAt: Date.now() + 60_000,
+                };
+                (request as any)._injectedSession = injected;
+                session = injected;
+            }
+        }
+    }
+
     if (!session) {
         void reply.code(401).send({
             error: 'unauthorized',
@@ -618,6 +654,8 @@ await registerMarketplaceRoutes(app, { getSession: (request) => readSession(requ
 await registerAbTestRoutes(app, { getSession: (request) => readSession(request) });
 await registerCircuitBreakerRoutes(app, { getSession: (request) => readSession(request) });
 await registerTaskQueueRoutes(app, { getSession: (request) => readSession(request), prisma: prisma as never });
+await registerScheduledReportRoutes(app, { getSession: (request) => readSession(request), prisma: prisma as never });
+await registerApiKeyRoutes(app, { getSession: (request) => readSession(request), prisma: prisma as never });
 
 app.get('/v1/dashboard/summary', async (request, reply) => {
     const session = readSession(request);

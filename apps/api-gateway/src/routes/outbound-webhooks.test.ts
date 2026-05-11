@@ -690,3 +690,124 @@ test('POST /v1/webhooks/dlq/:id/retry — 404 when DLQ entry not found', async (
     const res = await app.inject({ method: 'POST', url: '/v1/webhooks/dlq/dlq_MISSING/retry' });
     assert.equal(res.statusCode, 404);
 });
+
+// ── Event catalog tests (Phase 27) ───────────────────────────────────────────
+
+// POST /v1/webhooks/outbound: rejects unknown event type — 400, response includes validTypes
+test('POST /v1/webhooks/outbound — unknown event type — 400 with validTypes', async () => {
+    const app = Fastify();
+    await registerOutboundWebhookRoutes(app, {
+        getSession: () => makeSession(),
+        prisma: makePrisma(),
+    });
+    try {
+        const res = await app.inject({
+            method: 'POST',
+            url: '/v1/webhooks/outbound',
+            payload: { url: 'https://example.com/hook', events: ['not_a_real_event'] },
+        });
+        assert.equal(res.statusCode, 400);
+        const body = res.json<{ error: string; invalid: string[]; validTypes: string[] }>();
+        assert.equal(body.error, 'invalid_event_types');
+        assert.ok(Array.isArray(body.invalid), 'invalid must be an array');
+        assert.ok(body.invalid.includes('not_a_real_event'));
+        assert.ok(Array.isArray(body.validTypes) && body.validTypes.length > 0, 'validTypes must be a non-empty array');
+    } finally {
+        await app.close();
+    }
+});
+
+// POST /v1/webhooks/outbound: accepts a valid event type from the catalog — 201
+test('POST /v1/webhooks/outbound — valid catalog event type — 201', async () => {
+    const app = Fastify();
+    await registerOutboundWebhookRoutes(app, {
+        getSession: () => makeSession(),
+        prisma: makePrisma(),
+    });
+    try {
+        const res = await app.inject({
+            method: 'POST',
+            url: '/v1/webhooks/outbound',
+            payload: { url: 'https://example.com/hook', events: ['task_completed'] },
+        });
+        assert.equal(res.statusCode, 201);
+        const body = res.json<{ events: string[] }>();
+        assert.ok(Array.isArray(body.events));
+    } finally {
+        await app.close();
+    }
+});
+
+// GET /v1/webhooks/events — returns 200 with events array (no auth)
+test('GET /v1/webhooks/events — 200 with events array (no auth required)', async () => {
+    const app = Fastify();
+    await registerOutboundWebhookRoutes(app, {
+        getSession: () => null, // no session — public endpoint
+        prisma: makePrisma(),
+    });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/v1/webhooks/events' });
+        assert.equal(res.statusCode, 200);
+        const body = res.json<{ events: unknown[]; count: number }>();
+        assert.ok(Array.isArray(body.events) && body.events.length > 0, 'events must be a non-empty array');
+        assert.ok(typeof body.count === 'number', 'count must be a number');
+    } finally {
+        await app.close();
+    }
+});
+
+// GET /v1/webhooks/events — count matches events.length
+test('GET /v1/webhooks/events — count matches events.length', async () => {
+    const app = Fastify();
+    await registerOutboundWebhookRoutes(app, {
+        getSession: () => null,
+        prisma: makePrisma(),
+    });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/v1/webhooks/events' });
+        assert.equal(res.statusCode, 200);
+        const body = res.json<{ events: unknown[]; count: number }>();
+        assert.equal(body.count, body.events.length, 'count must equal events.length');
+    } finally {
+        await app.close();
+    }
+});
+
+// GET /v1/webhooks/events/:eventType — returns 200 with schemaVersion
+test('GET /v1/webhooks/events/:eventType — returns 200 with schemaVersion', async () => {
+    const app = Fastify();
+    await registerOutboundWebhookRoutes(app, {
+        getSession: () => null,
+        prisma: makePrisma(),
+    });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/v1/webhooks/events/task_completed' });
+        assert.equal(res.statusCode, 200);
+        const body = res.json<{ event: { schemaVersion: string; eventType: string } }>();
+        assert.ok(body.event, 'event must be present');
+        assert.ok(
+            typeof body.event.schemaVersion === 'string' && body.event.schemaVersion.length > 0,
+            'schemaVersion must be a non-empty string',
+        );
+        assert.equal(body.event.eventType, 'task_completed');
+    } finally {
+        await app.close();
+    }
+});
+
+// GET /v1/webhooks/events/:unknownType — returns 404
+test('GET /v1/webhooks/events/:unknownType — 404 for unknown event type', async () => {
+    const app = Fastify();
+    await registerOutboundWebhookRoutes(app, {
+        getSession: () => null,
+        prisma: makePrisma(),
+    });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/v1/webhooks/events/this_event_does_not_exist' });
+        assert.equal(res.statusCode, 404);
+        const body = res.json<{ error: string }>();
+        assert.equal(body.error, 'event_type_not_found');
+    } finally {
+        await app.close();
+    }
+});

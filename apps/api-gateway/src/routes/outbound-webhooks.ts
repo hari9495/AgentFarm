@@ -2,9 +2,13 @@ import { randomBytes } from 'node:crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
 import { ROLE_RANK } from '../lib/require-role.js';
-import { replayDelivery } from '../lib/webhook-dispatcher.js';
-
-const KNOWN_EVENT_TYPES = ['task_completed', 'task_failed', 'task_started', 'task_queued'] as const;
+import { replayDelivery, dispatchOutboundWebhooks } from '../lib/webhook-dispatcher.js';
+import {
+    isValidEventType,
+    getAllEventTypes,
+    getEventDefinition,
+    CATALOG,
+} from '../lib/event-catalog.js';
 
 type SessionContext = {
     userId: string;
@@ -54,9 +58,13 @@ export const registerOutboundWebhookRoutes = async (
             return reply.code(400).send({ error: 'events must be a non-empty array' });
         }
 
-        const invalid = events.filter((e) => !KNOWN_EVENT_TYPES.includes(e as any));
-        if (invalid.length > 0) {
-            return reply.code(400).send({ error: `unknown event types: ${(invalid as string[]).join(', ')}` });
+        const invalidEvents = (events as string[]).filter((e: string) => !isValidEventType(e));
+        if (invalidEvents.length > 0) {
+            return reply.code(400).send({
+                error: 'invalid_event_types',
+                invalid: invalidEvents,
+                validTypes: getAllEventTypes(),
+            });
         }
 
         const secret = randomBytes(32).toString('hex');
@@ -267,4 +275,70 @@ export const registerOutboundWebhookRoutes = async (
 
         return reply.code(200).send({ retried: true, webhookId: dlqEntry.webhookId });
     });
+
+    // -----------------------------------------------------------------------
+    // GET /v1/webhooks/events — public catalog of all event definitions
+    // No auth required — consumers need to read the catalog without credentials.
+    // -----------------------------------------------------------------------
+    app.get('/v1/webhooks/events', async (_req, reply) => {
+        const events = Object.values(CATALOG);
+        return reply.code(200).send({ events, count: events.length });
+    });
+
+    // -----------------------------------------------------------------------
+    // GET /v1/webhooks/events/:eventType — single event definition (public)
+    // -----------------------------------------------------------------------
+    app.get<{ Params: { eventType: string } }>(
+        '/v1/webhooks/events/:eventType',
+        async (req, reply) => {
+            const definition = getEventDefinition(req.params.eventType);
+            if (!definition) {
+                return reply.code(404).send({ error: 'event_type_not_found' });
+            }
+            return reply.code(200).send({ event: definition });
+        },
+    );
+
+    // -----------------------------------------------------------------------
+    // POST /v1/webhooks/test/:webhookId — send a test webhook delivery (operator+)
+    // -----------------------------------------------------------------------
+    app.post<{ Params: { webhookId: string } }>(
+        '/v1/webhooks/test/:webhookId',
+        async (req, reply) => {
+            const session = options.getSession(req);
+            if (!session) {
+                return reply.code(401).send({ error: 'unauthorized' });
+            }
+            if ((ROLE_RANK[session.role ?? ''] ?? 0) < (ROLE_RANK['operator'] ?? 99)) {
+                return reply.code(403).send({ error: 'insufficient_role', required: 'operator', actual: session.role });
+            }
+
+            const db = await resolvePrisma();
+            const webhook = await db.outboundWebhook.findUnique({
+                where: { id: req.params.webhookId },
+                select: { tenantId: true, workspaceId: true },
+            });
+
+            if (!webhook) {
+                return reply.code(404).send({ error: 'not_found' });
+            }
+
+            if (webhook.tenantId !== session.tenantId) {
+                return reply.code(403).send({ error: 'forbidden' });
+            }
+
+            await dispatchOutboundWebhooks(
+                {
+                    tenantId: session.tenantId,
+                    workspaceId: webhook.workspaceId ?? '',
+                    eventType: 'webhook_test',
+                    payload: { message: 'This is a test webhook from AgentFarm' },
+                    timestamp: new Date().toISOString(),
+                },
+                db,
+            );
+
+            return reply.code(200).send({ dispatched: true });
+        },
+    );
 };

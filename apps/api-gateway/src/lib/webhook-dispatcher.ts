@@ -1,6 +1,7 @@
 import { createHmac } from 'node:crypto';
 import type { PrismaClient } from '@prisma/client';
 import { isAllowed, recordSuccess, recordFailure, resetCircuit } from './circuit-breaker.js';
+import { getSchemaVersion } from './event-catalog.js';
 
 const DLQ_THRESHOLD = 5;
 
@@ -79,6 +80,7 @@ async function fireWebhook(
 ): Promise<{ success: boolean; responseStatus: number | null }> {
     const body = JSON.stringify({
         eventType: event.eventType,
+        schemaVersion: getSchemaVersion(event.eventType) ?? '1.0',
         tenantId: event.tenantId,
         taskId: event.taskId ?? null,
         payload: event.payload ?? null,

@@ -1608,3 +1608,47 @@ model TaskQueueEntry {
   @@index([tenantId, status])
   @@index([tenantId, priority, enqueuedAt])
 }
+
+// Phase 24 (report digest) — Periodic digest emails for workspace owners.
+// The report sweep in trigger-service finds due reports and sends them.
+model ScheduledReport {
+  id             String    @id @default(cuid())
+  tenantId       String
+  workspaceId    String
+  name           String
+  recipientEmail String
+  frequency      String    @default("weekly") // daily | weekly | monthly
+  reportTypes    String[]  // e.g. ["cost", "performance"]
+  enabled        Boolean   @default(true)
+  lastSentAt     DateTime?
+  nextSendAt     DateTime  @default(now())
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([tenantId])
+  @@index([tenantId, enabled])
+  @@index([nextSendAt, enabled])
+}
+
+// Phase 26 — Long-lived API keys for programmatic access.
+// Presented as: Authorization: Bearer af_<key>
+// Only the keyHash is stored; the rawKey is returned once at creation.
+model ApiKey {
+  id         String    @id @default(cuid())
+  tenantId   String
+  createdBy  String
+  name       String
+  keyHash    String    @unique
+  keyPrefix  String
+  scopes     String[]
+  role       String    @default("operator")
+  enabled    Boolean   @default(true)
+  expiresAt  DateTime?
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([tenantId])
+  @@index([keyHash])
+  @@index([tenantId, enabled])
+}

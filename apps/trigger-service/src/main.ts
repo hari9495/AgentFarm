@@ -3,6 +3,7 @@ import Fastify from 'fastify';
 import { PrismaClient } from '@prisma/client';
 import { startSubscriptionSweep } from './subscription-sweep.js';
 import { startScheduleSweep } from './schedule-sweep.js';
+import { startReportSweep } from './report-sweep.js';
 import { loadConfig } from './config-loader.js';
 import { TriggerEngine } from './trigger-engine.js';
 import { WebhookTriggerSource } from './sources/webhook-trigger.js';
@@ -106,6 +107,10 @@ async function main(): Promise<void> {
     const prisma = new PrismaClient();
     const sweepHandle = startSubscriptionSweep(prisma);
     const scheduleHandle = startScheduleSweep(prisma);
+    const reportSweepHandle = startReportSweep(prisma, {
+        apiGatewayUrl: process.env['API_GATEWAY_URL'] ?? 'http://localhost:3000',
+        internalToken: process.env['SSE_INTERNAL_TOKEN'] ?? '',
+    });
 
     // -----------------------------------------------------------------------
     // Shutdown
@@ -115,6 +120,7 @@ async function main(): Promise<void> {
         console.log(`Received ${signal}, shutting down…`);
         clearInterval(sweepHandle);
         clearInterval(scheduleHandle);
+        clearInterval(reportSweepHandle);
         await prisma.$disconnect();
         await engine.stop();
         await fastify.close();
