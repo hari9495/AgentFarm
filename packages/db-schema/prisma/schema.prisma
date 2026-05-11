@@ -168,13 +168,15 @@ enum RiskLevel {
 }
 
 model Tenant {
-  id          String       @id @default(cuid())
-  name        String
-  status      TenantStatus @default(pending)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  users       TenantUser[]
-  workspaces  Workspace[]
+  id             String         @id @default(cuid())
+  name           String
+  status         TenantStatus   @default(pending)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  users          TenantUser[]
+  workspaces     Workspace[]
+  scheduledJobs  ScheduledJob[]
+  chatSessions   ChatSession[]
 }
 
 model TenantUser {
@@ -199,13 +201,14 @@ model Workspace {
 }
 
 model Bot {
-  id          String    @id @default(cuid())
-  workspaceId String    @unique
-  role        String
-  status      BotStatus @default(created)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  id             String             @id @default(cuid())
+  workspaceId    String             @unique
+  role           String
+  status         BotStatus          @default(created)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  workspace      Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  configVersions BotConfigVersion[]
 }
 
 // Frozen 2026-04-21 — canonical source: planning/spec-azure-provisioning-workflow.md
@@ -1116,7 +1119,9 @@ model Plan {
   features    String
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
-  orders      Order[]
+  orders              Order[]
+  tenantSubscriptions TenantSubscription[]
+  agentSubscriptions  AgentSubscription[]
 }
 
 model Order {
@@ -1220,4 +1225,204 @@ model QualitySignalLog {
 
   @@index([tenantId])
   @@index([workspaceId, taskId])
+}
+
+// Billing — subscription lifecycle states
+enum SubscriptionStatus {
+  active
+  expired
+  suspended
+  cancelled
+}
+
+// Billing — who initiated a status transition
+enum SubscriptionEventActor {
+  system
+  payment_webhook
+  admin
+  customer
+}
+
+// Frozen 2026-05-11 — Billing Phase A: tenant-level subscription
+// Controls access to the full dashboard and all agents under the tenant.
+// Grace period: 3 days after expiresAt before status flips to suspended.
+model TenantSubscription {
+  id              String             @id @default(cuid())
+  tenantId        String             @unique
+  planId          String
+  plan            Plan               @relation(fields: [planId], references: [id])
+  status          SubscriptionStatus @default(active)
+  paymentProvider String             // "stripe" | "razorpay"
+  startedAt       DateTime
+  expiresAt       DateTime
+  gracePeriodDays Int                @default(3)
+  suspendedAt     DateTime?
+  cancelledAt     DateTime?
+  reactivatedAt   DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  events          SubscriptionEvent[]
+  agentSubs       AgentSubscription[]
+
+  @@index([tenantId])
+  @@index([status])
+  @@index([expiresAt])
+  @@index([tenantId, status])
+}
+
+// Frozen 2026-05-11 — Billing Phase A: per-agent subscription add-on
+// Allows individual agents to be sold separately or to stay active
+// even if the tenant-level plan lapses.
+model AgentSubscription {
+  id                   String              @id @default(cuid())
+  tenantId             String
+  agentId              String              // references agent/bot ID
+  tenantSubscriptionId String?             // null if standalone agent purchase
+  tenantSubscription   TenantSubscription? @relation(fields: [tenantSubscriptionId], references: [id])
+  planId               String
+  plan                 Plan                @relation(fields: [planId], references: [id])
+  status               SubscriptionStatus  @default(active)
+  paymentProvider      String              // "stripe" | "razorpay"
+  startedAt            DateTime
+  expiresAt            DateTime
+  gracePeriodDays      Int                 @default(3)
+  suspendedAt          DateTime?
+  cancelledAt          DateTime?
+  reactivatedAt        DateTime?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  events               SubscriptionEvent[]
+
+  @@unique([tenantId, agentId])
+  @@index([tenantId])
+  @@index([agentId])
+  @@index([status])
+  @@index([expiresAt])
+  @@index([tenantId, status])
+}
+
+// Frozen 2026-05-11 — Billing Phase A: immutable audit trail of all subscription transitions
+// Written on every status change (active→expired, expired→suspended, suspended→active, etc.)
+model SubscriptionEvent {
+  id                   String                 @id @default(cuid())
+  tenantId             String
+  tenantSubscriptionId String?
+  agentSubscriptionId  String?
+  tenantSubscription   TenantSubscription?    @relation(fields: [tenantSubscriptionId], references: [id])
+  agentSubscription    AgentSubscription?     @relation(fields: [agentSubscriptionId], references: [id])
+  fromStatus           SubscriptionStatus?
+  toStatus             SubscriptionStatus
+  actor                SubscriptionEventActor
+  paymentProvider      String?                // set when actor = payment_webhook
+  providerEventId      String?                // Stripe event ID or Razorpay payment ID
+  reason               String?
+  metadata             Json?
+  occurredAt           DateTime               @default(now())
+
+  @@index([tenantId])
+  @@index([tenantSubscriptionId])
+  @@index([agentSubscriptionId])
+  @@index([tenantId, occurredAt])
+}
+
+// Frozen 2026-05-11 — Phase 10D: customer-configured outbound webhooks
+// Fired when task_completed or task_failed events land in the SSE pipeline.
+model OutboundWebhook {
+  id          String   @id @default(cuid())
+  tenantId    String
+  workspaceId String?
+  url         String
+  secret      String   // HMAC-SHA256 signing secret — customer stores this to verify
+  events      String[] // e.g. ["task_completed", "task_failed"]
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deliveries  OutboundWebhookDelivery[]
+
+  @@index([tenantId])
+  @@index([tenantId, enabled])
+}
+
+// Frozen 2026-05-11 — Phase 10D: delivery log for each outbound webhook fire
+model OutboundWebhookDelivery {
+  id             String          @id @default(cuid())
+  webhookId      String
+  webhook        OutboundWebhook @relation(fields: [webhookId], references: [id])
+  tenantId       String
+  eventType      String
+  payload        Json
+  responseStatus Int?
+  responseBody   String?
+  durationMs     Int?
+  success        Boolean
+  firedAt        DateTime @default(now())
+
+  @@index([webhookId])
+  @@index([tenantId])
+  @@index([webhookId, firedAt])
+}
+
+// Phase 12 — Scheduled jobs: cron-based automatic task firing
+model ScheduledJob {
+  id          String    @id @default(cuid())
+  tenantId    String
+  name        String
+  cronExpr    String
+  goal        String
+  agentId     String?
+  enabled     Boolean   @default(true)
+  lastRunAt   DateTime?
+  nextRunAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, enabled])
+}
+
+// Phase 13 — Agent Chat: multi-turn conversational sessions with message history
+model ChatSession {
+  id          String        @id @default(cuid())
+  tenantId    String
+  agentId     String?
+  title       String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  messages    ChatMessage[]
+  tenant      Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+model ChatMessage {
+  id        String      @id @default(cuid())
+  sessionId String
+  role      String
+  content   String
+  createdAt DateTime    @default(now())
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+}
+
+// Phase 14 — Bot Versioning: user-facing config snapshots for rollback
+model BotConfigVersion {
+  id                String   @id @default(cuid())
+  botId             String
+  tenantId          String
+  versionNumber     Int
+  role              String
+  status            String
+  roleVersion       String?
+  policyPackVersion String?
+  brainConfig       Json?
+  changeNote        String?
+  createdBy         String
+  createdAt         DateTime @default(now())
+  bot               Bot      @relation(fields: [botId], references: [id], onDelete: Cascade)
+
+  @@unique([botId, versionNumber])
+  @@index([botId])
+  @@index([tenantId])
 }

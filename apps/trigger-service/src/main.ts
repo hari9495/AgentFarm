@@ -1,5 +1,8 @@
 import { fileURLToPath } from 'node:url';
 import Fastify from 'fastify';
+import { PrismaClient } from '@prisma/client';
+import { startSubscriptionSweep } from './subscription-sweep.js';
+import { startScheduleSweep } from './schedule-sweep.js';
 import { loadConfig } from './config-loader.js';
 import { TriggerEngine } from './trigger-engine.js';
 import { WebhookTriggerSource } from './sources/webhook-trigger.js';
@@ -100,12 +103,19 @@ async function main(): Promise<void> {
     const { fastify, engine } = buildApp();
     await engine.start();
 
+    const prisma = new PrismaClient();
+    const sweepHandle = startSubscriptionSweep(prisma);
+    const scheduleHandle = startScheduleSweep(prisma);
+
     // -----------------------------------------------------------------------
     // Shutdown
     // -----------------------------------------------------------------------
 
     const shutdown = async (signal: string): Promise<void> => {
         console.log(`Received ${signal}, shutting down…`);
+        clearInterval(sweepHandle);
+        clearInterval(scheduleHandle);
+        await prisma.$disconnect();
         await engine.stop();
         await fastify.close();
         process.exit(0);

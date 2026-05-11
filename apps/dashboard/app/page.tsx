@@ -23,6 +23,9 @@ import { WorkspaceBudgetPanel } from './components/workspace-budget-panel';
 import { SkillMarketplacePanel } from './components/skill-marketplace-panel';
 import { GovernanceKPIPanel } from './components/governance-kpis-panel';
 import { OperationalSignalTimeline, type OperationalSignalTimelinePoint } from './components/operational-signal-timeline';
+import AgentPerformancePanel from './components/agent-performance-panel';
+import AgentControlPanel from './components/agent-control-panel';
+import TaskRetryPanel from './components/task-retry-panel';
 import type { DashboardTab } from './components/dashboard-navigation';
 import type { WorkspaceBudgetSnapshot } from './components/workspace-budget-panel-utils';
 import { isInternalSessionToken } from './lib/internal-session';
@@ -1581,6 +1584,9 @@ export default async function HomePage({
                                 workspaceId={workspace.workspace_id}
                                 language={dashboardLanguage.workspaceLanguage ?? dashboardLanguage.tenantLanguage}
                             />
+                            <AgentPerformancePanel />
+                            <AgentControlPanel botId={workspace.bot_id} />
+                            <TaskRetryPanel botId={workspace.bot_id} />
                         </section>
                     )}
 

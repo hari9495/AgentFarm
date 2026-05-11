@@ -10,6 +10,7 @@ import type { FastifyError } from 'fastify';
 import { rateLimit, rateLimitTenant } from './lib/rate-limit.js';
 import { buildSessionToken, verifySessionToken, type SessionPayload } from './lib/session-auth.js';
 import { prisma } from './lib/db.js';
+import { checkSubscription } from './lib/subscription-guard.js';
 import { registerAuthRoutes } from './routes/auth.js';
 import { parseApprovalPacket } from './lib/approval-packet.js';
 import { registerConnectorAuthRoutes } from './routes/connector-auth.js';
@@ -68,12 +69,19 @@ import { registerQuestionRoutes } from './routes/questions.js';
 import { registerMemoryRoutes } from './routes/memory.js';
 import { registerMeetingRoutes } from './routes/meetings.js';
 import { registerBillingRoutes } from './routes/billing.js';
+import { registerAnalyticsRoutes } from './routes/analytics.js';
+import { registerAgentControlRoutes } from './routes/agent-control.js';
 import { registerAdminProvisionRoutes } from './routes/admin-provision.js';
 import { registerAgentDispatchRoutes } from './routes/agent-dispatch.js';
 import { registerZohoSignWebhookRoutes } from './routes/zoho-sign-webhook.js';
 import { registerNotificationRoutes } from './routes/notifications.js';
 import { registerRetentionPolicyRoutes } from './routes/retention-policy.js';
 import { registerSseTaskRoutes } from './routes/sse-tasks.js';
+import { registerOutboundWebhookRoutes } from './routes/outbound-webhooks.js';
+import { registerTeamRoutes } from './routes/team.js';
+import { registerScheduleRoutes } from './routes/schedules.js';
+import { registerChatRoutes } from './routes/chat.js';
+import { registerBotVersionRoutes } from './routes/bot-versions.js';
 
 const app = Fastify({ logger: true });
 const port = Number(process.env.API_GATEWAY_PORT ?? 3000);
@@ -462,6 +470,13 @@ app.addHook('preHandler', async (request, reply) => {
     }
 });
 
+// Subscription guard — runs after auth gate so session is available.
+// Populates request.session then checks tenant subscription status.
+app.addHook('preHandler', async (request, reply) => {
+    (request as any).session = readSession(request) ?? undefined;
+    await checkSubscription(request, reply);
+});
+
 // Register auth routes (signup, login, logout)
 await registerAuthRoutes(app);
 await registerConnectorAuthRoutes(app, {
@@ -560,6 +575,12 @@ await registerMeetingRoutes(app, {
 await registerBillingRoutes(app, {
     getSession: (request) => readSession(request),
 });
+await registerAnalyticsRoutes(app, {
+    getSession: (request) => readSession(request),
+});
+await registerAgentControlRoutes(app, {
+    getSession: (request) => readSession(request),
+});
 await registerAgentDispatchRoutes(app, {
     getSession: (request) => readSession(request),
 });
@@ -580,6 +601,11 @@ registerGovernanceKPIRoutes(app);
 registerAdapterRegistryRoutes(app);
 await registerRetentionPolicyRoutes(app, prisma);
 await registerSseTaskRoutes(app, { getSession: (request) => readSession(request) });
+await registerOutboundWebhookRoutes(app, { getSession: (request) => readSession(request) });
+await registerTeamRoutes(app, { getSession: (request) => readSession(request) });
+await registerScheduleRoutes(app, { getSession: (request) => readSession(request) });
+await registerChatRoutes(app, { getSession: (request) => readSession(request) });
+await registerBotVersionRoutes(app, { getSession: (request) => readSession(request) });
 
 app.get('/v1/dashboard/summary', async (request, reply) => {
     const session = readSession(request);
@@ -951,6 +977,22 @@ app.setErrorHandler((error: FastifyError, _request, reply) => {
     return reply.code(status).send({ error: error.message ?? 'bad request' });
 });
 
+const startupChecks = async (): Promise<void> => {
+    const requiredVars = ['DATABASE_URL', 'API_SESSION_SECRET'];
+    const missing = requiredVars.filter((v) => !process.env[v]?.trim());
+    if (missing.length > 0) {
+        app.log.error(`Startup checks failed: missing required env vars: ${missing.join(', ')}`);
+        process.exit(1);
+    }
+    try {
+        await prisma.$queryRaw`SELECT 1`;
+    } catch (err) {
+        app.log.error({ err }, 'Startup checks failed: database connectivity check failed');
+        process.exit(1);
+    }
+    app.log.info('Startup checks passed');
+};
+
 const start = async (): Promise<void> => {
     try {
         const internalLoginPolicy = getInternalLoginPolicyConfig();
@@ -960,6 +1002,7 @@ const start = async (): Promise<void> => {
             );
         }
 
+        await startupChecks();
         await app.listen({ port, host: '0.0.0.0' });
         app.log.info(`api-gateway listening on ${port}`);
 

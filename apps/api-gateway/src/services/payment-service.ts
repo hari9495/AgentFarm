@@ -219,3 +219,54 @@ export async function createInvoiceRecord(
         },
     });
 }
+
+// ---------------------------------------------------------------------------
+// Subscription reactivation
+// ---------------------------------------------------------------------------
+
+export async function reactivateSubscription(
+    tenantId: string,
+    paymentProvider: string,
+    providerEventId: string,
+    prismaOverride?: PrismaClient,
+): Promise<void> {
+    const prisma = prismaOverride ?? (await getPrisma());
+
+    const sub = await prisma.tenantSubscription.findUnique({
+        where: { tenantId },
+        select: { id: true, status: true, expiresAt: true },
+    });
+
+    if (!sub) return;
+    if (sub.status === 'active') return;
+
+    const now = new Date();
+    const newStartedAt = now;
+    const newExpiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+    await prisma.$transaction([
+        prisma.tenantSubscription.update({
+            where: { tenantId },
+            data: {
+                status: 'active',
+                startedAt: newStartedAt,
+                expiresAt: newExpiresAt,
+                suspendedAt: null,
+                reactivatedAt: now,
+            },
+        }),
+        prisma.subscriptionEvent.create({
+            data: {
+                tenantId,
+                tenantSubscriptionId: sub.id,
+                fromStatus: sub.status as any,
+                toStatus: 'active',
+                actor: 'payment_webhook',
+                paymentProvider,
+                providerEventId,
+                reason: 'Payment received — subscription reactivated',
+                occurredAt: now,
+            },
+        }),
+    ]);
+}

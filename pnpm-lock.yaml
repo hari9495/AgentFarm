@@ -201,6 +201,9 @@ importers:
 
   apps/trigger-service:
     dependencies:
+      '@prisma/client':
+        specifier: '*'
+        version: 6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3)
       '@slack/bolt':
         specifier: ^4.4.1
         version: 4.7.2(@types/express@5.0.6)

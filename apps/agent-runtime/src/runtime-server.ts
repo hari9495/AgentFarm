@@ -1,3 +1,4 @@
+import { registerChatRoutes } from './chat-routes.js';
 import { initObservability } from '@agentfarm/observability';
 initObservability({
     serviceName: 'agent-runtime',
@@ -6611,6 +6612,8 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         };
     });
 
+    registerChatRoutes(app);
+
     return app;
 }
 
@@ -6676,7 +6679,19 @@ export async function startRuntimeServer(options: RuntimeServerOptions = {}): Pr
     await globalScheduler.loadJobs();
     globalScheduler.start();
 
+    const startupChecks = async (): Promise<void> => {
+        const requiredVars = ['AF_TENANT_ID', 'AF_WORKSPACE_ID'];
+        const missing = requiredVars.filter((v) => !String(env[v] ?? '').trim());
+        if (missing.length > 0) {
+            const message = `Startup checks failed: missing required env vars: ${missing.join(', ')}`;
+            app.log.error(message);
+            throw new Error(message);
+        }
+        app.log.info('Startup checks passed');
+    };
+
     const port = Number(env.AF_HEALTH_PORT ?? env.AGENTFARM_HEALTH_PORT ?? 8080);
+    await startupChecks();
     await app.listen({ host: '0.0.0.0', port });
     app.log.info({ port }, 'agent-runtime listening');
     return app;

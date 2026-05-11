@@ -154,6 +154,7 @@ export const registerAuthRoutes = async (
             userId: result.user.id,
             tenantId: result.tenant.id,
             workspaceIds: [result.workspace.id],
+            role: 'owner',
         });
 
         return reply
@@ -206,6 +207,7 @@ export const registerAuthRoutes = async (
             tenantId: user.tenantId,
             workspaceIds: workspaces.map((w: { id: string }) => w.id),
             scope: 'customer',
+            role: user.role,
         });
 
         return reply
@@ -259,6 +261,7 @@ export const registerAuthRoutes = async (
             tenantId: user.tenantId,
             workspaceIds: workspaces.map((w: { id: string }) => w.id),
             scope: 'internal',
+            role: user.role,
         });
 
         return reply

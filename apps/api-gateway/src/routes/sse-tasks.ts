@@ -12,7 +12,9 @@
 
 import { randomUUID } from 'crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { PrismaClient } from '@prisma/client';
 import type { TaskProgressEvent } from '@agentfarm/shared-types';
+import { dispatchOutboundWebhooks } from '../lib/webhook-dispatcher.js';
 
 // ── Event model ───────────────────────────────────────────────────────────────
 
@@ -141,6 +143,7 @@ export interface SseTaskRouteDeps {
     getSession: (req: FastifyRequest) => SessionContext | null;
     /** Override for testing — allows injecting a pre-populated queue. */
     getQueue?: (tenantId: string, workspaceId: string) => SseTaskQueue;
+    prisma?: PrismaClient;
 }
 
 // ── Route registration ────────────────────────────────────────────────────────
@@ -262,6 +265,17 @@ export async function registerSseTaskRoutes(
                     taskId: evt.taskId,
                     payload: evt as unknown as Record<string, unknown>,
                 });
+                if (sseEvent.type === 'task_completed' || sseEvent.type === 'task_failed') {
+                    const db = deps.prisma ?? (await import('../lib/db.js')).prisma;
+                    dispatchOutboundWebhooks({
+                        tenantId: sseEvent.tenantId,
+                        workspaceId: sseEvent.workspaceId,
+                        eventType: sseEvent.type,
+                        taskId: sseEvent.taskId,
+                        payload: sseEvent.payload,
+                        timestamp: sseEvent.timestamp,
+                    }, db).catch((err) => console.error('[sse-tasks] webhook dispatch failed', err));
+                }
                 return reply.code(200).send({ eventId: sseEvent.eventId });
             }
 
@@ -272,6 +286,17 @@ export async function registerSseTaskRoutes(
             }
             const queue = resolveQueue(tenantId, workspaceId);
             const event = queue.push({ type, tenantId, workspaceId, taskId, payload });
+            if (event.type === 'task_completed' || event.type === 'task_failed') {
+                const db = deps.prisma ?? (await import('../lib/db.js')).prisma;
+                dispatchOutboundWebhooks({
+                    tenantId: event.tenantId,
+                    workspaceId: event.workspaceId,
+                    eventType: event.type,
+                    taskId: event.taskId,
+                    payload: event.payload,
+                    timestamp: event.timestamp,
+                }, db).catch((err) => console.error('[sse-tasks] webhook dispatch failed', err));
+            }
             return reply.code(200).send({ eventId: event.eventId });
         },
     );

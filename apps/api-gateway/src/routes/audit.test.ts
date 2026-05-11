@@ -83,6 +83,15 @@ const createRepo = () => {
                 }
                 return deleted;
             },
+            async listAllForExport(input: { tenantId: string; workspaceId?: string; from: Date; to: Date }) {
+                return events.filter(
+                    (e) =>
+                        e.tenantId === input.tenantId
+                        && (!input.workspaceId || e.workspaceId === input.workspaceId)
+                        && e.createdAt >= input.from
+                        && e.createdAt <= input.to,
+                );
+            },
         },
     };
 };
@@ -252,6 +261,112 @@ test('retention cleanup supports dry-run and delete execution', async () => {
         assert.equal(executeBody.deleted_count, 1);
         assert.equal(fake.events.length, 1);
         assert.equal(fake.events[0]?.id, 'evt_new');
+    } finally {
+        await app.close();
+    }
+});
+
+// ---------------------------------------------------------------------------
+// audit export
+// ---------------------------------------------------------------------------
+
+test('audit export: missing from or to returns 400', async () => {
+    const app = Fastify();
+    const fake = createRepo();
+    await registerAuditRoutes(app, {
+        getSession: () => session(),
+        repo: fake.repo,
+    });
+    try {
+        const res = await app.inject({
+            method: 'GET',
+            url: '/v1/audit/export?tenantId=tenant_1&from=2026-05-01T00:00:00.000Z',
+        });
+        assert.equal(res.statusCode, 400);
+        assert.equal(res.json().error, 'invalid_request');
+    } finally {
+        await app.close();
+    }
+});
+
+test('audit export: date range exceeds 90 days returns 400', async () => {
+    const app = Fastify();
+    const fake = createRepo();
+    await registerAuditRoutes(app, {
+        getSession: () => session(),
+        repo: fake.repo,
+    });
+    try {
+        const res = await app.inject({
+            method: 'GET',
+            url: '/v1/audit/export?tenantId=tenant_1&from=2026-01-01T00:00:00.000Z&to=2026-04-15T00:00:00.000Z',
+        });
+        assert.equal(res.statusCode, 400);
+        assert.equal(res.json().error, 'date_range_exceeded');
+    } finally {
+        await app.close();
+    }
+});
+
+test('audit export: returns CSV with correct header', async () => {
+    const app = Fastify();
+    const fake = createRepo();
+    await registerAuditRoutes(app, {
+        getSession: () => session(),
+        repo: fake.repo,
+    });
+    try {
+        const res = await app.inject({
+            method: 'GET',
+            url: '/v1/audit/export?tenantId=tenant_1&from=2026-05-01T00:00:00.000Z&to=2026-05-31T00:00:00.000Z',
+        });
+        assert.equal(res.statusCode, 200);
+        assert.ok(res.headers['content-type']?.includes('text/csv'));
+        const firstLine = res.body.split('\n')[0];
+        assert.equal(firstLine, 'id,tenantId,workspaceId,botId,eventType,severity,createdAt,summary');
+    } finally {
+        await app.close();
+    }
+});
+
+test('audit export: CSV rows contain correct field values', async () => {
+    const app = Fastify();
+    const fake = createRepo();
+
+    const eventDate = new Date('2026-05-10T08:00:00.000Z');
+    fake.events.push({
+        id: 'evt_export_1',
+        tenantId: 'tenant_1',
+        workspaceId: 'ws_1',
+        botId: 'bot_1',
+        eventType: 'approval_event',
+        severity: 'warn',
+        summary: 'Export test event',
+        sourceSystem: 'test',
+        correlationId: 'corr_x',
+        createdAt: eventDate,
+    });
+
+    await registerAuditRoutes(app, {
+        getSession: () => session(),
+        repo: fake.repo,
+    });
+    try {
+        const res = await app.inject({
+            method: 'GET',
+            url: '/v1/audit/export?tenantId=tenant_1&from=2026-05-01T00:00:00.000Z&to=2026-05-31T00:00:00.000Z',
+        });
+        assert.equal(res.statusCode, 200);
+        const lines = res.body.split('\n');
+        // header + 1 data row
+        assert.equal(lines.length, 2);
+        const dataRow = lines[1] ?? '';
+        assert.ok(dataRow.includes('"evt_export_1"'));
+        assert.ok(dataRow.includes('"tenant_1"'));
+        assert.ok(dataRow.includes('"ws_1"'));
+        assert.ok(dataRow.includes('"warn"'));
+        assert.ok(dataRow.includes('"Export test event"'));
+        assert.ok(dataRow.includes('"2026-05-10T08:00:00.000Z"'));
     } finally {
         await app.close();
     }

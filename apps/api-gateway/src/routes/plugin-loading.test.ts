@@ -38,11 +38,23 @@ const buildManifest = (): ExternalPluginManifestContract => {
 };
 
 test('C2: plugin load route enforces allowlist and trusted publisher', async () => {
+    const mockPrisma = {
+        externalPluginLoad: {
+            create: async () => ({}),
+            findMany: async () => [],
+        },
+        pluginKillSwitch: {
+            upsert: async () => ({}),
+            findUnique: async () => null,
+        },
+    };
+
     const app = Fastify();
     await registerPluginLoadingRoutes(app, {
         getSession: () => session(),
         featureEnabled: true,
         trustedPublishers: [{ publisher: 'agentfarm-plugins', sourceRepoPrefix: 'https://github.com/agentfarm/' }],
+        getPrisma: async () => mockPrisma as Parameters<typeof registerPluginLoadingRoutes>[1]['getPrisma'] extends (() => Promise<infer T>) | undefined ? T : never,
     });
 
     try {

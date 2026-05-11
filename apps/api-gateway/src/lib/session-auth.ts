@@ -5,6 +5,7 @@ type SessionPayload = {
     tenantId: string;
     workspaceIds: string[];
     scope: 'customer' | 'internal';
+    role: string;
     expiresAt: number;
 };
 
@@ -17,12 +18,13 @@ const toBase64Url = (value: string): string => Buffer.from(value, 'utf8').toStri
 const fromBase64Url = (value: string): string => Buffer.from(value, 'base64url').toString('utf8');
 
 export const buildSessionToken = (
-    payload: Omit<SessionPayload, 'expiresAt' | 'scope'> & { scope?: SessionScope },
+    payload: Omit<SessionPayload, 'expiresAt' | 'scope' | 'role'> & { scope?: SessionScope; role?: string },
     ttlMs = 8 * 60 * 60 * 1000,
 ): string => {
     const session: SessionPayload = {
         ...payload,
         scope: payload.scope ?? 'customer',
+        role: payload.role ?? 'viewer',
         expiresAt: Date.now() + ttlMs,
     };
 
@@ -65,6 +67,7 @@ export const verifySessionToken = (token: string): SessionPayload | null => {
         return {
             ...payload,
             scope,
+            role: typeof payload.role === 'string' ? payload.role : 'viewer',
         };
     } catch {
         return null;

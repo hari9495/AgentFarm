@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
+import { ROLE_RANK } from '../lib/require-role.js';
 import {
     getProviderForCountry,
     createStripeOrder,
@@ -9,6 +10,7 @@ import {
     createOrderRecord,
     markOrderPaid,
     createInvoiceRecord,
+    reactivateSubscription,
 } from '../services/payment-service.js';
 import { generateContractPdf } from '../services/contract-generator.js';
 import { uploadContractDocument, submitDocumentForSigning } from '../services/zoho-sign-client.js';
@@ -24,6 +26,7 @@ type SessionContext = {
     userId: string;
     tenantId: string;
     workspaceIds: string[];
+    role?: string;
     expiresAt: number;
 };
 
@@ -67,6 +70,9 @@ export async function registerBillingRoutes(
             const session = options.getSession(request);
             if (!session) {
                 return reply.code(401).send({ error: 'Unauthorized' });
+            }
+            if ((ROLE_RANK[session.role ?? ''] ?? 0) < (ROLE_RANK['admin'] ?? 99)) {
+                return reply.code(403).send({ error: 'insufficient_role', required: 'admin', actual: session.role });
             }
             const { planId, customerEmail, customerCountry = 'US', tenantId } = request.body;
             if (session.tenantId !== tenantId) {
@@ -247,6 +253,14 @@ export async function registerBillingRoutes(
                         console.error('Contract generation failed (stripe):', err);
                     }
                 });
+
+                setImmediate(() => {
+                    reactivateSubscription(
+                        order.tenantId,
+                        'stripe',
+                        result.providerPaymentId ?? result.providerOrderId,
+                    ).catch(err => console.error('[billing] stripe reactivation failed', err));
+                });
             }
 
             return reply.send({ received: true });
@@ -343,6 +357,14 @@ export async function registerBillingRoutes(
                         console.error('Contract generation failed (razorpay):', err);
                     }
                 });
+
+                setImmediate(() => {
+                    reactivateSubscription(
+                        order.tenantId,
+                        'razorpay',
+                        body.razorpay_payment_id,
+                    ).catch(err => console.error('[billing] razorpay reactivation failed', err));
+                });
             }
 
             return reply.send({ received: true });
@@ -421,6 +443,47 @@ export async function registerBillingRoutes(
             const prisma = await resolvePrisma();
             const plans = await prisma.plan.findMany({ where: { isActive: true } });
             return reply.send({ plans });
+        },
+    );
+
+    // -----------------------------------------------------------------------
+    // GET /v1/billing/subscription
+    // -----------------------------------------------------------------------
+    app.get<{ Querystring: { tenantId?: string } }>(
+        '/v1/billing/subscription',
+        async (request, reply) => {
+            const { tenantId } = request.query;
+            if (!tenantId) {
+                return reply.code(400).send({ error: 'tenantId is required' });
+            }
+
+            const db = await resolvePrisma();
+            const sub = await db.tenantSubscription.findUnique({
+                where: { tenantId },
+                select: {
+                    status: true,
+                    expiresAt: true,
+                    gracePeriodDays: true,
+                    suspendedAt: true,
+                },
+            });
+
+            if (!sub) {
+                return reply.send({ status: 'none' });
+            }
+
+            return reply.send({
+                status: sub.status,
+                expiresAt: sub.expiresAt,
+                gracePeriodDays: sub.gracePeriodDays,
+                suspendedAt: sub.suspendedAt ?? null,
+                daysUntilSuspension: sub.status === 'expired'
+                    ? Math.max(0, Math.ceil(
+                        (sub.expiresAt.getTime() + sub.gracePeriodDays * 86400000 - Date.now())
+                        / 86400000,
+                    ))
+                    : null,
+            });
         },
     );
 }

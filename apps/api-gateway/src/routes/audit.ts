@@ -60,6 +60,12 @@ type AuditRepo = {
         workspaceId: string;
         cutoff: Date;
     }): Promise<number>;
+    listAllForExport(input: {
+        tenantId: string;
+        workspaceId?: string;
+        from: Date;
+        to: Date;
+    }): Promise<AuditEventRecord[]>;
 };
 
 type RegisterAuditRoutesOptions = {
@@ -94,6 +100,13 @@ type RetentionBody = {
     workspace_id?: string;
     retention_days?: number;
     dry_run?: boolean;
+};
+
+type AuditExportQuery = {
+    tenantId?: string;
+    workspaceId?: string;
+    from?: string;
+    to?: string;
 };
 
 const DEFAULT_RETENTION_DAYS = 90;
@@ -226,6 +239,19 @@ const defaultRepo: AuditRepo = {
         });
 
         return result.count;
+    },
+
+    async listAllForExport(input) {
+        const prisma = await getPrisma();
+        return (await prisma.auditEvent.findMany({
+            where: {
+                tenantId: input.tenantId,
+                ...(input.workspaceId ? { workspaceId: input.workspaceId } : {}),
+                createdAt: { gte: input.from, lte: input.to },
+            },
+            orderBy: { createdAt: 'asc' },
+            take: 10000,
+        })) as AuditEventRecord[];
     },
 };
 
@@ -429,5 +455,77 @@ export const registerAuditRoutes = async (
             candidate_count: candidateCount,
             deleted_count: deletedCount,
         };
+    });
+
+    app.get<{ Querystring: AuditExportQuery }>('/v1/audit/export', async (request, reply) => {
+        const session = options.getSession(request);
+        if (!session) {
+            return reply.code(401).send({
+                error: 'unauthorized',
+                message: 'A valid authenticated session is required.',
+            });
+        }
+
+        const tenantId = request.query.tenantId;
+        if (!tenantId) {
+            return reply.code(400).send({
+                error: 'invalid_request',
+                message: 'tenantId is required.',
+            });
+        }
+
+        if (tenantId !== session.tenantId) {
+            return reply.code(403).send({
+                error: 'forbidden',
+                message: 'tenantId does not match session.',
+            });
+        }
+
+        const fromStr = request.query.from;
+        const toStr = request.query.to;
+        if (!fromStr || !toStr) {
+            return reply.code(400).send({
+                error: 'invalid_request',
+                message: 'from and to are required.',
+            });
+        }
+
+        const fromDate = parseDate(fromStr);
+        const toDate = parseDate(toStr);
+        if (!fromDate || !toDate) {
+            return reply.code(400).send({
+                error: 'invalid_date',
+                message: 'from and to must be valid ISO dates.',
+            });
+        }
+
+        if (toDate.getTime() - fromDate.getTime() > 90 * 24 * 60 * 60 * 1000) {
+            return reply.code(400).send({
+                error: 'date_range_exceeded',
+                message: 'Date range must not exceed 90 days.',
+            });
+        }
+
+        const workspaceId = request.query.workspaceId || undefined;
+        const events = await repo.listAllForExport({
+            tenantId,
+            workspaceId,
+            from: fromDate,
+            to: toDate,
+        });
+
+        const csvEscape = (v: string) => `"${v.replace(/"/g, '""')}"`;
+        const header = 'id,tenantId,workspaceId,botId,eventType,severity,createdAt,summary\n';
+        const rows = events.map((e) =>
+            [e.id, e.tenantId, e.workspaceId, e.botId, e.eventType, e.severity,
+            e.createdAt.toISOString(), e.summary]
+                .map(csvEscape).join(','),
+        ).join('\n');
+
+        return reply
+            .header('Content-Type', 'text/csv')
+            .header('Content-Disposition',
+                `attachment; filename="audit-export-${tenantId}-${fromDate.toISOString().slice(0, 10)}.csv"`)
+            .send(header + rows);
     });
 };
