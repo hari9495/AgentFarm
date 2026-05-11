@@ -4,6 +4,7 @@ import type { PrismaClient } from '@prisma/client';
 import type { TaskLeaseRecord } from '@agentfarm/shared-types';
 import { parseGoal } from '@agentfarm/agent-runtime/natural-language-parser.js';
 import { rateLimitAgent, getAgentRateLimitConfig } from '../lib/agent-rate-limit.js';
+import { isAllowed as cbIsAllowed, recordSuccess as cbRecordSuccess, recordFailure as cbRecordFailure } from '../lib/circuit-breaker.js';
 
 const getPrisma = async () => {
     const db = await import('../lib/db.js');
@@ -845,14 +846,30 @@ export async function registerRuntimeTaskRoutes(
             });
         }
 
-        const dispatchResult = await dispatcher({
-            runtimeEndpoint,
-            runtimeTaskToken,
-            taskId,
-            payload,
-            lease,
-            claimToken,
-        });
+        const dispatchResult = await (async () => {
+            const cbKey = 'runtime:agent-runtime';
+            if (!cbIsAllowed(cbKey)) {
+                return {
+                    ok: false,
+                    statusCode: 503,
+                    errorMessage: 'circuit_open',
+                } as const;
+            }
+            const result = await dispatcher({
+                runtimeEndpoint,
+                runtimeTaskToken,
+                taskId,
+                payload,
+                lease,
+                claimToken,
+            });
+            if (result.ok) {
+                cbRecordSuccess(cbKey);
+            } else {
+                cbRecordFailure(cbKey);
+            }
+            return result;
+        })();
 
         await repo.createActionRecord({
             tenantId: scope.tenantId,
@@ -893,9 +910,14 @@ export async function registerRuntimeTaskRoutes(
         });
 
         if (!dispatchResult.ok) {
-            return reply.code(502).send({
-                error: 'runtime_dispatch_failed',
-                message: dispatchResult.errorMessage ?? 'Runtime dispatch failed.',
+            const httpCode = dispatchResult.errorMessage === 'circuit_open' ? 503 : 502;
+            return reply.code(httpCode).send({
+                error: dispatchResult.errorMessage === 'circuit_open' ? 'service_unavailable' : 'runtime_dispatch_failed',
+                message: dispatchResult.errorMessage === 'circuit_open'
+                    ? 'Agent runtime circuit is open. Retry after 30 seconds.'
+                    : (dispatchResult.errorMessage ?? 'Runtime dispatch failed.'),
+                reason: dispatchResult.errorMessage === 'circuit_open' ? 'circuit_open' : undefined,
+                retryAfterMs: dispatchResult.errorMessage === 'circuit_open' ? 30_000 : undefined,
                 status_code: dispatchResult.statusCode,
             });
         }

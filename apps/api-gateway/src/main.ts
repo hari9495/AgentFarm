@@ -85,6 +85,9 @@ import { registerBotVersionRoutes } from './routes/bot-versions.js';
 import { registerOrchestrationRoutes } from './routes/orchestration.js';
 import { registerMarketplaceRoutes } from './routes/marketplace.js';
 import { registerAbTestRoutes } from './routes/ab-tests.js';
+import { registerCircuitBreakerRoutes } from './routes/circuit-breakers.js';
+import { registerTaskQueueRoutes } from './routes/task-queue.js';
+import { startDrainSweep, stopDrainSweep } from './lib/task-queue.js';
 
 const app = Fastify({ logger: true });
 const port = Number(process.env.API_GATEWAY_PORT ?? 3000);
@@ -613,6 +616,8 @@ await registerBotVersionRoutes(app, { getSession: (request) => readSession(reque
 await registerOrchestrationRoutes(app, { getSession: (request) => readSession(request) });
 await registerMarketplaceRoutes(app, { getSession: (request) => readSession(request) });
 await registerAbTestRoutes(app, { getSession: (request) => readSession(request) });
+await registerCircuitBreakerRoutes(app, { getSession: (request) => readSession(request) });
+await registerTaskQueueRoutes(app, { getSession: (request) => readSession(request), prisma: prisma as never });
 
 app.get('/v1/dashboard/summary', async (request, reply) => {
     const session = readSession(request);
@@ -1036,6 +1041,10 @@ const start = async (): Promise<void> => {
                 error: (msg, err) => app.log.error({ err }, msg),
             },
         );
+        startDrainSweep({
+            agentRuntimeUrl: process.env.AGENT_RUNTIME_URL ?? 'http://localhost:3001',
+            prisma: prisma as never,
+        });
     } catch (err) {
         app.log.error(err);
         process.exit(1);
@@ -1046,6 +1055,7 @@ const stop = async (): Promise<void> => {
     stopProvisioningWorker();
     stopConnectorTokenLifecycleWorker();
     stopConnectorHealthWorker();
+    stopDrainSweep();
     await app.close();
     process.exit(0);
 };

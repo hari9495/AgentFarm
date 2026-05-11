@@ -1567,3 +1567,44 @@ model AgentRateLimit {
 
   @@index([tenantId])
 }
+
+// Phase 23 — Circuit breaker observability: persists circuit state transitions
+// for dashboards and audit. The in-memory state machine in circuit-breaker.ts
+// is the source of truth; this model is written asynchronously on state change.
+model CircuitBreakerState {
+  id            String    @id @default(cuid())
+  key           String    @unique  // e.g. "webhook:<webhookId>" or "runtime:agent-runtime"
+  tenantId      String
+  state         String    @default("closed")  // closed | open | half-open
+  failureCount  Int       @default(0)
+  lastFailureAt DateTime?
+  openedAt      DateTime?
+  nextRetryAt   DateTime?
+  successCount  Int       @default(0)  // successes accumulated in half-open
+  updatedAt     DateTime  @updatedAt
+
+  @@index([tenantId])
+  @@index([tenantId, state])
+}
+
+// Phase 24 — Priority task queue for tenant-scoped task ingestion.
+// Tasks are enqueued with priority (high | normal | low) and drained by the
+// in-process sweep worker in apps/api-gateway/src/lib/task-queue.ts.
+model TaskQueueEntry {
+  id           String    @id @default(cuid())
+  tenantId     String
+  workspaceId  String
+  botId        String?
+  priority     String    @default("normal") // high | normal | low
+  status       String    @default("pending") // pending | running | done | cancelled | failed
+  payload      Json
+  errorMessage String?
+  enqueuedAt   DateTime  @default(now())
+  startedAt    DateTime?
+  completedAt  DateTime?
+  updatedAt    DateTime  @updatedAt
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, priority, enqueuedAt])
+}

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import Fastify from 'fastify';
 import { registerOutboundWebhookRoutes } from './outbound-webhooks.js';
 import { dispatchOutboundWebhooks } from '../lib/webhook-dispatcher.js';
+import { resetCircuit } from '../lib/circuit-breaker.js';
 
 // ── Session helpers ───────────────────────────────────────────────────────────
 
@@ -381,6 +382,9 @@ test('DLQ threshold — 5th consecutive failure — webhook disabled and DlqEntr
 });
 
 test('DLQ threshold — success after 3 failures — failureCount reset to 0', async (t) => {
+    // Reset the in-memory circuit so accumulated failures from previous DLQ
+    // threshold tests don't fast-fail this success scenario.
+    resetCircuit('webhook:wh_1');
     t.mock.method(globalThis, 'fetch', async () => ({ ok: true, status: 200, text: async () => 'ok' }));
 
     let failureCount = 3;

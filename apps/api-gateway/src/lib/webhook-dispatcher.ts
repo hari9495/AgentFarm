@@ -1,5 +1,6 @@
 import { createHmac } from 'node:crypto';
 import type { PrismaClient } from '@prisma/client';
+import { isAllowed, recordSuccess, recordFailure, resetCircuit } from './circuit-breaker.js';
 
 const DLQ_THRESHOLD = 5;
 
@@ -86,6 +87,27 @@ async function fireWebhook(
 
     const sig = createHmac('sha256', webhook.secret).update(body).digest('hex');
 
+    const circuitKey = `webhook:${webhook.id}`;
+
+    // Circuit breaker check — fast-fail when circuit is open
+    if (!isAllowed(circuitKey)) {
+        prisma.outboundWebhookDelivery
+            .create({
+                data: {
+                    webhookId: webhook.id,
+                    tenantId: event.tenantId,
+                    eventType: event.eventType,
+                    payload: JSON.parse(body),
+                    responseStatus: null,
+                    responseBody: 'circuit_open',
+                    durationMs: 0,
+                    success: false,
+                },
+            })
+            .catch(() => { });
+        return { success: false, responseStatus: null };
+    }
+
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10_000);
     const startMs = Date.now();
@@ -107,8 +129,14 @@ async function fireWebhook(
         responseStatus = res.status;
         responseBody = await res.text().catch(() => null);
         success = res.ok;
+        if (res.ok) {
+            recordSuccess(circuitKey);
+        } else {
+            recordFailure(circuitKey);
+        }
     } catch {
         success = false;
+        recordFailure(circuitKey);
     } finally {
         clearTimeout(timeout);
     }
@@ -151,6 +179,9 @@ export async function replayDelivery(
     }
 
     const storedPayload = delivery.payload as Record<string, unknown>;
+    // Manual DLQ retry is an explicit admin override — reset the circuit so the
+    // attempt is not fast-failed by an open circuit breaker.
+    resetCircuit(`webhook:${webhook.id}`);
     const result = await fireWebhook(
         { id: webhook.id, url: webhook.url, secret: webhook.secret },
         {
