@@ -6,41 +6,18 @@
  * Full-text skill search with category/tag filtering, dependency info, and invoke-in-place.
  */
 
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
-type SkillMeta = {
+type SkillCard = {
     id: string;
     name: string;
-    category: 'code-quality' | 'ci-cd' | 'security' | 'planning' | 'documentation' | 'operations' | 'ai';
-    tags: string[];
-    description: string;
-    dependencies?: string[];
+    version: string;
+    permissions: string[];
+    source: string;
+    installed: boolean;
+    installedVersion: string | null;
+    verified: boolean;
 };
-
-const SKILL_CATALOG: SkillMeta[] = [
-    { id: 'test-coverage-reporter', name: 'Test Coverage Reporter', category: 'code-quality', tags: ['tests', 'coverage'], description: 'Reports test coverage metrics for your codebase.' },
-    { id: 'flaky-test-detector', name: 'Flaky Test Detector', category: 'ci-cd', tags: ['tests', 'flaky', 'ci'], description: 'Identifies non-deterministic test failures over time.' },
-    { id: 'dependency-audit', name: 'Dependency Audit', category: 'security', tags: ['dependencies', 'security', 'audit'], description: 'Audits package dependencies for known vulnerabilities.' },
-    { id: 'pr-reviewer-risk-labels', name: 'PR Risk Labeler', category: 'code-quality', tags: ['pr', 'review', 'risk'], description: 'Labels pull requests by risk level based on diff analysis.' },
-    { id: 'ci-failure-explainer', name: 'CI Failure Explainer', category: 'ci-cd', tags: ['ci', 'failure', 'debug'], description: 'Explains CI failures in plain language with remediation hints.' },
-    { id: 'code-smell-detector', name: 'Code Smell Detector', category: 'code-quality', tags: ['quality', 'refactor'], description: 'Detects anti-patterns and maintainability issues.' },
-    { id: 'release-notes-generator', name: 'Release Notes Generator', category: 'documentation', tags: ['release', 'notes', 'changelog'], description: 'Generates release notes from commit messages and PR titles.' },
-    { id: 'security-audit', name: 'Security Audit', category: 'security', tags: ['security', 'audit', 'owasp'], description: 'Performs OWASP-aligned security audit on codebase.', dependencies: ['dependency-audit'] },
-    { id: 'on-call-brief', name: 'On-Call Brief', category: 'operations', tags: ['on-call', 'summary', 'ops'], description: 'Generates a briefing doc for on-call engineers.' },
-    { id: 'doc-drift-detector', name: 'Doc Drift Detector', category: 'documentation', tags: ['docs', 'drift', 'sync'], description: 'Detects documentation that is out of sync with code changes.' },
-    { id: 'sprint-risk-forecaster', name: 'Sprint Risk Forecaster', category: 'planning', tags: ['sprint', 'risk', 'forecast'], description: 'Predicts sprint delivery risk based on velocity and scope.' },
-    { id: 'dead-code-detector', name: 'Dead Code Detector', category: 'code-quality', tags: ['refactor', 'cleanup', 'dead-code'], description: 'Identifies unreachable or unused code segments.' },
-    { id: 'secrets-scanner', name: 'Secrets Scanner', category: 'security', tags: ['secrets', 'credentials', 'security'], description: 'Scans for leaked secrets, tokens, and credentials in code.' },
-    { id: 'refactor-advisor', name: 'Refactor Advisor', category: 'code-quality', tags: ['refactor', 'quality', 'ai'], description: 'Suggests targeted refactor actions with before/after diffs.' },
-    { id: 'test-generator', name: 'Test Generator', category: 'code-quality', tags: ['tests', 'ai', 'generation'], description: 'AI-generates unit tests for uncovered code paths.', dependencies: ['test-coverage-reporter'] },
-    { id: 'commit-message-linter', name: 'Commit Message Linter', category: 'code-quality', tags: ['commits', 'lint', 'convention'], description: 'Enforces conventional commit message standards.' },
-    { id: 'pr-description-generator', name: 'PR Description Generator', category: 'documentation', tags: ['pr', 'docs', 'ai'], description: 'Generates structured PR descriptions from diff content.' },
-    { id: 'license-compliance-check', name: 'License Compliance Check', category: 'security', tags: ['license', 'compliance', 'legal'], description: 'Checks dependency licenses against allowed list.' },
-    { id: 'docker-image-scanner', name: 'Docker Image Scanner', category: 'security', tags: ['docker', 'security', 'container'], description: 'Scans Docker images for known CVEs.', dependencies: ['dependency-audit'] },
-    { id: 'monorepo-dep-graph', name: 'Monorepo Dep Graph', category: 'ai', tags: ['monorepo', 'graph', 'dependencies'], description: 'Builds and visualizes inter-package dependency graph.' },
-];
-
-const CATEGORIES = ['all', 'code-quality', 'ci-cd', 'security', 'planning', 'documentation', 'operations', 'ai'] as const;
 
 type Props = {
     workspaceId: string;
@@ -50,26 +27,55 @@ type Props = {
 export function SkillSearchPanel({ workspaceId, botId }: Props) {
     const [query, setQuery] = useState('');
     const [category, setCategory] = useState<string>('all');
-    const [selectedSkill, setSelectedSkill] = useState<SkillMeta | null>(null);
+    const [selectedSkill, setSelectedSkill] = useState<SkillCard | null>(null);
     const [invokeInputs, setInvokeInputs] = useState('{}');
     const [invokeResult, setInvokeResult] = useState<{ ok: boolean; summary: string; duration_ms: number } | null>(null);
     const [invoking, setInvoking] = useState(false);
     const [invokeError, setInvokeError] = useState<string | null>(null);
 
+    const [catalogSkills, setCatalogSkills] = useState<SkillCard[]>([]);
+    const [catalogLoading, setCatalogLoading] = useState(true);
+    const [catalogError, setCatalogError] = useState<string | null>(null);
+
+    const fetchCatalog = useCallback(async () => {
+        setCatalogLoading(true);
+        setCatalogError(null);
+        try {
+            const res = await fetch(`/api/runtime/${encodeURIComponent(botId)}/marketplace/catalog`, { cache: 'no-store' });
+            const body = (await res.json().catch(() => ({}))) as { skills?: SkillCard[]; message?: string; reason?: string };
+            if (!res.ok) {
+                setCatalogError(body.message ?? body.reason ?? 'Failed to load skill catalog.');
+            } else {
+                setCatalogSkills(Array.isArray(body.skills) ? body.skills : []);
+            }
+        } catch (err) {
+            setCatalogError((err as Error).message);
+        } finally {
+            setCatalogLoading(false);
+        }
+    }, [botId]);
+
+    useEffect(() => {
+        void fetchCatalog();
+    }, [fetchCatalog]);
+
+    const categories = useMemo(
+        () => ['all', ...Array.from(new Set(catalogSkills.map((s) => s.source))).sort()],
+        [catalogSkills],
+    );
+
     const filteredSkills = useMemo(() => {
         const q = query.toLowerCase().trim();
-        return SKILL_CATALOG.filter((skill) => {
-            const matchesCategory = category === 'all' || skill.category === category;
+        return catalogSkills.filter((skill) => {
+            const matchesCategory = category === 'all' || skill.source === category;
             if (!matchesCategory) return false;
             if (!q) return true;
             return (
-                skill.id.includes(q) ||
-                skill.name.toLowerCase().includes(q) ||
-                skill.description.toLowerCase().includes(q) ||
-                skill.tags.some((t) => t.includes(q))
+                skill.id.toLowerCase().includes(q) ||
+                skill.name.toLowerCase().includes(q)
             );
         });
-    }, [query, category]);
+    }, [query, category, catalogSkills]);
 
     const handleInvoke = async () => {
         if (!selectedSkill) return;
@@ -107,11 +113,21 @@ export function SkillSearchPanel({ workspaceId, botId }: Props) {
 
     return (
         <section style={{ marginTop: '1rem' }}>
+            {/* Catalog loading / error */}
+            {catalogLoading && (
+                <p style={{ fontSize: '0.83rem', color: '#78716c', marginBottom: '0.75rem' }}>Loading skill catalog…</p>
+            )}
+            {catalogError && (
+                <div style={{ marginBottom: '0.75rem', padding: '0.6rem 0.9rem', background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: 6, color: '#dc2626', fontSize: '0.83rem' }}>
+                    {catalogError}
+                </div>
+            )}
+
             {/* Search + filter bar */}
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
                 <input
                     type="search"
-                    placeholder="Search skills by name, tag, or description…"
+                    placeholder="Search skills by name or id…"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     style={{ flex: '1 1 260px', padding: '0.45rem 0.7rem', borderRadius: 6, border: '1px solid #d4d4d4', fontSize: '0.88rem' }}
@@ -121,8 +137,8 @@ export function SkillSearchPanel({ workspaceId, botId }: Props) {
                     onChange={(e) => setCategory(e.target.value)}
                     style={{ padding: '0.45rem 0.7rem', borderRadius: 6, border: '1px solid #d4d4d4', fontSize: '0.88rem', background: '#fff' }}
                 >
-                    {CATEGORIES.map((c) => (
-                        <option key={c} value={c}>{c === 'all' ? 'All Categories' : c.replace('-', ' ')}</option>
+                    {categories.map((c) => (
+                        <option key={c} value={c}>{c === 'all' ? 'All Sources' : c}</option>
                     ))}
                 </select>
             </div>
@@ -146,14 +162,17 @@ export function SkillSearchPanel({ workspaceId, botId }: Props) {
                         }}
                     >
                         <div style={{ fontWeight: 600, fontSize: '0.88rem', marginBottom: '0.25rem' }}>{skill.name}</div>
-                        <div style={{ fontSize: '0.78rem', color: '#57534e', marginBottom: '0.35rem', lineHeight: 1.4 }}>{skill.description}</div>
+                        <div style={{ fontSize: '0.78rem', color: '#57534e', marginBottom: '0.35rem', lineHeight: 1.4, fontFamily: 'monospace' }}>{skill.id}</div>
                         <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
                             <span style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem', borderRadius: 99, background: '#f1f5f9', color: '#475569' }}>
-                                {skill.category}
+                                {skill.source}
                             </span>
-                            {skill.dependencies && (
-                                <span style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem', borderRadius: 99, background: '#fef3c7', color: '#92400e' }}>
-                                    {skill.dependencies.length} dep{skill.dependencies.length > 1 ? 's' : ''}
+                            <span style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem', borderRadius: 99, background: '#f1f5f9', color: '#475569' }}>
+                                v{skill.version}
+                            </span>
+                            {skill.verified && (
+                                <span style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem', borderRadius: 99, background: '#dcfce7', color: '#166534' }}>
+                                    ✓ verified
                                 </span>
                             )}
                         </div>
@@ -164,12 +183,12 @@ export function SkillSearchPanel({ workspaceId, botId }: Props) {
             {/* Invoke panel for selected skill */}
             {selectedSkill && (
                 <div style={{ marginTop: '1.25rem', padding: '1rem', border: '1px solid #6366f1', borderRadius: 8, background: '#fafafa' }}>
-                    <h3 style={{ margin: '0 0 0.25rem', fontSize: '1rem' }}>{selectedSkill.name}</h3>
-                    <p style={{ margin: '0 0 0.6rem', fontSize: '0.83rem', color: '#57534e' }}>{selectedSkill.description}</p>
+                    <h3 style={{ margin: '0 0 0.15rem', fontSize: '1rem' }}>{selectedSkill.name}</h3>
+                    <p style={{ margin: '0 0 0.4rem', fontSize: '0.78rem', color: '#57534e', fontFamily: 'monospace' }}>{selectedSkill.id} · v{selectedSkill.version} · {selectedSkill.source}</p>
 
-                    {selectedSkill.dependencies && (
+                    {selectedSkill.permissions.length > 0 && (
                         <p style={{ fontSize: '0.78rem', color: '#92400e', marginBottom: '0.5rem' }}>
-                            Depends on: {selectedSkill.dependencies.join(', ')}
+                            Permissions: {selectedSkill.permissions.join(', ')}
                         </p>
                     )}
 

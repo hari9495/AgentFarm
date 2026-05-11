@@ -1,4 +1,5 @@
 import { SessionReplayLoader } from '../../components/session-replay-loader';
+import { SessionIndexPanel } from '../../components/session-index-panel';
 
 export default async function SessionReplayPage({
     searchParams,
@@ -14,8 +15,9 @@ export default async function SessionReplayPage({
                 <header className="hero" style={{ marginBottom: '0.55rem' }}>
                     <p className="eyebrow">Observability</p>
                     <h1>Session Replay</h1>
-                    <p>Provide a sessionId query string to inspect the action timeline.</p>
+                    <p>Recent Sessions — click a row to replay</p>
                 </header>
+                <SessionIndexPanel />
             </main>
         );
     }

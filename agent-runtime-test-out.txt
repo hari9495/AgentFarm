@@ -1,0 +1,2413 @@
+﻿
+> @agentfarm/agent-runtime@0.1.0 test D:\AgentFarm\apps\agent-runtime
+> tsx --test src/**/*.test.ts
+
+[budget-alert] Error: network error
+    at globalThis.fetch (D:\AgentFarm\apps\agent-runtime\src\__tests__\budget-alert-emitter.test.ts:15:33)
+    at emitBudgetAlert (D:\AgentFarm\apps\agent-runtime\src\budget-alert-emitter.ts:13:15)
+    at <anonymous> (D:\AgentFarm\apps\agent-runtime\src\__tests__\budget-alert-emitter.test.ts:132:9)
+    at waitForActual (node:assert:632:21)
+    at strict.doesNotReject (node:assert:789:39)
+    at TestContext.<anonymous> (D:\AgentFarm\apps\agent-runtime\src\__tests__\budget-alert-emitter.test.ts:131:18)
+    at Test.runInAsyncScope (node:async_hooks:214:14)
+    at Test.run (node:internal/test_runner/test:1103:25)
+    at Test.processPendingSubtests (node:internal/test_runner/test:785:18)
+    at Test.postRun (node:internal/test_runner/test:1232:19)
+Γ£ö emitBudgetAlert posts to /v1/notifications/log with correct body (84.9727ms)
+Γ£ö level 'exhausted' sets eventTrigger to 'token_budget_exhausted' (0.9786ms)
+Γ£ö level 'warning' sets eventTrigger to 'token_budget_warning' (0.7142ms)
+Γ£ö percentUsed is calculated correctly (consumed / limit * 100 rounded) (0.6133ms)
+Γ£ö percentUsed rounds correctly for non-integer results (0.95ms)
+Γ£ö fetch errors are swallowed without throwing (6.5624ms)
+Γ£ö missing tenantId defaults to "system" (0.6409ms)
+Γ£ö missing workspaceId sends null in body (0.53ms)
+Γ£ö haiku model returns non-zero cost and tier "haiku" (1.8713ms)
+Γ£ö sonnet model returns non-zero cost and tier "sonnet" (0.4128ms)
+Γ£ö opus model returns non-zero cost and tier "opus" (0.3163ms)
+Γ£ö mock model returns costUsd === 0 and tier "mock" (0.2862ms)
+Γ£ö unknown model string returns costUsd === 0 and tier "unknown" (0.2898ms)
+Γ£ö zero tokens returns costUsd === 0 (0.245ms)
+Γ£ö gpt-4o model returns tier "gpt-4o" (not gpt-4o-mini) (0.299ms)
+Γ£ö gpt-4o-mini model returns tier "gpt-4o-mini" (not gpt-4o) (0.2614ms)
+Γ£ö cost scales linearly: double tokens = double cost (0.2986ms)
+∩╣ú agent-runtime db-smoke (0.8864ms) # DATABASE_URL is not pointing at the test DB (port 5433). Set FORCE_DB_SMOKE=true to override.
+[MockDesktopOperator] browserOpen: url=https://example.com browser=default
+[MockDesktopOperator] appLaunch: app=vscode args=--new-window
+(node:119168) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Γû╢ desktop-operator-factory
+  Γ£ö getDesktopOperator returns defined with DESKTOP_OPERATOR=mock (6.1782ms)
+  Γ£ö mock browserOpen returns ok:true and output contains "mock" (15.0489ms)
+  Γ£ö mock appLaunch returns ok:true (10.5188ms)
+Γ£ö desktop-operator-factory (33.885ms)
+(node:97052) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Γ£ö mock resolver returns deterministic result with confidence 0.85 (2.5389ms)
+Γ£ö mock resolver reads action_type from task payload (0.4377ms)
+Γ£ö mock resolver falls back to heuristic actionType when action_type is absent (0.3361ms)
+Γ£ö mock resolver classifies HIGH_RISK action_type as riskLevel high (0.5622ms)
+Γ£ö mock resolver classifies MEDIUM_RISK action_type as riskLevel medium (0.6631ms)
+Γ£ö mock resolver classifies LOW_RISK action_type as riskLevel low (1.1849ms)
+Γ£ö mock resolver returns 0 tokens and 0 cost (0.5565ms)
+Γ£ö MOCK_LLM_DELAY_MS adds artificial delay (77.9792ms)
+Γ£ö MOCK_LLM_DELAY_MS=0 returns without significant delay (1.1915ms)
+Γ£ö mock resolver never calls fetch (0.7461ms)
+Γ£ö mock resolver propagates target from task payload (0.443ms)
+Γ£ö mock resolver defaults target to README.md when absent (0.2548ms)
+Γ£ö mock resolver sets _mock_provider flag in payloadOverrides (0.2727ms)
+Γû╢ McpProtocolClient
+  Γû╢ initialize()
+    Γ£ö sends correct JSON-RPC request and returns protocolVersion (64.6822ms)
+    Γ£ö throws McpProtocolError on invalid JSON-RPC 2.0 (wrong jsonrpc field) (2.1154ms)
+    Γ£ö throws McpProtocolError when response missing protocolVersion (1.4208ms)
+  Γ£ö initialize() (69.3501ms)
+  Γû╢ listTools()
+    Γ£ö returns tools array from server response (5.6846ms)
+    Γ£ö throws McpProtocolError when tools is not an array (7.7377ms)
+  Γ£ö listTools() (20.6771ms)
+  Γû╢ callTool()
+    Γ£ö sends correct name and arguments (4.0843ms)
+    Γ£ö throws McpToolError when isError: true in response (3.1204ms)
+  Γ£ö callTool() (8.2326ms)
+[mcp-registry-client] discoverMcpTools: server "broken-server" (http://broken.example.com) is unhealthy ΓÇö skipping.
+  Γû╢ callTool() timeout
+    Γ£ö times out after AGENTFARM_MCP_TIMEOUT_MS (62.0067ms)
+  Γ£ö callTool() timeout (62.9389ms)
+  Γû╢ healthCheck()
+    Γ£ö returns false when server is unreachable (4.4765ms)
+    Γ£ö never throws ΓÇö returns false on any error (0.7017ms)
+    Γ£ö returns true when initialize succeeds (1.0236ms)
+  Γ£ö healthCheck() (6.7161ms)
+  Γû╢ McpProtocolError
+    Γ£ö invalid JSON response throws McpProtocolError (1.3166ms)
+    Γ£ö server-level JSON-RPC error propagates as McpProtocolError with code (1.2006ms)
+  Γ£ö McpProtocolError (2.7374ms)
+Γ£ö McpProtocolClient (171.9446ms)
+Γû╢ discoverMcpTools()
+  Γ£ö skips unhealthy servers (23.0027ms)
+Γ£ö discoverMcpTools() (23.4182ms)
+Γû╢ invokeMcpTool()
+  Γ£ö calls initialize() before callTool() (6.2452ms)
+Γ£ö invokeMcpTool() (6.6027ms)
+Γ£ö parseGoal returns a GoalPlan with status pending (9.7373ms)
+Γ£ö returned GoalPlan always has actions array with at least 1 item (1.7249ms)
+Γ£ö worldState targetState.desired always starts with "Complete:" (0.6248ms)
+Γ£ö GoalPlan has required contractVersion and non-empty id (0.2792ms)
+Γ£ö "fix the login bug" maps to update_status (bug resolution) (20.5119ms)
+Γ£ö "found a broken error in auth" maps to update_status (error/broken keywords) (0.476ms)
+Γ£ö "write tests for auth module" maps to read_task (test-related type) (0.2181ms)
+Γ£ö "add spec coverage for login" maps to read_task (spec keyword) (0.1538ms)
+Γ£ö "deploy to production" maps to update_status (deploy-related type) (0.1981ms)
+Γ£ö "release v2 and ship it" maps to update_status (release keyword) (1.7256ms)
+Γ£ö "notify team on slack" maps to send_message (slack/notify) (1.7575ms)
+Γ£ö "send a message in chat" maps to send_message (message/chat) (0.506ms)
+Γ£ö "review the pull request" maps to create_pr_comment (PR/review) (0.2639ms)
+Γ£ö "create a pr comment" maps to create_pr_comment (pr keyword) (0.1839ms)
+Γ£ö "update the jira ticket" maps to read_task (jira/ticket) (0.2499ms)
+Γ£ö "create github issue" maps to read_task (issue keyword) (0.1822ms)
+Γ£ö "push a commit to github" maps to update_status (github/commit/push) (0.2129ms)
+Γ£ö "add documentation to readme" maps to create_comment (document/docs/readme) (0.3259ms)
+Γ£ö empty string returns status pending with actionType unknown (0.2028ms)
+Γ£ö completely unrelated input "the weather is nice" returns unknown (0.1915ms)
+Γ£ö input with no matching keywords returns unknown (0.1654ms)
+Γ£ö currentState.current equals the input (0.1644ms)
+Γ£ö goalDescription equals the input (0.2999ms)
+Γ£ö GoalPlan has GoalAction with cost=1 and non-empty id (0.2524ms)
+Γ£ö GoalAction effects contains completed=true (0.2588ms)
+[routing-advisor] Error: Connection refused
+    at Object.groupBy (D:\AgentFarm\apps\agent-runtime\src\__tests__\routing-history-advisor.test.ts:195:27)
+    at getRoutingAdvice (D:\AgentFarm\apps\agent-runtime\src\routing-history-advisor.ts:52:73)
+    at TestContext.<anonymous> (D:\AgentFarm\apps\agent-runtime\src\__tests__\routing-history-advisor.test.ts:199:30)
+    at Test.runInAsyncScope (node:async_hooks:214:14)
+    at Test.run (node:internal/test_runner/test:1103:25)
+    at Suite.processPendingSubtests (node:internal/test_runner/test:785:18)
+    at Test.postRun (node:internal/test_runner/test:1232:19)
+    at Test.run (node:internal/test_runner/test:1160:12)
+    at async Suite.processPendingSubtests (node:internal/test_runner/test:785:7)
+Γû╢ getRoutingAdvice
+  Γ£ö returns empty map when groupBy returns no rows (2.4297ms)
+  Γ£ö provider with >=5 successes gets -0.15 delta (favoured) (0.5915ms)
+  Γ£ö provider with count exactly 5 successes gets -0.15 (boundary) (0.3542ms)
+  Γ£ö provider with >=3 failures gets +0.20 delta (deprioritised) (0.4575ms)
+  Γ£ö provider with count exactly 3 failures gets +0.20 (boundary) (0.2846ms)
+  Γ£ö provider with <5 successes gets no delta (0.3396ms)
+  Γ£ö provider with <3 failures gets no delta (0.3298ms)
+  Γ£ö approval_queued outcome is ignored (0.276ms)
+  Γ£ö rows with null modelTier are skipped (0.4414ms)
+  Γ£ö candidateProviders matching is case-insensitive (0.6413ms)
+  Γ£ö deltas accumulate when a provider matches multiple rows (0.3821ms)
+  Γ£ö deltas from success and qualifying failure rows accumulate additively (0.3994ms)
+  Γ£ö multiple providers each get independent deltas (0.6586ms)
+  Γ£ö DB error returns empty map without throwing (8.5424ms)
+  Γ£ö timeout race: slow groupBy loses to 200 ms timeout, caller gets empty map (213.8507ms)
+  Γ£ö empty candidateProviders list yields empty map even with DB rows (0.8368ms)
+  Γ£ö provider not matching any tier yields no entry (0.6134ms)
+Γ£ö getRoutingAdvice (234.9248ms)
+Γ£ö setRunCallback: dry-run job does not invoke callback (22.9988ms)
+Γ£ö setRunCallback: real job callback receives correct target and dryRun=false (125.1145ms)
+Γ£ö setRunCallback: callback that throws records failure in history (100.5463ms)
+Γ£ö scheduler tick fires only due jobs and updates run counts (155.8584ms)
+[sse-publish] Error: network error
+    at globalThis.fetch (D:\AgentFarm\apps\agent-runtime\src\__tests__\task-progress-publisher.test.ts:33:37)
+    at publishTaskProgress (D:\AgentFarm\apps\agent-runtime\src\task-progress-publisher.ts:26:15)
+    at <anonymous> (D:\AgentFarm\apps\agent-runtime\src\__tests__\task-progress-publisher.test.ts:81:15)
+    at waitForActual (node:assert:632:21)
+    at strict.doesNotReject (node:assert:789:39)
+    at TestContext.<anonymous> (D:\AgentFarm\apps\agent-runtime\src\__tests__\task-progress-publisher.test.ts:80:18)
+    at async Test.run (node:internal/test_runner/test:1110:7)
+    at async Test.processPendingSubtests (node:internal/test_runner/test:785:7)
+Γ£ö publishTaskProgress calls fetch with correct URL and body (79.3754ms)
+Γ£ö publishTaskProgress uses SSE_PUSH_URL env var when set (9.1976ms)
+Γ£ö publishTaskProgress swallows fetch errors without throwing (30.1649ms)
+Γ£ö publishTaskProgress skips fetch when SSE_PUSH_URL is empty string (10.7115ms)
+Γ£ö published body contains workspaceId and event fields (3.2851ms)
+Γ£ö publishTaskProgress includes x-internal-token header when SSE_INTERNAL_TOKEN is set (3.4438ms)
+(node:31152) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Γ£ö executeObservedAction persists dom hash, network summaries, and evidence bundle (29.9369ms)
+Γ£ö executeObservedAction keeps inline dom snapshots when checkpoint is not requested (17.028ms)
+Γ£ö Audit IDs: 4-Level Hierarchy with Embedded Ancestry (1.0683ms)
+Γ£ö Audit IDs: Decode Functions Extract Ancestry Without Database (1.0517ms)
+Γ£ö Storage Paths: Hierarchical with Prefix Queries (0.8174ms)
+Γ£ö Retention Policy: Zero Auto-Delete By Default (0.7109ms)
+Γ£ö Action Sequence: Sequential Within Session (1.0102ms)
+Γ£ö resolveActionResultPath uses configured env path when provided (1.3087ms)
+Γ£ö file action-result writer appends NDJSON records in order (32.3172ms)
+Γû╢ agent-feedback: AgentFeedback
+  Γ£ö submitFeedback stores a record and returns it (8.2493ms)
+  Γ£ö getFeedback returns records for given task_id (1.6162ms)
+  Γ£ö getSkillRating computes correct average (1.1027ms)
+  Γ£ö getSkillRating returns 0 for unknown skill (0.6094ms)
+  Γ£ö rating is clamped between 1 and 5 (14.2096ms)
+  Γ£ö listAll returns records in descending order (most recent first) (0.933ms)
+  Γ£ö getAllSkillRatings returns one entry per unique skill (1.3217ms)
+  Γ£ö workspace_id is stored when provided (0.5827ms)
+  Γ£ö listByWorkspace filters correctly (0.6143ms)
+Γ£ö agent-feedback: AgentFeedback (32.0905ms)
+(node:1048) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Γû╢ autonomous-coding-loop: runAutonomousLoop
+  Γ£ö returns a result with steps array in dry_run mode (102.1592ms)
+  Γ£ö dry_run does not leave any step in running state (100.4195ms)
+  Γ£ö includes analyze_issue step (85.2343ms)
+  Γ£ö returns a summary string (171.9051ms)
+  Γ£ö respects max_fix_attempts limit (175.5154ms)
+  Γ£ö includes create_pr step (127.2134ms)
+Γ£ö autonomous-coding-loop: runAutonomousLoop (766.1762ms)
+Γû╢ autonomous-coding-loop: resumeFromCheckpoint
+  Γ£ö returns null when no checkpoint exists for loop_id (2.9501ms)
+  Γ£ö returns a result when checkpoint exists from a prior run (278.3787ms)
+Γ£ö autonomous-coding-loop: resumeFromCheckpoint (289.7158ms)
+Γû╢ autonomous-coding-loop: createGitHubPR
+  Γ£ö calls the correct GitHub API URL (0.8719ms)
+  Γ£ö includes Authorization header with Bearer token (0.5707ms)
+  Γ£ö returns real prNumber and prUrl from response (0.3585ms)
+  Γ£ö returns ok:false and does not throw on GitHub API failure (0.3541ms)
+Γ£ö autonomous-coding-loop: createGitHubPR (2.5417ms)
+Γû╢ autonomous-coding-loop: commit_push step
+  Γ£ö includes commit_push step in dry_run mode (262.1759ms)
+  Γ£ö commit_push step output contains dry-run note (130.1707ms)
+  Γ£ö commit_push step appears before create_pr in results (119.6349ms)
+  Γ£ö live mode returns failed gracefully when tenantId and botId are missing (208.207ms)
+Γ£ö autonomous-coding-loop: commit_push step (722.5145ms)
+Γû╢ autonomous-coding-loop: file_edits field in AutonomousLoopInput
+  Γ£ö accepts file_edits in dry_run mode without error (197.6139ms)
+  Γ£ö implement_changes step succeeds in dry_run mode regardless of file_edits (267.7238ms)
+Γ£ö autonomous-coding-loop: file_edits field in AutonomousLoopInput (466.0581ms)
+Γû╢ autonomous-loop-orchestrator: Auto-iterate until tests pass
+  Γ£ö executes a single skill and detects success (3.429ms)
+  Γ£ö retries on failure and reaches max iterations (1.5678ms)
+  Γ£ö branches to alternate skills on failure (12.8313ms)
+  Γ£ö respects timeout limit (0.8036ms)
+  Γ£ö tracks learning patterns from success (1.0908ms)
+  Γ£ö returns detailed trace with decisions (0.8532ms)
+  Γ£ö gets recent runs history (0.8416ms)
+  Γ£ö cancels an active loop (0.8352ms)
+Γ£ö autonomous-loop-orchestrator: Auto-iterate until tests pass (28.3931ms)
+Γû╢ loop-learning-store: Learn from successful patterns
+  Γ£ö records a successful pattern (2.638ms)
+  Γ£ö increases success rate on repeated success (0.5434ms)
+  Γ£ö decreases success rate on failure (0.359ms)
+  Γ£ö returns top patterns sorted by success rate (0.3556ms)
+  Γ£ö prunes old patterns without recent usage (0.3355ms)
+Γ£ö loop-learning-store: Learn from successful patterns (4.7679ms)
+Γ£ö GET /chat/sessions: returns 400 when tenantId missing (428.1769ms)
+Γ£ö GET /chat/sessions: returns sessions list for tenant (10.2132ms)
+Γ£ö POST /chat/sessions: returns 400 when tenantId missing (20.3458ms)
+Γ£ö POST /chat/sessions: creates and returns new session (16.2088ms)
+Γ£ö GET /chat/sessions/:sessionId/messages: returns 404 for unknown session (9.6539ms)
+Γ£ö GET /chat/sessions/:sessionId/messages: returns messages for valid session (6.7089ms)
+Γ£ö POST /chat/sessions/:sessionId/messages: returns 400 when content missing (9.8021ms)
+Γ£ö POST /chat/sessions/:sessionId/messages: creates user + assistant messages (9.739ms)
+Γ£ö DELETE /chat/sessions/:sessionId: returns 404 for unknown session (10.5315ms)
+Γ£ö DELETE /chat/sessions/:sessionId: deletes session and returns 204 (9.6163ms)
+Γ£ö getChatReplyMock: echoes the last user message (1.5854ms)
+Γ£ö getChatReplyMock: returns empty echo when no user message (0.396ms)
+Γ£ö getChatReply: delegates to mock when provider=mock (0.6269ms)
+Γ£ö getChatReply: calls LLM and returns content (2.2548ms)
+Γ£ö getChatReply: throws when upstream returns non-ok status (2.3022ms)
+Γû╢ classifyFeedback
+  Γ£ö classifies style feedback (3.0399ms)
+  Γ£ö classifies security feedback (0.8014ms)
+  Γ£ö classifies testing feedback (2.1842ms)
+  Γ£ö defaults to style for unknown (0.7388ms)
+Γ£ö classifyFeedback (8.6934ms)
+Γû╢ ingestReviewFeedback
+  Γ£ö creates lessons from review comments (14.7705ms)
+  Γ£ö skips trivially short comments (0.4947ms)
+Γ£ö ingestReviewFeedback (15.6388ms)
+Γû╢ getRelevantLessons
+  Γ£ö returns lessons for workspace (0.7623ms)
+  Γ£ö returns empty for different workspace (0.5357ms)
+Γ£ö getRelevantLessons (1.7134ms)
+Γû╢ formatLessonsForPrompt
+  Γ£ö returns empty string when no lessons (0.6634ms)
+  Γ£ö formats lessons as bullet list (2.3114ms)
+Γ£ö formatLessonsForPrompt (3.3313ms)
+Γû╢ connector-health-monitor: ConnectorHealthMonitor
+  Γ£ö registerConnector adds connector to status map (4.0357ms)
+  Γ£ö pingConnector returns reachable=true for healthy ping (24.0464ms)
+  Γ£ö pingConnector returns reachable=false and increments failures on error (3.1479ms)
+  Γ£ö consecutive_failures resets to 0 after recovery (4.4697ms)
+  Γ£ö getAllStatuses returns all registered connectors (7.8059ms)
+  Γ£ö pingAll pings every registered connector (5.0358ms)
+  Γ£ö pingConnector throws for unknown connector id (2.8573ms)
+  Γ£ö unregisterConnector removes connector (0.5052ms)
+Γ£ö connector-health-monitor: ConnectorHealthMonitor (54.9521ms)
+(node:48744) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Γ£ö desktop/browser control actions are classified as high risk (1.9752ms)
+Γ£ö desktop/browser control actions require approval in normal developer flow (4.6898ms)
+Γ£ö approved desktop/browser action executes through approved-task path (1.4234ms)
+Γû╢ estimateTaskEffort
+  Γ£ö classifies a single-file low-risk task as trivial or small (8.3019ms)
+  Γ£ö classifies a large multi-file task correctly (1.4426ms)
+  Γ£ö detects auth risk factor (0.5608ms)
+  Γ£ö confidence decreases with more risk (0.471ms)
+  Γ£ö breakdown sums to estimated minutes (approximately) (0.4007ms)
+  Γ£ö returns a valid estimate even with an empty description (0.4607ms)
+Γ£ö estimateTaskEffort (13.9503ms)
+Γû╢ formatEstimateForApproval
+  Γ£ö includes the estimated minutes and complexity (0.6186ms)
+  Γ£ö includes risk factors when present (0.4514ms)
+Γ£ö formatEstimateForApproval (1.4057ms)
+Γ£ö no escalation at attempt 0 with a clear, sufficiently long task summary (1.9974ms)
+Γ£ö escalates with ambiguous_task when summary is too short at attempt 0 (0.431ms)
+Γ£ö does NOT escalate as ambiguous_task after first attempt even with short summary (0.2659ms)
+Γ£ö escalates with max_retries_exceeded when attempt >= default max_attempts (3) (0.2039ms)
+Γ£ö escalates with max_retries_exceeded when attempt >= custom max_attempts (0.2619ms)
+Γ£ö does NOT escalate for max_retries when attempt is below threshold (0.2049ms)
+Γ£ö escalates with scope_too_large when files_to_change has more than 10 entries (0.3158ms)
+Γ£ö does NOT escalate for scope when files_to_change has exactly 10 entries (0.2151ms)
+Γ£ö escalates with test_failures_unresolved when test failure pattern detected at attempt >= 2 (0.2858ms)
+Γ£ö does NOT escalate for test_failures at attempt 1 even with failure output (0.342ms)
+Γ£ö escalates with approval_rejected_twice when rejection count >= 2 (0.1888ms)
+Γ£ö buildEscalationMessage returns a non-empty string with escalation context (0.259ms)
+Γ£ö buildEscalationMessage returns short message when no escalation required (0.2203ms)
+Γ£ö resolveEvaluatorWebhookUrl returns null when env var is absent (1.9741ms)
+Γ£ö resolveEvaluatorWebhookUrl returns null for empty string (0.4339ms)
+Γ£ö resolveEvaluatorWebhookUrl returns null for whitespace-only value (0.2071ms)
+Γ£ö resolveEvaluatorWebhookUrl returns null for non-http scheme (0.217ms)
+Γ£ö resolveEvaluatorWebhookUrl returns null for invalid URL (0.2394ms)
+Γ£ö resolveEvaluatorWebhookUrl returns URL for valid https URL (0.2686ms)
+Γ£ö resolveEvaluatorWebhookUrl returns URL for valid http URL (0.2249ms)
+Γ£ö resolveEvaluatorWebhookUrl trims whitespace around valid URL (0.2254ms)
+Γ£ö fireEvaluatorWebhook calls fetch with POST and correct content-type (60.1835ms)
+Γ£ö fireEvaluatorWebhook does not throw when fetch rejects (2.3287ms)
+Γ£ö assembleEvidenceRecord creates complete evidence from task and action result (4.8725ms)
+Γ£ö assembleEvidenceRecord includes quality gate results from logs (0.689ms)
+Γ£ö assembleEvidenceRecord captures failed action status (0.4646ms)
+Γ£ö extractExecutionLogsFromBuffer parses ISO timestamp log format (0.8357ms)
+Γ£ö extractExecutionLogsFromBuffer handles missing timestamp gracefully (0.4518ms)
+Γ£ö getEvidenceSummary formats evidence for display (0.8305ms)
+Γ£ö getEvidenceSummary includes error reason for failed actions (0.5289ms)
+Γ£ö assembleEvidenceRecord preserves evidence ID uniqueness (0.4821ms)
+Γ£ö resolveEvidenceRecordPath uses configured env path when provided (1.7012ms)
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö file evidence writer appends NDJSON evidence records in order (137.5276ms)
+(node:112724) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Γ£ö normalizeActionType prefers action_type and falls back to normalized intent (3.0588ms)
+Γ£ö scoreConfidence returns high confidence for complete payload and lower confidence for ambiguous input (0.7516ms)
+Γ£ö classifyRisk maps action policy and confidence to low/medium/high risk levels (0.6199ms)
+Γ£ö buildDecision supports developer intents for code review and test planning as executable work (0.552ms)
+Γ£ö processDeveloperTask executes low-risk task with transient retries and succeeds (5.2386ms)
+Γ£ö processDeveloperTask queues medium/high-risk tasks for approval instead of direct execution (1.6921ms)
+Γ£ö processDeveloperTask marks non-retryable executor failures as runtime_exception (0.8509ms)
+Γ£ö processDeveloperTask marks exhausted transient retries as transient_error (0.9997ms)
+Γ£ö processDeveloperTask performs one research-assisted retry after repeated failures (14.634ms)
+Γ£ö processApprovedTask executes approved risky action through retry flow (1.0778ms)
+Γ£ö normalizeActionType treats whitespace-only action_type as missing and falls back to intent (0.4746ms)
+Γ£ö normalizeActionType treats non-string action_type as missing and falls back to intent (0.3631ms)
+Γ£ö scoreConfidence reduces score for any truthy ambiguous value, not only boolean true (1.2066ms)
+Γ£ö classifyRisk risk_hint=low explicitly overrides confidence-based medium risk (0.7914ms)
+Γ£ö classifyRisk unknown risk_hint values do not affect classification (0.2181ms)
+Γ£ö scoreConfidence reaches minimum score when all penalty conditions are applied simultaneously (0.1828ms)
+Γ£ö buildDecision routes risk_hint=high payload to approval even for normally-low action (0.2093ms)
+Γ£ö processDeveloperTask uses llmDecisionResolver output when available (1.7173ms)
+Γ£ö processDeveloperTask merges payloadOverrides into executionPayload (0.7387ms)
+Γ£ö processDeveloperTask injects audit ancestry when runtime context is present (1.7456ms)
+Γ£ö processDeveloperTask falls back to heuristic decision when llmDecisionResolver throws (0.7479ms)
+[language-resolver] learnUserLanguage failed for user u1: Error: network error
+[language-resolver] user profile fetch failed for user u1: Error: network error
+[language-resolver] tenant config fetch failed for tenant t1: Error: network error
+Γ£ö detectTextLanguage detects Japanese from hiragana text (3.3146ms)
+Γ£ö detectTextLanguage detects Japanese from katakana text (0.5714ms)
+Γ£ö detectTextLanguage detects Korean from Hangul text (0.4206ms)
+Γ£ö detectTextLanguage detects Arabic text (0.2602ms)
+Γ£ö detectTextLanguage detects Hindi from Devanagari text (0.2578ms)
+Γ£ö detectTextLanguage defaults to English for ASCII text (0.1973ms)
+Γ£ö detectTextLanguage defaults to English for short text under threshold (0.2305ms)
+Γ£ö detectTextLanguage handles empty string without throwing (0.4469ms)
+Γ£ö getOutputLanguage always returns en for pr regardless of detected language (0.2438ms)
+Γ£ö getOutputLanguage always returns en for ticket regardless of detected language (0.315ms)
+Γ£ö getOutputLanguage returns detected language for meeting (0.3122ms)
+Γ£ö getOutputLanguage returns detected language for chat (0.1567ms)
+Γ£ö getOutputLanguage returns en for meeting when language is already en (0.14ms)
+Γ£ö learnUserLanguage calls POST /v1/language/user with correct headers and body (50.3249ms)
+Γ£ö learnUserLanguage does not throw when fetch rejects (3.0389ms)
+Γ£ö learnUserLanguage does not throw when API returns non-200 (0.8944ms)
+Γ£ö resolveLanguage returns audio language immediately when confidence >= 0.85 (0.8061ms)
+Γ£ö resolveLanguage returns text-detected language when confidence >= 0.90 (0.3648ms)
+Γ£ö resolveLanguage falls through to user profile when text confidence is low (4.8986ms)
+Γ£ö resolveLanguage falls through to default en when all fetches fail (3.8544ms)
+Γ£ö resolveLanguage returns en default when tenantId is empty and API_GATEWAY_URL is unset (0.3842ms)
+[routing-advisor] PrismaClientKnownRequestError: 
+Invalid `activeDb.taskExecutionRecord.groupBy()` invocation in
+D:\AgentFarm\apps\agent-runtime\src\routing-history-advisor.ts:52:73
+
+  49 const activeDb: DbHandle = db ?? (getPrisma() as unknown as DbHandle);
+  50 const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  51 
+ΓåÆ 52 const groups: GroupByRow[] = await activeDb.taskExecutionRecord.groupBy(
+Error validating datasource `db`: the URL must start with the protocol `prisma://` or `prisma+postgres://`
+    at ei.handleRequestError (D:\AgentFarm\node_modules\.pnpm\@prisma+client@6.19.3_prisma@6.19.3_typescript@5.9.3__typescript@5.9.3\node_modules\@prisma\client\src\runtime\RequestHandler.ts:228:13)
+    at ei.handleAndLogRequestError (D:\AgentFarm\node_modules\.pnpm\@prisma+client@6.19.3_prisma@6.19.3_typescript@5.9.3__typescript@5.9.3\node_modules\@prisma\client\src\runtime\RequestHandler.ts:174:12)
+    at ei.request (D:\AgentFarm\node_modules\.pnpm\@prisma+client@6.19.3_prisma@6.19.3_typescript@5.9.3__typescript@5.9.3\node_modules\@prisma\client\src\runtime\RequestHandler.ts:143:12)
+    at async a (D:\AgentFarm\node_modules\.pnpm\@prisma+client@6.19.3_prisma@6.19.3_typescript@5.9.3__typescript@5.9.3\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:833:24)
+    at async getRoutingAdvice (D:\AgentFarm\apps\agent-runtime\src\routing-history-advisor.ts:52:38)
+    at async <anonymous> (D:\AgentFarm\apps\agent-runtime\src\llm-decision-adapter.ts:1789:24)
+    at async <anonymous> (D:\AgentFarm\apps\agent-runtime\src\llm-decision-adapter.ts:1216:24)
+    at async TestContext.<anonymous> (D:\AgentFarm\apps\agent-runtime\src\llm-decision-adapter.test.ts:452:24)
+    at async Test.run (node:internal/test_runner/test:1110:7)
+    at async Test.processPendingSubtests (node:internal/test_runner/test:785:7) {
+  code: 'P6001',
+  meta: { modelName: 'TaskExecutionRecord' },
+  clientVersion: '6.19.3'
+}
+[routing-advisor] PrismaClientKnownRequestError: 
+Invalid `activeDb.taskExecutionRecord.groupBy()` invocation in
+D:\AgentFarm\apps\agent-runtime\src\routing-history-advisor.ts:52:73
+
+  49 const activeDb: DbHandle = db ?? (getPrisma() as unknown as DbHandle);
+  50 const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  51 
+ΓåÆ 52 const groups: GroupByRow[] = await activeDb.taskExecutionRecord.groupBy(
+Error validating datasource `db`: the URL must start with the protocol `prisma://` or `prisma+postgres://`
+    at ei.handleRequestError (D:\AgentFarm\node_modules\.pnpm\@prisma+client@6.19.3_prisma@6.19.3_typescript@5.9.3__typescript@5.9.3\node_modules\@prisma\client\src\runtime\RequestHandler.ts:228:13)
+    at ei.handleAndLogRequestError (D:\AgentFarm\node_modules\.pnpm\@prisma+client@6.19.3_prisma@6.19.3_typescript@5.9.3__typescript@5.9.3\node_modules\@prisma\client\src\runtime\RequestHandler.ts:174:12)
+    at ei.request (D:\AgentFarm\node_modules\.pnpm\@prisma+client@6.19.3_prisma@6.19.3_typescript@5.9.3__typescript@5.9.3\node_modules\@prisma\client\src\runtime\RequestHandler.ts:143:12)
+    at async a (D:\AgentFarm\node_modules\.pnpm\@prisma+client@6.19.3_prisma@6.19.3_typescript@5.9.3__typescript@5.9.3\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:833:24)
+    at async getRoutingAdvice (D:\AgentFarm\apps\agent-runtime\src\routing-history-advisor.ts:52:38)
+    at async <anonymous> (D:\AgentFarm\apps\agent-runtime\src\llm-decision-adapter.ts:1789:24)
+    at async <anonymous> (D:\AgentFarm\apps\agent-runtime\src\llm-decision-adapter.ts:1216:24)
+    at async TestContext.<anonymous> (D:\AgentFarm\apps\agent-runtime\src\llm-decision-adapter.test.ts:514:24)
+    at async Test.run (node:internal/test_runner/test:1110:7)
+    at async Test.processPendingSubtests (node:internal/test_runner/test:785:7) {
+  code: 'P6001',
+  meta: { modelName: 'TaskExecutionRecord' },
+  clientVersion: '6.19.3'
+}
+[routing-advisor] PrismaClientKnownRequestError: 
+Invalid `activeDb.taskExecutionRecord.groupBy()` invocation in
+D:\AgentFarm\apps\agent-runtime\src\routing-history-advisor.ts:52:73
+
+  49 const activeDb: DbHandle = db ?? (getPrisma() as unknown as DbHandle);
+  50 const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  51 
+ΓåÆ 52 const groups: GroupByRow[] = await activeDb.taskExecutionRecord.groupBy(
+Error validating datasource `db`: the URL must start with the protocol `prisma://` or `prisma+postgres://`
+    at ei.handleRequestError (D:\AgentFarm\node_modules\.pnpm\@prisma+client@6.19.3_prisma@6.19.3_typescript@5.9.3__typescript@5.9.3\node_modules\@prisma\client\src\runtime\RequestHandler.ts:228:13)
+    at ei.handleAndLogRequestError (D:\AgentFarm\node_modules\.pnpm\@prisma+client@6.19.3_prisma@6.19.3_typescript@5.9.3__typescript@5.9.3\node_modules\@prisma\client\src\runtime\RequestHandler.ts:174:12)
+    at ei.request (D:\AgentFarm\node_modules\.pnpm\@prisma+client@6.19.3_prisma@6.19.3_typescript@5.9.3__typescript@5.9.3\node_modules\@prisma\client\src\runtime\RequestHandler.ts:143:12)
+    at async a (D:\AgentFarm\node_modules\.pnpm\@prisma+client@6.19.3_prisma@6.19.3_typescript@5.9.3__typescript@5.9.3\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:833:24)
+    at async getRoutingAdvice (D:\AgentFarm\apps\agent-runtime\src\routing-history-advisor.ts:52:38)
+    at async <anonymous> (D:\AgentFarm\apps\agent-runtime\src\llm-decision-adapter.ts:1789:24)
+    at async <anonymous> (D:\AgentFarm\apps\agent-runtime\src\llm-decision-adapter.ts:1216:24)
+    at async TestContext.<anonymous> (D:\AgentFarm\apps\agent-runtime\src\llm-decision-adapter.test.ts:693:24)
+    at async Test.run (node:internal/test_runner/test:1110:7)
+    at async Test.processPendingSubtests (node:internal/test_runner/test:785:7) {
+  code: 'P6001',
+  meta: { modelName: 'TaskExecutionRecord' },
+  clientVersion: '6.19.3'
+}
+[routing-advisor] PrismaClientKnownRequestError: 
+Invalid `activeDb.taskExecutionRecord.groupBy()` invocation in
+D:\AgentFarm\apps\agent-runtime\src\routing-history-advisor.ts:52:73
+
+  49 const activeDb: DbHandle = db ?? (getPrisma() as unknown as DbHandle);
+  50 const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  51 
+ΓåÆ 52 const groups: GroupByRow[] = await activeDb.taskExecutionRecord.groupBy(
+Error validating datasource `db`: the URL must start with the protocol `prisma://` or `prisma+postgres://`
+    at ei.handleRequestError (D:\AgentFarm\node_modules\.pnpm\@prisma+client@6.19.3_prisma@6.19.3_typescript@5.9.3__typescript@5.9.3\node_modules\@prisma\client\src\runtime\RequestHandler.ts:228:13)
+    at ei.handleAndLogRequestError (D:\AgentFarm\node_modules\.pnpm\@prisma+client@6.19.3_prisma@6.19.3_typescript@5.9.3__typescript@5.9.3\node_modules\@prisma\client\src\runtime\RequestHandler.ts:174:12)
+    at ei.request (D:\AgentFarm\node_modules\.pnpm\@prisma+client@6.19.3_prisma@6.19.3_typescript@5.9.3__typescript@5.9.3\node_modules\@prisma\client\src\runtime\RequestHandler.ts:143:12)
+    at async a (D:\AgentFarm\node_modules\.pnpm\@prisma+client@6.19.3_prisma@6.19.3_typescript@5.9.3__typescript@5.9.3\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:833:24)
+    at async getRoutingAdvice (D:\AgentFarm\apps\agent-runtime\src\routing-history-advisor.ts:52:38)
+    at async <anonymous> (D:\AgentFarm\apps\agent-runtime\src\llm-decision-adapter.ts:1789:24)
+    at async <anonymous> (D:\AgentFarm\apps\agent-runtime\src\llm-decision-adapter.ts:1216:24)
+    at async TestContext.<anonymous> (D:\AgentFarm\apps\agent-runtime\src\llm-decision-adapter.test.ts:749:25)
+    at async Test.run (node:internal/test_runner/test:1110:7)
+    at async Test.processPendingSubtests (node:internal/test_runner/test:785:7) {
+  code: 'P6001',
+  meta: { modelName: 'TaskExecutionRecord' },
+  clientVersion: '6.19.3'
+}
+[routing-advisor] PrismaClientKnownRequestError: 
+Invalid `activeDb.taskExecutionRecord.groupBy()` invocation in
+D:\AgentFarm\apps\agent-runtime\src\routing-history-advisor.ts:52:73
+
+  49 const activeDb: DbHandle = db ?? (getPrisma() as unknown as DbHandle);
+  50 const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  51 
+ΓåÆ 52 const groups: GroupByRow[] = await activeDb.taskExecutionRecord.groupBy(
+Error validating datasource `db`: the URL must start with the protocol `prisma://` or `prisma+postgres://`
+    at ei.handleRequestError (D:\AgentFarm\node_modules\.pnpm\@prisma+client@6.19.3_prisma@6.19.3_typescript@5.9.3__typescript@5.9.3\node_modules\@prisma\client\src\runtime\RequestHandler.ts:228:13)
+    at ei.handleAndLogRequestError (D:\AgentFarm\node_modules\.pnpm\@prisma+client@6.19.3_prisma@6.19.3_typescript@5.9.3__typescript@5.9.3\node_modules\@prisma\client\src\runtime\RequestHandler.ts:174:12)
+    at ei.request (D:\AgentFarm\node_modules\.pnpm\@prisma+client@6.19.3_prisma@6.19.3_typescript@5.9.3__typescript@5.9.3\node_modules\@prisma\client\src\runtime\RequestHandler.ts:143:12)
+    at async a (D:\AgentFarm\node_modules\.pnpm\@prisma+client@6.19.3_prisma@6.19.3_typescript@5.9.3__typescript@5.9.3\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:833:24)
+    at async getRoutingAdvice (D:\AgentFarm\apps\agent-runtime\src\routing-history-advisor.ts:52:38)
+    at async <anonymous> (D:\AgentFarm\apps\agent-runtime\src\llm-decision-adapter.ts:1789:24)
+    at async <anonymous> (D:\AgentFarm\apps\agent-runtime\src\llm-decision-adapter.ts:1216:24)
+    at async TestContext.<anonymous> (D:\AgentFarm\apps\agent-runtime\src\llm-decision-adapter.test.ts:821:24)
+    at async Test.run (node:internal/test_runner/test:1110:7)
+    at async Test.processPendingSubtests (node:internal/test_runner/test:785:7) {
+  code: 'P6001',
+  meta: { modelName: 'TaskExecutionRecord' },
+  clientVersion: '6.19.3'
+}
+[routing-advisor] PrismaClientKnownRequestError: 
+Invalid `activeDb.taskExecutionRecord.groupBy()` invocation in
+D:\AgentFarm\apps\agent-runtime\src\routing-history-advisor.ts:52:73
+
+  49 const activeDb: DbHandle = db ?? (getPrisma() as unknown as DbHandle);
+  50 const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  51 
+ΓåÆ 52 const groups: GroupByRow[] = await activeDb.taskExecutionRecord.groupBy(
+Error validating datasource `db`: the URL must start with the protocol `prisma://` or `prisma+postgres://`
+    at ei.handleRequestError (D:\AgentFarm\node_modules\.pnpm\@prisma+client@6.19.3_prisma@6.19.3_typescript@5.9.3__typescript@5.9.3\node_modules\@prisma\client\src\runtime\RequestHandler.ts:228:13)
+    at ei.handleAndLogRequestError (D:\AgentFarm\node_modules\.pnpm\@prisma+client@6.19.3_prisma@6.19.3_typescript@5.9.3__typescript@5.9.3\node_modules\@prisma\client\src\runtime\RequestHandler.ts:174:12)
+    at ei.request (D:\AgentFarm\node_modules\.pnpm\@prisma+client@6.19.3_prisma@6.19.3_typescript@5.9.3__typescript@5.9.3\node_modules\@prisma\client\src\runtime\RequestHandler.ts:143:12)
+    at async a (D:\AgentFarm\node_modules\.pnpm\@prisma+client@6.19.3_prisma@6.19.3_typescript@5.9.3__typescript@5.9.3\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:833:24)
+    at async getRoutingAdvice (D:\AgentFarm\apps\agent-runtime\src\routing-history-advisor.ts:52:38)
+    at async <anonymous> (D:\AgentFarm\apps\agent-runtime\src\llm-decision-adapter.ts:1789:24)
+    at async <anonymous> (D:\AgentFarm\apps\agent-runtime\src\llm-decision-adapter.ts:1216:24)
+    at async <anonymous> (D:\AgentFarm\apps\agent-runtime\src\llm-decision-adapter.test.ts:869:33)
+    at async withCooldownStatePath (D:\AgentFarm\apps\agent-runtime\src\llm-decision-adapter.test.ts:44:9)
+    at async TestContext.<anonymous> (D:\AgentFarm\apps\agent-runtime\src\llm-decision-adapter.test.ts:835:5) {
+  code: 'P6001',
+  meta: { modelName: 'TaskExecutionRecord' },
+  clientVersion: '6.19.3'
+}
+[routing-advisor] PrismaClientKnownRequestError: 
+Invalid `activeDb.taskExecutionRecord.groupBy()` invocation in
+D:\AgentFarm\apps\agent-runtime\src\routing-history-advisor.ts:52:73
+
+  49 const activeDb: DbHandle = db ?? (getPrisma() as unknown as DbHandle);
+  50 const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  51 
+ΓåÆ 52 const groups: GroupByRow[] = await activeDb.taskExecutionRecord.groupBy(
+Error validating datasource `db`: the URL must start with the protocol `prisma://` or `prisma+postgres://`
+    at ei.handleRequestError (D:\AgentFarm\node_modules\.pnpm\@prisma+client@6.19.3_prisma@6.19.3_typescript@5.9.3__typescript@5.9.3\node_modules\@prisma\client\src\runtime\RequestHandler.ts:228:13)
+    at ei.handleAndLogRequestError (D:\AgentFarm\node_modules\.pnpm\@prisma+client@6.19.3_prisma@6.19.3_typescript@5.9.3__typescript@5.9.3\node_modules\@prisma\client\src\runtime\RequestHandler.ts:174:12)
+    at ei.request (D:\AgentFarm\node_modules\.pnpm\@prisma+client@6.19.3_prisma@6.19.3_typescript@5.9.3__typescript@5.9.3\node_modules\@prisma\client\src\runtime\RequestHandler.ts:143:12)
+    at async a (D:\AgentFarm\node_modules\.pnpm\@prisma+client@6.19.3_prisma@6.19.3_typescript@5.9.3__typescript@5.9.3\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:833:24)
+    at async getRoutingAdvice (D:\AgentFarm\apps\agent-runtime\src\routing-history-advisor.ts:52:38)
+    at async <anonymous> (D:\AgentFarm\apps\agent-runtime\src\llm-decision-adapter.ts:1789:24)
+    at async <anonymous> (D:\AgentFarm\apps\agent-runtime\src\llm-decision-adapter.ts:1216:24)
+    at async <anonymous> (D:\AgentFarm\apps\agent-runtime\src\llm-decision-adapter.test.ts:895:34)
+    at async withCooldownStatePath (D:\AgentFarm\apps\agent-runtime\src\llm-decision-adapter.test.ts:44:9)
+    at async TestContext.<anonymous> (D:\AgentFarm\apps\agent-runtime\src\llm-decision-adapter.test.ts:835:5) {
+  code: 'P6001',
+  meta: { modelName: 'TaskExecutionRecord' },
+  clientVersion: '6.19.3'
+}
+[token-budget] WARNING (80%) scope=default-tenant:ws-budget-warning:default-bot consumed=85/100
+[token-budget] EXHAUSTED scope=default-tenant:ws-budget-deny:default-bot consumed=100/100
+(node:82288) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Γ£ö createLlmDecisionResolverFromConfig selects speed_first OpenAI model for low-risk tasks (16.3353ms)
+Γ£ö createLlmDecisionResolverFromConfig parses payloadOverrides for workspace_subagent_spawn (6.0962ms)
+Γ£ö createLlmDecisionResolverFromConfig selects quality_first Azure deployment for high-complexity tasks (9.4811ms)
+Γ£ö createLlmDecisionResolverFromConfig supports github_models provider (6.3836ms)
+Γ£ö createLlmDecisionResolverFromConfig supports anthropic provider (5.1544ms)
+Γ£ö createLlmDecisionResolverFromConfig supports google provider (6.5007ms)
+Γ£ö createLlmDecisionResolverFromConfig auto mode falls back to next configured provider (120.2712ms)
+Γ£ö createLlmDecisionResolverFromConfig auto mode falls back from anthropic to google (38.5612ms)
+Γ£ö createLlmDecisionResolverFromConfig supports xai provider (6.6965ms)
+Γ£ö createLlmDecisionResolverFromConfig supports mistral provider (6.4936ms)
+Γ£ö createLlmDecisionResolverFromConfig supports together provider (6.8171ms)
+Γ£ö createLlmDecisionResolverFromConfig auto mode falls back from mistral to together (14.3799ms)
+Γ£ö health scoring: failed provider gets deprioritized in subsequent auto calls (20.7862ms)
+Γ£ö auto provider routing prioritizes lower quality penalty using composite score (9.1564ms)
+Γ£ö auto mode persists cooldown windows and records skipped cooldown reason on subsequent resolver (25.3327ms)
+Γ£ö token budget guard emits warning payload override near limit (10.9777ms)
+Γ£ö token budget guard hard-stops and routes to approval when exhausted (8.698ms)
+(node:119652) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Γ£ö executeLocalWorkspaceActionWithMemoryMirror invokes mirror callback (101.532ms)
+Γ£ö code_edit_patch replaces exact snippet in workspace file (80.9914ms)
+Γ£ö autonomous_loop applies fix attempt and passes on retry (346.2864ms)
+Γ£ö create_pr_from_workspace returns pr_title and pr_body as JSON (1602.0197ms)
+Γ£ö code_search_replace replaces matches using regex pattern (9.0585ms)
+Γ£ö code_search_replace returns error when pattern not found (6.3607ms)
+Γ£ö workspace_memory_write and workspace_memory_read persist key-value notes (13.8839ms)
+Γ£ö workspace_memory_read returns empty object when memory file does not exist (1.4056ms)
+Γ£ö workspace_memory_promote_request and decision enforce controlled org-memory promotion (21.9157ms)
+Γ£ö workspace_memory_promote_request blocks sensitive content with remediation guidance (9.1992ms)
+Γ£ö autonomous_loop output includes structured JSON with attempt records (72.1564ms)
+Γ£ö git_branch auto_name generates semantic branch name (499.4913ms)
+Γ£ö workspace_list_files returns JSON array of workspace file paths (15.0835ms)
+Γ£ö workspace_grep finds regex matches in workspace files (10.7584ms)
+Γ£ö workspace_read_file reads content of existing file (7.3176ms)
+Γ£ö workspace_read_file returns error for non-existent file (7.0233ms)
+Γ£ö workspace_read_file returns error if file exceeds 1 MB (9.3929ms)
+Γ£ö workspace_read_file blocks path traversal (6.5179ms)
+Γ£ö file_move renames a file within the workspace (12.2167ms)
+Γ£ö file_delete removes a file from the workspace (15.3355ms)
+Γ£ö workspace_scout returns project summary JSON (28.1472ms)
+Γ£ö git_log returns structured JSON commit history (529.8584ms)
+Γ£ö git_stash push and pop roundtrip (677.244ms)
+Γ£ö apply_patch applies a valid unified diff to workspace files (493.2001ms)
+Γ£ö workspace_find_references returns matches for a known symbol (5.1867ms)
+Γ£ö workspace_find_references returns error when symbol is missing (0.7014ms)
+Γ£ö workspace_rename_symbol errors when old_name or new_name missing (0.4093ms)
+Γ£ö workspace_rename_symbol renames a symbol across a file (9.942ms)
+Γ£ö workspace_extract_function errors when code_block not found in file (3.6958ms)
+Γ£ö workspace_go_to_definition finds a function definition (11.216ms)
+Γ£ö workspace_hover_type returns structured output for a symbol (1.3176ms)
+Γ£ö workspace_code_coverage returns ok when no test runner is available (6.4242ms)
+Γ£ö workspace_complexity_metrics returns a metrics object (11.1066ms)
+Γ£ö workspace_security_scan returns findings array (21.1801ms)
+Γ£ö workspace_analyze_imports runs without throwing (10.9389ms)
+Γ£ö workspace_bulk_refactor errors when pattern is missing (0.8107ms)
+Γ£ö workspace_bulk_refactor replaces text across multiple files (11.7539ms)
+Γ£ö workspace_atomic_edit_set errors when edits array is missing (1.8647ms)
+Γ£ö workspace_atomic_edit_set writes multiple files atomically (623.9854ms)
+Γ£ö workspace_generate_from_template substitutes template variables (16.3622ms)
+Γ£ö workspace_summarize_folder returns file count and language list (9.405ms)
+Γ£ö workspace_dependency_tree returns root and deps list (7.562ms)
+Γ£ö workspace_test_impact_analysis errors when changed_file is missing (1.133ms)
+Γ£ö workspace_test_impact_analysis returns affected test files (8.5791ms)
+Γ£ö workspace_search_docs returns stubbed results for a query (1.5259ms)
+Γ£ö workspace_search_docs errors when query is missing (1.4814ms)
+Γ£ö workspace_package_lookup returns package info from package.json (8.2734ms)
+Γ£ö workspace_ai_code_review returns stub review for a file (13.019ms)
+Γ£ö workspace_repl_start returns sessionId and language (2.5428ms)
+Γ£ö workspace_repl_execute errors when session_id or code is missing (2.4583ms)
+Γ£ö workspace_repl_stop returns stopped status (2.5847ms)
+Γ£ö workspace_debug_breakpoint errors when line is missing or zero (2.5033ms)
+Γ£ö workspace_debug_breakpoint sets breakpoint successfully (2.5113ms)
+Γ£ö workspace_profiler_run (node) profiles a JS target and returns ok (350.9185ms)
+Γ£ö workspace_profiler_run (python) profiles a .py target and returns ok (514.8393ms)
+Γ£ö workspace_profiler_run returns error when target is missing (3.1951ms)
+Γ£ö workspace_language_adapter_python detects Django from requirements.txt (26.3044ms)
+Γ£ö workspace_language_adapter_java detects Maven from pom.xml (84.7485ms)
+Γ£ö workspace_language_adapter_go detects Gin framework from go.mod (46.9725ms)
+Γ£ö workspace_language_adapter_csharp returns C# metadata (34.2314ms)
+Γ£ö workspace_dry_run_with_approval_chain returns changeset preview (509.6235ms)
+Γ£ö workspace_change_impact_report returns file and test impact counts (495.1762ms)
+Γ£ö workspace_rollback_to_checkpoint errors when checkpoint_ref is missing (0.8493ms)
+Γ£ö workspace_rollback_to_checkpoint rolls back to HEAD commit (470.3595ms)
+Γ£ö workspace_generate_test creates test stubs for exported symbols (15.6407ms)
+Γ£ö workspace_generate_test errors when file_path is missing (1.5288ms)
+Γ£ö workspace_format_code errors when file_path is missing (1.8371ms)
+Γ£ö workspace_format_code runs without throwing (prettier may not be available) (12.2179ms)
+Γ£ö workspace_version_bump patches version in package.json (11.2505ms)
+Γ£ö workspace_version_bump minor resets patch to 0 (7.0929ms)
+Γ£ö workspace_version_bump errors on invalid bump_type (1.7223ms)
+Γ£ö workspace_changelog_generate produces CHANGELOG from git log (631.3568ms)
+Γ£ö workspace_git_blame returns structured blame for a committed file (441.9576ms)
+Γ£ö workspace_git_blame errors when file_path is missing (0.8189ms)
+Γ£ö workspace_outline_symbols lists exported symbols in a TypeScript file (4.9178ms)
+Γ£ö workspace_outline_symbols errors when file_path is missing (0.6304ms)
+Γ£ö workspace_create_pr returns assembled PR metadata from git state (540.0205ms)
+Γ£ö workspace_run_ci_checks executes command sequence (104.8861ms)
+Γ£ö workspace_fix_test_failures applies patches and improves test result (140.1266ms)
+Γ£ö workspace_security_fix_suggest identifies risky patterns (9.4279ms)
+Γ£ö workspace_pr_review_prepare returns changed files and checklist (610.0287ms)
+Γ£ö workspace_dependency_upgrade_plan reads package.json and creates plan (22.0079ms)
+Γ£ö workspace_release_notes_generate writes release notes file (685.0955ms)
+Γ£ö workspace_incident_patch_pack creates rollback metadata (787.4763ms)
+Γ£ö workspace_memory_profile writes and reads profile state (13.0796ms)
+Γ£ö workspace_autonomous_plan_execute runs plan and verification command (66.4842ms)
+Γ£ö workspace_policy_preflight returns approval route for medium/high actions (0.8508ms)
+Γ£ö workspace_connector_test returns pass for supported connector (0.4914ms)
+Γ£ö workspace_connector_test flags unsupported connector (0.3582ms)
+Γ£ö workspace_pr_auto_assign returns suggested reviewers from CODEOWNERS (7.9149ms)
+Γ£ö workspace_ci_watch runs ci_command and returns structured result (43.4028ms)
+Γ£ö workspace_explain_code returns structural summary for file (7.45ms)
+Γ£ö workspace_add_docstring detects undocumented exports in dry_run (7.2548ms)
+Γ£ö workspace_refactor_plan generates structured plan with steps (4.6205ms)
+Γ£ö workspace_semantic_search finds matches with context (9.35ms)
+Γ£ö workspace_diff_preview returns no-write diff summary (5.2756ms)
+Γ£ö workspace_approval_status returns pending for unknown taskId (1.9324ms)
+Γ£ö workspace_audit_export writes evidence bundle json (23.3173ms)
+Γ£ö workspace_browser_open returns launch plan in dry_run mode (2.9874ms)
+Γ£ö workspace_browser_open blocks non-http protocols (1.7058ms)
+Γ£ö workspace_app_launch returns launch plan for allowlisted app in dry_run (0.7829ms)
+Γ£ö workspace_meeting_join enforces meeting host allowlist (1.8482ms)
+Γ£ö workspace_app_launch respects AF_LOCAL_ALLOWED_APPS (1.6188ms)
+Γ£ö workspace_meeting_join respects AF_LOCAL_ALLOWED_MEETING_HOSTS (3.9715ms)
+Γ£ö workspace_meeting_speak returns invocation plan in dry_run mode (4.188ms)
+Γ£ö workspace_meeting_speak builds interview script when mode is interview (1.8165ms)
+Γ£ö workspace_meeting_speak requires text, script, or interview questions (0.6895ms)
+Γ£ö workspace_meeting_interview_live analyzes transcript and proposes follow-up (2.1364ms)
+Γ£ö workspace_meeting_interview_live emits partial transcript events from transcript_chunks (1.9194ms)
+Γ£ö workspace_meeting_interview_live returns final recommendation summary when finalize=true (26.847ms)
+Γ£ö workspace_meeting_interview_live requires current_question (1.6516ms)
+Γ£ö workspace_audit_export includes desktop action approval metadata (14.782ms)
+Γ£ö workspace_subagent_spawn returns dry_run plan with agentfarm engine (6.6621ms)
+Γ£ö workspace_subagent_spawn dry_run respects explicit test_command and max_attempts (4.2223ms)
+Γ£ö workspace_subagent_spawn dry_run infers initial and fix plans when none are provided (13.2043ms)
+Γ£ö workspace_subagent_spawn dry_run auto-selects azure deployment specialist profile (8.356ms)
+Γ£ö workspace_subagent_spawn dry_run accepts explicit specialist_profile and plan steps (7.0552ms)
+Γ£ö workspace_subagent_spawn ignores unknown agent param (no external CLI) (8.2862ms)
+Γ£ö workspace_subagent_spawn requires prompt (0.2173ms)
+Γ£ö workspace_github_issue_triage classifies issues without fetching GitHub when payload is complete (0.9445ms)
+Γ£ö workspace_github_pr_status requires pr_number (0.0942ms)
+Γ£ö workspace_github_pr_status rejects non-positive pr_number (0.0658ms)
+Γ£ö workspace_github_issue_fix dry_run returns issue prompt plan (0.149ms)
+Γ£ö workspace_github_issue_fix requires issue_number (0.0747ms)
+Γ£ö workspace_azure_deploy_plan returns a first-class deployment planner response (7.621ms)
+Γ£ö workspace_slack_notify requires SLACK_BOT_TOKEN env var (0.4276ms)
+Γ£ö workspace_slack_notify requires channel (0.3139ms)
+Γ£ö workspace_slack_notify requires message (0.2832ms)
+[meeting] VoxCPM2 synthesized 11 bytes for session sess-3
+[meeting] VoxCPM2 synthesized 11 bytes for session sess-pipeline
+Γû╢ startMeetingSession
+  Γ£ö posts correct payload and returns sessionId (44.169ms)
+Γ£ö startMeetingSession (45.9962ms)
+Γû╢ transcribeMeeting
+  Γ£ö calls voicebox transcribeAudio and patches session status (4.2159ms)
+Γ£ö transcribeMeeting (4.8416ms)
+Γû╢ summarizeMeeting
+  Γ£ö calls Anthropic API, parses JSON, and patches session with summary (5.2958ms)
+Γ£ö summarizeMeeting (5.9376ms)
+Γû╢ distributeMeetingSummary
+  Γ£ö calls ProviderExecutor with slack send_message and patches status to done (5.8732ms)
+Γ£ö distributeMeetingSummary (6.4191ms)
+Γû╢ runFullMeetingPipeline
+  Γ£ö orchestrates all steps in order and returns sessionId + summary (5.8282ms)
+  Γ£ö patches status to error and rethrows when Anthropic fails (3.4662ms)
+Γ£ö runFullMeetingPipeline (10.0996ms)
+Γû╢ MultiAgentOrchestrator: construction
+  Γ£ö creates an instance with default built-in agents (1.5446ms)
+  Γ£ö exports globalOrchestrator singleton (0.3888ms)
+  Γ£ö can register a custom agent (0.3909ms)
+Γ£ö MultiAgentOrchestrator: construction (4.037ms)
+Γû╢ MultiAgentOrchestrator: selectAgents
+  Γ£ö returns agents matching a single capability (0.6667ms)
+  Γ£ö returns agents matching multiple required capabilities (0.3289ms)
+  Γ£ö returns empty array when no agent matches (0.1905ms)
+  Γ£ö sorts by affinity_weight descending (0.2631ms)
+Γ£ö MultiAgentOrchestrator: selectAgents (1.9337ms)
+Γû╢ MultiAgentOrchestrator: dispatch dry_run
+  Γ£ö completes a dry_run dispatch without errors (8.411ms)
+  Γ£ö returns aggregated_output keyed by skill_id (0.9019ms)
+  Γ£ö produces audit_trail entries (0.6473ms)
+  Γ£ö returns ok=false when no agents match (0.3802ms)
+  Γ£ö returns total_duration_ms as a number (0.3869ms)
+Γ£ö MultiAgentOrchestrator: dispatch dry_run (11.33ms)
+Γû╢ MultiAgentOrchestrator: aggregation strategies
+  Γ£ö vote aggregation returns a result (0.7173ms)
+  Γ£ö merge aggregation returns a result (0.5013ms)
+Γ£ö MultiAgentOrchestrator: aggregation strategies (1.4133ms)
+Γû╢ isValidPackageName
+  Γ£ö accepts standard names (1.7359ms)
+  Γ£ö rejects names with shell metacharacters (0.4473ms)
+Γ£ö isValidPackageName (4.448ms)
+Γû╢ safePackageOperation
+  Γ£ö returns success record on install (5.0223ms)
+  Γ£ö returns failure record when runner exits non-zero (0.7057ms)
+  Γ£ö detects high-severity vulnerabilities after install (0.8855ms)
+  Γ£ö classifies uninstall as high risk (0.4604ms)
+  Γ£ö throws on invalid package name before touching shell (1.0914ms)
+  Γ£ö marks dev installs correctly (0.4776ms)
+Γ£ö safePackageOperation (9.4848ms)
+(node:20768) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Γ£ö buildCloseOutComment includes task id and summary (2.732ms)
+Γ£ö buildCloseOutComment reflects failure status (0.3521ms)
+Γ£ö buildCloseOutSummary returns a non-empty string (0.2473ms)
+Γ£ö buildPRDescription returns a formatted markdown string (0.3967ms)
+Γ£ö buildPRDescription includes Jira key when present (0.2079ms)
+Γ£ö postTaskCloseOut skips Jira when no jira_issue_key is present (0.4979ms)
+Γ£ö postTaskCloseOut skips Slack when notify_on_complete is not true (0.1881ms)
+Γ£ö postTaskCloseOut skips GitHub PR update when no pr_url or pr_number (0.1735ms)
+Γ£ö postTaskCloseOut resolves even when all close-out steps are no-ops (0.2378ms)
+[sse-publish] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async publishTaskProgress (D:\AgentFarm\apps\agent-runtime\src\task-progress-publisher.ts:26:9)
+    at async postTaskCloseOutV2 (D:\AgentFarm\apps\agent-runtime\src\post-task-closeout.ts:383:9)
+    at async TestContext.<anonymous> (D:\AgentFarm\apps\agent-runtime\src\post-task-closeout.test.ts:128:5)
+    at async Test.run (node:internal/test_runner/test:1110:7)
+    at async Test.processPendingSubtests (node:internal/test_runner/test:785:7) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[sse-publish] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async publishTaskProgress (D:\AgentFarm\apps\agent-runtime\src\task-progress-publisher.ts:26:9)
+    at async postTaskCloseOutV2 (D:\AgentFarm\apps\agent-runtime\src\post-task-closeout.ts:440:13)
+    at async TestContext.<anonymous> (D:\AgentFarm\apps\agent-runtime\src\post-task-closeout.test.ts:128:5)
+    at async Test.run (node:internal/test_runner/test:1110:7)
+    at async Test.processPendingSubtests (node:internal/test_runner/test:785:7) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö postTaskCloseOutV2 dispatches Jira create_comment when jira_issue_key is present (58.3205ms)
+[sse-publish] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async publishTaskProgress (D:\AgentFarm\apps\agent-runtime\src\task-progress-publisher.ts:26:9)
+    at async postTaskCloseOutV2 (D:\AgentFarm\apps\agent-runtime\src\post-task-closeout.ts:383:9)
+    at async TestContext.<anonymous> (D:\AgentFarm\apps\agent-runtime\src\post-task-closeout.test.ts:146:5)
+    at async Test.run (node:internal/test_runner/test:1110:7)
+    at async Test.processPendingSubtests (node:internal/test_runner/test:785:7) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[sse-publish] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async publishTaskProgress (D:\AgentFarm\apps\agent-runtime\src\task-progress-publisher.ts:26:9)
+    at async postTaskCloseOutV2 (D:\AgentFarm\apps\agent-runtime\src\post-task-closeout.ts:440:13)
+    at async TestContext.<anonymous> (D:\AgentFarm\apps\agent-runtime\src\post-task-closeout.test.ts:146:5)
+    at async Test.run (node:internal/test_runner/test:1110:7)
+    at async Test.processPendingSubtests (node:internal/test_runner/test:785:7) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö postTaskCloseOutV2 dispatches Teams send_message when notify_on_complete is true (10.4086ms)
+[sse-publish] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async publishTaskProgress (D:\AgentFarm\apps\agent-runtime\src\task-progress-publisher.ts:26:9)
+    at async postTaskCloseOutV2 (D:\AgentFarm\apps\agent-runtime\src\post-task-closeout.ts:383:9)
+    at async TestContext.<anonymous> (D:\AgentFarm\apps\agent-runtime\src\post-task-closeout.test.ts:163:5)
+    at async Test.run (node:internal/test_runner/test:1110:7)
+    at async Test.processPendingSubtests (node:internal/test_runner/test:785:7) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[sse-publish] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async publishTaskProgress (D:\AgentFarm\apps\agent-runtime\src\task-progress-publisher.ts:26:9)
+    at async postTaskCloseOutV2 (D:\AgentFarm\apps\agent-runtime\src\post-task-closeout.ts:440:13)
+    at async TestContext.<anonymous> (D:\AgentFarm\apps\agent-runtime\src\post-task-closeout.test.ts:163:5)
+    at async Test.run (node:internal/test_runner/test:1110:7)
+    at async Test.processPendingSubtests (node:internal/test_runner/test:785:7) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö postTaskCloseOutV2 dispatches GitHub create_pr_comment when pr_number is set (12.6257ms)
+[sse-publish] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async publishTaskProgress (D:\AgentFarm\apps\agent-runtime\src\task-progress-publisher.ts:26:9)
+    at async postTaskCloseOutV2 (D:\AgentFarm\apps\agent-runtime\src\post-task-closeout.ts:383:9)
+    at async TestContext.<anonymous> (D:\AgentFarm\apps\agent-runtime\src\post-task-closeout.test.ts:181:5)
+    at async Test.run (node:internal/test_runner/test:1110:7)
+    at async Test.processPendingSubtests (node:internal/test_runner/test:785:7) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[sse-publish] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async publishTaskProgress (D:\AgentFarm\apps\agent-runtime\src\task-progress-publisher.ts:26:9)
+    at async postTaskCloseOutV2 (D:\AgentFarm\apps\agent-runtime\src\post-task-closeout.ts:440:13)
+    at async TestContext.<anonymous> (D:\AgentFarm\apps\agent-runtime\src\post-task-closeout.test.ts:181:5)
+    at async Test.run (node:internal/test_runner/test:1110:7)
+    at async Test.processPendingSubtests (node:internal/test_runner/test:785:7) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö postTaskCloseOutV2 skips Jira dispatch when jira_issue_key is absent (8.0103ms)
+[sse-publish] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async publishTaskProgress (D:\AgentFarm\apps\agent-runtime\src\task-progress-publisher.ts:26:9)
+    at async postTaskCloseOutV2 (D:\AgentFarm\apps\agent-runtime\src\post-task-closeout.ts:383:9)
+    at async TestContext.<anonymous> (D:\AgentFarm\apps\agent-runtime\src\post-task-closeout.test.ts:195:5)
+    at async Test.run (node:internal/test_runner/test:1110:7)
+    at async Test.processPendingSubtests (node:internal/test_runner/test:785:7) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[sse-publish] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async publishTaskProgress (D:\AgentFarm\apps\agent-runtime\src\task-progress-publisher.ts:26:9)
+    at async postTaskCloseOutV2 (D:\AgentFarm\apps\agent-runtime\src\post-task-closeout.ts:440:13)
+    at async TestContext.<anonymous> (D:\AgentFarm\apps\agent-runtime\src\post-task-closeout.test.ts:195:5)
+    at async Test.run (node:internal/test_runner/test:1110:7)
+    at async Test.processPendingSubtests (node:internal/test_runner/test:785:7) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö postTaskCloseOutV2 skips Teams dispatch when notify_on_complete is absent (11.0904ms)
+[sse-publish] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async publishTaskProgress (D:\AgentFarm\apps\agent-runtime\src\task-progress-publisher.ts:26:9)
+    at async postTaskCloseOutV2 (D:\AgentFarm\apps\agent-runtime\src\post-task-closeout.ts:383:9)
+    at async waitForActual (node:assert:646:5)
+    at async strict.doesNotReject (node:assert:789:33)
+    at async TestContext.<anonymous> (D:\AgentFarm\apps\agent-runtime\src\post-task-closeout.test.ts:210:5)
+    at async Test.run (node:internal/test_runner/test:1110:7)
+    at async Test.processPendingSubtests (node:internal/test_runner/test:785:7) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[sse-publish] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async publishTaskProgress (D:\AgentFarm\apps\agent-runtime\src\task-progress-publisher.ts:26:9)
+    at async postTaskCloseOutV2 (D:\AgentFarm\apps\agent-runtime\src\post-task-closeout.ts:463:9)
+    at async waitForActual (node:assert:646:5)
+    at async strict.doesNotReject (node:assert:789:33)
+    at async TestContext.<anonymous> (D:\AgentFarm\apps\agent-runtime\src\post-task-closeout.test.ts:210:5)
+    at async Test.run (node:internal/test_runner/test:1110:7)
+    at async Test.processPendingSubtests (node:internal/test_runner/test:785:7) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö postTaskCloseOutV2 falls back to env-var path when connectorMeta is absent (10.8211ms)
+[sse-publish] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async publishTaskProgress (D:\AgentFarm\apps\agent-runtime\src\task-progress-publisher.ts:26:9)
+    at async postTaskCloseOutV2 (D:\AgentFarm\apps\agent-runtime\src\post-task-closeout.ts:383:9)
+    at async waitForActual (node:assert:646:5)
+    at async strict.doesNotReject (node:assert:789:33)
+    at async TestContext.<anonymous> (D:\AgentFarm\apps\agent-runtime\src\post-task-closeout.test.ts:220:5)
+    at async Test.run (node:internal/test_runner/test:1110:7)
+    at async Test.processPendingSubtests (node:internal/test_runner/test:785:7) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[sse-publish] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async publishTaskProgress (D:\AgentFarm\apps\agent-runtime\src\task-progress-publisher.ts:26:9)
+    at async postTaskCloseOutV2 (D:\AgentFarm\apps\agent-runtime\src\post-task-closeout.ts:463:9)
+    at async waitForActual (node:assert:646:5)
+    at async strict.doesNotReject (node:assert:789:33)
+    at async TestContext.<anonymous> (D:\AgentFarm\apps\agent-runtime\src\post-task-closeout.test.ts:220:5)
+    at async Test.run (node:internal/test_runner/test:1110:7)
+    at async Test.processPendingSubtests (node:internal/test_runner/test:785:7) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö postTaskCloseOutV2 falls back to env-var path when executor is absent (10.9276ms)
+[sse-publish] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async publishTaskProgress (D:\AgentFarm\apps\agent-runtime\src\task-progress-publisher.ts:26:9)
+    at async postTaskCloseOutV2 (D:\AgentFarm\apps\agent-runtime\src\post-task-closeout.ts:383:9)
+    at async TestContext.<anonymous> (D:\AgentFarm\apps\agent-runtime\src\post-task-closeout.test.ts:237:20)
+    at async Test.run (node:internal/test_runner/test:1110:7)
+    at async Test.processPendingSubtests (node:internal/test_runner/test:785:7) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[sse-publish] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async publishTaskProgress (D:\AgentFarm\apps\agent-runtime\src\task-progress-publisher.ts:26:9)
+    at async postTaskCloseOutV2 (D:\AgentFarm\apps\agent-runtime\src\post-task-closeout.ts:440:13)
+    at async TestContext.<anonymous> (D:\AgentFarm\apps\agent-runtime\src\post-task-closeout.test.ts:237:20)
+    at async Test.run (node:internal/test_runner/test:1110:7)
+    at async Test.processPendingSubtests (node:internal/test_runner/test:785:7) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö postTaskCloseOutV2 swallows executor errors and resolves (14.0401ms)
+Γ£ö returns empty string for a non-trigger action type (2.624ms)
+Γ£ö runs scout actions for a trigger action type (1.3091ms)
+Γ£ö caps output at 4000 characters (0.7239ms)
+Γ£ö handles executeAction failure gracefully and returns empty string (0.5832ms)
+Γ£ö SCOUT_TRIGGER_ACTIONS includes expected action types (0.3621ms)
+[prisma-memory-store] writeMemoryAfterTask failed: Error: prisma_create_failed
+    at TestContext.<anonymous> (D:\AgentFarm\apps\agent-runtime\src\prisma-memory-store.test.ts:81:50)
+    at Test.runInAsyncScope (node:async_hooks:214:14)
+    at Test.run (node:internal/test_runner/test:1103:25)
+    at Test.processPendingSubtests (node:internal/test_runner/test:785:18)
+    at Test.postRun (node:internal/test_runner/test:1232:19)
+    at Test.run (node:internal/test_runner/test:1160:12)
+    at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3)
+Γ£ö writeMemoryAfterTask calls agentShortTermMemory.create once with correct fields (2.6499ms)
+Γ£ö writeMemoryAfterTask resolves without throwing when create rejects (8.7891ms)
+Γ£ö readMemoryForTask returns safe empty defaults when findMany rejects (2.5794ms)
+Γ£ö readMemoryForTask computes approvalRejectionRate = 0.5 for 2 rejected of 4 (1.571ms)
+Γ£ö readMemoryForTask returns mostCommonConnectors with most frequent first (0.8523ms)
+Γ£ö getRoleSystemPrompt with repoName appends repo scope line (0.3716ms)
+Γ£ö getRoleSystemPrompt without repoName does not include repo scope line (0.2712ms)
+Γ£ö scoreText: exact match of full phrase adds 0.5 base bonus (1.4549ms)
+Γ£ö scoreText: zero-score rows are filtered from results (0.8365ms)
+Γ£ö scoreText: score is capped at 1.0 even with recency boost (0.7773ms)
+Γ£ö searchMemory: returns short results when types=[short] (0.5486ms)
+Γ£ö searchMemory: repoName filter is passed in where clause (0.4182ms)
+Γ£ö searchMemory: results sorted by score descending (0.5018ms)
+Γ£ö searchMemory: limit is respected (0.4206ms)
+Γ£ö searchMemory: recency boost lifts score for rows within 7 days (0.4108ms)
+Γ£ö searchMemory: repo type searches key and JSON-stringified value (0.5035ms)
+Γû╢ provider-state-persistence: Failover resilience
+  Γ£ö tracks provider health status (2.29ms)
+  Γ£ö records failures and applies cooldown (0.6821ms)
+  Γ£ö increases cooldown on repeated failures (0.6222ms)
+  Γ£ö calculates health score based on failure rate (0.4704ms)
+  Γ£ö clears cooldown and resets failures on success (0.5466ms)
+  Γ£ö checks cooldown status correctly (0.5718ms)
+  Γ£ö returns all provider states (0.5818ms)
+  Γ£ö applies exponential backoff for repeated failures (0.4511ms)
+Γ£ö provider-state-persistence: Failover resilience (8.5962ms)
+Γû╢ structured-telemetry-collector: Observability
+  Γ£ö creates correlation context (1.3357ms)
+  Γ£ö logs entries with structured context (1.0338ms)
+  Γ£ö records metrics (2.3198ms)
+  Γ£ö auto-flushes on batch size (0.5811ms)
+  Γ£ö supports shutdown and cleanup (0.2945ms)
+Γ£ö structured-telemetry-collector: Observability (6.325ms)
+Γû╢ RepoKnowledgeGraph: construction
+  Γ£ö creates a new instance without errors (1.7353ms)
+  Γ£ö exports globalKnowledgeGraph singleton (0.396ms)
+Γ£ö RepoKnowledgeGraph: construction (4.2603ms)
+Γû╢ RepoKnowledgeGraph: symbol queries on empty graph
+  Γ£ö findSymbol returns empty array for unknown name (1.5969ms)
+  Γ£ö searchSymbols returns empty array on empty graph (0.3809ms)
+  Γ£ö findCallers returns empty array (0.287ms)
+  Γ£ö findCallees returns empty array (0.2397ms)
+  Γ£ö getCallGraph returns empty object (0.307ms)
+  Γ£ö getSnapshot returns valid shape with empty arrays (2.772ms)
+Γ£ö RepoKnowledgeGraph: symbol queries on empty graph (6.377ms)
+Γû╢ RepoKnowledgeGraph: indexWorkspace
+  Γ£ö indexes a small TypeScript directory and returns a snapshot (4021.4998ms)
+  Γ£ö finds exported symbols after indexing (1941.2455ms)
+Γ£ö RepoKnowledgeGraph: indexWorkspace (5963.3291ms)
+Γû╢ RepoKnowledgeGraph: loadSnapshot
+  Γ£ö returns null when no snapshot exists yet (fresh instance) (4.2539ms)
+Γ£ö RepoKnowledgeGraph: loadSnapshot (4.4044ms)
+Γû╢ RepoKnowledgeGraph: recordTaskOutcome / loadTaskOutcomes
+  Γ£ö records and persists a task outcome (8.8816ms)
+  Γ£ö crystallize records outcome with helper method (4.2745ms)
+Γ£ö RepoKnowledgeGraph: recordTaskOutcome / loadTaskOutcomes (13.4847ms)
+Γû╢ RepoKnowledgeGraph: suggestNextActions
+  Γ£ö suggests coverage-related skills for testing context (0.3417ms)
+  Γ£ö suggests PR skills for PR review context (0.0575ms)
+  Γ£ö suggests security skills for security context (0.0535ms)
+  Γ£ö returns at most 5 suggestions (0.0425ms)
+  Γ£ö suggestions have confidence between 0 and 1 (0.0552ms)
+  Γ£ö returns empty array for unrecognized context (0.037ms)
+Γ£ö RepoKnowledgeGraph: suggestNextActions (0.6955ms)
+Γ£ö getRoleSystemPrompt returns a non-default prompt for a known role (2.0411ms)
+Γ£ö getRoleSystemPrompt returns the default fallback for an unknown role (0.5156ms)
+Γ£ö getRoleSystemPrompt returns the default fallback for an empty string (2.0988ms)
+Γ£ö getRoleSystemPrompt is a function (0.4626ms)
+Γ£ö ROLE_SYSTEM_PROMPTS covers all 12 expected roles (0.4994ms)
+[obs] No exporter configured for service "agent-runtime" ΓÇö using ConsoleSpanExporter
+(node:47112) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Γ£ö startup starts worker loop and health/ready is true when dependencies are reachable (378.2016ms)
+Γ£ö startup accepts AGENTFARM_* fallback runtime inputs and resolves contract metadata (22.1171ms)
+Γ£ö startup returns already_started on duplicate startup call (11.7749ms)
+Γ£ö startup fails with runtime_init_failed when required runtime config is missing (11.3182ms)
+Γ£ö health/ready transitions active to degraded when dependencies become unreachable (21.9261ms)
+Γ£ö kill endpoint engages graceful stop and reaches stopped state (75.1944ms)
+Γ£ö kill endpoint is idempotent and returns kill_already_engaged after first invocation (11.2238ms)
+Γ£ö tasks intake rejects before startup and accepts after startup with processing observable (73.6404ms)
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö runtime writes task memory after processing approval-required task (83.6706ms)
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö runtime continues processing when memory write fails (138.3897ms)
+Γ£ö runtime injects learned code review patterns into memory context before llm resolution (35.6383ms)
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö runtime enriches task payload with vision analysis before llm resolution (32.8938ms)
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö runtime fans out progress milestones to external connector sinks (37.0522ms)
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö runtime worker loop dispatches multiple tasks in parallel when configured (46.753ms)
+Γ£ö runtime quality signal endpoints ingest evaluator signals and return summary metrics (15.8399ms)
+Γ£ö runtime quality signal endpoint accepts taxonomy-based signals with model metadata (28.7213ms)
+Γ£ö runtime quality signal endpoint rejects invalid source (21.9433ms)
+[RuntimeAudit] Failed to persist browser action audit for action act_ses_session-observe-1_000: 
+Invalid `client.agentSession.upsert()` invocation in
+D:\AgentFarm\apps\agent-runtime\src\runtime-audit-integration.ts:134:31
+
+  131     context: AuditContext,
+  132 ): Promise<void> {
+  133     const client = prisma as AuditPrismaClient;
+ΓåÆ 134     await client.agentSession.upsert(
+Error validating datasource `db`: the URL must start with the protocol `prisma://` or `prisma+postgres://`
+Γ£ö runtime observability replay endpoint returns dom hash, network summaries, and evidence bundle refs (88.8307ms)
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö runtime correctness endpoint maps verification counts to normalized quality score (24.2234ms)
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö runtime correctness endpoint rejects missing correctness inputs (23.996ms)
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö task lease claim supports idempotent retries and conflict protection (34.3998ms)
+Γ£ö task lease renew and release lifecycle works with lease validation (34.6846ms)
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö lease claim race allows exactly one winner across 10 concurrent attempts (17.8136ms)
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö enforce task lease mode requires claim before worker processes queued tasks (212.1419ms)
+Γ£ö tasks intake returns 400 when task_id is missing after startup (9.9804ms)
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö high-risk task is classified and routed to approval queue (74.6875ms)
+{
+  resource: {
+    attributes: {
+      'host.name': 'PHYDLP-0040',
+      'host.arch': 'amd64',
+      'host.id': 'b083d860-7a33-4a1b-b880-3c45a7333406',
+      'process.pid': 47112,
+      'process.executable.name': 'C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe',
+      'process.executable.path': 'C:\\Program Files\\nodejs\\node.exe',
+      'process.command_args': [
+        'C:\\Program Files\\nodejs\\node.exe',
+        '--use-largepages=off',
+        '--trace-event-file-pattern=node_trace.${rotation}.log',
+        '--v8-pool-size=4',
+        '--node-snapshot',
+        '--cpu-prof-interval=1000',
+        '--report-signal=SIGUSR2',
+        '--tls-cipher-list=TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_128_GCM_SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA256:ECDHE-RSA-AES256-SHA384:DHE-RSA-AES256-SHA384:ECDHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA256:HIGH:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!PSK:!SRP:!CAMELLIA',
+        '--secure-heap=0',
+        '--secure-heap-min=2',
+        '--stack-trace-limit=10',
+        '--test-isolation=process',
+        '--network-family-autoselection-attempt-timeout=250',
+        '--heapsnapshot-near-heap-limit=0',
+        '--heap-prof-interval=524288',
+        '--max-http-header-size=16384',
+        '--test-concurrency=0',
+        '--test-timeout=0',
+        '--test-coverage-branches=0',
+        '--test-coverage-functions=0',
+        '--test-coverage-lines=0',
+        '--watch-kill-signal=SIGTERM',
+        '--require=D:\\AgentFarm\\node_modules\\.pnpm\\tsx@4.21.0\\node_modules\\tsx\\dist\\preflight.cjs',
+        '--import=file:///D:/AgentFarm/node_modules/.pnpm/tsx@4.21.0/node_modules/tsx/dist/loader.mjs',
+        '--inspect-port=127.0.0.1:9229',
+        '--inspect-publish-uid=stderr,http',
+        '--require',
+        'D:\\AgentFarm\\node_modules\\.pnpm\\tsx@4.21.0\\node_modules\\tsx\\dist\\preflight.cjs',
+        '--import',
+        'file:///D:/AgentFarm/node_modules/.pnpm/tsx@4.21.0/node_modules/tsx/dist/loader.mjs',
+        'D:\\AgentFarm\\apps\\agent-runtime\\src\\runtime-server.test.ts'
+      ],
+      'process.runtime.version': '24.13.1',
+      'process.runtime.name': 'nodejs',
+      'process.runtime.description': 'Node.js',
+      'process.command': 'D:\\AgentFarm\\apps\\agent-runtime\\src\\runtime-server.test.ts',
+      'process.owner': 'HariSivaSaiKumarMada',
+      'service.name': 'agent-runtime'
+    }
+  },
+  instrumentationScope: {
+    name: 'agentfarm.agent.action',
+    version: undefined,
+    schemaUrl: undefined
+  },
+  traceId: 'bb0bc704180bc46c818e5645fb22e8c5',
+  parentSpanContext: undefined,
+  traceState: undefined,
+  name: 'agent.action',
+  id: 'ac3f484b953b1eca',
+  kind: 0,
+  timestamp: 1778538944836000,
+  duration: 526.9,
+  attributes: {
+    'task.id': 'task-observe-1',
+    'agent.id': 'bot_test',
+    'workspace.id': 'ws_test',
+    'action.type': 'workspace_browser_open',
+    'action.success': true,
+    'action.duration_ms': 1
+  },
+  status: { code: 0 },
+  events: [],
+  links: []
+}
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö approval-required task triggers automatic approval intake call (5466.5434ms)
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö approved local edit task fails when post-change quality gate fails (93.8155ms)
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö approval intake retries transient failures with exponential backoff then succeeds (5525.0433ms)
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö approval intake does not retry non-transient failures (5481.9797ms)
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö approval-required tasks auto-escalate after timeout threshold (116.3449ms)
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö approval decision endpoint resolves pending approval and removes it from queue (99.7161ms)
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö approval decision endpoint resolves escalated approval and tracks rejected decision (88.4315ms)
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö approval decision accepts selected what-if option and logs it (100.253ms)
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö approval decision rejects unknown selected option ids (78.7486ms)
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö approval batch route groups pending approvals by risk and action type (81.3368ms)
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö approval batch decision resolves all tasks in the selected batch (80.2133ms)
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö approved decision executes deferred risky action and persists success result (84.2768ms)
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö approved connector-risk task executes via connector action endpoint client (99.3128ms)
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö enforced lease connector task forwards lease metadata and persists correlation fields (99.2179ms)
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö low-risk connector task executes via connector action endpoint without approval (116.3836ms)
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö rejected decision persists cancelled action result for graceful cancellation (85.7243ms)
+Γ£ö decision endpoint enforces shared token auth when configured (6.4899ms)
+Γ£ö approval decision endpoint validates runtime state, payload, and pending task existence (9.7034ms)
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö logs endpoint returns structured runtime events and supports limit (78.8518ms)
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö logs contain runtime.task_classified event with confidence and risk metadata for low-risk task (89.1057ms)
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö logs contain runtime.approval_required event with confidence and risk_level for high-risk task (98.8621ms)
+Γ£ö logs do not contain confidence metadata for tasks that fail before classification (13.8388ms)
+Γ£ö heartbeat loop updates live health metrics while active (118.549ms)
+Γ£ö state history endpoint returns runtime transition sequence (64.0408ms)
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö low-risk task retries transient failures and succeeds (141.5049ms)
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö low-risk hard failure (force_failure=true) is marked failed and persisted via action-result writer (182.416ms)
+Γ£ö startup freezes capability snapshot and exposes it via runtime endpoint (42.1481ms)
+Γ£ö startup resolves tester aliases and applies tester-only action guardrails (18.315ms)
+Γ£ö startup loads latest persisted capability snapshot by botId when available (17.4483ms)
+Γ£ö startup falls back to frozen snapshot and persists it when no persisted snapshot exists (8.1924ms)
+Γ£ö startup falls back to frozen snapshot when persisted snapshot load throws (10.467ms)
+Γ£ö startup continues with in-memory frozen snapshot when snapshot persist fails (6.9609ms)
+Γ£ö startup falls back to fresh freeze when persisted snapshot role key mismatches runtime config (8.225ms)
+Γ£ö startup falls back to fresh freeze when persisted snapshot policy pack mismatches runtime config (9.0115ms)
+Γ£ö startup falls back to fresh freeze when persisted snapshot connector/action policy is malformed (8.1965ms)
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö runtime blocks disallowed connector execution based on frozen snapshot policy (99.125ms)
+Γ£ö startup rejects corrupted snapshot with checksum mismatch and falls back to fresh freeze (6.0635ms)
+Γ£ö health endpoint includes snapshot version and checksum for observability (5.1529ms)
+Γ£ö capability-snapshot endpoint exposes snapshot metadata with version and checksum (10.6579ms)
+Γ£ö startup increments snapshot version on each persist call (39.9275ms)
+Γ£ö startup returns already_started when runtime is active (14.5664ms)
+Γ£ö kill endpoint returns kill_already_engaged on second call (12.5637ms)
+Γ£ö startup fails with config_error for invalid AF_HEALTH_PORT (5.8247ms)
+Γ£ö startup fails in production when approval intake token is missing (6.5355ms)
+Γ£ö startup fails when role key cannot be resolved (10.207ms)
+Γ£ö decision endpoint accepts bearer authorization token when configured (26.7214ms)
+Γ£ö logs total_buffered shows full buffer size while limit restricts response count (5.509ms)
+Γ£ö logs buffer caps at maxRuntimeLogs and oldest entries are evicted (9.4053ms)
+Γ£ö runtime.state_transition events appear in /logs with from_state and next_state details (12.9741ms)
+Γ£ö heartbeat failure increments failed count when control plane probe returns false (97.3129ms)
+Γ£ö heartbeat loop stops and metrics freeze after kill switch engages (163.6892ms)
+Γ£ö runtime.heartbeat_sent log event is emitted and carries sent_count metadata (104.9208ms)
+Γ£ö state history transitions each have at, from, to, and reason fields (86.0452ms)
+Γ£ö degraded state is recorded in state history when dependencies become unreachable (7.67ms)
+Γ£ö task execution record captures llm token usage when llmDecisionResolver is configured (32.3187ms)
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö task execution record falls back to provider metadata with null token usage when llmDecisionResolver fails (58.5632ms)
+Γ£ö task execution record marks payload overrides as llm_generated when resolver emits overrides (61.4135ms)
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö startup applies workspace LLM provider from llmConfigFetcher for task execution metadata (75.7275ms)
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö budget hard-stop denial blocks task execution and persists budget decision metadata (88.33ms)
+Γ£ö /runtime/transcripts returns empty list before any tasks are processed (7.2492ms)
+Γ£ö runtime persists evidence records for completed tasks (38.9463ms)
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö /runtime/transcripts records a transcript entry after a task completes (152.0705ms)
+Γ£ö /runtime/interview-events returns empty list before interview tasks run (7.5953ms)
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö /runtime/interview-events captures partial transcript events from meeting interview action (266.7917ms)
+Γ£ö /runtime/traces returns empty array for fresh server (19.4121ms)
+Γ£ö /runtime/traces rejects invalid limit (15.2473ms)
+Γ£ö /runtime/traces/:taskId returns 404 when trace missing (13.3366ms)
+Γ£ö /runtime/traces/:taskId/replay returns 404 when trace missing (13.9747ms)
+Γ£ö /runtime/policy/simulate returns 400 when blocked_actions empty (7.4998ms)
+Γ£ö /runtime/policy/simulate returns simulation result (6.2937ms)
+Γ£ö /runtime/pr/review returns 400 when changed_files empty (6.6342ms)
+Γ£ö /runtime/pr/review returns review for valid files (7.4307ms)
+Γ£ö /runtime/autopilot/issue-to-pr returns 400 when params missing (8.8154ms)
+Γ£ö /runtime/autopilot/issue-to-pr returns autopilot plan (9.3888ms)
+Γ£ö /runtime/autopilot/issue-to-pr/execute returns 400 when params missing (7.6071ms)
+Γ£ö /runtime/autopilot/issue-to-pr/execute returns execution plan (9.1442ms)
+Γ£ö /runtime/flaky-tests returns flaky signal list (10.7081ms)
+Γ£ö /runtime/flaky-tests/triage returns triage report (14.5054ms)
+Γ£ö /runtime/advanced/status returns control state (9.7106ms)
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö /runtime/reports/weekly-quality-roi generates manual report with required KPI fields (72.4759ms)
+Γ£ö background scheduler auto-generates weekly quality/ROI report on cadence (88.1349ms)
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö runtime processes task without error when task payload includes _crm_record_id but no CRM config is registered (100.9172ms)
+[evidence-record-writer] evidence-service POST failed: TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[quality-signal] TypeError: fetch failed
+    at node:internal/deps/undici/undici:16416:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]: 
+      at internalConnectMultiple (node:net:1134:18)
+      at afterConnectMultiple (node:net:1715:7) {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+Γ£ö runtime processes task without error when task payload has _crm_record_id with empty string (no-op guard) (94.5082ms)
+Γ£ö /runtime/plan/pending returns empty plan list (16.2751ms)
+Γ£ö /runtime/plan/pending rejects invalid limit (13.7048ms)
+Γ£ö /runtime/plan/:taskId returns 404 when plan missing (13.3748ms)
+Γ£ö /runtime/plan/:taskId/approve returns 404 when plan missing (12.8684ms)
+Γ£ö /runtime/control/pause pauses execution (13.2698ms)
+Γ£ö /runtime/control/resume resumes execution (15.6624ms)
+Γ£ö /runtime/control/step arms single-step mode (18.1976ms)
+Γ£ö /runtime/control/scope returns 400 when include_paths empty (14.0143ms)
+Γ£ö /runtime/control/scope sets scope constraint (13.6739ms)
+Γ£ö DELETE /runtime/control/scope clears scope (11.3386ms)
+Γ£ö /runtime/control/why returns 400 when task_id missing (8.3242ms)
+Γ£ö /runtime/control/why returns explanation for task (6.0645ms)
+Γ£ö /runtime/semantic-graph returns graph data (175.5097ms)
+Γ£ö /runtime/semantic-graph/query returns 400 when symbol missing (5.5098ms)
+Γ£ö /runtime/semantic-graph/query returns result for symbol (5.0937ms)
+Γ£ö /runtime/incident/patch-pack returns 400 when params missing (5.9227ms)
+Γ£ö /runtime/incident/patch-pack returns patch pack (4.694ms)
+Γ£ö /runtime/policy/packs returns active pack and list (4.324ms)
+Γ£ö /runtime/policy/packs returns 400 when id or name missing (5.8519ms)
+Γ£ö /runtime/policy/packs creates a policy pack (6.8313ms)
+Γ£ö /runtime/policy/packs/:packId/simulate returns 404 for unknown pack (4.8869ms)
+Γ£ö /runtime/policy/packs/:packId/simulate returns simulation for existing pack (16.4539ms)
+Γ£ö /runtime/policy/packs/:packId/enable attempts to enable a pack (5.7221ms)
+Γ£ö /runtime/marketplace/skills returns skill catalog (5.3583ms)
+Γ£ö /runtime/marketplace/install returns 400 when skill_id missing (4.5082ms)
+Γ£ö /runtime/marketplace/install installs a skill (5.0496ms)
+Γ£ö /runtime/marketplace/uninstall returns 400 when skill_id missing (5.249ms)
+Γ£ö /runtime/marketplace/telemetry returns telemetry events (4.7136ms)
+Γ£ö /runtime/marketplace/telemetry rejects invalid limit (4.6214ms)
+Γ£ö /runtime/marketplace/use returns 400 when skill_id missing (7.0659ms)
+Γ£ö /runtime/marketplace/use records usage and returns ok (28.6112ms)
+Γ£ö /runtime/marketplace/invoke returns 400 when skill_id missing (22.8168ms)
+Γ£ö /runtime/marketplace/invoke invokes a skill (17.0351ms)
+Γ£ö /runtime/marketplace/catalog/skills returns 400 when required fields missing (12.5977ms)
+Γ£ö /runtime/marketplace/catalog/skills upserts a catalog entry (6.1595ms)
+Γ£ö DELETE /runtime/marketplace/catalog/skills/:skillId removes or rejects removal (7.0351ms)
+Γ£ö /runtime/provenance/attestations returns attestation list (4.7138ms)
+Γ£ö /runtime/provenance/attestations rejects invalid limit (4.803ms)
+Γ£ö DELETE /runtime/marketplace/catalog/skills/:skillId returns 403 for builtin skill (5.5749ms)
+Γ£ö /runtime/marketplace/invoke returns 404 for non-installed skill (no inputs) (20.6641ms)
+Γ£ö startRuntimeServer starts and closes cleanly (17.707ms)

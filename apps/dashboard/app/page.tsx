@@ -1363,6 +1363,15 @@ export default async function HomePage({
                         <Link href="/settings" className="secondary-action" style={{ textDecoration: 'none' }}>
                             Settings &amp; Ops
                         </Link>
+                        <Link href="/webhooks-ops" className="secondary-action" style={{ textDecoration: 'none' }}>
+                            Webhook Ops
+                        </Link>
+                        <Link href="/ab-tests" className="secondary-action" style={{ textDecoration: 'none' }}>
+                            A/B Tests
+                        </Link>
+                        <Link href="/scheduled-reports" className="secondary-action" style={{ textDecoration: 'none' }}>
+                            Scheduled Reports
+                        </Link>
                     </section>
 
                     {(unifiedView || activeTab === 'overview') && (

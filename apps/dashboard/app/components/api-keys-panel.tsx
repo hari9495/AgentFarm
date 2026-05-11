@@ -23,6 +23,7 @@ export default function ApiKeysPanel({ tenantId: _tenantId }: ApiKeysPanelProps)
     const [error, setError] = useState<string | null>(null);
 
     const [createName, setCreateName] = useState('');
+    const [createRole, setCreateRole] = useState<'viewer' | 'operator' | 'admin'>('operator');
     const [creating, setCreating] = useState(false);
     const [createError, setCreateError] = useState<string | null>(null);
     const [newRawKey, setNewRawKey] = useState<string | null>(null);
@@ -58,7 +59,7 @@ export default function ApiKeysPanel({ tenantId: _tenantId }: ApiKeysPanelProps)
             const res = await fetch('/api/settings/api-keys', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: createName.trim(), role: 'operator' }),
+                body: JSON.stringify({ name: createName.trim(), role: createRole }),
             });
             const data = (await res.json()) as {
                 apiKey?: ApiKeyRecord;
@@ -80,20 +81,40 @@ export default function ApiKeysPanel({ tenantId: _tenantId }: ApiKeysPanelProps)
         }
     }
 
-    async function handleRevoke(keyId: string, keyName: string) {
-        if (!window.confirm(`Revoke key "${keyName}"? This cannot be undone.`)) return;
+    async function handleDisable(keyId: string, keyName: string) {
+        if (!window.confirm(`Disable key "${keyName}"? It can be re-enabled later.`)) return;
         try {
             const res = await fetch(`/api/settings/api-keys/${encodeURIComponent(keyId)}`, {
-                method: 'DELETE',
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ enabled: false }),
             });
             if (!res.ok) {
-                const data = (await res.json()) as { error?: string };
-                window.alert(data.error ?? 'Failed to revoke key.');
+                const data = (await res.json()) as { error?: string; message?: string };
+                window.alert(data.message ?? data.error ?? 'Failed to disable key.');
                 return;
             }
             await fetchKeys();
         } catch {
-            window.alert('Network error revoking API key.');
+            window.alert('Network error disabling API key.');
+        }
+    }
+
+    async function handleEnable(keyId: string) {
+        try {
+            const res = await fetch(`/api/settings/api-keys/${encodeURIComponent(keyId)}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ enabled: true }),
+            });
+            if (!res.ok) {
+                const data = (await res.json()) as { error?: string; message?: string };
+                window.alert(data.message ?? data.error ?? 'Failed to enable key.');
+                return;
+            }
+            await fetchKeys();
+        } catch {
+            window.alert('Network error enabling API key.');
         }
     }
 
@@ -121,6 +142,22 @@ export default function ApiKeysPanel({ tenantId: _tenantId }: ApiKeysPanelProps)
                         fontSize: '0.875rem',
                     }}
                 />
+                <select
+                    value={createRole}
+                    onChange={(e) => setCreateRole(e.target.value as 'viewer' | 'operator' | 'admin')}
+                    style={{
+                        padding: '0.45rem 0.6rem',
+                        border: '1px solid var(--line)',
+                        borderRadius: '6px',
+                        background: 'var(--bg)',
+                        color: 'var(--ink)',
+                        fontSize: '0.875rem',
+                    }}
+                >
+                    <option value="viewer">viewer</option>
+                    <option value="operator">operator</option>
+                    <option value="admin">admin</option>
+                </select>
                 <button
                     type="submit"
                     disabled={creating}
@@ -283,20 +320,37 @@ export default function ApiKeysPanel({ tenantId: _tenantId }: ApiKeysPanelProps)
                                         {new Date(k.createdAt).toLocaleDateString()}
                                     </td>
                                     <td style={{ padding: '0.65rem 0.75rem' }}>
-                                        <button
-                                            onClick={() => void handleRevoke(k.id, k.name)}
-                                            style={{
-                                                padding: '0.25rem 0.6rem',
-                                                fontSize: '0.75rem',
-                                                border: '1px solid #fecaca',
-                                                borderRadius: '4px',
-                                                background: '#fff',
-                                                color: '#dc2626',
-                                                cursor: 'pointer',
-                                            }}
-                                        >
-                                            Revoke
-                                        </button>
+                                        {k.enabled ? (
+                                            <button
+                                                onClick={() => void handleDisable(k.id, k.name)}
+                                                style={{
+                                                    padding: '0.25rem 0.6rem',
+                                                    fontSize: '0.75rem',
+                                                    border: '1px solid #fecaca',
+                                                    borderRadius: '4px',
+                                                    background: '#fff',
+                                                    color: '#dc2626',
+                                                    cursor: 'pointer',
+                                                }}
+                                            >
+                                                Disable
+                                            </button>
+                                        ) : (
+                                            <button
+                                                onClick={() => void handleEnable(k.id)}
+                                                style={{
+                                                    padding: '0.25rem 0.6rem',
+                                                    fontSize: '0.75rem',
+                                                    border: '1px solid #bbf7d0',
+                                                    borderRadius: '4px',
+                                                    background: '#fff',
+                                                    color: '#166534',
+                                                    cursor: 'pointer',
+                                                }}
+                                            >
+                                                Enable
+                                            </button>
+                                        )}
                                     </td>
                                 </tr>
                             ))}

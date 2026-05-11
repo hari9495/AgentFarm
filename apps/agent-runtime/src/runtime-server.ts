@@ -5947,6 +5947,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         stopWorkerLoop();
         stopHeartbeatLoop();
         stopBackgroundLoop();
+        globalScheduler.stop();
     });
 
     app.get<{ Querystring: { limit?: string } }>('/logs', async (request, reply) => {

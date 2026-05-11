@@ -311,6 +311,10 @@ export class AuditLogWriter {
         return typeof row?.count === 'number' ? row.count : 0;
     }
 
+    close(): void {
+        this.db.close();
+    }
+
     listSession(sessionId: string): ActionAuditRecord[] {
         const rows = this.db.prepare(SELECT_SESSION_SQL).all(sessionId) as Array<{
             id: string;
@@ -731,6 +735,7 @@ const parseJson = <T>(value: string | null): T | undefined => {
 };
 
 export const resetObservabilityForTests = (): void => {
+    sharedWriter?.close();
     sharedWriter = null;
     sharedSink = null;
     sharedPrismaClient = undefined;
