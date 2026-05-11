@@ -1,7 +1,9 @@
 import { randomUUID } from 'crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { PrismaClient } from '@prisma/client';
 import type { TaskLeaseRecord } from '@agentfarm/shared-types';
 import { parseGoal } from '@agentfarm/agent-runtime/natural-language-parser.js';
+import { rateLimitAgent, getAgentRateLimitConfig } from '../lib/agent-rate-limit.js';
 
 const getPrisma = async () => {
     const db = await import('../lib/db.js');
@@ -74,6 +76,7 @@ type RegisterRuntimeTaskRoutesOptions = {
     serviceAuthToken?: string;
     runtimeTaskToken?: string;
     dispatcher?: RuntimeTaskDispatcher;
+    prisma?: PrismaClient;
     listTaskRecords?: (
         workspaceId: string,
         limit: number,
@@ -384,6 +387,7 @@ export async function registerRuntimeTaskRoutes(
         ?? null;
     const repo = options.repo ?? defaultRepo;
     const dispatcher = options.dispatcher ?? defaultDispatcher;
+    const resolvePrisma = options.prisma ? () => Promise.resolve(options.prisma!) : getPrisma;
     const leaseStore: LeaseStore = options.leaseStore ?? {
         byTaskKey: new Map<string, RuntimeTaskLease>(),
         byClaimToken: new Map<string, RuntimeTaskLease>(),
@@ -742,6 +746,26 @@ export async function registerRuntimeTaskRoutes(
                 error: 'invalid_dispatch',
                 message: 'bot_id and claim_token are required.',
             });
+        }
+
+        // Phase 22 — per-agent rate limit (third tier: IP → tenant → agent)
+        // Only applied when a PrismaClient is explicitly provided (production path).
+        // Tests that do not supply prisma bypass this tier and continue unblocked.
+        if (options.prisma !== undefined) {
+            const db = await resolvePrisma();
+            const agentRlConfig = await getAgentRateLimitConfig(botId, scope.tenantId, db);
+            if (agentRlConfig?.enabled) {
+                const agentResult = rateLimitAgent(botId, { limit: agentRlConfig.requestsPerMinute, windowMs: 60_000 });
+                reply.header('x-ratelimit-agent-remaining', String(agentResult.remaining));
+                if (!agentResult.allowed) {
+                    return reply.code(429).send({
+                        error: 'rate_limit_exceeded',
+                        scope: 'agent',
+                        botId,
+                        retryAfterMs: agentResult.resetIn,
+                    });
+                }
+            }
         }
 
         const taskKey = buildTaskKey(scope.tenantId, workspaceId, botId, taskId);

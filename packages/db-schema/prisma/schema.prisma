@@ -1516,3 +1516,54 @@ model MarketplaceInstall {
   @@index([tenantId])
   @@index([tenantId, status])
 }
+
+// Phase 21 — A/B Testing: run two BotConfigVersions against incoming tasks
+// and compare outcomes via QualitySignalLog scores.
+model AbTest {
+  id             String             @id @default(cuid())
+  tenantId       String
+  botId          String
+  name           String
+  versionAId     String             // BotConfigVersion id — control
+  versionBId     String             // BotConfigVersion id — challenger
+  trafficSplit   Float              @default(0.5) // 0.0–1.0, fraction routed to B
+  status         String             @default("active") // active | paused | concluded
+  conclusionNote String?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  assignments    AbTestAssignment[]
+
+  @@index([tenantId])
+  @@index([tenantId, botId])
+  @@index([tenantId, status])
+}
+
+model AbTestAssignment {
+  id        String   @id @default(cuid())
+  abTestId  String
+  abTest    AbTest   @relation(fields: [abTestId], references: [id])
+  tenantId  String
+  taskId    String   @unique // one assignment per task
+  versionId String           // which BotConfigVersion was assigned
+  variant   String           // "A" or "B"
+  createdAt DateTime @default(now())
+
+  @@index([abTestId])
+  @@index([tenantId])
+  @@index([taskId])
+}
+
+// Phase 22 — Per-agent rate limiting: configurable request cap per bot.
+// Enforced at task-dispatch time in the api-gateway runtime-tasks route.
+model AgentRateLimit {
+  id                String   @id @default(cuid())
+  botId             String   @unique   // one config per bot
+  tenantId          String
+  requestsPerMinute Int      @default(60)
+  burstLimit        Int      @default(10) // max concurrent burst
+  enabled           Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([tenantId])
+}

@@ -1348,6 +1348,9 @@ export default async function HomePage({
                         <Link href="/analytics" className="secondary-action" style={{ textDecoration: 'none' }}>
                             Analytics
                         </Link>
+                        <Link href="/audit" className="secondary-action" style={{ textDecoration: 'none' }}>
+                            Audit Log
+                        </Link>
                     </section>
 
                     {(unifiedView || activeTab === 'overview') && (

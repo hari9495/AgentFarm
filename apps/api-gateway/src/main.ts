@@ -84,6 +84,7 @@ import { registerChatRoutes } from './routes/chat.js';
 import { registerBotVersionRoutes } from './routes/bot-versions.js';
 import { registerOrchestrationRoutes } from './routes/orchestration.js';
 import { registerMarketplaceRoutes } from './routes/marketplace.js';
+import { registerAbTestRoutes } from './routes/ab-tests.js';
 
 const app = Fastify({ logger: true });
 const port = Number(process.env.API_GATEWAY_PORT ?? 3000);
@@ -516,6 +517,7 @@ await registerRuntimeLlmConfigRoutes(app, {
 });
 await registerRuntimeTaskRoutes(app, {
     getSession: (request) => readSession(request),
+    prisma,
 });
 await registerWorkspaceSessionRoutes(app, {
     getSession: (request) => readSession(request),
@@ -610,6 +612,7 @@ await registerChatRoutes(app, { getSession: (request) => readSession(request) })
 await registerBotVersionRoutes(app, { getSession: (request) => readSession(request) });
 await registerOrchestrationRoutes(app, { getSession: (request) => readSession(request) });
 await registerMarketplaceRoutes(app, { getSession: (request) => readSession(request) });
+await registerAbTestRoutes(app, { getSession: (request) => readSession(request) });
 
 app.get('/v1/dashboard/summary', async (request, reply) => {
     const session = readSession(request);

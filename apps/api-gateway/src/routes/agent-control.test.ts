@@ -271,3 +271,166 @@ test('POST /v1/agents/:botId/resume — auto-snapshot is called after update', a
         await app.close();
     }
 });
+
+// ---------------------------------------------------------------------------
+// Phase 22 — rate-limit management routes
+// ---------------------------------------------------------------------------
+
+const rateLimitRow = {
+    botId: 'bot_1',
+    tenantId: 'tenant_1',
+    requestsPerMinute: 60,
+    burstLimit: 10,
+    enabled: true,
+    createdAt: new Date('2026-01-01'),
+    updatedAt: new Date('2026-01-01'),
+};
+
+const makeRlPrisma = (
+    bot: typeof activeBot | null,
+    rlRow: typeof rateLimitRow | null,
+) => ({
+    bot: { findUnique: async () => bot },
+    agentRateLimit: {
+        findUnique: async () => rlRow,
+        upsert: async () => rateLimitRow,
+        update: async () => rateLimitRow,
+        delete: async () => rateLimitRow,
+    },
+    botConfigVersion: { aggregate: async () => ({ _max: { versionNumber: null } }), create: async () => ({}) },
+    auditEvent: { create: async () => ({}) },
+} as any);
+
+test('GET /v1/agents/:botId/rate-limit — returns config when it exists', async () => {
+    const app = Fastify();
+    await registerAgentControlRoutes(app, {
+        getSession: () => session(),
+        prisma: makeRlPrisma(activeBot, rateLimitRow),
+    });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/v1/agents/bot_1/rate-limit' });
+        assert.equal(res.statusCode, 200);
+        assert.equal(res.json().requestsPerMinute, 60);
+        assert.equal(res.json().burstLimit, 10);
+        assert.equal(res.json().enabled, true);
+    } finally {
+        await app.close();
+    }
+});
+
+test('GET /v1/agents/:botId/rate-limit — returns 404 when not configured', async () => {
+    const app = Fastify();
+    await registerAgentControlRoutes(app, {
+        getSession: () => session(),
+        prisma: makeRlPrisma(activeBot, null),
+    });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/v1/agents/bot_1/rate-limit' });
+        assert.equal(res.statusCode, 404);
+        assert.equal(res.json().code, 'RATE_LIMIT_NOT_CONFIGURED');
+    } finally {
+        await app.close();
+    }
+});
+
+test('GET /v1/agents/:botId/rate-limit — returns 403 when bot belongs to different tenant', async () => {
+    const app = Fastify();
+    await registerAgentControlRoutes(app, {
+        getSession: () => session(),
+        prisma: makeRlPrisma(wrongTenantBot, rateLimitRow),
+    });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/v1/agents/bot_1/rate-limit' });
+        assert.equal(res.statusCode, 403);
+        assert.equal(res.json().code, 'FORBIDDEN');
+    } finally {
+        await app.close();
+    }
+});
+
+test('POST /v1/agents/:botId/rate-limit — creates config and returns 200', async () => {
+    const app = Fastify();
+    await registerAgentControlRoutes(app, {
+        getSession: () => session(),
+        prisma: makeRlPrisma(activeBot, null),
+    });
+    try {
+        const res = await app.inject({
+            method: 'POST',
+            url: '/v1/agents/bot_1/rate-limit',
+            payload: { requestsPerMinute: 60, burstLimit: 10, enabled: true },
+        });
+        assert.equal(res.statusCode, 200);
+        assert.equal(res.json().botId, 'bot_1');
+    } finally {
+        await app.close();
+    }
+});
+
+test('POST /v1/agents/:botId/rate-limit — rejects requestsPerMinute > 10000 with 400', async () => {
+    const app = Fastify();
+    await registerAgentControlRoutes(app, {
+        getSession: () => session(),
+        prisma: makeRlPrisma(activeBot, null),
+    });
+    try {
+        const res = await app.inject({
+            method: 'POST',
+            url: '/v1/agents/bot_1/rate-limit',
+            payload: { requestsPerMinute: 99999 },
+        });
+        assert.equal(res.statusCode, 400);
+        assert.equal(res.json().error, 'validation_error');
+    } finally {
+        await app.close();
+    }
+});
+
+test('PATCH /v1/agents/:botId/rate-limit — updates enabled field', async () => {
+    const app = Fastify();
+    await registerAgentControlRoutes(app, {
+        getSession: () => session(),
+        prisma: makeRlPrisma(activeBot, rateLimitRow),
+    });
+    try {
+        const res = await app.inject({
+            method: 'PATCH',
+            url: '/v1/agents/bot_1/rate-limit',
+            payload: { enabled: false },
+        });
+        assert.equal(res.statusCode, 200);
+        assert.equal(res.json().botId, 'bot_1');
+    } finally {
+        await app.close();
+    }
+});
+
+test('DELETE /v1/agents/:botId/rate-limit — removes config with admin role', async () => {
+    const adminSession = () => ({ ...session(), role: 'admin' });
+    const app = Fastify();
+    await registerAgentControlRoutes(app, {
+        getSession: adminSession,
+        prisma: makeRlPrisma(activeBot, rateLimitRow),
+    });
+    try {
+        const res = await app.inject({ method: 'DELETE', url: '/v1/agents/bot_1/rate-limit' });
+        assert.equal(res.statusCode, 204);
+    } finally {
+        await app.close();
+    }
+});
+
+test('DELETE /v1/agents/:botId/rate-limit — returns 403 for operator role', async () => {
+    const app = Fastify();
+    await registerAgentControlRoutes(app, {
+        getSession: () => session(), // operator role
+        prisma: makeRlPrisma(activeBot, rateLimitRow),
+    });
+    try {
+        const res = await app.inject({ method: 'DELETE', url: '/v1/agents/bot_1/rate-limit' });
+        assert.equal(res.statusCode, 403);
+        assert.equal(res.json().error, 'insufficient_role');
+    } finally {
+        await app.close();
+    }
+});
