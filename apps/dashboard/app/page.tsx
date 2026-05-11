@@ -1345,6 +1345,9 @@ export default async function HomePage({
                         <Link href="/connector-marketplace" className="secondary-action" style={{ textDecoration: 'none' }}>
                             Connector Marketplace
                         </Link>
+                        <Link href="/analytics" className="secondary-action" style={{ textDecoration: 'none' }}>
+                            Analytics
+                        </Link>
                     </section>
 
                     {(unifiedView || activeTab === 'overview') && (

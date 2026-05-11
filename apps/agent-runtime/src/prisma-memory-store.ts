@@ -220,3 +220,127 @@ export function createPrismaMemoryStore(prisma: PrismaClient): RuntimeMemoryStor
         },
     };
 }
+
+// ============================================================================
+// MEMORY SEARCH — full-text relevance-ranked search across all memory models
+// ============================================================================
+
+export type MemorySearchResult = {
+    id: string;
+    type: 'short' | 'long' | 'repo';
+    content: string;
+    score: number;
+    repoName?: string;
+    createdAt: Date;
+    metadata?: Record<string, unknown>;
+};
+
+function scoreText(text: string, query: string): number {
+    const t = text.toLowerCase();
+    const q = query.toLowerCase();
+    const tokens = q.split(/\s+/).filter(Boolean);
+    if (tokens.length === 0) return 0;
+    let score = 0;
+    if (t.includes(q)) score += 0.5;
+    const perToken = 0.5 / tokens.length;
+    for (const tok of tokens) {
+        if (t.includes(tok)) score += perToken;
+    }
+    return Math.min(score, 1);
+}
+
+export async function searchMemory(
+    params: {
+        tenantId: string;
+        query: string;
+        repoName?: string;
+        types?: Array<'short' | 'long' | 'repo'>;
+        limit?: number;
+    },
+    prisma: PrismaClient,
+): Promise<MemorySearchResult[]> {
+    const types = params.types ?? ['short', 'long', 'repo'];
+    const limit = Math.min(params.limit ?? 20, 50);
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const results: MemorySearchResult[] = [];
+
+    if (types.includes('short')) {
+        const rows = await prisma.agentShortTermMemory.findMany({
+            where: {
+                tenantId: params.tenantId,
+                ...(params.repoName ? { repoName: params.repoName } : {}),
+            },
+            select: { id: true, summary: true, repoName: true, createdAt: true },
+            take: 200,
+            orderBy: { createdAt: 'desc' },
+        });
+        for (const row of rows) {
+            let score = scoreText(row.summary, params.query);
+            if (score === 0) continue;
+            if (row.createdAt >= sevenDaysAgo) score = Math.min(score + 0.1, 1);
+            results.push({
+                id: row.id,
+                type: 'short',
+                content: row.summary,
+                score,
+                repoName: row.repoName ?? undefined,
+                createdAt: row.createdAt,
+            });
+        }
+    }
+
+    if (types.includes('long')) {
+        const rows = await prisma.agentLongTermMemory.findMany({
+            where: {
+                tenantId: params.tenantId,
+                ...(params.repoName ? { repoName: params.repoName } : {}),
+            },
+            select: { id: true, pattern: true, repoName: true, createdAt: true },
+            take: 200,
+            orderBy: { createdAt: 'desc' },
+        });
+        for (const row of rows) {
+            let score = scoreText(row.pattern, params.query);
+            if (score === 0) continue;
+            if (row.createdAt >= sevenDaysAgo) score = Math.min(score + 0.1, 1);
+            results.push({
+                id: row.id,
+                type: 'long',
+                content: row.pattern,
+                score,
+                repoName: row.repoName ?? undefined,
+                createdAt: row.createdAt,
+            });
+        }
+    }
+
+    if (types.includes('repo')) {
+        const rows = await prisma.agentRepoKnowledge.findMany({
+            where: {
+                tenantId: params.tenantId,
+                ...(params.repoName ? { repoName: params.repoName } : {}),
+            },
+            select: { id: true, key: true, value: true, repoName: true, createdAt: true },
+            take: 200,
+            orderBy: { createdAt: 'desc' },
+        });
+        for (const row of rows) {
+            const text = row.key + ' ' + JSON.stringify(row.value);
+            let score = scoreText(text, params.query);
+            if (score === 0) continue;
+            if (row.createdAt >= sevenDaysAgo) score = Math.min(score + 0.1, 1);
+            results.push({
+                id: row.id,
+                type: 'repo',
+                content: text,
+                score,
+                repoName: row.repoName ?? undefined,
+                createdAt: row.createdAt,
+                metadata: { key: row.key },
+            });
+        }
+    }
+
+    results.sort((a, b) => b.score - a.score || b.createdAt.getTime() - a.createdAt.getTime());
+    return results.slice(0, limit);
+}

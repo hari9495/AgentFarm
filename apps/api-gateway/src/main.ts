@@ -82,6 +82,8 @@ import { registerTeamRoutes } from './routes/team.js';
 import { registerScheduleRoutes } from './routes/schedules.js';
 import { registerChatRoutes } from './routes/chat.js';
 import { registerBotVersionRoutes } from './routes/bot-versions.js';
+import { registerOrchestrationRoutes } from './routes/orchestration.js';
+import { registerMarketplaceRoutes } from './routes/marketplace.js';
 
 const app = Fastify({ logger: true });
 const port = Number(process.env.API_GATEWAY_PORT ?? 3000);
@@ -606,6 +608,8 @@ await registerTeamRoutes(app, { getSession: (request) => readSession(request) })
 await registerScheduleRoutes(app, { getSession: (request) => readSession(request) });
 await registerChatRoutes(app, { getSession: (request) => readSession(request) });
 await registerBotVersionRoutes(app, { getSession: (request) => readSession(request) });
+await registerOrchestrationRoutes(app, { getSession: (request) => readSession(request) });
+await registerMarketplaceRoutes(app, { getSession: (request) => readSession(request) });
 
 app.get('/v1/dashboard/summary', async (request, reply) => {
     const session = readSession(request);

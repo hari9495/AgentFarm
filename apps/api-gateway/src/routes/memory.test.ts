@@ -161,3 +161,98 @@ test('POST /api/v1/memory/cleanup — with session → 200', async () => {
         await app.close();
     }
 });
+
+// ===========================================================================
+// Tests 7–11: GET /v1/memory/search proxy route
+// ===========================================================================
+
+test('GET /v1/memory/search — no session → 401', async () => {
+    const app = Fastify({ logger: false });
+    await registerMemoryRoutes(app, makePrisma(), { getSession: () => null });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/v1/memory/search?q=auth' });
+        assert.equal(res.statusCode, 401);
+    } finally {
+        await app.close();
+    }
+});
+
+test('GET /v1/memory/search — missing q → 400', async () => {
+    const app = Fastify({ logger: false });
+    await registerMemoryRoutes(app, makePrisma(), { getSession: () => makeSession() });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/v1/memory/search' });
+        assert.equal(res.statusCode, 400);
+        assert.equal(res.json<{ error: string }>().error, 'q param required');
+    } finally {
+        await app.close();
+    }
+});
+
+test('GET /v1/memory/search — forwards q param to upstream', async () => {
+    let capturedUrl = '';
+    const mockFetch = async (url: string | URL, _init?: RequestInit): Promise<Response> => {
+        capturedUrl = String(url);
+        return new Response(JSON.stringify({ results: [], count: 0 }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+        });
+    };
+    const app = Fastify({ logger: false });
+    await registerMemoryRoutes(app, makePrisma(), {
+        getSession: () => makeSession(),
+        fetch: mockFetch as unknown as typeof globalThis.fetch,
+    });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/v1/memory/search?q=auth+token' });
+        assert.equal(res.statusCode, 200);
+        assert.ok(capturedUrl.includes('q=auth'), `expected q param in URL but got: ${capturedUrl}`);
+    } finally {
+        await app.close();
+    }
+});
+
+test('GET /v1/memory/search — forwards optional repoName and types', async () => {
+    let capturedUrl = '';
+    const mockFetch = async (url: string | URL, _init?: RequestInit): Promise<Response> => {
+        capturedUrl = String(url);
+        return new Response(JSON.stringify({ results: [], count: 0 }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+        });
+    };
+    const app = Fastify({ logger: false });
+    await registerMemoryRoutes(app, makePrisma(), {
+        getSession: () => makeSession(),
+        fetch: mockFetch as unknown as typeof globalThis.fetch,
+    });
+    try {
+        const res = await app.inject({
+            method: 'GET',
+            url: '/v1/memory/search?q=deploy&repoName=repo-a&types=short%2Clong',
+        });
+        assert.equal(res.statusCode, 200);
+        assert.ok(capturedUrl.includes('repoName=repo-a'), `expected repoName in URL: ${capturedUrl}`);
+        assert.ok(capturedUrl.includes('types='), `expected types in URL: ${capturedUrl}`);
+    } finally {
+        await app.close();
+    }
+});
+
+test('GET /v1/memory/search — returns 502 when upstream errors', async () => {
+    const mockFetch = async (): Promise<Response> => {
+        throw new Error('connection refused');
+    };
+    const app = Fastify({ logger: false });
+    await registerMemoryRoutes(app, makePrisma(), {
+        getSession: () => makeSession(),
+        fetch: mockFetch as unknown as typeof globalThis.fetch,
+    });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/v1/memory/search?q=auth' });
+        assert.equal(res.statusCode, 502);
+        assert.equal(res.json<{ error: string }>().error, 'agent-runtime unreachable');
+    } finally {
+        await app.close();
+    }
+});

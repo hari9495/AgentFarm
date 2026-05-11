@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
 import { ROLE_RANK } from '../lib/require-role.js';
+import { replayDelivery } from '../lib/webhook-dispatcher.js';
 
 const KNOWN_EVENT_TYPES = ['task_completed', 'task_failed', 'task_started', 'task_queued'] as const;
 
@@ -167,4 +168,103 @@ export const registerOutboundWebhookRoutes = async (
             return reply.code(200).send({ deliveries });
         },
     );
+
+    // POST /v1/webhooks/deliveries/:deliveryId/replay — re-fire a past delivery
+    app.post<{ Params: { deliveryId: string } }>(
+        '/v1/webhooks/deliveries/:deliveryId/replay',
+        async (req, reply) => {
+            const session = options.getSession(req);
+            if (!session) {
+                return reply.code(401).send({ error: 'unauthorized' });
+            }
+
+            const db = await resolvePrisma();
+            const delivery = await db.outboundWebhookDelivery.findUnique({
+                where: { id: req.params.deliveryId },
+                select: { tenantId: true },
+            });
+
+            if (!delivery) {
+                return reply.code(404).send({ error: 'not_found' });
+            }
+
+            if (delivery.tenantId !== session.tenantId) {
+                return reply.code(403).send({ error: 'forbidden' });
+            }
+
+            const result = await replayDelivery(req.params.deliveryId, session.tenantId, db);
+            return reply.code(200).send({ replayed: true, success: result.success, status: result.status });
+        },
+    );
+
+    // GET /v1/webhooks/dlq — list DLQ entries for tenant
+    app.get<{ Querystring: { resolved?: string } }>('/v1/webhooks/dlq', async (req, reply) => {
+        const session = options.getSession(req);
+        if (!session) {
+            return reply.code(401).send({ error: 'unauthorized' });
+        }
+
+        const resolvedParam = req.query.resolved;
+        const showResolved = resolvedParam === 'true';
+
+        const db = await resolvePrisma();
+        const dlq = await db.webhookDlqEntry.findMany({
+            where: {
+                tenantId: session.tenantId,
+                resolvedAt: showResolved ? { not: null } : null,
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+
+        return reply.code(200).send({ dlq });
+    });
+
+    // POST /v1/webhooks/dlq/:dlqId/retry — re-enable webhook and replay last delivery
+    app.post<{ Params: { dlqId: string } }>('/v1/webhooks/dlq/:dlqId/retry', async (req, reply) => {
+        const session = options.getSession(req);
+        if (!session) {
+            return reply.code(401).send({ error: 'unauthorized' });
+        }
+        if ((ROLE_RANK[session.role ?? ''] ?? 0) < (ROLE_RANK['admin'] ?? 99)) {
+            return reply.code(403).send({ error: 'insufficient_role', required: 'admin', actual: session.role });
+        }
+
+        const db = await resolvePrisma();
+        const dlqEntry = await db.webhookDlqEntry.findUnique({
+            where: { id: req.params.dlqId },
+        });
+
+        if (!dlqEntry) {
+            return reply.code(404).send({ error: 'not_found' });
+        }
+
+        if (dlqEntry.tenantId !== session.tenantId) {
+            return reply.code(403).send({ error: 'forbidden' });
+        }
+
+        // Re-enable the webhook and reset failure tracking
+        await db.outboundWebhook.update({
+            where: { id: dlqEntry.webhookId },
+            data: { enabled: true, failureCount: 0, dlqAt: null },
+        });
+
+        // Find most recent delivery to replay
+        const lastDelivery = await db.outboundWebhookDelivery.findFirst({
+            where: { webhookId: dlqEntry.webhookId },
+            orderBy: { firedAt: 'desc' },
+            select: { id: true },
+        });
+
+        if (lastDelivery) {
+            await replayDelivery(lastDelivery.id, session.tenantId, db);
+        }
+
+        // Mark DLQ entry as resolved
+        await db.webhookDlqEntry.update({
+            where: { id: req.params.dlqId },
+            data: { resolvedAt: new Date(), resolvedBy: session.userId },
+        });
+
+        return reply.code(200).send({ retried: true, webhookId: dlqEntry.webhookId });
+    });
 };

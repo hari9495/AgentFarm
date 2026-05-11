@@ -175,8 +175,10 @@ model Tenant {
   updatedAt      DateTime       @updatedAt
   users          TenantUser[]
   workspaces     Workspace[]
-  scheduledJobs  ScheduledJob[]
-  chatSessions   ChatSession[]
+  scheduledJobs      ScheduledJob[]
+  chatSessions       ChatSession[]
+  orchestrationRuns  OrchestrationRun[]
+  marketplaceInstalls MarketplaceInstall[]
 }
 
 model TenantUser {
@@ -772,19 +774,26 @@ model ReproPack {
 // Frozen 2026-05-10 — Agent Dispatch Records
 // Persists cross-process agent dispatch events for audit and status tracking.
 model AgentDispatchRecord {
-  id              String   @id @default(cuid())
-  fromAgentId     String
-  toAgentId       String
-  workspaceId     String
-  tenantId        String
-  taskDescription String
-  status          String   @default("queued")
-  wakeSource      String   @default("agent_handoff")
-  queuedAt        DateTime @default(now())
-  createdAt       DateTime @default(now())
+  id                 String            @id @default(cuid())
+  fromAgentId        String
+  toAgentId          String
+  workspaceId        String
+  tenantId           String
+  taskDescription    String
+  status             String            @default("queued")
+  wakeSource         String            @default("agent_handoff")
+  orchestrationRunId String?
+  subTaskIndex       Int?
+  completedAt        DateTime?
+  result             Json?
+  errorMessage       String?
+  queuedAt           DateTime          @default(now())
+  createdAt          DateTime          @default(now())
+  orchestrationRun   OrchestrationRun? @relation(fields: [orchestrationRunId], references: [id])
 
   @@index([tenantId, workspaceId])
   @@index([tenantId, queuedAt])
+  @@index([orchestrationRunId])
 }
 
 // Frozen 2026-05-07 — Agent Memory Service (Epic A7)
@@ -1328,16 +1337,19 @@ model SubscriptionEvent {
 // Frozen 2026-05-11 — Phase 10D: customer-configured outbound webhooks
 // Fired when task_completed or task_failed events land in the SSE pipeline.
 model OutboundWebhook {
-  id          String   @id @default(cuid())
-  tenantId    String
-  workspaceId String?
-  url         String
-  secret      String   // HMAC-SHA256 signing secret — customer stores this to verify
-  events      String[] // e.g. ["task_completed", "task_failed"]
-  enabled     Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  deliveries  OutboundWebhookDelivery[]
+  id           String    @id @default(cuid())
+  tenantId     String
+  workspaceId  String?
+  url          String
+  secret       String    // HMAC-SHA256 signing secret — customer stores this to verify
+  events       String[]  // e.g. ["task_completed", "task_failed"]
+  enabled      Boolean   @default(true)
+  failureCount Int       @default(0)
+  dlqAt        DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deliveries   OutboundWebhookDelivery[]
+  dlqEntries   WebhookDlqEntry[]
 
   @@index([tenantId])
   @@index([tenantId, enabled])
@@ -1360,6 +1372,23 @@ model OutboundWebhookDelivery {
   @@index([webhookId])
   @@index([tenantId])
   @@index([webhookId, firedAt])
+}
+
+// Phase 10D (extended) — DLQ entries for webhooks that exceeded failure threshold
+model WebhookDlqEntry {
+  id            String    @id @default(cuid())
+  webhookId     String
+  tenantId      String
+  reason        String
+  lastPayload   Json
+  lastEventType String
+  createdAt     DateTime  @default(now())
+  resolvedAt    DateTime?
+  resolvedBy    String?
+  webhook       OutboundWebhook @relation(fields: [webhookId], references: [id])
+
+  @@index([tenantId])
+  @@index([webhookId])
 }
 
 // Phase 12 — Scheduled jobs: cron-based automatic task firing
@@ -1425,4 +1454,65 @@ model BotConfigVersion {
   @@unique([botId, versionNumber])
   @@index([botId])
   @@index([tenantId])
+}
+
+// Phase 15 — Multi-Agent Orchestration
+model OrchestrationRun {
+  id               String                @id @default(cuid())
+  tenantId         String
+  workspaceId      String
+  coordinatorBotId String
+  goal             String
+  status           String                @default("running")
+  subTaskCount     Int                   @default(0)
+  completedCount   Int                   @default(0)
+  failedCount      Int                   @default(0)
+  result           Json?
+  errorSummary     String?
+  startedAt        DateTime              @default(now())
+  completedAt      DateTime?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  dispatches       AgentDispatchRecord[]
+  tenant           Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+}
+
+// Phase 16 — Marketplace: durable skill catalog and install tracking
+model MarketplaceListing {
+  id          String               @id @default(cuid())
+  skillId     String               @unique
+  name        String
+  description String?
+  version     String
+  author      String?
+  permissions Json                 @default("[]")
+  source      String?
+  tags        Json                 @default("[]")
+  status      String               @default("active")
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  installs    MarketplaceInstall[]
+
+  @@index([status])
+}
+
+model MarketplaceInstall {
+  id                  String             @id @default(cuid())
+  tenantId            String
+  skillId             String
+  listingId           String
+  approvedPermissions Json               @default("[]")
+  pinVersion          Boolean            @default(false)
+  status              String             @default("installed")
+  installedAt         DateTime           @default(now())
+  uninstalledAt       DateTime?
+  listing             MarketplaceListing @relation(fields: [listingId], references: [id])
+  tenant              Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, skillId])
+  @@index([tenantId])
+  @@index([tenantId, status])
 }

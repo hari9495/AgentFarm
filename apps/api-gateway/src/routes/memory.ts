@@ -24,6 +24,7 @@ type SessionContext = {
 
 export type RegisterMemoryRoutesOptions = {
     getSession: (request: FastifyRequest) => SessionContext | null;
+    fetch?: typeof globalThis.fetch;
 };
 
 export async function registerMemoryRoutes(app: FastifyInstance, prisma: PrismaClient, options?: RegisterMemoryRoutesOptions) {
@@ -200,6 +201,44 @@ export async function registerMemoryRoutes(app: FastifyInstance, prisma: PrismaC
         } catch (error) {
             const msg = error instanceof Error ? error.message : 'Unknown error';
             return res.status(500).send({ error: `Failed to cleanup: ${msg}` });
+        }
+    });
+
+    // ========== SEARCH MEMORY (full-text relevance search via agent-runtime) ==========
+    const resolveFetch = options?.fetch ?? globalThis.fetch;
+    function getRuntimeUrl(): string {
+        return (process.env['AGENT_RUNTIME_URL'] ?? 'http://localhost:3001').replace(/\/+$/, '');
+    }
+
+    app.get('/v1/memory/search', async (req: FastifyRequest, res: FastifyReply) => {
+        const session = getSession(req);
+        if (!session) return res.status(401).send({ error: 'unauthorized' });
+
+        const query = req.query as Record<string, string>;
+        const q = query['q'];
+        if (!q || q.trim() === '') {
+            return res.status(400).send({ error: 'q param required' });
+        }
+
+        const params = new URLSearchParams({ q });
+        if (query['repoName']) params.set('repoName', query['repoName']);
+        if (query['types']) params.set('types', query['types']);
+        if (query['limit']) params.set('limit', query['limit']);
+
+        try {
+            const upstream = await resolveFetch(
+                `${getRuntimeUrl()}/memory/search?${params.toString()}`,
+                {
+                    headers: {
+                        'x-tenant-id': session.tenantId,
+                    },
+                },
+            );
+            const body = await upstream.json() as unknown;
+            if (!upstream.ok) return res.status(502).send({ error: 'upstream error', detail: body });
+            return res.send(body);
+        } catch {
+            return res.status(502).send({ error: 'agent-runtime unreachable' });
         }
     });
 }

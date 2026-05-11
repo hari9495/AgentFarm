@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 import { getInternalSessionAuthHeader, getSessionPayload } from '../../../lib/internal-session';
 
 const getApiBaseUrl = (): string => process.env.DASHBOARD_API_BASE_URL ?? 'http://localhost:3000';
@@ -15,7 +16,7 @@ type UpstreamCostSummary = {
     to: string;
 };
 
-export async function GET() {
+export async function GET(request: NextRequest) {
     const authHeader = await getInternalSessionAuthHeader();
     if (!authHeader) {
         return NextResponse.json(
@@ -33,8 +34,9 @@ export async function GET() {
         );
     }
 
-    const to = new Date().toISOString();
-    const from = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const { searchParams } = new URL(request.url);
+    const to = searchParams.get('to') ?? new Date().toISOString();
+    const from = searchParams.get('from') ?? new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
     let res: Response;
     try {

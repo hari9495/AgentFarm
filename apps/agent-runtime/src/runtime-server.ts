@@ -88,7 +88,7 @@ import {
 import { buildErrorQuery, researchForTask, type FetchFn } from './web-research-service.js';
 import { analyzeImage, type VisionLLMCallerFn, type VisionProvider } from './vision-service.js';
 import { FanOutProgressSink, NoopProgressSink, type ProgressMilestone, type ProgressSink } from './task-progress-reporter.js';
-import { createPrismaMemoryStore } from './prisma-memory-store.js';
+import { createPrismaMemoryStore, searchMemory } from './prisma-memory-store.js';
 import { estimateCostUsd } from './cost-calculator.js';
 import { globalScheduler } from './skill-scheduler.js';
 
@@ -278,6 +278,7 @@ type RuntimeServerOptions = {
     capabilitySnapshotPersistenceClient?: CapabilitySnapshotPersistenceClient;
     taskExecutionRecordWriter?: TaskExecutionRecordWriter;
     memoryStore?: RuntimeMemoryStore;
+    prisma?: import('@prisma/client').PrismaClient;
     llmDecisionResolver?: LlmDecisionResolver;
     llmConfigFetcher?: (input: {
         config: RuntimeConfig;
@@ -6613,6 +6614,43 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
     });
 
     registerChatRoutes(app);
+
+    // ── GET /memory/search — full-text relevance search across memory models ────
+    app.get<{ Querystring: { q?: string; repoName?: string; types?: string; limit?: string } }>('/memory/search', async (req, reply) => {
+        const tenantId = (req.headers['x-tenant-id'] as string) ?? '';
+        if (!tenantId) return reply.code(400).send({ error: 'x-tenant-id required' });
+
+        const q = req.query?.q;
+        if (!q || q.trim() === '') {
+            return reply.code(400).send({ error: 'q param required' });
+        }
+
+        const repoName = req.query?.repoName;
+        const typesRaw = req.query?.types;
+        const types = typesRaw
+            ? (typesRaw.split(',').filter((t) =>
+                ['short', 'long', 'repo'].includes(t),
+            ) as Array<'short' | 'long' | 'repo'>)
+            : undefined;
+        const limitRaw = parseInt(req.query?.limit ?? '20', 10);
+        const limit = isNaN(limitRaw) ? 20 : limitRaw;
+
+        let prismaClient = options.prisma;
+        if (!prismaClient) {
+            try {
+                const { PrismaClient } = await import('@prisma/client') as { PrismaClient: new () => import('@prisma/client').PrismaClient };
+                prismaClient = new PrismaClient();
+            } catch {
+                return reply.code(503).send({ error: 'database unavailable' });
+            }
+        }
+
+        const results = await searchMemory(
+            { tenantId, query: q, repoName, types, limit },
+            prismaClient,
+        );
+        return reply.send({ results, count: results.length });
+    });
 
     return app;
 }
