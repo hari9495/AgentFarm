@@ -1,9 +1,17 @@
 import { NextResponse } from 'next/server';
-import { getInternalSessionAuthHeader } from '../../../lib/internal-session';
+import { getInternalSessionAuthHeader, getSessionPayload } from '../../../lib/internal-session';
 
 const getApiBaseUrl = (): string => process.env.DASHBOARD_API_BASE_URL ?? 'http://localhost:3000';
 
-export async function GET(request: Request) {
+type SubscriptionResponse = {
+    status: string;
+    expiresAt?: string | null;
+    gracePeriodDays?: number;
+    suspendedAt?: string | null;
+    daysUntilSuspension?: number | null;
+};
+
+export async function GET() {
     const authHeader = await getInternalSessionAuthHeader();
     if (!authHeader) {
         return NextResponse.json(
@@ -12,33 +20,32 @@ export async function GET(request: Request) {
         );
     }
 
-    const incomingUrl = new URL(request.url);
-    const tenantId = incomingUrl.searchParams.get('tenantId');
+    const session = await getSessionPayload();
+    const tenantId = session?.tenantId;
     if (!tenantId) {
         return NextResponse.json(
-            { error: 'bad_request', message: 'tenantId is required.' },
+            { error: 'bad_request', message: 'tenantId not found in session.' },
             { status: 400 },
         );
     }
 
-    const targetUrl = `${getApiBaseUrl()}/v1/billing/subscription?tenantId=${encodeURIComponent(tenantId)}`;
-
+    let res: Response;
     try {
-        const response = await fetch(targetUrl, {
-            method: 'GET',
-            headers: {
-                Authorization: authHeader,
-            },
-            cache: 'no-store',
-        });
-
-        const body = await response.json().catch(() => ({
-            error: 'upstream_error',
-            message: 'Unable to parse subscription response.',
-        }));
-
-        return NextResponse.json(body, { status: response.status });
+        res = await fetch(
+            `${getApiBaseUrl()}/v1/billing/subscription?tenantId=${encodeURIComponent(tenantId)}`,
+            { headers: { Authorization: authHeader }, cache: 'no-store' },
+        );
     } catch {
-        return NextResponse.json({ error: 'upstream_unavailable' }, { status: 502 });
+        return NextResponse.json(
+            { error: 'upstream_error', message: 'Failed to reach billing service.' },
+            { status: 502 },
+        );
     }
+
+    if (!res.ok) {
+        return NextResponse.json<SubscriptionResponse>({ status: 'none' });
+    }
+
+    const data = (await res.json()) as SubscriptionResponse;
+    return NextResponse.json(data);
 }

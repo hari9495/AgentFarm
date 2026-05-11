@@ -1354,6 +1354,15 @@ export default async function HomePage({
                         <Link href="/live" className="secondary-action" style={{ textDecoration: 'none' }}>
                             Live Feed
                         </Link>
+                        <Link href="/agents" className="secondary-action" style={{ textDecoration: 'none' }}>
+                            Agents
+                        </Link>
+                        <Link href="/billing" className="secondary-action" style={{ textDecoration: 'none' }}>
+                            Billing
+                        </Link>
+                        <Link href="/settings" className="secondary-action" style={{ textDecoration: 'none' }}>
+                            Settings &amp; Ops
+                        </Link>
                     </section>
 
                     {(unifiedView || activeTab === 'overview') && (

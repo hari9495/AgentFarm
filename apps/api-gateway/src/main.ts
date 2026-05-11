@@ -71,6 +71,7 @@ import { registerMeetingRoutes } from './routes/meetings.js';
 import { registerBillingRoutes } from './routes/billing.js';
 import { registerAnalyticsRoutes } from './routes/analytics.js';
 import { registerAgentControlRoutes } from './routes/agent-control.js';
+import { registerAgentsRoutes } from './routes/agents.js';
 import { registerAdminProvisionRoutes } from './routes/admin-provision.js';
 import { registerAgentDispatchRoutes } from './routes/agent-dispatch.js';
 import { registerZohoSignWebhookRoutes } from './routes/zoho-sign-webhook.js';
@@ -619,6 +620,9 @@ await registerBillingRoutes(app, {
     getSession: (request) => readSession(request),
 });
 await registerAnalyticsRoutes(app, {
+    getSession: (request) => readSession(request),
+});
+await registerAgentsRoutes(app, {
     getSession: (request) => readSession(request),
 });
 await registerAgentControlRoutes(app, {
