@@ -413,4 +413,42 @@ export const registerGovernanceWorkflowRoutes = async (
 
         return diagnostics;
     });
+
+    app.get('/v1/governance/workflows', async (request, reply) => {
+        const session = options.getSession(request);
+        if (!session) {
+            return reply.code(401).send({ error: 'unauthorized', message: 'A valid authenticated session is required.' });
+        }
+
+        const query = request.query as { workspace_id?: string };
+        const workspaceIdFilter = query.workspace_id?.trim();
+
+        const workflows = Array.from(store.workflows.values()).filter(
+            (wf) =>
+                wf.tenantId === session.tenantId &&
+                (!workspaceIdFilter || wf.workspaceId === workspaceIdFilter),
+        );
+
+        return reply.code(200).send({ workflows, total: workflows.length });
+    });
+
+    app.get('/v1/governance/workflows/:workflowId', async (request, reply) => {
+        const session = options.getSession(request);
+        if (!session) {
+            return reply.code(401).send({ error: 'unauthorized', message: 'A valid authenticated session is required.' });
+        }
+
+        const params = request.params as { workflowId: string };
+        const wf = store.workflows.get(params.workflowId);
+        if (!wf) {
+            return reply.code(404).send({ error: 'not_found', message: 'Governance workflow not found.' });
+        }
+
+        if (wf.tenantId !== session.tenantId) {
+            return reply.code(403).send({ error: 'forbidden', message: 'Access denied.' });
+        }
+
+        const decisions = store.decisions.get(params.workflowId) ?? [];
+        return reply.code(200).send({ workflow: wf, decisions });
+    });
 };

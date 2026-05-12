@@ -1,20 +1,54 @@
+import { redirect } from 'next/navigation';
+import Link from 'next/link';
+import { getSessionPayload } from '../lib/internal-session';
 import { GovernanceWorkflowPanel } from '../components/governance-workflow-panel';
 
-type SearchParams = {
-    workspaceId?: string;
-};
+export default async function GovernancePage() {
+    const session = await getSessionPayload();
+    if (!session?.tenantId) {
+        redirect('/login?next=/governance');
+    }
 
-export default async function GovernancePage({ searchParams }: { searchParams: Promise<SearchParams> }) {
-    const params = await searchParams;
-    const workspaceId = params.workspaceId?.trim() || 'ws_1';
+    const workspaceId = session.workspaceIds?.[0] ?? 'ws_1';
 
     return (
-        <main style={{ maxWidth: 960, margin: '1.5rem auto', padding: '0 1rem' }}>
-            <h1>Governance Workflows</h1>
-            <p style={{ marginTop: '-0.45rem', color: '#57534e' }}>
-                Monitor org-level governance workflow SLA and review bottlenecks for approvals.
-            </p>
+        <main className="page-shell">
+            <header style={{ marginBottom: '2rem' }}>
+                <Link
+                    href="/"
+                    style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.25rem',
+                        fontSize: '0.8rem',
+                        color: 'var(--ink-muted)',
+                        textDecoration: 'none',
+                        marginBottom: '0.75rem',
+                    }}
+                >
+                    ← Dashboard
+                </Link>
+                <p
+                    style={{
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        letterSpacing: '0.08em',
+                        textTransform: 'uppercase',
+                        color: 'var(--ink-muted)',
+                        marginBottom: '0.35rem',
+                    }}
+                >
+                    Governance
+                </p>
+                <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--ink)', marginBottom: '0.35rem' }}>
+                    Governance Workflows
+                </h1>
+                <p style={{ color: 'var(--ink-muted)', fontSize: '0.95rem' }}>
+                    Monitor org-level governance workflow SLA and review bottlenecks for approvals.
+                </p>
+            </header>
             <GovernanceWorkflowPanel workspaceId={workspaceId} />
         </main>
     );
 }
+

@@ -4,6 +4,13 @@ import { useEffect, useState } from 'react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
+type DiffLine = {
+    type: 'added' | 'removed' | 'unchanged';
+    key: string;
+    oldValue?: unknown;
+    newValue?: unknown;
+};
+
 export type BotConfigVersion = {
     id: string;
     botId: string;
@@ -32,6 +39,14 @@ export default function AgentVersionHistory({ botId }: AgentVersionHistoryProps)
     const [snapshotLoading, setSnapshotLoading] = useState(false);
     const [snapshotNote, setSnapshotNote] = useState('');
     const [restoring, setRestoring] = useState<string | null>(null);
+
+    // Diff state
+    const [diffBase, setDiffBase] = useState<string | null>(null);
+    const [diffTarget, setDiffTarget] = useState<string | null>(null);
+    const [diffLines, setDiffLines] = useState<DiffLine[]>([]);
+    const [diffLoading, setDiffLoading] = useState(false);
+    const [diffError, setDiffError] = useState<string | null>(null);
+    const [showDiff, setShowDiff] = useState(false);
 
     async function load() {
         setLoading(true);
@@ -84,6 +99,72 @@ export default function AgentVersionHistory({ botId }: AgentVersionHistoryProps)
             }
         } finally {
             setRestoring(null);
+        }
+    }
+
+    function computeDiff(
+        baseConfig: Record<string, unknown> | null | undefined,
+        targetConfig: Record<string, unknown> | null | undefined,
+    ): DiffLine[] {
+        if (!baseConfig && !targetConfig) return [];
+        const base = baseConfig ?? {};
+        const target = targetConfig ?? {};
+        const allKeys = Array.from(new Set([...Object.keys(base), ...Object.keys(target)]));
+        const lines: DiffLine[] = [];
+
+        for (const key of allKeys) {
+            const inBase = Object.prototype.hasOwnProperty.call(base, key);
+            const inTarget = Object.prototype.hasOwnProperty.call(target, key);
+            if (inBase && inTarget) {
+                if (JSON.stringify(base[key]) === JSON.stringify(target[key])) {
+                    lines.push({ type: 'unchanged', key });
+                } else {
+                    lines.push({ type: 'removed', key, oldValue: base[key] });
+                    lines.push({ type: 'added', key, newValue: target[key] });
+                }
+            } else if (inBase) {
+                lines.push({ type: 'removed', key, oldValue: base[key] });
+            } else {
+                lines.push({ type: 'added', key, newValue: target[key] });
+            }
+        }
+
+        return lines;
+    }
+
+    async function loadAndDiff(baseId: string, targetId: string) {
+        setDiffLoading(true);
+        setDiffError(null);
+        setDiffLines([]);
+        try {
+            const [baseRes, targetRes] = await Promise.all([
+                fetch(`/api/agents/${botId}/versions/${baseId}`),
+                fetch(`/api/agents/${botId}/versions/${targetId}`),
+            ]);
+            if (!baseRes.ok || !targetRes.ok) {
+                setDiffError('Failed to fetch one or both versions for diff.');
+                setDiffLoading(false);
+                setShowDiff(true);
+                return;
+            }
+            const [baseData, targetData] = await Promise.all([
+                baseRes.json() as Promise<{ version?: BotConfigVersion }>,
+                targetRes.json() as Promise<{ version?: BotConfigVersion }>,
+            ]);
+            const baseVer = baseData.version;
+            const targetVer = targetData.version;
+            const baseConfig = baseVer?.brainConfig != null
+                ? (baseVer.brainConfig as Record<string, unknown>)
+                : null;
+            const targetConfig = targetVer?.brainConfig != null
+                ? (targetVer.brainConfig as Record<string, unknown>)
+                : null;
+            setDiffLines(computeDiff(baseConfig, targetConfig));
+        } catch {
+            setDiffError('Network error computing diff.');
+        } finally {
+            setDiffLoading(false);
+            setShowDiff(true);
         }
     }
 
@@ -213,25 +294,185 @@ export default function AgentVersionHistory({ botId }: AgentVersionHistoryProps)
                                     {new Date(v.createdAt).toLocaleString()} · by {v.createdBy}
                                 </div>
                             </div>
-                            <button
-                                onClick={() => void restoreVersion(v.id)}
-                                disabled={restoring === v.id}
-                                style={{
-                                    padding: '5px 10px',
-                                    background: '#1e293b',
-                                    border: '1px solid #334155',
-                                    borderRadius: '5px',
-                                    color: '#94a3b8',
-                                    fontSize: '11px',
-                                    fontWeight: 600,
-                                    cursor: restoring === v.id ? 'not-allowed' : 'pointer',
-                                    flexShrink: 0,
-                                }}
-                            >
-                                {restoring === v.id ? '…' : 'Restore'}
-                            </button>
+                            <div style={{ display: 'flex', gap: '6px', flexShrink: 0, alignItems: 'flex-start' }}>
+                                <button
+                                    onClick={() => {
+                                        if (diffBase === v.id) {
+                                            setDiffBase(null);
+                                            setShowDiff(false);
+                                        } else {
+                                            setDiffBase(v.id);
+                                            setShowDiff(false);
+                                        }
+                                    }}
+                                    style={{
+                                        padding: '5px 10px',
+                                        background: diffBase === v.id ? '#1e3a5f' : '#1e293b',
+                                        border: diffBase === v.id ? '1px solid #3b82f6' : '1px solid #334155',
+                                        borderRadius: '5px',
+                                        color: diffBase === v.id ? '#93c5fd' : '#94a3b8',
+                                        fontSize: '11px',
+                                        fontWeight: 600,
+                                        cursor: 'pointer',
+                                        flexShrink: 0,
+                                    }}
+                                >
+                                    {diffBase === v.id ? 'Base ✓' : 'Set Base'}
+                                </button>
+                                {diffBase && diffBase !== v.id && (
+                                    <button
+                                        onClick={() => {
+                                            setDiffTarget(v.id);
+                                            void loadAndDiff(diffBase, v.id);
+                                        }}
+                                        disabled={diffLoading}
+                                        style={{
+                                            padding: '5px 10px',
+                                            background: diffTarget === v.id ? '#1e3a5f' : '#1e293b',
+                                            border: diffTarget === v.id ? '1px solid #3b82f6' : '1px solid #334155',
+                                            borderRadius: '5px',
+                                            color: diffTarget === v.id ? '#93c5fd' : '#94a3b8',
+                                            fontSize: '11px',
+                                            fontWeight: 600,
+                                            cursor: diffLoading ? 'not-allowed' : 'pointer',
+                                            flexShrink: 0,
+                                        }}
+                                    >
+                                        {diffLoading && diffTarget === v.id ? '…' : 'Compare →'}
+                                    </button>
+                                )}
+                                <button
+                                    onClick={() => void restoreVersion(v.id)}
+                                    disabled={restoring === v.id}
+                                    style={{
+                                        padding: '5px 10px',
+                                        background: '#1e293b',
+                                        border: '1px solid #334155',
+                                        borderRadius: '5px',
+                                        color: '#94a3b8',
+                                        fontSize: '11px',
+                                        fontWeight: 600,
+                                        cursor: restoring === v.id ? 'not-allowed' : 'pointer',
+                                        flexShrink: 0,
+                                    }}
+                                >
+                                    {restoring === v.id ? '…' : 'Restore'}
+                                </button>
+                            </div>
                         </div>
                     ))}
+                </div>
+            )}
+
+            {/* Diff hint */}
+            {versions.length > 1 && !diffBase && (
+                <p style={{ fontSize: '11px', color: '#334155', marginTop: '12px' }}>
+                    Tip: click <strong style={{ color: '#475569' }}>Set Base</strong> on one version, then <strong style={{ color: '#475569' }}>Compare →</strong> on another to diff their brainConfig.
+                </p>
+            )}
+            {diffBase && !showDiff && (
+                <p style={{ fontSize: '11px', color: '#475569', marginTop: '12px' }}>
+                    Base set. Click <strong>Compare →</strong> on another version to see the diff.
+                </p>
+            )}
+
+            {/* Diff panel */}
+            {showDiff && (
+                <div
+                    style={{
+                        marginTop: '20px',
+                        background: '#0f172a',
+                        border: '1px solid #1e293b',
+                        borderRadius: '8px',
+                        padding: '14px',
+                    }}
+                >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                        <div
+                            style={{
+                                fontSize: '12px',
+                                fontWeight: 700,
+                                color: '#475569',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.06em',
+                            }}
+                        >
+                            brainConfig Diff
+                        </div>
+                        <button
+                            onClick={() => { setShowDiff(false); setDiffBase(null); setDiffTarget(null); setDiffLines([]); }}
+                            style={{
+                                background: 'transparent',
+                                border: 'none',
+                                color: '#475569',
+                                fontSize: '12px',
+                                cursor: 'pointer',
+                            }}
+                        >
+                            ✕ Close
+                        </button>
+                    </div>
+
+                    {diffLoading && (
+                        <p style={{ color: '#475569', fontSize: '12px' }}>Computing diff…</p>
+                    )}
+                    {diffError && (
+                        <p style={{ color: '#fca5a5', fontSize: '12px' }}>{diffError}</p>
+                    )}
+                    {!diffLoading && !diffError && diffLines.length === 0 && (
+                        <p style={{ color: '#475569', fontSize: '12px' }}>No differences found in brainConfig.</p>
+                    )}
+                    {!diffLoading && !diffError && diffLines.length > 0 && (
+                        <>
+                            <div
+                                style={{
+                                    fontSize: '11px',
+                                    color: '#475569',
+                                    marginBottom: '8px',
+                                }}
+                            >
+                                {diffLines.filter((l) => l.type !== 'unchanged').length} field(s) differ ·{' '}
+                                {diffLines.filter((l) => l.type === 'added').length} added ·{' '}
+                                {diffLines.filter((l) => l.type === 'removed').length} removed
+                            </div>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+                                <thead>
+                                    <tr>
+                                        <th style={{ textAlign: 'left', color: '#334155', padding: '4px 8px', fontWeight: 600, width: '30%' }}>Key</th>
+                                        <th style={{ textAlign: 'left', color: '#334155', padding: '4px 8px', fontWeight: 600, width: '35%' }}>Old</th>
+                                        <th style={{ textAlign: 'left', color: '#334155', padding: '4px 8px', fontWeight: 600, width: '35%' }}>New</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {diffLines
+                                        .filter((l) => l.type !== 'unchanged')
+                                        .map((line, idx) => {
+                                            const isAdd = line.type === 'added';
+                                            const bg = isAdd ? '#052e16' : '#450a0a';
+                                            const prefix = isAdd ? '+' : '−';
+                                            const prefixColor = isAdd ? '#4ade80' : '#f87171';
+                                            const truncate = (v: unknown): string => {
+                                                const s = JSON.stringify(v);
+                                                return s.length > 120 ? s.slice(0, 120) + '…' : s;
+                                            };
+                                            return (
+                                                <tr key={`${line.key}-${idx}`} style={{ background: bg }}>
+                                                    <td style={{ padding: '4px 8px', color: prefixColor, fontFamily: 'monospace' }}>
+                                                        {prefix} {line.key}
+                                                    </td>
+                                                    <td style={{ padding: '4px 8px', color: '#94a3b8', fontFamily: 'monospace', wordBreak: 'break-all' }}>
+                                                        {isAdd ? '' : truncate(line.oldValue)}
+                                                    </td>
+                                                    <td style={{ padding: '4px 8px', color: '#94a3b8', fontFamily: 'monospace', wordBreak: 'break-all' }}>
+                                                        {isAdd ? truncate(line.newValue) : ''}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                </tbody>
+                            </table>
+                        </>
+                    )}
                 </div>
             )}
         </div>

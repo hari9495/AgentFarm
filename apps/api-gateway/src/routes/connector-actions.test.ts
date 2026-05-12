@@ -8,6 +8,7 @@ import {
     type ConnectorAuditWriter,
     type ProviderExecutor,
     type SessionContext,
+    type ActionLogRow,
 } from './connector-actions.js';
 import { createInMemorySecretStore } from '../lib/secret-store.js';
 
@@ -33,13 +34,20 @@ type Metadata = {
 };
 
 type ActionLog = {
+    id: string;
     actionId: string;
+    tenantId: string;
+    connectorId: string;
     connectorType: string;
     actionType: string;
     resultStatus: string;
+    resultSummary: string;
     errorCode: string | null;
+    errorMessage: string | null;
+    remediationHint: string | null;
     contractVersion: string;
     completedAt: Date;
+    createdAt: Date;
 };
 
 const createFakeRepo = (): ConnectorActionRepo & {
@@ -83,14 +91,46 @@ const createFakeRepo = (): ConnectorActionRepo & {
 
         async createConnectorActionLog(record) {
             logs.push({
+                id: `log_${logs.length + 1}`,
                 actionId: record.actionId,
+                tenantId: record.tenantId,
+                connectorId: record.connectorId,
                 connectorType: record.connectorType,
                 actionType: record.actionType,
                 resultStatus: record.resultStatus,
+                resultSummary: record.resultSummary,
                 errorCode: record.errorCode,
+                errorMessage: record.errorMessage,
+                remediationHint: record.remediationHint,
                 contractVersion: record.contractVersion,
                 completedAt: record.completedAt,
+                createdAt: record.completedAt,
             });
+        },
+        async listConnectorActions(input): Promise<ActionLogRow[]> {
+            return logs
+                .filter(
+                    (entry) =>
+                        entry.tenantId === input.tenantId
+                        && entry.connectorId === input.connectorId
+                        && (!input.cursor || entry.createdAt < input.cursor),
+                )
+                .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+                .slice(0, input.limit)
+                .map((entry) => ({
+                    id: entry.id,
+                    actionId: entry.actionId,
+                    connectorId: entry.connectorId,
+                    connectorType: entry.connectorType,
+                    actionType: entry.actionType,
+                    resultStatus: entry.resultStatus,
+                    resultSummary: entry.resultSummary,
+                    errorCode: entry.errorCode,
+                    errorMessage: entry.errorMessage,
+                    remediationHint: entry.remediationHint,
+                    completedAt: entry.completedAt,
+                    createdAt: entry.createdAt,
+                }));
         },
     };
 };
@@ -1391,6 +1431,270 @@ test('PUT credentials respects explicit secret_ref_id override', async () => {
         assert.equal(response.statusCode, 200);
         const body = response.json() as { secret_ref_id: string };
         assert.equal(body.secret_ref_id, override);
+    } finally {
+        await app.close();
+    }
+});
+
+// ---------------------------------------------------------------------------
+// GET /v1/connectors/:connectorId/actions
+// ---------------------------------------------------------------------------
+
+test('GET connector actions — returns 401 when no session', async () => {
+    const app = Fastify();
+    const repo = createFakeRepo();
+
+    await registerConnectorActionRoutes(app, {
+        getSession: () => null,
+        repo,
+    });
+
+    try {
+        const response = await app.inject({
+            method: 'GET',
+            url: '/v1/connectors/jira:tenant_1:ws_1/actions',
+        });
+        assert.equal(response.statusCode, 401);
+        const body = response.json() as { error: string };
+        assert.equal(body.error, 'unauthorized');
+    } finally {
+        await app.close();
+    }
+});
+
+test('GET connector actions — returns empty array when no actions exist', async () => {
+    const app = Fastify();
+    const repo = createFakeRepo();
+    seedConnectedMetadata(repo);
+
+    await registerConnectorActionRoutes(app, {
+        getSession: () => sessionContext(),
+        repo,
+    });
+
+    try {
+        const response = await app.inject({
+            method: 'GET',
+            url: '/v1/connectors/jira:tenant_1:ws_1/actions',
+        });
+        assert.equal(response.statusCode, 200);
+        const body = response.json() as { actions: unknown[]; hasMore: boolean };
+        assert.deepEqual(body.actions, []);
+        assert.equal(body.hasMore, false);
+    } finally {
+        await app.close();
+    }
+});
+
+test('GET connector actions — returns only actions for the specified connectorId', async () => {
+    const app = Fastify();
+    const repo = createFakeRepo();
+    seedConnectedMetadata(repo);
+
+    const now = new Date();
+    await repo.createConnectorActionLog({
+        actionId: 'act_jira_1',
+        tenantId: 'tenant_1',
+        workspaceId: 'ws_1',
+        botId: 'bot_1',
+        connectorId: 'jira:tenant_1:ws_1',
+        connectorType: 'jira',
+        actionType: 'read_task',
+        contractVersion: 'v1.0',
+        correlationId: 'corr_1',
+        requestBody: {},
+        resultStatus: 'success',
+        providerResponseCode: '200',
+        resultSummary: 'ok',
+        errorCode: null,
+        errorMessage: null,
+        remediationHint: null,
+        completedAt: now,
+    });
+    await repo.createConnectorActionLog({
+        actionId: 'act_github_1',
+        tenantId: 'tenant_1',
+        workspaceId: 'ws_1',
+        botId: 'bot_1',
+        connectorId: 'github:tenant_1:ws_1',
+        connectorType: 'github',
+        actionType: 'create_pr_comment',
+        contractVersion: 'v1.0',
+        correlationId: 'corr_2',
+        requestBody: {},
+        resultStatus: 'success',
+        providerResponseCode: '200',
+        resultSummary: 'ok',
+        errorCode: null,
+        errorMessage: null,
+        remediationHint: null,
+        completedAt: now,
+    });
+
+    await registerConnectorActionRoutes(app, {
+        getSession: () => sessionContext(),
+        repo,
+    });
+
+    try {
+        const response = await app.inject({
+            method: 'GET',
+            url: '/v1/connectors/jira:tenant_1:ws_1/actions',
+        });
+        assert.equal(response.statusCode, 200);
+        const body = response.json() as { actions: Array<{ connectorId: string; actionId: string }> };
+        assert.equal(body.actions.length, 1);
+        assert.equal(body.actions[0]?.connectorId, 'jira:tenant_1:ws_1');
+        assert.equal(body.actions[0]?.actionId, 'act_jira_1');
+    } finally {
+        await app.close();
+    }
+});
+
+test('GET connector actions — never returns actions from other tenants', async () => {
+    const app = Fastify();
+    const repo = createFakeRepo();
+
+    const now = new Date();
+    // Seed action for a different tenant with the same connectorId pattern
+    await repo.createConnectorActionLog({
+        actionId: 'act_other_tenant',
+        tenantId: 'tenant_other',
+        workspaceId: 'ws_other',
+        botId: 'bot_other',
+        connectorId: 'jira:tenant_1:ws_1',
+        connectorType: 'jira',
+        actionType: 'read_task',
+        contractVersion: 'v1.0',
+        correlationId: 'corr_x',
+        requestBody: {},
+        resultStatus: 'success',
+        providerResponseCode: '200',
+        resultSummary: 'ok',
+        errorCode: null,
+        errorMessage: null,
+        remediationHint: null,
+        completedAt: now,
+    });
+
+    await registerConnectorActionRoutes(app, {
+        getSession: () => sessionContext(), // returns tenantId: 'tenant_1'
+        repo,
+    });
+
+    try {
+        const response = await app.inject({
+            method: 'GET',
+            url: '/v1/connectors/jira:tenant_1:ws_1/actions',
+        });
+        assert.equal(response.statusCode, 200);
+        const body = response.json() as { actions: unknown[] };
+        // Fake repo filters by tenantId — the other-tenant record has tenantId 'tenant_other'
+        // so it must not appear for 'tenant_1' session
+        assert.equal(body.actions.length, 0);
+    } finally {
+        await app.close();
+    }
+});
+
+test('GET connector actions — returns hasMore true when results hit the limit', async () => {
+    const app = Fastify();
+    const repo = createFakeRepo();
+    seedConnectedMetadata(repo);
+
+    const baseTime = new Date('2026-01-01T00:00:00Z');
+    // Seed 3 actions for a limit=2 request
+    for (let i = 0; i < 3; i++) {
+        await repo.createConnectorActionLog({
+            actionId: `act_${i}`,
+            tenantId: 'tenant_1',
+            workspaceId: 'ws_1',
+            botId: 'bot_1',
+            connectorId: 'jira:tenant_1:ws_1',
+            connectorType: 'jira',
+            actionType: 'read_task',
+            contractVersion: 'v1.0',
+            correlationId: `corr_${i}`,
+            requestBody: {},
+            resultStatus: 'success',
+            providerResponseCode: '200',
+            resultSummary: 'ok',
+            errorCode: null,
+            errorMessage: null,
+            remediationHint: null,
+            completedAt: new Date(baseTime.getTime() + i * 1000),
+        });
+    }
+
+    await registerConnectorActionRoutes(app, {
+        getSession: () => sessionContext(),
+        repo,
+    });
+
+    try {
+        const response = await app.inject({
+            method: 'GET',
+            url: '/v1/connectors/jira:tenant_1:ws_1/actions?limit=2',
+        });
+        assert.equal(response.statusCode, 200);
+        const body = response.json() as { actions: unknown[]; hasMore: boolean; nextCursor: string };
+        assert.equal(body.actions.length, 2);
+        assert.equal(body.hasMore, true);
+        assert.ok(body.nextCursor, 'nextCursor should be set');
+    } finally {
+        await app.close();
+    }
+});
+
+test('GET connector actions — respects cursor pagination (returns only records before cursor)', async () => {
+    const app = Fastify();
+    const repo = createFakeRepo();
+    seedConnectedMetadata(repo);
+
+    const t1 = new Date('2026-01-01T10:00:00Z');
+    const t2 = new Date('2026-01-01T11:00:00Z');
+    const t3 = new Date('2026-01-01T12:00:00Z');
+
+    for (const [actionId, completedAt] of [['act_1', t1], ['act_2', t2], ['act_3', t3]] as const) {
+        await repo.createConnectorActionLog({
+            actionId,
+            tenantId: 'tenant_1',
+            workspaceId: 'ws_1',
+            botId: 'bot_1',
+            connectorId: 'jira:tenant_1:ws_1',
+            connectorType: 'jira',
+            actionType: 'read_task',
+            contractVersion: 'v1.0',
+            correlationId: actionId,
+            requestBody: {},
+            resultStatus: 'success',
+            providerResponseCode: '200',
+            resultSummary: 'ok',
+            errorCode: null,
+            errorMessage: null,
+            remediationHint: null,
+            completedAt,
+        });
+    }
+
+    await registerConnectorActionRoutes(app, {
+        getSession: () => sessionContext(),
+        repo,
+    });
+
+    try {
+        // Use t3 as cursor — should return only t2 and t1 (lt t3)
+        const response = await app.inject({
+            method: 'GET',
+            url: `/v1/connectors/jira:tenant_1:ws_1/actions?cursor=${encodeURIComponent(t3.toISOString())}`,
+        });
+        assert.equal(response.statusCode, 200);
+        const body = response.json() as { actions: Array<{ actionId: string }> };
+        assert.equal(body.actions.length, 2);
+        const ids = body.actions.map((a) => a.actionId);
+        assert.ok(ids.includes('act_2'));
+        assert.ok(ids.includes('act_1'));
+        assert.ok(!ids.includes('act_3'));
     } finally {
         await app.close();
     }

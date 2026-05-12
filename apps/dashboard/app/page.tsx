@@ -1372,6 +1372,42 @@ export default async function HomePage({
                         <Link href="/scheduled-reports" className="secondary-action" style={{ textDecoration: 'none' }}>
                             Scheduled Reports
                         </Link>
+                        <Link href="/docs" className="secondary-action" style={{ textDecoration: 'none' }}>
+                            API Docs
+                        </Link>
+                        <Link href="/tasks" className="secondary-action" style={{ textDecoration: 'none' }}>
+                            Task History
+                        </Link>
+                        <Link href="/health" className="secondary-action" style={{ textDecoration: 'none' }}>
+                            Health &amp; Status
+                        </Link>
+                        <Link href="/tenant-settings" className="secondary-action" style={{ textDecoration: 'none' }}>
+                            Tenant Settings
+                        </Link>
+                        <Link href="/governance" className="secondary-action" style={{ textDecoration: 'none' }}>
+                            Governance
+                        </Link>
+                        <Link href="/ci" className="secondary-action" style={{ textDecoration: 'none' }}>
+                            CI/CD Triage
+                        </Link>
+                        <Link href="/notifications" className="secondary-action" style={{ textDecoration: 'none' }}>
+                            Notifications
+                        </Link>
+                        <Link href="/meetings" className="secondary-action" style={{ textDecoration: 'none' }}>
+                            Meetings
+                        </Link>
+                        <Link href="/retention" className="secondary-action" style={{ textDecoration: 'none' }}>
+                            Retention
+                        </Link>
+                        <Link href="/loops" className="secondary-action" style={{ textDecoration: 'none' }}>
+                            Loops
+                        </Link>
+                        <Link href="/orchestration" className="secondary-action" style={{ textDecoration: 'none' }}>
+                            Orchestration
+                        </Link>
+                        <Link href="/chat" className="secondary-action" style={{ textDecoration: 'none' }}>
+                            Agent Chat
+                        </Link>
                     </section>
 
                     {(unifiedView || activeTab === 'overview') && (

@@ -34,6 +34,18 @@ type Props = {
     initialConnectors: ConnectorSummary[];
 };
 
+type ActionLogEntry = {
+    id: string;
+    actionType: string;
+    resultStatus: string;
+    resultSummary: string;
+    errorCode: string | null;
+    errorMessage: string | null;
+    remediationHint: string | null;
+    completedAt: string;
+    createdAt: string;
+};
+
 const isOAuthConnector = (connectorType: ConnectorType): boolean => {
     return connectorType === 'jira' || connectorType === 'teams' || connectorType === 'github';
 };
@@ -285,6 +297,37 @@ export function ConnectorConfigPanel({ workspaceId, apiBase, initialConnectors }
     const [revokeErrorId, setRevokeErrorId] = useState<string | null>(null);
     const [healthRunning, setHealthRunning] = useState(false);
     const [healthError, setHealthError] = useState<string | null>(null);
+    const [actionLogConnectorId, setActionLogConnectorId] = useState<string | null>(null);
+    const [actionLog, setActionLog] = useState<ActionLogEntry[]>([]);
+    const [actionLogLoading, setActionLogLoading] = useState(false);
+    const [actionLogError, setActionLogError] = useState<string | null>(null);
+
+    const fetchActionLog = async (connectorId: string) => {
+        if (actionLogConnectorId === connectorId) {
+            setActionLogConnectorId(null);
+            return;
+        }
+        setActionLogConnectorId(connectorId);
+        setActionLog([]);
+        setActionLogError(null);
+        setActionLogLoading(true);
+        try {
+            const res = await fetch(
+                `/api/connectors/${encodeURIComponent(connectorId)}/actions`,
+                { cache: 'no-store' },
+            );
+            if (!res.ok) {
+                setActionLogError(`Failed to load action log (${res.status}).`);
+                return;
+            }
+            const body = (await res.json()) as { actions?: ActionLogEntry[] };
+            setActionLog(body.actions ?? []);
+        } catch {
+            setActionLogError('Could not load action log. Please retry.');
+        } finally {
+            setActionLogLoading(false);
+        }
+    };
 
     const handleSaved = (updated: ConnectorSummary) => {
         setConnectors((prev) =>
@@ -504,6 +547,12 @@ export function ConnectorConfigPanel({ workspaceId, apiBase, initialConnectors }
                                         >
                                             Update credentials
                                         </button>
+                                        <button
+                                            onClick={() => void fetchActionLog(connector.connector_id)}
+                                            className="secondary-action"
+                                        >
+                                            {actionLogConnectorId === connector.connector_id ? 'Hide Log' : 'Action Log'}
+                                        </button>
                                     </div>
                                 )}
                             </div>
@@ -539,6 +588,79 @@ export function ConnectorConfigPanel({ workspaceId, apiBase, initialConnectors }
                                     onSaved={handleSaved}
                                     onCancel={() => setEditingId(null)}
                                 />
+                            )}
+
+                            {actionLogConnectorId === connector.connector_id && !isEditing && (
+                                <div
+                                    className="panel-stack"
+                                    style={{
+                                        marginTop: '0.75rem',
+                                        padding: '0.75rem',
+                                        background: 'var(--bg)',
+                                        border: '1px solid var(--line)',
+                                        borderRadius: '0.375rem',
+                                    }}
+                                >
+                                    <p style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.5rem', color: 'var(--ink)' }}>
+                                        Action Log
+                                    </p>
+                                    {actionLogLoading && (
+                                        <p className="panel-muted">Loading actions…</p>
+                                    )}
+                                    {actionLogError && (
+                                        <p role="alert" className="panel-inline-note error">{actionLogError}</p>
+                                    )}
+                                    {!actionLogLoading && !actionLogError && actionLog.length === 0 && (
+                                        <p className="panel-muted">No actions recorded yet.</p>
+                                    )}
+                                    {!actionLogLoading && actionLog.length > 0 && (
+                                        <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                            {actionLog.map((entry) => (
+                                                <li
+                                                    key={entry.id}
+                                                    style={{
+                                                        padding: '0.5rem 0.75rem',
+                                                        background: 'var(--bg)',
+                                                        border: '1px solid var(--line)',
+                                                        borderRadius: '0.25rem',
+                                                        fontSize: '0.8rem',
+                                                    }}
+                                                >
+                                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.2rem' }}>
+                                                        <span
+                                                            className={
+                                                                entry.resultStatus === 'success' ? 'badge ok'
+                                                                    : entry.resultStatus === 'partial_success' ? 'badge warn'
+                                                                        : 'badge high'
+                                                            }
+                                                        >
+                                                            {entry.resultStatus.replace(/_/g, ' ')}
+                                                        </span>
+                                                        <span style={{ color: 'var(--ink-muted)', fontFamily: 'monospace' }}>
+                                                            {entry.actionType}
+                                                        </span>
+                                                        <span style={{ marginLeft: 'auto', color: 'var(--ink-soft)', fontSize: '0.75rem' }}>
+                                                            {new Date(entry.createdAt).toLocaleString('en-US')}
+                                                        </span>
+                                                    </div>
+                                                    {entry.resultSummary && (
+                                                        <p style={{ color: 'var(--ink-muted)', margin: 0 }}>{entry.resultSummary}</p>
+                                                    )}
+                                                    {entry.errorMessage && (
+                                                        <p style={{ color: 'var(--ink-soft)', margin: '0.2rem 0 0', fontFamily: 'monospace', fontSize: '0.75rem' }}>
+                                                            {entry.errorMessage}
+                                                        </p>
+                                                    )}
+                                                    {entry.remediationHint && (
+                                                        <p style={{ color: 'var(--ink-muted)', margin: '0.2rem 0 0', fontStyle: 'italic' }}>
+                                                            Hint: {entry.remediationHint}
+                                                        </p>
+                                                    )}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                </div>
                             )}
                         </li>
                     );

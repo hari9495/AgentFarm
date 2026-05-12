@@ -53,6 +53,7 @@ export function KnowledgeGraphExplorer() {
     const [searchLoading, setSearchLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'symbols' | 'graph' | 'suggestions'>('symbols');
+    const [selectedNode, setSelectedNode] = useState<string | null>(null);
 
     const botId = 'default';
 
@@ -213,6 +214,7 @@ export function KnowledgeGraphExplorer() {
                             key={tab}
                             onClick={() => {
                                 setActiveTab(tab);
+                                if (tab !== 'graph') setSelectedNode(null);
                                 if (tab === 'suggestions') loadSuggestions();
                             }}
                             className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors capitalize ${activeTab === tab ? 'bg-zinc-600 text-white' : 'text-zinc-400 hover:text-zinc-200'}`}
@@ -316,42 +318,160 @@ export function KnowledgeGraphExplorer() {
             )}
 
             {/* Graph tab */}
-            {activeTab === 'graph' && snapshot && (
-                <div className="bg-zinc-800 border border-zinc-700 rounded-xl p-6">
-                    <h2 className="font-semibold text-sm mb-4">Dependency Graph Summary</h2>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                            <p className="text-zinc-400 text-xs uppercase tracking-wide mb-2">Top Callers</p>
-                            {snapshot.symbols
-                                .sort((a, b) => b.callers.length - a.callers.length)
-                                .slice(0, 8)
-                                .map((s) => (
-                                    <div key={s.name} className="flex items-center justify-between py-1">
-                                        <span className="font-mono text-xs text-zinc-300 truncate">{s.name}</span>
-                                        <span className="text-xs text-zinc-500 ml-2 shrink-0">{s.callers.length} callers</span>
-                                    </div>
-                                ))}
+            {activeTab === 'graph' && snapshot && (() => {
+                const kindFill = (kind: string): string => {
+                    const map: Record<string, string> = {
+                        function: '#3b82f6',
+                        class: '#8b5cf6',
+                        interface: '#06b6d4',
+                        variable: '#6b7280',
+                    };
+                    return map[kind] ?? '#6b7280';
+                };
+
+                const topSymbols = [...snapshot.symbols]
+                    .sort((a, b) => (b.callers.length + b.callees.length) - (a.callers.length + a.callees.length))
+                    .slice(0, 40);
+
+                const count = topSymbols.length;
+                const cols = Math.max(1, Math.ceil(Math.sqrt(count)));
+                const rows = Math.max(1, Math.ceil(count / cols));
+                const padX = 80;
+                const padY = 50;
+                const colStep = (800 - 2 * padX) / cols;
+                const rowStep = (500 - 2 * padY) / rows;
+
+                const nodePositions = new Map<string, { x: number; y: number }>();
+                topSymbols.forEach((s, i) => {
+                    const col = i % cols;
+                    const row = Math.floor(i / cols);
+                    nodePositions.set(s.name, {
+                        x: padX + col * colStep,
+                        y: padY + row * rowStep,
+                    });
+                });
+
+                const nodeNames = new Set(topSymbols.map(s => s.name));
+                const visibleEdges = snapshot.call_edges.filter(
+                    e => nodeNames.has(e.from) && nodeNames.has(e.to),
+                );
+
+                const selSym = selectedNode
+                    ? (snapshot.symbols.find(s => s.name === selectedNode) ?? null)
+                    : null;
+
+                return (
+                    <>
+                        <div className="bg-zinc-800 border border-zinc-700 rounded-xl p-4">
+                            <svg viewBox="0 0 800 500" width="100%" preserveAspectRatio="xMidYMid meet">
+                                <rect width={800} height={500} fill="#18181b" rx={8} />
+                                {visibleEdges.map((e, idx) => {
+                                    const from = nodePositions.get(e.from);
+                                    const to = nodePositions.get(e.to);
+                                    if (!from || !to) return null;
+                                    return (
+                                        <line
+                                            key={`${e.from}:${e.to}:${idx}`}
+                                            x1={from.x} y1={from.y}
+                                            x2={to.x} y2={to.y}
+                                            stroke="#3f3f46"
+                                            strokeWidth={1}
+                                            opacity={0.6}
+                                        />
+                                    );
+                                })}
+                                {topSymbols.map(s => {
+                                    const pos = nodePositions.get(s.name);
+                                    if (!pos) return null;
+                                    const fill = kindFill(s.kind);
+                                    const isSelected = selectedNode === s.name;
+                                    const label = s.name.length > 12 ? s.name.slice(0, 11) + '\u2026' : s.name;
+                                    return (
+                                        <g
+                                            key={s.name}
+                                            onClick={() => setSelectedNode(selectedNode === s.name ? null : s.name)}
+                                            style={{ cursor: 'pointer' }}
+                                        >
+                                            <circle
+                                                cx={pos.x}
+                                                cy={pos.y}
+                                                r={18}
+                                                fill={fill}
+                                                stroke={isSelected ? '#fbbf24' : 'none'}
+                                                strokeWidth={isSelected ? 2 : 0}
+                                            />
+                                            <text
+                                                x={pos.x}
+                                                y={pos.y + 28}
+                                                fontSize={8}
+                                                fill="#a1a1aa"
+                                                textAnchor="middle"
+                                            >
+                                                {label}
+                                            </text>
+                                        </g>
+                                    );
+                                })}
+                            </svg>
+                            <p className="text-xs text-zinc-500 mt-2">
+                                Showing {count} of {snapshot.symbols.length} symbols · {visibleEdges.length} call edges rendered
+                            </p>
+                            <p className="text-xs text-zinc-600 mt-1">
+                                Last indexed:{' '}
+                                {snapshot.last_indexed ? new Date(snapshot.last_indexed).toLocaleString() : '—'}
+                            </p>
                         </div>
-                        <div>
-                            <p className="text-zinc-400 text-xs uppercase tracking-wide mb-2">Most Connected</p>
-                            {snapshot.symbols
-                                .sort((a, b) => (b.callers.length + b.callees.length) - (a.callers.length + a.callees.length))
-                                .slice(0, 8)
-                                .map((s) => (
-                                    <div key={s.name} className="flex items-center justify-between py-1">
-                                        <span className="font-mono text-xs text-zinc-300 truncate">{s.name}</span>
-                                        <span className="text-xs text-zinc-500 ml-2 shrink-0">
-                                            {s.callers.length + s.callees.length} edges
-                                        </span>
+                        {selSym && (
+                            <div className="bg-zinc-800 border border-zinc-700 rounded-xl p-4 mt-4">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <span className="font-mono font-bold text-sm text-zinc-100">{selSym.name}</span>
+                                    <span
+                                        className="px-2 py-0.5 rounded text-xs font-semibold"
+                                        style={{ background: kindFill(selSym.kind), color: '#fff' }}
+                                    >
+                                        {selSym.kind}
+                                    </span>
+                                </div>
+                                <p className="text-xs text-zinc-500 font-mono mb-3">
+                                    {selSym.file_path}:{selSym.line}
+                                </p>
+                                {selSym.callers.length > 0 && (
+                                    <div className="mb-2">
+                                        <p className="text-xs text-zinc-400 font-semibold uppercase tracking-wide mb-1">Callers</p>
+                                        <div className="flex flex-col gap-1">
+                                            {selSym.callers.slice(0, 5).map(c => (
+                                                <span
+                                                    key={c}
+                                                    className="text-xs font-mono text-zinc-300 bg-zinc-700 px-2 py-0.5 rounded"
+                                                    title={c}
+                                                >
+                                                    {c.length > 30 ? c.slice(0, 29) + '\u2026' : c}
+                                                </span>
+                                            ))}
+                                        </div>
                                     </div>
-                                ))}
-                        </div>
-                    </div>
-                    <p className="text-xs text-zinc-600 mt-4">
-                        Last indexed: {snapshot.last_indexed ? new Date(snapshot.last_indexed).toLocaleString() : '—'}
-                    </p>
-                </div>
-            )}
+                                )}
+                                {selSym.callees.length > 0 && (
+                                    <div>
+                                        <p className="text-xs text-zinc-400 font-semibold uppercase tracking-wide mb-1">Callees</p>
+                                        <div className="flex flex-col gap-1">
+                                            {selSym.callees.slice(0, 5).map(c => (
+                                                <span
+                                                    key={c}
+                                                    className="text-xs font-mono text-zinc-300 bg-zinc-700 px-2 py-0.5 rounded"
+                                                    title={c}
+                                                >
+                                                    {c.length > 30 ? c.slice(0, 29) + '\u2026' : c}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </>
+                );
+            })()}
 
             {/* Suggestions tab */}
             {activeTab === 'suggestions' && (

@@ -107,6 +107,27 @@ type ConnectorActionRepo = {
         | null;
     }): Promise<void>;
     createConnectorActionLog(record: ConnectorActionLogRecord): Promise<void>;
+    listConnectorActions(input: {
+        tenantId: string;
+        connectorId: string;
+        limit: number;
+        cursor?: Date;
+    }): Promise<ActionLogRow[]>;
+};
+
+type ActionLogRow = {
+    id: string;
+    actionId: string;
+    connectorId: string;
+    connectorType: string;
+    actionType: string;
+    resultStatus: string;
+    resultSummary: string;
+    errorCode: string | null;
+    errorMessage: string | null;
+    remediationHint: string | null;
+    completedAt: Date;
+    createdAt: Date;
 };
 
 type HealthProbeResult = {
@@ -358,6 +379,32 @@ const defaultRepo: ConnectorActionRepo = {
                 errorMessage: record.errorMessage,
                 remediationHint: record.remediationHint,
                 completedAt: record.completedAt,
+            },
+        });
+    },
+    async listConnectorActions(input) {
+        const prisma = await getPrisma();
+        return prisma.connectorAction.findMany({
+            where: {
+                tenantId: input.tenantId,
+                connectorId: input.connectorId,
+                ...(input.cursor ? { createdAt: { lt: input.cursor } } : {}),
+            },
+            orderBy: { createdAt: 'desc' },
+            take: input.limit,
+            select: {
+                id: true,
+                actionId: true,
+                connectorId: true,
+                connectorType: true,
+                actionType: true,
+                resultStatus: true,
+                resultSummary: true,
+                errorCode: true,
+                errorMessage: true,
+                remediationHint: true,
+                completedAt: true,
+                createdAt: true,
             },
         });
     },
@@ -1311,6 +1358,66 @@ export const registerConnectorActionRoutes = async (
             });
         },
     );
+
+    // -------------------------------------------------------------------------
+    // GET /v1/connectors/:connectorId/actions
+    //
+    // Returns a paginated list of ConnectorAction log records for a specific
+    // connector, scoped to the authenticated tenant.  Cursor-based pagination
+    // via createdAt ISO timestamp (lt cursor → earlier records).
+    // requestBody is intentionally omitted (may contain secrets).
+    // -------------------------------------------------------------------------
+
+    type ActionLogParams = { connectorId: string };
+    type ActionLogQuery = { limit?: string; cursor?: string };
+
+    app.get<{ Params: ActionLogParams; Querystring: ActionLogQuery }>(
+        '/v1/connectors/:connectorId/actions',
+        async (request, reply) => {
+            const session = options.getSession(request);
+            if (!session) {
+                return reply.code(401).send({
+                    error: 'unauthorized',
+                    message: 'A valid authenticated session is required.',
+                });
+            }
+
+            const { connectorId } = request.params;
+
+            const rawLimit = parseInt(request.query?.limit ?? '20', 10);
+            const limit = Math.min(Math.max(Number.isNaN(rawLimit) ? 20 : rawLimit, 1), 50);
+
+            let cursorDate: Date | undefined;
+            if (request.query?.cursor) {
+                const parsed = new Date(request.query.cursor);
+                if (!Number.isNaN(parsed.getTime())) {
+                    cursorDate = parsed;
+                }
+            }
+
+            let actions: ActionLogRow[];
+            try {
+                actions = await repo.listConnectorActions({
+                    tenantId: session.tenantId,
+                    connectorId,
+                    limit,
+                    cursor: cursorDate,
+                });
+            } catch (err) {
+                const msg = err instanceof Error ? err.message : String(err);
+                return reply.code(500).send({
+                    error: 'database_error',
+                    message: `Failed to retrieve action log: ${msg}`,
+                });
+            }
+
+            return reply.code(200).send({
+                actions,
+                hasMore: actions.length === limit,
+                nextCursor: actions.at(-1)?.createdAt ?? null,
+            });
+        },
+    );
 };
 
 export type {
@@ -1320,4 +1427,5 @@ export type {
     ConnectorAuditWriter,
     SessionContext,
     ProviderExecutor,
+    ActionLogRow,
 };

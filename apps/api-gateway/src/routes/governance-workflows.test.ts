@@ -260,3 +260,230 @@ test('C1 diagnostics expose workflow SLA and bottleneck stage', async () => {
         await app.close();
     }
 });
+
+test('C1 workflow list returns 401 when no session', async () => {
+    const app = Fastify();
+    await registerGovernanceWorkflowRoutes(app, { getSession: () => null });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/v1/governance/workflows' });
+        assert.equal(res.statusCode, 401);
+    } finally {
+        await app.close();
+    }
+});
+
+test('C1 workflow list returns empty array on empty store', async () => {
+    const app = Fastify();
+    await registerGovernanceWorkflowRoutes(app, { getSession: () => session() });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/v1/governance/workflows' });
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as { workflows: unknown[]; total: number };
+        assert.deepEqual(body.workflows, []);
+        assert.equal(body.total, 0);
+    } finally {
+        await app.close();
+    }
+});
+
+test('C1 workflow list returns only tenant matching workflows', async () => {
+    const app = Fastify();
+    let currentSession = session();
+    await registerGovernanceWorkflowRoutes(app, { getSession: () => currentSession });
+    try {
+        const tmpl = await app.inject({
+            method: 'POST',
+            url: '/v1/governance/workflows/templates',
+            payload: createTemplatePayload(),
+        });
+        const { template_id } = tmpl.json() as { template_id: string };
+
+        await app.inject({
+            method: 'POST',
+            url: '/v1/governance/workflows/start',
+            payload: {
+                template_id,
+                workspace_id: 'ws-1',
+                bot_id: 'bot-list-a',
+                task_id: 'task-list-a',
+                action_id: 'action-list-a',
+                action_summary: 'Tenant filter check',
+                action_type: 'deploy.release',
+                risk_level: 'high',
+            },
+        });
+
+        // Switch to a different tenant — should see 0 workflows
+        currentSession = { ...session(), tenantId: 'tenant-other' };
+        const res = await app.inject({ method: 'GET', url: '/v1/governance/workflows' });
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as { workflows: unknown[]; total: number };
+        assert.equal(body.total, 0);
+    } finally {
+        await app.close();
+    }
+});
+
+test('C1 workflow list filters by workspace_id query param', async () => {
+    const app = Fastify();
+    const multiWsSession = { ...session(), workspaceIds: ['ws-1', 'ws-2'] };
+    await registerGovernanceWorkflowRoutes(app, { getSession: () => multiWsSession });
+    try {
+        const tmpl = await app.inject({
+            method: 'POST',
+            url: '/v1/governance/workflows/templates',
+            payload: createTemplatePayload(),
+        });
+        const { template_id } = tmpl.json() as { template_id: string };
+
+        await app.inject({
+            method: 'POST',
+            url: '/v1/governance/workflows/start',
+            payload: {
+                template_id,
+                workspace_id: 'ws-1',
+                bot_id: 'bot-ws1',
+                task_id: 'task-ws1',
+                action_id: 'action-ws1',
+                action_summary: 'WS-1 action',
+                action_type: 'deploy.release',
+                risk_level: 'high',
+            },
+        });
+
+        await app.inject({
+            method: 'POST',
+            url: '/v1/governance/workflows/start',
+            payload: {
+                template_id,
+                workspace_id: 'ws-2',
+                bot_id: 'bot-ws2',
+                task_id: 'task-ws2',
+                action_id: 'action-ws2',
+                action_summary: 'WS-2 action',
+                action_type: 'deploy.release',
+                risk_level: 'high',
+            },
+        });
+
+        const res = await app.inject({ method: 'GET', url: '/v1/governance/workflows?workspace_id=ws-1' });
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as { workflows: Array<{ workspaceId: string }>; total: number };
+        assert.equal(body.total, 1);
+        assert.equal(body.workflows[0]!.workspaceId, 'ws-1');
+    } finally {
+        await app.close();
+    }
+});
+
+test('C1 workflow detail returns 401 when no session', async () => {
+    const app = Fastify();
+    await registerGovernanceWorkflowRoutes(app, { getSession: () => null });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/v1/governance/workflows/any-id' });
+        assert.equal(res.statusCode, 401);
+    } finally {
+        await app.close();
+    }
+});
+
+test('C1 workflow detail returns 404 when workflow not found', async () => {
+    const app = Fastify();
+    await registerGovernanceWorkflowRoutes(app, { getSession: () => session() });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/v1/governance/workflows/nonexistent-id' });
+        assert.equal(res.statusCode, 404);
+    } finally {
+        await app.close();
+    }
+});
+
+test('C1 workflow detail returns 403 when workflow belongs to different tenant', async () => {
+    const app = Fastify();
+    let currentSession = session();
+    await registerGovernanceWorkflowRoutes(app, { getSession: () => currentSession });
+    try {
+        const tmpl = await app.inject({
+            method: 'POST',
+            url: '/v1/governance/workflows/templates',
+            payload: createTemplatePayload(),
+        });
+        const { template_id } = tmpl.json() as { template_id: string };
+
+        const start = await app.inject({
+            method: 'POST',
+            url: '/v1/governance/workflows/start',
+            payload: {
+                template_id,
+                workspace_id: 'ws-1',
+                bot_id: 'bot-403',
+                task_id: 'task-403',
+                action_id: 'action-403',
+                action_summary: 'Cross-tenant access check',
+                action_type: 'deploy.release',
+                risk_level: 'high',
+            },
+        });
+        const { workflow_id } = start.json() as { workflow_id: string };
+
+        // Switch to a different tenant — access should be denied
+        currentSession = { ...session(), tenantId: 'tenant-other' };
+        const res = await app.inject({ method: 'GET', url: `/v1/governance/workflows/${workflow_id}` });
+        assert.equal(res.statusCode, 403);
+    } finally {
+        await app.close();
+    }
+});
+
+test('C1 workflow detail returns workflow and decisions', async () => {
+    const app = Fastify();
+    await registerGovernanceWorkflowRoutes(app, { getSession: () => session() });
+    try {
+        const tmpl = await app.inject({
+            method: 'POST',
+            url: '/v1/governance/workflows/templates',
+            payload: createTemplatePayload(),
+        });
+        const { template_id } = tmpl.json() as { template_id: string };
+
+        const start = await app.inject({
+            method: 'POST',
+            url: '/v1/governance/workflows/start',
+            payload: {
+                template_id,
+                workspace_id: 'ws-1',
+                bot_id: 'bot-detail',
+                task_id: 'task-detail',
+                action_id: 'action-detail',
+                action_summary: 'Detail view check',
+                action_type: 'deploy.release',
+                risk_level: 'high',
+            },
+        });
+        const { workflow_id } = start.json() as { workflow_id: string };
+
+        await app.inject({
+            method: 'POST',
+            url: `/v1/governance/workflows/${workflow_id}/decision`,
+            payload: {
+                decision: 'approved',
+                reason_code: 'approved_with_controls',
+                reason_text: 'Looks good',
+                evidence_links: ['https://evidence.local/detail-1'],
+            },
+        });
+
+        const res = await app.inject({ method: 'GET', url: `/v1/governance/workflows/${workflow_id}` });
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as {
+            workflow: { id: string; status: string; actionSummary: string };
+            decisions: Array<{ decision: string }>;
+        };
+        assert.equal(body.workflow.id, workflow_id);
+        assert.equal(body.workflow.actionSummary, 'Detail view check');
+        assert.equal(body.decisions.length, 1);
+        assert.equal(body.decisions[0]!.decision, 'approved');
+    } finally {
+        await app.close();
+    }
+});

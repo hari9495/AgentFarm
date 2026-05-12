@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import type { PrismaClient } from '@prisma/client';
+import type { PrismaClient, TaskExecutionOutcome } from '@prisma/client';
 import { ROLE_RANK } from '../lib/require-role.js';
 
 const getPrisma = async () => {
@@ -31,6 +31,18 @@ type CostSummaryQuery = {
     tenantId?: string;
     from?: string;
     to?: string;
+};
+
+type TasksQuery = {
+    tenantId?: string;
+    from?: string;
+    to?: string;
+    workspaceId?: string;
+    botId?: string;
+    outcome?: string;
+    modelProvider?: string;
+    cursor?: string;
+    limit?: string;
 };
 
 const MAX_RANGE_MS = 90 * 24 * 60 * 60 * 1000;
@@ -299,6 +311,120 @@ export const registerAnalyticsRoutes = async (
             successRate,
             byProvider: Object.entries(byProvider).map(([provider, v]) => ({ provider, ...v })),
             weeklyTrend,
+        });
+    });
+
+    // -----------------------------------------------------------------------
+    // GET /v1/analytics/tasks
+    // -----------------------------------------------------------------------
+    app.get<{ Querystring: TasksQuery }>('/v1/analytics/tasks', async (request, reply) => {
+        const session = options.getSession(request);
+        if (!session) {
+            return reply.code(401).send({
+                error: 'unauthorized',
+                message: 'A valid authenticated session is required.',
+            });
+        }
+        if ((ROLE_RANK[session.role ?? ''] ?? 0) < (ROLE_RANK['viewer'] ?? 99)) {
+            return reply.code(403).send({ error: 'insufficient_role', required: 'viewer', actual: session.role });
+        }
+
+        const tenantId = request.query.tenantId;
+        if (!tenantId) {
+            return reply.code(400).send({
+                error: 'invalid_request',
+                message: 'tenantId is required.',
+            });
+        }
+
+        if (tenantId !== session.tenantId) {
+            return reply.code(403).send({
+                error: 'forbidden',
+                message: 'tenantId does not match session.',
+            });
+        }
+
+        const toDate = parseDateParam(request.query.to) ?? new Date();
+        const fromDate = parseDateParam(request.query.from) ?? new Date(toDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+        const VALID_OUTCOMES = ['success', 'failed', 'approval_queued'] as const;
+        const outcome = request.query.outcome;
+        if (outcome && !(VALID_OUTCOMES as readonly string[]).includes(outcome)) {
+            return reply.code(400).send({
+                error: 'invalid_request',
+                message: `outcome must be one of: ${VALID_OUTCOMES.join(', ')}.`,
+            });
+        }
+
+        const rawLimit = parseInt(request.query.limit ?? '50', 10);
+        const limit = Math.min(Math.max(isNaN(rawLimit) ? 50 : rawLimit, 1), 100);
+
+        const cursor = request.query.cursor;
+        const cursorDate = cursor ? parseDateParam(cursor) : null;
+
+        const workspaceId = request.query.workspaceId;
+        const botId = request.query.botId;
+        const modelProvider = request.query.modelProvider;
+
+        const db = await resolvePrisma();
+
+        const where = {
+            tenantId: session.tenantId,
+            executedAt: { gte: fromDate, lte: toDate },
+            ...(workspaceId ? { workspaceId } : {}),
+            ...(botId ? { botId } : {}),
+            ...(outcome ? { outcome: outcome as TaskExecutionOutcome } : {}),
+            ...(modelProvider ? { modelProvider } : {}),
+            ...(cursorDate ? { createdAt: { lt: cursorDate } } : {}),
+        };
+
+        const [tasks, total] = await Promise.all([
+            db.taskExecutionRecord.findMany({
+                where,
+                orderBy: { executedAt: 'desc' },
+                take: limit,
+                select: {
+                    id: true,
+                    taskId: true,
+                    botId: true,
+                    workspaceId: true,
+                    modelProvider: true,
+                    modelProfile: true,
+                    modelTier: true,
+                    promptTokens: true,
+                    completionTokens: true,
+                    totalTokens: true,
+                    estimatedCostUsd: true,
+                    latencyMs: true,
+                    outcome: true,
+                    executedAt: true,
+                },
+            }),
+            db.taskExecutionRecord.count({ where }),
+        ]);
+
+        const typedTasks = tasks as Array<{
+            id: string;
+            taskId: string;
+            botId: string;
+            workspaceId: string;
+            modelProvider: string;
+            modelProfile: string;
+            modelTier: string | null;
+            promptTokens: number | null;
+            completionTokens: number | null;
+            totalTokens: number | null;
+            estimatedCostUsd: number | null;
+            latencyMs: number;
+            outcome: string;
+            executedAt: Date;
+        }>;
+
+        return reply.send({
+            tasks: typedTasks,
+            total,
+            hasMore: typedTasks.length === limit,
+            nextCursor: typedTasks.at(-1)?.executedAt.toISOString() ?? null,
         });
     });
 };

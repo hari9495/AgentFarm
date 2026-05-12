@@ -51,6 +51,12 @@ export default function MarketplacePage() {
                 >
                   Talk to onboarding
                 </Link>
+                <Link
+                  href="/marketplace/listings"
+                  className="inline-flex items-center justify-center rounded-xl border border-slate-300 dark:border-slate-700 px-5 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-white/70 dark:hover:bg-slate-800 transition-colors"
+                >
+                  View live skill registry →
+                </Link>
               </div>
             </div>
             <div className="marketplace-stat-grid" aria-label="Marketplace trust metrics">

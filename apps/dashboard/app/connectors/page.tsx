@@ -1,5 +1,7 @@
-import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import { ConnectorConfigPanel } from '../components/connector-config-panel';
+import { getSessionPayload, getInternalSessionAuthHeader } from '../lib/internal-session';
 
 type ConnectorSummary = {
     connector_id: string;
@@ -61,13 +63,13 @@ const FALLBACK_CONNECTORS: ConnectorSummary[] = [
     },
 ];
 
-async function fetchConnectors(workspaceId: string, sessionCookie: string): Promise<ConnectorSummary[]> {
+async function fetchConnectors(workspaceId: string, authHeader: string): Promise<ConnectorSummary[]> {
     try {
         const res = await fetch(
             `${API_BASE}/v1/connectors/health/summary?workspace_id=${encodeURIComponent(workspaceId)}`,
             {
-                headers: { Cookie: sessionCookie },
-                next: { revalidate: 30 },
+                headers: { Authorization: authHeader },
+                cache: 'no-store',
             },
         );
         if (!res.ok) return FALLBACK_CONNECTORS;
@@ -79,22 +81,52 @@ async function fetchConnectors(workspaceId: string, sessionCookie: string): Prom
 }
 
 export default async function ConnectorsPage() {
-    const cookieStore = await cookies();
-    const sessionCookie = cookieStore.toString();
+    const session = await getSessionPayload();
+    if (!session?.tenantId) {
+        redirect('/login?next=/connectors');
+    }
 
-    // Use the first workspace id from session or fall back to the default
-    const workspaceId = cookieStore.get('workspace_id')?.value ?? 'ws_primary_001';
+    const workspaceId = session.workspaceIds?.[0] ?? '';
+    const authHeader = await getInternalSessionAuthHeader();
 
-    const connectors = await fetchConnectors(workspaceId, sessionCookie);
+    const connectors = authHeader && workspaceId
+        ? await fetchConnectors(workspaceId, authHeader)
+        : FALLBACK_CONNECTORS;
 
     return (
         <main className="page-shell">
-            <header className="hero">
-                <p className="eyebrow">Settings</p>
-                <h1>Connector Credentials</h1>
-                <p>
-                    Manage the credentials each agent workspace uses to connect to Jira, GitHub, Microsoft Teams,
-                    and Email. Credentials are written to Azure Key Vault and never stored in the application database.
+            <header style={{ marginBottom: '2rem' }}>
+                <Link
+                    href="/"
+                    style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.25rem',
+                        fontSize: '0.8rem',
+                        color: 'var(--ink-muted)',
+                        textDecoration: 'none',
+                        marginBottom: '0.75rem',
+                    }}
+                >
+                    ← Dashboard
+                </Link>
+                <p
+                    style={{
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        letterSpacing: '0.08em',
+                        textTransform: 'uppercase',
+                        color: 'var(--ink-muted)',
+                        marginBottom: '0.35rem',
+                    }}
+                >
+                    Integrations
+                </p>
+                <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--ink)', marginBottom: '0.35rem' }}>
+                    Connectors
+                </h1>
+                <p style={{ color: 'var(--ink-muted)', fontSize: '0.95rem' }}>
+                    Manage connector authentication and view action history.
                 </p>
             </header>
 

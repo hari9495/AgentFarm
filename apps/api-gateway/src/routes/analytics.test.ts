@@ -297,3 +297,232 @@ test('cost-summary: totalPromptTokens and totalCompletionTokens summed correctly
         await app.close();
     }
 });
+
+// ---------------------------------------------------------------------------
+// tasks
+// ---------------------------------------------------------------------------
+
+const makeTasksPrisma = (records: any[] = [], countResult?: number) => ({
+    taskExecutionRecord: {
+        findMany: async () => records,
+        count: async () => countResult ?? records.length,
+    },
+    qualitySignalLog: {
+        findMany: async () => [],
+    },
+} as any);
+
+const makeTaskRecord = (overrides: Record<string, unknown> = {}) => ({
+    id: 'task_1',
+    taskId: 'tid_1',
+    botId: 'bot_1',
+    workspaceId: 'ws_1',
+    modelProvider: 'openai',
+    modelProfile: 'gpt-4',
+    modelTier: 'standard',
+    promptTokens: 100,
+    completionTokens: 200,
+    totalTokens: 300,
+    estimatedCostUsd: 0.01,
+    latencyMs: 150,
+    outcome: 'success',
+    executedAt: new Date('2026-05-01T10:00:00.000Z'),
+    ...overrides,
+});
+
+test('tasks: returns 401 when no session', async () => {
+    const app = Fastify();
+    await registerAnalyticsRoutes(app, {
+        getSession: () => null,
+        prisma: makeTasksPrisma(),
+    });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/v1/analytics/tasks?tenantId=tenant_1' });
+        assert.equal(res.statusCode, 401);
+        assert.equal(res.json().error, 'unauthorized');
+    } finally {
+        await app.close();
+    }
+});
+
+test('tasks: returns 400 when outcome param is invalid', async () => {
+    const app = Fastify();
+    await registerAnalyticsRoutes(app, {
+        getSession: () => session(),
+        prisma: makeTasksPrisma(),
+    });
+    try {
+        const res = await app.inject({
+            method: 'GET',
+            url: '/v1/analytics/tasks?tenantId=tenant_1&outcome=not_a_valid_outcome',
+        });
+        assert.equal(res.statusCode, 400);
+        assert.equal(res.json().error, 'invalid_request');
+    } finally {
+        await app.close();
+    }
+});
+
+test('tasks: returns empty tasks array when no records exist', async () => {
+    const app = Fastify();
+    await registerAnalyticsRoutes(app, {
+        getSession: () => session(),
+        prisma: makeTasksPrisma([]),
+    });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/v1/analytics/tasks?tenantId=tenant_1' });
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as { tasks: unknown[]; total: number; hasMore: boolean; nextCursor: null };
+        assert.ok(Array.isArray(body.tasks));
+        assert.equal(body.tasks.length, 0);
+        assert.equal(body.total, 0);
+        assert.equal(body.hasMore, false);
+        assert.equal(body.nextCursor, null);
+    } finally {
+        await app.close();
+    }
+});
+
+test('tasks: returns tasks for session tenantId and blocks cross-tenant request', async () => {
+    const records = [makeTaskRecord()];
+    const app = Fastify();
+    await registerAnalyticsRoutes(app, {
+        getSession: () => session(),
+        prisma: makeTasksPrisma(records),
+    });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/v1/analytics/tasks?tenantId=tenant_1' });
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as { tasks: Array<{ id: string }> };
+        assert.equal(body.tasks.length, 1);
+        assert.equal(body.tasks[0]?.id, 'task_1');
+
+        const res2 = await app.inject({ method: 'GET', url: '/v1/analytics/tasks?tenantId=tenant_other' });
+        assert.equal(res2.statusCode, 403);
+        assert.equal(res2.json().error, 'forbidden');
+    } finally {
+        await app.close();
+    }
+});
+
+test('tasks: filters by outcome=success — returns matching records', async () => {
+    const records = [makeTaskRecord({ id: 'task_s', outcome: 'success' })];
+    const app = Fastify();
+    await registerAnalyticsRoutes(app, {
+        getSession: () => session(),
+        prisma: makeTasksPrisma(records, 1),
+    });
+    try {
+        const res = await app.inject({
+            method: 'GET',
+            url: '/v1/analytics/tasks?tenantId=tenant_1&outcome=success',
+        });
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as { tasks: Array<{ outcome: string }>; total: number };
+        assert.equal(body.tasks[0]?.outcome, 'success');
+        assert.equal(body.total, 1);
+    } finally {
+        await app.close();
+    }
+});
+
+test('tasks: filters by botId — returns matching record', async () => {
+    const records = [makeTaskRecord({ botId: 'bot_target' })];
+    const app = Fastify();
+    await registerAnalyticsRoutes(app, {
+        getSession: () => session(),
+        prisma: makeTasksPrisma(records, 1),
+    });
+    try {
+        const res = await app.inject({
+            method: 'GET',
+            url: '/v1/analytics/tasks?tenantId=tenant_1&botId=bot_target',
+        });
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as { tasks: Array<{ botId: string }> };
+        assert.equal(body.tasks[0]?.botId, 'bot_target');
+    } finally {
+        await app.close();
+    }
+});
+
+test('tasks: hasMore is true when result count equals limit', async () => {
+    const records = Array.from({ length: 50 }, (_, i) =>
+        makeTaskRecord({ id: `task_${i}`, executedAt: new Date(Date.now() - i * 1000) }),
+    );
+    const app = Fastify();
+    await registerAnalyticsRoutes(app, {
+        getSession: () => session(),
+        prisma: makeTasksPrisma(records, 200),
+    });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/v1/analytics/tasks?tenantId=tenant_1' });
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as { hasMore: boolean; tasks: unknown[] };
+        assert.equal(body.tasks.length, 50);
+        assert.equal(body.hasMore, true);
+    } finally {
+        await app.close();
+    }
+});
+
+test('tasks: nextCursor is ISO string of last task executedAt', async () => {
+    const executedAt = new Date('2026-05-01T10:00:00.000Z');
+    const records = [makeTaskRecord({ id: 'last_task', executedAt })];
+    const app = Fastify();
+    await registerAnalyticsRoutes(app, {
+        getSession: () => session(),
+        prisma: makeTasksPrisma(records, 1),
+    });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/v1/analytics/tasks?tenantId=tenant_1' });
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as { nextCursor: string };
+        assert.ok(typeof body.nextCursor === 'string');
+        assert.equal(new Date(body.nextCursor).toISOString(), executedAt.toISOString());
+    } finally {
+        await app.close();
+    }
+});
+
+test('tasks: filters by workspaceId — returns matching record', async () => {
+    const records = [makeTaskRecord({ workspaceId: 'ws_target' })];
+    const app = Fastify();
+    await registerAnalyticsRoutes(app, {
+        getSession: () => session(),
+        prisma: makeTasksPrisma(records, 1),
+    });
+    try {
+        const res = await app.inject({
+            method: 'GET',
+            url: '/v1/analytics/tasks?tenantId=tenant_1&workspaceId=ws_target',
+        });
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as { tasks: Array<{ workspaceId: string }> };
+        assert.equal(body.tasks[0]?.workspaceId, 'ws_target');
+    } finally {
+        await app.close();
+    }
+});
+
+test('tasks: respects from/to date range params and returns 200', async () => {
+    const app = Fastify();
+    await registerAnalyticsRoutes(app, {
+        getSession: () => session(),
+        prisma: makeTasksPrisma([]),
+    });
+    try {
+        const from = '2026-04-01T00:00:00.000Z';
+        const to = '2026-04-30T23:59:59.000Z';
+        const res = await app.inject({
+            method: 'GET',
+            url: `/v1/analytics/tasks?tenantId=tenant_1&from=${from}&to=${to}`,
+        });
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as { tasks: unknown[]; total: number };
+        assert.ok(Array.isArray(body.tasks));
+        assert.equal(body.total, 0);
+    } finally {
+        await app.close();
+    }
+});
