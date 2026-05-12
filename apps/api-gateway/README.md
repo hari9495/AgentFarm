@@ -1,94 +1,120 @@
-# API Gateway Authentication and Internal Access Notes
+# API Gateway
 
-This document summarizes customer vs internal authentication behavior and the internal login policy controls.
+The API Gateway is the control-plane entry point for AgentFarm. All authenticated requests from the Dashboard and all inter-service callbacks from the Agent Runtime pass through this service.
 
-## Authentication Endpoints
-
-- POST /auth/signup
-  - Creates tenant bootstrap records and returns a customer-scoped session token.
-
-- POST /auth/login
-  - Returns a customer-scoped session token.
-
-- POST /auth/internal-login
-  - Returns an internal-scoped session token only when policy checks pass.
-
-- POST /auth/logout
-  - Clears session cookie.
-
-## Session Scope Model
-
-Session tokens include a scope field.
-
-- customer
-  - Default scope for customer authentication flows.
-
-- internal
-  - Required for internal dashboard APIs and diagnostics.
-
-## Internal Login Policy Controls
-
-Internal login uses deny-by-default policy enforcement.
-
-- API_INTERNAL_LOGIN_ALLOWED_DOMAINS
-  - CSV list of email domains allowed to use /auth/internal-login.
-  - Example: agentfarm.com,corp.agentfarm.com
-
-- API_INTERNAL_LOGIN_ADMIN_ROLES
-  - CSV list of TenantUser.role values that are allowed to use /auth/internal-login.
-  - Example: internal_admin,platform_admin,owner
-
-Internal login access is granted when either condition matches:
-
-1. Email domain is in API_INTERNAL_LOGIN_ALLOWED_DOMAINS.
-2. User role is in API_INTERNAL_LOGIN_ADMIN_ROLES.
-
-Otherwise /auth/internal-login returns:
-
-- HTTP 403
-- error code: internal_access_denied
-
-## Startup Validation Warning
-
-At api-gateway startup, a warning is emitted if both policy lists are empty.
-
-- This indicates internal login remains deny-by-default until policy values are configured.
-
-## Internal-Only Policy Diagnostics Endpoint
-
-- GET /v1/auth/internal-login-policy
-  - Internal session required (scope must be internal).
-  - Returns sanitized effective policy values and counters.
-
-Response fields include:
-
-- allowed_domains
-- admin_roles
-- allowed_domains_count
-- admin_roles_count
-- deny_all_mode
-
-## Quick Policy Smoke Command
-
-Run focused policy checks only:
-
-- pnpm --filter @agentfarm/api-gateway test:internal-login-policy
-
-This command validates:
-
-1. Domain-based internal login allow path.
-2. Role-based internal login allow path.
-3. Customer denial path.
-4. Internal diagnostics endpoint allow/deny behavior.
-5. deny_all_mode behavior when policy config is empty.
+**Port**: 3000
+**Framework**: Fastify 5 with TypeScript
+**Tests**: 898 tests, 57 suites
 
 ---
 
-## SSE Task Stream
+## Responsibilities
 
-Real-time task events delivered over Server-Sent Events (SSE), implemented in `src/routes/sse-tasks.ts`.
+- Session-based authentication for all `/v1/*` routes
+- Tenant and workspace isolation (all records carry `tenantId` + `workspaceId`)
+- Rate limiting: per-IP (180 req/min general, 20 req/min auth) and per-tenant (600 req/min)
+- Security headers via `@fastify/helmet`
+- Approval intake and decision recording (immutable, latency-tracked)
+- Audit event log (append-only, no update/delete path)
+- Budget policy enforcement (daily/monthly limits, hard-stop)
+- Subscription guard (grace period, suspension wall)
+- Billing webhook handling (Stripe, Razorpay, Zoho Sign)
+- Connector auth lifecycle (OAuth 2.0, API key, basic auth, token refresh/revoke)
+- Plugin allowlist and kill-switch governance
+- SSE live task feed with auto-recovery
 
-### Endpoint
+---
+
+## Development
+
+```bash
+# From the repo root
+pnpm --filter @agentfarm/api-gateway dev
+
+# Typecheck
+pnpm --filter @agentfarm/api-gateway typecheck
+
+# Tests
+pnpm --filter @agentfarm/api-gateway test
+```
+
+---
+
+## Environment variables
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `DATABASE_URL` | yes | — | PostgreSQL connection string |
+| `REDIS_URL` | yes | — | Redis connection string |
+| `API_SESSION_SECRET` | yes | — | Session cookie signing secret |
+| `DASHBOARD_API_TOKEN` | yes | — | Token expected on requests from the Dashboard |
+| `AGENTFARM_APPROVAL_INTAKE_SHARED_TOKEN` | yes | — | HMAC token for approval intake from Agent Runtime |
+| `AGENTFARM_RUNTIME_DECISION_SHARED_TOKEN` | yes | — | Token for runtime decision callbacks |
+| `AGENTFARM_CONNECTOR_EXEC_SHARED_TOKEN` | yes | — | Token for connector execution callbacks |
+| `AGENTFARM_RUNTIME_TASK_SHARED_TOKEN` | yes | — | Token for runtime task observability push |
+| `AGENTFARM_RUNTIME_DISPATCH_SHARED_TOKEN` | yes | — | Token for dispatching tasks to the runtime |
+| `ALLOWED_ORIGINS` | no | `''` | Comma-separated CORS allowlist |
+| `PORT` | no | `3000` | HTTP listen port |
+| `API_INTERNAL_LOGIN_ALLOWED_DOMAINS` | no | `''` | CSV email domains allowed to use internal login |
+| `API_INTERNAL_LOGIN_ADMIN_ROLES` | no | `''` | CSV role values allowed to use internal login |
+
+---
+
+## Authentication
+
+All `/v1/*` routes require a valid `agentfarm_session` cookie. Public endpoints explicitly excluded from auth:
+
+- `GET /health`
+- `POST /v1/auth/login`
+- `POST /v1/auth/signup`
+- `GET /v1/auth/internal-login-policy` (requires internal scope)
+
+### Session scopes
+- `customer` — default scope for customer-facing flows
+- `internal` — required for internal diagnostics and admin APIs
+
+### Internal login policy
+Internal login (`POST /v1/auth/internal-login`) uses deny-by-default policy. Access is granted when either:
+1. User's email domain is in `API_INTERNAL_LOGIN_ALLOWED_DOMAINS`
+2. User's role is in `API_INTERNAL_LOGIN_ADMIN_ROLES`
+
+Otherwise returns HTTP 403 with `error: internal_access_denied`.
+
+---
+
+## Route summary
+
+62 route files in `src/routes/`. Each file exports a Fastify plugin registered at `/v1/<domain>`.
+
+**Auth and identity**: `auth.ts`, `workspace-session.ts`, `roles.ts`, `internal-login-policy.ts`
+
+**Agents and bots**: `agents.ts`, `bot-versions.ts`, `agent-control.ts`, `agent-dispatch.ts`, `agent-feedback.ts`
+
+**Task execution**: `runtime-tasks.ts`, `task-queue.ts`, `sse-tasks.ts`, `runtime-llm-config.ts`, `repro-packs.ts`, `schedules.ts`, `skill-scheduler.ts`
+
+**Orchestration and skills**: `orchestration.ts`, `autonomous-loops.ts`, `skill-pipelines.ts`, `skill-composition-execute.ts`, `handoffs.ts`
+
+**Governance and audit**: `approvals.ts`, `audit.ts`, `governance-kpis.ts`, `governance-workflows.ts`, `budget-policy.ts`, `retention-policy.ts`, `circuit-breakers.ts`, `snapshots.ts`, `ab-tests.ts`, `plugin-loading.ts`, `ci-failures.ts`
+
+**Billing**: `billing.ts`, `zoho-sign-webhook.ts`
+
+**Connectors**: `connector-actions.ts`, `connector-auth.ts`, `connector-health.ts`, `adapter-registry.ts`, `marketplace.ts`
+
+**Observability**: `analytics.ts`, `observability.ts`, `activity-events.ts`
+
+**Voice and meetings**: `meetings.ts`, `language.ts`
+
+**Memory and knowledge**: `memory.ts`, `work-memory.ts`, `knowledge-graph.ts`
+
+**Notifications**: `notifications.ts`, `questions.ts`
+
+**Developer tools**: `api-keys.ts`, `webhooks.ts`, `outbound-webhooks.ts`, `scheduled-reports.ts`, `pull-requests.ts`, `ide-state.ts`, `desktop-actions.ts`, `desktop-profile.ts`, `env-reconciler.ts`, `mcp-registry.ts`, `zoho-sign-webhook.ts`, `admin-provision.ts`, `chat.ts`, `team.ts`
+
+---
+
+## SSE task stream
+
+Real-time task events over Server-Sent Events, implemented in `src/routes/sse-tasks.ts`.
 
 ```
 GET /sse/tasks/:botId
@@ -97,6 +123,30 @@ GET /sse/tasks/:botId
 - Establishes a persistent SSE connection per `botId`.
 - On connect, any queued events for that bot are immediately drained to the client.
 - Heartbeat comment (`: heartbeat`) sent every 30 seconds to keep the connection alive.
+- Auto-recovery: queued events are buffered during disconnects and delivered on reconnect.
+
+---
+
+## Approvals
+
+Approval records are immutable. The lifecycle is:
+
+1. Agent Runtime posts to `POST /v1/approvals/intake` with a shared HMAC token.
+2. Gateway creates an `Approval` record (pending).
+3. Operator retrieves pending approvals via `GET /v1/approvals`.
+4. Operator posts a decision via `POST /v1/approvals/:id/decide`.
+5. Re-deciding an already-decided approval returns HTTP 409.
+6. `decisionLatencySeconds` is recorded on every decision.
+
+---
+
+## Health check
+
+```
+GET /health
+```
+
+Returns `200 {"status":"ok"}` when the service is ready. The Docker healthcheck polls this endpoint every 15 seconds.
 
 ### SseTaskQueue
 

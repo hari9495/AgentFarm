@@ -1,189 +1,144 @@
-# Dashboard Internal Operations Notes
+# Dashboard
 
-This internal dashboard includes:
+The Dashboard is the operator control center for AgentFarm. It provides real-time visibility into agent activity, approval queues, audit logs, governance metrics, billing, and all platform configuration.
 
-- Left sidebar navigation and top bar shell
-- Tabs for Overview, Approvals, Observability, and Audit
-- Compact equal-height metric cards row in Overview
-- Runtime observability controls and telemetry panels
-- Internal login policy visibility metrics in Observability
-- Incident drilldown actions for heartbeat, state, and connector failures
-- Deep-link copy actions for workspace/tab views and item-level contexts
-- Internal-only session enforcement for dashboard API routes
-
-## Environment Variables
-
-Set these variables when running the dashboard with runtime observability enabled:
-
-- AGENT_RUNTIME_BASE_URL
-  - Runtime base URL used by dashboard runtime proxy routes.
-  - Default: http://localhost:8080
-
-- AGENT_RUNTIME_TOKEN
-  - Optional bearer token forwarded from dashboard runtime proxy routes to runtime endpoints.
-  - Only required if runtime endpoints enforce bearer auth.
-
-- DASHBOARD_API_BASE_URL
-  - Base URL for API gateway calls from server components and route handlers.
-  - Default: http://localhost:3000
-
-## Internal Login Policy (API Gateway)
-
-The internal dashboard login flow uses:
-
-- POST /auth/internal-login
-
-Internal login only succeeds when the account matches policy rules configured on api-gateway.
-
-- API_INTERNAL_LOGIN_ALLOWED_DOMAINS
-  - CSV list of email domains allowed for internal login.
-  - Example: agentfarm.com,corp.agentfarm.com
-
-- API_INTERNAL_LOGIN_ADMIN_ROLES
-  - CSV list of TenantUser.role values treated as internal-admin access.
-  - Example: internal_admin,platform_admin,owner
-
-Additional policy-related behavior now available in api-gateway:
-
-- Startup warning when both policy lists are empty.
-- Internal diagnostics endpoint: GET /v1/auth/internal-login-policy.
-
-Policy behavior:
-
-- Internal login is deny-by-default.
-- Access is granted only if email domain is allowed OR role is in admin roles.
-- Non-matching accounts receive 403 with error code internal_access_denied.
-
-Example local configuration:
-
-- API_INTERNAL_LOGIN_ALLOWED_DOMAINS=agentfarm.com
-- API_INTERNAL_LOGIN_ADMIN_ROLES=internal_admin,owner
-
-## Navigation and Tab Behavior
-
-The internal dashboard supports tab navigation in two places:
-
-- Sidebar links
-- Top tab row
-
-Supported tabs:
-
-- overview
-- approvals
-- observability
-- audit
-
-Tab routing behavior:
-
-- URL query params control dashboard context:
-  - /?workspaceId=ws_primary_001&tab=overview
-- Top bar workspace selector submits workspaceId and preserves current tab.
-- Sidebar workspace selector also supports quick workspace switches and preserves current tab.
-- Deep-link actions are available to copy current view and per-tab workspace links.
-- Approval items support copy links using `approvalId` query context.
-- Audit items support copy links using `correlationId` query context.
-- Last selected workspace is persisted in local storage key:
-  - agentfarm.dashboard.activeWorkspaceId
-- Last selected tab is persisted per workspace in local storage key:
-  - agentfarm.dashboard.activeTab.<workspaceId>
-- If URL does not include tab, stored tab is restored automatically.
-- If URL does not include workspaceId, stored workspace is restored automatically.
-- Legacy key migration:
-  - If workspace key is missing and legacy key agentfarm.dashboard.activeTab exists, the value is migrated to the active workspace key.
-
-## Dashboard Commands
-
-From the repository root:
-
-- Start dashboard dev server
-  - pnpm --filter @agentfarm/dashboard dev
-
-- Run dashboard tests
-  - pnpm --filter @agentfarm/dashboard test
-
-- Run dashboard browser e2e for workspace/tab behavior
-  - pnpm --filter @agentfarm/dashboard test:e2e:workspace-tabs
-
-- Run dashboard typecheck
-  - pnpm --filter @agentfarm/dashboard typecheck
-
-- Run internal login policy smoke checks in api-gateway
-  - pnpm --filter @agentfarm/api-gateway test:internal-login-policy
-
-- Run root smoke checks (includes dashboard tab persistence smoke)
-  - pnpm smoke:e2e
-
-- Run dashboard CI lane locally (same checks as workflow)
-  - pnpm --filter @agentfarm/dashboard typecheck
-  - pnpm --filter @agentfarm/dashboard exec next build --no-lint
-  - pnpm --filter @agentfarm/dashboard exec playwright install chromium
-  - pnpm --filter @agentfarm/dashboard test:e2e:workspace-tabs http://127.0.0.1:3101
-
-Regression coverage includes:
-
-- Query-preservation contract tests for tab/workspace URL updates.
-- Workspace-scoped tab storage and legacy migration tests.
-- Browser e2e for per-workspace tab memory and sticky workspace restore.
-
-## Runtime Proxy Routes in Dashboard
-
-The dashboard proxies runtime observability calls through:
-
-- /api/runtime/[botId]/logs
-- /api/runtime/[botId]/state
-- /api/runtime/[botId]/health
-- /api/runtime/[botId]/kill
-
-These routes require internal scope and return 403 when internal scope is not present.
+**Port**: 3001
+**Framework**: Next.js 15, React 19
+**Pages**: 51
+**API proxy routes**: 159
 
 ---
 
-## Kanban Board
+## Architecture
 
-Pure business-logic Kanban utilities implemented in `app/components/kanban-board-utils.ts`.
+The Dashboard never calls the API Gateway directly from the browser. Every API call goes through a server-side Next.js route handler in `app/api/`, which appends the internal `X-Dashboard-Token` header before proxying to the Gateway. This keeps the gateway token out of the browser.
 
-### Exports
-
-| Function | Description |
-|----------|-------------|
-| `createBoard(columns)` | Creates a new Kanban board with named columns |
-| `addCard(board, columnId, card)` | Adds a card to a specific column |
-| `moveCard(board, cardId, targetColumnId)` | Moves a card between columns (drag-and-drop support) |
-| `removeCard(board, cardId)` | Removes a card from the board |
-| `getColumnCards(board, columnId)` | Returns all cards in a column |
-| `filterCards(board, predicate)` | Filters cards across all columns by a predicate function |
-
-### Notes
-
-- Pure logic module — no React or DOM dependencies. Can be unit-tested without rendering.
-- WIP limits: Set `maxCards` on a column definition to enforce work-in-progress limits; `addCard` will throw if the limit is reached.
-- Priority support: Cards carry a `priority` field (`low | medium | high | critical`); `filterCards` can filter by priority.
-- Drag-and-drop: `moveCard` is the pure-data backing for drag-and-drop UI gestures.
-
-### Tests
-
-Covered in the dashboard 69-test suite under `app/components/kanban-board-utils.test.ts`.
+```
+Browser request
+  └─▶ app/api/[...path]/route.ts  (server-side)
+        └─▶ Adds X-Dashboard-Token header
+              └─▶ Forwards to API Gateway /v1/*
+                    └─▶ Response relayed to browser
+```
 
 ---
 
-## Test Summary
+## Development
 
-| Suite | Tests |
-|-------|-------|
-| Kanban board utils | covered |
-| Operational signal timeline | covered |
-| Workspace tab persistence | covered |
-| **Total** | **69 passing** |
+```bash
+# From the repo root
+pnpm --filter @agentfarm/dashboard dev
 
-Last quality gate run: **2026-05-06 — EXIT_CODE=0 (PASS)**
+# Typecheck
+pnpm --filter @agentfarm/dashboard typecheck
 
-Sprint 6 release-readiness note:
-1. Dashboard observability and workspace/tab persistence lanes remain green in the latest full quality gate.
-2. Website connector hardening changes were validated alongside dashboard smoke and browser e2e lanes in the same run.
+# Build
+pnpm --filter @agentfarm/dashboard build
+```
 
+---
 
-<!-- doc-sync: 2026-05-06 sprint-6 -->
-> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
+## Environment variables
 
-<!-- doc-sync: 2026-05-06 full-pass-2 -->
-> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `DASHBOARD_API_BASE_URL` | yes | `http://localhost:3000` | Base URL for API Gateway |
+| `DASHBOARD_API_TOKEN` | yes | — | Internal token added to all proxied requests |
+
+---
+
+## Pages
+
+51 pages in `app/`. Each page has a corresponding `app/api/` route tree with 159 total route handlers.
+
+| URL | Description |
+|-----|-------------|
+| `/` | Root dashboard home |
+| `/ab-tests` | A/B test management |
+| `/activity` | Activity event feed |
+| `/adapters` | Adapter registry |
+| `/agent-chat` | Real-time agent chat |
+| `/agents` | Agent list and management |
+| `/analytics` | Performance and cost analytics |
+| `/audit` | Audit log viewer |
+| `/audit/session-replay` | Session replay for audit events |
+| `/billing` | Billing and invoices |
+| `/budget` | Budget policy and cost limits |
+| `/chat` | Multi-turn chat sessions |
+| `/ci` | CI failure triage |
+| `/connector-marketplace` | Browse and install connectors |
+| `/connectors` | Active connector management |
+| `/cost-dashboard` | Cost breakdown and trends |
+| `/desktop` | Desktop action governance |
+| `/docs` | In-app documentation |
+| `/env` | Environment profile reconciler |
+| `/governance` | Governance overview |
+| `/governance/kpis` | Governance KPI metrics |
+| `/governance/plugins` | Plugin governance |
+| `/handoffs` | Agent handoff management |
+| `/health` | Platform health and status |
+| `/internal/skills` | Internal skill browser |
+| `/knowledge-graph` | Repository knowledge graph |
+| `/live` | Real-time live task feed (SSE) |
+| `/login` | Login page |
+| `/loops` | Autonomous loop management |
+| `/marketplace` | Agent marketplace |
+| `/meetings` | Meeting session management |
+| `/memory` | Agent memory browser |
+| `/notifications` | Notifications center |
+| `/onboarding` | Customer onboarding wizard |
+| `/orchestration` | Orchestration runs |
+| `/pipelines` | Skill pipeline management |
+| `/pr-drafts` | PR draft management |
+| `/provisioning` | Provisioning job status |
+| `/quality` | Quality signals dashboard |
+| `/retention` | Retention policy management |
+| `/scheduled-reports` | Scheduled report configuration |
+| `/settings` | API keys, circuit breakers, task queue |
+| `/signup` | Signup page |
+| `/skill-search` | Skill search |
+| `/snapshots` | Bot capability snapshots |
+| `/tasks` | Task history |
+| `/team` | Team management |
+| `/tenant-settings` | Tenant configuration |
+| `/webhooks` | Outbound webhook management |
+| `/webhooks-ops` | Webhook DLQ and replay |
+| `/work-memory` | Work memory viewer |
+
+---
+
+## Navigation and workspace switching
+
+- URL query params control dashboard context: `/?workspaceId=ws_&tab=overview`
+- The workspace selector in the top bar and sidebar preserves the current tab on switch.
+- Last selected workspace is persisted in localStorage: `agentfarm.dashboard.activeWorkspaceId`
+- Last selected tab is persisted per workspace: `agentfarm.dashboard.activeTab.<workspaceId>`
+- On load, if URL omits `workspaceId` or `tab`, stored values are restored automatically.
+
+### Deep links
+All pages support copy-link actions for the current view context. Item-level deep links include:
+- Approvals: `?approvalId=<id>`
+- Audit events: `?correlationId=<id>`
+
+---
+
+## Approval queue
+
+The `/approvals` page is the primary governance interface:
+
+- Pending approvals grouped by risk level (HIGH, MEDIUM)
+- Each item shows: action summary, risk reason, impacted scope, proposed rollback
+- Structured packet fields: `lint_status`, `test_status`, `packet_complete`
+- Detail drawer for full structured packet inspection without cluttering the table
+- Approve / reject with reason capture
+- Decision latency shown per item
+- Escalation timer visible for items approaching SLA
+
+---
+
+## Session and auth
+
+- Login: `POST /v1/auth/login` via `app/api/auth/login/route.ts`
+- Internal login: `POST /v1/auth/internal-login` — requires matching domain or role policy
+- All API proxy routes enforce the `DASHBOARD_API_TOKEN` header before forwarding
+- Session cookie is set by the API Gateway and forwarded transparently

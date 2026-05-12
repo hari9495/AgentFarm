@@ -44,6 +44,14 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "tenantId and orderId are required." }, { status: 400 });
     }
 
+    if (typeof tenantId !== "string" || tenantId.trim().length === 0 || tenantId.length > 64 || /\s/.test(tenantId)) {
+        return NextResponse.json({ error: "tenantId must be a non-empty string with no spaces, max 64 characters." }, { status: 400 });
+    }
+
+    if (typeof orderId !== "string" || orderId.trim().length === 0 || orderId.length > 64 || /\s/.test(orderId)) {
+        return NextResponse.json({ error: "orderId must be a non-empty string with no spaces, max 64 characters." }, { status: 400 });
+    }
+
     const gatewayToken = user.gatewayToken ?? token;
 
     const res = await fetch(`${GATEWAY_URL}/v1/admin/provision`, {

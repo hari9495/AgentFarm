@@ -227,7 +227,7 @@ type StepHandler = (
 
 const STEP_HANDLERS: Partial<Record<HappyState, StepHandler>> = {
     validating: (job) => azureValidateTenant(job),
-    creating_resources: (job, ctx) => azureCreateResources(job),       // ctx unused in stub
+    creating_resources: (job, ctx) => azureCreateResources(job),       // ctx not yet threaded into azureCreateResources; pass ctx when resource tagging needs correlation data.
     bootstrapping_vm: (job, ctx) => azureBootstrapVm(job, ctx),
     starting_container: (job, ctx) => azureStartContainer(job, ctx),
     registering_runtime: (job, ctx) => azureRegisterRuntime(job, ctx),

@@ -408,6 +408,78 @@ test('POST /auth/internal-login — 401 wrong password', async () => {
     restoreEnv('API_INTERNAL_LOGIN_ALLOWED_DOMAINS', previousAllowedDomains);
 });
 
+// ---------------------------------------------------------------------------
+// Cookie security flags
+// ---------------------------------------------------------------------------
+
+test('POST /auth/signup — cookie has HttpOnly and SameSite=Strict flags', async () => {
+    const { repo } = createRepo();
+    const { app, register } = buildApp(repo);
+    await register();
+
+    const res = await app.inject({
+        method: 'POST',
+        url: '/auth/signup',
+        body: { name: 'Flag User', email: 'flags@acme.com', password: 'longpassword1', companyName: 'Acme' },
+    });
+
+    assert.equal(res.statusCode, 201);
+    const cookie = res.headers['set-cookie'] as string | undefined;
+    assert.ok(cookie, 'Set-Cookie header present');
+    assert.match(cookie, /HttpOnly/i, 'must have HttpOnly flag');
+    assert.match(cookie, /SameSite=Strict/i, 'must have SameSite=Strict flag');
+});
+
+test('POST /auth/signup — Secure flag present when COOKIE_SECURE=true', async () => {
+    const previousCookieSecure = process.env['COOKIE_SECURE'];
+    const previousNodeEnv = process.env['NODE_ENV'];
+    process.env['COOKIE_SECURE'] = 'true';
+    process.env['NODE_ENV'] = 'development'; // ensure it is not NODE_ENV doing the work
+
+    const { repo } = createRepo();
+    const { app, register } = buildApp(repo);
+    await register();
+
+    const res = await app.inject({
+        method: 'POST',
+        url: '/auth/signup',
+        body: { name: 'Secure User', email: 'secure@acme.com', password: 'longpassword1', companyName: 'Acme' },
+    });
+
+    assert.equal(res.statusCode, 201);
+    const cookie = res.headers['set-cookie'] as string | undefined;
+    assert.ok(cookie, 'Set-Cookie header present');
+    assert.match(cookie, /;\s*Secure\b/i, 'must have Secure flag when COOKIE_SECURE=true');
+
+    restoreEnv('COOKIE_SECURE', previousCookieSecure);
+    restoreEnv('NODE_ENV', previousNodeEnv);
+});
+
+test('POST /auth/login — cookie has HttpOnly and SameSite=Strict flags', async () => {
+    const { repo } = createRepo();
+    const { app, register } = buildApp(repo);
+    await register();
+
+    const pw = 'correctPassword1';
+    await app.inject({
+        method: 'POST',
+        url: '/auth/signup',
+        body: { name: 'Login Flags', email: 'logflags@acme.com', password: pw, companyName: 'Acme' },
+    });
+
+    const res = await app.inject({
+        method: 'POST',
+        url: '/auth/login',
+        body: { email: 'logflags@acme.com', password: pw },
+    });
+
+    assert.equal(res.statusCode, 200);
+    const cookie = res.headers['set-cookie'] as string | undefined;
+    assert.ok(cookie, 'Set-Cookie header present');
+    assert.match(cookie, /HttpOnly/i, 'must have HttpOnly flag');
+    assert.match(cookie, /SameSite=Strict/i, 'must have SameSite=Strict flag');
+});
+
 test('POST /auth/internal-login — 403 when account is not in internal policy', async () => {
     const previousAllowedDomains = process.env.API_INTERNAL_LOGIN_ALLOWED_DOMAINS;
     const previousAdminRoles = process.env.API_INTERNAL_LOGIN_ADMIN_ROLES;

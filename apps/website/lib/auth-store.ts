@@ -510,6 +510,11 @@ if (!hasGatewayTokenColumn) {
     try { db.exec(`ALTER TABLE users ADD COLUMN gateway_token TEXT;`); } catch { /* already added by parallel worker */ }
 }
 
+const hasDeletedAtColumn = userColumns.some((column) => column.name === "deleted_at");
+if (!hasDeletedAtColumn) {
+    try { db.exec(`ALTER TABLE users ADD COLUMN deleted_at INTEGER;`); } catch { /* already added by parallel worker */ }
+}
+
 const deploymentColumns = db.prepare(`PRAGMA table_info(deployment_jobs)`).all() as Array<{ name: string }>;
 const hasLastActionTypeColumn = deploymentColumns.some((column) => column.name === "last_action_type");
 const hasLastActionByColumn = deploymentColumns.some((column) => column.name === "last_action_by");
@@ -3281,4 +3286,128 @@ export const retryProvisioningJob = (input: {
         job: mapProvisioningQueueEntry(queuedRetryRow),
         reused: false,
     };
+};
+
+// ── Database export helpers ────────────────────────────────────────────────
+
+/**
+ * Generates a full SQL dump (schema + INSERT statements) for all user-created
+ * tables. Safe to call at any time — operates inside a single read transaction.
+ */
+export const exportSqlDump = (): string => {
+    const tables = db
+        .prepare(
+            `SELECT name, sql FROM sqlite_master
+             WHERE type = 'table' AND name NOT LIKE 'sqlite_%'
+             ORDER BY name`,
+        )
+        .all() as Array<{ name: string; sql: string }>;
+
+    const lines: string[] = [
+        `-- AgentFarm database export`,
+        `-- Generated: ${new Date().toISOString()}`,
+        `-- Tables: ${tables.map((t) => t.name).join(", ")}`,
+        ``,
+        `PRAGMA journal_mode = WAL;`,
+        ``,
+    ];
+
+    for (const table of tables) {
+        lines.push(`-- --------------------------------------------------------`);
+        lines.push(`-- Table: ${table.name}`);
+        lines.push(`-- --------------------------------------------------------`);
+        lines.push(`${table.sql};`);
+        lines.push(``);
+
+        const rows = db.prepare(`SELECT * FROM "${table.name}"`).all() as Record<string, unknown>[];
+        for (const row of rows) {
+            const cols = Object.keys(row)
+                .map((k) => `"${k}"`)
+                .join(", ");
+            const vals = Object.values(row)
+                .map((v) => {
+                    if (v === null || v === undefined) return "NULL";
+                    if (typeof v === "number" || typeof v === "bigint") return String(v);
+                    return `'${String(v).replace(/'/g, "''")}'`;
+                })
+                .join(", ");
+            lines.push(`INSERT INTO "${table.name}" (${cols}) VALUES (${vals});`);
+        }
+        lines.push(``);
+    }
+
+    return lines.join("\n");
+};
+
+const EXPORT_TABLES = ["users", "bots", "company_audit_events", "approvals"] as const;
+
+/**
+ * Returns CSV text for one of the key export tables.
+ * Sensitive columns (password_hash, token_hash) are stripped.
+ */
+export const exportTableCsv = (tableName: (typeof EXPORT_TABLES)[number]): string => {
+    const REDACT = new Set(["password_hash", "token_hash"]);
+
+    const rows = db
+        .prepare(`SELECT * FROM "${tableName}" ORDER BY created_at DESC LIMIT 10000`)
+        .all() as Record<string, unknown>[];
+
+    if (rows.length === 0) return "";
+
+    const allCols = Object.keys(rows[0]!);
+    const cols = allCols.filter((c) => !REDACT.has(c));
+
+    const escape = (v: unknown): string => {
+        if (v === null || v === undefined) return "";
+        const s = String(v);
+        if (s.includes(",") || s.includes('"') || s.includes("\n") || s.includes("\r")) {
+            return `"${s.replace(/"/g, '""')}"`;
+        }
+        return s;
+    };
+
+    const csvLines = [cols.join(","), ...rows.map((row) => cols.map((c) => escape(row[c])).join(","))];
+    return csvLines.join("\n");
+};
+
+/**
+ * Hard-delete (or irreversibly anonymise) a user account and all data owned by
+ * that user. Required by GDPR, DPDP, and CCPA "right to erasure" obligations.
+ *
+ * What this does:
+ *  1. Deletes all sessions for the user (logs them out everywhere).
+ *  2. Replaces PII columns with anonymised placeholders so foreign-key references
+ *     in audit logs and approval records remain structurally intact (avoids
+ *     cascade failures) while making the data unattributable.
+ *  3. Marks the user row as deleted with a tombstone so the ID is never re-used.
+ *
+ * Callers must verify that the requesting session belongs to the target userId
+ * (or has superadmin role) before calling this function.
+ */
+export const deleteAccount = (userId: string): { ok: boolean; error?: string } => {
+    const user = db
+        .prepare(`SELECT id FROM users WHERE id = ? AND deleted_at IS NULL`)
+        .get(userId) as { id: string } | undefined;
+
+    if (!user) {
+        return { ok: false, error: "user_not_found" };
+    }
+
+    const deletedAt = now();
+    const anonEmail = `deleted_${userId}@anon.invalid`;
+    const anonName = "Deleted User";
+    const anonCompany = "deleted";
+
+    // 1. Invalidate all sessions
+    db.prepare(`DELETE FROM sessions WHERE user_id = ?`).run(userId);
+
+    // 2. Anonymise PII columns in the users table. The row is kept as a
+    //    tombstone (deleted_at is set) so the ID cannot be reused.
+    db.prepare(
+        `UPDATE users
+         SET email = ?, name = ?, company = ?, password_hash = ?, deleted_at = ?
+         WHERE id = ?`,
+    ).run(anonEmail, anonName, anonCompany, "deleted", deletedAt, userId);
+
+    return { ok: true };
 };

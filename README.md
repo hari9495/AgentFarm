@@ -1,322 +1,379 @@
-# AgentFarm — Trusted AI Teammates for Engineering Teams
+﻿# AgentFarm
 
-> Operate AI agents with enterprise control gates — human approval, audit trails, and governed autonomy from day one.
+AgentFarm is a production-grade, multi-tenant AI agent orchestration platform built as a TypeScript pnpm monorepo. It provides a complete runtime for deploying, governing, and observing autonomous AI agents — covering task execution with 9 LLM providers, multi-agent orchestration, 12 tiers of local workspace actions, structured approval and audit trails, billing and subscription enforcement, connector integrations, desktop and browser automation, voice meeting transcription, and a full operator dashboard.
 
-AgentFarm is a TypeScript pnpm monorepo that delivers a production-grade AI agent platform. The MVP ships one high-quality Developer Agent role with 18 live connectors across 4 categories, risk-based autonomy, a full approval enforcement stack, a complete audit/evidence path for compliance, and a desktop-operator abstraction for browser, app, and meeting automation.
+## Architecture
 
-**Quality gate: PASS (47 checks, 46 passing, 1 skipped: DB smoke lane). 1,392 tests passing across all packages.**
+```
+  ┌─────────────┐     ┌───────────────┐     ┌─────────────────┐
+  │  Dashboard  │────▶│  API Gateway  │────▶│  Agent Runtime  │
+  │  (Next.js)  │     │   (Fastify)   │     │   (Fastify)     │
+  └─────────────┘     └───────────────┘     └─────────────────┘
+                              │                       │
+                      ┌───────┴───────┐       ┌───────┴───────┐
+                      │   PostgreSQL  │       │  Trigger Svc  │
+                      │    + Redis    │       │   (Fastify)   │
+                      └───────────────┘       └───────────────┘
+```
 
-## Current Build Status (2026-05-08)
+The **API Gateway** is the single control-plane entry point. All dashboard traffic is proxied through it. It owns authentication, rate limiting, billing enforcement, audit logging, and all database writes.
 
-- Sprint 6 hardening completed — quality gate report at `operations/quality/8.1-quality-gate-report.md`
-- Desktop Operator abstraction added: frozen `DesktopOperator` interface in `shared-types`, `MockDesktopOperator` factory in `agent-runtime`, and mock short-circuits wired into all four Tier 11/12 desktop action cases
-- All 1,392 tests pass across 14 packages; 0 failures
-- Latest full quality gate: PASS (2026-05-06T18:03:49 → 18:08:14)
+The **Agent Runtime** is the execution engine for AI tasks. It connects back to the API Gateway for approvals and task lease management, and out to LLM providers, connectors, and optional external services (Voicebox STT, VoxCPM2 TTS, OPA).
+
+The **Trigger Service** handles inbound signals — webhooks, email (IMAP), and Slack messages — and forwards them as structured tasks to the Agent Runtime.
+
+The **Dashboard** (Next.js) proxies every API call through its own `app/api/` route layer, which adds an internal auth header before forwarding to the API Gateway. It never calls the Gateway directly from the browser.
+
+The **Website** (Next.js) handles marketing, public signup, and onboarding flows.
 
 ---
 
-## Full Documentation
-
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — Full system architecture, data flows, database schema
-- [docs/API.md](docs/API.md) — All API routes with request/response examples
-- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — Environment setup, local dev, Azure production deployment
-- [docs/AGENT_ROLES.md](docs/AGENT_ROLES.md) — 12 agent roles, capabilities, risk posture, connector policies
-- [docs/PAYMENTS.md](docs/PAYMENTS.md) — Stripe + Razorpay payments, Zoho Sign e-signature, provisioning trigger
-- [docs/TESTING.md](docs/TESTING.md) — Testing patterns, quality gate, test locations
-
-→ **[read.md](read.md)** — extended technical reference: full tier table, connector registry, quality posture
-
----
-
-## Architecture at a Glance
+## Monorepo structure
 
 ```
 apps/
-  api-gateway/          ← control-plane API: auth, approvals, audit, connector execution,
-                          budget policy, roles, snapshots, plugin loading, LLM config,
-                          governance workflows, task lease, provisioning workers,
-                          SSE task-stream with auto-recovery
-                          388 tests passing | typecheck clean | ≥80% line coverage enforced
-
-  agent-runtime/        ← per-tenant execution engine: risk classification, action dispatch,
-                          10 LLM providers (incl. Auto mode), 12 tiers of workspace actions,
-                          skills crystallization (Hermes pattern), desktop-action governance,
-                          DesktopOperator mock factory (DESKTOP_OPERATOR env var)
-                          661 tests passing | typecheck clean | ≥80% line coverage enforced
-
-  dashboard/            ← operator UI: approval queue, evidence panel, runtime observability,
-                          LLM config, governance workflows, plugin loading, budget panel,
-                          workspace switcher, deep links, Kanban board
-                          118 tests passing | typecheck clean
-
-  website/              ← 51 pages: onboarding, connector dashboard, approval inbox, evidence,
-                          marketplace, admin, superadmin, docs, blog, pricing, auth flows
-                          43 API routes across 12 route groups | SQLite-backed | port 3002
-                          118 tests across 9 suites | typecheck clean
-
-  orchestrator/         ← multi-agent workflow coordinator: task scheduler (heartbeat wake
-                          model with coalescing), routine scheduler, plugin capability guard,
-                          state persistence (file/db backend), GOAP A* goal planner
-                          62 tests passing | typecheck clean
-
-services/
-  provisioning-service/ ← Azure VM lifecycle, 11-step state machine, SLA monitoring, cleanup
-                          15 tests passing | typecheck clean
-  approval-service/     ← approval enforcement, kill-switch, governance workflow manager
-                          12 tests passing | typecheck clean
-  connector-gateway/    ← OAuth, token refresh, adapter registry, adapter dispatch,
-                          mTLS certificate verification, PII-strip middleware
-                          36 tests passing | typecheck clean
-  policy-engine/        ← governance routing policy and rule resolution
-                          2 tests passing | typecheck clean
-  evidence-service/     ← governance KPI calculator, evidence chain completeness,
-                          HNSW vector index for approximate nearest-neighbor evidence search
-                          24 tests passing | typecheck clean
-  agent-observability/  ← action interception, browser action capture with diff verification,
-                          correctness scoring, audit log writer
-                          9 tests passing | typecheck clean
-  notification-service/ ← approval-scoped notification gateway: Telegram, Slack, Discord,
-                          Webhook, Voice (VoxCPM/VoIP), per-trigger allowlists,
-                          dispatchApprovalAlert (approval-only entry point)
-                          31 tests passing | typecheck clean
-  meeting-agent/        ← meeting lifecycle state machine, voice pipeline, STT/TTS adapters
-                          23 tests passing | typecheck clean
-  memory-service/       ← long-term memory store: read/write/update, post-task crystallization
-                          11 tests passing | typecheck clean
-  agent-question-service/ ← async agent Q&A with human teammates, expiry sweeper
-  audit-storage/        ← Azure Blob screenshot uploader, audit evidence persistence
-  compliance-export/    ← JSON/CSV compliance evidence packs, 365-day/730-day retention
-  retention-cleanup/    ← scheduled retention cleanup job (active/archive policy)
-  identity-service/     ← tenant, workspace, user lifecycle (stub)
+  api-gateway/      Fastify 5 control-plane: auth, routing, billing, audit, approvals
+  agent-runtime/    AI task execution engine: LLM routing, skills, orchestration, desktop
+  trigger-service/  Inbound webhook, email, and Slack trigger ingestion
+  dashboard/        Next.js 15 operator dashboard (51 pages, 159 proxy routes)
+  website/          Next.js 15 marketing, signup, and onboarding site
 
 packages/
-  shared-types/         ← 100+ versioned contract types, enums, kill-switch types,
-                          GOAP plan types, skills crystallization types, voice/meeting types,
-                          NotificationChannelConfig, DesktopOperator interface (frozen 2026-05-08)
-  connector-contracts/  ← 18-connector registry, 18 normalized action types, 12 role policies
-  queue-contracts/      ← queue event type definitions
-  db-schema/            ← Prisma schema and 10 migrations
-  observability/        ← structured telemetry helpers
+  db-schema/             Prisma schema, migrations, and generated client
+  shared-types/          TypeScript types shared across all apps
+  queue-contracts/       Queue message schemas
+  connector-contracts/   Connector action and auth contracts
+  observability/         OpenTelemetry + Azure Monitor helpers
+  crm-service/           CRM adapter types and clients
+  erp-service/           ERP adapter types and clients
+  notification-service/  Notification adapter types
 ```
 
 ---
 
-## Quick Start
+## Features
+
+### Agent management
+- Agent (bot) creation, versioning, and lifecycle management
+- Per-agent rate limiting, capability snapshots, and role profiles
+- Bot marketplace with install/uninstall and version history
+- Agent runtime instance registration and health tracking
+
+### Task execution
+- Multi-step task planning with LLM-backed planner loop
+- 9 LLM providers: OpenAI, Azure OpenAI, Anthropic, Google, xAI, Mistral, Together AI, GitHub Models, Auto (health-score failover)
+- Auto mode: 5-minute rolling health score (error rate + latency) with per-profile priority lists
+- 12 tiers of local workspace actions (file ops, shell, IDE, browser, desktop, meetings, sub-agents)
+- Task queue with priority lanes, lease locking, and retry
+- Cost estimation per task with token budget enforcement and daily limit alerts
+
+### Multi-agent orchestration
+- Multi-agent dispatch with `AgentDispatchRecord` tracking
+- Orchestration runs with state history and timeline
+- Autonomous loop orchestrator for background agent cycles
+- Wake coalescer to deduplicate concurrent triggers
+- Skill pipelines: define, schedule, and execute multi-step skill chains
+
+### Billing and subscriptions
+- Tenant and agent subscription management
+- Subscription guard middleware with grace period and suspension wall
+- Daily lifecycle sweep and renewal reminders
+- Stripe + Razorpay payment webhook handling
+- Budget policy: per-workspace daily/monthly limits, hard-stop enforcement, cost dashboard
+
+### Security and auth
+- Session token auth (cookie) on all `/v1/*` routes
+- Per-IP rate limiting: 180 req/min general, 20 req/min auth endpoints
+- Per-tenant rate limiting: 600 req/min
+- `@fastify/helmet` security headers (CSP, HSTS, X-Frame-Options, etc.)
+- HMAC webhook signature verification
+- CORS origin validation (configurable `ALLOWED_ORIGINS`)
+- 1 MB request body limit
+- Audit trail on sensitive mutations
+- Role-based access with `Roles` model
+
+### Connectors and integrations
+- Connector auth: OAuth 2.0, API key, basic auth, generic REST
+- Token lifecycle worker: auto-refresh, revoke, re-consent routing
+- Connector health monitoring with status and remediation hints
+- Adapter registry with register/discover/health-check
+- Connector marketplace: browse, install, and manage integrations
+
+### Observability and analytics
+- OpenTelemetry + Azure Monitor integration
+- Structured telemetry collector with action observability
+- Quality signal logging and quality dashboard
+- CI failure triage reports
+- Agent performance and cost analytics with CSV export
+- Outbound webhooks with HMAC signing and delivery tracking
+- Webhook DLQ and replay
+
+### Voice and meetings
+- Meeting session management with STT transcription (Voicebox)
+- Speaking agent with TTS voice synthesis (VoxCPM2)
+- Language resolver for locale-aware TTS
+- Language configuration per tenant, workspace, and user
+
+### Governance and compliance
+- Approval queue: risk-based routing (low/medium/high), decision latency tracking
+- Kill-switch: 30-second control window, incident reference required to resume
+- Governance workflows and KPIs
+- Plugin allowlist/killswitch management
+- Audit log: append-only, filterable, compliance export (JSON/CSV)
+- Evidence bundles with retention policy management
+- A/B testing framework with assignment tracking
+
+### Developer tooling
+- API key management (SHA-256, `af_` prefix)
+- Outbound webhook event catalog (10 typed schemas)
+- SSE live task feed with auto-recovery
+- IDE state sync
+- PR drafts
+- Repro packs and run-resume
+- Environment profile reconciler
+- Scheduled reports via nodemailer
+- Work memory viewer
+
+---
+
+## Dashboard
+
+51 pages covering 159 proxy routes to the API Gateway.
+
+| URL | Description |
+|-----|-------------|
+| `/` | Root dashboard home |
+| `/ab-tests` | A/B test management |
+| `/activity` | Activity event feed |
+| `/adapters` | Adapter registry |
+| `/agent-chat` | Real-time agent chat |
+| `/agents` | Agent list and management |
+| `/analytics` | Performance and cost analytics |
+| `/audit` | Audit log viewer |
+| `/audit/session-replay` | Session replay for audit events |
+| `/billing` | Billing and invoices |
+| `/budget` | Budget policy and cost limits |
+| `/chat` | Multi-turn chat sessions |
+| `/ci` | CI failure triage |
+| `/connector-marketplace` | Browse and install connectors |
+| `/connectors` | Active connector management |
+| `/cost-dashboard` | Cost breakdown and trends |
+| `/desktop` | Desktop action governance |
+| `/docs` | In-app documentation |
+| `/env` | Environment profile reconciler |
+| `/governance` | Governance overview |
+| `/governance/kpis` | Governance KPI metrics |
+| `/governance/plugins` | Plugin governance |
+| `/handoffs` | Agent handoff management |
+| `/health` | Platform health and status |
+| `/internal/skills` | Internal skill browser |
+| `/knowledge-graph` | Repository knowledge graph |
+| `/live` | Real-time live task feed (SSE) |
+| `/login` | Login page |
+| `/loops` | Autonomous loop management |
+| `/marketplace` | Agent marketplace |
+| `/meetings` | Meeting session management |
+| `/memory` | Agent memory browser |
+| `/notifications` | Notifications center |
+| `/onboarding` | Customer onboarding wizard |
+| `/orchestration` | Orchestration runs |
+| `/pipelines` | Skill pipeline management |
+| `/pr-drafts` | PR draft management |
+| `/provisioning` | Provisioning job status |
+| `/quality` | Quality signals dashboard |
+| `/retention` | Retention policy management |
+| `/scheduled-reports` | Scheduled report configuration |
+| `/settings` | API keys, circuit breakers, task queue |
+| `/signup` | Signup page |
+| `/skill-search` | Skill search |
+| `/snapshots` | Bot capability snapshots |
+| `/tasks` | Task history |
+| `/team` | Team management |
+| `/tenant-settings` | Tenant configuration |
+| `/webhooks` | Outbound webhook management |
+| `/webhooks-ops` | Webhook DLQ and replay |
+| `/work-memory` | Work memory viewer |
+
+---
+
+## API
+
+62 backend route files. Routes grouped by domain:
+
+**Auth and identity**: `auth.ts`, `workspace-session.ts`, `roles.ts`, `internal-login-policy.ts`
+
+**Agents and bots**: `agents.ts`, `bot-versions.ts`, `agent-control.ts`, `agent-dispatch.ts`, `agent-feedback.ts`
+
+**Task execution**: `runtime-tasks.ts`, `task-queue.ts`, `sse-tasks.ts`, `runtime-llm-config.ts`, `repro-packs.ts`, `schedules.ts`, `skill-scheduler.ts`
+
+**Orchestration and skills**: `orchestration.ts`, `autonomous-loops.ts`, `skill-pipelines.ts`, `skill-composition-execute.ts`, `handoffs.ts`
+
+**Billing**: `billing.ts`
+
+**Connectors and marketplace**: `connector-actions.ts`, `connector-auth.ts`, `connector-health.ts`, `adapter-registry.ts`, `marketplace.ts`
+
+**Governance and audit**: `approvals.ts`, `audit.ts`, `governance-kpis.ts`, `governance-workflows.ts`, `budget-policy.ts`, `retention-policy.ts`, `circuit-breakers.ts`, `snapshots.ts`, `ab-tests.ts`, `plugin-loading.ts`, `ci-failures.ts`
+
+**Observability**: `analytics.ts`, `observability.ts`, `activity-events.ts`
+
+**Voice and meetings**: `meetings.ts`, `language.ts`
+
+**Memory and knowledge**: `memory.ts`, `work-memory.ts`, `knowledge-graph.ts`
+
+**Notifications**: `notifications.ts`, `questions.ts`
+
+**Developer tools**: `api-keys.ts`, `webhooks.ts`, `outbound-webhooks.ts`, `scheduled-reports.ts`, `pull-requests.ts`, `ide-state.ts`, `desktop-actions.ts`, `desktop-profile.ts`, `env-reconciler.ts`, `mcp-registry.ts`, `zoho-sign-webhook.ts`, `admin-provision.ts`, `chat.ts`, `team.ts`
+
+---
+
+## Database
+
+70 Prisma models across 8 domains:
+
+**Identity and tenancy** (8): `Tenant`, `TenantUser`, `Workspace`, `WorkspaceSessionState`, `TenantLanguageConfig`, `WorkspaceLanguageConfig`, `UserLanguageProfile`, `TenantMcpServer`
+
+**Agents and bots** (8): `Bot`, `BotCapabilitySnapshot`, `BotConfigVersion`, `AgentSession`, `AgentRateLimit`, `RuntimeInstance`, `AgentSubscription`, `TenantSubscription`
+
+**Task execution** (9): `TaskExecutionRecord`, `TaskQueueEntry`, `Plan`, `ActionRecord`, `AgentDispatchRecord`, `OrchestrationRun`, `RunResume`, `ReproPack`, `WorkspaceCheckpoint`
+
+**Memory and knowledge** (5): `AgentShortTermMemory`, `AgentLongTermMemory`, `WorkMemory`, `AgentRepoKnowledge`, `TerminalSession`
+
+**Billing and subscriptions** (5): `Order`, `Invoice`, `SubscriptionEvent`, `ProvisioningJob`, `ScheduledReport`
+
+**Connectors and marketplace** (6): `ConnectorAction`, `ConnectorAuthEvent`, `ConnectorAuthMetadata`, `ConnectorAuthSession`, `MarketplaceListing`, `MarketplaceInstall`
+
+**Governance and audit** (12): `Approval`, `AuditEvent`, `QualitySignalLog`, `StoredEvidenceBundle`, `RetentionPolicy`, `ExternalPluginLoad`, `PluginAllowlist`, `PluginKillSwitch`, `CiTriageReport`, `AbTest`, `AbTestAssignment`, `CircuitBreakerState`
+
+**Communication and developer tools** (17): `MeetingSession`, `ChatSession`, `ChatMessage`, `AgentQuestion`, `NotificationLog`, `ActivityEvent`, `PrDraft`, `ApiKey`, `OutboundWebhook`, `OutboundWebhookDelivery`, `WebhookDlqEntry`, `IdeState`, `DesktopAction`, `DesktopProfile`, `BrowserActionEvent`, `EnvProfile`, `ScheduledJob`
+
+---
+
+## Getting started
+
+### Prerequisites
+
+- Node.js 20+
+- pnpm 9+
+- Docker + Docker Compose (for full stack)
+- PostgreSQL 16 (provided by Docker Compose)
+
+### Quick start (Docker)
 
 ```bash
-# Install dependencies
-pnpm install
-
-# Website (port 3002) — auth, connectors, approval inbox, evidence dashboard
-pnpm --filter @agentfarm/website dev
-
-# API gateway (control-plane, port 3001)
-pnpm --filter @agentfarm/api-gateway dev
-
-# Dashboard (operator UI, port 3000)
-pnpm --filter @agentfarm/dashboard dev
-
-# Run all tests
-pnpm test
-
-# Run typechecks across workspace
-pnpm typecheck
-
-# Full quality gate (47 checks)
-pnpm quality:gate
-
-# E2E smoke lane
-pnpm smoke:e2e
+cp .env.example .env
+# Fill in required secrets (see .env.example)
+docker compose up
 ```
 
-Copy `.env.example` to `.env` and fill in values before running. Enable local signup with `AGENTFARM_ALLOWED_SIGNUP_DOMAINS=agentfarm.local`. Set `DESKTOP_OPERATOR=mock` to route Tier 11/12 desktop actions through the mock adapter.
+### Quick start (local dev)
+
+```bash
+pnpm install
+cp .env.example .env
+# Fill in DATABASE_URL and required secrets
+
+pnpm --filter @agentfarm/db-schema exec prisma migrate deploy
+pnpm --filter @agentfarm/db-schema exec prisma generate
+
+# Start services in separate terminals:
+pnpm --filter @agentfarm/api-gateway dev      # port 3000
+pnpm --filter @agentfarm/agent-runtime dev    # port 4000
+pnpm --filter @agentfarm/trigger-service dev  # port 3002
+pnpm --filter @agentfarm/dashboard dev        # port 3001
+```
+
+### Required environment variables
+
+| Variable | Description |
+|----------|-------------|
+| `DATABASE_URL` | PostgreSQL connection string |
+| `API_SESSION_SECRET` | Secret for session cookie signing |
+| `DASHBOARD_API_TOKEN` | Internal token for dashboard-to-gateway calls |
+| `AGENTFARM_APPROVAL_INTAKE_SHARED_TOKEN` | Token for approval intake endpoint |
+| `AGENTFARM_CONNECTOR_EXEC_SHARED_TOKEN` | Token for connector execution callbacks |
+| `AGENTFARM_RUNTIME_DECISION_SHARED_TOKEN` | Token for runtime decision callbacks |
+| `AGENTFARM_RUNTIME_TASK_SHARED_TOKEN` | Token for runtime task observability push |
+| `AGENTFARM_RUNTIME_DISPATCH_SHARED_TOKEN` | Token for task dispatch to runtime |
+
+See `.env.example` (380 lines, fully commented) for all variables.
 
 ---
 
-## What Was Built
+## Testing
 
-### Workstream 1 — Signup and Tenant Lifecycle
-- `POST /auth/signup` creates tenant, workspace, bot, and queues provisioning job atomically
-- HMAC-SHA256 session tokens, `agentfarm_session` cookie, workspace-scoped row-level security
-- Dashboard provisioning status card with live state transitions and remediation hints
+```bash
+pnpm --filter @agentfarm/api-gateway test       # 898 tests, 57 suites
+pnpm --filter @agentfarm/agent-runtime test     # 906 tests, 118 suites
+pnpm --filter @agentfarm/trigger-service test   #  49 tests, 19 suites
+```
 
-### Workstream 2 — Azure Runtime Provisioning
-- 11-step provisioning state machine: `queued → validating → creating_resources → ... → completed`
-- VM bootstrap script: installs Docker, pulls bot image, sets env vars via secure references (no inline secrets)
-- Failure recovery: rollback, cleanup, audit log, dashboard error alert with next-step hints
-- SLA monitoring: 10-minute target, 24-hour timeout, stuck-state alerts after 1 hour
+**Total: 1,853 tests, 0 failures.**
 
-### Workstream 3 — Docker Runtime and Bot Execution
-- Runtime server with `/startup`, `/health`, `/kill` (5-second graceful shutdown), `/logs`, heartbeat
-- Execution engine with risk classification: `HIGH_RISK_ACTIONS` (17 items) and `MEDIUM_RISK_ACTIONS` (40+ items); confidence < 0.6 escalates to medium
-- **10 LLM providers**: OpenAI, Azure OpenAI, GitHub Models, Anthropic, Google, xAI, Mistral, Together AI, AgentFarm native, Auto (health-score failover)
-- Auto mode: 5-minute rolling health-score composite (error rate + latency), per-profile priority lists
-- Model profiles: `quality_first`, `speed_first`, `cost_balanced`, `custom` — configurable per workspace
-- Provider failover trace: full `ProviderFailoverTraceRecord[]` on every decision for debugging
-- Dashboard LLM config panel: per-provider settings, profile presets, redacted key display
-- **12 tiers of local workspace actions** (Tier 1–12 + original set) — see [read.md](read.md) for full table
-
-### Workstream 4 — Connector Auth and Action Execution
-- OAuth 2.0 flow for all named connectors with CSRF nonce validation
-- API key / basic auth / generic REST for remaining connectors
-- Token lifecycle worker: auto-refresh, revoke, permission_invalid → re-consent routing, `ScopeStatus` tracking (full/partial/insufficient)
-- Normalized action execution with exponential backoff retry and role-policy enforcement
-- Adapter registry (`connector-gateway`): register/unregister/discover/health-check, audit-logged, tenant-scoped
-- **18 connectors in plugin registry** (`packages/connector-contracts`):
-
-| Category | Named Connectors | Custom |
-|----------|-----------------|--------|
-| Task Tracker | Jira, Linear, Asana, Monday, Trello, ClickUp | Generic REST |
-| Messaging | Microsoft Teams, Slack | Generic REST |
-| Code | GitHub, GitLab, Azure DevOps | Generic REST |
-| Email | Outlook (Graph), Gmail | Generic REST, Generic SMTP |
-
-- **18 normalized action types** and **12 agent role keys** — see [read.md](read.md)
-
-### Workstream 5 — Approval and Risk Controls
-- Risk evaluator + approval routing: low → execute immediately, medium/high → approval queue, escalation after 1 hour
-- Approval queue UI at `/dashboard/approvals`: pending by risk level, approve/reject with reason capture, decision latency display
-- `ApprovalEnforcer`: kill-switch activation/resume, 30-second control window, multi-stakeholder governance
-- Immutability enforcement: 409 on re-decision; `decisionLatencySeconds` tracked per record
-
-### Workstream 6 — Audit, Evidence, and Observability
-- `writeAuditEvent()` — append-only SQLite audit log (no update/delete path)
-- Query API: filter by actorEmail, action, tenantId, date range, limit
-- Evidence dashboard: live KPIs (P95 latency, escalation count, freshness score), audit timeline, compliance export
-- Compliance export: JSON and CSV with 365-day active / 730-day archive retention
-
-### Workstream 7 — Website and Marketplace
-- Bot marketplace at `/marketplace` with 179 agents across 29 departments
-- 51 pages, 43 API routes, superadmin portal
-- Website SWA deployment (blocked: needs GitHub secret `AZURE_STATIC_WEB_APPS_API_TOKEN_WEBSITE`)
-
-### Workstream 8 — Testing and Deployment
-- 1,392 tests passing across 14 packages; 47-check quality gate passing
-- Coverage enforced ≥80% on critical modules (execution-engine: 95%, runtime-server: 81%, provisioning-monitoring: 94%)
-- Production deployment blocked on Azure sign-in (tracked in ops runbook)
-
-### Workstream 9 — Tier 1–12 Local Workspace Actions
-- 12 tiers of Developer Agent workspace actions in `apps/agent-runtime/src/local-workspace-executor.ts`
-- Sandbox path enforcement (`safeChildPath`) on all file and shell operations
-- Tier 1–12 summary: file ops → autonomous ops → IDE intelligence → multi-file → REPL → language adapters → governance → release → productivity → observability → desktop/meeting (HIGH) → sub-agent/GitHub (HIGH)
-
-### Sprint 2 — Autonomous Intelligence and Notification Features
-1. **Messaging gateway** — Notification-service with Telegram/Slack/Discord/Webhook/Voice adapters
-2. **GOAP planner** — A* goal planner in orchestrator
-3. **SSE task stream** — Async Server-Sent Events queue with auto-recovery in api-gateway
-4. **Skills crystallization** — Hermes Agent pattern in agent-runtime
-5. **Graphify** — Monorepo package dependency graph visualiser
-6. **Agent federation security** — mTLS cert verifier + PII-strip middleware in connector-gateway
-7. **HNSW vector search** — Approximate nearest-neighbour index in evidence-service
-8. **Kanban board** — Pure drag-and-drop Kanban logic in dashboard
-9. **Voice notification** — VoxCPM/VoIP voice channel adapter in notification-service
-10. **Approval-only gateway** — `dispatchApprovalAlert()` scopes messaging to approval triggers only
-
-### Workstream 10 — Payments, E-Signature, and Provisioning Trigger
-- Dual-provider payment infrastructure: **Stripe** (international, USD) + **Razorpay** (India, INR)
-- Webhook handlers with HMAC/signature verification for both providers
-- After payment: **pdfkit** contract PDF generated, uploaded to **Zoho Sign**, submitted for e-signature
-- **Zoho Sign OAuth client** (`client_credentials` grant, `Zoho-oauthtoken` header): `getZohoSignAccessToken`, `uploadContractDocument`, `submitDocumentForSigning`, `getDocumentStatus`, `downloadSignedDocument`
-- **Zoho Sign webhook** (`POST /v1/webhooks/zoho-sign` + website proxy) with token verification, idempotent `ProvisioningJob` creation
-- Order lifecycle: `pending → paid → contract_sent (signatureStatus=sent) → signed → VM provisioned`
-- All payment code tested: 450/450 tests passing (billing + zoho-sign-client + contract-generator + zoho-sign-webhook)
-- See [docs/PAYMENTS.md](docs/PAYMENTS.md) for full flow and runbook
-
-
-- Frozen `DesktopOperator` interface in `packages/shared-types/src/desktop-operator.ts` (2026-05-08): `browserOpen`, `appLaunch`, `meetingJoin`, `meetingSpeak`
-- `MockDesktopOperator` and `getDesktopOperator()` factory in `apps/agent-runtime/src/desktop-operator-factory.ts` — reads `DESKTOP_OPERATOR` env var
-- Mock short-circuits wired into all four Tier 11 cases in `local-workspace-executor.ts` — native paths untouched when `DESKTOP_OPERATOR` is unset or `native`
+Test framework: Node.js built-in `node:test`. No Jest, no Vitest.
 
 ---
 
-## Key Workflows
+## CI/CD
 
-| Flow | Description |
-|------|-------------|
-| **Signup → Provisioning** | User signs up → tenant/workspace/bot created atomically → provisioning job queued → 11-step VM state machine → dashboard shows live progress |
-| **Connector Action** | Runtime requests normalized action → role policy checked → risk classified → low: execute immediately → medium/high: routed to approval queue → approved: execute + audit event |
-| **Approval Lifecycle** | Risky action enters intake → immutable approval record created → approver decides → decision latency tracked → optional webhook to bot → escalation after 1-hour SLA |
-| **Audit and Evidence** | All events appended to audit log → query API with filters → evidence dashboard shows freshness score → compliance export as CSV/JSON pack |
-| **Connector Setup** | User adds connector → OAuth flow initiates → token stored in Key Vault reference → health probe validates monthly → dashboard shows status/remediation |
-| **Kill-Switch** | Admin activates kill-switch → all new medium/high actions blocked within 30-second control window → resume requires incident reference + authorized signal |
-| **Budget Enforcement** | Per-task cost estimate evaluated → workspace daily/monthly limits checked → hard stop blocks execution → budget events ledger-appended for audit |
-| **LLM Failover** | Auto provider mode iterates health-score-ordered chain → failover trace records each skip → heuristic fallback fires if all providers fail |
-| **Plugin Loading** | External connector plugin submitted with manifest + signature → verified against trusted publisher list → capability allowlist created → orchestrator plugin guard enforces per-capability decisions |
-| **Orchestrator Wake** | Wake source (timer/assignment/on_demand/automation) triggers run → dedupeKey coalesces duplicate wakeups → run state persisted to file/db backend |
-| **GOAP Planning** | Goal world-state diffed against target → A* search selects optimal action sequence → planner replans on partial completion or world-state change |
-| **Approval Notification** | Approval event emitted → `dispatchApprovalAlert()` enforces approval-trigger filter → routed to Telegram/Slack/Discord/Webhook/Voice channel |
-| **SSE Task Stream** | Client opens `/sse/tasks/:botId` → `SseTaskQueue` buffers events per channel → auto-recovery sends queued events on reconnect → heartbeat keeps connection alive |
-| **Skills Crystallization** | Successful run completion → `SkillsRegistry.crystallize()` extracts template → draft → active lifecycle → `findMatching()` accelerates future similar tasks |
-| **Desktop Operator** | `DESKTOP_OPERATOR=mock` → Tier 11/12 browser/app/meeting actions short-circuit to `MockDesktopOperator` before native logic; `native` or unset → existing platform execution path |
+Seven GitHub Actions jobs in `.github/workflows/ci.yml`:
+
+| Job | Purpose |
+|-----|---------|
+| `website-permissions` | Build website, start server, run permission matrix + deployment UI regression |
+| `validate` | Workspace-level `pnpm typecheck` + `pnpm build` |
+| `db-integration` | Spin up Postgres, run `db:migrate:deploy`, run `test:db-smoke` |
+| `install` | `pnpm install --frozen-lockfile` with pnpm store cache |
+| `typecheck` | Matrix typecheck: api-gateway, agent-runtime, trigger-service, dashboard, crm-adapters, erp-adapters, notification-adapters |
+| `test` | Matrix tests: api-gateway, agent-runtime, trigger-service, crm-adapters, erp-adapters, notification-adapters |
+| `build` | Docker build matrix: api-gateway, agent-runtime, trigger-service, dashboard |
 
 ---
 
-## Planning and Operations
+## Docker
 
-| Document | Purpose |
-|----------|---------|
-| [mvp/mvp-scope-and-gates.md](mvp/mvp-scope-and-gates.md) | MVP scope, gates, and success metrics |
-| [planning/architecture-decision-log.md](planning/architecture-decision-log.md) | Architecture decisions (ADR-001 through ADR-007+) |
-| [planning/product-architecture.md](planning/product-architecture.md) | Full product architecture narrative |
-| [planning/engineering-execution-design.md](planning/engineering-execution-design.md) | Engineering execution design |
-| [planning/master-plan.md](planning/master-plan.md) | Phases: validation → MVP → pilot → scale → enterprise |
-| [planning/build-snapshot-2026-05-07.md](planning/build-snapshot-2026-05-07.md) | Six-priority spec-alignment wave snapshot |
-| [operations/quality/8.1-quality-gate-report.md](operations/quality/8.1-quality-gate-report.md) | Quality gate report (47 checks — 46 passing, 1 skip: DB smoke) |
-| [operations/runbooks/mvp-launch-ops-runbook.md](operations/runbooks/mvp-launch-ops-runbook.md) | MVP launch ops runbook (Tasks 7.1, 8.2, 8.3) |
-| [operations/runbooks/website-swa-runbook.md](operations/runbooks/website-swa-runbook.md) | Website SWA deployment runbook |
-| [scripts/dev-setup.md](scripts/dev-setup.md) | Local development environment setup |
-| [infrastructure/control-plane/README.md](infrastructure/control-plane/README.md) | Control-plane IaC notes |
-| [infrastructure/runtime-plane/README.md](infrastructure/runtime-plane/README.md) | Runtime-plane IaC notes |
+Nine services in `docker-compose.yml`. All 8 runtime services have healthchecks. `migrate` is a one-shot init container (no healthcheck — intentional).
 
----
-
-## Quality Posture
-
-| Package | Tests | Typecheck | Coverage |
-|---------|-------|-----------|---------|
-| `@agentfarm/agent-runtime` | **661 passing** | ✅ clean | ≥80% enforced on critical modules |
-| `@agentfarm/api-gateway` | **388 passing** | ✅ clean | ≥80% enforced on critical modules |
-| `@agentfarm/dashboard` | **118 passing** | ✅ clean | — |
-| `@agentfarm/website` | **118 passing** across 9 suites | ✅ clean | — |
-| `@agentfarm/orchestrator` | **62 passing** | ✅ clean | — |
-| `@agentfarm/connector-gateway` | **36 passing** | ✅ clean | — |
-| `@agentfarm/notification-service` | **31 passing** | ✅ clean | — |
-| `@agentfarm/evidence-service` | **24 passing** | ✅ clean | — |
-| `@agentfarm/meeting-agent` | **23 passing** | ✅ clean | — |
-| `@agentfarm/provisioning-service` | **15 passing** | ✅ clean | — |
-| `@agentfarm/approval-service` | **12 passing** | ✅ clean | — |
-| `@agentfarm/memory-service` | **11 passing** | ✅ clean | — |
-| `@agentfarm/agent-observability` | **9 passing** | ✅ clean | — |
-| `@agentfarm/policy-engine` | **2 passing** | ✅ clean | — |
-| **Total** | **1,392 passing** | | |
-
-- Quality gate: **47 checks total — 46 pass, 1 skipped** (DB runtime snapshot, requires Docker/Postgres)
-- E2E smoke lane validates auth, session, and protected route flows end-to-end
-- Last full gate run: **2026-05-06 — EXIT_CODE=0 (PASS)**
-- Pre-existing: `PrismaClient` export error in worktree (`runtime-audit-integration.ts`, `agent-question-service`, `compliance-export`, `memory-service`, `retention-cleanup`) — Prisma version mismatch in this worktree, not present in main repo
+| Service | Port | Healthcheck | Notes |
+|---------|------|-------------|-------|
+| `postgres` | 5432 | `pg_isready -U agentfarm` | Primary database |
+| `redis` | 6379 | `redis-cli ping` | Rate limiting and cache |
+| `opa` | 8181 | `GET /health` | Optional — policy evaluation |
+| `voicebox` | 17493 | `GET /health` | Optional — STT transcription |
+| `migrate` | — | None (intentional) | One-shot Prisma migrate |
+| `api-gateway` | 3000 | `GET /health` | Main control plane |
+| `agent-runtime` | 4000 | `GET /health` | AI execution engine |
+| `trigger-service` | 3002 | `GET /health` | Webhook/email/Slack intake |
+| `dashboard` | 3001 | `GET /` | Operator dashboard |
 
 ---
 
-## Security Principles
+## Shared packages
 
-- No connector secrets stored in relational records — only Key Vault references persisted
-- Workspace and tenant scoping enforced at session and route level (workspace RLS)
-- Approval immutability: guarded fields return 409 on re-decision
-- Kill-switch governance: 30-second control window, incident-reference-gated resume
-- CSRF nonce validation on all OAuth connector flows
-- Timing-safe password comparison to prevent user enumeration
-- Exponential backoff on transient connector failures
-- `safeChildPath` sandbox enforcement on all file and shell workspace operations
-- Plugin trust verification: cryptographic signature check before any external plugin is allowlisted
+8 shared packages under `packages/`. TypeScript path aliases enable in-process resolution in development — no compiled `dist/` output required to run or test locally.
+
+| Package | Purpose | Has `dist/`? | Notes |
+|---------|---------|--------------|-------|
+| `@agentfarm/db-schema` | Prisma schema + generated client | no | Run `prisma generate` |
+| `@agentfarm/shared-types` | Shared TypeScript types | yes | |
+| `@agentfarm/queue-contracts` | Queue message schemas | no | |
+| `@agentfarm/connector-contracts` | Connector action/auth contracts | no | |
+| `@agentfarm/observability` | OTEL + Azure Monitor helpers | no | |
+| `@agentfarm/crm-service` | CRM adapter types and clients | no | |
+| `@agentfarm/erp-service` | ERP adapter types and clients | no | |
+| `@agentfarm/notification-service` | Notification adapter types | no | |
 
 ---
 
-## Who This Is For
+## Security
 
-- **Platform engineers** building governed AI agent systems
-- **AI runtime engineers** implementing controlled autonomy with human oversight
-- **Security and compliance teams** requiring auditable decision and execution traces
-- **Product and operations leads** preparing pilot-ready enterprise delivery
-
-<!-- doc-sync: 2026-05-08 desktop-operator + test-count update -->
-> Last synchronized: 2026-05-08 (desktop-operator abstraction, 1,392 total tests, all packages documented).
+- **`@fastify/helmet`** — CSP (`default-src 'none'`, `frame-ancestors 'none'`), HSTS, X-Content-Type-Options, X-Frame-Options, Referrer-Policy (`strict-origin-when-cross-origin`)
+- **Per-IP rate limiting** — 180 req/min general, 20 req/min auth endpoints; `x-ratelimit-remaining` header on every response
+- **Per-tenant rate limiting** — 600 req/min; `x-ratelimit-tenant-remaining` header
+- **HMAC webhook verification** — inbound webhooks require valid `x-hub-signature-256` or `x-signature`
+- **Session auth** — all `/v1/*` routes require a valid session cookie; public paths explicitly allowlisted
+- **CORS origin validation** — `ALLOWED_ORIGINS` env var; 403 on unlisted origin
+- **1 MB bodyLimit** — prevents large payload DoS
+- **Audit trail** — sensitive mutations (approvals, role changes, kill-switch) logged to append-only audit table
+- **Token budget alerts** — warning at 80%, critical throttle at 90% of daily limit
+- **No hardcoded secrets** — all secrets from environment variables
+- **Permissions-Policy header** — `geolocation=(), microphone=(), camera=()` on all responses

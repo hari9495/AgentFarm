@@ -257,7 +257,7 @@ export async function distributeMeetingSummary(
 
     // Fire-and-forget: synthesize audio version of the summary via the speaking agent.
     // Failures are logged but must not block distribution.
-    speakResponse(summary, undefined, language).catch((synthErr: unknown) => {
+    speakResponse(summary, '', language ?? 'en').catch((synthErr: unknown) => {
         console.warn(`[meeting] speaking-agent synthesis failed (non-fatal): ${String(synthErr)}`);
     });
 

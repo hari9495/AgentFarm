@@ -2,7 +2,25 @@ node_modules/
 dist/
 .next/
 coverage/
+
+# Environment variable files — real values must never be committed
 .env
 .env.*
 !.env.example
+!.env.production.example
+
+# Private keys and certificates
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.cer
+*.crt
+serviceAccountKey.json
+
+# Secret directories
+secrets/
+.secrets/
+
 *.log

@@ -1,0 +1,36 @@
+# .gitleaks.toml — AgentFarm secret scanning configuration
+# Docs: https://github.com/gitleaks/gitleaks
+
+title = "AgentFarm gitleaks config"
+
+[extend]
+# Extend the default ruleset provided by gitleaks
+useDefault = true
+
+[allowlist]
+description = "Known safe patterns — documentation examples and test fixtures only"
+
+# Node.js built-in type definitions use 'password' and 'secret' in JSDoc examples
+paths = [
+  '''node_modules''',
+  '''\.next''',
+  '''dist''',
+  '''coverage''',
+  '''pnpm-lock\.yaml''',
+]
+
+# Placeholder values used in .env.example files — never real secrets
+regexes = [
+  '''your-secret-here''',
+  '''your-password-here''',
+  '''<REQUIRED:[^>]+>''',
+  '''<PASSWORD>''',
+  '''<PROD_HOST>''',
+  # JSDoc password examples in Node type declaration files
+  '''Password used to genera''',
+  # Prisma migration SQL uses string literals for table/column names, not secrets
+  '''prisma/migrations''',
+]
+
+# Commits that pre-date secret scanning enforcement — audit separately
+# commits = []

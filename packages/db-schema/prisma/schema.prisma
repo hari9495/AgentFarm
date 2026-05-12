@@ -173,6 +173,8 @@ model Tenant {
   status         TenantStatus   @default(pending)
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
+  deletedAt      DateTime?
+  createdBy      String?
   users          TenantUser[]
   workspaces     Workspace[]
   scheduledJobs      ScheduledJob[]
@@ -189,6 +191,9 @@ model TenantUser {
   passwordHash String
   role         String
   createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  deletedAt    DateTime?
+  createdBy    String?
   tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
@@ -198,6 +203,9 @@ model Workspace {
   name      String
   status    WorkspaceStatus @default(pending)
   createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  deletedAt DateTime?
+  createdBy String?
   tenant    Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   bot       Bot?
 }
@@ -209,6 +217,8 @@ model Bot {
   status         BotStatus          @default(created)
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
+  deletedAt      DateTime?
+  createdBy      String?
   workspace      Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   configVersions BotConfigVersion[]
 }
@@ -388,10 +398,13 @@ model ConnectorAuthMetadata {
   lastHealthcheckAt DateTime?
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
+  deletedAt       DateTime?
+  createdBy       String?
 
   @@index([tenantId])
   @@index([workspaceId])
   @@index([status])
+  @@index([deletedAt])
 }
 
 model ConnectorAuthSession {
@@ -726,6 +739,7 @@ model StoredEvidenceBundle {
   finalised     Boolean   @default(false)
   finalisedAt   DateTime?
   createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   @@index([tenantId])
   @@index([workspaceId])
@@ -789,6 +803,7 @@ model AgentDispatchRecord {
   errorMessage       String?
   queuedAt           DateTime          @default(now())
   createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
   orchestrationRun   OrchestrationRun? @relation(fields: [orchestrationRunId], references: [id])
 
   @@index([tenantId, workspaceId])
@@ -829,6 +844,7 @@ model AgentLongTermMemory {
   observedCount Int      @default(1)
   lastSeen      DateTime
   createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@unique([tenantId, pattern])
   @@index([workspaceId, confidence])
@@ -1111,6 +1127,7 @@ model MeetingSession {
   resolvedLanguage String?   // language code e.g. "en", "ja"
   startedAt        DateTime  @default(now())
   endedAt          DateTime?
+  createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
   @@index([tenantId])
@@ -1128,6 +1145,7 @@ model Plan {
   features    String
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   orders              Order[]
   tenantSubscriptions TenantSubscription[]
   agentSubscriptions  AgentSubscription[]
@@ -1169,6 +1187,7 @@ model Invoice {
   sentAt      DateTime?
   paidAt      DateTime?
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model ExternalPluginLoad {
@@ -1180,6 +1199,7 @@ model ExternalPluginLoad {
   trustLevel      String
   rejectionReason String?
   loadedAt        DateTime @default(now())
+  createdAt       DateTime @default(now())
 
   @@index([tenantId])
   @@index([tenantId, pluginKey])
@@ -1192,6 +1212,7 @@ model PluginKillSwitch {
   reason    String?
   killedAt  DateTime @default(now())
   killedBy  String?
+  createdAt DateTime @default(now())
 
   @@unique([tenantId, pluginKey])
 }
@@ -1202,6 +1223,8 @@ model PluginAllowlist {
   pluginKey    String
   capabilities String[]
   grantedAt    DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   @@unique([tenantId, pluginKey])
 }
@@ -1216,6 +1239,7 @@ model NotificationLog {
   payload      Json?
   error        String?
   sentAt       DateTime @default(now())
+  createdAt    DateTime @default(now())
 
   @@index([tenantId])
   @@index([tenantId, sentAt])
@@ -1231,6 +1255,7 @@ model QualitySignalLog {
   score       Float?
   metadata    Json?
   recordedAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
 
   @@index([tenantId])
   @@index([workspaceId, taskId])
@@ -1327,6 +1352,7 @@ model SubscriptionEvent {
   reason               String?
   metadata             Json?
   occurredAt           DateTime               @default(now())
+  createdAt            DateTime               @default(now())
 
   @@index([tenantId])
   @@index([tenantSubscriptionId])
@@ -1348,11 +1374,14 @@ model OutboundWebhook {
   dlqAt        DateTime?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+  createdBy    String?
   deliveries   OutboundWebhookDelivery[]
   dlqEntries   WebhookDlqEntry[]
 
   @@index([tenantId])
   @@index([tenantId, enabled])
+  @@index([deletedAt])
 }
 
 // Frozen 2026-05-11 — Phase 10D: delivery log for each outbound webhook fire
@@ -1368,6 +1397,7 @@ model OutboundWebhookDelivery {
   durationMs     Int?
   success        Boolean
   firedAt        DateTime @default(now())
+  createdAt      DateTime @default(now())
 
   @@index([webhookId])
   @@index([tenantId])
@@ -1383,6 +1413,7 @@ model WebhookDlqEntry {
   lastPayload   Json
   lastEventType String
   createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
   resolvedAt    DateTime?
   resolvedBy    String?
   webhook       OutboundWebhook @relation(fields: [webhookId], references: [id])
@@ -1404,10 +1435,13 @@ model ScheduledJob {
   nextRunAt   DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  createdBy   String?
   tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId])
   @@index([tenantId, enabled])
+  @@index([deletedAt])
 }
 
 // Phase 13 — Agent Chat: multi-turn conversational sessions with message history
@@ -1509,12 +1543,17 @@ model MarketplaceInstall {
   status              String             @default("installed")
   installedAt         DateTime           @default(now())
   uninstalledAt       DateTime?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  deletedAt           DateTime?
+  createdBy           String?
   listing             MarketplaceListing @relation(fields: [listingId], references: [id])
   tenant              Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, skillId])
   @@index([tenantId])
   @@index([tenantId, status])
+  @@index([deletedAt])
 }
 
 // Phase 21 — A/B Testing: run two BotConfigVersions against incoming tasks
@@ -1531,11 +1570,14 @@ model AbTest {
   conclusionNote String?
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
+  deletedAt      DateTime?
+  createdBy      String?
   assignments    AbTestAssignment[]
 
   @@index([tenantId])
   @@index([tenantId, botId])
   @@index([tenantId, status])
+  @@index([deletedAt])
 }
 
 model AbTestAssignment {
@@ -1581,6 +1623,7 @@ model CircuitBreakerState {
   openedAt      DateTime?
   nextRetryAt   DateTime?
   successCount  Int       @default(0)  // successes accumulated in half-open
+  createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
   @@index([tenantId])
@@ -1600,6 +1643,7 @@ model TaskQueueEntry {
   payload      Json
   errorMessage String?
   enqueuedAt   DateTime  @default(now())
+  createdAt    DateTime  @default(now())
   startedAt    DateTime?
   completedAt  DateTime?
   updatedAt    DateTime  @updatedAt
@@ -1647,8 +1691,10 @@ model ApiKey {
   lastUsedAt DateTime?
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
 
   @@index([tenantId])
   @@index([keyHash])
   @@index([tenantId, enabled])
+  @@index([deletedAt])
 }

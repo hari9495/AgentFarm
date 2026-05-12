@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
-import { getSessionUser, updateBotStatus, updateBotConfig, BotStatus, AutonomyLevel, ApprovalPolicy } from "@/lib/auth-store";
+import { getSessionUser, updateBotStatus, updateBotConfig, writeAuditEvent, BotStatus, AutonomyLevel, ApprovalPolicy } from "@/lib/auth-store";
 
 const COOKIE_NAME = "agentfarm_session";
 
@@ -32,6 +32,15 @@ export async function PATCH(
         }
         const result = updateBotStatus(slug, body.status as BotStatus);
         if (!result.ok) return NextResponse.json({ error: "Bot not found" }, { status: 404 });
+        writeAuditEvent({
+            actorId: actor.id,
+            actorEmail: actor.email,
+            action: "bot.status_change",
+            targetType: "bot",
+            targetId: slug,
+            afterState: { status: body.status },
+            reason: `Status changed to ${body.status}`,
+        });
     }
 
     // Config update
@@ -54,6 +63,15 @@ export async function PATCH(
     if (Object.keys(configFields).length > 0) {
         const result = updateBotConfig(slug, configFields);
         if (!result.ok) return NextResponse.json({ error: "Bot not found or no changes" }, { status: 404 });
+        writeAuditEvent({
+            actorId: actor.id,
+            actorEmail: actor.email,
+            action: "bot.config_change",
+            targetType: "bot",
+            targetId: slug,
+            afterState: configFields as Record<string, unknown>,
+            reason: `Config updated: ${Object.keys(configFields).join(", ")}`,
+        });
     }
 
     return NextResponse.json({ ok: true });

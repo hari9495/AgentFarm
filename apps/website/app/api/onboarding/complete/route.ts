@@ -43,6 +43,14 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "GitHub organization is required." }, { status: 400 });
     }
 
+    if (githubOrg.length > 64) {
+        return NextResponse.json({ error: "GitHub organization must be 64 characters or fewer." }, { status: 400 });
+    }
+
+    if (inviteEmail.length > 254) {
+        return NextResponse.json({ error: "Invite email is too long." }, { status: 400 });
+    }
+
     if (!emailPattern.test(inviteEmail)) {
         return NextResponse.json({ error: "Invite email is invalid." }, { status: 400 });
     }

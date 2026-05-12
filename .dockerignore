@@ -1,0 +1,65 @@
+# Dependencies — never needed in build context
+node_modules
+**/node_modules
+
+# Next.js build artifacts — rebuilt inside Docker
+**/.next
+**/out
+
+# TypeScript compiled output — rebuilt inside Docker
+**/dist
+**/build
+
+# Test artifacts
+**/coverage
+**/*.test.ts.snap
+
+# Local environment files — never ship secrets
+.env
+.env.local
+.env.*.local
+**/.env
+**/.env.local
+
+# Git and editor
+.git
+.gitignore
+.gitattributes
+.editorconfig
+.vscode
+.idea
+
+# Documentation and planning
+*.md
+docs/
+research/
+planning/
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Prisma migration SQL — schema.prisma is needed, SQL is not
+# (comment out this line if migrate runs in the container)
+# **/migrations
+
+# Docker files themselves (avoid recursive inclusion)
+**/Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# packages/ is intentionally NOT excluded — shared packages
+# are needed by the Docker build stages for TypeScript resolution
+
+# CI/CD
+.github/
+
+# Temporary files
+tmp/
+temp/
+*.tmp

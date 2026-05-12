@@ -3575,7 +3575,9 @@ export async function executeLocalWorkspaceAction(input: {
             }
         }
 
-        // workspace_rename_symbol: language-aware rename (stub — would require LSP)
+        // workspace_rename_symbol: text-based rename via regex replace across all workspace files.
+        // Not LSP-aware: misses aliased imports, renamed re-exports, and string references.
+        // A semantics-aware rename requires an active typescript-language-server process.
         case 'workspace_rename_symbol': {
             const oldName = typeof payload['old_name'] === 'string' ? payload['old_name'].trim() : '';
             const newName = typeof payload['new_name'] === 'string' ? payload['new_name'].trim() : '';
@@ -3609,7 +3611,10 @@ export async function executeLocalWorkspaceAction(input: {
             }
         }
 
-        // workspace_extract_function: extract code block into a function (stub)
+        // workspace_extract_function: simple text extraction — replaces the exact code block
+        // with a function call and appends the new function at the end of the file.
+        // Does not handle variable capture, scope analysis, or duplicate occurrences.
+        // Full AST-based extraction would require the TypeScript compiler API.
         case 'workspace_extract_function': {
             const fromFile = typeof payload['file_path'] === 'string' ? payload['file_path'].trim() : '';
             const codeBlock = typeof payload['code_block'] === 'string' ? payload['code_block'] : '';
@@ -3627,7 +3632,7 @@ export async function executeLocalWorkspaceAction(input: {
                     return { ok: false, output: '', errorOutput: 'Code block not found in file.' };
                 }
 
-                // Simple stub: replace with function call
+                // Simplified: replaces the first occurrence of the code block with a function call.
                 const newContent = fileContent.replace(codeBlock, `${funcName}();`);
                 const newFunc = `\nfunction ${funcName}() {\n${codeBlock}\n}\n`;
 
@@ -3649,7 +3654,8 @@ export async function executeLocalWorkspaceAction(input: {
             }
 
             try {
-                // Stub: search for function/class definition patterns
+                // Uses regex to match common definition patterns (function/const/class/export).
+                // Not LSP-aware: misses type-alias exports and some shorthand patterns.
                 const patterns = [
                     `(function|const|class)\\s+${symbol}\\s*[({]`,
                     `export\\s+(function|const|class)\\s+${symbol}`,
@@ -3676,7 +3682,8 @@ export async function executeLocalWorkspaceAction(input: {
             }
         }
 
-        // workspace_hover_type: get type information for a symbol (TypeScript-aware stub)
+        // workspace_hover_type: returns an error — type resolution requires an active
+        // TypeScript language server. Not callable in the standalone executor environment.
         case 'workspace_hover_type': {
             const symbol = typeof payload['symbol'] === 'string' ? payload['symbol'].trim() : '';
 
@@ -3694,7 +3701,8 @@ export async function executeLocalWorkspaceAction(input: {
         // workspace_analyze_imports: find unused imports and circular dependencies
         case 'workspace_analyze_imports': {
             try {
-                // Stub: run eslint with unused-vars plugin logic
+                // Runs eslint with --format json and parses output for unused-import findings.
+                // Requires eslint to be installed in the workspace; returns empty result if absent.
                 const result = await runCommand(['eslint', '--format', 'json', '.'], workspaceDir, 60_000);
 
                 if (result.exitCode === 0 || result.stdout) {
@@ -3754,7 +3762,8 @@ export async function executeLocalWorkspaceAction(input: {
         // workspace_security_scan: find hardcoded secrets, injection vulns, etc.
         case 'workspace_security_scan': {
             try {
-                // Stub: grep for common patterns (hardcoded secrets, etc.)
+                // Pattern-matching scan using workspace_grep for common secret variable names.
+                // Not a full SAST scan: does not detect encoded secrets or indirect assignments.
                 const secrets = ['password', 'secret', 'api_key', 'token', 'credentials'];
                 const findings: SecurityFinding[] = [];
 
@@ -3958,7 +3967,8 @@ export async function executeLocalWorkspaceAction(input: {
             const entryPoint = typeof payload['entry_point'] === 'string' ? payload['entry_point'].trim() : 'src/index.ts';
 
             try {
-                // Stub: build a simple dependency tree by parsing imports
+                // Parses import statements via regex — top-level only, does not recurse into
+                // dependencies or resolve barrel exports. For a full tree use madge or ts-morph.
                 const tree: { root: string; dependencies: string[] } = { root: entryPoint, dependencies: [] };
 
                 try {
@@ -3987,7 +3997,8 @@ export async function executeLocalWorkspaceAction(input: {
             }
 
             try {
-                // Stub: find test files that import or depend on changedFile
+                // Finds test files that reference changedFile by name — direct dependency only.
+                // Does not resolve transitive imports or barrel re-exports.
                 const analysis: ImpactAnalysis = { tests: [], functions: [], files: [] };
 
                 const grepResult = await executeLocalWorkspaceAction({
@@ -4068,7 +4079,9 @@ export async function executeLocalWorkspaceAction(input: {
             }
         }
 
-        // workspace_ai_code_review: async code review from LLM (stub)
+        // workspace_ai_code_review: returns a pending placeholder.
+        // LLM code review requires the decision adapter context (processOneTask) to invoke
+        // the model provider. Not available in the standalone executor environment.
         case 'workspace_ai_code_review': {
             const filePath = typeof payload['file_path'] === 'string' ? payload['file_path'].trim() : '';
 
@@ -4091,7 +4104,9 @@ export async function executeLocalWorkspaceAction(input: {
             }
         }
 
-        // workspace_repl_start: start an interactive REPL session (stub)
+        // workspace_repl_start: not supported — spawning an interactive REPL requires a
+        // persistent TTY which is unavailable in the task-execution environment.
+        // Returns an error so the caller can surface a clear message instead of hanging.
         case 'workspace_repl_start': {
             const language = typeof payload['language'] === 'string' ? payload['language'].trim() : 'node';
 
@@ -4399,7 +4414,7 @@ export async function executeLocalWorkspaceAction(input: {
 
                 const impact: ChangeImpact = {
                     files_modified: files,
-                    functions_affected: Math.ceil(files * 0.5), // Stub estimate
+                    functions_affected: Math.ceil(files * 0.5), // Heuristic: ~0.5 functions per changed file; no AST analysis performed.
                     tests_impacted: Math.ceil(files * 0.3),
                     predicted_impacted_packages: impactedPackages,
                     recommended_test_set: buildRecommendedTestSet(impactedPackages),

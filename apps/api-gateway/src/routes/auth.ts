@@ -97,11 +97,20 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LEN = 10;
 const SESSION_MAX_AGE = 8 * 3600; // 8 hours in seconds
 
-const setSessionCookie = (token: string): string =>
-    `agentfarm_session=${encodeURIComponent(token)}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${SESSION_MAX_AGE}`;
+// Add Secure flag in production (or when explicitly opted in via COOKIE_SECURE=true).
+// Without Secure the cookie can travel over plain HTTP, exposing the token to network interception.
+const isSecureCookie = (): boolean =>
+    process.env['NODE_ENV'] === 'production' || process.env['COOKIE_SECURE'] === 'true';
 
-const clearSessionCookie = (): string =>
-    'agentfarm_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0';
+const setSessionCookie = (token: string): string => {
+    const secureFlag = isSecureCookie() ? '; Secure' : '';
+    return `agentfarm_session=${encodeURIComponent(token)}; HttpOnly; SameSite=Strict; Path=/${secureFlag}; Max-Age=${SESSION_MAX_AGE}`;
+};
+
+const clearSessionCookie = (): string => {
+    const secureFlag = isSecureCookie() ? '; Secure' : '';
+    return `agentfarm_session=; HttpOnly; SameSite=Strict; Path=/${secureFlag}; Max-Age=0`;
+};
 
 export const registerAuthRoutes = async (
     app: FastifyInstance,

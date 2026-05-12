@@ -44,7 +44,7 @@ export async function GET(request: Request) {
     const agentSlug = searchParams.get("agentSlug") ?? undefined;
     const status = (searchParams.get("status") ?? "pending") as "pending" | "approved" | "rejected";
     const limitParam = Number.parseInt(searchParams.get("limit") ?? "100", 10);
-    const limit = Number.isFinite(limitParam) ? limitParam : 100;
+    const limit = Number.isFinite(limitParam) ? Math.min(limitParam, 500) : 100;
 
     if (!["pending", "approved", "rejected"].includes(status)) {
         return NextResponse.json({ error: "Invalid status filter." }, { status: 400 });
@@ -94,12 +94,36 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Title must be at least 6 characters." }, { status: 400 });
     }
 
+    if (title.length > 100) {
+        return NextResponse.json({ error: "Title must be 100 characters or fewer." }, { status: 400 });
+    }
+
     if (!agentSlug || !agent) {
         return NextResponse.json({ error: "Agent slug and name are required." }, { status: 400 });
     }
 
+    if (agentSlug.length > 64) {
+        return NextResponse.json({ error: "Agent slug must be 64 characters or fewer." }, { status: 400 });
+    }
+
+    if (agent.length > 100) {
+        return NextResponse.json({ error: "Agent name must be 100 characters or fewer." }, { status: 400 });
+    }
+
+    if (channel.length > 64) {
+        return NextResponse.json({ error: "Channel must be 64 characters or fewer." }, { status: 400 });
+    }
+
+    if (requestedBy.length > 254) {
+        return NextResponse.json({ error: "requestedBy must be 254 characters or fewer." }, { status: 400 });
+    }
+
     if (reason.length < 8) {
         return NextResponse.json({ error: "Reason must be at least 8 characters." }, { status: 400 });
+    }
+
+    if (reason.length > 1000) {
+        return NextResponse.json({ error: "Reason must be 1000 characters or fewer." }, { status: 400 });
     }
 
     if (!risk || !["low", "medium", "high"].includes(risk)) {

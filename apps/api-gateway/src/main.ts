@@ -7,6 +7,7 @@ initObservability({
 
 import Fastify from 'fastify';
 import type { FastifyError } from 'fastify';
+import helmet from '@fastify/helmet';
 import { rateLimit, rateLimitTenant } from './lib/rate-limit.js';
 import { buildSessionToken, verifySessionToken, type SessionPayload } from './lib/session-auth.js';
 import { prisma } from './lib/db.js';
@@ -93,7 +94,22 @@ import { registerApiKeyRoutes } from './routes/api-keys.js';
 import { validateApiKey } from './lib/api-key-auth.js';
 import { startDrainSweep, stopDrainSweep } from './lib/task-queue.js';
 
-const app = Fastify({ logger: true });
+// 1 MB max request body — prevents large payload DoS
+const app = Fastify({
+    logger: true,
+    bodyLimit: 1_048_576,
+});
+// Security headers via helmet
+await app.register(helmet, {
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'none'"],
+            frameAncestors: ["'none'"],
+        },
+    },
+    referrerPolicy: { policy: ['strict-origin-when-cross-origin'] },
+    frameguard: { action: 'deny' },
+});
 const port = Number(process.env.API_GATEWAY_PORT ?? 3000);
 const requireAuth = process.env.API_REQUIRE_AUTH === 'true';
 
@@ -410,12 +426,7 @@ const isPublicPath = (url: string): boolean => {
 
 // Security headers on every response
 app.addHook('onSend', async (_request, reply) => {
-    reply.header('X-Content-Type-Options', 'nosniff');
-    reply.header('X-Frame-Options', 'DENY');
-    reply.header('X-XSS-Protection', '1; mode=block');
-    reply.header('Referrer-Policy', 'strict-origin-when-cross-origin');
     reply.header('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
-    reply.header('Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'");
 });
 
 app.addHook('preHandler', async (request, reply) => {

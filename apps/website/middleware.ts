@@ -3,6 +3,14 @@ import { type NextRequest, NextResponse } from "next/server";
 const COOKIE_NAME = "agentfarm_session";
 
 /**
+ * Maintenance mode: set NEXT_PUBLIC_MAINTENANCE_MODE=true in the environment
+ * to return a 503 for all traffic except /api/health and /maintenance itself.
+ * This lets you pause the site without redeploying.
+ */
+const MAINTENANCE_MODE = process.env["NEXT_PUBLIC_MAINTENANCE_MODE"] === "true";
+const MAINTENANCE_BYPASS_PATHS = new Set(["/api/health", "/maintenance"]);
+
+/**
  * Protected path prefixes. Any request whose pathname starts with one of these
  * prefixes requires a valid session cookie.  Full DB-level validation is done
  * inside server components (layouts) and route handlers; middleware acts as a
@@ -50,6 +58,19 @@ function hasCookie(request: NextRequest): boolean {
 
 export function middleware(request: NextRequest): NextResponse {
     const { pathname } = request.nextUrl;
+
+    // Maintenance mode: 503 for everything except health check and the maintenance page.
+    if (MAINTENANCE_MODE && !MAINTENANCE_BYPASS_PATHS.has(pathname)) {
+        if (pathname.startsWith("/api/")) {
+            return NextResponse.json(
+                { error: "Service temporarily unavailable. Please try again later." },
+                { status: 503, headers: { "Retry-After": "300" } },
+            );
+        }
+        const maintenanceUrl = request.nextUrl.clone();
+        maintenanceUrl.pathname = "/maintenance";
+        return NextResponse.redirect(maintenanceUrl);
+    }
 
     if (!isProtected(pathname)) {
         return NextResponse.next();

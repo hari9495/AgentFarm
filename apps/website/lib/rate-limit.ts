@@ -35,7 +35,40 @@ export function checkRateLimit(userId: string): RateLimitResult {
     return { allowed: true };
 }
 
+// Separate map for auth-specific rate limiting (unauthenticated endpoints).
+const authWindows = new Map<string, Timestamps>();
+
+/**
+ * Check a custom sliding-window rate limit keyed by an arbitrary string.
+ * Use for authentication endpoints where requests arrive before a userId is known.
+ *
+ * @param key        - unique key, e.g. "login:192.0.2.1" or "forgotpw:user@example.com"
+ * @param windowMs   - time window in milliseconds
+ * @param maxRequests - maximum requests allowed in that window
+ */
+export function checkAuthRateLimit(
+    key: string,
+    windowMs: number,
+    maxRequests: number,
+): RateLimitResult {
+    const now = Date.now();
+    const cutoff = now - windowMs;
+
+    const existing = authWindows.get(key);
+    const fresh: Timestamps = existing ? existing.filter((ts) => ts > cutoff) : [];
+
+    if (fresh.length >= maxRequests) {
+        const oldest = fresh[0];
+        return { allowed: false, retryAfterMs: oldest + windowMs - now };
+    }
+
+    fresh.push(now);
+    authWindows.set(key, fresh);
+    return { allowed: true };
+}
+
 /** Flush state — for testing only. */
 export function _resetRateLimitState(): void {
     windows.clear();
+    authWindows.clear();
 }

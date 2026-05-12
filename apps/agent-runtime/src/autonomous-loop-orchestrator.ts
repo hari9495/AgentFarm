@@ -27,6 +27,12 @@ import type {
 import { getSkillHandler } from './skill-execution-engine.js';
 import type { SkillOutput } from './skill-execution-engine.js';
 
+// Hard ceiling on loop iterations. Prevents runaway agent loops from
+// calling paid APIs indefinitely (e.g. a retry loop with no backoff).
+// Callers may specify a lower limit via config.max_iterations; this cap
+// is the absolute maximum regardless of what the caller requests.
+const MAX_LOOP_ITERATIONS_HARD_CAP = 25;
+
 export class AutonomousLoopOrchestrator {
     private activeLoops = new Map<string, LoopRunResult>();
     private loopHistory: LoopRunResult[] = [];
@@ -46,6 +52,10 @@ export class AutonomousLoopOrchestrator {
         let currentSkill = config.initial_skill;
         let previousOutput: Record<string, unknown> | null = null;
         let cumulativeTokensCost = 0;
+
+        // Clamp caller-supplied max_iterations to the hard cap so a misconfigured
+        // or adversarially-crafted loop config cannot trigger unbounded API calls.
+        const effectiveMaxIterations = Math.min(config.max_iterations, MAX_LOOP_ITERATIONS_HARD_CAP);
 
         // Check if we should reuse a learned successful pattern
         if (config.allow_learning && this.learningStore) {
@@ -76,7 +86,7 @@ export class AutonomousLoopOrchestrator {
         }
 
         // Main iteration loop
-        while (iterationCount < config.max_iterations) {
+        while (iterationCount < effectiveMaxIterations) {
             iterationCount++;
 
             // Execute current skill
@@ -135,7 +145,7 @@ export class AutonomousLoopOrchestrator {
         }
 
         // Check if we hit max iterations without success
-        if (currentState === 'running' && iterationCount >= config.max_iterations) {
+        if (currentState === 'running' && iterationCount >= effectiveMaxIterations) {
             currentState = 'failed';
         }
 

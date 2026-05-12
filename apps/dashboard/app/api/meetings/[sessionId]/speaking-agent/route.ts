@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getInternalSessionAuthHeader } from '../../../../../lib/internal-session';
+import { getInternalSessionAuthHeader } from '../../../../lib/internal-session';
 
 const getApiBaseUrl = (): string => process.env.DASHBOARD_API_BASE_URL ?? 'http://localhost:3000';
 

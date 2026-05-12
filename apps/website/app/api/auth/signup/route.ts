@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSession, createUser, findUserByEmail, initializeTenantWorkspaceAndBot, updateUserGatewayIds } from "@/lib/auth-store";
+import { checkAuthRateLimit } from "@/lib/rate-limit";
 
 type SignupPayload = {
     name?: string;
@@ -40,7 +41,24 @@ const isAllowedSignupEmail = (email: string): boolean => {
     return false;
 };
 
+function getClientIp(request: Request): string {
+    return (
+        request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+        request.headers.get("x-real-ip") ??
+        "unknown"
+    );
+}
+
 export async function POST(request: Request) {
+    const ip = getClientIp(request);
+    const rl = checkAuthRateLimit(`signup:${ip}`, 60 * 60 * 1000, 5);
+    if (!rl.allowed) {
+        return NextResponse.json(
+            { error: "Too many signup attempts. Please wait before retrying." },
+            { status: 429, headers: { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) } },
+        );
+    }
+
     let payload: SignupPayload;
 
     try {
@@ -59,8 +77,20 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Name must be at least 2 characters." }, { status: 400 });
     }
 
+    if (name.length > 100) {
+        return NextResponse.json({ error: "Name must be 100 characters or fewer." }, { status: 400 });
+    }
+
     if (company.length < 2) {
         return NextResponse.json({ error: "Company must be at least 2 characters." }, { status: 400 });
+    }
+
+    if (company.length > 100) {
+        return NextResponse.json({ error: "Company must be 100 characters or fewer." }, { status: 400 });
+    }
+
+    if (email.length > 254) {
+        return NextResponse.json({ error: "Email address is too long." }, { status: 400 });
     }
 
     if (!emailPattern.test(email)) {
@@ -69,6 +99,10 @@ export async function POST(request: Request) {
 
     if (password.length < 8) {
         return NextResponse.json({ error: "Password must be at least 8 characters." }, { status: 400 });
+    }
+
+    if (password.length > 128) {
+        return NextResponse.json({ error: "Password must be 128 characters or fewer." }, { status: 400 });
     }
 
     if (!agreeToTerms) {
@@ -155,7 +189,7 @@ export async function POST(request: Request) {
         name: COOKIE_NAME,
         value: sessionToken,
         httpOnly: true,
-        sameSite: "lax",
+        sameSite: "strict",
         secure: process.env.NODE_ENV === "production",
         path: "/",
         maxAge: 8 * 60 * 60,

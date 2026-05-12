@@ -1,0 +1,62 @@
+name: Scheduled Database Backup
+"on":
+  schedule:
+    - cron: '0 2 * * *'
+
+  # Allow manual trigger for ad-hoc backups or restore drills
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run — validate backup script without uploading'
+        required: false
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    name: pg_dump → offsite upload
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify tooling (az, aws, pg_dump pre-installed on ubuntu-latest)
+        run: |
+          pg_dump --version
+          az version --output none || true
+          aws --version || true
+
+      - name: Run backup
+        env:
+          DATABASE_URL:            ${{ secrets.PROD_DATABASE_URL }}
+          BACKUP_DESTINATION:      ${{ vars.BACKUP_DESTINATION || 'azure' }}
+          # Azure destination
+          AZURE_STORAGE_ACCOUNT:   ${{ secrets.AZURE_STORAGE_ACCOUNT }}
+          AZURE_STORAGE_KEY:       ${{ secrets.AZURE_STORAGE_KEY }}
+          AZURE_BACKUP_CONTAINER:  ${{ vars.AZURE_BACKUP_CONTAINER || 'agentfarm-db-backups' }}
+          # S3 destination (optional)
+          AWS_S3_BACKUP_BUCKET:    ${{ secrets.AWS_S3_BACKUP_BUCKET }}
+          AWS_REGION:              ${{ vars.AWS_REGION }}
+          AWS_ACCESS_KEY_ID:       ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY:   ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          chmod +x ./scripts/db-backup.sh
+          if [[ "${{ github.event.inputs.dry_run }}" == "true" ]]; then
+            echo "DRY_RUN mode: skipping actual upload."
+            echo "DATABASE_URL is set: $( [ -n \"$DATABASE_URL\" ] && echo yes || echo NO )"
+          else
+            ./scripts/db-backup.sh
+          fi
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "::error::Database backup failed. Check the workflow logs and verify"
+          echo "::error::that PROD_DATABASE_URL and storage secrets are set correctly."
+          echo "::error::See operations/runbooks/db-backup-restore.md for recovery steps."

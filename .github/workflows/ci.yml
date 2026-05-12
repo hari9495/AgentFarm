@@ -8,6 +8,23 @@ on:
   workflow_dispatch:
 
 jobs:
+  secret-scan:
+    name: Secret scanning (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # full history so gitleaks can scan all commits on a PR
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # GITLEAKS_LICENSE is only required for private repos on the paid plan;
+          # remove if this repo is public or you are using the free tier.
+          # GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+
   website-permissions:
     runs-on: ubuntu-latest
     steps:
@@ -158,6 +175,9 @@ jobs:
           - '@agentfarm/agent-runtime'
           - '@agentfarm/trigger-service'
           - '@agentfarm/dashboard'
+          - '@agentfarm/crm-adapters'
+          - '@agentfarm/erp-adapters'
+          - '@agentfarm/notification-adapters'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -200,6 +220,9 @@ jobs:
           - '@agentfarm/api-gateway'
           - '@agentfarm/agent-runtime'
           - '@agentfarm/trigger-service'
+          - '@agentfarm/crm-adapters'
+          - '@agentfarm/erp-adapters'
+          - '@agentfarm/notification-adapters'
     services:
       postgres:
         image: postgres:16

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { authenticateUser, createSession, updateUserGatewayToken } from "@/lib/auth-store";
+import { checkAuthRateLimit } from "@/lib/rate-limit";
 
 type LoginPayload = {
     email?: string;
@@ -74,7 +75,24 @@ function sanitizeFrom(from: unknown): string {
     return trimmed || "/dashboard";
 }
 
+function getClientIp(request: Request): string {
+    return (
+        request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+        request.headers.get("x-real-ip") ??
+        "unknown"
+    );
+}
+
 export async function POST(request: Request) {
+    const ip = getClientIp(request);
+    const rl = checkAuthRateLimit(`login:${ip}`, 15 * 60 * 1000, 10);
+    if (!rl.allowed) {
+        return NextResponse.json(
+            { error: "Too many login attempts. Please wait before retrying." },
+            { status: 429, headers: { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) } },
+        );
+    }
+
     let payload: LoginPayload;
 
     try {
@@ -85,6 +103,14 @@ export async function POST(request: Request) {
 
     const email = payload.email?.trim().toLowerCase() ?? "";
     const password = payload.password ?? "";
+
+    if (email.length > 254) {
+        return NextResponse.json({ error: "Email address is too long." }, { status: 400 });
+    }
+
+    if (password.length > 128) {
+        return NextResponse.json({ error: "Password is too long." }, { status: 400 });
+    }
 
     if (!emailPattern.test(email)) {
         return NextResponse.json({ error: "Enter a valid email address." }, { status: 400 });
@@ -125,7 +151,7 @@ export async function POST(request: Request) {
         name: COOKIE_NAME,
         value: sessionToken,
         httpOnly: true,
-        sameSite: "lax",
+        sameSite: "strict",
         secure: process.env.NODE_ENV === "production",
         path: "/",
         maxAge: 8 * 60 * 60,
@@ -136,7 +162,7 @@ export async function POST(request: Request) {
             name: INTERNAL_COOKIE_NAME,
             value: internalToken,
             httpOnly: true,
-            sameSite: "lax",
+            sameSite: "strict",
             secure: process.env.NODE_ENV === "production",
             path: "/",
             maxAge: 8 * 60 * 60,
