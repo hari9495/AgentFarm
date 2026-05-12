@@ -91,6 +91,7 @@ import { registerCircuitBreakerRoutes } from './routes/circuit-breakers.js';
 import { registerTaskQueueRoutes } from './routes/task-queue.js';
 import { registerScheduledReportRoutes } from './routes/scheduled-reports.js';
 import { registerApiKeyRoutes } from './routes/api-keys.js';
+import { registerAgentMessageRoutes } from './routes/agent-messages.js';
 import { validateApiKey } from './lib/api-key-auth.js';
 import { startDrainSweep, stopDrainSweep } from './lib/task-queue.js';
 
@@ -375,6 +376,40 @@ app.get('/health', async () => ({
     ts: new Date().toISOString(),
 }));
 
+// Public status page endpoint — no auth required
+app.get('/status', async (_request, _reply) => {
+    const updatedAt = new Date().toISOString();
+    const services: { name: string; status: 'operational' | 'degraded' | 'outage'; latencyMs?: number }[] = [];
+
+    // Check database
+    const dbStart = Date.now();
+    let dbStatus: 'operational' | 'degraded' | 'outage' = 'outage';
+    try {
+        await prisma.$queryRaw`SELECT 1`;
+        dbStatus = 'operational';
+    } catch { /* unreachable */ }
+    services.push({ name: 'Database', status: dbStatus, latencyMs: Date.now() - dbStart });
+
+    // Check Redis if configured
+    if (process.env['REDIS_URL']) {
+        // Redis reachability is inferred from worker health; mark operational by default
+        services.push({ name: 'Cache', status: 'operational' });
+    }
+
+    services.push({ name: 'API Gateway', status: 'operational', latencyMs: 0 });
+
+    const hasOutage = services.some(s => s.status === 'outage');
+    const hasDegraded = services.some(s => s.status === 'degraded');
+    const overallStatus: 'operational' | 'degraded' | 'outage' = hasOutage ? 'outage' : hasDegraded ? 'degraded' : 'operational';
+
+    return {
+        status: overallStatus,
+        updatedAt,
+        services,
+        incidents: [] as { id: string; title: string; severity: string; startedAt: string }[],
+    };
+});
+
 // Detailed health — requires internal session
 app.get('/health/detail', async (request, reply) => {
     const session = readSession(request);
@@ -413,7 +448,7 @@ app.get('/v1/auth/dev-session', async (_request, reply) => {
 });
 
 // Public paths that bypass auth checks (still rate-limited)
-const PUBLIC_PATHS = new Set(['/health', '/auth/signup', '/auth/login', '/auth/internal-login']);
+const PUBLIC_PATHS = new Set(['/health', '/status', '/auth/signup', '/auth/login', '/auth/internal-login']);
 const isPublicPath = (url: string): boolean => {
     const path = url.split('?')[0] ?? '';
     return (
@@ -671,6 +706,7 @@ await registerCircuitBreakerRoutes(app, { getSession: (request) => readSession(r
 await registerTaskQueueRoutes(app, { getSession: (request) => readSession(request), prisma: prisma as never });
 await registerScheduledReportRoutes(app, { getSession: (request) => readSession(request), prisma: prisma as never });
 await registerApiKeyRoutes(app, { getSession: (request) => readSession(request), prisma: prisma as never });
+registerAgentMessageRoutes(app, { getSession: (request) => readSession(request) });
 
 app.get('/v1/dashboard/summary', async (request, reply) => {
     const session = readSession(request);

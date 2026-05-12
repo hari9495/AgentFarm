@@ -2,9 +2,13 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-RUN pip install flask soundfile voxcpm
+# espeak-ng provides the speech synthesis backend for pyttsx3 on Linux
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    espeak-ng \
+    libespeak-ng1 \
+    && rm -rf /var/lib/apt/lists/*
 
-# TODO: replace stub with real VoxCPM2 model load
+RUN pip install --no-cache-dir flask pyttsx3
 
 COPY app.py /app/app.py
 

@@ -97,3 +97,130 @@ describe('POST /api/v1/memory/patterns/code-review', () => {
         }
     });
 });
+
+describe('GET /v1/webhooks/inbound/sources', () => {
+    it('returns an empty sources array', async () => {
+        const { app } = await buildApp();
+        try {
+            const res = await app.inject({ method: 'GET', url: '/v1/webhooks/inbound/sources' });
+            assert.equal(res.statusCode, 200);
+            const body = res.json() as { sources: unknown[] };
+            assert.ok(Array.isArray(body.sources));
+        } finally {
+            await app.close();
+        }
+    });
+});
+
+describe('POST /v1/webhooks/inbound/sources', () => {
+    it('creates a new source and returns id, name, secret, inboundUrl', async () => {
+        const { app } = await buildApp();
+        try {
+            const res = await app.inject({
+                method: 'POST',
+                url: '/v1/webhooks/inbound/sources',
+                payload: { name: 'GitHub Actions', description: 'CI triggers' },
+            });
+            assert.equal(res.statusCode, 201);
+            const body = res.json() as { id: string; name: string; secret: string; inboundUrl: string };
+            assert.equal(body.name, 'GitHub Actions');
+            assert.ok(body.id.startsWith('wsrc_'));
+            assert.ok(typeof body.secret === 'string' && body.secret.length > 0);
+            assert.ok(body.inboundUrl.includes(body.id));
+        } finally {
+            await app.close();
+        }
+    });
+
+    it('rejects requests without a name', async () => {
+        const { app } = await buildApp();
+        try {
+            const res = await app.inject({
+                method: 'POST',
+                url: '/v1/webhooks/inbound/sources',
+                payload: {},
+            });
+            assert.equal(res.statusCode, 400);
+        } finally {
+            await app.close();
+        }
+    });
+});
+
+describe('DELETE /v1/webhooks/inbound/sources/:sourceId', () => {
+    it('returns deleted: true', async () => {
+        const { app } = await buildApp();
+        try {
+            const res = await app.inject({
+                method: 'DELETE',
+                url: '/v1/webhooks/inbound/sources/wsrc_test123',
+            });
+            assert.equal(res.statusCode, 200);
+            const body = res.json() as { deleted: boolean };
+            assert.equal(body.deleted, true);
+        } finally {
+            await app.close();
+        }
+    });
+});
+
+describe('GET /v1/webhooks/inbound/events', () => {
+    it('returns an empty events array', async () => {
+        const { app } = await buildApp();
+        try {
+            const res = await app.inject({ method: 'GET', url: '/v1/webhooks/inbound/events' });
+            assert.equal(res.statusCode, 200);
+            const body = res.json() as { events: unknown[] };
+            assert.ok(Array.isArray(body.events));
+        } finally {
+            await app.close();
+        }
+    });
+
+    it('accepts source and limit query params without error', async () => {
+        const { app } = await buildApp();
+        try {
+            const res = await app.inject({
+                method: 'GET',
+                url: '/v1/webhooks/inbound/events?source=wsrc_abc&limit=50',
+            });
+            assert.equal(res.statusCode, 200);
+        } finally {
+            await app.close();
+        }
+    });
+});
+
+describe('POST /v1/webhooks/inbound/test', () => {
+    it('rejects requests without a sourceId', async () => {
+        const { app } = await buildApp();
+        try {
+            const res = await app.inject({
+                method: 'POST',
+                url: '/v1/webhooks/inbound/test',
+                payload: {},
+            });
+            assert.equal(res.statusCode, 400);
+        } finally {
+            await app.close();
+        }
+    });
+
+    it('returns ok/statusCode/latencyMs when sourceId is provided (network may fail)', async () => {
+        const { app } = await buildApp();
+        try {
+            const res = await app.inject({
+                method: 'POST',
+                url: '/v1/webhooks/inbound/test',
+                payload: { sourceId: 'wsrc_test123' },
+            });
+            assert.equal(res.statusCode, 200);
+            const body = res.json() as { ok: boolean; statusCode: number; latencyMs: number };
+            assert.ok(typeof body.ok === 'boolean');
+            assert.ok(typeof body.statusCode === 'number');
+            assert.ok(typeof body.latencyMs === 'number');
+        } finally {
+            await app.close();
+        }
+    });
+});

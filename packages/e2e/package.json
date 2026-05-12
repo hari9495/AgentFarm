@@ -1,0 +1,17 @@
+{
+    "name": "@agentfarm/e2e",
+    "version": "0.1.0",
+    "description": "End-to-end tests for AgentFarm",
+    "private": true,
+    "scripts": {
+        "test": "playwright test",
+        "test:ui": "playwright test --ui",
+        "test:headed": "playwright test --headed",
+        "test:report": "playwright show-report",
+        "typecheck": "tsc --noEmit"
+    },
+    "devDependencies": {
+        "@playwright/test": "^1.44.0",
+        "typescript": "^5.0.0"
+    }
+}

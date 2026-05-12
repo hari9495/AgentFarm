@@ -1366,6 +1366,9 @@ export default async function HomePage({
                         <Link href="/webhooks-ops" className="secondary-action" style={{ textDecoration: 'none' }}>
                             Webhook Ops
                         </Link>
+                        <Link href="/webhooks/inbound" className="secondary-action" style={{ textDecoration: 'none' }}>
+                            Inbound webhooks
+                        </Link>
                         <Link href="/ab-tests" className="secondary-action" style={{ textDecoration: 'none' }}>
                             A/B Tests
                         </Link>
@@ -1386,6 +1389,9 @@ export default async function HomePage({
                         </Link>
                         <Link href="/governance" className="secondary-action" style={{ textDecoration: 'none' }}>
                             Governance
+                        </Link>
+                        <Link href="/governance/workflows" className="secondary-action" style={{ textDecoration: 'none' }}>
+                            Workflow builder
                         </Link>
                         <Link href="/ci" className="secondary-action" style={{ textDecoration: 'none' }}>
                             CI/CD Triage

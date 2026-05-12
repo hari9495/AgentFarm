@@ -263,6 +263,65 @@ export const registerMarketplaceRoutes = async (
         },
     );
 
+    // ── GET /v1/marketplace/installs/:skillId — viewer+ ────────────────────
+    app.get<{ Params: { skillId: string } }>(
+        '/v1/marketplace/installs/:skillId',
+        async (req, reply) => {
+            const session = options.getSession(req);
+            if (!session) return reply.code(401).send({ error: 'unauthorized' });
+            if ((ROLE_RANK[session.role ?? ''] ?? 0) < (ROLE_RANK['viewer'] ?? 99)) {
+                return reply.code(403).send({ error: 'insufficient_role', required: 'viewer', actual: session.role });
+            }
+
+            const db = await resolvePrisma();
+            const install = await (db as any).marketplaceInstall.findUnique({
+                where: { tenantId_skillId: { tenantId: session.tenantId, skillId: req.params.skillId } },
+                include: { listing: { select: { name: true, version: true, skillId: true } } },
+            });
+            if (!install) return reply.code(404).send({ error: 'not_found' });
+            return reply.code(200).send(install);
+        },
+    );
+
+    // ── PATCH /v1/marketplace/installs/:skillId — operator+ ─────────────────
+    app.patch<{
+        Params: { skillId: string };
+        Body: { enabled?: unknown; config?: unknown };
+    }>(
+        '/v1/marketplace/installs/:skillId',
+        async (req, reply) => {
+            const session = options.getSession(req);
+            if (!session) return reply.code(401).send({ error: 'unauthorized' });
+            if ((ROLE_RANK[session.role ?? ''] ?? 0) < (ROLE_RANK['operator'] ?? 99)) {
+                return reply.code(403).send({ error: 'insufficient_role', required: 'operator', actual: session.role });
+            }
+
+            const db = await resolvePrisma();
+            const existing = await (db as any).marketplaceInstall.findUnique({
+                where: { tenantId_skillId: { tenantId: session.tenantId, skillId: req.params.skillId } },
+            });
+            if (!existing) return reply.code(404).send({ error: 'not_found' });
+
+            const { enabled } = req.body ?? {};
+            const update: Record<string, unknown> = {};
+            if (typeof enabled === 'boolean') {
+                // Map enabled flag onto the status field (no dedicated column in schema)
+                update['status'] = enabled ? 'installed' : 'disabled';
+            }
+
+            if (Object.keys(update).length === 0) {
+                return reply.code(400).send({ error: 'no_fields', message: 'Provide at least one field to update.' });
+            }
+
+            const updated = await (db as any).marketplaceInstall.update({
+                where: { tenantId_skillId: { tenantId: session.tenantId, skillId: req.params.skillId } },
+                data: update,
+                include: { listing: { select: { name: true, version: true, skillId: true } } },
+            });
+            return reply.code(200).send(updated);
+        },
+    );
+
     // ── DELETE /v1/marketplace/installs/:skillId — operator+ ────────────────
     app.delete<{
         Params: { skillId: string };

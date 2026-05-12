@@ -219,8 +219,10 @@ model Bot {
   updatedAt      DateTime           @updatedAt
   deletedAt      DateTime?
   createdBy      String?
-  workspace      Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  configVersions BotConfigVersion[]
+  workspace        Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  configVersions   BotConfigVersion[]
+  sentMessages     AgentMessage[]     @relation("SentMessages")
+  receivedMessages AgentMessage[]     @relation("ReceivedMessages")
 }
 
 // Frozen 2026-04-21 — canonical source: planning/spec-azure-provisioning-workflow.md
@@ -1697,4 +1699,51 @@ model ApiKey {
   @@index([keyHash])
   @@index([tenantId, enabled])
   @@index([deletedAt])
+}
+
+// Phase 27 — Agent-to-Agent Messaging: structured in-platform message passing between bots.
+model AgentMessage {
+  id           String             @id @default(cuid())
+  fromBotId    String
+  toBotId      String
+  threadId     String?
+  messageType  AgentMessageType
+  subject      String?
+  body         String             @db.Text
+  metadata     Json?
+  status       AgentMessageStatus @default(PENDING)
+  readAt       DateTime?
+  repliedAt    DateTime?
+  replyToId    String?
+  replyTo      AgentMessage?      @relation("MessageReplies", fields: [replyToId], references: [id])
+  replies      AgentMessage[]     @relation("MessageReplies")
+  createdAt    DateTime           @default(now())
+  expiresAt    DateTime?
+  fromBot      Bot                @relation("SentMessages", fields: [fromBotId], references: [id])
+  toBot        Bot                @relation("ReceivedMessages", fields: [toBotId], references: [id])
+
+  @@index([fromBotId])
+  @@index([toBotId])
+  @@index([threadId])
+  @@index([toBotId, status])
+  @@index([createdAt])
+}
+
+enum AgentMessageType {
+  QUESTION
+  ANSWER
+  RESULT
+  STATUS_UPDATE
+  HANDOFF_REQUEST
+  HANDOFF_ACCEPT
+  HANDOFF_REJECT
+  BROADCAST
+}
+
+enum AgentMessageStatus {
+  PENDING
+  DELIVERED
+  READ
+  REPLIED
+  EXPIRED
 }

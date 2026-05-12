@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
 import { answerQuestion, PrismaQuestionStore } from '@agentfarm/agent-question-service';
@@ -319,6 +320,95 @@ export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient
                 sourceTaskId: trimString(body.sourceTaskId) || undefined,
                 sourcePrUrl: trimString(body.sourcePrUrl) || trimString(body.pull_request?.html_url) || undefined,
             });
+        },
+    );
+
+    // ── Inbound webhook source management ────────────────────────────────────
+    // TODO: Add a WebhookSource model to the Prisma schema for persistence.
+    // Current implementation returns static/generated shapes without DB writes.
+
+    /**
+     * GET /v1/webhooks/inbound/sources
+     * Returns the list of registered inbound webhook sources.
+     */
+    app.get('/v1/webhooks/inbound/sources', async (_req, reply) => {
+        // TODO: Replace with prisma.webhookSource.findMany() once the model exists.
+        return reply.send({ sources: [] });
+    });
+
+    /**
+     * POST /v1/webhooks/inbound/sources
+     * Registers a new inbound webhook source.
+     * Body: { name: string, description?: string }
+     */
+    app.post<{ Body: { name?: unknown; description?: unknown } }>(
+        '/v1/webhooks/inbound/sources',
+        async (req, reply) => {
+            const name = trimString(req.body?.name);
+            if (!name) {
+                return reply.code(400).send({ error: 'name is required' });
+            }
+            const id = `wsrc_${randomUUID().replace(/-/g, '').slice(0, 16)}`;
+            const secret = randomUUID();
+            const inboundUrl = `/webhooks/ingest/inbound?source=${id}`;
+            // TODO: Persist to prisma.webhookSource once the model exists.
+            return reply.code(201).send({ id, name, secret, inboundUrl });
+        },
+    );
+
+    /**
+     * DELETE /v1/webhooks/inbound/sources/:sourceId
+     * Removes a registered inbound webhook source.
+     */
+    app.delete<{ Params: { sourceId: string } }>(
+        '/v1/webhooks/inbound/sources/:sourceId',
+        async (_req, reply) => {
+            // TODO: Delete from prisma.webhookSource once the model exists.
+            return reply.send({ deleted: true });
+        },
+    );
+
+    /**
+     * GET /v1/webhooks/inbound/events
+     * Returns recent inbound webhook events.
+     * Query: source?, limit?, cursor?
+     */
+    app.get<{ Querystring: { source?: string; limit?: string; cursor?: string } }>(
+        '/v1/webhooks/inbound/events',
+        async (_req, reply) => {
+            // TODO: Query from an InboundWebhookEvent model once it exists.
+            return reply.send({ events: [] });
+        },
+    );
+
+    /**
+     * POST /v1/webhooks/inbound/test
+     * Sends a test ping to the inbound webhook endpoint and measures latency.
+     * Body: { sourceId: string }
+     */
+    app.post<{ Body: { sourceId?: unknown } }>(
+        '/v1/webhooks/inbound/test',
+        async (req, reply) => {
+            const sourceId = trimString(req.body?.sourceId);
+            if (!sourceId) {
+                return reply.code(400).send({ error: 'sourceId is required' });
+            }
+            const baseUrl = process.env['INTERNAL_BASE_URL'] ?? 'http://localhost:3000';
+            const testUrl = `${baseUrl}/webhooks/ingest/inbound?source=${sourceId}`;
+            const t0 = Date.now();
+            try {
+                const res = await fetch(testUrl, {
+                    method: 'POST',
+                    headers: { 'content-type': 'application/json', 'x-test-ping': '1' },
+                    body: JSON.stringify({ test: true, sourceId }),
+                    signal: AbortSignal.timeout(5_000),
+                });
+                const latencyMs = Date.now() - t0;
+                return reply.send({ ok: res.ok || res.status < 500, statusCode: res.status, latencyMs });
+            } catch {
+                const latencyMs = Date.now() - t0;
+                return reply.send({ ok: false, statusCode: 0, latencyMs });
+            }
         },
     );
 }

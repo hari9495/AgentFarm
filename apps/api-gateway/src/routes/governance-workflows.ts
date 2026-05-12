@@ -97,6 +97,18 @@ export const registerGovernanceWorkflowRoutes = async (
     const now = options.now ?? (() => Date.now());
     const workflowSlaSeconds = options.workflowSlaSeconds ?? 300;
 
+    // ── GET /v1/governance/workflows/templates — list all templates for tenant
+    app.get('/v1/governance/workflows/templates', async (request, reply) => {
+        const session = options.getSession(request);
+        if (!session) {
+            return reply.code(401).send({ error: 'unauthorized', message: 'A valid authenticated session is required.' });
+        }
+        const templates = Array.from(store.templates.values()).filter(
+            (t) => t.tenantId === session.tenantId,
+        );
+        return reply.code(200).send({ templates, total: templates.length });
+    });
+
     app.post('/v1/governance/workflows/templates', async (request, reply) => {
         const session = options.getSession(request);
         if (!session) {

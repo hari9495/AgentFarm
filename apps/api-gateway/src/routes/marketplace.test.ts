@@ -379,3 +379,130 @@ test('DELETE /v1/marketplace/installs/:skillId — 403 if viewer role', async ()
         await app.close();
     }
 });
+
+// ---------------------------------------------------------------------------
+// 14. GET /v1/marketplace/installs/:skillId — 200 with install
+// ---------------------------------------------------------------------------
+
+test('GET /v1/marketplace/installs/:skillId — 200 with install', async () => {
+    const prisma = makePrisma({
+        marketplaceInstall: {
+            findUnique: async () => installRecord({ skillId: 'skill_1', status: 'installed' }),
+        },
+    });
+    const app = Fastify({ logger: false });
+    await registerMarketplaceRoutes(app, { getSession: () => makeSession('viewer'), prisma });
+    try {
+        const res = await app.inject({
+            method: 'GET',
+            url: '/v1/marketplace/installs/skill_1',
+        });
+        assert.equal(res.statusCode, 200);
+        const body = res.json<{ skillId: string; status: string }>();
+        assert.equal(body.skillId, 'skill_1');
+        assert.equal(body.status, 'installed');
+    } finally {
+        await app.close();
+    }
+});
+
+// ---------------------------------------------------------------------------
+// 15. GET /v1/marketplace/installs/:skillId — 404 when not found
+// ---------------------------------------------------------------------------
+
+test('GET /v1/marketplace/installs/:skillId — 404 when not found', async () => {
+    const prisma = makePrisma({
+        marketplaceInstall: {
+            findUnique: async () => null,
+        },
+    });
+    const app = Fastify({ logger: false });
+    await registerMarketplaceRoutes(app, { getSession: () => makeSession('viewer'), prisma });
+    try {
+        const res = await app.inject({
+            method: 'GET',
+            url: '/v1/marketplace/installs/skill_missing',
+        });
+        assert.equal(res.statusCode, 404);
+        const body = res.json<{ error: string }>();
+        assert.equal(body.error, 'not_found');
+    } finally {
+        await app.close();
+    }
+});
+
+// ---------------------------------------------------------------------------
+// 16. PATCH /v1/marketplace/installs/:skillId — disables install
+// ---------------------------------------------------------------------------
+
+test('PATCH /v1/marketplace/installs/:skillId — disables install', async () => {
+    const prisma = makePrisma({
+        marketplaceInstall: {
+            findUnique: async () => installRecord({ skillId: 'skill_1', status: 'installed' }),
+            update: async ({ data }: any) => ({ ...installRecord(), ...data }),
+        },
+    });
+    const app = Fastify({ logger: false });
+    await registerMarketplaceRoutes(app, { getSession: () => makeSession('operator'), prisma });
+    try {
+        const res = await app.inject({
+            method: 'PATCH',
+            url: '/v1/marketplace/installs/skill_1',
+            payload: { enabled: false },
+        });
+        assert.equal(res.statusCode, 200);
+        const body = res.json<{ status: string }>();
+        assert.equal(body.status, 'disabled');
+    } finally {
+        await app.close();
+    }
+});
+
+// ---------------------------------------------------------------------------
+// 17. PATCH /v1/marketplace/installs/:skillId — enables install
+// ---------------------------------------------------------------------------
+
+test('PATCH /v1/marketplace/installs/:skillId — enables install', async () => {
+    const prisma = makePrisma({
+        marketplaceInstall: {
+            findUnique: async () => installRecord({ skillId: 'skill_1', status: 'disabled' }),
+            update: async ({ data }: any) => ({ ...installRecord(), ...data }),
+        },
+    });
+    const app = Fastify({ logger: false });
+    await registerMarketplaceRoutes(app, { getSession: () => makeSession('operator'), prisma });
+    try {
+        const res = await app.inject({
+            method: 'PATCH',
+            url: '/v1/marketplace/installs/skill_1',
+            payload: { enabled: true },
+        });
+        assert.equal(res.statusCode, 200);
+        const body = res.json<{ status: string }>();
+        assert.equal(body.status, 'installed');
+    } finally {
+        await app.close();
+    }
+});
+
+// ---------------------------------------------------------------------------
+// 18. PATCH /v1/marketplace/installs/:skillId — 403 if viewer role
+// ---------------------------------------------------------------------------
+
+test('PATCH /v1/marketplace/installs/:skillId — 403 if viewer role', async () => {
+    const app = Fastify({ logger: false });
+    await registerMarketplaceRoutes(app, { getSession: () => makeSession('viewer'), prisma: makePrisma() });
+    try {
+        const res = await app.inject({
+            method: 'PATCH',
+            url: '/v1/marketplace/installs/skill_1',
+            payload: { enabled: false },
+        });
+        assert.equal(res.statusCode, 403);
+        const body = res.json<{ error: string; required: string }>();
+        assert.equal(body.error, 'insufficient_role');
+        assert.equal(body.required, 'operator');
+    } finally {
+        await app.close();
+    }
+});

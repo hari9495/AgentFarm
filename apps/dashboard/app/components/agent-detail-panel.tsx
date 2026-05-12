@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import type { Agent, BotStatus } from './agent-card.js';
 import AgentVersionHistory from './agent-version-history.js';
+import AgentObservabilityPanel from './agent-observability-panel.js';
+import AgentMessagesPanel from './agent-messages-panel.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -89,7 +91,7 @@ function ActionButton({
 }) {
     const colors = {
         default: { bg: '#1e293b', border: '#334155', text: '#94a3b8', hover: '#263244' },
-        danger:  { bg: '#3b0d0d', border: '#7f1d1d', text: '#fca5a5', hover: '#4c1313' },
+        danger: { bg: '#3b0d0d', border: '#7f1d1d', text: '#fca5a5', hover: '#4c1313' },
         success: { bg: '#0d2b1f', border: '#166534', text: '#86efac', hover: '#113526' },
     }[variant];
 
@@ -126,7 +128,7 @@ function ActionButton({
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function AgentDetailPanel({ agent, onStatusChange }: AgentDetailPanelProps) {
-    const [activeTab, setActiveTab] = useState<'overview' | 'rate-limit' | 'versions'>('overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'rate-limit' | 'versions' | 'metrics' | 'messages'>('overview');
     const [actionLoading, setActionLoading] = useState<string | null>(null);
     const [actionError, setActionError] = useState<string | null>(null);
 
@@ -219,17 +221,19 @@ export default function AgentDetailPanel({ agent, onStatusChange }: AgentDetailP
         }
     }
 
-    function handleTabChange(tab: 'overview' | 'rate-limit' | 'versions') {
+    function handleTabChange(tab: 'overview' | 'rate-limit' | 'versions' | 'metrics' | 'messages') {
         setActiveTab(tab);
         if (tab === 'rate-limit' && !rateLimitConfig && !rateLimitLoading) {
             void loadRateLimit();
         }
     }
 
-    const tabs: { key: 'overview' | 'rate-limit' | 'versions'; label: string }[] = [
+    const tabs: { key: 'overview' | 'rate-limit' | 'versions' | 'metrics' | 'messages'; label: string }[] = [
         { key: 'overview', label: 'Overview' },
         { key: 'rate-limit', label: 'Rate Limit' },
         { key: 'versions', label: 'Versions' },
+        { key: 'metrics', label: 'Metrics' },
+        { key: 'messages', label: 'Messages' },
     ];
 
     return (
@@ -425,6 +429,16 @@ export default function AgentDetailPanel({ agent, onStatusChange }: AgentDetailP
             {/* Tab: Versions */}
             {activeTab === 'versions' && (
                 <AgentVersionHistory botId={agent.id} />
+            )}
+
+            {/* Tab: Metrics */}
+            {activeTab === 'metrics' && (
+                <AgentObservabilityPanel botId={agent.id} />
+            )}
+
+            {/* Tab: Messages */}
+            {activeTab === 'messages' && (
+                <AgentMessagesPanel botId={agent.id} />
             )}
         </div>
     );
