@@ -31,8 +31,14 @@ export async function registerMemoryRoutes(app: FastifyInstance, prisma: PrismaC
     const memoryStore = new MemoryStore(prisma);
     const getSession = options?.getSession ?? (() => null);
 
+    // Register route at both /v1/ (auth-protected by middleware) and /api/v1/ (deprecated alias — will be removed in v2)
+    const on = (m: 'get' | 'post' | 'patch' | 'delete', p: string, h: (req: FastifyRequest, res: FastifyReply) => Promise<unknown>) => {
+        (app as any)[m](`/v1${p}`, h);
+        (app as any)[m](`/api/v1${p}`, h); // deprecated: use /v1/
+    };
+
     // ========== READ SHORT-TERM MEMORY (for LLM prompt injection) ==========
-    app.get('/api/v1/workspaces/:workspaceId/memory', async (req: FastifyRequest, res: FastifyReply) => {
+    on('get', '/workspaces/:workspaceId/memory', async (req: FastifyRequest, res: FastifyReply) => {
         const session = getSession(req);
         if (!session) return res.status(401).send({ error: 'unauthorized' });
         try {
@@ -58,7 +64,7 @@ export async function registerMemoryRoutes(app: FastifyInstance, prisma: PrismaC
     });
 
     // ========== WRITE SHORT-TERM MEMORY (after task execution) ==========
-    app.post('/api/v1/workspaces/:workspaceId/memory', async (req: FastifyRequest, res: FastifyReply) => {
+    on('post', '/workspaces/:workspaceId/memory', async (req: FastifyRequest, res: FastifyReply) => {
         const session = getSession(req);
         if (!session) return res.status(401).send({ error: 'unauthorized' });
         try {
@@ -108,7 +114,7 @@ export async function registerMemoryRoutes(app: FastifyInstance, prisma: PrismaC
     });
 
     // ========== READ LONG-TERM LEARNED PATTERNS ==========
-    app.get('/api/v1/workspaces/:workspaceId/memory/patterns', async (req: FastifyRequest, res: FastifyReply) => {
+    on('get', '/workspaces/:workspaceId/memory/patterns', async (req: FastifyRequest, res: FastifyReply) => {
         const session = getSession(req);
         if (!session) return res.status(401).send({ error: 'unauthorized' });
         try {
@@ -135,7 +141,7 @@ export async function registerMemoryRoutes(app: FastifyInstance, prisma: PrismaC
     });
 
     // ========== WRITE LONG-TERM PATTERN (from code review feedback or manual learning) ==========
-    app.post('/api/v1/memory/patterns', async (req: FastifyRequest, res: FastifyReply) => {
+    on('post', '/memory/patterns', async (req: FastifyRequest, res: FastifyReply) => {
         const session = getSession(req);
         if (!session) return res.status(401).send({ error: 'unauthorized' });
         try {
@@ -170,7 +176,7 @@ export async function registerMemoryRoutes(app: FastifyInstance, prisma: PrismaC
     });
 
     // ========== UPDATE PATTERN CONFIDENCE (when pattern is reinforced) ==========
-    app.post('/api/v1/memory/patterns/:patternId/reinforce', async (req: FastifyRequest, res: FastifyReply) => {
+    on('post', '/memory/patterns/:patternId/reinforce', async (req: FastifyRequest, res: FastifyReply) => {
         const session = getSession(req);
         if (!session) return res.status(401).send({ error: 'unauthorized' });
         try {
@@ -187,7 +193,7 @@ export async function registerMemoryRoutes(app: FastifyInstance, prisma: PrismaC
     });
 
     // ========== CLEANUP EXPIRED SHORT-TERM MEMORY (background job) ==========
-    app.post('/api/v1/memory/cleanup', async (req: FastifyRequest, res: FastifyReply) => {
+    on('post', '/memory/cleanup', async (req: FastifyRequest, res: FastifyReply) => {
         const session = getSession(req);
         if (!session) return res.status(401).send({ error: 'unauthorized' });
         try {

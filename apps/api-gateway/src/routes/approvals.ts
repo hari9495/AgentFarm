@@ -859,13 +859,13 @@ export const registerApprovalRoutes = async (
     const evidenceReader = options.evidenceReader ?? defaultEvidenceReader;
     const serviceAuthToken =
         options.serviceAuthToken
-        ?? process.env.APPROVAL_INTAKE_SHARED_TOKEN
         ?? process.env.AGENTFARM_APPROVAL_INTAKE_SHARED_TOKEN
+        ?? process.env.APPROVAL_INTAKE_SHARED_TOKEN
         ?? null;
     const runtimeDecisionToken =
         options.runtimeDecisionToken
-        ?? process.env.RUNTIME_DECISION_SHARED_TOKEN
         ?? process.env.AGENTFARM_RUNTIME_DECISION_SHARED_TOKEN
+        ?? process.env.RUNTIME_DECISION_SHARED_TOKEN
         ?? serviceAuthToken
         ?? null;
 

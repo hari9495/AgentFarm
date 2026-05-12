@@ -1561,20 +1561,20 @@ const buildConfig = (env: NodeJS.ProcessEnv): RuntimeConfig => {
 
     const approvalIntakeToken = readEnv(
         env,
-        'AF_APPROVAL_INTAKE_SHARED_TOKEN',
         'AGENTFARM_APPROVAL_INTAKE_SHARED_TOKEN',
+        'AF_APPROVAL_INTAKE_SHARED_TOKEN',
     ) ?? null;
 
     const decisionWebhookToken = readEnv(
         env,
-        'AF_RUNTIME_DECISION_SHARED_TOKEN',
         'AGENTFARM_RUNTIME_DECISION_SHARED_TOKEN',
+        'AF_RUNTIME_DECISION_SHARED_TOKEN',
     ) ?? approvalIntakeToken;
 
     const connectorExecuteToken = readEnv(
         env,
-        'AF_CONNECTOR_EXEC_SHARED_TOKEN',
         'AGENTFARM_CONNECTOR_EXEC_SHARED_TOKEN',
+        'AF_CONNECTOR_EXEC_SHARED_TOKEN',
     ) ?? approvalIntakeToken;
 
     const connectorApiUrl =
@@ -1582,7 +1582,7 @@ const buildConfig = (env: NodeJS.ProcessEnv): RuntimeConfig => {
         ?? required(env, 'AF_APPROVAL_API_URL', 'AGENTFARM_APPROVAL_API_URL');
 
     if (env.NODE_ENV === 'production' && !approvalIntakeToken) {
-        throw new Error('Missing required environment variable AF_APPROVAL_INTAKE_SHARED_TOKEN for production runtime intake auth');
+        throw new Error('Missing required environment variable AGENTFARM_APPROVAL_INTAKE_SHARED_TOKEN for production runtime intake auth');
     }
 
     const roleProfile = required(env, 'AF_ROLE_PROFILE', 'AGENTFARM_ROLE_TYPE');

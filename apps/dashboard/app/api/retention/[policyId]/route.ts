@@ -27,7 +27,7 @@ export async function PATCH(
     const body = await request.json().catch(() => ({}));
 
     const response = await fetch(
-        `${getApiBaseUrl()}/api/v1/retention-policies/${encodeURIComponent(policyId)}`,
+        `${getApiBaseUrl()}/v1/retention-policies/${encodeURIComponent(policyId)}`,
         {
             method: 'PATCH',
             headers: {
@@ -70,7 +70,7 @@ export async function DELETE(
 
     try {
         const response = await fetch(
-            `${getApiBaseUrl()}/api/v1/retention-policies/${encodeURIComponent(policyId)}`,
+            `${getApiBaseUrl()}/v1/retention-policies/${encodeURIComponent(policyId)}`,
             {
                 method: 'DELETE',
                 headers: { Authorization: authHeader },

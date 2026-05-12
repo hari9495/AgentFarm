@@ -11,8 +11,14 @@ import { PrismaClient } from '@prisma/client';
  */
 
 export async function registerRetentionPolicyRoutes(app: FastifyInstance, prisma: PrismaClient) {
+    // Register route at both /v1/ (auth-protected by middleware) and /api/v1/ (deprecated alias — will be removed in v2)
+    const on = (m: 'get' | 'post' | 'patch' | 'delete', p: string, h: (req: FastifyRequest, res: FastifyReply) => Promise<unknown>) => {
+        (app as any)[m](`/v1${p}`, h);
+        (app as any)[m](`/api/v1${p}`, h); // deprecated: use /v1/
+    };
+
     // ========== CREATE RETENTION POLICY ==========
-    app.post('/api/v1/retention-policies', async (req: FastifyRequest, res: FastifyReply) => {
+    on('post', '/retention-policies', async (req: FastifyRequest, res: FastifyReply) => {
         try {
             const body = req.body as any;
             const { tenantId, workspaceId, roleKey, name, description, scope, action, retentionDays } = body;
@@ -51,7 +57,7 @@ export async function registerRetentionPolicyRoutes(app: FastifyInstance, prisma
     });
 
     // ========== GET POLICIES FOR TENANT ==========
-    app.get('/api/v1/retention-policies', async (req: FastifyRequest, res: FastifyReply) => {
+    on('get', '/retention-policies', async (req: FastifyRequest, res: FastifyReply) => {
         try {
             const query = req.query as any;
             const { tenantId, workspaceId, roleKey, status } = query;
@@ -78,7 +84,7 @@ export async function registerRetentionPolicyRoutes(app: FastifyInstance, prisma
     });
 
     // ========== GET SPECIFIC POLICY ==========
-    app.get('/api/v1/retention-policies/:policyId', async (req: FastifyRequest, res: FastifyReply) => {
+    on('get', '/retention-policies/:policyId', async (req: FastifyRequest, res: FastifyReply) => {
         try {
             const params = req.params as any;
             const { policyId } = params;
@@ -96,7 +102,7 @@ export async function registerRetentionPolicyRoutes(app: FastifyInstance, prisma
     });
 
     // ========== UPDATE RETENTION POLICY ==========
-    app.patch('/api/v1/retention-policies/:policyId', async (req: FastifyRequest, res: FastifyReply) => {
+    on('patch', '/retention-policies/:policyId', async (req: FastifyRequest, res: FastifyReply) => {
         try {
             const params = req.params as any;
             const body = req.body as any;
@@ -132,7 +138,7 @@ export async function registerRetentionPolicyRoutes(app: FastifyInstance, prisma
     });
 
     // ========== ARCHIVE/DELETE POLICY ==========
-    app.delete('/api/v1/retention-policies/:policyId', async (req: FastifyRequest, res: FastifyReply) => {
+    on('delete', '/retention-policies/:policyId', async (req: FastifyRequest, res: FastifyReply) => {
         try {
             const params = req.params as any;
             const query = req.query as any;
@@ -166,7 +172,7 @@ export async function registerRetentionPolicyRoutes(app: FastifyInstance, prisma
     });
 
     // ========== SET DEFAULT POLICY FOR TENANT ==========
-    app.post('/api/v1/retention-policies/:policyId/set-default', async (req: FastifyRequest, res: FastifyReply) => {
+    on('post', '/retention-policies/:policyId/set-default', async (req: FastifyRequest, res: FastifyReply) => {
         try {
             const params = req.params as any;
             const body = req.body as any;
@@ -190,7 +196,7 @@ export async function registerRetentionPolicyRoutes(app: FastifyInstance, prisma
     });
 
     // ========== GET POLICY STATISTICS ==========
-    app.get('/api/v1/retention-policies/:policyId/stats', async (req: FastifyRequest, res: FastifyReply) => {
+    on('get', '/retention-policies/:policyId/stats', async (req: FastifyRequest, res: FastifyReply) => {
         try {
             const params = req.params as any;
             const { policyId } = params;

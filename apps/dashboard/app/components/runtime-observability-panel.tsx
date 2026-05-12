@@ -200,14 +200,12 @@ export function RuntimeObservabilityPanel({
 
     const refresh = useCallback(async () => {
         try {
-            const [logsRes, stateRes, healthRes, capabilityRes, transcriptsRes, interviewEventsRes, weeklyRoiRes] = await Promise.all([
+            const [logsRes, stateRes, healthRes, capabilityRes, transcriptsRes] = await Promise.all([
                 fetch(`/api/runtime/${encodeURIComponent(botId)}/logs?limit=50`),
                 fetch(`/api/runtime/${encodeURIComponent(botId)}/state?limit=20`),
                 fetch(`/api/runtime/${encodeURIComponent(botId)}/health`),
                 fetch(`/api/runtime/${encodeURIComponent(botId)}/capability`),
                 fetch(`/api/runtime/${encodeURIComponent(botId)}/transcripts?limit=50`),
-                fetch(`/api/runtime/${encodeURIComponent(botId)}/interview-events?limit=200`),
-                fetch(`/api/runtime/${encodeURIComponent(botId)}/weekly-quality-roi`),
             ]);
 
             if (logsRes.ok) {
@@ -234,15 +232,6 @@ export function RuntimeObservabilityPanel({
                 const transcriptData = (await transcriptsRes.json()) as { transcripts?: RuntimeTranscriptEntry[] };
                 setTranscripts(transcriptData.transcripts ?? []);
             }
-            if (interviewEventsRes.ok) {
-                const interviewData = (await interviewEventsRes.json()) as { events?: RuntimeInterviewEventEntry[] };
-                setInterviewEvents(interviewData.events ?? []);
-            }
-            if (weeklyRoiRes.ok) {
-                const weeklyRoiData = (await weeklyRoiRes.json()) as WeeklyQualityRoiResponse;
-                setWeeklyRoiReport(weeklyRoiData);
-            }
-
             setLastRefreshed(new Date());
             setRefreshError(null);
         } catch {
@@ -253,19 +242,7 @@ export function RuntimeObservabilityPanel({
     const generateWeeklyRoiReport = useCallback(async () => {
         setWeeklyRoiBusy(true);
         try {
-            const response = await fetch(`/api/runtime/${encodeURIComponent(botId)}/weekly-quality-roi?generate=true`);
-            if (!response.ok) {
-                const body = (await response.json().catch(() => ({}))) as { message?: string; error?: string };
-                setRefreshError(body.message ?? body.error ?? 'Unable to generate weekly ROI report.');
-                return;
-            }
-
-            const payload = (await response.json()) as WeeklyQualityRoiResponse;
-            setWeeklyRoiReport(payload);
-            setLastRefreshed(new Date());
-            setRefreshError(null);
-        } catch {
-            setRefreshError('Unable to generate weekly ROI report.');
+            // route removed
         } finally {
             setWeeklyRoiBusy(false);
         }

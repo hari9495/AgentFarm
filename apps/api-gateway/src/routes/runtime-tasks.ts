@@ -378,11 +378,13 @@ export async function registerRuntimeTaskRoutes(
     const now = options.now ?? (() => Date.now());
     const serviceAuthToken =
         options.serviceAuthToken
+        ?? process.env.AGENTFARM_RUNTIME_DISPATCH_SHARED_TOKEN
         ?? process.env.RUNTIME_DISPATCH_SHARED_TOKEN
         ?? process.env.AF_RUNTIME_DISPATCH_SHARED_TOKEN
         ?? null;
     const runtimeTaskToken =
         options.runtimeTaskToken
+        ?? process.env.AGENTFARM_RUNTIME_TASK_SHARED_TOKEN
         ?? process.env.RUNTIME_TASK_SHARED_TOKEN
         ?? process.env.AF_RUNTIME_TASK_SHARED_TOKEN
         ?? null;

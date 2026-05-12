@@ -24,8 +24,8 @@ type RegisterObservabilityRoutesOptions = {
 };
 
 const resolveRuntimeToken = (): string | null => {
-    return process.env.RUNTIME_TASK_SHARED_TOKEN
-        ?? process.env.AGENTFARM_RUNTIME_TASK_SHARED_TOKEN
+    return process.env.AGENTFARM_RUNTIME_TASK_SHARED_TOKEN
+        ?? process.env.RUNTIME_TASK_SHARED_TOKEN
         ?? process.env.RUNTIME_SERVICE_TOKEN
         ?? null;
 };

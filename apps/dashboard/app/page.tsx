@@ -1408,6 +1408,42 @@ export default async function HomePage({
                         <Link href="/chat" className="secondary-action" style={{ textDecoration: 'none' }}>
                             Agent Chat
                         </Link>
+                        <Link href="/work-memory" className="secondary-action" style={{ textDecoration: 'none' }}>
+                            Work Memory
+                        </Link>
+                        <Link href="/pr-drafts" className="secondary-action" style={{ textDecoration: 'none' }}>
+                            PR Drafts
+                        </Link>
+                        <Link href="/budget" className="secondary-action" style={{ textDecoration: 'none' }}>
+                            Budget
+                        </Link>
+                        <Link href="/desktop" className="secondary-action" style={{ textDecoration: 'none' }}>
+                            Desktop
+                        </Link>
+                        <Link href="/env" className="secondary-action" style={{ textDecoration: 'none' }}>
+                            Env Reconciler
+                        </Link>
+                        <Link href="/snapshots" className="secondary-action" style={{ textDecoration: 'none' }}>
+                            Snapshots
+                        </Link>
+                        <Link href="/handoffs" className="secondary-action" style={{ textDecoration: 'none' }}>
+                            Handoffs
+                        </Link>
+                        <Link href="/pipelines" className="secondary-action" style={{ textDecoration: 'none' }}>
+                            Pipelines
+                        </Link>
+                        <Link href="/activity" className="secondary-action" style={{ textDecoration: 'none' }}>
+                            Activity
+                        </Link>
+                        <Link href="/team" className="secondary-action" style={{ textDecoration: 'none' }}>
+                            Team
+                        </Link>
+                        <Link href="/memory" className="secondary-action" style={{ textDecoration: 'none' }}>
+                            Memory
+                        </Link>
+                        <Link href="/quality" className="secondary-action" style={{ textDecoration: 'none' }}>
+                            Quality
+                        </Link>
                     </section>
 
                     {(unifiedView || activeTab === 'overview') && (

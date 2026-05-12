@@ -34,7 +34,7 @@ export async function proxyQuestionsGet(input: QuestionsGetInput): Promise<Route
         };
     }
 
-    const upstreamUrl = `${apiBaseUrl}/api/v1/workspaces/${encodeURIComponent(workspaceId)}/questions/pending`;
+    const upstreamUrl = `${apiBaseUrl}/v1/workspaces/${encodeURIComponent(workspaceId)}/questions/pending`;
 
     try {
         const response = await fetchImpl(upstreamUrl, {

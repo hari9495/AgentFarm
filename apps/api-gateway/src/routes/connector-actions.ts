@@ -665,8 +665,8 @@ export const registerConnectorActionRoutes = async (
     connectorHealthProbe ??= defaultConnectorHealthProbe;
     const serviceAuthToken =
         options.serviceAuthToken
-        ?? process.env.CONNECTOR_EXEC_SHARED_TOKEN
         ?? process.env.AGENTFARM_CONNECTOR_EXEC_SHARED_TOKEN
+        ?? process.env.CONNECTOR_EXEC_SHARED_TOKEN
         ?? null;
 
     app.post<{ Body: ExecuteActionBody }>('/v1/connectors/actions/execute', async (request, reply) => {

@@ -55,13 +55,11 @@ export function KnowledgeGraphExplorer() {
     const [activeTab, setActiveTab] = useState<'symbols' | 'graph' | 'suggestions'>('symbols');
     const [selectedNode, setSelectedNode] = useState<string | null>(null);
 
-    const botId = 'default';
-
     const loadSnapshot = async () => {
         setLoading(true);
         setError(null);
         try {
-            const res = await fetch(`/api/runtime/${botId}/knowledge-graph/snapshot`);
+            const res = await fetch('/api/knowledge-graph/snapshot');
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = (await res.json()) as GraphSnapshot;
             setSnapshot(data);
@@ -76,7 +74,7 @@ export function KnowledgeGraphExplorer() {
         setIndexing(true);
         setError(null);
         try {
-            const res = await fetch(`/api/runtime/${botId}/knowledge-graph/index`, {
+            const res = await fetch('/api/knowledge-graph/index', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ root_dir: '.' }),
@@ -96,7 +94,7 @@ export function KnowledgeGraphExplorer() {
         setError(null);
         try {
             const res = await fetch(
-                `/api/runtime/${botId}/knowledge-graph/symbols?q=${encodeURIComponent(searchQuery)}`,
+                `/api/knowledge-graph/symbols?q=${encodeURIComponent(searchQuery)}`,
             );
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = (await res.json()) as { symbols: GraphSymbol[] };
@@ -110,7 +108,7 @@ export function KnowledgeGraphExplorer() {
 
     const loadSuggestions = async (context?: string) => {
         try {
-            const url = `/api/runtime/${botId}/knowledge-graph/suggestions${context ? `?context=${encodeURIComponent(context)}` : ''}`;
+            const url = `/api/knowledge-graph/suggestions${context ? `?context=${encodeURIComponent(context)}` : ''}`;
             const res = await fetch(url);
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = (await res.json()) as { suggestions: Suggestion[] };

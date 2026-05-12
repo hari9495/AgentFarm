@@ -349,8 +349,14 @@ export async function registerQuestionRoutes(
 ) {
     const questionStore = options?.questionStore ?? new PrismaQuestionStore(prisma);
 
+    // Register route at both /v1/ (auth-protected by middleware) and /api/v1/ (deprecated alias — will be removed in v2)
+    const on = (m: 'get' | 'post' | 'patch' | 'delete', p: string, h: (req: FastifyRequest, res: FastifyReply) => Promise<unknown>) => {
+        (app as any)[m](`/v1${p}`, h);
+        (app as any)[m](`/api/v1${p}`, h); // deprecated: use /v1/
+    };
+
     // ========== CREATE QUESTION (from agent) ==========
-    app.post('/api/v1/questions', async (req: FastifyRequest, res: FastifyReply) => {
+    on('post', '/questions', async (req: FastifyRequest, res: FastifyReply) => {
         try {
             const body = req.body as any;
             const {
@@ -411,7 +417,7 @@ export async function registerQuestionRoutes(
     });
 
     // ========== ANSWER QUESTION (webhook from Slack/Teams or dashboard) ==========
-    app.post('/api/v1/questions/:questionId/answer', async (req: FastifyRequest, res: FastifyReply) => {
+    on('post', '/questions/:questionId/answer', async (req: FastifyRequest, res: FastifyReply) => {
         try {
             const params = req.params as any;
             const body = req.body as any;
@@ -435,7 +441,7 @@ export async function registerQuestionRoutes(
     });
 
     // ========== GET PENDING QUESTIONS FOR TASK ==========
-    app.get('/api/v1/tasks/:taskId/questions', async (req: FastifyRequest, res: FastifyReply) => {
+    on('get', '/tasks/:taskId/questions', async (req: FastifyRequest, res: FastifyReply) => {
         try {
             const params = req.params as any;
             const { taskId } = params;
@@ -449,7 +455,7 @@ export async function registerQuestionRoutes(
     });
 
     // ========== GET PENDING QUESTIONS FOR WORKSPACE (orchestrator sweep) ==========
-    app.get('/api/v1/workspaces/:workspaceId/questions/pending', async (req: FastifyRequest, res: FastifyReply) => {
+    on('get', '/workspaces/:workspaceId/questions/pending', async (req: FastifyRequest, res: FastifyReply) => {
         try {
             const params = req.params as any;
             const { workspaceId } = params;
@@ -463,7 +469,7 @@ export async function registerQuestionRoutes(
     });
 
     // ========== SWEEP EXPIRED QUESTIONS (orchestrator wake cycle) ==========
-    app.post('/api/v1/workspaces/:workspaceId/questions/sweep-expired', async (req: FastifyRequest, res: FastifyReply) => {
+    on('post', '/workspaces/:workspaceId/questions/sweep-expired', async (req: FastifyRequest, res: FastifyReply) => {
         try {
             const params = req.params as any;
             const { workspaceId } = params;
@@ -484,7 +490,7 @@ export async function registerQuestionRoutes(
     });
 
     // ========== GET SPECIFIC QUESTION ==========
-    app.get('/api/v1/questions/:questionId', async (req: FastifyRequest, res: FastifyReply) => {
+    on('get', '/questions/:questionId', async (req: FastifyRequest, res: FastifyReply) => {
         try {
             const params = req.params as any;
             const { questionId } = params;

@@ -50,7 +50,7 @@ test('proxyQuestionsGet forwards request to upstream and returns upstream body',
 
     assert.equal(
         capturedUrl,
-        'http://localhost:3000/api/v1/workspaces/ws%20one/questions/pending',
+        'http://localhost:3000/v1/workspaces/ws%20one/questions/pending',
     );
     assert.equal(capturedAuth, 'Bearer internal-token');
     assert.equal(result.status, 200);

@@ -3684,14 +3684,10 @@ export async function executeLocalWorkspaceAction(input: {
                 return { ok: false, output: '', errorOutput: 'payload.symbol is required.' };
             }
 
-            // Stub implementation: returns structured type placeholder without spawning a shell
             return {
-                ok: true,
-                output: JSON.stringify({
-                    symbol,
-                    type: 'unknown (LSP integration required)',
-                    hint: 'Connect a TypeScript language server for accurate type hover information.',
-                }, null, 2),
+                ok: false,
+                output: '',
+                errorOutput: 'workspace_hover_type requires a running TypeScript language server. LSP integration is not available in this executor.',
             };
         }
 
@@ -3734,21 +3730,22 @@ export async function executeLocalWorkspaceAction(input: {
 
         // workspace_complexity_metrics: analyze cyclomatic and cognitive complexity
         case 'workspace_complexity_metrics': {
+            const targetFile = typeof payload['file_path'] === 'string' ? payload['file_path'].trim() : '';
+            if (!targetFile) {
+                return { ok: false, output: '', errorOutput: 'payload.file_path is required for complexity analysis.' };
+            }
             try {
-                // Stub: could use typescript-complexity or similar
-                const result = await runCommand(['npx', 'eslint', '--ext', '.ts,.tsx,.js,.jsx', '--format', 'compact', '.'], workspaceDir, 60_000);
-
-                const metrics: CodeMetrics[] = [];
-                const lines = (result.stdout || '').split('\n');
-
-                // Parse ESLint output for complexity hints
-                for (const line of lines) {
-                    if (line.includes('complexity') || line.includes('cognitive')) {
-                        metrics.push({ cyclomatic: 5, cognitive: 8, lines: 50 }); // Stub values
-                    }
-                }
-
-                return { ok: true, output: JSON.stringify({ metrics: metrics.length > 0 ? metrics : [{ cyclomatic: 'N/A', cognitive: 'N/A', lines: 0 }] }, null, 2) };
+                const absPath = safeChildPath(workspaceDir, targetFile);
+                const content = await readFile(absPath, 'utf-8');
+                const lineCount = content.split('\n').length;
+                // Cyclomatic approximation: count branching points (if/else if/for/while/do/switch/case/catch/?? /&&/||)
+                const branchMatches = content.match(/\b(if|else\s+if|for|while|do|switch|case|catch)\b|\?\?|&&|\|\|/g);
+                const cyclomatic = (branchMatches?.length ?? 0) + 1;
+                // Cognitive approximation: count nesting control structures
+                const nestingMatches = content.match(/\b(if|for|while|switch|catch)\b/g);
+                const cognitive = nestingMatches?.length ?? 0;
+                const metrics: CodeMetrics[] = [{ cyclomatic, cognitive, lines: lineCount }];
+                return { ok: true, output: JSON.stringify({ file: targetFile, metrics }, null, 2) };
             } catch (err) {
                 return { ok: false, output: '', errorOutput: String(err) };
             }
@@ -4016,27 +4013,16 @@ export async function executeLocalWorkspaceAction(input: {
         // workspace_search_docs: search framework/library documentation
         case 'workspace_search_docs': {
             const query = typeof payload['query'] === 'string' ? payload['query'].trim() : '';
-            const framework = typeof payload['framework'] === 'string' ? payload['framework'].trim() : 'general';
 
             if (!query) {
                 return { ok: false, output: '', errorOutput: 'payload.query is required.' };
             }
 
-            try {
-                // Stub: return mock doc results
-                const results: DocSearchResult[] = [
-                    {
-                        source: `${framework}-docs`,
-                        title: `Documentation for: ${query}`,
-                        snippet: `This is a stub result for searching ${query} in ${framework} documentation. In production, this would query documentation APIs or a cached knowledge base.`,
-                        url: `https://docs.example.com/search?q=${encodeURIComponent(query)}`,
-                    },
-                ];
-
-                return { ok: true, output: JSON.stringify(results, null, 2) };
-            } catch (err) {
-                return { ok: false, output: '', errorOutput: String(err) };
-            }
+            return {
+                ok: false,
+                output: '',
+                errorOutput: 'workspace_search_docs requires external HTTP access to documentation APIs, which is not available in this executor.',
+            };
         }
 
         // workspace_package_lookup: check package versions and vulnerabilities
@@ -4048,10 +4034,18 @@ export async function executeLocalWorkspaceAction(input: {
             }
 
             try {
-                // Stub: return mock package info
+                // Resolve latest version from npm registry (soft-fail — npm may not be available)
+                let latest = 'unknown';
+                try {
+                    const npmResult = await runCommand(['npm', 'info', packageName, 'version'], workspaceDir, 30_000);
+                    const trimmed = (npmResult.stdout || '').trim();
+                    if (trimmed) { latest = trimmed; }
+                } catch {
+                    // npm not available — latest remains 'unknown'
+                }
                 const pkgInfo: PackageInfo = {
                     name: packageName,
-                    latest: '1.0.0',
+                    latest,
                     installed: undefined,
                     vulnerabilities: [],
                 };
@@ -4100,20 +4094,12 @@ export async function executeLocalWorkspaceAction(input: {
         // workspace_repl_start: start an interactive REPL session (stub)
         case 'workspace_repl_start': {
             const language = typeof payload['language'] === 'string' ? payload['language'].trim() : 'node';
-            const sessionId = `repl-${Date.now()}`;
 
-            try {
-                const replState: REPLState = {
-                    sessionId,
-                    state: 'running',
-                    language,
-                };
-
-                // Stub: actual REPL would require spawning a process
-                return { ok: true, output: JSON.stringify(replState, null, 2) };
-            } catch (err) {
-                return { ok: false, output: '', errorOutput: String(err) };
-            }
+            return {
+                ok: false,
+                output: '',
+                errorOutput: `workspace_repl_start requires spawning an interactive ${language} process. Interactive REPL sessions are not supported in this executor environment.`,
+            };
         }
 
         // workspace_repl_execute: execute code in active REPL
@@ -4125,12 +4111,11 @@ export async function executeLocalWorkspaceAction(input: {
                 return { ok: false, output: '', errorOutput: 'payload.session_id and payload.code are required.' };
             }
 
-            try {
-                // Stub: would execute in active REPL session
-                return { ok: true, output: JSON.stringify({ session_id: sessionId, executed: code.slice(0, 50), result: '(REPL stub)' }, null, 2) };
-            } catch (err) {
-                return { ok: false, output: '', errorOutput: String(err) };
-            }
+            return {
+                ok: false,
+                output: '',
+                errorOutput: 'workspace_repl_execute requires an active REPL process. Interactive REPL sessions are not supported in this executor environment.',
+            };
         }
 
         // workspace_repl_stop: stop REPL session
@@ -4157,12 +4142,11 @@ export async function executeLocalWorkspaceAction(input: {
                 return { ok: false, output: '', errorOutput: 'payload.file_path and payload.line are required.' };
             }
 
-            try {
-                // Stub: would configure a debugger
-                return { ok: true, output: JSON.stringify({ file: filePath, line: lineNumber, status: 'breakpoint:set (debugger stub)' }, null, 2) };
-            } catch (err) {
-                return { ok: false, output: '', errorOutput: String(err) };
-            }
+            return {
+                ok: false,
+                output: '',
+                errorOutput: 'workspace_debug_breakpoint requires a running debugger session. Debugger integration is not available in this executor.',
+            };
         }
 
         // workspace_profiler_run: run performance profiler

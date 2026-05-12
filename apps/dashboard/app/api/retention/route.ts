@@ -23,7 +23,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     searchParams.set('tenantId', session.tenantId);
 
-    const upstream = `${getApiBaseUrl()}/api/v1/retention-policies?${searchParams.toString()}`;
+    const upstream = `${getApiBaseUrl()}/v1/retention-policies?${searchParams.toString()}`;
 
     const response = await fetch(upstream, {
         headers: { Authorization: authHeader },
@@ -63,7 +63,7 @@ export async function POST(request: Request) {
         );
     }
 
-    const response = await fetch(`${getApiBaseUrl()}/api/v1/retention-policies`, {
+    const response = await fetch(`${getApiBaseUrl()}/v1/retention-policies`, {
         method: 'POST',
         headers: {
             'content-type': 'application/json',

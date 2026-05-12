@@ -3648,7 +3648,7 @@ test('startup fails in production when approval intake token is missing', async 
         assert.equal(startupRes.statusCode, 500);
         const body = startupRes.json() as { failure_class: string; message: string };
         assert.equal(body.failure_class, 'config_error');
-        assert.match(body.message, /AF_APPROVAL_INTAKE_SHARED_TOKEN/);
+        assert.match(body.message, /AGENTFARM_APPROVAL_INTAKE_SHARED_TOKEN/);
     } finally {
         await app.close();
     }

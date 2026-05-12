@@ -1016,7 +1016,7 @@ test('workspace_go_to_definition finds a function definition', async () => {
     assert.ok(typeof result.ok === 'boolean');
 });
 
-test('workspace_hover_type returns structured output for a symbol', async () => {
+test('workspace_hover_type returns LSP-unavailable error', async () => {
     const { executeLocalWorkspaceAction } = await import('./local-workspace-executor.js');
 
     const result = await executeLocalWorkspaceAction({
@@ -1024,9 +1024,8 @@ test('workspace_hover_type returns structured output for a symbol', async () => 
         actionType: 'workspace_hover_type',
         payload: { workspace_key: 'repo-hover', symbol: 'mySymbol' },
     });
-    assert.equal(result.ok, true, result.errorOutput);
-    const parsed = JSON.parse(result.output) as { symbol: string };
-    assert.equal(parsed.symbol, 'mySymbol');
+    assert.equal(result.ok, false);
+    assert.match(result.errorOutput ?? '', /LSP/);
 });
 
 test('workspace_code_coverage returns ok when no test runner is available', async () => {
@@ -1317,7 +1316,7 @@ test('workspace_test_impact_analysis returns affected test files', async () => {
 // TIER 5: EXTERNAL KNOWLEDGE & EXPERIMENTATION
 // ===========================================================================
 
-test('workspace_search_docs returns stubbed results for a query', async () => {
+test('workspace_search_docs returns unavailable when external HTTP not accessible', async () => {
     const { executeLocalWorkspaceAction } = await import('./local-workspace-executor.js');
 
     const result = await executeLocalWorkspaceAction({
@@ -1325,10 +1324,8 @@ test('workspace_search_docs returns stubbed results for a query', async () => {
         actionType: 'workspace_search_docs',
         payload: { workspace_key: 'repo-x', query: 'useState hook', framework: 'react' },
     });
-    assert.equal(result.ok, true, result.errorOutput);
-    const parsed = JSON.parse(result.output) as { source: string }[];
-    assert.ok(Array.isArray(parsed));
-    assert.ok(parsed.length >= 1);
+    assert.equal(result.ok, false);
+    assert.match(result.errorOutput ?? '', /HTTP|documentation|external/);
 });
 
 test('workspace_search_docs errors when query is missing', async () => {
@@ -1388,7 +1385,7 @@ test('workspace_ai_code_review returns stub review for a file', async () => {
     assert.equal(parsed.file, 'app.ts');
 });
 
-test('workspace_repl_start returns sessionId and language', async () => {
+test('workspace_repl_start returns unavailable error', async () => {
     const { executeLocalWorkspaceAction } = await import('./local-workspace-executor.js');
 
     const result = await executeLocalWorkspaceAction({
@@ -1396,11 +1393,8 @@ test('workspace_repl_start returns sessionId and language', async () => {
         actionType: 'workspace_repl_start',
         payload: { workspace_key: 'repo-x', language: 'node' },
     });
-    assert.equal(result.ok, true, result.errorOutput);
-    const parsed = JSON.parse(result.output) as { sessionId: string; state: string; language: string };
-    assert.equal(parsed.language, 'node');
-    assert.equal(parsed.state, 'running');
-    assert.ok(parsed.sessionId.startsWith('repl-'));
+    assert.equal(result.ok, false);
+    assert.match(result.errorOutput ?? '', /REPL|interactive/);
 });
 
 test('workspace_repl_execute errors when session_id or code is missing', async () => {
@@ -1440,7 +1434,7 @@ test('workspace_debug_breakpoint errors when line is missing or zero', async () 
     assert.match(result.errorOutput ?? '', /line/);
 });
 
-test('workspace_debug_breakpoint sets breakpoint successfully', async () => {
+test('workspace_debug_breakpoint returns unavailable error', async () => {
     const { executeLocalWorkspaceAction } = await import('./local-workspace-executor.js');
 
     const result = await executeLocalWorkspaceAction({
@@ -1448,10 +1442,8 @@ test('workspace_debug_breakpoint sets breakpoint successfully', async () => {
         actionType: 'workspace_debug_breakpoint',
         payload: { workspace_key: 'repo-x', file_path: 'src/app.ts', line: 42 },
     });
-    assert.equal(result.ok, true, result.errorOutput);
-    const parsed = JSON.parse(result.output) as { line: number; status: string };
-    assert.equal(parsed.line, 42);
-    assert.match(parsed.status, /breakpoint:set/);
+    assert.equal(result.ok, false);
+    assert.match(result.errorOutput ?? '', /debugger|debug/);
 });
 
 test('workspace_profiler_run (node) profiles a JS target and returns ok', async () => {
