@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -102,10 +102,19 @@ export default function MeetingSessionsPanel({ tenantId }: { tenantId: string })
     const [detailLoading, setDetailLoading] = useState(false);
     const [busyId, setBusyId] = useState<string | null>(null);
 
+    // Transcript polling state (active when a session is open and status is active/joining)
+    const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    // Speaking-agent state
+    const [speakText, setSpeakText] = useState('');
+    const [speakBusy, setSpeakBusy] = useState(false);
+    const [speakResult, setSpeakResult] = useState<{ ok: boolean; durationMs?: number; error?: string } | null>(null);
+
     // Sessions are maintained locally (no list endpoint on gateway)
     const loadDetail = useCallback(async (id: string) => {
         setDetailLoading(true);
         setDetailId(id);
+        setSpeakResult(null);
 
         const response = await fetch(`/api/meetings/${encodeURIComponent(id)}`, { cache: 'no-store' });
         const data = (await response.json().catch(() => ({}))) as { session?: MeetingSession; message?: string };
@@ -126,6 +135,53 @@ export default function MeetingSessionsPanel({ tenantId }: { tenantId: string })
             );
         }
     }, []);
+
+    // Poll detail every 3s while a session is open and status is active/joining
+    useEffect(() => {
+        if (pollIntervalRef.current) {
+            clearInterval(pollIntervalRef.current);
+            pollIntervalRef.current = null;
+        }
+
+        if (detailId && detail && (detail.status === 'active' || detail.status === 'joining')) {
+            pollIntervalRef.current = setInterval(() => {
+                void loadDetail(detailId);
+            }, 3_000);
+        }
+
+        return () => {
+            if (pollIntervalRef.current) {
+                clearInterval(pollIntervalRef.current);
+                pollIntervalRef.current = null;
+            }
+        };
+    }, [detailId, detail?.status, loadDetail]);
+
+    const sendSpeakRequest = async (id: string) => {
+        if (!speakText.trim()) return;
+        setSpeakBusy(true);
+        setSpeakResult(null);
+
+        const response = await fetch(`/api/meetings/${encodeURIComponent(id)}/speaking-agent`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ text: speakText.trim() }),
+        });
+
+        const data = (await response.json().catch(() => ({}))) as {
+            ok?: boolean;
+            durationMs?: number;
+            error?: string;
+            message?: string;
+        };
+
+        setSpeakResult({
+            ok: data.ok ?? false,
+            durationMs: data.durationMs,
+            error: data.error ?? data.message,
+        });
+        setSpeakBusy(false);
+    };
 
     const createSession = async () => {
         if (!newSession.workspaceId.trim() || !newSession.agentId.trim() || !newSession.meetingUrl.trim()) {
@@ -394,7 +450,7 @@ export default function MeetingSessionsPanel({ tenantId }: { tenantId: string })
                         <button
                             type="button"
                             className="secondary-action"
-                            onClick={() => { setDetailId(null); setDetail(null); }}
+                            onClick={() => { setDetailId(null); setDetail(null); setSpeakResult(null); setSpeakText(''); }}
                         >
                             Close
                         </button>
@@ -463,6 +519,48 @@ export default function MeetingSessionsPanel({ tenantId }: { tenantId: string })
                                     </pre>
                                 </div>
                             )}
+
+                            {/* Speaking-agent response panel */}
+                            <div style={{ borderTop: '1px solid var(--line)', paddingTop: '0.6rem', display: 'grid', gap: '0.4rem' }}>
+                                <p style={{ margin: 0, fontWeight: 600, fontSize: '0.83rem', color: 'var(--ink-muted)' }}>
+                                    Speaking agent
+                                    {(detail.status === 'active' || detail.status === 'joining') && (
+                                        <span style={{ marginLeft: '0.4rem', fontSize: '0.72rem', color: 'var(--ok)', fontWeight: 400 }}>
+                                            ● polling
+                                        </span>
+                                    )}
+                                </p>
+                                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                                    <input
+                                        type="text"
+                                        placeholder="Enter text for agent to speak…"
+                                        value={speakText}
+                                        onChange={(e) => setSpeakText(e.target.value)}
+                                        onKeyDown={(e) => { if (e.key === 'Enter' && !speakBusy) void sendSpeakRequest(detail.id); }}
+                                        style={{ flex: '1 1 220px', padding: '0.35rem 0.55rem', fontSize: '0.83rem', border: '1px solid var(--line)', borderRadius: '4px', background: 'var(--bg)', color: 'var(--ink)' }}
+                                    />
+                                    <button
+                                        type="button"
+                                        className="primary-action"
+                                        disabled={speakBusy || !speakText.trim()}
+                                        onClick={() => void sendSpeakRequest(detail.id)}
+                                    >
+                                        {speakBusy ? 'Speaking…' : 'Speak'}
+                                    </button>
+                                </div>
+                                {speakResult && (
+                                    <p
+                                        className="message-inline"
+                                        style={speakResult.ok
+                                            ? { borderColor: 'var(--ok-border)', background: 'var(--ok-bg)', color: 'var(--ok)' }
+                                            : undefined}
+                                    >
+                                        {speakResult.ok
+                                            ? `Spoken — ${speakResult.durationMs ?? 0} ms audio`
+                                            : `Speaking failed: ${speakResult.error ?? 'unknown error'}`}
+                                    </p>
+                                )}
+                            </div>
 
                             <p style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '0.75rem' }}>
                                 Started: {new Date(detail.startedAt).toLocaleString()}

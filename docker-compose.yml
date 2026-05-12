@@ -49,6 +49,105 @@ services:
       - agentfarm
     restart: unless-stopped
 
+  migrate:
+    build:
+      context: .
+      dockerfile: apps/api-gateway/Dockerfile
+      target: builder
+    container_name: agentfarm-migrate
+    command: >
+      sh -c "pnpm --filter @agentfarm/db-schema prisma:migrate:deploy"
+    environment:
+      DATABASE_URL: postgresql://agentfarm:agentfarm@postgres:5432/agentfarm
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - agentfarm
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: apps/api-gateway/Dockerfile
+    container_name: agentfarm-api-gateway
+    ports:
+      - '3000:3000'
+    environment:
+      DATABASE_URL: postgresql://agentfarm:agentfarm@postgres:5432/agentfarm
+      REDIS_URL: redis://redis:6379
+      OPA_BASE_URL: http://opa:8181
+      API_GATEWAY_PORT: '3000'
+      NODE_ENV: production
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: [ 'CMD-SHELL', 'wget -qO- http://localhost:3000/health || exit 1' ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks:
+      - agentfarm
+    restart: unless-stopped
+
+  agent-runtime:
+    build:
+      context: .
+      dockerfile: apps/agent-runtime/Dockerfile
+    container_name: agentfarm-agent-runtime
+    ports:
+      - '4000:4000'
+    environment:
+      DATABASE_URL: postgresql://agentfarm:agentfarm@postgres:5432/agentfarm
+      RUNTIME_PORT: '4000'
+      API_GATEWAY_URL: http://api-gateway:3000
+      VOXCPM2_URL: http://voicebox:17493
+      NODE_ENV: production
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    networks:
+      - agentfarm
+    restart: unless-stopped
+
+  trigger-service:
+    build:
+      context: .
+      dockerfile: apps/trigger-service/Dockerfile
+    container_name: agentfarm-trigger-service
+    environment:
+      TRIGGER_SERVICE_PORT: '3002'
+      AGENT_RUNTIME_URL: http://agent-runtime:4000
+      NODE_ENV: production
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    networks:
+      - agentfarm
+    restart: unless-stopped
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: apps/dashboard/Dockerfile
+    container_name: agentfarm-dashboard
+    ports:
+      - '3001:3001'
+    environment:
+      DASHBOARD_API_BASE_URL: http://api-gateway:3000
+      NODE_ENV: production
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    networks:
+      - agentfarm
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
 networks:
   agentfarm:
     driver: bridge

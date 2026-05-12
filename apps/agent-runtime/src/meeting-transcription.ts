@@ -10,7 +10,7 @@
 
 import { VoiceboxClient } from './voicebox-client.js';
 import { buildSystemPrompt } from './system-prompt-builder.js';
-import { VoxCPM2Client } from './voxcpm2-client.js';
+import { speakResponse } from './speaking-agent.js';
 
 // ---------------------------------------------------------------------------
 // Internal helpers
@@ -255,15 +255,11 @@ export async function distributeMeetingSummary(
         `📋 *Meeting Summary*\n${summary}\n\n*Action Items:*\n` +
         actionItems.map((i) => `• ${i}`).join('\n');
 
-    // Fire-and-forget: synthesize audio version of the summary via VoxCPM2.
+    // Fire-and-forget: synthesize audio version of the summary via the speaking agent.
     // Failures are logged but must not block distribution.
-    try {
-        const voxcpm2 = new VoxCPM2Client();
-        const audioBuffer = await voxcpm2.synthesize(summary, language);
-        console.log(`[meeting] VoxCPM2 synthesized ${audioBuffer.byteLength} bytes for session ${sessionId}`);
-    } catch (synthErr: unknown) {
-        console.warn(`[meeting] VoxCPM2 synthesis failed (non-fatal): ${String(synthErr)}`);
-    }
+    speakResponse(summary, undefined, language).catch((synthErr: unknown) => {
+        console.warn(`[meeting] speaking-agent synthesis failed (non-fatal): ${String(synthErr)}`);
+    });
 
     await executor({
         connectorType: 'slack',

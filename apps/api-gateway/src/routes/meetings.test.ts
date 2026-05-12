@@ -32,6 +32,9 @@ const stubSession: {
     startedAt: Date;
     endedAt: Date | null;
     updatedAt: Date;
+    agentVoiceId: string | null;
+    speakingEnabled: boolean;
+    resolvedLanguage: string | null;
 } = {
     id: 'sess-001',
     tenantId: 't1',
@@ -47,6 +50,9 @@ const stubSession: {
     startedAt: new Date('2026-05-09T10:00:00Z'),
     endedAt: null,
     updatedAt: new Date('2026-05-09T10:00:00Z'),
+    agentVoiceId: null,
+    speakingEnabled: false,
+    resolvedLanguage: null,
 };
 
 // ---------------------------------------------------------------------------
@@ -305,6 +311,88 @@ test('PATCH /v1/meetings/:sessionId/speaking-agent returns 404 when session not 
             payload: { speakingEnabled: true },
         });
         assert.equal(res.statusCode, 404);
+    } finally {
+        await app.close();
+    }
+});
+
+// ---------------------------------------------------------------------------
+// POST /v1/meetings/:sessionId/speaking-agent  (TTS invoke)
+// ---------------------------------------------------------------------------
+
+test('POST /v1/meetings/:sessionId/speaking-agent returns ok and durationMs on success', async (t) => {
+    const prisma = {
+        meetingSession: { findFirst: async () => ({ ...stubSession }) },
+    };
+
+    const fakeAudio = Buffer.alloc(96_000, 0); // ~1 s at 96 kB/s
+    t.mock.method(globalThis, 'fetch', async () =>
+        new Response(fakeAudio.buffer as ArrayBuffer, {
+            status: 200,
+            headers: { 'content-type': 'audio/wav' },
+        }),
+    );
+
+    const app = Fastify({ logger: false });
+    await registerMeetingRoutes(app, { getSession: () => session(), prisma: prisma as never });
+
+    try {
+        const res = await app.inject({
+            method: 'POST',
+            url: '/v1/meetings/sess-001/speaking-agent',
+            payload: { text: 'Hello meeting' },
+        });
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as { ok: boolean; durationMs: number };
+        assert.equal(body.ok, true);
+        assert.equal(typeof body.durationMs, 'number');
+    } finally {
+        await app.close();
+    }
+});
+
+test('POST /v1/meetings/:sessionId/speaking-agent returns 400 when text is missing', async () => {
+    const prisma = {
+        meetingSession: { findFirst: async () => ({ ...stubSession }) },
+    };
+
+    const app = Fastify({ logger: false });
+    await registerMeetingRoutes(app, { getSession: () => session(), prisma: prisma as never });
+
+    try {
+        const res = await app.inject({
+            method: 'POST',
+            url: '/v1/meetings/sess-001/speaking-agent',
+            payload: {},
+        });
+        assert.equal(res.statusCode, 400);
+    } finally {
+        await app.close();
+    }
+});
+
+test('POST /v1/meetings/:sessionId/speaking-agent returns ok:false (not 500) when TTS fails', async (t) => {
+    const prisma = {
+        meetingSession: { findFirst: async () => ({ ...stubSession }) },
+    };
+
+    t.mock.method(globalThis, 'fetch', async () =>
+        new Response('service unavailable', { status: 503 }),
+    );
+
+    const app = Fastify({ logger: false });
+    await registerMeetingRoutes(app, { getSession: () => session(), prisma: prisma as never });
+
+    try {
+        const res = await app.inject({
+            method: 'POST',
+            url: '/v1/meetings/sess-001/speaking-agent',
+            payload: { text: 'Hello' },
+        });
+        assert.equal(res.statusCode, 200); // NOT 500 — TTS errors are surfaced as ok:false
+        const body = res.json() as { ok: boolean; error: string };
+        assert.equal(body.ok, false);
+        assert.equal(typeof body.error, 'string');
     } finally {
         await app.close();
     }
