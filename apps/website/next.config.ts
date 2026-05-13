@@ -1,5 +1,4 @@
 ﻿import type { NextConfig } from "next";
-import path from "path";
 import { setupDevPlatform } from "@cloudflare/next-on-pages/next-dev";
 
 if (process.env.NODE_ENV === "development") {
@@ -8,7 +7,6 @@ if (process.env.NODE_ENV === "development") {
 
 const nextConfig: NextConfig = {
     transpilePackages: ['@agentfarm/connector-contracts'],
-    outputFileTracingRoot: path.join(process.cwd(), "../.."),
     eslint: {
         // The repository currently has broad legacy lint debt; keep build signal focused on compile/type health.
         ignoreDuringBuilds: true,
