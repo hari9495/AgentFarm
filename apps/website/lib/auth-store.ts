@@ -1,6 +1,20 @@
-﻿import { createHash, randomBytes } from "node:crypto";
-import { getRequestContext } from "@cloudflare/next-on-pages";
+﻿import { getRequestContext } from "@cloudflare/next-on-pages";
 import { hashPassword, verifyPassword } from "@agentfarm/auth-utils";
+
+function randomHex(bytes: number): string {
+    const arr = new Uint8Array(bytes);
+    globalThis.crypto.getRandomValues(arr);
+    return Array.from(arr, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function randomBase64url(bytes: number): string {
+    const arr = new Uint8Array(bytes);
+    globalThis.crypto.getRandomValues(arr);
+    return btoa(String.fromCharCode(...arr))
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_")
+        .replace(/=+$/, "");
+}
 
 export type UserRole = "superadmin" | "admin" | "member";
 
@@ -443,8 +457,10 @@ const seedApprovals = [
     },
 ];
 
-const hashSessionToken = (token: string): string => {
-    return createHash("sha256").update(token).digest("hex");
+const hashSessionToken = async (token: string): Promise<string> => {
+    const data = new TextEncoder().encode(token);
+    const hashBuffer = await globalThis.crypto.subtle.digest("SHA-256", data);
+    return Array.from(new Uint8Array(hashBuffer), (b) => b.toString(16).padStart(2, "0")).join("");
 };
 
 const mapUser = (row: Record<string, unknown> | undefined | null): UserRecord | null => {
@@ -771,7 +787,7 @@ export const createUser = async (input: {
     company: string;
     password: string;
 }): Promise<UserRecord> => {
-    const userId = `usr_${randomBytes(10).toString("hex")}`;
+    const userId = `usr_${randomHex(10)}`;
     const createdAt = now();
     const passwordHash = await hashPassword(input.password);
     const countRow = await getDb().prepare(`SELECT COUNT(*) AS count FROM users`).first<{ count: number }>();
@@ -849,9 +865,9 @@ export const authenticateUser = async (email: string, password: string): Promise
 };
 
 export const createSession = async (userId: string): Promise<{ sessionToken: string; session: SessionRecord }> => {
-    const sessionId = `ses_${randomBytes(10).toString("hex")}`;
-    const sessionToken = randomBytes(48).toString("base64url");
-    const tokenHash = hashSessionToken(sessionToken);
+    const sessionId = `ses_${randomHex(10)}`;
+    const sessionToken = randomBase64url(48);
+    const tokenHash = await hashSessionToken(sessionToken);
     const createdAt = now();
     const expiresAt = createdAt + SESSION_TTL_MS;
 
@@ -888,7 +904,7 @@ export const updateUserGatewayToken = async (input: {
 };
 
 export const getSessionUser = async (sessionToken: string): Promise<UserRecord | null> => {
-    const tokenHash = hashSessionToken(sessionToken);
+    const tokenHash = await hashSessionToken(sessionToken);
 
     const row = await getDb()
         .prepare(
@@ -950,7 +966,7 @@ export const getSessionUser = async (sessionToken: string): Promise<UserRecord |
 };
 
 export const deleteSession = async (sessionToken: string): Promise<void> => {
-    const tokenHash = hashSessionToken(sessionToken);
+    const tokenHash = await hashSessionToken(sessionToken);
     await getDb().prepare(`DELETE FROM sessions WHERE token_hash = ?`).bind(tokenHash).run();
 };
 
@@ -1023,7 +1039,7 @@ export const requestDeployment = async (input: {
         return { ok: false, error: "onboarding_required" };
     }
 
-    const id = `dep_${randomBytes(8).toString("hex")}`;
+    const id = `dep_${randomHex(8)}`;
     const ts = now();
     await getDb().prepare(
         `INSERT INTO deployment_jobs (
@@ -1106,7 +1122,7 @@ export const retryDeployment = async (input: {
         return { ok: false, error: "not_retryable" };
     }
 
-    const id = `dep_${randomBytes(8).toString("hex")}`;
+    const id = `dep_${randomHex(8)}`;
     const ts = now();
     await getDb().prepare(
         `INSERT INTO deployment_jobs (
@@ -1172,7 +1188,7 @@ export const createApprovalRequest = async (input: {
     actorId: string;
     actorEmail: string;
 }): Promise<ApprovalRecord> => {
-    const id = `APR-${randomBytes(3).toString("hex").toUpperCase()}`;
+    const id = `APR-${randomHex(3).toUpperCase()}`;
     const createdAt = now();
 
     await getDb().prepare(
@@ -2014,7 +2030,7 @@ export const createCompanyTenant = async (input: {
     region: string;
     mrrCents?: number;
 }): Promise<TenantRecord> => {
-    const id = `tnt_${randomBytes(8).toString("hex")}`;
+    const id = `tnt_${randomHex(8)}`;
     const ts = now();
     await getDb().prepare(
         `INSERT INTO tenants (id, name, plan, status, region, mrr_cents, open_invoices, last_heartbeat_at, created_at)
@@ -2038,7 +2054,7 @@ export const createCompanyTenantBot = async (input: {
     botSlug: string;
     displayName: string;
 }): Promise<FleetBotRecord> => {
-    const id = `fb_${randomBytes(8).toString("hex")}`;
+    const id = `fb_${randomHex(8)}`;
     const ts = now();
     await getDb().prepare(
         `INSERT INTO tenant_bots (id, tenant_id, bot_slug, display_name, status, reliability_pct, tasks_completed, last_activity_at)
@@ -2085,7 +2101,7 @@ export const writeAuditEvent = async (event: {
     afterState?: Record<string, unknown>;
     reason?: string;
 }): Promise<void> => {
-    const id = `aud_${randomBytes(8).toString("hex")}`;
+    const id = `aud_${randomHex(8)}`;
     await getDb().prepare(
         `INSERT INTO company_audit_events
             (id, actor_id, actor_email, action, target_type, target_id, tenant_id, before_state, after_state, reason, created_at)
@@ -2377,19 +2393,19 @@ export const initializeTenantWorkspaceAndBot = async (input: {
     const planId = input.planId ?? "starter";
     const ts = now();
 
-    const tenantId = `tnt_${randomBytes(10).toString("hex")}`;
+    const tenantId = `tnt_${randomHex(10)}`;
     await getDb().prepare(
         `INSERT INTO customer_tenants (id, tenant_name, plan_id, billing_status, tenant_status, created_at)
          VALUES (?, ?, ?, 'trial', 'pending', ?)`,
     ).bind(tenantId, input.tenantName, planId, ts).run();
 
-    const workspaceId = `wsp_${randomBytes(10).toString("hex")}`;
+    const workspaceId = `wsp_${randomHex(10)}`;
     await getDb().prepare(
         `INSERT INTO customer_workspaces (id, tenant_id, workspace_name, role_type, runtime_tier, workspace_status, created_at)
          VALUES (?, ?, 'Primary Workspace', 'developer', 'standard', 'pending', ?)`,
     ).bind(workspaceId, tenantId, ts).run();
 
-    const botId = `bot_${randomBytes(10).toString("hex")}`;
+    const botId = `bot_${randomHex(10)}`;
     await getDb().prepare(
         `INSERT INTO customer_bots (id, workspace_id, bot_name, bot_status, policy_pack_version, created_at)
          VALUES (?, ?, 'Developer Agent', 'created', 'v1', ?)`,
@@ -2397,8 +2413,8 @@ export const initializeTenantWorkspaceAndBot = async (input: {
 
     await getDb().prepare(`UPDATE users SET tenant_id = ? WHERE id = ?`).bind(tenantId, input.userId).run();
 
-    const correlationId = `cor_${randomBytes(10).toString("hex")}`;
-    const jobId = `prv_${randomBytes(8).toString("hex")}`;
+    const correlationId = `cor_${randomHex(10)}`;
+    const jobId = `prv_${randomHex(8)}`;
     await getDb().prepare(
         `INSERT INTO provisioning_queue
              (id, tenant_id, workspace_id, bot_id, plan_id, runtime_tier, role_type,

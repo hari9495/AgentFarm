@@ -2,7 +2,6 @@
 
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth-store";
-import crypto from "crypto";
 
 const SESSION_COOKIE = "agentfarm_session";
 const GATEWAY_COOKIE = "agentfarm_gateway_session";
