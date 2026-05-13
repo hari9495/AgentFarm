@@ -4,6 +4,9 @@ compatibility_flags = ["nodejs_compat"]
 
 pages_build_output_dir = ".vercel/output/static"
 
+[build]
+command = "pnpm dlx @cloudflare/next-on-pages"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "agent-farm-db"
