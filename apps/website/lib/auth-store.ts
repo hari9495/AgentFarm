@@ -1,5 +1,46 @@
 ﻿import { getRequestContext } from "@cloudflare/next-on-pages";
-import { hashPassword, verifyPassword } from "@agentfarm/auth-utils";
+
+// --- Edge-compatible password helpers (Web Crypto PBKDF2, no node:crypto) ---
+
+async function hashPassword(password: string): Promise<string> {
+    const enc = new TextEncoder();
+    const salt = randomHex(32);
+    const keyMaterial = await globalThis.crypto.subtle.importKey(
+        "raw", enc.encode(password), "PBKDF2", false, ["deriveBits"]
+    );
+    const bits = await globalThis.crypto.subtle.deriveBits(
+        { name: "PBKDF2", salt: enc.encode(salt), iterations: 100000, hash: "SHA-256" },
+        keyMaterial, 256
+    );
+    const hash = Array.from(new Uint8Array(bits), (b) => b.toString(16).padStart(2, "0")).join("");
+    return `pbkdf2:${salt}:${hash}`;
+}
+
+async function verifyPassword(password: string, stored: string): Promise<boolean> {
+    if (!stored.startsWith("pbkdf2:")) return false;
+    const parts = stored.split(":");
+    if (parts.length !== 3) return false;
+    const [, salt, storedHash] = parts;
+    if (!salt || !storedHash) return false;
+    try {
+        const enc = new TextEncoder();
+        const keyMaterial = await globalThis.crypto.subtle.importKey(
+            "raw", enc.encode(password), "PBKDF2", false, ["deriveBits"]
+        );
+        const bits = await globalThis.crypto.subtle.deriveBits(
+            { name: "PBKDF2", salt: enc.encode(salt), iterations: 100000, hash: "SHA-256" },
+            keyMaterial, 256
+        );
+        const hash = Array.from(new Uint8Array(bits), (b) => b.toString(16).padStart(2, "0")).join("");
+        // Constant-time comparison to prevent timing attacks
+        if (hash.length !== storedHash.length) return false;
+        let diff = 0;
+        for (let i = 0; i < hash.length; i++) diff |= hash.charCodeAt(i) ^ storedHash.charCodeAt(i);
+        return diff === 0;
+    } catch { return false; }
+}
+
+// --- End edge-compatible password helpers ---
 
 function randomHex(bytes: number): string {
     const arr = new Uint8Array(bytes);
