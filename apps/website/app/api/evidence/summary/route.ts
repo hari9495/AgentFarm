@@ -1,3 +1,5 @@
+﻿export const runtime = 'edge'
+
 import { NextResponse } from "next/server";
 import { getComplianceEvidenceSummary, getSessionUser } from "@/lib/auth-store";
 
@@ -19,14 +21,14 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: "Authentication required." }, { status: 401 });
     }
 
-    const user = getSessionUser(token);
+    const user = await getSessionUser(token);
     if (!user) {
         return NextResponse.json({ error: "Invalid or expired session." }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
     const windowHoursRaw = Number.parseInt(searchParams.get("windowHours") ?? "24", 10);
-    const summary = getComplianceEvidenceSummary({
+    const summary = await getComplianceEvidenceSummary({
         tenantId: user.tenantId ?? undefined,
         windowHours: Number.isFinite(windowHoursRaw) ? windowHoursRaw : 24,
     });
@@ -36,3 +38,4 @@ export async function GET(request: Request) {
         summary,
     });
 }
+

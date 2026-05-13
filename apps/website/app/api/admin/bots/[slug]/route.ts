@@ -1,3 +1,5 @@
+﻿export const runtime = 'edge'
+
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser, updateBotStatus, updateBotConfig, writeAuditEvent, BotStatus, AutonomyLevel, ApprovalPolicy } from "@/lib/auth-store";
@@ -12,7 +14,7 @@ export async function PATCH(
     const token = jar.get(COOKIE_NAME)?.value;
     if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const actor = getSessionUser(token);
+    const actor = await getSessionUser(token);
     if (!actor) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     if (actor.role === "member") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
@@ -30,7 +32,7 @@ export async function PATCH(
         if (!valid.includes(body.status as BotStatus)) {
             return NextResponse.json({ error: "Invalid status" }, { status: 400 });
         }
-        const result = updateBotStatus(slug, body.status as BotStatus);
+        const result = await updateBotStatus(slug, body.status as BotStatus);
         if (!result.ok) return NextResponse.json({ error: "Bot not found" }, { status: 404 });
         writeAuditEvent({
             actorId: actor.id,
@@ -61,7 +63,7 @@ export async function PATCH(
     if (body.notes !== undefined) configFields.notes = body.notes;
 
     if (Object.keys(configFields).length > 0) {
-        const result = updateBotConfig(slug, configFields);
+        const result = await updateBotConfig(slug, configFields);
         if (!result.ok) return NextResponse.json({ error: "Bot not found or no changes" }, { status: 404 });
         writeAuditEvent({
             actorId: actor.id,

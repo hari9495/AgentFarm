@@ -1,3 +1,5 @@
+﻿export const runtime = 'edge'
+
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth-store";
 import crypto from "crypto";
@@ -45,13 +47,13 @@ type GatewayInitiateResponse = {
     token_storage: string;
 };
 
-// ── GET /api/connectors ─────────────────────────────────────────────────────
+// â”€â”€ GET /api/connectors â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export async function GET(request: Request) {
     const cookies = request.headers.get("cookie");
     const token = getCookieValue(cookies, SESSION_COOKIE);
     if (!token) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
 
-    const user = getSessionUser(token);
+    const user = await getSessionUser(token);
     if (!user) return NextResponse.json({ error: "Invalid session." }, { status: 401 });
 
     const gatewayToken = getCookieValue(cookies, GATEWAY_COOKIE);
@@ -84,13 +86,13 @@ export async function GET(request: Request) {
     }
 }
 
-// ── POST /api/connectors ────────────────────────────────────────────────────
+// â”€â”€ POST /api/connectors â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export async function POST(request: Request) {
     const cookies = request.headers.get("cookie");
     const token = getCookieValue(cookies, SESSION_COOKIE);
     if (!token) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
 
-    const user = getSessionUser(token);
+    const user = await getSessionUser(token);
     if (!user) return NextResponse.json({ error: "Invalid session." }, { status: 401 });
 
     const gatewayToken = getCookieValue(cookies, GATEWAY_COOKIE);
@@ -147,7 +149,7 @@ export async function POST(request: Request) {
             });
         }
 
-        // api_key or generic_rest — store credentials via gateway
+        // api_key or generic_rest â€” store credentials via gateway
         const connectorId = crypto.randomUUID();
         const res = await gatewayFetch(
             `/v1/connectors/${connectorId}/credentials`,
@@ -169,3 +171,4 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "gateway_error", detail }, { status: 502 });
     }
 }
+

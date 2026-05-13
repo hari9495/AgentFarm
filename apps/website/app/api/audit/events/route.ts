@@ -1,3 +1,5 @@
+﻿export const runtime = 'edge'
+
 import { NextResponse } from "next/server";
 import { getSessionUser, listAuditEvents, writeAuditEvent } from "@/lib/auth-store";
 
@@ -28,7 +30,7 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: "Authentication required." }, { status: 401 });
     }
 
-    const user = getSessionUser(token);
+    const user = await getSessionUser(token);
     if (!user) {
         return NextResponse.json({ error: "Invalid or expired session." }, { status: 401 });
     }
@@ -50,7 +52,7 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: "Invalid to timestamp." }, { status: 400 });
     }
 
-    const events = listAuditEvents({
+    const events = await listAuditEvents({
         actorEmail,
         action,
         tenantId: user.tenantId ?? undefined,
@@ -72,7 +74,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Authentication required." }, { status: 401 });
     }
 
-    const user = getSessionUser(token);
+    const user = await getSessionUser(token);
     if (!user) {
         return NextResponse.json({ error: "Invalid or expired session." }, { status: 401 });
     }
@@ -106,3 +108,4 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ status: "created" }, { status: 201 });
 }
+

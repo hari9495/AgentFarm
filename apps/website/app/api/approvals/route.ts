@@ -1,3 +1,5 @@
+﻿export const runtime = 'edge'
+
 import { NextResponse } from "next/server";
 import {
     createApprovalRequest,
@@ -35,7 +37,7 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: "Authentication required." }, { status: 401 });
     }
 
-    const user = getSessionUser(token);
+    const user = await getSessionUser(token);
     if (!user) {
         return NextResponse.json({ error: "Invalid or expired session." }, { status: 401 });
     }
@@ -50,7 +52,7 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: "Invalid status filter." }, { status: 400 });
     }
 
-    const approvals = listApprovals({
+    const approvals = await listApprovals({
         agentSlug,
         status,
         tenantId: user.tenantId ?? undefined,
@@ -69,7 +71,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Authentication required." }, { status: 401 });
     }
 
-    const user = getSessionUser(token);
+    const user = await getSessionUser(token);
     if (!user) {
         return NextResponse.json({ error: "Invalid or expired session." }, { status: 401 });
     }
@@ -130,7 +132,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Risk must be low, medium, or high." }, { status: 400 });
     }
 
-    const approval = createApprovalRequest({
+    const approval = await createApprovalRequest({
         title,
         agentSlug,
         agent,
@@ -152,12 +154,12 @@ export async function PATCH(request: Request) {
         return NextResponse.json({ error: "Authentication required." }, { status: 401 });
     }
 
-    const user = getSessionUser(token);
+    const user = await getSessionUser(token);
     if (!user) {
         return NextResponse.json({ error: "Invalid or expired session." }, { status: 401 });
     }
 
-    const result = escalatePendingApprovals({
+    const result = await escalatePendingApprovals({
         tenantId: user.tenantId ?? undefined,
         actorId: user.id,
         actorEmail: user.email,
@@ -169,3 +171,4 @@ export async function PATCH(request: Request) {
         escalatedIds: result.escalatedIds,
     });
 }
+

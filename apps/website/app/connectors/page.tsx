@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 
@@ -456,7 +456,7 @@ export default function ConnectorsPage() {
             const endpoint = params.size > 0 ? `/api/connectors?${params.toString()}` : "/api/connectors";
             const res = await fetch(endpoint);
             if (res.ok) {
-                const data = await res.json();
+                const data = await res.json() as any;
                 setConfigured(data.configured ?? []);
                 setAvailable(data.available ?? []);
                 if (data.context) {

@@ -1,3 +1,5 @@
+﻿export const runtime = 'edge'
+
 import { NextResponse } from "next/server";
 import { getLatestDeploymentForUser, getSessionUser } from "@/lib/auth-store";
 
@@ -19,15 +21,16 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: "Authentication required." }, { status: 401 });
     }
 
-    const user = getSessionUser(token);
+    const user = await getSessionUser(token);
     if (!user) {
         return NextResponse.json({ error: "Invalid or expired session." }, { status: 401 });
     }
 
-    const latest = getLatestDeploymentForUser(user.id);
+    const latest = await getLatestDeploymentForUser(user.id);
 
     return NextResponse.json({
         status: "ok",
         deployment: latest,
     });
 }
+

@@ -1,3 +1,5 @@
+﻿export const runtime = 'edge'
+
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import {
@@ -19,7 +21,7 @@ export async function POST(req: NextRequest) {
     const token = jar.get(COOKIE_NAME)?.value;
     if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const user = getSessionUser(token);
+    const user = await getSessionUser(token);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     if (!isCompanyOperatorEmail(user.email)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
@@ -57,10 +59,10 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: `Region must be one of: ${VALID_REGIONS.join(", ")}.` }, { status: 422 });
     }
 
-    const tenant = createCompanyTenant({ name: name.trim(), plan, region });
+    const tenant = await createCompanyTenant({ name: name.trim(), plan, region });
 
     // Auto-provision first bot (AI Backend Developer)
-    const bot = createCompanyTenantBot({
+    const bot = await createCompanyTenantBot({
         tenantId: tenant.id,
         botSlug: "ai-backend-developer",
         displayName: "Backend Worker",
@@ -80,3 +82,4 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ tenant, bot }, { status: 201 });
 }
+

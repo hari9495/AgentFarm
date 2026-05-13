@@ -1,3 +1,5 @@
+﻿export const runtime = 'edge'
+
 import { NextResponse } from "next/server";
 import { getSessionUser, saveMarketplaceSelection } from "@/lib/auth-store";
 
@@ -24,7 +26,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Authentication required." }, { status: 401 });
     }
 
-    const user = getSessionUser(token);
+    const user = await getSessionUser(token);
     if (!user) {
         return NextResponse.json({ error: "Invalid or expired session." }, { status: 401 });
     }
@@ -52,3 +54,4 @@ export async function POST(request: Request) {
         starterAgent,
     });
 }
+

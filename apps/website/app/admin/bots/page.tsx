@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState, useCallback } from "react";
 import {
@@ -69,7 +69,7 @@ export default function AdminBotsPage() {
         setLoading(true);
         try {
             const res = await fetch("/api/admin/bots");
-            const data = await res.json();
+            const data = await res.json() as any;
             if (res.ok) setBots(data.bots ?? []);
             else setError(data.error ?? "Failed to load bots");
         } catch {
@@ -96,7 +96,7 @@ export default function AdminBotsPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(body),
             });
-            const data = await res.json();
+            const data = await res.json() as any;
             if (res.ok) {
                 await fetchBots();
                 showToast("Bot updated.", true);

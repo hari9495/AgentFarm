@@ -1,3 +1,5 @@
+﻿export const runtime = 'edge'
+
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth-store";
 
@@ -24,7 +26,7 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: "Authentication required." }, { status: 401 });
     }
 
-    const user = getSessionUser(token);
+    const user = await getSessionUser(token);
     if (!user) {
         return NextResponse.json({ error: "Invalid session." }, { status: 401 });
     }
@@ -46,3 +48,4 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: "Gateway unavailable." }, { status: 500 });
     }
 }
+

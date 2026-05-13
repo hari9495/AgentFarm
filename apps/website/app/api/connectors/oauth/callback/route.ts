@@ -1,3 +1,5 @@
+﻿export const runtime = 'edge'
+
 import { NextResponse } from "next/server";
 
 const API_GATEWAY_URL =
@@ -5,7 +7,7 @@ const API_GATEWAY_URL =
     process.env.NEXT_PUBLIC_API_URL ??
     "http://localhost:3000";
 
-// ── GET /api/connectors/oauth/callback ──────────────────────────────────────
+// â”€â”€ GET /api/connectors/oauth/callback â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Transparent proxy for the OAuth provider redirect.
 // The OAuth provider redirects here (website domain); we forward all query
 // params to the api-gateway which owns the OAuth state machine.
@@ -38,3 +40,4 @@ export async function GET(request: Request) {
         return NextResponse.redirect(new URL("/connectors?error=oauth_failed", incomingUrl.origin));
     }
 }
+

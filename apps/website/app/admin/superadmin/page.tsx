@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -79,7 +79,7 @@ export default function TenantSuperAdminPage() {
             setAuthorized(false);
             return;
         }
-        const data = await res.json();
+        const data = await res.json() as any;
         setAuthorized(data?.user?.role === "superadmin");
     }, []);
 
@@ -92,8 +92,8 @@ export default function TenantSuperAdminPage() {
                 fetch("/api/admin/bots", { cache: "no-store" }),
             ]);
 
-            const usersData = await usersRes.json();
-            const botsData = await botsRes.json();
+            const usersData = await usersRes.json() as any;
+            const botsData = await botsRes.json() as any;
 
             if (!usersRes.ok) throw new Error(usersData.error ?? "Failed to load users");
             if (!botsRes.ok) throw new Error(botsData.error ?? "Failed to load bots");
@@ -123,7 +123,7 @@ export default function TenantSuperAdminPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ role }),
             });
-            const data = await res.json();
+            const data = await res.json() as any;
             if (!res.ok) {
                 showToast(false, data.error ?? "Failed to update role");
                 return;

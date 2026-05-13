@@ -1,3 +1,5 @@
+﻿export const runtime = 'edge'
+
 import { NextResponse } from "next/server";
 import { getProvisioningStatusForUser, getSessionUser, retryProvisioningJob } from "@/lib/auth-store";
 
@@ -23,7 +25,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Authentication required." }, { status: 401 });
     }
 
-    const user = getSessionUser(token);
+    const user = await getSessionUser(token);
     if (!user) {
         return NextResponse.json({ error: "Invalid or expired session." }, { status: 401 });
     }
@@ -44,12 +46,12 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "jobId is required." }, { status: 400 });
     }
 
-    const currentStatus = getProvisioningStatusForUser(user.id);
+    const currentStatus = await getProvisioningStatusForUser(user.id);
     if (!currentStatus.tenant) {
         return NextResponse.json({ error: "No tenant provisioning context found." }, { status: 404 });
     }
 
-    const retryResult = retryProvisioningJob({
+    const retryResult = await retryProvisioningJob({
         jobId: requestedJobId,
         requestedBy: user.id,
         actorId: user.id,
@@ -77,3 +79,4 @@ export async function POST(request: Request) {
         retryAttemptCount: retryResult.job.retryAttemptCount,
     });
 }
+

@@ -1,3 +1,5 @@
+﻿export const runtime = 'edge'
+
 import { NextResponse } from "next/server";
 import {
     autoProcessProvisioningForUser,
@@ -28,7 +30,7 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: "Authentication required." }, { status: 401 });
     }
 
-    const user = getSessionUser(token);
+    const user = await getSessionUser(token);
     if (!user) {
         return NextResponse.json({ error: "Invalid or expired session." }, { status: 401 });
     }
@@ -37,14 +39,14 @@ export async function GET(request: Request) {
     let autoProcessed = { processed: 0, completed: 0, failed: 0 };
     if (now - lastAutoTickAt >= AUTO_TICK_MIN_INTERVAL_MS) {
         lastAutoTickAt = now;
-        autoProcessed = autoProcessProvisioningForUser({
+        autoProcessed = await autoProcessProvisioningForUser({
             userId: user.id,
             actorId: user.id,
             actorEmail: user.email,
         });
     }
 
-    const { tenant, workspace, bot, provisioningJob } = getProvisioningStatusForUser(user.id);
+    const { tenant, workspace, bot, provisioningJob } = await getProvisioningStatusForUser(user.id);
     const provisioningTimeline = provisioningJob && user.tenantId
         ? getProvisioningTimelineForJob({
             tenantId: user.tenantId,
@@ -89,3 +91,4 @@ export async function GET(request: Request) {
         autoProcessed,
     });
 }
+

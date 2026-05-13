@@ -1,3 +1,5 @@
+﻿export const runtime = 'edge'
+
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { getSessionUser, listBots } from "@/lib/auth-store";
@@ -9,9 +11,10 @@ export async function GET() {
     const token = jar.get(COOKIE_NAME)?.value;
     if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const user = getSessionUser(token);
+    const user = await getSessionUser(token);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const bots = listBots();
+    const bots = await listBots();
     return NextResponse.json({ bots });
 }
+

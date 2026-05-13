@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -272,12 +272,12 @@ export default function CompanyPortalPage() {
         if (!contentType.toLowerCase().includes("application/json")) {
             return null;
         }
-        return (await res.json().catch(() => null)) as T | null;
+        return (await (res.json() as Promise<any>).catch(() => null)) as T | null;
     }, []);
 
     const checkAccess = useCallback(async () => {
         const res = await fetch("/api/auth/session", { cache: "no-store" });
-        const data = await res.json().catch(() => null);
+        const data = await (res.json() as Promise<any>).catch(() => null);
         if (!res.ok || !data?.user) {
             // Not signed in — will prompt to log in
             setSessionEmail(null);
@@ -443,7 +443,7 @@ export default function CompanyPortalPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ role, reason }),
             });
-            const data = await res.json();
+            const data = await res.json() as any;
             if (!res.ok) {
                 showToast(false, data.error ?? "Failed to update role");
                 return;
@@ -474,7 +474,7 @@ export default function CompanyPortalPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ status, reason }),
             });
-            const data = await res.json();
+            const data = await res.json() as any;
             if (!res.ok) {
                 showToast(false, data.error ?? "Failed to update bot status");
                 return;
@@ -499,7 +499,7 @@ export default function CompanyPortalPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ reason }),
             });
-            const data = await res.json();
+            const data = await res.json() as any;
             if (!res.ok) {
                 showToast(false, data.error ?? "Failed to resolve incident");
                 return;
@@ -605,7 +605,7 @@ export default function CompanyPortalPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ ids, status, reason }),
             });
-            const data = await res.json();
+            const data = await res.json() as any;
             if (!res.ok) {
                 showToast(false, data.error ?? "Bulk action failed");
                 return;
@@ -660,7 +660,7 @@ export default function CompanyPortalPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(body),
             });
-            const data = await res.json();
+            const data = await res.json() as any;
             if (!res.ok) {
                 showToast(false, data.error ?? "Escalation failed");
                 return;
@@ -719,7 +719,7 @@ export default function CompanyPortalPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ name: provisionName.trim(), plan: provisionPlan, region: provisionRegion }),
             });
-            const data = await res.json();
+            const data = await res.json() as any;
             if (!res.ok) {
                 showToast(false, data.error ?? "Provisioning failed");
                 return;

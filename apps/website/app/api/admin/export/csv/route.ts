@@ -1,6 +1,8 @@
+﻿export const runtime = 'edge'
+
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
-import { getSessionUser, exportTableCsv } from "@/lib/auth-store";
+import { getSessionUser, exportDatabaseAsCsv } from "@/lib/auth-store";
 
 const COOKIE_NAME = "agentfarm_session";
 
@@ -16,7 +18,7 @@ export async function GET(req: NextRequest) {
     const token = jar.get(COOKIE_NAME)?.value;
     if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const user = getSessionUser(token);
+    const user = await getSessionUser(token);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     if (user.role !== "admin" && user.role !== "superadmin") {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -30,7 +32,7 @@ export async function GET(req: NextRequest) {
         );
     }
 
-    const csv = exportTableCsv(table);
+    const csv = await exportDatabaseAsCsv(table);
     const ts = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
     const filename = `agentfarm-${table}-${ts}.csv`;
 
@@ -43,3 +45,4 @@ export async function GET(req: NextRequest) {
         },
     });
 }
+

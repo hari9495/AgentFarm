@@ -1,3 +1,5 @@
+﻿export const runtime = 'edge'
+
 import { NextResponse } from "next/server";
 import { authenticateUser, createSession, updateUserGatewayToken } from "@/lib/auth-store";
 import { checkAuthRateLimit } from "@/lib/rate-limit";
@@ -125,7 +127,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Email or password is incorrect." }, { status: 401 });
     }
 
-    const { sessionToken } = createSession(user.id);
+    const { sessionToken } = await createSession(user.id);
 
     const isInternalUser = user.role === "admin" || user.role === "superadmin";
     const [internalToken, gatewayToken] = await Promise.all([
@@ -183,3 +185,4 @@ export async function POST(request: Request) {
 
     return response;
 }
+

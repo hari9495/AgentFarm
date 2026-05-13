@@ -1,3 +1,5 @@
+﻿export const runtime = 'edge'
+
 import { NextResponse } from "next/server";
 import { exportComplianceEvidencePack, getSessionUser } from "@/lib/auth-store";
 
@@ -25,7 +27,7 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: "Authentication required." }, { status: 401 });
     }
 
-    const user = getSessionUser(token);
+    const user = await getSessionUser(token);
     if (!user) {
         return NextResponse.json({ error: "Invalid or expired session." }, { status: 401 });
     }
@@ -33,7 +35,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const format = (searchParams.get("format") ?? "json").toLowerCase();
 
-    const pack = exportComplianceEvidencePack({
+    const pack = await exportComplianceEvidencePack({
         tenantId: user.tenantId ?? undefined,
     });
 
@@ -81,3 +83,4 @@ export async function GET(request: Request) {
         pack,
     });
 }
+

@@ -1,3 +1,5 @@
+﻿export const runtime = 'edge'
+
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import {
@@ -21,7 +23,7 @@ export async function PATCH(
     const token = jar.get(COOKIE_NAME)?.value;
     if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const user = getSessionUser(token);
+    const user = await getSessionUser(token);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     if (!isCompanyOperatorEmail(user.email)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
@@ -60,8 +62,8 @@ export async function PATCH(
     }
 
     const { id } = await params;
-    const before = getCompanyFleetBotById(id);
-    const result = updateCompanyFleetBotStatus(id, newStatus);
+    const before = await getCompanyFleetBotById(id);
+    const result = await updateCompanyFleetBotStatus(id, newStatus);
     if (!result.ok) return NextResponse.json({ error: "Bot instance not found" }, { status: 404 });
 
     writeAuditEvent({

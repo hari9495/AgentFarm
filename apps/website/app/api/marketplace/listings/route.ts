@@ -1,3 +1,5 @@
+﻿export const runtime = 'edge'
+
 import { NextRequest, NextResponse } from 'next/server';
 import { GATEWAY_URL } from '@agentfarm/config';
 
@@ -14,3 +16,4 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(body, { status: response.status });
 }
+

@@ -3,3 +3,9 @@ compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
 
 pages_build_output_dir = ".vercel/output/static"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "agent-farm-db"
+database_id = "eaeeb99f-cd57-4a6b-bace-2f2bf82bf113"
+

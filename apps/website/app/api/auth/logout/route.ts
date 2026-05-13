@@ -1,3 +1,5 @@
+﻿export const runtime = 'edge'
+
 import { NextResponse } from "next/server";
 import { deleteSession } from "@/lib/auth-store";
 
@@ -32,3 +34,4 @@ export async function POST(request: Request) {
 
     return response;
 }
+

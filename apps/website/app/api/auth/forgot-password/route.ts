@@ -1,3 +1,5 @@
+﻿export const runtime = 'edge'
+
 import { NextResponse } from "next/server";
 import { findUserByEmail } from "@/lib/auth-store";
 import { checkAuthRateLimit } from "@/lib/rate-limit";
@@ -62,3 +64,4 @@ export async function POST(request: Request) {
         message: "If this account exists, a reset link has been sent.",
     });
 }
+

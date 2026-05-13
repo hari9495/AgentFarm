@@ -1,3 +1,5 @@
+﻿export const runtime = 'edge'
+
 import { NextResponse } from "next/server";
 import { GATEWAY_URL } from "../../_utils";
 
@@ -12,3 +14,4 @@ export async function GET(request: Request): Promise<NextResponse> {
     const data = (await upstream.json().catch(() => ({}))) as Record<string, unknown>;
     return NextResponse.json(data, { status: upstream.status });
 }
+

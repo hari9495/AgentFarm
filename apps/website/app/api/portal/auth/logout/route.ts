@@ -1,3 +1,5 @@
+﻿export const runtime = 'edge'
+
 import { NextResponse } from "next/server";
 import { GATEWAY_URL } from "../../_utils";
 
@@ -20,3 +22,4 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     return response;
 }
+

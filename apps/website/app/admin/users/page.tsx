@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState, useCallback } from "react";
 import { KeyRound, Shield, ShieldCheck, UserCheck, UserMinus, Users } from "lucide-react";
@@ -32,7 +32,7 @@ export default function AdminUsersPage() {
         setLoading(true);
         try {
             const res = await fetch("/api/admin/users");
-            const data = await res.json();
+            const data = await res.json() as any;
             if (res.ok) setUsers(data.users ?? []);
             else setError(data.error ?? "Failed to load users");
         } catch {
@@ -59,7 +59,7 @@ export default function AdminUsersPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ role: newRole }),
             });
-            const data = await res.json();
+            const data = await res.json() as any;
             if (res.ok) {
                 setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u)));
                 showToast(

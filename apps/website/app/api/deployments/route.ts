@@ -1,3 +1,5 @@
+﻿export const runtime = 'edge'
+
 import { NextResponse } from "next/server";
 import { getSessionUser, listDeploymentsForUser, requestDeployment } from "@/lib/auth-store";
 
@@ -24,7 +26,7 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: "Authentication required." }, { status: 401 });
     }
 
-    const user = getSessionUser(token);
+    const user = await getSessionUser(token);
     if (!user) {
         return NextResponse.json({ error: "Invalid or expired session." }, { status: 401 });
     }
@@ -32,7 +34,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const limitParam = Number.parseInt(searchParams.get("limit") ?? "25", 10);
     const limit = Number.isNaN(limitParam) ? 25 : limitParam;
-    const deployments = listDeploymentsForUser(user.id, limit);
+    const deployments = await listDeploymentsForUser(user.id, limit);
 
     return NextResponse.json({
         status: "ok",
@@ -46,7 +48,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Authentication required." }, { status: 401 });
     }
 
-    const user = getSessionUser(token);
+    const user = await getSessionUser(token);
     if (!user) {
         return NextResponse.json({ error: "Invalid or expired session." }, { status: 401 });
     }
@@ -65,7 +67,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Bot slug and bot name are required." }, { status: 400 });
     }
 
-    const deployment = requestDeployment({
+    const deployment = await requestDeployment({
         userId: user.id,
         botSlug,
         botName,
@@ -98,3 +100,4 @@ export async function POST(request: Request) {
         job: deployment.job,
     });
 }
+

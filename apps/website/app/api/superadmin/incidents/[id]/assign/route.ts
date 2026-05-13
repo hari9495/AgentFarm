@@ -1,3 +1,5 @@
+﻿export const runtime = 'edge'
+
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import {
@@ -24,7 +26,7 @@ export async function PATCH(
     const token = jar.get(COOKIE_NAME)?.value;
     if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const user = getSessionUser(token);
+    const user = await getSessionUser(token);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     if (!isCompanyOperatorEmail(user.email)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
@@ -57,7 +59,7 @@ export async function PATCH(
         return NextResponse.json({ error: "A reason is required for incident escalation." }, { status: 422 });
     }
 
-    const before = getCompanyIncidentById(id);
+    const before = await getCompanyIncidentById(id);
     if (!before) return NextResponse.json({ error: "Incident not found." }, { status: 404 });
 
     const beforeState: Record<string, unknown> = {
@@ -73,7 +75,7 @@ export async function PATCH(
         if (typeof assigneeEmail !== "string" || !assigneeEmail.trim()) {
             return NextResponse.json({ error: "assigneeEmail must be a non-empty string." }, { status: 422 });
         }
-        const res = assignCompanyIncident(id, String(assigneeEmail));
+        const res = await assignCompanyIncident(id, String(assigneeEmail));
         if (!res.ok) return NextResponse.json({ error: res.error }, { status: 400 });
         afterState.assigneeEmail = String(assigneeEmail).trim().toLowerCase();
     }
@@ -82,7 +84,7 @@ export async function PATCH(
         if (!VALID_SEVERITIES.includes(severity as IncidentSeverity)) {
             return NextResponse.json({ error: `Severity must be one of: ${VALID_SEVERITIES.join(", ")}.` }, { status: 422 });
         }
-        const res = updateCompanyIncidentSeverity(id, severity as IncidentSeverity);
+        const res = await updateCompanyIncidentSeverity(id, severity as IncidentSeverity);
         if (!res.ok) return NextResponse.json({ error: res.error }, { status: 400 });
         afterState.severity = severity;
     }

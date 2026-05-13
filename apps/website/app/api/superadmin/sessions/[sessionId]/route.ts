@@ -1,3 +1,5 @@
+﻿export const runtime = 'edge'
+
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import {
@@ -20,7 +22,7 @@ export async function DELETE(
     const token = jar.get(COOKIE_NAME)?.value;
     if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const user = getSessionUser(token);
+    const user = await getSessionUser(token);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     if (!isCompanyOperatorEmail(user.email)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
@@ -36,7 +38,7 @@ export async function DELETE(
         return NextResponse.json({ error: "Session ID is required." }, { status: 400 });
     }
 
-    const result = revokeSessionById(sessionId);
+    const result = await revokeSessionById(sessionId);
     if (!result.ok) {
         return NextResponse.json({ error: "Session not found." }, { status: 404 });
     }

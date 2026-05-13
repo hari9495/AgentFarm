@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { ArrowUpRight, CreditCard, Download, TrendingUp, Users, Zap } from "lucide-react";
@@ -98,7 +98,7 @@ export default function AdminBillingPage() {
                 body: JSON.stringify({ tenantId: order.tenantId, orderId: order.id }),
             });
             if (!res.ok) {
-                const err = await res.json().catch(() => ({ error: 'Request failed' }));
+                const err = await (res.json() as Promise<any>).catch(() => ({ error: 'Request failed' }));
                 throw new Error((err as { error?: string }).error ?? 'Request failed');
             }
             setProvisionStates((s) => ({ ...s, [order.id]: 'done' }));
@@ -110,8 +110,8 @@ export default function AdminBillingPage() {
 
     useEffect(() => {
         fetch("/api/billing/orders", { credentials: "include" })
-            .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
-            .then((data: { orders?: ApiOrder[] }) => {
+            .then((r) => (r.ok ? r.json() as any : Promise.reject(r.status)))
+            .then((data: any) => {
                 if (Array.isArray(data.orders) && data.orders.length > 0) {
                     setOrders(data.orders);
                 }

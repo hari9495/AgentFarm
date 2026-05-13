@@ -1,7 +1,9 @@
+﻿export const runtime = 'edge'
+
 import { NextResponse } from "next/server";
 
 /**
- * Public health check — returns 200 with minimal status info.
+ * Public health check â€” returns 200 with minimal status info.
  * Suitable for uptime monitors (UptimeRobot, BetterStack, etc.).
  * No sensitive internal state is exposed here.
  */
@@ -15,3 +17,4 @@ export function GET() {
         { status: 200 },
     );
 }
+

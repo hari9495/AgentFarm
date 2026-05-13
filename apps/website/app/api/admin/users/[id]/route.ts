@@ -1,3 +1,5 @@
+﻿export const runtime = 'edge'
+
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { getUserById, getSessionUser, updateUserRole, UserRole, writeAuditEvent } from "@/lib/auth-store";
@@ -12,7 +14,7 @@ export async function PATCH(
     const token = jar.get(COOKIE_NAME)?.value;
     if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const actor = getSessionUser(token);
+    const actor = await getSessionUser(token);
     if (!actor) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     if (actor.role === "member") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
@@ -34,8 +36,8 @@ export async function PATCH(
         return NextResponse.json({ error: "A reason is required when changing a user role." }, { status: 422 });
     }
 
-    const targetBefore = getUserById(targetId);
-    const result = updateUserRole(targetId, newRole as UserRole, actor.id, actor.role);
+    const targetBefore = await getUserById(targetId);
+    const result = await updateUserRole(targetId, newRole as UserRole, actor.id, actor.role);
     if (!result.ok) {
         return NextResponse.json({ error: result.error }, { status: 422 });
     }

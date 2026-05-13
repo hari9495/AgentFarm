@@ -1,3 +1,5 @@
+﻿export const runtime = 'edge'
+
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import {
@@ -19,7 +21,7 @@ export async function POST(req: NextRequest) {
     const token = jar.get(COOKIE_NAME)?.value;
     if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const user = getSessionUser(token);
+    const user = await getSessionUser(token);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     if (!isCompanyOperatorEmail(user.email)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
@@ -62,9 +64,9 @@ export async function POST(req: NextRequest) {
     let updated = 0;
     for (const rawId of ids) {
         if (typeof rawId !== "string") continue;
-        const bot = getCompanyFleetBotById(rawId);
+        const bot = await getCompanyFleetBotById(rawId);
         if (!bot) continue;
-        const result = updateCompanyFleetBotStatus(rawId, status as FleetBotStatus);
+        const result = await updateCompanyFleetBotStatus(rawId, status as FleetBotStatus);
         if (result.ok) {
             updated++;
             writeAuditEvent({
@@ -83,3 +85,4 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true, updated });
 }
+

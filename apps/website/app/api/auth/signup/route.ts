@@ -1,3 +1,5 @@
+﻿export const runtime = 'edge'
+
 import { NextResponse } from "next/server";
 import { createSession, createUser, findUserByEmail, initializeTenantWorkspaceAndBot, updateUserGatewayIds } from "@/lib/auth-store";
 import { checkAuthRateLimit } from "@/lib/rate-limit";
@@ -119,7 +121,7 @@ export async function POST(request: Request) {
         );
     }
 
-    const existingUser = findUserByEmail(email);
+    const existingUser = await findUserByEmail(email);
     if (existingUser) {
         return NextResponse.json({ error: "An account with this email already exists." }, { status: 409 });
     }
@@ -131,13 +133,13 @@ export async function POST(request: Request) {
         password,
     });
 
-    const { tenant, workspace } = initializeTenantWorkspaceAndBot({
+    const { tenant, workspace } = await initializeTenantWorkspaceAndBot({
         userId: user.id,
         tenantName: company,
     });
 
     // Attempt gateway signup to create Prisma-side records and obtain HMAC token.
-    // Failure is non-fatal — the website signup is already committed.
+    // Failure is non-fatal â€” the website signup is already committed.
     let gatewaySessionToken: string | null = null;
     try {
         const gwResponse = await fetch(`${API_GATEWAY_URL}/auth/signup`, {
@@ -169,13 +171,13 @@ export async function POST(request: Request) {
                 });
             }
         } else {
-            console.error("[signup] Gateway signup returned", gwResponse.status, "— continuing without gateway IDs");
+            console.error("[signup] Gateway signup returned", gwResponse.status, "â€” continuing without gateway IDs");
         }
     } catch (err) {
         console.error("[signup] Gateway signup call failed:", err);
     }
 
-    const { sessionToken } = createSession(user.id);
+    const { sessionToken } = await createSession(user.id);
 
     const response = NextResponse.json({
         status: "ok",
@@ -209,3 +211,4 @@ export async function POST(request: Request) {
 
     return response;
 }
+

@@ -1,3 +1,5 @@
+﻿export const runtime = 'edge'
+
 import { NextResponse } from 'next/server';
 import { portalProxy } from '../_utils';
 
@@ -16,3 +18,4 @@ export async function PATCH(request: Request): Promise<Response> {
     const data = await upstream.json();
     return NextResponse.json(data, { status: upstream.status });
 }
+

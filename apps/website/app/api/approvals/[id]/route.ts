@@ -1,5 +1,7 @@
+﻿export const runtime = 'edge'
+
 import { NextResponse } from "next/server";
-import { getSessionUser, updateApprovalDecision } from "@/lib/auth-store";
+import { getSessionUser, decideApproval } from "@/lib/auth-store";
 
 const COOKIE_NAME = "agentfarm_session";
 
@@ -24,7 +26,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
         return NextResponse.json({ error: "Authentication required." }, { status: 401 });
     }
 
-    const user = getSessionUser(token);
+    const user = await getSessionUser(token);
     if (!user) {
         return NextResponse.json({ error: "Invalid or expired session." }, { status: 401 });
     }
@@ -47,7 +49,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
     const { id } = await context.params;
 
-    const updated = updateApprovalDecision({
+    const updated = await decideApproval({
         id,
         decision: payload.action === "approve" ? "approved" : "rejected",
         decidedBy: user.email,

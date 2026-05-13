@@ -1,3 +1,5 @@
+﻿export const runtime = 'edge'
+
 import { NextResponse } from "next/server";
 
 type QuickStartPayload = {
@@ -78,3 +80,4 @@ export async function POST(request: Request) {
         },
     });
 }
+

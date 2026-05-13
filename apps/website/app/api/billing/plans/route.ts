@@ -1,3 +1,5 @@
+﻿export const runtime = 'edge'
+
 import { NextResponse } from "next/server";
 
 const API_GATEWAY_URL =
@@ -16,3 +18,4 @@ export async function GET() {
         return NextResponse.json({ error: "Gateway unavailable." }, { status: 500 });
     }
 }
+

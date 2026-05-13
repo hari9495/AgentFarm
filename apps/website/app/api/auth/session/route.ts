@@ -1,3 +1,5 @@
+﻿export const runtime = 'edge'
+
 import { NextResponse } from "next/server";
 import { getSessionUser, isCompanyOperatorEmail } from "@/lib/auth-store";
 
@@ -19,7 +21,7 @@ export async function GET(request: Request) {
         return NextResponse.json({ authenticated: false }, { status: 401 });
     }
 
-    const user = getSessionUser(token);
+    const user = await getSessionUser(token);
     if (!user) {
         return NextResponse.json({ authenticated: false }, { status: 401 });
     }
@@ -30,3 +32,4 @@ export async function GET(request: Request) {
         isCompanyOperator: isCompanyOperatorEmail(user.email),
     });
 }
+

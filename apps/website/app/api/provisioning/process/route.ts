@@ -1,3 +1,5 @@
+﻿export const runtime = 'edge'
+
 import { NextResponse } from "next/server";
 import { getProvisioningStatusForUser, getSessionUser, processProvisioningQueue } from "@/lib/auth-store";
 
@@ -25,7 +27,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Authentication required." }, { status: 401 });
     }
 
-    const user = getSessionUser(token);
+    const user = await getSessionUser(token);
     if (!user) {
         return NextResponse.json({ error: "Invalid or expired session." }, { status: 401 });
     }
@@ -41,9 +43,9 @@ export async function POST(request: Request) {
         payload = {};
     }
 
-    const currentStatus = getProvisioningStatusForUser(user.id);
+    const currentStatus = await getProvisioningStatusForUser(user.id);
 
-    const result = processProvisioningQueue({
+    const result = await processProvisioningQueue({
         limit: payload.limit,
         jobIds: payload.jobIds,
         tenantIds: currentStatus.tenant ? [currentStatus.tenant.id] : undefined,
@@ -57,3 +59,4 @@ export async function POST(request: Request) {
         ...result,
     });
 }
+

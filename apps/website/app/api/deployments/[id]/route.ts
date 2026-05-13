@@ -1,3 +1,5 @@
+﻿export const runtime = 'edge'
+
 import { NextResponse } from "next/server";
 import { cancelDeployment, getSessionUser, retryDeployment } from "@/lib/auth-store";
 
@@ -23,7 +25,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
         return NextResponse.json({ error: "Authentication required." }, { status: 401 });
     }
 
-    const user = getSessionUser(token);
+    const user = await getSessionUser(token);
     if (!user) {
         return NextResponse.json({ error: "Invalid or expired session." }, { status: 401 });
     }
@@ -42,7 +44,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     const { id } = await context.params;
 
     if (payload.action === "cancel") {
-        const result = cancelDeployment({ userId: user.id, deploymentId: id, actorEmail: user.email });
+        const result = await cancelDeployment({ userId: user.id, deploymentId: id, actorEmail: user.email });
         if (!result.ok) {
             if (result.error === "not_found") {
                 return NextResponse.json({ error: "Deployment not found." }, { status: 404 });
@@ -53,7 +55,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
         return NextResponse.json({ status: "ok", action: "cancel", job: result.job });
     }
 
-    const result = retryDeployment({ userId: user.id, deploymentId: id, actorEmail: user.email });
+    const result = await retryDeployment({ userId: user.id, deploymentId: id, actorEmail: user.email });
     if (!result.ok) {
         if (result.error === "not_found") {
             return NextResponse.json({ error: "Deployment not found." }, { status: 404 });

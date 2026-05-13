@@ -1,3 +1,5 @@
+﻿export const runtime = 'edge'
+
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import {
@@ -21,7 +23,7 @@ export async function GET(
     const token = jar.get(COOKIE_NAME)?.value;
     if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const user = getSessionUser(token);
+    const user = await getSessionUser(token);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     if (!isCompanyOperatorEmail(user.email)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
@@ -33,11 +35,11 @@ export async function GET(
         );
     }
 
-    const tenant = getCompanyTenantById(id);
+    const tenant = await getCompanyTenantById(id);
     if (!tenant) return NextResponse.json({ error: "Tenant not found." }, { status: 404 });
 
-    const fleet = getCompanyTenantFleetBots(id);
-    const incidents = getCompanyTenantIncidents(id);
+    const fleet = await getCompanyTenantFleetBots(id);
+    const incidents = await getCompanyTenantIncidents(id);
 
     return NextResponse.json({ tenant, fleet, incidents });
 }

@@ -1,3 +1,5 @@
+﻿export const runtime = 'edge'
+
 import { NextResponse } from "next/server";
 import { getSessionUser, deleteSession, deleteAccount } from "@/lib/auth-store";
 import { checkAuthRateLimit } from "@/lib/rate-limit";
@@ -21,7 +23,7 @@ const getCookieValue = (cookieHeader: string | null, name: string): string | nul
  * Satisfies GDPR Art. 17, DPDP s. 13, and CCPA "right to delete" obligations.
  *
  * Rate-limited to 3 attempts per 15 minutes per session to prevent abuse.
- * Requires a currently valid session cookie — no additional confirmation body
+ * Requires a currently valid session cookie â€” no additional confirmation body
  * needed because the session already proves identity.
  */
 export async function DELETE(request: Request) {
@@ -40,12 +42,12 @@ export async function DELETE(request: Request) {
         );
     }
 
-    const user = getSessionUser(token);
+    const user = await getSessionUser(token);
     if (!user) {
         return NextResponse.json({ error: "Session not found or expired." }, { status: 401 });
     }
 
-    const result = deleteAccount(user.id);
+    const result = await deleteAccount(user.id);
     if (!result.ok) {
         return NextResponse.json({ error: "Account not found." }, { status: 404 });
     }
@@ -63,3 +65,4 @@ export async function DELETE(request: Request) {
     });
     return response;
 }
+

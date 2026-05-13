@@ -1,3 +1,5 @@
+﻿export const runtime = 'edge'
+
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getSessionUser, isCompanyOperatorEmail } from "@/lib/auth-store";
@@ -21,7 +23,7 @@ export default async function CompanyLayout({ children }: { children: React.Reac
         redirect("/login");
     }
 
-    const user = getSessionUser(token);
+    const user = await getSessionUser(token);
     if (!user) {
         redirect("/login");
     }

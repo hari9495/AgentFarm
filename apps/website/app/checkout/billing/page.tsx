@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -90,9 +90,9 @@ function BillingCheckoutContent() {
         }
 
         fetch("/api/billing/plans")
-            .then((r) => r.json())
-            .then((data: { plans?: Plan[] }) => {
-                const found = data.plans?.find((p) => p.id === planId);
+            .then((r) => r.json() as any)
+            .then((data: any) => {
+                const found = data.plans?.find((p: any) => p.id === planId);
                 if (found) {
                     setPlan(found);
                 } else {
@@ -180,12 +180,12 @@ function BillingCheckoutContent() {
                 }
 
                 if (!orderRes.ok) {
-                    const errData = (await orderRes.json()) as { error?: string };
+                    const errData = (await orderRes.json() as any) as { error?: string };
                     setFormError(errData.error ?? "Failed to create order. Please try again.");
                     return;
                 }
 
-                const data = (await orderRes.json()) as CreateOrderResponse;
+                const data = (await orderRes.json() as any) as CreateOrderResponse;
 
                 if (data.provider === "razorpay") {
                     await loadRazorpayScript();

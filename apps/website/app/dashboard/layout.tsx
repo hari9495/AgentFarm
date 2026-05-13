@@ -1,3 +1,5 @@
+﻿export const runtime = 'edge'
+
 import AppSidebar from "@/components/layout/AppSidebar";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -22,7 +24,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         redirect("/login");
     }
 
-    const user = getSessionUser(token);
+    const user = await getSessionUser(token);
     if (!user) {
         redirect("/login");
     }

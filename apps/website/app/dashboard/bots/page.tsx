@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState, useCallback } from "react";
 import {
@@ -99,7 +99,7 @@ export default function DashboardBotsPage() {
         setLoading(true);
         try {
             const res = await fetch("/api/admin/bots");
-            const data = await res.json();
+            const data = await res.json() as any;
             if (res.ok) { setBots(data.bots ?? []); setLastRefresh(new Date()); }
             else setError(data.error ?? "Failed to load");
         } catch {

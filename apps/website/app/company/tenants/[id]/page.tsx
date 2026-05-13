@@ -102,7 +102,7 @@ export default function TenantDetailPage() {
                     router.replace("/login");
                     return;
                 }
-                const data = await res.json().catch(() => null);
+                const data = await res.json().catch(() => null) as any;
                 if (!data?.isCompanyOperator) {
                     router.replace("/");
                     return;
@@ -124,7 +124,7 @@ export default function TenantDetailPage() {
             setError(null);
             try {
                 const res = await fetch(`/api/superadmin/tenants/${params.id}`, { cache: "no-store" });
-                const data = await res.json();
+                const data = await res.json() as any;
                 if (!res.ok) { setError(data.error ?? "Failed to load tenant"); return; }
                 setTenant(data.tenant ?? null);
                 setFleet(data.fleet ?? []);
