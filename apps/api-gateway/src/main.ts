@@ -13,6 +13,8 @@ import { buildSessionToken, verifySessionToken, type SessionPayload } from './li
 import { prisma } from './lib/db.js';
 import { checkSubscription } from './lib/subscription-guard.js';
 import { registerAuthRoutes } from './routes/auth.js';
+import { registerPortalAuthRoutes } from './routes/portal-auth.js';
+import { registerPortalDataRoutes } from './routes/portal-data.js';
 import { parseApprovalPacket } from './lib/approval-packet.js';
 import { registerConnectorAuthRoutes } from './routes/connector-auth.js';
 import { registerMcpRegistryRoutes } from './routes/mcp-registry.js';
@@ -448,12 +450,25 @@ app.get('/v1/auth/dev-session', async (_request, reply) => {
 });
 
 // Public paths that bypass auth checks (still rate-limited)
-const PUBLIC_PATHS = new Set(['/health', '/status', '/auth/signup', '/auth/login', '/auth/internal-login']);
+const PUBLIC_PATHS = new Set([
+    '/health',
+    '/status',
+    '/auth/signup',
+    '/auth/login',
+    '/auth/internal-login',
+    // Portal auth routes have their own session mechanism
+    '/portal/auth/signup',
+    '/portal/auth/login',
+    '/portal/auth/logout',
+    '/portal/auth/me',
+]);
 const isPublicPath = (url: string): boolean => {
     const path = url.split('?')[0] ?? '';
     return (
         PUBLIC_PATHS.has(path) ||
         path === '/auth/logout' ||
+        // All /portal/* routes use portal sessions — not operator sessions
+        path.startsWith('/portal/') ||
         // Webhook event catalog is public — consumers read it without credentials
         path.startsWith('/v1/webhooks/events')
     );
@@ -568,6 +583,8 @@ app.addHook('preHandler', async (request, reply) => {
 
 // Register auth routes (signup, login, logout)
 await registerAuthRoutes(app);
+await registerPortalAuthRoutes(app);
+await registerPortalDataRoutes(app);
 await registerConnectorAuthRoutes(app, {
     getSession: (request) => readSession(request),
     secretStore: createDefaultSecretStore(),

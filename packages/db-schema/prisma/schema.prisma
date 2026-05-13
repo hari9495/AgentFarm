@@ -181,6 +181,7 @@ model Tenant {
   chatSessions       ChatSession[]
   orchestrationRuns  OrchestrationRun[]
   marketplaceInstalls MarketplaceInstall[]
+  portalAccounts     TenantPortalAccount[]
 }
 
 model TenantUser {
@@ -483,6 +484,8 @@ model TaskExecutionRecord {
   modelTier        String?
   latencyMs        Int
   outcome          TaskExecutionOutcome
+  parentTaskId     String?
+  taskDepth        Int                  @default(0)
   executedAt       DateTime
   createdAt        DateTime             @default(now())
 
@@ -1642,13 +1645,16 @@ model TaskQueueEntry {
   botId        String?
   priority     String    @default("normal") // high | normal | low
   status       String    @default("pending") // pending | running | done | cancelled | failed
-  payload      Json
-  errorMessage String?
-  enqueuedAt   DateTime  @default(now())
-  createdAt    DateTime  @default(now())
-  startedAt    DateTime?
-  completedAt  DateTime?
-  updatedAt    DateTime  @updatedAt
+  payload       Json
+  errorMessage  String?
+  parentTaskId  String?
+  dependsOn     String[]
+  dependencyMet Boolean  @default(true)
+  enqueuedAt    DateTime @default(now())
+  createdAt     DateTime @default(now())
+  startedAt     DateTime?
+  completedAt   DateTime?
+  updatedAt     DateTime @updatedAt
 
   @@index([tenantId])
   @@index([tenantId, status])
@@ -1746,4 +1752,41 @@ enum AgentMessageStatus {
   READ
   REPLIED
   EXPIRED
+}
+
+model TenantPortalAccount {
+  id            String              @id @default(cuid())
+  tenantId      String
+  email         String
+  passwordHash  String
+  displayName   String?
+  role          TenantPortalRole    @default(VIEWER)
+  isActive      Boolean             @default(true)
+  lastLoginAt   DateTime?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  tenant        Tenant              @relation(fields: [tenantId], references: [id])
+  sessions      TenantPortalSession[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+}
+
+model TenantPortalSession {
+  id            String              @id @default(cuid())
+  accountId     String
+  tenantId      String
+  token         String              @unique
+  expiresAt     DateTime
+  createdAt     DateTime            @default(now())
+  lastSeenAt    DateTime            @default(now())
+
+  account       TenantPortalAccount @relation(fields: [accountId], references: [id])
+}
+
+enum TenantPortalRole {
+  VIEWER
+  MANAGER
+  ADMIN
 }

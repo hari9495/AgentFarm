@@ -264,3 +264,195 @@ test('DELETE /v1/task-queue/:entryId — returns 409 for running entry', async (
         await app.close();
     }
 });
+
+// ─── Dependency readiness gate tests ──────────────────────────────────────────
+
+test('POST /v1/task-queue — dependsOn with pending dep stores dependencyMet=false', async () => {
+    clearQueue();
+    const session = buildSession('operator');
+    let capturedData: Record<string, unknown> | null = null;
+    const app = Fastify({ logger: false });
+    try {
+        await registerTaskQueueRoutes(app, {
+            getSession: () => session,
+            prisma: buildPrismaStub({
+                create: async (args: unknown) => {
+                    capturedData = (args as { data: Record<string, unknown> }).data;
+                    return { id: 'entry_1', tenantId: session.tenantId, workspaceId: 'ws_1', priority: 'normal', status: 'pending' };
+                },
+                findMany: async () => [{ id: 'dep_1', tenantId: session.tenantId, workspaceId: 'ws_1', priority: 'normal', status: 'pending' }],
+            }) as never,
+        });
+
+        const res = await app.inject({
+            method: 'POST',
+            url: '/v1/task-queue',
+            payload: { workspaceId: 'ws_1', payload: { task: 'run' }, dependsOn: ['dep_1'] },
+        });
+
+        assert.equal(res.statusCode, 202);
+        assert.equal(capturedData?.['dependencyMet'], false);
+    } finally {
+        await app.close();
+    }
+});
+
+test('POST /v1/task-queue — dependsOn with done dep stores dependencyMet=true', async () => {
+    clearQueue();
+    const session = buildSession('operator');
+    let capturedData: Record<string, unknown> | null = null;
+    const app = Fastify({ logger: false });
+    try {
+        await registerTaskQueueRoutes(app, {
+            getSession: () => session,
+            prisma: buildPrismaStub({
+                create: async (args: unknown) => {
+                    capturedData = (args as { data: Record<string, unknown> }).data;
+                    return { id: 'entry_1', tenantId: session.tenantId, workspaceId: 'ws_1', priority: 'normal', status: 'pending' };
+                },
+                findMany: async () => [{ id: 'dep_1', tenantId: session.tenantId, workspaceId: 'ws_1', priority: 'normal', status: 'done' }],
+            }) as never,
+        });
+
+        const res = await app.inject({
+            method: 'POST',
+            url: '/v1/task-queue',
+            payload: { workspaceId: 'ws_1', payload: { task: 'run' }, dependsOn: ['dep_1'] },
+        });
+
+        assert.equal(res.statusCode, 202);
+        assert.equal(capturedData?.['dependencyMet'], true);
+    } finally {
+        await app.close();
+    }
+});
+
+// ─── Complete endpoint tests ───────────────────────────────────────────────────
+
+test('POST /v1/task-queue/:entryId/complete — 400 for invalid outcome', async () => {
+    clearQueue();
+    const session = buildSession('operator');
+    const app = Fastify({ logger: false });
+    try {
+        await registerTaskQueueRoutes(app, {
+            getSession: () => session,
+            prisma: buildPrismaStub() as never,
+        });
+
+        const res = await app.inject({
+            method: 'POST',
+            url: '/v1/task-queue/entry_1/complete',
+            payload: { outcome: 'unknown' },
+        });
+
+        assert.equal(res.statusCode, 400);
+        assert.equal(res.json<{ error: string }>().error, 'invalid_input');
+    } finally {
+        await app.close();
+    }
+});
+
+test('POST /v1/task-queue/:entryId/complete — 404 when entry not found', async () => {
+    clearQueue();
+    const session = buildSession('operator');
+    const app = Fastify({ logger: false });
+    try {
+        await registerTaskQueueRoutes(app, {
+            getSession: () => session,
+            prisma: buildPrismaStub({ findFirst: async () => null }) as never,
+        });
+
+        const res = await app.inject({
+            method: 'POST',
+            url: '/v1/task-queue/nonexistent/complete',
+            payload: { outcome: 'success' },
+        });
+
+        assert.equal(res.statusCode, 404);
+        assert.equal(res.json<{ error: string }>().error, 'not_found');
+    } finally {
+        await app.close();
+    }
+});
+
+test('POST /v1/task-queue/:entryId/complete — marks entry done and promotes unblocked dependents', async () => {
+    clearQueue();
+    const session = buildSession('operator');
+
+    const theEntry = { id: 'entry_1', tenantId: session.tenantId, workspaceId: 'ws_1', priority: 'normal', status: 'pending' };
+    const dependent = { id: 'dep_entry_1', tenantId: session.tenantId, workspaceId: 'ws_1', priority: 'normal', status: 'pending', dependsOn: ['entry_1'], dependencyMet: false };
+    const updatedCalls: string[] = [];
+
+    let findManyCallCount = 0;
+    const app = Fastify({ logger: false });
+    try {
+        await registerTaskQueueRoutes(app, {
+            getSession: () => session,
+            prisma: buildPrismaStub({
+                findFirst: async () => theEntry,
+                findMany: async () => {
+                    findManyCallCount++;
+                    if (findManyCallCount === 1) {
+                        // First call: find dependents blocked on entry_1
+                        return [dependent] as never;
+                    }
+                    // Second call: checkDependenciesMet for dep_entry_1's dep list
+                    return [{ id: 'entry_1', status: 'done', tenantId: session.tenantId, workspaceId: 'ws_1', priority: 'normal' }];
+                },
+                update: async (args: unknown) => {
+                    const where = (args as { where: { id: string } }).where;
+                    updatedCalls.push(where.id);
+                    return { ...theEntry, status: 'done' };
+                },
+            }) as never,
+        });
+
+        const res = await app.inject({
+            method: 'POST',
+            url: '/v1/task-queue/entry_1/complete',
+            payload: { outcome: 'success' },
+        });
+
+        assert.equal(res.statusCode, 200);
+        const body = res.json<{ updated: string; promoted: string[] }>();
+        assert.equal(body.updated, 'entry_1');
+        assert.deepEqual(body.promoted, ['dep_entry_1']);
+        assert.ok(updatedCalls.includes('entry_1'), 'should update the completed entry');
+        assert.ok(updatedCalls.includes('dep_entry_1'), 'should promote the dependent');
+    } finally {
+        await app.close();
+    }
+});
+
+test('POST /v1/task-queue/:entryId/complete — marks entry failed and no promotion when deps still blocked', async () => {
+    clearQueue();
+    const session = buildSession('operator');
+
+    const theEntry = { id: 'entry_1', tenantId: session.tenantId, workspaceId: 'ws_1', priority: 'normal', status: 'pending' };
+    const promoted: string[] = [];
+
+    const app = Fastify({ logger: false });
+    try {
+        await registerTaskQueueRoutes(app, {
+            getSession: () => session,
+            prisma: buildPrismaStub({
+                findFirst: async () => theEntry,
+                findMany: async () => [],  // no dependents blocked on this entry
+                update: async () => ({ ...theEntry, status: 'failed' }),
+            }) as never,
+        });
+
+        const res = await app.inject({
+            method: 'POST',
+            url: '/v1/task-queue/entry_1/complete',
+            payload: { outcome: 'failed' },
+        });
+
+        assert.equal(res.statusCode, 200);
+        const body = res.json<{ updated: string; promoted: string[] }>();
+        assert.equal(body.updated, 'entry_1');
+        assert.deepEqual(body.promoted, promoted);
+    } finally {
+        await app.close();
+    }
+});

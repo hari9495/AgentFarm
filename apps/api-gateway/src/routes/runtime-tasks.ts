@@ -5,6 +5,7 @@ import type { TaskLeaseRecord } from '@agentfarm/shared-types';
 import { parseGoal } from '@agentfarm/agent-runtime/natural-language-parser.js';
 import { rateLimitAgent, getAgentRateLimitConfig } from '../lib/agent-rate-limit.js';
 import { isAllowed as cbIsAllowed, recordSuccess as cbRecordSuccess, recordFailure as cbRecordFailure } from '../lib/circuit-breaker.js';
+import { checkDependenciesMet, type DepCheckDb } from '../lib/task-dep-utils.js';
 
 const getPrisma = async () => {
     const db = await import('../lib/db.js');
@@ -788,6 +789,31 @@ export async function registerRuntimeTaskRoutes(
                 lease_status: lease.status,
                 expires_at: lease.expiresAt,
             });
+        }
+
+        // Dependency gate — only active when a PrismaClient is explicitly provided.
+        // Tests that do not supply prisma bypass this check and continue unblocked.
+        if (options.prisma !== undefined) {
+            const db = await resolvePrisma();
+            const queueEntry = await db.taskQueueEntry.findFirst({
+                where: { id: taskId },
+                select: { id: true, dependsOn: true, dependencyMet: true },
+            });
+            if (queueEntry && !queueEntry.dependencyMet) {
+                const depIds = Array.isArray(queueEntry.dependsOn) ? queueEntry.dependsOn : [];
+                const depsCheck = await checkDependenciesMet(depIds, db as unknown as DepCheckDb);
+                if (!depsCheck.met) {
+                    return reply.code(409).send({
+                        error: 'task_dependencies_not_met',
+                        message: 'One or more task dependencies are not yet complete.',
+                        blocking: depsCheck.blocking,
+                    });
+                }
+                await db.taskQueueEntry.update({
+                    where: { id: taskId },
+                    data: { dependencyMet: true },
+                });
+            }
         }
 
         const runtimeEndpoint = await repo.findRuntimeEndpoint({

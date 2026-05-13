@@ -476,3 +476,96 @@ test('GET /v1/workspaces/:workspaceId/tasks returns 401 when no session', async 
         await app.close();
     }
 });
+
+// ─── Dispatch dependency gate tests ───────────────────────────────────────────
+
+const baseRepo = {
+    async findRuntimeEndpoint() { return 'http://runtime.bot.local'; },
+    async createAuditEvent() { return; },
+    async createActionRecord() { return; },
+};
+
+test('dispatch returns 409 task_dependencies_not_met when deps are still running', async () => {
+    const app = Fastify();
+    await registerRuntimeTaskRoutes(app, {
+        getSession: () => internalSession,
+        now: () => 1_700_000_000_000,
+        repo: baseRepo,
+        dispatcher: async () => ({ ok: true, statusCode: 202 }),
+        prisma: {
+            agentRateLimit: { findUnique: async () => null },
+            taskQueueEntry: {
+                findFirst: async () => ({ id: 'task_blocked_1', dependsOn: ['dep_1'], dependencyMet: false }),
+                findMany: async () => [{ id: 'dep_1', status: 'running' }],
+                update: async () => ({ id: 'task_blocked_1' }),
+            },
+        } as never,
+    });
+
+    try {
+        const claim = await app.inject({
+            method: 'POST',
+            url: '/v1/workspaces/ws_1/runtime/tasks/claim',
+            payload: { bot_id: 'bot_dep_1', task_id: 'task_blocked_1', idempotency_key: 'idem_blocked_1' },
+        });
+        assert.equal(claim.statusCode, 200);
+        const { claim_token } = claim.json() as { claim_token: string };
+
+        const dispatch = await app.inject({
+            method: 'POST',
+            url: '/v1/workspaces/ws_1/runtime/tasks/task_blocked_1/dispatch',
+            payload: { bot_id: 'bot_dep_1', claim_token, payload: {} },
+        });
+
+        assert.equal(dispatch.statusCode, 409);
+        const body = dispatch.json<{ error: string; blocking: string[] }>();
+        assert.equal(body.error, 'task_dependencies_not_met');
+        assert.deepEqual(body.blocking, ['dep_1']);
+    } finally {
+        await app.close();
+    }
+});
+
+test('dispatch proceeds normally when dependency gate passes (dependencyMet=true)', async () => {
+    const dispatchCalls: string[] = [];
+    const app = Fastify();
+    await registerRuntimeTaskRoutes(app, {
+        getSession: () => internalSession,
+        now: () => 1_700_000_000_000,
+        repo: baseRepo,
+        dispatcher: async (input) => {
+            dispatchCalls.push(input.taskId);
+            return { ok: true, statusCode: 202 };
+        },
+        prisma: {
+            agentRateLimit: { findUnique: async () => null },
+            taskQueueEntry: {
+                findFirst: async () => ({ id: 'task_ready_1', dependsOn: [], dependencyMet: true }),
+                findMany: async () => [],
+                update: async () => ({ id: 'task_ready_1' }),
+            },
+        } as never,
+    });
+
+    try {
+        const claim = await app.inject({
+            method: 'POST',
+            url: '/v1/workspaces/ws_1/runtime/tasks/claim',
+            payload: { bot_id: 'bot_dep_2', task_id: 'task_ready_1', idempotency_key: 'idem_ready_1' },
+        });
+        assert.equal(claim.statusCode, 200);
+        const { claim_token } = claim.json() as { claim_token: string };
+
+        const dispatch = await app.inject({
+            method: 'POST',
+            url: '/v1/workspaces/ws_1/runtime/tasks/task_ready_1/dispatch',
+            payload: { bot_id: 'bot_dep_2', claim_token, payload: {} },
+        });
+
+        assert.equal(dispatch.statusCode, 202);
+        assert.equal(dispatchCalls.length, 1);
+        assert.equal(dispatchCalls[0], 'task_ready_1');
+    } finally {
+        await app.close();
+    }
+});

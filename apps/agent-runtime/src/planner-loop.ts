@@ -21,10 +21,12 @@ export async function runTask(
     let allResults: StepResult[] = [];
     let replansUsed = 0;
     let context: string | undefined;
+    let depGraphUsed = false;
 
     for (let attempt = 0; attempt <= maxReplans; attempt++) {
         const plan = await planTask(task, context);
         const results = await executePlan(plan, tenantId, agentId);
+        depGraphUsed ||= plan.steps.some((s) => (s.depends_on?.length ?? 0) > 0);
 
         allResults = [...allResults, ...results];
 
@@ -36,6 +38,7 @@ export async function runTask(
                 final_results: allResults,
                 replans_used: replansUsed,
                 goal: plan.goal,
+                depGraphUsed,
             };
         }
 
@@ -51,5 +54,6 @@ export async function runTask(
         final_results: allResults,
         replans_used: replansUsed,
         goal: task,
+        depGraphUsed,
     };
 }

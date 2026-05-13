@@ -2090,3 +2090,65 @@ export interface AgentDispatchResult {
   error?: string;
 }
 
+// ── Task dependency graph types ────────────────────────────────────────────
+
+export type TaskDepStatus =
+  | 'pending'
+  | 'running'
+  | 'done'
+  | 'failed'
+  | 'blocked'   // has unmet dependencies
+
+export interface TaskDependencyNode {
+  taskId: string
+  label?: string                       // human-readable name
+  status: TaskDepStatus
+  dependsOn: string[]                     // taskIds this node depends on
+  dependents: string[]                    // taskIds that depend on this
+  depth: number                       // 0 = root task
+  metadata?: Record<string, unknown>
+}
+
+export interface TaskDependencyGraph {
+  nodes: TaskDependencyNode[]
+  rootIds: string[]                       // nodes with no dependencies
+  leafIds: string[]                       // nodes with no dependents
+}
+
+export interface TaskDependencyPhase {
+  phaseIndex: number
+  taskIds: string[]                    // tasks that can run in parallel
+  status: TaskDepStatus
+}
+
+export interface TaskEnqueueRequest {
+  tenantId: string
+  workspaceId: string
+  botId?: string
+  priority?: 'high' | 'normal' | 'low'
+  payload: Record<string, unknown>
+  parentTaskId?: string
+  dependsOn?: string[]
+}
+
+// ── Tenant portal types ───────────────────────────────────────────────────────
+
+export type TenantPortalRole = 'VIEWER' | 'MANAGER' | 'ADMIN'
+
+export interface TenantPortalSessionPayload {
+  accountId: string
+  tenantId: string
+  email: string
+  displayName: string | null
+  role: TenantPortalRole
+}
+
+export interface TenantPortalLoginResponse {
+  accountId: string
+  tenantId: string
+  email: string
+  displayName: string | null
+  role: TenantPortalRole
+  expiresAt: string
+}
+

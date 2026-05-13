@@ -26,4 +26,7 @@ export type TaskRunResult = {
     final_results: StepResult[];
     replans_used: number;
     goal: string;
+    depGraphUsed?: boolean;
+    phasesExecuted?: number;
+    parallelSteps?: number;
 };

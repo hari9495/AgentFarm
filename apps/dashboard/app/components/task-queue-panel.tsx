@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import TaskDagPanel from './task-dag-panel';
 
 type TaskQueuePanelProps = { tenantId: string };
 
@@ -63,6 +64,7 @@ export default function TaskQueuePanel({ tenantId: _tenantId }: TaskQueuePanelPr
     const [error, setError] = useState<string | null>(null);
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
     const [cancelling, setCancelling] = useState<string | null>(null);
+    const [dagExpanded, setDagExpanded] = useState(false);
 
     const fetchStatus = useCallback(async () => {
         try {
@@ -333,6 +335,34 @@ export default function TaskQueuePanel({ tenantId: _tenantId }: TaskQueuePanelPr
                             })}
                     </tbody>
                 </table>
+            </div>
+
+            {/* ── Dependency graph (collapsible) ─────────────────────────── */}
+            <div style={{ marginTop: '1.5rem', borderTop: '1px solid var(--line, #e2e8f0)', paddingTop: '1rem' }}>
+                <button
+                    onClick={() => setDagExpanded((v) => !v)}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.4rem',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: '0.875rem',
+                        fontWeight: 600,
+                        color: 'var(--ink, #0f172a)',
+                        padding: 0,
+                        marginBottom: dagExpanded ? '1rem' : 0,
+                    }}
+                >
+                    <span style={{ fontSize: '0.7rem', transition: 'transform 0.15s', transform: dagExpanded ? 'rotate(90deg)' : 'none' }}>
+                        ▶
+                    </span>
+                    Dependency graph
+                </button>
+                {dagExpanded && (
+                    <TaskDagPanel taskIds={entries.map((e) => e.id)} />
+                )}
             </div>
         </section>
     );

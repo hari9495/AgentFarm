@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 
 const COOKIE_NAME = "agentfarm_session";
+const PORTAL_SESSION_COOKIE = "portal_session";
 
 /**
  * Maintenance mode: set NEXT_PUBLIC_MAINTENANCE_MODE=true in the environment
@@ -38,6 +39,33 @@ const PROTECTED_PREFIXES = [
  */
 const PUBLIC_PREFIXES = ["/api/auth"];
 
+/**
+ * Portal paths that are always public (no portal_session required).
+ */
+const PORTAL_PUBLIC_PATHS = new Set(["/portal/login"]);
+
+/**
+ * Portal session: pages under /portal/* (except /portal/login and /api/portal/auth/*)
+ * require a portal_session cookie.  Full validation is done server-side; middleware
+ * does a fast presence-only check at the edge.
+ */
+function isPortalProtected(pathname: string): boolean {
+    if (PORTAL_PUBLIC_PATHS.has(pathname)) return false;
+    if (pathname.startsWith("/api/portal/")) return false;
+    return pathname === "/portal" || pathname.startsWith("/portal/");
+}
+
+function hasPortalCookie(request: NextRequest): boolean {
+    const cookieHeader = request.headers.get("cookie");
+    if (!cookieHeader) return false;
+    return cookieHeader.split(";").some((part) => {
+        const trimmed = part.trim();
+        if (!trimmed.startsWith(`${PORTAL_SESSION_COOKIE}=`)) return false;
+        const value = trimmed.slice(PORTAL_SESSION_COOKIE.length + 1);
+        return value.length > 0;
+    });
+}
+
 function isProtected(pathname: string): boolean {
     if (PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
         return false;
@@ -70,6 +98,16 @@ export function middleware(request: NextRequest): NextResponse {
         const maintenanceUrl = request.nextUrl.clone();
         maintenanceUrl.pathname = "/maintenance";
         return NextResponse.redirect(maintenanceUrl);
+    }
+
+    // Portal session protection: check before operator session check.
+    if (isPortalProtected(pathname)) {
+        if (hasPortalCookie(request)) {
+            return NextResponse.next();
+        }
+        const loginUrl = request.nextUrl.clone();
+        loginUrl.pathname = "/portal/login";
+        return NextResponse.redirect(loginUrl);
     }
 
     if (!isProtected(pathname)) {
