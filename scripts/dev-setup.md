@@ -100,7 +100,7 @@ pnpm --filter @agentfarm/website test:evidence         # Task 6.1/6.2 evidence c
 pnpm --filter @agentfarm/website test:deployments
 pnpm --filter @agentfarm/website test:deployments:ui
 
-# Full quality gate (47 checks — 46 pass, 1 skipped: DB smoke)
+# Full quality gate (46 checks — 45 pass, 1 skipped: DB smoke)
 pnpm quality:gate
 
 # E2E smoke lane

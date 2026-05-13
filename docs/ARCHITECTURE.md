@@ -483,11 +483,12 @@ Full reference in [TESTING.md](TESTING.md).
 
 | Package | Framework | Tests | Command |
 |---|---|---|---|
-| `@agentfarm/agent-runtime` | `node:test` | 785+ | `pnpm --filter @agentfarm/agent-runtime test` |
-| `@agentfarm/api-gateway` | `node:test` | 450 | `pnpm --filter @agentfarm/api-gateway test` |
+| `@agentfarm/agent-runtime` | `node:test` | 906 | `pnpm --filter @agentfarm/agent-runtime test` |
+| `@agentfarm/api-gateway` | `node:test` | 898 | `pnpm --filter @agentfarm/api-gateway test` |
 | `@agentfarm/dashboard` | `node:test` | 118 | `pnpm --filter @agentfarm/dashboard test` |
 | `@agentfarm/website` | `node:test` | 118 | `pnpm --filter @agentfarm/website test` |
 | `@agentfarm/orchestrator` | `node:test` | 62 | `pnpm --filter @agentfarm/orchestrator test` |
+| `@agentfarm/trigger-service` | `node:test` | 49 | `pnpm --filter @agentfarm/trigger-service test` |
 | All other services | `node:test` | 200+ | per-package |
 
 **Key patterns:**

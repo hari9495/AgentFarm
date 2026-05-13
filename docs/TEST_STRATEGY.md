@@ -52,7 +52,7 @@ pnpm quality:gate
 | Package | Test Count | Notes |
 |---|---|---|
 | `apps/api-gateway` | **450** | Largest test suite; includes route, service, lib, and integration tests |
-| `apps/agent-runtime` | **785+** | Highest coverage; full execution, LLM, memory, skills, desktop, voice, etc. |
+| `apps/agent-runtime` | **906** | Highest coverage; full execution, LLM, memory, skills, desktop, voice, etc. |
 | `apps/dashboard` | **118** | Component logic, proxy handlers, pagination, navigation |
 | `apps/website` | **118** | Auth flow, provisioning, deployments, permissions, session |
 | `apps/orchestrator` | **62** | GOAP planner, parallel task manager, scheduler, state store |
@@ -86,7 +86,7 @@ Exceptions:
 
 ## Key Test Areas by Package
 
-### apps/api-gateway (450 tests)
+### apps/api-gateway (898 tests)
 
 | Area | Files | Focus |
 |---|---|---|
@@ -132,7 +132,7 @@ Exceptions:
 | Sprint integration | `sprint3-integration.test.ts`, `sprint4-integration.test.ts` | Full sprint regression |
 | API routes | `api-routes.test.ts` | All routes registered correctly |
 
-### apps/agent-runtime (785+ tests)
+### apps/agent-runtime (906 tests)
 
 | Area | Files | Focus |
 |---|---|---|

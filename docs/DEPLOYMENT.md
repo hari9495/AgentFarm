@@ -34,7 +34,7 @@ cp .env.example .env
 | `API_SESSION_SECRET` | api-gateway | ✅ | `agentfarm-dev-secret` | HMAC-SHA256 signing secret for session tokens |
 | `API_GATEWAY_PORT` | api-gateway | ❌ | `3000` | HTTP port for api-gateway |
 | `API_GATEWAY_URL` | agent-runtime, trigger-service | ✅ | — | Base URL for api-gateway (e.g. `http://localhost:3000`) |
-| `AGENT_RUNTIME_PORT` | agent-runtime | ❌ | `3003` | HTTP port for agent-runtime |
+| `AGENT_RUNTIME_PORT` | agent-runtime | ❌ | `4000` | HTTP port for agent-runtime |
 | `TRIGGER_SERVICE_PORT` | trigger-service | ❌ | — | HTTP port for trigger-service |
 | `OPS_MONITORING_TOKEN` | api-gateway | ✅ | — | Secret for `x-ops-token` monitoring header |
 | `LLM_PROVIDER` | agent-runtime | ❌ | `auto` | LLM provider: `openai`, `azure_openai`, `anthropic`, `google`, `xai`, `mistral`, `together`, `github_models`, `auto` |
@@ -132,7 +132,7 @@ pnpm --filter @agentfarm/website dev
 # Dashboard (port 3001)
 pnpm --filter @agentfarm/dashboard dev
 
-# Agent Runtime (port 3003)
+# Agent Runtime (port 4000)
 pnpm --filter @agentfarm/agent-runtime dev
 
 # Trigger Service (port: TRIGGER_SERVICE_PORT)
@@ -186,7 +186,7 @@ Run the full quality gate before any release:
 pnpm quality:gate
 ```
 
-This executes 47 checks including:
+This executes 46 checks including:
 - TypeScript compilation across all packages
 - `pnpm test` across all packages
 - `pnpm lint` across all packages
@@ -221,7 +221,7 @@ pnpm build           # Full production build
 | `api-gateway` | 3000 | `API_GATEWAY_PORT` |
 | `dashboard` | 3001 | — |
 | `website` | 3002 | — |
-| `agent-runtime` | 3003 | `AGENT_RUNTIME_PORT` |
+| `agent-runtime` | 4000 | `AGENT_RUNTIME_PORT` |
 | `trigger-service` | — | `TRIGGER_SERVICE_PORT` |
 | `postgres` | 5432 | (in DATABASE_URL) |
 | `redis` | 6379 | (in REDIS_URL) |

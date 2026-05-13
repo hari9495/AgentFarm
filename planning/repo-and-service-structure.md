@@ -79,7 +79,7 @@ agentfarm/
 │   └── runtime-plane/           # Azure Bicep + cloud-init for VM provisioning
 │
 ├── scripts/                     # Developer utility scripts
-│   ├── quality-gate.mjs         # CI orchestrator — 51 checks
+│   ├── quality-gate.mjs         # CI orchestrator — 46 checks
 │   ├── graphify.mjs             # Monorepo package dependency graph (Mermaid/DOT/JSON)
 │   ├── e2e-smoke.mjs            # E2E smoke tests (dashboard + website)
 │   ├── coverage-threshold-check.mjs  # Coverage summary validator
@@ -105,7 +105,7 @@ agentfarm/
 - Responsibilities: Authentication, authorization, rate limiting, request routing, SSE task-stream.
 - Port: 3000 (local), proxied via Azure Load Balancer in production.
 - Key routes: auth, approvals, audit, connectors, budget, roles, snapshots, plugins, LLM config, governance, task lease, provisioning workers, SSE `/sse/tasks/:botId`.
-- Tests: 351 passing.
+- Tests: 898 passing (Sprint 7).
 
 ### apps/dashboard
 - Framework: Next.js (App Router) + Tailwind CSS
@@ -123,7 +123,7 @@ agentfarm/
 - Not deployed to control plane. Deployed as Docker image pulled to per-tenant VM.
 - Config source: Environment variables injected at container start by bootstrap script.
 - Health endpoint: /health (used by provisioning health-check loop).
-- Tests: 239 passing.
+- Tests: 906 passing (Sprint 7).
 
 ### apps/orchestrator
 - Runtime: Paperclip multi-agent workflow coordinator.
@@ -305,12 +305,12 @@ agentfarm/
 - Enums: PascalCase. Example: TenantStatus, BotStatus.
 - Constants: SCREAMING_SNAKE_CASE. Example: QUEUE_PROVISIONING.
 
-### NestJS
-- Module file: [domain].module.ts
-- Service file: [domain].service.ts
-- Controller file: [domain].controller.ts
-- Consumer file: [domain].consumer.ts
-- Each domain lives in a folder matching the module name.
+### Fastify (apps/api-gateway, apps/agent-runtime, apps/orchestrator, apps/trigger-service)
+- Server file: [app]/src/server.ts
+- Route files: [app]/src/routes/[resource].ts
+- Lib/utility files: [app]/src/lib/[feature].ts
+- Test files: co-located [feature].test.ts next to the source file.
+- Each route domain lives in a routes/ folder.
 
 ### Database
 - Table names: snake_case plural. Example: tenants, provisioning_jobs.

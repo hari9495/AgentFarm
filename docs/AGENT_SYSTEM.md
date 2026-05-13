@@ -8,7 +8,7 @@ Full reference for the agent execution pipeline in `apps/agent-runtime`.
 
 ## Overview
 
-The agent runtime is a Fastify v5 server (port 3003) that receives task envelopes, classifies the intended action via LLM, executes that action, manages approvals, memory, escalation, and post-task closeout. Each agent instance is bound to a single workspace and a single role.
+The agent runtime is a Fastify v5 server (port 4000) that receives task envelopes, classifies the intended action via LLM, executes that action, manages approvals, memory, escalation, and post-task closeout. Each agent instance is bound to a single workspace and a single role.
 
 **Core pipeline per task:**
 1. Pre-task scout (codebase context gathering)

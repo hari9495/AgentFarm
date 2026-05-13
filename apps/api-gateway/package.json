@@ -18,6 +18,7 @@
         "@agentfarm/agent-runtime": "workspace:*",
         "@agentfarm/auth-utils": "workspace:*",
         "@agentfarm/connector-contracts": "workspace:*",
+        "@agentfarm/crm-adapters": "workspace:*",
         "@agentfarm/memory-service": "workspace:*",
         "@agentfarm/observability": "workspace:*",
         "@agentfarm/queue-contracts": "workspace:*",

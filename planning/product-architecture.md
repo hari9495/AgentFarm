@@ -374,7 +374,7 @@ This table defines final tool choices by rollout stage.
 | Must-have | OpenTelemetry + Prometheus + Grafana + Loki + Tempo | Keep | End-to-end observability and audit evidence support | Required for ops and gate metrics |
 | Must-have | OPA (Open Policy Agent) | Keep | Policy-as-code for approval and risk controls | Connect to approval service decisions |
 | Must-have | Vault (or equivalent) | Keep | Secret management and rotation | Required for connector credentials |
-| Must-have | Next.js + NestJS + TypeScript | Keep | Consistent full-stack developer velocity | Aligns with current architecture baseline |
+| Must-have | Next.js + Fastify + TypeScript | Keep | Consistent full-stack developer velocity | Aligns with current architecture baseline |
 | Nice-to-have | awesome-openclaw-agents | Conditional keep | Fast template bootstrapping and inspiration | Treat as template source only |
 | Nice-to-have | awesome-openclaw-skills | Conditional keep | Large skill discovery catalog | Curated intake only; security review required |
 | Nice-to-have | Composio | Optional | Faster OAuth and third-party app integrations | Add if connector velocity becomes bottleneck |
@@ -602,8 +602,8 @@ Diagram notes:
 - TypeScript on Node.js LTS.
 - Monorepo with pnpm workspaces.
 2. Backend framework
-- NestJS for modular services and consistent dependency injection.
-- Fastify adapter for API performance.
+- Fastify v5 for all backend services (api-gateway, agent-runtime, orchestrator, trigger-service).
+- Lightweight, fast HTTP layer with plugin-based architecture.
 3. Frontend framework
 - Next.js (App Router) with TypeScript.
 - Tailwind CSS for fast UI iteration.

@@ -93,6 +93,9 @@ importers:
       '@agentfarm/connector-contracts':
         specifier: workspace:*
         version: link:../../packages/connector-contracts
+      '@agentfarm/crm-adapters':
+        specifier: workspace:*
+        version: link:../../packages/crm-service
       '@agentfarm/memory-service':
         specifier: workspace:*
         version: link:../../services/memory-service

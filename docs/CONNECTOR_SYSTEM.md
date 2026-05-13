@@ -8,7 +8,7 @@ Full reference for the connector gateway in `services/connector-gateway`.
 
 ## Overview
 
-The connector gateway manages OAuth flows, token storage, health monitoring, and action execution for all third-party integrations. It sits between the API gateway and external services, providing a unified interface for all 9+ connectors.
+The connector gateway manages OAuth flows, token storage, health monitoring, and action execution for all third-party integrations. It sits between the API gateway and external services, providing a unified interface for all 12 connectors.
 
 **Key Design Principles:**
 - OAuth state nonce stored in `ConnectorAuthSession` — expires in 10 minutes
@@ -23,16 +23,17 @@ The connector gateway manages OAuth flows, token storage, health monitoring, and
 | Connector | Type | Auth Mode | Status |
 |---|---|---|---|
 | GitHub | Code hosting | PAT or OAuth App | ✅ Production |
-| Slack | Messaging | OAuth 2.0 | ✅ Production |
+| GitLab | Code hosting | OAuth 2.0 | ✅ Production |
+| Jira | Issue tracker | OAuth 2.0 | ✅ Production |
 | Linear | Issue tracker | OAuth 2.0 | ✅ Production |
-| Jira/Confluence | Project mgmt / Wiki | OAuth 2.0 | ✅ Production |
-| Azure DevOps | Code + CI/CD | OAuth 2.0 | ✅ Production |
-| Email | Email | SMTP/IMAP credentials | ✅ Production |
+| Slack | Messaging | OAuth 2.0 | ✅ Production |
+| Microsoft Teams | Messaging | OAuth 2.0 | ✅ Production |
+| Notion | Notes / Wiki | OAuth 2.0 | ✅ Production |
+| Confluence | Wiki | OAuth 2.0 | ✅ Production |
 | PagerDuty | Incident management | OAuth 2.0 | ✅ Production |
 | Sentry | Error tracking | OAuth 2.0 | ✅ Production |
-| Notion | Notes / Wiki | OAuth 2.0 | ✅ Production |
-| Salesforce | CRM | OAuth 2.0 (stub) | ⚠️ Stub |
-| SAP | ERP | OAuth 2.0 (stub) | ⚠️ Stub |
+| Azure DevOps | Code + CI/CD | OAuth 2.0 | ✅ Production |
+| Email | Email | SMTP/IMAP credentials | ✅ Production |
 
 ---
 

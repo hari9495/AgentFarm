@@ -35,6 +35,7 @@ const stubSession: {
     agentVoiceId: string | null;
     speakingEnabled: boolean;
     resolvedLanguage: string | null;
+    slackDistributed: boolean;
 } = {
     id: 'sess-001',
     tenantId: 't1',
@@ -53,6 +54,7 @@ const stubSession: {
     agentVoiceId: null,
     speakingEnabled: false,
     resolvedLanguage: null,
+    slackDistributed: false,
 };
 
 // ---------------------------------------------------------------------------
@@ -393,6 +395,137 @@ test('POST /v1/meetings/:sessionId/speaking-agent returns ok:false (not 500) whe
         const body = res.json() as { ok: boolean; error: string };
         assert.equal(body.ok, false);
         assert.equal(typeof body.error, 'string');
+    } finally {
+        await app.close();
+    }
+});
+
+// ---------------------------------------------------------------------------
+// Slack distribution: PATCH /v1/meetings/:sessionId — summaryText triggers Slack
+// ---------------------------------------------------------------------------
+
+test('PATCH /v1/meetings/:sessionId dispatches Slack notification when MEETING_SLACK_DISTRIBUTION=true and summaryText set', async (t) => {
+    let slackCallBody: Record<string, unknown> | null = null;
+
+    process.env['MEETING_SLACK_DISTRIBUTION'] = 'true';
+    process.env['MEETING_SLACK_WEBHOOK_URL'] = 'https://hooks.slack.com/services/TEST/WEBHOOK';
+
+    t.after(() => {
+        delete process.env['MEETING_SLACK_DISTRIBUTION'];
+        delete process.env['MEETING_SLACK_WEBHOOK_URL'];
+    });
+
+    let updateCount = 0;
+    const prisma = {
+        meetingSession: {
+            findFirst: async () => ({ ...stubSession, summaryText: null, slackDistributed: false }),
+            update: async (_args: { where: { id: string }; data: Record<string, unknown> }) => {
+                updateCount++;
+                return { ...stubSession, ..._args.data };
+            },
+        },
+    };
+
+    t.mock.method(globalThis, 'fetch', async (url: string, init?: RequestInit) => {
+        if (typeof url === 'string' && url.includes('hooks.slack.com')) {
+            slackCallBody = JSON.parse((init?.body as string) ?? '{}') as Record<string, unknown>;
+            return new Response('ok', { status: 200 });
+        }
+        return new Response('{}', { status: 200 });
+    });
+
+    const app = Fastify({ logger: false });
+    await registerMeetingRoutes(app, { getSession: () => session(), prisma: prisma as never });
+
+    try {
+        const res = await app.inject({
+            method: 'PATCH',
+            url: '/v1/meetings/sess-001',
+            payload: { summaryText: 'Meeting went well. Key decisions made.' },
+        });
+        assert.equal(res.statusCode, 200);
+        assert.ok(slackCallBody !== null, 'Slack webhook should have been called');
+        assert.ok(
+            typeof (slackCallBody as Record<string, unknown>)['text'] === 'string',
+            'Slack body should have text field',
+        );
+        assert.ok(updateCount >= 2, 'Should have called update twice (summary + slackDistributed)');
+    } finally {
+        await app.close();
+    }
+});
+
+test('PATCH /v1/meetings/:sessionId skips Slack when MEETING_SLACK_DISTRIBUTION is not set', async (t) => {
+    delete process.env['MEETING_SLACK_DISTRIBUTION'];
+    delete process.env['MEETING_SLACK_WEBHOOK_URL'];
+
+    let slackCalled = false;
+    const prisma = {
+        meetingSession: {
+            findFirst: async () => ({ ...stubSession, summaryText: null, slackDistributed: false }),
+            update: async (_args: { where: { id: string }; data: Record<string, unknown> }) => ({ ...stubSession, ..._args.data }),
+        },
+    };
+
+    t.mock.method(globalThis, 'fetch', async (url: string) => {
+        if (typeof url === 'string' && url.includes('hooks.slack.com')) {
+            slackCalled = true;
+        }
+        return new Response('{}', { status: 200 });
+    });
+
+    const app = Fastify({ logger: false });
+    await registerMeetingRoutes(app, { getSession: () => session(), prisma: prisma as never });
+
+    try {
+        const res = await app.inject({
+            method: 'PATCH',
+            url: '/v1/meetings/sess-001',
+            payload: { summaryText: 'Summary text here.' },
+        });
+        assert.equal(res.statusCode, 200);
+        assert.equal(slackCalled, false, 'Slack should NOT be called when distribution is disabled');
+    } finally {
+        await app.close();
+    }
+});
+
+test('PATCH /v1/meetings/:sessionId skips Slack when already distributed', async (t) => {
+    process.env['MEETING_SLACK_DISTRIBUTION'] = 'true';
+    process.env['MEETING_SLACK_WEBHOOK_URL'] = 'https://hooks.slack.com/services/TEST/WEBHOOK';
+
+    t.after(() => {
+        delete process.env['MEETING_SLACK_DISTRIBUTION'];
+        delete process.env['MEETING_SLACK_WEBHOOK_URL'];
+    });
+
+    let slackCalled = false;
+    const prisma = {
+        meetingSession: {
+            // slackDistributed already true — should not re-send
+            findFirst: async () => ({ ...stubSession, summaryText: 'old summary', slackDistributed: true }),
+            update: async (_args: { where: { id: string }; data: Record<string, unknown> }) => ({ ...stubSession, ..._args.data }),
+        },
+    };
+
+    t.mock.method(globalThis, 'fetch', async (url: string) => {
+        if (typeof url === 'string' && url.includes('hooks.slack.com')) {
+            slackCalled = true;
+        }
+        return new Response('{}', { status: 200 });
+    });
+
+    const app = Fastify({ logger: false });
+    await registerMeetingRoutes(app, { getSession: () => session(), prisma: prisma as never });
+
+    try {
+        const res = await app.inject({
+            method: 'PATCH',
+            url: '/v1/meetings/sess-001',
+            payload: { summaryText: 'Updated summary.' },
+        });
+        assert.equal(res.statusCode, 200);
+        assert.equal(slackCalled, false, 'Slack should NOT be re-sent when already distributed');
     } finally {
         await app.close();
     }

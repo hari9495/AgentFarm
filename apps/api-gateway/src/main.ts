@@ -74,6 +74,7 @@ import { registerMeetingRoutes } from './routes/meetings.js';
 import { registerBillingRoutes } from './routes/billing.js';
 import { registerAnalyticsRoutes } from './routes/analytics.js';
 import { registerAgentControlRoutes } from './routes/agent-control.js';
+import { registerLeadRoutes } from './routes/leads.js';
 import { registerAgentsRoutes } from './routes/agents.js';
 import { registerAdminProvisionRoutes } from './routes/admin-provision.js';
 import { registerAgentDispatchRoutes } from './routes/agent-dispatch.js';
@@ -702,6 +703,7 @@ registerNotificationRoutes(app, { getSession: (request) => readSession(request) 
 registerSkillPipelineRoutes(app, { getSession: (request) => readSession(request) });
 registerSkillSchedulerRoutes(app, { getSession: (request) => readSession(request) });
 registerWebhookRoutes(app, prisma);
+registerLeadRoutes(app);
 registerConnectorHealthRoutes(app);
 registerKnowledgeGraphRoutes(app, { getSession: (request) => readSession(request) });
 registerAgentFeedbackRoutes(app, { getSession: (request) => readSession(request) });

@@ -11,10 +11,10 @@ AgentFarm is a **multi-tenant AI agent platform** that deploys specialised AI te
 ```
 d:\AgentFarm\
 ├── apps/                        # User-facing and runtime applications
-│   ├── agent-runtime/           # Core agent task execution engine (port 3003)
+│   ├── agent-runtime/           # Core agent task execution engine (port 4000)
 │   ├── api-gateway/             # Central REST API — Fastify v5 (port 3000)
 │   ├── dashboard/               # Internal ops dashboard — Next.js 15 (port 3001)
-│   ├── orchestrator/            # Multi-agent GOAP orchestrator (port 3004)
+│   ├── orchestrator/            # Multi-agent GOAP orchestrator (port 3011)
 │   ├── trigger-service/         # External event → agent task bridge (port 3002)
 │   └── website/                 # Public marketing site + customer portal (port 3002*)
 │                                # (*trigger-service + website both default 3002; set TRIGGER_SERVICE_PORT)
@@ -34,14 +34,19 @@ d:\AgentFarm\
 │   ├── policy-engine/           # Governance routing policy evaluator
 │   ├── provisioning-service/    # Azure VM/container provisioning job processor
 │   └── retention-cleanup/       # Scheduled retention cleanup job
-├── packages/                    # Shared libraries
+├── packages/                    # Shared libraries (13 packages)
+│   ├── auth-utils/              # JWT/HMAC auth and session helpers
+│   ├── cli/                     # CLI developer tooling
+│   ├── config/                  # Shared configuration utilities
 │   ├── connector-contracts/     # Connector type contracts (TypeScript)
 │   ├── crm-service/             # CRM integration types/stubs
 │   ├── db-schema/               # Prisma schema + migrations (PostgreSQL)
+│   ├── e2e/                     # End-to-end test utilities
 │   ├── erp-service/             # ERP integration types/stubs
 │   ├── notification-service/    # Shared notification adapter contracts
 │   ├── observability/           # Shared telemetry/observability helpers
 │   ├── queue-contracts/         # Queue message type contracts
+│   ├── sdk/                     # AgentFarm SDK
 │   └── shared-types/            # Canonical shared TypeScript types
 ├── infrastructure/
 │   ├── control-plane/           # Azure IaC for control plane
@@ -117,7 +122,7 @@ Or start individual apps:
 pnpm --filter @agentfarm/api-gateway dev        # port 3000
 pnpm --filter @agentfarm/dashboard dev           # port 3001
 pnpm --filter @agentfarm/website dev             # port 3002 (or next available)
-pnpm --filter @agentfarm/agent-runtime dev       # port 3003
+pnpm --filter @agentfarm/agent-runtime dev       # port 4000
 pnpm --filter @agentfarm/orchestrator dev
 pnpm --filter @agentfarm/trigger-service dev
 ```
@@ -134,8 +139,9 @@ pnpm test
 pnpm quality:gate
 
 # Per-package tests
-pnpm --filter @agentfarm/api-gateway test          # ~450 tests
-pnpm --filter @agentfarm/agent-runtime test        # ~785 tests
+pnpm --filter @agentfarm/api-gateway test          # ~898 tests
+pnpm --filter @agentfarm/agent-runtime test        # ~906 tests
+pnpm --filter @agentfarm/trigger-service test      # ~49 tests
 pnpm --filter @agentfarm/dashboard test            # ~118 tests
 pnpm --filter @agentfarm/website test              # ~118 tests
 pnpm --filter @agentfarm/orchestrator test         # ~62 tests

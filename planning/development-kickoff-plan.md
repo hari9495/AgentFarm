@@ -31,7 +31,7 @@ This document bridges the completed planning pack to the first lines of working 
 - [ ] Prisma schema connects and migrates against local PostgreSQL successfully
 - [ ] BullMQ connects to Redis and enqueues/consumes test jobs
 - [ ] Next.js dashboard boots and reaches a placeholder home page
-- [ ] NestJS API gateway boots and returns health check at /health
+- [ ] Fastify API gateway boots and returns health check at /health
 
 #### Contract Closure (maps to P0 execution tasks)
 - [ ] Task 1.1 complete: tenant_status and bot_status values frozen and identical across all referenced docs

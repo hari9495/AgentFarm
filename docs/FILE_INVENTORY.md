@@ -55,13 +55,13 @@ Total TypeScript source files (approximate): 1,971.
 | `walkthrough.mjs` | root | Interactive developer walkthrough script | CLI steps for local dev setup | Onboarding script |
 | `walkthrough.ps1` | root | PowerShell version of walkthrough | Same as `.mjs` for Windows devs | Windows developer onboarding |
 | `README.md` | root | Monorepo readme | Links to docs, quick-start | Developer entry point |
-| `read.md` | root | NOT FOUND — needs investigation | — | — |
+| `read.md` | root | Technical reference: architecture, connectors, tiers, LLM routing, contract versions | — | Developer quick-reference |
 
 ---
 
 ## apps/agent-runtime
 
-Fastify server (port 3003) that runs agent tasks, manages LLM providers, executes workspace actions, and persists evidence.
+Fastify server (port 4000) that runs agent tasks, manages LLM providers, executes workspace actions, and persists evidence.
 
 ### src/
 
@@ -1038,7 +1038,7 @@ Custom ESLint plugins and tooling.
 | apps/orchestrator | ~15 files |
 | apps/trigger-service | ~12 files |
 | services/* (15 services) | ~80 files |
-| packages/* (5 packages) | ~25 files |
+| packages/* (13 packages) | ~55 files |
 | infrastructure/ | 4 files |
 | scripts/ | 10 files |
 | tools/ | 1 file |

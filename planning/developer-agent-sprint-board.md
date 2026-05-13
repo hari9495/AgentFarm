@@ -49,20 +49,20 @@ Update this block continuously during execution.
 
 | Task ID | Status | Owner | Start Date | End Date | Evidence Link | Scope Check | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| DA-P0-001 | Not started | Engineering Lead |  |  |  | Pass |  |
-| DA-P0-002 | Not started | Runtime Lead |  |  |  | Pass |  |
-| DA-P0-003 | Not started | Security and Safety Lead |  |  |  | Pass |  |
-| DA-P0-004 | Not started | Runtime Lead |  |  |  | Pass |  |
-| DA-P0-005 | Not started | Runtime Lead |  |  |  | Pass |  |
-| DA-P0-006 | Not started | QA Lead |  |  |  | Pass |  |
-| DA-P0-007 | Not started | Product Engineering Lead |  |  |  | Pass |  |
-| DA-P0-008 | Not started | Integration Lead |  |  |  | Pass |  |
-| DA-P1-001 | Not started | Architecture Owner |  |  |  | Pass |  |
-| DA-P1-002 | Not started | Product Engineering Lead |  |  |  | Pass |  |
-| DA-P1-003 | Not started | Runtime Lead |  |  |  | Pass |  |
-| DA-P2-001 | Not started | Engineering Lead |  |  |  | Pass |  |
-| DA-P2-002 | Not started | Security and Safety Lead |  |  |  | Pass |  |
-| DA-P2-003 | Not started | Compliance Engineering Lead |  |  |  | Pass |  |
+| DA-P0-001 | Completed | Engineering Lead | 2026-04-28 | 2026-04-30 | planning/build-snapshot-2026-04-28.md | Pass | Unified task contract shipped Sprint 1 |
+| DA-P0-002 | Completed | Runtime Lead | 2026-04-28 | 2026-04-30 | planning/build-snapshot-2026-04-28.md | Pass | Capability snapshot enforcement wired Sprint 1 |
+| DA-P0-003 | Completed | Security and Safety Lead | 2026-04-28 | 2026-04-30 | planning/build-snapshot-2026-04-28.md | Pass | Risk route matrix implemented Sprint 1 |
+| DA-P0-004 | Completed | Runtime Lead | 2026-04-28 | 2026-04-30 | planning/build-snapshot-2026-04-28.md | Pass | Workspace action chain reliability Sprint 1 |
+| DA-P0-005 | Completed | Runtime Lead | 2026-04-30 | 2026-04-30 | planning/build-snapshot-2026-04-28.md | Pass | Tier 9 fallback shipped Sprint 1 |
+| DA-P0-006 | Completed | QA Lead | 2026-04-28 | 2026-04-30 | planning/build-snapshot-2026-04-28.md | Pass | Pre-PR validation + evidence summary wired Sprint 1 |
+| DA-P0-007 | Completed | Product Engineering Lead | 2026-04-30 | 2026-04-30 | planning/build-snapshot-2026-04-28.md | Pass | Escalation packet shipped Sprint 1 |
+| DA-P0-008 | Completed | Integration Lead | 2026-05-04 | 2026-05-04 | planning/build-snapshot-2026-05-07.md | Pass | ADR-010 dispatchApprovalAlert shipped |
+| DA-P1-001 | Completed | Architecture Owner | 2026-04-30 | 2026-05-01 | planning/build-snapshot-2026-04-28.md | Pass | Shadow mode + approval batching shipped Sprint 2 |
+| DA-P1-002 | Completed | Product Engineering Lead | 2026-04-30 | 2026-05-07 | planning/build-snapshot-2026-05-07.md | Pass | Context-rich approval packet shipped (ADR-016) |
+| DA-P1-003 | Completed | Runtime Lead | 2026-05-01 | 2026-05-07 | planning/build-snapshot-2026-05-07.md | Pass | Monorepo impact + test recommendations shipped |
+| DA-P2-001 | Completed | Engineering Lead | 2026-05-07 | 2026-05-07 | planning/build-snapshot-2026-05-07.md | Pass | Long-term memory store + runtime hooks shipped (ADR-016) |
+| DA-P2-002 | Completed | Security and Safety Lead | 2026-05-07 | 2026-05-07 | planning/build-snapshot-2026-05-07.md | Pass | Approval-gated memory promotion wired |
+| DA-P2-003 | Completed | Compliance Engineering Lead | 2026-05-01 | 2026-05-04 | planning/build-snapshot-2026-05-07.md | Pass | Compliance export shipped in services/compliance-export |
 
 ## Release Exit Checklist
 1. All P0 tasks are completed with evidence links.

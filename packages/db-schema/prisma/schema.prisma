@@ -1130,6 +1130,7 @@ model MeetingSession {
   agentVoiceId     String?   // VoxCPM2 cloned voice ID for this session
   speakingEnabled  Boolean   @default(false)
   resolvedLanguage String?   // language code e.g. "en", "ja"
+  slackDistributed Boolean   @default(false)
   startedAt        DateTime  @default(now())
   endedAt          DateTime?
   createdAt        DateTime  @default(now())

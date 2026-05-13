@@ -2,7 +2,7 @@
 
 AgentFarm is a TypeScript pnpm monorepo for operating AI agents with enterprise control gates. The platform delivers one production-grade Developer Agent role backed by 18 connectors across 4 categories, risk-based autonomy with human approval enforcement, 12 tiers of local workspace actions, a desktop-operator abstraction layer, 10 LLM providers with health-score failover, and a complete audit and evidence path for compliance teams.
 
-**1,392 tests passing across 14 packages. Quality gate: 47 checks, 46 PASS, 1 SKIP (DB smoke).**
+**1,853 tests passing across apps and services. Quality gate: 46 checks, all PASS.**
 
 ---
 
@@ -39,11 +39,12 @@ infrastructure/  Azure control-plane and runtime-plane IaC
 
 | App | Port | Purpose | Tests |
 |-----|------|---------|-------|
-| `apps/api-gateway` | 3001 | Control-plane API: auth, session, connector execution, approvals, audit, budget policy, roles, snapshots, plugin loading, LLM config, governance workflows, SSE task-stream | 388 |
-| `apps/agent-runtime` | — | Per-tenant execution engine: risk classification, LLM dispatch, 12-tier workspace actions, desktop-operator factory | 661 |
-| `apps/dashboard` | 3000 | Operator UI: approval queue, evidence panel, runtime observability, LLM config, governance workflows, plugin loading, budget panel, workspace switcher, Kanban board | 118 |
-| `apps/website` | 3002 | Product surface: 51 pages, 43 API routes, auth, connectors, marketplace, approvals, evidence, superadmin | 118 |
-| `apps/orchestrator` | — | Multi-agent coordinator: heartbeat wake model, routine scheduler, plugin capability guard, GOAP A* planner, state persistence | 62 |
+| `apps/api-gateway` | 3000 | Control-plane API: auth, session, connector execution, approvals, audit, budget policy, roles, snapshots, plugin loading, LLM config, governance workflows, SSE task-stream | 898 |
+| `apps/agent-runtime` | 4000 | Per-tenant execution engine: risk classification, LLM dispatch, 12-tier workspace actions, desktop-operator factory | 906 |
+| `apps/orchestrator` | 3011 | Multi-agent coordinator: heartbeat wake model, routine scheduler, plugin capability guard, GOAP A* planner, state persistence | 62 |
+| `apps/trigger-service` | 3002 | Inbound webhook/email/Slack intake; HMAC verification, Anthropic trigger processing | 49 |
+| `apps/dashboard` | 3001 | Operator UI: approval queue, evidence panel, runtime observability, LLM config, governance workflows, plugin loading, budget panel, workspace switcher, Kanban board | — |
+| `apps/website` | dev:3002, prod:Azure SWA | Product surface: 51 pages, 43 API routes, auth, connectors, marketplace, approvals, evidence, superadmin | — |
 
 ### Domain Services
 
@@ -70,9 +71,17 @@ infrastructure/  Azure control-plane and runtime-plane IaC
 |---------|---------|
 | `packages/shared-types` | 100+ versioned contract types, enums, kill-switch types, GOAP plan types, skills crystallization types, voice/meeting types, `DesktopOperator` interface |
 | `packages/connector-contracts` | 18-connector plugin registry, 18 normalized action types, 12 role policy keys |
-| `packages/queue-contracts` | Queue event type definitions |
-| `packages/db-schema` | Prisma schema and 10 migrations |
-| `packages/observability` | Structured telemetry helpers |
+| `packages/queue-contracts` | Queue name constants, lease types, budget decision types |
+| `packages/db-schema` | Prisma schema (70 models, 8 domains), migrations, generated Prisma client |
+| `packages/observability` | OpenTelemetry + Azure Monitor structured telemetry helpers |
+| `packages/auth-utils` | scrypt `hashPassword` / `verifyPassword` |
+| `packages/config` | Centralised `GATEWAY_URL` and service URL constants |
+| `packages/sdk` | `AgentFarmClient` — agents, analytics, notifications, messages |
+| `packages/cli` | `af` developer CLI (depends on sdk) |
+| `packages/e2e` | Playwright end-to-end test suite |
+| `packages/crm-service` | CRM adapter types and clients (Salesforce, HubSpot) |
+| `packages/erp-service` | ERP adapter types and clients (SAP, Oracle) |
+| `packages/notification-service` | Notification adapter types |
 
 ---
 
@@ -582,17 +591,18 @@ SQLite-backed (`node:sqlite` `DatabaseSync`). Key types: `UserRecord`, `SessionR
 pnpm build               # build all packages
 pnpm test                # run all tests
 pnpm typecheck           # typecheck all packages
-pnpm quality:gate        # run full 47-check quality gate
+pnpm quality:gate        # run full 46-check quality gate
 pnpm smoke:e2e           # E2E auth/session smoke lane
 pnpm verify:website:prod # production website verification
 ```
 
-### Quality Gate (47 checks — current)
+### Quality Gate (46 checks — current)
 
 | Check | Status |
 |-------|--------|
-| Agent Runtime: 661 tests | ✅ PASS |
-| API Gateway: 388 tests | ✅ PASS |
+| Agent Runtime: 906 tests | ✅ PASS |
+| Trigger Service: 49 tests | ✅ PASS |
+| API Gateway: 898 tests | ✅ PASS |
 | Dashboard: 118 tests | ✅ PASS |
 | Website: 118 tests across 9 suites | ✅ PASS |
 | Orchestrator: 62 tests | ✅ PASS |
@@ -688,8 +698,9 @@ pnpm --filter @agentfarm/dashboard dev
 pnpm test
 
 # Per package
-pnpm --filter @agentfarm/agent-runtime test    # 661 tests
-pnpm --filter @agentfarm/api-gateway test      # 388 tests
+pnpm --filter @agentfarm/agent-runtime test    # 906 tests
+pnpm --filter @agentfarm/api-gateway test      # 898 tests
+pnpm --filter @agentfarm/trigger-service test  # 49 tests
 pnpm --filter @agentfarm/dashboard test        # 118 tests
 
 # Website suites
@@ -701,7 +712,7 @@ pnpm --filter @agentfarm/website test:session-auth
 pnpm --filter @agentfarm/website test:provisioning
 pnpm --filter @agentfarm/website test:deployments
 
-# Full quality gate (47 checks)
+# Full quality gate (46 checks)
 pnpm quality:gate
 ```
 
@@ -748,4 +759,4 @@ Never commit secrets to source. All connector tokens are stored as Key Vault ref
 - **Product and operations leads** preparing pilot-ready enterprise delivery
 
 <!-- doc-sync: 2026-05-08 desktop-operator + full-service-coverage + test-count-update -->
-> Last synchronized: 2026-05-08 (desktop-operator abstraction, all 14 services documented, 1,392 total tests, quality gate 47 checks).
+> Last synchronized: 2026-05-08 (desktop-operator abstraction, all 14 services documented, 1,853 total tests, quality gate 46 checks).

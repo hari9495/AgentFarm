@@ -1,5 +1,9 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
+import {
+    isMeetingSlackEnabled,
+    distributeMeetingSummaryToSlack,
+} from '../lib/meeting-slack-notifier.js';
 
 const getPrisma = async () => {
     const db = await import('../lib/db.js');
@@ -166,6 +170,33 @@ export async function registerMeetingRoutes(
                 where: { id: sessionId },
                 data: updateData,
             });
+
+            // Distribute meeting summary to Slack when summaryText was just set
+            // and has not already been distributed. Failure is non-fatal.
+            if (
+                body.summaryText !== undefined &&
+                body.summaryText.trim().length > 0 &&
+                !existing.slackDistributed &&
+                isMeetingSlackEnabled()
+            ) {
+                const sent = await distributeMeetingSummaryToSlack({
+                    sessionId,
+                    tenantId: session.tenantId,
+                    workspaceId: existing.workspaceId,
+                    platform: existing.platform,
+                    summaryText: body.summaryText,
+                    actionItems: body.actionItems ?? existing.actionItems,
+                });
+
+                if (sent) {
+                    await prisma.meetingSession.update({
+                        where: { id: sessionId },
+                        data: { slackDistributed: true },
+                    }).catch((err: unknown) => {
+                        console.warn('[meeting-slack] Failed to set slackDistributed:', err);
+                    });
+                }
+            }
 
             return reply.send(updated);
         },

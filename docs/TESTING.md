@@ -9,11 +9,12 @@
 
 | Package | Tests | Framework | Coverage Threshold |
 |---|---|---|---|
-| `@agentfarm/agent-runtime` | 785+ | `node:test` | ≥ 80% |
-| `@agentfarm/api-gateway` | 450 | `node:test` | ≥ 80% |
+| `@agentfarm/agent-runtime` | 906 | `node:test` | ≥ 80% |
+| `@agentfarm/api-gateway` | 898 | `node:test` | ≥ 80% |
 | `@agentfarm/dashboard` | 118 | `node:test` | — |
 | `@agentfarm/website` | 118 | `node:test` | — |
 | `@agentfarm/orchestrator` | 62 | `node:test` | — |
+| `@agentfarm/trigger-service` | 49 | `node:test` | — |
 | `@agentfarm/provisioning-service` | 15 | `node:test` | — |
 | `@agentfarm/approval-service` | 12 | `node:test` | — |
 | `@agentfarm/connector-gateway` | 36 | `node:test` | — |
@@ -23,7 +24,7 @@
 | `@agentfarm/notification-service` | 31 | `node:test` | — |
 | `@agentfarm/meeting-agent` | 23 | `node:test` | — |
 | `@agentfarm/memory-service` | 11 | `node:test` | — |
-| **Total** | **1,600+** | | |
+| **Total** | **1,853** | | |
 
 ---
 
@@ -231,7 +232,7 @@ Run the full quality gate:
 pnpm quality:gate
 ```
 
-The gate runs 47 checks:
+The gate runs 46 checks:
 1. TypeScript compilation (`pnpm typecheck`) for all packages
 2. Lint (`pnpm lint`) for all packages
 3. Tests (`pnpm test`) for all packages
