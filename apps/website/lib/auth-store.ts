@@ -1,6 +1,6 @@
-import { createHash, randomBytes, scrypt, timingSafeEqual } from "node:crypto";
-import { promisify } from "node:util";
+import { createHash, randomBytes } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
+import { hashPassword, verifyPassword } from "@agentfarm/auth-utils";
 
 export type UserRole = "superadmin" | "admin" | "member";
 
@@ -206,9 +206,6 @@ type MarketplaceSelectionRecord = {
     updatedAt: number;
 };
 
-const scryptAsync = promisify(scrypt);
-const KEY_LEN = 64;
-const SALT_LEN = 32;
 const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
 
 const parseCsvEnv = (value: string | undefined): string[] => {
@@ -752,39 +749,6 @@ if (Number(approvalsCount.count) === 0) {
         );
     });
 }
-
-const hashPassword = async (password: string): Promise<string> => {
-    const salt = randomBytes(SALT_LEN).toString("hex");
-    const derivedKey = (await scryptAsync(password, salt, KEY_LEN)) as Buffer;
-    return `scrypt:${salt}:${derivedKey.toString("hex")}`;
-};
-
-const verifyPassword = async (password: string, stored: string): Promise<boolean> => {
-    if (!stored.startsWith("scrypt:")) {
-        return false;
-    }
-
-    const parts = stored.split(":");
-    if (parts.length !== 3) {
-        return false;
-    }
-
-    const [, salt, hashHex] = parts;
-    if (!salt || !hashHex) {
-        return false;
-    }
-
-    try {
-        const derivedKey = (await scryptAsync(password, salt, KEY_LEN)) as Buffer;
-        const storedKey = Buffer.from(hashHex, "hex");
-        if (derivedKey.length !== storedKey.length) {
-            return false;
-        }
-        return timingSafeEqual(derivedKey, storedKey);
-    } catch {
-        return false;
-    }
-};
 
 const hashSessionToken = (token: string): string => {
     return createHash("sha256").update(token).digest("hex");

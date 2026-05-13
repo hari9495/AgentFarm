@@ -7,7 +7,7 @@ that every engineer uses from day one. This is the source of truth for "where do
 ## Authority
 - Architecture baseline: planning/product-architecture.md
 - Engineering design: planning/engineering-execution-design.md
-- Toolset: TypeScript + Node.js LTS, NestJS/Fastify, Next.js/Tailwind, PostgreSQL/Prisma, Redis/BullMQ, OPA, OpenTelemetry
+- Toolset: TypeScript + Node.js LTS, Fastify 5, Next.js 15, PostgreSQL/Prisma, Redis, OPA, OpenTelemetry
 
 ## Latest Build Snapshot
 - Current cross-service implementation closure reference: planning/build-snapshot-2026-05-07.md
@@ -19,62 +19,80 @@ that every engineer uses from day one. This is the source of truth for "where do
 
 ```
 agentfarm/
-├── apps/                        # Deployable applications
-│   ├── api-gateway/             # NestJS — control plane API entry point
-│   ├── dashboard/               # Next.js + Tailwind — operator and tenant UI
-│   ├── agent-runtime/           # OpenClaw agent runner (Docker image, per-VM)
-│   │                            # Skills crystallization (Hermes pattern), 239 tests
-│   ├── orchestrator/            # Paperclip multi-agent workflow coordinator
-│   │                            # GOAP A* planner, heartbeat wake, routine scheduler
-│   └── website/                 # Next.js 14 — public/tenant-facing web
+├── apps/                        # Deployable applications (6)
+│   ├── api-gateway/             # Fastify 5 — control plane API entry point (port 3000)
+│   │                            # 62 route files, 898 tests
+│   ├── agent-runtime/           # Fastify 5 — AI agent execution engine (port 4000)
+│   │                            # 9 LLM providers, 12 action tiers, 906 tests
+│   ├── orchestrator/            # Fastify 5 — multi-agent workflow coordinator (port 3011)
+│   │                            # GOAP A* planner, routine scheduler, proactive signal detector,
+│   │                            # agent handoff manager (pending/accepted/completed/failed/timed_out)
+│   ├── trigger-service/         # Fastify 5 — inbound webhook/email/Slack intake (port 3002)
+│   │                            # 49 tests
+│   ├── dashboard/               # Next.js 15 — operator and tenant UI (port 3001)
+│   │                            # 51 pages, 159 proxy routes
+│   └── website/                 # Next.js 15 — public/tenant-facing web (Azure SWA in prod)
+│                                # 43 API route groups, marketplace, admin portal
 │
-├── services/                    # Internal domain services (NestJS/Fastify)
-│   ├── agent-question-service/  # Human-in-the-loop question lifecycle and timeout sweep helpers
-│   ├── agent-observability/     # Browser/desktop evidence capture primitives and audit wrappers
-│   ├── identity-service/        # Tenant, workspace, user, plan management
-│   ├── provisioning-service/    # Azure VM lifecycle and bootstrap (11-step state machine)
-│   ├── approval-service/        # Approval routing, records, kill-switch, multi-stakeholder
-│   ├── policy-engine/           # OPA-based risk classification sidecar
-│   ├── connector-gateway/       # Connector auth, token lifecycle, action dispatch,
-│   │                            # mTLS cert verifier, PII-strip middleware
-│   ├── audit-storage/           # Azure Blob-backed evidence artifact storage and signed URL helpers
-│   ├── memory-service/          # Short-term and long-term memory read/write service layer
-│   ├── evidence-service/        # Audit record and evidence writes, HNSW vector index,
-│   │                            # governance KPI calculator
-│   ├── compliance-export/       # Compliance evidence export packaging
-│   ├── notification-service/    # Approval notification gateway: Telegram, Slack, Discord,
-│   │                            # Webhook, Voice (VoxCPM), dispatchApprovalAlert(),
-│   │                            # per-trigger allowlists, 31 tests
-│   ├── retention-cleanup/       # Retention enforcement and cleanup routines
-│   └── meeting-agent/           # AI-facilitated meeting lifecycle, voice pipeline (STT/TTS)
+├── services/                    # Internal domain services (15)
+│   ├── agent-observability/     # Action interception, audit log writer, browser capture,
+│   │                            # correctness scorer, diff verifier
+│   ├── agent-question-service/  # Human-in-the-loop question parking; Prisma-backed store
+│   ├── approval-service/        # Approval batcher, kill-switch enforcer, governance
+│   │                            # workflow manager; batch create + batch decision
+│   ├── audit-storage/           # Azure Blob screenshot and evidence uploader
+│   ├── browser-actions/         # Playwright browser action executor (web-actions)
+│   ├── compliance-export/       # JSON/JSONL/CSV compliance pack export
+│   ├── connector-gateway/       # 12-connector OAuth registry (GitHub, GitLab, Jira, Linear,
+│   │                            # Slack, Teams, Notion, Confluence, PagerDuty, Sentry,
+│   │                            # Azure DevOps, Email), mTLS cert verifier, PII filter,
+│   │                            # plugin loader, adapter registry
+│   ├── evidence-service/        # Governance KPI calculator, HNSW vector search index
+│   ├── identity-service/        # Tenant, workspace, user lifecycle scaffold
+│   ├── meeting-agent/           # Meeting lifecycle state machine, STT/TTS voice pipeline
+│   ├── memory-service/          # Long-term memory read/write/update with TTL + relevance
+│   ├── notification-service/    # Multi-channel approval alert dispatcher: Telegram, Slack,
+│   │                            # Discord, Webhook, Voice; dispatchApprovalAlert()
+│   ├── policy-engine/           # Governance routing policy resolution
+│   ├── provisioning-service/    # Azure VM lifecycle — 11-step state machine, job processor,
+│   │                            # queue consumer, VM bootstrap, SLA monitoring
+│   └── retention-cleanup/       # Scheduled retention policy cleanup job
 │
-├── packages/                    # Shared internal libraries (not deployed independently)
-│   ├── shared-types/            # TypeScript interfaces and enums shared across all services
-│   ├── db-schema/               # Prisma schema, migrations, and seed scripts
-│   ├── queue-contracts/         # BullMQ job type definitions
-│   ├── connector-contracts/     # Normalized connector action and event types
-│   └── observability/           # OpenTelemetry tracer, logger, and metrics setup
+├── packages/                    # Shared internal libraries — not deployed independently (13)
+│   ├── auth-utils/              # scrypt password hashing + verification
+│   ├── cli/                     # af developer CLI (bin: af, depends on sdk)
+│   ├── config/                  # Centralised service URL and config constants
+│   ├── connector-contracts/     # 18-connector registry, 18 action types, 12 role policies
+│   ├── crm-service/             # CRM adapter types and clients (Salesforce, HubSpot)
+│   ├── db-schema/               # Prisma schema (70 models), migrations, generated client
+│   ├── e2e/                     # Playwright end-to-end test suite
+│   ├── erp-service/             # ERP adapter types and clients (SAP, Oracle)
+│   ├── notification-service/    # Notification adapter types
+│   ├── observability/           # OpenTelemetry + Azure Monitor helpers
+│   ├── queue-contracts/         # Queue name constants + lease/budget types
+│   ├── sdk/                     # AgentFarmClient SDK (agents, analytics, notifications)
+│   └── shared-types/            # 100+ TypeScript contracts shared across all apps
 │
 ├── infrastructure/              # Infrastructure as Code
-│   ├── control-plane/           # Bicep/Terraform for shared resource group
-│   └── runtime-plane/           # Bicep/Terraform per-tenant VM template
+│   ├── control-plane/           # Azure Bicep: Log Analytics, App Insights, Key Vault,
+│   │                            # PostgreSQL, Redis, Container Registry
+│   └── runtime-plane/           # Azure Bicep + cloud-init for VM provisioning
 │
 ├── scripts/                     # Developer utility scripts
-│   ├── quality-gate.mjs         # CI orchestrator — 47 checks
+│   ├── quality-gate.mjs         # CI orchestrator — 51 checks
 │   ├── graphify.mjs             # Monorepo package dependency graph (Mermaid/DOT/JSON)
 │   ├── e2e-smoke.mjs            # E2E smoke tests (dashboard + website)
 │   ├── coverage-threshold-check.mjs  # Coverage summary validator
 │   ├── a4-contract-validation.mjs    # Contract versioning validator
 │   ├── a4-import-boundary-check.mjs  # Import boundary enforcer
 │   └── website-swa-verify.mjs   # SWA deployment verifier
-├── docs/                        # README index pointing to planning/ docs
-├── .github/                     # CI/CD workflows, PR templates, branch rules
-├── docker-compose.yml           # Local development stack (PostgreSQL, Redis, OPA)
+├── docs/                        # Detailed architecture, API reference, test strategy, etc.
+├── .github/                     # CI/CD workflows, PR templates, Copilot instructions
+├── docker-compose.yml           # Local development stack: PostgreSQL, Redis, OPA, VoxCPM2,
+│                                # api-gateway, agent-runtime, trigger-service, dashboard
 ├── pnpm-workspace.yaml          # pnpm monorepo workspace definition
-├── tsconfig.base.json           # Shared TypeScript base config
-├── .eslintrc.js                 # Shared lint rules
-├── .prettierrc                  # Shared format rules
-└── package.json                 # Root scripts: build, lint, test, dev
+├── tsconfig.base.json           # Shared TypeScript base config (strict, ES2022, NodeNext)
+└── package.json                 # Root scripts: quality:gate, test, build, lint, typecheck
 ```
 
 ---

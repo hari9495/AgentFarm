@@ -6,6 +6,24 @@ Format: changes are grouped by sprint and date. Each entry describes what was bu
 
 ---
 
+## Sprint 7 — 2026-05-07 (Spec-alignment wave and feature expansion)
+
+### Added
+- **memory-service**: Long-term memory read/write/update APIs (`memory-types.ts`, `memory-store.ts`). Runtime pre-task memory read and post-task memory mirror hooks in `apps/agent-runtime/src/execution-engine.ts`.
+- **orchestrator**: Proactive signal detection extracted to `proactive-signal-detector.ts`. Added `ci_failure_on_main` and `dependency_cve` signals. New signal thresholds and payloads wired through orchestrator API.
+- **approval-service**: Approval batcher — batch create and batch decision functions (`approval-batcher.ts`). Lifecycle audit events on batch operations.
+- **api-gateway**: Batch approval create and decision routes in `src/routes/approvals.ts`. Handoff wrapper routes in `src/routes/handoffs.ts`.
+- **dashboard**: Batch decision UI actions in `approval-queue-panel.tsx`.
+- **agent-runtime**: Tester role policy enforced in `tester-agent-profile.ts` — tester connector and local-action constraints applied in `runtime-server.ts`.
+- **agent-runtime**: Quality feedback loop — model/provider metadata on approvals; quality signals emitted on approval decisions; `llm-quality-tracker.ts` updated. Auto-provider routing composite formula: `score = availability_penalty × 0.6 + quality_penalty × 0.4`.
+- **orchestrator**: Handoff protocol normalized — statuses: `pending`, `accepted`, `completed`, `failed`, `timed_out`. Timeout semantics added via `escalateOnTimeoutMs`. Pending filter updated, completion payload forwarding added.
+- **packages/shared-types**: New contracts for memory, proactive signals, approval batching, handoff normalization, and tester role policy.
+
+### Quality
+- Sprint 7 test counts: api-gateway 898 tests / agent-runtime 906 tests / trigger-service 49 tests. Total: **1,853 tests, 0 failures**.
+
+---
+
 ## Sprint 6 — 2026-05-06 (Hardening and quality gate pass)
 
 ### Changed

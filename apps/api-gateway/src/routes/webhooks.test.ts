@@ -14,8 +14,22 @@ type LearnedPatternRecord = {
     createdAt: Date;
 };
 
+type MockWebhookSource = {
+    id: string;
+    tenantId: string;
+    name: string;
+    description?: string;
+    secret: string;
+    active: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+};
+
 const buildApp = async () => {
     const learnedPatterns: LearnedPatternRecord[] = [];
+    const webhookSources: MockWebhookSource[] = [];
+    let sourceSeq = 0;
+
     const prisma = {
         $queryRaw: async (_strings: TemplateStringsArray, ...values: unknown[]) => {
             const record: LearnedPatternRecord = {
@@ -31,11 +45,39 @@ const buildApp = async () => {
             learnedPatterns.push(record);
             return [record];
         },
+        webhookSource: {
+            findMany: async ({ where }: { where?: { tenantId?: string } } = {}) => {
+                if (where?.tenantId) return webhookSources.filter((s) => s.tenantId === where.tenantId);
+                return [...webhookSources];
+            },
+            create: async ({ data }: { data: Omit<MockWebhookSource, 'id' | 'active' | 'createdAt' | 'updatedAt'> }) => {
+                sourceSeq += 1;
+                const source: MockWebhookSource = {
+                    id: `mock-src-${sourceSeq}`,
+                    ...data,
+                    active: true,
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                };
+                webhookSources.push(source);
+                return source;
+            },
+            findUnique: async ({ where }: { where: { id: string } }) =>
+                webhookSources.find((s) => s.id === where.id) ?? null,
+            delete: async ({ where }: { where: { id: string } }) => {
+                const idx = webhookSources.findIndex((s) => s.id === where.id);
+                if (idx >= 0) webhookSources.splice(idx, 1);
+                return {};
+            },
+        },
+        inboundWebhookEvent: {
+            findMany: async () => [],
+        },
     };
 
     const app = Fastify({ logger: false });
     registerWebhookRoutes(app, prisma as never);
-    return { app, learnedPatterns };
+    return { app, learnedPatterns, webhookSources };
 };
 
 describe('POST /api/v1/memory/patterns/code-review', () => {
@@ -99,13 +141,23 @@ describe('POST /api/v1/memory/patterns/code-review', () => {
 });
 
 describe('GET /v1/webhooks/inbound/sources', () => {
-    it('returns an empty sources array', async () => {
+    it('returns an empty sources array for a tenant', async () => {
         const { app } = await buildApp();
         try {
-            const res = await app.inject({ method: 'GET', url: '/v1/webhooks/inbound/sources' });
+            const res = await app.inject({ method: 'GET', url: '/v1/webhooks/inbound/sources?tenantId=tenant-001' });
             assert.equal(res.statusCode, 200);
             const body = res.json() as { sources: unknown[] };
             assert.ok(Array.isArray(body.sources));
+        } finally {
+            await app.close();
+        }
+    });
+
+    it('returns 400 when tenantId is missing', async () => {
+        const { app } = await buildApp();
+        try {
+            const res = await app.inject({ method: 'GET', url: '/v1/webhooks/inbound/sources' });
+            assert.equal(res.statusCode, 400);
         } finally {
             await app.close();
         }
@@ -119,12 +171,12 @@ describe('POST /v1/webhooks/inbound/sources', () => {
             const res = await app.inject({
                 method: 'POST',
                 url: '/v1/webhooks/inbound/sources',
-                payload: { name: 'GitHub Actions', description: 'CI triggers' },
+                payload: { name: 'GitHub Actions', description: 'CI triggers', tenantId: 'tenant-001' },
             });
             assert.equal(res.statusCode, 201);
             const body = res.json() as { id: string; name: string; secret: string; inboundUrl: string };
             assert.equal(body.name, 'GitHub Actions');
-            assert.ok(body.id.startsWith('wsrc_'));
+            assert.ok(typeof body.id === 'string' && body.id.length > 0);
             assert.ok(typeof body.secret === 'string' && body.secret.length > 0);
             assert.ok(body.inboundUrl.includes(body.id));
         } finally {
@@ -138,7 +190,21 @@ describe('POST /v1/webhooks/inbound/sources', () => {
             const res = await app.inject({
                 method: 'POST',
                 url: '/v1/webhooks/inbound/sources',
-                payload: {},
+                payload: { tenantId: 'tenant-001' },
+            });
+            assert.equal(res.statusCode, 400);
+        } finally {
+            await app.close();
+        }
+    });
+
+    it('rejects requests without a tenantId', async () => {
+        const { app } = await buildApp();
+        try {
+            const res = await app.inject({
+                method: 'POST',
+                url: '/v1/webhooks/inbound/sources',
+                payload: { name: 'Test Source' },
             });
             assert.equal(res.statusCode, 400);
         } finally {
@@ -148,12 +214,33 @@ describe('POST /v1/webhooks/inbound/sources', () => {
 });
 
 describe('DELETE /v1/webhooks/inbound/sources/:sourceId', () => {
-    it('returns deleted: true', async () => {
+    it('returns 404 for an unknown source', async () => {
         const { app } = await buildApp();
         try {
             const res = await app.inject({
                 method: 'DELETE',
-                url: '/v1/webhooks/inbound/sources/wsrc_test123',
+                url: '/v1/webhooks/inbound/sources/unknown-src',
+            });
+            assert.equal(res.statusCode, 404);
+        } finally {
+            await app.close();
+        }
+    });
+
+    it('returns deleted: true for an existing source', async () => {
+        const { app } = await buildApp();
+        try {
+            // Create a source first
+            const createRes = await app.inject({
+                method: 'POST',
+                url: '/v1/webhooks/inbound/sources',
+                payload: { name: 'To Delete', tenantId: 'tenant-001' },
+            });
+            const { id } = createRes.json() as { id: string };
+
+            const res = await app.inject({
+                method: 'DELETE',
+                url: `/v1/webhooks/inbound/sources/${id}`,
             });
             assert.equal(res.statusCode, 200);
             const body = res.json() as { deleted: boolean };
@@ -165,10 +252,20 @@ describe('DELETE /v1/webhooks/inbound/sources/:sourceId', () => {
 });
 
 describe('GET /v1/webhooks/inbound/events', () => {
-    it('returns an empty events array', async () => {
+    it('returns 400 when neither source nor tenantId is provided', async () => {
         const { app } = await buildApp();
         try {
             const res = await app.inject({ method: 'GET', url: '/v1/webhooks/inbound/events' });
+            assert.equal(res.statusCode, 400);
+        } finally {
+            await app.close();
+        }
+    });
+
+    it('returns an empty events array when tenantId is provided', async () => {
+        const { app } = await buildApp();
+        try {
+            const res = await app.inject({ method: 'GET', url: '/v1/webhooks/inbound/events?tenantId=tenant-001' });
             assert.equal(res.statusCode, 200);
             const body = res.json() as { events: unknown[] };
             assert.ok(Array.isArray(body.events));

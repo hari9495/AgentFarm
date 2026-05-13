@@ -1,6 +1,6 @@
 # Architecture
 
-AgentFarm is a TypeScript pnpm monorepo. The system is composed of five applications, eight shared packages, and external services. All runtime services are containerised and orchestrated via Docker Compose.
+AgentFarm is a TypeScript pnpm monorepo. The system is composed of six applications, fifteen domain services, thirteen shared packages, and external dependencies. All runtime services are containerised and orchestrated via Docker Compose. The website is deployed separately to Azure Static Web Apps.
 
 ---
 
@@ -13,7 +13,7 @@ AgentFarm is a TypeScript pnpm monorepo. The system is composed of five applicat
  ┌──────────────┐         ┌──────────────────┐
  │   Dashboard  │         │     Website       │
  │  (Next.js 15)│         │  (Next.js 15)     │
- │   port 3001  │         │   port 3000       │
+ │   port 3001  │         │  Azure SWA (prod) │
  └──────┬───────┘         └──────────────────┘
         │  internal token
         v
@@ -40,6 +40,13 @@ AgentFarm is a TypeScript pnpm monorepo. The system is composed of five applicat
        │PostgreSQL│   │    Redis     │  │ LLM APIs │
        │  pg 16   │   │  rate limit  │  │ (9 provs)│
        └──────────┘   └──────────────┘  └──────────┘
+
+ ┌──────────────────────────────────────────┐
+ │            Orchestrator                   │
+ │  (Fastify 5, port 3011)                  │
+ │  GOAP planner · Task/routine schedulers  │
+ │  Proactive signal detection · Handoffs   │
+ └──────────────────────────────────────────┘
 ```
 
 ### Optional external services
@@ -139,8 +146,49 @@ Dashboard browser
 ### Website (`apps/website/`)
 
 - **Framework**: Next.js 15
-- **Port**: varies (dev: 3000 or next available)
+- **Dev port**: 3002 (default `next dev` port; configurable)
+- **Production**: Deployed to Azure Static Web Apps (not part of Docker Compose)
 - **Purpose**: Marketing, signup, onboarding, and public-facing documentation
+
+### Orchestrator (`apps/orchestrator/`)
+
+- **Framework**: Fastify 5 with TypeScript
+- **Port**: 3011 (configurable via `PORT` env var)
+- **Purpose**: Multi-agent workflow coordination, proactive signal detection, and agent handoff management
+- **Key modules**:
+  - `goap-planner.ts` — GOAP A* planner over `GoalWorldState` (preconditions, effects, cost)
+  - `task-scheduler.ts` — Deferred and immediate task scheduling
+  - `routine-scheduler.ts` — Periodic/routine execution with proactive signal detection (ci_failure_on_main, dependency_cve)
+  - `proactive-signal-detector.ts` — Detects and emits proactive signals for upstream triggers
+  - `agent-handoff-manager.ts` — Handoff lifecycle: pending → accepted → completed / failed / timed_out
+  - `orchestrator-state-store.ts` — Durable world-state persistence for GOAP replanning
+  - `parallel-task-manager.ts` — Concurrent task dispatch and result collation
+  - `plugin-capability-guard.ts` — Guards multi-agent orchestration based on plugin allowlists
+- **Tests**: 62 tests
+
+---
+
+## Domain services
+
+15 domain services under `services/`. All are pnpm workspace members and are consumed by the apps as workspace dependencies.
+
+| Service | Package | Purpose |
+|---------|---------|---------|
+| `agent-observability` | `@agentfarm/agent-observability` | Action interception, audit log writer, browser screenshot capture with upload, correctness scorer, diff verifier |
+| `agent-question-service` | `@agentfarm/agent-question-service` | Async human-in-the-loop question parking; Prisma-backed question store |
+| `approval-service` | `@agentfarm/approval-service` | Approval batcher (batch create + batch decision), kill-switch enforcer, governance workflow manager |
+| `audit-storage` | `@agentfarm/audit-storage` | Azure Blob Storage screenshot and evidence uploader |
+| `browser-actions` | `@agentfarm/browser-actions` | Playwright browser action executor (web-actions) |
+| `compliance-export` | `@agentfarm/compliance-export` | JSON/JSONL/CSV compliance pack export with 365-day and 730-day retention policies |
+| `connector-gateway` | `@agentfarm/connector-gateway` | 12-connector OAuth registry (GitHub, GitLab, Jira, Linear, Slack, Teams, Notion, Confluence, PagerDuty, Sentry, Azure DevOps, Email); mTLS cert verifier, PII filter, plugin loader, adapter registry |
+| `evidence-service` | `@agentfarm/evidence-service` | Governance KPI calculator, HNSW vector search index for evidence retrieval (cosine similarity, O(log N) search) |
+| `identity-service` | `@agentfarm/identity-service` | Tenant, workspace, and user lifecycle scaffold |
+| `meeting-agent` | `@agentfarm/meeting-agent` | Meeting lifecycle state machine, STT/TTS voice pipeline adapters |
+| `memory-service` | `@agentfarm/memory-service` | Long-term agent memory store with TTL and relevance ranking (`memory-store.ts`, `memory-types.ts`) |
+| `notification-service` | `@agentfarm/notification-service` | Multi-channel approval alert dispatcher: Telegram, Slack, Discord, Webhook, Voice |
+| `policy-engine` | `@agentfarm/policy-engine` | Governance routing policy resolution |
+| `provisioning-service` | `@agentfarm/provisioning-service` | Azure VM lifecycle — 11-step state machine, job processor, queue consumer, VM bootstrap, SLA monitoring |
+| `retention-cleanup` | `@agentfarm/retention-cleanup` | Scheduled artifact retention cleanup job |
 
 ---
 
@@ -172,14 +220,19 @@ Dashboard browser
 
 | Package | Import name | Purpose |
 |---------|-------------|---------|
-| `packages/db-schema` | `@agentfarm/db-schema` | Prisma schema, migrations, generated client |
-| `packages/shared-types` | `@agentfarm/shared-types` | Contract types shared across all apps |
-| `packages/queue-contracts` | `@agentfarm/queue-contracts` | Queue message type definitions |
+| `packages/auth-utils` | `@agentfarm/auth-utils` | scrypt password hashing and verification |
+| `packages/cli` | `@agentfarm/cli` | `af` developer CLI (depends on sdk) |
+| `packages/config` | `@agentfarm/config` | Centralised service URL and config constants |
 | `packages/connector-contracts` | `@agentfarm/connector-contracts` | 18-connector registry, 18 action types, 12 role policies |
-| `packages/observability` | `@agentfarm/observability` | OpenTelemetry + Azure Monitor helpers |
 | `packages/crm-service` | `@agentfarm/crm-adapters` | CRM adapter types and clients |
+| `packages/db-schema` | `@agentfarm/db-schema` | Prisma schema, migrations, generated client |
+| `packages/e2e` | `@agentfarm/e2e` | Playwright end-to-end test suite |
 | `packages/erp-service` | `@agentfarm/erp-adapters` | ERP adapter types and clients |
 | `packages/notification-service` | `@agentfarm/notification-adapters` | Notification adapter types |
+| `packages/observability` | `@agentfarm/observability` | OpenTelemetry + Azure Monitor helpers |
+| `packages/queue-contracts` | `@agentfarm/queue-contracts` | Queue message type definitions |
+| `packages/sdk` | `@agentfarm/sdk` | AgentFarmClient SDK (agents, analytics, notifications, messages) |
+| `packages/shared-types` | `@agentfarm/shared-types` | 100+ contract types shared across all apps and services |
 
 Packages use `main: ./src/index.ts` in their `package.json` for in-process resolution during development. No `dist/` output is required for local development or testing. `@agentfarm/shared-types` is the only package with a compiled `dist/` (used by applications that need it at runtime).
 

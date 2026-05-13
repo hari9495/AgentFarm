@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getInternalSessionAuthHeader } from '../../../../lib/internal-session';
-import type { BrowserActionType, PrismaClient } from '@prisma/client';
-
-let prismaClientSingleton: PrismaClient | undefined;
+import type { BrowserActionType } from '@prisma/client';
+import { prisma } from '../../../../lib/prisma';
 
 const resolveRiskLevelFromActionType = (actionType: BrowserActionType): 'low' | 'medium' | 'high' => {
     switch (actionType) {
@@ -14,24 +13,6 @@ const resolveRiskLevelFromActionType = (actionType: BrowserActionType): 'low' | 
             return 'medium';
         default:
             return 'low';
-    }
-};
-
-const getPrismaClient = async (): Promise<PrismaClient> => {
-    if (prismaClientSingleton !== undefined) {
-        return prismaClientSingleton;
-    }
-
-    if (!process.env.DATABASE_URL?.trim()) {
-        throw new Error('DATABASE_URL is required for Prisma-backed session replay.');
-    }
-
-    try {
-        const prismaModule = await import('@prisma/client');
-        prismaClientSingleton = new prismaModule.PrismaClient();
-        return prismaClientSingleton;
-    } catch {
-        throw new Error('Failed to initialize @prisma/client for session replay route.');
     }
 };
 
@@ -117,7 +98,6 @@ export async function GET(
     }
 
     try {
-        const prisma = await getPrismaClient();
         const session = await prisma.agentSession.findUnique({
             where: { id: sessionId },
             select: {

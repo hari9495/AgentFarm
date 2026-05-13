@@ -16,6 +16,7 @@
     "dependencies": {
         "@agentfarm/agent-question-service": "workspace:*",
         "@agentfarm/agent-runtime": "workspace:*",
+        "@agentfarm/auth-utils": "workspace:*",
         "@agentfarm/connector-contracts": "workspace:*",
         "@agentfarm/memory-service": "workspace:*",
         "@agentfarm/observability": "workspace:*",

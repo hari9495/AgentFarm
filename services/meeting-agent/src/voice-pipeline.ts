@@ -23,12 +23,14 @@ export type TtsAdapter = (
 /** Default STT stub — in production replace with a Whisper API call. */
 const defaultSttAdapter: SttAdapter = async (_audioRef, _config) => {
     // Production: POST audio to Whisper endpoint
+    console.error('[voice-pipeline] defaultSttAdapter called: no STT provider configured, returning empty transcript. Set a real SttAdapter in VoicePipeline constructor.');
     return { transcript: '', confidence: undefined };
 };
 
 /** Default TTS stub — in production replace with VoxCPM /v1/audio/speech call. */
 const defaultTtsAdapter: TtsAdapter = async (_text, _config) => {
     // Production: POST to config.ttsEndpoint (OpenAI-compatible /v1/audio/speech)
+    console.error('[voice-pipeline] defaultTtsAdapter called: no TTS provider configured, returning empty audioRef. Set a real TtsAdapter in VoicePipeline constructor.');
     return { audioRef: undefined };
 };
 

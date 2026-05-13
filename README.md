@@ -14,17 +14,29 @@ AgentFarm is a production-grade, multi-tenant AI agent orchestration platform bu
                       │   PostgreSQL  │       │  Trigger Svc  │
                       │    + Redis    │       │   (Fastify)   │
                       └───────────────┘       └───────────────┘
+                                                      │
+                                              ┌───────┴───────┐
+                                              │ Orchestrator  │
+                                              │  (Fastify)    │
+                                              └───────────────┘
+
+Domain Services Layer (15 services)
+  agent-observability · approval-service · browser-actions · connector-gateway
+  evidence-service · identity-service · meeting-agent · memory-service
+  notification-service · policy-engine · provisioning-service · + 4 more
 ```
 
 The **API Gateway** is the single control-plane entry point. All dashboard traffic is proxied through it. It owns authentication, rate limiting, billing enforcement, audit logging, and all database writes.
 
 The **Agent Runtime** is the execution engine for AI tasks. It connects back to the API Gateway for approvals and task lease management, and out to LLM providers, connectors, and optional external services (Voicebox STT, VoxCPM2 TTS, OPA).
 
+The **Orchestrator** coordinates multi-agent workflows using a GOAP (Goal-Oriented Action Planning) A* planner, routine/task schedulers, proactive signal detection (CI failures, CVE alerts), and agent handoff management (port 3011).
+
 The **Trigger Service** handles inbound signals — webhooks, email (IMAP), and Slack messages — and forwards them as structured tasks to the Agent Runtime.
 
 The **Dashboard** (Next.js) proxies every API call through its own `app/api/` route layer, which adds an internal auth header before forwarding to the API Gateway. It never calls the Gateway directly from the browser.
 
-The **Website** (Next.js) handles marketing, public signup, and onboarding flows.
+The **Website** (Next.js) handles marketing, public signup, and onboarding flows. Deployed to Azure Static Web Apps in production.
 
 ---
 
@@ -34,19 +46,42 @@ The **Website** (Next.js) handles marketing, public signup, and onboarding flows
 apps/
   api-gateway/      Fastify 5 control-plane: auth, routing, billing, audit, approvals
   agent-runtime/    AI task execution engine: LLM routing, skills, orchestration, desktop
-  trigger-service/  Inbound webhook, email, and Slack trigger ingestion
-  dashboard/        Next.js 15 operator dashboard (51 pages, 159 proxy routes)
-  website/          Next.js 15 marketing, signup, and onboarding site
+  orchestrator/     Multi-agent workflow coordinator: GOAP planner, schedulers, handoffs (port 3011)
+  trigger-service/  Inbound webhook, email, and Slack trigger ingestion (port 3002)
+  dashboard/        Next.js 15 operator dashboard (51 pages, 159 proxy routes) (port 3001)
+  website/          Next.js 15 marketing, signup, and onboarding site (Azure SWA in prod)
+
+services/
+  agent-observability/     Action interception, audit log writer, browser capture, correctness scorer
+  agent-question-service/  Async human-in-the-loop Q&A question parking with Prisma store
+  approval-service/        Approval batcher, kill-switch enforcer, governance workflow manager
+  audit-storage/           Azure Blob screenshot uploader and evidence persistence
+  browser-actions/         Playwright browser action executor (web-actions)
+  compliance-export/       JSON/CSV compliance pack export with 365/730-day retention
+  connector-gateway/       12-connector OAuth registry, mTLS verifier, PII filter, plugin loader
+  evidence-service/        Governance KPI calculator, HNSW vector search index
+  identity-service/        Tenant/workspace/user lifecycle scaffold
+  meeting-agent/           Meeting lifecycle state machine, STT/TTS voice pipeline adapters
+  memory-service/          Long-term agent memory store with TTL and relevance ranking
+  notification-service/    Telegram/Slack/Discord/Webhook/Voice approval alert dispatcher
+  policy-engine/           Governance routing policy resolution
+  provisioning-service/    Azure VM lifecycle 11-step state machine, SLA monitoring, job processor
+  retention-cleanup/       Scheduled artifact retention cleanup job
 
 packages/
-  db-schema/             Prisma schema, migrations, and generated client
-  shared-types/          TypeScript types shared across all apps
-  queue-contracts/       Queue message schemas
-  connector-contracts/   Connector action and auth contracts
-  observability/         OpenTelemetry + Azure Monitor helpers
-  crm-service/           CRM adapter types and clients
-  erp-service/           ERP adapter types and clients
+  auth-utils/            scrypt password hashing and verification utilities
+  cli/                   af CLI — developer command-line tool (uses sdk)
+  config/                Centralised service URL and configuration constants
+  connector-contracts/   18-connector registry, 18 normalized action types, 12 role policies
+  crm-service/           CRM adapter types and clients (Salesforce, HubSpot)
+  db-schema/             Prisma schema, migrations, and generated client (70 models)
+  e2e/                   Playwright end-to-end test suite
+  erp-service/           ERP adapter types and clients (SAP, Oracle)
   notification-service/  Notification adapter types
+  observability/         OpenTelemetry + Azure Monitor helpers
+  queue-contracts/       Queue message schemas and lease/budget types
+  sdk/                   AgentFarmClient SDK (agents, analytics, notifications, messages)
+  shared-types/          100+ TypeScript contracts shared across all apps and services
 ```
 
 ---
@@ -280,6 +315,7 @@ pnpm --filter @agentfarm/api-gateway dev      # port 3000
 pnpm --filter @agentfarm/agent-runtime dev    # port 4000
 pnpm --filter @agentfarm/trigger-service dev  # port 3002
 pnpm --filter @agentfarm/dashboard dev        # port 3001
+pnpm --filter @agentfarm/orchestrator dev     # port 3011 (optional — multi-agent workflows)
 ```
 
 ### Required environment variables
@@ -349,18 +385,23 @@ Nine services in `docker-compose.yml`. All 8 runtime services have healthchecks.
 
 ## Shared packages
 
-8 shared packages under `packages/`. TypeScript path aliases enable in-process resolution in development — no compiled `dist/` output required to run or test locally.
+13 shared packages under `packages/`. TypeScript path aliases enable in-process resolution in development — no compiled `dist/` output required to run or test locally.
 
 | Package | Purpose | Has `dist/`? | Notes |
 |---------|---------|--------------|-------|
-| `@agentfarm/db-schema` | Prisma schema + generated client | no | Run `prisma generate` |
-| `@agentfarm/shared-types` | Shared TypeScript types | yes | |
-| `@agentfarm/queue-contracts` | Queue message schemas | no | |
+| `@agentfarm/auth-utils` | scrypt password hashing + verification | no | |
+| `@agentfarm/cli` | `af` developer CLI (`bin: af`) | no | Depends on sdk |
+| `@agentfarm/config` | Centralised service URL + config constants | no | |
 | `@agentfarm/connector-contracts` | Connector action/auth contracts | no | |
-| `@agentfarm/observability` | OTEL + Azure Monitor helpers | no | |
 | `@agentfarm/crm-service` | CRM adapter types and clients | no | |
+| `@agentfarm/db-schema` | Prisma schema + generated client | no | Run `prisma generate` |
+| `@agentfarm/e2e` | Playwright end-to-end tests | no | |
 | `@agentfarm/erp-service` | ERP adapter types and clients | no | |
 | `@agentfarm/notification-service` | Notification adapter types | no | |
+| `@agentfarm/observability` | OTEL + Azure Monitor helpers | no | |
+| `@agentfarm/queue-contracts` | Queue message schemas | no | |
+| `@agentfarm/sdk` | AgentFarmClient SDK (agents, analytics, notifications) | no | |
+| `@agentfarm/shared-types` | Shared TypeScript types | yes | |
 
 ---
 

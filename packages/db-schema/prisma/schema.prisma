@@ -1790,3 +1790,33 @@ enum TenantPortalRole {
   MANAGER
   ADMIN
 }
+
+// Phase 36 — Inbound Webhooks: durable source registry and event log.
+model WebhookSource {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  description String?
+  secret      String
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  events      InboundWebhookEvent[]
+
+  @@index([tenantId])
+}
+
+model InboundWebhookEvent {
+  id         String        @id @default(cuid())
+  sourceId   String
+  source     WebhookSource @relation(fields: [sourceId], references: [id])
+  tenantId   String
+  eventType  String
+  payload    Json
+  receivedAt DateTime      @default(now())
+  processed  Boolean       @default(false)
+
+  @@index([sourceId])
+  @@index([tenantId])
+  @@index([sourceId, processed])
+}

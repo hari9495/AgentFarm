@@ -60,184 +60,200 @@ function formatDate(date: Date): string {
  */
 export function generateContractPdf(params: ContractPdfParams): Promise<Buffer> {
     return new Promise((resolve, reject) => {
-        const doc = new PDFDocument({ margin: 60, size: 'A4' });
+        let doc: InstanceType<typeof PDFDocument>;
+        try {
+            doc = new PDFDocument({ margin: 60, size: 'A4' });
+        } catch (err: unknown) {
+            console.error('[contract-generator] PDFDocument init failed:', err);
+            reject(err instanceof Error ? err : new Error(String(err)));
+            return;
+        }
+
         const chunks: Buffer[] = [];
 
         doc.on('data', (chunk: Buffer) => chunks.push(chunk));
         doc.on('end', () => resolve(Buffer.concat(chunks)));
-        doc.on('error', reject);
+        doc.on('error', (err: Error) => {
+            console.error('[contract-generator] PDFKit stream error:', err);
+            reject(err);
+        });
 
-        const pageWidth = doc.page.width - 120; // account for margins
+        try {
+            const pageWidth = doc.page.width - 120; // account for margins
 
-        // ----------------------------------------------------------------
-        // Header
-        // ----------------------------------------------------------------
-        doc
-            .fontSize(20)
-            .font('Helvetica-Bold')
-            .text('AgentFarm Service Agreement', { align: 'center' })
-            .moveDown(0.4);
+            // ----------------------------------------------------------------
+            // Header
+            // ----------------------------------------------------------------
+            doc
+                .fontSize(20)
+                .font('Helvetica-Bold')
+                .text('AgentFarm Service Agreement', { align: 'center' })
+                .moveDown(0.4);
 
-        doc
-            .fontSize(10)
-            .font('Helvetica')
-            .text(`Date: ${formatDate(params.date)}`, { align: 'center' })
-            .moveDown(1.5);
-
-        doc
-            .moveTo(60, doc.y)
-            .lineTo(60 + pageWidth, doc.y)
-            .strokeColor('#CCCCCC')
-            .stroke()
-            .moveDown(1);
-
-        // ----------------------------------------------------------------
-        // Parties
-        // ----------------------------------------------------------------
-        doc
-            .fontSize(13)
-            .font('Helvetica-Bold')
-            .text('Parties')
-            .moveDown(0.4);
-
-        doc
-            .fontSize(10)
-            .font('Helvetica')
-            .text(`Service Provider: AgentFarm (${params.companyName})`)
-            .moveDown(0.3)
-            .text(`Customer: ${params.customerName} (${params.customerEmail})`)
-            .moveDown(1.2);
-
-        // ----------------------------------------------------------------
-        // Plan details
-        // ----------------------------------------------------------------
-        doc
-            .fontSize(13)
-            .font('Helvetica-Bold')
-            .text('Plan Details')
-            .moveDown(0.4);
-
-        doc
-            .fontSize(10)
-            .font('Helvetica')
-            .text(`Plan Name: ${params.planName}`)
-            .moveDown(0.3)
-            .text(`Agent Slots: ${params.agentSlots}`)
-            .moveDown(0.6);
-
-        doc
-            .fontSize(10)
-            .font('Helvetica-Bold')
-            .text('Included Features:')
-            .moveDown(0.3);
-
-        const featureList = params.features
-            .split(',')
-            .map((f) => f.trim())
-            .filter(Boolean);
-
-        for (const feature of featureList) {
             doc
                 .fontSize(10)
                 .font('Helvetica')
-                .text(`  • ${feature}`)
-                .moveDown(0.2);
-        }
+                .text(`Date: ${formatDate(params.date)}`, { align: 'center' })
+                .moveDown(1.5);
 
-        doc.moveDown(0.8);
+            doc
+                .moveTo(60, doc.y)
+                .lineTo(60 + pageWidth, doc.y)
+                .strokeColor('#CCCCCC')
+                .stroke()
+                .moveDown(1);
 
-        // ----------------------------------------------------------------
-        // Payment
-        // ----------------------------------------------------------------
-        doc
-            .fontSize(13)
-            .font('Helvetica-Bold')
-            .text('Payment')
-            .moveDown(0.4);
+            // ----------------------------------------------------------------
+            // Parties
+            // ----------------------------------------------------------------
+            doc
+                .fontSize(13)
+                .font('Helvetica-Bold')
+                .text('Parties')
+                .moveDown(0.4);
 
-        doc
-            .fontSize(10)
-            .font('Helvetica')
-            .text(`Total Amount: ${formatAmount(params.amountCents, params.currency)}`)
-            .moveDown(1.2);
-
-        // ----------------------------------------------------------------
-        // Terms
-        // ----------------------------------------------------------------
-        doc
-            .fontSize(13)
-            .font('Helvetica-Bold')
-            .text('Terms & Conditions')
-            .moveDown(0.4);
-
-        const terms = [
-            'Customer agrees to use agents within purchased slot limits',
-            'AgentFarm will provision agents within 24 hours of contract signing',
-            'Contract is valid for 12 months from signing date',
-        ];
-
-        for (const term of terms) {
             doc
                 .fontSize(10)
                 .font('Helvetica')
-                .text(`  • ${term}`)
+                .text(`Service Provider: AgentFarm (${params.companyName})`)
+                .moveDown(0.3)
+                .text(`Customer: ${params.customerName} (${params.customerEmail})`)
+                .moveDown(1.2);
+
+            // ----------------------------------------------------------------
+            // Plan details
+            // ----------------------------------------------------------------
+            doc
+                .fontSize(13)
+                .font('Helvetica-Bold')
+                .text('Plan Details')
+                .moveDown(0.4);
+
+            doc
+                .fontSize(10)
+                .font('Helvetica')
+                .text(`Plan Name: ${params.planName}`)
+                .moveDown(0.3)
+                .text(`Agent Slots: ${params.agentSlots}`)
+                .moveDown(0.6);
+
+            doc
+                .fontSize(10)
+                .font('Helvetica-Bold')
+                .text('Included Features:')
                 .moveDown(0.3);
+
+            const featureList = params.features
+                .split(',')
+                .map((f) => f.trim())
+                .filter(Boolean);
+
+            for (const feature of featureList) {
+                doc
+                    .fontSize(10)
+                    .font('Helvetica')
+                    .text(`  • ${feature}`)
+                    .moveDown(0.2);
+            }
+
+            doc.moveDown(0.8);
+
+            // ----------------------------------------------------------------
+            // Payment
+            // ----------------------------------------------------------------
+            doc
+                .fontSize(13)
+                .font('Helvetica-Bold')
+                .text('Payment')
+                .moveDown(0.4);
+
+            doc
+                .fontSize(10)
+                .font('Helvetica')
+                .text(`Total Amount: ${formatAmount(params.amountCents, params.currency)}`)
+                .moveDown(1.2);
+
+            // ----------------------------------------------------------------
+            // Terms
+            // ----------------------------------------------------------------
+            doc
+                .fontSize(13)
+                .font('Helvetica-Bold')
+                .text('Terms & Conditions')
+                .moveDown(0.4);
+
+            const terms = [
+                'Customer agrees to use agents within purchased slot limits',
+                'AgentFarm will provision agents within 24 hours of contract signing',
+                'Contract is valid for 12 months from signing date',
+            ];
+
+            for (const term of terms) {
+                doc
+                    .fontSize(10)
+                    .font('Helvetica')
+                    .text(`  • ${term}`)
+                    .moveDown(0.3);
+            }
+
+            doc.moveDown(1.5);
+
+            // ----------------------------------------------------------------
+            // Signature section
+            // ----------------------------------------------------------------
+            doc
+                .moveTo(60, doc.y)
+                .lineTo(60 + pageWidth, doc.y)
+                .strokeColor('#CCCCCC')
+                .stroke()
+                .moveDown(1);
+
+            doc
+                .fontSize(13)
+                .font('Helvetica-Bold')
+                .text('Signatures')
+                .moveDown(0.6);
+
+            doc
+                .fontSize(10)
+                .font('Helvetica')
+                .text('Customer Signature: ___________________________')
+                .moveDown(0.5)
+                .text(`Name: ${params.customerName}`)
+                .moveDown(0.5)
+                .text(`Date: ${formatDate(params.date)}`)
+                .moveDown(1.5);
+
+            doc
+                .fontSize(10)
+                .font('Helvetica')
+                .text('AgentFarm Authorised Signatory: ___________________________')
+                .moveDown(0.5)
+                .text('Name: AgentFarm Platform')
+                .moveDown(0.5)
+                .text(`Date: ${formatDate(params.date)}`)
+                .moveDown(2);
+
+            // ----------------------------------------------------------------
+            // Footer
+            // ----------------------------------------------------------------
+            doc
+                .moveTo(60, doc.y)
+                .lineTo(60 + pageWidth, doc.y)
+                .strokeColor('#CCCCCC')
+                .stroke()
+                .moveDown(0.6);
+
+            doc
+                .fontSize(9)
+                .fillColor('#888888')
+                .font('Helvetica')
+                .text(`Order ID: ${params.orderId}`, { align: 'center' });
+
+            doc.end();
+        } catch (err: unknown) {
+            console.error('[contract-generator] generateContractPdf failed:', err);
+            reject(err instanceof Error ? err : new Error(String(err)));
         }
-
-        doc.moveDown(1.5);
-
-        // ----------------------------------------------------------------
-        // Signature section
-        // ----------------------------------------------------------------
-        doc
-            .moveTo(60, doc.y)
-            .lineTo(60 + pageWidth, doc.y)
-            .strokeColor('#CCCCCC')
-            .stroke()
-            .moveDown(1);
-
-        doc
-            .fontSize(13)
-            .font('Helvetica-Bold')
-            .text('Signatures')
-            .moveDown(0.6);
-
-        doc
-            .fontSize(10)
-            .font('Helvetica')
-            .text('Customer Signature: ___________________________')
-            .moveDown(0.5)
-            .text(`Name: ${params.customerName}`)
-            .moveDown(0.5)
-            .text(`Date: ${formatDate(params.date)}`)
-            .moveDown(1.5);
-
-        doc
-            .fontSize(10)
-            .font('Helvetica')
-            .text('AgentFarm Authorised Signatory: ___________________________')
-            .moveDown(0.5)
-            .text('Name: AgentFarm Platform')
-            .moveDown(0.5)
-            .text(`Date: ${formatDate(params.date)}`)
-            .moveDown(2);
-
-        // ----------------------------------------------------------------
-        // Footer
-        // ----------------------------------------------------------------
-        doc
-            .moveTo(60, doc.y)
-            .lineTo(60 + pageWidth, doc.y)
-            .strokeColor('#CCCCCC')
-            .stroke()
-            .moveDown(0.6);
-
-        doc
-            .fontSize(9)
-            .fillColor('#888888')
-            .font('Helvetica')
-            .text(`Order ID: ${params.orderId}`, { align: 'center' });
-
-        doc.end();
     });
 }

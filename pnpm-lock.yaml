@@ -38,6 +38,9 @@ importers:
       '@agentfarm/browser-actions':
         specifier: workspace:*
         version: link:../../services/browser-actions
+      '@agentfarm/config':
+        specifier: workspace:*
+        version: link:../../packages/config
       '@agentfarm/crm-adapters':
         specifier: workspace:*
         version: link:../../packages/crm-service
@@ -84,6 +87,9 @@ importers:
       '@agentfarm/agent-runtime':
         specifier: workspace:*
         version: link:../agent-runtime
+      '@agentfarm/auth-utils':
+        specifier: workspace:*
+        version: link:../../packages/auth-utils
       '@agentfarm/connector-contracts':
         specifier: workspace:*
         version: link:../../packages/connector-contracts
@@ -241,6 +247,12 @@ importers:
 
   apps/website:
     dependencies:
+      '@agentfarm/auth-utils':
+        specifier: workspace:*
+        version: link:../../packages/auth-utils
+      '@agentfarm/config':
+        specifier: workspace:*
+        version: link:../../packages/config
       '@agentfarm/connector-contracts':
         specifier: workspace:*
         version: link:../../packages/connector-contracts
@@ -321,11 +333,23 @@ importers:
         specifier: ^5
         version: 5.9.3
 
+  packages/auth-utils:
+    devDependencies:
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
   packages/cli:
     dependencies:
       '@agentfarm/sdk':
         specifier: workspace:*
         version: link:../sdk
+
+  packages/config:
+    devDependencies:
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
 
   packages/connector-contracts:
     devDependencies:

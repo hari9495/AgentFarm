@@ -21,6 +21,8 @@
         "ui:baseline:update": "node scripts/verify-ui-baseline.mjs --update"
     },
     "dependencies": {
+        "@agentfarm/auth-utils": "workspace:*",
+        "@agentfarm/config": "workspace:*",
         "@agentfarm/connector-contracts": "workspace:*",
         "@react-three/drei": "^10.7.7",
         "@react-three/fiber": "^9.6.1",

@@ -1,5 +1,6 @@
 import { registerChatRoutes } from './chat-routes.js';
 import { initObservability } from '@agentfarm/observability';
+import { GATEWAY_URL } from '@agentfarm/config';
 initObservability({
     serviceName: 'agent-runtime',
     azureConnectionString: process.env.APPLICATIONINSIGHTS_CONNECTION_STRING,
@@ -645,7 +646,7 @@ const parseQualitySignalSource = (value: unknown): QualitySignalSource | null =>
 // Failures are logged but never block the caller.
 // ---------------------------------------------------------------------------
 function emitQualitySignal(signal: QualitySignalRecord, taskId?: string): void {
-    const gwUrl = process.env.API_GATEWAY_URL ?? 'http://localhost:3000';
+    const gwUrl = GATEWAY_URL;
     fetch(`${gwUrl}/v1/feedback/quality-signal`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

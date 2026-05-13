@@ -123,7 +123,9 @@ export async function getDesktopOperator(): Promise<DesktopOperator> {
     }
     case 'native':
     default:
-      // TODO: wire up a real native adapter (e.g. AppleScript / xdg-open / PowerShell)
-      return new MockDesktopOperator();
+      throw new Error(
+        'Native desktop adapter is not implemented. ' +
+        'Set DESKTOP_OPERATOR=mock or DESKTOP_OPERATOR=playwright instead.'
+      );
   }
 }

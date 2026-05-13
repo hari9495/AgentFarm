@@ -41,4 +41,26 @@ describe('desktop-operator-factory', () => {
     const result = await operator.appLaunch('vscode', ['--new-window']);
     assert.equal(result.ok, true);
   });
+
+  it('getDesktopOperator throws for DESKTOP_OPERATOR=native', async () => {
+    process.env.DESKTOP_OPERATOR = 'native';
+    await assert.rejects(
+      () => getDesktopOperator(),
+      (err: Error) => {
+        assert.ok(err.message.includes('Native desktop adapter is not implemented'));
+        return true;
+      },
+    );
+  });
+
+  it('getDesktopOperator throws when DESKTOP_OPERATOR is unset (defaults to native)', async () => {
+    delete process.env.DESKTOP_OPERATOR;
+    await assert.rejects(
+      () => getDesktopOperator(),
+      (err: Error) => {
+        assert.ok(err.message.includes('Native desktop adapter is not implemented'));
+        return true;
+      },
+    );
+  });
 });

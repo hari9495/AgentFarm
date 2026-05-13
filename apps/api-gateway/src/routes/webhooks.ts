@@ -324,35 +324,47 @@ export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient
     );
 
     // ── Inbound webhook source management ────────────────────────────────────
-    // TODO: Add a WebhookSource model to the Prisma schema for persistence.
-    // Current implementation returns static/generated shapes without DB writes.
 
     /**
      * GET /v1/webhooks/inbound/sources
-     * Returns the list of registered inbound webhook sources.
+     * Returns the list of registered inbound webhook sources for a tenant.
+     * Query: tenantId (required)
      */
-    app.get('/v1/webhooks/inbound/sources', async (_req, reply) => {
-        // TODO: Replace with prisma.webhookSource.findMany() once the model exists.
-        return reply.send({ sources: [] });
+    app.get<{ Querystring: { tenantId?: string } }>('/v1/webhooks/inbound/sources', async (req, reply) => {
+        const tenantId = trimString(req.query.tenantId);
+        if (!tenantId) {
+            return reply.code(400).send({ error: 'tenantId query parameter is required' });
+        }
+        const sources = await prisma.webhookSource.findMany({
+            where: { tenantId },
+            orderBy: { createdAt: 'desc' },
+        });
+        return reply.send({ sources });
     });
 
     /**
      * POST /v1/webhooks/inbound/sources
      * Registers a new inbound webhook source.
-     * Body: { name: string, description?: string }
+     * Body: { name: string, tenantId: string, description?: string }
      */
-    app.post<{ Body: { name?: unknown; description?: unknown } }>(
+    app.post<{ Body: { name?: unknown; description?: unknown; tenantId?: unknown } }>(
         '/v1/webhooks/inbound/sources',
         async (req, reply) => {
             const name = trimString(req.body?.name);
+            const tenantId = trimString(req.body?.tenantId);
             if (!name) {
                 return reply.code(400).send({ error: 'name is required' });
             }
-            const id = `wsrc_${randomUUID().replace(/-/g, '').slice(0, 16)}`;
+            if (!tenantId) {
+                return reply.code(400).send({ error: 'tenantId is required' });
+            }
+            const description = trimString(req.body?.description) || undefined;
             const secret = randomUUID();
-            const inboundUrl = `/webhooks/ingest/inbound?source=${id}`;
-            // TODO: Persist to prisma.webhookSource once the model exists.
-            return reply.code(201).send({ id, name, secret, inboundUrl });
+            const source = await prisma.webhookSource.create({
+                data: { tenantId, name, description, secret },
+            });
+            const inboundUrl = `/webhooks/ingest/inbound?source=${source.id}`;
+            return reply.code(201).send({ id: source.id, name: source.name, secret: source.secret, inboundUrl });
         },
     );
 
@@ -362,8 +374,12 @@ export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient
      */
     app.delete<{ Params: { sourceId: string } }>(
         '/v1/webhooks/inbound/sources/:sourceId',
-        async (_req, reply) => {
-            // TODO: Delete from prisma.webhookSource once the model exists.
+        async (req, reply) => {
+            const existing = await prisma.webhookSource.findUnique({ where: { id: req.params.sourceId } });
+            if (!existing) {
+                return reply.code(404).send({ error: 'source not found' });
+            }
+            await prisma.webhookSource.delete({ where: { id: req.params.sourceId } });
             return reply.send({ deleted: true });
         },
     );
@@ -371,13 +387,29 @@ export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient
     /**
      * GET /v1/webhooks/inbound/events
      * Returns recent inbound webhook events.
-     * Query: source?, limit?, cursor?
+     * Query: source?, tenantId?, limit?, cursor?
+     * At least one of source or tenantId is required.
      */
-    app.get<{ Querystring: { source?: string; limit?: string; cursor?: string } }>(
+    app.get<{ Querystring: { source?: string; tenantId?: string; limit?: string; cursor?: string } }>(
         '/v1/webhooks/inbound/events',
-        async (_req, reply) => {
-            // TODO: Query from an InboundWebhookEvent model once it exists.
-            return reply.send({ events: [] });
+        async (req, reply) => {
+            const sourceId = req.query.source ? trimString(req.query.source) : undefined;
+            const tenantId = req.query.tenantId ? trimString(req.query.tenantId) : undefined;
+            if (!sourceId && !tenantId) {
+                return reply.code(400).send({ error: 'source or tenantId query parameter is required' });
+            }
+            const limit = Math.min(Number(req.query.limit ?? 20), 100);
+            const cursor = req.query.cursor ? trimString(req.query.cursor) : undefined;
+            const where: Record<string, unknown> = {};
+            if (sourceId) where['sourceId'] = sourceId;
+            if (tenantId) where['tenantId'] = tenantId;
+            const events = await prisma.inboundWebhookEvent.findMany({
+                where,
+                orderBy: { receivedAt: 'desc' },
+                take: limit,
+                ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+            });
+            return reply.send({ events });
         },
     );
 

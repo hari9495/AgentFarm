@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-const getApiBaseUrl = (): string => process.env.API_GATEWAY_URL ?? 'http://localhost:3000';
+import { GATEWAY_URL } from '@agentfarm/config';
 
 export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
-    const upstream = `${getApiBaseUrl()}/v1/marketplace/listings?${searchParams.toString()}`;
+    const upstream = `${GATEWAY_URL}/v1/marketplace/listings?${searchParams.toString()}`;
 
     const response = await fetch(upstream, { cache: 'no-store' });
 

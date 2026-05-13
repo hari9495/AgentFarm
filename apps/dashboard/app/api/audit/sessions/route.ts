@@ -1,26 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getInternalSessionAuthHeader } from '../../../lib/internal-session';
-import type { PrismaClient } from '@prisma/client';
-
-let prismaClientSingleton: PrismaClient | undefined;
-
-const getPrismaClient = async (): Promise<PrismaClient> => {
-    if (prismaClientSingleton !== undefined) {
-        return prismaClientSingleton;
-    }
-
-    if (!process.env.DATABASE_URL?.trim()) {
-        throw new Error('DATABASE_URL is required for Prisma-backed session index.');
-    }
-
-    try {
-        const prismaModule = await import('@prisma/client');
-        prismaClientSingleton = new prismaModule.PrismaClient();
-        return prismaClientSingleton;
-    } catch {
-        throw new Error('Failed to initialize @prisma/client for sessions index route.');
-    }
-};
+import { prisma } from '../../../lib/prisma';
 
 export async function GET() {
     const authHeader = await getInternalSessionAuthHeader();
@@ -32,7 +12,6 @@ export async function GET() {
     }
 
     try {
-        const prisma = await getPrismaClient();
         const sessions = await prisma.agentSession.findMany({
             orderBy: { createdAt: 'desc' },
             take: 50,

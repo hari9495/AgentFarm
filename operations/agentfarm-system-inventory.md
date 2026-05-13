@@ -1,6 +1,6 @@
 # AgentFarm — Complete System Inventory
 
-> Generated: 2026-05-09  
+> Generated: 2026-05-09 | Updated: 2026-05-10  
 > Scope: Full codebase read of `d:\AgentFarm`  
 > Method: All entry points, route files, service indexes, connectors, schema, and test results read directly from source.
 
@@ -12,11 +12,11 @@
 |---|---|
 | Total `.ts` source files (excl. tests, node_modules) | **606** |
 | Total `.test.ts` files | **155** |
-| Prisma DB models | **43** |
-| API route files (api-gateway) | **44** |
-| Connector implementations | **10** |
-| Workspace packages | **33** |
-| Tests passing | **1,297** |
+| Prisma DB models | **70** |
+| API route files (api-gateway) | **62** |
+| Connector implementations | **12** |
+| Workspace packages (apps + services + packages) | **34** |
+| Tests passing (Sprint 7 confirmed) | **1,853** |
 | Tests failing | **0** |
 
 ---
@@ -25,9 +25,9 @@
 
 | Package | Role | Source files (est.) | Test files (est.) |
 |---|---|---|---|
-| `apps/agent-runtime` | Core agent execution runtime | ~100 | ~55 |
-| `apps/api-gateway` | REST API gateway (Fastify) | ~80 | ~50 |
-| `apps/orchestrator` | Task scheduling + wake orchestration | ~15 | ~12 |
+| `apps/agent-runtime` | Core agent execution runtime | ~110 | ~60 |
+| `apps/api-gateway` | REST API gateway (Fastify) | ~80 | ~57 |
+| `apps/orchestrator` | Task scheduling, GOAP planner, handoff coordinator | ~15 | ~12 |
 | `apps/trigger-service` | Webhook trigger ingestion | ~9 | ~3 |
 | `apps/dashboard` | Next.js operator dashboard | ~75 | ~8 |
 | `apps/website` | Next.js marketing / signup site | ~90 | ~10 |
@@ -37,8 +37,8 @@
 | `services/audit-storage` | Azure Blob audit/screenshot uploader | ~5 | ~1 |
 | `services/browser-actions` | Playwright web-action helpers | ~3 | 0 |
 | `services/compliance-export` | Audit CSV/JSONL export | ~3 | 0 |
-| `services/connector-gateway` | Adapter registry + 10 connector impls | ~15 | ~4 |
-| `services/evidence-service` | Evidence plane (stub only) | 1 | 0 |
+| `services/connector-gateway` | Adapter registry + 12 connector impls | ~17 | ~4 |
+| `services/evidence-service` | Governance KPI + HNSW vector search | ~3 | ~2 |
 | `services/identity-service` | Identity scaffold | 1 | 0 |
 | `services/meeting-agent` | Meeting lifecycle + voice pipeline | ~5 | ~2 |
 | `services/memory-service` | Short/long-term agent memory store | ~6 | ~1 |
@@ -46,53 +46,127 @@
 | `services/policy-engine` | Governance routing policy | ~3 | ~1 |
 | `services/provisioning-service` | Azure VM provisioning job processor | ~7 | ~3 |
 | `services/retention-cleanup` | Retention policy TTL cleanup | ~3 | 0 |
+| `packages/auth-utils` | scrypt password hashing | 1 | 0 |
+| `packages/cli` | af developer CLI | ~3 | 0 |
+| `packages/config` | Service URL constants | 1 | 0 |
 | `packages/connector-contracts` | Connector type definitions | 1 | 0 |
 | `packages/crm-service` | CRM adapter (Salesforce, HubSpot) | ~9 | 1 |
 | `packages/db-schema` | Prisma schema + barrel export | 2 | 0 |
+| `packages/e2e` | Playwright end-to-end tests | ~5 | ~5 |
 | `packages/erp-service` | ERP adapter (SAP, Oracle) | ~9 | 1 |
 | `packages/notification-service` | Notification adapter | ~7 | ~2 |
 | `packages/observability` | In-memory observability event store | 1 | 0 |
 | `packages/queue-contracts` | Queue name constants + lease/budget types | 1 | 0 |
+| `packages/sdk` | AgentFarmClient SDK | ~5 | 0 |
 | `packages/shared-types` | All cross-service TypeScript contracts | ~15 | 1 |
 
 ---
 
-## 2. Prisma Database Models (43 total)
+## 2. Prisma Database Models (70 total)
 
-All models live in `packages/db-schema/prisma/schema.prisma` against PostgreSQL.
+All models live in `packages/db-schema/prisma/schema.prisma` against PostgreSQL 16.
 
-| Model | Purpose | Sprint |
-|---|---|---|
-| `Tenant` | Root tenant record | S1 |
-| `TenantUser` | Tenant user with hashed password + role | S1 |
-| `Workspace` | Per-tenant workspace | S1 |
-| `Bot` | Agent bot instance linked to workspace | S1 |
-| `ProvisioningJob` | Azure VM provisioning lifecycle | S1 |
-| `RuntimeInstance` | Live runtime endpoint + heartbeat | S1 |
-| `BotCapabilitySnapshot` | Frozen capability config (brain, language, avatar) | S1 |
-| `ActionRecord` | Every agent action with risk + approval link | S1 |
-| `Approval` | Approval requests with decision + P95 latency fields | S1 |
-| `AuditEvent` | Immutable audit log for all system events | S1 |
-| `ConnectorAuthMetadata` | OAuth / API key auth state per connector | S1 |
-| `ConnectorAuthSession` | OAuth state nonce sessions | S1 |
-| `ConnectorAuthEvent` | Auth event audit trail | S1 |
-| `ConnectorAction` | Normalized connector action execution records | S1 |
-| `TaskExecutionRecord` | LLM token usage + latency per task | S2 |
-| `WorkspaceSessionState` | VM workspace state persistence | Phase 1 |
-| `WorkspaceCheckpoint` | Workspace state checkpoint snapshots | Phase 1 |
-| `DesktopProfile` | Browser profile storage refs + tab state | Phase 1 |
-| `IdeState` | IDE open files, breakpoints, active file | Phase 1 |
-| `TerminalSession` | Terminal shell history + cwd | Phase 1 |
-| `ActivityEvent` | Unified notification/activity stream | Phase 1 |
-| `EnvProfile` | Toolchain reconciliation drift report | Phase 1 |
-| `DesktopAction` | GUI action runtime records + screenshots | Phase 1 |
-| `PrDraft` | PR auto-driver draft records | S3 |
-| `CiTriageReport` | CI failure triage + patch proposals | S3 |
-| `WorkMemory` | Per-workspace agent work memory entries | S3 |
-| `RunResume` | Crash recovery run resume records | S4 |
-| `ReproPack` | Crash repro pack manifests + download refs | S4 |
-| `AgentShortTermMemory` | 7-day TTL per-task memory for prompt injection | A7 |
-| `AgentLongTermMemory` | Persistent behavioral pattern memory | A7 |
+### Identity and tenancy (8)
+| Model | Purpose |
+|---|---|
+| `Tenant` | Root tenant record |
+| `TenantUser` | Tenant user with hashed password + role |
+| `Workspace` | Per-tenant workspace |
+| `WorkspaceSessionState` | VM workspace state persistence |
+| `TenantLanguageConfig` | Default + ticket language per tenant |
+| `WorkspaceLanguageConfig` | Preferred language per workspace |
+| `UserLanguageProfile` | Detected + preferred language per user |
+| `TenantMcpServer` | Tenant-registered MCP server URLs |
+
+### Agents and bots (8)
+| Model | Purpose |
+|---|---|
+| `Bot` | Agent bot instance linked to workspace |
+| `BotCapabilitySnapshot` | Frozen capability config (brain, language, avatar) |
+| `BotConfigVersion` | Versioned bot config history |
+| `AgentSession` | Browser audit session root (video + actions) |
+| `AgentRateLimit` | Per-bot rate limiting state |
+| `RuntimeInstance` | Live runtime endpoint + heartbeat |
+| `AgentSubscription` | Per-agent subscription tier |
+| `TenantSubscription` | Tenant-level subscription state |
+
+### Task execution (9)
+| Model | Purpose |
+|---|---|
+| `TaskExecutionRecord` | LLM token usage + latency per task |
+| `TaskQueueEntry` | Priority queue entries with lease state |
+| `Plan` | Subscription plan definitions |
+| `ActionRecord` | Every agent action with risk + approval link |
+| `AgentDispatchRecord` | Multi-agent dispatch tracking |
+| `OrchestrationRun` | Orchestration run state + timeline |
+| `RunResume` | Crash recovery run resume records |
+| `ReproPack` | Crash repro pack manifests + download refs |
+| `WorkspaceCheckpoint` | Workspace state checkpoint snapshots |
+
+### Memory and knowledge (5)
+| Model | Purpose |
+|---|---|
+| `AgentShortTermMemory` | 7-day TTL per-task memory for prompt injection |
+| `AgentLongTermMemory` | Persistent behavioral pattern memory |
+| `WorkMemory` | Per-workspace agent work memory entries |
+| `AgentRepoKnowledge` | Per-repo role knowledge graph entries |
+| `TerminalSession` | Terminal shell history + cwd |
+
+### Billing and subscriptions (5)
+| Model | Purpose |
+|---|---|
+| `Order` | Payment orders (Razorpay / Stripe) |
+| `Invoice` | Invoice records with PDF URLs |
+| `SubscriptionEvent` | Subscription lifecycle events |
+| `ProvisioningJob` | Azure VM provisioning lifecycle |
+| `ScheduledReport` | Scheduled report job config |
+
+### Connectors and marketplace (6)
+| Model | Purpose |
+|---|---|
+| `ConnectorAction` | Normalized connector action execution records |
+| `ConnectorAuthEvent` | Auth event audit trail |
+| `ConnectorAuthMetadata` | OAuth / API key auth state per connector |
+| `ConnectorAuthSession` | OAuth state nonce sessions |
+| `MarketplaceListing` | Agent marketplace catalog entries |
+| `MarketplaceInstall` | Installed marketplace agents per workspace |
+
+### Governance and audit (12)
+| Model | Purpose |
+|---|---|
+| `Approval` | Approval requests with decision + P95 latency fields |
+| `AuditEvent` | Immutable audit log for all system events |
+| `QualitySignalLog` | LLM and action quality signal records |
+| `StoredEvidenceBundle` | Compliance evidence bundles with retention |
+| `RetentionPolicy` | Customer-configured artifact retention rules |
+| `ExternalPluginLoad` | External plugin load audit records |
+| `PluginAllowlist` | Approved plugin registry |
+| `PluginKillSwitch` | Disabled plugin registry |
+| `CiTriageReport` | CI failure triage + patch proposals |
+| `AbTest` | A/B test configuration |
+| `AbTestAssignment` | Per-user A/B test assignments |
+| `CircuitBreakerState` | Circuit breaker state per service |
+
+### Communication and developer tools (17)
+| Model | Purpose |
+|---|---|
+| `MeetingSession` | Meeting transcription sessions + summaries |
+| `ChatSession` | Multi-turn chat sessions |
+| `ChatMessage` | Individual chat messages |
+| `AgentQuestion` | Human-in-the-loop question parking + answers |
+| `NotificationLog` | Notification delivery records |
+| `ActivityEvent` | Unified notification/activity stream |
+| `PrDraft` | PR auto-driver draft records |
+| `ApiKey` | SHA-256 hashed API keys with `af_` prefix |
+| `OutboundWebhook` | Outbound webhook config |
+| `OutboundWebhookDelivery` | Webhook delivery records + retry state |
+| `WebhookDlqEntry` | Webhook dead-letter queue |
+| `IdeState` | IDE open files, breakpoints, active file |
+| `DesktopAction` | GUI action runtime records + screenshots |
+| `DesktopProfile` | Browser profile storage refs + tab state |
+| `BrowserActionEvent` | Individual browser action with screenshots |
+| `EnvProfile` | Toolchain reconciliation drift report |
+| `ScheduledJob` | Scheduled job execution records |
 | `AgentRepoKnowledge` | Per-repo role knowledge graph entries | A7 |
 | `AgentSession` | Browser audit session root (video + actions) | 2026-05-07 |
 | `BrowserActionEvent` | Individual browser action with screenshots | 2026-05-07 |
