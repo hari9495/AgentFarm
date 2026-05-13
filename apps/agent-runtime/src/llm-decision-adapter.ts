@@ -2425,3 +2425,536 @@ export const createLlmDecisionResolver = (env: NodeJS.ProcessEnv): LlmDecisionRe
         timeoutMs,
     }));
 };
+
+// ── streamLLM ─────────────────────────────────────────────────────────────────
+
+export type StreamLLMMessage = { role: 'user' | 'assistant' | 'system'; content: string };
+
+export type StreamLLMOptions = {
+    model?: string;
+    maxTokens?: number;
+    temperature?: number;
+    signal?: AbortSignal;
+    apiKey?: string;
+    baseUrl?: string;
+    /** Anthropic API version (Anthropic provider only). */
+    apiVersion?: string;
+};
+
+/**
+ * Stream token chunks from an LLM provider as an async generator.
+ *
+ * Supported providers: openai, azure_openai, github_models, xai, mistral, together, anthropic, google, mock.
+ * For unsupported providers, yields a single empty string.
+ */
+export async function* streamLLM(
+    provider: RuntimeModelProvider,
+    messages: StreamLLMMessage[],
+    options: StreamLLMOptions = {},
+): AsyncGenerator<string, void, unknown> {
+    // ── Mock provider ──────────────────────────────────────────────────────
+    if (provider === 'mock' || provider === 'agentfarm') {
+        const mockText = 'mock-stream-response';
+        const chunkSize = Math.ceil(mockText.length / 3);
+        for (let i = 0; i < mockText.length; i += chunkSize) {
+            yield mockText.slice(i, i + chunkSize);
+        }
+        return;
+    }
+
+    // ── Anthropic ──────────────────────────────────────────────────────────
+    if (provider === 'anthropic') {
+        const apiKey = options.apiKey ?? process.env['AF_ANTHROPIC_API_KEY'] ?? process.env['AGENTFARM_ANTHROPIC_API_KEY'] ?? '';
+        const baseUrl = (options.baseUrl ?? process.env['AF_ANTHROPIC_BASE_URL'] ?? process.env['AGENTFARM_ANTHROPIC_BASE_URL'] ?? DEFAULT_ANTHROPIC_BASE_URL).replace(/\/+$/, '');
+        const model = options.model ?? process.env['AF_ANTHROPIC_MODEL'] ?? process.env['AGENTFARM_ANTHROPIC_MODEL'] ?? DEFAULT_ANTHROPIC_MODEL;
+        const apiVersion = options.apiVersion ?? DEFAULT_ANTHROPIC_API_VERSION;
+
+        const systemMsg = messages.find(m => m.role === 'system')?.content ?? '';
+        const userMsgs = messages
+            .filter(m => m.role !== 'system')
+            .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+
+        const response = await fetch(`${baseUrl}/v1/messages`, {
+            method: 'POST',
+            headers: {
+                'x-api-key': apiKey,
+                'anthropic-version': apiVersion,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                model,
+                max_tokens: options.maxTokens ?? 4096,
+                temperature: options.temperature ?? 0.2,
+                stream: true,
+                ...(systemMsg ? { system: systemMsg } : {}),
+                messages: userMsgs,
+            }),
+            signal: options.signal,
+        });
+
+        if (!response.ok || !response.body) {
+            throw new Error(`Anthropic stream error ${response.status}`);
+        }
+
+        yield* _parseAnthropicStream(response.body);
+        return;
+    }
+
+    // ── Google ─────────────────────────────────────────────────────────────
+    if (provider === 'google') {
+        const apiKey = options.apiKey ?? process.env['AF_GOOGLE_API_KEY'] ?? process.env['AGENTFARM_GOOGLE_API_KEY'] ?? '';
+        const baseUrl = (options.baseUrl ?? process.env['AF_GOOGLE_BASE_URL'] ?? process.env['AGENTFARM_GOOGLE_BASE_URL'] ?? DEFAULT_GOOGLE_BASE_URL).replace(/\/+$/, '');
+        const model = options.model ?? process.env['AF_GOOGLE_MODEL'] ?? process.env['AGENTFARM_GOOGLE_MODEL'] ?? DEFAULT_GOOGLE_MODEL;
+
+        const contents = messages
+            .filter(m => m.role !== 'system')
+            .map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] }));
+        const systemMsg = messages.find(m => m.role === 'system')?.content;
+
+        const response = await fetch(`${baseUrl}/models/${model}:streamGenerateContent?key=${encodeURIComponent(apiKey)}&alt=sse`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                generationConfig: {
+                    temperature: options.temperature ?? 0.2,
+                    maxOutputTokens: options.maxTokens ?? 4096,
+                },
+                ...(systemMsg ? { systemInstruction: { parts: [{ text: systemMsg }] } } : {}),
+                contents,
+            }),
+            signal: options.signal,
+        });
+
+        if (!response.ok || !response.body) {
+            throw new Error(`Google stream error ${response.status}`);
+        }
+
+        yield* _parseGoogleStream(response.body);
+        return;
+    }
+
+    // ── Azure OpenAI ───────────────────────────────────────────────────────
+    if (provider === 'azure_openai') {
+        const apiKey = options.apiKey ?? process.env['AF_AZURE_OPENAI_API_KEY'] ?? process.env['AGENTFARM_AZURE_OPENAI_API_KEY'] ?? '';
+        const endpoint = (options.baseUrl ?? process.env['AF_AZURE_OPENAI_ENDPOINT'] ?? process.env['AGENTFARM_AZURE_OPENAI_ENDPOINT'] ?? '').replace(/\/+$/, '');
+        const deployment = options.model ?? process.env['AF_AZURE_OPENAI_DEPLOYMENT'] ?? process.env['AGENTFARM_AZURE_OPENAI_DEPLOYMENT'] ?? 'gpt-4o-mini';
+        const apiVersion = options.apiVersion ?? process.env['AF_AZURE_OPENAI_API_VERSION'] ?? process.env['AGENTFARM_AZURE_OPENAI_API_VERSION'] ?? '2024-02-01';
+
+        const azureResponse = await fetch(`${endpoint}/openai/deployments/${deployment}/chat/completions?api-version=${apiVersion}`, {
+            method: 'POST',
+            headers: { 'api-key': apiKey, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                messages,
+                stream: true,
+                temperature: options.temperature ?? 0.2,
+                ...(options.maxTokens !== undefined ? { max_tokens: options.maxTokens } : {}),
+            }),
+            signal: options.signal,
+        });
+
+        if (!azureResponse.ok || !azureResponse.body) {
+            throw new Error(`Azure OpenAI stream error ${azureResponse.status}`);
+        }
+
+        yield* _parseOpenAiStream(azureResponse.body);
+        return;
+    }
+
+    // ── OpenAI-compatible (openai, github_models, xai, mistral, together) ──
+    let apiKey: string;
+    let baseUrl: string;
+    let model: string;
+
+    switch (provider) {
+        case 'github_models':
+            apiKey = options.apiKey ?? process.env['AF_GITHUB_MODELS_API_KEY'] ?? process.env['AGENTFARM_GITHUB_MODELS_API_KEY'] ?? '';
+            baseUrl = (options.baseUrl ?? process.env['AF_GITHUB_MODELS_BASE_URL'] ?? process.env['AGENTFARM_GITHUB_MODELS_BASE_URL'] ?? DEFAULT_GITHUB_MODELS_BASE_URL).replace(/\/+$/, '');
+            model = options.model ?? process.env['AF_GITHUB_MODELS_MODEL'] ?? process.env['AGENTFARM_GITHUB_MODELS_MODEL'] ?? 'openai/gpt-4.1-mini';
+            break;
+        case 'xai':
+            apiKey = options.apiKey ?? process.env['AF_XAI_API_KEY'] ?? process.env['AGENTFARM_XAI_API_KEY'] ?? '';
+            baseUrl = (options.baseUrl ?? process.env['AF_XAI_BASE_URL'] ?? process.env['AGENTFARM_XAI_BASE_URL'] ?? DEFAULT_XAI_BASE_URL).replace(/\/+$/, '');
+            model = options.model ?? process.env['AF_XAI_MODEL'] ?? process.env['AGENTFARM_XAI_MODEL'] ?? DEFAULT_XAI_MODEL;
+            break;
+        case 'mistral':
+            apiKey = options.apiKey ?? process.env['AF_MISTRAL_API_KEY'] ?? process.env['AGENTFARM_MISTRAL_API_KEY'] ?? '';
+            baseUrl = (options.baseUrl ?? process.env['AF_MISTRAL_BASE_URL'] ?? process.env['AGENTFARM_MISTRAL_BASE_URL'] ?? DEFAULT_MISTRAL_BASE_URL).replace(/\/+$/, '');
+            model = options.model ?? process.env['AF_MISTRAL_MODEL'] ?? process.env['AGENTFARM_MISTRAL_MODEL'] ?? DEFAULT_MISTRAL_MODEL;
+            break;
+        case 'together':
+            apiKey = options.apiKey ?? process.env['AF_TOGETHER_API_KEY'] ?? process.env['AGENTFARM_TOGETHER_API_KEY'] ?? '';
+            baseUrl = (options.baseUrl ?? process.env['AF_TOGETHER_BASE_URL'] ?? process.env['AGENTFARM_TOGETHER_BASE_URL'] ?? DEFAULT_TOGETHER_BASE_URL).replace(/\/+$/, '');
+            model = options.model ?? process.env['AF_TOGETHER_MODEL'] ?? process.env['AGENTFARM_TOGETHER_MODEL'] ?? 'meta-llama/Llama-3.3-70B-Instruct-Turbo';
+            break;
+        default: // openai and auto fallback
+            apiKey = options.apiKey ?? process.env['AF_OPENAI_API_KEY'] ?? process.env['AGENTFARM_OPENAI_API_KEY'] ?? '';
+            baseUrl = (options.baseUrl ?? process.env['AF_OPENAI_BASE_URL'] ?? process.env['AGENTFARM_OPENAI_BASE_URL'] ?? DEFAULT_OPENAI_BASE_URL).replace(/\/+$/, '');
+            model = options.model ?? process.env['AF_OPENAI_MODEL'] ?? process.env['AGENTFARM_OPENAI_MODEL'] ?? DEFAULT_OPENAI_MODEL;
+    }
+
+    const response = await fetch(`${baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+            Authorization: `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            model,
+            messages,
+            stream: true,
+            temperature: options.temperature ?? 0.2,
+            ...(options.maxTokens !== undefined ? { max_tokens: options.maxTokens } : {}),
+        }),
+        signal: options.signal,
+    });
+
+    if (!response.ok || !response.body) {
+        throw new Error(`LLM stream error ${response.status} from ${provider}`);
+    }
+
+    yield* _parseOpenAiStream(response.body);
+}
+
+/** @internal Parse an OpenAI-compatible SSE stream body into text chunks. */
+async function* _parseOpenAiStream(body: ReadableStream<Uint8Array>): AsyncGenerator<string, void, unknown> {
+    const reader = body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+        for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            const raw = line.slice(6).trim();
+            if (raw === '[DONE]') return;
+            try {
+                const parsed = JSON.parse(raw) as { choices?: { delta?: { content?: string } }[] };
+                const content = parsed.choices?.[0]?.delta?.content;
+                if (content) yield content;
+            } catch {
+                // ignore malformed SSE data
+            }
+        }
+    }
+}
+
+/** @internal Parse an Anthropic SSE stream body into text chunks. */
+async function* _parseAnthropicStream(body: ReadableStream<Uint8Array>): AsyncGenerator<string, void, unknown> {
+    const reader = body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+        for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            const raw = line.slice(6).trim();
+            if (!raw || raw === '[DONE]') continue;
+            try {
+                const parsed = JSON.parse(raw) as { type?: string; delta?: { type?: string; text?: string } };
+                if (parsed.delta?.type === 'text_delta' && parsed.delta.text) {
+                    yield parsed.delta.text;
+                }
+            } catch {
+                // ignore malformed SSE data
+            }
+        }
+    }
+}
+
+/** @internal Parse a Google SSE stream body into text chunks. */
+async function* _parseGoogleStream(body: ReadableStream<Uint8Array>): AsyncGenerator<string, void, unknown> {
+    const reader = body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+        for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            const raw = line.slice(6).trim();
+            if (!raw) continue;
+            try {
+                const parsed = JSON.parse(raw) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
+                const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (text) yield text;
+            } catch {
+                // ignore malformed SSE data
+            }
+        }
+    }
+}
+
+// ── callLLMWithTools ──────────────────────────────────────────────────────────
+
+export type LLMTool = {
+    name: string;
+    description: string;
+    parameters: Record<string, unknown>;
+};
+
+export type LLMToolCall = {
+    id: string;
+    name: string;
+    arguments: Record<string, unknown>;
+};
+
+export type LLMWithToolsOptions = {
+    model?: string;
+    maxTokens?: number;
+    temperature?: number;
+    toolChoice?: 'auto' | 'none' | { type: 'function'; function: { name: string } };
+    apiKey?: string;
+    baseUrl?: string;
+    /** Anthropic or Azure api version. */
+    apiVersion?: string;
+};
+
+export type LLMWithToolsResult = {
+    content: string | null;
+    toolCalls: LLMToolCall[];
+    finishReason: 'stop' | 'tool_calls' | 'length' | 'error';
+};
+
+/**
+ * Call an LLM with a tools/function-calling spec.
+ * Returns parsed tool calls (if any) and the text content.
+ */
+export async function callLLMWithTools(
+    provider: RuntimeModelProvider,
+    messages: Array<{ role: 'user' | 'assistant' | 'system' | 'tool'; content: string; tool_call_id?: string }>,
+    tools: LLMTool[],
+    options: LLMWithToolsOptions = {},
+): Promise<LLMWithToolsResult> {
+    // ── Mock provider ──────────────────────────────────────────────────────
+    if (provider === 'mock' || provider === 'agentfarm') {
+        if (tools.length > 0) {
+            return {
+                content: null,
+                toolCalls: [{ id: 'mock-call-0', name: tools[0]!.name, arguments: {} }],
+                finishReason: 'tool_calls',
+            };
+        }
+        return { content: 'mock-response', toolCalls: [], finishReason: 'stop' };
+    }
+
+    // ── Anthropic ──────────────────────────────────────────────────────────
+    if (provider === 'anthropic') {
+        const apiKey = options.apiKey ?? process.env['AF_ANTHROPIC_API_KEY'] ?? process.env['AGENTFARM_ANTHROPIC_API_KEY'] ?? '';
+        const baseUrl = (options.baseUrl ?? process.env['AF_ANTHROPIC_BASE_URL'] ?? process.env['AGENTFARM_ANTHROPIC_BASE_URL'] ?? DEFAULT_ANTHROPIC_BASE_URL).replace(/\/+$/, '');
+        const model = options.model ?? process.env['AF_ANTHROPIC_MODEL'] ?? process.env['AGENTFARM_ANTHROPIC_MODEL'] ?? DEFAULT_ANTHROPIC_MODEL;
+        const apiVersion = options.apiVersion ?? DEFAULT_ANTHROPIC_API_VERSION;
+
+        const systemMsg = messages.find(m => m.role === 'system')?.content ?? '';
+        const userMsgs = messages
+            .filter(m => m.role !== 'system')
+            .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+
+        const anthropicTools = tools.map(t => ({
+            name: t.name,
+            description: t.description,
+            input_schema: t.parameters,
+        }));
+
+        const response = await fetch(`${baseUrl}/v1/messages`, {
+            method: 'POST',
+            headers: {
+                'x-api-key': apiKey,
+                'anthropic-version': apiVersion,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                model,
+                max_tokens: options.maxTokens ?? 4096,
+                temperature: options.temperature ?? 0.2,
+                ...(systemMsg ? { system: systemMsg } : {}),
+                messages: userMsgs,
+                tools: anthropicTools,
+            }),
+        });
+
+        if (!response.ok) {
+            return { content: null, toolCalls: [], finishReason: 'error' };
+        }
+
+        type AnthropicResponse = {
+            stop_reason: string;
+            content: Array<{ type: string; text?: string; id?: string; name?: string; input?: Record<string, unknown> }>;
+        };
+        const body = await response.json() as AnthropicResponse;
+
+        const toolCalls: LLMToolCall[] = body.content
+            .filter(c => c.type === 'tool_use' && c.name)
+            .map(c => ({ id: c.id ?? '', name: c.name!, arguments: c.input ?? {} }));
+
+        const textContent = body.content.find(c => c.type === 'text')?.text ?? null;
+        const finishReason: LLMWithToolsResult['finishReason'] = toolCalls.length > 0 ? 'tool_calls' : 'stop';
+
+        return { content: textContent, toolCalls, finishReason };
+    }
+
+    // ── Google ─────────────────────────────────────────────────────────────
+    if (provider === 'google') {
+        const apiKey = options.apiKey ?? process.env['AF_GOOGLE_API_KEY'] ?? process.env['AGENTFARM_GOOGLE_API_KEY'] ?? '';
+        const baseUrl = (options.baseUrl ?? process.env['AF_GOOGLE_BASE_URL'] ?? process.env['AGENTFARM_GOOGLE_BASE_URL'] ?? DEFAULT_GOOGLE_BASE_URL).replace(/\/+$/, '');
+        const model = options.model ?? process.env['AF_GOOGLE_MODEL'] ?? process.env['AGENTFARM_GOOGLE_MODEL'] ?? DEFAULT_GOOGLE_MODEL;
+
+        const systemMsg = messages.find(m => m.role === 'system')?.content;
+        const contents = messages
+            .filter(m => m.role !== 'system')
+            .map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] }));
+
+        const googleTools = tools.length > 0
+            ? [{ functionDeclarations: tools.map(t => ({ name: t.name, description: t.description, parameters: t.parameters })) }]
+            : undefined;
+
+        const response = await fetch(`${baseUrl}/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                generationConfig: { temperature: options.temperature ?? 0.2 },
+                ...(systemMsg ? { systemInstruction: { parts: [{ text: systemMsg }] } } : {}),
+                contents,
+                ...(googleTools ? { tools: googleTools } : {}),
+            }),
+        });
+
+        if (!response.ok) {
+            return { content: null, toolCalls: [], finishReason: 'error' };
+        }
+
+        type GoogleResponse = {
+            candidates?: {
+                finishReason?: string;
+                content?: { parts?: Array<{ text?: string; functionCall?: { name: string; args: Record<string, unknown> } }> };
+            }[];
+        };
+        const body = await response.json() as GoogleResponse;
+        const parts = body.candidates?.[0]?.content?.parts ?? [];
+
+        const toolCalls: LLMToolCall[] = parts
+            .filter(p => p.functionCall?.name)
+            .map((p, idx) => ({ id: `google-call-${idx}`, name: p.functionCall!.name, arguments: p.functionCall!.args }));
+
+        const textContent = parts.find(p => p.text)?.text ?? null;
+        const rawFinish = body.candidates?.[0]?.finishReason ?? '';
+        const finishReason: LLMWithToolsResult['finishReason'] =
+            toolCalls.length > 0 ? 'tool_calls' :
+                rawFinish === 'MAX_TOKENS' ? 'length' : 'stop';
+
+        return { content: textContent, toolCalls, finishReason };
+    }
+
+    // ── OpenAI-compatible (openai, azure_openai, github_models, xai, mistral, together) ──
+    let apiKey: string;
+    let fetchUrl: string;
+    let model: string;
+    const extraHeaders: Record<string, string> = {};
+
+    switch (provider) {
+        case 'azure_openai': {
+            apiKey = options.apiKey ?? process.env['AF_AZURE_OPENAI_API_KEY'] ?? process.env['AGENTFARM_AZURE_OPENAI_API_KEY'] ?? '';
+            const endpoint = (options.baseUrl ?? process.env['AF_AZURE_OPENAI_ENDPOINT'] ?? process.env['AGENTFARM_AZURE_OPENAI_ENDPOINT'] ?? '').replace(/\/+$/, '');
+            const deployment = options.model ?? process.env['AF_AZURE_OPENAI_DEPLOYMENT'] ?? process.env['AGENTFARM_AZURE_OPENAI_DEPLOYMENT'] ?? 'gpt-4o-mini';
+            const apiVersion = options.apiVersion ?? process.env['AF_AZURE_OPENAI_API_VERSION'] ?? process.env['AGENTFARM_AZURE_OPENAI_API_VERSION'] ?? '2024-02-01';
+            model = deployment;
+            fetchUrl = `${endpoint}/openai/deployments/${deployment}/chat/completions?api-version=${apiVersion}`;
+            extraHeaders['api-key'] = apiKey;
+            break;
+        }
+        case 'github_models':
+            apiKey = options.apiKey ?? process.env['AF_GITHUB_MODELS_API_KEY'] ?? process.env['AGENTFARM_GITHUB_MODELS_API_KEY'] ?? '';
+            fetchUrl = `${(options.baseUrl ?? process.env['AF_GITHUB_MODELS_BASE_URL'] ?? process.env['AGENTFARM_GITHUB_MODELS_BASE_URL'] ?? DEFAULT_GITHUB_MODELS_BASE_URL).replace(/\/+$/, '')}/chat/completions`;
+            model = options.model ?? process.env['AF_GITHUB_MODELS_MODEL'] ?? process.env['AGENTFARM_GITHUB_MODELS_MODEL'] ?? 'openai/gpt-4.1-mini';
+            break;
+        case 'xai':
+            apiKey = options.apiKey ?? process.env['AF_XAI_API_KEY'] ?? process.env['AGENTFARM_XAI_API_KEY'] ?? '';
+            fetchUrl = `${(options.baseUrl ?? process.env['AF_XAI_BASE_URL'] ?? process.env['AGENTFARM_XAI_BASE_URL'] ?? DEFAULT_XAI_BASE_URL).replace(/\/+$/, '')}/chat/completions`;
+            model = options.model ?? process.env['AF_XAI_MODEL'] ?? process.env['AGENTFARM_XAI_MODEL'] ?? DEFAULT_XAI_MODEL;
+            break;
+        case 'mistral':
+            apiKey = options.apiKey ?? process.env['AF_MISTRAL_API_KEY'] ?? process.env['AGENTFARM_MISTRAL_API_KEY'] ?? '';
+            fetchUrl = `${(options.baseUrl ?? process.env['AF_MISTRAL_BASE_URL'] ?? process.env['AGENTFARM_MISTRAL_BASE_URL'] ?? DEFAULT_MISTRAL_BASE_URL).replace(/\/+$/, '')}/chat/completions`;
+            model = options.model ?? process.env['AF_MISTRAL_MODEL'] ?? process.env['AGENTFARM_MISTRAL_MODEL'] ?? DEFAULT_MISTRAL_MODEL;
+            break;
+        case 'together':
+            apiKey = options.apiKey ?? process.env['AF_TOGETHER_API_KEY'] ?? process.env['AGENTFARM_TOGETHER_API_KEY'] ?? '';
+            fetchUrl = `${(options.baseUrl ?? process.env['AF_TOGETHER_BASE_URL'] ?? process.env['AGENTFARM_TOGETHER_BASE_URL'] ?? DEFAULT_TOGETHER_BASE_URL).replace(/\/+$/, '')}/chat/completions`;
+            model = options.model ?? process.env['AF_TOGETHER_MODEL'] ?? process.env['AGENTFARM_TOGETHER_MODEL'] ?? 'meta-llama/Llama-3.3-70B-Instruct-Turbo';
+            break;
+        default: // openai and auto fallback
+            apiKey = options.apiKey ?? process.env['AF_OPENAI_API_KEY'] ?? process.env['AGENTFARM_OPENAI_API_KEY'] ?? '';
+            fetchUrl = `${(options.baseUrl ?? process.env['AF_OPENAI_BASE_URL'] ?? process.env['AGENTFARM_OPENAI_BASE_URL'] ?? DEFAULT_OPENAI_BASE_URL).replace(/\/+$/, '')}/chat/completions`;
+            model = options.model ?? process.env['AF_OPENAI_MODEL'] ?? process.env['AGENTFARM_OPENAI_MODEL'] ?? DEFAULT_OPENAI_MODEL;
+    }
+
+    const openAiTools = tools.map(t => ({
+        type: 'function' as const,
+        function: { name: t.name, description: t.description, parameters: t.parameters },
+    }));
+
+    const toolChoice = options.toolChoice ?? (tools.length > 0 ? 'auto' : 'none');
+
+    const response = await fetch(fetchUrl, {
+        method: 'POST',
+        headers: {
+            Authorization: `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+            ...extraHeaders,
+        },
+        body: JSON.stringify({
+            model,
+            messages,
+            tools: openAiTools,
+            tool_choice: toolChoice,
+            temperature: options.temperature ?? 0.2,
+            ...(options.maxTokens !== undefined ? { max_tokens: options.maxTokens } : {}),
+        }),
+    });
+
+    if (!response.ok) {
+        return { content: null, toolCalls: [], finishReason: 'error' };
+    }
+
+    type OpenAiToolCallRaw = {
+        id: string;
+        function: { name: string; arguments: string };
+    };
+    type OpenAiResponse = {
+        choices: Array<{
+            finish_reason: string;
+            message: {
+                content: string | null;
+                tool_calls?: OpenAiToolCallRaw[];
+            };
+        }>;
+    };
+    const body = await response.json() as OpenAiResponse;
+    const choice = body.choices[0];
+    if (!choice) return { content: null, toolCalls: [], finishReason: 'error' };
+
+    const toolCalls: LLMToolCall[] = (choice.message.tool_calls ?? []).map(tc => {
+        let args: Record<string, unknown> = {};
+        try { args = JSON.parse(tc.function.arguments) as Record<string, unknown>; } catch { /* use empty args */ }
+        return { id: tc.id, name: tc.function.name, arguments: args };
+    });
+
+    const rawFinish = choice.finish_reason ?? '';
+    const finishReason: LLMWithToolsResult['finishReason'] =
+        rawFinish === 'tool_calls' ? 'tool_calls' :
+            rawFinish === 'length' ? 'length' : 'stop';
+
+    return { content: choice.message.content ?? null, toolCalls, finishReason };
+}

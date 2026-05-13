@@ -164,6 +164,132 @@ export const CATALOG: Record<string, EventDefinition> = {
         },
     },
 
+    budget_alert_warn: {
+        eventType: 'budget_alert_warn',
+        schemaVersion: '1.0',
+        description: "Fired when daily spend crosses the warning threshold (default 80% of daily limit).",
+        fields: [
+            ...ENVELOPE_FIELDS,
+            { name: 'taskId', type: 'string?', description: 'The task that triggered the threshold crossing.' },
+            { name: 'estimatedCost', type: 'number', description: 'Estimated cost of the triggering task in USD.' },
+            { name: 'dailySpent', type: 'number', description: 'Total daily spend so far in USD.' },
+            { name: 'dailyLimit', type: 'number', description: 'Configured daily limit in USD.' },
+        ],
+        examplePayload: {
+            eventType: 'budget_alert_warn',
+            tenantId: 'ten_abc123',
+            timestamp: '2026-05-12T10:10:00.000Z',
+            taskId: 'task_xyz',
+            estimatedCost: 0.05,
+            dailySpent: 160.0,
+            dailyLimit: 200.0,
+        },
+    },
+
+    budget_alert_critical: {
+        eventType: 'budget_alert_critical',
+        schemaVersion: '1.0',
+        description: "Fired when daily spend crosses the critical threshold (default 90% of daily limit).",
+        fields: [
+            ...ENVELOPE_FIELDS,
+            { name: 'taskId', type: 'string?', description: 'The task that triggered the threshold crossing.' },
+            { name: 'estimatedCost', type: 'number', description: 'Estimated cost of the triggering task in USD.' },
+            { name: 'dailySpent', type: 'number', description: 'Total daily spend so far in USD.' },
+            { name: 'dailyLimit', type: 'number', description: 'Configured daily limit in USD.' },
+        ],
+        examplePayload: {
+            eventType: 'budget_alert_critical',
+            tenantId: 'ten_abc123',
+            timestamp: '2026-05-12T10:12:00.000Z',
+            taskId: 'task_xyz',
+            estimatedCost: 0.05,
+            dailySpent: 181.0,
+            dailyLimit: 200.0,
+        },
+    },
+
+    budget_alert_exceeded: {
+        eventType: 'budget_alert_exceeded',
+        schemaVersion: '1.0',
+        description: "Fired when daily spend meets or exceeds 100% of the daily limit.",
+        fields: [
+            ...ENVELOPE_FIELDS,
+            { name: 'taskId', type: 'string?', description: 'The task that triggered the threshold crossing.' },
+            { name: 'estimatedCost', type: 'number', description: 'Estimated cost of the triggering task in USD.' },
+            { name: 'dailySpent', type: 'number', description: 'Total daily spend so far in USD.' },
+            { name: 'dailyLimit', type: 'number', description: 'Configured daily limit in USD.' },
+        ],
+        examplePayload: {
+            eventType: 'budget_alert_exceeded',
+            tenantId: 'ten_abc123',
+            timestamp: '2026-05-12T10:14:00.000Z',
+            taskId: 'task_xyz',
+            estimatedCost: 0.05,
+            dailySpent: 200.5,
+            dailyLimit: 200.0,
+        },
+    },
+
+    connector_action_executed: {
+        eventType: 'connector_action_executed',
+        schemaVersion: '1.0',
+        description: 'Fired when a connector action completes successfully.',
+        fields: [
+            ...ENVELOPE_FIELDS,
+            { name: 'botId', type: 'string', description: 'The bot that executed the connector action.' },
+            { name: 'connectorType', type: 'string', description: 'The connector type (e.g. github, jira).' },
+            { name: 'actionType', type: 'string', description: 'The action executed (e.g. create_issue).' },
+        ],
+        examplePayload: {
+            eventType: 'connector_action_executed',
+            tenantId: 'ten_abc123',
+            timestamp: '2026-05-12T10:20:00.000Z',
+            botId: 'bot_123',
+            connectorType: 'github',
+            actionType: 'create_issue',
+        },
+    },
+
+    connector_action_failed: {
+        eventType: 'connector_action_failed',
+        schemaVersion: '1.0',
+        description: 'Fired when a connector action fails after all retry attempts.',
+        fields: [
+            ...ENVELOPE_FIELDS,
+            { name: 'botId', type: 'string', description: 'The bot that attempted the connector action.' },
+            { name: 'connectorType', type: 'string', description: 'The connector type (e.g. github, jira).' },
+            { name: 'actionType', type: 'string', description: 'The action attempted (e.g. create_issue).' },
+            { name: 'errorCode', type: 'string', description: 'Machine-readable error code.' },
+        ],
+        examplePayload: {
+            eventType: 'connector_action_failed',
+            tenantId: 'ten_abc123',
+            timestamp: '2026-05-12T10:21:00.000Z',
+            botId: 'bot_123',
+            connectorType: 'github',
+            actionType: 'create_issue',
+            errorCode: 'permission_denied',
+        },
+    },
+
+    bot_version_restored: {
+        eventType: 'bot_version_restored',
+        schemaVersion: '1.0',
+        description: 'Fired when a bot configuration is restored to a previous version.',
+        fields: [
+            ...ENVELOPE_FIELDS,
+            { name: 'botId', type: 'string', description: 'The bot whose configuration was restored.' },
+            { name: 'restoredBy', type: 'string', description: 'User ID that performed the restore.' },
+        ],
+        examplePayload: {
+            eventType: 'bot_version_restored',
+            tenantId: 'ten_abc123',
+            timestamp: '2026-05-12T10:30:00.000Z',
+            botId: 'bot_123',
+            restoredBy: 'user_admin_1',
+        },
+    },
+
     webhook_test: {
         eventType: 'webhook_test',
         schemaVersion: '1.0',

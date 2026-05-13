@@ -1,4 +1,4 @@
-export { AgentFarmClient, AgentsNamespace, AnalyticsNamespace, NotificationsNamespace, MessagesNamespace } from './client.js';
+export { AgentFarmClient, AgentsNamespace, AnalyticsNamespace, NotificationsNamespace, MessagesNamespace, TasksNamespace, ApprovalsNamespace } from './client.js';
 export { AgentFarmError, AgentFarmAuthError, AgentFarmNotFoundError } from './errors.js';
 export type {
     Agent,
@@ -11,4 +11,17 @@ export type {
     AgentMessageStatus,
     SendMessageOptions,
     AgentFarmClientOptions,
+    TaskQueueEntry,
+    TaskQueueEntryStatus,
+    TaskSubmitOptions,
+    TaskListFilters,
+    TaskListResult,
+    TaskQueueStatusResult,
+    ApprovalEntry,
+    ApprovalStatus,
+    ApprovalIntakeOptions,
+    ApprovalDecisionOptions,
+    ApprovalListFilters,
+    ApprovalListResult,
+    BulkApproveResult,
 } from './types.js';

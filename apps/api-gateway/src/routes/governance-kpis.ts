@@ -22,7 +22,9 @@ let globalProviderState: any = null;
 
 const getProviderState = async () => {
     if (!globalProviderState) {
-        const mod = await import('../agent-runtime-stubs.js');
+        const mod = await import('@agentfarm/agent-runtime/provider-state-persistence.js').catch(
+            () => import('../agent-runtime-stubs.js'),
+        );
         globalProviderState = mod.globalProviderState;
     }
     return globalProviderState;

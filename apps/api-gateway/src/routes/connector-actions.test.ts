@@ -1300,7 +1300,7 @@ test('PUT credentials returns 400 when email type is missing', async () => {
                 assert.equal(repo.logs[0]!.resultStatus, 'success');
 
                 assert.equal(auditWriter.events.length, 1);
-                assert.equal(auditWriter.events[0]!.eventType, 'connector_action.executed');
+                assert.equal(auditWriter.events[0]!.eventType, 'connector_action_executed');
                 assert.equal(auditWriter.events[0]!.severity, 'info');
                 assert.ok(auditWriter.events[0]!.summary.includes('merge_pr'));
             } finally {
@@ -1343,7 +1343,7 @@ test('PUT credentials returns 400 when email type is missing', async () => {
                 assert.equal(body.status, 'success');
 
                 assert.equal(auditWriter.events.length, 1);
-                assert.equal(auditWriter.events[0]!.eventType, 'connector_action.executed');
+                assert.equal(auditWriter.events[0]!.eventType, 'connector_action_executed');
             } finally {
                 await app.close();
             }
@@ -1393,7 +1393,7 @@ test('PUT credentials returns 400 when email type is missing', async () => {
                 assert.equal(response.statusCode, 502);
 
                 assert.equal(auditWriter.events.length, 1);
-                assert.equal(auditWriter.events[0]!.eventType, 'connector_action.failed');
+                assert.equal(auditWriter.events[0]!.eventType, 'connector_action_failed');
                 assert.equal(auditWriter.events[0]!.severity, 'error');
                 assert.ok(auditWriter.events[0]!.summary.includes('merge_pr'));
             } finally {

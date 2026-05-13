@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Fragment, useState, type FormEvent } from 'react';
+import { Fragment, useState, useEffect, type FormEvent } from 'react';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -11,14 +11,20 @@ const MIN_PASSWORD_LEN = 10;
 const STEP_LABELS = ['Account', 'Workspace', 'Agent', 'Plan', 'Done'] as const;
 
 type AgentRoleOption = { value: string; label: string; description: string };
-const AGENT_ROLES: AgentRoleOption[] = [
+const DEFAULT_AGENT_ROLES: AgentRoleOption[] = [
     { value: 'developer_agent', label: 'Developer Agent', description: 'Writes, reviews, and improves code across your repositories.' },
     { value: 'qa_agent', label: 'QA Agent', description: 'Tests, validates, and reports on software quality.' },
     { value: 'devops_agent', label: 'DevOps Agent', description: 'Manages infrastructure, CI/CD pipelines, and deployments.' },
 ];
 
+const PLAN_DETAILS: Record<string, { price: string; features: string[] }> = {
+    free: { price: '$0 / mo', features: ['1 agent', 'Community support', '100 tasks / mo'] },
+    growth: { price: '$49 / mo', features: ['5 agents', 'Email support', '2,000 tasks / mo'] },
+    enterprise: { price: 'Contact us', features: ['Unlimited agents', 'Dedicated support', 'Custom SLA'] },
+};
+
 type PlanOption = { value: string; label: string; price: string; features: string[]; recommended?: boolean };
-const PLANS: PlanOption[] = [
+const DEFAULT_PLANS: PlanOption[] = [
     { value: 'free', label: 'Free', price: '$0 / mo', features: ['1 agent', 'Community support', '100 tasks / mo'] },
     { value: 'growth', label: 'Growth', price: '$49 / mo', features: ['5 agents', 'Email support', '2,000 tasks / mo'], recommended: true },
     { value: 'enterprise', label: 'Enterprise', price: 'Contact us', features: ['Unlimited agents', 'Dedicated support', 'Custom SLA'] },
@@ -458,9 +464,11 @@ function StepWorkspace({
 function StepAgent({
     state,
     updateState,
+    agentRoles,
 }: {
     state: WizardState;
     updateState: (u: Partial<WizardState>) => void;
+    agentRoles: AgentRoleOption[];
 }) {
     const handleNext = async () => {
         if (!state.agentRole) {
@@ -515,7 +523,7 @@ function StepAgent({
             {state.error && <ErrorBanner message={state.error} />}
 
             <div style={{ display: 'grid', gap: '0.6rem' }}>
-                {AGENT_ROLES.map((r) => {
+                {agentRoles.map((r) => {
                     const selected = state.agentRole === r.value;
                     return (
                         <button
@@ -571,9 +579,11 @@ function StepAgent({
 function StepPlan({
     state,
     updateState,
+    plans,
 }: {
     state: WizardState;
     updateState: (u: Partial<WizardState>) => void;
+    plans: PlanOption[];
 }) {
     const handleNext = () => {
         if (!state.plan) {
@@ -595,7 +605,7 @@ function StepPlan({
             {state.error && <ErrorBanner message={state.error} />}
 
             <div style={{ display: 'grid', gap: '0.6rem' }}>
-                {PLANS.map((p) => {
+                {plans.map((p) => {
                     const selected = state.plan === p.value;
                     return (
                         <button
@@ -714,10 +724,10 @@ function KvRow({ label, value, mono }: { label: string; value: string; mono?: bo
     );
 }
 
-function StepDone({ state }: { state: WizardState }) {
-    const planLabel = PLANS.find((p) => p.value === state.plan)?.label ?? 'Free';
+function StepDone({ state, agentRoles, plans }: { state: WizardState; agentRoles: AgentRoleOption[]; plans: PlanOption[] }) {
+    const planLabel = plans.find((p) => p.value === state.plan)?.label ?? 'Free';
     const agentLabel =
-        AGENT_ROLES.find((r) => r.value === state.agentRole)?.label ?? state.agentRole;
+        agentRoles.find((r) => r.value === state.agentRole)?.label ?? state.agentRole;
 
     return (
         <div className="card" style={{ display: 'grid', gap: '1rem', textAlign: 'center' }}>
@@ -780,6 +790,43 @@ function StepDone({ state }: { state: WizardState }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function OnboardingPage() {
+    const [agentRoles, setAgentRoles] = useState<AgentRoleOption[]>(DEFAULT_AGENT_ROLES);
+    const [plans, setPlans] = useState<PlanOption[]>(DEFAULT_PLANS);
+
+    useEffect(() => {
+        void fetch('/api/onboarding/agent-roles', { cache: 'no-store' })
+            .then(r => r.json())
+            .then((data: { roles?: Array<{ id: string; label: string }> }) => {
+                if (Array.isArray(data.roles) && data.roles.length > 0) {
+                    setAgentRoles(
+                        data.roles.map(r => ({
+                            value: r.id,
+                            label: r.label,
+                            description: DEFAULT_AGENT_ROLES.find(d => d.value === r.id)?.description ?? '',
+                        })),
+                    );
+                }
+            })
+            .catch(() => { /* keep defaults on failure */ });
+
+        void fetch('/api/onboarding/plans', { cache: 'no-store' })
+            .then(r => r.json())
+            .then((data: { plans?: Array<{ id: string; label: string; recommended?: boolean }> }) => {
+                if (Array.isArray(data.plans) && data.plans.length > 0) {
+                    setPlans(
+                        data.plans.map(p => ({
+                            value: p.id,
+                            label: p.label,
+                            recommended: p.recommended,
+                            price: PLAN_DETAILS[p.id]?.price ?? p.label,
+                            features: PLAN_DETAILS[p.id]?.features ?? [],
+                        })),
+                    );
+                }
+            })
+            .catch(() => { /* keep defaults on failure */ });
+    }, []);
+
     const [state, setState] = useState<WizardState>({
         step: 1,
         name: '',
@@ -854,9 +901,9 @@ export default function OnboardingPage() {
 
                 {state.step === 1 && <StepAccount state={state} updateState={updateState} />}
                 {state.step === 2 && <StepWorkspace state={state} updateState={updateState} />}
-                {state.step === 3 && <StepAgent state={state} updateState={updateState} />}
-                {state.step === 4 && <StepPlan state={state} updateState={updateState} />}
-                {state.step === 5 && <StepDone state={state} />}
+                {state.step === 3 && <StepAgent state={state} updateState={updateState} agentRoles={agentRoles} />}
+                {state.step === 4 && <StepPlan state={state} updateState={updateState} plans={plans} />}
+                {state.step === 5 && <StepDone state={state} agentRoles={agentRoles} plans={plans} />}
 
                 {state.step === 1 && (
                     <p

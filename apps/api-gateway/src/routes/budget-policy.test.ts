@@ -11,12 +11,17 @@ const mockSession = {
     expiresAt: Date.now() + 3600000,
 };
 
+const stubPrisma = {
+    outboundWebhook: { findMany: async () => [] },
+} as any;
+
 async function createTestApp(customBudgetStore?: Map<any, any>) {
     const app = Fastify({ logger: false });
     const budgetStore = customBudgetStore ?? new Map();
     await registerBudgetPolicyRoutes(app, {
         getSession: () => mockSession,
         budgetStore,
+        prisma: stubPrisma,
     });
     return { app, budgetStore };
 }
@@ -35,6 +40,7 @@ async function createTestAppWithOptions(options?: {
         getSession: () => mockSession,
         budgetStore,
         repo: options?.repo,
+        prisma: stubPrisma,
     });
     return { app, budgetStore };
 }

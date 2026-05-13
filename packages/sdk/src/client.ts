@@ -9,6 +9,17 @@ import type {
     SendMessageOptions,
     AgentMessageStatus,
     AgentFarmClientOptions,
+    TaskQueueEntry,
+    TaskSubmitOptions,
+    TaskListFilters,
+    TaskListResult,
+    TaskQueueStatusResult,
+    ApprovalEntry,
+    ApprovalIntakeOptions,
+    ApprovalDecisionOptions,
+    ApprovalListFilters,
+    ApprovalListResult,
+    BulkApproveResult,
 } from './types.js';
 
 // ── AgentFarmClient ───────────────────────────────────────────────────────────
@@ -31,6 +42,8 @@ export class AgentFarmClient {
     public readonly analytics: AnalyticsNamespace;
     public readonly notifications: NotificationsNamespace;
     public readonly messages: MessagesNamespace;
+    public readonly tasks: TasksNamespace;
+    public readonly approvals: ApprovalsNamespace;
 
     constructor(options: AgentFarmClientOptions = {}) {
         this.baseUrl = (options.baseUrl ?? 'http://localhost:3000').replace(/\/+$/, '');
@@ -41,6 +54,8 @@ export class AgentFarmClient {
         this.analytics = new AnalyticsNamespace(this);
         this.notifications = new NotificationsNamespace(this);
         this.messages = new MessagesNamespace(this);
+        this.tasks = new TasksNamespace(this);
+        this.approvals = new ApprovalsNamespace(this);
     }
 
     /** @internal Perform an authenticated fetch against the API gateway. */
@@ -235,5 +250,138 @@ export class MessagesNamespace {
         );
         const body = await this.client._parseOrThrow<{ messages: AgentMessage[] }>(res);
         return body.messages;
+    }
+}
+
+// ── Tasks namespace ───────────────────────────────────────────────────────────
+
+export class TasksNamespace {
+    constructor(private readonly client: AgentFarmClient) { }
+
+    /** Submit a task to the queue for a specific agent. */
+    async submit(options: TaskSubmitOptions): Promise<TaskQueueEntry> {
+        const res = await this.client._fetch('/v1/task-queue', {
+            method: 'POST',
+            body: JSON.stringify(options),
+        });
+        const body = await this.client._parseOrThrow<{ entry: TaskQueueEntry }>(res);
+        return body.entry;
+    }
+
+    /** Get a single task queue entry by ID. */
+    async get(entryId: string): Promise<TaskQueueEntry> {
+        const res = await this.client._fetch(`/v1/task-queue/${encodeURIComponent(entryId)}`);
+        const body = await this.client._parseOrThrow<{ entry: TaskQueueEntry }>(res);
+        return body.entry;
+    }
+
+    /** List task queue entries, optionally filtered by status or agentId. */
+    async list(filters: TaskListFilters = {}): Promise<TaskListResult> {
+        const qs = new URLSearchParams();
+        if (filters.agentId) qs.set('agentId', filters.agentId);
+        if (filters.workspaceId) qs.set('workspaceId', filters.workspaceId);
+        if (filters.status) qs.set('status', filters.status);
+        const q = qs.toString();
+        const res = await this.client._fetch(`/v1/task-queue${q ? `?${q}` : ''}`);
+        return this.client._parseOrThrow<TaskListResult>(res);
+    }
+
+    /** Cancel a pending or running task. */
+    async cancel(entryId: string): Promise<void> {
+        const res = await this.client._fetch(`/v1/task-queue/${encodeURIComponent(entryId)}`, { method: 'DELETE' });
+        await this.client._parseOrThrow<unknown>(res);
+    }
+
+    /** Get overall task queue status counts. */
+    async status(): Promise<TaskQueueStatusResult> {
+        const res = await this.client._fetch('/v1/task-queue/status');
+        return this.client._parseOrThrow<TaskQueueStatusResult>(res);
+    }
+
+    /** Complete a task with an outcome. */
+    async complete(entryId: string, outcome?: unknown): Promise<TaskQueueEntry> {
+        const res = await this.client._fetch(`/v1/task-queue/${encodeURIComponent(entryId)}/complete`, {
+            method: 'POST',
+            body: JSON.stringify({ outcome }),
+        });
+        const body = await this.client._parseOrThrow<{ entry: TaskQueueEntry }>(res);
+        return body.entry;
+    }
+}
+
+// ── Approvals namespace ───────────────────────────────────────────────────────
+
+export class ApprovalsNamespace {
+    constructor(private readonly client: AgentFarmClient) { }
+
+    /** Submit an approval request. */
+    async intake(options: ApprovalIntakeOptions): Promise<ApprovalEntry> {
+        const res = await this.client._fetch('/v1/approvals/intake', {
+            method: 'POST',
+            body: JSON.stringify(options),
+        });
+        const body = await this.client._parseOrThrow<{ approval: ApprovalEntry }>(res);
+        return body.approval;
+    }
+
+    /** List approval entries with optional filters. */
+    async list(filters: ApprovalListFilters = {}): Promise<ApprovalListResult> {
+        const qs = new URLSearchParams();
+        if (filters.workspaceId) qs.set('workspace_id', filters.workspaceId);
+        if (filters.agentId) qs.set('agentId', filters.agentId);
+        if (filters.status) qs.set('status', filters.status);
+        const q = qs.toString();
+        const res = await this.client._fetch(`/v1/approvals${q ? `?${q}` : ''}`);
+        return this.client._parseOrThrow<ApprovalListResult>(res);
+    }
+
+    /** Get a single approval entry by ID. */
+    async get(approvalId: string): Promise<ApprovalEntry> {
+        const res = await this.client._fetch(`/v1/approvals/${encodeURIComponent(approvalId)}`);
+        const body = await this.client._parseOrThrow<{ approval: ApprovalEntry }>(res);
+        return body.approval;
+    }
+
+    /** Approve an approval entry. */
+    async approve(approvalId: string, options: ApprovalDecisionOptions = {}): Promise<ApprovalEntry> {
+        const res = await this.client._fetch(`/v1/approvals/${encodeURIComponent(approvalId)}/decision`, {
+            method: 'POST',
+            body: JSON.stringify({ decision: 'approved', ...options }),
+        });
+        const body = await this.client._parseOrThrow<{ approval: ApprovalEntry }>(res);
+        return body.approval;
+    }
+
+    /** Reject an approval entry. */
+    async reject(approvalId: string, options: ApprovalDecisionOptions = {}): Promise<ApprovalEntry> {
+        const res = await this.client._fetch(`/v1/approvals/${encodeURIComponent(approvalId)}/decision`, {
+            method: 'POST',
+            body: JSON.stringify({ decision: 'rejected', ...options }),
+        });
+        const body = await this.client._parseOrThrow<{ approval: ApprovalEntry }>(res);
+        return body.approval;
+    }
+
+    /** Approve multiple approvals in one call. Returns per-ID success/failure. */
+    async bulkApprove(approvalIds: string[], options: ApprovalDecisionOptions = {}): Promise<BulkApproveResult> {
+        const results: BulkApproveResult = { approved: [], failed: [] };
+        await Promise.allSettled(
+            approvalIds.map(async (id) => {
+                try {
+                    await this.approve(id, options);
+                    results.approved.push(id);
+                } catch {
+                    results.failed.push(id);
+                }
+            }),
+        );
+        return results;
+    }
+
+    /** Get evidence for an approval entry. */
+    async getEvidence(approvalId: string, workspaceId?: string): Promise<unknown> {
+        const qs = workspaceId ? `?workspace_id=${encodeURIComponent(workspaceId)}` : '';
+        const res = await this.client._fetch(`/v1/approvals/${encodeURIComponent(approvalId)}/evidence${qs}`);
+        return this.client._parseOrThrow<unknown>(res);
     }
 }

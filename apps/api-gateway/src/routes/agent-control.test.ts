@@ -48,6 +48,9 @@ const makePrisma = (bot: typeof activeBot | null, updateStatus?: string, onSnaps
     auditEvent: {
         create: async () => ({}),
     },
+    outboundWebhook: {
+        findMany: async () => [],
+    },
 } as any);
 
 // ---------------------------------------------------------------------------

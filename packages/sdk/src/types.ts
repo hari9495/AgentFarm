@@ -116,3 +116,90 @@ export interface AgentFarmClientOptions {
     /** Timeout in ms for HTTP requests. Default: 15000 */
     timeoutMs?: number;
 }
+
+// ── Task Queue types ───────────────────────────────────────────────────────────
+
+export type TaskQueueEntryStatus = 'pending' | 'running' | 'done' | 'failed' | 'cancelled';
+
+export interface TaskQueueEntry {
+    id: string;
+    agentId: string;
+    workspaceId?: string;
+    payload: unknown;
+    status: TaskQueueEntryStatus;
+    createdAt: string;
+    updatedAt: string;
+    startedAt?: string;
+    completedAt?: string;
+    outcome?: unknown;
+    error?: string;
+}
+
+export interface TaskSubmitOptions {
+    agentId: string;
+    workspaceId?: string;
+    payload: Record<string, unknown>;
+}
+
+export interface TaskListFilters {
+    agentId?: string;
+    workspaceId?: string;
+    status?: TaskQueueEntryStatus;
+}
+
+export interface TaskListResult {
+    entries: TaskQueueEntry[];
+}
+
+export interface TaskQueueStatusResult {
+    pending: number;
+    running: number;
+    done: number;
+    failed: number;
+}
+
+// ── Approvals types ────────────────────────────────────────────────────────────
+
+export type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'escalated' | 'expired';
+
+export interface ApprovalEntry {
+    id: string;
+    workspaceId?: string;
+    agentId?: string;
+    actionSummary: string;
+    status: ApprovalStatus;
+    decidedBy?: string;
+    decidedAt?: string;
+    comment?: string;
+    createdAt: string;
+    updatedAt: string;
+    expiresAt?: string;
+    evidence?: unknown;
+    packet?: unknown;
+}
+
+export interface ApprovalIntakeOptions {
+    agentId: string;
+    workspaceId?: string;
+    actionSummary: string;
+    evidence?: Record<string, unknown>;
+}
+
+export interface ApprovalDecisionOptions {
+    comment?: string;
+}
+
+export interface ApprovalListFilters {
+    workspaceId?: string;
+    agentId?: string;
+    status?: ApprovalStatus;
+}
+
+export interface ApprovalListResult {
+    approvals: ApprovalEntry[];
+}
+
+export interface BulkApproveResult {
+    approved: string[];
+    failed: string[];
+}

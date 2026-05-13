@@ -1,10 +1,12 @@
 import { randomUUID } from 'crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { PrismaClient } from '@prisma/client';
 import type {
     BudgetDecisionRecord,
     BudgetDecisionType,
     BudgetDenialReason,
 } from '@agentfarm/shared-types';
+import { dispatchOutboundWebhooks } from '../lib/webhook-dispatcher.js';
 
 const BUDGET_LEDGER_SOURCE = 'api-gateway-budget-ledger';
 const BUDGET_LEDGER_PREFIX = 'BUDGET_LEDGER:';
@@ -63,6 +65,7 @@ type BudgetPolicyOptions = {
     getSession: (request: FastifyRequest) => SessionContext | null;
     budgetStore?: Map<string, WorkspaceBudgetState>;
     repo?: BudgetPolicyRepo;
+    prisma?: PrismaClient;
 };
 
 type BudgetPolicyRepo = {
@@ -267,6 +270,8 @@ export async function registerBudgetPolicyRoutes(
     // Use provided budget store or default to global
     const store = options.budgetStore ?? budgetStore;
     const repo = options.repo ?? (options.budgetStore ? noopRepo : defaultRepo);
+    const resolvePrismaForDispatch = () =>
+        options.prisma ? Promise.resolve(options.prisma) : getPrisma();
 
     const loadBudgetState = async (
         tenantId: string,
@@ -489,6 +494,14 @@ export async function registerBudgetPolicyRoutes(
                             correlationId: eventCorrelationId,
                             event: { eventType: 'budget_alert_exceeded', ...alertBase },
                         });
+                        void resolvePrismaForDispatch().then((db) => dispatchOutboundWebhooks({
+                            tenantId: scope.tenantId!,
+                            workspaceId,
+                            eventType: 'budget_alert_exceeded',
+                            taskId,
+                            payload: { ...alertBase },
+                            timestamp: new Date().toISOString(),
+                        }, db));
                     } else if (spendRatio >= BUDGET_CRITICAL_PCT) {
                         await appendLedgerEvent({
                             tenantId: scope.tenantId,
@@ -496,6 +509,14 @@ export async function registerBudgetPolicyRoutes(
                             correlationId: eventCorrelationId,
                             event: { eventType: 'budget_alert_critical', ...alertBase },
                         });
+                        void resolvePrismaForDispatch().then((db) => dispatchOutboundWebhooks({
+                            tenantId: scope.tenantId!,
+                            workspaceId,
+                            eventType: 'budget_alert_critical',
+                            taskId,
+                            payload: { ...alertBase },
+                            timestamp: new Date().toISOString(),
+                        }, db));
                     } else if (spendRatio >= BUDGET_WARN_PCT) {
                         await appendLedgerEvent({
                             tenantId: scope.tenantId,
@@ -503,6 +524,14 @@ export async function registerBudgetPolicyRoutes(
                             correlationId: eventCorrelationId,
                             event: { eventType: 'budget_alert_warn', ...alertBase },
                         });
+                        void resolvePrismaForDispatch().then((db) => dispatchOutboundWebhooks({
+                            tenantId: scope.tenantId!,
+                            workspaceId,
+                            eventType: 'budget_alert_warn',
+                            taskId,
+                            payload: { ...alertBase },
+                            timestamp: new Date().toISOString(),
+                        }, db));
                     }
                 }
 

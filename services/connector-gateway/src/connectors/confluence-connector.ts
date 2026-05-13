@@ -110,25 +110,58 @@ export class ConfluenceConnector {
         };
     }
 
+    private get apiBase(): string {
+        return `${this.config.baseUrl}/wiki/rest/api`;
+    }
+
+    /** Internal HTTP helper — throws on network errors; maps HTTP errors to result. */
+    private async request<T>(
+        method: string,
+        path: string,
+        body?: unknown,
+    ): Promise<ConfluenceQueryResult<T>> {
+        const url = `${this.apiBase}${path}`;
+        let response: Response;
+        try {
+            response = await fetch(url, {
+                method,
+                headers: this.headers,
+                body: body !== undefined ? JSON.stringify(body) : undefined,
+            });
+        } catch (err) {
+            return { ok: false, error: err instanceof Error ? err.message : 'network_error' };
+        }
+
+        if (response.status === 204) {
+            return { ok: true, data: undefined as unknown as T };
+        }
+
+        let json: unknown;
+        try { json = await response.json(); } catch { json = {}; }
+
+        if (!response.ok) {
+            const msg = (json as Record<string, unknown>)?.['message']
+                ?? (json as Record<string, unknown>)?.['errorMessage']
+                ?? `HTTP ${response.status}`;
+            return { ok: false, error: String(msg) };
+        }
+
+        return { ok: true, data: json as T };
+    }
+
     // ── Spaces ─────────────────────────────────────────────────────────────
 
     async listSpaces(limit = 25): Promise<ConfluenceQueryResult<ConfluenceSpace[]>> {
-        return { ok: true, data: [] };
+        const result = await this.request<{ results?: RawConfluenceSpace[] }>('GET', `/space?limit=${limit}`);
+        if (!result.ok || !result.data) return { ok: result.ok, error: result.error };
+        return { ok: true, data: (result.data.results ?? []).map(s => mapConfluenceSpace(s, this.config.baseUrl)) };
     }
 
     async getSpace(spaceKey: string): Promise<ConfluenceQueryResult<ConfluenceSpace>> {
         if (!spaceKey) return { ok: false, error: 'spaceKey is required' };
-        return {
-            ok: true,
-            data: {
-                key: spaceKey,
-                name: `Space ${spaceKey}`,
-                type: 'global',
-                status: 'current',
-                homepage_id: '0',
-                url: `${this.config.baseUrl}/wiki/spaces/${spaceKey}`,
-            },
-        };
+        const result = await this.request<RawConfluenceSpace>('GET', `/space/${encodeURIComponent(spaceKey)}`);
+        if (!result.ok || !result.data) return { ok: result.ok, error: result.error };
+        return { ok: true, data: mapConfluenceSpace(result.data, this.config.baseUrl) };
     }
 
     // ── Pages ──────────────────────────────────────────────────────────────
@@ -136,96 +169,112 @@ export class ConfluenceConnector {
     async createPage(input: CreatePageInput): Promise<ConfluenceQueryResult<ConfluencePage>> {
         const spaceKey = input.space_key ?? this.config.defaultSpaceKey;
         if (!spaceKey) return { ok: false, error: 'space_key is required' };
-        const now = new Date().toISOString();
-        const pageId = `page-${Date.now()}`;
-        return {
-            ok: true,
-            data: {
-                id: pageId,
-                title: input.title.slice(0, 255),
-                space_key: spaceKey,
-                version: 1,
-                status: input.is_draft ? 'draft' : 'current',
-                body_view: input.body.slice(0, 65536),
-                created_at: now,
-                updated_at: now,
-                author: 'agentfarm-bot',
-                url: `${this.config.baseUrl}/wiki/spaces/${spaceKey}/pages/${pageId}`,
-                ancestors: input.parent_id ? [{ id: input.parent_id, title: 'Parent' }] : [],
+
+        const body: Record<string, unknown> = {
+            type: 'page',
+            title: input.title.slice(0, 255),
+            space: { key: spaceKey },
+            status: input.is_draft ? 'draft' : 'current',
+            body: {
+                storage: { value: input.body.slice(0, 65536), representation: 'storage' },
             },
         };
+
+        if (input.parent_id) {
+            body['ancestors'] = [{ id: input.parent_id }];
+        }
+
+        const result = await this.request<RawConfluencePage>('POST', '/content', body);
+        if (!result.ok || !result.data) return { ok: result.ok, error: result.error };
+        return { ok: true, data: mapConfluencePage(result.data, this.config.baseUrl) };
     }
 
     async getPage(pageId: string): Promise<ConfluenceQueryResult<ConfluencePage>> {
         if (!pageId) return { ok: false, error: 'pageId is required' };
-        const now = new Date().toISOString();
-        return {
-            ok: true,
-            data: {
-                id: pageId,
-                title: 'Untitled Page',
-                space_key: this.config.defaultSpaceKey ?? 'UNKNOWN',
-                version: 1,
-                status: 'current',
-                body_view: '',
-                created_at: now,
-                updated_at: now,
-                author: 'unknown',
-                url: `${this.config.baseUrl}/wiki/pages/${pageId}`,
-                ancestors: [],
-            },
-        };
+        const result = await this.request<RawConfluencePage>('GET', `/content/${encodeURIComponent(pageId)}?expand=body.view,version,ancestors,space`);
+        if (!result.ok || !result.data) return { ok: result.ok, error: result.error };
+        return { ok: true, data: mapConfluencePage(result.data, this.config.baseUrl) };
     }
 
     async updatePage(pageId: string, title: string, body: string, currentVersion: number): Promise<ConfluenceQueryResult<{ version: number }>> {
         if (!pageId) return { ok: false, error: 'pageId is required' };
-        return { ok: true, data: { version: currentVersion + 1 } };
+        const newVersion = currentVersion + 1;
+        const result = await this.request<{ version?: { number?: number } }>('PUT', `/content/${encodeURIComponent(pageId)}`, {
+            type: 'page',
+            title: title.slice(0, 255),
+            version: { number: newVersion },
+            body: {
+                storage: { value: body.slice(0, 65536), representation: 'storage' },
+            },
+        });
+        if (!result.ok) return { ok: false, error: result.error };
+        return { ok: true, data: { version: result.data?.version?.number ?? newVersion } };
     }
 
     async deletePage(pageId: string): Promise<ConfluenceQueryResult<{ deleted: boolean }>> {
         if (!pageId) return { ok: false, error: 'pageId is required' };
+        const result = await this.request<unknown>('DELETE', `/content/${encodeURIComponent(pageId)}`);
+        if (!result.ok) return { ok: false, error: result.error };
         return { ok: true, data: { deleted: true } };
     }
 
     async getPagesBySpace(spaceKey: string, limit = 25, start = 0): Promise<ConfluenceQueryResult<ConfluencePage[]>> {
         if (!spaceKey) return { ok: false, error: 'spaceKey is required' };
-        return { ok: true, data: [] };
+        const qs = new URLSearchParams({ type: 'page', spaceKey, limit: String(limit), start: String(start) }).toString();
+        const result = await this.request<{ results?: RawConfluencePage[] }>('GET', `/content?${qs}`);
+        if (!result.ok || !result.data) return { ok: result.ok, error: result.error };
+        return { ok: true, data: (result.data.results ?? []).map(p => mapConfluencePage(p, this.config.baseUrl)) };
     }
 
     async getChildPages(parentPageId: string): Promise<ConfluenceQueryResult<ConfluencePage[]>> {
         if (!parentPageId) return { ok: false, error: 'parentPageId is required' };
-        return { ok: true, data: [] };
+        const result = await this.request<{ results?: RawConfluencePage[] }>('GET', `/content/${encodeURIComponent(parentPageId)}/child/page`);
+        if (!result.ok || !result.data) return { ok: result.ok, error: result.error };
+        return { ok: true, data: (result.data.results ?? []).map(p => mapConfluencePage(p, this.config.baseUrl)) };
     }
 
     // ── Comments ───────────────────────────────────────────────────────────
 
     async addPageComment(pageId: string, body: string): Promise<ConfluenceQueryResult<ConfluenceComment>> {
         if (!pageId || !body) return { ok: false, error: 'pageId and body are required' };
-        const now = new Date().toISOString();
-        return {
-            ok: true,
-            data: {
-                id: `comment-${Date.now()}`,
-                body: body.slice(0, 32768),
-                author: 'agentfarm-bot',
-                created_at: now,
-                updated_at: now,
+        const result = await this.request<RawConfluenceComment>('POST', '/content', {
+            type: 'comment',
+            container: { key: pageId, type: 'page' },
+            body: {
+                storage: { value: body.slice(0, 32768), representation: 'storage' },
             },
-        };
+        });
+        if (!result.ok || !result.data) return { ok: result.ok, error: result.error };
+        return { ok: true, data: mapConfluenceComment(result.data) };
     }
 
     async getPageComments(pageId: string): Promise<ConfluenceQueryResult<ConfluenceComment[]>> {
         if (!pageId) return { ok: false, error: 'pageId is required' };
-        return { ok: true, data: [] };
+        const result = await this.request<{ results?: RawConfluenceComment[] }>('GET', `/content/${encodeURIComponent(pageId)}/child/comment?expand=body.view`);
+        if (!result.ok || !result.data) return { ok: result.ok, error: result.error };
+        return { ok: true, data: (result.data.results ?? []).map(mapConfluenceComment) };
     }
 
     // ── Search ─────────────────────────────────────────────────────────────
 
     async search(query: string, spaceKey?: string, limit = 25): Promise<ConfluenceQueryResult<ConfluenceSearchResult>> {
         if (!query || query.trim().length === 0) return { ok: false, error: 'query is required' };
+
+        let cql = `type=page AND text~"${query.replace(/"/g, '\\"')}"`;
+        if (spaceKey) cql += ` AND space="${spaceKey}"`;
+
+        const qs = new URLSearchParams({ cql, limit: String(limit) }).toString();
+        const result = await this.request<{ results?: RawConfluencePage[]; totalSize?: number; start?: number; limit?: number }>('GET', `/content/search?${qs}`);
+        if (!result.ok || !result.data) return { ok: result.ok, error: result.error };
+
         return {
             ok: true,
-            data: { pages: [], total_size: 0, start: 0, limit },
+            data: {
+                pages: (result.data.results ?? []).map(p => mapConfluencePage(p, this.config.baseUrl)),
+                total_size: result.data.totalSize ?? 0,
+                start: result.data.start ?? 0,
+                limit: result.data.limit ?? limit,
+            },
         };
     }
 
@@ -233,6 +282,81 @@ export class ConfluenceConnector {
 
     async ping(): Promise<{ reachable: boolean; latency_ms: number }> {
         const start = Date.now();
-        return { reachable: true, latency_ms: Date.now() - start };
+        const result = await this.request<unknown>('GET', '/space?limit=1');
+        return { reachable: result.ok, latency_ms: Date.now() - start };
     }
+}
+
+// ── Raw response types ────────────────────────────────────────────────────────
+
+type RawConfluenceSpace = {
+    key?: string;
+    name?: string;
+    type?: string;
+    status?: string;
+    _links?: { homepageId?: string; webui?: string };
+    homepageId?: string;
+};
+
+type RawConfluencePage = {
+    id?: string;
+    title?: string;
+    space?: { key?: string };
+    version?: { number?: number };
+    status?: string;
+    body?: { view?: { value?: string }; storage?: { value?: string } };
+    history?: { createdDate?: string; createdBy?: { displayName?: string } };
+    version_date?: string;
+    lastUpdated?: string;
+    ancestors?: Array<{ id?: string; title?: string }>;
+    _links?: { webui?: string };
+};
+
+type RawConfluenceComment = {
+    id?: string;
+    body?: { view?: { value?: string }; storage?: { value?: string } };
+    history?: { createdDate?: string; createdBy?: { displayName?: string }; lastUpdated?: { when?: string } };
+    created?: string;
+    updated?: string;
+};
+
+// ── Mappers ───────────────────────────────────────────────────────────────────
+
+function mapConfluenceSpace(raw: RawConfluenceSpace, baseUrl: string): ConfluenceSpace {
+    return {
+        key: raw.key ?? '',
+        name: raw.name ?? '',
+        type: (raw.type as ConfluenceSpace['type']) ?? 'global',
+        status: (raw.status as ConfluenceSpace['status']) ?? 'current',
+        homepage_id: raw.homepageId ?? raw._links?.homepageId ?? '',
+        url: raw._links?.webui ? `${baseUrl}/wiki${raw._links.webui}` : `${baseUrl}/wiki/spaces/${raw.key ?? ''}`,
+    };
+}
+
+function mapConfluencePage(raw: RawConfluencePage, baseUrl: string): ConfluencePage {
+    const now = new Date().toISOString();
+    return {
+        id: raw.id ?? '',
+        title: raw.title ?? '',
+        space_key: raw.space?.key ?? '',
+        version: raw.version?.number ?? 1,
+        status: (raw.status as ConfluencePage['status']) ?? 'current',
+        body_view: raw.body?.view?.value ?? raw.body?.storage?.value ?? '',
+        created_at: raw.history?.createdDate ?? now,
+        updated_at: raw.version_date ?? raw.lastUpdated ?? now,
+        author: raw.history?.createdBy?.displayName ?? 'unknown',
+        url: raw._links?.webui ? `${baseUrl}/wiki${raw._links.webui}` : `${baseUrl}/wiki/pages/${raw.id ?? ''}`,
+        ancestors: (raw.ancestors ?? []).map(a => ({ id: a.id ?? '', title: a.title ?? '' })),
+    };
+}
+
+function mapConfluenceComment(raw: RawConfluenceComment): ConfluenceComment {
+    const now = new Date().toISOString();
+    return {
+        id: raw.id ?? '',
+        body: raw.body?.view?.value ?? raw.body?.storage?.value ?? '',
+        author: raw.history?.createdBy?.displayName ?? 'unknown',
+        created_at: raw.history?.createdDate ?? raw.created ?? now,
+        updated_at: raw.history?.lastUpdated?.when ?? raw.updated ?? now,
+    };
 }

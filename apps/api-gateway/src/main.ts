@@ -22,6 +22,7 @@ import { registerLanguageRoutes } from './routes/language.js';
 import { registerConnectorActionRoutes } from './routes/connector-actions.js';
 import { createDefaultSecretStore } from './lib/secret-store.js';
 import { registerApprovalRoutes } from './routes/approvals.js';
+import { registerOnboardingConfigRoutes } from './routes/onboarding-config.js';
 import { registerAuditRoutes } from './routes/audit.js';
 import { registerRoleRoutes } from './routes/roles.js';
 import { registerSnapshotRoutes } from './routes/snapshots.js';
@@ -727,6 +728,7 @@ await registerTaskQueueRoutes(app, { getSession: (request) => readSession(reques
 await registerScheduledReportRoutes(app, { getSession: (request) => readSession(request), prisma: prisma as never });
 await registerApiKeyRoutes(app, { getSession: (request) => readSession(request), prisma: prisma as never });
 registerAgentMessageRoutes(app, { getSession: (request) => readSession(request) });
+registerOnboardingConfigRoutes(app);
 
 app.get('/v1/dashboard/summary', async (request, reply) => {
     const session = readSession(request);

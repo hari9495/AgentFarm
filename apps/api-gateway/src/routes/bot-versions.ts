@@ -168,7 +168,7 @@ export const registerBotVersionRoutes = async (
                 tenantId: session.tenantId,
                 workspaceId: bot.workspaceId,
                 botId,
-                eventType: 'bot.version.restore',
+                eventType: 'bot_version_restored',
                 severity: 'info',
                 summary: `Bot ${botId} config restored to version ${versionId} by ${session.userId}`,
             });

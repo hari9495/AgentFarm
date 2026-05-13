@@ -4,6 +4,7 @@ import { writeAuditEvent } from '../lib/audit-writer.js';
 import { ROLE_RANK } from '../lib/require-role.js';
 import { snapshotBotConfig } from '../lib/bot-versioning.js';
 import { invalidateAgentRateLimitCache } from '../lib/agent-rate-limit.js';
+import { dispatchOutboundWebhooks } from '../lib/webhook-dispatcher.js';
 
 const getPrisma = async () => {
     const db = await import('../lib/db.js');
@@ -84,10 +85,19 @@ export const registerAgentControlRoutes = async (
             tenantId: session.tenantId,
             workspaceId: bot.workspaceId,
             botId,
-            eventType: 'agent.paused',
+            eventType: 'agent_paused',
             severity: 'info',
             summary: `Agent ${botId} paused by ${session.userId}`,
         });
+
+        void dispatchOutboundWebhooks({
+            tenantId: session.tenantId,
+            workspaceId: bot.workspaceId,
+            eventType: 'agent_paused',
+            taskId: botId,
+            payload: { botId, status: 'paused', pausedBy: session.userId },
+            timestamp: new Date().toISOString(),
+        }, db);
 
         void snapshotBotConfig(db, botId, session.tenantId, session.userId, 'auto: paused');
 
@@ -145,10 +155,19 @@ export const registerAgentControlRoutes = async (
             tenantId: session.tenantId,
             workspaceId: bot.workspaceId,
             botId,
-            eventType: 'agent.resumed',
+            eventType: 'agent_resumed',
             severity: 'info',
             summary: `Agent ${botId} resumed by ${session.userId}`,
         });
+
+        void dispatchOutboundWebhooks({
+            tenantId: session.tenantId,
+            workspaceId: bot.workspaceId,
+            eventType: 'agent_resumed',
+            taskId: botId,
+            payload: { botId, status: 'active', resumedBy: session.userId },
+            timestamp: new Date().toISOString(),
+        }, db);
 
         void snapshotBotConfig(db, botId, session.tenantId, session.userId, 'auto: resumed');
 

@@ -10,19 +10,15 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { LoopConfig } from '@agentfarm/shared-types';
 
-// Import from agent-runtime stubs (fallback if module not available)
+// Import from agent-runtime with stub fallback
 let globalLoopOrchestrator: any = null;
 
 const getLoopOrchestrator = async () => {
     if (!globalLoopOrchestrator) {
-        try {
-            const mod = await import('../agent-runtime-stubs.js');
-            globalLoopOrchestrator = mod.globalLoopOrchestrator;
-        } catch {
-            // Use built-in stubs
-            const mod = await import('../agent-runtime-stubs.js');
-            globalLoopOrchestrator = mod.globalLoopOrchestrator;
-        }
+        const mod = await import('@agentfarm/agent-runtime/autonomous-loop-orchestrator.js').catch(
+            () => import('../agent-runtime-stubs.js'),
+        );
+        globalLoopOrchestrator = mod.globalLoopOrchestrator;
     }
     return globalLoopOrchestrator;
 };

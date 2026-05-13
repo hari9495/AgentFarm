@@ -37,6 +37,18 @@
         "./natural-language-parser.js": {
             "types": "./src/natural-language-parser.ts",
             "default": "./src/natural-language-parser.ts"
+        },
+        "./autonomous-loop-orchestrator.js": {
+            "types": "./src/autonomous-loop-orchestrator.ts",
+            "default": "./src/autonomous-loop-orchestrator.ts"
+        },
+        "./skill-composition-engine.js": {
+            "types": "./src/skill-composition-engine.ts",
+            "default": "./src/skill-composition-engine.ts"
+        },
+        "./provider-state-persistence.js": {
+            "types": "./src/provider-state-persistence.ts",
+            "default": "./src/provider-state-persistence.ts"
         }
     },
     "scripts": {
