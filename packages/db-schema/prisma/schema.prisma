@@ -1821,3 +1821,54 @@ model InboundWebhookEvent {
   @@index([tenantId])
   @@index([sourceId, processed])
 }
+
+// Phase 37 — Nurture Lead Queue
+enum LeadStatus {
+  NEW
+  NURTURE
+  QUALIFIED
+  DISQUALIFIED
+  CONVERTED
+}
+
+model Lead {
+  id             String       @id @default(cuid())
+  tenantId       String?
+  firstName      String
+  lastName       String
+  email          String
+  company        String
+  message        String?
+  leadSource     String       @default("Web")
+  status         LeadStatus   @default(NEW)
+  nurtureStep    Int          @default(0)
+  lastContactAt  DateTime?
+  nextContactAt  DateTime?
+  qualifiedAt    DateTime?
+  disqualifiedAt DateTime?
+  convertedAt    DateTime?
+  sfLeadId       String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  sequences      NurtureSequenceEntry[]
+
+  @@index([status])
+  @@index([tenantId])
+  @@index([status, nextContactAt])
+}
+
+model NurtureSequenceEntry {
+  id       String   @id @default(cuid())
+  leadId   String
+  lead     Lead     @relation(fields: [leadId], references: [id])
+  step     Int
+  sentAt   DateTime @default(now())
+  channel  String   @default("email")
+  subject  String
+  body     String
+  opened   Boolean  @default(false)
+  clicked  Boolean  @default(false)
+  bounced  Boolean  @default(false)
+
+  @@index([leadId])
+}

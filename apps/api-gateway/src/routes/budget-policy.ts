@@ -21,7 +21,14 @@ interface WorkspaceBudgetState {
 }
 
 type BudgetLedgerEvent = {
-    eventType: 'budget_evaluated' | 'hard_stop_updated' | 'daily_reset' | 'budget_limits_updated';
+    eventType:
+    | 'budget_evaluated'
+    | 'hard_stop_updated'
+    | 'daily_reset'
+    | 'budget_limits_updated'
+    | 'budget_alert_warn'
+    | 'budget_alert_critical'
+    | 'budget_alert_exceeded';
     tenantId: string;
     workspaceId: string;
     taskId?: string;
@@ -38,6 +45,11 @@ type BudgetLedgerEvent = {
 };
 
 const budgetStore = new Map<string, WorkspaceBudgetState>();
+
+// Budget alert thresholds (fraction of daily limit). Configurable via env vars.
+const BUDGET_WARN_PCT = Number(process.env['BUDGET_ALERT_WARN_PCT'] ?? 80) / 100;
+const BUDGET_CRITICAL_PCT = Number(process.env['BUDGET_ALERT_CRITICAL_PCT'] ?? 90) / 100;
+const BUDGET_EXCEEDED_PCT = Number(process.env['BUDGET_ALERT_EXCEEDED_PCT'] ?? 100) / 100;
 
 type SessionContext = {
     userId: string;
@@ -402,7 +414,7 @@ export async function registerBudgetPolicyRoutes(
                 // Check if approaching limits (warning state)
                 else if (
                     budgetState.dailySpent + estimatedCost >
-                    budgetState.dailyLimit * 0.8
+                    budgetState.dailyLimit * BUDGET_WARN_PCT
                 ) {
                     decision = 'warning';
                 }
@@ -458,6 +470,41 @@ export async function registerBudgetPolicyRoutes(
                         occurredAt: new Date().toISOString(),
                     },
                 });
+
+                // Threshold alert dispatch — fires for allowed/warning decisions only; highest threshold wins
+                if (decision !== 'denied' && budgetState.dailyLimit > 0) {
+                    const spendRatio = budgetState.dailySpent / budgetState.dailyLimit;
+                    const alertBase = {
+                        tenantId: scope.tenantId,
+                        workspaceId,
+                        taskId,
+                        estimatedCost,
+                        stateAfter: { ...budgetState },
+                        occurredAt: new Date().toISOString(),
+                    };
+                    if (spendRatio >= BUDGET_EXCEEDED_PCT) {
+                        await appendLedgerEvent({
+                            tenantId: scope.tenantId,
+                            workspaceId,
+                            correlationId: eventCorrelationId,
+                            event: { eventType: 'budget_alert_exceeded', ...alertBase },
+                        });
+                    } else if (spendRatio >= BUDGET_CRITICAL_PCT) {
+                        await appendLedgerEvent({
+                            tenantId: scope.tenantId,
+                            workspaceId,
+                            correlationId: eventCorrelationId,
+                            event: { eventType: 'budget_alert_critical', ...alertBase },
+                        });
+                    } else if (spendRatio >= BUDGET_WARN_PCT) {
+                        await appendLedgerEvent({
+                            tenantId: scope.tenantId,
+                            workspaceId,
+                            correlationId: eventCorrelationId,
+                            event: { eventType: 'budget_alert_warn', ...alertBase },
+                        });
+                    }
+                }
 
                 reply.code(200).send(decisionRecord);
             } catch (error) {

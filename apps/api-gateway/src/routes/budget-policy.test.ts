@@ -525,4 +525,86 @@ test('Budget Policy Routes', async (suite) => {
             await app.close();
         }
     });
+
+    await suite.test('evaluate at 95% spend fires budget_alert_critical only', async () => {
+        const events: any[] = [];
+        const mockRepo = {
+            async loadBudgetState(_input: any) { return null; },
+            async loadBudgetConfig(_input: any) { return null; },
+            async appendBudgetEvent(input: any) { events.push(input.event); },
+        };
+        const seededStore = new Map<any, any>();
+        seededStore.set('ws_001', {
+            dailySpent: 75,
+            dailyLimit: 100,
+            monthlySpent: 75,
+            monthlyLimit: 1000,
+            isHardStopActive: false,
+            lastResetDaily: new Date().toISOString(),
+        });
+        const { app } = await createTestAppWithOptions({ budgetStore: seededStore, repo: mockRepo });
+        try {
+            const res = await app.inject({
+                method: 'POST',
+                url: '/v1/workspaces/ws_001/budget/evaluate',
+                payload: { taskId: 'task_alert_critical', estimatedCost: 20 },
+            });
+            assert.strictEqual(res.statusCode, 200);
+            assert.ok(
+                events.some((e) => e.eventType === 'budget_alert_critical'),
+                'critical alert should fire at 95% spend',
+            );
+            assert.ok(
+                !events.some((e) => e.eventType === 'budget_alert_warn'),
+                'warn alert must not fire when critical threshold crossed',
+            );
+            assert.ok(
+                !events.some((e) => e.eventType === 'budget_alert_exceeded'),
+                'exceeded alert must not fire at 95% spend',
+            );
+        } finally {
+            await app.close();
+        }
+    });
+
+    await suite.test('evaluate at 100% spend fires budget_alert_exceeded only', async () => {
+        const events: any[] = [];
+        const mockRepo = {
+            async loadBudgetState(_input: any) { return null; },
+            async loadBudgetConfig(_input: any) { return null; },
+            async appendBudgetEvent(input: any) { events.push(input.event); },
+        };
+        const seededStore = new Map<any, any>();
+        seededStore.set('ws_001', {
+            dailySpent: 80,
+            dailyLimit: 100,
+            monthlySpent: 80,
+            monthlyLimit: 1000,
+            isHardStopActive: false,
+            lastResetDaily: new Date().toISOString(),
+        });
+        const { app } = await createTestAppWithOptions({ budgetStore: seededStore, repo: mockRepo });
+        try {
+            const res = await app.inject({
+                method: 'POST',
+                url: '/v1/workspaces/ws_001/budget/evaluate',
+                payload: { taskId: 'task_alert_exceeded', estimatedCost: 20 },
+            });
+            assert.strictEqual(res.statusCode, 200);
+            assert.ok(
+                events.some((e) => e.eventType === 'budget_alert_exceeded'),
+                'exceeded alert should fire at 100% spend',
+            );
+            assert.ok(
+                !events.some((e) => e.eventType === 'budget_alert_warn'),
+                'warn alert must not fire when exceeded threshold crossed',
+            );
+            assert.ok(
+                !events.some((e) => e.eventType === 'budget_alert_critical'),
+                'critical alert must not fire when exceeded threshold crossed',
+            );
+        } finally {
+            await app.close();
+        }
+    });
 });

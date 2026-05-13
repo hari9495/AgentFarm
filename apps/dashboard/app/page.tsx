@@ -1354,6 +1354,9 @@ export default async function HomePage({
                         <Link href="/live" className="secondary-action" style={{ textDecoration: 'none' }}>
                             Live Feed
                         </Link>
+                        <Link href="/leads" className="secondary-action" style={{ textDecoration: 'none' }}>
+                            Lead Queue
+                        </Link>
                         <Link href="/agents" className="secondary-action" style={{ textDecoration: 'none' }}>
                             Agents
                         </Link>

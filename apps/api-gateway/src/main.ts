@@ -8,7 +8,7 @@ initObservability({
 import Fastify from 'fastify';
 import type { FastifyError } from 'fastify';
 import helmet from '@fastify/helmet';
-import { rateLimit, rateLimitTenant } from './lib/rate-limit.js';
+import { rateLimit, rateLimitTenant, rateLimitAsync, rateLimitTenantAsync } from './lib/rate-limit.js';
 import { buildSessionToken, verifySessionToken, type SessionPayload } from './lib/session-auth.js';
 import { prisma } from './lib/db.js';
 import { checkSubscription } from './lib/subscription-guard.js';
@@ -31,6 +31,7 @@ import {
     stopConnectorTokenLifecycleWorker,
 } from './services/connector-token-lifecycle-worker.js';
 import { startConnectorHealthWorker, stopConnectorHealthWorker } from './services/connector-health-worker.js';
+import { startNurtureWorker, stopNurtureWorker } from './services/nurture-worker.js';
 import {
     PROVISIONING_SLA_TARGET_MS,
     PROVISIONING_STUCK_ALERT_MS,
@@ -485,7 +486,7 @@ app.addHook('preHandler', async (request, reply) => {
     const isAuthEndpoint = request.url.startsWith('/auth/');
     const limit = isAuthEndpoint ? 20 : 180;
     const identityKey = `${request.ip}:${isAuthEndpoint ? 'auth' : request.url}`;
-    const result = rateLimit(identityKey, { limit, windowMs: 60_000 });
+    const result = await rateLimitAsync(identityKey, { limit, windowMs: 60_000 });
     reply.header('x-ratelimit-remaining', String(result.remaining));
     reply.header('x-ratelimit-reset-in-ms', String(result.resetIn));
 
@@ -514,7 +515,7 @@ app.addHook('preHandler', async (request, reply) => {
     // Per-tenant rate limit (only when a session exists)
     const tenantSession = readSession(request);
     if (tenantSession?.tenantId) {
-        const tenantResult = rateLimitTenant(tenantSession.tenantId, {
+        const tenantResult = await rateLimitTenantAsync(tenantSession.tenantId, {
             limit: 600,
             windowMs: 60_000,
         });
@@ -703,7 +704,7 @@ registerNotificationRoutes(app, { getSession: (request) => readSession(request) 
 registerSkillPipelineRoutes(app, { getSession: (request) => readSession(request) });
 registerSkillSchedulerRoutes(app, { getSession: (request) => readSession(request) });
 registerWebhookRoutes(app, prisma);
-registerLeadRoutes(app);
+registerLeadRoutes(app, { prisma });
 registerConnectorHealthRoutes(app);
 registerKnowledgeGraphRoutes(app, { getSession: (request) => readSession(request) });
 registerAgentFeedbackRoutes(app, { getSession: (request) => readSession(request) });
@@ -1149,6 +1150,7 @@ const start = async (): Promise<void> => {
                 error: (msg, err) => app.log.error({ err }, msg),
             },
         );
+        startNurtureWorker(prisma);
         startDrainSweep({
             agentRuntimeUrl: process.env.AGENT_RUNTIME_URL ?? 'http://localhost:3001',
             prisma: prisma as never,
@@ -1163,6 +1165,7 @@ const stop = async (): Promise<void> => {
     stopProvisioningWorker();
     stopConnectorTokenLifecycleWorker();
     stopConnectorHealthWorker();
+    stopNurtureWorker();
     stopDrainSweep();
     await app.close();
     process.exit(0);

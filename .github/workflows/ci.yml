@@ -181,6 +181,7 @@ jobs:
           - '@agentfarm/notification-adapters'
           - '@agentfarm/sdk'
           - '@agentfarm/cli'
+          - '@agentfarm/redis-client'
     steps:
       - name: Checkout
         uses: actions/checkout@v4

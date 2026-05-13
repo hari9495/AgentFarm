@@ -10,6 +10,7 @@
  */
 
 import type { PrismaClient } from '@prisma/client';
+import { getRedisClient } from '@agentfarm/redis-client';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -131,6 +132,18 @@ async function drainOnce(opts: DrainOpts, concurrency: number): Promise<void> {
 }
 
 async function processEntry(entry: QueueEntry, opts: DrainOpts): Promise<void> {
+    // Redis claim deduplication — prevents duplicate pickup in multi-instance deployments
+    const redis = getRedisClient();
+    if (redis) {
+        try {
+            const claimKey = `taskqueue:claimed:${entry.id}`;
+            const claimed = await redis.set(claimKey, '1', 'EX', 300, 'NX');
+            if (!claimed) return; // Another instance already claimed this task
+        } catch {
+            // Redis unavailable — continue without claim check
+        }
+    }
+
     // Step 1 — mark running in DB; re-enqueue at front on failure
     try {
         await (opts.prisma as unknown as {

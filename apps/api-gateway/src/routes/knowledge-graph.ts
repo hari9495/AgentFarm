@@ -1,4 +1,15 @@
+/**
+ * Knowledge graph data is populated by the agent-runtime indexer.
+ * To seed test data, dispatch an agent with a code repository task —
+ * the runtime writes AgentRepoKnowledge records which this route reads.
+ * Empty graph = no indexing runs have completed for this tenant yet.
+ */
 import type { FastifyInstance, FastifyRequest } from 'fastify';
+
+const getPrisma = async () => {
+    const db = await import('../lib/db.js');
+    return db.prisma;
+};
 
 type SymbolQuery = {
     q?: string;
@@ -35,12 +46,55 @@ export function registerKnowledgeGraphRoutes(app: FastifyInstance, options: Regi
         const { globalKnowledgeGraph } = await import(
             '@agentfarm/agent-runtime/repo-knowledge-graph.js'
         ).catch(() => import('../agent-runtime-stubs.js'));
-        const symbols = globalKnowledgeGraph.listSymbols?.() ?? [];
+        const runtimeSymbols = globalKnowledgeGraph.listSymbols?.() ?? [];
+
+        // DB-backed graph — fill in records the runtime hasn't indexed in-memory yet
+        const VALID_KINDS = new Set(['function', 'class', 'interface', 'type', 'variable', 'unknown']);
+        let dbSymbols: typeof runtimeSymbols = [];
+        let dbLastIndexed: string | null = null;
+        try {
+            const prisma = await getPrisma();
+            const dbRecords = await prisma.agentRepoKnowledge.findMany({
+                where: { tenantId: session.tenantId },
+                take: 500,
+                orderBy: { updatedAt: 'desc' },
+            });
+            if (dbRecords.length > 0) {
+                dbLastIndexed = dbRecords[0].updatedAt.toISOString();
+            }
+            dbSymbols = dbRecords.map((r) => {
+                const val =
+                    r.value && typeof r.value === 'object' && !Array.isArray(r.value)
+                        ? (r.value as Record<string, unknown>)
+                        : {};
+                return {
+                    name: r.key,
+                    kind: (VALID_KINDS.has(r.role) ? r.role : 'unknown') as
+                        | 'function'
+                        | 'class'
+                        | 'interface'
+                        | 'type'
+                        | 'variable'
+                        | 'unknown',
+                    file_path: typeof val['filePath'] === 'string' ? val['filePath'] : '',
+                    line: typeof val['line'] === 'number' ? val['line'] : 0,
+                    callers: [],
+                    callees: [],
+                };
+            });
+        } catch {
+            // DB unavailable — serve whatever the runtime has in memory
+        }
+
+        // Runtime symbols take precedence; DB fills the rest
+        const runtimeNames = new Set(runtimeSymbols.map((s: { name: string }) => s.name));
+        const additionalDbSymbols = dbSymbols.filter((s: { name: string }) => !runtimeNames.has(s.name));
+
         return reply.send({
-            symbols,
+            symbols: [...runtimeSymbols, ...additionalDbSymbols],
             call_edges: globalKnowledgeGraph.getCallEdges?.() ?? [],
             dep_edges: globalKnowledgeGraph.getDepEdges?.() ?? [],
-            last_indexed: globalKnowledgeGraph.lastIndexed ?? null,
+            last_indexed: globalKnowledgeGraph.lastIndexed ?? dbLastIndexed,
         });
     });
 
