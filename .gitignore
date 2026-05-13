@@ -3,6 +3,9 @@ dist/
 .next/
 coverage/
 
+# Claude AI internal worktrees and session data
+.claude/
+
 # Environment variable files — real values must never be committed
 .env
 .env.*
