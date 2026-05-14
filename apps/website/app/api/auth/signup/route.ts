@@ -1,4 +1,3 @@
-﻿export const runtime = 'edge'
 
 import { NextResponse } from "next/server";
 import { createSession, createUser, findUserByEmail, initializeTenantWorkspaceAndBot, updateUserGatewayIds } from "@/lib/auth-store";

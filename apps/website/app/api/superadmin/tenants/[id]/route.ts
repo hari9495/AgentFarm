@@ -1,24 +1,16 @@
-﻿export const runtime = 'edge'
 
 import { cookies } from "next/headers";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import {
     getSessionUser,
     isCompanyOperatorEmail,
-    getCompanyTenantById,
-    getCompanyTenantFleetBots,
-    getCompanyTenantIncidents,
+    listActiveOperatorSessions,
 } from "@/lib/auth-store";
 import { checkRateLimit } from "@/lib/rate-limit";
 
 const COOKIE_NAME = "agentfarm_session";
 
-export async function GET(
-    _req: NextRequest,
-    { params }: { params: Promise<{ id: string }> },
-) {
-    const { id } = await params;
-
+export async function GET() {
     const jar = await cookies();
     const token = jar.get(COOKIE_NAME)?.value;
     if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -35,11 +27,6 @@ export async function GET(
         );
     }
 
-    const tenant = await getCompanyTenantById(id);
-    if (!tenant) return NextResponse.json({ error: "Tenant not found." }, { status: 404 });
-
-    const fleet = await getCompanyTenantFleetBots(id);
-    const incidents = await getCompanyTenantIncidents(id);
-
-    return NextResponse.json({ tenant, fleet, incidents });
+    return NextResponse.json({ sessions: listActiveOperatorSessions() });
 }
+

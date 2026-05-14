@@ -1,58 +1,70 @@
-﻿export const runtime = 'edge'
 
-import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
-import { getUserById, getSessionUser, updateUserRole, UserRole, writeAuditEvent } from "@/lib/auth-store";
+import { getSessionUser } from "@/lib/auth-store";
 
-const COOKIE_NAME = "agentfarm_session";
+const SESSION_COOKIE = "agentfarm_session";
+const GATEWAY_URL =
+    process.env.API_GATEWAY_URL ??
+    process.env.NEXT_PUBLIC_API_URL ??
+    "http://localhost:3000";
 
-export async function PATCH(
-    req: NextRequest,
-    { params }: { params: Promise<{ id: string }> },
-) {
-    const jar = await cookies();
-    const token = jar.get(COOKIE_NAME)?.value;
-    if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+function getCookieValue(cookieHeader: string | null, name: string): string | null {
+    if (!cookieHeader) return null;
+    const cookie = cookieHeader
+        .split(";")
+        .map((part) => part.trim())
+        .find((part) => part.startsWith(`${name}=`));
+    if (!cookie) return null;
+    return decodeURIComponent(cookie.slice(name.length + 1));
+}
 
-    const actor = await getSessionUser(token);
-    if (!actor) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    if (actor.role === "member") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+export async function POST(request: NextRequest) {
+    const token = getCookieValue(request.headers.get("cookie"), SESSION_COOKIE);
+    if (!token) {
+        return NextResponse.json({ error: "Authentication required." }, { status: 401 });
+    }
 
-    const { id: targetId } = await params;
-    let body: { role?: string; reason?: string };
+    const user = await getSessionUser(token);
+    if (!user) {
+        return NextResponse.json({ error: "Invalid or expired session." }, { status: 401 });
+    }
+
+    if (user.role !== "admin" && user.role !== "superadmin") {
+        return NextResponse.json({ error: "Admin access required." }, { status: 403 });
+    }
+
+    let body: { tenantId?: string; orderId?: string } = {};
     try {
-        body = await req.json();
+        body = await request.json();
     } catch {
-        return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+        return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
     }
 
-    const newRole = body.role;
-    if (newRole !== "superadmin" && newRole !== "admin" && newRole !== "member") {
-        return NextResponse.json({ error: "role must be 'superadmin', 'admin', or 'member'" }, { status: 400 });
+    const { tenantId, orderId } = body;
+    if (!tenantId || !orderId) {
+        return NextResponse.json({ error: "tenantId and orderId are required." }, { status: 400 });
     }
 
-    const reason = (body.reason ?? "").trim();
-    if (!reason) {
-        return NextResponse.json({ error: "A reason is required when changing a user role." }, { status: 422 });
+    if (typeof tenantId !== "string" || tenantId.trim().length === 0 || tenantId.length > 64 || /\s/.test(tenantId)) {
+        return NextResponse.json({ error: "tenantId must be a non-empty string with no spaces, max 64 characters." }, { status: 400 });
     }
 
-    const targetBefore = await getUserById(targetId);
-    const result = await updateUserRole(targetId, newRole as UserRole, actor.id, actor.role);
-    if (!result.ok) {
-        return NextResponse.json({ error: result.error }, { status: 422 });
+    if (typeof orderId !== "string" || orderId.trim().length === 0 || orderId.length > 64 || /\s/.test(orderId)) {
+        return NextResponse.json({ error: "orderId must be a non-empty string with no spaces, max 64 characters." }, { status: 400 });
     }
 
-    writeAuditEvent({
-        actorId: actor.id,
-        actorEmail: actor.email,
-        action: "user.role_change",
-        targetType: "user",
-        targetId: targetId,
-        tenantId: "",
-        beforeState: { role: targetBefore?.role ?? "unknown" },
-        afterState: { role: newRole },
-        reason,
+    const gatewayToken = user.gatewayToken ?? token;
+
+    const res = await fetch(`${GATEWAY_URL}/v1/admin/provision`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${gatewayToken}`,
+        },
+        body: JSON.stringify({ tenantId, orderId }),
     });
 
-    return NextResponse.json({ ok: true });
+    const data = await res.json();
+    return NextResponse.json(data, { status: res.status });
 }
+

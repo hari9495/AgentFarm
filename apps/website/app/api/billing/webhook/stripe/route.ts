@@ -1,4 +1,3 @@
-export const runtime = 'edge'
 
 import { NextResponse } from "next/server";
 
@@ -21,7 +20,7 @@ export async function POST(request: Request) {
             body: rawBody,
         });
     } catch {
-        // best effort — always return 200 to Stripe
+        // best effort â€” always return 200 to Stripe
     }
 
     return NextResponse.json({ received: true }, { status: 200 });
