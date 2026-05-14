@@ -1,6 +1,4 @@
-﻿export const runtime = 'edge'
-
-import AppSidebar from "@/components/layout/AppSidebar";
+﻿import AppSidebar from "@/components/layout/AppSidebar";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getSessionUser, isCompanyOperatorEmail } from "@/lib/auth-store";
