@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 import Link from "next/link";
 import {
     Code2, BarChart3, Users, DollarSign, MessageCircle,
@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { marketplaceBots } from "@/lib/bots";
 import { useCart } from "@/lib/cart-store";
-import PremiumIcon from "@/components/shared/PremiumIcon";
+
 
 type TeamSize = "1-5" | "6-20" | "21-50" | "50+";
 type FocusArea = "engineering" | "marketing" | "finance" | "hr" | "customer-success" | "security" | "product" | "operations";
@@ -73,17 +73,17 @@ export default function TeamBuilderWizard() {
     };
 
     return (
-        <section className="py-16 bg-gradient-to-b from-slate-50 to-white dark:from-slate-900 dark:to-slate-950 border-y border-slate-100 dark:border-slate-800">
+        <section className="py-16 bg-gradient-to-b bg-[var(--canvas)] border-y border-[var(--hairline)]">
             <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Header */}
                 <div className="text-center mb-10">
-                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-violet-600 bg-violet-50 dark:bg-violet-900/30 px-3 py-1.5 rounded-full border border-violet-100 dark:border-violet-800 mb-4">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider chip chip-accent mb-4">
                         <Sparkles className="w-3.5 h-3.5" /> Not sure where to start?
                     </span>
-                    <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-slate-100 mt-2">
+                    <h2 className="text-2xl sm:text-3xl font-semibold tracking-[-0.03em] text-[var(--ink)] mt-2">
                         Build your AI team in 3 steps
                     </h2>
-                    <p className="mt-3 text-slate-500 dark:text-slate-400 text-sm">
+                    <p className="mt-3 text-[var(--mute)] text-sm">
                         Tell us a little about your team and we will recommend the right agents.
                     </p>
                 </div>
@@ -93,12 +93,12 @@ export default function TeamBuilderWizard() {
                     {([1, 2, 3] as const).map((s) => (
                         <div key={s} className="flex items-center gap-2">
                             <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${step >= s
-                                ? "bg-blue-600 text-white"
-                                : "bg-slate-200 dark:bg-slate-700 text-slate-400"
+                                ? "bg-[var(--accent-blue)] text-[#07080a]"
+                                : "bg-[var(--surface-el)] text-[var(--ash)]"
                                 }`}>
                                 {s}
                             </div>
-                            {s < 3 && <div className={`w-8 h-0.5 transition-colors ${step > s ? "bg-blue-600" : "bg-slate-200 dark:bg-slate-700"}`} />}
+                            {s < 3 && <div className={`w-8 h-0.5 transition-colors ${step > s ? "bg-[var(--accent-blue)]" : "bg-[var(--hairline)]"}`} />}
                         </div>
                     ))}
                 </div>
@@ -113,7 +113,7 @@ export default function TeamBuilderWizard() {
                             exit={{ opacity: 0, x: -30 }}
                             transition={{ duration: 0.25 }}
                         >
-                            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-4">
+                            <p className="text-sm font-semibold text-[var(--ink)] mb-4">
                                 How large is your team?
                             </p>
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -122,11 +122,11 @@ export default function TeamBuilderWizard() {
                                         key={size}
                                         onClick={() => { setTeamSize(size); setStep(2); }}
                                         className={`rounded-xl border px-4 py-5 text-center transition-all cursor-pointer ${teamSize === size
-                                            ? "border-blue-600 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 ring-2 ring-blue-600"
-                                            : "border-slate-200 dark:border-slate-700 hover:border-blue-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                                            ? "border-[var(--accent-blue)] bg-[var(--accent-blue)]/10 text-[var(--accent-blue)] ring-2 ring-[var(--accent-blue)]"
+                                            : "border-[var(--hairline)] hover:border-[var(--accent-blue)]/50 hover:bg-[var(--surface-el)]"
                                             }`}
                                     >
-                                        <p className="text-xl font-extrabold text-slate-900 dark:text-slate-100">{size}</p>
+                                        <p className="text-xl font-bold text-[var(--ink)]">{size}</p>
                                         <p className="text-xs text-slate-400 mt-1">people</p>
                                     </button>
                                 ))}
@@ -142,7 +142,7 @@ export default function TeamBuilderWizard() {
                             exit={{ opacity: 0, x: -30 }}
                             transition={{ duration: 0.25 }}
                         >
-                            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-4">
+                            <p className="text-sm font-semibold text-[var(--ink)] mb-4">
                                 Which areas need the most help? <span className="font-normal text-slate-400">(pick any)</span>
                             </p>
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
@@ -153,17 +153,14 @@ export default function TeamBuilderWizard() {
                                             key={value}
                                             onClick={() => toggleFocus(value)}
                                             className={`flex flex-col items-center gap-2 rounded-xl border px-3 py-4 text-center transition-all cursor-pointer ${active
-                                                ? "border-blue-600 bg-blue-50 dark:bg-blue-950/40 ring-2 ring-blue-600"
-                                                : "border-slate-200 dark:border-slate-700 hover:border-blue-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                                                ? "border-[var(--accent-blue)] bg-[var(--accent-blue)]/10 ring-2 ring-[var(--accent-blue)]"
+                                                : "border-[var(--hairline)] hover:border-[var(--accent-blue)]/50 hover:bg-[var(--surface-el)]"
                                                 }`}
                                         >
-                                            <PremiumIcon
-                                                icon={Icon}
-                                                tone={active ? "sky" : "slate"}
-                                                containerClassName="w-8 h-8 rounded-lg"
-                                                iconClassName="w-4 h-4"
-                                            />
-                                            <span className={`text-xs font-medium ${active ? "text-blue-700 dark:text-blue-300" : "text-slate-600 dark:text-slate-400"}`}>
+                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${active ? "bg-[var(--accent-blue)]/10" : "bg-[var(--surface-el)]"}`}>
+                                                <Icon className={`w-4 h-4 ${active ? "text-[var(--accent-blue)]" : "text-[var(--mute)]"}`} />
+                                            </div>
+                                            <span className={`text-xs font-medium ${active ? "text-[var(--accent-blue)]" : "text-[var(--mute)]"}`}>
                                                 {label}
                                             </span>
                                         </button>
@@ -177,7 +174,7 @@ export default function TeamBuilderWizard() {
                                 <button
                                     onClick={() => setStep(3)}
                                     disabled={focusAreas.size === 0}
-                                    className="flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed px-5 py-2.5 text-sm font-semibold text-white transition-colors cursor-pointer"
+                                    className="flex items-center gap-2 rounded-xl bg-[var(--accent-blue)] hover:bg-[#8dd7ff] text-[#07080a] disabled:opacity-40 disabled:cursor-not-allowed px-5 py-2.5 text-sm font-semibold text-white transition-colors cursor-pointer"
                                 >
                                     See recommendations <ArrowRight className="w-4 h-4" />
                                 </button>
@@ -193,13 +190,13 @@ export default function TeamBuilderWizard() {
                             exit={{ opacity: 0, x: -30 }}
                             transition={{ duration: 0.25 }}
                         >
-                            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-4">
+                            <p className="text-sm font-semibold text-[var(--ink)] mb-4">
                                 Your recommended starter team
                             </p>
                             {recommendations.length === 0 ? (
                                 <div className="text-center py-10">
-                                    <p className="text-slate-500 text-sm mb-4">No agents are live yet for those areas — they are coming soon.</p>
-                                    <Link href="/marketplace" className="text-blue-600 text-sm hover:underline">
+                                    <p className="text-[var(--mute)] text-sm mb-4">No agents are live yet for those areas — they are coming soon.</p>
+                                    <Link href="/marketplace" className="text-[var(--accent-blue)] text-sm hover:underline">
                                         Browse the full marketplace
                                     </Link>
                                 </div>
@@ -209,7 +206,7 @@ export default function TeamBuilderWizard() {
                                         {recommendations.map((bot) => (
                                             <div
                                                 key={bot.slug}
-                                                className="flex items-center gap-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3"
+                                                className="flex items-center gap-3 rounded-xl border border-[var(--hairline)] bg-[var(--surface-card)] p-3"
                                             >
                                                 <img
                                                     src={`https://api.dicebear.com/7.x/bottts/svg?seed=${bot.slug}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc&radius=12`}
@@ -218,12 +215,12 @@ export default function TeamBuilderWizard() {
                                                     loading="lazy"
                                                 />
                                                 <div className="min-w-0 flex-1">
-                                                    <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">{bot.name}</p>
-                                                    <p className="text-xs text-slate-400">{bot.price}</p>
+                                                    <p className="text-sm font-semibold text-[var(--ink)] truncate">{bot.name}</p>
+                                                    <p className="text-xs text-[var(--ash)]">{bot.price}</p>
                                                 </div>
                                                 <Link
                                                     href={`/marketplace/${bot.slug}`}
-                                                    className="shrink-0 text-slate-400 hover:text-blue-600 transition-colors"
+                                                    className="shrink-0 text-[var(--ash)] hover:text-[var(--accent-blue)] transition-colors"
                                                 >
                                                     <ChevronRight className="w-4 h-4" />
                                                 </Link>
@@ -233,20 +230,20 @@ export default function TeamBuilderWizard() {
                                     <div className="flex flex-col sm:flex-row items-center gap-3">
                                         <button
                                             onClick={addAll}
-                                            className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-5 py-2.5 text-sm font-semibold text-white transition-colors cursor-pointer"
+                                            className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl bg-[var(--accent-blue)] hover:bg-[#8dd7ff] text-[#07080a] px-5 py-2.5 text-sm font-semibold transition-colors cursor-pointer"
                                         >
                                             Add all to my team
                                         </button>
                                         <Link
                                             href="/marketplace"
-                                            className="text-sm text-slate-500 hover:text-slate-700 dark:hover:text-slate-200"
+                                            className="text-sm text-[var(--mute)] hover:text-[var(--ink)]"
                                         >
                                             Explore all {marketplaceBots.length} agents
                                         </Link>
                                     </div>
                                 </>
                             )}
-                            <button onClick={() => { setStep(1); setTeamSize(null); setFocusAreas(new Set()); }} className="mt-4 text-xs text-slate-400 hover:text-slate-600 cursor-pointer">
+                            <button onClick={() => { setStep(1); setTeamSize(null); setFocusAreas(new Set()); }} className="mt-4 text-xs text-[var(--ash)] hover:text-[var(--mute)] cursor-pointer">
                                 Start over
                             </button>
                         </motion.div>
@@ -256,3 +253,6 @@ export default function TeamBuilderWizard() {
         </section>
     );
 }
+
+
+

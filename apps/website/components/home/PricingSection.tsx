@@ -1,9 +1,9 @@
-﻿"use client";
+"use client";
 
-import { motion } from "framer-motion";
-import { CheckCircle } from "lucide-react";
-import ButtonLink from "@/components/shared/ButtonLink";
-import { useCompactMotion } from "@/lib/useCompactMotion";
+import { useState } from "react";
+import { motion } from "motion/react";
+import { CheckCircle2, Zap } from "lucide-react";
+import Link from "next/link";
 
 const plans = [
     {
@@ -64,94 +64,141 @@ const plans = [
     },
 ];
 
+const ease = [0.22, 1, 0.36, 1] as const;
+
 export default function PricingSection() {
-    const compactMotion = useCompactMotion();
-    const motionScale = compactMotion ? 0.78 : 1;
-    const hoverLift = compactMotion ? -3 : -6;
+    const [annual, setAnnual] = useState(false);
+
+    const getPrice = (monthly: string) => {
+        if (monthly === "Custom") return "Custom";
+        const num = parseInt(monthly.replace("$", ""), 10);
+        return annual ? `$${Math.round(num * 0.8)}` : monthly;
+    };
 
     return (
-        <section id="pricing" className="relative overflow-hidden bg-slate-50 dark:bg-slate-900 py-24">
-            <div className="pointer-events-none absolute inset-0 opacity-40">
-                <div className="absolute -top-32 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-gradient-to-br from-sky-200 to-emerald-200 blur-3xl dark:from-sky-900/40 dark:to-emerald-900/30" />
-            </div>
+        <section id="pricing" className="bg-[var(--canvas)] py-24 border-t border-[var(--hairline)]">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="max-w-2xl mx-auto text-center mb-16">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-blue-600">
-                        Pricing
-                    </span>
-                    <h2 className="mt-3 text-3xl sm:text-4xl font-bold text-slate-900 dark:text-slate-100">
+                {/* Header */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.48, ease }}
+                    className="max-w-2xl mx-auto text-center mb-10"
+                >
+                    <span className="chip chip-accent text-xs mb-4">Pricing</span>
+                    <h2 className="text-[clamp(1.8rem,3.5vw,2.6rem)] font-semibold text-[var(--ink)] tracking-[-0.03em]">
                         Simple, predictable pricing
                     </h2>
-                    <p className="mt-4 text-lg text-slate-500 dark:text-slate-400">
-                        Start with the AI teammates your team needs today. Scale by role and expand when you see measurable outcomes.
+                    <p className="mt-4 text-[var(--mute)] leading-relaxed">
+                        Start with the skills your team needs. Scale by role and expand when you see measurable outcomes.
                     </p>
+                </motion.div>
+
+                {/* Toggle */}
+                <div className="flex justify-center mb-10">
+                    <div className="flex items-center gap-3 bg-[var(--surface-card)] border border-[var(--hairline)] rounded-xl p-1">
+                        <button
+                            onClick={() => setAnnual(false)}
+                            className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-colors ${!annual ? "bg-white/[0.08] text-[var(--ink)]" : "text-[var(--mute)] hover:text-[var(--ink)]"}`}
+                        >
+                            Monthly
+                        </button>
+                        <button
+                            onClick={() => setAnnual(true)}
+                            className={`relative px-4 py-1.5 text-sm font-medium rounded-lg transition-colors ${annual ? "bg-white/[0.08] text-[var(--ink)]" : "text-[var(--mute)] hover:text-[var(--ink)]"}`}
+                        >
+                            Annual
+                            <span className="ml-2 text-[10px] font-bold text-[var(--accent-green)] bg-[#59d499]/10 border border-[#59d499]/25 px-1.5 py-0.5 rounded-full">
+                                -20%
+                            </span>
+                        </button>
+                    </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto items-start">
+                {/* Plans grid */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-5xl mx-auto items-stretch">
                     {plans.map((plan, i) => (
                         <motion.div
                             key={plan.name}
                             initial={{ opacity: 0, y: 24 }}
                             whileInView={{ opacity: 1, y: 0 }}
                             viewport={{ once: true, margin: "-40px" }}
-                            transition={{ delay: i * 0.14 * motionScale, duration: 0.52 * motionScale, ease: "easeOut" }}
-                            whileHover={{ y: hoverLift, transition: { duration: 0.22 * motionScale } }}
-                            className={`rounded-2xl p-7 flex flex-col ${plan.highlighted
-                                ? "bg-slate-900/95 text-white ring-2 ring-sky-400 shadow-2xl shadow-sky-500/20 md:scale-[1.03]"
-                                : "bg-white/90 dark:bg-slate-800/90 backdrop-blur border border-slate-200 dark:border-slate-700 shadow-sm"
+                            transition={{ delay: i * 0.1, duration: 0.46, ease }}
+                            className={`relative rounded-2xl p-7 flex flex-col border transition-all ${plan.highlighted
+                                    ? "bg-[var(--surface-card)] border-[var(--accent-blue)]/50 shadow-[0_0_0_1px_rgba(87,193,255,0.2),0_8px_40px_rgba(87,193,255,0.06)]"
+                                    : "bg-[var(--surface-card)] border-[var(--hairline)]"
                                 }`}
                         >
                             {plan.highlighted && (
-                                <span className="self-start text-xs font-semibold bg-gradient-to-r from-sky-500 to-emerald-500 text-white px-2.5 py-1 rounded-full mb-4">
-                                    Most Popular
-                                </span>
-                            )}
-                            <p className={`text-sm font-semibold ${plan.highlighted ? "text-slate-300" : "text-slate-500"}`}>
-                                {plan.name}
-                            </p>
-                            <div className="mt-2 flex items-end gap-1">
-                                <span className={`text-4xl font-extrabold ${plan.highlighted ? "text-white" : "text-slate-900"}`}>
-                                    {plan.price}
-                                </span>
-                                {plan.period && (
-                                    <span className={`text-sm mb-1 ${plan.highlighted ? "text-slate-400" : "text-slate-400"}`}>
-                                        {plan.period}
+                                <div className="absolute -top-3 left-7">
+                                    <span className="flex items-center gap-1 text-[10px] font-bold bg-[var(--accent-blue)] text-[#07080a] px-2.5 py-1 rounded-full shadow">
+                                        <Zap className="w-2.5 h-2.5" />
+                                        Most Popular
                                     </span>
-                                )}
+                                </div>
+                            )}
+
+                            <div className="mb-5">
+                                <p className="text-xs font-semibold uppercase tracking-widest text-[var(--mute)] mb-2">{plan.name}</p>
+                                <div className="flex items-end gap-1 mt-1">
+                                    <motion.span
+                                        key={annual ? "ann" : "mo"}
+                                        initial={{ opacity: 0, y: 8 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ duration: 0.22 }}
+                                        className="text-4xl font-bold text-[var(--ink)] tracking-tight"
+                                    >
+                                        {getPrice(plan.price)}
+                                    </motion.span>
+                                    {plan.period && (
+                                        <span className="text-sm text-[var(--ash)] mb-1.5">
+                                            / {annual ? "mo, billed annually" : "month"}
+                                        </span>
+                                    )}
+                                </div>
+                                <p className="mt-3 text-sm text-[var(--mute)] leading-relaxed">{plan.description}</p>
                             </div>
-                            <p className={`mt-3 text-sm leading-relaxed ${plan.highlighted ? "text-slate-400" : "text-slate-500"}`}>
-                                {plan.description}
-                            </p>
-                            <ul className="mt-6 space-y-2.5 flex-1">
+
+                            <ul className="flex-1 space-y-2.5 mb-7">
                                 {plan.features.map((f) => (
-                                    <li key={f} className="flex items-start gap-2 text-sm">
-                                        <CheckCircle
-                                            className={`w-4 h-4 shrink-0 mt-0.5 ${plan.highlighted ? "text-blue-400" : "text-blue-600"}`}
-                                        />
-                                        <span className={plan.highlighted ? "text-slate-300" : "text-slate-600"}>{f}</span>
+                                    <li key={f} className="flex items-start gap-2.5 text-sm text-[var(--body-color)]">
+                                        <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0 text-[var(--accent-green)]" />
+                                        {f}
                                     </li>
                                 ))}
                             </ul>
-                            <div className="mt-8">
-                                <ButtonLink
-                                    href={plan.ctaHref}
-                                    className="w-full justify-center"
-                                    variant={plan.highlighted ? "primary" : "outline"}
-                                >
-                                    {plan.cta}
-                                </ButtonLink>
-                            </div>
+
+                            <Link
+                                href={plan.ctaHref}
+                                className={`w-full text-center py-2.5 text-sm font-semibold rounded-xl transition-all ${plan.highlighted
+                                        ? "bg-[var(--accent-blue)] text-[#07080a] hover:bg-[#8dd7ff]"
+                                        : plan.name === "Enterprise"
+                                            ? "bg-white/[0.06] border border-[var(--hairline)] text-[var(--ink)] hover:bg-white/[0.1]"
+                                            : "bg-white text-[#07080a] hover:bg-[#e8e8e8]"
+                                    }`}
+                            >
+                                {plan.cta}
+                            </Link>
                         </motion.div>
                     ))}
                 </div>
 
-                <div className="mt-8 text-center">
-                    <ButtonLink href="/pricing" variant="outline" size="md">
-                        View full pricing & plan details →
-                    </ButtonLink>
-                </div>
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    whileInView={{ opacity: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.3, duration: 0.4 }}
+                    className="mt-8 text-center"
+                >
+                    <Link
+                        href="/pricing"
+                        className="text-sm text-[var(--mute)] hover:text-[var(--ink)] underline underline-offset-4 transition-colors"
+                    >
+                        View full pricing and plan details →
+                    </Link>
+                </motion.div>
             </div>
         </section>
     );
 }
-

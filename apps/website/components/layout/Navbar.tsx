@@ -1,9 +1,9 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion } from "motion/react";
 import { Menu, X, Bot, ChevronDown, LayoutDashboard, Shield } from "lucide-react";
 import ThemeToggle from "@/components/shared/ThemeToggle";
 import CartIcon from "@/components/shared/CartIcon";
@@ -34,18 +34,18 @@ const navLinks: NavLink[] = [
 function DropdownMenu({ children, onClose }: { children: ChildLink[]; onClose: () => void }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8, scale: 0.98 }}
+      initial={{ opacity: 0, y: 6, scale: 0.97 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: 6, scale: 0.98 }}
-      transition={{ duration: 0.16 }}
-      className="absolute top-full left-0 mt-2 w-48 bg-white/92 dark:bg-slate-900/92 backdrop-blur-xl border border-white/70 dark:border-slate-700 rounded-2xl shadow-2xl shadow-sky-500/10 dark:shadow-slate-900/55 py-1.5 z-50"
+      exit={{ opacity: 0, y: 4, scale: 0.97 }}
+      transition={{ duration: 0.14, ease: [0.22, 1, 0.36, 1] }}
+      className="absolute top-full left-0 mt-1.5 w-44 bg-[#121212] border border-[#242728] rounded-xl shadow-2xl shadow-black/60 py-1 z-50"
     >
       {children.map((child) => (
         <Link
           key={child.href}
           href={child.href}
           onClick={onClose}
-          className="block px-4 py-2 text-sm text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+          className="block px-3.5 py-2 text-sm text-[#9c9c9d] hover:text-[#f4f4f6] hover:bg-white/[0.04] transition-colors rounded-lg mx-1"
         >
           {child.label}
         </Link>
@@ -71,7 +71,6 @@ export default function Navbar() {
     } else {
       document.body.style.overflow = "";
     }
-
     return () => {
       document.body.style.overflow = "";
     };
@@ -88,28 +87,29 @@ export default function Navbar() {
   }, []);
 
   return (
-    <header className="sticky top-0 z-50 bg-white/72 dark:bg-slate-950/78 backdrop-blur-xl border-b border-white/70 dark:border-slate-800/80 shadow-[0_10px_36px_rgba(2,132,199,0.1)] dark:shadow-[0_10px_36px_rgba(2,132,199,0.16)]">
-      <nav ref={ref} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+    <header className="sticky top-0 z-50 bg-[#07080a]/90 backdrop-blur-xl border-b border-[#242728]">
+      <nav ref={ref} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-6">
+
         {/* Logo */}
-        <Link href="/" className="group flex items-center gap-2 font-bold text-slate-900 dark:text-slate-100 text-lg shrink-0">
-          <span className="relative inline-flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 via-blue-600 to-emerald-500 shadow-md shadow-sky-500/40 transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-105">
+        <Link href="/" className="group flex items-center gap-2.5 shrink-0">
+          <span className="relative inline-flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-[#ff5757] to-[#a1131a] shadow-lg shadow-red-900/40 transition-transform duration-300 group-hover:scale-105">
             <Bot className="w-4 h-4 text-white" />
           </span>
-          <span className="tracking-tight">AgentFarm</span>
+          <span className="text-[#f4f4f6] font-semibold tracking-tight text-[15px]">AgentFarm</span>
         </Link>
 
-        {/* Desktop links */}
-        <ul className="hidden md:flex items-center gap-1">
+        {/* Desktop nav links */}
+        <ul className="hidden md:flex items-center gap-0.5 flex-1">
           {navLinks.map((l) => (
             <li key={l.label} className="relative">
               {l.children ? (
                 <>
                   <button
                     onClick={() => setDropdown(dropdown === l.label ? null : l.label)}
-                    className="flex items-center gap-1 px-3.5 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 rounded-full hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100/90 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                    className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-[#9c9c9d] hover:text-[#f4f4f6] hover:bg-white/[0.04] rounded-lg transition-colors cursor-pointer"
                   >
                     {l.label}
-                    <ChevronDown className={`w-3.5 h-3.5 transition-transform ${dropdown === l.label ? "rotate-180" : ""}`} />
+                    <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${dropdown === l.label ? "rotate-180" : ""}`} />
                   </button>
                   <AnimatePresence>
                     {dropdown === l.label && (
@@ -120,9 +120,9 @@ export default function Navbar() {
               ) : (
                 <Link
                   href={l.href!}
-                  className={`px-3.5 py-2 text-sm font-medium rounded-full transition-colors block ${pathname === l.href
-                    ? "bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100"
-                    : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100/90 dark:hover:bg-slate-800"
+                  className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors block ${pathname === l.href
+                      ? "text-[#f4f4f6] bg-white/[0.06]"
+                      : "text-[#9c9c9d] hover:text-[#f4f4f6] hover:bg-white/[0.04]"
                     }`}
                 >
                   {l.label}
@@ -133,40 +133,40 @@ export default function Navbar() {
         </ul>
 
         {/* Desktop CTAs */}
-        <div className="hidden md:flex items-center gap-1">
+        <div className="hidden md:flex items-center gap-1.5">
           <ThemeToggle />
           <CartIcon />
-          <span className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-0.5" />
+          <div className="w-px h-4 bg-[#242728] mx-0.5" />
           <Link
             href="/dashboard"
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-full transition-colors ${pathname.startsWith("/dashboard")
-              ? "bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100"
-              : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800"
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-medium rounded-lg transition-colors ${pathname.startsWith("/dashboard")
+                ? "text-[#f4f4f6] bg-white/[0.06]"
+                : "text-[#9c9c9d] hover:text-[#f4f4f6] hover:bg-white/[0.04]"
               }`}
           >
             <LayoutDashboard className="w-3.5 h-3.5" />
-            Dashboard
+            <span className="hidden lg:inline">Dashboard</span>
           </Link>
           <Link
             href="/admin"
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-full transition-colors ${pathname.startsWith("/admin")
-              ? "bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100"
-              : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800"
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-medium rounded-lg transition-colors ${pathname.startsWith("/admin")
+                ? "text-[#f4f4f6] bg-white/[0.06]"
+                : "text-[#9c9c9d] hover:text-[#f4f4f6] hover:bg-white/[0.04]"
               }`}
           >
             <Shield className="w-3.5 h-3.5" />
-            Admin
+            <span className="hidden lg:inline">Admin</span>
           </Link>
-          <span className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-0.5" />
+          <div className="w-px h-4 bg-[#242728] mx-0.5" />
           <Link
             href="/login"
-            className="px-3.5 py-1.5 text-sm font-medium text-slate-700 dark:text-slate-300 rounded-full hover:text-slate-900 dark:hover:text-slate-100 hover:bg-white/80 dark:hover:bg-slate-800/80 transition-colors"
+            className="px-3 py-1.5 text-sm font-medium text-[#9c9c9d] hover:text-[#f4f4f6] hover:bg-white/[0.04] rounded-lg transition-colors"
           >
-            Sign In
+            Sign in
           </Link>
           <Link
             href="/get-started"
-            className="px-4 py-2 text-sm font-semibold text-white rounded-full bg-gradient-to-br from-sky-500 via-blue-600 to-emerald-500 hover:brightness-110 hover:-translate-y-0.5 shadow-md shadow-sky-500/35"
+            className="px-4 py-1.5 text-sm font-semibold text-[#000000] bg-[#ffffff] rounded-lg hover:bg-[#e8e8e8] transition-colors shadow-sm"
           >
             Get Started
           </Link>
@@ -174,7 +174,7 @@ export default function Navbar() {
 
         {/* Mobile hamburger */}
         <button
-          className="md:hidden p-2 rounded-md text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+          className="md:hidden p-2 rounded-lg text-[#9c9c9d] hover:text-[#f4f4f6] hover:bg-white/[0.06] transition-colors cursor-pointer"
           onClick={() => setOpen(!open)}
           aria-label="Toggle menu"
         >
@@ -190,19 +190,19 @@ export default function Navbar() {
               type="button"
               aria-label="Close mobile navigation"
               onClick={() => setOpen(false)}
-              className="md:hidden fixed inset-0 top-16 bg-black/30"
+              className="md:hidden fixed inset-0 top-14 bg-black/60 backdrop-blur-sm"
             />
             <motion.div
-              initial={{ opacity: 0, y: -10 }}
+              initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.18 }}
-              className="md:hidden absolute inset-x-0 top-16 border-t border-white/70 dark:border-slate-800 bg-white/96 dark:bg-slate-950/96 backdrop-blur-2xl px-4 py-4 flex flex-col gap-1 max-h-[calc(100vh-4rem)] overflow-y-auto"
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
+              className="md:hidden absolute inset-x-0 top-14 border-t border-[#242728] bg-[#0d0d0d] px-4 py-4 flex flex-col gap-1 max-h-[calc(100vh-3.5rem)] overflow-y-auto z-40"
             >
               {navLinks.map((l) =>
                 l.children ? (
                   <div key={l.label}>
-                    <p className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                    <p className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-[#6a6b6c]">
                       {l.label}
                     </p>
                     {l.children.map((child) => (
@@ -210,9 +210,9 @@ export default function Navbar() {
                         key={child.href}
                         href={child.href}
                         onClick={() => setOpen(false)}
-                        className={`block px-5 py-2.5 text-sm font-medium rounded-md ${pathname === child.href
-                          ? "bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100"
-                          : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                        className={`block px-4 py-2.5 text-sm font-medium rounded-lg ${pathname === child.href
+                            ? "bg-white/[0.06] text-[#f4f4f6]"
+                            : "text-[#9c9c9d] hover:bg-white/[0.04] hover:text-[#f4f4f6]"
                           }`}
                       >
                         {child.label}
@@ -224,44 +224,45 @@ export default function Navbar() {
                     key={l.href}
                     href={l.href!}
                     onClick={() => setOpen(false)}
-                    className={`px-3 py-2.5 text-sm font-medium rounded-md ${pathname === l.href
-                      ? "bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100"
-                      : "text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    className={`px-3 py-2.5 text-sm font-medium rounded-lg ${pathname === l.href
+                        ? "bg-white/[0.06] text-[#f4f4f6]"
+                        : "text-[#9c9c9d] hover:bg-white/[0.04] hover:text-[#f4f4f6]"
                       }`}
                   >
                     {l.label}
                   </Link>
                 )
               )}
-              <div className="mt-3 flex flex-col gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-                <div className="flex justify-center mb-1">
+              <div className="mt-4 flex flex-col gap-2 pt-4 border-t border-[#242728]">
+                <div className="flex gap-2 justify-end mb-1">
+                  <ThemeToggle />
                   <CartIcon />
                 </div>
                 <Link
                   href="/dashboard"
                   onClick={() => setOpen(false)}
-                  className="flex items-center justify-center gap-2 w-full px-4 py-2.5 text-sm font-medium border border-sky-200 dark:border-sky-800 text-sky-700 dark:text-sky-300 rounded-lg hover:bg-sky-50 dark:hover:bg-sky-900/20"
+                  className="flex items-center justify-center gap-2 w-full px-4 py-2.5 text-sm font-medium border border-[#242728] text-[#9c9c9d] rounded-lg hover:bg-white/[0.04] hover:text-[#f4f4f6]"
                 >
                   <LayoutDashboard className="w-4 h-4" /> Dashboard
                 </Link>
                 <Link
                   href="/admin"
                   onClick={() => setOpen(false)}
-                  className="flex items-center justify-center gap-2 w-full px-4 py-2.5 text-sm font-medium border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20"
+                  className="flex items-center justify-center gap-2 w-full px-4 py-2.5 text-sm font-medium border border-[#242728] text-[#9c9c9d] rounded-lg hover:bg-white/[0.04] hover:text-[#f4f4f6]"
                 >
                   <Shield className="w-4 h-4" /> Admin
                 </Link>
                 <Link
                   href="/login"
                   onClick={() => setOpen(false)}
-                  className="w-full text-center px-4 py-2.5 text-sm font-medium border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800"
+                  className="w-full text-center px-4 py-2.5 text-sm font-medium border border-[#242728] text-[#9c9c9d] rounded-lg hover:bg-white/[0.04] hover:text-[#f4f4f6]"
                 >
-                  Sign In
+                  Sign in
                 </Link>
                 <Link
                   href="/get-started"
                   onClick={() => setOpen(false)}
-                  className="w-full text-center px-4 py-2.5 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className="w-full text-center px-4 py-2.5 text-sm font-semibold bg-white text-black rounded-lg hover:bg-[#e8e8e8]"
                 >
                   Get Started
                 </Link>

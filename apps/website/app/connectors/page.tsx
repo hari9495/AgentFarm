@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 
@@ -78,10 +78,10 @@ const CATEGORY_LABELS: Record<ConnectorCategory, string> = {
 const CATEGORY_ORDER: ConnectorCategory[] = ["task_tracker", "messaging", "code", "email"];
 
 const STATUS_COLORS: Record<ConnectorStatus, string> = {
-    connected: "bg-green-100 text-green-800",
-    pending_auth: "bg-yellow-100 text-yellow-800",
-    error: "bg-red-100 text-red-800",
-    disconnected: "bg-gray-100 text-gray-600",
+    connected: "bg-[var(--accent-green)]/10 text-[var(--accent-green)]",
+    pending_auth: "bg-amber-400/10 text-amber-400",
+    error: "bg-rose-500/10 text-rose-400",
+    disconnected: "bg-[var(--surface-el)] text-[var(--ash)]",
 };
 
 const STATUS_LABELS: Record<ConnectorStatus, string> = {
@@ -163,46 +163,46 @@ function AddConnectorModal({
     }
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-lg">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+            <div className="bg-[var(--surface-card)] rounded-xl shadow-xl w-full max-w-lg border border-[var(--hairline)]">
                 {/* Header */}
-                <div className="flex items-center gap-3 p-5 border-b border-gray-200">
+                <div className="flex items-center gap-3 p-5 border-b border-[var(--hairline)]">
                     <ConnectorIcon tool={connector.tool} size={36} />
                     <div>
-                        <h2 className="text-lg font-semibold text-gray-900">Connect {connector.displayName}</h2>
-                        <p className="text-sm text-gray-500 capitalize">{connector.category.replace("_", " ")}</p>
+                        <h2 className="text-lg font-semibold text-[var(--ink)]">Connect {connector.displayName}</h2>
+                        <p className="text-sm text-[var(--mute)] capitalize">{connector.category.replace("_", " ")}</p>
                     </div>
-                    <button onClick={onClose} className="ml-auto text-gray-400 hover:text-gray-600 text-xl font-bold" aria-label="Close">×</button>
+                    <button onClick={onClose} className="ml-auto text-[var(--ash)] hover:text-[var(--ink)] text-xl font-bold" aria-label="Close">×</button>
                 </div>
 
                 <form onSubmit={handleSubmit} className="p-5 space-y-4">
                     {/* Display name */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-[var(--body-color)] mb-1">
                             Display Name
                         </label>
                         <input
                             type="text"
                             value={displayName}
                             onChange={(e) => setDisplayName(e.target.value)}
-                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full border border-[var(--hairline)] bg-[var(--surface-el)] text-[var(--ink)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent-blue)]"
                             placeholder="e.g. Our Jira, Engineering Slack"
                         />
-                        <p className="text-xs text-gray-400 mt-1">The name your team will see in the dashboard.</p>
+                        <p className="text-xs text-[var(--ash)] mt-1">The name your team will see in the dashboard.</p>
                     </div>
 
                     {/* OAuth info block */}
                     {connector.authMethod === "oauth2" && (
-                        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
+                        <div className="rounded-lg border border-[var(--accent-blue)]/20 bg-[var(--accent-blue)]/5 p-4 text-sm text-[var(--accent-blue)]">
                             <p className="font-medium mb-1">OAuth 2.0 Authentication</p>
                             <p className="text-xs text-blue-700">
                                 After clicking Add, you'll be redirected to {connector.displayName} to authorize access.
                                 We request only the permissions your agent needs:
                             </p>
                             {connector.oauthScopes && (
-                                <ul className="mt-2 text-xs text-blue-700 space-y-0.5">
+                                <ul className="mt-2 text-xs text-[var(--accent-blue)]/80 space-y-0.5">
                                     {connector.oauthScopes.map((s) => (
-                                        <li key={s} className="font-mono bg-blue-100 rounded px-1">• {s}</li>
+                                        <li key={s} className="font-mono bg-[var(--accent-blue)]/10 rounded px-1">• {s}</li>
                                     ))}
                                 </ul>
                             )}
@@ -212,7 +212,7 @@ function AddConnectorModal({
                     {/* API key / generic_rest config fields */}
                     {fields.map((field) => (
                         <div key={field.key}>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-medium text-[var(--body-color)] mb-1">
                                 {field.label}
                                 {field.required && <span className="text-red-500 ml-1">*</span>}
                             </label>
@@ -220,7 +220,7 @@ function AddConnectorModal({
                                 <select
                                     value={configValues[field.key] ?? ""}
                                     onChange={(e) => setConfigValues((v) => ({ ...v, [field.key]: e.target.value }))}
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full border border-[var(--hairline)] bg-[var(--surface-el)] text-[var(--ink)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent-blue)]"
                                     required={field.required}
                                 >
                                     <option value="">Select...</option>
@@ -233,23 +233,23 @@ function AddConnectorModal({
                                     type={field.type === "password" ? "password" : field.type === "url" ? "url" : "text"}
                                     value={configValues[field.key] ?? ""}
                                     onChange={(e) => setConfigValues((v) => ({ ...v, [field.key]: e.target.value }))}
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full border border-[var(--hairline)] bg-[var(--surface-el)] text-[var(--ink)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent-blue)]"
                                     placeholder={field.placeholder}
                                     required={field.required}
                                 />
                             )}
-                            {field.hint && <p className="text-xs text-gray-400 mt-1">{field.hint}</p>}
+                            {field.hint && <p className="text-xs text-[var(--ash)] mt-1">{field.hint}</p>}
                         </div>
                     ))}
 
                     {/* Supported actions */}
                     <div>
-                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+                        <p className="text-xs font-medium text-[var(--ash)] uppercase tracking-wide mb-1">
                             Your agent will be able to:
                         </p>
                         <div className="flex flex-wrap gap-1">
                             {connector.supportedActions.map((a) => (
-                                <span key={a} className="bg-gray-100 text-gray-600 rounded-full px-2 py-0.5 text-xs font-mono">
+                                <span key={a} className="bg-[var(--surface-el)] text-[var(--mute)] rounded-full px-2 py-0.5 text-xs font-mono">
                                     {a}
                                 </span>
                             ))}
@@ -257,21 +257,21 @@ function AddConnectorModal({
                     </div>
 
                     {error && (
-                        <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>
+                        <p className="text-sm text-rose-400 bg-rose-500/10 rounded-lg px-3 py-2">{error}</p>
                     )}
 
                     <div className="flex gap-3 pt-2">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="flex-1 border border-gray-300 text-gray-700 rounded-lg px-4 py-2 text-sm hover:bg-gray-50 transition"
+                            className="flex-1 border border-[var(--hairline)] text-[var(--body-color)] rounded-lg px-4 py-2 text-sm hover:bg-[var(--surface-el)] transition"
                         >
                             Cancel
                         </button>
                         <button
                             type="submit"
                             disabled={loading}
-                            className="flex-1 bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition"
+                            className="flex-1 bg-[var(--accent-blue)] text-[#07080a] rounded-lg px-4 py-2 text-sm font-medium hover:bg-[#8dd7ff] disabled:opacity-50 transition"
                         >
                             {loading ? "Connecting..." : connector.authMethod === "oauth2" ? "Continue to Auth" : "Add Connector"}
                         </button>
@@ -315,17 +315,17 @@ function ConnectorCard({
     }
 
     return (
-        <div className="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-4 hover:shadow-sm transition">
+        <div className="bg-[var(--surface-card)] rounded-xl border border-[var(--hairline)] p-4 flex items-center gap-4 hover:shadow-sm transition">
             <ConnectorIcon tool={connector.tool} size={40} />
             <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                    <p className="font-medium text-gray-900 text-sm truncate">{connector.displayName}</p>
+                    <p className="font-medium text-[var(--ink)] text-sm truncate">{connector.displayName}</p>
                     {checking ? (
-                        <span className="text-xs rounded-full px-2 py-0.5 font-medium bg-gray-100 text-gray-500">
+                        <span className="text-xs rounded-full px-2 py-0.5 font-medium bg-[var(--surface-el)] text-[var(--ash)]">
                             ⬤ Checking...
                         </span>
                     ) : healthResult !== null ? (
-                        <span className={`text-xs rounded-full px-2 py-0.5 font-medium ${healthResult.healthy ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
+                        <span className={`text-xs rounded-full px-2 py-0.5 font-medium ${healthResult.healthy ? "bg-[var(--accent-green)]/10 text-[var(--accent-green)]" : "bg-rose-500/10 text-rose-400"}`}>
                             {healthResult.healthy ? "⬤ Healthy" : "⬤ Degraded"}
                         </span>
                     ) : (
@@ -334,14 +334,14 @@ function ConnectorCard({
                         </span>
                     )}
                 </div>
-                <p className="text-xs text-gray-400 mt-0.5 capitalize">{connector.category.replace("_", " ")} · {connector.authMethod.replace("_", " ")}</p>
+                <p className="text-xs text-[var(--ash)] mt-0.5 capitalize">{connector.category.replace("_", " ")} · {connector.authMethod.replace("_", " ")}</p>
                 {connector.lastHealthcheckAt && (
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs text-[var(--ash)]">
                         Last checked: {new Date(connector.lastHealthcheckAt).toLocaleString()}
                     </p>
                 )}
                 {connector.lastErrorClass && (
-                    <p className="text-xs text-red-500">Error: {connector.lastErrorClass.replace(/_/g, " ")}</p>
+                    <p className="text-xs text-rose-400">Error: {connector.lastErrorClass.replace(/_/g, " ")}</p>
                 )}
             </div>
             <div className="flex items-center gap-2">
@@ -351,7 +351,7 @@ function ConnectorCard({
                             const oauthInitUrl = healthResult.nextStep?.oauthInitUrl;
                             if (oauthInitUrl) { window.location.href = oauthInitUrl; }
                         }}
-                        className="text-xs text-amber-600 hover:text-amber-800 border border-amber-200 hover:border-amber-400 rounded-lg px-3 py-1.5 transition"
+                        className="text-xs text-amber-400 hover:text-amber-300 border border-amber-400/30 hover:border-amber-400 rounded-lg px-3 py-1.5 transition"
                     >
                         Re-authenticate
                     </button>
@@ -359,13 +359,13 @@ function ConnectorCard({
                 <button
                     onClick={runHealthCheck}
                     disabled={checking}
-                    className="text-xs text-blue-600 hover:text-blue-800 border border-blue-200 hover:border-blue-400 rounded-lg px-3 py-1.5 transition disabled:opacity-50"
+                    className="text-xs text-[var(--accent-blue)] hover:text-[#8dd7ff] border border-[var(--accent-blue)]/30 hover:border-[var(--accent-blue)] rounded-lg px-3 py-1.5 transition disabled:opacity-50"
                 >
                     {checking ? "Checking..." : "Test"}
                 </button>
                 <button
                     onClick={onRemove}
-                    className="text-xs text-red-500 hover:text-red-700 border border-red-200 hover:border-red-400 rounded-lg px-3 py-1.5 transition"
+                    className="text-xs text-rose-400 hover:text-red-700 border border-red-200 hover:border-red-400 rounded-lg px-3 py-1.5 transition"
                 >
                     Remove
                 </button>
@@ -385,11 +385,11 @@ function AvailableCard({
     onAdd: () => void;
 }) {
     return (
-        <div className="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-3 hover:shadow-sm transition">
+        <div className="bg-[var(--surface-card)] rounded-xl border border-[var(--hairline)] p-4 flex items-center gap-3 hover:shadow-sm transition">
             <ConnectorIcon tool={connector.tool} size={36} />
             <div className="flex-1 min-w-0">
-                <p className="font-medium text-gray-900 text-sm">{connector.displayName}</p>
-                <p className="text-xs text-gray-400 mt-0.5">
+                <p className="font-medium text-[var(--ink)] text-sm">{connector.displayName}</p>
+                <p className="text-xs text-[var(--ash)] mt-0.5">
                     {connector.supportedActions.length} actions · {connector.authMethod.replace("_", " ")}
                 </p>
             </div>
@@ -397,19 +397,19 @@ function AvailableCard({
                 configuredStatus === "error" || configuredStatus === "pending_auth" ? (
                     <button
                         onClick={onAdd}
-                        className="text-xs bg-amber-500 text-white rounded-lg px-3 py-1.5 hover:bg-amber-600 transition font-medium"
+                        className="text-xs bg-amber-500/20 text-amber-400 rounded-lg px-3 py-1.5 hover:bg-amber-500/30 transition font-medium"
                     >
                         Reconnect
                     </button>
                 ) : (
-                    <span className="text-xs bg-green-100 text-green-700 rounded-full px-2 py-0.5 font-medium">
+                    <span className="text-xs bg-[var(--accent-green)]/10 text-[var(--accent-green)] rounded-full px-2 py-0.5 font-medium">
                         Connected
                     </span>
                 )
             ) : (
                 <button
                     onClick={onAdd}
-                    className="text-xs bg-blue-600 text-white rounded-lg px-3 py-1.5 hover:bg-blue-700 transition font-medium"
+                    className="text-xs bg-[var(--accent-blue)] text-[#07080a] rounded-lg px-3 py-1.5 hover:bg-[#8dd7ff] transition font-medium"
                 >
                     + Add
                 </button>
@@ -555,7 +555,7 @@ export default function ConnectorsPage() {
     );
 
     return (
-        <div className="min-h-screen bg-gray-50 p-6">
+        <div className="min-h-screen bg-[var(--canvas)] p-6">
             {/* Toast */}
             {toast && (
                 <div className={`fixed top-4 right-4 z-50 rounded-xl px-4 py-3 text-sm font-medium shadow-lg ${toast.type === "success" ? "bg-green-600 text-white" : "bg-red-600 text-white"}`}>
@@ -580,36 +580,36 @@ export default function ConnectorsPage() {
             <div className="max-w-5xl mx-auto space-y-8">
 
                 {/* Connector showcase gallery */}
-                <section className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6">
+                <section className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface-card)] p-6">
                     <div className="flex items-center justify-between mb-5">
                         <div>
-                            <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">Available connectors</h2>
-                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">All tools your agent can connect to. More added every sprint.</p>
+                            <h2 className="text-base font-semibold text-[var(--ink)]">Available connectors</h2>
+                            <p className="text-xs text-[var(--mute)] mt-0.5">All tools your agent can connect to. More added every sprint.</p>
                         </div>
-                        <span className="text-xs font-semibold bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 px-2.5 py-1 rounded-full">{available.length} connectors</span>
+                        <span className="text-xs font-semibold bg-[var(--accent-blue)]/10 text-[var(--accent-blue)] px-2.5 py-1 rounded-full">{available.length} connectors</span>
                     </div>
                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
                         {loading ? (
                             Array.from({ length: 12 }).map((_, i) => (
-                                <div key={i} className="flex flex-col items-center gap-2 p-3 rounded-xl bg-gray-100 dark:bg-slate-800 border border-transparent animate-pulse">
-                                    <div className="w-7 h-7 rounded bg-gray-200 dark:bg-slate-700" />
-                                    <div className="h-2.5 w-10 rounded bg-gray-200 dark:bg-slate-700" />
+                                <div key={i} className="flex flex-col items-center gap-2 p-3 rounded-xl bg-[var(--surface-el)] border border-transparent animate-pulse">
+                                    <div className="w-7 h-7 rounded bg-[var(--hairline)]" />
+                                    <div className="h-2.5 w-10 rounded bg-[var(--hairline)]" />
                                 </div>
                             ))
                         ) : available.length === 0 ? (
-                            <div className="col-span-full text-center py-6 text-sm text-slate-400 dark:text-slate-500">No connectors available.</div>
+                            <div className="col-span-full text-center py-6 text-sm text-[var(--ash)]">No connectors available.</div>
                         ) : (
                             available.slice(0, 12).map((c) => {
                                 const categoryColor: Record<ConnectorCategory, string> = {
-                                    task_tracker: "bg-sky-50 dark:bg-sky-900/30",
-                                    messaging: "bg-violet-50 dark:bg-violet-900/30",
-                                    code: "bg-slate-100 dark:bg-slate-800",
-                                    email: "bg-emerald-50 dark:bg-emerald-900/20",
+                                    task_tracker: "bg-[var(--accent-blue)]/10",
+                                    messaging: "bg-violet-500/10",
+                                    code: "bg-[var(--surface-el)]",
+                                    email: "bg-[var(--accent-green)]/10",
                                 };
                                 return (
-                                    <div key={c.tool} className={`flex flex-col items-center gap-2 p-3 rounded-xl ${categoryColor[c.category]} border border-transparent hover:border-slate-200 dark:hover:border-slate-600 transition-colors cursor-default`}>
+                                    <div key={c.tool} className={`flex flex-col items-center gap-2 p-3 rounded-xl ${categoryColor[c.category]} border border-transparent hover:border-[var(--hairline)] transition-colors cursor-default`}>
                                         <ConnectorIcon tool={c.tool} size={28} />
-                                        <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 text-center leading-none">{c.displayName}</span>
+                                        <span className="text-[11px] font-semibold text-[var(--mute)] text-center leading-none">{c.displayName}</span>
                                     </div>
                                 );
                             })
@@ -619,25 +619,25 @@ export default function ConnectorsPage() {
 
                 {/* Header */}
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Integrations</h1>
-                    <p className="text-gray-500 mt-1 text-sm">
+                    <h1 className="text-2xl font-semibold text-[var(--ink)] tracking-[-0.03em]">Integrations</h1>
+                    <p className="text-[var(--mute)] mt-1 text-sm">
                         Connect your tools so your agent can work across your entire stack. Your agent's logic stays the same — only the connector changes.
                     </p>
                 </div>
 
                 {context && context.options.length > 0 && (
-                    <section className="bg-white rounded-xl border border-gray-200 p-4">
+                    <section className="bg-[var(--surface-card)] rounded-xl border border-[var(--hairline)] p-4">
                         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                             <div>
-                                <p className="text-sm font-semibold text-gray-900">Bot-scoped integration context</p>
-                                <p className="text-xs text-gray-500 mt-0.5">
+                                <p className="text-sm font-semibold text-[var(--ink)]">Bot-scoped integration context</p>
+                                <p className="text-xs text-[var(--mute)] mt-0.5">
                                     This catalog is filtered by selected bot role and policy. Configured connectors are scoped per workspace.
                                 </p>
                             </div>
                             <select
                                 value={`${context.selectedWorkspaceId}::${context.selectedBotId}`}
                                 onChange={(event) => handleScopeChange(event.target.value)}
-                                className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                                className="rounded-lg border border-[var(--hairline)] bg-[var(--surface-el)] text-[var(--ink)] px-3 py-2 text-sm"
                                 aria-label="Select workspace bot"
                             >
                                 {context.options.map((option) => (
@@ -651,19 +651,19 @@ export default function ConnectorsPage() {
                             const selected = getSelectedWorkspaceBot();
                             if (!selected) return null;
                             return (
-                                <div className="mt-3 grid grid-cols-1 gap-2 text-xs text-gray-600 sm:grid-cols-3">
+                                <div className="mt-3 grid grid-cols-1 gap-2 text-xs text-[var(--body-color)] sm:grid-cols-3">
                                     <p>
-                                        Role key: <span className="font-semibold text-gray-800">{context.selectedRoleKey}</span>
+                                        Role key: <span className="font-semibold text-[var(--ink)]">{context.selectedRoleKey}</span>
                                     </p>
                                     <p>
-                                        Policy pack: <span className="font-semibold text-gray-800">{selected.policyPackVersion}</span>
+                                        Policy pack: <span className="font-semibold text-[var(--ink)]">{selected.policyPackVersion}</span>
                                     </p>
                                     <p>
-                                        Hidden disallowed integrations: <span className="font-semibold text-gray-800">{context.disallowed_tools_hidden_count}</span>
+                                        Hidden disallowed integrations: <span className="font-semibold text-[var(--ink)]">{context.disallowed_tools_hidden_count}</span>
                                     </p>
                                     {context.scope_model && (
                                         <p>
-                                            Scope model: <span className="font-semibold text-gray-800">{context.scope_model}</span>
+                                            Scope model: <span className="font-semibold text-[var(--ink)]">{context.scope_model}</span>
                                         </p>
                                     )}
                                 </div>
@@ -675,8 +675,8 @@ export default function ConnectorsPage() {
                 {/* Connected tools summary */}
                 {configured.length > 0 && (
                     <section>
-                        <h2 className="text-base font-semibold text-gray-800 mb-3">
-                            Your Connected Tools <span className="text-gray-400 font-normal">({configured.length})</span>
+                        <h2 className="text-base font-semibold text-[var(--ink)] mb-3">
+                            Your Connected Tools <span className="text-[var(--ash)] font-normal">({configured.length})</span>
                         </h2>
                         <div className="space-y-2">
                             {configured.map((c) => (
@@ -693,17 +693,17 @@ export default function ConnectorsPage() {
 
                 {/* No connections state */}
                 {!loading && configured.length === 0 && (
-                    <div className="bg-white rounded-xl border border-dashed border-gray-300 p-8 text-center">
+                    <div className="bg-[var(--surface-card)] rounded-xl border border-dashed border-[var(--hairline)] p-8 text-center">
                         <p className="text-3xl mb-2">🔌</p>
-                        <p className="font-medium text-gray-800">No tools connected yet</p>
-                        <p className="text-sm text-gray-400 mt-1">Add your first integration below to get your agent working.</p>
+                        <p className="font-medium text-[var(--ink)]">No tools connected yet</p>
+                        <p className="text-sm text-[var(--ash)] mt-1">Add your first integration below to get your agent working.</p>
                     </div>
                 )}
 
                 {/* Available integrations */}
                 <section>
                     <div className="flex items-center justify-between mb-3">
-                        <h2 className="text-base font-semibold text-gray-800">Available Integrations</h2>
+                        <h2 className="text-base font-semibold text-[var(--ink)]">Available Integrations</h2>
                     </div>
 
                     {/* Category filter tabs */}
@@ -713,8 +713,8 @@ export default function ConnectorsPage() {
                                 key={cat}
                                 onClick={() => setActiveCategory(cat)}
                                 className={`text-xs rounded-full px-3 py-1.5 border transition font-medium ${activeCategory === cat
-                                    ? "bg-blue-600 text-white border-blue-600"
-                                    : "bg-white text-gray-600 border-gray-300 hover:border-gray-400"
+                                    ? "bg-[var(--accent-blue)] text-[#07080a] border-[var(--accent-blue)]"
+                                    : "bg-[var(--surface-el)] text-[var(--mute)] border-[var(--hairline)] hover:border-[var(--ash)]"
                                     }`}
                             >
                                 {cat === "all" ? "All" : CATEGORY_LABELS[cat]}
@@ -723,7 +723,7 @@ export default function ConnectorsPage() {
                     </div>
 
                     {loading ? (
-                        <p className="text-sm text-gray-400">Loading integrations...</p>
+                        <p className="text-sm text-[var(--ash)]">Loading integrations...</p>
                     ) : (
                         <div className="space-y-6">
                             {CATEGORY_ORDER.map((cat) => {
@@ -731,7 +731,7 @@ export default function ConnectorsPage() {
                                 if (items.length === 0) return null;
                                 return (
                                     <div key={cat}>
-                                        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+                                        <h3 className="text-xs font-semibold text-[var(--ash)] uppercase tracking-wide mb-2">
                                             {CATEGORY_LABELS[cat]}
                                         </h3>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -752,12 +752,12 @@ export default function ConnectorsPage() {
                 </section>
 
                 {/* Custom REST API callout */}
-                <section className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-xl p-5 text-white">
+                <section className="bg-[var(--surface-el)] border border-[var(--hairline)] rounded-xl p-5">
                     <div className="flex items-start gap-3">
                         <span className="text-2xl">🔌</span>
                         <div className="flex-1">
-                            <p className="font-semibold text-base">Using a custom or internal tool?</p>
-                            <p className="text-sm text-gray-300 mt-1">
+                            <p className="font-semibold text-base text-[var(--ink)]">Using a custom or internal tool?</p>
+                            <p className="text-sm text-[var(--mute)] mt-1">
                                 Any tool with a REST API can be connected using category-specific Custom REST connectors for tasks, messaging, code, and email.
                             </p>
                         </div>
@@ -766,7 +766,7 @@ export default function ConnectorsPage() {
                                 const generic = getPreferredCustomConnector();
                                 if (generic) setAddingConnector(generic);
                             }}
-                            className="shrink-0 bg-white text-gray-900 rounded-lg px-4 py-2 text-sm font-medium hover:bg-gray-100 transition"
+                            className="shrink-0 bg-[var(--ink)] text-[var(--canvas)] rounded-lg px-4 py-2 text-sm font-medium hover:opacity-90 transition"
                         >
                             + Custom API
                         </button>

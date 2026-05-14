@@ -7,181 +7,18 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum TenantStatus {
-  pending
-  provisioning
-  ready
-  degraded
-  suspended
-  terminated
-}
-
-enum WorkspaceStatus {
-  pending
-  provisioning
-  ready
-  degraded
-  suspended
-  failed
-}
-
-enum BotStatus {
-  created
-  bootstrapping
-  connector_setup_required
-  active
-  paused
-  failed
-}
-
-// Frozen 2026-04-21 — canonical source: planning/spec-azure-provisioning-workflow.md
-enum ProvisioningJobStatus {
-  queued
-  validating
-  creating_resources
-  bootstrapping_vm
-  starting_container
-  registering_runtime
-  healthchecking
-  completed
-  failed
-  cleanup_pending
-  cleaned_up
-}
-
-// Frozen 2026-04-21 — canonical source: planning/spec-docker-runtime-contract.md
-enum RuntimeStatus {
-  created
-  starting
-  ready
-  active
-  degraded
-  paused
-  stopping
-  stopped
-  failed
-}
-
-enum CapabilitySnapshotSource {
-  runtime_freeze
-  persisted_load
-  manual_override
-}
-
-// Frozen 2026-04-21 — canonical source: planning/engineering-execution-design.md Section 6
-enum ApprovalDecision {
-  pending
-  approved
-  rejected
-  timeout_rejected
-}
-
-// Frozen 2026-04-21 — canonical source: planning/spec-connector-auth-flow.md
-enum ConnectorAuthStatus {
-  not_configured
-  auth_initiated
-  consent_pending
-  token_received
-  validation_in_progress
-  connected
-  degraded
-  token_expired
-  permission_invalid
-  revoked
-  disconnected
-}
-
-enum ConnectorScopeStatus {
-  full
-  partial
-  insufficient
-}
-
-enum ConnectorErrorClass {
-  oauth_state_mismatch
-  oauth_code_exchange_failed
-  token_refresh_failed
-  token_expired
-  insufficient_scope
-  provider_rate_limited
-  provider_unavailable
-  secret_store_unavailable
-}
-
-// Frozen 2026-04-21 — canonical source: planning/engineering-execution-design.md Section 4 (normalized action contract)
-enum ConnectorActionType {
-  read_task
-  create_comment
-  update_status
-  send_message
-  create_pr_comment
-  send_email
-}
-
-enum ConnectorActionStatus {
-  success
-  failed
-  timeout
-}
-
-enum ConnectorActionErrorCode {
-  rate_limit
-  timeout
-  provider_unavailable
-  permission_denied
-  invalid_format
-  unsupported_action
-  upgrade_required
-}
-
-// Frozen 2026-04-21 — canonical source: planning/engineering-execution-design.md Section 7
-enum AuditEventType {
-  provisioning_event
-  bot_runtime_event
-  connector_event
-  approval_event
-  security_event
-  audit_event
-  memory_write
-}
-
-enum AuditSeverity {
-  info
-  warn
-  error
-  critical
-}
-
-enum ActionStatus {
-  pending
-  executing
-  completed
-  rejected
-  failed
-}
-
-// Frozen 2026-04-21 — canonical source: planning/engineering-execution-design.md Section 6
-enum RiskLevel {
-  low
-  medium
-  high
-}
-
 model Tenant {
-  id             String         @id @default(cuid())
-  name           String
-  status         TenantStatus   @default(pending)
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-  deletedAt      DateTime?
-  createdBy      String?
-  users          TenantUser[]
-  workspaces     Workspace[]
-  scheduledJobs      ScheduledJob[]
-  chatSessions       ChatSession[]
-  orchestrationRuns  OrchestrationRun[]
+  id                  String               @id @default(cuid())
+  name                String
+  status              TenantStatus         @default(pending)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  chatSessions        ChatSession[]
   marketplaceInstalls MarketplaceInstall[]
-  portalAccounts     TenantPortalAccount[]
+  orchestrationRuns   OrchestrationRun[]
+  scheduledJobs       ScheduledJob[]
+  users               TenantUser[]
+  workspaces          Workspace[]
 }
 
 model TenantUser {
@@ -192,9 +29,6 @@ model TenantUser {
   passwordHash String
   role         String
   createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  deletedAt    DateTime?
-  createdBy    String?
   tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
@@ -204,11 +38,8 @@ model Workspace {
   name      String
   status    WorkspaceStatus @default(pending)
   createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
-  deletedAt DateTime?
-  createdBy String?
-  tenant    Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   bot       Bot?
+  tenant    Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
 model Bot {
@@ -218,46 +49,40 @@ model Bot {
   status         BotStatus          @default(created)
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
-  deletedAt      DateTime?
-  createdBy      String?
-  workspace        Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  configVersions   BotConfigVersion[]
-  sentMessages     AgentMessage[]     @relation("SentMessages")
-  receivedMessages AgentMessage[]     @relation("ReceivedMessages")
+  workspace      Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  configVersions BotConfigVersion[]
 }
 
-// Frozen 2026-04-21 — canonical source: planning/spec-azure-provisioning-workflow.md
 model ProvisioningJob {
-  id                String                @id @default(cuid())
-  tenantId          String
-  workspaceId       String
-  botId             String
-  planId            String
-  runtimeTier       String
-  roleType          String
-  correlationId     String
-  triggerSource     String
-  status            ProvisioningJobStatus @default(queued)
-  failureReason     String?
-  remediationHint   String?
-  cleanupResult     String?
-  requestedAt       DateTime
-  requestedBy       String
-  startedAt         DateTime?
-  completedAt       DateTime?
-  failedAt          DateTime?
-  createdAt         DateTime              @default(now())
-  updatedAt         DateTime              @updatedAt
-  orderId           String?
-  triggeredBy       String?
-  metadata          String?
+  id              String                @id @default(cuid())
+  tenantId        String
+  workspaceId     String
+  botId           String
+  planId          String
+  runtimeTier     String
+  roleType        String
+  correlationId   String
+  triggerSource   String
+  status          ProvisioningJobStatus @default(queued)
+  failureReason   String?
+  remediationHint String?
+  cleanupResult   String?
+  requestedAt     DateTime
+  requestedBy     String
+  startedAt       DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  metadata        String?
+  orderId         String?
+  triggeredBy     String?
+  failedAt        DateTime?
 
   @@index([tenantId])
   @@index([workspaceId])
   @@index([correlationId])
 }
 
-// Frozen 2026-04-21 — canonical source: planning/spec-docker-runtime-contract.md
 model RuntimeInstance {
   id              String        @id @default(cuid())
   botId           String        @unique
@@ -275,7 +100,6 @@ model RuntimeInstance {
   @@index([workspaceId])
 }
 
-// Frozen 2026-04-25 — canonical source: planning/role-bot-sprint-execution-plan.md (Sprint 1)
 model BotCapabilitySnapshot {
   id                    String                   @id @default(cuid())
   botId                 String
@@ -309,9 +133,8 @@ model BotCapabilitySnapshot {
   @@index([botId, frozenAt])
 }
 
-// Frozen 2026-04-21 — canonical source: planning/engineering-execution-design.md Section 7
 model ActionRecord {
-  id                String        @id @default(cuid())
+  id                String       @id @default(cuid())
   tenantId          String
   workspaceId       String
   botId             String
@@ -320,11 +143,11 @@ model ActionRecord {
   policyPackVersion String
   inputSummary      String
   outputSummary     String?
-  status            ActionStatus  @default(pending)
+  status            ActionStatus @default(pending)
   approvalId        String?
   connectorType     String?
   correlationId     String
-  createdAt         DateTime      @default(now())
+  createdAt         DateTime     @default(now())
   completedAt       DateTime?
 
   @@index([tenantId])
@@ -332,7 +155,6 @@ model ActionRecord {
   @@index([correlationId])
 }
 
-// Frozen 2026-04-21 — canonical source: planning/engineering-execution-design.md Section 6
 model Approval {
   id                       String           @id @default(cuid())
   tenantId                 String
@@ -340,31 +162,30 @@ model Approval {
   botId                    String
   taskId                   String
   actionId                 String
-  llmProvider              String?
-  llmModel                 String?
   riskLevel                RiskLevel
   actionSummary            String
   requestedBy              String
   approverId               String?
   decision                 ApprovalDecision @default(pending)
   decisionReason           String?
-  decisionLatencySeconds   Int? // Supports P95 latency SLA reporting per product-architecture.md Step 8
+  decisionLatencySeconds   Int?
   policyPackVersion        String
   escalationTimeoutSeconds Int              @default(3600)
   escalatedAt              DateTime?
-  createdAt                DateTime         @default(now()) // Immutable after created
-  decidedAt                DateTime? // Immutable after set; signals record completion
+  createdAt                DateTime         @default(now())
+  decidedAt                DateTime?
+  llmModel                 String?
+  llmProvider              String?
 
   @@index([tenantId])
-  @@index([workspaceId]) // For dashboard scope filtering per spec-dashboard-data-model.md
+  @@index([workspaceId])
   @@index([botId])
   @@index([taskId])
-  @@index([decision]) // For pending vs decided filtering
-  @@index([riskLevel]) // For risk-based latency SLA queries
-  @@index([decisionLatencySeconds]) // For P95 latency analysis
+  @@index([decision])
+  @@index([riskLevel])
+  @@index([decisionLatencySeconds])
 }
 
-// Frozen 2026-04-21 — canonical source: planning/engineering-execution-design.md Section 7
 model AuditEvent {
   id            String         @id @default(cuid())
   tenantId      String
@@ -383,42 +204,38 @@ model AuditEvent {
   @@index([createdAt])
 }
 
-// Frozen 2026-04-21 — canonical source: planning/spec-connector-auth-flow.md
 model ConnectorAuthMetadata {
-  id              String               @id @default(cuid())
-  connectorId     String               @unique
-  tenantId        String
-  workspaceId     String
-  connectorType   String
-  authMode        String
-  status          ConnectorAuthStatus  @default(not_configured)
-  grantedScopes   String[]
-  scopeStatus     ConnectorScopeStatus?
-  secretRefId     String?
-  tokenExpiresAt  DateTime?
-  lastRefreshAt   DateTime?
-  lastErrorClass  ConnectorErrorClass?
+  id                String                @id @default(cuid())
+  connectorId       String                @unique
+  tenantId          String
+  workspaceId       String
+  connectorType     String
+  authMode          String
+  status            ConnectorAuthStatus   @default(not_configured)
+  grantedScopes     String[]
+  scopeStatus       ConnectorScopeStatus?
+  secretRefId       String?
+  tokenExpiresAt    DateTime?
+  lastRefreshAt     DateTime?
+  lastErrorClass    ConnectorErrorClass?
   lastHealthcheckAt DateTime?
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt
-  deletedAt       DateTime?
-  createdBy       String?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
 
   @@index([tenantId])
   @@index([workspaceId])
   @@index([status])
-  @@index([deletedAt])
 }
 
 model ConnectorAuthSession {
-  id            String   @id @default(cuid())
-  connectorId   String
-  tenantId      String
-  workspaceId   String
-  stateNonce    String   @unique
-  status        String
-  createdAt     DateTime @default(now())
-  expiresAt     DateTime
+  id          String   @id @default(cuid())
+  connectorId String
+  tenantId    String
+  workspaceId String
+  stateNonce  String   @unique
+  status      String
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime
 
   @@index([connectorId])
   @@index([tenantId])
@@ -440,27 +257,26 @@ model ConnectorAuthEvent {
   @@index([correlationId])
 }
 
-// Frozen 2026-04-21 — canonical source: planning/engineering-execution-design.md Section 4 (normalized action contract)
 model ConnectorAction {
-  id                 String                    @id @default(cuid())
-  actionId           String                    @unique
-  tenantId           String
-  workspaceId        String
-  botId              String
-  connectorId        String
-  connectorType      String
-  actionType         ConnectorActionType
-  contractVersion    String                    @default("v1.0")
-  correlationId      String
-  requestBody        Json
-  resultStatus       ConnectorActionStatus
+  id                   String                    @id @default(cuid())
+  actionId             String                    @unique
+  tenantId             String
+  workspaceId          String
+  botId                String
+  connectorId          String
+  connectorType        String
+  actionType           ConnectorActionType
+  contractVersion      String                    @default("v1.0")
+  correlationId        String
+  requestBody          Json
+  resultStatus         ConnectorActionStatus
   providerResponseCode String?
-  resultSummary      String
-  errorCode          ConnectorActionErrorCode?
-  errorMessage       String?
-  remediationHint    String?
-  completedAt        DateTime
-  createdAt          DateTime                  @default(now())
+  resultSummary        String
+  errorCode            ConnectorActionErrorCode?
+  errorMessage         String?
+  remediationHint      String?
+  completedAt          DateTime
+  createdAt            DateTime                  @default(now())
 
   @@index([tenantId])
   @@index([botId])
@@ -468,7 +284,6 @@ model ConnectorAction {
   @@index([connectorType])
 }
 
-// Sprint 2 — LLM task execution metadata; canonical source: planning/sprint-1-execution-task-list.md Item 5
 model TaskExecutionRecord {
   id               String               @id @default(cuid())
   botId            String
@@ -480,14 +295,12 @@ model TaskExecutionRecord {
   promptTokens     Int?
   completionTokens Int?
   totalTokens      Int?
-  estimatedCostUsd Float?
-  modelTier        String?
   latencyMs        Int
   outcome          TaskExecutionOutcome
-  parentTaskId     String?
-  taskDepth        Int                  @default(0)
   executedAt       DateTime
   createdAt        DateTime             @default(now())
+  estimatedCostUsd Float?
+  modelTier        String?
 
   @@index([botId])
   @@index([tenantId])
@@ -495,13 +308,6 @@ model TaskExecutionRecord {
   @@index([taskId])
 }
 
-enum TaskExecutionOutcome {
-  success
-  failed
-  approval_queued
-}
-
-// Frozen 2026-05-01 — canonical source: planning/phase-1-vm-realism-execution-plan.md (Phase 1)
 model WorkspaceSessionState {
   id          String   @id @default(cuid())
   tenantId    String
@@ -517,7 +323,6 @@ model WorkspaceSessionState {
   @@index([workspaceId])
 }
 
-// Frozen 2026-05-01 — canonical source: planning/phase-1-vm-realism-execution-plan.md (Phase 1)
 model WorkspaceCheckpoint {
   id             String   @id @default(cuid())
   tenantId       String
@@ -537,26 +342,24 @@ model WorkspaceCheckpoint {
   @@index([correlationId])
 }
 
-// Frozen 2026-05-01 — canonical source: planning/phase-1-vm-realism-execution-plan.md (Phase 1)
 model DesktopProfile {
-  id           String   @id @default(cuid())
-  tenantId     String
-  workspaceId  String
-  profileId    String   @unique
-  browser      String
-  storageRef   String?
-  tabState     Json
-  tokenVersion Int      @default(1)
+  id            String    @id @default(cuid())
+  tenantId      String
+  workspaceId   String
+  profileId     String    @unique
+  browser       String
+  storageRef    String?
+  tabState      Json
+  tokenVersion  Int       @default(1)
   lastRotatedAt DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   @@unique([tenantId, workspaceId])
   @@index([tenantId])
   @@index([workspaceId])
 }
 
-// Frozen 2026-05-01 — IDE state persistence (Phase 1 VM realism F4)
 model IdeState {
   id          String   @id @default(cuid())
   tenantId    String
@@ -573,7 +376,6 @@ model IdeState {
   @@index([workspaceId])
 }
 
-// Frozen 2026-05-01 — Terminal session continuity (Phase 1 VM realism F4)
 model TerminalSession {
   id          String   @id @default(cuid())
   tenantId    String
@@ -591,22 +393,21 @@ model TerminalSession {
   @@index([tenantId, workspaceId])
 }
 
-// Frozen 2026-05-01 — Unified activity/notification stream events (Phase 1 F5)
 model ActivityEvent {
-  id          String   @id @default(cuid())
-  tenantId    String
-  workspaceId String
-  category    String
-  title       String
-  body        String?
-  payload     Json?
-  status      String   @default("unread")
-  sequence    Int
-  ackedAt     DateTime?
-  ackedBy     String?
+  id            String    @id @default(cuid())
+  tenantId      String
+  workspaceId   String
+  category      String
+  title         String
+  body          String?
+  payload       Json?
+  status        String    @default("unread")
+  sequence      Int
+  ackedAt       DateTime?
+  ackedBy       String?
   correlationId String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   @@index([tenantId])
   @@index([workspaceId])
@@ -614,24 +415,22 @@ model ActivityEvent {
   @@index([tenantId, workspaceId, status])
 }
 
-// Frozen 2026-05-01 — Environment reconciler profile (Phase 1 F8)
 model EnvProfile {
-  id               String    @id @default(cuid())
-  tenantId         String
-  workspaceId      String
-  toolchain        Json      @default("[]")
-  reconcileStatus  String    @default("clean")
-  lastReconcileAt  DateTime?
-  driftReport      Json?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  id              String    @id @default(cuid())
+  tenantId        String
+  workspaceId     String
+  toolchain       Json      @default("[]")
+  reconcileStatus String    @default("clean")
+  lastReconcileAt DateTime?
+  driftReport     Json?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   @@unique([tenantId, workspaceId])
   @@index([tenantId])
   @@index([workspaceId])
 }
 
-// Frozen 2026-05-01 — Desktop GUI action runtime records (Phase 1 F3)
 model DesktopAction {
   id            String    @id @default(cuid())
   tenantId      String
@@ -657,75 +456,70 @@ model DesktopAction {
   @@index([approvalId])
 }
 
-// Sprint 3 – F6 PR Auto Driver
 model PrDraft {
-  id               String    @id @default(cuid())
-  tenantId         String
-  workspaceId      String
-  branch           String
-  targetBranch     String?
-  changeSummary    String
-  linkedIssueIds   Json      @default("[]")
-  title            String
-  body             String
-  checklist        Json      @default("[]")
-  reviewersSuggested Json    @default("[]")
-  status           String    @default("draft")
-  prId             String?
-  provider         String?
-  labels           Json      @default("[]")
-  correlationId    String
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  id                 String   @id @default(cuid())
+  tenantId           String
+  workspaceId        String
+  branch             String
+  targetBranch       String?
+  changeSummary      String
+  linkedIssueIds     Json     @default("[]")
+  title              String
+  body               String
+  checklist          Json     @default("[]")
+  reviewersSuggested Json     @default("[]")
+  status             String   @default("draft")
+  prId               String?
+  provider           String?
+  labels             Json     @default("[]")
+  correlationId      String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   @@index([tenantId, workspaceId])
   @@index([tenantId, workspaceId, status])
 }
 
-// Sprint 3 – F7 CI Failure Triage
 model CiTriageReport {
-  id                   String    @id @default(cuid())
-  tenantId             String
-  workspaceId          String
-  provider             String
-  runId                String
-  repo                 String
-  branch               String
-  failedJobs           Json      @default("[]")
-  logRefs              Json      @default("[]")
-  status               String    @default("queued")
-  rootCauseHypothesis  String?
-  reproSteps           Json?
-  patchProposal        String?
-  confidence           Float?
-  blastRadius          String?
-  correlationId        String
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
+  id                  String   @id @default(cuid())
+  tenantId            String
+  workspaceId         String
+  provider            String
+  runId               String
+  repo                String
+  branch              String
+  failedJobs          Json     @default("[]")
+  logRefs             Json     @default("[]")
+  status              String   @default("queued")
+  rootCauseHypothesis String?
+  reproSteps          Json?
+  patchProposal       String?
+  confidence          Float?
+  blastRadius         String?
+  correlationId       String
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
+  @@unique([tenantId, workspaceId, runId])
   @@index([tenantId, workspaceId])
   @@index([tenantId, workspaceId, status])
-  @@unique([tenantId, workspaceId, runId])
 }
 
-// Sprint 3 – F10 Work Memory
 model WorkMemory {
-  id            String    @id @default(cuid())
+  id            String   @id @default(cuid())
   tenantId      String
   workspaceId   String
-  memoryVersion Int       @default(1)
-  entries       Json      @default("[]")
+  memoryVersion Int      @default(1)
+  entries       Json     @default("[]")
   summary       String?
   correlationId String
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@unique([tenantId, workspaceId])
   @@index([tenantId, workspaceId])
 }
 
-// Added 2026-05-10 — Evidence Service bundle storage (evidence-service)
-// Stores per-task evidence bundles with optional blob-signed screenshots and audit signing.
 model StoredEvidenceBundle {
   id            String    @id @default(cuid())
   taskId        String
@@ -744,16 +538,12 @@ model StoredEvidenceBundle {
   finalised     Boolean   @default(false)
   finalisedAt   DateTime?
   createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
 
   @@index([tenantId])
   @@index([workspaceId])
   @@index([taskId])
   @@index([tenantId, workspaceId])
 }
-
-// Sprint 4 — F9: Crash Recovery + Repro Pack Generator
-// Frozen 2026-05-01 — canonical source: planning/phase-1-vm-realism-execution-plan.md
 
 model RunResume {
   id            String   @id @default(cuid())
@@ -790,8 +580,6 @@ model ReproPack {
   @@index([tenantId, workspaceId, runId])
 }
 
-// Frozen 2026-05-10 — Agent Dispatch Records
-// Persists cross-process agent dispatch events for audit and status tracking.
 model AgentDispatchRecord {
   id                 String            @id @default(cuid())
   fromAgentId        String
@@ -801,14 +589,13 @@ model AgentDispatchRecord {
   taskDescription    String
   status             String            @default("queued")
   wakeSource         String            @default("agent_handoff")
-  orchestrationRunId String?
-  subTaskIndex       Int?
-  completedAt        DateTime?
-  result             Json?
-  errorMessage       String?
   queuedAt           DateTime          @default(now())
   createdAt          DateTime          @default(now())
-  updatedAt          DateTime          @updatedAt
+  completedAt        DateTime?
+  errorMessage       String?
+  orchestrationRunId String?
+  result             Json?
+  subTaskIndex       Int?
   orchestrationRun   OrchestrationRun? @relation(fields: [orchestrationRunId], references: [id])
 
   @@index([tenantId, workspaceId])
@@ -816,23 +603,21 @@ model AgentDispatchRecord {
   @@index([orchestrationRunId])
 }
 
-// Frozen 2026-05-07 — Agent Memory Service (Epic A7)
-// Short-term task memory for agent context injection. 7-day TTL for recent task history.
 model AgentShortTermMemory {
-  id               String   @id @default(cuid())
+  id               String    @id @default(cuid())
   workspaceId      String
   tenantId         String
   taskId           String
-  actionsTaken     Json     // string[] of action types
-  approvalOutcomes Json     // { action: string; decision: 'approved' | 'rejected'; reason?: string }[]
-  connectorsUsed   Json     // string[] of connector types
-  llmProvider      String?  // which provider made the decision
-  executionStatus  String   @default("success") // 'success' | 'approval_required' | 'failed'
-  summary          String   // brief task summary for prompt injection
+  actionsTaken     Json
+  approvalOutcomes Json
+  connectorsUsed   Json
+  llmProvider      String?
+  executionStatus  String    @default("success")
+  summary          String
   correlationId    String
-  repoName         String?  // optional repo scope for per-repo memory isolation
-  createdAt        DateTime @default(now())
-  expiresAt        DateTime? // createdAt + 7 days; null for permanent records; used for TTL cleanup
+  createdAt        DateTime  @default(now())
+  expiresAt        DateTime?
+  repoName         String?
 
   @@index([workspaceId, createdAt])
   @@index([workspaceId, expiresAt])
@@ -844,12 +629,11 @@ model AgentLongTermMemory {
   tenantId      String
   workspaceId   String
   pattern       String
-  repoName      String?  // optional repo scope for per-repo memory isolation
   confidence    Float
   observedCount Int      @default(1)
   lastSeen      DateTime
   createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  repoName      String?
 
   @@unique([tenantId, pattern])
   @@index([workspaceId, confidence])
@@ -872,10 +656,953 @@ model AgentRepoKnowledge {
   @@index([workspaceId])
 }
 
-// ============================================================================
-// BROWSER AUDIT SYSTEM (2026-05-07)
-// Frozen specification: packages/shared-types/src/audit-ids.ts, browser-audit.ts
-// ============================================================================
+model AgentSession {
+  id                 String               @id @unique
+  tenantId           String
+  agentInstanceId    String
+  taskId             String
+  role               String
+  recordingId        String
+  recordingUrl       String
+  startedAt          DateTime
+  endedAt            DateTime?
+  actionCount        Int                  @default(0)
+  status             SessionAuditStatus   @default(running)
+  failureReason      String?
+  retentionExpiresAt DateTime?
+  retentionPolicyId  String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  actions            BrowserActionEvent[]
+
+  @@index([tenantId])
+  @@index([agentInstanceId])
+  @@index([taskId])
+  @@index([tenantId, startedAt])
+  @@index([status])
+  @@index([retentionExpiresAt])
+}
+
+model BrowserActionEvent {
+  id                    String            @id @unique
+  sessionId             String
+  tenantId              String
+  agentInstanceId       String
+  sequence              Int
+  actionType            BrowserActionType
+  targetSelector        String
+  targetText            String
+  inputValue            String?
+  pageUrl               String
+  screenshotBeforeId    String
+  screenshotAfterId     String
+  screenshotBeforeUrl   String
+  screenshotAfterUrl    String
+  domSnapshotHashBefore String?
+  domSnapshotHashAfter  String?
+  networkLog            Json              @default("[]")
+  durationMs            Int
+  success               Boolean
+  errorMessage          String?
+  failureClass          String?
+  timestamp             DateTime
+  correctnessAssertion  Json?
+  createdAt             DateTime          @default(now())
+  session               AgentSession      @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([tenantId])
+  @@index([agentInstanceId])
+  @@index([tenantId, actionType])
+  @@index([timestamp])
+  @@index([tenantId, timestamp])
+}
+
+model RetentionPolicy {
+  id               String                @id @default(cuid())
+  tenantId         String
+  workspaceId      String?
+  roleKey          String?
+  name             String
+  description      String?
+  scope            RetentionPolicyScope  @default(tenant)
+  action           RetentionPolicyAction @default(never_delete)
+  retentionDays    Int?
+  deletionTrigger  String?
+  deletionSchedule String?
+  effectiveFrom    DateTime
+  expiredAt        DateTime?
+  status           RetentionPolicyStatus @default(active)
+  createdBy        String
+  updatedBy        String
+  correlationId    String
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  @@index([tenantId])
+  @@index([tenantId, workspaceId])
+  @@index([tenantId, status])
+}
+
+model AgentQuestion {
+  id              String                     @id @default(cuid())
+  contractVersion String
+  tenantId        String
+  workspaceId     String
+  taskId          String
+  botId           String
+  question        String
+  context         String
+  options         String[]                   @default([])
+  askedVia        AgentQuestionChannel
+  status          AgentQuestionStatus        @default(pending)
+  timeoutMs       Int                        @default(14400000)
+  onTimeout       AgentQuestionTimeoutPolicy @default(escalate)
+  answer          String?
+  answeredBy      String?
+  answeredAt      DateTime?
+  expiresAt       DateTime
+  correlationId   String
+  createdAt       DateTime                   @default(now())
+  updatedAt       DateTime                   @updatedAt
+
+  @@index([tenantId])
+  @@index([workspaceId])
+  @@index([taskId])
+  @@index([status])
+  @@index([expiresAt])
+  @@index([tenantId, status])
+}
+
+model TenantMcpServer {
+  id          String   @id @default(cuid())
+  tenantId    String
+  workspaceId String?
+  name        String
+  url         String
+  headers     Json?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@index([tenantId, isActive])
+}
+
+model TenantLanguageConfig {
+  id              String   @id @default(cuid())
+  tenantId        String   @unique
+  defaultLanguage String   @default("en")
+  ticketLanguage  String   @default("en")
+  autoDetect      Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
+model WorkspaceLanguageConfig {
+  id                String   @id @default(cuid())
+  tenantId          String
+  workspaceId       String
+  preferredLanguage String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([tenantId, workspaceId])
+  @@index([tenantId])
+}
+
+model UserLanguageProfile {
+  id                String    @id @default(cuid())
+  tenantId          String
+  userId            String
+  detectedLanguage  String?
+  preferredLanguage String?
+  confidence        Float     @default(0.0)
+  lastDetectedAt    DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@unique([tenantId, userId])
+  @@index([tenantId])
+  @@index([tenantId, userId])
+}
+
+model MeetingSession {
+  id               String    @id @default(cuid())
+  tenantId         String
+  workspaceId      String
+  agentId          String
+  meetingUrl       String
+  platform         String
+  status           String    @default("joining")
+  language         String?
+  transcriptRaw    String?
+  summaryText      String?
+  actionItems      String?
+  startedAt        DateTime  @default(now())
+  endedAt          DateTime?
+  updatedAt        DateTime  @updatedAt
+  agentVoiceId     String?
+  resolvedLanguage String?
+  speakingEnabled  Boolean   @default(false)
+
+  @@index([tenantId])
+  @@index([workspaceId])
+  @@index([tenantId, workspaceId])
+  @@index([tenantId, status])
+}
+
+model Plan {
+  id                  String               @id @default(cuid())
+  name                String
+  priceInr            Int
+  priceUsd            Int
+  agentSlots          Int
+  features            String
+  isActive            Boolean              @default(true)
+  createdAt           DateTime             @default(now())
+  agentSubscriptions  AgentSubscription[]
+  orders              Order[]
+  tenantSubscriptions TenantSubscription[]
+}
+
+model Order {
+  id                String    @id @default(cuid())
+  tenantId          String
+  planId            String
+  amountCents       Int
+  currency          String
+  status            String    @default("pending")
+  paymentProvider   String
+  providerOrderId   String?
+  providerPaymentId String?
+  providerSignature String?
+  customerEmail     String
+  customerCountry   String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  contractPdfUrl    String?
+  contractSentAt    DateTime?
+  signatureStatus   String?   @default("pending")
+  signedAt          DateTime?
+  zohoSignRequestId String?
+  invoice           Invoice?
+  plan              Plan      @relation(fields: [planId], references: [id])
+}
+
+model Invoice {
+  id          String    @id @default(cuid())
+  orderId     String    @unique
+  tenantId    String
+  number      String    @unique
+  amountCents Int
+  currency    String
+  pdfUrl      String?
+  sentAt      DateTime?
+  paidAt      DateTime?
+  createdAt   DateTime  @default(now())
+  order       Order     @relation(fields: [orderId], references: [id])
+}
+
+model ExternalPluginLoad {
+  id              String   @id @default(cuid())
+  tenantId        String
+  pluginKey       String
+  version         String
+  status          String
+  trustLevel      String
+  rejectionReason String?
+  loadedAt        DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([tenantId, pluginKey])
+}
+
+model PluginKillSwitch {
+  id        String   @id @default(cuid())
+  tenantId  String
+  pluginKey String
+  reason    String?
+  killedAt  DateTime @default(now())
+  killedBy  String?
+
+  @@unique([tenantId, pluginKey])
+}
+
+model PluginAllowlist {
+  id           String   @id @default(cuid())
+  tenantId     String
+  pluginKey    String
+  capabilities String[]
+  grantedAt    DateTime @default(now())
+
+  @@unique([tenantId, pluginKey])
+}
+
+model NotificationLog {
+  id           String   @id @default(cuid())
+  tenantId     String
+  workspaceId  String?
+  channel      String
+  eventTrigger String
+  status       String
+  payload      Json?
+  error        String?
+  sentAt       DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([tenantId, sentAt])
+}
+
+model QualitySignalLog {
+  id          String   @id @default(cuid())
+  tenantId    String
+  workspaceId String
+  taskId      String?
+  signalType  String?
+  source      String?
+  score       Float?
+  metadata    Json?
+  recordedAt  DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([workspaceId, taskId])
+}
+
+model TenantSubscription {
+  id              String              @id @default(cuid())
+  tenantId        String              @unique
+  planId          String
+  status          SubscriptionStatus  @default(active)
+  paymentProvider String
+  startedAt       DateTime
+  expiresAt       DateTime
+  gracePeriodDays Int                 @default(3)
+  suspendedAt     DateTime?
+  cancelledAt     DateTime?
+  reactivatedAt   DateTime?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  agentSubs       AgentSubscription[]
+  events          SubscriptionEvent[]
+  plan            Plan                @relation(fields: [planId], references: [id])
+
+  @@index([tenantId])
+  @@index([status])
+  @@index([expiresAt])
+  @@index([tenantId, status])
+}
+
+model AgentSubscription {
+  id                   String              @id @default(cuid())
+  tenantId             String
+  agentId              String
+  tenantSubscriptionId String?
+  planId               String
+  status               SubscriptionStatus  @default(active)
+  paymentProvider      String
+  startedAt            DateTime
+  expiresAt            DateTime
+  gracePeriodDays      Int                 @default(3)
+  suspendedAt          DateTime?
+  cancelledAt          DateTime?
+  reactivatedAt        DateTime?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  plan                 Plan                @relation(fields: [planId], references: [id])
+  tenantSubscription   TenantSubscription? @relation(fields: [tenantSubscriptionId], references: [id])
+  events               SubscriptionEvent[]
+
+  @@unique([tenantId, agentId])
+  @@index([tenantId])
+  @@index([agentId])
+  @@index([status])
+  @@index([expiresAt])
+  @@index([tenantId, status])
+}
+
+model SubscriptionEvent {
+  id                   String                 @id @default(cuid())
+  tenantId             String
+  tenantSubscriptionId String?
+  agentSubscriptionId  String?
+  fromStatus           SubscriptionStatus?
+  toStatus             SubscriptionStatus
+  actor                SubscriptionEventActor
+  paymentProvider      String?
+  providerEventId      String?
+  reason               String?
+  metadata             Json?
+  occurredAt           DateTime               @default(now())
+  agentSubscription    AgentSubscription?     @relation(fields: [agentSubscriptionId], references: [id])
+  tenantSubscription   TenantSubscription?    @relation(fields: [tenantSubscriptionId], references: [id])
+
+  @@index([tenantId])
+  @@index([tenantSubscriptionId])
+  @@index([agentSubscriptionId])
+  @@index([tenantId, occurredAt])
+}
+
+model OutboundWebhook {
+  id           String                    @id @default(cuid())
+  tenantId     String
+  workspaceId  String?
+  url          String
+  secret       String
+  events       String[]
+  enabled      Boolean                   @default(true)
+  createdAt    DateTime                  @default(now())
+  updatedAt    DateTime                  @updatedAt
+  dlqAt        DateTime?
+  failureCount Int                       @default(0)
+  deliveries   OutboundWebhookDelivery[]
+  dlqEntries   WebhookDlqEntry[]
+
+  @@index([tenantId])
+  @@index([tenantId, enabled])
+}
+
+model OutboundWebhookDelivery {
+  id             String          @id @default(cuid())
+  webhookId      String
+  tenantId       String
+  eventType      String
+  payload        Json
+  responseStatus Int?
+  responseBody   String?
+  durationMs     Int?
+  success        Boolean
+  firedAt        DateTime        @default(now())
+  webhook        OutboundWebhook @relation(fields: [webhookId], references: [id])
+
+  @@index([webhookId])
+  @@index([tenantId])
+  @@index([webhookId, firedAt])
+}
+
+model WebhookDlqEntry {
+  id            String          @id @default(cuid())
+  webhookId     String
+  tenantId      String
+  reason        String
+  lastPayload   Json
+  lastEventType String
+  createdAt     DateTime        @default(now())
+  resolvedAt    DateTime?
+  resolvedBy    String?
+  webhook       OutboundWebhook @relation(fields: [webhookId], references: [id])
+
+  @@index([tenantId])
+  @@index([webhookId])
+}
+
+model ScheduledJob {
+  id        String    @id @default(cuid())
+  tenantId  String
+  name      String
+  cronExpr  String
+  goal      String
+  agentId   String?
+  enabled   Boolean   @default(true)
+  lastRunAt DateTime?
+  nextRunAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, enabled])
+}
+
+model ChatSession {
+  id        String        @id @default(cuid())
+  tenantId  String
+  agentId   String?
+  title     String?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  messages  ChatMessage[]
+  tenant    Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+model ChatMessage {
+  id        String      @id @default(cuid())
+  sessionId String
+  role      String
+  content   String
+  createdAt DateTime    @default(now())
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+}
+
+model BotConfigVersion {
+  id                String   @id @default(cuid())
+  botId             String
+  tenantId          String
+  versionNumber     Int
+  role              String
+  status            String
+  roleVersion       String?
+  policyPackVersion String?
+  brainConfig       Json?
+  changeNote        String?
+  createdBy         String
+  createdAt         DateTime @default(now())
+  bot               Bot      @relation(fields: [botId], references: [id], onDelete: Cascade)
+
+  @@unique([botId, versionNumber])
+  @@index([botId])
+  @@index([tenantId])
+}
+
+model OrchestrationRun {
+  id               String                @id @default(cuid())
+  tenantId         String
+  workspaceId      String
+  coordinatorBotId String
+  goal             String
+  status           String                @default("running")
+  subTaskCount     Int                   @default(0)
+  completedCount   Int                   @default(0)
+  failedCount      Int                   @default(0)
+  result           Json?
+  errorSummary     String?
+  startedAt        DateTime              @default(now())
+  completedAt      DateTime?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  dispatches       AgentDispatchRecord[]
+  tenant           Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+}
+
+model MarketplaceListing {
+  id          String               @id @default(cuid())
+  skillId     String               @unique
+  name        String
+  description String?
+  version     String
+  author      String?
+  permissions Json                 @default("[]")
+  source      String?
+  tags        Json                 @default("[]")
+  status      String               @default("active")
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  installs    MarketplaceInstall[]
+
+  @@index([status])
+}
+
+model MarketplaceInstall {
+  id                  String             @id @default(cuid())
+  tenantId            String
+  skillId             String
+  listingId           String
+  approvedPermissions Json               @default("[]")
+  pinVersion          Boolean            @default(false)
+  status              String             @default("installed")
+  installedAt         DateTime           @default(now())
+  uninstalledAt       DateTime?
+  listing             MarketplaceListing @relation(fields: [listingId], references: [id])
+  tenant              Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, skillId])
+  @@index([tenantId])
+  @@index([tenantId, status])
+}
+
+model AbTest {
+  id             String             @id @default(cuid())
+  tenantId       String
+  botId          String
+  name           String
+  versionAId     String
+  versionBId     String
+  trafficSplit   Float              @default(0.5)
+  status         String             @default("active")
+  conclusionNote String?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  assignments    AbTestAssignment[]
+
+  @@index([tenantId])
+  @@index([tenantId, botId])
+  @@index([tenantId, status])
+}
+
+model AbTestAssignment {
+  id        String   @id @default(cuid())
+  abTestId  String
+  tenantId  String
+  taskId    String   @unique
+  versionId String
+  variant   String
+  createdAt DateTime @default(now())
+  abTest    AbTest   @relation(fields: [abTestId], references: [id])
+
+  @@index([abTestId])
+  @@index([tenantId])
+  @@index([taskId])
+}
+
+model AgentRateLimit {
+  id                String   @id @default(cuid())
+  botId             String   @unique
+  tenantId          String
+  requestsPerMinute Int      @default(60)
+  burstLimit        Int      @default(10)
+  enabled           Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
+model CircuitBreakerState {
+  id            String    @id @default(cuid())
+  key           String    @unique
+  tenantId      String
+  state         String    @default("closed")
+  failureCount  Int       @default(0)
+  lastFailureAt DateTime?
+  openedAt      DateTime?
+  nextRetryAt   DateTime?
+  successCount  Int       @default(0)
+  updatedAt     DateTime  @updatedAt
+
+  @@index([tenantId])
+  @@index([tenantId, state])
+}
+
+model TaskQueueEntry {
+  id           String    @id @default(cuid())
+  tenantId     String
+  workspaceId  String
+  botId        String?
+  priority     String    @default("normal")
+  status       String    @default("pending")
+  payload      Json
+  errorMessage String?
+  enqueuedAt   DateTime  @default(now())
+  startedAt    DateTime?
+  completedAt  DateTime?
+  updatedAt    DateTime  @updatedAt
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, priority, enqueuedAt])
+}
+
+model ScheduledReport {
+  id             String    @id @default(cuid())
+  tenantId       String
+  workspaceId    String
+  name           String
+  recipientEmail String
+  frequency      String    @default("weekly")
+  reportTypes    String[]
+  enabled        Boolean   @default(true)
+  lastSentAt     DateTime?
+  nextSendAt     DateTime  @default(now())
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([tenantId])
+  @@index([tenantId, enabled])
+  @@index([nextSendAt, enabled])
+}
+
+model ApiKey {
+  id         String    @id @default(cuid())
+  tenantId   String
+  createdBy  String
+  name       String
+  keyHash    String    @unique
+  keyPrefix  String
+  scopes     String[]
+  role       String    @default("operator")
+  enabled    Boolean   @default(true)
+  expiresAt  DateTime?
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([tenantId])
+  @@index([keyHash])
+  @@index([tenantId, enabled])
+}
+
+// ── Sales pipeline ─────────────────────────────────────────────────────────
+
+model SalesAgentConfig {
+  id                 String   @id @default(cuid())
+  tenantId           String
+  botId              String   @unique
+  productDescription String
+  icp                String
+  leadSourceProvider String
+  emailProvider      String
+  crmProvider        String
+  calendarProvider   String
+  signatureProvider  String
+  emailTone          String   @default("conversational")
+  followUpDays       Int[]    @default([3, 7, 14])
+  maxProspectsPerDay Int      @default(50)
+  active             Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([botId])
+}
+
+model Prospect {
+  id              String         @id @default(cuid())
+  tenantId        String
+  botId           String
+  firstName       String
+  lastName        String
+  email           String
+  company         String
+  title           String?
+  industry        String?
+  companySize     String?
+  linkedinUrl     String?
+  website         String?
+  phone           String?
+  icpScore        Int            @default(0)
+  qualified       Boolean        @default(false)
+  status          ProspectStatus @default(new)
+  notes           String?
+  lastContactedAt DateTime?
+  nextFollowUpAt  DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  deals      SalesDeal[]
+  activities SalesActivity[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+  @@index([botId])
+  @@index([tenantId, status])
+}
+
+model SalesDeal {
+  id                String    @id @default(cuid())
+  tenantId          String
+  botId             String
+  prospectId        String
+  title             String
+  value             Float?
+  currency          String    @default("USD")
+  stage             DealStage @default(discovery)
+  notes             String?
+  expectedCloseDate DateTime?
+  closedAt          DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  prospect   Prospect        @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  activities SalesActivity[]
+
+  @@index([tenantId])
+  @@index([botId])
+  @@index([prospectId])
+  @@index([tenantId, stage])
+}
+
+model SalesActivity {
+  id           String            @id @default(cuid())
+  tenantId     String
+  botId        String
+  prospectId   String
+  dealId       String?
+  activityType SalesActivityType
+  subject      String
+  body         String?
+  outcome      String?
+  scheduledAt  DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  prospect Prospect   @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  deal     SalesDeal? @relation(fields: [dealId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([botId])
+  @@index([prospectId])
+  @@index([dealId])
+}
+
+enum TenantStatus {
+  pending
+  provisioning
+  ready
+  degraded
+  suspended
+  terminated
+}
+
+enum WorkspaceStatus {
+  pending
+  provisioning
+  ready
+  degraded
+  suspended
+  failed
+}
+
+enum BotStatus {
+  created
+  bootstrapping
+  connector_setup_required
+  active
+  paused
+  failed
+}
+
+enum ProvisioningJobStatus {
+  queued
+  validating
+  creating_resources
+  bootstrapping_vm
+  starting_container
+  registering_runtime
+  healthchecking
+  completed
+  failed
+  cleanup_pending
+  cleaned_up
+}
+
+enum RuntimeStatus {
+  created
+  starting
+  ready
+  active
+  degraded
+  paused
+  stopping
+  stopped
+  failed
+}
+
+enum CapabilitySnapshotSource {
+  runtime_freeze
+  persisted_load
+  manual_override
+}
+
+enum ApprovalDecision {
+  pending
+  approved
+  rejected
+  timeout_rejected
+}
+
+enum ConnectorAuthStatus {
+  not_configured
+  auth_initiated
+  consent_pending
+  token_received
+  validation_in_progress
+  connected
+  degraded
+  token_expired
+  permission_invalid
+  revoked
+  disconnected
+}
+
+enum ConnectorScopeStatus {
+  full
+  partial
+  insufficient
+}
+
+enum ConnectorErrorClass {
+  oauth_state_mismatch
+  oauth_code_exchange_failed
+  token_refresh_failed
+  token_expired
+  insufficient_scope
+  provider_rate_limited
+  provider_unavailable
+  secret_store_unavailable
+}
+
+enum ConnectorActionType {
+  read_task
+  create_comment
+  update_status
+  send_message
+  create_pr_comment
+  send_email
+}
+
+enum ConnectorActionStatus {
+  success
+  failed
+  timeout
+}
+
+enum ConnectorActionErrorCode {
+  rate_limit
+  timeout
+  provider_unavailable
+  permission_denied
+  invalid_format
+  unsupported_action
+  upgrade_required
+}
+
+enum AuditEventType {
+  provisioning_event
+  bot_runtime_event
+  connector_event
+  approval_event
+  security_event
+  audit_event
+  memory_write
+}
+
+enum AuditSeverity {
+  info
+  warn
+  error
+  critical
+}
+
+enum ActionStatus {
+  pending
+  executing
+  completed
+  rejected
+  failed
+}
+
+enum RiskLevel {
+  low
+  medium
+  high
+}
+
+enum TaskExecutionOutcome {
+  success
+  failed
+  approval_queued
+}
 
 enum BrowserActionType {
   click
@@ -915,101 +1642,6 @@ enum RetentionPolicyStatus {
   superseded
 }
 
-// Agent session for a task — root of audit hierarchy
-model AgentSession {
-  id                 String              @id // ses_agt_<agent-short>_<timestamp>_<random>
-  tenantId           String              // ten_<random> — root tenant
-  agentInstanceId    String              // agt_<tenant-short>_<role>_<random> — agent identity
-  taskId             String              // link to existing TaskRecord
-  role               String              // agent role (e.g., 'developer')
-  recordingId        String              // rec_ses_<session-short>
-  recordingUrl       String              // signed URL to .mp4 in blob storage
-  startedAt          DateTime
-  endedAt            DateTime?
-  actionCount        Int                 @default(0)
-  status             SessionAuditStatus  @default(running)
-  failureReason      String?
-  retentionExpiresAt DateTime?           // null = never auto-delete (compliance mode)
-  retentionPolicyId  String?             // customer-configured policy ID
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  actions            BrowserActionEvent[]
-
-  @@unique([id]) // Session ID is globally unique
-  @@index([tenantId])
-  @@index([agentInstanceId])
-  @@index([taskId])
-  @@index([tenantId, startedAt]) // for compliance period queries
-  @@index([status])
-  @@index([retentionExpiresAt]) // for cleanup jobs
-}
-
-// Individual browser action within a session
-model BrowserActionEvent {
-  id                    String              @id // act_ses_<session-short>_<sequence>
-  sessionId             String              // ses_agt_<agent-short>_<timestamp>_<random>
-  tenantId              String              // ten_<random> — embedded for zero-join queries
-  agentInstanceId       String              // agt_<tenant-short>_<role>_<random> — embedded ancestry
-  sequence              Int                 // 0, 1, 2, ... within session
-  actionType            BrowserActionType
-  targetSelector        String
-  targetText            String
-  inputValue            String?
-  pageUrl               String
-  screenshotBeforeId    String              // scr_<action-id>_before
-  screenshotAfterId     String              // scr_<action-id>_after
-  screenshotBeforeUrl   String              // signed URL
-  screenshotAfterUrl    String              // signed URL
-  domSnapshotHashBefore String?
-  domSnapshotHashAfter  String?
-  networkLog            Json                @default("[]") // NetworkEntry[]
-  durationMs            Int
-  success               Boolean
-  errorMessage          String?
-  failureClass          String?
-  timestamp             DateTime
-  correctnessAssertion  Json?               // { screenshotDiffPercentage, domChangesDetected, ... }
-  createdAt             DateTime            @default(now())
-  session               AgentSession        @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-
-  @@unique([id])
-  @@index([sessionId]) // reconstruct full session
-  @@index([tenantId]) // list all actions for tenant
-  @@index([agentInstanceId]) // list all actions by agent
-  @@index([tenantId, actionType]) // role-based compliance queries
-  @@index([timestamp]) // time-range queries
-  @@index([tenantId, timestamp]) // compliance exports
-}
-
-// Customer-configured retention policy — determines artifact cleanup
-model RetentionPolicy {
-  id                 String                @id @default(cuid())
-  tenantId           String
-  workspaceId        String?
-  roleKey            String?               // optional: role-scoped policy
-  name               String
-  description        String?
-  scope              RetentionPolicyScope  @default(tenant)
-  action             RetentionPolicyAction @default(never_delete)
-  retentionDays      Int?                  // null if action != auto_delete_after_days
-  deletionTrigger    String?               // 'user_initiated' | 'scheduled' | 'api_triggered'
-  deletionSchedule   String?               // cron expression for scheduled deletions
-  effectiveFrom      DateTime
-  expiredAt          DateTime?
-  status             RetentionPolicyStatus @default(active)
-  createdBy          String
-  updatedBy          String
-  correlationId      String
-  createdAt          DateTime              @default(now())
-  updatedAt          DateTime              @updatedAt
-
-  @@index([tenantId])
-  @@index([tenantId, workspaceId])
-  @@index([tenantId, status])
-}
-
-// Frozen 2026-05-07 — Agent Question Service (Feature #2)
-// Allows agent to ask human a question, park task, resume when answered
 enum AgentQuestionStatus {
   pending
   answered
@@ -1028,246 +1660,6 @@ enum AgentQuestionTimeoutPolicy {
   abandon_task
 }
 
-model AgentQuestion {
-  id            String                      @id @default(cuid())
-  contractVersion String
-  tenantId      String
-  workspaceId   String
-  taskId        String
-  botId         String
-  question      String
-  context       String
-  options       String[]                    @default([])
-  askedVia      AgentQuestionChannel
-  status        AgentQuestionStatus         @default(pending)
-  timeoutMs     Int                         @default(14400000) // 4 hours
-  onTimeout     AgentQuestionTimeoutPolicy  @default(escalate)
-  answer        String?
-  answeredBy    String?
-  answeredAt    DateTime?
-  expiresAt     DateTime
-  correlationId String
-  createdAt     DateTime                    @default(now())
-  updatedAt     DateTime                    @updatedAt
-
-  @@index([tenantId])
-  @@index([workspaceId])
-  @@index([taskId])
-  @@index([status])
-  @@index([expiresAt])
-  @@index([tenantId, status])
-}
-
-model TenantMcpServer {
-  id          String   @id @default(cuid())
-  tenantId    String
-  workspaceId String?
-  name        String
-  url         String
-  headers     Json?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@unique([tenantId, name])
-  @@index([tenantId])
-  @@index([tenantId, isActive])
-}
-
-model TenantLanguageConfig {
-  id               String   @id @default(cuid())
-  tenantId         String   @unique
-  defaultLanguage  String   @default("en")
-  ticketLanguage   String   @default("en")
-  autoDetect       Boolean  @default(true)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
-  @@index([tenantId])
-}
-
-model WorkspaceLanguageConfig {
-  id                String   @id @default(cuid())
-  tenantId          String
-  workspaceId       String
-  preferredLanguage String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-
-  @@unique([tenantId, workspaceId])
-  @@index([tenantId])
-}
-
-model UserLanguageProfile {
-  id                String    @id @default(cuid())
-  tenantId          String
-  userId            String
-  detectedLanguage  String?
-  preferredLanguage String?
-  confidence        Float     @default(0.0)
-  lastDetectedAt    DateTime?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-
-  @@unique([tenantId, userId])
-  @@index([tenantId])
-  @@index([tenantId, userId])
-}
-
-// Frozen 2026-05-09 — Meeting transcription pipeline sessions
-model MeetingSession {
-  id               String    @id @default(cuid())
-  tenantId         String
-  workspaceId      String
-  agentId          String
-  meetingUrl       String
-  platform         String    // "teams" | "zoom" | "google_meet" | "webex"
-  status           String    @default("joining")  // joining | recording | transcribing | summarizing | done | error | deleted
-  language         String?
-  transcriptRaw    String?   @db.Text
-  summaryText      String?   @db.Text
-  actionItems      String?   @db.Text  // JSON array string
-  agentVoiceId     String?   // VoxCPM2 cloned voice ID for this session
-  speakingEnabled  Boolean   @default(false)
-  resolvedLanguage String?   // language code e.g. "en", "ja"
-  slackDistributed Boolean   @default(false)
-  startedAt        DateTime  @default(now())
-  endedAt          DateTime?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-
-  @@index([tenantId])
-  @@index([workspaceId])
-  @@index([tenantId, workspaceId])
-  @@index([tenantId, status])
-}
-
-model Plan {
-  id          String   @id @default(cuid())
-  name        String
-  priceInr    Int
-  priceUsd    Int
-  agentSlots  Int
-  features    String
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  orders              Order[]
-  tenantSubscriptions TenantSubscription[]
-  agentSubscriptions  AgentSubscription[]
-}
-
-model Order {
-  id                String      @id @default(cuid())
-  tenantId          String
-  planId            String
-  plan              Plan        @relation(fields: [planId], references: [id])
-  amountCents       Int
-  currency          String
-  status            String      @default("pending")
-  paymentProvider   String
-  providerOrderId   String?
-  providerPaymentId String?
-  providerSignature String?
-  customerEmail     String
-  customerCountry   String?
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
-  invoice           Invoice?
-  contractPdfUrl    String?
-  zohoSignRequestId String?
-  signatureStatus   String?     @default("pending")
-  signedAt          DateTime?
-  contractSentAt    DateTime?
-}
-
-model Invoice {
-  id          String   @id @default(cuid())
-  orderId     String   @unique
-  order       Order    @relation(fields: [orderId], references: [id])
-  tenantId    String
-  number      String   @unique
-  amountCents Int
-  currency    String
-  pdfUrl      String?
-  sentAt      DateTime?
-  paidAt      DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-model ExternalPluginLoad {
-  id              String   @id @default(cuid())
-  tenantId        String
-  pluginKey       String
-  version         String
-  status          String
-  trustLevel      String
-  rejectionReason String?
-  loadedAt        DateTime @default(now())
-  createdAt       DateTime @default(now())
-
-  @@index([tenantId])
-  @@index([tenantId, pluginKey])
-}
-
-model PluginKillSwitch {
-  id        String   @id @default(cuid())
-  tenantId  String
-  pluginKey String
-  reason    String?
-  killedAt  DateTime @default(now())
-  killedBy  String?
-  createdAt DateTime @default(now())
-
-  @@unique([tenantId, pluginKey])
-}
-
-model PluginAllowlist {
-  id           String   @id @default(cuid())
-  tenantId     String
-  pluginKey    String
-  capabilities String[]
-  grantedAt    DateTime @default(now())
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  @@unique([tenantId, pluginKey])
-}
-
-model NotificationLog {
-  id           String   @id @default(cuid())
-  tenantId     String
-  workspaceId  String?
-  channel      String
-  eventTrigger String
-  status       String
-  payload      Json?
-  error        String?
-  sentAt       DateTime @default(now())
-  createdAt    DateTime @default(now())
-
-  @@index([tenantId])
-  @@index([tenantId, sentAt])
-}
-
-model QualitySignalLog {
-  id          String   @id @default(cuid())
-  tenantId    String
-  workspaceId String
-  taskId      String?
-  signalType  String?
-  source      String?
-  score       Float?
-  metadata    Json?
-  recordedAt  DateTime @default(now())
-  createdAt   DateTime @default(now())
-
-  @@index([tenantId])
-  @@index([workspaceId, taskId])
-}
-
-// Billing — subscription lifecycle states
 enum SubscriptionStatus {
   active
   expired
@@ -1275,7 +1667,6 @@ enum SubscriptionStatus {
   cancelled
 }
 
-// Billing — who initiated a status transition
 enum SubscriptionEventActor {
   system
   payment_webhook
@@ -1283,592 +1674,29 @@ enum SubscriptionEventActor {
   customer
 }
 
-// Frozen 2026-05-11 — Billing Phase A: tenant-level subscription
-// Controls access to the full dashboard and all agents under the tenant.
-// Grace period: 3 days after expiresAt before status flips to suspended.
-model TenantSubscription {
-  id              String             @id @default(cuid())
-  tenantId        String             @unique
-  planId          String
-  plan            Plan               @relation(fields: [planId], references: [id])
-  status          SubscriptionStatus @default(active)
-  paymentProvider String             // "stripe" | "razorpay"
-  startedAt       DateTime
-  expiresAt       DateTime
-  gracePeriodDays Int                @default(3)
-  suspendedAt     DateTime?
-  cancelledAt     DateTime?
-  reactivatedAt   DateTime?
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
-  events          SubscriptionEvent[]
-  agentSubs       AgentSubscription[]
-
-  @@index([tenantId])
-  @@index([status])
-  @@index([expiresAt])
-  @@index([tenantId, status])
+enum ProspectStatus {
+  new
+  contacted
+  engaged
+  qualified
+  disqualified
+  converted
 }
 
-// Frozen 2026-05-11 — Billing Phase A: per-agent subscription add-on
-// Allows individual agents to be sold separately or to stay active
-// even if the tenant-level plan lapses.
-model AgentSubscription {
-  id                   String              @id @default(cuid())
-  tenantId             String
-  agentId              String              // references agent/bot ID
-  tenantSubscriptionId String?             // null if standalone agent purchase
-  tenantSubscription   TenantSubscription? @relation(fields: [tenantSubscriptionId], references: [id])
-  planId               String
-  plan                 Plan                @relation(fields: [planId], references: [id])
-  status               SubscriptionStatus  @default(active)
-  paymentProvider      String              // "stripe" | "razorpay"
-  startedAt            DateTime
-  expiresAt            DateTime
-  gracePeriodDays      Int                 @default(3)
-  suspendedAt          DateTime?
-  cancelledAt          DateTime?
-  reactivatedAt        DateTime?
-  createdAt            DateTime            @default(now())
-  updatedAt            DateTime            @updatedAt
-  events               SubscriptionEvent[]
-
-  @@unique([tenantId, agentId])
-  @@index([tenantId])
-  @@index([agentId])
-  @@index([status])
-  @@index([expiresAt])
-  @@index([tenantId, status])
+enum DealStage {
+  discovery
+  proposal
+  negotiation
+  closed_won
+  closed_lost
 }
 
-// Frozen 2026-05-11 — Billing Phase A: immutable audit trail of all subscription transitions
-// Written on every status change (active→expired, expired→suspended, suspended→active, etc.)
-model SubscriptionEvent {
-  id                   String                 @id @default(cuid())
-  tenantId             String
-  tenantSubscriptionId String?
-  agentSubscriptionId  String?
-  tenantSubscription   TenantSubscription?    @relation(fields: [tenantSubscriptionId], references: [id])
-  agentSubscription    AgentSubscription?     @relation(fields: [agentSubscriptionId], references: [id])
-  fromStatus           SubscriptionStatus?
-  toStatus             SubscriptionStatus
-  actor                SubscriptionEventActor
-  paymentProvider      String?                // set when actor = payment_webhook
-  providerEventId      String?                // Stripe event ID or Razorpay payment ID
-  reason               String?
-  metadata             Json?
-  occurredAt           DateTime               @default(now())
-  createdAt            DateTime               @default(now())
-
-  @@index([tenantId])
-  @@index([tenantSubscriptionId])
-  @@index([agentSubscriptionId])
-  @@index([tenantId, occurredAt])
-}
-
-// Frozen 2026-05-11 — Phase 10D: customer-configured outbound webhooks
-// Fired when task_completed or task_failed events land in the SSE pipeline.
-model OutboundWebhook {
-  id           String    @id @default(cuid())
-  tenantId     String
-  workspaceId  String?
-  url          String
-  secret       String    // HMAC-SHA256 signing secret — customer stores this to verify
-  events       String[]  // e.g. ["task_completed", "task_failed"]
-  enabled      Boolean   @default(true)
-  failureCount Int       @default(0)
-  dlqAt        DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  deletedAt    DateTime?
-  createdBy    String?
-  deliveries   OutboundWebhookDelivery[]
-  dlqEntries   WebhookDlqEntry[]
-
-  @@index([tenantId])
-  @@index([tenantId, enabled])
-  @@index([deletedAt])
-}
-
-// Frozen 2026-05-11 — Phase 10D: delivery log for each outbound webhook fire
-model OutboundWebhookDelivery {
-  id             String          @id @default(cuid())
-  webhookId      String
-  webhook        OutboundWebhook @relation(fields: [webhookId], references: [id])
-  tenantId       String
-  eventType      String
-  payload        Json
-  responseStatus Int?
-  responseBody   String?
-  durationMs     Int?
-  success        Boolean
-  firedAt        DateTime @default(now())
-  createdAt      DateTime @default(now())
-
-  @@index([webhookId])
-  @@index([tenantId])
-  @@index([webhookId, firedAt])
-}
-
-// Phase 10D (extended) — DLQ entries for webhooks that exceeded failure threshold
-model WebhookDlqEntry {
-  id            String    @id @default(cuid())
-  webhookId     String
-  tenantId      String
-  reason        String
-  lastPayload   Json
-  lastEventType String
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  resolvedAt    DateTime?
-  resolvedBy    String?
-  webhook       OutboundWebhook @relation(fields: [webhookId], references: [id])
-
-  @@index([tenantId])
-  @@index([webhookId])
-}
-
-// Phase 12 — Scheduled jobs: cron-based automatic task firing
-model ScheduledJob {
-  id          String    @id @default(cuid())
-  tenantId    String
-  name        String
-  cronExpr    String
-  goal        String
-  agentId     String?
-  enabled     Boolean   @default(true)
-  lastRunAt   DateTime?
-  nextRunAt   DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime?
-  createdBy   String?
-  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  @@index([tenantId])
-  @@index([tenantId, enabled])
-  @@index([deletedAt])
-}
-
-// Phase 13 — Agent Chat: multi-turn conversational sessions with message history
-model ChatSession {
-  id          String        @id @default(cuid())
-  tenantId    String
-  agentId     String?
-  title       String?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  messages    ChatMessage[]
-  tenant      Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  @@index([tenantId])
-}
-
-model ChatMessage {
-  id        String      @id @default(cuid())
-  sessionId String
-  role      String
-  content   String
-  createdAt DateTime    @default(now())
-  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-
-  @@index([sessionId])
-}
-
-// Phase 14 — Bot Versioning: user-facing config snapshots for rollback
-model BotConfigVersion {
-  id                String   @id @default(cuid())
-  botId             String
-  tenantId          String
-  versionNumber     Int
-  role              String
-  status            String
-  roleVersion       String?
-  policyPackVersion String?
-  brainConfig       Json?
-  changeNote        String?
-  createdBy         String
-  createdAt         DateTime @default(now())
-  bot               Bot      @relation(fields: [botId], references: [id], onDelete: Cascade)
-
-  @@unique([botId, versionNumber])
-  @@index([botId])
-  @@index([tenantId])
-}
-
-// Phase 15 — Multi-Agent Orchestration
-model OrchestrationRun {
-  id               String                @id @default(cuid())
-  tenantId         String
-  workspaceId      String
-  coordinatorBotId String
-  goal             String
-  status           String                @default("running")
-  subTaskCount     Int                   @default(0)
-  completedCount   Int                   @default(0)
-  failedCount      Int                   @default(0)
-  result           Json?
-  errorSummary     String?
-  startedAt        DateTime              @default(now())
-  completedAt      DateTime?
-  createdAt        DateTime              @default(now())
-  updatedAt        DateTime              @updatedAt
-  dispatches       AgentDispatchRecord[]
-  tenant           Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  @@index([tenantId])
-  @@index([tenantId, status])
-}
-
-// Phase 16 — Marketplace: durable skill catalog and install tracking
-model MarketplaceListing {
-  id          String               @id @default(cuid())
-  skillId     String               @unique
-  name        String
-  description String?
-  version     String
-  author      String?
-  permissions Json                 @default("[]")
-  source      String?
-  tags        Json                 @default("[]")
-  status      String               @default("active")
-  createdAt   DateTime             @default(now())
-  updatedAt   DateTime             @updatedAt
-  installs    MarketplaceInstall[]
-
-  @@index([status])
-}
-
-model MarketplaceInstall {
-  id                  String             @id @default(cuid())
-  tenantId            String
-  skillId             String
-  listingId           String
-  approvedPermissions Json               @default("[]")
-  pinVersion          Boolean            @default(false)
-  status              String             @default("installed")
-  installedAt         DateTime           @default(now())
-  uninstalledAt       DateTime?
-  createdAt           DateTime           @default(now())
-  updatedAt           DateTime           @updatedAt
-  deletedAt           DateTime?
-  createdBy           String?
-  listing             MarketplaceListing @relation(fields: [listingId], references: [id])
-  tenant              Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  @@unique([tenantId, skillId])
-  @@index([tenantId])
-  @@index([tenantId, status])
-  @@index([deletedAt])
-}
-
-// Phase 21 — A/B Testing: run two BotConfigVersions against incoming tasks
-// and compare outcomes via QualitySignalLog scores.
-model AbTest {
-  id             String             @id @default(cuid())
-  tenantId       String
-  botId          String
-  name           String
-  versionAId     String             // BotConfigVersion id — control
-  versionBId     String             // BotConfigVersion id — challenger
-  trafficSplit   Float              @default(0.5) // 0.0–1.0, fraction routed to B
-  status         String             @default("active") // active | paused | concluded
-  conclusionNote String?
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
-  deletedAt      DateTime?
-  createdBy      String?
-  assignments    AbTestAssignment[]
-
-  @@index([tenantId])
-  @@index([tenantId, botId])
-  @@index([tenantId, status])
-  @@index([deletedAt])
-}
-
-model AbTestAssignment {
-  id        String   @id @default(cuid())
-  abTestId  String
-  abTest    AbTest   @relation(fields: [abTestId], references: [id])
-  tenantId  String
-  taskId    String   @unique // one assignment per task
-  versionId String           // which BotConfigVersion was assigned
-  variant   String           // "A" or "B"
-  createdAt DateTime @default(now())
-
-  @@index([abTestId])
-  @@index([tenantId])
-  @@index([taskId])
-}
-
-// Phase 22 — Per-agent rate limiting: configurable request cap per bot.
-// Enforced at task-dispatch time in the api-gateway runtime-tasks route.
-model AgentRateLimit {
-  id                String   @id @default(cuid())
-  botId             String   @unique   // one config per bot
-  tenantId          String
-  requestsPerMinute Int      @default(60)
-  burstLimit        Int      @default(10) // max concurrent burst
-  enabled           Boolean  @default(true)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-
-  @@index([tenantId])
-}
-
-// Phase 23 — Circuit breaker observability: persists circuit state transitions
-// for dashboards and audit. The in-memory state machine in circuit-breaker.ts
-// is the source of truth; this model is written asynchronously on state change.
-model CircuitBreakerState {
-  id            String    @id @default(cuid())
-  key           String    @unique  // e.g. "webhook:<webhookId>" or "runtime:agent-runtime"
-  tenantId      String
-  state         String    @default("closed")  // closed | open | half-open
-  failureCount  Int       @default(0)
-  lastFailureAt DateTime?
-  openedAt      DateTime?
-  nextRetryAt   DateTime?
-  successCount  Int       @default(0)  // successes accumulated in half-open
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  @@index([tenantId])
-  @@index([tenantId, state])
-}
-
-// Phase 24 — Priority task queue for tenant-scoped task ingestion.
-// Tasks are enqueued with priority (high | normal | low) and drained by the
-// in-process sweep worker in apps/api-gateway/src/lib/task-queue.ts.
-model TaskQueueEntry {
-  id           String    @id @default(cuid())
-  tenantId     String
-  workspaceId  String
-  botId        String?
-  priority     String    @default("normal") // high | normal | low
-  status       String    @default("pending") // pending | running | done | cancelled | failed
-  payload       Json
-  errorMessage  String?
-  parentTaskId  String?
-  dependsOn     String[]
-  dependencyMet Boolean  @default(true)
-  enqueuedAt    DateTime @default(now())
-  createdAt     DateTime @default(now())
-  startedAt     DateTime?
-  completedAt   DateTime?
-  updatedAt     DateTime @updatedAt
-
-  @@index([tenantId])
-  @@index([tenantId, status])
-  @@index([tenantId, priority, enqueuedAt])
-}
-
-// Phase 24 (report digest) — Periodic digest emails for workspace owners.
-// The report sweep in trigger-service finds due reports and sends them.
-model ScheduledReport {
-  id             String    @id @default(cuid())
-  tenantId       String
-  workspaceId    String
-  name           String
-  recipientEmail String
-  frequency      String    @default("weekly") // daily | weekly | monthly
-  reportTypes    String[]  // e.g. ["cost", "performance"]
-  enabled        Boolean   @default(true)
-  lastSentAt     DateTime?
-  nextSendAt     DateTime  @default(now())
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-
-  @@index([tenantId])
-  @@index([tenantId, enabled])
-  @@index([nextSendAt, enabled])
-}
-
-// Phase 26 — Long-lived API keys for programmatic access.
-// Presented as: Authorization: Bearer af_<key>
-// Only the keyHash is stored; the rawKey is returned once at creation.
-model ApiKey {
-  id         String    @id @default(cuid())
-  tenantId   String
-  createdBy  String
-  name       String
-  keyHash    String    @unique
-  keyPrefix  String
-  scopes     String[]
-  role       String    @default("operator")
-  enabled    Boolean   @default(true)
-  expiresAt  DateTime?
-  lastUsedAt DateTime?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  deletedAt  DateTime?
-
-  @@index([tenantId])
-  @@index([keyHash])
-  @@index([tenantId, enabled])
-  @@index([deletedAt])
-}
-
-// Phase 27 — Agent-to-Agent Messaging: structured in-platform message passing between bots.
-model AgentMessage {
-  id           String             @id @default(cuid())
-  fromBotId    String
-  toBotId      String
-  threadId     String?
-  messageType  AgentMessageType
-  subject      String?
-  body         String             @db.Text
-  metadata     Json?
-  status       AgentMessageStatus @default(PENDING)
-  readAt       DateTime?
-  repliedAt    DateTime?
-  replyToId    String?
-  replyTo      AgentMessage?      @relation("MessageReplies", fields: [replyToId], references: [id])
-  replies      AgentMessage[]     @relation("MessageReplies")
-  createdAt    DateTime           @default(now())
-  expiresAt    DateTime?
-  fromBot      Bot                @relation("SentMessages", fields: [fromBotId], references: [id])
-  toBot        Bot                @relation("ReceivedMessages", fields: [toBotId], references: [id])
-
-  @@index([fromBotId])
-  @@index([toBotId])
-  @@index([threadId])
-  @@index([toBotId, status])
-  @@index([createdAt])
-}
-
-enum AgentMessageType {
-  QUESTION
-  ANSWER
-  RESULT
-  STATUS_UPDATE
-  HANDOFF_REQUEST
-  HANDOFF_ACCEPT
-  HANDOFF_REJECT
-  BROADCAST
-}
-
-enum AgentMessageStatus {
-  PENDING
-  DELIVERED
-  READ
-  REPLIED
-  EXPIRED
-}
-
-model TenantPortalAccount {
-  id            String              @id @default(cuid())
-  tenantId      String
-  email         String
-  passwordHash  String
-  displayName   String?
-  role          TenantPortalRole    @default(VIEWER)
-  isActive      Boolean             @default(true)
-  lastLoginAt   DateTime?
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
-
-  tenant        Tenant              @relation(fields: [tenantId], references: [id])
-  sessions      TenantPortalSession[]
-
-  @@unique([tenantId, email])
-  @@index([tenantId])
-}
-
-model TenantPortalSession {
-  id            String              @id @default(cuid())
-  accountId     String
-  tenantId      String
-  token         String              @unique
-  expiresAt     DateTime
-  createdAt     DateTime            @default(now())
-  lastSeenAt    DateTime            @default(now())
-
-  account       TenantPortalAccount @relation(fields: [accountId], references: [id])
-}
-
-enum TenantPortalRole {
-  VIEWER
-  MANAGER
-  ADMIN
-}
-
-// Phase 36 — Inbound Webhooks: durable source registry and event log.
-model WebhookSource {
-  id          String   @id @default(cuid())
-  tenantId    String
-  name        String
-  description String?
-  secret      String
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  events      InboundWebhookEvent[]
-
-  @@index([tenantId])
-}
-
-model InboundWebhookEvent {
-  id         String        @id @default(cuid())
-  sourceId   String
-  source     WebhookSource @relation(fields: [sourceId], references: [id])
-  tenantId   String
-  eventType  String
-  payload    Json
-  receivedAt DateTime      @default(now())
-  processed  Boolean       @default(false)
-
-  @@index([sourceId])
-  @@index([tenantId])
-  @@index([sourceId, processed])
-}
-
-// Phase 37 — Nurture Lead Queue
-enum LeadStatus {
-  NEW
-  NURTURE
-  QUALIFIED
-  DISQUALIFIED
-  CONVERTED
-}
-
-model Lead {
-  id             String       @id @default(cuid())
-  tenantId       String?
-  firstName      String
-  lastName       String
-  email          String
-  company        String
-  message        String?
-  leadSource     String       @default("Web")
-  status         LeadStatus   @default(NEW)
-  nurtureStep    Int          @default(0)
-  lastContactAt  DateTime?
-  nextContactAt  DateTime?
-  qualifiedAt    DateTime?
-  disqualifiedAt DateTime?
-  convertedAt    DateTime?
-  sfLeadId       String?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  sequences      NurtureSequenceEntry[]
-
-  @@index([status])
-  @@index([tenantId])
-  @@index([status, nextContactAt])
-}
-
-model NurtureSequenceEntry {
-  id       String   @id @default(cuid())
-  leadId   String
-  lead     Lead     @relation(fields: [leadId], references: [id])
-  step     Int
-  sentAt   DateTime @default(now())
-  channel  String   @default("email")
-  subject  String
-  body     String
-  opened   Boolean  @default(false)
-  clicked  Boolean  @default(false)
-  bounced  Boolean  @default(false)
-
-  @@index([leadId])
+enum SalesActivityType {
+  email
+  call
+  meeting
+  linkedin_message
+  follow_up
+  demo
+  proposal_sent
 }

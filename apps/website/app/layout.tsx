@@ -1,5 +1,5 @@
 ﻿import type { Metadata } from "next";
-import { Manrope, Sora } from "next/font/google";
+import { Inter, Manrope, Sora } from "next/font/google";
 import "./globals.css";
 import ToastProvider from "@/components/shared/ToastProvider";
 import { ThemeProvider } from "@/components/shared/ThemeProvider";
@@ -9,6 +9,12 @@ import { Analytics } from "@vercel/analytics/react";
 import CartProvider from "@/components/shared/CartProvider";
 import MotionProvider from "@/components/shared/MotionProvider";
 import MarketingShell from "@/components/layout/MarketingShell";
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
 
 const manrope = Manrope({
   subsets: ["latin"],
@@ -58,12 +64,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${manrope.variable} ${sora.variable}`} suppressHydrationWarning>
+    <html lang="en" className={`${inter.variable} ${manrope.variable} ${sora.variable}`} suppressHydrationWarning>
       <head>
-        {/* Prevent dark-mode flash of unstyled content */}
+        {/* Default to dark mode — respect user preference or saved theme */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('agentfarm-theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme:dark)').matches)){document.documentElement.classList.add('dark')}}catch(e){}})()`,
+            __html: `(function(){try{var t=localStorage.getItem('agentfarm-theme');if(t==='light'){return}if(t==='dark'||!t){document.documentElement.classList.add('dark')}}catch(e){document.documentElement.classList.add('dark')}})()`,
           }}
         />
         <script

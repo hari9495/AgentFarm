@@ -1,6 +1,7 @@
 ﻿"use client";
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
 
 const faqs = [
     {
@@ -45,45 +46,70 @@ const faqs = [
     },
 ];
 
+const ease = [0.22, 1, 0.36, 1] as const;
+
 export default function FAQ() {
     const [open, setOpen] = useState<number | null>(null);
 
     return (
-        <section className="py-24 bg-white dark:bg-slate-950 border-t border-slate-100 dark:border-slate-800">
+        <section className="py-24 bg-[var(--surface)] border-t border-[var(--hairline)]" id="faq">
             <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="text-center mb-14">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-sky-600 dark:text-sky-400">
-                        FAQ
-                    </span>
-                    <h2 className="mt-3 text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-slate-100">
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.46, ease }}
+                    className="text-center mb-14"
+                >
+                    <span className="chip chip-accent text-xs mb-4">FAQ</span>
+                    <h2 className="text-[clamp(1.8rem,3.5vw,2.6rem)] font-semibold text-[var(--ink)] tracking-[-0.03em]">
                         Frequently asked questions
                     </h2>
-                    <p className="mt-4 text-lg text-slate-500 dark:text-slate-400">
+                    <p className="mt-4 text-[var(--mute)] leading-relaxed">
                         Clear answers about setup, security, pricing, and day-to-day use.
                     </p>
-                </div>
+                </motion.div>
 
-                <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                <div className="divide-y divide-[var(--hairline)]">
                     {faqs.map((faq, i) => (
-                        <div key={i} className="py-5">
+                        <motion.div
+                            key={i}
+                            initial={{ opacity: 0, y: 12 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true, margin: "-30px" }}
+                            transition={{ duration: 0.38, delay: i * 0.04, ease }}
+                        >
                             <button
                                 onClick={() => setOpen(open === i ? null : i)}
-                                className="w-full flex items-center justify-between text-left gap-4 cursor-pointer"
+                                className="w-full flex items-center justify-between text-left gap-4 py-5 cursor-pointer group"
                             >
-                                <span className="text-base font-medium text-slate-900 dark:text-slate-100">
+                                <span className="text-[15px] font-medium text-[var(--ink)] group-hover:text-[#f4f4f6] transition-colors">
                                     {faq.question}
                                 </span>
-                                <ChevronDown
-                                    className={`w-5 h-5 text-slate-400 shrink-0 transition-transform duration-200 ${open === i ? "rotate-180" : ""
-                                        }`}
-                                />
+                                <motion.div
+                                    animate={{ rotate: open === i ? 180 : 0 }}
+                                    transition={{ duration: 0.22, ease }}
+                                    className="shrink-0"
+                                >
+                                    <ChevronDown className="w-4.5 h-4.5 text-[var(--ash)]" />
+                                </motion.div>
                             </button>
-                            {open === i && (
-                                <p className="mt-3 text-slate-500 dark:text-slate-400 leading-relaxed text-sm pr-8">
-                                    {faq.answer}
-                                </p>
-                            )}
-                        </div>
+                            <AnimatePresence initial={false}>
+                                {open === i && (
+                                    <motion.div
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: "auto", opacity: 1 }}
+                                        exit={{ height: 0, opacity: 0 }}
+                                        transition={{ duration: 0.28, ease }}
+                                        className="overflow-hidden"
+                                    >
+                                        <p className="pb-5 text-sm text-[var(--mute)] leading-relaxed pr-8">
+                                            {faq.answer}
+                                        </p>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </motion.div>
                     ))}
                 </div>
             </div>

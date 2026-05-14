@@ -1,14 +1,12 @@
 "use client";
 
-import { motion, type Variants } from "framer-motion";
+import { motion, type Variants } from "motion/react";
 import {
     Code2, Layout, TestTube2, Target, MessageCircle,
     UserPlus, FileText, TrendingUp, Megaphone, type LucideIcon,
 } from "lucide-react";
 import { marketplaceBots, colorMap, DEPARTMENTS } from "@/lib/bots";
 import ButtonLink from "@/components/shared/ButtonLink";
-import { useCompactMotion } from "@/lib/useCompactMotion";
-import PremiumIcon from "@/components/shared/PremiumIcon";
 
 const FEATURED_SLUGS = [
     "ai-technical-recruiter",
@@ -57,23 +55,18 @@ const cardVariants: Variants = {
 };
 
 export default function RobotTypes() {
-    const compactMotion = useCompactMotion();
-    const motionScale = compactMotion ? 0.78 : 1;
-    const hoverLift = compactMotion ? -2 : -4;
     const featured = FEATURED_SLUGS.map((slug) => marketplaceBots.find((b) => b.slug === slug)!).filter(Boolean);
     const activeDepts = DEPARTMENTS.filter((d) => marketplaceBots.some((b) => b.department === d));
 
     return (
-        <section id="teammates" className="bg-slate-50 dark:bg-slate-900 py-24">
+        <section id="teammates" className="bg-[var(--surface)] py-24">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="max-w-3xl mx-auto text-center mb-16">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-sky-600 dark:text-sky-400">
-                        AI Teammate Marketplace
-                    </span>
-                    <h2 className="mt-3 text-3xl sm:text-4xl font-bold text-slate-900 dark:text-slate-100">
+                    <span className="chip chip-accent">AI Teammate Marketplace</span>
+                    <h2 className="mt-4 text-3xl sm:text-4xl font-semibold tracking-[-0.03em] text-[var(--ink)]">
                         Specialists you can assign real engineering work to
                     </h2>
-                    <p className="mt-4 text-lg text-slate-500 dark:text-slate-400">
+                    <p className="mt-4 text-lg text-[var(--mute)]">
                         {marketplaceBots.length} role-based AI teammates across {activeDepts.length} departments.
                         Clear scope, measurable outcomes, and integration-ready from day one.
                     </p>
@@ -90,53 +83,39 @@ export default function RobotTypes() {
                                 initial="hidden"
                                 whileInView="visible"
                                 viewport={{ once: true, margin: "-40px" }}
-                                variants={{
-                                    hidden: cardVariants.hidden,
-                                    visible: (index: number) => ({
-                                        opacity: 1,
-                                        y: 0,
-                                        transition: {
-                                            delay: index * 0.1 * motionScale,
-                                            duration: 0.46 * motionScale,
-                                            ease: [0.22, 1, 0.36, 1],
-                                        },
-                                    }),
-                                }}
-                                whileHover={{ y: hoverLift, transition: { duration: 0.22 * motionScale } }}
-                                className="group bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden hover:shadow-xl hover:border-sky-200 dark:hover:border-sky-700 transition-all duration-200 flex flex-col cursor-pointer"
+                                variants={cardVariants}
+                                whileHover={{ y: -4, transition: { duration: 0.22 } }}
+                                className="group bg-[var(--surface-card)] rounded-2xl border border-[var(--hairline)] overflow-hidden hover:border-[var(--accent-blue)]/40 transition-all duration-200 flex flex-col cursor-pointer"
                             >
                                 <div className="relative h-36">
                                     <img
                                         src={ROLE_IMAGES[bot.slug] ?? "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1200&q=80"}
                                         alt={`${bot.name} AI teammate`}
-                                        className="w-full h-full object-cover"
+                                        className="w-full h-full object-cover opacity-80"
                                         loading="lazy"
                                     />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/70 via-slate-900/20 to-transparent" />
-                                    <span className="absolute top-3 right-3 flex items-center gap-1.5 text-[10px] font-semibold text-emerald-700 bg-emerald-50/95 px-2.5 py-1 rounded-full">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-[#07080a]/80 via-[#07080a]/20 to-transparent" />
+                                    <span className="absolute top-3 right-3 flex items-center gap-1.5 text-[10px] font-semibold text-[var(--accent-green)] bg-[var(--accent-green)]/10 px-2.5 py-1 rounded-full">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-green)] animate-pulse" />
                                         Ready to deploy
                                     </span>
                                 </div>
 
                                 <div className="p-5 flex-1 flex flex-col">
                                     <div className="mb-3 flex items-center gap-3">
-                                        <PremiumIcon
-                                            icon={Icon}
-                                            tone="sky"
-                                            containerClassName={`w-9 h-9 rounded-xl ${c.bg} ${c.icon}`}
-                                            iconClassName="w-5 h-5"
-                                        />
+                                        <div className={`w-9 h-9 rounded-xl ${c.bg} ${c.icon} flex items-center justify-center shrink-0`}>
+                                            <Icon className="w-5 h-5" />
+                                        </div>
                                         <div>
-                                            <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{bot.department}</p>
-                                            <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm leading-snug">{bot.name}</h3>
+                                            <p className="text-[11px] font-semibold text-[var(--ash)] uppercase tracking-wider">{bot.department}</p>
+                                            <h3 className="font-semibold text-[var(--ink)] text-sm leading-snug">{bot.name}</h3>
                                         </div>
                                     </div>
 
-                                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-3 flex-1">{bot.description}</p>
+                                    <p className="text-xs text-[var(--mute)] leading-relaxed mb-3 flex-1">{bot.description}</p>
 
                                     {bot.useCases[0] && (
-                                        <p className="text-[11px] font-medium text-slate-600 dark:text-slate-300 mb-4">
+                                        <p className="text-[11px] font-medium text-[var(--body-color)] mb-4">
                                             First deliverable: {bot.useCases[0]}
                                         </p>
                                     )}
@@ -145,12 +124,12 @@ export default function RobotTypes() {
                                         {bot.skills.slice(0, 3).map((s) => (
                                             <span
                                                 key={s}
-                                                className="text-xs bg-slate-100 dark:bg-slate-700 group-hover:bg-sky-50 dark:group-hover:bg-sky-900/20 group-hover:text-sky-600 dark:group-hover:text-sky-400 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-md font-medium transition-colors duration-150"
+                                                className="text-xs bg-[var(--surface-el)] text-[var(--mute)] px-2 py-0.5 rounded-md font-medium"
                                             >
                                                 {s}
                                             </span>
                                         ))}
-                                        <span className="text-xs text-slate-400 ml-auto">{bot.price}</span>
+                                        <span className="text-xs text-[var(--ash)] ml-auto">{bot.price}</span>
                                     </div>
                                 </div>
                             </motion.div>

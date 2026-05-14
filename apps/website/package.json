@@ -33,6 +33,7 @@
         "clsx": "^2.1.1",
         "framer-motion": "^12.36.0",
         "lucide-react": "^0.577.0",
+        "motion": "^12.38.0",
         "next": "15.5.18",
         "razorpay": "^2.9.6",
         "react": "^19.0.0",
@@ -43,9 +44,8 @@
         "three": "^0.184.0"
     },
     "devDependencies": {
-        "@opennextjs/cloudflare": "^1.19.6",
         "@cloudflare/workers-types": "^4.20260511.1",
-        "wrangler": "^4.86.0",
+        "@opennextjs/cloudflare": "^1.19.6",
         "@tailwindcss/postcss": "^4",
         "@types/node": "^22",
         "@types/react": "^19",
@@ -55,6 +55,7 @@
         "eslint-config-next": "^15.5.15",
         "tailwindcss": "^4",
         "tsx": "^4.21.0",
-        "typescript": "^5"
+        "typescript": "^5",
+        "wrangler": "^4.86.0"
     }
 }

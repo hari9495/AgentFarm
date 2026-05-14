@@ -25,29 +25,29 @@ const certifications = [
     {
         name: "SOC 2 Type II",
         icon: ShieldCheck,
-        iconBg: "bg-sky-100 dark:bg-sky-900/40",
-        iconColor: "text-sky-600 dark:text-sky-400",
+        iconBg: "bg-[var(--accent-blue)]/10",
+        iconColor: "text-[var(--accent-blue)]",
         description: "Audited annually by an independent third party across Security, Availability, and Confidentiality trust criteria.",
     },
     {
         name: "GDPR",
         icon: Globe,
-        iconBg: "bg-violet-100 dark:bg-violet-900/40",
-        iconColor: "text-violet-600 dark:text-violet-400",
+        iconBg: "bg-violet-500/10",
+        iconColor: "text-violet-400",
         description: "Full compliance with EU data privacy regulations. Data residency options available. DPA available on request.",
     },
     {
         name: "HIPAA Ready",
         icon: FileLock2,
-        iconBg: "bg-rose-100 dark:bg-rose-900/40",
-        iconColor: "text-rose-600 dark:text-rose-400",
+        iconBg: "bg-rose-500/10",
+        iconColor: "text-rose-400",
         description: "BAA available for healthcare customers. PHI handling controls, audit logging, and encryption at rest and in transit.",
     },
     {
         name: "ISO 27001",
         icon: Shield,
-        iconBg: "bg-emerald-100 dark:bg-emerald-900/40",
-        iconColor: "text-emerald-600 dark:text-emerald-400",
+        iconBg: "bg-[var(--accent-green)]/10",
+        iconColor: "text-[var(--accent-green)]",
         description: "Information security management system certified to ISO/IEC 27001:2022 by an accredited certification body.",
     },
 ];
@@ -55,8 +55,8 @@ const certifications = [
 const features = [
     {
         icon: Lock,
-        iconBg: "bg-sky-100 dark:bg-sky-900/40",
-        iconColor: "text-sky-600 dark:text-sky-400",
+        iconBg: "bg-[var(--accent-blue)]/10",
+        iconColor: "text-[var(--accent-blue)]",
         title: "Encryption everywhere",
         items: [
             "TLS 1.3 for all data in transit",
@@ -67,8 +67,8 @@ const features = [
     },
     {
         icon: Server,
-        iconBg: "bg-violet-100 dark:bg-violet-900/40",
-        iconColor: "text-violet-600 dark:text-violet-400",
+        iconBg: "bg-violet-500/10",
+        iconColor: "text-violet-400",
         title: "Isolated agent runtimes",
         items: [
             "Per-agent ephemeral container isolation",
@@ -79,8 +79,8 @@ const features = [
     },
     {
         icon: Eye,
-        iconBg: "bg-amber-100 dark:bg-amber-900/40",
-        iconColor: "text-amber-600 dark:text-amber-400",
+        iconBg: "bg-amber-500/10",
+        iconColor: "text-amber-400",
         title: "Full auditability",
         items: [
             "Immutable, tamper-evident audit log",
@@ -91,8 +91,8 @@ const features = [
     },
     {
         icon: KeyRound,
-        iconBg: "bg-emerald-100 dark:bg-emerald-900/40",
-        iconColor: "text-emerald-600 dark:text-emerald-400",
+        iconBg: "bg-[var(--accent-green)]/10",
+        iconColor: "text-[var(--accent-green)]",
         title: "Identity & access",
         items: [
             "SSO via SAML 2.0 / OIDC (Okta, Azure AD, Google)",
@@ -103,8 +103,8 @@ const features = [
     },
     {
         icon: Zap,
-        iconBg: "bg-rose-100 dark:bg-rose-900/40",
-        iconColor: "text-rose-600 dark:text-rose-400",
+        iconBg: "bg-rose-500/10",
+        iconColor: "text-rose-400",
         title: "Agent action controls",
         items: [
             "Configurable approval gates by risk level",
@@ -115,8 +115,8 @@ const features = [
     },
     {
         icon: RefreshCw,
-        iconBg: "bg-slate-100 dark:bg-slate-800",
-        iconColor: "text-slate-600 dark:text-slate-400",
+        iconBg: "bg-[var(--surface-el)]",
+        iconColor: "text-[var(--body-color)]",
         title: "Reliability & availability",
         items: [
             "99.9% uptime SLA on all paid plans",
@@ -152,26 +152,26 @@ const faqs = [
 
 export default function SecurityPage() {
     return (
-        <div className="site-shell min-h-screen">
+        <div className="min-h-screen">
 
             {/* Hero */}
-            <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-sky-900/60 text-white">
+            <div className="bg-[var(--canvas)] text-[var(--ink)]">
                 <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 text-white/80 text-xs font-semibold mb-6">
+                    <div className="chip chip-accent mb-6">
                         <Shield className="w-3.5 h-3.5" /> Security & Compliance
                     </div>
-                    <h1 className="text-4xl sm:text-5xl font-extrabold mb-6 leading-tight">
+                    <h1 className="text-4xl sm:text-5xl font-semibold tracking-[-0.03em] text-[var(--ink)] mb-6 leading-tight">
                         Built for teams that<br className="hidden sm:block" />
-                        <span className="bg-gradient-to-r from-sky-400 via-blue-400 to-emerald-400 bg-clip-text text-transparent"> can't afford to compromise</span>
+                        <span className="bg-gradient-to-r from-[var(--accent-blue)] to-[var(--accent-green)] bg-clip-text text-transparent"> can't afford to compromise</span>
                     </h1>
-                    <p className="text-lg text-white/70 max-w-2xl mx-auto mb-10">
+                    <p className="text-lg text-[var(--mute)] max-w-2xl mx-auto mb-10">
                         AgentFarm is designed from first principles for security. Isolated runtimes, immutable audit logs, configurable approval gates, and enterprise compliance out of the box.
                     </p>
                     <div className="flex flex-wrap justify-center gap-4">
-                        <Link href="/signup" className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-gradient-to-br from-sky-500 via-blue-600 to-emerald-500 text-white font-semibold text-sm shadow-lg shadow-sky-500/30 hover:brightness-110 transition-all">
+                        <Link href="/signup" className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-[var(--accent-blue)] text-[#07080a] font-semibold text-sm hover:bg-[#8dd7ff] transition-all">
                             Start free trial <ArrowRight className="w-4 h-4" />
                         </Link>
-                        <a href="mailto:security@agentfarm.ai" className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl border border-white/20 text-white/80 font-semibold text-sm hover:bg-white/10 transition-all">
+                        <a href="mailto:security@agentfarm.ai" className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl border border-[var(--hairline)] text-[var(--body-color)] font-semibold text-sm hover:bg-[var(--surface-el)] transition-all">
                             Contact security team
                         </a>
                     </div>
@@ -180,35 +180,35 @@ export default function SecurityPage() {
 
             {/* Certifications */}
             <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-                <p className="text-center text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-10">Certifications & Compliance</p>
+                <p className="text-center text-xs font-bold uppercase tracking-widest text-[var(--ash)] mb-10">Certifications & Compliance</p>
                 <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
                     {certifications.map((cert) => (
-                        <div key={cert.name} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 text-center hover:shadow-md transition-shadow">
+                        <div key={cert.name} className="bg-[var(--surface-card)] rounded-2xl border border-[var(--hairline)] p-6 text-center hover:shadow-md transition-shadow">
                             <div className={`h-12 w-12 rounded-2xl ${cert.iconBg} flex items-center justify-center mx-auto mb-4`}>
                                 <cert.icon className={`w-6 h-6 ${cert.iconColor}`} />
                             </div>
-                            <p className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-2">{cert.name}</p>
-                            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{cert.description}</p>
+                            <p className="text-sm font-semibold text-[var(--ink)] mb-2">{cert.name}</p>
+                            <p className="text-xs text-[var(--mute)] leading-relaxed">{cert.description}</p>
                         </div>
                     ))}
                 </div>
             </div>
 
             {/* Security features */}
-            <div className="bg-slate-50 dark:bg-slate-900/50 border-y border-slate-200 dark:border-slate-800 py-16">
+            <div className="bg-[var(--surface)] border-y border-[var(--hairline)] py-16">
                 <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <p className="text-center text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-3">Security Architecture</p>
-                    <h2 className="text-3xl font-extrabold text-slate-900 dark:text-slate-100 text-center mb-12">Every layer, locked down</h2>
+                    <p className="text-center text-xs font-bold uppercase tracking-widest text-[var(--ash)] mb-3">Security Architecture</p>
+                    <h2 className="text-3xl font-semibold tracking-[-0.03em] text-[var(--ink)] text-center mb-12">Every layer, locked down</h2>
                     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
                         {features.map((feature) => (
-                            <div key={feature.title} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
+                            <div key={feature.title} className="bg-[var(--surface-card)] rounded-2xl border border-[var(--hairline)] p-6">
                                 <div className={`h-10 w-10 rounded-xl ${feature.iconBg} flex items-center justify-center mb-4`}>
                                     <feature.icon className={`w-5 h-5 ${feature.iconColor}`} />
                                 </div>
-                                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-3">{feature.title}</h3>
+                                <h3 className="text-sm font-semibold text-[var(--ink)] mb-3">{feature.title}</h3>
                                 <ul className="space-y-2">
                                     {feature.items.map((item) => (
-                                        <li key={item} className="flex items-start gap-2 text-xs text-slate-600 dark:text-slate-400">
+                                        <li key={item} className="flex items-start gap-2 text-xs text-[var(--body-color)]">
                                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 mt-0.5 shrink-0" />
                                             {item}
                                         </li>
@@ -222,13 +222,13 @@ export default function SecurityPage() {
 
             {/* FAQ */}
             <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-                <p className="text-center text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-3">FAQ</p>
-                <h2 className="text-3xl font-extrabold text-slate-900 dark:text-slate-100 text-center mb-10">Security questions</h2>
+                <p className="text-center text-xs font-bold uppercase tracking-widest text-[var(--ash)] mb-3">FAQ</p>
+                <h2 className="text-3xl font-semibold tracking-[-0.03em] text-[var(--ink)] text-center mb-10">Security questions</h2>
                 <div className="space-y-4">
                     {faqs.map((faq) => (
-                        <div key={faq.q} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
-                            <p className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-2">{faq.q}</p>
-                            <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{faq.a}</p>
+                        <div key={faq.q} className="bg-[var(--surface-card)] rounded-2xl border border-[var(--hairline)] p-6">
+                            <p className="text-sm font-semibold text-[var(--ink)] mb-2">{faq.q}</p>
+                            <p className="text-sm text-[var(--body-color)] leading-relaxed">{faq.a}</p>
                         </div>
                     ))}
                 </div>
@@ -236,23 +236,23 @@ export default function SecurityPage() {
 
             {/* Compliance checklist */}
             <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
+                <div className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface-card)] overflow-hidden">
                     <div className="grid md:grid-cols-2">
                         <div className="p-8">
-                            <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/40 px-3 py-1.5 rounded-full border border-emerald-100 dark:border-emerald-800 mb-4">
+                            <span className="chip chip-accent mb-4">
                                 Compliance checklist
                             </span>
-                            <h2 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 mb-3">Before you deploy AI workers</h2>
-                            <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-6">A practical checklist your security and compliance teams can use to evaluate AI agent deployments — covering data residency, access controls, audit logging, and approval governance.</p>
-                            <a href="/docs/security-checklist" className="inline-flex items-center gap-2 rounded-xl bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 px-5 py-2.5 text-sm font-semibold hover:opacity-90 transition-opacity">
+                            <h2 className="text-2xl font-semibold tracking-[-0.03em] text-[var(--ink)] mb-3">Before you deploy AI workers</h2>
+                            <p className="text-sm text-[var(--mute)] leading-relaxed mb-6">A practical checklist your security and compliance teams can use to evaluate AI agent deployments — covering data residency, access controls, audit logging, and approval governance.</p>
+                            <a href="/docs/security-checklist" className="inline-flex items-center gap-2 rounded-xl bg-[var(--ink)] text-[var(--canvas)] px-5 py-2.5 text-sm font-semibold hover:opacity-90 transition-opacity">
                                 <CheckCircle2 className="w-4 h-4" /> Download checklist (PDF)
                             </a>
                         </div>
-                        <div className="bg-slate-50 dark:bg-slate-800/50 p-8 border-t md:border-t-0 md:border-l border-slate-200 dark:border-slate-800">
-                            <p className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-5">Checklist covers</p>
+                        <div className="bg-[var(--surface-el)] p-8 border-t md:border-t-0 md:border-l border-[var(--hairline)]">
+                            <p className="text-xs font-bold uppercase tracking-wider text-[var(--ash)] mb-5">Checklist covers</p>
                             <ul className="space-y-3">
                                 {["Data residency & sovereignty requirements", "Credential and token isolation per tenant", "Approval gate configuration & policy rules", "Immutable audit log export for compliance evidence", "Role-based access control (RBAC) setup", "SOC 2 / ISO 27001 vendor questionnaire answers", "Incident response contacts and SLA commitments", "GDPR data processing agreement (DPA) request"].map((item) => (
-                                    <li key={item} className="flex items-start gap-2 text-xs text-slate-600 dark:text-slate-300">
+                                    <li key={item} className="flex items-start gap-2 text-xs text-[var(--body-color)]">
                                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 mt-0.5 shrink-0" />
                                         {item}
                                     </li>
@@ -264,17 +264,17 @@ export default function SecurityPage() {
             </div>
 
             {/* CTA */}
-            <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-sky-900/60 py-20 text-center">
-                <Bot className="w-10 h-10 mx-auto mb-4 text-sky-400" />
-                <h2 className="text-3xl font-extrabold text-white mb-4">Security questions? Talk to our team.</h2>
-                <p className="text-white/70 mb-8 max-w-xl mx-auto text-sm">
+            <div className="bg-[var(--surface)] border-t border-[var(--hairline)] py-20 text-center">
+                <Bot className="w-10 h-10 mx-auto mb-4 text-[var(--accent-blue)]" />
+                <h2 className="text-3xl font-semibold tracking-[-0.03em] text-[var(--ink)] mb-4">Security questions? Talk to our team.</h2>
+                <p className="text-[var(--mute)] mb-8 max-w-xl mx-auto text-sm">
                     Our security team is available for pre-sales reviews, vendor questionnaires, and custom compliance requirements.
                 </p>
                 <div className="flex flex-wrap justify-center gap-4">
-                    <a href="mailto:security@agentfarm.ai" className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-gradient-to-br from-sky-500 via-blue-600 to-emerald-500 text-white font-semibold text-sm shadow-lg hover:brightness-110 transition-all">
+                    <a href="mailto:security@agentfarm.ai" className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-[var(--accent-blue)] text-[#07080a] font-semibold text-sm hover:bg-[#8dd7ff] transition-all">
                         Contact security team <ArrowRight className="w-4 h-4" />
                     </a>
-                    <Link href="/signup" className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl border border-white/20 text-white/80 font-semibold text-sm hover:bg-white/10 transition-all">
+                    <Link href="/signup" className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl border border-[var(--hairline)] text-[var(--body-color)] font-semibold text-sm hover:bg-[var(--surface-el)] transition-all">
                         Start free trial
                     </Link>
                 </div>

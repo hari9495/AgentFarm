@@ -1,6 +1,23 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
 import { ROLE_RANK } from '../lib/require-role.js';
+import type { RoleKey } from '@agentfarm/shared-types';
+import { getRoleProfile } from '@agentfarm/agent-runtime/role-profiles.js';
+
+const VALID_ROLE_KEYS: RoleKey[] = [
+    'recruiter',
+    'developer',
+    'fullstack_developer',
+    'tester',
+    'business_analyst',
+    'technical_writer',
+    'content_writer',
+    'sales_rep',
+    'marketing_specialist',
+    'corporate_assistant',
+    'customer_support_executive',
+    'project_manager_product_owner_scrum_master',
+];
 
 const getPrisma = async () => {
     const db = await import('../lib/db.js');
@@ -77,6 +94,14 @@ export const registerAgentsRoutes = async (
             return reply.code(400).send({ error: 'missing_fields', message: 'workspaceId and role are required.' });
         }
 
+        if (!VALID_ROLE_KEYS.includes(role as RoleKey)) {
+            return reply.code(400).send({
+                error: 'invalid_role',
+                message: `role must be one of: ${VALID_ROLE_KEYS.join(', ')}`,
+                provided: role,
+            });
+        }
+
         const db = await resolvePrisma();
 
         // Verify workspace belongs to this tenant
@@ -95,6 +120,22 @@ export const registerAgentsRoutes = async (
 
         const bot = await db.bot.create({
             data: { workspaceId, role },
+        });
+
+        const profile = getRoleProfile(role as RoleKey);
+        await db.botCapabilitySnapshot.create({
+            data: {
+                botId: bot.id,
+                tenantId: session.tenantId,
+                workspaceId,
+                roleKey: role,
+                roleVersion: '1.0.0',
+                policyPackVersion: '1.0.0',
+                allowedConnectorTools: profile.allowedConnectorTools,
+                allowedActions: profile.allowedActions,
+                brainConfig: {},
+                frozenAt: new Date(),
+            },
         });
 
         return reply.code(201).send({ bot });

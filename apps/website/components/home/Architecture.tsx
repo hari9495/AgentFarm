@@ -1,21 +1,21 @@
-﻿"use client";
+"use client";
 
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { Monitor, Cpu, Bot, GitBranch, ArrowDown, Lock, ShieldCheck, Database } from "lucide-react";
-import PremiumIcon from "@/components/shared/PremiumIcon";
+
 
 export default function Architecture() {
     return (
-        <section className="bg-white dark:bg-slate-950 py-24 border-t border-slate-100 dark:border-slate-800">
+        <section className="bg-[var(--canvas)] py-24 border-t border-[var(--hairline)]">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="max-w-2xl mx-auto text-center mb-16">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-blue-600">
+                    <span className="chip chip-accent">
                         Architecture
                     </span>
-                    <h2 className="mt-3 text-3xl sm:text-4xl font-bold text-slate-900 dark:text-slate-100">
+                    <h2 className="mt-4 text-3xl sm:text-4xl font-semibold tracking-[-0.03em] text-[var(--ink)]">
                         Built for security and scale
                     </h2>
-                    <p className="mt-4 text-lg text-slate-500 dark:text-slate-400">
+                    <p className="mt-4 text-lg text-[var(--mute)]">
                         Every Developer Agent runs in a dedicated, tenant-isolated Azure VM with
                         approval gates, role-based access control, and a full audit trail on every action.
                     </p>
@@ -25,7 +25,7 @@ export default function Architecture() {
 
                     {/* LEFT: Inputs */}
                     <div className="flex flex-col gap-4">
-                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Your Stack</p>
+                        <p className="text-xs font-semibold uppercase tracking-wider text-[var(--ash)] mb-1">Your Stack</p>
                         {[
                             { icon: Monitor, label: "AgentFarm Dashboard", sub: "Assign tasks, review PRs", color: "bg-blue-600" },
                             { icon: GitBranch, label: "GitHub / GitLab", sub: "Source control & PRs", color: "bg-slate-700" },
@@ -37,12 +37,12 @@ export default function Architecture() {
                                 whileInView={{ opacity: 1, x: 0 }}
                                 viewport={{ once: true }}
                                 transition={{ delay: i * 0.1 }}
-                                className="flex items-center gap-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow"
+                                className="flex items-center gap-3 bg-[var(--surface-card)] border border-[var(--hairline)] rounded-xl p-4 hover:border-[var(--accent-blue)]/30 transition-colors"
                             >
-                                <PremiumIcon icon={Icon} tone="sky" containerClassName={`w-9 h-9 rounded-lg ${color} text-white shrink-0 border-white/20`} iconClassName="w-4 h-4" />
+                                <div className={`w-9 h-9 rounded-lg ${color} flex items-center justify-center shrink-0`}><Icon className="w-4 h-4 text-white" /></div>
                                 <div>
-                                    <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{label}</p>
-                                    <p className="text-xs text-slate-400">{sub}</p>
+                                    <p className="text-sm font-semibold text-[var(--ink)]">{label}</p>
+                                    <p className="text-xs text-[var(--ash)]">{sub}</p>
                                 </div>
                             </motion.div>
                         ))}
@@ -50,7 +50,7 @@ export default function Architecture() {
 
                     {/* CENTER: Control Plane */}
                     <div className="flex flex-col items-center">
-                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">AI Control Plane</p>
+                        <p className="text-xs font-semibold uppercase tracking-wider text-[var(--ash)] mb-1">AI Control Plane</p>
                         <motion.div
                             initial={{ opacity: 0, scale: 0.9 }}
                             whileInView={{ opacity: 1, scale: 1 }}
@@ -74,7 +74,7 @@ export default function Architecture() {
                                 {/* Worker avatars */}
                                 <div className="grid grid-cols-2 gap-2">
                                     {["ai-backend-developer", "ai-qa-engineer", "ai-devops-engineer", "ai-security-engineer"].map((slug) => (
-                                        <div key={slug} className="flex items-center gap-2 bg-slate-700/50 rounded-lg p-2">
+                                        <div key={slug} className="flex items-center gap-2 bg-[var(--surface-el)] rounded-lg p-2">
                                             <img
                                                 src={`https://api.dicebear.com/7.x/bottts/svg?seed=${slug}&backgroundColor=b6e3f4,c0aede&radius=6`}
                                                 alt={slug}
@@ -85,10 +85,10 @@ export default function Architecture() {
                                         </div>
                                     ))}
                                 </div>
-                                <div className="h-px bg-slate-700" />
+                                <div className="h-px bg-[var(--hairline)]" />
                                 <div className="flex items-center gap-2">
-                                    <Lock className="w-3.5 h-3.5 text-slate-400" />
-                                    <span className="text-[10px] text-slate-400">Sandboxed Â· Encrypted Â· Audited</span>
+                                    <Lock className="w-3.5 h-3.5 text-[var(--ash)]" />
+                                    <span className="text-[10px] text-[var(--ash)]">Sandboxed · Encrypted · Audited</span>
                                 </div>
                             </div>
                         </motion.div>
@@ -96,7 +96,7 @@ export default function Architecture() {
 
                     {/* RIGHT: Outputs */}
                     <div className="flex flex-col gap-4">
-                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">AI Workers Output</p>
+                        <p className="text-xs font-semibold uppercase tracking-wider text-[var(--ash)] mb-1">AI Workers Output</p>
                         {[
                             { icon: Bot, label: "Code & Pull Requests", sub: "Reviewed and ready to merge", color: "bg-emerald-600" },
                             { icon: ShieldCheck, label: "Security Reports", sub: "Zero-trust audit trail", color: "bg-purple-600" },
@@ -108,12 +108,12 @@ export default function Architecture() {
                                 whileInView={{ opacity: 1, x: 0 }}
                                 viewport={{ once: true }}
                                 transition={{ delay: i * 0.1 }}
-                                className="flex items-center gap-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow"
+                                className="flex items-center gap-3 bg-[var(--surface-card)] border border-[var(--hairline)] rounded-xl p-4 hover:border-[var(--accent-blue)]/30 transition-colors"
                             >
-                                <PremiumIcon icon={Icon} tone="sky" containerClassName={`w-9 h-9 rounded-lg ${color} text-white shrink-0 border-white/20`} iconClassName="w-4 h-4" />
+                                <div className={`w-9 h-9 rounded-lg ${color} flex items-center justify-center shrink-0`}><Icon className="w-4 h-4 text-white" /></div>
                                 <div>
-                                    <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{label}</p>
-                                    <p className="text-xs text-slate-400">{sub}</p>
+                                    <p className="text-sm font-semibold text-[var(--ink)]">{label}</p>
+                                    <p className="text-xs text-[var(--ash)]">{sub}</p>
                                 </div>
                             </motion.div>
                         ))}
@@ -127,9 +127,9 @@ export default function Architecture() {
                         { label: "Zero Trust", desc: "Least-privilege by default" },
                         { label: "Encrypted at Rest", desc: "AES-256 for all stored data" },
                     ].map((item) => (
-                        <div key={item.label} className="bg-slate-50 dark:bg-slate-800/50 rounded-xl px-5 py-4 border border-slate-200 dark:border-slate-700">
-                            <p className="font-semibold text-slate-900 dark:text-slate-100 text-sm">{item.label}</p>
-                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{item.desc}</p>
+                        <div key={item.label} className="bg-[var(--surface-card)] rounded-xl px-5 py-4 border border-[var(--hairline)]">
+                            <p className="font-semibold text-[var(--ink)] text-sm">{item.label}</p>
+                            <p className="text-xs text-[var(--mute)] mt-1">{item.desc}</p>
                         </div>
                     ))}
                 </div>
@@ -137,4 +137,6 @@ export default function Architecture() {
         </section>
     );
 }
+
+
 

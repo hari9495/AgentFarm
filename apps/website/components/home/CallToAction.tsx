@@ -1,48 +1,39 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { CheckCircle2, GitPullRequest, Shield, Zap } from "lucide-react";
 import WaitlistForm from "@/components/shared/WaitlistForm";
 
 const liveMetrics = [
-    { icon: GitPullRequest, label: "46 PRs merged this week", color: "text-violet-400" },
-    { icon: CheckCircle2, label: "184 tasks shipped", color: "text-emerald-400" },
-    { icon: Shield, label: "100% audit-covered", color: "text-sky-400" },
+    { icon: GitPullRequest, label: "46 PRs merged this week", color: "#59d499" },
+    { icon: CheckCircle2, label: "184 tasks shipped", color: "#57c1ff" },
+    { icon: Shield, label: "100% audit-covered", color: "#ffc533" },
 ];
 
 export default function CallToAction() {
     return (
-        <section id="waitlist" className="relative py-24 overflow-hidden bg-slate-950">
+        <section id="waitlist" className="relative py-28 overflow-hidden bg-[var(--canvas)]">
 
-            {/* Gradient mesh */}
+            {/* Very subtle radial glow */}
             <div className="absolute inset-0 pointer-events-none">
-                <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_10%_20%,rgba(14,165,233,0.18)_0%,transparent_60%)]" />
-                <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_60%_at_90%_80%,rgba(16,185,129,0.14)_0%,transparent_60%)]" />
-                <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_40%_at_50%_50%,rgba(99,102,241,0.08)_0%,transparent_70%)]" />
-                <div
-                    className="absolute inset-0 opacity-[0.04]"
-                    style={{
-                        backgroundImage: "radial-gradient(circle, rgba(255,255,255,1) 1px, transparent 1px)",
-                        backgroundSize: "28px 28px",
-                    }}
-                />
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_50%_at_50%_0%,rgba(87,193,255,0.06)_0%,transparent_70%)]" />
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_40%_at_10%_80%,rgba(89,212,153,0.04)_0%,transparent_70%)]" />
             </div>
 
-            {/* Animated orbs */}
-            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-sky-600/20 rounded-full blur-3xl animate-pulse" style={{ animationDuration: "4s" }} />
-            <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-emerald-600/15 rounded-full blur-3xl animate-pulse" style={{ animationDuration: "6s", animationDelay: "2s" }} />
+            {/* Red accent stripe at top */}
+            <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-[#ff5757]/40 to-transparent" />
 
-            <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <div className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
 
-                {/* Product badge */}
+                {/* Badge */}
                 <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    transition={{ duration: 0.4 }}
-                    className="inline-flex items-center gap-2 rounded-full border border-sky-500/30 bg-sky-500/10 px-4 py-1.5 text-xs font-bold text-sky-400 mb-8"
+                    transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                    className="chip chip-accent inline-flex mb-8 text-xs"
                 >
-                    <Zap className="w-3.5 h-3.5" />
+                    <Zap className="w-3 h-3 mr-1" />
                     Deploy your first AI teammate in under 10 minutes
                 </motion.div>
 
@@ -50,12 +41,12 @@ export default function CallToAction() {
                     initial={{ opacity: 0, y: 16 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    transition={{ duration: 0.45, delay: 0.05 }}
-                    className="text-4xl sm:text-5xl font-extrabold text-white leading-tight tracking-tight"
+                    transition={{ duration: 0.48, delay: 0.06, ease: [0.22, 1, 0.36, 1] }}
+                    className="text-[clamp(2rem,4.5vw,3.2rem)] font-semibold text-[#f4f4f6] leading-[1.08] tracking-tight"
                 >
                     Build a high-output engineering team
                     <br className="hidden sm:block" />
-                    <span className="bg-gradient-to-r from-sky-400 to-emerald-400 bg-clip-text text-transparent">
+                    <span className="bg-gradient-to-r from-[#ff5757] via-[#ff8c42] to-[#ff6161] bg-clip-text text-transparent">
                         with clear AI role ownership
                     </span>
                 </motion.h2>
@@ -64,8 +55,8 @@ export default function CallToAction() {
                     initial={{ opacity: 0, y: 12 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    transition={{ duration: 0.45, delay: 0.1 }}
-                    className="mt-5 text-lg text-slate-400 max-w-xl mx-auto leading-relaxed"
+                    transition={{ duration: 0.44, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
+                    className="mt-5 text-[#9c9c9d] max-w-xl mx-auto leading-relaxed"
                 >
                     Start with the roles you need today, connect GitHub and Jira in minutes,
                     and scale only when you see measurable shipping outcomes.
@@ -73,15 +64,15 @@ export default function CallToAction() {
 
                 {/* Live activity strip */}
                 <motion.div
-                    initial={{ opacity: 0, y: 10 }}
+                    initial={{ opacity: 0, y: 8 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    transition={{ duration: 0.4, delay: 0.15 }}
+                    transition={{ duration: 0.4, delay: 0.16 }}
                     className="mt-8 inline-flex flex-wrap items-center justify-center gap-5"
                 >
                     {liveMetrics.map(({ icon: Icon, label, color }) => (
-                        <div key={label} className="flex items-center gap-2 text-sm font-medium text-slate-400">
-                            <Icon className={`w-4 h-4 ${color}`} />
+                        <div key={label} className="flex items-center gap-2 text-sm text-[#9c9c9d]">
+                            <Icon className="w-4 h-4 shrink-0" style={{ color }} />
                             {label}
                         </div>
                     ))}
@@ -92,36 +83,36 @@ export default function CallToAction() {
                     initial={{ opacity: 0, y: 16 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    transition={{ duration: 0.45, delay: 0.2 }}
+                    transition={{ duration: 0.44, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
                     className="mt-10 max-w-md mx-auto"
                 >
                     <WaitlistForm />
                 </motion.div>
 
-                <p className="mt-4 text-xs text-slate-500">
+                <p className="mt-4 text-xs text-[#6a6b6c]">
                     No spam. No credit card required. Unsubscribe anytime.
                 </p>
 
                 {/* Trust bar */}
-                <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+                <div className="mt-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
                     {[
-                        { icon: <Shield className="w-3.5 h-3.5" />, label: "SOC 2 Ready" },
+                        { label: "SOC 2 Ready" },
                         { label: "Tenant-isolated Azure runtime" },
                         { label: "14-day free trial" },
-                        { icon: <CheckCircle2 className="w-3.5 h-3.5" />, label: "Full audit trail" },
-                    ].map(({ icon, label }) => (
-                        <span key={label} className="flex items-center gap-1.5 text-xs text-slate-500">
-                            {icon}
+                        { label: "Full audit trail" },
+                    ].map(({ label }) => (
+                        <span key={label} className="flex items-center gap-1.5 text-xs text-[#6a6b6c]">
+                            <span className="w-1 h-1 rounded-full bg-[#242728]" />
                             {label}
                         </span>
                     ))}
                 </div>
 
-                <p className="mt-6 text-sm text-slate-500">
+                <p className="mt-6 text-sm text-[#6a6b6c]">
                     Need full onboarding support?{" "}
                     <a
                         href="/get-started"
-                        className="text-sky-400 hover:text-sky-300 font-semibold transition-colors"
+                        className="text-[#57c1ff] hover:text-[#8dd7ff] font-medium transition-colors"
                     >
                         Apply for early access →
                     </a>

@@ -1,7 +1,7 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import { Code2, TestTube2, Server, Rocket, Users, ShieldCheck, CheckCircle2 } from "lucide-react";
 import ButtonLink from "@/components/shared/ButtonLink";
-import PremiumIcon from "@/components/shared/PremiumIcon";
+
 
 export const metadata: Metadata = {
   title: "Use Cases — AgentFarm",
@@ -102,18 +102,18 @@ const cases = [
 ];
 
 const colorMap: Record<string, { bg: string; icon: string; badge: string }> = {
-  blue: { bg: "bg-blue-50", icon: "text-blue-600", badge: "bg-blue-100 text-blue-700" },
-  green: { bg: "bg-green-50", icon: "text-green-600", badge: "bg-green-100 text-green-700" },
-  purple: { bg: "bg-purple-50", icon: "text-purple-600", badge: "bg-purple-100 text-purple-700" },
-  orange: { bg: "bg-orange-50", icon: "text-orange-600", badge: "bg-orange-100 text-orange-700" },
-  pink: { bg: "bg-pink-50", icon: "text-pink-600", badge: "bg-pink-100 text-pink-700" },
-  teal: { bg: "bg-teal-50", icon: "text-teal-600", badge: "bg-teal-100 text-teal-700" },
-  red: { bg: "bg-red-50", icon: "text-red-600", badge: "bg-red-100 text-red-700" },
+  blue: { bg: "bg-[var(--accent-blue)]/10", icon: "text-[var(--accent-blue)]", badge: "bg-[var(--accent-blue)]/10 text-[var(--accent-blue)]" },
+  green: { bg: "bg-[var(--accent-green)]/10", icon: "text-[var(--accent-green)]", badge: "bg-[var(--accent-green)]/10 text-[var(--accent-green)]" },
+  purple: { bg: "bg-purple-500/10", icon: "text-purple-400", badge: "bg-purple-500/10 text-purple-400" },
+  orange: { bg: "bg-orange-500/10", icon: "text-orange-400", badge: "bg-orange-500/10 text-orange-400" },
+  pink: { bg: "bg-pink-500/10", icon: "text-pink-400", badge: "bg-pink-500/10 text-pink-400" },
+  teal: { bg: "bg-teal-500/10", icon: "text-teal-400", badge: "bg-teal-500/10 text-teal-400" },
+  red: { bg: "bg-red-500/10", icon: "text-red-400", badge: "bg-red-500/10 text-red-400" },
 };
 
 export default function UseCasesPage() {
   return (
-    <div className="site-shell">
+    <div>
       {/* Hero with real photo */}
       <section className="relative overflow-hidden">
         <img
@@ -122,20 +122,20 @@ export default function UseCasesPage() {
           className="w-full h-[400px] sm:h-[480px] object-cover"
           loading="eager"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-orange-900/85 via-slate-900/70 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#07080a]/85 via-[#07080a]/70 to-transparent" />
         <div className="absolute inset-0 flex items-center">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
             <div className="max-w-2xl">
-              <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-orange-300 bg-white/10 backdrop-blur border border-white/20 px-3 py-1.5 rounded-full mb-5">
+              <span className="chip chip-accent mb-5">
                 Use Cases
               </span>
-              <h1 className="mt-3 text-4xl sm:text-6xl font-extrabold text-white tracking-tight">
+              <h1 className="mt-3 text-4xl sm:text-6xl font-semibold text-[var(--ink)] tracking-[-0.03em]">
                 Built for{" "}
-                <span className="bg-gradient-to-r from-orange-300 via-red-300 to-pink-300 bg-clip-text text-transparent">
+                <span className="bg-gradient-to-r from-[var(--accent-red)] via-[#ff6161] to-pink-400 bg-clip-text text-transparent">
                   engineering teams
                 </span>
               </h1>
-              <p className="mt-5 text-xl text-slate-300 max-w-2xl leading-relaxed">
+              <p className="mt-5 text-xl text-[var(--mute)] max-w-2xl leading-relaxed">
                 From solo founders to 100-person engineering orgs — see how AgentFarm's Developer Agent ships real work with approval gates and a full audit trail.
               </p>
             </div>
@@ -152,7 +152,7 @@ export default function UseCasesPage() {
               return (
                 <div
                   key={headline}
-                  className="border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all bg-white dark:bg-slate-900"
+                  className="border border-[var(--hairline)] rounded-2xl overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all bg-[var(--surface-card)]"
                 >
                   {/* Cover image */}
                   <div className="relative h-44 overflow-hidden">
@@ -164,25 +164,22 @@ export default function UseCasesPage() {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                     <div className="absolute bottom-3 left-4 flex items-center gap-2">
-                      <PremiumIcon
-                        icon={Icon}
-                        tone="cyan"
-                        containerClassName={`w-9 h-9 rounded-xl ${c.bg} ${c.icon}`}
-                        iconClassName="w-5 h-5"
-                      />
+                      <div className={`w-9 h-9 rounded-xl ${c.bg} flex items-center justify-center`}>
+                        <Icon className={`w-5 h-5 ${c.icon}`} />
+                      </div>
                       <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${c.badge}`}>
                         {audience}
                       </span>
                     </div>
                   </div>
                   <div className="p-6">
-                    <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-3">{headline}</h2>
-                    <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-5">{story}</p>
+                    <h2 className="text-xl font-semibold text-[var(--ink)] mb-3">{headline}</h2>
+                    <p className="text-[var(--mute)] text-sm leading-relaxed mb-5">{story}</p>
                     <div className="grid grid-cols-2 gap-2">
                       {results.map((r) => (
                         <div key={r} className="flex items-start gap-1.5">
                           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                          <p className="text-xs text-slate-600 dark:text-slate-300">{r}</p>
+                          <p className="text-xs text-[var(--body-color)]">{r}</p>
                         </div>
                       ))}
                     </div>
@@ -195,12 +192,12 @@ export default function UseCasesPage() {
       </section>
 
       {/* ROI Calculator */}
-      <section className="py-16 bg-slate-50 dark:bg-slate-900/50 border-y border-slate-100 dark:border-slate-800">
+      <section className="py-16 bg-[var(--surface)] border-y border-[var(--hairline)]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-8">
-            <p className="text-xs font-semibold uppercase tracking-widest text-blue-600 dark:text-blue-400 mb-2">ROI estimate</p>
-            <h2 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100">How much could your team save?</h2>
-            <p className="text-slate-500 dark:text-slate-400 text-sm mt-2 max-w-lg mx-auto">Based on median outcomes across AgentFarm customers. Actual results vary by workflow.</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-[var(--accent-blue)] mb-2">ROI estimate</p>
+            <h2 className="text-2xl font-semibold tracking-[-0.03em] text-[var(--ink)]">How much could your team save?</h2>
+            <p className="text-[var(--mute)] text-sm mt-2 max-w-lg mx-auto">Based on median outcomes across AgentFarm customers. Actual results vary by workflow.</p>
           </div>
           <div className="grid sm:grid-cols-3 gap-4">
             {[
@@ -208,15 +205,15 @@ export default function UseCasesPage() {
               { tier: "Startup / 5–20 engineers", hours: "60–100 hrs/wk", cost: "$96k–$160k/yr", note: "Equivalent to 1.5–2.5 full-time engineers" },
               { tier: "Scale-up / 25–100 engineers", hours: "200–350 hrs/wk", cost: "$320k–$560k/yr", note: "Equivalent to 5–9 full-time engineers" },
             ].map(({ tier, hours, cost, note }) => (
-              <div key={tier} className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5">
-                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-3">{tier}</p>
-                <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 leading-none">{hours}</p>
-                <p className="text-xs text-blue-600 dark:text-blue-400 font-semibold mt-1">{cost} saved</p>
-                <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 leading-snug">{note}</p>
+              <div key={tier} className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface-card)] p-5">
+                <p className="text-xs font-semibold text-[var(--mute)] mb-3">{tier}</p>
+                <p className="text-2xl font-semibold tracking-[-0.03em] text-[var(--ink)] leading-none">{hours}</p>
+                <p className="text-xs text-[var(--accent-blue)] font-semibold mt-1">{cost} saved</p>
+                <p className="text-xs text-[var(--ash)] mt-2 leading-snug">{note}</p>
               </div>
             ))}
           </div>
-          <p className="text-center text-[11px] text-slate-400 dark:text-slate-500 mt-5">Estimate based on $80/hr blended engineering cost and median AgentFarm task automation rates.</p>
+          <p className="text-center text-[11px] text-[var(--ash)] mt-5">Estimate based on $80/hr blended engineering cost and median AgentFarm task automation rates.</p>
         </div>
       </section>
 

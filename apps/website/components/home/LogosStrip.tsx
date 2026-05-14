@@ -1,43 +1,54 @@
 "use client";
 
-const logos = [
-    { name: "Vercel", color: "bg-slate-900 text-white", initials: "▲" },
-    { name: "Stripe", color: "bg-indigo-100 text-indigo-700", initials: "S" },
-    { name: "Linear", color: "bg-violet-100 text-violet-700", initials: "LN" },
-    { name: "Loom", color: "bg-purple-100 text-purple-700", initials: "L" },
-    { name: "Retool", color: "bg-blue-100 text-blue-700", initials: "RT" },
-    { name: "Grafana", color: "bg-orange-100 text-orange-700", initials: "GF" },
-    { name: "Render", color: "bg-emerald-100 text-emerald-700", initials: "R" },
-    { name: "Supabase", color: "bg-teal-100 text-teal-700", initials: "SB" },
-    { name: "Planetscale", color: "bg-sky-100 text-sky-700", initials: "PS" },
-    { name: "Fly.io", color: "bg-rose-100 text-rose-700", initials: "FY" },
-];
+import { motion } from "motion/react";
 
-// Duplicate for seamless loop
-const allLogos = [...logos, ...logos];
+const logos = [
+    { name: "GitHub", initials: "GH", color: "#f4f4f6" },
+    { name: "Jira", initials: "JR", color: "#57c1ff" },
+    { name: "Microsoft Teams", initials: "MT", color: "#57c1ff" },
+    { name: "Azure", initials: "AZ", color: "#57c1ff" },
+    { name: "Slack", initials: "SL", color: "#59d499" },
+    { name: "Vercel", initials: "▲", color: "#f4f4f6" },
+    { name: "Linear", initials: "LN", color: "#9c9c9d" },
+    { name: "Notion", initials: "N", color: "#f4f4f6" },
+    { name: "Figma", initials: "FG", color: "#ff6161" },
+    { name: "Datadog", initials: "DD", color: "#ffc533" },
+    { name: "PagerDuty", initials: "PD", color: "#ff6161" },
+    { name: "Confluence", initials: "CF", color: "#57c1ff" },
+];
 
 export default function LogosStrip() {
     return (
-        <section className="bg-slate-50 dark:bg-slate-900 border-y border-slate-200 dark:border-slate-800 py-10 overflow-hidden">
-            <p className="text-center text-xs font-semibold uppercase tracking-widest text-slate-400 mb-8">
-                Trusted by engineering teams at fast-growing companies
-            </p>
-            <div className="relative">
-                <div className="absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-slate-50 dark:from-slate-900 to-transparent z-10 pointer-events-none" />
-                <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-slate-50 dark:from-slate-900 to-transparent z-10 pointer-events-none" />
+        <section className="bg-[#0d0d0d] border-y border-[#242728] py-10 overflow-hidden">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6 text-center">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#6a6b6c]">
+                    Connects with the tools your team already uses
+                </p>
+            </div>
 
-                <div className="flex animate-marquee w-max gap-6">
-                    {allLogos.map((logo, i) => (
-                        <div
+            {/* Marquee wrapper with gradient fade edges */}
+            <div className="relative">
+                <div className="pointer-events-none absolute inset-y-0 left-0 w-24 z-10 bg-gradient-to-r from-[#0d0d0d] to-transparent" />
+                <div className="pointer-events-none absolute inset-y-0 right-0 w-24 z-10 bg-gradient-to-l from-[#0d0d0d] to-transparent" />
+
+                <div className="flex animate-marquee gap-4 w-max">
+                    {[...logos, ...logos].map((logo, i) => (
+                        <motion.div
                             key={`${logo.name}-${i}`}
-                            className="flex items-center gap-2.5 shrink-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 shadow-sm hover:shadow-md transition-shadow cursor-default"
-                            title={logo.name}
+                            whileHover={{ scale: 1.06, y: -2 }}
+                            transition={{ duration: 0.18 }}
+                            className="flex items-center gap-2.5 bg-[#121212] border border-[#242728] rounded-xl px-5 py-3 shrink-0 cursor-default"
                         >
-                            <div className={`w-8 h-8 rounded-lg ${logo.color} flex items-center justify-center text-xs font-bold shrink-0`}>
+                            <span
+                                className="text-sm font-bold leading-none"
+                                style={{ color: logo.color }}
+                            >
                                 {logo.initials}
-                            </div>
-                            <span className="text-sm font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">{logo.name}</span>
-                        </div>
+                            </span>
+                            <span className="text-[13px] font-medium text-[#9c9c9d] whitespace-nowrap">
+                                {logo.name}
+                            </span>
+                        </motion.div>
                     ))}
                 </div>
             </div>

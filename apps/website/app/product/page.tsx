@@ -1,12 +1,12 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import { Code2, Layout, TestTube2, Server, Zap, Shield, Activity, GitBranch, Sparkles, CheckCircle2 } from "lucide-react";
 import ButtonLink from "@/components/shared/ButtonLink";
-import PremiumIcon from "@/components/shared/PremiumIcon";
+
 import ProductSceneSection from "@/components/product/ProductSceneSection";
 import ProductDemoVideo from "@/components/product/ProductDemoVideo";
 
 export const metadata: Metadata = {
-    title: "Product — AgentFarm",
+    title: "Product � AgentFarm",
     description: "Explore AgentFarm's AI teammate capabilities, integrations, and trust controls.",
 };
 
@@ -14,9 +14,9 @@ const features = [
     {
         icon: Code2,
         gradient: "from-blue-500 to-blue-600",
-        title: "Developer Agent — End-to-End Execution",
+        title: "Developer Agent � End-to-End Execution",
         description:
-            "The Developer Agent implements features, creates branches, opens PRs with full codebase context, and responds to review comments — no human needed for the first pass.",
+            "The Developer Agent implements features, creates branches, opens PRs with full codebase context, and responds to review comments � no human needed for the first pass.",
         image: "https://images.unsplash.com/photo-1518773553398-650c184e0bb3?auto=format&fit=crop&w=800&q=80",
     },
     {
@@ -32,7 +32,7 @@ const features = [
         gradient: "from-red-500 to-red-600",
         title: "Risk-Classified Approval Gates",
         description:
-            "Every action is classified as LOW, MEDIUM, or HIGH risk before execution. Low-risk actions auto-execute. Risky changes pause and request human approval via Teams or email — nothing ships without sign-off.",
+            "Every action is classified as LOW, MEDIUM, or HIGH risk before execution. Low-risk actions auto-execute. Risky changes pause and request human approval via Teams or email � nothing ships without sign-off.",
         image: "https://images.unsplash.com/photo-1555949963-ff9fe0c870eb?auto=format&fit=crop&w=800&q=80",
     },
     {
@@ -40,7 +40,7 @@ const features = [
         gradient: "from-orange-500 to-orange-600",
         title: "Tenant-Isolated Azure Runtime",
         description:
-            "Each customer gets a dedicated Azure VM. Your code, tokens, and execution environment are never shared with other tenants — zero cross-customer exposure.",
+            "Each customer gets a dedicated Azure VM. Your code, tokens, and execution environment are never shared with other tenants � zero cross-customer exposure.",
         image: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=800&q=80",
     },
     {
@@ -48,7 +48,7 @@ const features = [
         gradient: "from-green-500 to-green-600",
         title: "CI Checks + Test Failure Fixes",
         description:
-            "Agent runs CI checks after every PR, identifies test failures, diagnoses root cause, and pushes a targeted fix — all without human intervention for routine failures.",
+            "Agent runs CI checks after every PR, identifies test failures, diagnoses root cause, and pushes a targeted fix � all without human intervention for routine failures.",
         image: "https://images.unsplash.com/photo-1516116216624-53e697fedbea?auto=format&fit=crop&w=800&q=80",
     },
     {
@@ -64,7 +64,7 @@ const features = [
         gradient: "from-slate-600 to-slate-700",
         title: "Native GitHub & Jira Integration",
         description:
-            "Branch creation, PR authoring, code review comments, CI triggers, and Jira ticket transitions — all driven natively by the agent via OAuth with least-privilege scopes.",
+            "Branch creation, PR authoring, code review comments, CI triggers, and Jira ticket transitions � all driven natively by the agent via OAuth with least-privilege scopes.",
         image: "https://images.unsplash.com/photo-1556075798-4825dfaaf498?auto=format&fit=crop&w=800&q=80",
     },
     {
@@ -72,14 +72,14 @@ const features = [
         gradient: "from-pink-500 to-pink-600",
         title: "10 LLM Providers with Fallback Routing",
         description:
-            "AgentFarm routes tasks to the best-performing model across 10 providers — OpenAI, Azure OpenAI, Anthropic, Google, Mistral, GitHub Models, xAI, Together, and more — with health-score fallback.",
+            "AgentFarm routes tasks to the best-performing model across 10 providers � OpenAI, Azure OpenAI, Anthropic, Google, Mistral, GitHub Models, xAI, Together, and more � with health-score fallback.",
         image: "https://images.unsplash.com/photo-1547658719-da2b51169166?auto=format&fit=crop&w=800&q=80",
     },
 ];
 
 const outcomes = [
     "First PR from the Developer Agent within 15 minutes of setup",
-    "Every action risk-classified — risky changes require human approval before execution",
+    "Every action risk-classified � risky changes require human approval before execution",
     "Security scan on every PR with evidence stored for compliance review",
     "Full audit trail for every agent action, approval decision, and outcome",
 ];
@@ -104,7 +104,7 @@ const executionFlow = [
 
 export default function ProductPage() {
     return (
-        <div className="site-shell">
+        <div>
             {/* Hero with product screenshot */}
             <section className="relative overflow-hidden">
                 <img
@@ -113,7 +113,7 @@ export default function ProductPage() {
                     className="w-full h-[440px] sm:h-[540px] object-cover"
                     loading="eager"
                 />
-                <div className="absolute inset-0 bg-gradient-to-r from-slate-900/90 via-slate-900/60 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-r from-[#07080a]/90 via-[#07080a]/60 to-transparent" />
                 <div className="absolute inset-0 flex items-center">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
                         <div className="max-w-2xl">
@@ -145,13 +145,13 @@ export default function ProductPage() {
             </section>
 
             {/* Outcome checklist */}
-            <section className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 py-10">
+            <section className="bg-[var(--surface)] border-b border-[var(--hairline)] py-10">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
                         {outcomes.map((o) => (
                             <div key={o} className="flex items-start gap-3">
-                                <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-                                <p className="text-sm text-slate-600 dark:text-slate-300 leading-snug">{o}</p>
+                                <CheckCircle2 className="w-5 h-5 text-[var(--accent-green)] shrink-0 mt-0.5" />
+                                <p className="text-sm text-[var(--body-color)] leading-snug">{o}</p>
                             </div>
                         ))}
                     </div>
@@ -160,15 +160,15 @@ export default function ProductPage() {
 
             <section className="py-14 sm:py-16">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="site-section-shell rounded-3xl bg-white/85 dark:bg-slate-900/80 backdrop-blur px-5 py-6 sm:px-8 sm:py-8">
-                        <p className="text-xs uppercase tracking-[0.16em] text-sky-700 dark:text-sky-300 font-semibold">Execution Path</p>
-                        <h2 className="mt-2 text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100">From role selection to trusted delivery in three steps</h2>
+                    <div className="rounded-3xl bg-[var(--surface-card)] border border-[var(--hairline)] px-5 py-6 sm:px-8 sm:py-8">
+                        <p className="chip chip-accent">Execution Path</p>
+                        <h2 className="mt-4 text-2xl sm:text-3xl font-semibold tracking-[-0.03em] text-[var(--ink)]">From role selection to trusted delivery in three steps</h2>
                         <div className="mt-6 grid gap-4 md:grid-cols-3">
                             {executionFlow.map((item) => (
-                                <article key={item.step} className="rounded-2xl border border-slate-200/80 dark:border-slate-700/80 bg-white/90 dark:bg-slate-900/85 p-4">
-                                    <p className="text-xs font-semibold tracking-[0.14em] text-slate-500 dark:text-slate-400">STEP {item.step}</p>
-                                    <h3 className="mt-2 text-base font-semibold text-slate-900 dark:text-slate-100">{item.title}</h3>
-                                    <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{item.detail}</p>
+                                <article key={item.step} className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface-el)] p-4">
+                                    <p className="text-xs font-semibold tracking-[0.14em] text-[var(--ash)]">STEP {item.step}</p>
+                                    <h3 className="mt-2 text-base font-semibold text-[var(--ink)]">{item.title}</h3>
+                                    <p className="mt-2 text-sm text-[var(--body-color)]">{item.detail}</p>
                                 </article>
                             ))}
                         </div>
@@ -179,11 +179,11 @@ export default function ProductPage() {
             <ProductSceneSection />
 
             {/* Demo video section */}
-            <section className="py-20 bg-slate-50 dark:bg-slate-900/50">
+            <section className="py-20 bg-[var(--surface)]">
                 <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-                    <p className="text-xs font-semibold uppercase tracking-widest text-blue-600 dark:text-blue-400 mb-4">See it in action</p>
-                    <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-slate-100 mb-4">Watch an AI worker ship a feature</h2>
-                    <p className="text-slate-500 dark:text-slate-400 text-base mb-8 max-w-xl mx-auto">In 4 minutes, an AgentFarm worker takes a Jira ticket, writes the code, opens a PR, and passes CI. No prompting, no babysitting.</p>
+                    <p className="chip chip-accent mb-4">See it in action</p>
+                    <h2 className="text-2xl sm:text-3xl font-semibold tracking-[-0.03em] text-[var(--ink)] mb-4">Watch an AI worker ship a feature</h2>
+                    <p className="text-[var(--mute)] text-base mb-8 max-w-xl mx-auto">In 4 minutes, an AgentFarm worker takes a Jira ticket, writes the code, opens a PR, and passes CI. No prompting, no babysitting.</p>
                     <ProductDemoVideo />
                 </div>
             </section>
@@ -192,18 +192,18 @@ export default function ProductPage() {
             <section className="py-24">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="max-w-2xl mx-auto text-center mb-16">
-                        <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-slate-100">
+                        <h2 className="text-3xl sm:text-4xl font-semibold tracking-[-0.03em] text-[var(--ink)]">
                             Built for real engineering workflows
                         </h2>
-                        <p className="mt-4 text-lg text-slate-500 dark:text-slate-400">
-                            Every feature is designed around how software teams actually work — not how AI demos pretend they work.
+                        <p className="mt-4 text-lg text-[var(--mute)]">
+                            Every feature is designed around how software teams actually work � not how AI demos pretend they work.
                         </p>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                         {features.map(({ icon: Icon, gradient, title, description, image }) => (
                             <div
                                 key={title}
-                                className="border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all bg-white dark:bg-slate-900 group"
+                                className="bg-[var(--surface-card)] rounded-2xl border border-[var(--hairline)] overflow-hidden hover:border-[var(--accent-blue)]/40 hover:-translate-y-1 transition-all group"
                             >
                                 <div className="relative h-36 overflow-hidden">
                                     <img
@@ -212,19 +212,16 @@ export default function ProductPage() {
                                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                         loading="lazy"
                                     />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-[#07080a]/70 to-transparent" />
                                     <div className="absolute bottom-3 left-3">
-                                        <PremiumIcon
-                                            icon={Icon}
-                                            tone="cyan"
-                                            containerClassName={`h-9 w-9 rounded-xl bg-gradient-to-br ${gradient} text-white border-white/20`}
-                                            iconClassName="w-5 h-5"
-                                        />
+                                        <div className={`h-9 w-9 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center`}>
+                                            <Icon className="w-5 h-5 text-white" />
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="p-5">
-                                    <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2 text-sm">{title}</h3>
-                                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{description}</p>
+                                    <h3 className="font-semibold text-[var(--ink)] mb-2 text-sm">{title}</h3>
+                                    <p className="text-xs text-[var(--mute)] leading-relaxed">{description}</p>
                                 </div>
                             </div>
                         ))}
@@ -242,7 +239,7 @@ export default function ProductPage() {
                             className="absolute inset-0 w-full h-full object-cover"
                             loading="lazy"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-br from-violet-900/90 via-blue-900/85 to-slate-900/90" />
+                        <div className="absolute inset-0 bg-gradient-to-br from-[#07080a]/90 via-[#07080a]/90 to-[#07080a]/90" />
                         <div className="relative py-16 px-10 text-center text-white">
                             <h2 className="text-3xl font-bold mb-4">
                                 Ready to augment your team with trusted AI execution?
@@ -258,3 +255,6 @@ export default function ProductPage() {
         </div>
     );
 }
+
+
+

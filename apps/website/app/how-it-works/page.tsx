@@ -1,4 +1,4 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import { ShoppingCart, Rocket, Link as LinkIcon, MessageSquare, GitPullRequest, BarChart3, Sparkles, CheckCircle2 } from "lucide-react";
 import ButtonLink from "@/components/shared/ButtonLink";
 
@@ -72,7 +72,7 @@ const steps = [
 
 export default function HowItWorksPage() {
     return (
-        <div className="site-shell">
+        <div>
             {/* Hero with real photo */}
             <section className="relative overflow-hidden">
                 <img
@@ -81,7 +81,7 @@ export default function HowItWorksPage() {
                     className="w-full h-[420px] sm:h-[500px] object-cover"
                     loading="eager"
                 />
-                <div className="absolute inset-0 bg-gradient-to-r from-emerald-900/85 via-slate-900/70 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-r from-[#07080a]/85 via-[#07080a]/70 to-transparent" />
                 <div className="absolute inset-0 flex items-center">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
                         <div className="max-w-2xl">
@@ -105,7 +105,7 @@ export default function HowItWorksPage() {
             </section>
 
             {/* Setup time bar */}
-            <div className="bg-slate-900 dark:bg-slate-950 border-b border-slate-800">
+            <div className="bg-[var(--canvas)] border-b border-[var(--hairline)]">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-wrap justify-center gap-8 text-center">
                     {[
                         { label: "Provision workspace + install skills", time: "2 min" },
@@ -115,8 +115,8 @@ export default function HowItWorksPage() {
                     ].map(({ label, time }) => (
                         <div key={label} className="flex items-center gap-3">
                             <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                            <span className="text-slate-400 text-sm">{label}</span>
-                            <span className="text-white font-semibold text-sm">{time}</span>
+                            <span className="text-[var(--mute)] text-sm">{label}</span>
+                            <span className="text-[var(--ink)] font-semibold text-sm">{time}</span>
                         </div>
                     ))}
                 </div>
@@ -139,11 +139,11 @@ export default function HowItWorksPage() {
                                             <div className={`w-11 h-11 rounded-2xl bg-gradient-to-br ${step.gradient} flex items-center justify-center shadow-lg`}>
                                                 <StepIcon className="w-5 h-5 text-white" />
                                             </div>
-                                            <span className="text-xs font-bold text-slate-400 font-mono uppercase tracking-widest">Step {step.number}</span>
+                                            <span className="text-xs font-bold text-[var(--ash)] font-mono uppercase tracking-widest">Step {step.number}</span>
                                         </div>
-                                        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">{step.title}</h2>
-                                        <p className="text-slate-500 dark:text-slate-400 leading-relaxed mb-5">{step.description}</p>
-                                        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-100 dark:border-emerald-800 px-3 py-1.5 rounded-full">
+                                        <h2 className="text-2xl font-semibold tracking-[-0.03em] text-[var(--ink)] mb-4">{step.title}</h2>
+                                        <p className="text-[var(--mute)] leading-relaxed mb-5">{step.description}</p>
+                                        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--accent-green)] bg-[var(--accent-green)]/10 border border-[var(--accent-green)]/20 px-3 py-1.5 rounded-full">
                                             ✓ {step.detail}
                                         </span>
                                     </div>
@@ -154,7 +154,7 @@ export default function HowItWorksPage() {
                                             className="w-full h-64 sm:h-72 object-cover"
                                             loading="lazy"
                                         />
-                                        <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm text-white text-xs font-mono px-2.5 py-1 rounded-full">
+                                        <div className="absolute top-3 left-3 bg-[#07080a]/80 backdrop-blur-sm text-[var(--ink)] text-xs font-mono px-2.5 py-1 rounded-full">
                                             {step.number}
                                         </div>
                                     </div>
@@ -170,10 +170,10 @@ export default function HowItWorksPage() {
                             className="absolute inset-0 w-full h-full object-cover"
                             loading="lazy"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-br from-blue-900/90 to-violet-900/90" />
+                        <div className="absolute inset-0 bg-[var(--canvas)] border border-[var(--hairline)]" />
                         <div className="relative py-14 px-10 text-white text-center">
-                            <h3 className="text-2xl font-bold mb-3">Ready to augment your team with trusted AI execution?</h3>
-                            <p className="text-blue-100 mb-6">Start with a 14-day free trial. No credit card required.</p>
+                            <h3 className="text-2xl font-semibold tracking-[-0.03em] text-[var(--ink)] mb-3">Ready to augment your team with trusted AI execution?</h3>
+                            <p className="text-[var(--mute)] mb-6">Start with a 14-day free trial. No credit card required.</p>
                             <ButtonLink href="/#waitlist" size="lg">
                                 Get Started Free
                             </ButtonLink>

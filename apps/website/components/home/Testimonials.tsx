@@ -1,8 +1,7 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { Star } from "lucide-react";
-import { useCompactMotion } from "@/lib/useCompactMotion";
+import { motion } from "motion/react";
+import { Star, Quote } from "lucide-react";
 
 const testimonials = [
     {
@@ -67,70 +66,83 @@ const testimonials = [
     },
 ];
 
-export default function Testimonials() {
-    const compactMotion = useCompactMotion();
-    const motionScale = compactMotion ? 0.8 : 1;
+// Split into 3 columns for masonry layout
+const col1 = testimonials.slice(0, 2);
+const col2 = testimonials.slice(2, 4);
+const col3 = testimonials.slice(4);
 
+const ease = [0.22, 1, 0.36, 1] as const;
+
+function TestimonialCard({ t, delay }: { t: typeof testimonials[0]; delay: number }) {
     return (
-        <section className="bg-white dark:bg-slate-950 py-24 border-t border-slate-100 dark:border-slate-800">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-14">
+        <motion.article
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-50px" }}
+            transition={{ duration: 0.46, delay, ease }}
+            className="bg-[var(--surface-card)] border border-[var(--hairline)] rounded-2xl p-6 flex flex-col gap-4"
+        >
+            <Quote className="w-5 h-5 text-[var(--ash)]" />
+            {/* Metric badge */}
+            <p className="text-xs font-semibold text-[var(--accent-blue)] bg-[#57c1ff]/10 border border-[#57c1ff]/20 px-2.5 py-1 rounded-full w-fit">
+                {t.metric}
+            </p>
+            {/* Stars */}
+            <div className="flex gap-0.5">
+                {Array.from({ length: t.stars }).map((_, j) => (
+                    <Star key={j} className="w-3.5 h-3.5 text-[#ffc533] fill-[#ffc533]" />
+                ))}
+            </div>
+            {/* Quote */}
+            <p className="text-sm text-[var(--body-color)] leading-relaxed flex-1">
+                &ldquo;{t.quote}&rdquo;
+            </p>
+            {/* Author */}
+            <div className="pt-4 border-t border-[var(--hairline)] flex items-center gap-3">
+                <div className={`w-8 h-8 rounded-lg ${t.color} flex items-center justify-center text-[11px] font-bold text-white shrink-0`}>
+                    {t.initials}
+                </div>
+                <div>
+                    <p className="text-sm font-semibold text-[var(--ink)]">{t.name}</p>
+                    <p className="text-xs text-[var(--ash)]">{t.role}</p>
+                </div>
+            </div>
+        </motion.article>
+    );
+}
+
+export default function Testimonials() {
+    return (
+        <section className="bg-[var(--surface)] py-24 border-t border-[var(--hairline)]" id="testimonials">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                {/* Header */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    transition={{ duration: 0.48 * motionScale }}
-                    className="max-w-2xl mx-auto text-center"
+                    transition={{ duration: 0.48, ease }}
+                    className="max-w-2xl mx-auto text-center mb-14"
                 >
-                    <span className="text-xs font-semibold uppercase tracking-wider text-sky-600 dark:text-sky-400">
-                        Customer Stories
-                    </span>
-                    <h2 className="mt-3 text-3xl sm:text-4xl font-bold text-slate-900 dark:text-slate-100">
-                        Real teams. Measurable engineering outcomes.
+                    <span className="chip chip-accent text-xs mb-4">Customer Stories</span>
+                    <h2 className="text-[clamp(1.8rem,3.5vw,2.6rem)] font-semibold text-[var(--ink)] tracking-[-0.03em]">
+                        Real teams. Measurable outcomes.
                     </h2>
-                    <p className="mt-4 text-lg text-slate-500 dark:text-slate-400">
-                        Concrete results from founders, engineering leads, and operators running AgentFarm AI teammates in production.
+                    <p className="mt-4 text-[var(--mute)] leading-relaxed">
+                        Founders, engineering leads, and operators running AgentFarm AI teammates in production.
                     </p>
                 </motion.div>
-            </div>
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {testimonials.map((t, i) => (
-                        <motion.article
-                            key={t.name}
-                            initial={{ opacity: 0, y: 20 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true, margin: "-40px" }}
-                            transition={{ duration: 0.45 * motionScale, delay: i * 0.06 * motionScale }}
-                            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 flex flex-col shadow-sm hover:shadow-lg hover:border-slate-300 dark:hover:border-slate-600 transition-all duration-200"
-                        >
-                            {/* Stars */}
-                            <div className="flex gap-0.5 mb-4">
-                                {Array.from({ length: t.stars }).map((_, j) => (
-                                    <Star key={j} className="w-4 h-4 text-amber-400 fill-amber-400" />
-                                ))}
-                            </div>
-
-                            {/* Metric highlight */}
-                            <p className="text-sm font-bold text-sky-600 dark:text-sky-400 mb-3">{t.metric}</p>
-
-                            {/* Quote */}
-                            <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed flex-1">
-                                &ldquo;{t.quote}&rdquo;
-                            </p>
-
-                            {/* Author */}
-                            <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center gap-3">
-                                <div className={`w-9 h-9 rounded-xl ${t.color} flex items-center justify-center text-xs font-bold text-white shrink-0`}>
-                                    {t.initials}
-                                </div>
-                                <div>
-                                    <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{t.name}</p>
-                                    <p className="text-xs text-slate-400">{t.role}</p>
-                                </div>
-                            </div>
-                        </motion.article>
-                    ))}
+                {/* 3-column masonry */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 items-start">
+                    <div className="flex flex-col gap-5">
+                        {col1.map((t, i) => <TestimonialCard key={t.name} t={t} delay={i * 0.08} />)}
+                    </div>
+                    <div className="flex flex-col gap-5 md:mt-8 lg:mt-8">
+                        {col2.map((t, i) => <TestimonialCard key={t.name} t={t} delay={0.12 + i * 0.08} />)}
+                    </div>
+                    <div className="flex flex-col gap-5 md:col-span-2 lg:col-span-1">
+                        {col3.map((t, i) => <TestimonialCard key={t.name} t={t} delay={0.24 + i * 0.08} />)}
+                    </div>
                 </div>
             </div>
         </section>

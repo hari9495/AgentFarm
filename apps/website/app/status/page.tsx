@@ -84,17 +84,17 @@ export default async function StatusPage() {
     });
 
     return (
-        <main className="min-h-screen bg-slate-950 text-slate-100 font-manrope">
+        <main className="min-h-screen bg-[var(--canvas)] text-[var(--ink)]">
             {/* Auto-refresh every 60s */}
             <StatusRefresher />
 
             {/* Header */}
             <section className="max-w-3xl mx-auto px-6 pt-20 pb-10">
-                <h1 className="text-4xl font-bold tracking-tight text-slate-50 mb-2">
+                <h1 className="text-4xl font-semibold tracking-[-0.03em] text-[var(--ink)] mb-2">
                     System Status
                 </h1>
-                <p className="text-slate-400 text-sm">
-                    Last updated: <span className="text-slate-300">{lastUpdated}</span>
+                <p className="text-[var(--mute)] text-sm">
+                    Last updated: <span className="text-[var(--body-color)]">{lastUpdated}</span>
                 </p>
             </section>
 
@@ -114,16 +114,16 @@ export default async function StatusPage() {
 
             {/* Services table */}
             <section className="max-w-3xl mx-auto px-6 mb-12">
-                <h2 className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-4">
+                <h2 className="text-xs font-bold uppercase tracking-widest text-[var(--ash)] mb-4">
                     Services
                 </h2>
 
                 {data.services.length === 0 ? (
-                    <div className="rounded-2xl border border-slate-800 bg-slate-900/60 px-6 py-8 text-center text-slate-500 text-sm">
+                    <div className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface-card)] px-6 py-8 text-center text-[var(--mute)] text-sm">
                         Unable to retrieve service status.
                     </div>
                 ) : (
-                    <div className="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden divide-y divide-slate-800">
+                    <div className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface-card)] overflow-hidden divide-y divide-[var(--hairline)]">
                         {data.services.map((svc) => (
                             <div
                                 key={svc.name}
@@ -133,13 +133,13 @@ export default async function StatusPage() {
                                     <span
                                         className={`inline-block w-2.5 h-2.5 rounded-full flex-shrink-0 ${STATUS_COLORS[svc.status]}`}
                                     />
-                                    <span className="text-sm font-medium text-slate-200">
+                                    <span className="text-sm font-medium text-[var(--ink)]">
                                         {svc.name}
                                     </span>
                                 </div>
                                 <div className="flex items-center gap-4 text-sm">
                                     {svc.latencyMs !== undefined && (
-                                        <span className="text-slate-500 tabular-nums">
+                                        <span className="text-[var(--ash)] tabular-nums">
                                             {svc.latencyMs}ms
                                         </span>
                                     )}
@@ -157,27 +157,27 @@ export default async function StatusPage() {
 
             {/* Incidents section */}
             <section className="max-w-3xl mx-auto px-6 mb-20">
-                <h2 className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-4">
+                <h2 className="text-xs font-bold uppercase tracking-widest text-[var(--ash)] mb-4">
                     Active Incidents
                 </h2>
 
                 {data.incidents.length === 0 ? (
-                    <div className="rounded-2xl border border-slate-800 bg-slate-900/60 px-6 py-8 text-center text-slate-500 text-sm">
+                    <div className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface-card)] px-6 py-8 text-center text-[var(--mute)] text-sm">
                         No incidents reported.
                     </div>
                 ) : (
-                    <div className="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden divide-y divide-slate-800">
+                    <div className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface-card)] overflow-hidden divide-y divide-[var(--hairline)]">
                         {data.incidents.map((incident) => (
                             <div key={incident.id} className="px-6 py-4">
                                 <div className="flex items-center justify-between mb-1">
-                                    <span className="text-sm font-semibold text-slate-200">
+                                    <span className="text-sm font-semibold text-[var(--ink)]">
                                         {incident.title}
                                     </span>
                                     <span className="text-xs uppercase tracking-wide font-bold text-amber-400 bg-amber-950/60 border border-amber-700 rounded px-2 py-0.5">
                                         {incident.severity}
                                     </span>
                                 </div>
-                                <p className="text-xs text-slate-500">
+                                <p className="text-xs text-[var(--ash)]">
                                     Started{' '}
                                     {new Date(incident.startedAt).toLocaleString('en-US', {
                                         dateStyle: 'medium',

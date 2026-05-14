@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import Link from "next/link";
 import { useState } from "react";
 import { CheckCircle, Circle, Clock } from "lucide-react";
@@ -131,23 +131,23 @@ const statusConfig = {
   shipped: {
     icon: CheckCircle,
     label: "Shipped",
-    iconClass: "text-green-500",
-    bg: "bg-green-50",
-    text: "text-green-700",
+    iconClass: "text-[var(--accent-green)]",
+    bg: "bg-[var(--accent-green)]/10",
+    text: "text-[var(--accent-green)]",
   },
   "in-progress": {
     icon: Clock,
     label: "In Progress",
-    iconClass: "text-blue-500",
-    bg: "bg-blue-50",
-    text: "text-blue-700",
+    iconClass: "text-[var(--accent-blue)]",
+    bg: "bg-[var(--accent-blue)]/10",
+    text: "text-[var(--accent-blue)]",
   },
   planned: {
     icon: Circle,
     label: "Planned",
-    iconClass: "text-slate-300",
-    bg: "bg-slate-100",
-    text: "text-slate-500",
+    iconClass: "text-[var(--ash)]",
+    bg: "bg-[var(--surface-el)]",
+    text: "text-[var(--mute)]",
   },
 };
 
@@ -182,21 +182,21 @@ export default function ChangelogPage() {
   const upcoming = filteredEntries.filter((e) => e.status !== "shipped");
 
   return (
-    <div className="site-shell">
+    <div>
       {/* Hero */}
-      <section className="relative py-24 border-b border-slate-100 dark:border-slate-800 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-emerald-50/60 via-white to-blue-50/40 dark:from-emerald-950/20 dark:via-slate-950 dark:to-blue-950/20 pointer-events-none" />
+      <section className="relative py-24 border-b border-[var(--hairline)] overflow-hidden">
+        <div className="absolute inset-0 bg-[var(--canvas)] pointer-events-none" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/40 px-3 py-1.5 rounded-full border border-emerald-100 dark:border-emerald-800 mb-4">
+          <span className="chip chip-accent mb-4">
             Changelog
           </span>
-          <h1 className="mt-3 text-4xl sm:text-6xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
+          <h1 className="mt-3 text-4xl sm:text-6xl font-semibold text-[var(--ink)] tracking-[-0.03em]">
             What we&apos;ve built.{" "}
-            <span className="bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-[var(--accent-green)] to-[var(--accent-blue)] bg-clip-text text-transparent">
               What&apos;s next.
             </span>
           </h1>
-          <p className="mt-5 text-xl text-slate-500 dark:text-slate-400 max-w-2xl leading-relaxed">
+          <p className="mt-5 text-xl text-[var(--mute)] max-w-2xl leading-relaxed">
             A live record of every shipped feature and our public roadmap — no surprises,
             no vaporware.
           </p>
@@ -204,14 +204,14 @@ export default function ChangelogPage() {
       </section>
 
       {/* Filter bar */}
-      <div className="border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-950">
+      <div className="border-b border-[var(--hairline)] bg-[var(--canvas)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
           <div className="flex items-center gap-2 flex-wrap">
             {ALL_FILTERS.map((f) => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className={`text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors ${filter === f ? "bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 border-slate-900 dark:border-slate-100" : "border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-slate-400 dark:hover:border-slate-500"}`}
+                className={`text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors ${filter === f ? "bg-[var(--ink)] text-[var(--canvas)] border-[var(--ink)]" : "border-[var(--hairline)] text-[var(--mute)] hover:border-[var(--ash)]"}`}
               >
                 {f}
               </button>
@@ -223,7 +223,7 @@ export default function ChangelogPage() {
               placeholder="Search entries…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 px-3 py-2 w-52 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="text-xs rounded-lg border border-[var(--hairline)] bg-[var(--surface-el)] text-[var(--ink)] px-3 py-2 w-52 placeholder:text-[var(--ash)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-blue)]"
             />
           </div>
         </div>
@@ -233,34 +233,34 @@ export default function ChangelogPage() {
         <div className="max-w-3xl mx-auto space-y-20">
           {/* Shipped */}
           <div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-8 flex items-center gap-2">
+            <h2 className="text-xl font-semibold text-[var(--ink)] mb-8 flex items-center gap-2">
               <CheckCircle className="w-5 h-5 text-green-500" /> Shipped
             </h2>
-            <div className="space-y-8 border-l-2 border-slate-200 dark:border-slate-700 pl-6">
+            <div className="space-y-8 border-l-2 border-[var(--hairline)] pl-6">
               {shipped.map((entry) => {
                 const s = statusConfig[entry.status];
                 return (
                   <div key={entry.title} className="relative">
-                    <div className="absolute -left-[31px] w-4 h-4 rounded-full border-2 border-green-500 bg-white dark:bg-slate-950" />
+                    <div className="absolute -left-[31px] w-4 h-4 rounded-full border-2 border-[var(--accent-green)] bg-[var(--canvas)]" />
                     <div className="flex items-center gap-3 mb-2 flex-wrap">
                       {entry.version && (
-                        <span className="text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-md">
+                        <span className="text-xs font-bold bg-[var(--surface-el)] text-[var(--body-color)] px-2 py-0.5 rounded-md">
                           {entry.version}
                         </span>
                       )}
-                      <span className="text-xs text-slate-400">{entry.date}</span>
+                      <span className="text-xs text-[var(--ash)]">{entry.date}</span>
                       {entry.tags.map((tag) => (
-                        <span key={tag} className="text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded-md">
+                        <span key={tag} className="text-xs bg-[var(--surface-el)] border border-[var(--hairline)] text-[var(--mute)] px-2 py-0.5 rounded-md">
                           {tag}
                         </span>
                       ))}
                     </div>
-                    <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-1">{entry.title}</h3>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{entry.description}</p>
+                    <h3 className="font-semibold text-[var(--ink)] mb-1">{entry.title}</h3>
+                    <p className="text-sm text-[var(--mute)] leading-relaxed">{entry.description}</p>
                     {entry.version && (
                       <Link
                         href={`/changelog/${toVersionSlug(entry.version)}`}
-                        className="mt-2 inline-block text-xs font-semibold text-sky-600 dark:text-sky-400 hover:underline"
+                        className="mt-2 inline-block text-xs font-semibold text-[var(--accent-blue)] hover:underline"
                       >
                         View entry
                       </Link>
@@ -273,29 +273,29 @@ export default function ChangelogPage() {
 
           {/* Roadmap */}
           <div>
-            <h2 className="text-xl font-bold text-slate-900 mb-8 flex items-center gap-2">
+            <h2 className="text-xl font-semibold text-[var(--ink)] mb-8 flex items-center gap-2">
               <Clock className="w-5 h-5 text-blue-500" /> Roadmap
             </h2>
-            <div className="space-y-8 border-l-2 border-dashed border-slate-200 pl-6">
+            <div className="space-y-8 border-l-2 border-dashed border-[var(--hairline)] pl-6">
               {upcoming.map((entry) => {
                 const s = statusConfig[entry.status];
                 const Icon = s.icon;
                 return (
                   <div key={entry.title} className="relative">
-                    <div className="absolute -left-[31px] w-4 h-4 rounded-full border-2 border-slate-300 bg-white dark:bg-slate-950" />
+                    <div className="absolute -left-[31px] w-4 h-4 rounded-full border-2 border-[var(--ash)] bg-[var(--canvas)]" />
                     <div className="flex items-center gap-3 mb-2 flex-wrap">
                       <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${s.bg} ${s.text}`}>
                         {s.label}
                       </span>
-                      <span className="text-xs text-slate-400">{entry.date}</span>
+                      <span className="text-xs text-[var(--ash)]">{entry.date}</span>
                       {entry.tags.map((tag) => (
-                        <span key={tag} className="text-xs bg-slate-50 border border-slate-200 text-slate-500 px-2 py-0.5 rounded-md">
+                        <span key={tag} className="text-xs bg-[var(--surface-el)] border border-[var(--hairline)] text-[var(--mute)] px-2 py-0.5 rounded-md">
                           {tag}
                         </span>
                       ))}
                     </div>
-                    <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-1">{entry.title}</h3>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{entry.description}</p>
+                    <h3 className="font-semibold text-[var(--ink)] mb-1">{entry.title}</h3>
+                    <p className="text-sm text-[var(--mute)] leading-relaxed">{entry.description}</p>
                   </div>
                 );
               })}

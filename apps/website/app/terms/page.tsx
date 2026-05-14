@@ -63,43 +63,30 @@ const sections = [
 
 export default function TermsPage() {
     return (
-        <div className="site-shell">
-            <div className="page-hero">
-                <div className="page-hero-inner">
-                    <p className="page-eyebrow">Legal</p>
-                    <h1 className="page-hero-title">Terms of Service</h1>
-                    <p className="page-hero-subtitle">Last updated: March 1, 2026</p>
-                </div>
-            </div>
-            <div className="page-section">
-                <div className="page-section-inner max-w-3xl">
-                    <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-full mb-4">
-                        Legal
-                    </div>
-                    <h1 className="text-4xl font-extrabold mb-3">
-                        <span className="bg-gradient-to-r from-slate-900 to-slate-600 bg-clip-text text-transparent">Terms of Service</span>
-                    </h1>
-                    <p className="text-slate-500 mb-12">Last updated: March 1, 2026</p>
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+            <div className="chip chip-accent mb-4">Legal</div>
+            <h1 className="text-4xl font-semibold tracking-[-0.03em] text-[var(--ink)] mb-3">
+                Terms of Service
+            </h1>
+            <p className="text-[var(--mute)] mb-12">Last updated: March 1, 2026</p>
 
-                    <p className="text-lg text-slate-600 leading-relaxed mb-12">
-                        Please read these Terms carefully before using AgentFarm. They govern
-                        your access to and use of our platform.
-                    </p>
+            <p className="text-lg text-[var(--body-color)] leading-relaxed mb-12">
+                Please read these Terms carefully before using AgentFarm. They govern
+                your access to and use of our platform.
+            </p>
 
-                    <div className="space-y-8">
-                        {sections.map(({ heading, body }) => (
-                            <div
-                                key={heading}
-                                className="pb-8 border-b border-slate-100 last:border-0"
-                            >
-                                <h2 className="text-lg font-semibold text-slate-900 mb-3">
-                                    {heading}
-                                </h2>
-                                <p className="text-slate-600 leading-relaxed">{body}</p>
-                            </div>
-                        ))}
+            <div className="space-y-8">
+                {sections.map(({ heading, body }) => (
+                    <div
+                        key={heading}
+                        className="pb-8 border-b border-[var(--hairline)] last:border-0"
+                    >
+                        <h2 className="text-lg font-semibold text-[var(--ink)] mb-3">
+                            {heading}
+                        </h2>
+                        <p className="text-[var(--body-color)] leading-relaxed">{body}</p>
                     </div>
-                </div>
+                ))}
             </div>
         </div>
     );

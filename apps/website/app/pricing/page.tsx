@@ -1,6 +1,6 @@
 ﻿import type { Metadata } from "next";
-import { CheckCircle } from "lucide-react";
-import ButtonLink from "@/components/shared/ButtonLink";
+import { CheckCircle2 } from "lucide-react";
+import Link from "next/link";
 import PricingCalculator from "@/components/pricing/PricingCalculator";
 import { marketplaceBots, type Bot } from "@/lib/bots";
 
@@ -93,26 +93,24 @@ const faqs = [
 
 export default function PricingPage() {
     return (
-        <div className="site-shell">
+        <div className="site-shell bg-[var(--canvas)]">
             {/* Hero */}
-            <section className="relative py-24 text-center border-b border-slate-100 dark:border-slate-800 overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-b from-blue-50/60 via-white to-white dark:from-blue-950/30 dark:via-slate-950 dark:to-slate-950 pointer-events-none" />
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-gradient-radial from-blue-200/30 to-transparent dark:from-blue-800/20 blur-3xl pointer-events-none" />
+            <section className="relative py-24 text-center border-b border-[var(--hairline)] overflow-hidden">
+                <div aria-hidden className="absolute inset-0 pointer-events-none">
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[680px] h-[300px] bg-[radial-gradient(ellipse,rgba(87,193,255,0.10)_0%,transparent_70%)] blur-2xl" />
+                </div>
                 <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-blue-600 bg-blue-50 dark:bg-blue-900/40 px-3 py-1.5 rounded-full border border-blue-100 dark:border-blue-800 mb-4">
-                        Pricing
-                    </span>
-                    <h1 className="mt-3 text-4xl sm:text-6xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
+                    <span className="chip chip-accent text-xs mb-4">Pricing</span>
+                    <h1 className="mt-3 text-[clamp(2rem,5vw,3.5rem)] font-semibold text-[var(--ink)] tracking-[-0.04em]">
                         Simple,{" "}
-                        <span className="bg-gradient-to-r from-blue-600 via-cyan-500 to-emerald-500 bg-clip-text text-transparent">
+                        <span className="bg-gradient-to-r from-[#57c1ff] to-[#59d499] bg-clip-text text-transparent">
                             predictable
                         </span>{" "}
                         pricing
                     </h1>
-                    <p className="mt-5 text-xl text-slate-500 dark:text-slate-400 max-w-xl mx-auto">
+                    <p className="mt-5 text-lg text-[var(--mute)] max-w-xl mx-auto">
                         Marketplace-aligned pricing across {availableMarketplaceBots.length} live AI roles. Start free and scale by role.
                     </p>
-                    {/* Social proof strip */}
                     <div className="mt-8 flex items-center justify-center gap-3">
                         <div className="flex -space-x-2">
                             {["forge", "scout", "atlas", "orion", "vega"].map((seed) => (
@@ -120,13 +118,13 @@ export default function PricingPage() {
                                     key={seed}
                                     src={`https://api.dicebear.com/7.x/bottts/svg?seed=${seed}&backgroundColor=b6e3f4,c0aede,d1d4f9&radius=10`}
                                     alt="AI worker"
-                                    className="w-8 h-8 rounded-full border-2 border-white dark:border-slate-950 bg-blue-50"
+                                    className="w-8 h-8 rounded-full border-2 border-[var(--canvas)] bg-[var(--surface)]"
                                     loading="lazy"
                                 />
                             ))}
                         </div>
-                        <span className="text-sm text-slate-500 dark:text-slate-400">
-                            <span className="font-semibold text-slate-700 dark:text-slate-300">{availableMarketplaceBots.length} live roles</span> in marketplace pricing
+                        <span className="text-sm text-[var(--mute)]">
+                            <span className="font-semibold text-[var(--ink)]">{availableMarketplaceBots.length} live roles</span> in marketplace pricing
                         </span>
                     </div>
                 </div>
@@ -134,103 +132,100 @@ export default function PricingPage() {
 
             <PricingCalculator />
 
-            <section className="py-10 sm:py-12">
+            {/* Decision cards */}
+            <section className="py-10 sm:py-12 border-b border-[var(--hairline)]">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="grid gap-4 md:grid-cols-3">
-                        <article className="card-premium">
-                            <p className="text-xs uppercase tracking-[0.14em] font-semibold text-sky-700 dark:text-sky-300">Starter Decision</p>
-                            <p className="mt-2 text-lg font-bold text-slate-900 dark:text-slate-100">From {starterPlanPrice}/month</p>
-                            <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Best when you are proving AI teammate workflows with one to two core roles.</p>
+                        <article className="rounded-xl bg-[var(--surface-card)] border border-[var(--hairline)] p-6">
+                            <p className="text-xs uppercase tracking-[0.14em] font-semibold text-[var(--accent-blue)]">Starter Decision</p>
+                            <p className="mt-2 text-lg font-semibold text-[var(--ink)]">From {starterPlanPrice}/month</p>
+                            <p className="mt-1 text-sm text-[var(--mute)]">Best when you are proving AI teammate workflows with one to two core roles.</p>
                         </article>
-                        <article className="card-premium">
-                            <p className="text-xs uppercase tracking-[0.14em] font-semibold text-emerald-700 dark:text-emerald-300">Scale Decision</p>
-                            <p className="mt-2 text-lg font-bold text-slate-900 dark:text-slate-100">Most teams pick Pro+ at {proPlanPrice}/month</p>
-                            <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Adds coverage breadth across departments with better rollout economics.</p>
+                        <article className="rounded-xl bg-[var(--surface-card)] border border-[var(--hairline)] p-6">
+                            <p className="text-xs uppercase tracking-[0.14em] font-semibold text-[var(--accent-green)]">Scale Decision</p>
+                            <p className="mt-2 text-lg font-semibold text-[var(--ink)]">Most teams pick Pro+ at {proPlanPrice}/month</p>
+                            <p className="mt-1 text-sm text-[var(--mute)]">Adds coverage breadth across departments with better rollout economics.</p>
                         </article>
-                        <article className="card-premium">
-                            <p className="text-xs uppercase tracking-[0.14em] font-semibold text-slate-700 dark:text-slate-300">Governance Decision</p>
-                            <p className="mt-2 text-lg font-bold text-slate-900 dark:text-slate-100">Enterprise for regulated environments</p>
-                            <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Custom controls, support, and deployment posture for strict compliance teams.</p>
+                        <article className="rounded-xl bg-[var(--surface-card)] border border-[var(--hairline)] p-6">
+                            <p className="text-xs uppercase tracking-[0.14em] font-semibold text-[var(--mute)]">Governance Decision</p>
+                            <p className="mt-2 text-lg font-semibold text-[var(--ink)]">Enterprise for regulated environments</p>
+                            <p className="mt-1 text-sm text-[var(--mute)]">Custom controls, support, and deployment posture for strict compliance teams.</p>
                         </article>
                     </div>
                 </div>
             </section>
 
             {/* Plans */}
-            <section className="py-24 bg-slate-50 dark:bg-slate-900/50">
+            <section className="py-24 bg-[var(--surface)]">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto items-start">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-5xl mx-auto items-stretch">
                         {plans.map((plan) => (
                             <div
                                 key={plan.name}
-                                className={`relative rounded-2xl p-7 flex flex-col transition-all ${plan.highlighted
-                                    ? "bg-gradient-to-b from-slate-800 to-slate-900 text-white ring-2 ring-blue-500 shadow-2xl shadow-blue-500/20 md:scale-[1.04]"
-                                    : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-lg hover:-translate-y-0.5"
+                                className={`relative rounded-2xl p-7 flex flex-col border transition-all ${plan.highlighted
+                                        ? "bg-[var(--surface-card)] border-[var(--accent-blue)]/50 shadow-[0_0_0_1px_rgba(87,193,255,0.2),0_8px_40px_rgba(87,193,255,0.06)]"
+                                        : "bg-[var(--surface-card)] border-[var(--hairline)]"
                                     }`}
                             >
                                 {plan.highlighted && (
                                     <>
-                                        <span className="self-start text-xs font-semibold bg-blue-500 text-white px-3 py-1 rounded-full mb-4 flex items-center gap-1">
+                                        <span className="self-start text-[10px] font-bold bg-[var(--accent-blue)] text-[#07080a] px-2.5 py-1 rounded-full mb-4">
                                             Most Popular
                                         </span>
-                                        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-blue-500 to-transparent rounded-t-2xl" />
+                                        <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--accent-blue)]/50 to-transparent rounded-t-2xl" />
                                     </>
                                 )}
-                                <p className={`text-sm font-semibold ${plan.highlighted ? "text-slate-300" : "text-slate-500 dark:text-slate-400"}`}>
-                                    {plan.name}
-                                </p>
-                                <div className="mt-2 flex items-end gap-1">
-                                    <span className={`text-5xl font-extrabold tracking-tight ${plan.highlighted ? "text-white" : "text-slate-900 dark:text-slate-100"}`}>
-                                        {plan.price}
-                                    </span>
+                                <p className="text-xs font-semibold uppercase tracking-widest text-[var(--mute)] mb-2">{plan.name}</p>
+                                <div className="flex items-end gap-1 mt-1">
+                                    <span className="text-4xl font-bold text-[var(--ink)] tracking-tight">{plan.price}</span>
                                     {plan.period && (
-                                        <span className="text-sm mb-2 text-slate-400">{plan.period}</span>
+                                        <span className="text-sm text-[var(--ash)] mb-1.5">{plan.period}</span>
                                     )}
                                 </div>
-                                <p className={`mt-3 text-sm leading-relaxed ${plan.highlighted ? "text-slate-400" : "text-slate-500 dark:text-slate-400"}`}>
-                                    {plan.description}
-                                </p>
+                                <p className="mt-3 text-sm text-[var(--mute)] leading-relaxed">{plan.description}</p>
                                 <ul className="mt-6 space-y-2.5 flex-1">
                                     {plan.features.map((f) => (
-                                        <li key={f} className="flex items-start gap-2 text-sm">
-                                            <CheckCircle
-                                                className={`w-4 h-4 shrink-0 mt-0.5 ${plan.highlighted ? "text-blue-400" : "text-blue-600"}`}
-                                            />
-                                            <span className={plan.highlighted ? "text-slate-300" : "text-slate-600 dark:text-slate-300"}>{f}</span>
+                                        <li key={f} className="flex items-start gap-2.5 text-sm text-[var(--body-color)]">
+                                            <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-[var(--accent-green)]" />
+                                            {f}
                                         </li>
                                     ))}
                                 </ul>
                                 <div className="mt-8">
-                                    <ButtonLink
+                                    <Link
                                         href={plan.ctaHref}
-                                        className="w-full justify-center"
-                                        variant={plan.highlighted ? "primary" : "outline"}
+                                        className={`w-full block text-center py-2.5 text-sm font-semibold rounded-xl transition-all ${plan.highlighted
+                                                ? "bg-[var(--accent-blue)] text-[#07080a] hover:bg-[#8dd7ff]"
+                                                : plan.name === "Enterprise"
+                                                    ? "bg-white/[0.06] border border-[var(--hairline)] text-[var(--ink)] hover:bg-white/[0.1]"
+                                                    : "bg-white text-[#07080a] hover:bg-[#e8e8e8]"
+                                            }`}
                                     >
                                         {plan.cta}
-                                    </ButtonLink>
+                                    </Link>
                                 </div>
                             </div>
                         ))}
                     </div>
-                    <p className="text-center text-sm text-slate-400 dark:text-slate-500 mt-8">Marketplace pricing updates with role availability. 14-day free trial, no credit card required.</p>
+                    <p className="text-center text-sm text-[var(--ash)] mt-8">Marketplace pricing updates with role availability. 14-day free trial, no credit card required.</p>
                 </div>
             </section>
 
             {/* FAQ */}
-            <section className="py-24">
+            <section className="py-24 bg-[var(--canvas)] border-t border-[var(--hairline)]">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="max-w-3xl mx-auto">
-                        <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-12 text-center">
+                        <h2 className="text-2xl font-semibold text-[var(--ink)] tracking-[-0.03em] mb-10 text-center">
                             Frequently asked questions
                         </h2>
-                        <div className="space-y-0 divide-y divide-slate-100 dark:divide-slate-800 border border-slate-100 dark:border-slate-800 rounded-2xl overflow-hidden">
+                        <div className="divide-y divide-[var(--hairline)] border border-[var(--hairline)] rounded-2xl overflow-hidden">
                             {faqs.map(({ q, a }) => (
-                                <div key={q} className="p-6 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                                    <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-2">
-                                        <span className="text-blue-500">Q</span>
+                                <div key={q} className="p-6 bg-[var(--surface-card)] hover:bg-[var(--surface)] transition-colors">
+                                    <h3 className="font-medium text-[var(--ink)] mb-2 flex items-center gap-2">
+                                        <span className="text-[var(--accent-blue)] text-xs font-bold">Q</span>
                                         {q}
                                     </h3>
-                                    <p className="text-slate-500 dark:text-slate-400 leading-relaxed text-sm pl-5">{a}</p>
+                                    <p className="text-sm text-[var(--mute)] leading-relaxed pl-5">{a}</p>
                                 </div>
                             ))}
                         </div>
@@ -240,5 +235,4 @@ export default function PricingPage() {
         </div>
     );
 }
-
 

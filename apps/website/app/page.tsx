@@ -1,11 +1,12 @@
 ﻿import type { Metadata } from "next";
 import dynamic from "next/dynamic";
-import ButtonLink from "@/components/shared/ButtonLink";
+import Link from "next/link";
 import { marketplaceBots } from "@/lib/bots";
 import Hero from "@/components/home/Hero";
 import LogosStrip from "@/components/home/LogosStrip";
 import Problem from "@/components/home/Problem";
 import Solution from "@/components/home/Solution";
+import Features from "@/components/home/Features";
 
 // Lazy-load below-the-fold sections — improves initial page load
 const DemoSection = dynamic(() => import("@/components/home/DemoSection"));
@@ -14,7 +15,6 @@ const Integrations = dynamic(() => import("@/components/home/Integrations"));
 const RobotTypes = dynamic(() => import("@/components/home/RobotTypes"));
 const TeamBuilderWizard = dynamic(() => import("@/components/home/TeamBuilderWizard"));
 const StatsCounter = dynamic(() => import("@/components/home/StatsCounter"));
-const Architecture = dynamic(() => import("@/components/home/Architecture"));
 const Testimonials = dynamic(() => import("@/components/home/Testimonials"));
 const PricingSection = dynamic(() => import("@/components/home/PricingSection"));
 const FAQ = dynamic(() => import("@/components/home/FAQ"));
@@ -37,18 +37,33 @@ export default function Home() {
     <main className="home-choreo" aria-label="AgentFarm home content">
       <Hero />
       <SocialProofBar />
-      <section className="py-6 sm:py-8">
+      {/* Conversion Snapshot */}
+      <section className="py-6 sm:py-8 bg-[var(--surface)] border-y border-[var(--hairline)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="site-section-shell rounded-3xl bg-white/85 dark:bg-slate-900/80 backdrop-blur px-5 py-5 sm:px-8 sm:py-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
             <div>
-              <p className="text-xs uppercase tracking-[0.16em] text-sky-700 dark:text-sky-300 font-semibold">Conversion Snapshot</p>
-              <p className="mt-2 text-base sm:text-lg text-slate-700 dark:text-slate-200">
-                Launch from <span className="font-semibold text-slate-900 dark:text-slate-100">{availableRoles} live roles</span> across <span className="font-semibold text-slate-900 dark:text-slate-100">{departmentCoverage} departments</span>, with approval and audit controls from day one.
+              <p className="text-xs uppercase tracking-[0.16em] text-[var(--accent-blue)] font-semibold">Conversion Snapshot</p>
+              <p className="mt-2 text-base sm:text-lg text-[var(--body-color)]">
+                Launch from{" "}
+                <span className="font-semibold text-[var(--ink)]">{availableRoles} live roles</span>{" "}
+                across{" "}
+                <span className="font-semibold text-[var(--ink)]">{departmentCoverage} departments</span>
+                , with approval and audit controls from day one.
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
-              <ButtonLink href="/marketplace">Explore Marketplace</ButtonLink>
-              <ButtonLink href="/pricing" variant="outline">See Pricing</ButtonLink>
+              <Link
+                href="/marketplace"
+                className="px-5 py-2.5 text-sm font-semibold text-black bg-white rounded-lg hover:bg-[#e8e8e8] transition-colors"
+              >
+                Explore Marketplace
+              </Link>
+              <Link
+                href="/pricing"
+                className="px-5 py-2.5 text-sm font-medium text-[var(--mute)] border border-[var(--hairline)] rounded-lg hover:text-[var(--ink)] hover:border-[rgba(255,255,255,0.15)] hover:bg-white/[0.04] transition-colors"
+              >
+                See Pricing
+              </Link>
             </div>
           </div>
         </div>
@@ -56,6 +71,7 @@ export default function Home() {
       <LogosStrip />
       <Problem />
       <Solution />
+      <Features />
       <DemoSection />
       <HowItWorks />
       <Integrations />
@@ -63,7 +79,6 @@ export default function Home() {
       <TeamBuilderWizard />
       <StatsCounter />
       <MetricsTicker />
-      <Architecture />
       <Testimonials />
       <PricingSection />
       <FAQ />
@@ -72,5 +87,4 @@ export default function Home() {
     </main>
   );
 }
-
 

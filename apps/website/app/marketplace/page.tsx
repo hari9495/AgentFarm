@@ -1,4 +1,4 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import Link from "next/link";
 import MarketplaceGrid from "@/components/marketplace/MarketplaceGrid";
 
@@ -31,29 +31,29 @@ export default function MarketplacePage() {
           <div className="marketplace-hero-card">
             <div>
               <p className="marketplace-eyebrow">Agent Marketplace</p>
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-semibold text-[var(--ink)] tracking-[-0.03em]">
                 Skill Marketplace: 21 developer skills, ready to ship work
               </h1>
-              <p className="mt-4 max-w-3xl text-slate-600 dark:text-slate-300 text-base sm:text-lg">
+              <p className="mt-4 max-w-3xl text-[var(--mute)] text-base sm:text-lg">
                 Each skill gives your Developer Agent a new capability — from creating PRs and fixing CI failures
                 to explaining code, generating release notes, and exporting audit evidence. Install only what your team needs.
               </p>
               <div className="mt-6 flex flex-col sm:flex-row gap-3">
                 <Link
                   href="/checkout"
-                  className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-700 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 transition-colors"
+                  className="inline-flex items-center justify-center rounded-xl bg-[var(--ink)] px-5 py-2.5 text-sm font-semibold text-[var(--canvas)] hover:opacity-90 transition-colors"
                 >
                   Review selected team
                 </Link>
                 <Link
                   href="/get-started"
-                  className="inline-flex items-center justify-center rounded-xl border border-slate-300 dark:border-slate-700 px-5 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-white/70 dark:hover:bg-slate-800 transition-colors"
+                  className="inline-flex items-center justify-center rounded-xl border border-[var(--hairline)] px-5 py-2.5 text-sm font-semibold text-[var(--body-color)] hover:bg-[var(--surface-el)] transition-colors"
                 >
                   Talk to onboarding
                 </Link>
                 <Link
                   href="/marketplace/listings"
-                  className="inline-flex items-center justify-center rounded-xl border border-slate-300 dark:border-slate-700 px-5 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-white/70 dark:hover:bg-slate-800 transition-colors"
+                  className="inline-flex items-center justify-center rounded-xl border border-[var(--hairline)] px-5 py-2.5 text-sm font-semibold text-[var(--body-color)] hover:bg-[var(--surface-el)] transition-colors"
                 >
                   View live skill registry →
                 </Link>
@@ -91,10 +91,10 @@ export default function MarketplacePage() {
             {launchPaths.map((path) => (
               <article
                 key={path.label}
-                className="rounded-2xl border border-slate-200/80 dark:border-slate-700/80 bg-white/85 dark:bg-slate-900/80 backdrop-blur p-5"
+                className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface-card)] p-5"
               >
-                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{path.label}</p>
-                <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{path.detail}</p>
+                <p className="text-sm font-semibold text-[var(--ink)]">{path.label}</p>
+                <p className="mt-2 text-sm text-[var(--mute)]">{path.detail}</p>
               </article>
             ))}
           </div>

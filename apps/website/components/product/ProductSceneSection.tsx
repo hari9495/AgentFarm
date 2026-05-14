@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { motion, useMotionValueEvent, useScroll, useSpring } from "framer-motion";
+import { motion, useMotionValueEvent, useScroll, useSpring } from "motion/react";
 import { CheckCircle2, ShieldAlert, GitPullRequest, FileCheck2, Bot } from "lucide-react";
 
 const PIPELINE = [

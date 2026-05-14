@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Star } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
 
 const quotes = [
     {
@@ -42,33 +43,38 @@ export default function SocialProofBar() {
     const current = quotes[idx];
 
     return (
-        <section className="bg-gradient-to-r from-sky-600 via-blue-600 to-indigo-600 py-8">
+        <section className="bg-[var(--surface)] border-y border-[var(--hairline)] py-10">
             <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
                 <div className="flex justify-center gap-0.5 mb-4">
                     {Array.from({ length: current.rating }).map((_, i) => (
-                        <Star key={i} className="w-4 h-4 text-amber-300 fill-amber-300" />
+                        <Star key={i} className="w-4 h-4 text-[var(--accent-yellow)] fill-[var(--accent-yellow)]" />
                     ))}
                 </div>
-                <p
-                    key={idx}
-                    className="text-base sm:text-lg font-medium text-white leading-relaxed max-w-2xl mx-auto animate-fade-in"
-                    style={{ animation: "fadeIn 0.45s ease" }}
-                >
-                    &ldquo;{current.quote}&rdquo;
-                </p>
-                <p className="mt-3 text-sm text-blue-200 font-semibold">{current.author}</p>
+                <AnimatePresence mode="wait">
+                    <motion.p
+                        key={idx}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -8 }}
+                        transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
+                        className="text-base sm:text-lg font-medium text-[var(--ink)] leading-relaxed max-w-2xl mx-auto"
+                    >
+                        &ldquo;{current.quote}&rdquo;
+                    </motion.p>
+                </AnimatePresence>
+                <p className="mt-3 text-sm text-[var(--mute)] font-semibold">{current.author}</p>
                 <div className="mt-5 flex justify-center gap-1.5">
                     {quotes.map((_, i) => (
                         <button
                             key={i}
                             onClick={() => setIdx(i)}
-                            className={`w-1.5 h-1.5 rounded-full transition-all ${i === idx ? "bg-white w-4" : "bg-white/40"}`}
+                            className={`h-1.5 rounded-full transition-all ${i === idx ? "bg-[var(--accent-blue)] w-4" : "bg-[var(--hairline)] w-1.5"}`}
                             aria-label={`Go to quote ${i + 1}`}
                         />
                     ))}
                 </div>
             </div>
-            <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }`}</style>
         </section>
     );
 }
+

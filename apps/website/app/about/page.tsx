@@ -1,7 +1,7 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import { Bot, Target, Zap, Users, Sparkles, TrendingUp, Award } from "lucide-react";
 import ButtonLink from "@/components/shared/ButtonLink";
-import PremiumIcon from "@/components/shared/PremiumIcon";
+
 
 export const metadata: Metadata = {
     title: "About — AgentFarm",
@@ -59,7 +59,7 @@ const values = [
 
 export default function AboutPage() {
     return (
-        <div className="site-shell">
+        <div>
             {/* Hero with real team photo */}
             <section className="relative overflow-hidden">
                 <img
@@ -68,7 +68,7 @@ export default function AboutPage() {
                     className="w-full h-[420px] sm:h-[520px] object-cover"
                     loading="eager"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/85 via-slate-900/40 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#07080a]/85 via-[#07080a]/40 to-transparent" />
                 <div className="absolute bottom-0 left-0 right-0 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-14">
                     <div className="inline-flex items-center gap-2 bg-white/15 backdrop-blur border border-white/20 text-white text-xs font-semibold px-4 py-1.5 rounded-full mb-5">
                         <Bot className="w-3.5 h-3.5" />
@@ -92,7 +92,7 @@ export default function AboutPage() {
             </section>
 
             {/* Stats bar */}
-            <div className="bg-slate-900 dark:bg-slate-950 border-b border-slate-800">
+            <div className="bg-[var(--canvas)] border-b border-[var(--hairline)]">
                 <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
                     {[
                         { value: "2025", label: "Founded" },
@@ -101,8 +101,8 @@ export default function AboutPage() {
                         { value: "Azure", label: "Infrastructure" },
                     ].map(({ value, label }) => (
                         <div key={label}>
-                            <p className="text-xl font-extrabold text-white">{value}</p>
-                            <p className="text-xs text-slate-400 mt-0.5">{label}</p>
+                            <p className="text-xl font-bold text-[var(--ink)]">{value}</p>
+                            <p className="text-xs text-[var(--ash)] mt-0.5">{label}</p>
                         </div>
                     ))}
                 </div>
@@ -140,17 +140,17 @@ export default function AboutPage() {
                             className="w-full h-72 object-cover"
                             loading="lazy"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#07080a]/60 to-transparent" />
                         <div className="absolute bottom-4 left-4 right-4 text-white">
                             <p className="text-sm font-semibold">Built by engineers, for engineers</p>
-                            <p className="text-xs text-slate-300">Every feature comes from a real team pain point</p>
+                            <p className="text-xs text-[var(--mute)]">Every feature comes from a real team pain point</p>
                         </div>
                     </div>
                 </div>
 
                 {/* Values */}
                 <div className="mb-20">
-                    <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-8">
+                    <h2 className="text-2xl font-semibold tracking-[-0.03em] text-[var(--ink)] mb-8">
                         What we believe
                     </h2>
                     <div className="grid sm:grid-cols-3 gap-6">
@@ -163,18 +163,15 @@ export default function AboutPage() {
                             return (
                                 <div
                                     key={title}
-                                    className="p-6 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:shadow-lg hover:-translate-y-1 transition-all"
+                                    className="p-6 rounded-2xl border border-[var(--hairline)] bg-[var(--surface-card)] hover:-translate-y-1 hover:border-[var(--accent-blue)]/30 transition-all"
                                 >
                                     <div className="mb-4">
-                                        <PremiumIcon
-                                            icon={Icon}
-                                            tone="sky"
-                                            containerClassName={`w-10 h-10 rounded-xl bg-gradient-to-br ${gradients[i % gradients.length]} text-white border-white/20`}
-                                            iconClassName="w-5 h-5"
-                                        />
+                                        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${gradients[i % gradients.length]} flex items-center justify-center`}>
+                                            <Icon className="w-5 h-5 text-white" />
+                                        </div>
                                     </div>
-                                    <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">{title}</h3>
-                                    <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                                    <h3 className="font-semibold text-[var(--ink)] mb-2">{title}</h3>
+                                    <p className="text-sm text-[var(--mute)] leading-relaxed">
                                         {description}
                                     </p>
                                 </div>
@@ -185,13 +182,13 @@ export default function AboutPage() {
 
                 {/* Team */}
                 <div className="mb-20">
-                    <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-3">The team</h2>
-                    <p className="text-slate-500 dark:text-slate-400 mb-8">Four people who&apos;ve built products used by millions of developers.</p>
+                    <h2 className="text-2xl font-semibold tracking-[-0.03em] text-[var(--ink)] mb-3">The team</h2>
+                    <p className="text-[var(--mute)] mb-8">Four people who&apos;ve built products used by millions of developers.</p>
                     <div className="grid sm:grid-cols-2 gap-6">
                         {team.map(({ name, role, bio, photo }) => (
                             <div
                                 key={name}
-                                className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:shadow-xl hover:-translate-y-1 transition-all overflow-hidden"
+                                className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface-card)] hover:-translate-y-1 transition-all overflow-hidden"
                             >
                                 <img
                                     src={photo}
@@ -200,9 +197,9 @@ export default function AboutPage() {
                                     loading="lazy"
                                 />
                                 <div className="p-5">
-                                    <p className="font-semibold text-slate-900 dark:text-slate-100">{name}</p>
-                                    <p className="text-sm text-blue-600 dark:text-blue-400 mb-2 font-medium">{role}</p>
-                                    <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{bio}</p>
+                                    <p className="font-semibold text-[var(--ink)]">{name}</p>
+                                    <p className="text-sm text-[var(--accent-blue)] mb-2 font-medium">{role}</p>
+                                    <p className="text-sm text-[var(--mute)] leading-relaxed">{bio}</p>
                                 </div>
                             </div>
                         ))}
@@ -211,12 +208,12 @@ export default function AboutPage() {
 
                 {/* Backers */}
                 <div className="mb-20 text-center">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-6">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-[var(--ash)] mb-6">
                         Backed by
                     </p>
                     <div className="flex flex-wrap justify-center gap-8 text-slate-400 font-semibold text-sm">
                         {["Y Combinator", "Sequoia", "a16z", "Founders Fund"].map((backer) => (
-                            <span key={backer} className="px-4 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300">
+                            <span key={backer} className="px-4 py-2 bg-[var(--surface-el)] rounded-xl border border-[var(--hairline)] text-[var(--body-color)]">
                                 {backer}
                             </span>
                         ))}
@@ -224,11 +221,11 @@ export default function AboutPage() {
                 </div>
 
                 {/* CTA */}
-                <div className="relative text-center bg-gradient-to-br from-slate-900 to-blue-900 rounded-3xl p-10 text-white overflow-hidden">
+                <div className="relative text-center bg-[var(--surface-card)] border border-[var(--hairline)] rounded-3xl p-10 overflow-hidden">
                     <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(59,130,246,0.2)_0%,_transparent_70%)] pointer-events-none" />
                     <div className="relative">
-                        <h2 className="text-2xl font-bold mb-3">Join us on the mission</h2>
-                        <p className="text-blue-200 mb-6">
+                        <h2 className="text-2xl font-semibold tracking-[-0.03em] text-[var(--ink)] mb-3">Join us on the mission</h2>
+                        <p className="text-[var(--mute)] mb-6">
                             We&apos;re hiring engineers, designers, and builders who want to
                             reshape how software gets made.
                         </p>

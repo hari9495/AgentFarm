@@ -1,6 +1,6 @@
-﻿"use client";
+"use client";
 
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { ArrowRight, Bot, Link2, ShieldCheck, ClipboardCheck } from "lucide-react";
 
 const steps = [
@@ -36,7 +36,7 @@ const steps = [
         number: "04",
         title: "Review, approve, and measure",
         description:
-            "Review PRs, approve high-risk actions, and track every outcome from the dashboard — with a complete evidence trail for every task.",
+            "Review PRs, approve high-risk actions, and track every outcome from the dashboard � with a complete evidence trail for every task.",
         image:
             "https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=1200&q=80",
     },
@@ -44,14 +44,14 @@ const steps = [
 
 export default function HowItWorks() {
     return (
-        <section id="how-it-works" className="bg-white dark:bg-slate-950 py-24 border-t border-slate-100 dark:border-slate-800">
+        <section id="how-it-works" className="bg-[var(--surface)] py-24 border-t border-[var(--hairline)]">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="max-w-2xl mx-auto text-center mb-16">
                     <motion.span
                         initial={{ opacity: 0, y: -6 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
-                        className="text-xs font-semibold uppercase tracking-wider text-sky-600 dark:text-sky-400"
+                        className="chip chip-accent"
                     >
                         How It Works
                     </motion.span>
@@ -60,7 +60,7 @@ export default function HowItWorks() {
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
                         transition={{ delay: 0.05 }}
-                        className="mt-3 text-3xl sm:text-4xl font-bold text-slate-900 dark:text-slate-100"
+                        className="mt-4 text-3xl sm:text-4xl font-semibold tracking-[-0.03em] text-[var(--ink)]"
                     >
                         Clear process, not black-box automation
                     </motion.h2>
@@ -69,7 +69,7 @@ export default function HowItWorks() {
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
                         transition={{ delay: 0.1 }}
-                        className="mt-4 text-lg text-slate-500 dark:text-slate-400"
+                        className="mt-4 text-lg text-[var(--mute)]"
                     >
                         From setup to measurable output, every step is structured, transparent, and easy for teams to follow.
                     </motion.p>
@@ -85,25 +85,25 @@ export default function HowItWorks() {
                                 initial={{ opacity: 0, y: 32 }}
                                 whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true, margin: "-30px" }}
-                                transition={{ delay: i * 0.15, duration: 0.45, ease: "easeOut" }}
-                                className="relative z-10 rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm"
+                                transition={{ delay: i * 0.15, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+                                className="relative z-10 rounded-3xl overflow-hidden border border-[var(--hairline)] bg-[var(--surface-card)]"
                             >
                                 <img
                                     src={step.image}
                                     alt={step.title}
-                                    className="w-full h-44 object-cover"
+                                    className="w-full h-44 object-cover opacity-80"
                                     loading="lazy"
                                 />
                                 <div className="p-6">
                                     <div className="mb-3 flex items-center gap-2">
-                                        <div className="integration-icon-orb h-8 w-8 rounded-lg">
-                                            <StepIcon className="w-4 h-4 text-cyan-700" />
+                                        <div className="w-8 h-8 rounded-lg bg-[var(--accent-blue)]/10 flex items-center justify-center">
+                                            <StepIcon className="w-4 h-4 text-[var(--accent-blue)]" />
                                         </div>
-                                        <p className="text-xs font-semibold text-blue-600">Step {step.number}</p>
+                                        <p className="text-xs font-semibold text-[var(--accent-blue)]">Step {step.number}</p>
                                     </div>
-                                    <h3 className="font-bold text-slate-900 dark:text-slate-100 mb-2 text-lg">{step.title}</h3>
-                                    <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{step.description}</p>
-                                    <a href="/how-it-works" className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700">
+                                    <h3 className="font-semibold text-[var(--ink)] mb-2 text-lg tracking-[-0.02em]">{step.title}</h3>
+                                    <p className="text-sm text-[var(--mute)] leading-relaxed">{step.description}</p>
+                                    <a href="/how-it-works" className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--accent-blue)] hover:text-[#8dd7ff] transition-colors">
                                         Learn more <ArrowRight className="w-4 h-4" />
                                     </a>
                                 </div>

@@ -2152,3 +2152,148 @@ export interface TenantPortalLoginResponse {
   expiresAt: string
 }
 
+// ============================================================================
+// SALES AGENT CONFIG
+// Frozen 2026-05-13
+// ============================================================================
+
+export type LeadSourceProvider =
+  | 'apollo'
+  | 'hunter'
+  | 'linkedin'
+  | 'clearbit'
+  | 'zoominfo'
+  | 'lusha'
+  | 'phantombuster';
+
+export type SalesEmailProvider =
+  | 'gmail'
+  | 'outlook'
+  | 'smtp'
+  | 'sendgrid'
+  | 'mailgun'
+  | 'amazon_ses';
+
+export type SalesCrmProvider =
+  | 'salesforce'
+  | 'hubspot'
+  | 'pipedrive'
+  | 'zoho_crm'
+  | 'close_io';
+
+export type SalesCalendarProvider =
+  | 'google_calendar'
+  | 'calendly'
+  | 'microsoft_bookings'
+  | 'cal_com';
+
+export type SalesSignatureProvider =
+  | 'docusign'
+  | 'zoho_sign'
+  | 'adobe_sign'
+  | 'hellosign';
+
+export interface SalesAgentConfigRecord {
+  id: string;
+  tenantId: string;
+  botId: string;
+  productDescription: string;
+  icp: string;
+  leadSourceProvider: LeadSourceProvider;
+  emailProvider: SalesEmailProvider;
+  crmProvider: SalesCrmProvider;
+  calendarProvider: SalesCalendarProvider;
+  signatureProvider: SalesSignatureProvider;
+  emailTone: string;
+  followUpDays: number[];
+  maxProspectsPerDay: number;
+  active: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ============================================================================
+// SALES PIPELINE TYPES
+// Frozen 2026-05-18
+// ============================================================================
+
+export type ProspectStatus =
+  | 'new'
+  | 'contacted'
+  | 'engaged'
+  | 'qualified'
+  | 'disqualified'
+  | 'converted';
+
+export type DealStage =
+  | 'discovery'
+  | 'proposal'
+  | 'negotiation'
+  | 'closed_won'
+  | 'closed_lost';
+
+export type SalesActivityType =
+  | 'email'
+  | 'call'
+  | 'meeting'
+  | 'linkedin_message'
+  | 'follow_up'
+  | 'demo'
+  | 'proposal_sent';
+
+export interface ProspectRecord {
+  id: string;
+  tenantId: string;
+  botId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  company: string;
+  title: string | null;
+  industry: string | null;
+  companySize: string | null;
+  linkedinUrl: string | null;
+  website: string | null;
+  phone: string | null;
+  icpScore: number;
+  qualified: boolean;
+  status: ProspectStatus;
+  notes: string | null;
+  lastContactedAt: Date | null;
+  nextFollowUpAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface SalesDealRecord {
+  id: string;
+  tenantId: string;
+  botId: string;
+  prospectId: string;
+  title: string;
+  value: number | null;
+  currency: string;
+  stage: DealStage;
+  notes: string | null;
+  expectedCloseDate: Date | null;
+  closedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface SalesActivityRecord {
+  id: string;
+  tenantId: string;
+  botId: string;
+  prospectId: string;
+  dealId: string | null;
+  activityType: SalesActivityType;
+  subject: string;
+  body: string | null;
+  outcome: string | null;
+  scheduledAt: Date | null;
+  completedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+

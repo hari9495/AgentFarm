@@ -5,8 +5,158 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme inline {
-  --font-sans: var(--font-manrope);
-  --font-display: var(--font-sora);
+  --font-sans: var(--font-inter), var(--font-manrope), sans-serif;
+  --font-display: var(--font-inter), var(--font-sora), sans-serif;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DESIGN.md — Raycast dark canvas token system
+   ═══════════════════════════════════════════════════════════════════════════ */
+:root {
+  /* Canvas / Surface ladder */
+  --canvas: #07080a;
+  --surface: #0d0d0d;
+  --surface-elevated: #101111;
+  --surface-card: #121212;
+  --surface-overlay: #161616;
+  /* Hairlines */
+  --hairline: #242728;
+  --hairline-soft: rgba(255, 255, 255, 0.08);
+  /* Typography */
+  --ink: #f4f4f6;
+  --body-color: #cdcdcd;
+  --mute: #9c9c9d;
+  --ash: #6a6b6c;
+  /* Accent spectrum */
+  --accent-red: #ff6161;
+  --accent-blue: #57c1ff;
+  --accent-green: #59d499;
+  --accent-yellow: #ffc533;
+  /* Hero gradient stripe */
+  --hero-stripe-from: #ff5757;
+  --hero-stripe-to: #a1131a;
+  /* Interactions */
+  --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out: cubic-bezier(0.0, 0, 0.2, 1);
+  /* Radius scale */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-pill: 9999px;
+}
+
+/* Inter font with Raycast stylistic settings */
+body,
+.font-inter {
+  font-feature-settings: "calt", "kern", "liga", "ss03";
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-feature-settings: "calt", "kern", "liga", "ss03", "cv01";
+  letter-spacing: -0.02em;
+}
+
+/* ── Dark mode — DESIGN.md Raycast canvas ─────────────────────────────── */
+.dark body {
+  background: var(--canvas);
+  color: var(--ink);
+}
+
+/* Surface utility classes (work in dark-first context) */
+.surface {
+  background: var(--surface);
+}
+
+.surface-el {
+  background: var(--surface-elevated);
+}
+
+.surface-card {
+  background: var(--surface-card);
+}
+
+.hairline {
+  border-color: var(--hairline);
+}
+
+.hairline-soft {
+  border-color: var(--hairline-soft);
+}
+
+.text-ink {
+  color: var(--ink);
+}
+
+.text-body-muted {
+  color: var(--body-color);
+}
+
+.text-muted-rd {
+  color: var(--mute);
+}
+
+/* Hero stripe — Raycast signature diagonal gradient */
+.hero-stripe {
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-stripe::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--hero-stripe-from), var(--hero-stripe-to));
+  opacity: 0.9;
+  z-index: 10;
+}
+
+/* Raycast-style command palette / terminal card */
+.raycast-card {
+  background: var(--surface-card);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-xl);
+}
+
+/* Glass chip / pill badge */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-pill);
+  padding: 0.25rem 0.75rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--mute);
+}
+
+.chip-accent {
+  background: rgba(87, 193, 255, 0.1);
+  border-color: rgba(87, 193, 255, 0.25);
+  color: var(--accent-blue);
+}
+
+.chip-green {
+  background: rgba(89, 212, 153, 0.1);
+  border-color: rgba(89, 212, 153, 0.2);
+  color: var(--accent-green);
+}
+
+.chip-red {
+  background: rgba(255, 97, 97, 0.1);
+  border-color: rgba(255, 97, 97, 0.2);
+  color: var(--accent-red);
 }
 
 html {
@@ -226,8 +376,9 @@ body {
 }
 
 .dark .card-premium {
-  background: linear-gradient(135deg, rgba(15, 23, 42, 0.78) 0%, rgba(30, 41, 59, 0.75) 55%, rgba(17, 24, 39, 0.85) 100%);
-  border-color: rgba(100, 116, 139, 0.3);
+  background: var(--surface-card);
+  border-color: var(--hairline);
+  box-shadow: none;
 }
 
 .btn-primary {
@@ -256,13 +407,14 @@ body {
 
 .dark .btn-primary {
   background: #ffffff;
-  color: #0f172a;
+  color: #000000;
   border-color: #ffffff;
 }
 
 .dark .btn-primary:hover {
-  background: #e2e8f0;
-  border-color: #e2e8f0;
+  background: #e8e8e8;
+  border-color: #e8e8e8;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12), 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
 .btn-secondary {
@@ -290,13 +442,13 @@ body {
 }
 
 .dark .btn-secondary {
-  color: #f1f5f9;
-  border-color: rgba(100, 116, 139, 0.4);
+  color: var(--ink);
+  border-color: var(--hairline);
 }
 
 .dark .btn-secondary:hover {
-  background: rgba(15, 23, 42, 0.8);
-  border-color: rgba(100, 116, 139, 0.6);
+  background: var(--surface-elevated);
+  border-color: rgba(255, 255, 255, 0.15);
 }
 
 .btn-link {
@@ -327,6 +479,13 @@ body {
     radial-gradient(72% 58% at 8% 8%, rgba(34, 211, 238, 0.19) 0%, rgba(34, 211, 238, 0) 72%),
     radial-gradient(66% 52% at 94% 12%, rgba(20, 184, 166, 0.16) 0%, rgba(20, 184, 166, 0) 74%),
     linear-gradient(180deg, #f4fbff 0%, #eef6ff 44%, #ecf5fa 100%);
+}
+
+.dark .hero-future {
+  background:
+    radial-gradient(72% 58% at 8% 8%, rgba(87, 193, 255, 0.07) 0%, rgba(87, 193, 255, 0) 72%),
+    radial-gradient(66% 52% at 94% 12%, rgba(89, 212, 153, 0.05) 0%, rgba(89, 212, 153, 0) 74%),
+    var(--canvas);
 }
 
 .hero-future-aurora {
@@ -632,10 +791,7 @@ h6 {
 }
 
 .dark .site-shell {
-  background:
-    radial-gradient(65% 55% at 10% 0%, rgba(2, 132, 199, 0.20) 0%, rgba(2, 132, 199, 0) 75%),
-    radial-gradient(60% 50% at 90% 0%, rgba(5, 150, 105, 0.20) 0%, rgba(5, 150, 105, 0) 75%),
-    linear-gradient(180deg, #020617 0%, #0b1120 48%, #111827 100%);
+  background: var(--canvas);
 }
 
 .site-ambient {
@@ -652,7 +808,11 @@ h6 {
 }
 
 .dark .site-ambient {
-  opacity: 0.9;
+  opacity: 0.45;
+  background:
+    radial-gradient(450px 250px at 18% 12%, rgba(87, 193, 255, 0.07), rgba(87, 193, 255, 0)),
+    radial-gradient(350px 260px at 82% 10%, rgba(89, 212, 153, 0.06), rgba(89, 212, 153, 0)),
+    radial-gradient(300px 260px at 55% 86%, rgba(255, 97, 97, 0.04), rgba(255, 97, 97, 0));
 }
 
 .site-grid {
@@ -683,10 +843,10 @@ h6 {
 }
 
 .dark .site-grid {
-  opacity: 0.12;
+  opacity: 0.06;
   background-image:
-    linear-gradient(to right, rgba(148, 163, 184, 0.25) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(148, 163, 184, 0.25) 1px, transparent 1px);
+    linear-gradient(to right, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
 }
 
 @keyframes ambient-drift {

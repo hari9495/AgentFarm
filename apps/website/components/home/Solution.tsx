@@ -1,7 +1,7 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { ArrowRight, CheckCircle, CheckCircle2, Clock3, GitPullRequest, ShieldCheck, Zap } from "lucide-react";
+import { motion } from "motion/react";
+import { ArrowRight, CheckCircle2, Clock3, GitPullRequest, ShieldCheck } from "lucide-react";
 
 const benefits = [
     "Role-specific AI workers with clear responsibilities and outputs",
@@ -12,140 +12,173 @@ const benefits = [
     "Transparent monthly pricing aligned to role and usage",
 ];
 
-// Mock live-operations panel items
 const prEvents = [
     {
-        type: "pr",
         label: "PR #482 opened",
         detail: "Fix auth timeout — billing webhook retries",
         agent: "AI Backend Developer",
         initials: "AB",
-        color: "text-sky-400",
-        ring: "ring-sky-500/20 bg-sky-500/10",
+        accentColor: "#57c1ff",
         risk: "low",
-        riskColor: "text-emerald-400 bg-emerald-900/40",
-        time: "Just now",
+        time: "just now",
     },
     {
-        type: "ci",
         label: "CI checks passed",
-        detail: "423 / 423 tests green · 0 failures",
+        detail: "985 / 985 tests green · 0 failures",
         agent: "AI QA Engineer",
         initials: "AQ",
-        color: "text-violet-400",
-        ring: "ring-violet-500/20 bg-violet-500/10",
+        accentColor: "#59d499",
         risk: "low",
-        riskColor: "text-emerald-400 bg-emerald-900/40",
         time: "8m ago",
     },
     {
-        type: "approval",
         label: "⚠ Approval needed",
         detail: "Merge migration · customer schema change",
         agent: "AI DevOps Engineer",
         initials: "AD",
-        color: "text-amber-400",
-        ring: "ring-amber-500/20 bg-amber-500/10",
+        accentColor: "#ffc533",
         risk: "high",
-        riskColor: "text-rose-400 bg-rose-900/40",
         time: "15m ago",
     },
 ];
 
 export default function Solution() {
     return (
-        <section className="bg-white dark:bg-slate-950 py-24">
+        <section className="bg-[var(--surface)] py-24">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
 
                     {/* Text side */}
                     <div>
-                        <span className="text-xs font-semibold uppercase tracking-wider text-sky-600 dark:text-sky-400">
+                        <motion.p
+                            initial={{ opacity: 0 }}
+                            whileInView={{ opacity: 1 }}
+                            viewport={{ once: true }}
+                            className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#6a6b6c] mb-4"
+                        >
                             The Solution
-                        </span>
-                        <h2 className="mt-3 text-3xl sm:text-4xl font-bold text-slate-900 dark:text-slate-100 leading-tight">
+                        </motion.p>
+                        <motion.h2
+                            initial={{ opacity: 0, y: 12 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            transition={{ duration: 0.44, ease: [0.22, 1, 0.36, 1] }}
+                            className="text-[clamp(1.8rem,3.5vw,2.8rem)] font-semibold text-[#f4f4f6] tracking-tight leading-[1.1]"
+                        >
                             A practical AI operations layer for engineering teams
-                        </h2>
-                        <p className="mt-5 text-lg text-slate-500 dark:text-slate-400 leading-relaxed">
+                        </motion.h2>
+                        <motion.p
+                            initial={{ opacity: 0, y: 10 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            transition={{ delay: 0.08, duration: 0.44, ease: [0.22, 1, 0.36, 1] }}
+                            className="mt-5 text-[#9c9c9d] leading-relaxed"
+                        >
                             AgentFarm gives teams a structured way to run AI workers inside real company workflows.
-                            Designed for measurable output, human oversight, and predictable delivery — not demo-only automation.
-                        </p>
-                        <ul className="mt-8 space-y-3.5">
+                            Designed for measurable output, human oversight, and predictable delivery.
+                        </motion.p>
+                        <motion.ul
+                            initial={{ opacity: 0, y: 8 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            transition={{ delay: 0.14, duration: 0.44, ease: [0.22, 1, 0.36, 1] }}
+                            className="mt-8 space-y-3"
+                        >
                             {benefits.map((b) => (
-                                <li key={b} className="flex items-start gap-3 text-slate-700 dark:text-slate-300">
-                                    <CheckCircle className="w-5 h-5 text-sky-600 dark:text-sky-400 shrink-0 mt-0.5" />
-                                    <span className="text-sm leading-relaxed">{b}</span>
+                                <li key={b} className="flex items-start gap-3 text-sm text-[#cdcdcd]">
+                                    <CheckCircle2 className="w-4 h-4 text-[#59d499] shrink-0 mt-0.5" />
+                                    <span className="leading-relaxed">{b}</span>
                                 </li>
                             ))}
-                        </ul>
-                        <a
+                        </motion.ul>
+                        <motion.a
+                            initial={{ opacity: 0 }}
+                            whileInView={{ opacity: 1 }}
+                            viewport={{ once: true }}
+                            transition={{ delay: 0.26, duration: 0.36 }}
                             href="/how-it-works"
-                            className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300 transition-colors"
+                            className="mt-8 inline-flex items-center gap-2 text-sm font-medium text-[#57c1ff] hover:text-[#8dd7ff] transition-colors"
                         >
                             See full delivery flow <ArrowRight className="w-4 h-4" />
-                        </a>
+                        </motion.a>
                     </div>
 
-                    {/* Visual side — live ops panel */}
+                    {/* Visual side — dark live ops panel */}
                     <motion.div
                         initial={{ opacity: 0, x: 30 }}
                         whileInView={{ opacity: 1, x: 0 }}
                         viewport={{ once: true }}
-                        transition={{ duration: 0.55 }}
+                        transition={{ duration: 0.52, ease: [0.22, 1, 0.36, 1] }}
                         className="relative"
                     >
-                        {/* Glow */}
-                        <div className="absolute -inset-4 bg-gradient-to-br from-sky-100/60 via-emerald-50/40 to-indigo-100/60 dark:from-sky-900/20 dark:via-emerald-900/10 dark:to-indigo-900/20 rounded-3xl blur-2xl" />
+                        {/* Subtle glow behind panel */}
+                        <div className="absolute -inset-6 rounded-3xl bg-[radial-gradient(ellipse_at_center,rgba(87,193,255,0.05),transparent_72%)] pointer-events-none" />
 
                         {/* Panel */}
-                        <div className="relative rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-950 shadow-2xl overflow-hidden">
-
-                            {/* Panel titlebar */}
-                            <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-800 bg-slate-900">
-                                <div className="w-3 h-3 rounded-full bg-rose-500/70" />
-                                <div className="w-3 h-3 rounded-full bg-amber-500/70" />
-                                <div className="w-3 h-3 rounded-full bg-emerald-500/70" />
-                                <span className="ml-2 text-xs font-mono text-slate-500">AgentFarm — Live Operations</span>
-                                <span className="ml-auto flex items-center gap-1.5 text-[11px] text-emerald-400 font-semibold">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        <div className="relative rounded-xl border border-[#242728] bg-[#0d0d0d] overflow-hidden shadow-2xl shadow-black/70">
+                            {/* Titlebar */}
+                            <div className="flex items-center gap-2 px-4 py-3 border-b border-[#242728] bg-[#121212]">
+                                <div className="w-2.5 h-2.5 rounded-full bg-[#ff6161]" />
+                                <div className="w-2.5 h-2.5 rounded-full bg-[#ffc533]" />
+                                <div className="w-2.5 h-2.5 rounded-full bg-[#59d499]" />
+                                <span className="ml-2 text-[11px] font-mono text-[#6a6b6c]">AgentFarm — Live Operations</span>
+                                <span className="ml-auto flex items-center gap-1.5 text-[11px] text-[#59d499] font-semibold">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-[#59d499] animate-pulse" />
                                     4 agents active
                                 </span>
                             </div>
 
                             {/* Event feed */}
-                            <div className="p-4 space-y-3">
+                            <div className="p-4 space-y-2.5">
                                 {prEvents.map((ev, i) => (
-                                    <div
-                                        key={i}
-                                        className="flex items-start gap-3 rounded-xl bg-slate-900/80 border border-slate-800 p-3.5"
+                                    <motion.div
+                                        key={ev.label}
+                                        initial={{ opacity: 0, x: -8 }}
+                                        whileInView={{ opacity: 1, x: 0 }}
+                                        viewport={{ once: true }}
+                                        transition={{ delay: 0.3 + i * 0.1, duration: 0.36, ease: [0.22, 1, 0.36, 1] }}
+                                        className="flex items-start gap-3 rounded-lg bg-[#121212] border border-[#242728] p-3"
                                     >
-                                        <div className={`w-8 h-8 rounded-xl ring-1 ${ev.ring} flex items-center justify-center shrink-0 text-xs font-bold ${ev.color}`}>
+                                        <div
+                                            className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-[11px] font-bold"
+                                            style={{
+                                                background: `${ev.accentColor}14`,
+                                                border: `1px solid ${ev.accentColor}28`,
+                                                color: ev.accentColor,
+                                            }}
+                                        >
                                             {ev.initials}
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2 mb-0.5">
-                                                <span className="text-xs font-bold text-slate-200">{ev.label}</span>
-                                                <span className={`text-[10px] font-bold rounded-full px-2 py-0.5 ${ev.riskColor}`}>
-                                                    {ev.risk}
+                                                <span className="text-xs font-semibold text-[#f4f4f6]">{ev.label}</span>
+                                                <span
+                                                    className="text-[9px] font-semibold rounded px-1.5 py-0.5 ml-auto shrink-0"
+                                                    style={{
+                                                        color: ev.risk === "high" ? "#ffc533" : "#59d499",
+                                                        background: ev.risk === "high" ? "rgba(255,197,51,0.1)" : "rgba(89,212,153,0.1)",
+                                                    }}
+                                                >
+                                                    {ev.risk.toUpperCase()}
                                                 </span>
-                                                <span className="text-[10px] text-slate-500 ml-auto shrink-0">{ev.time}</span>
+                                                <span className="text-[10px] text-[#6a6b6c] shrink-0">{ev.time}</span>
                                             </div>
-                                            <p className="text-xs text-slate-400 truncate">{ev.detail}</p>
-                                            <p className={`text-[11px] font-semibold mt-1 ${ev.color}`}>{ev.agent}</p>
+                                            <p className="text-xs text-[#9c9c9d] truncate">{ev.detail}</p>
+                                            <p className="text-[11px] font-medium mt-0.5" style={{ color: ev.accentColor }}>{ev.agent}</p>
                                         </div>
-                                    </div>
+                                    </motion.div>
                                 ))}
 
-                                {/* Approval action buttons */}
-                                <div className="rounded-xl bg-amber-950/30 border border-amber-800/40 p-3.5">
-                                    <p className="text-xs text-amber-300 font-semibold mb-2.5">
+                                {/* Approval row */}
+                                <div className="rounded-lg bg-[rgba(255,197,51,0.04)] border border-[rgba(255,197,51,0.18)] p-3.5">
+                                    <p className="text-xs text-[#ffc533] font-semibold mb-2.5">
                                         HIGH-risk action pending your approval
                                     </p>
                                     <div className="flex gap-2">
-                                        <button className="flex-1 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white py-2 transition-colors">
+                                        <button className="flex-1 text-xs font-semibold rounded-lg bg-[#59d499] hover:bg-[#6ee8ae] text-black py-2 transition-colors">
                                             Approve
                                         </button>
-                                        <button className="flex-1 text-xs font-bold rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-800 py-2 transition-colors">
+                                        <button className="flex-1 text-xs font-semibold rounded-lg border border-[#242728] text-[#9c9c9d] hover:text-[#f4f4f6] hover:bg-white/[0.04] py-2 transition-colors">
                                             Review diff
                                         </button>
                                     </div>
@@ -153,39 +186,31 @@ export default function Solution() {
                             </div>
 
                             {/* Bottom stats strip */}
-                            <div className="border-t border-slate-800 bg-slate-900 px-4 py-3 grid grid-cols-3 gap-3">
-                                <div className="flex items-center gap-2">
-                                    <Clock3 className="w-4 h-4 text-sky-500 shrink-0" />
-                                    <div>
-                                        <p className="text-[10px] text-slate-500">Median setup</p>
-                                        <p className="text-xs font-bold text-slate-200">9 minutes</p>
+                            <div className="border-t border-[#242728] bg-[#121212] px-4 py-3 grid grid-cols-3 gap-3">
+                                {[
+                                    { icon: Clock3, color: "#57c1ff", label: "Median setup", value: "9 minutes" },
+                                    { icon: GitPullRequest, color: "#59d499", label: "Weekly output", value: "+18 PRs" },
+                                    { icon: ShieldCheck, color: "#ffc533", label: "Governance", value: "Audit-ready" },
+                                ].map(({ icon: Icon, color, label, value }) => (
+                                    <div key={label} className="flex items-center gap-2">
+                                        <Icon className="w-4 h-4 shrink-0" style={{ color }} />
+                                        <div>
+                                            <p className="text-[10px] text-[#6a6b6c]">{label}</p>
+                                            <p className="text-xs font-semibold text-[#f4f4f6]">{value}</p>
+                                        </div>
                                     </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <GitPullRequest className="w-4 h-4 text-emerald-500 shrink-0" />
-                                    <div>
-                                        <p className="text-[10px] text-slate-500">Weekly output</p>
-                                        <p className="text-xs font-bold text-slate-200">+18 PRs</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <ShieldCheck className="w-4 h-4 text-violet-500 shrink-0" />
-                                    <div>
-                                        <p className="text-[10px] text-slate-500">Governance</p>
-                                        <p className="text-xs font-bold text-slate-200">Audit-ready</p>
-                                    </div>
-                                </div>
+                                ))}
                             </div>
                         </div>
 
-                        {/* Operations snapshot callout */}
-                        <div className="mt-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40 px-4 py-3 flex items-center gap-3">
-                            <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
+                        {/* Callout below panel */}
+                        <div className="mt-4 rounded-xl bg-[rgba(89,212,153,0.04)] border border-[rgba(89,212,153,0.15)] px-4 py-3 flex items-center gap-3">
+                            <CheckCircle2 className="w-4 h-4 text-[#59d499] shrink-0" />
                             <div>
-                                <p className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                                <p className="text-sm font-semibold text-[#f4f4f6]">
                                     Teams report faster cycle time within first 2 weeks
                                 </p>
-                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                <p className="text-xs text-[#6a6b6c] mt-0.5">
                                     Clear task ownership, faster handoffs, fewer repetitive blockers.
                                 </p>
                             </div>
@@ -196,3 +221,4 @@ export default function Solution() {
         </section>
     );
 }
+

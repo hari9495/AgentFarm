@@ -49,6 +49,26 @@
         "./provider-state-persistence.js": {
             "types": "./src/provider-state-persistence.ts",
             "default": "./src/provider-state-persistence.ts"
+        },
+        "./role-profiles.js": {
+            "types": "./src/role-profiles/index.ts",
+            "default": "./src/role-profiles/index.ts"
+        },
+        "./sales/prospect-finder.js": {
+            "types": "./src/sales/prospect-finder.ts",
+            "default": "./src/sales/prospect-finder.ts"
+        },
+        "./sales/outreach.js": {
+            "types": "./src/sales/outreach-orchestrator.ts",
+            "default": "./src/sales/outreach-orchestrator.ts"
+        },
+        "./sales/reply-classifier.js": {
+            "types": "./src/sales/reply-classifier.ts",
+            "default": "./src/sales/reply-classifier.ts"
+        },
+        "./sales/email-personaliser.js": {
+            "types": "./src/sales/email-personaliser.ts",
+            "default": "./src/sales/email-personaliser.ts"
         }
     },
     "scripts": {
@@ -78,6 +98,10 @@
         "@agentfarm/shared-types": "workspace:*",
         "@prisma/client": "^6.19.3",
         "fastify": "^5.2.1",
+        "nodemailer": "^6.9.16",
         "playwright": "^1.59.1"
+    },
+    "devDependencies": {
+        "@types/nodemailer": "^6.4.17"
     }
 }

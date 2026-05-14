@@ -62,9 +62,9 @@ function LoginForm() {
     }
 
     return (
-        <div className="min-h-screen flex bg-white dark:bg-slate-950">
+        <div className="min-h-screen flex bg-[var(--canvas)]">
             {/* ── Left Panel — Brand ── */}
-            <div className="hidden lg:flex lg:w-[58%] relative overflow-hidden flex-col bg-slate-950">
+            <div className="hidden lg:flex lg:w-[58%] relative overflow-hidden flex-col bg-[var(--surface)]">
                 {/* Layered gradient mesh */}
                 <div className="absolute inset-0 pointer-events-none">
                     <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_10%_10%,rgba(14,165,233,0.25)_0%,transparent_60%)]" />
@@ -83,26 +83,26 @@ function LoginForm() {
                 <div className="relative z-10 flex flex-col h-full p-12">
                     {/* Logo */}
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-sky-400 via-blue-500 to-emerald-400 flex items-center justify-center shadow-xl shadow-sky-500/30">
+                        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#ff5757] to-[#a1131a] flex items-center justify-center shadow-xl shadow-red-900/30">
                             <Zap className="w-5 h-5 text-white" />
                         </div>
-                        <span className="text-xl font-extrabold text-white tracking-tight">AgentFarm</span>
+                        <span className="text-xl font-semibold text-white tracking-tight">AgentFarm</span>
                     </div>
 
                     {/* Hero copy */}
                     <div className="flex-1 flex flex-col justify-center max-w-[440px]">
-                        <span className="inline-flex items-center gap-2 self-start rounded-full border border-sky-500/30 bg-sky-500/10 px-3.5 py-1.5 text-xs font-semibold text-sky-400 mb-7">
-                            <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse" />
+                        <span className="inline-flex items-center gap-2 self-start rounded-full border border-[#57c1ff]/30 bg-[#57c1ff]/10 px-3.5 py-1.5 text-xs font-semibold text-[#57c1ff] mb-7">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#57c1ff] animate-pulse" />
                             AI teammates are live right now
                         </span>
 
-                        <h2 className="text-[2.6rem] font-extrabold text-white leading-[1.15] tracking-tight">
+                        <h2 className="text-[2.6rem] font-semibold text-white leading-[1.15] tracking-[-0.03em]">
                             Your engineering team,{" "}
-                            <span className="bg-gradient-to-r from-sky-400 to-emerald-400 bg-clip-text text-transparent">
+                            <span className="bg-gradient-to-r from-[#57c1ff] to-[#59d499] bg-clip-text text-transparent">
                                 always on.
                             </span>
                         </h2>
-                        <p className="mt-4 text-slate-400 text-base leading-relaxed">
+                        <p className="mt-4 text-[var(--mute)] text-base leading-relaxed">
                             Deploy AI engineers that plan, code, review, and ship — while you focus on strategy and growth.
                         </p>
 
@@ -177,22 +177,22 @@ function LoginForm() {
             </div>
 
             {/* ── Right Panel — Form ── */}
-            <div className="flex-1 flex items-center justify-center p-6 sm:p-10 bg-white dark:bg-slate-950">
+            <div className="flex-1 flex items-center justify-center p-6 sm:p-10 bg-[var(--canvas)]">
                 <div className="w-full max-w-[400px]">
 
                     {/* Mobile logo */}
                     <div className="flex items-center gap-3 mb-10 lg:hidden">
-                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-400 to-emerald-400 flex items-center justify-center shadow-lg shadow-sky-500/30">
+                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#ff5757] to-[#a1131a] flex items-center justify-center shadow-lg shadow-red-900/30">
                             <Zap className="w-5 h-5 text-white" />
                         </div>
-                        <span className="text-lg font-extrabold text-slate-900 dark:text-white">AgentFarm</span>
+                        <span className="text-lg font-semibold text-[var(--ink)]">AgentFarm</span>
                     </div>
 
                     <div className="mb-8">
-                        <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                        <h1 className="text-3xl font-semibold text-[var(--ink)] tracking-[-0.03em]">
                             Welcome back
                         </h1>
-                        <p className="mt-2 text-slate-500 dark:text-slate-400 text-sm">
+                        <p className="mt-2 text-[var(--mute)] text-sm">
                             Sign in to your AI teammate dashboard.
                         </p>
                     </div>
@@ -200,22 +200,22 @@ function LoginForm() {
                     <form onSubmit={onSubmit} noValidate className="space-y-5">
                         {/* Email */}
                         <div className="space-y-1.5">
-                            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200">
+                            <label className="block text-sm font-medium text-[var(--body-color)]">
                                 Work email
                             </label>
                             <div className="relative">
-                                <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 z-10" />
+                                <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--ash)] z-10" />
                                 <input
                                     type="email"
                                     placeholder="you@company.com"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    className="w-full rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/80 pl-11 pr-4 py-3.5 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 outline-none transition-all duration-200 focus:border-sky-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-sky-500/10"
+                                    className="w-full rounded-xl border border-[var(--hairline)] bg-[var(--surface-card)] pl-11 pr-4 py-3.5 text-sm text-[var(--ink)] placeholder:text-[var(--ash)] outline-none transition-all focus:border-[var(--accent-blue)]/60 focus:ring-2 focus:ring-[var(--accent-blue)]/15"
                                     autoComplete="email"
                                 />
                             </div>
                             {errors.email && (
-                                <p className="text-xs text-rose-500 dark:text-rose-400 flex items-center gap-1 pl-1">
+                                <p className="text-xs text-[var(--accent-red)] flex items-center gap-1 pl-1">
                                     {errors.email}
                                 </p>
                             )}
@@ -224,44 +224,44 @@ function LoginForm() {
                         {/* Password */}
                         <div className="space-y-1.5">
                             <div className="flex items-center justify-between">
-                                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200">
+                                <label className="block text-sm font-medium text-[var(--body-color)]">
                                     Password
                                 </label>
                                 <Link
                                     href="/forgot-password"
-                                    className="text-xs font-semibold text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300 transition-colors"
+                                    className="text-xs font-medium text-[var(--accent-blue)] hover:text-[#8dd7ff] transition-colors"
                                 >
                                     Forgot password?
                                 </Link>
                             </div>
                             <div className="relative">
-                                <Lock className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                                <Lock className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--ash)]" />
                                 <input
                                     type={showPassword ? "text" : "password"}
                                     placeholder="••••••••"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/80 pl-11 pr-12 py-3.5 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 outline-none transition-all duration-200 focus:border-sky-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-sky-500/10"
+                                    className="w-full rounded-xl border border-[var(--hairline)] bg-[var(--surface-card)] pl-11 pr-12 py-3.5 text-sm text-[var(--ink)] placeholder:text-[var(--ash)] outline-none transition-all focus:border-[var(--accent-blue)]/60 focus:ring-2 focus:ring-[var(--accent-blue)]/15"
                                     autoComplete="current-password"
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword((p) => !p)}
-                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors p-0.5"
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--ash)] hover:text-[var(--mute)] transition-colors p-0.5"
                                     aria-label={showPassword ? "Hide password" : "Show password"}
                                 >
                                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                 </button>
                             </div>
                             {errors.password && (
-                                <p className="text-xs text-rose-500 dark:text-rose-400 pl-1">{errors.password}</p>
+                                <p className="text-xs text-[var(--accent-red)] pl-1">{errors.password}</p>
                             )}
                         </div>
 
                         {/* Server error */}
                         {serverError && (
-                            <div className="rounded-2xl border border-rose-200 dark:border-rose-800/60 bg-rose-50 dark:bg-rose-950/30 px-4 py-3.5">
-                                <p className="text-sm text-rose-600 dark:text-rose-400 font-medium">{serverError}</p>
+                            <div className="rounded-xl border border-[var(--accent-red)]/30 bg-[var(--accent-red)]/8 px-4 py-3.5">
+                                <p className="text-sm text-[var(--accent-red)] font-medium">{serverError}</p>
                             </div>
                         )}
 
@@ -269,7 +269,7 @@ function LoginForm() {
                         <button
                             type="submit"
                             disabled={submitting}
-                            className="relative w-full flex items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 px-6 py-4 text-sm font-bold text-white shadow-lg shadow-sky-500/25 transition-all duration-200 hover:shadow-xl hover:shadow-sky-500/35 hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+                            className="w-full flex items-center justify-center gap-2.5 rounded-xl bg-[var(--accent-blue)] px-6 py-3.5 text-sm font-semibold text-[#07080a] shadow-sm transition-all hover:bg-[#8dd7ff] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
                         >
                             {submitting ? (
                                 <>
@@ -288,25 +288,25 @@ function LoginForm() {
                         </button>
                     </form>
 
-                    <p className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">
+                    <p className="mt-6 text-center text-sm text-[var(--mute)]">
                         Don&rsquo;t have an account?{" "}
                         <Link
                             href="/signup"
-                            className="font-semibold text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300 transition-colors"
+                            className="font-semibold text-[var(--accent-blue)] hover:text-[#8dd7ff] transition-colors"
                         >
                             Request access
                         </Link>
                     </p>
 
                     {/* Bottom trust row */}
-                    <div className="mt-8 pt-7 border-t border-slate-100 dark:border-slate-800 flex items-center justify-center gap-3 text-xs text-slate-400">
+                    <div className="mt-8 pt-7 border-t border-[var(--hairline)] flex items-center justify-center gap-3 text-xs text-[var(--ash)]">
                         <span className="flex items-center gap-1">
                             <Shield className="w-3 h-3" />
                             SOC 2 Ready
                         </span>
-                        <span className="text-slate-300 dark:text-slate-700">·</span>
+                        <span>·</span>
                         <span>256-bit encryption</span>
-                        <span className="text-slate-300 dark:text-slate-700">·</span>
+                        <span>·</span>
                         <span>99.9% uptime</span>
                     </div>
                 </div>

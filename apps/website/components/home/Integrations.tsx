@@ -1,6 +1,6 @@
-﻿"use client";
+"use client";
 
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 
 // Inline SVG brand icons
 const GitHubIcon = () => (
@@ -46,61 +46,61 @@ const SkillsIcon = () => (
 const integrations = [
     {
         Icon: GitHubIcon,
-        iconBg: "bg-slate-900 dark:bg-slate-700",
-        iconColor: "text-white",
+        iconBg: "bg-[var(--surface-el)]",
+        iconColor: "text-[var(--ink)]",
         name: "GitHub",
         badge: "Live",
-        badgeColor: "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400",
+        badgeColor: "bg-[var(--accent-green)]/10 text-[var(--accent-green)]",
         description:
             "Push branches, open PRs, respond to review comments, run CI checks, and auto-assign reviewers — all executed by the agent.",
     },
     {
         Icon: JiraIcon,
-        iconBg: "bg-blue-50 dark:bg-blue-900/20",
-        iconColor: "text-blue-600",
+        iconBg: "bg-[var(--surface-el)]",
+        iconColor: "text-[var(--accent-blue)]",
         name: "Jira",
         badge: "Live",
-        badgeColor: "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400",
+        badgeColor: "bg-[var(--accent-green)]/10 text-[var(--accent-green)]",
         description:
             "Agent picks up Jira tickets, executes the work, and transitions issue status as PRs progress through your workflow.",
     },
     {
         Icon: TeamsIcon,
-        iconBg: "bg-indigo-50 dark:bg-indigo-900/20",
-        iconColor: "text-indigo-600",
+        iconBg: "bg-[var(--surface-el)]",
+        iconColor: "text-[var(--accent-blue)]",
         name: "Microsoft Teams",
         badge: "Live",
-        badgeColor: "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400",
+        badgeColor: "bg-[var(--accent-green)]/10 text-[var(--accent-green)]",
         description:
             "Receive approval requests, get task updates, and invoke developer skills directly from Teams channels and chats.",
     },
     {
         Icon: EmailIcon,
-        iconBg: "bg-sky-50 dark:bg-sky-900/20",
-        iconColor: "text-sky-600",
+        iconBg: "bg-[var(--surface-el)]",
+        iconColor: "text-[var(--mute)]",
         name: "Email / Outlook",
         badge: "Live",
-        badgeColor: "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400",
+        badgeColor: "bg-[var(--accent-green)]/10 text-[var(--accent-green)]",
         description:
             "Approval requests and action summaries delivered to approvers via email with one-click approve or reject links.",
     },
     {
         Icon: AzureIcon,
-        iconBg: "bg-blue-50 dark:bg-blue-900/20",
-        iconColor: "text-blue-600",
+        iconBg: "bg-[var(--surface-el)]",
+        iconColor: "text-[var(--accent-blue)]",
         name: "Azure Isolated Runtime",
         badge: "Infrastructure",
-        badgeColor: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400",
+        badgeColor: "bg-[var(--accent-blue)]/10 text-[var(--accent-blue)]",
         description:
             "Each tenant gets a dedicated Azure VM — your code and credentials never share infrastructure with other customers.",
     },
     {
         Icon: SkillsIcon,
-        iconBg: "bg-slate-100 dark:bg-slate-700",
-        iconColor: "text-slate-600",
+        iconBg: "bg-[var(--surface-el)]",
+        iconColor: "text-[var(--ash)]",
         name: "More connectors",
         badge: "Roadmap",
-        badgeColor: "bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400",
+        badgeColor: "bg-[var(--hairline)] text-[var(--ash)]",
         description:
             "Confluence, Slack, Linear, Azure DevOps, and GitLab connectors are planned for the Scale phase.",
     },
@@ -108,14 +108,14 @@ const integrations = [
 
 export default function Integrations() {
     return (
-        <section className="py-24 bg-slate-50 dark:bg-slate-900">
+        <section className="py-24 bg-[var(--canvas)]">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="text-center mb-14">
                     <motion.span
                         initial={{ opacity: 0, y: -8 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
-                        className="text-xs font-semibold uppercase tracking-wider text-sky-600 dark:text-sky-400"
+                        className="chip chip-accent"
                     >
                         Integrations
                     </motion.span>
@@ -124,7 +124,7 @@ export default function Integrations() {
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
                         transition={{ delay: 0.05 }}
-                        className="mt-3 text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-slate-100"
+                        className="mt-4 text-3xl sm:text-4xl font-semibold tracking-[-0.03em] text-[var(--ink)]"
                     >
                         Works where your engineering team already works
                     </motion.h2>
@@ -133,10 +133,10 @@ export default function Integrations() {
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
                         transition={{ delay: 0.1 }}
-                        className="mt-4 text-lg text-slate-500 dark:text-slate-400 max-w-2xl mx-auto"
+                        className="mt-4 text-lg text-[var(--mute)] max-w-2xl mx-auto"
                     >
                         AgentFarm connects to your existing developer stack via OAuth with least-privilege scopes.
-                        No workflow changes required — the agent comes to your tools.
+                        No workflow changes required � the agent comes to your tools.
                     </motion.p>
                 </div>
 
@@ -149,21 +149,21 @@ export default function Integrations() {
                             viewport={{ once: true, margin: "-30px" }}
                             transition={{ delay: i * 0.07, duration: 0.4 }}
                             whileHover={{ y: -3, transition: { duration: 0.15 } }}
-                            className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 flex gap-4 hover:shadow-lg hover:border-slate-300 dark:hover:border-slate-600 transition-all duration-200"
+                            className="bg-[var(--surface-card)] rounded-xl border border-[var(--hairline)] p-6 flex gap-4 hover:border-[var(--accent-blue)]/30 transition-all duration-200"
                         >
-                            <div className={`integration-icon-orb w-12 h-12 rounded-xl ${iconBg} ${iconColor} flex items-center justify-center shrink-0`}>
+                            <div className={`w-12 h-12 rounded-xl ${iconBg} ${iconColor} flex items-center justify-center shrink-0`}>
                                 <Icon />
                             </div>
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1">
-                                    <span className="font-semibold text-slate-900 dark:text-slate-100 text-sm">
+                                    <span className="font-semibold text-[var(--ink)] text-sm">
                                         {name}
                                     </span>
                                     <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${badgeColor}`}>
                                         {badge}
                                     </span>
                                 </div>
-                                <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                                <p className="text-sm text-[var(--mute)] leading-relaxed">
                                     {description}
                                 </p>
                             </div>
@@ -171,9 +171,9 @@ export default function Integrations() {
                     ))}
                 </div>
 
-                <p className="text-center text-sm text-slate-400 mt-8">
+                <p className="text-center text-sm text-[var(--ash)] mt-8">
                     Connectors use OAuth with least-privilege scopes and never store credentials in plaintext —{" "}
-                    <a href="/security" className="text-blue-600 hover:underline font-medium">
+                    <a href="/security" className="text-[var(--accent-blue)] hover:underline font-medium">
                         read our security model
                     </a>
                 </p>

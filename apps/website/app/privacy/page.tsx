@@ -1,4 +1,4 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 
 export const metadata: Metadata = {
     title: "Privacy Policy — AgentFarm",
@@ -52,15 +52,15 @@ const sections = [
 export default function PrivacyPage() {
     return (
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
-            <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-full mb-4">
+            <div className="chip chip-accent mb-4">
                 Legal
             </div>
-            <h1 className="text-4xl font-extrabold mb-3">
-                <span className="bg-gradient-to-r from-slate-900 to-slate-600 bg-clip-text text-transparent">Privacy Policy</span>
+            <h1 className="text-4xl font-semibold tracking-[-0.03em] text-[var(--ink)] mb-3">
+                Privacy Policy
             </h1>
-            <p className="text-slate-500 mb-12">Last updated: March 1, 2026</p>
+            <p className="text-[var(--mute)] mb-12">Last updated: March 1, 2026</p>
 
-            <p className="text-lg text-slate-600 leading-relaxed mb-12">
+            <p className="text-lg text-[var(--body-color)] leading-relaxed mb-12">
                 AgentFarm Inc. (&quot;AgentFarm&quot;, &quot;we&quot;, &quot;us&quot;) is
                 committed to protecting your privacy. This policy explains what data we
                 collect, why we collect it, and how you can control it.
@@ -70,12 +70,12 @@ export default function PrivacyPage() {
                 {sections.map(({ heading, body }) => (
                     <div
                         key={heading}
-                        className="pb-8 border-b border-slate-100 last:border-0"
+                        className="pb-8 border-b border-[var(--hairline)] last:border-0"
                     >
-                        <h2 className="text-lg font-semibold text-slate-900 mb-3">
+                        <h2 className="text-lg font-semibold text-[var(--ink)] mb-3">
                             {heading}
                         </h2>
-                        <p className="text-slate-600 leading-relaxed">{body}</p>
+                        <p className="text-[var(--body-color)] leading-relaxed">{body}</p>
                     </div>
                 ))}
             </div>

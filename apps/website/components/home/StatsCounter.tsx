@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { motion, useInView } from "framer-motion";
+import { motion, useInView } from "motion/react";
 
 function Counter({ to, suffix = "" }: { to: number; suffix?: string }) {
     const [count, setCount] = useState(0);
@@ -35,47 +35,55 @@ const stats = [
     {
         value: 21,
         suffix: "",
-        label: "Developer Skills in Marketplace",
+        accentColor: "#57c1ff",
+        label: "Developer Skills",
         sub: "Create PR · CI Checks · Security Scan · and 18 more",
     },
     {
         value: 10,
         suffix: "",
-        label: "LLM Providers with Fallback",
+        accentColor: "#59d499",
+        label: "LLM Providers",
         sub: "OpenAI · Anthropic · Azure · Google · Mistral · and more",
     },
     {
         value: 100,
         suffix: "%",
-        label: "Actions Under Audit Coverage",
+        accentColor: "#ffc533",
+        label: "Audit Coverage",
         sub: "Every action logged with evidence for compliance review",
     },
     {
         value: 9,
         suffix: " min",
-        label: "Median Workspace Setup Time",
+        accentColor: "#ff6161",
+        label: "Median Setup Time",
         sub: "From account creation to first AI teammate working",
     },
 ];
 
 export default function StatsCounter() {
     return (
-        <section className="bg-slate-950 py-16 border-y border-slate-800">
+        <section className="bg-[#0d0d0d] border-y border-[#242728] py-16">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 text-center text-white">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-[#242728] rounded-xl overflow-hidden">
                     {stats.map((s, i) => (
                         <motion.div
                             key={s.label}
-                            initial={{ opacity: 0, y: 20 }}
+                            initial={{ opacity: 0, y: 16 }}
                             whileInView={{ opacity: 1, y: 0 }}
                             viewport={{ once: true }}
-                            transition={{ delay: i * 0.1, duration: 0.5 }}
+                            transition={{ delay: i * 0.08, duration: 0.44, ease: [0.22, 1, 0.36, 1] }}
+                            className="bg-[#0d0d0d] px-8 py-10 text-center flex flex-col items-center"
                         >
-                            <p className="text-4xl sm:text-5xl font-extrabold bg-gradient-to-r from-sky-400 to-emerald-400 bg-clip-text text-transparent tabular-nums">
+                            <p
+                                className="text-4xl sm:text-5xl font-semibold tabular-nums leading-none tracking-tight"
+                                style={{ color: s.accentColor }}
+                            >
                                 <Counter to={s.value} suffix={s.suffix} />
                             </p>
-                            <p className="mt-2 text-slate-200 text-sm font-semibold">{s.label}</p>
-                            <p className="mt-1 text-slate-500 text-xs leading-snug">{s.sub}</p>
+                            <p className="mt-3 text-sm font-semibold text-[#f4f4f6]">{s.label}</p>
+                            <p className="mt-1.5 text-[11px] text-[#6a6b6c] leading-snug max-w-[160px]">{s.sub}</p>
                         </motion.div>
                     ))}
                 </div>
