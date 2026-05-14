@@ -729,7 +729,7 @@ export default function MarketplaceGrid() {
                                 <div className="flex-1 min-w-0">
                                     <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">{dept}</h2>
                                     <p className="text-sm text-slate-500 dark:text-slate-400">
-                                        {filteredDept.length} agent{filteredDept.length !== 1 ? "s" : ""} · click any card to learn more
+                                        {filteredDept.length} agent{filteredDept.length !== 1 ? "s" : ""} Â· click any card to learn more
                                     </p>
                                 </div>
                                 <button
