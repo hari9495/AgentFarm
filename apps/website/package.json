@@ -45,6 +45,7 @@
     "devDependencies": {
         "@opennextjs/cloudflare": "^1.19.6",
         "@cloudflare/workers-types": "^4.20260511.1",
+        "wrangler": "^4.86.0",
         "@tailwindcss/postcss": "^4",
         "@types/node": "^22",
         "@types/react": "^19",
