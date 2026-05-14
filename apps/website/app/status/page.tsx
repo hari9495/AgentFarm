@@ -1,3 +1,6 @@
+export const runtime = 'edge'
+export const dynamic = 'force-dynamic'
+
 import type { Metadata } from 'next';
 import { StatusRefresher } from './StatusRefresher';
 
@@ -5,10 +8,6 @@ export const metadata: Metadata = {
     title: 'System Status — AgentFarm',
     description: 'Real-time status for AgentFarm services.',
 };
-
-export const runtime = 'edge';
-// Force dynamic so Next.js re-fetches on every request (SSR, no stale cache)
-export const dynamic = 'force-dynamic';
 
 type ServiceStatus = 'operational' | 'degraded' | 'outage';
 

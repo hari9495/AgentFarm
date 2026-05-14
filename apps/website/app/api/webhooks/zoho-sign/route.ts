@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+export const runtime = 'edge'
 
-export const runtime = 'edge';
+import { NextRequest, NextResponse } from 'next/server';
 
 const GATEWAY_URL =
     process.env.API_GATEWAY_URL ??
