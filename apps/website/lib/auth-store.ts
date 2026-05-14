@@ -1,4 +1,4 @@
-﻿import { getRequestContext } from "@cloudflare/next-on-pages";
+﻿import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 // --- Edge-compatible password helpers (Web Crypto PBKDF2, no node:crypto) ---
 
@@ -369,7 +369,7 @@ const getEffectiveRole = (email: string, storedRole: UserRole): UserRole => {
 
 // ── D1 database accessor ──────────────────────────────────────────────────────
 const getDb = (): D1Database =>
-    (getRequestContext() as { env: CloudflareEnv }).env.DB;
+    getCloudflareContext().env.DB as D1Database;
 
 const now = (): number => Date.now();
 
