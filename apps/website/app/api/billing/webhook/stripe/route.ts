@@ -5,7 +5,7 @@ const API_GATEWAY_URL =
     process.env.NEXT_PUBLIC_API_URL ??
     "http://localhost:3000";
 
-export const runtime = "nodejs";
+export const runtime = 'edge';
 
 export async function POST(request: Request) {
     const rawBody = await request.text();

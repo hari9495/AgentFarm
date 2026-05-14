@@ -6,6 +6,7 @@ export const metadata: Metadata = {
     description: 'Real-time status for AgentFarm services.',
 };
 
+export const runtime = 'edge';
 // Force dynamic so Next.js re-fetches on every request (SSR, no stale cache)
 export const dynamic = 'force-dynamic';
 
