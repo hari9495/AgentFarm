@@ -362,7 +362,7 @@ export class GitHubConnector {
             assignees: input.assignees ?? [],
             ...(input.milestone !== undefined && { milestone: input.milestone }),
         });
-        if (!result.ok || !result.data) return result as GitHubQueryResult<GitHubIssue>;
+        if (!result.ok || !result.data) return result as unknown as GitHubQueryResult<GitHubIssue>;
         return { ok: true, data: this.mapIssue(result.data), rate_limit_remaining: result.rate_limit_remaining, rate_limit_reset_at: result.rate_limit_reset_at };
     }
 
@@ -371,14 +371,14 @@ export class GitHubConnector {
             return { ok: false, error: 'Invalid issue number' };
         }
         const result = await this.request<RawGHIssue>('GET', `/repos/${this.config.owner}/${this.config.repo}/issues/${issueNumber}`);
-        if (!result.ok || !result.data) return result as GitHubQueryResult<GitHubIssue>;
+        if (!result.ok || !result.data) return result as unknown as GitHubQueryResult<GitHubIssue>;
         return { ok: true, data: this.mapIssue(result.data), rate_limit_remaining: result.rate_limit_remaining, rate_limit_reset_at: result.rate_limit_reset_at };
     }
 
     async listOpenIssues(page = 1, perPage = 30): Promise<GitHubQueryResult<GitHubIssue[]>> {
         const safePerPage = Math.min(perPage, 100);
         const result = await this.request<RawGHIssue[]>('GET', `/repos/${this.config.owner}/${this.config.repo}/issues?state=open&page=${page}&per_page=${safePerPage}`);
-        if (!result.ok || !result.data) return result as GitHubQueryResult<GitHubIssue[]>;
+        if (!result.ok || !result.data) return result as unknown as GitHubQueryResult<GitHubIssue[]>;
         return { ok: true, data: result.data.map(r => this.mapIssue(r)), rate_limit_remaining: result.rate_limit_remaining, rate_limit_reset_at: result.rate_limit_reset_at };
     }
 
@@ -387,13 +387,13 @@ export class GitHubConnector {
             return { ok: false, error: 'Invalid issue number' };
         }
         const result = await this.request<RawGHIssue>('PATCH', `/repos/${this.config.owner}/${this.config.repo}/issues/${issueNumber}`, { state: 'closed' });
-        if (!result.ok) return result as GitHubQueryResult<{ closed: boolean }>;
+        if (!result.ok) return result as unknown as GitHubQueryResult<{ closed: boolean }>;
         return { ok: true, data: { closed: true }, rate_limit_remaining: result.rate_limit_remaining, rate_limit_reset_at: result.rate_limit_reset_at };
     }
 
     async addIssueComment(issueNumber: number, body: string): Promise<GitHubQueryResult<GitHubComment>> {
         const result = await this.request<RawGHComment>('POST', `/repos/${this.config.owner}/${this.config.repo}/issues/${issueNumber}/comments`, { body: sanitizeBody(body) });
-        if (!result.ok || !result.data) return result as GitHubQueryResult<GitHubComment>;
+        if (!result.ok || !result.data) return result as unknown as GitHubQueryResult<GitHubComment>;
         return { ok: true, data: this.mapComment(result.data), rate_limit_remaining: result.rate_limit_remaining, rate_limit_reset_at: result.rate_limit_reset_at };
     }
 
@@ -404,14 +404,14 @@ export class GitHubConnector {
             return { ok: false, error: 'Invalid PR number' };
         }
         const result = await this.request<RawGHPR>('GET', `/repos/${this.config.owner}/${this.config.repo}/pulls/${prNumber}`);
-        if (!result.ok || !result.data) return result as GitHubQueryResult<GitHubPR>;
+        if (!result.ok || !result.data) return result as unknown as GitHubQueryResult<GitHubPR>;
         return { ok: true, data: this.mapPR(result.data), rate_limit_remaining: result.rate_limit_remaining, rate_limit_reset_at: result.rate_limit_reset_at };
     }
 
     async listOpenPRs(page = 1, perPage = 30): Promise<GitHubQueryResult<GitHubPR[]>> {
         const safePerPage = Math.min(perPage, 100);
         const result = await this.request<RawGHPR[]>('GET', `/repos/${this.config.owner}/${this.config.repo}/pulls?state=open&page=${page}&per_page=${safePerPage}`);
-        if (!result.ok || !result.data) return result as GitHubQueryResult<GitHubPR[]>;
+        if (!result.ok || !result.data) return result as unknown as GitHubQueryResult<GitHubPR[]>;
         return { ok: true, data: result.data.map(r => this.mapPR(r)), rate_limit_remaining: result.rate_limit_remaining, rate_limit_reset_at: result.rate_limit_reset_at };
     }
 
@@ -433,19 +433,19 @@ export class GitHubConnector {
             base: input.base,
             draft: input.draft ?? false,
         });
-        if (!result.ok || !result.data) return result as GitHubQueryResult<GitHubPR>;
+        if (!result.ok || !result.data) return result as unknown as GitHubQueryResult<GitHubPR>;
         return { ok: true, data: this.mapPR(result.data), rate_limit_remaining: result.rate_limit_remaining, rate_limit_reset_at: result.rate_limit_reset_at };
     }
 
     async requestPRReview(prNumber: number, reviewers: string[]): Promise<GitHubQueryResult<{ requested: string[] }>> {
         const result = await this.request<{ requested_reviewers: { login: string }[] }>('POST', `/repos/${this.config.owner}/${this.config.repo}/pulls/${prNumber}/requested_reviewers`, { reviewers: reviewers.slice(0, 15) });
-        if (!result.ok) return result as GitHubQueryResult<{ requested: string[] }>;
+        if (!result.ok) return result as unknown as GitHubQueryResult<{ requested: string[] }>;
         return { ok: true, data: { requested: (result.data?.requested_reviewers ?? []).map(r => r.login) }, rate_limit_remaining: result.rate_limit_remaining, rate_limit_reset_at: result.rate_limit_reset_at };
     }
 
     async listPRReviews(prNumber: number): Promise<GitHubQueryResult<GitHubReview[]>> {
         const result = await this.request<RawGHReview[]>('GET', `/repos/${this.config.owner}/${this.config.repo}/pulls/${prNumber}/reviews`);
-        if (!result.ok || !result.data) return result as GitHubQueryResult<GitHubReview[]>;
+        if (!result.ok || !result.data) return result as unknown as GitHubQueryResult<GitHubReview[]>;
         return { ok: true, data: result.data.map(r => this.mapReview(r)), rate_limit_remaining: result.rate_limit_remaining, rate_limit_reset_at: result.rate_limit_reset_at };
     }
 
@@ -454,7 +454,7 @@ export class GitHubConnector {
     async listCommits(branch = 'main', perPage = 20): Promise<GitHubQueryResult<GitHubCommit[]>> {
         const safePerPage = Math.min(perPage, 100);
         const result = await this.request<RawGHCommit[]>('GET', `/repos/${this.config.owner}/${this.config.repo}/commits?sha=${encodeURIComponent(branch)}&per_page=${safePerPage}`);
-        if (!result.ok || !result.data) return result as GitHubQueryResult<GitHubCommit[]>;
+        if (!result.ok || !result.data) return result as unknown as GitHubQueryResult<GitHubCommit[]>;
         return { ok: true, data: result.data.map(r => this.mapCommit(r)), rate_limit_remaining: result.rate_limit_remaining, rate_limit_reset_at: result.rate_limit_reset_at };
     }
 
@@ -463,7 +463,7 @@ export class GitHubConnector {
             return { ok: false, error: 'Invalid SHA' };
         }
         const result = await this.request<RawGHCommit>('GET', `/repos/${this.config.owner}/${this.config.repo}/commits/${encodeURIComponent(sha)}`);
-        if (!result.ok || !result.data) return result as GitHubQueryResult<GitHubCommit>;
+        if (!result.ok || !result.data) return result as unknown as GitHubQueryResult<GitHubCommit>;
         return { ok: true, data: this.mapCommit(result.data), rate_limit_remaining: result.rate_limit_remaining, rate_limit_reset_at: result.rate_limit_reset_at };
     }
 
@@ -474,19 +474,19 @@ export class GitHubConnector {
             return { ok: false, error: 'workflowId and ref are required' };
         }
         const result = await this.request<undefined>('POST', `/repos/${this.config.owner}/${this.config.repo}/actions/workflows/${encodeURIComponent(workflowId)}/dispatches`, { ref, inputs: inputs ?? {} });
-        if (!result.ok) return result as GitHubQueryResult<{ triggered: boolean }>;
+        if (!result.ok) return result as unknown as GitHubQueryResult<{ triggered: boolean }>;
         return { ok: true, data: { triggered: true }, rate_limit_remaining: result.rate_limit_remaining, rate_limit_reset_at: result.rate_limit_reset_at };
     }
 
     async listWorkflowRuns(workflowId: string, page = 1): Promise<GitHubQueryResult<GitHubWorkflowRun[]>> {
         const result = await this.request<{ workflow_runs: RawGHWorkflowRun[] }>('GET', `/repos/${this.config.owner}/${this.config.repo}/actions/workflows/${encodeURIComponent(workflowId)}/runs?page=${page}`);
-        if (!result.ok || !result.data) return result as GitHubQueryResult<GitHubWorkflowRun[]>;
+        if (!result.ok || !result.data) return result as unknown as GitHubQueryResult<GitHubWorkflowRun[]>;
         return { ok: true, data: result.data.workflow_runs.map(r => this.mapWorkflowRun(r)), rate_limit_remaining: result.rate_limit_remaining, rate_limit_reset_at: result.rate_limit_reset_at };
     }
 
     async getWorkflowRun(runId: number): Promise<GitHubQueryResult<GitHubWorkflowRun>> {
         const result = await this.request<RawGHWorkflowRun>('GET', `/repos/${this.config.owner}/${this.config.repo}/actions/runs/${runId}`);
-        if (!result.ok || !result.data) return result as GitHubQueryResult<GitHubWorkflowRun>;
+        if (!result.ok || !result.data) return result as unknown as GitHubQueryResult<GitHubWorkflowRun>;
         return { ok: true, data: this.mapWorkflowRun(result.data), rate_limit_remaining: result.rate_limit_remaining, rate_limit_reset_at: result.rate_limit_reset_at };
     }
 
@@ -494,7 +494,7 @@ export class GitHubConnector {
 
     async listWebhooks(): Promise<GitHubQueryResult<{ id: number; url: string; events: string[] }[]>> {
         const result = await this.request<{ id: number; config: { url: string }; events: string[] }[]>('GET', `/repos/${this.config.owner}/${this.config.repo}/hooks`);
-        if (!result.ok || !result.data) return result as GitHubQueryResult<{ id: number; url: string; events: string[] }[]>;
+        if (!result.ok || !result.data) return result as unknown as GitHubQueryResult<{ id: number; url: string; events: string[] }[]>;
         return { ok: true, data: result.data.map(h => ({ id: h.id, url: h.config.url, events: h.events })), rate_limit_remaining: result.rate_limit_remaining, rate_limit_reset_at: result.rate_limit_reset_at };
     }
 
@@ -516,13 +516,13 @@ export class GitHubConnector {
                 ...(input.secret ? { secret: input.secret } : {}),
             },
         });
-        if (!result.ok || !result.data) return result as GitHubQueryResult<{ id: number; url: string; active: boolean }>;
+        if (!result.ok || !result.data) return result as unknown as GitHubQueryResult<{ id: number; url: string; active: boolean }>;
         return { ok: true, data: { id: result.data.id, url: result.data.config.url, active: result.data.active }, rate_limit_remaining: result.rate_limit_remaining, rate_limit_reset_at: result.rate_limit_reset_at };
     }
 
     async deleteWebhook(hookId: number): Promise<GitHubQueryResult<{ deleted: boolean }>> {
         const result = await this.request<undefined>('DELETE', `/repos/${this.config.owner}/${this.config.repo}/hooks/${hookId}`);
-        if (!result.ok) return result as GitHubQueryResult<{ deleted: boolean }>;
+        if (!result.ok) return result as unknown as GitHubQueryResult<{ deleted: boolean }>;
         return { ok: true, data: { deleted: true }, rate_limit_remaining: result.rate_limit_remaining, rate_limit_reset_at: result.rate_limit_reset_at };
     }
 
@@ -530,13 +530,13 @@ export class GitHubConnector {
 
     async getRepoInfo(): Promise<GitHubQueryResult<{ full_name: string; default_branch: string; private: boolean; stargazers_count: number }>> {
         const result = await this.request<{ full_name: string; default_branch: string; private: boolean; stargazers_count: number }>('GET', `/repos/${this.config.owner}/${this.config.repo}`);
-        if (!result.ok || !result.data) return result as GitHubQueryResult<{ full_name: string; default_branch: string; private: boolean; stargazers_count: number }>;
+        if (!result.ok || !result.data) return result as unknown as GitHubQueryResult<{ full_name: string; default_branch: string; private: boolean; stargazers_count: number }>;
         return { ok: true, data: { full_name: result.data.full_name, default_branch: result.data.default_branch, private: result.data.private, stargazers_count: result.data.stargazers_count }, rate_limit_remaining: result.rate_limit_remaining, rate_limit_reset_at: result.rate_limit_reset_at };
     }
 
     async listBranches(): Promise<GitHubQueryResult<{ name: string; protected: boolean }[]>> {
         const result = await this.request<{ name: string; protected: boolean }[]>('GET', `/repos/${this.config.owner}/${this.config.repo}/branches`);
-        if (!result.ok || !result.data) return result as GitHubQueryResult<{ name: string; protected: boolean }[]>;
+        if (!result.ok || !result.data) return result as unknown as GitHubQueryResult<{ name: string; protected: boolean }[]>;
         return { ok: true, data: result.data.map(b => ({ name: b.name, protected: b.protected })), rate_limit_remaining: result.rate_limit_remaining, rate_limit_reset_at: result.rate_limit_reset_at };
     }
 }

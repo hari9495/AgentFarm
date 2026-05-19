@@ -1,10 +1,11 @@
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
 import { getSessionPayload, getInternalSessionAuthHeader } from '../lib/internal-session';
 import { SubscriptionStatusCard } from '../components/subscription-status-card';
 import ApiKeysPanel from '../components/api-keys-panel';
 import CircuitBreakersPanel from '../components/circuit-breakers-panel';
 import TaskQueuePanel from '../components/task-queue-panel';
+import AgentPersonaPanel from '../components/agent-persona-panel';
+import { PageHeader } from '../components/page-header';
 
 const getApiBaseUrl = (): string => process.env.DASHBOARD_API_BASE_URL ?? 'http://localhost:3000';
 
@@ -29,6 +30,20 @@ async function fetchSubscription(tenantId: string, authHeader: string): Promise<
     }
 }
 
+async function fetchFirstBotId(authHeader: string): Promise<string | null> {
+    try {
+        const res = await fetch(`${getApiBaseUrl()}/v1/agents`, {
+            headers: { Authorization: authHeader },
+            cache: 'no-store',
+        });
+        if (!res.ok) return null;
+        const data = (await res.json()) as { bots?: { id: string }[] };
+        return data.bots?.[0]?.id ?? null;
+    } catch {
+        return null;
+    }
+}
+
 export default async function SettingsPage() {
     const session = await getSessionPayload();
     if (!session?.tenantId) {
@@ -37,37 +52,18 @@ export default async function SettingsPage() {
 
     const { tenantId } = session;
     const authHeader = await getInternalSessionAuthHeader();
-    const subscription = authHeader
-        ? await fetchSubscription(tenantId, authHeader)
-        : { status: 'none' };
+    const [subscription, firstBotId] = await Promise.all([
+        authHeader ? fetchSubscription(tenantId, authHeader) : Promise.resolve({ status: 'none' } as SubscriptionData),
+        authHeader ? fetchFirstBotId(authHeader) : Promise.resolve(null),
+    ]);
 
     return (
         <main className="page-shell">
-            <header style={{ marginBottom: '2rem' }}>
-                <Link
-                    href="/"
-                    style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.25rem',
-                        fontSize: '0.8rem',
-                        color: 'var(--ink-muted)',
-                        textDecoration: 'none',
-                        marginBottom: '0.75rem',
-                    }}
-                >
-                    ← Dashboard
-                </Link>
-                <p style={{ fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ink-muted)', marginBottom: '0.35rem' }}>
-                    Settings &amp; Ops
-                </p>
-                <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--ink)', marginBottom: '0.35rem' }}>
-                    Operational Settings
-                </h1>
-                <p style={{ color: 'var(--ink-muted)', fontSize: '0.95rem' }}>
-                    Manage API keys, inspect circuit breaker state, and monitor the task queue.
-                </p>
-            </header>
+            <PageHeader
+                eyebrow="Settings &amp; Ops"
+                title="Operational Settings"
+                description="Manage API keys, inspect circuit breaker state, and monitor the task queue."
+            />
 
             <SubscriptionStatusCard
                 status={subscription.status}
@@ -78,6 +74,12 @@ export default async function SettingsPage() {
             />
 
             <div style={{ marginTop: '2rem' }}>
+                {firstBotId && (
+                    <>
+                        <AgentPersonaPanel botId={firstBotId} />
+                        <hr style={{ border: 'none', borderTop: '1px solid var(--border, #e5e7eb)', margin: '1.5rem 0' }} />
+                    </>
+                )}
                 <ApiKeysPanel tenantId={tenantId} />
                 <CircuitBreakersPanel tenantId={tenantId} />
                 <TaskQueuePanel tenantId={tenantId} />

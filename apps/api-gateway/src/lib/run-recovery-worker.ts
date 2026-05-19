@@ -44,7 +44,7 @@ export interface BuildManifestOptions {
 export function assessRecovery(
     runId: string,
     strategy: ResumeStrategy,
-    options?: RecoveryWorkerOptions,
+    _options?: RecoveryWorkerOptions,
 ): RecoveryAssessment {
     if (!runId || typeof runId !== 'string' || runId.trim() === '') {
         return {

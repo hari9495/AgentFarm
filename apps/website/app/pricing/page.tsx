@@ -71,7 +71,7 @@ const faqs = [
     },
     {
         q: "What counts as a task execution?",
-        a: "A task execution is any unit of work your AI worker picks up — writing a function, running a test suite, opening a PR, or responding to a code review comment.",
+        a: "A task execution is any unit of work an AI worker picks up — writing a function, sending a follow-up email, drafting a report, processing a support ticket, running a CI check, or scheduling a meeting.",
     },
     {
         q: "Can I change plans?",
@@ -79,11 +79,11 @@ const faqs = [
     },
     {
         q: "What integrations are supported?",
-        a: "GitHub, GitLab (coming soon), Slack, Jira, Linear (coming soon), and PagerDuty (coming soon). We add new integrations based on customer demand.",
+        a: "GitHub, Jira, Slack, HubSpot, Salesforce, Gmail, Google Calendar, Microsoft Teams, Notion, and 100+ more via MCP connectors. Bring your own MCP server for internal tools. New connectors added continuously.",
     },
     {
-        q: "Is my code safe?",
-        a: "Every AI worker runs in an isolated container with least-privilege access. Your code never leaves your own GitHub repositories and AgentFarm never stores source code on our servers.",
+        q: "Is my data safe?",
+        a: "Every AI worker runs in a tenant-isolated Azure VM with least-privilege access. Your data never leaves your own connected tools and AgentFarm never stores credentials in plaintext.",
     },
     {
         q: "Do you support on-premises deployment?",
@@ -95,36 +95,42 @@ export default function PricingPage() {
     return (
         <div className="site-shell bg-[var(--canvas)]">
             {/* Hero */}
-            <section className="relative py-24 text-center border-b border-[var(--hairline)] overflow-hidden">
-                <div aria-hidden className="absolute inset-0 pointer-events-none">
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[680px] h-[300px] bg-[radial-gradient(ellipse,rgba(87,193,255,0.10)_0%,transparent_70%)] blur-2xl" />
+            <section className="magic-canvas relative py-28 text-center border-b border-[var(--m-hairline)] overflow-hidden">
+                <div aria-hidden className="aurora-bg">
+                    <div className="orb orb-3" />
+                    <div className="orb orb-4" />
+                    <div className="cyber-grid" />
+                    <div className="magic-grain" />
                 </div>
-                <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <span className="chip chip-accent text-xs mb-4">Pricing</span>
-                    <h1 className="mt-3 text-[clamp(2rem,5vw,3.5rem)] font-semibold text-[var(--ink)] tracking-[-0.04em]">
+                <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="reveal-up flex justify-center mb-5">
+                        <span className="neon-chip neon-chip-cyan">
+                            <span className="dot" aria-hidden />
+                            Pricing
+                        </span>
+                    </div>
+                    <h1 className="reveal-up delay-1 text-[clamp(2.4rem,5.5vw,4rem)] font-black text-[var(--m-ink)] tracking-[-0.04em]">
                         Simple,{" "}
-                        <span className="bg-gradient-to-r from-[#57c1ff] to-[#59d499] bg-clip-text text-transparent">
-                            predictable
-                        </span>{" "}
+                        <span className="holo-text">predictable</span>{" "}
                         pricing
                     </h1>
-                    <p className="mt-5 text-lg text-[var(--mute)] max-w-xl mx-auto">
+                    <p className="reveal-up delay-2 mt-5 text-lg text-[var(--m-ink-muted)] max-w-xl mx-auto">
                         Marketplace-aligned pricing across {availableMarketplaceBots.length} live AI roles. Start free and scale by role.
                     </p>
-                    <div className="mt-8 flex items-center justify-center gap-3">
+                    <div className="reveal-up delay-3 mt-8 flex items-center justify-center gap-3">
                         <div className="flex -space-x-2">
                             {["forge", "scout", "atlas", "orion", "vega"].map((seed) => (
                                 <img
                                     key={seed}
                                     src={`https://api.dicebear.com/7.x/bottts/svg?seed=${seed}&backgroundColor=b6e3f4,c0aede,d1d4f9&radius=10`}
                                     alt="AI worker"
-                                    className="w-8 h-8 rounded-full border-2 border-[var(--canvas)] bg-[var(--surface)]"
+                                    className="w-8 h-8 rounded-full border-2 border-[var(--m-canvas)] bg-[var(--m-surface)]"
                                     loading="lazy"
                                 />
                             ))}
                         </div>
-                        <span className="text-sm text-[var(--mute)]">
-                            <span className="font-semibold text-[var(--ink)]">{availableMarketplaceBots.length} live roles</span> in marketplace pricing
+                        <span className="text-sm text-[var(--m-ink-muted)]">
+                            <span className="font-semibold text-[var(--m-ink)]">{availableMarketplaceBots.length} live roles</span> in marketplace pricing
                         </span>
                     </div>
                 </div>
@@ -133,60 +139,54 @@ export default function PricingPage() {
             <PricingCalculator />
 
             {/* Decision cards */}
-            <section className="py-10 sm:py-12 border-b border-[var(--hairline)]">
+            <section className="py-10 sm:py-12 border-b border-[var(--m-hairline)]">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="grid gap-4 md:grid-cols-3">
-                        <article className="rounded-xl bg-[var(--surface-card)] border border-[var(--hairline)] p-6">
-                            <p className="text-xs uppercase tracking-[0.14em] font-semibold text-[var(--accent-blue)]">Starter Decision</p>
-                            <p className="mt-2 text-lg font-semibold text-[var(--ink)]">From {starterPlanPrice}/month</p>
-                            <p className="mt-1 text-sm text-[var(--mute)]">Best when you are proving AI teammate workflows with one to two core roles.</p>
+                        <article className="glass-card holo-edge reveal-up p-6">
+                            <span className="neon-chip neon-chip-cyan text-[10px] mb-3"><span className="dot" aria-hidden />Starter</span>
+                            <p className="mt-2 text-lg font-bold text-[var(--m-ink)]">From {starterPlanPrice}/month</p>
+                            <p className="mt-1 text-sm text-[var(--m-ink-muted)]">Best when you are proving AI teammate workflows with one to two core roles.</p>
                         </article>
-                        <article className="rounded-xl bg-[var(--surface-card)] border border-[var(--hairline)] p-6">
-                            <p className="text-xs uppercase tracking-[0.14em] font-semibold text-[var(--accent-green)]">Scale Decision</p>
-                            <p className="mt-2 text-lg font-semibold text-[var(--ink)]">Most teams pick Pro+ at {proPlanPrice}/month</p>
-                            <p className="mt-1 text-sm text-[var(--mute)]">Adds coverage breadth across departments with better rollout economics.</p>
+                        <article className="glass-card holo-edge reveal-up delay-1 p-6">
+                            <span className="neon-chip neon-chip-mint text-[10px] mb-3"><span className="dot" aria-hidden />Scale</span>
+                            <p className="mt-2 text-lg font-bold text-[var(--m-ink)]">Most teams pick Pro+ at {proPlanPrice}/month</p>
+                            <p className="mt-1 text-sm text-[var(--m-ink-muted)]">Adds coverage breadth across departments with better rollout economics.</p>
                         </article>
-                        <article className="rounded-xl bg-[var(--surface-card)] border border-[var(--hairline)] p-6">
-                            <p className="text-xs uppercase tracking-[0.14em] font-semibold text-[var(--mute)]">Governance Decision</p>
-                            <p className="mt-2 text-lg font-semibold text-[var(--ink)]">Enterprise for regulated environments</p>
-                            <p className="mt-1 text-sm text-[var(--mute)]">Custom controls, support, and deployment posture for strict compliance teams.</p>
+                        <article className="glass-card holo-edge reveal-up delay-2 p-6">
+                            <span className="neon-chip neon-chip-violet text-[10px] mb-3"><span className="dot" aria-hidden />Governance</span>
+                            <p className="mt-2 text-lg font-bold text-[var(--m-ink)]">Enterprise for regulated environments</p>
+                            <p className="mt-1 text-sm text-[var(--m-ink-muted)]">Custom controls, support, and deployment posture for strict compliance teams.</p>
                         </article>
                     </div>
                 </div>
             </section>
 
             {/* Plans */}
-            <section className="py-24 bg-[var(--surface)]">
+            <section className="py-24">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-5xl mx-auto items-stretch">
-                        {plans.map((plan) => (
+                        {plans.map((plan, i) => (
                             <div
                                 key={plan.name}
-                                className={`relative rounded-2xl p-7 flex flex-col border transition-all ${plan.highlighted
-                                        ? "bg-[var(--surface-card)] border-[var(--accent-blue)]/50 shadow-[0_0_0_1px_rgba(87,193,255,0.2),0_8px_40px_rgba(87,193,255,0.06)]"
-                                        : "bg-[var(--surface-card)] border-[var(--hairline)]"
-                                    }`}
+                                className={`glass-card reveal-up flex flex-col p-7 delay-${i + 1} ${plan.highlighted ? "holo-edge" : ""}`}
                             >
                                 {plan.highlighted && (
-                                    <>
-                                        <span className="self-start text-[10px] font-bold bg-[var(--accent-blue)] text-[#07080a] px-2.5 py-1 rounded-full mb-4">
-                                            Most Popular
-                                        </span>
-                                        <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--accent-blue)]/50 to-transparent rounded-t-2xl" />
-                                    </>
+                                    <span className="neon-chip neon-chip-cyan self-start mb-4 text-[10px]">
+                                        <span className="dot" aria-hidden />Most Popular
+                                    </span>
                                 )}
-                                <p className="text-xs font-semibold uppercase tracking-widest text-[var(--mute)] mb-2">{plan.name}</p>
+                                <p className="text-xs font-semibold uppercase tracking-widest text-[var(--m-ink-faint)] mb-2">{plan.name}</p>
                                 <div className="flex items-end gap-1 mt-1">
-                                    <span className="text-4xl font-bold text-[var(--ink)] tracking-tight">{plan.price}</span>
+                                    <span className={`text-4xl font-black tracking-tight ${plan.highlighted ? "holo-text" : "text-[var(--m-ink)]"}`}>{plan.price}</span>
                                     {plan.period && (
-                                        <span className="text-sm text-[var(--ash)] mb-1.5">{plan.period}</span>
+                                        <span className="text-sm text-[var(--m-ink-faint)] mb-1.5">{plan.period}</span>
                                     )}
                                 </div>
-                                <p className="mt-3 text-sm text-[var(--mute)] leading-relaxed">{plan.description}</p>
+                                <p className="mt-3 text-sm text-[var(--m-ink-muted)] leading-relaxed">{plan.description}</p>
                                 <ul className="mt-6 space-y-2.5 flex-1">
                                     {plan.features.map((f) => (
-                                        <li key={f} className="flex items-start gap-2.5 text-sm text-[var(--body-color)]">
-                                            <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-[var(--accent-green)]" />
+                                        <li key={f} className="flex items-start gap-2.5 text-sm text-[var(--m-ink-soft)]">
+                                            <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "var(--m-aurora-3)" }} />
                                             {f}
                                         </li>
                                     ))}
@@ -194,12 +194,7 @@ export default function PricingPage() {
                                 <div className="mt-8">
                                     <Link
                                         href={plan.ctaHref}
-                                        className={`w-full block text-center py-2.5 text-sm font-semibold rounded-xl transition-all ${plan.highlighted
-                                                ? "bg-[var(--accent-blue)] text-[#07080a] hover:bg-[#8dd7ff]"
-                                                : plan.name === "Enterprise"
-                                                    ? "bg-white/[0.06] border border-[var(--hairline)] text-[var(--ink)] hover:bg-white/[0.1]"
-                                                    : "bg-white text-[#07080a] hover:bg-[#e8e8e8]"
-                                            }`}
+                                        className={plan.highlighted ? "magic-btn magic-btn-primary w-full block text-center" : "magic-btn magic-btn-ghost w-full block text-center"}
                                     >
                                         {plan.cta}
                                     </Link>
@@ -207,25 +202,25 @@ export default function PricingPage() {
                             </div>
                         ))}
                     </div>
-                    <p className="text-center text-sm text-[var(--ash)] mt-8">Marketplace pricing updates with role availability. 14-day free trial, no credit card required.</p>
+                    <p className="text-center text-sm text-[var(--m-ink-faint)] mt-8">Marketplace pricing updates with role availability. 14-day free trial, no credit card required.</p>
                 </div>
             </section>
 
             {/* FAQ */}
-            <section className="py-24 bg-[var(--canvas)] border-t border-[var(--hairline)]">
+            <section className="py-24 border-t border-[var(--m-hairline)]">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="max-w-3xl mx-auto">
-                        <h2 className="text-2xl font-semibold text-[var(--ink)] tracking-[-0.03em] mb-10 text-center">
-                            Frequently asked questions
+                        <h2 className="text-2xl font-black text-[var(--m-ink)] tracking-[-0.03em] mb-10 text-center reveal-up">
+                            Frequently asked <span className="holo-text">questions</span>
                         </h2>
-                        <div className="divide-y divide-[var(--hairline)] border border-[var(--hairline)] rounded-2xl overflow-hidden">
+                        <div className="glass-card reveal-up delay-1 divide-y divide-[var(--m-hairline)] overflow-hidden p-0">
                             {faqs.map(({ q, a }) => (
-                                <div key={q} className="p-6 bg-[var(--surface-card)] hover:bg-[var(--surface)] transition-colors">
-                                    <h3 className="font-medium text-[var(--ink)] mb-2 flex items-center gap-2">
-                                        <span className="text-[var(--accent-blue)] text-xs font-bold">Q</span>
+                                <div key={q} className="p-6 hover:bg-[var(--m-surface-elev)] transition-colors">
+                                    <h3 className="font-semibold text-[var(--m-ink)] mb-2 flex items-center gap-2">
+                                        <span className="neon-chip neon-chip-cyan text-[9px] px-1.5 py-0.5">Q</span>
                                         {q}
                                     </h3>
-                                    <p className="text-sm text-[var(--mute)] leading-relaxed pl-5">{a}</p>
+                                    <p className="text-sm text-[var(--m-ink-muted)] leading-relaxed pl-5">{a}</p>
                                 </div>
                             ))}
                         </div>

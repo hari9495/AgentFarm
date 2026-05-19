@@ -49,6 +49,8 @@ var nicName = '${resourcePrefix}-nic'
 var vmName = '${resourcePrefix}-vm'
 var identityName = '${resourcePrefix}-id'
 var diskName = '${resourcePrefix}-osdisk'
+var natGwName = '${resourcePrefix}-natgw'
+var natPipName = '${resourcePrefix}-natgw-pip'
 
 // ── Managed Identity ──────────────────────────────────────────────────────────
 
@@ -121,6 +123,33 @@ resource nsg 'Microsoft.Network/networkSecurityGroups@2024-01-01' = {
   }
 }
 
+// ── NAT Gateway (explicit outbound — required for VMs created after Sept 2025) ─
+
+resource natPip 'Microsoft.Network/publicIPAddresses@2024-01-01' = {
+  name: natPipName
+  location: location
+  sku: {
+    name: 'Standard'
+  }
+  properties: {
+    publicIPAllocationMethod: 'Static'
+  }
+}
+
+resource natGw 'Microsoft.Network/natGateways@2024-01-01' = {
+  name: natGwName
+  location: location
+  sku: {
+    name: 'Standard'
+  }
+  properties: {
+    publicIpAddresses: [
+      { id: natPip.id }
+    ]
+    idleTimeoutInMinutes: 4
+  }
+}
+
 // ── Virtual Network ───────────────────────────────────────────────────────────
 
 resource vnet 'Microsoft.Network/virtualNetworks@2024-01-01' = {
@@ -137,6 +166,9 @@ resource vnet 'Microsoft.Network/virtualNetworks@2024-01-01' = {
           addressPrefix: '10.0.0.0/24'
           networkSecurityGroup: {
             id: nsg.id
+          }
+          natGateway: {
+            id: natGw.id
           }
           privateEndpointNetworkPolicies: 'Enabled'
         }
@@ -192,12 +224,12 @@ runcmd:
     ExecStartPre=-/usr/bin/docker stop agentfarm-runtime
     ExecStartPre=-/usr/bin/docker rm agentfarm-runtime
     ExecStart=/usr/bin/docker run --name agentfarm-runtime \
-      --env AF_TENANT_ID=${TENANT_ID} \
-      --env AF_BOT_ID=${BOT_ID} \
-      --env AF_KV_URI=${KV_URI} \
+      --env AF_TENANT_ID=__TENANT_ID__ \
+      --env AF_BOT_ID=__BOT_ID__ \
+      --env AF_KV_URI=__KV_URI__ \
       -p 127.0.0.1:8080:8080 \
       --restart unless-stopped \
-      ${ACR_SERVER}/agentfarm/agent-runtime:${IMAGE_TAG}
+      __ACR_SERVER__/agentfarm/agent-runtime:__IMAGE_TAG__
     ExecStop=/usr/bin/docker stop agentfarm-runtime
 
     [Install]
@@ -205,11 +237,11 @@ runcmd:
     UNIT
   - |
     cat > /etc/agentfarm.env << ENVFILE
-    TENANT_ID=${TENANT_ID}
-    BOT_ID=${BOT_ID}
-    KV_URI=${KV_URI}
-    ACR_SERVER=${ACR_SERVER}
-    IMAGE_TAG=${IMAGE_TAG}
+    TENANT_ID=__TENANT_ID__
+    BOT_ID=__BOT_ID__
+    KV_URI=__KV_URI__
+    ACR_SERVER=__ACR_SERVER__
+    IMAGE_TAG=__IMAGE_TAG__
     ENVFILE
   - systemctl daemon-reload
   - systemctl enable agentfarm-runtime
@@ -217,9 +249,17 @@ runcmd:
 '''
 
 var cloudInitEncoded = base64(replace(
-  replace(replace(replace(cloudInitScript, '${TENANT_ID}', tenantId), '${BOT_ID}', botId), '${KV_URI}', keyVaultUri),
-  '${ACR_SERVER}',
-  acrLoginServer
+  replace(
+    replace(
+      replace(replace(cloudInitScript, '__TENANT_ID__', tenantId), '__BOT_ID__', botId),
+      '__KV_URI__',
+      keyVaultUri
+    ),
+    '__ACR_SERVER__',
+    acrLoginServer
+  ),
+  '__IMAGE_TAG__',
+  agentImageTag
 ))
 
 // ── Virtual Machine ───────────────────────────────────────────────────────────

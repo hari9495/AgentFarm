@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { RepoKnowledgeGraph, globalKnowledgeGraph } from './repo-knowledge-graph.js';
 import { join } from 'node:path';
-import { tmpdir } from 'node:os';
 
 // ── Construction ───────────────────────────────────────────────────────────
 

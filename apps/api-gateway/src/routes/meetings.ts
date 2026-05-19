@@ -4,14 +4,15 @@ import {
     isMeetingSlackEnabled,
     distributeMeetingSummaryToSlack,
 } from '../lib/meeting-slack-notifier.js';
+import { generateProposalPdf, sendProposalEmail } from '../proposal-generator.js';
 
 const getPrisma = async () => {
     const db = await import('../lib/db.js');
     return db.prisma;
 };
 
-const voxcpm2Base = (): string =>
-    (process.env['VOXCPM2_URL'] ?? 'http://localhost:8765').replace(/\/+$/, '');
+const voiceboxBase = (): string =>
+    (process.env['VOICEBOX_URL'] ?? 'http://localhost:17493').replace(/\/+$/, '');
 
 type SessionContext = {
     userId: string;
@@ -41,6 +42,18 @@ type PatchMeetingBody = {
     endedAt?: string;
 };
 
+type PostMeetingAuditEventBody = {
+    tenantId: string;
+    workspaceId: string;
+    agentId: string;
+    platform: string;
+    eventType: string;
+    severity?: string;
+    summary: string;
+    payload?: Record<string, unknown>;
+    durationMs?: number;
+};
+
 type PatchSpeakingAgentBody = {
     speakingEnabled?: boolean;
     agentVoiceId?: string;
@@ -56,6 +69,8 @@ type PostSpeakingAgentBody = {
 export type RegisterMeetingRoutesOptions = {
     getSession: (request: FastifyRequest) => SessionContext | null;
     prisma?: PrismaClient;
+    /** Overrides generateProposalPdf — used in tests. */
+    generateProposalFn?: typeof generateProposalPdf;
 };
 
 export async function registerMeetingRoutes(
@@ -65,6 +80,8 @@ export async function registerMeetingRoutes(
     const resolvePrisma = options.prisma
         ? () => Promise.resolve(options.prisma!)
         : getPrisma;
+
+    const doGenerateProposal = options.generateProposalFn ?? generateProposalPdf;
 
     // -----------------------------------------------------------------------
     // GET /v1/meetings/:sessionId
@@ -198,6 +215,27 @@ export async function registerMeetingRoutes(
                 }
             }
 
+            // Generate proposal PDF when summary is newly set
+            if (
+                body.summaryText !== undefined &&
+                body.summaryText.trim().length > 0 &&
+                !existing.proposalPath
+            ) {
+                doGenerateProposal(sessionId, session.tenantId, prisma)
+                    .then(async (path) => {
+                        if (path) {
+                            // Auto-send proposal if configured
+                            await sendProposalEmail(sessionId, session.tenantId, prisma)
+                                .catch((err: unknown) => {
+                                    console.warn('[meetings] sendProposalEmail failed:', err);
+                                });
+                        }
+                    })
+                    .catch((err: unknown) => {
+                        console.warn('[meetings] generateProposalPdf failed:', err);
+                    });
+            }
+
             return reply.send(updated);
         },
     );
@@ -286,7 +324,7 @@ export async function registerMeetingRoutes(
             }
 
             try {
-                const ttsResponse = await fetch(`${voxcpm2Base()}/v1/synthesize`, {
+                const ttsResponse = await fetch(`${voiceboxBase()}/v1/synthesize`, {
                     method: 'POST',
                     headers: { 'content-type': 'application/json' },
                     body: JSON.stringify(synthesizeBody),
@@ -309,6 +347,43 @@ export async function registerMeetingRoutes(
             } catch (err: unknown) {
                 return reply.send({ ok: false, error: String(err) });
             }
+        },
+    );
+
+    // -----------------------------------------------------------------------
+    // POST /v1/meetings/:sessionId/send-proposal
+    // Manually triggers proposal PDF generation and sends it to the prospect.
+    // -----------------------------------------------------------------------
+    app.post<{ Params: SessionIdParams }>(
+        '/v1/meetings/:sessionId/send-proposal',
+        async (request, reply) => {
+            const session = options.getSession(request);
+            if (!session) {
+                return reply.code(401).send({ error: 'Unauthorized' });
+            }
+
+            const { sessionId } = request.params;
+            const prisma = await resolvePrisma();
+
+            const existing = await prisma.meetingSession.findFirst({
+                where: { id: sessionId, tenantId: session.tenantId },
+            });
+            if (!existing) {
+                return reply.code(404).send({ error: 'Meeting session not found' });
+            }
+
+            // Generate PDF if not already generated
+            let proposalPath = existing.proposalPath;
+            if (!proposalPath) {
+                proposalPath = await doGenerateProposal(sessionId, session.tenantId, prisma);
+            }
+
+            if (!proposalPath) {
+                return reply.code(422).send({ error: 'Failed to generate proposal PDF' });
+            }
+
+            const sent = await sendProposalEmail(sessionId, session.tenantId, prisma);
+            return reply.send({ ok: true, sent, proposalPath });
         },
     );
 
@@ -339,6 +414,141 @@ export async function registerMeetingRoutes(
             });
 
             return reply.send({ ok: true });
+        },
+    );
+
+    // -----------------------------------------------------------------------
+    // POST /v1/meetings/:sessionId/audit-events
+    // Called by agent-runtime to write a per-event audit trail entry.
+    // Does not require a valid session cookie — uses x-tenant-id header.
+    // -----------------------------------------------------------------------
+    app.post<{ Params: SessionIdParams; Body: PostMeetingAuditEventBody }>(
+        '/v1/meetings/:sessionId/audit-events',
+        async (request, reply) => {
+            const tenantIdHeader =
+                (request.headers['x-tenant-id'] as string | undefined) ??
+                options.getSession(request)?.tenantId;
+
+            if (!tenantIdHeader) {
+                return reply.code(401).send({ error: 'Unauthorized' });
+            }
+
+            const { sessionId } = request.params;
+            const body = request.body ?? ({} as PostMeetingAuditEventBody);
+
+            if (!body.eventType || !body.summary) {
+                return reply.code(400).send({ error: 'eventType and summary are required' });
+            }
+
+            const prisma = await resolvePrisma();
+
+            const existing = await prisma.meetingSession.findFirst({
+                where: { id: sessionId, tenantId: tenantIdHeader },
+            });
+            if (!existing) {
+                return reply.code(404).send({ error: 'Meeting session not found' });
+            }
+
+            const event = await prisma.meetingAuditEvent.create({
+                data: {
+                    meetingSessionId: sessionId,
+                    tenantId: tenantIdHeader,
+                    workspaceId: body.workspaceId ?? existing.workspaceId,
+                    agentId: body.agentId ?? existing.agentId,
+                    platform: body.platform ?? existing.platform,
+                    eventType: body.eventType,
+                    severity: body.severity ?? 'info',
+                    summary: body.summary,
+                    payload: body.payload !== undefined ? (body.payload as import('@prisma/client').Prisma.InputJsonValue) : undefined,
+                    durationMs: body.durationMs ?? null,
+                },
+            });
+
+            return reply.code(201).send(event);
+        },
+    );
+
+    // -----------------------------------------------------------------------
+    // GET /v1/meetings/:sessionId/audit-events
+    // Returns all audit events for a meeting session in ascending time order.
+    // -----------------------------------------------------------------------
+    app.get<{ Params: SessionIdParams }>(
+        '/v1/meetings/:sessionId/audit-events',
+        async (request, reply) => {
+            const session = options.getSession(request);
+            if (!session) {
+                return reply.code(401).send({ error: 'Unauthorized' });
+            }
+
+            const { sessionId } = request.params;
+            const prisma = await resolvePrisma();
+
+            const meeting = await prisma.meetingSession.findFirst({
+                where: { id: sessionId, tenantId: session.tenantId },
+            });
+            if (!meeting) {
+                return reply.code(404).send({ error: 'Meeting session not found' });
+            }
+
+            const events = await prisma.meetingAuditEvent.findMany({
+                where: { meetingSessionId: sessionId, tenantId: session.tenantId },
+                orderBy: { createdAt: 'asc' },
+            });
+
+            return reply.send({ sessionId, meetingUrl: meeting.meetingUrl, platform: meeting.platform, events });
+        },
+    );
+
+    // -----------------------------------------------------------------------
+    // GET /v1/meetings  (list sessions for tenant, newest first)
+    // -----------------------------------------------------------------------
+    app.get(
+        '/v1/meetings',
+        async (request, reply) => {
+            const session = options.getSession(request);
+            if (!session) {
+                return reply.code(401).send({ error: 'Unauthorized' });
+            }
+
+            const query = request.query as Record<string, string>;
+            const limit = Math.min(parseInt(query['limit'] ?? '20', 10), 100);
+            const cursor = query['cursor'];
+            const platform = query['platform'];
+            const status = query['status'];
+
+            const prisma = await resolvePrisma();
+
+            const where: Record<string, unknown> = { tenantId: session.tenantId };
+            if (platform) where['platform'] = platform;
+            if (status) where['status'] = status;
+            if (cursor) where['id'] = { lt: cursor };
+
+            const sessions = await prisma.meetingSession.findMany({
+                where,
+                orderBy: { startedAt: 'desc' },
+                take: limit + 1,
+                select: {
+                    id: true,
+                    tenantId: true,
+                    workspaceId: true,
+                    agentId: true,
+                    meetingUrl: true,
+                    platform: true,
+                    status: true,
+                    language: true,
+                    summaryText: true,
+                    startedAt: true,
+                    endedAt: true,
+                    videoEnabled: true,
+                    speakingEnabled: true,
+                },
+            });
+
+            const hasNext = sessions.length > limit;
+            const items = hasNext ? sessions.slice(0, limit) : sessions;
+            const nextCursor = hasNext ? items[items.length - 1]?.id : null;
+
+            return reply.send({ items, nextCursor });
         },
     );
 }

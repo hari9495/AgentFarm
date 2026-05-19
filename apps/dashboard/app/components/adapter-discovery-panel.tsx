@@ -53,7 +53,7 @@ function healthColor(score: number) {
 
 type Props = { workspaceId?: string };
 
-export function AdapterDiscoveryPanel({ workspaceId: _workspaceId }: Props) {
+export function AdapterDiscoveryPanel({ workspaceId }: Props) {
     const [adapters, setAdapters] = useState<AdapterRecord[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -72,11 +72,15 @@ export function AdapterDiscoveryPanel({ workspaceId: _workspaceId }: Props) {
     const [healthResults, setHealthResults] = useState<Record<string, HealthCheckResult>>({});
     const [checkingHealth, setCheckingHealth] = useState<Record<string, boolean>>({});
 
+    const adaptersUrl = workspaceId
+        ? `${API_BASE}/v1/workspaces/${encodeURIComponent(workspaceId)}/adapters`
+        : `${API_BASE}/v1/adapters`;
+
     const loadAdapters = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
-            const res = await fetch(`${API_BASE}/v1/adapters`, { cache: 'no-store' });
+            const res = await fetch(adaptersUrl, { cache: 'no-store' });
             const body = (await res.json().catch(() => null)) as { adapters?: AdapterRecord[]; message?: string } | null;
             if (!res.ok || !body) {
                 setError(body?.message ?? 'Failed to load adapters');
@@ -90,7 +94,7 @@ export function AdapterDiscoveryPanel({ workspaceId: _workspaceId }: Props) {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [adaptersUrl]);
 
     useEffect(() => {
         void loadAdapters();
@@ -104,7 +108,7 @@ export function AdapterDiscoveryPanel({ workspaceId: _workspaceId }: Props) {
         setRegistering(true);
         setRegisterError(null);
         try {
-            const res = await fetch(`${API_BASE}/v1/adapters`, {
+            const res = await fetch(adaptersUrl, {
                 method: 'POST',
                 headers: { 'content-type': 'application/json' },
                 body: JSON.stringify({
@@ -133,8 +137,11 @@ export function AdapterDiscoveryPanel({ workspaceId: _workspaceId }: Props) {
 
     const handleHealthCheck = async (adapter: AdapterRecord) => {
         setCheckingHealth((prev) => ({ ...prev, [adapter.adapter_id]: true }));
+        const baseAdapterUrl = workspaceId
+            ? `${API_BASE}/v1/workspaces/${encodeURIComponent(workspaceId)}/adapters`
+            : `${API_BASE}/v1/adapters`;
         try {
-            const res = await fetch(`${API_BASE}/v1/adapters/${encodeURIComponent(adapter.adapter_id)}/health-check`, {
+            const res = await fetch(`${baseAdapterUrl}/${encodeURIComponent(adapter.adapter_id)}/health-check`, {
                 method: 'POST',
                 headers: { 'content-type': 'application/json' },
                 body: JSON.stringify({}),
@@ -160,8 +167,11 @@ export function AdapterDiscoveryPanel({ workspaceId: _workspaceId }: Props) {
     };
 
     const handleDelete = async (adapterId: string) => {
+        const baseAdapterUrl = workspaceId
+            ? `${API_BASE}/v1/workspaces/${encodeURIComponent(workspaceId)}/adapters`
+            : `${API_BASE}/v1/adapters`;
         try {
-            await fetch(`${API_BASE}/v1/adapters/${encodeURIComponent(adapterId)}`, { method: 'DELETE' });
+            await fetch(`${baseAdapterUrl}/${encodeURIComponent(adapterId)}`, { method: 'DELETE' });
             await loadAdapters();
         } catch {
             // ignore

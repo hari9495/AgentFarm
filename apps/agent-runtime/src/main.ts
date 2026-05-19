@@ -1,5 +1,6 @@
 import { startRuntimeServer } from './runtime-server.js';
 import { ensureVoiceboxRegistered } from './voicebox-mcp-registrar.js';
+import { seedVoiceProfiles } from './voice-profile-seeder.js';
 
 void startRuntimeServer().catch((err: unknown) => {
     console.error('agent-runtime failed to start', err);
@@ -10,4 +11,9 @@ void startRuntimeServer().catch((err: unknown) => {
 const agentTenantId = process.env['AGENT_TENANT_ID'] ?? 'default';
 ensureVoiceboxRegistered(agentTenantId).catch((err: unknown) => {
     console.error('[voicebox-registrar] startup registration failed:', err);
+});
+
+// Fire-and-forget: seed default voice profiles for all 12 roles.
+seedVoiceProfiles().catch((err: unknown) => {
+    console.warn('[voice-profile-seeder] startup seeding failed (non-fatal):', err);
 });

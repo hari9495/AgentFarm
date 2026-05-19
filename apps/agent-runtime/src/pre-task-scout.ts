@@ -21,7 +21,12 @@ export const SCOUT_TRIGGER_ACTIONS = new Set([
     'autonomous_loop',
     'workspace_github_issue_fix',
     'workspace_generate_from_template',
+    // FIX 8a: The primary coding entry-point for developer tasks.
+    'workspace_subagent_spawn',
 ]);
+
+/** Regex that matches coding-related action_type values not already in the set. */
+const CODING_ACTION_REGEX = /(fix|bug|edit|refactor|update|add|create|implement|code|test|patch|feature)/i;
 
 /**
  * Scout the codebase before the LLM sees the task.
@@ -48,7 +53,20 @@ export async function preTaskScout(
             ? task.payload['action_type'].trim().toLowerCase()
             : '';
 
-    if (!SCOUT_TRIGGER_ACTIONS.has(actionType)) {
+    // FIX 8b: Trigger scout when:
+    //   (a) action_type is in the explicit set, OR
+    //   (b) action_type matches coding keywords (fix_bug, add_feature, refactor, etc.), OR
+    //   (c) payload has a non-empty target_files array or a target string
+    const hasTargetFiles =
+        (Array.isArray(task.payload['target_files']) && (task.payload['target_files'] as unknown[]).length > 0) ||
+        (typeof task.payload['target'] === 'string' && task.payload['target'].trim().length > 0);
+
+    const shouldScout =
+        SCOUT_TRIGGER_ACTIONS.has(actionType) ||
+        CODING_ACTION_REGEX.test(actionType) ||
+        hasTargetFiles;
+
+    if (!shouldScout) {
         return '';
     }
 
@@ -124,6 +142,41 @@ export async function preTaskScout(
         // Best-effort
     }
 
+    // 4. FIX 8c: Read actual content of target_files so the LLM sees real code
+    //    before it generates initial_plan. Without this, the LLM classifies
+    //    blindly and code_edit_patch steps reference lines/symbols it cannot see.
+    const rawTargetFiles = Array.isArray(task.payload['target_files'])
+        ? (task.payload['target_files'] as unknown[]).filter((f): f is string => typeof f === 'string')
+        : typeof task.payload['target'] === 'string' && task.payload['target'].trim()
+            ? [task.payload['target'].trim()]
+            : [];
+
+    if (rawTargetFiles.length > 0) {
+        const FILE_CONTENT_CAP = 3000;
+        const fileParts: string[] = [];
+        for (const filePath of rawTargetFiles.slice(0, 4)) {
+            try {
+                const readResult = await executeAction({
+                    tenantId,
+                    botId,
+                    taskId: scoutTaskId,
+                    actionType: 'workspace_read_file',
+                    payload: { ...task.payload, file_path: filePath },
+                });
+                if (readResult.ok && readResult.output.trim()) {
+                    const truncated = readResult.output.slice(0, FILE_CONTENT_CAP);
+                    fileParts.push(`--- ${filePath} ---\n${truncated}`);
+                }
+            } catch {
+                // Best-effort — file may not exist in workspace yet
+            }
+        }
+        if (fileParts.length > 0) {
+            parts.push(`=== TARGET FILE CONTENTS ===\n${fileParts.join('\n\n')}`);
+        }
+    }
+
     const full = parts.join('\n\n');
     return full.slice(0, 4000);
 }
+

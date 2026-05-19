@@ -107,7 +107,7 @@ async function fetchAndSummarise(
 
 // ── Query builder for each intent ────────────────────────────────────────────
 
-function buildLookupUrl(intent: WebResearchIntent, query: string, source: WebResearchSource): string {
+function buildLookupUrl(_intent: WebResearchIntent, query: string, source: WebResearchSource): string {
     const base = SOURCE_REGISTRY[source].baseUrl;
     const encoded = encodeURIComponent(query);
     switch (source) {

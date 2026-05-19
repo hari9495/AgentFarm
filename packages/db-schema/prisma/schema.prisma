@@ -38,19 +38,63 @@ model Workspace {
   name      String
   status    WorkspaceStatus @default(pending)
   createdAt DateTime        @default(now())
-  bot       Bot?
+  bots      Bot[]
+  sharedVm  WorkspaceVm?
   tenant    Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
 model Bot {
   id             String             @id @default(cuid())
-  workspaceId    String             @unique
+  workspaceId    String
   role           String
   status         BotStatus          @default(created)
+  containerPort  Int?               // port on the shared workspace VM (null until provisioned)
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
   workspace      Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   configVersions BotConfigVersion[]
+  persona        AgentPersona?
+  sentMessages   AgentMessage[]     @relation("MessageFrom")
+  receivedMessages AgentMessage[]   @relation("MessageTo")
+}
+
+model AgentPersona {
+  id                  String   @id @default(cuid())
+  botId               String   @unique
+  tenantId            String
+  displayName         String   @db.VarChar(100)
+  emailAddress        String   @db.VarChar(255)
+  avatarUrl           String?
+  communicationStyle  String   @default("professional")
+  disclosureStatement String   @default("This message was sent by an AI agent.")
+  language            String   @default("en")
+  timezone            String   @default("UTC")
+  workingHours        Json?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  bot                 Bot      @relation(fields: [botId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+// Sprint 3 — Setup Wizard
+model SetupWizardSession {
+  id             String    @id @default(cuid())
+  tenantId       String
+  botId          String?
+  currentStep    String    @default("select_role")
+  completedSteps String[]  @default([])
+  selectedRole   String?
+  connectors     Json      @default("[]")
+  personaBotId   String?
+  approvalPolicy Json?
+  status         String    @default("in_progress")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  completedAt    DateTime?
+
+  @@index([tenantId])
+  @@index([status])
 }
 
 model ProvisioningJob {
@@ -81,6 +125,28 @@ model ProvisioningJob {
   @@index([tenantId])
   @@index([workspaceId])
   @@index([correlationId])
+}
+
+// One shared VM per workspace — multiple bot containers run on it to save cost.
+// When the last container is removed the VM is deprovisioned and this record is deleted.
+model WorkspaceVm {
+  id                   String    @id @default(cuid())
+  workspaceId          String    @unique
+  tenantId             String
+  vmName               String
+  vmResourceId         String
+  resourceGroup        String
+  privateIp            String
+  region               String
+  vmSize               String    @default("Standard_B4ms")
+  status               String    @default("running")
+  activeContainerCount Int       @default(0)
+  nextContainerPort    Int       @default(8081)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  workspace            Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
 }
 
 model RuntimeInstance {
@@ -301,6 +367,7 @@ model TaskExecutionRecord {
   createdAt        DateTime             @default(now())
   estimatedCostUsd Float?
   modelTier        String?
+  platformFeeUsd   Float?
 
   @@index([botId])
   @@index([tenantId])
@@ -625,19 +692,25 @@ model AgentShortTermMemory {
 }
 
 model AgentLongTermMemory {
-  id            String   @id @default(cuid())
-  tenantId      String
-  workspaceId   String
-  pattern       String
-  confidence    Float
-  observedCount Int      @default(1)
-  lastSeen      DateTime
-  createdAt     DateTime @default(now())
-  repoName      String?
+  id             String   @id @default(cuid())
+  tenantId       String
+  workspaceId    String
+  pattern        String
+  confidence     Float
+  observedCount  Int      @default(1)
+  lastSeen       DateTime
+  createdAt      DateTime @default(now())
+  repoName       String?
+  // Sprint 4 — pgvector episodic memory
+  botId          String?
+  summary        String?
+  embeddingModel String?
+  embedding      Unsupported("vector(1536)")?
 
   @@unique([tenantId, pattern])
   @@index([workspaceId, confidence])
   @@index([tenantId, workspaceId])
+  @@index([botId])
 }
 
 model AgentRepoKnowledge {
@@ -845,14 +918,45 @@ model MeetingSession {
   startedAt        DateTime  @default(now())
   endedAt          DateTime?
   updatedAt        DateTime  @updatedAt
-  agentVoiceId     String?
-  resolvedLanguage String?
-  speakingEnabled  Boolean   @default(false)
+  agentVoiceId      String?
+  resolvedLanguage  String?
+  speakingEnabled   Boolean  @default(false)
+  slackDistributed  Boolean  @default(false)
+  proposalPath      String?
+  videoEnabled      Boolean  @default(false)
+  avatarProfileId   String?
+  desktopSessionId  String?
+  recordingUrl      String?
+
+  auditEvents      MeetingAuditEvent[]
 
   @@index([tenantId])
   @@index([workspaceId])
   @@index([tenantId, workspaceId])
   @@index([tenantId, status])
+}
+
+// Meeting per-event audit trail — one row per action/milestone in the meeting
+model MeetingAuditEvent {
+  id               String    @id @default(cuid())
+  meetingSessionId String
+  tenantId         String
+  workspaceId      String
+  agentId          String
+  eventType        String    // joined | left | spoke | listened | transcribed | summarised | summary_distributed | error | avatar_state_changed
+  platform         String
+  severity         String    @default("info")  // info | warn | error
+  summary          String
+  payload          Json?
+  durationMs       Int?
+  createdAt        DateTime  @default(now())
+
+  session          MeetingSession @relation(fields: [meetingSessionId], references: [id], onDelete: Cascade)
+
+  @@index([meetingSessionId])
+  @@index([tenantId])
+  @@index([tenantId, createdAt])
+  @@index([tenantId, eventType])
 }
 
 model Plan {
@@ -862,6 +966,7 @@ model Plan {
   priceUsd            Int
   agentSlots          Int
   features            String
+  roleType            String               @default("developer_agent") // e.g. developer_agent | fullstack_developer | tester_agent
   isActive            Boolean              @default(true)
   createdAt           DateTime             @default(now())
   agentSubscriptions  AgentSubscription[]
@@ -1284,18 +1389,20 @@ model CircuitBreakerState {
 }
 
 model TaskQueueEntry {
-  id           String    @id @default(cuid())
-  tenantId     String
-  workspaceId  String
-  botId        String?
-  priority     String    @default("normal")
-  status       String    @default("pending")
-  payload      Json
-  errorMessage String?
-  enqueuedAt   DateTime  @default(now())
-  startedAt    DateTime?
-  completedAt  DateTime?
-  updatedAt    DateTime  @updatedAt
+  id             String    @id @default(cuid())
+  tenantId       String
+  workspaceId    String
+  botId          String?
+  priority       String    @default("normal")
+  status         String    @default("pending")
+  payload        Json
+  errorMessage   String?
+  enqueuedAt     DateTime  @default(now())
+  startedAt      DateTime?
+  completedAt    DateTime?
+  updatedAt      DateTime  @updatedAt
+  dependsOn      String[]
+  dependencyMet  Boolean   @default(true)
 
   @@index([tenantId])
   @@index([tenantId, status])
@@ -1356,13 +1463,107 @@ model SalesAgentConfig {
   signatureProvider  String
   emailTone          String   @default("conversational")
   followUpDays       Int[]    @default([3, 7, 14])
-  maxProspectsPerDay Int      @default(50)
-  active             Boolean  @default(true)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  maxProspectsPerDay    Int      @default(50)
+  active                Boolean  @default(true)
+  bookingUrl                String?
+  autoSendProposal          Boolean  @default(false)
+  bookingWebhookSecret      String?
+  contractUrl               String?
+  contractWebhookSecret     String?
+  winNotificationProvider   String?
+  winNotificationTarget     String?
+  winNotificationSecret     String?
+  reEngageDaysAfterLoss     Int?
+  browserEnabled            Boolean  @default(false)
+  browserAllowedDomains     String?
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
 
   @@index([tenantId])
   @@index([botId])
+}
+
+model BrowserTask {
+  id            String   @id @default(cuid())
+  tenantId      String
+  botId         String
+  prospectId    String?
+  dealId        String?
+  goal          String
+  allowedDomain String?
+  status        String   @default("pending")
+  steps         Json     @default("[]")
+  result        String?
+  errorMessage  String?
+  startedAt     DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([botId])
+  @@index([tenantId, status])
+}
+
+model BookingEvent {
+  id               String    @id @default(cuid())
+  tenantId         String
+  prospectId       String?
+  botId            String?
+  bookingProvider  String    @default("other")
+  externalId       String?
+  scheduledAt      DateTime?
+  guestEmail       String?
+  guestName        String?
+  meetingTitle     String?
+  meetingSessionId String?
+  status           String    @default("pending")
+  rawPayload       String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([tenantId])
+  @@index([prospectId])
+  @@index([tenantId, status])
+  @@index([meetingSessionId])
+}
+
+model ContractEvent {
+  id              String    @id @default(cuid())
+  tenantId        String
+  botId           String
+  prospectId      String
+  dealId          String
+  provider        String
+  externalEventId String?
+  signerEmail     String
+  signerName      String?
+  signedAt        DateTime?
+  status          String
+  payload         String
+  createdAt       DateTime  @default(now())
+
+  @@index([tenantId])
+  @@index([dealId])
+  @@index([tenantId, status])
+}
+
+model WinLossEvent {
+  id           String    @id @default(cuid())
+  tenantId     String
+  botId        String
+  prospectId   String
+  dealId       String
+  outcome      String
+  dealValue    Float?
+  currency     String    @default("USD")
+  daysToClose  Int?
+  notifiedAt   DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([tenantId])
+  @@index([dealId])
+  @@index([tenantId, outcome])
 }
 
 model Prospect {
@@ -1381,6 +1582,7 @@ model Prospect {
   phone           String?
   icpScore        Int            @default(0)
   qualified       Boolean        @default(false)
+  sequenceStep    Int            @default(1)
   status          ProspectStatus @default(new)
   notes           String?
   lastContactedAt DateTime?
@@ -1388,8 +1590,9 @@ model Prospect {
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 
-  deals      SalesDeal[]
-  activities SalesActivity[]
+  deals           SalesDeal[]
+  activities      SalesActivity[]
+  sequenceEntries SalesSequenceEntry[]
 
   @@unique([tenantId, email])
   @@index([tenantId])
@@ -1406,9 +1609,12 @@ model SalesDeal {
   value             Float?
   currency          String    @default("USD")
   stage             DealStage @default(discovery)
+  probability       Float?
   notes             String?
   expectedCloseDate DateTime?
   closedAt          DateTime?
+  contractSentAt    DateTime?
+  contractSignedAt  DateTime?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
@@ -1443,6 +1649,172 @@ model SalesActivity {
   @@index([botId])
   @@index([prospectId])
   @@index([dealId])
+}
+
+model Lead {
+  id            String    @id @default(cuid())
+  tenantId      String    @default("")
+  firstName     String
+  lastName      String?
+  email         String
+  company       String?
+  message       String?
+  leadSource    String?
+  sfLeadId      String?
+  status        String    @default("NEW")
+  nurtureStep   Int       @default(0)
+  lastContactAt DateTime?
+  nextContactAt DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  nurtureEntries NurtureSequenceEntry[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+  @@index([status])
+  @@index([nextContactAt])
+}
+
+model NurtureSequenceEntry {
+  id        String   @id @default(cuid())
+  leadId    String
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  step      Int
+  channel   String   @default("email")
+  subject   String?
+  body      String?
+  sentAt    DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  @@index([leadId])
+  @@index([step])
+}
+
+model SalesSequenceEntry {
+  id           String    @id @default(cuid())
+  tenantId     String
+  botId        String
+  prospectId   String
+  prospect     Prospect  @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  sequenceStep Int       @default(1)
+  scheduledFor DateTime
+  sentAt       DateTime?
+  skipped      Boolean   @default(false)
+  skipReason   String?
+  subject      String?
+  activityId   String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([tenantId])
+  @@index([botId])
+  @@index([prospectId])
+  @@index([scheduledFor])
+  @@index([sentAt])
+}
+
+// ── Portal auth models ────────────────────────────────────────────────────────
+
+model TenantPortalAccount {
+  id           String    @id @default(cuid())
+  tenantId     String
+  email        String
+  passwordHash String
+  displayName  String?
+  role         String    @default("member")
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  sessions TenantPortalSession[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+}
+
+model TenantPortalSession {
+  id         String   @id @default(cuid())
+  accountId  String
+  tenantId   String
+  token      String   @unique
+  expiresAt  DateTime
+  lastSeenAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  account TenantPortalAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([token])
+}
+
+// ── Agent messaging model ─────────────────────────────────────────────────────
+
+model AgentMessage {
+  id          String    @id @default(cuid())
+  fromBotId   String?
+  toBotId     String?
+  messageType String    @default("info")
+  subject     String?
+  body        String
+  status      String    @default("sent")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  fromBot Bot? @relation("MessageFrom", fields: [fromBotId], references: [id], onDelete: SetNull)
+  toBot   Bot? @relation("MessageTo", fields: [toBotId], references: [id], onDelete: SetNull)
+
+  @@index([fromBotId])
+  @@index([toBotId])
+}
+
+// ── Inbound webhook models ────────────────────────────────────────────────────
+
+model WebhookSource {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  description String?
+  secret      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  events InboundWebhookEvent[]
+
+  @@index([tenantId])
+}
+
+model InboundWebhookEvent {
+  id         String   @id @default(cuid())
+  tenantId   String
+  sourceId   String
+  headers    Json     @default("{}")
+  body       Json     @default("{}")
+  receivedAt DateTime @default(now())
+
+  source WebhookSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([sourceId])
+  @@index([receivedAt])
+}
+
+// Sprint 9 — Semantic Memory / Company Knowledge RAG
+model AgentKnowledgeBase {
+  id             String   @id @default(cuid())
+  tenantId       String
+  botId          String?
+  content        String
+  sourceUrl      String?
+  sourceType     String
+  embeddingModel String?
+  embedding      Unsupported("vector(1536)")?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([botId])
 }
 
 enum TenantStatus {
@@ -1681,6 +2053,12 @@ enum ProspectStatus {
   qualified
   disqualified
   converted
+  nurture
+  replied
+  meeting_booked
+  proposal_sent
+  closed_won
+  closed_lost
 }
 
 enum DealStage {
@@ -1699,4 +2077,16 @@ enum SalesActivityType {
   follow_up
   demo
   proposal_sent
+  email_replied
+  meeting_booked
+  contract_sent
+  contract_signed
+  crm_updated
+  lead_found
+  lead_enriched
+  objection_handled
+  handoff_sent
+  email_sent
+  note
+  browser_task
 }

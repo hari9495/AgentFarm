@@ -2,20 +2,6 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { getChatReplyMock, getChatReply } from './chat-service.js';
 
-// ── Mock helpers ─────────────────────────────────────────────────────────────
-
-function mockFetch(
-    status: number,
-    body: unknown,
-): typeof globalThis.fetch {
-    return async (_url, _init) =>
-        ({
-            ok: status >= 200 && status < 300,
-            status,
-            json: async () => body,
-        }) as Response;
-}
-
 // ── getChatReplyMock ─────────────────────────────────────────────────────────
 
 test('getChatReplyMock: echoes the last user message', () => {

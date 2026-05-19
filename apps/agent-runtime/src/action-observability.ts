@@ -9,10 +9,7 @@ import {
     screenshotPath,
     domSnapshotPath,
 } from '@agentfarm/shared-types';
-import type {
-    BrowserActionAuditEvent,
-    SessionAuditRecord,
-} from '@agentfarm/shared-types';
+
 import {
     buildRuntimeAuditContext,
     deriveSequenceFromActionId,

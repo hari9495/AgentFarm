@@ -1,4 +1,4 @@
-import { describe, test, beforeEach } from 'node:test';
+import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import Fastify from 'fastify';
 import { registerZohoSignWebhookRoutes } from './zoho-sign-webhook.js';

@@ -3,6 +3,7 @@ import type { PrismaClient } from '@prisma/client';
 import { personaliseEmail, type PersonaliseEmailParams, type PersonalisedEmail } from './email-personaliser.js';
 import { getEmailProvider } from './email-provider-factory.js';
 import type { IEmailProvider, EmailProviderConfig } from './email-provider.js';
+import { appendGdprFooter, resolveOptOutUrl } from '../gdpr-email-footer.js';
 
 export interface OutreachParams {
     tenantId: string;
@@ -70,12 +71,13 @@ export async function sendOutreachEmail(
     });
 
     const provider = params.emailProviderOverride ?? getEmailProvider(params.config.emailProvider);
+    const emailBody = appendGdprFooter(email.body, { optOutUrl: resolveOptOutUrl(params.tenantId) });
     const sendResult = await provider.sendEmail(
         {
             to: prospect.email,
             from: params.emailConfig.fromEmail ?? process.env['SALES_EMAIL_FROM'] ?? '',
             subject: email.subject,
-            body: email.body,
+            body: emailBody,
         },
         params.emailConfig,
     );

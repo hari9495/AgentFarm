@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import type { Agent, BotStatus } from './agent-card.js';
-import AgentVersionHistory from './agent-version-history.js';
-import AgentObservabilityPanel from './agent-observability-panel.js';
-import AgentMessagesPanel from './agent-messages-panel.js';
+import type { Agent, BotStatus } from './agent-card';
+import AgentVersionHistory from './agent-version-history';
+import AgentObservabilityPanel from './agent-observability-panel';
+import AgentMessagesPanel from './agent-messages-panel';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 

@@ -18,9 +18,9 @@ const job = {
 } as const;
 
 test("default executor: bootstrap returns VM context with bootstrap script", async () => {
-    const executor = new DefaultProvisioningStepExecutor();
+    const executor = new DefaultProvisioningStepExecutor(undefined, undefined);
 
-    const afterResources = await executor.createResources(job as never);
+    const afterResources = await executor.createResources(job as never, {});
     const afterBootstrap = await executor.bootstrapVm(job as never, afterResources ?? {});
 
     assert.ok(afterBootstrap.vmName);
@@ -29,7 +29,7 @@ test("default executor: bootstrap returns VM context with bootstrap script", asy
 });
 
 test("default executor: startContainer computes endpoint and register/health checks require it", async () => {
-    const executor = new DefaultProvisioningStepExecutor();
+    const executor = new DefaultProvisioningStepExecutor(undefined, undefined);
 
     const context = await executor.startContainer(job as never, { vmPrivateIp: "10.0.1.12" });
     assert.equal(context.containerEndpoint, "http://10.0.1.12:8080");
@@ -41,7 +41,7 @@ test("default executor: startContainer computes endpoint and register/health che
 });
 
 test("default executor: registerRuntime fails fast without endpoint", async () => {
-    const executor = new DefaultProvisioningStepExecutor();
+    const executor = new DefaultProvisioningStepExecutor(undefined, undefined);
 
     await assert.rejects(async () => {
         await executor.registerRuntime(job as never, {});

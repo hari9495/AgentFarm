@@ -130,6 +130,16 @@ const createFakeRepo = (): ConnectorAuthRepo & {
         async createAuthEvent(input) {
             events.push(input);
         },
+
+        async findAllForWorkspace(tenantId, workspaceId) {
+            const results: typeof metadata extends Map<string, infer V> ? V[] : never[] = [];
+            for (const m of metadata.values()) {
+                if (m.tenantId === tenantId && m.workspaceId === workspaceId) {
+                    results.push(m);
+                }
+            }
+            return results;
+        },
     };
 };
 
@@ -772,6 +782,180 @@ test('revoke endpoint clears connector auth token reference and marks revoked', 
         assert.equal(metadata?.secretRefId, null);
         assert.equal(metadata?.tokenExpiresAt, null);
         assert.equal(metadata?.lastRefreshAt, null);
+    } finally {
+        await app.close();
+    }
+});
+
+// ============================================================================
+// Sprint 11 � GET /v1/connectors/health/summary tests
+// ============================================================================
+
+test('health summary returns 401 when no session', async () => {
+    const app = Fastify();
+    await registerConnectorAuthRoutes(app, {
+        getSession: () => null,
+    });
+    try {
+        const response = await app.inject({ method: 'GET', url: '/v1/connectors/health/summary?workspace_id=ws_1' });
+        assert.equal(response.statusCode, 401);
+    } finally {
+        await app.close();
+    }
+});
+
+test('health summary returns 403 when workspace not in session scope', async () => {
+    const app = Fastify();
+    await registerConnectorAuthRoutes(app, {
+        getSession: () => sessionContext(),
+    });
+    try {
+        const response = await app.inject({ method: 'GET', url: '/v1/connectors/health/summary?workspace_id=ws_other' });
+        assert.equal(response.statusCode, 403);
+    } finally {
+        await app.close();
+    }
+});
+
+test('health summary returns empty connectors array when none configured', async () => {
+    const app = Fastify();
+    const repo = createFakeRepo();
+    await registerConnectorAuthRoutes(app, {
+        getSession: () => sessionContext(),
+        repo,
+    });
+    try {
+        const response = await app.inject({ method: 'GET', url: '/v1/connectors/health/summary?workspace_id=ws_1' });
+        assert.equal(response.statusCode, 200);
+        const body = response.json() as { connectors: unknown[] };
+        assert.deepEqual(body.connectors, []);
+    } finally {
+        await app.close();
+    }
+});
+
+test('health summary returns connected connector status when OAuth is complete', async () => {
+    const app = Fastify();
+    const repo = createFakeRepo();
+
+    await registerConnectorAuthRoutes(app, {
+        getSession: () => sessionContext(),
+        repo,
+        nonceGenerator: () => 'state_nonce_health',
+        env: {
+            API_BASE_URL: 'http://localhost:3000',
+            CONNECTOR_GITHUB_AUTHORIZE_URL: 'https://github.com/login/oauth/authorize',
+            CONNECTOR_GITHUB_CLIENT_ID: 'gh-client-456',
+        },
+    });
+
+    // Manually seed connected metadata
+    await repo.upsertAuthMetadata({
+        connectorId: 'github:tenant_1:ws_1',
+        tenantId: 'tenant_1',
+        workspaceId: 'ws_1',
+        connectorType: 'github',
+        authMode: 'oauth2',
+        status: 'connected',
+        secretRefId: 'kv://agentfarm-local-vault/secrets/github:tenant_1:ws_1-oauth-token',
+        tokenExpiresAt: new Date(Date.now() + 3600_000),
+        lastRefreshAt: new Date(),
+        scopeStatus: 'full',
+        lastErrorClass: null,
+    });
+
+    try {
+        const response = await app.inject({ method: 'GET', url: '/v1/connectors/health/summary?workspace_id=ws_1' });
+        assert.equal(response.statusCode, 200);
+        const body = response.json() as { connectors: Array<{ connector_type: string; is_connected: boolean; status: string }> };
+        assert.equal(body.connectors.length, 1);
+        assert.equal(body.connectors[0]?.connector_type, 'github');
+        assert.equal(body.connectors[0]?.is_connected, true);
+        assert.equal(body.connectors[0]?.status, 'connected');
+    } finally {
+        await app.close();
+    }
+});
+
+// ============================================================================
+// Sprint 11 � GET /v1/connectors/token tests
+// ============================================================================
+
+test('token endpoint returns 401 when no session', async () => {
+    const app = Fastify();
+    await registerConnectorAuthRoutes(app, {
+        getSession: () => null,
+    });
+    try {
+        const response = await app.inject({ method: 'GET', url: '/v1/connectors/token?connector_type=github&workspace_id=ws_1' });
+        assert.equal(response.statusCode, 401);
+    } finally {
+        await app.close();
+    }
+});
+
+test('token endpoint returns 403 when session scope is not internal', async () => {
+    const app = Fastify();
+    await registerConnectorAuthRoutes(app, {
+        getSession: () => ({ ...sessionContext(), scope: 'customer' }),
+    });
+    try {
+        const response = await app.inject({ method: 'GET', url: '/v1/connectors/token?connector_type=github&workspace_id=ws_1' });
+        assert.equal(response.statusCode, 403);
+    } finally {
+        await app.close();
+    }
+});
+
+test('token endpoint returns 404 when connector not found', async () => {
+    const app = Fastify();
+    const repo = createFakeRepo();
+    await registerConnectorAuthRoutes(app, {
+        getSession: () => ({ ...sessionContext(), scope: 'internal' }),
+        repo,
+    });
+    try {
+        const response = await app.inject({ method: 'GET', url: '/v1/connectors/token?connector_type=github&workspace_id=ws_1' });
+        assert.equal(response.statusCode, 404);
+    } finally {
+        await app.close();
+    }
+});
+
+test('token endpoint returns credentials when connector is connected', async () => {
+    const app = Fastify();
+    const repo = createFakeRepo();
+    const secretStore = createFakeSecretStore();
+
+    const secretRefId = 'kv://agentfarm-local-vault/secrets/github:tenant_1:ws_1-oauth-token';
+    await secretStore.setSecret(secretRefId, JSON.stringify({ access_token: 'ghp_abc123', token_type: 'bearer' }));
+
+    await repo.upsertAuthMetadata({
+        connectorId: 'github:tenant_1:ws_1',
+        tenantId: 'tenant_1',
+        workspaceId: 'ws_1',
+        connectorType: 'github',
+        authMode: 'oauth2',
+        status: 'connected',
+        secretRefId,
+        tokenExpiresAt: new Date(Date.now() + 3600_000),
+        lastRefreshAt: new Date(),
+        scopeStatus: 'full',
+        lastErrorClass: null,
+    });
+
+    await registerConnectorAuthRoutes(app, {
+        getSession: () => ({ ...sessionContext(), scope: 'internal' }),
+        repo,
+        secretStore,
+    });
+
+    try {
+        const response = await app.inject({ method: 'GET', url: '/v1/connectors/token?connector_type=github&workspace_id=ws_1' });
+        assert.equal(response.statusCode, 200);
+        const body = response.json() as { connector_type: string; credentials: { access_token: string } };
+        assert.equal(body.connector_type, 'github');
+        assert.equal(body.credentials.access_token, 'ghp_abc123');
     } finally {
         await app.close();
     }

@@ -22,7 +22,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         redirect("/login");
     }
 
-    const user = await getSessionUser(token);
+    const user = await getSessionUser(token!);
     if (!user) {
         redirect("/login");
     }

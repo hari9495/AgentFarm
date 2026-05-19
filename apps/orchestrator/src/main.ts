@@ -1127,6 +1127,18 @@ export const buildOrchestratorServer = async (
         };
     });
 
+    // B1: List run records with wake source, status, and dedupe metadata
+    app.get('/v1/wake/runs', async (request) => {
+        const query = request.query as { bot_id?: string; workspace_id?: string; status?: string };
+        const runs = taskScheduler.listRuns().filter((run) => {
+            if (query.bot_id && run.botId !== query.bot_id) return false;
+            if (query.workspace_id && run.workspaceId !== query.workspace_id) return false;
+            if (query.status && run.status !== query.status) return false;
+            return true;
+        });
+        return { count: runs.length, runs };
+    });
+
     app.post('/v1/proactive-signals/:signalId/resolve', async (request, reply) => {
         const { signalId } = request.params as { signalId: string };
         const found = routineScheduler.resolveProactiveSignal(signalId);

@@ -6,17 +6,9 @@
 
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import type { FastifyInstance } from 'fastify';
 
 describe('autonomous-loops API routes', () => {
     it('POST /v1/autonomous-loops/execute returns 200 on valid config', async () => {
-        // Integration test would use real Fastify instance
-        const config = {
-            loop_id: 'test-1',
-            initial_skill: { skill_id: 'test-gen', inputs: {} },
-            success_criteria: { type: 'test_pass_rate', threshold: 0.8 },
-        };
-
         // Mock response
         const response = {
             status: 200,
@@ -32,11 +24,6 @@ describe('autonomous-loops API routes', () => {
     });
 
     it('POST /v1/autonomous-loops/execute returns 400 on missing required fields', () => {
-        const invalidConfig = {
-            loop_id: 'test-2',
-            // Missing initial_skill and success_criteria
-        };
-
         const response = {
             status: 400,
             body: { error: 'initial_skill and success_criteria required' },
@@ -106,13 +93,6 @@ describe('autonomous-loops API routes', () => {
 
 describe('skill-compositions API routes', () => {
     it('POST /v1/compositions registers DAG', () => {
-        const dag = {
-            composition_id: 'test-dag',
-            version: '1.0.0',
-            nodes: [{ node_id: 'n1', type: 'skill', skill_id: 'skill1', inputs: {} }],
-            edges: [],
-        };
-
         const response = {
             status: 201,
             body: { composition_id: 'test-dag', version: '1.0.0' },
@@ -216,12 +196,6 @@ describe('governance-kpis API routes', () => {
 
 describe('adapter-registry API routes', () => {
     it('POST /v1/adapters registers adapter', () => {
-        const manifest = {
-            adapter_id: 'github-connector',
-            name: 'GitHub Connector',
-            type: 'connector',
-        };
-
         const response = {
             status: 201,
             body: { adapter_id: 'github-connector', status: 'registered' },

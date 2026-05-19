@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import Link from 'next/link';
+import { PageHeader } from '../components/page-header';
 import { SubscriptionStatusCard } from '../components/subscription-status-card';
 import { UsageSummaryCard } from '../components/usage-summary-card';
 import { CostTrendChart, type WeeklyTrendPoint } from '../components/cost-trend-chart';
@@ -29,12 +29,56 @@ type CostSummaryData = {
     weekly_trend: WeeklyTrendPoint[];
 };
 
+type MeteringData = {
+    taskCount: number;
+    billableTaskCount: number;
+    platformFeeUsd: number;
+    llmCostUsd: number;
+    totalChargeUsd: number;
+};
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const isoDate = (d: Date): string => d.toISOString().slice(0, 10);
 
 const defaultFrom = (): string => isoDate(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
 const defaultTo = (): string => isoDate(new Date());
+
+// ── MeteringBreakdownCard ─────────────────────────────────────────────────────
+
+function MeteringBreakdownCard({ data }: { data: MeteringData }) {
+    const rows: { label: string; value: string; highlight?: boolean }[] = [
+        { label: 'Total tasks', value: data.taskCount.toLocaleString() },
+        { label: 'Billable tasks', value: data.billableTaskCount.toLocaleString() },
+        { label: 'Platform fee ($0.10 / task)', value: `$${data.platformFeeUsd.toFixed(2)}` },
+        { label: 'LLM inference cost', value: `$${data.llmCostUsd.toFixed(4)}` },
+        { label: 'Total charge', value: `$${data.totalChargeUsd.toFixed(2)}`, highlight: true },
+    ];
+
+    return (
+        <div className="card" style={{ display: 'grid', gap: '0.5rem' }}>
+            <h2 style={{ margin: '0 0 0.25rem', fontSize: '1rem', fontWeight: 700 }}>Metering Breakdown</h2>
+            {rows.map(({ label, value, highlight }) => (
+                <div
+                    key={label}
+                    style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '0.4rem 0',
+                        borderBottom: '1px solid var(--line)',
+                        fontSize: highlight ? '0.9rem' : '0.83rem',
+                        fontWeight: highlight ? 700 : 400,
+                        color: highlight ? 'var(--ink)' : 'var(--ink-soft)',
+                    }}
+                >
+                    <span>{label}</span>
+                    <span style={{ fontVariantNumeric: 'tabular-nums' }}>{value}</span>
+                </div>
+            ))}
+        </div>
+    );
+}
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
@@ -44,6 +88,7 @@ export default function BillingPage() {
 
     const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
     const [costSummary, setCostSummary] = useState<CostSummaryData | null>(null);
+    const [metering, setMetering] = useState<MeteringData | null>(null);
     const [subLoading, setSubLoading] = useState(true);
     const [costLoading, setCostLoading] = useState(true);
     const [subError, setSubError] = useState<string | null>(null);
@@ -86,6 +131,12 @@ export default function BillingPage() {
                 setCostError('Failed to load usage data.');
                 setCostLoading(false);
             });
+
+        const meteringParams = new URLSearchParams({ from, to });
+        fetch(`/api/billing/metering?${meteringParams.toString()}`, { cache: 'no-store' })
+            .then((r) => (r.ok ? (r.json() as Promise<MeteringData>) : Promise.reject()))
+            .then((data) => { setMetering(data); })
+            .catch(() => { setMetering(null); });
     }, [from, to]);
 
     useEffect(() => {
@@ -105,105 +156,81 @@ export default function BillingPage() {
                 gap: '1.5rem',
             }}
         >
-            {/* Header */}
+            <PageHeader
+                eyebrow="Finance"
+                title="Billing &amp; Usage"
+                description="Track token usage, cost breakdown, and subscription billing."
+            />
+
+            {/* Date range */}
             <div
                 style={{
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'space-between',
+                    gap: '0.6rem',
                     flexWrap: 'wrap',
-                    gap: '0.5rem',
+                    marginBottom: '0.5rem',
                 }}
             >
-                <div>
-                    <Link
-                        href="/"
-                        style={{
-                            fontSize: '0.8rem',
-                            color: 'var(--ink-muted)',
-                            textDecoration: 'none',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.25rem',
-                            marginBottom: '0.4rem',
-                        }}
-                    >
-                        ← Back to Dashboard
-                    </Link>
-                    <h1 style={{ margin: 0, fontSize: '1.75rem', fontWeight: 700, letterSpacing: '-0.03em' }}>
-                        Billing &amp; Usage
-                    </h1>
-                </div>
-
-                {/* Date range */}
-                <div
+                <label
                     style={{
                         display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.6rem',
-                        flexWrap: 'wrap',
+                        flexDirection: 'column',
+                        fontSize: '0.72rem',
+                        fontWeight: 600,
+                        color: 'var(--ink-muted)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.06em',
+                        gap: '0.2rem',
                     }}
                 >
-                    <label
+                    From
+                    <input
+                        type="date"
+                        value={from}
+                        max={to}
+                        onChange={(e) => setFrom(e.target.value)}
                         style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            fontSize: '0.72rem',
-                            fontWeight: 600,
-                            color: 'var(--ink-muted)',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.06em',
-                            gap: '0.2rem',
+                            padding: '0.4rem 0.6rem',
+                            borderRadius: 7,
+                            border: '1px solid var(--line)',
+                            fontSize: '0.875rem',
+                            fontWeight: 500,
+                            color: 'var(--ink)',
+                            background: '#fff',
                         }}
-                    >
-                        From
-                        <input
-                            type="date"
-                            value={from}
-                            max={to}
-                            onChange={(e) => setFrom(e.target.value)}
-                            style={{
-                                padding: '0.4rem 0.6rem',
-                                borderRadius: 7,
-                                border: '1px solid var(--line)',
-                                fontSize: '0.875rem',
-                                fontWeight: 500,
-                                color: 'var(--ink)',
-                                background: '#fff',
-                            }}
-                        />
-                    </label>
-                    <label
+                    />
+                </label>
+                <label
+                    style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        fontSize: '0.72rem',
+                        fontWeight: 600,
+                        color: 'var(--ink-muted)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.06em',
+                        gap: '0.2rem',
+                    }}
+                >
+                    To
+                    <input
+                        type="date"
+                        value={to}
+                        min={from}
+                        max={isoDate(new Date())}
+                        onChange={(e) => setTo(e.target.value)}
                         style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            fontSize: '0.72rem',
-                            fontWeight: 600,
-                            color: 'var(--ink-muted)',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.06em',
-                            gap: '0.2rem',
+                            padding: '0.4rem 0.6rem',
+                            borderRadius: 7,
+                            border: '1px solid var(--line)',
+                            fontSize: '0.875rem',
+                            fontWeight: 500,
+                            color: 'var(--ink)',
+                            background: '#fff',
                         }}
-                    >
-                        To
-                        <input
-                            type="date"
-                            value={to}
-                            min={from}
-                            max={isoDate(new Date())}
-                            onChange={(e) => setTo(e.target.value)}
-                            style={{
-                                padding: '0.4rem 0.6rem',
-                                borderRadius: 7,
-                                border: '1px solid var(--line)',
-                                fontSize: '0.875rem',
-                                fontWeight: 500,
-                                color: 'var(--ink)',
-                                background: '#fff',
-                            }}
-                        />
-                    </label>
-                </div>
+                    />
+                </label>
             </div>
 
             {loading && (
@@ -233,8 +260,12 @@ export default function BillingPage() {
                         // Provide a sensible soft limit per plan; backend does not return this today
                         subscription.status === 'active' ? undefined : undefined
                     }
+                    platformCharge={metering?.platformFeeUsd}
                 />
             )}
+
+            {/* Row 1b: Metering breakdown */}
+            {metering && <MeteringBreakdownCard data={metering} />}
 
             {/* Row 2: Usage + Invoices */}
             <div
@@ -305,13 +336,12 @@ export default function BillingPage() {
                         ))}
                     </div>
                 </div>
+
+                <CostTrendChart data={costSummary?.weekly_trend ?? []} />
+
+                {/* Row 4: Cost by provider */}
+                <AgentCostTable byProvider={costSummary?.by_provider ?? []} />
             </div>
-
-            {/* Row 3: Cost trend */}
-            <CostTrendChart data={costSummary?.weekly_trend ?? []} />
-
-            {/* Row 4: Cost by provider */}
-            <AgentCostTable byProvider={costSummary?.by_provider ?? []} />
         </div>
     );
 }

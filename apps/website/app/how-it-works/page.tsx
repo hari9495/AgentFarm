@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { ShoppingCart, Rocket, Link as LinkIcon, MessageSquare, GitPullRequest, BarChart3, Sparkles, CheckCircle2 } from "lucide-react";
+import { ShoppingCart, Rocket, Link as LinkIcon, MessageSquare, CheckCircle2, BarChart3, Sparkles, Users } from "lucide-react";
 import ButtonLink from "@/components/shared/ButtonLink";
 
 export const metadata: Metadata = {
     title: "How It Works — AgentFarm",
-    description: "Learn how AgentFarm AI agents integrate with your GitHub, Jira, and Microsoft Teams workflow.",
+    description: "Learn how AgentFarm provisions AI workers for any department and connects them to your real tools in under 10 minutes.",
 };
 
 const steps = [
@@ -12,29 +12,29 @@ const steps = [
         number: "01",
         icon: ShoppingCart,
         gradient: "from-blue-500 to-blue-600",
-        title: "Provision Your Workspace",
+        title: "Browse the Role Marketplace",
         description:
-            "Sign up and AgentFarm provisions a dedicated, tenant-isolated Azure VM runtime for your team. Your code and credentials never share infrastructure with other customers.",
-        detail: "Takes under 2 minutes",
+            "Browse 12 AI worker roles across every department — Developer, Tester, Sales Rep, Marketing Specialist, Customer Support Executive, Corporate Assistant, and more. Select the role your team needs and AgentFarm provisions a dedicated, tenant-isolated Azure VM runtime for that agent.",
+        detail: "Role live in under 2 minutes",
         image: "https://images.unsplash.com/photo-1526628953301-3e589a6a8b74?auto=format&fit=crop&w=900&q=80",
     },
     {
         number: "02",
-        icon: Rocket,
+        icon: Users,
         gradient: "from-violet-500 to-violet-600",
-        title: "Install Developer Skills",
+        title: "Set Up Your Agent's Identity",
         description:
-            "Browse the Skill Marketplace and install the 21 developer skills your team needs — PR creation, CI checks, test fixes, code review, security scanning, release notes, and more.",
-        detail: "Skills live in ~30 seconds",
+            "Give your AI worker a name, email address, and persona. External people — customers, candidates, vendors — interact with the agent as they would a human employee. Configure escalation rules so the agent knows when to act autonomously and when to loop in a human.",
+        detail: "Persona configured in minutes",
         image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=900&q=80",
     },
     {
         number: "03",
         icon: LinkIcon,
         gradient: "from-emerald-500 to-emerald-600",
-        title: "Connect GitHub, Jira & Teams",
+        title: "Connect Your Tools",
         description:
-            "Grant repository access via GitHub OAuth. Link your Jira board and Microsoft Teams workspace in the integrations panel. AgentFarm uses least-privilege scopes and never stores credentials in plaintext.",
+            "Connect the tools your AI worker needs: GitHub, Jira, Slack, HubSpot, Salesforce, Gmail, Google Calendar, and more — all via MCP connectors. AgentFarm uses least-privilege OAuth scopes and never stores credentials in plaintext. For tools with no connector, the agent operates in full desktop mode — it sees the screen and uses it like a human.",
         detail: "Setup in under 5 minutes",
         image: "https://images.unsplash.com/photo-1556075798-4825dfaaf498?auto=format&fit=crop&w=900&q=80",
     },
@@ -42,29 +42,29 @@ const steps = [
         number: "04",
         icon: MessageSquare,
         gradient: "from-orange-500 to-orange-600",
-        title: "Assign Tasks — Agent Classifies Risk",
+        title: "Assign Work — Agent Classifies Risk",
         description:
-            "Assign a Jira ticket or send a Teams message. The agent classifies each action by risk: LOW actions execute automatically, MEDIUM and HIGH actions pause and request your approval before proceeding.",
+            "Assign a task via Jira, Slack, Teams, or email. The agent classifies every action by risk: LOW-risk tasks execute automatically, MEDIUM and HIGH-risk actions pause and notify you for approval before proceeding. Nothing risky ships without sign-off.",
         detail: "Execution starts in <30s",
         image: "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?auto=format&fit=crop&w=900&q=80",
     },
     {
         number: "05",
-        icon: GitPullRequest,
+        icon: CheckCircle2,
         gradient: "from-pink-500 to-pink-600",
-        title: "Review the Pull Request",
+        title: "Review and Approve",
         description:
-            "Your teammate opens a PR on GitHub with clear change summaries and rationale. Review the diff, leave feedback, and approve with policy-aware guardrails.",
-        detail: "PR ready in minutes",
+            "Every significant action comes to you for review. Approve in one click from your email, Slack, or Teams. The agent's output — a PR, a drafted email, a filled form, a generated report — is visible before anything is committed.",
+        detail: "One-click approval from anywhere",
         image: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=900&q=80",
     },
     {
         number: "06",
         icon: BarChart3,
         gradient: "from-indigo-500 to-indigo-600",
-        title: "Monitor & Iterate",
+        title: "Monitor Across Every Agent",
         description:
-            "The AgentFarm dashboard shows real-time metrics: tasks completed, PRs merged, test coverage, and deployment frequency. Use insights to refine role usage and approval rules.",
+            "The AgentFarm dashboard shows real-time activity across all your AI workers: tasks completed, decisions made, approvals pending, audit evidence exported. Pause, redirect, or hire a new agent role in minutes.",
         detail: "Full observability, always",
         image: "https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=900&q=80",
     },
@@ -90,14 +90,14 @@ export default function HowItWorksPage() {
                                 How It Works
                             </span>
                             <h1 className="mt-3 text-4xl sm:text-6xl font-extrabold text-white tracking-tight leading-tight">
-                                From zero to trusted AI operations in{" "}
+                                From zero to a working AI employee in{" "}
                                 <span className="bg-gradient-to-r from-emerald-300 to-blue-300 bg-clip-text text-transparent">
                                     under 10 minutes
                                 </span>
                             </h1>
                             <p className="mt-5 text-xl text-slate-300 leading-relaxed">
-                                AgentFarm is designed to slot into your existing workflow with zero disruption.
-                                No new tools, no new processes — just AI teammates inside the tools your team already uses.
+                                AgentFarm slots into your existing workflow without disruption.
+                                Pick a role, connect your tools, set approval rules — and your AI worker starts on day one.
                             </p>
                         </div>
                     </div>
@@ -108,10 +108,10 @@ export default function HowItWorksPage() {
             <div className="bg-[var(--canvas)] border-b border-[var(--hairline)]">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-wrap justify-center gap-8 text-center">
                     {[
-                        { label: "Provision workspace + install skills", time: "2 min" },
-                        { label: "Connect GitHub + Jira + Teams", time: "5 min" },
-                        { label: "First task assigned", time: "8 min" },
-                        { label: "First review-ready PR", time: "<15 min" },
+                        { label: "Browse marketplace + pick a role", time: "1 min" },
+                        { label: "Configure persona + connect tools", time: "5 min" },
+                        { label: "First task assigned to agent", time: "8 min" },
+                        { label: "First output ready for review", time: "<15 min" },
                     ].map(({ label, time }) => (
                         <div key={label} className="flex items-center gap-3">
                             <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
@@ -154,7 +154,7 @@ export default function HowItWorksPage() {
                                             className="w-full h-64 sm:h-72 object-cover"
                                             loading="lazy"
                                         />
-                                        <div className="absolute top-3 left-3 bg-[#07080a]/80 backdrop-blur-sm text-[var(--ink)] text-xs font-mono px-2.5 py-1 rounded-full">
+                                        <div className="absolute top-3 left-3 bg-[#07080a]/80 backdrop-blur-sm text-white text-xs font-mono px-2.5 py-1 rounded-full">
                                             {step.number}
                                         </div>
                                     </div>
@@ -172,8 +172,8 @@ export default function HowItWorksPage() {
                         />
                         <div className="absolute inset-0 bg-[var(--canvas)] border border-[var(--hairline)]" />
                         <div className="relative py-14 px-10 text-white text-center">
-                            <h3 className="text-2xl font-semibold tracking-[-0.03em] text-[var(--ink)] mb-3">Ready to augment your team with trusted AI execution?</h3>
-                            <p className="text-[var(--mute)] mb-6">Start with a 14-day free trial. No credit card required.</p>
+                            <h3 className="text-2xl font-semibold tracking-[-0.03em] text-[var(--ink)] mb-3">Ready to hire your first AI worker?</h3>
+                            <p className="text-[var(--mute)] mb-6">Start with any role. 14-day free trial. No credit card required.</p>
                             <ButtonLink href="/#waitlist" size="lg">
                                 Get Started Free
                             </ButtonLink>

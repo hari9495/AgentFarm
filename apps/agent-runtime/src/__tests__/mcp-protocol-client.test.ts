@@ -5,7 +5,7 @@
  * Uses node:test with a fetch mock injected via globalThis.
  */
 
-import { describe, test, after, before, beforeEach } from 'node:test';
+import { describe, test, after, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { McpProtocolClient, McpProtocolError, McpToolError } from '../mcp-protocol-client.js';
 

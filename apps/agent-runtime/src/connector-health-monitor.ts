@@ -1,4 +1,3 @@
-import { randomUUID } from 'crypto';
 import { writeFile, readFile, mkdir } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';

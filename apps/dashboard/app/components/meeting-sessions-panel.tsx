@@ -4,6 +4,25 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
+type MeetingAuditEvent = {
+    id: string;
+    meetingSessionId: string;
+    eventType: string;
+    platform: string;
+    severity: string;
+    summary: string;
+    payload: Record<string, unknown> | null;
+    durationMs: number | null;
+    createdAt: string;
+};
+
+type MeetingAuditResponse = {
+    sessionId: string;
+    meetingUrl: string;
+    platform: string;
+    events: MeetingAuditEvent[];
+};
+
 type MeetingSession = {
     id: string;
     tenantId: string;
@@ -102,6 +121,12 @@ export default function MeetingSessionsPanel({ tenantId }: { tenantId: string })
     const [detailLoading, setDetailLoading] = useState(false);
     const [busyId, setBusyId] = useState<string | null>(null);
 
+    // Audit log drawer state
+    const [auditSessionId, setAuditSessionId] = useState<string | null>(null);
+    const [auditData, setAuditData] = useState<MeetingAuditResponse | null>(null);
+    const [auditLoading, setAuditLoading] = useState(false);
+    const [auditError, setAuditError] = useState<string | null>(null);
+
     // Transcript polling state (active when a session is open and status is active/joining)
     const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -156,6 +181,29 @@ export default function MeetingSessionsPanel({ tenantId }: { tenantId: string })
             }
         };
     }, [detailId, detail?.status, loadDetail]);
+
+    const loadAuditEvents = async (id: string) => {
+        setAuditSessionId(id);
+        setAuditLoading(true);
+        setAuditError(null);
+        setAuditData(null);
+
+        const response = await fetch(`/api/meetings/${encodeURIComponent(id)}/audit-events`, {
+            cache: 'no-store',
+        });
+        const data = (await response.json().catch(() => ({}))) as
+            | MeetingAuditResponse
+            | { message?: string };
+
+        if (!response.ok) {
+            setAuditError((data as { message?: string }).message ?? 'Unable to load audit events.');
+            setAuditLoading(false);
+            return;
+        }
+
+        setAuditData(data as MeetingAuditResponse);
+        setAuditLoading(false);
+    };
 
     const sendSpeakRequest = async (id: string) => {
         if (!speakText.trim()) return;
@@ -415,6 +463,14 @@ export default function MeetingSessionsPanel({ tenantId }: { tenantId: string })
                                                 >
                                                     Detail
                                                 </button>
+                                                <button
+                                                    type="button"
+                                                    className="secondary-action"
+                                                    disabled={isBusy}
+                                                    onClick={() => void loadAuditEvents(session.id)}
+                                                >
+                                                    Audit Log
+                                                </button>
                                                 {session.status === 'active' || session.status === 'joining' ? (
                                                     <button
                                                         type="button"
@@ -569,6 +625,120 @@ export default function MeetingSessionsPanel({ tenantId }: { tenantId: string })
                         </div>
                     ) : (
                         <p style={{ margin: 0, color: 'var(--ink-soft)' }}>Unable to load session detail.</p>
+                    )}
+                </div>
+            )}
+
+            {/* Audit log drawer */}
+            {auditSessionId && (
+                <div className="card" style={{ margin: 0, padding: '0.9rem', display: 'grid', gap: '0.6rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Meeting audit log</h3>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <button
+                                type="button"
+                                className="secondary-action"
+                                onClick={() => void loadAuditEvents(auditSessionId)}
+                                disabled={auditLoading}
+                            >
+                                {auditLoading ? 'Loading…' : 'Refresh'}
+                            </button>
+                            <button
+                                type="button"
+                                className="secondary-action"
+                                onClick={() => { setAuditSessionId(null); setAuditData(null); setAuditError(null); }}
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+
+                    {auditError && <p className="message-inline">{auditError}</p>}
+
+                    {auditLoading && !auditData && (
+                        <p style={{ margin: 0, color: 'var(--ink-soft)', fontSize: '0.83rem' }}>Loading audit events…</p>
+                    )}
+
+                    {auditData && (
+                        <>
+                            <div style={{ fontSize: '0.78rem', color: 'var(--ink-muted)' }}>
+                                <span style={{ fontFamily: 'monospace' }}>{auditData.sessionId.slice(0, 16)}…</span>
+                                {' · '}{auditData.platform}
+                                {' · '}<a href={auditData.meetingUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--ink-soft)' }}>meeting link</a>
+                            </div>
+
+                            {auditData.events.length === 0 ? (
+                                <p style={{ margin: 0, color: 'var(--ink-soft)', fontSize: '0.83rem' }}>No audit events yet.</p>
+                            ) : (
+                                <div style={{ position: 'relative', paddingLeft: '1.4rem' }}>
+                                    {/* Vertical timeline spine */}
+                                    <div style={{
+                                        position: 'absolute', left: '0.55rem', top: '0.6rem',
+                                        bottom: '0.6rem', width: '2px',
+                                        background: 'var(--line)',
+                                    }} />
+
+                                    {auditData.events.map((ev, idx) => {
+                                        const dotColor =
+                                            ev.severity === 'error' ? '#ef4444' :
+                                                ev.severity === 'warn' ? '#f59e0b' :
+                                                    ev.eventType === 'joined' ? '#22c55e' :
+                                                        ev.eventType === 'left' ? '#6366f1' :
+                                                            '#64748b';
+
+                                        const iconMap: Record<string, string> = {
+                                            joined: '▶',
+                                            left: '■',
+                                            spoke: '🔊',
+                                            listened: '🎧',
+                                            transcribed: '📝',
+                                            summarised: '✨',
+                                            summary_distributed: '📤',
+                                            avatar_state_changed: '🎭',
+                                            error: '✕',
+                                        };
+                                        const icon = iconMap[ev.eventType] ?? '•';
+
+                                        return (
+                                            <div key={ev.id ?? idx} style={{ position: 'relative', marginBottom: '0.85rem' }}>
+                                                {/* Dot */}
+                                                <div style={{
+                                                    position: 'absolute', left: '-1.15rem', top: '0.25rem',
+                                                    width: '10px', height: '10px', borderRadius: '50%',
+                                                    background: dotColor, zIndex: 1,
+                                                }} />
+
+                                                <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'baseline', flexWrap: 'wrap' }}>
+                                                    <span style={{ fontSize: '0.8rem' }}>{icon}</span>
+                                                    <span style={{ fontWeight: 600, fontSize: '0.8rem', color: 'var(--ink)', textTransform: 'capitalize' }}>
+                                                        {ev.eventType.replace(/_/g, ' ')}
+                                                    </span>
+                                                    <span style={{ fontSize: '0.72rem', color: 'var(--ink-muted)', marginLeft: 'auto' }}>
+                                                        {new Date(ev.createdAt).toLocaleTimeString()}
+                                                        {ev.durationMs != null ? ` · ${ev.durationMs}ms` : ''}
+                                                    </span>
+                                                </div>
+                                                <p style={{ margin: '0.15rem 0 0', fontSize: '0.78rem', color: 'var(--ink-soft)' }}>
+                                                    {ev.summary}
+                                                </p>
+                                                {ev.payload && Object.keys(ev.payload).length > 0 && (
+                                                    <pre style={{
+                                                        margin: '0.25rem 0 0',
+                                                        padding: '0.35rem 0.5rem',
+                                                        background: 'var(--bg)',
+                                                        border: '1px solid var(--line)',
+                                                        borderRadius: '3px',
+                                                        fontSize: '0.7rem',
+                                                        color: 'var(--ink-muted)',
+                                                        overflowX: 'auto',
+                                                    }}>{JSON.stringify(ev.payload, null, 2)}</pre>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </>
                     )}
                 </div>
             )}

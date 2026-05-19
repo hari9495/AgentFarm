@@ -4,6 +4,7 @@ import { ROLE_RANK } from '../lib/require-role.js';
 import {
     getProviderForCountry,
     createStripeOrder,
+    createStripeCheckoutSession,
     createRazorpayOrder,
     verifyStripeWebhook,
     verifyRazorpayWebhook,
@@ -16,6 +17,8 @@ import { generateContractPdf } from '../services/contract-generator.js';
 import { uploadContractDocument, submitDocumentForSigning } from '../services/zoho-sign-client.js';
 import { writeAuditEvent } from '../lib/audit-writer.js';
 import { validate } from '../lib/validate.js';
+import { enrollAgentAfterPayment } from '../lib/hire-handler.js';
+import { computeMeteringPeriodSummary } from '../lib/usage-meter.js';
 
 const getPrisma = async () => {
     const db = await import('../lib/db.js');
@@ -180,7 +183,12 @@ export async function registerBillingRoutes(
                     ? ((request as unknown as { rawBody: string }).rawBody)
                     : JSON.stringify(request.body);
 
-            const result = await verifyStripeWebhook(payload, signature);
+            let result: Awaited<ReturnType<typeof verifyStripeWebhook>>;
+            try {
+                result = await verifyStripeWebhook(payload, signature);
+            } catch {
+                result = { success: false, providerOrderId: '', providerPaymentId: '', customerEmail: '' };
+            }
             if (!result.success) {
                 return reply.code(400).send({ error: 'Webhook verification failed' });
             }
@@ -260,6 +268,18 @@ export async function registerBillingRoutes(
                         'stripe',
                         result.providerPaymentId ?? result.providerOrderId,
                     ).catch(err => console.error('[billing] stripe reactivation failed', err));
+                });
+
+                // Enqueue provisioning job — worker picks it up automatically
+                setImmediate(() => {
+                    resolvePrisma()
+                        .then(p => enrollAgentAfterPayment({
+                            orderId: order.id,
+                            tenantId: order.tenantId,
+                            planId: order.planId,
+                            requestedBy: 'payment_webhook',
+                        }, p))
+                        .catch(err => console.error('[billing] agent enroll failed (stripe):', err));
                 });
             }
 
@@ -364,6 +384,18 @@ export async function registerBillingRoutes(
                         'razorpay',
                         body.razorpay_payment_id,
                     ).catch(err => console.error('[billing] razorpay reactivation failed', err));
+                });
+
+                // Enqueue provisioning job — worker picks it up automatically
+                setImmediate(() => {
+                    resolvePrisma()
+                        .then(p => enrollAgentAfterPayment({
+                            orderId: order.id,
+                            tenantId: order.tenantId,
+                            planId: order.planId,
+                            requestedBy: 'payment_webhook',
+                        }, p))
+                        .catch(err => console.error('[billing] agent enroll failed (razorpay):', err));
                 });
             }
 
@@ -483,6 +515,173 @@ export async function registerBillingRoutes(
                         / 86400000,
                     ))
                     : null,
+            });
+        },
+    );
+
+    // -----------------------------------------------------------------------
+    // GET /v1/billing/metering/period
+    // -----------------------------------------------------------------------
+    app.get<{ Querystring: { tenantId?: string; from?: string; to?: string } }>(
+        '/v1/billing/metering/period',
+        async (request, reply) => {
+            const session = options.getSession(request);
+            if (!session) {
+                return reply.code(401).send({ error: 'Unauthorized' });
+            }
+            const { tenantId, from, to } = request.query;
+            if (!tenantId) {
+                return reply.code(400).send({ error: 'tenantId is required' });
+            }
+            if (session.tenantId !== tenantId) {
+                return reply.code(403).send({ error: 'forbidden' });
+            }
+            const toDate = to ? new Date(to) : new Date();
+            const fromDate = from
+                ? new Date(from)
+                : new Date(toDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+            const prisma = await resolvePrisma();
+            const summary = await computeMeteringPeriodSummary(prisma, tenantId, fromDate, toDate);
+            return reply.send(summary);
+        },
+    );
+
+    // -----------------------------------------------------------------------
+    // GET /v1/billing/metering/agent?botId=&from=&to=
+    // Per-agent cost breakdown for the dashboard agent detail page.
+    // -----------------------------------------------------------------------
+    app.get<{ Querystring: { botId?: string; from?: string; to?: string } }>(
+        '/v1/billing/metering/agent',
+        async (request, reply) => {
+            const session = options.getSession(request);
+            if (!session) {
+                return reply.code(401).send({ error: 'Unauthorized' });
+            }
+            const { botId, from, to } = request.query;
+            if (!botId) {
+                return reply.code(400).send({ error: 'botId is required' });
+            }
+
+            // Verify the bot belongs to the authenticated tenant
+            const prisma = await resolvePrisma();
+            const bot = await (prisma.bot as unknown as {
+                findUnique: (args: unknown) => Promise<{ tenantId: string } | null>;
+            }).findUnique({ where: { id: botId }, select: { tenantId: true } });
+
+            if (!bot) {
+                return reply.code(404).send({ error: 'Bot not found.' });
+            }
+            if (bot.tenantId !== session.tenantId) {
+                return reply.code(403).send({ error: 'forbidden' });
+            }
+
+            const toDate = to ? new Date(to) : new Date();
+            const fromDate = from
+                ? new Date(from)
+                : new Date(toDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+            const summary = await computeMeteringPeriodSummary(
+                prisma,
+                session.tenantId,
+                fromDate,
+                toDate,
+                botId,
+            );
+            return reply.send(summary);
+        },
+    );
+
+    // -----------------------------------------------------------------------
+    // POST /v1/billing/checkout-session
+    // Create a Stripe hosted checkout session and return the redirect URL.
+    // -----------------------------------------------------------------------
+    type CheckoutSessionBody = {
+        planId: string;
+        customerEmail: string;
+        tenantId: string;
+        successUrl: string;
+        cancelUrl: string;
+    };
+    app.post<{ Body: CheckoutSessionBody }>(
+        '/v1/billing/checkout-session',
+        async (request, reply) => {
+            const session = options.getSession(request);
+            if (!session) {
+                return reply.code(401).send({ error: 'Unauthorized' });
+            }
+            const { planId, customerEmail, tenantId, successUrl, cancelUrl } = request.body ?? {};
+            if (!planId || !customerEmail || !tenantId || !successUrl || !cancelUrl) {
+                return reply.code(400).send({ error: 'planId, customerEmail, tenantId, successUrl, and cancelUrl are required' });
+            }
+            if (session.tenantId !== tenantId) {
+                return reply.code(403).send({ error: 'forbidden' });
+            }
+            const prisma = await resolvePrisma();
+            const plan = await prisma.plan.findFirst({ where: { id: planId, isActive: true } });
+            if (!plan) {
+                return reply.code(404).send({ error: 'plan_not_found' });
+            }
+            const result = await createStripeCheckoutSession({
+                planId,
+                amountCents: plan.priceUsd,
+                currency: 'usd',
+                customerEmail,
+                tenantId,
+                successUrl,
+                cancelUrl,
+            });
+
+            // Persist an Order now so the webhook can find it by providerOrderId = sessionId
+            await createOrderRecord({
+                tenantId,
+                planId,
+                amountCents: plan.priceUsd,
+                currency: 'usd',
+                paymentProvider: 'stripe',
+                providerOrderId: result.sessionId,
+                customerEmail,
+            });
+
+            return reply.send({ checkoutUrl: result.checkoutUrl, sessionId: result.sessionId });
+        },
+    );
+
+    // -----------------------------------------------------------------------
+    // GET /v1/billing/invoices/:invoiceId/download
+    // Return invoice metadata and a PDF download URL for the given invoice.
+    // -----------------------------------------------------------------------
+    type InvoiceParams = { invoiceId: string };
+    app.get<{ Params: InvoiceParams }>(
+        '/v1/billing/invoices/:invoiceId/download',
+        async (request, reply) => {
+            const session = options.getSession(request);
+            if (!session) {
+                return reply.code(401).send({ error: 'Unauthorized' });
+            }
+            const { invoiceId } = request.params;
+            const prisma = await resolvePrisma();
+            const invoice = await prisma.invoice.findFirst({
+                where: { id: invoiceId, tenantId: session.tenantId },
+                include: { order: true },
+            });
+            if (!invoice) {
+                return reply.code(404).send({ error: 'invoice_not_found' });
+            }
+            // Return invoice metadata. pdfUrl is populated by the webhook flow when
+            // the contract PDF is generated. Clients use the URL to stream the file.
+            return reply.send({
+                invoiceId: invoice.id,
+                number: invoice.number,
+                amountCents: invoice.amountCents,
+                currency: invoice.currency,
+                pdfUrl: invoice.pdfUrl ?? null,
+                paidAt: invoice.paidAt ?? null,
+                createdAt: invoice.createdAt,
+                order: {
+                    id: invoice.order.id,
+                    planId: invoice.order.planId,
+                    status: invoice.order.status,
+                },
             });
         },
     );

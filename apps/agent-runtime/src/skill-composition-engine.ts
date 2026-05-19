@@ -10,13 +10,10 @@
 import { randomUUID } from 'node:crypto';
 import type {
     SkillCompositionDAG,
-    CompositionRunRecord,
     CompositionExecutionResult,
-    CompositionNode,
     EdgeCondition,
 } from '@agentfarm/shared-types';
 import { getSkillHandler } from './skill-execution-engine.js';
-import type { SkillOutput } from './skill-execution-engine.js';
 
 export class SkillCompositionEngine {
     private compositions = new Map<string, SkillCompositionDAG>();

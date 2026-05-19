@@ -7,8 +7,9 @@ initObservability({
 
 import Fastify from 'fastify';
 import type { FastifyError } from 'fastify';
+import { timingSafeEqual } from 'node:crypto';
 import helmet from '@fastify/helmet';
-import { rateLimit, rateLimitTenant, rateLimitAsync, rateLimitTenantAsync } from './lib/rate-limit.js';
+import { rateLimitAsync, rateLimitTenantAsync } from './lib/rate-limit.js';
 import { buildSessionToken, verifySessionToken, type SessionPayload } from './lib/session-auth.js';
 import { prisma } from './lib/db.js';
 import { checkSubscription } from './lib/subscription-guard.js';
@@ -33,6 +34,7 @@ import {
 } from './services/connector-token-lifecycle-worker.js';
 import { startConnectorHealthWorker, stopConnectorHealthWorker } from './services/connector-health-worker.js';
 import { startNurtureWorker, stopNurtureWorker } from './services/nurture-worker.js';
+import { startSalesSequenceWorker, stopSalesSequenceWorker } from './services/sales-sequence-worker.js';
 import {
     PROVISIONING_SLA_TARGET_MS,
     PROVISIONING_STUCK_ALERT_MS,
@@ -50,6 +52,7 @@ import { registerDesktopProfileRoutes } from './routes/desktop-profile.js';
 import { registerIdeStateRoutes } from './routes/ide-state.js';
 import { registerBudgetPolicyRoutes } from './routes/budget-policy.js';
 import { registerGovernanceWorkflowRoutes } from './routes/governance-workflows.js';
+import { registerKillSwitchRoutes } from './routes/kill-switches.js';
 import { registerPluginLoadingRoutes } from './routes/plugin-loading.js';
 import { registerActivityRoutes } from './routes/activity-events.js';
 import { registerEnvReconcilerRoutes } from './routes/env-reconciler.js';
@@ -69,9 +72,15 @@ import { registerSkillCompositionRoutes } from './routes/skill-composition-execu
 import { registerGovernanceKPIRoutes } from './routes/governance-kpis.js';
 import { registerAdapterRegistryRoutes } from './routes/adapter-registry.js';
 import { registerHandoffRoutes } from './routes/handoffs.js';
+import { registerWakeRunRoutes } from './routes/wake-runs.js';
+import { registerRoutineSchedulerRoutes } from './routes/routine-scheduler.js';
 import { registerObservabilityRoutes } from './routes/observability.js';
 import { registerQuestionRoutes } from './routes/questions.js';
 import { registerMemoryRoutes } from './routes/memory.js';
+import { registerKnowledgeBaseRoutes } from './routes/knowledge-base.js';
+import { registerAgentLifecycleRoutes } from './routes/agent-lifecycle.js';
+import { registerEpisodicMemoryRoutes } from './routes/episodic-memory.js';
+import { createEmbedFn } from '@agentfarm/memory-service';
 import { registerMeetingRoutes } from './routes/meetings.js';
 import { registerBillingRoutes } from './routes/billing.js';
 import { registerAnalyticsRoutes } from './routes/analytics.js';
@@ -81,9 +90,17 @@ import { registerProspectsRoutes } from './routes/prospects.js';
 import { registerSalesConfigRoutes } from './routes/sales-config.js';
 import { registerOutreachRoutes } from './routes/outreach.js';
 import { registerAgentsRoutes } from './routes/agents.js';
+import { registerPersonaRoutes } from './routes/personas.js';
+import { registerDisclosureRoutes } from './routes/disclosure.js';
+import { registerSetupWizardRoutes } from './routes/setup-wizard.js';
 import { registerAdminProvisionRoutes } from './routes/admin-provision.js';
 import { registerAgentDispatchRoutes } from './routes/agent-dispatch.js';
 import { registerZohoSignWebhookRoutes } from './routes/zoho-sign-webhook.js';
+import { registerBookingWebhookRoutes } from './routes/booking-webhook.js';
+import { registerContractWebhookRoutes } from './routes/contract-webhook.js';
+import { registerDealsRoutes } from './routes/deals.js';
+import { registerBrowserTasksRoutes } from './routes/browser-tasks.js';
+import { registerDesktopSessionsRoutes } from './routes/desktop-sessions.js';
 import { registerNotificationRoutes } from './routes/notifications.js';
 import { registerRetentionPolicyRoutes } from './routes/retention-policy.js';
 import { registerSseTaskRoutes } from './routes/sse-tasks.js';
@@ -201,7 +218,17 @@ const verifyOpsToken = (request: { headers: Record<string, unknown> }): boolean 
         return false;
     }
     const headerToken = request.headers['x-ops-token'];
-    return typeof headerToken === 'string' && headerToken === configuredToken;
+    if (typeof headerToken !== 'string') {
+        return false;
+    }
+    // Constant-time comparison to prevent timing-based secret leakage
+    try {
+        const a = Buffer.from(headerToken, 'utf8');
+        const b = Buffer.from(configuredToken, 'utf8');
+        return a.length === b.length && timingSafeEqual(a, b);
+    } catch {
+        return false;
+    }
 };
 
 // Helper function to get total workspace count and counts for summaries
@@ -643,6 +670,9 @@ await registerBudgetPolicyRoutes(app, {
 await registerGovernanceWorkflowRoutes(app, {
     getSession: (request) => readSession(request),
 });
+await registerKillSwitchRoutes(app, {
+    getSession: (request) => readSession(request),
+});
 await registerPluginLoadingRoutes(app, {
     getSession: (request) => readSession(request),
     featureEnabled: process.env.FEATURE_EXTERNAL_PLUGIN_LOADING === 'true',
@@ -664,9 +694,11 @@ await registerDesktopActionRoutes(app, {
 });
 await registerPrRoutes(app, {
     getSession: (request) => readSession(request),
+    prisma,
 });
 await registerCiFailureRoutes(app, {
     getSession: (request) => readSession(request),
+    prisma,
 });
 await registerWorkMemoryRoutes(app, {
     getSession: (request) => readSession(request),
@@ -677,11 +709,27 @@ await registerReproPackRoutes(app, {
 await registerHandoffRoutes(app, {
     getSession: (request) => readSession(request),
 });
+await registerWakeRunRoutes(app, {
+    getSession: (request) => readSession(request),
+});
+await registerRoutineSchedulerRoutes(app, {
+    getSession: (request) => readSession(request),
+});
 await registerObservabilityRoutes(app, {
     getSession: (request) => readSession(request),
 });
 await registerQuestionRoutes(app, prisma);
-await registerMemoryRoutes(app, prisma, { getSession: (request) => readSession(request) });
+await registerMemoryRoutes(app, prisma, {
+    getSession: (request) => readSession(request),
+    embedFn: (() => {
+        const endpoint = process.env['EPISODIC_EMBEDDING_ENDPOINT'] ?? '';
+        const apiKey = process.env['EPISODIC_EMBEDDING_API_KEY'] ?? '';
+        const deployment = process.env['EPISODIC_EMBEDDING_DEPLOYMENT'] ?? 'text-embedding-3-small';
+        if (!endpoint || !apiKey) return null;
+        return createEmbedFn({ endpoint, deployment, apiKey });
+    })(),
+    embeddingDeployment: process.env['EPISODIC_EMBEDDING_DEPLOYMENT'] ?? 'text-embedding-3-small',
+});
 await registerMeetingRoutes(app, {
     getSession: (request) => readSession(request),
 });
@@ -694,6 +742,15 @@ await registerAnalyticsRoutes(app, {
 await registerAgentsRoutes(app, {
     getSession: (request) => readSession(request),
 });
+await registerPersonaRoutes(app, {
+    getSession: (request) => readSession(request),
+});
+await registerDisclosureRoutes(app, {
+    getSession: (request) => readSession(request),
+});
+await registerSetupWizardRoutes(app, {
+    getSession: (request) => readSession(request),
+});
 await registerAgentControlRoutes(app, {
     getSession: (request) => readSession(request),
 });
@@ -703,7 +760,32 @@ await registerAgentDispatchRoutes(app, {
 await registerAdminProvisionRoutes(app, {
     getSession: (request) => readSession(request),
 });
+// Sprint 9 — Fire-agent terminate route
+await registerAgentLifecycleRoutes(app, {
+    getSession: (request) => readSession(request),
+});
+// Sprint 9 — Semantic Memory / Company Knowledge RAG
+await registerKnowledgeBaseRoutes(app, prisma, {
+    getSession: (request) => readSession(request),
+    embedFn: (() => {
+        const endpoint = process.env['EPISODIC_EMBEDDING_ENDPOINT'] ?? '';
+        const apiKey = process.env['EPISODIC_EMBEDDING_API_KEY'] ?? '';
+        const deployment = process.env['EPISODIC_EMBEDDING_DEPLOYMENT'] ?? 'text-embedding-3-small';
+        if (!endpoint || !apiKey) return null;
+        return createEmbedFn({ endpoint, deployment, apiKey });
+    })(),
+    embeddingDeployment: process.env['EPISODIC_EMBEDDING_DEPLOYMENT'] ?? 'text-embedding-3-small',
+});
+// Sprint 11 — Episodic Memory Browse + Redact API
+await registerEpisodicMemoryRoutes(app, {
+    getSession: (request) => readSession(request),
+});
 await registerZohoSignWebhookRoutes(app);
+await registerBookingWebhookRoutes(app, { prisma });
+await registerContractWebhookRoutes(app, { prisma });
+await registerDealsRoutes(app, { getSession: (request) => readSession(request), prisma });
+await registerBrowserTasksRoutes(app, { getSession: (request) => readSession(request), prisma });
+await registerDesktopSessionsRoutes(app, { getSession: (request) => readSession(request) });
 registerNotificationRoutes(app, { getSession: (request) => readSession(request) });
 registerSkillPipelineRoutes(app, { getSession: (request) => readSession(request) });
 registerSkillSchedulerRoutes(app, { getSession: (request) => readSession(request) });
@@ -718,7 +800,7 @@ registerAgentFeedbackRoutes(app, { getSession: (request) => readSession(request)
 registerAutonomousLoopRoutes(app);
 registerSkillCompositionRoutes(app);
 registerGovernanceKPIRoutes(app);
-registerAdapterRegistryRoutes(app);
+registerAdapterRegistryRoutes(app, { getSession: (request) => readSession(request) });
 await registerRetentionPolicyRoutes(app, prisma);
 await registerSseTaskRoutes(app, { getSession: (request) => readSession(request) });
 await registerOutboundWebhookRoutes(app, { getSession: (request) => readSession(request) });
@@ -1159,6 +1241,7 @@ const start = async (): Promise<void> => {
             },
         );
         startNurtureWorker(prisma);
+        startSalesSequenceWorker(prisma);
         startDrainSweep({
             agentRuntimeUrl: process.env.AGENT_RUNTIME_URL ?? 'http://localhost:3001',
             prisma: prisma as never,
@@ -1174,6 +1257,7 @@ const stop = async (): Promise<void> => {
     stopConnectorTokenLifecycleWorker();
     stopConnectorHealthWorker();
     stopNurtureWorker();
+    stopSalesSequenceWorker();
     stopDrainSweep();
     await app.close();
     process.exit(0);

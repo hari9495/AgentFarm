@@ -1,5 +1,7 @@
 # Sprint 2: Adoption And Reliability Scale
 
+Status: CLOSED
+
 ## Sprint Goal
 Improve adoption confidence and operational reliability with shadow mode, monorepo impact awareness, richer escalation context, and weekly ROI reporting.
 

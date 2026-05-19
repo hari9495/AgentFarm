@@ -10,7 +10,8 @@
 
 import { VoiceboxClient } from './voicebox-client.js';
 import { buildSystemPrompt } from './system-prompt-builder.js';
-import { speakResponse } from './speaking-agent.js';
+import { speakResponse, listenAndRespond } from './speaking-agent.js';
+import { logMeetingEvent } from './meeting-audit-logger.js';
 
 // ---------------------------------------------------------------------------
 // Internal helpers
@@ -319,11 +320,33 @@ export async function runFullMeetingPipeline(
     try {
         ({ sessionId } = await startMeetingSession(startParams));
 
+        await logMeetingEvent({
+            meetingSessionId: sessionId,
+            tenantId: params.tenantId,
+            workspaceId: params.workspaceId,
+            agentId: params.agentId,
+            platform: params.platform,
+            eventType: 'joined',
+            summary: `Agent joined ${params.platform} meeting at ${params.meetingUrl}`,
+            payload: { meetingUrl: params.meetingUrl },
+        });
+
         const { transcript, language } = await transcribeMeeting(
             sessionId,
             audioBuffer,
             params.tenantId,
         );
+
+        await logMeetingEvent({
+            meetingSessionId: sessionId,
+            tenantId: params.tenantId,
+            workspaceId: params.workspaceId,
+            agentId: params.agentId,
+            platform: params.platform,
+            eventType: 'transcribed',
+            summary: `Transcription complete — ${transcript.length} chars, language: ${language}`,
+            payload: { charCount: transcript.length, language },
+        });
 
         const { summary, actionItems } = await summarizeMeeting(
             sessionId,
@@ -331,6 +354,17 @@ export async function runFullMeetingPipeline(
             language,
             params.tenantId,
         );
+
+        await logMeetingEvent({
+            meetingSessionId: sessionId,
+            tenantId: params.tenantId,
+            workspaceId: params.workspaceId,
+            agentId: params.agentId,
+            platform: params.platform,
+            eventType: 'summarised',
+            summary: `Summary generated — ${actionItems.length} action items`,
+            payload: { actionItemCount: actionItems.length },
+        });
 
         await distributeMeetingSummary(
             sessionId,
@@ -340,6 +374,26 @@ export async function runFullMeetingPipeline(
             params.tenantId,
             executor,
         );
+
+        await logMeetingEvent({
+            meetingSessionId: sessionId,
+            tenantId: params.tenantId,
+            workspaceId: params.workspaceId,
+            agentId: params.agentId,
+            platform: params.platform,
+            eventType: 'summary_distributed',
+            summary: 'Meeting summary distributed to Slack',
+        });
+
+        await logMeetingEvent({
+            meetingSessionId: sessionId,
+            tenantId: params.tenantId,
+            workspaceId: params.workspaceId,
+            agentId: params.agentId,
+            platform: params.platform,
+            eventType: 'left',
+            summary: `Agent completed and left ${params.platform} meeting`,
+        });
 
         return { sessionId, summary, actionItems };
     } catch (err: unknown) {
@@ -356,7 +410,169 @@ export async function runFullMeetingPipeline(
             }).catch(() => {
                 // Best-effort; never mask the original error
             });
+
+            await logMeetingEvent({
+                meetingSessionId: sessionId,
+                tenantId: params.tenantId,
+                workspaceId: params.workspaceId,
+                agentId: params.agentId,
+                platform: params.platform,
+                eventType: 'error',
+                severity: 'error',
+                summary: `Meeting pipeline failed: ${err instanceof Error ? err.message : String(err)}`,
+                payload: { errorMessage: err instanceof Error ? err.message : String(err) },
+            });
         }
         throw err;
     }
+}
+
+// ---------------------------------------------------------------------------
+// Live participation loop
+// ---------------------------------------------------------------------------
+
+export type MeetingParticipationParams = {
+    tenantId: string;
+    workspaceId: string;
+    agentId: string;
+    /** Desktop VM session ID (from POST /v1/desktop-sessions). */
+    desktopSessionId: string;
+    meetingUrl: string;
+    platform: MeetingPlatform;
+    language?: string;
+    /** Maximum capture-respond turns before exiting. Default 10. */
+    maxTurns?: number;
+    /** Seconds of audio to capture per turn. Default 10. */
+    captureDurationSeconds?: number;
+};
+
+/**
+ * Join a video meeting via the desktop-agent, then participate in a
+ * capture → transcribe → respond → speak loop for up to maxTurns turns.
+ *
+ * Returns the created meeting session ID so callers can retrieve the full
+ * transcript and summary afterwards.
+ */
+export async function runMeetingParticipation(
+    params: MeetingParticipationParams,
+): Promise<{ meetingSessionId: string }> {
+    const {
+        tenantId,
+        workspaceId,
+        agentId,
+        desktopSessionId,
+        meetingUrl,
+        platform,
+        language = 'en',
+        maxTurns = 10,
+        captureDurationSeconds = 10,
+    } = params;
+
+    const base = gatewayBase();
+
+    // Step 1 — Instruct desktop-agent to navigate to and join the meeting.
+    const joinRes = await fetch(
+        `${base}/v1/desktop-sessions/${encodeURIComponent(desktopSessionId)}/join-meeting`,
+        {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ meetingUrl, platform }),
+            signal: AbortSignal.timeout(60_000),
+        },
+    );
+    if (!joinRes.ok) {
+        const errText = await joinRes.text().catch(() => '');
+        throw new Error(`[meeting] join-meeting failed with HTTP ${joinRes.status}: ${errText}`);
+    }
+
+    // Step 2 — Create a MeetingSession record in the gateway.
+    const { sessionId: meetingSessionId } = await startMeetingSession({
+        tenantId,
+        workspaceId,
+        agentId,
+        meetingUrl,
+        platform,
+    });
+
+    await logMeetingEvent({
+        meetingSessionId,
+        tenantId,
+        workspaceId,
+        agentId,
+        platform,
+        eventType: 'joined',
+        summary: `Agent joined ${platform} meeting at ${meetingUrl}`,
+        payload: { meetingUrl, desktopSessionId },
+    });
+
+    // Step 3 — Participation loop: capture → respond → speak.
+    for (let turn = 0; turn < maxTurns; turn++) {
+        const captureRes = await fetch(
+            `${base}/v1/desktop-sessions/${encodeURIComponent(desktopSessionId)}/capture-audio`,
+            {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({ durationSeconds: captureDurationSeconds }),
+                signal: AbortSignal.timeout((captureDurationSeconds + 15) * 1_000),
+            },
+        );
+
+        if (!captureRes.ok) {
+            console.warn(`[meeting] capture-audio HTTP ${captureRes.status} — skipping turn ${turn}`);
+            continue;
+        }
+
+        const captured = (await captureRes.json()) as { audioBase64?: string };
+        if (!captured.audioBase64) {
+            continue;
+        }
+
+        const audioBuffer = Buffer.from(captured.audioBase64, 'base64');
+
+        // listenAndRespond transcribes the audio, generates a reply via LLM,
+        // and synthesises it with the agent's cloned voice.  Returns a WAV Buffer.
+        let responseAudio: Buffer;
+        try {
+            responseAudio = await listenAndRespond(meetingSessionId, audioBuffer, language);
+        } catch (respondErr: unknown) {
+            console.warn(`[meeting] listenAndRespond failed on turn ${turn}: ${String(respondErr)}`);
+            continue;
+        }
+
+        // Zero-length buffer means the gate decided not to respond on this turn
+        // (silence, not addressed, etc.) — skip speaking and listen on next turn.
+        if (responseAudio.length === 0) {
+            continue;
+        }
+
+        // Play the response audio into the virtual PulseAudio sink so meeting
+        // participants hear the agent speak.
+        const speakRes = await fetch(
+            `${base}/v1/desktop-sessions/${encodeURIComponent(desktopSessionId)}/speak`,
+            {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({
+                    audioBase64: responseAudio.toString('base64'),
+                    format: 'wav',
+                }),
+                signal: AbortSignal.timeout(30_000),
+            },
+        );
+        if (!speakRes.ok) {
+            console.warn(`[meeting] speak HTTP ${speakRes.status} on turn ${turn}`);
+        }
+    }
+
+    await logMeetingEvent({
+        meetingSessionId,
+        tenantId,
+        workspaceId,
+        agentId,
+        platform,
+        eventType: 'left',
+        summary: `Agent completed ${maxTurns}-turn participation and left ${platform} meeting`,
+    });
+
+    return { meetingSessionId };
 }

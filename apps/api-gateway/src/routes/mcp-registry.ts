@@ -1,4 +1,9 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
+import {
+    MANAGED_MCP_CATALOG,
+    findConnectorById,
+    buildConnectorHeaders,
+} from '../lib/managed-mcp-catalog.js';
 
 type SessionContext = {
     userId: string;
@@ -226,4 +231,84 @@ export async function registerMcpRegistryRoutes(
             return reply.code(200).send({ ok: false, latencyMs: TIMEOUT_MS });
         }
     });
+
+    // ── GET /v1/mcp/catalog — list all managed connectors ──────────────────
+    app.get('/v1/mcp/catalog', async (request, reply) => {
+        const session = options.getSession(request);
+        if (!session) {
+            return reply.code(401).send({ error: 'unauthorized', message: 'A valid authenticated session is required.' });
+        }
+        // Strip out any sensitive defaults; return catalog metadata only
+        const catalog = MANAGED_MCP_CATALOG.map(({ id, displayName, category, description, logoSlug, tools, supportedRoles, requiredFields, optionalFields }) => ({
+            id,
+            displayName,
+            category,
+            description,
+            logoSlug,
+            tools,
+            supportedRoles,
+            requiredFields: requiredFields.map(({ name, label, type, placeholder, helpText }) => ({
+                name, label, type, placeholder, helpText,
+            })),
+            optionalFields: (optionalFields ?? []).map(({ name, label, type, placeholder, helpText }) => ({
+                name, label, type, placeholder, helpText,
+            })),
+        }));
+        return reply.code(200).send({ catalog });
+    });
+
+    // ── POST /v1/mcp/catalog/:connectorId/enable — activate a managed connector ──
+    app.post<{ Params: { connectorId: string }; Body: Record<string, string> }>(
+        '/v1/mcp/catalog/:connectorId/enable',
+        async (request, reply) => {
+            const session = options.getSession(request);
+            if (!session) {
+                return reply.code(401).send({ error: 'unauthorized', message: 'A valid authenticated session is required.' });
+            }
+
+            const connectorId = request.params.connectorId?.trim();
+            const connector = findConnectorById(connectorId);
+            if (!connector) {
+                return reply.code(404).send({ error: 'not_found', message: `Managed connector '${connectorId}' not found in catalog.` });
+            }
+
+            // Validate required fields are present
+            const body = request.body ?? {};
+            const missingFields = connector.requiredFields
+                .filter((f) => !body[f.name] || String(body[f.name]).trim() === '')
+                .map((f) => f.name);
+            if (missingFields.length > 0) {
+                return reply.code(400).send({
+                    error: 'missing_fields',
+                    message: `Required fields missing: ${missingFields.join(', ')}`,
+                    missingFields,
+                });
+            }
+
+            const fieldValues: Record<string, string> = {};
+            for (const field of [...connector.requiredFields, ...(connector.optionalFields ?? [])]) {
+                const val = body[field.name];
+                if (typeof val === 'string' && val.trim()) {
+                    fieldValues[field.name] = val.trim();
+                }
+            }
+
+            const headers = buildConnectorHeaders(connector, fieldValues);
+
+            const record = await repo.upsert({
+                tenantId: session.tenantId,
+                name: connector.id,
+                url: connector.serverUrl,
+                headers,
+            });
+
+            return reply.code(201).send({
+                id: record.id,
+                connectorId: connector.id,
+                displayName: connector.displayName,
+                url: connector.serverUrl,
+                isActive: true,
+            });
+        },
+    );
 }

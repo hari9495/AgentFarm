@@ -64,9 +64,9 @@ const stats = [
 
 export default function StatsCounter() {
     return (
-        <section className="bg-[#0d0d0d] border-y border-[#242728] py-16">
+        <section className="bg-[var(--surface)] border-y border-[var(--hairline)] py-16">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-[#242728] rounded-xl overflow-hidden">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-[var(--hairline)] rounded-xl overflow-hidden">
                     {stats.map((s, i) => (
                         <motion.div
                             key={s.label}
@@ -74,7 +74,7 @@ export default function StatsCounter() {
                             whileInView={{ opacity: 1, y: 0 }}
                             viewport={{ once: true }}
                             transition={{ delay: i * 0.08, duration: 0.44, ease: [0.22, 1, 0.36, 1] }}
-                            className="bg-[#0d0d0d] px-8 py-10 text-center flex flex-col items-center"
+                            className="bg-[var(--surface)] px-8 py-10 text-center flex flex-col items-center"
                         >
                             <p
                                 className="text-4xl sm:text-5xl font-semibold tabular-nums leading-none tracking-tight"
@@ -82,8 +82,8 @@ export default function StatsCounter() {
                             >
                                 <Counter to={s.value} suffix={s.suffix} />
                             </p>
-                            <p className="mt-3 text-sm font-semibold text-[#f4f4f6]">{s.label}</p>
-                            <p className="mt-1.5 text-[11px] text-[#6a6b6c] leading-snug max-w-[160px]">{s.sub}</p>
+                            <p className="mt-3 text-sm font-semibold text-[var(--ink)]">{s.label}</p>
+                            <p className="mt-1.5 text-[11px] text-[var(--ash)] leading-snug max-w-[160px]">{s.sub}</p>
                         </motion.div>
                     ))}
                 </div>

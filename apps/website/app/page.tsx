@@ -38,32 +38,25 @@ export default function Home() {
       <Hero />
       <SocialProofBar />
       {/* Conversion Snapshot */}
-      <section className="py-6 sm:py-8 bg-[var(--surface)] border-y border-[var(--hairline)]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="magic-canvas relative overflow-hidden py-8 sm:py-10 border-y border-[var(--m-hairline)]">
+        <div aria-hidden className="absolute inset-0 pointer-events-none opacity-40">
+          <div className="cyber-grid" />
+        </div>
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
             <div>
-              <p className="text-xs uppercase tracking-[0.16em] text-[var(--accent-blue)] font-semibold">Conversion Snapshot</p>
-              <p className="mt-2 text-base sm:text-lg text-[var(--body-color)]">
+              <span className="neon-chip neon-chip-cyan text-[10px]"><span className="dot" aria-hidden />Live Snapshot</span>
+              <p className="mt-3 text-base sm:text-lg text-[var(--m-ink-muted)]">
                 Launch from{" "}
-                <span className="font-semibold text-[var(--ink)]">{availableRoles} live roles</span>{" "}
+                <span className="font-bold text-[var(--m-ink)]">{availableRoles} live roles</span>{" "}
                 across{" "}
-                <span className="font-semibold text-[var(--ink)]">{departmentCoverage} departments</span>
+                <span className="font-bold text-[var(--m-ink)]">{departmentCoverage} departments</span>
                 , with approval and audit controls from day one.
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
-              <Link
-                href="/marketplace"
-                className="px-5 py-2.5 text-sm font-semibold text-black bg-white rounded-lg hover:bg-[#e8e8e8] transition-colors"
-              >
-                Explore Marketplace
-              </Link>
-              <Link
-                href="/pricing"
-                className="px-5 py-2.5 text-sm font-medium text-[var(--mute)] border border-[var(--hairline)] rounded-lg hover:text-[var(--ink)] hover:border-[rgba(255,255,255,0.15)] hover:bg-white/[0.04] transition-colors"
-              >
-                See Pricing
-              </Link>
+              <Link href="/marketplace" className="magic-btn magic-btn-primary">Explore Marketplace</Link>
+              <Link href="/pricing" className="magic-btn magic-btn-ghost">See Pricing</Link>
             </div>
           </div>
         </div>

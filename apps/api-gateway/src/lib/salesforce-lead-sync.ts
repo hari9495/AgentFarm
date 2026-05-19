@@ -12,9 +12,9 @@
 
 export interface LeadPayload {
     firstName?: string;
-    lastName: string;
+    lastName?: string;
     email: string;
-    company: string;
+    company?: string;
     phone?: string;
     description?: string;
     leadSource?: string;

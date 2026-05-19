@@ -30,7 +30,7 @@ const rows: Row[] = [
   { feature: "No hiring / onboarding time", AgentFarm: "yes", copilot: "yes", contractor: "partial", hiring: "no" },
   { feature: "Scales instantly", AgentFarm: "yes", copilot: "yes", contractor: "no", hiring: "no" },
   { feature: "Understands full codebase context", AgentFarm: "yes", copilot: "partial", contractor: "partial", hiring: "yes" },
-  { feature: "21 developer skills available", AgentFarm: "yes", copilot: "no", contractor: "partial", hiring: "partial" },
+  { feature: "12 AI worker roles available", AgentFarm: "yes", copilot: "no", contractor: "partial", hiring: "partial" },
   { feature: "Risk-classified approval gates", AgentFarm: "yes", copilot: "no", contractor: "no", hiring: "partial" },
   { feature: "OWASP / security scanning on every PR", AgentFarm: "yes", copilot: "no", contractor: "no", hiring: "partial" },
   { feature: "Test coverage delta tracked per PR", AgentFarm: "yes", copilot: "no", contractor: "no", hiring: "partial" },
@@ -64,15 +64,15 @@ export default function ComparePage() {
               <span className="chip chip-accent mb-5">
                 Compare
               </span>
-              <h1 className="mt-3 text-4xl sm:text-6xl font-semibold text-[var(--ink)] tracking-[-0.03em]">
+              <h1 className="mt-3 text-4xl sm:text-6xl font-semibold text-white tracking-[-0.03em]">
                 AgentFarm vs{" "}
                 <span className="bg-gradient-to-r from-[var(--accent-blue)] to-[#8dd7ff] bg-clip-text text-transparent">
                   the alternatives
                 </span>
               </h1>
-              <p className="mt-5 text-xl text-[var(--body-color)] max-w-2xl leading-relaxed">
+              <p className="mt-5 text-xl text-slate-300 max-w-2xl leading-relaxed">
                 Copilot suggests code. Contractors take weeks to hire. Traditional hires
-                take months. AgentFarm just ships.
+                take months. AgentFarm AI workers start the same day.
               </p>
             </div>
           </div>
@@ -161,14 +161,14 @@ export default function ComparePage() {
       <section className="bg-[var(--surface)] py-20 border-t border-[var(--hairline)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-2xl font-semibold tracking-[-0.03em] text-[var(--ink)] text-center mb-12">
-            Annual cost per engineering resource
+            Annual cost: AI worker vs alternatives
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
             {[
               { label: "AgentFarm AI Worker", cost: "$1,188", sub: "$99/mo × 12", highlight: true },
               { label: "GitHub Copilot", cost: "$228", sub: "suggest-only, no execution" },
               { label: "Contractor", cost: "$80,000+", sub: "part-time, varies widely" },
-              { label: "Senior SWE Hire", cost: "$180,000+", sub: "salary + benefits + equity" },
+              { label: "Full-time Hire", cost: "$80k–$200k+", sub: "salary + benefits + equity" },
             ].map((item) => (
               <div
                 key={item.label}

@@ -14,9 +14,6 @@ function makeOkExecutor(): StepExecutor {
     return async (_input) => OK_RESULT;
 }
 
-function makeFailExecutor(): StepExecutor {
-    return async (_input) => FAIL_RESULT;
-}
 
 /**
  * Executor that fails calls whose actionType matches `failAction`,

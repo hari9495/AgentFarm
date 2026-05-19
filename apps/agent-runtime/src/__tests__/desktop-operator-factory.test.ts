@@ -42,25 +42,21 @@ describe('desktop-operator-factory', () => {
     assert.equal(result.ok, true);
   });
 
-  it('getDesktopOperator throws for DESKTOP_OPERATOR=native', async () => {
+  it('getDesktopOperator returns NativeDesktopOperator for DESKTOP_OPERATOR=native', async () => {
     process.env.DESKTOP_OPERATOR = 'native';
-    await assert.rejects(
-      () => getDesktopOperator(),
-      (err: Error) => {
-        assert.ok(err.message.includes('Native desktop adapter is not implemented'));
-        return true;
-      },
-    );
+    const operator = await getDesktopOperator();
+    assert.ok(operator, 'operator should be defined');
+    assert.equal(typeof operator.browserOpen, 'function');
+    assert.equal(typeof operator.appLaunch, 'function');
+    assert.equal(typeof operator.meetingJoin, 'function');
+    assert.equal(typeof operator.meetingSpeak, 'function');
   });
 
-  it('getDesktopOperator throws when DESKTOP_OPERATOR is unset (defaults to native)', async () => {
+  it('getDesktopOperator returns NativeDesktopOperator when DESKTOP_OPERATOR is unset (defaults to native)', async () => {
     delete process.env.DESKTOP_OPERATOR;
-    await assert.rejects(
-      () => getDesktopOperator(),
-      (err: Error) => {
-        assert.ok(err.message.includes('Native desktop adapter is not implemented'));
-        return true;
-      },
-    );
+    const operator = await getDesktopOperator();
+    assert.ok(operator, 'operator should be defined');
+    assert.equal(typeof operator.browserOpen, 'function');
+    assert.equal(typeof operator.appLaunch, 'function');
   });
 });

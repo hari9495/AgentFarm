@@ -5,6 +5,8 @@
  * language is not English. Keeps all other prompt logic unchanged.
  */
 
+import type { AgentPersonaRecord } from '@agentfarm/shared-types';
+
 // ---------------------------------------------------------------------------
 // Language name lookup
 // ---------------------------------------------------------------------------
@@ -43,6 +45,8 @@ export interface SystemPromptOptions {
     tenantId?: string;
     workspaceId?: string;
     userId?: string;
+    /** Agent persona — when present, prepends identity block to the prompt. */
+    persona?: AgentPersonaRecord;
 }
 
 // ---------------------------------------------------------------------------
@@ -57,10 +61,22 @@ export interface SystemPromptOptions {
  *   the END of the prompt so it takes precedence over earlier instructions.
  */
 export function buildSystemPrompt(options: SystemPromptOptions): string {
-    const { basePrompt, language } = options;
+    const { basePrompt, language, persona, role } = options;
+
+    // Prepend persona identity block when available
+    let prompt = basePrompt;
+    if (persona) {
+        const identityBlock = [
+            `You are ${persona.displayName}, an AI ${role ?? 'agent'} working at AgentFarm.`,
+            `Your email address is ${persona.emailAddress}. Communication style: ${persona.communicationStyle}.`,
+            `Always append "${persona.disclosureStatement}" to any external-facing message.`,
+            '---',
+        ].join('\n');
+        prompt = `${identityBlock}\n${basePrompt}`;
+    }
 
     if (!language || language === 'en') {
-        return basePrompt;
+        return prompt;
     }
 
     const languageName = getLanguageNameFromCode(language);
@@ -72,5 +88,5 @@ export function buildSystemPrompt(options: SystemPromptOptions): string {
         `All explanations, code comments, error messages, and summaries must be in ${languageName}.`,
     ].join('\n');
 
-    return `${basePrompt}\n${instruction}`;
+    return `${prompt}\n${instruction}`;
 }

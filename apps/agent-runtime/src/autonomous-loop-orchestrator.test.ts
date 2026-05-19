@@ -72,8 +72,6 @@ describe('autonomous-loop-orchestrator: Auto-iterate until tests pass', () => {
     });
 
     it('tracks learning patterns from success', async () => {
-        const inputFingerprint = JSON.stringify({ file_path: 'test.ts' });
-
         await orchestrator.execute({
             loop_id: 'test-loop-5',
             initial_skill: { skill_id: 'test-generator', inputs: { file_path: 'test.ts' } },
@@ -179,7 +177,7 @@ describe('loop-learning-store: Learn from successful patterns', () => {
         store.recordSuccess('old_pattern', ['skill1']);
         const initialCount = store.listPatterns().length;
 
-        const removed = store.pruneOldPatterns(0); // 0 days = remove all
+        store.pruneOldPatterns(0); // 0 days = remove all
         const finalCount = store.listPatterns().length;
 
         assert.ok(finalCount <= initialCount, 'Should remove old patterns');

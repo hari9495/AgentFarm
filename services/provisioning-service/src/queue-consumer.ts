@@ -51,24 +51,33 @@ export class ProvisioningQueueConsumer {
 
     /**
      * Exposed for testing. Runs a single poll cycle:
-     * 1. Count queued jobs for observability logging.
-     * 2. If any exist, delegate to processor.processOnce() which handles
-     *    atomic claiming and status transitions.
+     * 1. Count queued AND cleanup_pending jobs for observability logging.
+     * 2. If any exist in either queue, delegate to processor.processOnce()
+     *    which handles atomic claiming and all status transitions.
      */
     async pollOnce(): Promise<void> {
         try {
-            const jobs = await this.prisma.provisioningJob.findMany({
-                where: { status: "queued" },
-                orderBy: { createdAt: "asc" },
-                take: this.batchSize,
-                select: { id: true },
-            });
+            const [queued, cleanupPending] = await Promise.all([
+                this.prisma.provisioningJob.findMany({
+                    where: { status: "queued" },
+                    orderBy: { createdAt: "asc" },
+                    take: this.batchSize,
+                    select: { id: true },
+                }),
+                this.prisma.provisioningJob.findMany({
+                    where: { status: "cleanup_pending" },
+                    orderBy: { requestedAt: "asc" },
+                    take: this.batchSize,
+                    select: { id: true },
+                }),
+            ]);
 
+            const totalPending = queued.length + cleanupPending.length;
             console.log(
-                `[provisioning-consumer] poll: found ${jobs.length} queued job(s)`,
+                `[provisioning-consumer] poll: found ${queued.length} queued job(s), ${cleanupPending.length} cleanup_pending job(s)`,
             );
 
-            if (jobs.length === 0) return;
+            if (totalPending === 0) return;
 
             const result = await this.processor.processOnce();
 

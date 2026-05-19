@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import { executeBrowserAction } from './browser-action-executor.js';
-import { resolveLanguage, getOutputLanguage, type LanguageContext } from './language-resolver.js';
+import { resolveLanguage, type LanguageContext } from './language-resolver.js';
 import { parseGoal } from './natural-language-parser.js';
 import { publishTaskProgress } from './task-progress-publisher.js';
 

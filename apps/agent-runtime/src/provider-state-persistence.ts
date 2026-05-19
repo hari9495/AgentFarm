@@ -5,7 +5,7 @@
  * Prevents retry thundering when a provider is rate-limited or temporarily unavailable.
  */
 
-import type { CooldownRecord, ProviderStateSnapshot, FailoverReason, ProviderHealthStatus } from '@agentfarm/shared-types';
+import type { ProviderStateSnapshot, FailoverReason, ProviderHealthStatus } from '@agentfarm/shared-types';
 
 export class ProviderStatePersistence {
     private states = new Map<string, ProviderStateSnapshot>();

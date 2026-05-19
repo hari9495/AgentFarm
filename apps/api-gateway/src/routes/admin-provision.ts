@@ -74,26 +74,50 @@ export async function registerAdminProvisionRoutes(
             return reply.code(404).send({ error: 'Plan not found.' });
         }
 
-        // Look up the tenant's workspace and bot
+        // Look up the tenant's workspace
         const workspace = await (prisma.workspace as any).findFirst({ where: { tenantId } });
         if (!workspace) {
             return reply.code(404).send({ error: 'Workspace not found for tenant.' });
         }
 
-        const bot = await (prisma.bot as any).findFirst({ where: { workspaceId: workspace.id } });
-        if (!bot) {
-            return reply.code(404).send({ error: 'Bot not found for workspace.' });
+        // Role comes from the plan. Each purchase of a different role creates a
+        // NEW bot so the customer can run Developer + Full Stack Developer etc.
+        // simultaneously — each gets its own isolated VM.
+        const roleType: string = (plan as any).roleType ?? 'developer_agent';
+
+        // Check if this order was already provisioned (idempotency guard)
+        const existingJob = await prisma.provisioningJob.findFirst({
+            where: { orderId: order.id },
+        });
+        if (existingJob) {
+            return reply.code(200).send({
+                jobId: existingJob.id,
+                botId: existingJob.botId,
+                roleType,
+                status: existingJob.status,
+                message: 'Provisioning already in progress for this order',
+            });
         }
+
+        // Create a fresh bot for this role. Multiple bots can exist per workspace —
+        // one per purchased role (Developer, Full Stack Developer, Tester, etc.)
+        const newBot = await (prisma.bot as any).create({
+            data: {
+                workspaceId: workspace.id,
+                role: roleType,
+                status: 'created',
+            },
+        });
 
         // Create the provisioning job
         const job = await prisma.provisioningJob.create({
             data: {
                 tenantId,
                 workspaceId: workspace.id,
-                botId: bot.id,
+                botId: newBot.id,
                 planId: order.planId,
                 runtimeTier: 'dedicated_vm',
-                roleType: 'developer_agent',
+                roleType,
                 correlationId: `corr_provision_${Date.now()}`,
                 triggerSource: 'admin_billing',
                 status: 'queued',
@@ -105,12 +129,15 @@ export async function registerAdminProvisionRoutes(
                     planName: plan.name,
                     customerEmail: order.customerEmail,
                     agentSlots: plan.agentSlots,
+                    roleType,
                 }),
             },
         });
 
         return reply.code(200).send({
             jobId: job.id,
+            botId: newBot.id,
+            roleType,
             status: 'queued',
             message: 'Provisioning started',
         });

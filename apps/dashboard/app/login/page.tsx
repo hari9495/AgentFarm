@@ -30,7 +30,6 @@ function LoginForm() {
                 return;
             }
 
-            // Set session cookie for server components to read on next navigation
             document.cookie = `agentfarm_internal_session=${encodeURIComponent(data.token)}; path=/; samesite=strict; max-age=28800`;
             const redirectTarget = searchParams.get('next') || '/';
             router.push(redirectTarget.startsWith('/') ? redirectTarget : '/');
@@ -42,88 +41,95 @@ function LoginForm() {
     };
 
     return (
-        <main className="page-shell" style={{ maxWidth: 440, paddingTop: '4rem' }}>
-            <header className="hero">
-                <p className="eyebrow">AgentFarm Internal</p>
-                <h1 style={{ fontSize: '1.5rem' }}>Internal Team Sign In</h1>
-                <p style={{ marginTop: '0.3rem', fontSize: '0.9rem' }}>
-                    This login is for operations and support teams.
-                </p>
-            </header>
+        <div className="ops-shell magic-canvas min-h-screen flex items-center justify-center relative overflow-hidden">
+            {/* Aurora background */}
+            <div aria-hidden className="aurora-bg pointer-events-none">
+                <div className="orb orb-3" />
+                <div className="orb orb-4" />
+                <div className="cyber-grid" />
+                <div className="magic-grain" />
+            </div>
 
-            <form onSubmit={handleSubmit} className="card" style={{ display: 'grid', gap: '0.85rem' }}>
-                {error && (
-                    <div
-                        style={{
-                            background: '#fee2e2',
-                            border: '1px solid #fca5a5',
-                            borderRadius: 8,
-                            padding: '0.6rem 0.8rem',
-                            color: '#991b1b',
-                            fontSize: '0.88rem',
-                        }}
-                    >
-                        {error}
-                    </div>
-                )}
+            <div className="relative z-10 w-full max-w-[460px] mx-auto px-4 py-10">
+                {/* Brand header */}
+                <div className="mb-8 text-center">
+                    <span className="neon-chip neon-chip-cyan text-[10px]">
+                        <span className="dot" aria-hidden />AgentFarm Internal
+                    </span>
+                    <h1 className="mt-4 text-[1.9rem] font-black tracking-[-0.03em] text-[var(--m-ink)]">
+                        Internal Team{' '}
+                        <span className="holo-text">Sign In</span>
+                    </h1>
+                    <p className="mt-2 text-sm text-[var(--m-ink-muted)]">
+                        Operations and support teams only.
+                    </p>
+                </div>
 
-                <label style={{ display: 'grid', gap: '0.3rem', fontSize: '0.9rem' }}>
-                    <span>Email</span>
-                    <input
-                        type="email"
-                        required
-                        autoComplete="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        style={inputStyle}
-                    />
-                </label>
+                {/* Form card */}
+                <div className="glass-card holo-edge p-8">
+                    <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '1.1rem' }}>
+                        {error && (
+                            <div className="p-3 rounded-lg text-sm" style={{
+                                background: 'rgba(239,68,68,0.12)',
+                                border: '1px solid rgba(239,68,68,0.3)',
+                                color: '#fca5a5',
+                            }}>
+                                {error}
+                            </div>
+                        )}
 
-                <label style={{ display: 'grid', gap: '0.3rem', fontSize: '0.9rem' }}>
-                    <span>Password</span>
-                    <input
-                        type="password"
-                        required
-                        autoComplete="current-password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        style={inputStyle}
-                    />
-                </label>
+                        <label style={{ display: 'grid', gap: '0.4rem' }}>
+                            <span className="text-xs font-semibold uppercase tracking-wider text-[var(--m-ink-muted)]">Email</span>
+                            <input
+                                type="email"
+                                required
+                                autoComplete="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="w-full rounded-lg px-3 py-2.5 text-sm text-[var(--m-ink)] placeholder-[var(--m-ink-faint)] outline-none transition-all focus:ring-1"
+                                style={{
+                                    background: 'var(--m-surface-elev, rgba(255,255,255,0.05))',
+                                    border: '1px solid var(--m-hairline)',
+                                }}
+                                placeholder="you@agentfarm.io"
+                            />
+                        </label>
 
-                <button type="submit" disabled={loading} style={btnStyle(loading)}>
-                    {loading ? 'Signing in…' : 'Sign in'}
-                </button>
+                        <label style={{ display: 'grid', gap: '0.4rem' }}>
+                            <span className="text-xs font-semibold uppercase tracking-wider text-[var(--m-ink-muted)]">Password</span>
+                            <input
+                                type="password"
+                                required
+                                autoComplete="current-password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="w-full rounded-lg px-3 py-2.5 text-sm text-[var(--m-ink)] placeholder-[var(--m-ink-faint)] outline-none transition-all"
+                                style={{
+                                    background: 'var(--m-surface-elev, rgba(255,255,255,0.05))',
+                                    border: '1px solid var(--m-hairline)',
+                                }}
+                                placeholder="••••••••"
+                            />
+                        </label>
 
-                <p style={{ margin: 0, fontSize: '0.85rem', textAlign: 'center', color: '#57534e' }}>
-                    Customer user? Use the customer portal login.
-                </p>
-            </form>
-        </main>
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="magic-btn magic-btn-primary w-full"
+                            style={{ opacity: loading ? 0.7 : 1, cursor: loading ? 'not-allowed' : 'pointer' }}
+                        >
+                            {loading ? 'Signing in…' : 'Sign in'}
+                        </button>
+
+                        <p className="text-center text-xs text-[var(--m-ink-faint)]">
+                            Customer user? Use the customer portal login.
+                        </p>
+                    </form>
+                </div>
+            </div>
+        </div>
     );
 }
-
-const inputStyle: React.CSSProperties = {
-    padding: '0.5rem 0.65rem',
-    border: '1px solid #d8d1c5',
-    borderRadius: 8,
-    fontSize: '0.95rem',
-    background: '#fffdf8',
-    width: '100%',
-    outline: 'none',
-};
-
-const btnStyle = (disabled: boolean): React.CSSProperties => ({
-    padding: '0.6rem 1rem',
-    background: disabled ? '#99c8c4' : '#0f766e',
-    color: '#fff',
-    border: 'none',
-    borderRadius: 8,
-    fontSize: '0.95rem',
-    fontWeight: 700,
-    cursor: disabled ? 'not-allowed' : 'pointer',
-    transition: 'background 0.15s',
-});
 
 export default function LoginPage() {
     return (

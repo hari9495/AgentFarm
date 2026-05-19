@@ -175,11 +175,11 @@ export function RuntimeObservabilityPanel({
     const [logs, setLogs] = useState<RuntimeLogEntry[]>(initialLogs);
     const [transitions, setTransitions] = useState<RuntimeStateTransition[]>(initialTransitions);
     const [transcripts, setTranscripts] = useState<RuntimeTranscriptEntry[]>(initialTranscripts);
-    const [interviewEvents, setInterviewEvents] = useState<RuntimeInterviewEventEntry[]>(initialInterviewEvents);
+    const [interviewEvents] = useState<RuntimeInterviewEventEntry[]>(initialInterviewEvents);
     const [currentState, setCurrentState] = useState<string>(initialCurrentState);
     const [health, setHealth] = useState<RuntimeHealthSnapshot>(initialHealth);
     const [workspaceActions, setWorkspaceActions] = useState<string[]>([]);
-    const [weeklyRoiReport, setWeeklyRoiReport] = useState<WeeklyQualityRoiResponse | null>(null);
+    const [weeklyRoiReport] = useState<WeeklyQualityRoiResponse | null>(null);
     const [weeklyRoiBusy, setWeeklyRoiBusy] = useState(false);
 
     const [logFilter, setLogFilter] = useState<string>('');

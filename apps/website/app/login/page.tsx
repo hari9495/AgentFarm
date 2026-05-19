@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import {
     ArrowRight,
@@ -17,7 +17,6 @@ import {
 } from "lucide-react";
 
 function LoginForm() {
-    const router = useRouter();
     const searchParams = useSearchParams();
     const from = searchParams.get("from") ?? undefined;
     const [email, setEmail] = useState("");
@@ -49,11 +48,9 @@ function LoginForm() {
                 return;
             }
             const redirectTo = data.redirectTo ?? "/dashboard";
-            if (/^https?:\/\//i.test(redirectTo)) {
-                window.location.assign(redirectTo);
-                return;
-            }
-            router.push(redirectTo);
+            // Use window.location.assign for all redirects to ensure cookies are
+            // always sent on the subsequent navigation (avoids SPA/RSC timing issues).
+            window.location.assign(redirectTo);
         } catch {
             setServerError("Network error. Please try again.");
         } finally {
@@ -64,7 +61,7 @@ function LoginForm() {
     return (
         <div className="min-h-screen flex bg-[var(--canvas)]">
             {/* ── Left Panel — Brand ── */}
-            <div className="hidden lg:flex lg:w-[58%] relative overflow-hidden flex-col bg-[var(--surface)]">
+            <div className="hidden lg:flex lg:w-[58%] relative overflow-hidden flex-col bg-[#0d0d0d]">
                 {/* Layered gradient mesh */}
                 <div className="absolute inset-0 pointer-events-none">
                     <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_10%_10%,rgba(14,165,233,0.25)_0%,transparent_60%)]" />

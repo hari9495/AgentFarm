@@ -1,5 +1,7 @@
 # Sprint 4: Resilience And Launch Readiness
 
+Status: CLOSED
+
 ## Sprint Goal
 Deliver crash recovery and repro-pack workflows with production-grade security hardening, quality-gate enforcement, and launch signoff readiness.
 

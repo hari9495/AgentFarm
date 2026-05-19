@@ -6,8 +6,9 @@
  * are logged and empty/null values are returned; nothing is thrown.
  */
 
-import type { McpServerInfo, McpTool, McpToolCallResult } from '@agentfarm/shared-types';
+import type { McpServerInfo, McpTool, McpToolCallResult, RoleKey } from '@agentfarm/shared-types';
 import { McpProtocolClient } from './mcp-protocol-client.js';
+import { getRoleProfile } from './role-profiles/index.js';
 
 export interface TenantMcpServer {
     id: string;
@@ -109,15 +110,19 @@ export async function registerMcpServer(
 /**
  * Discover all healthy MCP servers for a tenant and return their tool lists.
  *
- * @param tenantId  The tenant whose registered servers to query.
- * @param _baseUrl  Reserved for future use (currently resolved via API_GATEWAY_URL).
+ * @param tenantId     The tenant whose registered servers to query.
+ * @param _baseUrl     Reserved for future use (currently resolved via API_GATEWAY_URL).
  * @param _serviceToken  Reserved for future use (auth token placeholder).
+ * @param roleKey      Optional: when provided, only servers whose name matches the
+ *                     role's `allowedConnectorTools` list are included.  Servers with
+ *                     names not in the allowlist are silently filtered out.
  * @returns Array of McpServerInfo — one per healthy server. Empty on total failure.
  */
 export async function discoverMcpTools(
     tenantId: string,
     _baseUrl: string,
     _serviceToken: string,
+    roleKey?: RoleKey,
 ): Promise<McpServerInfo[]> {
     let servers: TenantMcpServer[];
     try {
@@ -131,9 +136,26 @@ export async function discoverMcpTools(
         return [];
     }
 
+    // Apply role-based server filter when a roleKey is provided.
+    // Only servers whose normalised name appears in the role's connector allowlist are included.
+    let filteredServers = servers;
+    if (roleKey) {
+        const roleProfile = getRoleProfile(roleKey);
+        const allowedSet = new Set(
+            roleProfile.allowedConnectorTools.map(t => t.toLowerCase()),
+        );
+        filteredServers = servers.filter(s => allowedSet.has(s.name.toLowerCase()));
+        if (filteredServers.length < servers.length) {
+            console.info(
+                `[mcp-registry-client] discoverMcpTools: role "${roleKey}" — ` +
+                `${servers.length - filteredServers.length} server(s) filtered out by role allowlist.`,
+            );
+        }
+    }
+
     const results: McpServerInfo[] = [];
 
-    for (const server of servers) {
+    for (const server of filteredServers) {
         const client = new McpProtocolClient(server.url, server.headers ?? undefined);
 
         const healthy = await client.healthCheck();

@@ -10,7 +10,6 @@
  *   registerSseTaskRoutes       — wires the queue into a Fastify instance
  */
 
-import { randomUUID } from 'crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
 import type { TaskProgressEvent } from '@agentfarm/shared-types';

@@ -49,6 +49,30 @@ export const CONTRACT_VERSIONS = {
   // ---- Browser Audit System (2026-05-07) ----
   BROWSER_AUDIT: '1.0.0',     // Browser action audit events with evidence chain
   RETENTION_POLICY: '1.0.0',  // Customer-configurable audit artifact retention policies
+  // ---- Persona Layer (Sprint 1, 2026-05-15) ----
+  PERSONA: '1.0.0',           // Agent identity: displayName, email, disclosure, communication style
+  // ---- Role Enforcement Framework (Sprint 2, 2026-05-15) ----
+  ROLE_ENFORCEMENT: '1.0.0',  // Role boundary enforcement results and decline records
+  // ---- Setup Wizard (Sprint 3, 2026-05-15) ----
+  SETUP_WIZARD: '1.0.0',      // Multi-step self-service wizard for agent onboarding
+  // ---- pgvector Episodic Memory (Sprint 4, 2026-05-15) ----
+  EPISODIC_MEMORY: '1.0.0',   // Semantic vector search over past task memories
+  // ---- Semantic Memory / Company Knowledge RAG (Sprint 9, 2026-05-22) ----
+  SEMANTIC_MEMORY: '1.0.0',   // Knowledge-base RAG: tenant company knowledge chunks + cosine search
+  // ---- Agent Hire → Provisioning Wire (Sprint 5, 2026-05-15) ----
+  AGENT_HIRE: '1.0.0',        // AgentHireRecord — payment completed → ProvisioningJob queued
+  // ---- Billing Metering (Sprint 7, 2026-05-16) ----
+  USAGE_METERING: '1.0.0',    // UsageMeteringEvent — per-task platform fee record
+  // ---- Full Desktop VM (Sprint 9, 2026-05-15) ----
+  DESKTOP_SESSION: '1.0.0',   // DesktopSessionRecord — noVNC session lifecycle
+  DESKTOP_VISION_TASK: '1.0.0', // DesktopVisionTaskRecord — LLM vision loop task
+  // ---- B2: Approval Gate + Kill-Switch Enforcement (Sprint B, 2026-05-15) ----
+  KILL_SWITCH: '1.0.0',       // Runtime kill-switch lifecycle: activate, resolve, resume
+  // ---- Full Desktop VM + VM Lifecycle (Sprint 10, 2026-05-22) ----
+  DESKTOP_AGENT: '1.0.0',     // VisionLoopRequest/Result — LLM vision-loop over noVNC desktop
+  VM_LIFECYCLE: '1.0.0',      // VMProvisionResult/VMTerminateResult — Azure ARM VM provisioning and teardown
+  // ---- OAuth Connector Status + Episodic Memory API (Sprint 11, 2026-05-22) ----
+  OAUTH_CONNECTOR_STATUS: '1.0.0', // OAuthConnectorStatusRecord — connector health summary and token retrieval
 } as const;
 
 export type ContractVersion = (typeof CONTRACT_VERSIONS)[keyof typeof CONTRACT_VERSIONS];
@@ -271,6 +295,17 @@ export interface BotRecord {
   status: BotStatus;
   roleKey?: RoleKey;
 }
+
+export * from './desktop-agent-contracts.js';
+export * from './vm-lifecycle-contracts.js';
+export * from './persona.js';
+export * from './role-enforcement.js';
+export * from './setup-wizard.js';
+export * from './episodic-memory.js';
+export * from './semantic-memory.js';
+export * from './hire-contract.js';
+export * from './billing-metering.js';
+export * from './connector-status.js';
 
 // Frozen 2026-04-30 — signup-to-provisioning transition contract with versioning
 export interface SignupProvisioningRequested {
@@ -2031,6 +2066,7 @@ export * from './browser-audit.js';
 export * from './storage-paths.js';
 export * from './retention-policy.js';
 export * from './desktop-operator.js';
+export * from './desktop-session.js';
 export * from './task-plan.js';
 export type { AgentNotificationChannel, NotificationConfig, NotificationPayload, NotificationResult, CustomerNotificationConfig } from './notification.js';
 export type { CRMVendor, CRMConfig, CRMRecord, CRMQuery, CRMWritePayload, CRMResult, CustomerCRMConfig } from './crm.js';
@@ -2193,6 +2229,8 @@ export type SalesSignatureProvider =
   | 'adobe_sign'
   | 'hellosign';
 
+export type WinNotificationProvider = 'slack' | 'teams' | 'email' | 'webhook';
+
 export interface SalesAgentConfigRecord {
   id: string;
   tenantId: string;
@@ -2208,8 +2246,114 @@ export interface SalesAgentConfigRecord {
   followUpDays: number[];
   maxProspectsPerDay: number;
   active: boolean;
+  bookingUrl?: string;
+  autoSendProposal?: boolean;
+  bookingWebhookSecret?: string;
+  contractUrl?: string;
+  contractWebhookSecret?: string;
+  winNotificationProvider?: WinNotificationProvider;
+  winNotificationTarget?: string;
+  winNotificationSecret?: string;
+  reEngageDaysAfterLoss?: number;
+  browserEnabled?: boolean;
+  browserAllowedDomains?: string;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface ContractEventRecord {
+  id: string;
+  tenantId: string;
+  botId: string;
+  prospectId: string;
+  dealId: string;
+  provider: string;
+  externalEventId?: string;
+  signerEmail: string;
+  signerName?: string;
+  signedAt?: Date;
+  status: string;
+  payload: string;
+  createdAt: Date;
+}
+
+export interface WinLossEventRecord {
+  id: string;
+  tenantId: string;
+  botId: string;
+  prospectId: string;
+  dealId: string;
+  outcome: 'won' | 'lost';
+  dealValue?: number;
+  currency: string;
+  daysToClose?: number;
+  notifiedAt?: Date;
+  createdAt: Date;
+}
+
+export interface WinLossNotification {
+  outcome: 'won' | 'lost';
+  dealId: string;
+  prospectName: string;
+  company: string;
+  dealValue?: number;
+  currency: string;
+  daysToClose?: number;
+  tenantId: string;
+  botId: string;
+}
+
+// ============================================================================
+// BOOKING / MEETING WORKFLOW TYPES
+// ============================================================================
+
+export interface BookingWebhookPayload {
+  event: string;
+  bookingId?: string;
+  guestEmail?: string;
+  guestName?: string;
+  meetingTitle?: string;
+  scheduledAt?: string;
+  cancelledAt?: string;
+  prospectId?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface BookingEventRecord {
+  id: string;
+  tenantId: string;
+  prospectId?: string;
+  botId?: string;
+  bookingProvider: string;
+  externalId?: string;
+  scheduledAt?: Date;
+  guestEmail?: string;
+  guestName?: string;
+  meetingTitle?: string;
+  meetingSessionId?: string;
+  status: string;
+  rawPayload?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface PreMeetingBrief {
+  prospectId: string;
+  tenantId: string;
+  prospectName: string;
+  company: string;
+  title?: string;
+  recentInteractions: Array<{
+    activityType: string;
+    subject: string;
+    outcome?: string;
+    completedAt?: string;
+  }>;
+  openDealValue?: number;
+  dealStage?: string;
+  suggestedTopics: string[];
+  riskSignals: string[];
+  generatedAt: string;
 }
 
 // ============================================================================
@@ -2223,7 +2367,13 @@ export type ProspectStatus =
   | 'engaged'
   | 'qualified'
   | 'disqualified'
-  | 'converted';
+  | 'converted'
+  | 'nurture'
+  | 'replied'
+  | 'meeting_booked'
+  | 'proposal_sent'
+  | 'closed_won'
+  | 'closed_lost';
 
 export type DealStage =
   | 'discovery'
@@ -2239,7 +2389,19 @@ export type SalesActivityType =
   | 'linkedin_message'
   | 'follow_up'
   | 'demo'
-  | 'proposal_sent';
+  | 'proposal_sent'
+  | 'email_replied'
+  | 'meeting_booked'
+  | 'contract_sent'
+  | 'contract_signed'
+  | 'crm_updated'
+  | 'lead_found'
+  | 'lead_enriched'
+  | 'objection_handled'
+  | 'handoff_sent'
+  | 'email_sent'
+  | 'note'
+  | 'browser_task';
 
 export interface ProspectRecord {
   id: string;
@@ -2259,6 +2421,7 @@ export interface ProspectRecord {
   qualified: boolean;
   status: ProspectStatus;
   notes: string | null;
+  sequenceStep: number;
   lastContactedAt: Date | null;
   nextFollowUpAt: Date | null;
   createdAt: Date;
@@ -2274,9 +2437,12 @@ export interface SalesDealRecord {
   value: number | null;
   currency: string;
   stage: DealStage;
+  probability?: number | null;
   notes: string | null;
   expectedCloseDate: Date | null;
   closedAt: Date | null;
+  contractSentAt?: Date | null;
+  contractSignedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -2295,5 +2461,74 @@ export interface SalesActivityRecord {
   completedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface SalesSequenceEntryRecord {
+  id: string;
+  tenantId: string;
+  botId: string;
+  prospectId: string;
+  sequenceStep: number;
+  scheduledFor: string;
+  sentAt?: string;
+  skipped: boolean;
+  skipReason?: string;
+  subject?: string;
+  activityId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ============================================================================
+// BROWSER TASK TYPES (2026-05)
+// Sales browser automation — fire-and-forget task lifecycle
+// ============================================================================
+
+export interface BrowserStep {
+  action: string;        // e.g. "navigate", "click", "type", "extract", "screenshot"
+  target?: string;       // CSS selector or URL
+  value?: string;        // text to type or data extracted
+  screenshotUrl?: string;
+  ok: boolean;
+  errorMessage?: string;
+  durationMs?: number;
+  timestamp: string;     // ISO
+}
+
+export interface BrowserTaskRecord {
+  id: string;
+  tenantId: string;
+  botId: string;
+  prospectId?: string | null;
+  dealId?: string | null;
+  goal: string;
+  allowedDomain?: string | null;
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  steps: BrowserStep[];
+  result?: string | null;
+  errorMessage?: string | null;
+  startedAt?: Date | null;
+  completedAt?: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface BrowserTaskRequest {
+  tenantId: string;
+  botId: string;
+  prospectId?: string;
+  dealId?: string;
+  goal: string;
+}
+
+export interface BrowserStepResponse {
+  action: string;
+  target?: string;
+  value?: string;
+  screenshotUrl?: string;
+  ok: boolean;
+  errorMessage?: string;
+  durationMs?: number;
+  timestamp: string;
 }
 

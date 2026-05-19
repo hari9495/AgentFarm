@@ -20,6 +20,19 @@ function makePrisma(jobs: MockJob[] = [MOCK_JOB]) {
     };
 }
 
+/** Status-aware Prisma mock: returns different job lists for queued vs cleanup_pending. */
+function makePrismaStatusAware(queuedJobs: { id: string }[], cleanupJobs: { id: string }[]) {
+    return {
+        provisioningJob: {
+            findMany: async (args: { where?: { status?: string } }) => {
+                const status = args?.where?.status;
+                if (status === "cleanup_pending") return cleanupJobs;
+                return queuedJobs;
+            },
+        },
+    };
+}
+
 function makeProcessor(result = PROCESS_ONCE_OK) {
     let calls = 0;
     return {
@@ -189,3 +202,49 @@ test("each poll cycle calls processOnce() exactly once regardless of job count",
         `processOnce should not be called once-per-job; got ${processor.callCount} calls`,
     );
 });
+
+// ---------------------------------------------------------------------------
+// Test 8 — cleanup_pending-only jobs trigger processOnce() (Sprint 10 fix)
+// ---------------------------------------------------------------------------
+
+test("cleanup_pending-only jobs (no queued jobs) still trigger processor.processOnce()", async () => {
+    const processor = makeProcessor();
+    const consumer = new ProvisioningQueueConsumer(
+        makePrismaStatusAware(
+            [],                      // 0 queued jobs
+            [{ id: "cleanup-1" }],   // 1 cleanup_pending job
+        ) as any,
+        processor as any,
+        { PROVISIONING_POLL_INTERVAL_MS: "9999999", PROVISIONING_BATCH_SIZE: "3" },
+    );
+
+    await consumer.pollOnce();
+
+    assert.equal(
+        processor.callCount,
+        1,
+        "processOnce must be called when cleanup_pending jobs exist, even if queued is empty",
+    );
+});
+
+// ---------------------------------------------------------------------------
+// Test 9 — truly empty queues (both queued and cleanup_pending = 0) skip processOnce()
+// ---------------------------------------------------------------------------
+
+test("empty queued AND empty cleanup_pending does not call processor.processOnce()", async () => {
+    const processor = makeProcessor();
+    const consumer = new ProvisioningQueueConsumer(
+        makePrismaStatusAware([], []) as any,
+        processor as any,
+        { PROVISIONING_POLL_INTERVAL_MS: "9999999" },
+    );
+
+    await consumer.pollOnce();
+
+    assert.equal(
+        processor.callCount,
+        0,
+        "processOnce must not be called when both queued and cleanup_pending queues are empty",
+    );
+});
+

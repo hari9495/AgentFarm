@@ -15,6 +15,16 @@ export class MailgunEmailProvider implements IEmailProvider {
         form.append('subject', params.subject);
         form.append('html', params.body);
 
+        if (params.attachments && params.attachments.length > 0) {
+            for (const att of params.attachments) {
+                const arrayBuffer = att.content.buffer.slice(
+                    att.content.byteOffset,
+                    att.content.byteOffset + att.content.byteLength,
+                ) as ArrayBuffer;
+                form.append('attachment', new Blob([arrayBuffer], { type: att.contentType }), att.filename);
+            }
+        }
+
         const res = await fetch(`https://api.mailgun.net/v3/${domain}/messages`, {
             method: 'POST',
             headers: { Authorization: `Basic ${auth}` },

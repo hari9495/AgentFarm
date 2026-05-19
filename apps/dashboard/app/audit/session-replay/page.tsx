@@ -1,5 +1,6 @@
 import { SessionReplayLoader } from '../../components/session-replay-loader';
 import { SessionIndexPanel } from '../../components/session-index-panel';
+import { PageHeader } from '../../components/page-header';
 
 export default async function SessionReplayPage({
     searchParams,
@@ -11,24 +12,24 @@ export default async function SessionReplayPage({
 
     if (!sessionId) {
         return (
-            <main className="page-shell" style={{ maxWidth: 1100 }}>
-                <header className="hero" style={{ marginBottom: '0.55rem' }}>
-                    <p className="eyebrow">Observability</p>
-                    <h1>Session Replay</h1>
-                    <p>Recent Sessions — click a row to replay</p>
-                </header>
+            <main className="page-shell">
+                <PageHeader
+                    eyebrow="Observability"
+                    title="Session Replay"
+                    description="Recent Sessions — click a row to replay"
+                />
                 <SessionIndexPanel />
             </main>
         );
     }
 
     return (
-        <main className="page-shell" style={{ maxWidth: 1200 }}>
-            <header className="hero" style={{ marginBottom: '0.55rem' }}>
-                <p className="eyebrow">Observability</p>
-                <h1>Session Replay</h1>
-                <p>Inspect every captured browser or desktop action for this session.</p>
-            </header>
+        <main className="page-shell">
+            <PageHeader
+                eyebrow="Observability"
+                title="Session Replay"
+                description="Inspect every captured browser or desktop action for this session."
+            />
             <SessionReplayLoader sessionId={sessionId} />
         </main>
     );

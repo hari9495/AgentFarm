@@ -1,7 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import Fastify from 'fastify';
-import { hashPassword } from '../lib/password.js';
 import { verifySessionToken } from '../lib/session-auth.js';
 import { registerAuthRoutes, type AuthRepo } from './auth.js';
 
@@ -237,7 +236,6 @@ test('POST /auth/login — 200 returns token for correct credentials', async () 
 
     // Pre-seed a user with a known password
     const pw = 'correctPassword1';
-    const hash = await hashPassword(pw);
     (repo as unknown as { findUserByEmail: unknown }).findUserByEmail;
     // Insert directly into the in-memory store by calling signup route
     await app.inject({

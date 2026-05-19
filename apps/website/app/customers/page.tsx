@@ -4,7 +4,7 @@ import { ArrowRight, Bot, Building2, Quote, Star, TrendingUp } from "lucide-reac
 
 export const metadata: Metadata = {
     title: "Customers - AgentFarm",
-    description: "See how engineering teams are shipping more with AI workers from AgentFarm.",
+    description: "See how companies across every department are getting more done with AI workers from AgentFarm.",
 };
 
 const logos = [
@@ -19,10 +19,10 @@ const logos = [
 ];
 
 const stats = [
-    { value: "40–60%", label: "More features shipped per quarter" },
-    { value: "8.2×", label: "Faster vulnerability detection" },
-    { value: "78%", label: "First-pass acceptance rate" },
-    { value: "< 10 min", label: "Time to deploy first agent" },
+    { value: "40–60%", label: "More output shipped per quarter" },
+    { value: "8.2×", label: "Faster issue detection and resolution" },
+    { value: "78%", label: "First-pass task acceptance rate" },
+    { value: "< 10 min", label: "Time to deploy first AI worker" },
 ];
 
 const caseStudies = [
@@ -31,16 +31,16 @@ const caseStudies = [
         initials: "SL",
         accentBg: "bg-[var(--accent-blue)]/10",
         accentColor: "text-[var(--accent-blue)]",
-        tagline: "API platform · 24 engineers",
+        tagline: "API platform · 24-person team",
         challenge: "Stack Labs was drowning in security backlog. Their two-person security team couldn't keep up with CVE triage, dependency audits, and IAM reviews across 40+ services.",
-        outcome: "After deploying AgentFarm's security engineer, mean time to vulnerability detection dropped from 11 days to 4 hours. The human security engineers shifted entirely to threat modelling and architecture review.",
+        outcome: "After deploying AgentFarm's Developer + Tester agent pair, mean time to vulnerability detection dropped from 11 days to 4 hours. The human security engineers shifted entirely to threat modelling and architecture review.",
         metrics: [
             { label: "Detection time", before: "11 days", after: "4 hours" },
             { label: "CVEs resolved/month", before: "8", after: "47" },
             { label: "Sec team hours on triage", before: "60%", after: "10%" },
         ],
-        quote: "Our security engineers stopped being CVE janitors and started doing actual security work. That alone justified the cost.",
-        quoteAuthor: "Head of Security, Stack Labs",
+        quote: "Our engineers stopped being CVE janitors and started doing actual architecture work. That alone justified the cost.",
+        quoteAuthor: "Head of Engineering, Stack Labs",
         pdfLabel: "Stack Labs case study",
     },
     {
@@ -48,9 +48,9 @@ const caseStudies = [
         initials: "QI",
         accentBg: "bg-[var(--accent-green)]/10",
         accentColor: "text-[var(--accent-green)]",
-        tagline: "Data platform · 11 engineers",
+        tagline: "Data platform · 11-person team",
         challenge: "Qubit IO needed to triple their test coverage before a Series B due diligence review. Their team had six weeks and zero capacity — every engineer was heads-down on features.",
-        outcome: "The QA agent wrote 2,400 new tests over five weeks, bringing coverage from 31% to 89%. 94% of those tests passed human review without changes.",
+        outcome: "The Tester Agent wrote 2,400 new tests over five weeks, bringing coverage from 31% to 89%. 94% of those tests passed human review without changes.",
         metrics: [
             { label: "Test coverage", before: "31%", after: "89%" },
             { label: "Tests authored", before: "—", after: "2,400" },
@@ -65,16 +65,16 @@ const caseStudies = [
         initials: "VA",
         accentBg: "bg-purple-500/10",
         accentColor: "text-purple-400",
-        tagline: "ML infrastructure · 19 engineers",
-        challenge: "Verdo AI's deployment pipeline was a bottleneck. Manual deploys took 3-4 hours each, required a DevOps engineer on-call, and had a 15% rollback rate.",
-        outcome: "The DevOps agent automated 80% of routine deploys, reduced average deploy time to 22 minutes, and cut the rollback rate to 3%.",
+        tagline: "ML infrastructure · 19-person team",
+        challenge: "Verdo AI's Sales team was manually updating CRM records, sending follow-up emails 2-3 days late, and missing pipeline opportunities. Hiring more SDRs wasn't in budget.",
+        outcome: "The Sales Rep Agent automated CRM updates, follow-ups, and meeting prep. Pipeline coverage tripled in 8 weeks and zero leads were missed during the agent's first quarter.",
         metrics: [
-            { label: "Deploy time", before: "3-4 hours", after: "22 minutes" },
-            { label: "Rollback rate", before: "15%", after: "3%" },
-            { label: "Deploys/week", before: "4", after: "27" },
+            { label: "Pipeline coverage", before: "1×", after: "3×" },
+            { label: "Missed follow-ups", before: "~15/wk", after: "0" },
+            { label: "SDR time on admin", before: "60%", after: "15%" },
         ],
-        quote: "We went from 4 deploys a week to 27 without any increase in incidents. The agent handles the routine deploys and escalates anything unusual.",
-        quoteAuthor: "VP Engineering, Verdo AI",
+        quote: "We went from missing half our follow-ups to zero. The agent handles the CRM and scheduling — our reps close.",
+        quoteAuthor: "VP Sales, Verdo AI",
         pdfLabel: "Verdo AI case study",
     },
 ];
@@ -88,15 +88,15 @@ const testimonials = [
     },
     {
         text: "The approvals system is what made this safe to deploy. Agents do the work; humans control the risk. That's the right tradeoff.",
-        author: "Head of Platform",
+        author: "Head of Operations",
         company: "Fintech startup",
-        initials: "HP",
+        initials: "HO",
     },
     {
-        text: "We were planning to hire 3 QA engineers. We deployed the QA agent instead. That's 3 headcount we can invest elsewhere.",
-        author: "Engineering Manager",
-        company: "Developer tools company",
-        initials: "EM",
+        text: "We hired a Sales Rep Agent and a Customer Support Agent in the same week. It felt like onboarding two new employees — except they were running by end of day.",
+        author: "CEO",
+        company: "Early-stage startup",
+        initials: "CE",
     },
 ];
 
@@ -111,11 +111,11 @@ export default function CustomersPage() {
                         <Building2 className="w-3.5 h-3.5" /> Customer stories
                     </div>
                     <h1 className="text-4xl sm:text-5xl font-semibold tracking-[-0.03em] text-[var(--ink)] mb-6 leading-tight">
-                        Engineering teams shipping<br className="hidden sm:block" />
-                        <span className="bg-gradient-to-r from-[var(--accent-blue)] to-[var(--accent-green)] bg-clip-text text-transparent"> more with AgentFarm</span>
+                        Companies getting more done<br className="hidden sm:block" />
+                        <span className="bg-gradient-to-r from-[var(--accent-blue)] to-[var(--accent-green)] bg-clip-text text-transparent"> with AgentFarm AI workers</span>
                     </h1>
                     <p className="text-lg text-[var(--mute)] max-w-2xl mx-auto mb-10">
-                        From security backlogs to deployment velocity, see how teams are using AI workers to multiply output without multiplying headcount.
+                        From engineering velocity to sales pipeline to support capacity — see how teams are using AI workers to multiply output without multiplying headcount.
                     </p>
                     <Link href="/signup" className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-[var(--accent-blue)] text-[#07080a] font-semibold text-sm hover:bg-[#8dd7ff] transition-all">
                         Start free trial <ArrowRight className="w-4 h-4" />
@@ -138,7 +138,7 @@ export default function CustomersPage() {
             {/* Logo wall */}
             <div className="py-14 border-b border-[var(--hairline)]">
                 <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-                    <p className="chip chip-accent mx-auto w-fit mb-8">Trusted by engineering teams</p>
+                    <p className="chip chip-accent mx-auto w-fit mb-8">Trusted by teams across every department</p>
                     <div className="flex flex-wrap justify-center gap-4">
                         {logos.map((logo) => (
                             <div key={logo.name} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[var(--hairline)] bg-[var(--surface-card)]">
@@ -158,7 +158,7 @@ export default function CustomersPage() {
                     <div className="chip chip-accent mb-4">
                         <TrendingUp className="w-3.5 h-3.5" /> Case studies
                     </div>
-                    <h2 className="text-3xl font-semibold tracking-[-0.03em] text-[var(--ink)]">Real outcomes, real teams</h2>
+                    <h2 className="text-3xl font-semibold tracking-[-0.03em] text-[var(--ink)] mb-4">Real AI workers. Real outcomes. Real teams.</h2>
                 </div>
 
                 {caseStudies.map((cs) => (
@@ -252,8 +252,8 @@ export default function CustomersPage() {
             {/* CTA */}
             <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
                 <Bot className="w-10 h-10 mx-auto mb-4 text-[var(--accent-blue)]" />
-                <h2 className="text-3xl font-semibold tracking-[-0.03em] text-[var(--ink)] mb-4">Ready to see what your team can do?</h2>
-                <p className="text-[var(--mute)] mb-8 max-w-xl mx-auto">Deploy your first AI engineer in under 10 minutes. No credit card required.</p>
+                <h2 className="text-3xl font-semibold tracking-[-0.03em] text-[var(--ink)] mb-4">Ready to staff your first AI worker?</h2>
+                <p className="text-[var(--mute)] mb-8 max-w-xl mx-auto">Deploy your first AI worker in under 10 minutes. No credit card required.</p>
                 <div className="flex flex-wrap justify-center gap-4">
                     <Link href="/signup" className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-[var(--accent-blue)] text-[#07080a] font-semibold text-sm hover:bg-[#8dd7ff] transition-all">
                         Start free trial <ArrowRight className="w-4 h-4" />

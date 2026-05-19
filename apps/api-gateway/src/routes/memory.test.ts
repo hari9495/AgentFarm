@@ -256,3 +256,198 @@ test('GET /v1/memory/search — returns 502 when upstream errors', async () => {
         await app.close();
     }
 });
+
+// ===========================================================================
+// Tests: POST /v1/episodic-memory/search
+// ===========================================================================
+
+const stubEmbed = async (_text: string): Promise<number[]> =>
+    Array<number>(1536).fill(0.1);
+
+const fakeEpisodicSearchRow = {
+    id: 'ep-1',
+    tenantId: 'tenant-1',
+    workspaceId: 'ws-1',
+    botId: null as string | null,
+    pattern: 'code-review',
+    summary: 'Reviewed PR #42',
+    embeddingModel: 'text-embedding-3-small',
+    confidence: 0.85,
+    observedCount: 3,
+    lastSeen: new Date('2026-05-01'),
+    createdAt: new Date('2026-04-01'),
+    similarity: 0.91,
+};
+
+const fakeEpisodicWriteRow = {
+    id: 'ep-2',
+    tenantId: 'tenant-1',
+    workspaceId: 'ws-1',
+    botId: null as string | null,
+    pattern: 'deploy-hotfix',
+    summary: 'Deployed hotfix to production',
+    embeddingModel: 'text-embedding-3-small',
+    confidence: 0.9,
+    observedCount: 1,
+    lastSeen: new Date('2026-05-10'),
+    createdAt: new Date('2026-05-10'),
+};
+
+function makePrismaForEpisodicSearch(): PrismaClient {
+    return {
+        ...makePrisma(),
+        $queryRaw: async () => [fakeEpisodicSearchRow],
+    } as unknown as PrismaClient;
+}
+
+function makePrismaForEpisodicWrite(): PrismaClient {
+    return {
+        ...makePrisma(),
+        $queryRaw: async () => [fakeEpisodicWriteRow],
+    } as unknown as PrismaClient;
+}
+
+test('POST /v1/episodic-memory/search — no session → 401', async () => {
+    const app = Fastify({ logger: false });
+    await registerMemoryRoutes(app, makePrisma(), { getSession: () => null, embedFn: stubEmbed });
+    try {
+        const res = await app.inject({
+            method: 'POST',
+            url: '/v1/episodic-memory/search',
+            payload: { tenantId: 'tenant-1', workspaceId: 'ws-1', queryText: 'test' },
+        });
+        assert.equal(res.statusCode, 401);
+        assert.equal(res.json<{ error: string }>().error, 'unauthorized');
+    } finally {
+        await app.close();
+    }
+});
+
+test('POST /v1/episodic-memory/search — no embedFn → 503', async () => {
+    const app = Fastify({ logger: false });
+    await registerMemoryRoutes(app, makePrisma(), { getSession: () => makeSession(), embedFn: null });
+    try {
+        const res = await app.inject({
+            method: 'POST',
+            url: '/v1/episodic-memory/search',
+            payload: { tenantId: 'tenant-1', workspaceId: 'ws-1', queryText: 'test' },
+        });
+        assert.equal(res.statusCode, 503);
+    } finally {
+        await app.close();
+    }
+});
+
+test('POST /v1/episodic-memory/search — missing required fields → 400', async () => {
+    const app = Fastify({ logger: false });
+    await registerMemoryRoutes(app, makePrisma(), { getSession: () => makeSession(), embedFn: stubEmbed });
+    try {
+        const res = await app.inject({
+            method: 'POST',
+            url: '/v1/episodic-memory/search',
+            payload: { tenantId: 'tenant-1' },
+        });
+        assert.equal(res.statusCode, 400);
+    } finally {
+        await app.close();
+    }
+});
+
+test('POST /v1/episodic-memory/search — success → 200 with results', async () => {
+    const app = Fastify({ logger: false });
+    await registerMemoryRoutes(app, makePrismaForEpisodicSearch(), {
+        getSession: () => makeSession(),
+        embedFn: stubEmbed,
+    });
+    try {
+        const res = await app.inject({
+            method: 'POST',
+            url: '/v1/episodic-memory/search',
+            payload: { tenantId: 'tenant-1', workspaceId: 'ws-1', queryText: 'code review' },
+        });
+        assert.equal(res.statusCode, 200);
+        const body = res.json<{ results: unknown[]; count: number }>();
+        assert.equal(body.count, 1);
+        assert.equal(body.results.length, 1);
+    } finally {
+        await app.close();
+    }
+});
+
+// ===========================================================================
+// Tests: POST /v1/episodic-memory/write
+// ===========================================================================
+
+test('POST /v1/episodic-memory/write — no session → 401', async () => {
+    const app = Fastify({ logger: false });
+    await registerMemoryRoutes(app, makePrisma(), { getSession: () => null, embedFn: stubEmbed });
+    try {
+        const res = await app.inject({
+            method: 'POST',
+            url: '/v1/episodic-memory/write',
+            payload: { tenantId: 'tenant-1', workspaceId: 'ws-1', summary: 'Did a thing', pattern: 'code-review' },
+        });
+        assert.equal(res.statusCode, 401);
+        assert.equal(res.json<{ error: string }>().error, 'unauthorized');
+    } finally {
+        await app.close();
+    }
+});
+
+test('POST /v1/episodic-memory/write — no embedFn → 503', async () => {
+    const app = Fastify({ logger: false });
+    await registerMemoryRoutes(app, makePrisma(), { getSession: () => makeSession(), embedFn: null });
+    try {
+        const res = await app.inject({
+            method: 'POST',
+            url: '/v1/episodic-memory/write',
+            payload: { tenantId: 'tenant-1', workspaceId: 'ws-1', summary: 'Did a thing', pattern: 'code-review' },
+        });
+        assert.equal(res.statusCode, 503);
+    } finally {
+        await app.close();
+    }
+});
+
+test('POST /v1/episodic-memory/write — missing required fields → 400', async () => {
+    const app = Fastify({ logger: false });
+    await registerMemoryRoutes(app, makePrisma(), { getSession: () => makeSession(), embedFn: stubEmbed });
+    try {
+        const res = await app.inject({
+            method: 'POST',
+            url: '/v1/episodic-memory/write',
+            payload: { tenantId: 'tenant-1', workspaceId: 'ws-1' },
+        });
+        assert.equal(res.statusCode, 400);
+    } finally {
+        await app.close();
+    }
+});
+
+test('POST /v1/episodic-memory/write — success → 201 with record', async () => {
+    const app = Fastify({ logger: false });
+    await registerMemoryRoutes(app, makePrismaForEpisodicWrite(), {
+        getSession: () => makeSession(),
+        embedFn: stubEmbed,
+        embeddingDeployment: 'text-embedding-3-small',
+    });
+    try {
+        const res = await app.inject({
+            method: 'POST',
+            url: '/v1/episodic-memory/write',
+            payload: {
+                tenantId: 'tenant-1',
+                workspaceId: 'ws-1',
+                summary: 'Deployed hotfix to production',
+                pattern: 'deploy-hotfix',
+                confidence: 0.9,
+            },
+        });
+        assert.equal(res.statusCode, 201);
+        const body = res.json<{ record: { id: string; pattern: string } }>();
+        assert.equal(body.record.id, 'ep-2');
+        assert.equal(body.record.pattern, 'deploy-hotfix');
+    } finally {
+        await app.close();
+    }
+});

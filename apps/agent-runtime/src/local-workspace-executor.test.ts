@@ -954,7 +954,7 @@ test('workspace_rename_symbol errors when old_name or new_name missing', async (
 
 test('workspace_rename_symbol renames a symbol across a file', async () => {
     const { executeLocalWorkspaceAction, getWorkspaceDir } = await import('./local-workspace-executor.js');
-    const { writeFile, mkdir, readFile } = await import('node:fs/promises');
+    const { writeFile, mkdir } = await import('node:fs/promises');
     const { join: pjoin } = await import('node:path');
 
     const tenantId = 'tenant-rename';
@@ -3389,4 +3389,149 @@ test('workspace_slack_notify requires message', async () => {
             delete process.env['SLACK_BOT_TOKEN'];
         }
     }
+});
+
+// ---------------------------------------------------------------------------
+// Outbound signing — persona from _persona in payload
+// ---------------------------------------------------------------------------
+
+test('workspace_slack_notify prefixes message with persona displayName when _persona present', async () => {
+    let capturedPayload: Record<string, unknown> | null = null;
+    const mockConnector = async (input: { connectorType: string; actionType: string; payload: Record<string, unknown> }) => {
+        capturedPayload = input.payload;
+        return { ok: true, statusCode: 200 };
+    };
+    const result = await executeLocalWorkspaceAction({
+        tenantId: 'tenant-signing',
+        botId: 'bot-signing',
+        taskId: 'task-signing-slack',
+        actionType: 'workspace_slack_notify',
+        payload: {
+            channel: 'C123456',
+            message: 'Hello, world!',
+            _persona: {
+                displayName: 'Alex',
+                emailAddress: 'alex@agentfarm.ai',
+                disclosureStatement: 'This message was sent by an AI agent.',
+            },
+        },
+        connectorActionExecuteClient: mockConnector,
+    });
+    assert.equal(result.ok, true, result.errorOutput);
+    assert.ok(capturedPayload !== null, 'connector should have been called');
+    const sentMessage = (capturedPayload as Record<string, unknown>)['message'] as string;
+    assert.ok(sentMessage.startsWith('[Alex]'), `message should be prefixed with [Alex], got: ${sentMessage}`);
+    assert.ok(sentMessage.includes('Hello, world!'), 'original message content should be preserved');
+});
+
+test('workspace_slack_notify sends raw message without prefix when no _persona', async () => {
+    let capturedPayload: Record<string, unknown> | null = null;
+    const mockConnector = async (input: { connectorType: string; actionType: string; payload: Record<string, unknown> }) => {
+        capturedPayload = input.payload;
+        return { ok: true, statusCode: 200 };
+    };
+    const result = await executeLocalWorkspaceAction({
+        tenantId: 'tenant-signing',
+        botId: 'bot-signing',
+        taskId: 'task-signing-slack-nopersona',
+        actionType: 'workspace_slack_notify',
+        payload: { channel: 'C123456', message: 'Hello, world!' },
+        connectorActionExecuteClient: mockConnector,
+    });
+    assert.equal(result.ok, true, result.errorOutput);
+    const sentMessage = (capturedPayload as Record<string, unknown> | null)?.['message'] as string;
+    assert.equal(sentMessage, 'Hello, world!');
+});
+
+test('git_commit uses persona displayName and emailAddress as author fallback', async () => {
+    const { getWorkspaceDir } = await import('./local-workspace-executor.js');
+    const { writeFile, mkdir: mkdirFn } = await import('node:fs/promises');
+    const { spawn: spawnCmd } = await import('node:child_process');
+    const { join: pjoin } = await import('node:path');
+
+    const tenantId = 'tenant-commit-persona';
+    const botId = 'bot-commit-persona';
+    const workspaceKey = 'repo-commit-persona-1';
+    const wsDir = getWorkspaceDir(tenantId, botId, workspaceKey);
+    await mkdirFn(wsDir, { recursive: true });
+
+    const runGit = (args: string[]): Promise<number> =>
+        new Promise((resolve) => {
+            const proc = spawnCmd('git', args, { cwd: wsDir, stdio: 'ignore' });
+            proc.on('close', resolve);
+        });
+    await runGit(['init']);
+    await runGit(['checkout', '-b', 'main']);
+    await writeFile(pjoin(wsDir, 'base.ts'), 'export const v = 0;\n', 'utf-8');
+    await runGit(['add', '.']);
+    await runGit(['commit', '-m', 'chore: initial', '--author', 'Setup <setup@agentfarm.dev>',
+        '--env', 'GIT_AUTHOR_NAME=Setup', '--env', 'GIT_AUTHOR_EMAIL=setup@agentfarm.dev',
+        '--env', 'GIT_COMMITTER_NAME=Setup', '--env', 'GIT_COMMITTER_EMAIL=setup@agentfarm.dev']);
+    await writeFile(pjoin(wsDir, 'change.ts'), 'export const x = 1;\n', 'utf-8');
+
+    const result = await executeLocalWorkspaceAction({
+        tenantId, botId, taskId: 'task-commit-persona',
+        actionType: 'git_commit',
+        payload: {
+            workspace_key: workspaceKey,
+            message: 'feat: persona signing test',
+            _persona: {
+                displayName: 'Alex',
+                emailAddress: 'alex@agentfarm.ai',
+                disclosureStatement: 'This message was sent by an AI agent.',
+            },
+        },
+    });
+    assert.equal(result.ok, true, result.errorOutput ?? result.output);
+
+    // Verify commit author from git log
+    const { exec } = await import('node:child_process');
+    const { promisify } = await import('node:util');
+    const execAsync = promisify(exec);
+    const { stdout } = await execAsync('git log -1 --format="%an <%ae>"', { cwd: wsDir });
+    assert.equal(stdout.trim(), 'Alex <alex@agentfarm.ai>', `commit author should be persona, got: ${stdout.trim()}`);
+});
+
+test('workspace_create_pr body includes disclosure footer when _persona present', async () => {
+    const { getWorkspaceDir } = await import('./local-workspace-executor.js');
+    const { writeFile, mkdir: mkdirFn } = await import('node:fs/promises');
+    const { spawn: spawnCmd } = await import('node:child_process');
+    const { join: pjoin } = await import('node:path');
+
+    const tenantId = 'tenant-pr-persona';
+    const botId = 'bot-pr-persona';
+    const workspaceKey = 'repo-pr-persona-1';
+    const wsDir = getWorkspaceDir(tenantId, botId, workspaceKey);
+    await mkdirFn(wsDir, { recursive: true });
+
+    const runGit = (args: string[]): Promise<number> =>
+        new Promise((resolve) => {
+            const proc = spawnCmd('git', args, { cwd: wsDir, stdio: 'ignore' });
+            proc.on('close', resolve);
+        });
+    await runGit(['init']);
+    await runGit(['config', 'user.email', 'bot@agentfarm.dev']);
+    await runGit(['config', 'user.name', 'AgentFarm Bot']);
+    await runGit(['checkout', '-b', 'main']);
+    await writeFile(pjoin(wsDir, 'index.ts'), 'export const v = 1;\n', 'utf-8');
+    await runGit(['add', '.']);
+    await runGit(['commit', '-m', 'feat: initial commit']);
+
+    const result = await executeLocalWorkspaceAction({
+        tenantId, botId, taskId: 'task-pr-persona',
+        actionType: 'workspace_create_pr',
+        payload: {
+            workspace_key: workspaceKey,
+            base_branch: 'main',
+            _persona: {
+                displayName: 'Alex',
+                emailAddress: 'alex@agentfarm.ai',
+                disclosureStatement: 'This message was sent by an AI agent.',
+            },
+        },
+    });
+    assert.equal(result.ok, true, result.errorOutput);
+    const parsed = JSON.parse(result.output) as { body: string };
+    assert.ok(parsed.body.includes('alex@agentfarm.ai'), 'PR body should contain agent email');
+    assert.ok(parsed.body.includes('This message was sent by an AI agent.'), 'PR body should contain disclosure statement');
 });

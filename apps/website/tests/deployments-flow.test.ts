@@ -23,18 +23,18 @@ const createTestUser = (db: DatabaseSync, suffix: string): string => {
     return id;
 };
 
-test("deployment guardrail: onboarding must be completed before deploy request", () => {
+test("deployment guardrail: onboarding must be completed before deploy request", async () => {
     const db = new DatabaseSync(DB_PATH);
     const suffix = `${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     const userId = createTestUser(db, suffix);
 
-    saveMarketplaceSelection({
+    await saveMarketplaceSelection({
         userId,
         starterAgent: "ai-devops-engineer",
         config: { plan: "Pro+", source: "test" },
     });
 
-    const deployment = requestDeployment({
+    const deployment = await requestDeployment({
         userId,
         botSlug: "ai-devops-engineer",
         botName: "AI DevOps Engineer",
@@ -49,25 +49,25 @@ test("deployment guardrail: onboarding must be completed before deploy request",
     db.prepare("DELETE FROM users WHERE id = ?").run(userId);
 });
 
-test("deployment flow: selected agent deploy request is created and visible on dashboard lane", () => {
+test("deployment flow: selected agent deploy request is created and visible on dashboard lane", async () => {
     const db = new DatabaseSync(DB_PATH);
     const suffix = `${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     const userId = createTestUser(db, suffix);
 
-    saveMarketplaceSelection({
+    await saveMarketplaceSelection({
         userId,
         starterAgent: "ai-backend-developer",
         config: { plan: "Starter+", source: "test" },
     });
 
-    completeOnboarding({
+    await completeOnboarding({
         userId,
         githubOrg: "agentfarm-test-org",
         inviteEmail: `invite-${suffix}@agentfarm.local`,
         starterAgent: "ai-backend-developer",
     });
 
-    const deployment = requestDeployment({
+    const deployment = await requestDeployment({
         userId,
         botSlug: "ai-backend-developer",
         botName: "AI Backend Developer",
@@ -85,7 +85,7 @@ test("deployment flow: selected agent deploy request is created and visible on d
     assert.equal(deployment.job.lastActionBy, "requester@agentfarm.local");
     assert.equal(typeof deployment.job.lastActionAt, "number");
 
-    const latest = getLatestDeploymentForUser(userId);
+    const latest = await getLatestDeploymentForUser(userId);
     assert.notEqual(latest, null);
     assert.equal(latest?.id, deployment.job.id);
     assert.equal(["queued", "running", "succeeded", "failed", "canceled"].includes(String(latest?.status)), true);
@@ -93,25 +93,25 @@ test("deployment flow: selected agent deploy request is created and visible on d
     db.prepare("DELETE FROM users WHERE id = ?").run(userId);
 });
 
-test("deployment history: returns newest first with both deployment records", () => {
+test("deployment history: returns newest first with both deployment records", async () => {
     const db = new DatabaseSync(DB_PATH);
     const suffix = `${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     const userId = createTestUser(db, suffix);
 
-    saveMarketplaceSelection({
+    await saveMarketplaceSelection({
         userId,
         starterAgent: "ai-backend-developer",
         config: { plan: "Starter+", source: "test" },
     });
 
-    completeOnboarding({
+    await completeOnboarding({
         userId,
         githubOrg: "agentfarm-test-org",
         inviteEmail: `invite-history-${suffix}@agentfarm.local`,
         starterAgent: "ai-backend-developer",
     });
 
-    const first = requestDeployment({
+    const first = await requestDeployment({
         userId,
         botSlug: "ai-backend-developer",
         botName: "AI Backend Developer",
@@ -121,13 +121,13 @@ test("deployment history: returns newest first with both deployment records", ()
         assert.fail("Expected first deployment to succeed");
     }
 
-    saveMarketplaceSelection({
+    await saveMarketplaceSelection({
         userId,
         starterAgent: "ai-devops-engineer",
         config: { plan: "Starter+", source: "test" },
     });
 
-    const second = requestDeployment({
+    const second = await requestDeployment({
         userId,
         botSlug: "ai-devops-engineer",
         botName: "AI DevOps Engineer",
@@ -141,7 +141,7 @@ test("deployment history: returns newest first with both deployment records", ()
     db.prepare("UPDATE deployment_jobs SET created_at = ?, updated_at = ? WHERE id = ?").run(baseTime - 10_000, baseTime - 10_000, first.job.id);
     db.prepare("UPDATE deployment_jobs SET created_at = ?, updated_at = ? WHERE id = ?").run(baseTime - 1_000, baseTime - 1_000, second.job.id);
 
-    const history = listDeploymentsForUser(userId, 10);
+    const history = await listDeploymentsForUser(userId, 10);
     assert.equal(history.length >= 2, true);
     assert.equal(history[0]?.id, second.job.id);
     assert.equal(history[1]?.id, first.job.id);
@@ -151,25 +151,25 @@ test("deployment history: returns newest first with both deployment records", ()
     db.prepare("DELETE FROM users WHERE id = ?").run(userId);
 });
 
-test("deployment actions: cancel supports queued/running and rejects terminal states", () => {
+test("deployment actions: cancel supports queued/running and rejects terminal states", async () => {
     const db = new DatabaseSync(DB_PATH);
     const suffix = `${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     const userId = createTestUser(db, suffix);
 
-    saveMarketplaceSelection({
+    await saveMarketplaceSelection({
         userId,
         starterAgent: "ai-backend-developer",
         config: { plan: "Starter+", source: "test" },
     });
 
-    completeOnboarding({
+    await completeOnboarding({
         userId,
         githubOrg: "agentfarm-test-org",
         inviteEmail: `invite-cancel-${suffix}@agentfarm.local`,
         starterAgent: "ai-backend-developer",
     });
 
-    const deployment = requestDeployment({
+    const deployment = await requestDeployment({
         userId,
         botSlug: "ai-backend-developer",
         botName: "AI Backend Developer",
@@ -179,7 +179,7 @@ test("deployment actions: cancel supports queued/running and rejects terminal st
         assert.fail("Expected deployment request to succeed");
     }
 
-    const canceled = cancelDeployment({
+    const canceled = await cancelDeployment({
         userId,
         deploymentId: deployment.job.id,
         actorEmail: "operator@agentfarm.local",
@@ -193,7 +193,7 @@ test("deployment actions: cancel supports queued/running and rejects terminal st
     assert.equal(canceled.job.lastActionBy, "operator@agentfarm.local");
     assert.equal(typeof canceled.job.lastActionAt, "number");
 
-    const secondCancel = cancelDeployment({
+    const secondCancel = await cancelDeployment({
         userId,
         deploymentId: deployment.job.id,
     });
@@ -203,32 +203,32 @@ test("deployment actions: cancel supports queued/running and rejects terminal st
     }
     assert.equal(secondCancel.error, "not_cancelable");
 
-    const latest = getLatestDeploymentForUser(userId);
+    const latest = await getLatestDeploymentForUser(userId);
     assert.notEqual(latest, null);
     assert.equal(latest?.status, "canceled");
 
     db.prepare("DELETE FROM users WHERE id = ?").run(userId);
 });
 
-test("deployment actions: retry only supports failed and creates a new queued job", () => {
+test("deployment actions: retry only supports failed and creates a new queued job", async () => {
     const db = new DatabaseSync(DB_PATH);
     const suffix = `${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     const userId = createTestUser(db, suffix);
 
-    saveMarketplaceSelection({
+    await saveMarketplaceSelection({
         userId,
         starterAgent: "ai-backend-developer",
         config: { plan: "Starter+", source: "test" },
     });
 
-    completeOnboarding({
+    await completeOnboarding({
         userId,
         githubOrg: "agentfarm-test-org",
         inviteEmail: `invite-retry-${suffix}@agentfarm.local`,
         starterAgent: "ai-backend-developer",
     });
 
-    const deployment = requestDeployment({
+    const deployment = await requestDeployment({
         userId,
         botSlug: "ai-backend-developer",
         botName: "AI Backend Developer",
@@ -238,7 +238,7 @@ test("deployment actions: retry only supports failed and creates a new queued jo
         assert.fail("Expected deployment request to succeed");
     }
 
-    const retryBlocked = retryDeployment({
+    const retryBlocked = await retryDeployment({
         userId,
         deploymentId: deployment.job.id,
     });
@@ -251,7 +251,7 @@ test("deployment actions: retry only supports failed and creates a new queued jo
     db.prepare("UPDATE deployment_jobs SET status = ?, status_message = ?, updated_at = ? WHERE id = ?")
         .run("failed", "Provisioning failed due to quota limits.", Date.now(), deployment.job.id);
 
-    const retried = retryDeployment({
+    const retried = await retryDeployment({
         userId,
         deploymentId: deployment.job.id,
         actorEmail: "operator@agentfarm.local",
@@ -266,11 +266,11 @@ test("deployment actions: retry only supports failed and creates a new queued jo
     assert.equal(retried.job.lastActionBy, "operator@agentfarm.local");
     assert.equal(typeof retried.job.lastActionAt, "number");
 
-    const latest = getLatestDeploymentForUser(userId);
+    const latest = await getLatestDeploymentForUser(userId);
     assert.notEqual(latest, null);
     assert.equal(latest?.id, retried.job.id);
 
-    const history = listDeploymentsForUser(userId, 10);
+    const history = await listDeploymentsForUser(userId, 10);
     assert.equal(history.some((job) => job.id === deployment.job.id && job.status === "failed"), true);
     assert.equal(history.some((job) => job.id === retried.job.id && job.status === "queued"), true);
 

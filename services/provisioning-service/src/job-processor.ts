@@ -17,6 +17,12 @@ export type ProvisioningExecutionContext = {
     containerEndpoint?: string;
     bootstrapScriptBase64?: string;
     cleanupPlan?: CleanupAction[];
+    /** ID of the WorkspaceVm record that owns the shared VM for this workspace. */
+    workspaceVmId?: string;
+    /** Port on the shared VM that this bot's container is bound to. */
+    containerPort?: number;
+    /** True when the workspace already had a running VM — skip VM bootstrap, use runCommand. */
+    vmAlreadyExisted?: boolean;
 };
 
 export type CleanupAction =

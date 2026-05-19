@@ -12,8 +12,9 @@
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { PrismaClient } from '@prisma/client';
-import { MemoryStore } from '@agentfarm/memory-service';
-import type { MemoryWriteRequest, MemoryReadResponse, LongTermMemoryWriteRequest } from '@agentfarm/memory-service';
+import { MemoryStore, searchEpisodicMemory, writeEpisodicMemory } from '@agentfarm/memory-service';
+import type { MemoryWriteRequest, MemoryReadResponse, LongTermMemoryWriteRequest, EmbedFn } from '@agentfarm/memory-service';
+import type { EpisodicSearchRequest, EpisodicWriteRequest } from '@agentfarm/shared-types';
 
 type SessionContext = {
     userId: string;
@@ -25,11 +26,15 @@ type SessionContext = {
 export type RegisterMemoryRoutesOptions = {
     getSession: (request: FastifyRequest) => SessionContext | null;
     fetch?: typeof globalThis.fetch;
+    embedFn?: EmbedFn | null;
+    embeddingDeployment?: string;
 };
 
 export async function registerMemoryRoutes(app: FastifyInstance, prisma: PrismaClient, options?: RegisterMemoryRoutesOptions) {
     const memoryStore = new MemoryStore(prisma);
     const getSession = options?.getSession ?? (() => null);
+    const embedFn = options?.embedFn ?? null;
+    const embeddingDeployment = options?.embeddingDeployment ?? 'text-embedding-3-small';
 
     // Register route at both /v1/ (auth-protected by middleware) and /api/v1/ (deprecated alias — will be removed in v2)
     const on = (m: 'get' | 'post' | 'patch' | 'delete', p: string, h: (req: FastifyRequest, res: FastifyReply) => Promise<unknown>) => {
@@ -245,6 +250,69 @@ export async function registerMemoryRoutes(app: FastifyInstance, prisma: PrismaC
             return res.send(body);
         } catch {
             return res.status(502).send({ error: 'agent-runtime unreachable' });
+        }
+    });
+
+    // ========== EPISODIC MEMORY SEARCH (semantic similarity via pgvector) ==========
+    on('post', '/episodic-memory/search', async (req: FastifyRequest, res: FastifyReply) => {
+        const session = getSession(req);
+        if (!session) return res.status(401).send({ error: 'unauthorized' });
+        if (!embedFn) return res.status(503).send({ error: 'Episodic memory not configured: missing embedding provider' });
+
+        const body = req.body as Record<string, unknown>;
+        const { tenantId, botId, workspaceId, queryText, topK, minSimilarity } = body;
+
+        if (!tenantId || !workspaceId || !queryText) {
+            return res.status(400).send({ error: 'Missing required: tenantId, workspaceId, queryText' });
+        }
+
+        const request: EpisodicSearchRequest = {
+            tenantId: String(tenantId),
+            botId: typeof botId === 'string' ? botId : '',
+            workspaceId: String(workspaceId),
+            queryText: String(queryText),
+            topK: typeof topK === 'number' ? topK : undefined,
+            minSimilarity: typeof minSimilarity === 'number' ? minSimilarity : undefined,
+        };
+
+        try {
+            const results = await searchEpisodicMemory(request, embedFn, prisma);
+            return res.send({ results, count: results.length });
+        } catch (error) {
+            const msg = error instanceof Error ? error.message : 'Unknown error';
+            return res.status(500).send({ error: `Episodic memory search failed: ${msg}` });
+        }
+    });
+
+    // ========== EPISODIC MEMORY WRITE (upsert with vector embedding) ==========
+    on('post', '/episodic-memory/write', async (req: FastifyRequest, res: FastifyReply) => {
+        const session = getSession(req);
+        if (!session) return res.status(401).send({ error: 'unauthorized' });
+        if (!embedFn) return res.status(503).send({ error: 'Episodic memory not configured: missing embedding provider' });
+
+        const body = req.body as Record<string, unknown>;
+        const { tenantId, botId, workspaceId, summary, pattern, confidence, taskId } = body;
+
+        if (!tenantId || !workspaceId || !summary || !pattern) {
+            return res.status(400).send({ error: 'Missing required: tenantId, workspaceId, summary, pattern' });
+        }
+
+        const request: EpisodicWriteRequest = {
+            tenantId: String(tenantId),
+            botId: typeof botId === 'string' ? botId : '',
+            workspaceId: String(workspaceId),
+            summary: String(summary),
+            pattern: String(pattern),
+            confidence: typeof confidence === 'number' ? confidence : 0.7,
+            taskId: typeof taskId === 'string' ? taskId : '',
+        };
+
+        try {
+            const record = await writeEpisodicMemory(request, embedFn, prisma, embeddingDeployment);
+            return res.status(201).send({ record });
+        } catch (error) {
+            const msg = error instanceof Error ? error.message : 'Unknown error';
+            return res.status(500).send({ error: `Episodic memory write failed: ${msg}` });
         }
     });
 }

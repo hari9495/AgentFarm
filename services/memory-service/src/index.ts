@@ -17,3 +17,11 @@ export {
   InMemoryMemoryStore,
 } from './memory-store.js';
 export type { InMemoryAuditEvent } from './memory-store.js';
+// Sprint 4 — pgvector Episodic Memory
+export { createEmbedFn } from './embedding-service.js';
+export type { EmbeddingServiceConfig, EmbedFn } from './embedding-service.js';
+export { writeEpisodicMemory } from './episodic-write-hook.js';
+export { searchEpisodicMemory } from './episodic-read-hook.js';
+// Sprint 9 — Semantic Memory / Company Knowledge RAG
+export { writeSemanticMemory } from './semantic-write-hook.js';
+export { searchSemanticMemory } from './semantic-search-hook.js';

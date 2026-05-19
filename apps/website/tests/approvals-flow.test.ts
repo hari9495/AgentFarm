@@ -11,11 +11,11 @@ import {
 
 const DB_PATH = process.env.WEBSITE_AUTH_DB_PATH ?? ".auth.sqlite";
 
-test("approval vertical slice: request -> pending -> decision -> activity", () => {
+test("approval vertical slice: request -> pending -> decision -> activity", async () => {
     const suffix = `${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     const db = new DatabaseSync(DB_PATH);
 
-    const created = createApprovalRequest({
+    const created = await createApprovalRequest({
         title: `Deploy production change ${suffix}`,
         agentSlug: "ai-devops-engineer",
         agent: "AI DevOps Engineer",
@@ -29,14 +29,14 @@ test("approval vertical slice: request -> pending -> decision -> activity", () =
 
     assert.equal(created.status, "pending");
 
-    const pending = listApprovals({ status: "pending", agentSlug: "ai-devops-engineer" });
+    const pending = await listApprovals({ status: "pending", agentSlug: "ai-devops-engineer" });
     assert.equal(
         pending.some((item) => item.id === created.id),
         true,
         "created request should appear in pending approvals",
     );
 
-    const decided = updateApprovalDecision({
+    const decided = await updateApprovalDecision({
         id: created.id,
         decision: "approved",
         decidedBy: "reviewer@agentfarm.local",
@@ -48,21 +48,21 @@ test("approval vertical slice: request -> pending -> decision -> activity", () =
     assert.equal(decided?.decisionReason, "Reviewed rollout scope and deployment blast radius.");
     assert.equal(typeof decided?.decisionLatencySeconds, "number");
 
-    const pendingAfter = listApprovals({ status: "pending", agentSlug: "ai-devops-engineer" });
+    const pendingAfter = await listApprovals({ status: "pending", agentSlug: "ai-devops-engineer" });
     assert.equal(
         pendingAfter.some((item) => item.id === created.id),
         false,
         "approved request should no longer remain in pending list",
     );
 
-    const approved = listApprovals({ status: "approved", agentSlug: "ai-devops-engineer" });
+    const approved = await listApprovals({ status: "approved", agentSlug: "ai-devops-engineer" });
     assert.equal(
         approved.some((item) => item.id === created.id),
         true,
         "approved request should appear in approved list",
     );
 
-    const activity = listRecentActivity(40);
+    const activity = await listRecentActivity(40);
     assert.equal(
         activity.some((event) => event.id === `ACT-REQ-${created.id}` && event.action === "Approval requested"),
         true,
@@ -78,11 +78,11 @@ test("approval vertical slice: request -> pending -> decision -> activity", () =
     db.prepare("DELETE FROM company_audit_events WHERE target_id = ?").run(created.id);
 });
 
-test("approval vertical slice: rejection path is reflected in state and activity", () => {
+test("approval vertical slice: rejection path is reflected in state and activity", async () => {
     const suffix = `${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     const db = new DatabaseSync(DB_PATH);
 
-    const created = createApprovalRequest({
+    const created = await createApprovalRequest({
         title: `Reject risky production change ${suffix}`,
         agentSlug: "ai-security-engineer",
         agent: "AI Security Engineer",
@@ -94,7 +94,7 @@ test("approval vertical slice: rejection path is reflected in state and activity
         actorEmail: "test-suite@agentfarm.local",
     });
 
-    const rejected = updateApprovalDecision({
+    const rejected = await updateApprovalDecision({
         id: created.id,
         decision: "rejected",
         decidedBy: "reviewer@agentfarm.local",
@@ -106,21 +106,21 @@ test("approval vertical slice: rejection path is reflected in state and activity
     assert.equal(rejected?.decisionReason, "Missing rollback and incident fallback plan.");
     assert.equal(typeof rejected?.decisionLatencySeconds, "number");
 
-    const pendingAfter = listApprovals({ status: "pending", agentSlug: "ai-security-engineer" });
+    const pendingAfter = await listApprovals({ status: "pending", agentSlug: "ai-security-engineer" });
     assert.equal(
         pendingAfter.some((item) => item.id === created.id),
         false,
         "rejected request should not remain in pending list",
     );
 
-    const rejectedList = listApprovals({ status: "rejected", agentSlug: "ai-security-engineer" });
+    const rejectedList = await listApprovals({ status: "rejected", agentSlug: "ai-security-engineer" });
     assert.equal(
         rejectedList.some((item) => item.id === created.id),
         true,
         "rejected request should appear in rejected list",
     );
 
-    const activity = listRecentActivity(40);
+    const activity = await listRecentActivity(40);
     assert.equal(
         activity.some(
             (event) =>
@@ -136,11 +136,11 @@ test("approval vertical slice: rejection path is reflected in state and activity
     db.prepare("DELETE FROM company_audit_events WHERE target_id = ?").run(created.id);
 });
 
-test("approval vertical slice: pending approvals escalate after timeout", () => {
+test("approval vertical slice: pending approvals escalate after timeout", async () => {
     const suffix = `${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     const db = new DatabaseSync(DB_PATH);
 
-    const created = createApprovalRequest({
+    const created = await createApprovalRequest({
         title: `Escalation timeout validation ${suffix}`,
         agentSlug: "ai-devops-engineer",
         agent: "AI DevOps Engineer",
@@ -153,7 +153,7 @@ test("approval vertical slice: pending approvals escalate after timeout", () => 
         escalationTimeoutSeconds: 60,
     });
 
-    const result = escalatePendingApprovals({
+    const result = await escalatePendingApprovals({
         actorId: "test-suite",
         actorEmail: "test-suite@agentfarm.local",
         nowTs: created.createdAt + 61_000,
@@ -161,7 +161,7 @@ test("approval vertical slice: pending approvals escalate after timeout", () => 
 
     assert.equal(result.escalatedIds.includes(created.id), true);
 
-    const refreshed = listApprovals({ status: "pending", agentSlug: "ai-devops-engineer", limit: 100 })
+    const refreshed = (await listApprovals({ status: "pending", agentSlug: "ai-devops-engineer", limit: 100 }))
         .find((item) => item.id === created.id);
 
     assert.notEqual(refreshed, undefined);

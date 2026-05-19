@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { PageHeader } from '../../components/page-header';
 import { InternalSkillCatalogPanel } from '../../components/internal-skill-catalog-panel';
 
 type SearchParams = {
@@ -20,11 +21,11 @@ export default async function InternalSkillCatalogPage({ searchParams }: { searc
 
     return (
         <main className="page-shell" style={{ maxWidth: 980 }}>
-            <header className="hero" style={{ marginBottom: '0.3rem' }}>
-                <p className="eyebrow">Internal Operations</p>
-                <h1>Skill Catalog Manager</h1>
-                <p>Create managed skills and publish entitlements so customer agents only see allowed installs.</p>
-            </header>
+            <PageHeader
+                eyebrow="Internal Operations"
+                title="Skill Catalog Manager"
+                description="Create managed skills and publish entitlements so customer agents only see allowed installs."
+            />
 
             <div style={{ display: 'flex', gap: '0.55rem', flexWrap: 'wrap' }}>
                 <Link href={`/?workspaceId=${encodeURIComponent(workspaceId)}&tab=overview`} className="secondary-action" style={{ textDecoration: 'none' }}>

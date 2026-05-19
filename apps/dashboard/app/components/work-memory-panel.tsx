@@ -75,7 +75,6 @@ export default function WorkMemoryPanel({ tenantId, workspaceId }: WorkMemoryPan
 
     // Daily plan state
     const [dailyPlan, setDailyPlan] = useState<DailyPlan | null>(null);
-    const [planLoading, setPlanLoading] = useState(false);
     const [planError, setPlanError] = useState<string | null>(null);
 
     // Edit state

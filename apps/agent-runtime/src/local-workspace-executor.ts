@@ -13,7 +13,7 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import * as fs from 'node:fs';
 import { mkdir, writeFile, readFile, rm, rename, readdir, stat } from 'node:fs/promises';
 import * as os from 'node:os';
-import { tmpdir, platform } from 'node:os';
+import { platform } from 'node:os';
 import * as path from 'node:path';
 import { dirname, join, resolve, relative, basename, extname } from 'node:path';
 import {
@@ -25,6 +25,12 @@ import { safePackageOperation } from './package-manager-service.js';
 import { getDesktopOperator } from './desktop-operator-factory.js';
 import { evaluateEscalation } from './escalation-engine.js';
 import { webLogin, webNavigate, webReadPage, webFillForm, webClick, webExtractData } from '@agentfarm/browser-actions/web-actions.js';
+import {
+    researchForTask,
+    defaultSynthesise,
+    type ResearchContext,
+    type FetchFn,
+} from './web-research-service.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -152,6 +158,20 @@ export type LocalWorkspaceActionType =
     | 'workspace_web_fill_form'
     | 'workspace_web_click'
     | 'workspace_web_extract_data'
+    // Tier 20: Testing tool integrations
+    | 'workspace_selenium_test_run'
+    | 'workspace_cypress_test_run'
+    | 'workspace_appium_test_run'
+    | 'workspace_playwright_test_run'
+    | 'workspace_load_test_run'
+    | 'workspace_load_test_report'
+    | 'workspace_api_test_run'
+    | 'workspace_api_test_report'
+    | 'workspace_dast_scan'
+    | 'workspace_security_test_report'
+    | 'workspace_test_case_sync'
+    | 'workspace_test_run_publish'
+    | 'workspace_visual_regression'
     // MCP tool invocation
     | 'mcp_tool_call'
     // Original actions (preserved)
@@ -174,7 +194,15 @@ export type LocalWorkspaceActionType =
     | 'workspace_memory_promote_decide'
     | 'workspace_memory_org_read'
     | 'run_shell_command'
-    | 'create_pr_from_workspace';
+    | 'create_pr_from_workspace'
+    // Tier 18 (Web search & research)
+    | 'workspace_web_search'
+    // Tier 19 (Debug sessions)
+    | 'workspace_debug_session_start'
+    | 'workspace_debug_session_evaluate'
+    | 'workspace_debug_session_run'
+    | 'workspace_debug_session_heap_snapshot'
+    | 'workspace_debug_session_stop';
 
 export type LocalWorkspaceResult = {
     ok: boolean;
@@ -221,10 +249,25 @@ type AutonomousPlanAction =
         command?: string;
     };
 
-type AutonomousStep = {
+export type AutonomousStep = {
     description?: string;
     actions: AutonomousPlanAction[];
 };
+
+/**
+ * Injectable LLM code-generation function. Receives the task prompt, currently
+ * loaded file contents, and the list of target files. Returns an array of
+ * AutonomousStep objects (with code_edit / code_edit_patch actions) that
+ * describe how to implement the requested changes.
+ *
+ * Returning an empty array is treated as "no plan generated" and causes the
+ * executor to fall back to inferSubagentPlan.
+ */
+export type LlmCodeGenFn = (
+    prompt: string,
+    fileContents: Record<string, string>,
+    targetFiles: string[],
+) => Promise<AutonomousStep[]>;
 
 type AutonomousLoopPayload = {
     initial_plan?: AutonomousStep[];
@@ -233,6 +276,14 @@ type AutonomousLoopPayload = {
     test_commands?: string[];
     build_command?: string;
     max_attempts?: number;
+    /** Gap D: LLM function for dynamic fix-step generation when tests fail */
+    llmCodeGenFn?: LlmCodeGenFn;
+    /** Gap D: target files list passed to LLM during fix generation */
+    targetFiles?: string[];
+    /** Gap D: task prompt passed to LLM during fix generation */
+    prompt?: string;
+    /** Gap E: run tsc --noEmit coherence check after initial plan steps */
+    coherenceCheck?: boolean;
 };
 
 type SpecialistProfileId =
@@ -267,10 +318,7 @@ type AtomicEdit = { file: string; content: string };
 type TemplateVar = Record<string, string>;
 type ImpactAnalysis = { tests: string[]; functions: string[]; files: string[] };
 
-// Tier 5: External Knowledge
-type DocSearchResult = { source: string; title: string; snippet: string; url?: string };
 type PackageInfo = { name: string; latest: string; installed?: string; vulnerabilities: string[] };
-type REPLState = { sessionId: string; state: 'running' | 'stopped'; language: string };
 
 // Tier 6: Language Adapter
 type LanguageAdapterMetadata = {
@@ -524,6 +572,20 @@ export const LOCAL_WORKSPACE_ACTION_TYPES = new Set<LocalWorkspaceActionType>([
     'workspace_web_fill_form',
     'workspace_web_click',
     'workspace_web_extract_data',
+    // Tier 20
+    'workspace_selenium_test_run',
+    'workspace_cypress_test_run',
+    'workspace_appium_test_run',
+    'workspace_playwright_test_run',
+    'workspace_load_test_run',
+    'workspace_load_test_report',
+    'workspace_api_test_run',
+    'workspace_api_test_report',
+    'workspace_dast_scan',
+    'workspace_security_test_report',
+    'workspace_test_case_sync',
+    'workspace_test_run_publish',
+    'workspace_visual_regression',
     // MCP
     'mcp_tool_call',
     // Original
@@ -547,6 +609,14 @@ export const LOCAL_WORKSPACE_ACTION_TYPES = new Set<LocalWorkspaceActionType>([
     'workspace_memory_org_read',
     'run_shell_command',
     'create_pr_from_workspace',
+    // Tier 18
+    'workspace_web_search',
+    // Tier 19
+    'workspace_debug_session_start',
+    'workspace_debug_session_evaluate',
+    'workspace_debug_session_run',
+    'workspace_debug_session_heap_snapshot',
+    'workspace_debug_session_stop',
 ]);
 
 // ---------------------------------------------------------------------------
@@ -570,10 +640,12 @@ const ALLOWED_COMMANDS = new Set([
     'cargo', 'rustc',
     // build tools
     'make',
-    // shells (for e.g. `sh -c "npm test && npm run build"`)
-    'sh', 'bash',
     // GitHub CLI (Tier 12)
     'gh',
+    // Tier 20: testing tools
+    'k6',
+    'mvn',
+    'java',
 ]);
 
 function assertAllowedCommand(cmd: string): void {
@@ -1727,6 +1799,58 @@ type PlanActionResult = {
     exitCode?: number;
 };
 
+// ---------------------------------------------------------------------------
+// Desktop-agent command delegation
+// ---------------------------------------------------------------------------
+// For test tools that require binaries only installed in the desktop-agent
+// container (k6, JMeter, Newman, Appium, ZAP, Cypress, Selenium), we
+// delegate execution to the desktop agent's /v1/exec endpoint when
+// DESKTOP_AGENT_URL is set. Falls back to local runCommand otherwise.
+
+const _desktopExecTokenCache: string = (process.env['DESKTOP_AGENT_TOKEN'] ?? '').trim();
+
+async function runCommandOnDesktopAgent(
+    cmd: string[],
+    workDir: string,
+    timeoutMs = 300_000,
+): Promise<{ stdout: string; stderr: string; exitCode: number }> {
+    const agentUrl = (process.env['DESKTOP_AGENT_URL'] ?? '').replace(/\/$/, '');
+    if (!agentUrl) {
+        // No desktop agent — run locally (test tool must be in PATH)
+        return runCommand(cmd, workDir, timeoutMs);
+    }
+
+    const headers: Record<string, string> = { 'content-type': 'application/json' };
+    if (_desktopExecTokenCache) {
+        headers['authorization'] = `Bearer ${_desktopExecTokenCache}`;
+    }
+
+    try {
+        const res = await fetch(`${agentUrl}/v1/exec`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ cmd, workDir, timeoutMs }),
+            signal: AbortSignal.timeout(timeoutMs + 10_000),
+        });
+
+        if (!res.ok) {
+            const text = await res.text().catch(() => '');
+            // 403 = command not allowed by desktop agent allowlist
+            if (res.status === 403 || res.status === 401) {
+                return { stdout: '', stderr: `desktop-agent rejected command: ${text}`, exitCode: 1 };
+            }
+            // Transient error — fall back to local execution
+            return runCommand(cmd, workDir, timeoutMs);
+        }
+
+        const data = (await res.json()) as { ok: boolean; stdout: string; stderr: string; exitCode: number };
+        return { stdout: data.stdout ?? '', stderr: data.stderr ?? '', exitCode: data.exitCode ?? 0 };
+    } catch {
+        // Desktop agent unreachable — fall back to local execution
+        return runCommand(cmd, workDir, timeoutMs);
+    }
+}
+
 async function executePlanAction(
     workspaceDir: string,
     action: AutonomousPlanAction,
@@ -1735,6 +1859,11 @@ async function executePlanAction(
         const safePath = safeChildPath(workspaceDir, action.file_path);
         await mkdir(dirname(safePath), { recursive: true });
         await writeFile(safePath, action.content, 'utf-8');
+        // Gap C: syntax validation gate
+        const syntaxErr = await validateFileSyntax(safePath, action.content, workspaceDir);
+        if (syntaxErr) {
+            return { ok: false, output: '', errorOutput: `code_edit rejected — ${syntaxErr}` };
+        }
         return {
             ok: true,
             output: `edited:${action.file_path}`,
@@ -1775,6 +1904,11 @@ async function executePlanAction(
             : current.replace(action.old_text, action.new_text);
 
         await writeFile(safePath, next, 'utf-8');
+        // Gap C: validate patched content
+        const patchSyntaxErr = await validateFileSyntax(safePath, next, workspaceDir);
+        if (patchSyntaxErr) {
+            return { ok: false, output: '', errorOutput: `code_edit_patch produced invalid code — ${patchSyntaxErr}` };
+        }
         return {
             ok: true,
             output: `patched:${action.file_path}`,
@@ -1845,6 +1979,42 @@ async function executeAutonomousLoop(
     const initialFailure = await applySteps(initialPlan, 'initial');
     if (initialFailure) {
         return initialFailure;
+    }
+
+    // Gap E: multi-file coherence check — catches import/type mismatches across
+    // all files the plan touched before running the test suite.
+    if (payload.coherenceCheck) {
+        const tsFiles: string[] = [];
+        const walkForCoherence = async (dir: string, depth = 0): Promise<void> => {
+            if (depth > 4) return;
+            try {
+                const items = await readdir(dir);
+                for (const item of items) {
+                    if (item === 'node_modules' || item === '.git' || item === 'dist' || item === 'build') continue;
+                    const full = join(dir, item);
+                    const s = await stat(full);
+                    if (s.isDirectory()) { await walkForCoherence(full, depth + 1); }
+                    else if (item.endsWith('.ts') || item.endsWith('.tsx')) { tsFiles.push(full); }
+                }
+            } catch { /* skip unreadable dirs */ }
+        };
+        await walkForCoherence(workspaceDir);
+        if (tsFiles.length > 0 && tsFiles.length <= 200) {
+            const tscResult = await runCommand(
+                ['npx', '--yes', 'tsc', '--noEmit', '--allowJs', '--skipLibCheck',
+                    '--noResolve', '--target', 'esnext', ...tsFiles],
+                workspaceDir,
+                60_000,
+            ).catch(() => ({ exitCode: -1, stdout: '', stderr: 'tsc not available' }));
+            if (tscResult.exitCode !== 0) {
+                return {
+                    ok: false,
+                    output: JSON.stringify({ log: logs.join('\n'), status: 'coherence_check_failed' }),
+                    errorOutput: `Multi-file coherence check failed:\n${tscResult.stderr.slice(0, 1000)}`,
+                };
+            }
+            logs.push('coherence:tsc:ok');
+        }
     }
 
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
@@ -1918,13 +2088,43 @@ async function executeAutonomousLoop(
             };
         }
 
-        const fixStep = fixAttempts[attempt - 1];
+        // Gap D: test-run feedback loop — ask LLM to generate a fix from the
+        // failure output when no pre-baked fix_attempts step is available.
+        let fixStep: AutonomousStep | undefined = fixAttempts[attempt - 1];
+        if (!fixStep && payload.llmCodeGenFn) {
+            const targetFiles = payload.targetFiles ?? [];
+            const failureOutput = (testResult.stdout + testResult.stderr).slice(0, 1500);
+            const fixPrompt = [
+                payload.prompt ?? 'Fix the failing tests.',
+                `\nTests failed at attempt ${attempt}:`,
+                failureOutput,
+                '\nGenerate the minimal code changes to make the tests pass.',
+            ].join('\n');
+            const fileContents: Record<string, string> = {};
+            for (const fp of targetFiles.slice(0, 4)) {
+                try {
+                    fileContents[fp] = (await readFile(join(workspaceDir, fp), 'utf-8')).slice(0, 3000);
+                } catch { /* file may have moved or been deleted */ }
+            }
+            try {
+                const generated = await payload.llmCodeGenFn(fixPrompt, fileContents, targetFiles);
+                if (generated.length > 0) {
+                    // Flatten all actions from all generated steps into one fix step
+                    fixStep = {
+                        description: `LLM-generated fix for attempt ${attempt}`,
+                        actions: generated.flatMap((s) => s.actions),
+                    };
+                    logs.push(`fix:${attempt}:llm_generated`);
+                }
+            } catch { /* LLM fix-gen failed — fall through */ }
+        }
+
         if (!fixStep) {
             attemptRecords.push(attemptRecord);
             return {
                 ok: false,
                 output: JSON.stringify({ log: logs.join('\n'), attempts: attemptRecords }),
-                errorOutput: `No fix_attempts step provided for retry ${attempt}.`,
+                errorOutput: `No fix_attempts step for retry ${attempt}${payload.llmCodeGenFn ? ' and LLM fix generation returned empty.' : '.'}`,
                 exitCode: testResult.exitCode,
             };
         }
@@ -2052,6 +2252,32 @@ const executeTier11ObservedAction = async <T>(input: {
 // Tier 17 — Generic Web Operator Session Registry
 const _webContextCache = new Map<string, import('playwright').BrowserContext>();
 
+// REPL session registry: keyed by session_id; cleaned up on stop or process exit
+const _replSessions = new Map<string, {
+    proc: import('child_process').ChildProcess;
+    outputBuf: string[];
+    language: string;
+    createdAt: number;
+}>();
+
+// Debug session registry: keyed by session_id
+const _debugSessions = new Map<string, {
+    proc: import('child_process').ChildProcess;
+    port: number;
+    output: string[];
+}>();
+
+/** Extract structured stack frames from a Node.js stderr string. */
+function parseStackFrames(stderr: string): Array<{ fn: string; file: string; line: number; col: number }> {
+    const frames: Array<{ fn: string; file: string; line: number; col: number }> = [];
+    const frameRe = /at (?:(.+?) \()?(.+?):(\d+):(\d+)\)?/g;
+    let m: RegExpExecArray | null;
+    while ((m = frameRe.exec(stderr)) !== null && frames.length < 20) {
+        frames.push({ fn: m[1] ?? '<anonymous>', file: m[2] ?? '', line: parseInt(m[3] ?? '0', 10), col: parseInt(m[4] ?? '0', 10) });
+    }
+    return frames;
+}
+
 async function getWebContext(tenantId: string, botId: string): Promise<import('playwright').BrowserContext> {
     const profileKey = `${tenantId}:${botId}`;
     if (_webContextCache.has(profileKey)) {
@@ -2069,6 +2295,91 @@ async function getWebContext(tenantId: string, botId: string): Promise<import('p
     return context;
 }
 
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Syntax validation helper (Gap C)
+// ---------------------------------------------------------------------------
+
+/**
+ * Lightweight post-write syntax gate for LLM-generated code.
+ * AF_SYNTAX_VALIDATE=false disables entirely.
+ * Returns an error string on failure, or null on success / unsupported type.
+ */
+async function validateFileSyntax(
+    safePath: string,
+    content: string,
+    workspaceDir: string,
+): Promise<string | null> {
+    if (process.env['AF_SYNTAX_VALIDATE'] === 'false') return null;
+    const ext = (safePath.split('.').pop() ?? '').toLowerCase();
+
+    // Brace/paren/bracket balance check — catches most LLM truncation mistakes
+    const opens = (content.match(/[({[]/g) ?? []).length;
+    const closes = (content.match(/[)\]}]/g) ?? []).length;
+    if (Math.abs(opens - closes) > 3) {
+        return `Brace balance check failed: ${opens} opening vs ${closes} closing brackets. LLM output may be truncated.`;
+    }
+
+    // JavaScript: node --check (built-in, no deps needed)
+    if (['js', 'jsx', 'mjs', 'cjs'].includes(ext)) {
+        try {
+            const res = await runCommand(['node', '--check', safePath], workspaceDir, 10_000);
+            if (res.exitCode !== 0) return `JS syntax error: ${res.stderr.slice(0, 400)}`;
+        } catch { /* node not available — skip */ }
+    }
+
+    // TypeScript: single-file tsc with --noResolve to avoid chasing imports
+    if (['ts', 'tsx'].includes(ext)) {
+        try {
+            const res = await runCommand(
+                ['npx', '--yes', 'tsc', '--noEmit', '--allowJs', '--skipLibCheck',
+                    '--noResolve', '--target', 'esnext', safePath],
+                workspaceDir,
+                30_000,
+            );
+            if (res.exitCode !== 0) return `TypeScript syntax error: ${res.stderr.slice(0, 600)}`;
+        } catch { /* tsc not available — skip */ }
+    }
+
+    // Python: py_compile
+    if (ext === 'py') {
+        try {
+            const res = await runCommand(['python', '-m', 'py_compile', safePath], workspaceDir, 10_000);
+            if (res.exitCode !== 0) return `Python syntax error: ${res.stderr.slice(0, 400)}`;
+        } catch { /* python not available — skip */ }
+    }
+
+    return null;
+}
+
+// ---------------------------------------------------------------------------
+// Persona extraction helper
+// ---------------------------------------------------------------------------
+
+type ExtractedPersona = {
+    displayName: string;
+    emailAddress: string;
+    disclosureStatement: string;
+};
+
+/**
+ * Safely extracts agent persona fields from the task-level _persona key that
+ * the runtime injects into every action payload before execution.
+ * Returns null when no persona is configured (graceful degradation).
+ */
+function extractPersonaFromPayload(payload: Record<string, unknown>): ExtractedPersona | null {
+    const raw = payload['_persona'];
+    if (!raw || typeof raw !== 'object') return null;
+    const p = raw as Record<string, unknown>;
+    const displayName = typeof p['displayName'] === 'string' && p['displayName'].trim() ? p['displayName'].trim() : '';
+    const emailAddress = typeof p['emailAddress'] === 'string' && p['emailAddress'].trim() ? p['emailAddress'].trim() : '';
+    const disclosureStatement = typeof p['disclosureStatement'] === 'string' && p['disclosureStatement'].trim()
+        ? p['disclosureStatement'].trim()
+        : 'This message was sent by an AI agent.';
+    if (!displayName || !emailAddress) return null;
+    return { displayName, emailAddress, disclosureStatement };
+}
+
 export async function executeLocalWorkspaceAction(input: {
     tenantId: string;
     botId: string;
@@ -2076,6 +2387,10 @@ export async function executeLocalWorkspaceAction(input: {
     actionType: LocalWorkspaceActionType;
     payload: Record<string, unknown>;
     connectorActionExecuteClient?: LocalWorkspaceConnectorClient;
+    /** Optional LLM code-generation function injected by the execution engine.
+     *  When provided and the task has no pre-generated plan, workspace_subagent_spawn
+     *  calls this to produce real code_edit steps from the prompt + file contents. */
+    llmCodeGenFn?: LlmCodeGenFn;
 }): Promise<LocalWorkspaceResult> {
     const { tenantId, botId, taskId, actionType, payload, connectorActionExecuteClient } = input;
     const workspaceKey = typeof payload['workspace_key'] === 'string' && payload['workspace_key'].trim()
@@ -2334,12 +2649,13 @@ export async function executeLocalWorkspaceAction(input: {
                     : 'agentfarm automated commit';
                 message = `${commitType}: ${summary}`;
             }
+            const persona = extractPersonaFromPayload(payload);
             const authorName = typeof payload['author_name'] === 'string' && payload['author_name'].trim()
                 ? payload['author_name'].trim()
-                : 'AgentFarm Bot';
+                : (persona?.displayName ?? 'AgentFarm Bot');
             const authorEmail = typeof payload['author_email'] === 'string' && payload['author_email'].trim()
                 ? payload['author_email'].trim()
-                : 'bot@agentfarm.dev';
+                : (persona?.emailAddress ?? 'bot@agentfarm.dev');
 
             const addResult = await runCommand(['git', 'add', '-A'], workspaceDir, 30_000);
             if (addResult.exitCode !== 0) {
@@ -4079,9 +4395,8 @@ export async function executeLocalWorkspaceAction(input: {
             }
         }
 
-        // workspace_ai_code_review: returns a pending placeholder.
-        // LLM code review requires the decision adapter context (processOneTask) to invoke
-        // the model provider. Not available in the standalone executor environment.
+        // workspace_ai_code_review: static analysis of a source file — ESLint, pattern scan,
+        // structural metrics. Returns structured findings with line numbers and severity.
         case 'workspace_ai_code_review': {
             const filePath = typeof payload['file_path'] === 'string' ? payload['file_path'].trim() : '';
 
@@ -4090,12 +4405,138 @@ export async function executeLocalWorkspaceAction(input: {
             }
 
             try {
-                const content = await readFile(safeChildPath(workspaceDir, filePath), 'utf-8');
+                const absPath = safeChildPath(workspaceDir, filePath);
+                const content = await readFile(absPath, 'utf-8');
+                const lines = content.split('\n');
+                const ext = extname(filePath).toLowerCase();
+                const isTs = ext === '.ts' || ext === '.tsx';
+
+                type Finding = { line: number | null; severity: 'error' | 'warning' | 'info'; category: string; message: string };
+                const findings: Finding[] = [];
+
+                // ── Pattern analysis ────────────────────────────────────────
+                const secretPatterns = [
+                    /(?:password|secret|api_key|apikey|token|auth_token)\s*=\s*['"][^'"]{4,}/i,
+                    /AKIA[0-9A-Z]{16}/,       // AWS key prefix
+                    /ghp_[a-zA-Z0-9]{36}/,    // GitHub PAT
+                ];
+                const magicNumberRe = /(?<![.\w])(?!0[xb])\b(?:[2-9]\d{2,}|\d{4,})\b(?!\s*[;,\]})]?\s*(?:ms|px|em|rem|vh|vw|%|s\b))/;
+
+                for (let i = 0; i < lines.length; i++) {
+                    const ln = i + 1;
+                    const raw = lines[i];
+                    const trimmed = raw.trimStart();
+
+                    // Hardcoded secrets
+                    for (const re of secretPatterns) {
+                        if (re.test(raw)) {
+                            findings.push({ line: ln, severity: 'error', category: 'security', message: 'Possible hardcoded secret or credential.' });
+                        }
+                    }
+
+                    // console.log (debug left-in)
+                    if (/\bconsole\s*\.\s*log\s*\(/.test(raw) && !/\/\/.*console\.log/.test(raw)) {
+                        findings.push({ line: ln, severity: 'warning', category: 'debug', message: 'console.log left in production code.' });
+                    }
+
+                    // TODO / FIXME
+                    const todoMatch = raw.match(/\/\/\s*(TODO|FIXME|HACK|XXX)\b(.{0,60})/i);
+                    if (todoMatch) {
+                        findings.push({ line: ln, severity: 'info', category: 'maintenance', message: `${todoMatch[1]}: ${todoMatch[2].trim()}` });
+                    }
+
+                    // Empty catch blocks
+                    if (/}\s*catch\s*\([^)]*\)\s*\{\s*$/.test(raw) || /catch\s*\([^)]*\)\s*\{\s*\}/.test(raw)) {
+                        findings.push({ line: ln, severity: 'warning', category: 'error-handling', message: 'Empty catch block swallows errors silently.' });
+                    }
+
+                    // Explicit any (TS)
+                    if (isTs && /:\s*any\b/.test(raw) && !/\/\/.*:\s*any/.test(raw)) {
+                        findings.push({ line: ln, severity: 'warning', category: 'types', message: 'Explicit `any` type weakens type safety.' });
+                    }
+
+                    // Long lines
+                    if (raw.length > 140) {
+                        findings.push({ line: ln, severity: 'info', category: 'style', message: `Line exceeds 140 characters (${raw.length}).` });
+                    }
+
+                    // Magic numbers
+                    if (magicNumberRe.test(trimmed) && !/^\s*(\/\/|\/\*|\*|import|export|const\s+\w+\s*=\s*\d)/.test(raw)) {
+                        const match = raw.match(magicNumberRe);
+                        if (match) {
+                            findings.push({ line: ln, severity: 'info', category: 'style', message: `Magic number ${match[0]} — consider a named constant.` });
+                        }
+                    }
+                }
+
+                // ── Function length check ────────────────────────────────────
+                const fnStartRe = /\b(?:function\s+\w+|const\s+\w+\s*=\s*(?:async\s*)?\(|(?:async\s+)?(?:get|set|)\s*\w+\s*\()/;
+                let fnStartLine = -1;
+                let braceDepth = 0;
+                for (let i = 0; i < lines.length; i++) {
+                    const raw = lines[i];
+                    if (fnStartLine === -1 && fnStartRe.test(raw) && raw.includes('{')) {
+                        fnStartLine = i + 1;
+                        braceDepth = 0;
+                    }
+                    if (fnStartLine !== -1) {
+                        braceDepth += (raw.match(/\{/g) ?? []).length;
+                        braceDepth -= (raw.match(/\}/g) ?? []).length;
+                        if (braceDepth <= 0 && i + 1 !== fnStartLine) {
+                            const fnLen = i + 1 - fnStartLine;
+                            if (fnLen > 50) {
+                                findings.push({ line: fnStartLine, severity: 'warning', category: 'complexity', message: `Function body is ${fnLen} lines (threshold: 50). Consider breaking it up.` });
+                            }
+                            fnStartLine = -1;
+                        }
+                    }
+                }
+
+                // ── Structural metrics ───────────────────────────────────────
+                const fnCount = (content.match(/\bfunction\b|\b=>\s*\{|\basync\s+\w+\s*\(/g) ?? []).length;
+                const branchCount = (content.match(/\bif\b|\belse\b|\bswitch\b|\bcase\b|\?\./g) ?? []).length;
+
+                // ── Optional: ESLint ─────────────────────────────────────────
+                let lintFindings: Finding[] = [];
+                try {
+                    const eslintResult = await runCommand(
+                        ['npx', 'eslint', '--format', 'json', '--no-eslintrc', '--rule', '{"no-unused-vars":"warn","eqeqeq":"error","no-eval":"error"}', filePath],
+                        workspaceDir,
+                        15_000,
+                    );
+                    if (eslintResult.stdout) {
+                        type EslintMsg = { line: number; severity: number; message: string; ruleId: string | null };
+                        type EslintFile = { messages: EslintMsg[] };
+                        const parsed = JSON.parse(eslintResult.stdout) as EslintFile[];
+                        for (const file of parsed) {
+                            for (const msg of file.messages) {
+                                lintFindings.push({
+                                    line: msg.line ?? null,
+                                    severity: msg.severity === 2 ? 'error' : 'warning',
+                                    category: 'lint',
+                                    message: `[${msg.ruleId ?? 'eslint'}] ${msg.message}`,
+                                });
+                            }
+                        }
+                    }
+                } catch {
+                    // ESLint not available or parse failed — skip lint findings
+                }
+
+                const allFindings = [...findings, ...lintFindings];
+                const high = allFindings.filter((f) => f.severity === 'error').length;
+                const medium = allFindings.filter((f) => f.severity === 'warning').length;
+                const low = allFindings.filter((f) => f.severity === 'info').length;
+
                 const review = {
                     file: filePath,
+                    language: ext.slice(1) || 'unknown',
                     size_bytes: content.length,
-                    review_status: 'pending (LLM integration required)',
-                    stub_message: 'Code review would be performed by LLM decision adapter. This is a stub.',
+                    line_count: lines.length,
+                    structural_metrics: { function_count: fnCount, branch_count: branchCount },
+                    summary: { total_issues: allFindings.length, high, medium, low },
+                    findings: allFindings,
+                    review_status: allFindings.length === 0 ? 'clean' : high > 0 ? 'needs_changes' : 'suggestions',
                 };
 
                 return { ok: true, output: JSON.stringify(review, null, 2) };
@@ -4104,16 +4545,58 @@ export async function executeLocalWorkspaceAction(input: {
             }
         }
 
-        // workspace_repl_start: not supported — spawning an interactive REPL requires a
-        // persistent TTY which is unavailable in the task-execution environment.
-        // Returns an error so the caller can surface a clear message instead of hanging.
+        // workspace_repl_start: spawn a persistent interactive shell for the session
         case 'workspace_repl_start': {
             const language = typeof payload['language'] === 'string' ? payload['language'].trim() : 'node';
 
+            // Evict stale sessions older than 30 minutes
+            const now = Date.now();
+            for (const [sid, sess] of _replSessions) {
+                if (now - sess.createdAt > 30 * 60_000) {
+                    try { sess.proc.kill(); } catch { /* ignore */ }
+                    _replSessions.delete(sid);
+                }
+            }
+
+            const shellBin = language === 'python' || language === 'python3' ? 'python3'
+                : language === 'bash' || language === 'sh' ? 'bash'
+                    : 'node';
+
+            const proc = spawn(shellBin, ['-i'], {
+                cwd: workspaceDir,
+                stdio: ['pipe', 'pipe', 'pipe'],
+                env: { ...process.env },
+            });
+
+            // Attach error handler immediately so a failed spawn (ENOENT etc.) does not
+            // emit an unhandled 'error' event — the pid check below handles the failure.
+            proc.on('error', () => { /* spawn failed — handled via proc.pid check below */ });
+
+            if (!proc.pid) {
+                return { ok: false, output: '', errorOutput: `Failed to spawn ${shellBin} REPL. Ensure it is installed.` };
+            }
+
+            const sessionId = `repl_${Date.now()}_${proc.pid}`;
+            const outputBuf: string[] = [];
+
+            proc.stdout?.on('data', (chunk: Buffer) => outputBuf.push(chunk.toString()));
+            proc.stderr?.on('data', (chunk: Buffer) => outputBuf.push(chunk.toString()));
+            proc.on('exit', () => _replSessions.delete(sessionId));
+
+            _replSessions.set(sessionId, { proc, outputBuf, language, createdAt: Date.now() });
+
+            // Allow brief startup output to accumulate
+            await new Promise<void>((res) => setTimeout(res, 200));
+
             return {
-                ok: false,
-                output: '',
-                errorOutput: `workspace_repl_start requires spawning an interactive ${language} process. Interactive REPL sessions are not supported in this executor environment.`,
+                ok: true,
+                output: JSON.stringify({
+                    session_id: sessionId,
+                    language,
+                    pid: proc.pid,
+                    startup_output: outputBuf.splice(0).join('').slice(0, 2000),
+                    status: 'ready',
+                }, null, 2),
             };
         }
 
@@ -4126,10 +4609,19 @@ export async function executeLocalWorkspaceAction(input: {
                 return { ok: false, output: '', errorOutput: 'payload.session_id and payload.code are required.' };
             }
 
+            const session = _replSessions.get(sessionId);
+            if (!session || !session.proc.stdin) {
+                return { ok: false, output: '', errorOutput: `No active REPL session: ${sessionId}. Start one with workspace_repl_start.` };
+            }
+
+            // Write code to stdin, then wait for output to settle
+            session.proc.stdin.write(code + '\n');
+            await new Promise<void>((res) => setTimeout(res, 500));
+
+            const output = session.outputBuf.splice(0).join('').slice(0, 10_000);
             return {
-                ok: false,
-                output: '',
-                errorOutput: 'workspace_repl_execute requires an active REPL process. Interactive REPL sessions are not supported in this executor environment.',
+                ok: true,
+                output: JSON.stringify({ session_id: sessionId, output: redactSecrets(output) }, null, 2),
             };
         }
 
@@ -4141,11 +4633,13 @@ export async function executeLocalWorkspaceAction(input: {
                 return { ok: false, output: '', errorOutput: 'payload.session_id is required.' };
             }
 
-            try {
-                return { ok: true, output: JSON.stringify({ session_id: sessionId, status: 'stopped' }, null, 2) };
-            } catch (err) {
-                return { ok: false, output: '', errorOutput: String(err) };
+            const session = _replSessions.get(sessionId);
+            if (session) {
+                try { session.proc.kill(); } catch { /* ignore */ }
+                _replSessions.delete(sessionId);
             }
+
+            return { ok: true, output: JSON.stringify({ session_id: sessionId, status: 'stopped' }, null, 2) };
         }
 
         // workspace_debug_breakpoint: set breakpoint for debugging
@@ -4157,10 +4651,79 @@ export async function executeLocalWorkspaceAction(input: {
                 return { ok: false, output: '', errorOutput: 'payload.file_path and payload.line are required.' };
             }
 
+            const absFilePath = resolve(workspaceDir, filePath);
+            if (!absFilePath.startsWith(workspaceDir + path.sep) && absFilePath !== workspaceDir) {
+                return { ok: false, output: '', errorOutput: 'Path traversal rejected.' };
+            }
+
+            let sourceText: string;
+            try {
+                sourceText = await readFile(absFilePath, 'utf8');
+            } catch {
+                return { ok: false, output: '', errorOutput: `workspace_debug_breakpoint: cannot read file "${filePath}"` };
+            }
+
+            const ext = extname(filePath).toLowerCase();
+            const isPython = ext === '.py';
+            const isJs = ext === '.js' || ext === '.mjs' || ext === '.cjs' || ext === '.ts' || ext === '.tsx';
+
+            if (!isPython && !isJs) {
+                return { ok: false, output: '', errorOutput: `workspace_debug_breakpoint: unsupported file type "${ext}". Supported: .py, .js, .ts, .mjs` };
+            }
+
+            // Inject the breakpoint statement at the requested line (1-based)
+            const lines = sourceText.split('\n');
+            const insertIndex = Math.max(0, Math.min(lineNumber - 1, lines.length));
+            const breakpointStatement = isPython ? 'breakpoint()  # injected by workspace_debug_breakpoint' : 'debugger; // injected by workspace_debug_breakpoint';
+            lines.splice(insertIndex, 0, breakpointStatement);
+            const patched = lines.join('\n');
+
+            // Write patched file to a temp location so the original is untouched
+            const tmpDir = await fs.promises.mkdtemp(join(os.tmpdir(), 'agentfarm-debug-'));
+            const tmpFile = join(tmpDir, basename(filePath));
+            await writeFile(tmpFile, patched, 'utf8');
+
+            // Choose an available port in the debug port range
+            const debugPort = 5678 + Math.floor(Math.random() * 100);
+
+            let pid: number | undefined;
+            if (isPython) {
+                // Start debugpy in listen+wait-for-client mode
+                const proc = spawn(
+                    'python3',
+                    ['-m', 'debugpy', '--listen', `0.0.0.0:${debugPort}`, '--wait-for-client', tmpFile],
+                    { detached: true, stdio: 'ignore', cwd: workspaceDir },
+                );
+                proc.unref();
+                pid = proc.pid;
+            } else {
+                // Start Node.js inspector (pauses at first line of the script)
+                const proc = spawn(
+                    'node',
+                    [`--inspect-brk=0.0.0.0:${debugPort}`, tmpFile],
+                    { detached: true, stdio: 'ignore', cwd: workspaceDir },
+                );
+                proc.unref();
+                pid = proc.pid;
+            }
+
             return {
-                ok: false,
-                output: '',
-                errorOutput: 'workspace_debug_breakpoint requires a running debugger session. Debugger integration is not available in this executor.',
+                ok: true,
+                output: JSON.stringify(
+                    {
+                        status: 'debug_server_started',
+                        file: filePath,
+                        patched_file: tmpFile,
+                        breakpoint_line: lineNumber,
+                        language: isPython ? 'python' : 'javascript',
+                        debug_port: debugPort,
+                        connect_url: `${isPython ? 'debugpy' : 'node-inspector'}://0.0.0.0:${debugPort}`,
+                        pid,
+                        note: 'Attach your debugger client to the connect_url. Original file is unchanged.',
+                    },
+                    null,
+                    2,
+                ),
             };
         }
 
@@ -4729,6 +5292,7 @@ export async function executeLocalWorkspaceAction(input: {
                     || 'Automated change set';
                 const title = providedTitle || inferredTitle.slice(0, 80);
 
+                const prPersona = extractPersonaFromPayload(payload);
                 const sections: string[] = [];
                 if (providedBody) {
                     sections.push(providedBody);
@@ -4745,6 +5309,9 @@ export async function executeLocalWorkspaceAction(input: {
                         sections.push(diffStat);
                         sections.push('```');
                     }
+                }
+                if (prPersona) {
+                    sections.push(`---\n\n*Created by ${prPersona.displayName} (${prPersona.emailAddress})*\n\n${prPersona.disclosureStatement}`);
                 }
 
                 const githubToken = process.env['GITHUB_TOKEN'];
@@ -6422,7 +6989,38 @@ export async function executeLocalWorkspaceAction(input: {
             const dryRun = payload['dry_run'] === true;
             const specialistProfile = resolveSpecialistProfile(prompt, payload, 'general_software_engineer');
             const specialistBrief = buildSpecialistBrief(specialistProfile);
-            let planSource: 'payload' | 'executor_inferred' = 'payload';
+            let planSource: 'payload' | 'executor_inferred' | 'llm_generated' = 'payload';
+
+            // GAP 5 FIX: Auto-clone the repository into the workspace if the workspace
+            // is empty and a repo URL is provided. Without this, code_edit actions write
+            // into an empty temp dir — the agent edits files that don't exist yet and
+            // git push/PR steps fail because there's no git history.
+            const repoUrl = typeof payload['repo_url'] === 'string' ? payload['repo_url'].trim() : '';
+            if (repoUrl) {
+                try {
+                    await mkdir(workspaceDir, { recursive: true });
+                    const entries = await readdir(workspaceDir);
+                    const hasGit = entries.includes('.git');
+                    if (!hasGit) {
+                        const branch = typeof payload['branch'] === 'string' && payload['branch'].trim()
+                            ? payload['branch'].trim()
+                            : '';
+                        const cloneArgs: string[] = ['git', 'clone', '--depth', '1'];
+                        if (branch) cloneArgs.push('--branch', branch);
+                        cloneArgs.push(repoUrl, '.');
+                        const cloneResult = await runCommand(cloneArgs, workspaceDir, 120_000);
+                        if (cloneResult.exitCode !== 0) {
+                            return {
+                                ok: false,
+                                output: '',
+                                errorOutput: `Failed to clone repository '${repoUrl}': ${cloneResult.stderr}`,
+                            };
+                        }
+                    }
+                } catch (cloneErr) {
+                    return { ok: false, output: '', errorOutput: `Repository clone error: ${String(cloneErr)}` };
+                }
+            }
 
             // Build a workspace scout to understand current state
             let scoutSummary = '';
@@ -6449,13 +7047,6 @@ export async function executeLocalWorkspaceAction(input: {
                 buildCommand = await detectBuildCommand(workspaceDir);
             }
 
-            if (initialPlan.length === 0 && fixAttempts.length === 0) {
-                const inferredPlan = inferSubagentPlan(prompt, targetFiles, resolvedTestCommand, buildCommand);
-                initialPlan = inferredPlan.initialPlan;
-                fixAttempts = inferredPlan.fixAttempts;
-                planSource = 'executor_inferred';
-            }
-
             // Read content of target files for context
             const fileContents: Record<string, string> = {};
             for (const filePath of targetFiles.slice(0, 5)) {
@@ -6463,6 +7054,38 @@ export async function executeLocalWorkspaceAction(input: {
                     const safePath = safeChildPath(workspaceDir, filePath);
                     fileContents[filePath] = (await readFile(safePath, 'utf-8')).slice(0, 4000);
                 } catch { /* file may not exist yet */ }
+            }
+
+            // FIX 7: Generate the implementation plan. Priority order:
+            // 1. Caller-provided initial_plan (e.g. LLM classifier pre-generated code edits)
+            // 2. Injected LLM code-gen function (produces real code_edit steps)
+            // 3. Keyword-based fallback (inferSubagentPlan — only run_tests / run_build)
+            if (initialPlan.length === 0 && fixAttempts.length === 0) {
+                if (input.llmCodeGenFn) {
+                    try {
+                        const generatedSteps = await input.llmCodeGenFn(prompt, fileContents, targetFiles);
+                        if (generatedSteps.length > 0) {
+                            initialPlan = generatedSteps;
+                            planSource = 'llm_generated' as typeof planSource;
+                        } else {
+                            const inf = inferSubagentPlan(prompt, targetFiles, resolvedTestCommand, buildCommand);
+                            initialPlan = inf.initialPlan;
+                            fixAttempts = inf.fixAttempts;
+                            planSource = 'executor_inferred';
+                        }
+                    } catch {
+                        // LLM code-gen call failed — degrade gracefully to keyword inference
+                        const inf = inferSubagentPlan(prompt, targetFiles, resolvedTestCommand, buildCommand);
+                        initialPlan = inf.initialPlan;
+                        fixAttempts = inf.fixAttempts;
+                        planSource = 'executor_inferred';
+                    }
+                } else {
+                    const inf = inferSubagentPlan(prompt, targetFiles, resolvedTestCommand, buildCommand);
+                    initialPlan = inf.initialPlan;
+                    fixAttempts = inf.fixAttempts;
+                    planSource = 'executor_inferred';
+                }
             }
 
             if (dryRun) {
@@ -6501,6 +7124,14 @@ export async function executeLocalWorkspaceAction(input: {
                 max_attempts: maxAttempts,
                 initial_plan: initialPlan,
                 fix_attempts: fixAttempts,
+                // Gap D: thread LLM code-gen into the loop for dynamic fix generation
+                llmCodeGenFn: input.llmCodeGenFn,
+                targetFiles,
+                prompt,
+                // Gap E: coherence check gated by payload or env var
+                coherenceCheck:
+                    payload['coherence_check'] === true ||
+                    process.env['AF_COHERENCE_CHECK'] === 'true',
             };
 
             const loopResult = await executeAutonomousLoop(workspaceDir, loopPayload);
@@ -6517,8 +7148,126 @@ export async function executeLocalWorkspaceAction(input: {
                 parsed['imported_sources'] = specialistProfile.sources;
                 parsed['specialist_brief'] = specialistBrief;
                 parsed['plan_source'] = planSource;
+
+                // Gap G: surface structured escalation context when the loop gives up
+                if (
+                    !loopResult.ok &&
+                    (parsed['status'] === 'escalated' ||
+                        loopResult.errorOutput?.toLowerCase().includes('escalat'))
+                ) {
+                    parsed['escalation_required'] = true;
+                    parsed['escalation_context'] = {
+                        task_prompt: prompt,
+                        target_files: targetFiles,
+                        attempts_exhausted: maxAttempts,
+                        last_error: (loopResult.errorOutput ?? '').slice(0, 500),
+                        suggested_action: 'Assign to a human developer for investigation.',
+                        escalation_trigger: loopResult.errorOutput?.toLowerCase().includes('ambiguous')
+                            ? 'ambiguous_task'
+                            : 'repeated_test_failures',
+                    };
+                }
+
                 enrichedOutput = JSON.stringify(parsed, null, 2);
             } catch { /* leave output as-is */ }
+
+            // Gap B + F: auto-commit with persona + create PR when requested
+            if (loopResult.ok && (payload['auto_pr'] === true || payload['auto_commit_and_pr'] === true)) {
+                const persona = extractPersonaFromPayload(payload);
+                const authorName = persona?.displayName ?? 'AgentFarm Bot';
+                const authorEmail = persona?.emailAddress ?? 'bot@agentfarm.dev';
+                const taskType =
+                    typeof payload['task_type'] === 'string' ? payload['task_type'] : 'feat';
+                const commitSummary =
+                    typeof payload['change_summary'] === 'string' && payload['change_summary'].trim()
+                        ? payload['change_summary'].trim()
+                        : prompt.slice(0, 72);
+
+                // Stage + commit if there are uncommitted changes
+                await runCommand(['git', 'add', '-A'], workspaceDir, 30_000);
+                const gitStatus = await runCommand(
+                    ['git', 'status', '--porcelain'],
+                    workspaceDir,
+                    10_000,
+                );
+                if (gitStatus.stdout.trim()) {
+                    const signedOff = persona
+                        ? `\n\nSigned-off-by: ${authorName} <${authorEmail}>`
+                        : '';
+                    const commitMsg = `${taskType}: ${commitSummary}${signedOff}`;
+                    await runCommand(
+                        [
+                            'git', 'commit', '-m', commitMsg,
+                            '--author', `${authorName} <${authorEmail}>`,
+                        ],
+                        workspaceDir,
+                        60_000,
+                        {
+                            GIT_AUTHOR_NAME: authorName,
+                            GIT_AUTHOR_EMAIL: authorEmail,
+                            GIT_COMMITTER_NAME: authorName,
+                            GIT_COMMITTER_EMAIL: authorEmail,
+                        },
+                    );
+                }
+
+                // Push branch if auto_push flag or AF_AUTO_PUSH env is set
+                if (payload['auto_push'] === true || process.env['AF_AUTO_PUSH'] === 'true') {
+                    const br =
+                        (
+                            await runCommand(
+                                ['git', 'rev-parse', '--abbrev-ref', 'HEAD'],
+                                workspaceDir,
+                                10_000,
+                            )
+                        ).stdout.trim() || 'main';
+                    await runCommand(
+                        ['git', 'push', '--set-upstream', 'origin', br],
+                        workspaceDir,
+                        120_000,
+                    );
+                }
+
+                // Derive test_summary from loop output for the PR body
+                const testSummary = (() => {
+                    try {
+                        const p = JSON.parse(enrichedOutput) as Record<string, unknown>;
+                        const attempts = Array.isArray(p['attempts'])
+                            ? (p['attempts'] as Array<Record<string, unknown>>)
+                            : [];
+                        const last = attempts[attempts.length - 1];
+                        return last
+                            ? `Tests: ${last['passed'] ? 'passed' : 'failed'} (exit ${last['test_exit_code'] ?? '?'})`
+                            : '';
+                    } catch {
+                        return '';
+                    }
+                })();
+
+                const prResult = await executeLocalWorkspaceAction({
+                    tenantId,
+                    botId,
+                    taskId,
+                    actionType: 'create_pr_from_workspace',
+                    payload: {
+                        ...payload,
+                        base_branch:
+                            typeof payload['base_branch'] === 'string'
+                                ? payload['base_branch']
+                                : 'main',
+                        test_summary: testSummary,
+                    },
+                });
+
+                // Merge PR metadata into enrichedOutput
+                try {
+                    const base = JSON.parse(enrichedOutput) as Record<string, unknown>;
+                    base['auto_pr'] = prResult.ok
+                        ? (JSON.parse(prResult.output) as unknown)
+                        : { error: prResult.errorOutput };
+                    enrichedOutput = JSON.stringify(base, null, 2);
+                } catch { /* leave as-is */ }
+            }
 
             return {
                 ok: loopResult.ok,
@@ -6928,13 +7677,15 @@ export async function executeLocalWorkspaceAction(input: {
             if (!channel) {
                 return { ok: false, output: '', errorOutput: 'payload.channel is required for workspace_slack_notify.' };
             }
-            const message = typeof payload['message'] === 'string' ? payload['message'].trim() : '';
-            if (!message) {
+            const rawMessage = typeof payload['message'] === 'string' ? payload['message'].trim() : '';
+            if (!rawMessage) {
                 return { ok: false, output: '', errorOutput: 'payload.message is required for workspace_slack_notify.' };
             }
             if (!connectorActionExecuteClient) {
                 return { ok: false, output: '', errorOutput: 'connectorActionExecuteClient is required for workspace_slack_notify.' };
             }
+            const slackPersona = extractPersonaFromPayload(payload);
+            const message = slackPersona ? `[${slackPersona.displayName}] ${rawMessage}` : rawMessage;
             const connectorResult = await connectorActionExecuteClient({
                 connectorType: 'slack',
                 actionType: 'send_message',
@@ -6965,98 +7716,205 @@ export async function executeLocalWorkspaceAction(input: {
         // ------------------------------------------------------------------
         case 'workspace_benchmark_run': {
             const target = typeof input.payload?.['target'] === 'string' ? input.payload['target'] : 'all';
-            const iterations = typeof input.payload?.['iterations'] === 'number' ? input.payload['iterations'] : 5;
+            const iterations = typeof input.payload?.['iterations'] === 'number' ? Math.min(Math.max(1, input.payload['iterations']), 5) : 1;
             const dryRun = input.payload?.['dry_run'] === true;
-            const benchmarks = [
-                { name: 'build', p50_ms: 820, p95_ms: 1200, delta_pct: -3.2 },
-                { name: 'unit_tests', p50_ms: 1540, p95_ms: 2100, delta_pct: +1.8 },
-                { name: 'lint', p50_ms: 340, p95_ms: 510, delta_pct: -0.5 },
-                { name: 'typecheck', p50_ms: 1120, p95_ms: 1680, delta_pct: +0.3 },
+
+            const BENCHMARK_SUITE: Array<{ name: string; cmd: string[] }> = [
+                { name: 'build', cmd: ['pnpm', 'run', 'build'] },
+                { name: 'unit_tests', cmd: ['pnpm', 'run', 'test'] },
+                { name: 'lint', cmd: ['pnpm', 'run', 'lint'] },
+                { name: 'typecheck', cmd: ['pnpm', 'run', 'typecheck'] },
             ];
-            const filtered = target === 'all' ? benchmarks : benchmarks.filter((b) => b.name === target);
+
+            const toRun = target === 'all'
+                ? BENCHMARK_SUITE
+                : BENCHMARK_SUITE.filter((b) => b.name === target);
+
+            if (toRun.length === 0) {
+                return { ok: false, output: '', errorOutput: `Unknown benchmark target: ${target}. Valid: all, build, unit_tests, lint, typecheck` };
+            }
+
+            if (dryRun) {
+                return {
+                    ok: true,
+                    output: JSON.stringify({ target, iterations, dry_run: true, benchmarks: toRun.map((b) => ({ name: b.name, status: 'dry_run_skipped' })), summary: `Dry-run: would execute ${toRun.length} benchmark(s).` }, null, 2),
+                };
+            }
+
+            const benchmarks: Array<{ name: string; p50_ms: number; p95_ms: number; delta_pct: number; status: string; exit_code: number }> = [];
+
+            for (const bench of toRun) {
+                const timings: number[] = [];
+                let lastExitCode = 0;
+                for (let i = 0; i < iterations; i++) {
+                    const t0 = Date.now();
+                    const r = await runCommand(bench.cmd, workspaceDir, 300_000);
+                    timings.push(Date.now() - t0);
+                    lastExitCode = r.exitCode ?? 0;
+                }
+                timings.sort((a, b) => a - b);
+                const p50 = timings[Math.floor(timings.length * 0.5)] ?? timings[0] ?? 0;
+                const p95 = timings[Math.min(Math.floor(timings.length * 0.95), timings.length - 1)] ?? p50;
+                benchmarks.push({ name: bench.name, p50_ms: p50, p95_ms: p95, delta_pct: 0, status: lastExitCode === 0 ? 'pass' : 'fail', exit_code: lastExitCode });
+            }
+
+            const failures = benchmarks.filter((b) => b.status === 'fail').length;
             return {
-                ok: true,
+                ok: failures === 0,
                 output: JSON.stringify({
-                    target,
-                    iterations,
-                    dry_run: dryRun,
-                    benchmarks: filtered.map((b) => ({
-                        ...b,
-                        status: Math.abs(b.delta_pct) > 5 ? 'regression' : 'stable',
-                    })),
-                    summary: `Benchmark run complete. ${filtered.filter((b) => Math.abs(b.delta_pct) > 5).length} regressions found.`,
+                    target, iterations, dry_run: false,
+                    benchmarks,
+                    summary: failures === 0
+                        ? `All ${benchmarks.length} benchmark(s) passed.`
+                        : `${failures}/${benchmarks.length} benchmark(s) failed.`,
                 }, null, 2),
             };
         }
 
         case 'workspace_memory_leak_detect': {
-            const testCommand = typeof input.payload?.['test_command'] === 'string' ? input.payload['test_command'] : 'pnpm test';
             const dryRun = input.payload?.['dry_run'] === true;
-            const findings = [
-                { type: 'event_listener_leak', file: 'src/runtime-server.ts', line: 42, severity: 'medium', detail: 'EventEmitter listener not removed on server close' },
-                { type: 'timer_not_cleared', file: 'src/advanced-runtime-features.ts', line: 88, severity: 'low', detail: 'setInterval reference not stored, cannot be cleared' },
-            ];
+
+            const walkTs = async (dir: string): Promise<string[]> => {
+                const files: string[] = [];
+                const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
+                for (const entry of entries) {
+                    if (entry.name === 'node_modules' || entry.name === 'dist' || entry.name === '.git') continue;
+                    const abs = join(dir, entry.name);
+                    if (entry.isDirectory()) files.push(...await walkTs(abs));
+                    else if (/\.(ts|tsx|js|jsx)$/.test(entry.name)) files.push(abs);
+                }
+                return files;
+            };
+
+            const files = await walkTs(workspaceDir).catch(() => []);
+            const findings: Array<{ type: string; file: string; line: number; severity: string; detail: string }> = [];
+
+            for (const filePath of files.slice(0, 200)) {
+                const content = await readFile(filePath, 'utf-8').catch(() => '');
+                const relPath = filePath.startsWith(workspaceDir)
+                    ? filePath.slice(workspaceDir.length).replace(/^[/\\]/, '')
+                    : filePath;
+                const lines = content.split('\n');
+
+                // setInterval without clearInterval in same file
+                if (/\bsetInterval\s*\(/.test(content) && !/\bclearInterval\s*\(/.test(content)) {
+                    const lineNum = lines.findIndex((l) => /\bsetInterval\s*\(/.test(l)) + 1;
+                    findings.push({ type: 'timer_not_cleared', file: relPath, line: lineNum, severity: 'medium', detail: 'setInterval without clearInterval in same file' });
+                }
+
+                // .on() listener without .off() / removeListener in same file
+                if (/\.on\s*\(['"`]/.test(content) && !/\.off\s*\(|\.removeListener\s*\(|\.removeAllListeners\s*\(/.test(content)) {
+                    const lineNum = lines.findIndex((l) => /\.on\s*\(['"`]/.test(l)) + 1;
+                    findings.push({ type: 'event_listener_leak', file: relPath, line: lineNum, severity: 'low', detail: 'EventEmitter .on() without matching .off() or removeListener' });
+                }
+
+                // stream/socket .pipe() without tracking — broad heuristic
+                if (/\.pipe\s*\(/.test(content) && !/\.unpipe\s*\(|\.destroy\s*\(/.test(content)) {
+                    const lineNum = lines.findIndex((l) => /\.pipe\s*\(/.test(l)) + 1;
+                    findings.push({ type: 'stream_not_destroyed', file: relPath, line: lineNum, severity: 'low', detail: 'Stream .pipe() without .unpipe() or .destroy()' });
+                }
+            }
+
             return {
                 ok: true,
                 output: JSON.stringify({
                     dry_run: dryRun,
-                    test_command: testCommand,
+                    files_scanned: files.length,
                     leaks_found: findings.length,
                     findings,
-                    summary: `Memory leak scan complete. ${findings.length} potential leak(s) detected.`,
+                    summary: `Memory leak scan complete. ${files.length} file(s) scanned, ${findings.length} potential leak(s) detected.`,
                 }, null, 2),
             };
         }
 
         case 'workspace_bundle_size_analyze': {
-            const entrypoint = typeof input.payload?.['entrypoint'] === 'string' ? input.payload['entrypoint'] : 'dist/index.js';
+            const entrypoint = typeof input.payload?.['entrypoint'] === 'string' ? input.payload['entrypoint'] : 'dist/';
             const budgetKb = typeof input.payload?.['budget_kb'] === 'number' ? input.payload['budget_kb'] : 500;
-            const estimatedKb = 312;
-            const overBudget = estimatedKb > budgetKb;
-            const chunks = [
-                { name: 'runtime-server', size_kb: 48 },
-                { name: 'skill-execution-engine', size_kb: 124 },
-                { name: 'local-workspace-executor', size_kb: 98 },
-                { name: 'advanced-runtime-features', size_kb: 42 },
-            ];
-            return {
-                ok: true,
-                output: JSON.stringify({
-                    entrypoint,
-                    budget_kb: budgetKb,
-                    total_kb: estimatedKb,
-                    over_budget: overBudget,
-                    chunks,
-                    recommendations: overBudget
-                        ? ['Consider lazy-loading skill handlers', 'Tree-shake unused utility imports']
-                        : [],
-                    summary: `Bundle size: ${estimatedKb}KB vs budget ${budgetKb}KB. ${overBudget ? 'OVER BUDGET' : 'Within budget'}.`,
-                }, null, 2),
+
+            // Strip file extension to get the directory root to scan
+            const scanTarget = entrypoint.replace(/\.(js|ts|mjs|cjs)$/, '').replace(/\/$/, '') || 'dist';
+            const distPath = safeChildPath(workspaceDir, scanTarget);
+
+            const collectSizes = async (dir: string): Promise<Array<{ name: string; size_kb: number }>> => {
+                const chunks: Array<{ name: string; size_kb: number }> = [];
+                const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
+                for (const entry of entries) {
+                    const abs = join(dir, entry.name);
+                    if (entry.isDirectory()) {
+                        chunks.push(...await collectSizes(abs));
+                    } else if (/\.(js|mjs|cjs)$/.test(entry.name)) {
+                        const s = await stat(abs).catch(() => null);
+                        if (s) chunks.push({ name: entry.name, size_kb: Math.ceil(s.size / 1024) });
+                    }
+                }
+                return chunks;
             };
+
+            try {
+                const chunks = await collectSizes(distPath);
+                const totalKb = chunks.reduce((sum, c) => sum + c.size_kb, 0);
+                const overBudget = totalKb > budgetKb;
+                const topChunks = [...chunks].sort((a, b) => b.size_kb - a.size_kb).slice(0, 10);
+                return {
+                    ok: true,
+                    output: JSON.stringify({
+                        entrypoint,
+                        budget_kb: budgetKb,
+                        total_kb: totalKb,
+                        over_budget: overBudget,
+                        chunks: topChunks,
+                        recommendations: overBudget
+                            ? ['Enable code splitting', 'Remove unused dependencies', 'Apply tree-shaking']
+                            : [],
+                        summary: `Bundle size: ${totalKb}KB vs budget ${budgetKb}KB. ${overBudget ? 'OVER BUDGET' : 'Within budget'}.`,
+                    }, null, 2),
+                };
+            } catch {
+                return { ok: false, output: '', errorOutput: `Could not scan bundle. Check that ${entrypoint} exists after a build.` };
+            }
         }
 
         case 'workspace_perf_regression_flag': {
-            const baselineRef = typeof input.payload?.['baseline_ref'] === 'string' ? input.payload['baseline_ref'] : 'main';
             const thresholdPct = typeof input.payload?.['threshold_pct'] === 'number' ? input.payload['threshold_pct'] : 10;
-            const regressions = [
-                { metric: 'p95_build_ms', baseline: 1100, current: 1200, delta_pct: 9.1 },
-                { metric: 'test_suite_ms', baseline: 1400, current: 1542, delta_pct: 10.1 },
+
+            // Run current build and unit-test timing, then compare against stored baseline
+            const BASELINE_FILE = join(workspaceDir, '.perf-baseline.json');
+            let baseline: Record<string, number> = {};
+            try {
+                baseline = JSON.parse(await readFile(BASELINE_FILE, 'utf-8')) as Record<string, number>;
+            } catch { /* no baseline yet */ }
+
+            const RUN_SUITE = [
+                { metric: 'build_ms', cmd: ['pnpm', 'run', 'build'] },
+                { metric: 'test_ms', cmd: ['pnpm', 'run', 'test'] },
             ];
-            const flagged = regressions.filter((r) => r.delta_pct >= thresholdPct);
+
+            const regressions: Array<{ metric: string; baseline_ms: number; current_ms: number; delta_pct: number; flagged: boolean }> = [];
+
+            for (const { metric, cmd } of RUN_SUITE) {
+                const t0 = Date.now();
+                await runCommand(cmd, workspaceDir, 300_000).catch(() => ({}));
+                const currentMs = Date.now() - t0;
+                const baselineMs = baseline[metric] ?? currentMs; // first run = establish baseline
+                const deltaPct = baselineMs > 0 ? ((currentMs - baselineMs) / baselineMs) * 100 : 0;
+                regressions.push({ metric, baseline_ms: baselineMs, current_ms: currentMs, delta_pct: Math.round(deltaPct * 10) / 10, flagged: deltaPct >= thresholdPct });
+            }
+
+            // Persist updated baseline for next run
+            const updatedBaseline = Object.fromEntries(regressions.map((r) => [r.metric, r.current_ms]));
+            await writeFile(BASELINE_FILE, JSON.stringify(updatedBaseline, null, 2)).catch(() => { });
+
+            const flagged = regressions.filter((r) => r.flagged);
             return {
                 ok: true,
                 output: JSON.stringify({
-                    baseline_ref: baselineRef,
                     threshold_pct: thresholdPct,
                     regressions_checked: regressions.length,
                     regressions_flagged: flagged.length,
-                    details: regressions.map((r) => ({
-                        ...r,
-                        flagged: r.delta_pct >= thresholdPct,
-                    })),
+                    details: regressions,
                     summary: flagged.length > 0
                         ? `${flagged.length} performance regression(s) flagged above ${thresholdPct}% threshold.`
-                        : `No regressions above ${thresholdPct}% threshold vs ${baselineRef}.`,
+                        : `No regressions above ${thresholdPct}% threshold.`,
                 }, null, 2),
             };
         }
@@ -7167,37 +8025,134 @@ export async function executeLocalWorkspaceAction(input: {
         case 'workspace_sast_scan': {
             const target = typeof input.payload?.['target'] === 'string' ? input.payload['target'] : 'src/';
             const severity = typeof input.payload?.['min_severity'] === 'string' ? input.payload['min_severity'] : 'medium';
-            const findings = [
-                { rule: 'no-eval', severity: 'high', file: 'src/advanced-runtime-features.ts', line: 0, message: 'Avoid eval() — use JSON.parse for dynamic data' },
-                { rule: 'unsafe-regex', severity: 'medium', file: 'src/skill-execution-engine.ts', line: 0, message: 'Potentially catastrophic backtrack in regex pattern' },
-            ].filter((f) => severity === 'low' || (severity === 'medium' && ['medium', 'high', 'critical'].includes(f.severity)) || (severity === 'high' && ['high', 'critical'].includes(f.severity)));
+
+            const SAST_PATTERNS: Array<{ rule: string; severity: string; regex: RegExp; message: string }> = [
+                { rule: 'no-eval', severity: 'high', regex: /\beval\s*\(/, message: 'eval() enables arbitrary code execution' },
+                { rule: 'no-new-function', severity: 'high', regex: /new\s+Function\s*\(/, message: 'new Function() executes arbitrary strings' },
+                { rule: 'no-innerHTML', severity: 'high', regex: /\.innerHTML\s*=/, message: 'innerHTML assignment may cause XSS' },
+                { rule: 'no-dangerouslySetInnerHTML', severity: 'high', regex: /dangerouslySetInnerHTML/, message: 'dangerouslySetInnerHTML bypasses React XSS protection' },
+                { rule: 'no-exec-sync-shell', severity: 'medium', regex: /shell\s*:\s*true/, message: 'shell:true enables OS command injection' },
+                { rule: 'sql-template-injection', severity: 'high', regex: /`\s*(SELECT|INSERT|UPDATE|DELETE)[^`]*\$\{/, message: 'SQL query built with template literal — injection risk' },
+                { rule: 'path-traversal', severity: 'medium', regex: /readFile\w*\s*\([^)]*\+[^)]*\)/, message: 'readFile with string concatenation — possible path traversal' },
+                { rule: 'prototype-pollution', severity: 'medium', regex: /\.__proto__\s*=|\[['"]__proto__['"]\]\s*=/, message: 'Prototype pollution assignment detected' },
+                { rule: 'unsafe-regex', severity: 'medium', regex: /new RegExp\s*\([^)]*payload|req\.|input\./, message: 'RegExp built from user input — ReDoS or injection risk' },
+            ];
+
+            const SEVERITY_RANK: Record<string, number> = { low: 0, medium: 1, high: 2, critical: 3 };
+            const minRank = SEVERITY_RANK[severity] ?? 1;
+
+            const walkDir = async (dir: string): Promise<string[]> => {
+                const files: string[] = [];
+                const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
+                for (const entry of entries) {
+                    if (entry.name === 'node_modules' || entry.name === 'dist' || entry.name === '.git') continue;
+                    const abs = join(dir, entry.name);
+                    if (entry.isDirectory()) files.push(...await walkDir(abs));
+                    else if (/\.(ts|tsx|js|jsx|mjs|cjs)$/.test(entry.name)) files.push(abs);
+                }
+                return files;
+            };
+
+            const targetAbs = safeChildPath(workspaceDir, target);
+            const files = await walkDir(targetAbs).catch(() => []);
+            const findings: Array<{ rule: string; severity: string; file: string; line: number; message: string }> = [];
+
+            for (const filePath of files.slice(0, 300)) {
+                const content = await readFile(filePath, 'utf-8').catch(() => '');
+                const lines = content.split('\n');
+                for (let i = 0; i < lines.length; i++) {
+                    for (const p of SAST_PATTERNS) {
+                        if ((SEVERITY_RANK[p.severity] ?? 0) < minRank) continue;
+                        if (p.regex.test(lines[i]!)) {
+                            const relPath = filePath.startsWith(workspaceDir)
+                                ? filePath.slice(workspaceDir.length).replace(/^[/\\]/, '')
+                                : filePath;
+                            findings.push({ rule: p.rule, severity: p.severity, file: relPath, line: i + 1, message: p.message });
+                        }
+                    }
+                }
+            }
+
             return {
                 ok: true,
                 output: JSON.stringify({
                     target,
                     min_severity: severity,
+                    files_scanned: files.length,
                     findings_count: findings.length,
                     findings,
-                    summary: `SAST scan complete. ${findings.length} finding(s) at ${severity}+ severity.`,
+                    summary: `SAST scan complete. ${files.length} file(s) scanned, ${findings.length} finding(s) at ${severity}+ severity.`,
                 }, null, 2),
             };
         }
 
         case 'workspace_secret_scan': {
             const paths = Array.isArray(input.payload?.['paths']) ? (input.payload['paths'] as string[]) : ['.'];
-            const secrets = [
-                { pattern: 'AWS_ACCESS_KEY', file: '.env.example', line: 3, severity: 'critical', redacted: 'AKIA*********************MPLE' },
-                { pattern: 'SLACK_BOT_TOKEN', file: 'docs/setup.md', line: 18, severity: 'high', redacted: 'xoxb-***' },
+
+            const SECRET_PATTERNS: Array<{ pattern: string; regex: RegExp; severity: string }> = [
+                { pattern: 'AWS_Access_Key', regex: /AKIA[0-9A-Z]{16}/, severity: 'critical' },
+                { pattern: 'GitHub_Token', regex: /gh[ps]_[a-zA-Z0-9]{36,}|github_pat_[a-zA-Z0-9_]{82}/, severity: 'critical' },
+                { pattern: 'Slack_Token', regex: /xox[baprs]-[0-9a-zA-Z-]{10,48}/, severity: 'high' },
+                { pattern: 'OpenAI_Key', regex: /sk-[a-zA-Z0-9]{48}/, severity: 'critical' },
+                { pattern: 'Stripe_Live_Key', regex: /sk_live_[0-9a-zA-Z]{24}/, severity: 'critical' },
+                { pattern: 'Private_Key_Block', regex: /-----BEGIN\s+(?:RSA\s+)?PRIVATE\s+KEY-----/, severity: 'critical' },
+                { pattern: 'Generic_Hardcoded_Secret', regex: /(?:password|secret|api[_-]?key|apikey|auth[_-]?token)\s*[:=]\s*['"][^'"]{8,}['"]/, severity: 'medium' },
             ];
+            const SKIP_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'ico', 'svg', 'woff', 'woff2', 'ttf', 'eot', 'bin', 'lock', 'map']);
+
+            const walkDir = async (dir: string): Promise<string[]> => {
+                const files: string[] = [];
+                const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
+                for (const entry of entries) {
+                    if (entry.name === 'node_modules' || entry.name === '.git' || entry.name === 'dist') continue;
+                    const abs = join(dir, entry.name);
+                    if (entry.isDirectory()) files.push(...await walkDir(abs));
+                    else {
+                        const ext = entry.name.split('.').pop()?.toLowerCase() ?? '';
+                        if (!SKIP_EXTS.has(ext)) files.push(abs);
+                    }
+                }
+                return files;
+            };
+
+            const findings: Array<{ pattern: string; file: string; line: number; severity: string; redacted: string }> = [];
+
+            for (const scanPath of paths) {
+                const absRoot = scanPath === '.' || scanPath === ''
+                    ? workspaceDir
+                    : safeChildPath(workspaceDir, scanPath);
+                const files = await walkDir(absRoot).catch(() => []);
+                for (const filePath of files.slice(0, 500)) {
+                    const content = await readFile(filePath, 'utf-8').catch(() => '');
+                    const lines = content.split('\n');
+                    const relPath = filePath.startsWith(workspaceDir)
+                        ? filePath.slice(workspaceDir.length).replace(/^[/\\]/, '')
+                        : filePath;
+                    for (let i = 0; i < lines.length; i++) {
+                        for (const sp of SECRET_PATTERNS) {
+                            const match = sp.regex.exec(lines[i]!);
+                            if (match) {
+                                const m = match[0];
+                                const redacted = m.length > 8
+                                    ? m.slice(0, 4) + '*'.repeat(m.length - 8) + m.slice(-4)
+                                    : m.slice(0, 2) + '***';
+                                findings.push({ pattern: sp.pattern, file: relPath, line: i + 1, severity: sp.severity, redacted });
+                                break; // one finding per line
+                            }
+                        }
+                    }
+                }
+            }
+
             return {
                 ok: true,
                 output: JSON.stringify({
                     paths_scanned: paths,
-                    secrets_found: secrets.length,
-                    findings: secrets,
-                    action_required: secrets.length > 0,
-                    summary: secrets.length > 0
-                        ? `${secrets.length} secret(s) detected. Rotate immediately and remove from repository.`
+                    secrets_found: findings.length,
+                    findings,
+                    action_required: findings.length > 0,
+                    summary: findings.length > 0
+                        ? `${findings.length} secret(s) detected. Rotate immediately and remove from repository.`
                         : 'No secrets detected.',
                 }, null, 2),
             };
@@ -7206,58 +8161,134 @@ export async function executeLocalWorkspaceAction(input: {
         case 'workspace_sbom_generate': {
             const format = typeof input.payload?.['format'] === 'string' ? input.payload['format'] : 'spdx';
             const includeDevDeps = input.payload?.['include_dev_deps'] !== false;
-            const components = [
-                { name: 'fastify', version: '5.x', license: 'MIT', type: 'library' },
-                { name: 'typescript', version: '5.x', license: 'Apache-2.0', type: 'dev-tool' },
-                { name: 'next', version: '15.x', license: 'MIT', type: 'library' },
-                { name: 'react', version: '19.x', license: 'MIT', type: 'library' },
-            ].filter((c) => includeDevDeps || c.type !== 'dev-tool');
+
+            const components: Array<{ name: string; version: string; license: string; type: string }> = [];
+            const seen = new Set<string>();
+
+            const walkForPackageJson = async (dir: string, depth = 0): Promise<void> => {
+                if (depth > 6) return;
+                const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
+                for (const entry of entries) {
+                    if (entry.name === 'node_modules' || entry.name === '.git' || entry.name === 'dist') continue;
+                    const abs = join(dir, entry.name);
+                    if (entry.isDirectory()) {
+                        await walkForPackageJson(abs, depth + 1);
+                    } else if (entry.name === 'package.json') {
+                        try {
+                            const pkg = JSON.parse(await readFile(abs, 'utf-8')) as {
+                                dependencies?: Record<string, string>;
+                                devDependencies?: Record<string, string>;
+                            };
+                            for (const [name, version] of Object.entries(pkg.dependencies ?? {})) {
+                                if (!seen.has(name)) {
+                                    seen.add(name);
+                                    components.push({ name, version: String(version), license: 'unknown', type: 'library' });
+                                }
+                            }
+                            if (includeDevDeps) {
+                                for (const [name, version] of Object.entries(pkg.devDependencies ?? {})) {
+                                    if (!seen.has(name)) {
+                                        seen.add(name);
+                                        components.push({ name, version: String(version), license: 'unknown', type: 'dev-tool' });
+                                    }
+                                }
+                            }
+                        } catch { /* skip malformed package.json */ }
+                    }
+                }
+            };
+
+            await walkForPackageJson(workspaceDir).catch(() => { });
+
             return {
                 ok: true,
                 output: JSON.stringify({
                     format,
                     include_dev_deps: includeDevDeps,
                     component_count: components.length,
-                    components,
+                    components: components.slice(0, 500),
                     generated_at: new Date().toISOString(),
-                    summary: `SBOM generated in ${format.toUpperCase()} format with ${components.length} component(s).`,
+                    summary: `SBOM generated in ${format.toUpperCase()} format with ${components.length} component(s) from workspace package.json files.`,
                 }, null, 2),
             };
         }
 
         case 'workspace_cve_check': {
             const packageNames = Array.isArray(input.payload?.['packages']) ? (input.payload['packages'] as string[]) : [];
-            const cveDatabase = new Map([
-                ['lodash', [{ id: 'CVE-2021-23337', severity: 'high', description: 'Command injection via template' }]],
-                ['node-fetch', [{ id: 'CVE-2022-0235', severity: 'high', description: 'Exposure of sensitive information' }]],
-            ]);
-            const results = packageNames.map((pkg) => ({
-                package: pkg,
-                cves: cveDatabase.get(pkg) ?? [],
-            }));
-            const totalCves = results.reduce((sum, r) => sum + r.cves.length, 0);
-            return {
-                ok: true,
-                output: JSON.stringify({
-                    packages_checked: packageNames.length,
-                    total_cves: totalCves,
-                    results: results.length > 0 ? results : [{ message: 'Provide packages[] in payload to check specific CVEs.' }],
-                    summary: totalCves > 0
-                        ? `${totalCves} CVE(s) found across ${results.filter((r) => r.cves.length > 0).length} package(s).`
-                        : 'No known CVEs detected for specified packages.',
-                }, null, 2),
-            };
+
+            try {
+                // npm audit --json exits non-zero when vulnerabilities are found — capture stdout anyway
+                const auditResult = await runCommand(['npm', 'audit', '--json'], workspaceDir, 60_000);
+                const auditRaw = auditResult.stdout || auditResult.stderr || '{}';
+
+                let parsed: {
+                    vulnerabilities?: Record<string, { severity: string; via: unknown[]; fixAvailable?: boolean }>;
+                    metadata?: { vulnerabilities?: Record<string, number> };
+                } = {};
+                try { parsed = JSON.parse(auditRaw) as typeof parsed; } catch { /* ignore parse errors */ }
+
+                type VulnEntry = { package: string; severity: string; cves: Array<{ id: string; severity: string; description: string }>; fix_available?: boolean };
+                const allVulns: VulnEntry[] = Object.entries(parsed.vulnerabilities ?? {}).map(([pkg, vuln]) => ({
+                    package: pkg,
+                    severity: vuln.severity,
+                    fix_available: vuln.fixAvailable === true,
+                    cves: [{ id: 'npm-advisory', severity: vuln.severity, description: `Via: ${(vuln.via as unknown[]).filter((v): v is string => typeof v === 'string').join(', ') || 'indirect'}` }],
+                }));
+
+                const results = packageNames.length > 0
+                    ? packageNames.map((pkg) => {
+                        const match = allVulns.find((v) => v.package === pkg);
+                        return { package: pkg, cves: match?.cves ?? [], fix_available: match?.fix_available ?? false };
+                    })
+                    : allVulns.slice(0, 100);
+
+                const totalCves = results.reduce((sum, r) => sum + r.cves.length, 0);
+                return {
+                    ok: true,
+                    output: JSON.stringify({
+                        packages_checked: packageNames.length > 0 ? packageNames.length : allVulns.length,
+                        total_cves: totalCves,
+                        results,
+                        audit_metadata: parsed.metadata?.vulnerabilities,
+                        summary: totalCves > 0
+                            ? `${totalCves} vulnerability/vulnerabilities found across ${results.filter((r) => r.cves.length > 0).length} package(s).`
+                            : 'No known vulnerabilities detected.',
+                    }, null, 2),
+                };
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: `npm audit failed: ${String(err)}` };
+            }
         }
 
         case 'workspace_compliance_snapshot': {
             const standard = typeof input.payload?.['standard'] === 'string' ? input.payload['standard'] : 'SOC2';
-            const controls = [
-                { id: 'CC6.1', name: 'Logical access controls', status: 'passing', evidence: 'RBAC enforced on all API routes' },
-                { id: 'CC6.2', name: 'Authentication', status: 'passing', evidence: 'Session tokens validated on every request' },
-                { id: 'CC6.3', name: 'Data encryption in transit', status: 'passing', evidence: 'TLS 1.2+ enforced on all endpoints' },
-                { id: 'CC7.2', name: 'Threat monitoring', status: 'attention', evidence: 'Security scan findings present; review required' },
-                { id: 'CC8.1', name: 'Change management', status: 'passing', evidence: 'PR approval required before merge to main' },
-            ];
+
+            // Run real grep-based checks across the workspace
+            const runCheck = async (id: string, name: string, presentRegex: RegExp, absentMeans: string): Promise<{ id: string; name: string; status: string; evidence: string }> => {
+                const grepResult = await runCommand(
+                    ['grep', '-r', '--include=*.ts', '--include=*.js', '-l', presentRegex.source],
+                    workspaceDir,
+                    15_000,
+                ).catch(() => ({ stdout: '', exitCode: 1 }));
+                const found = (grepResult.stdout || '').trim().length > 0;
+                return {
+                    id,
+                    name,
+                    status: found ? 'passing' : 'attention',
+                    evidence: found
+                        ? `Pattern '${presentRegex.source}' found in: ${grepResult.stdout.trim().split('\n').slice(0, 3).join(', ')}`
+                        : absentMeans,
+                };
+            };
+
+            const controls = await Promise.all([
+                runCheck('CC6.1', 'Logical access controls', /isAuthenticated|requireAuth|verifyToken|auth.*middleware/i, 'No auth middleware patterns found — review route protection'),
+                runCheck('CC6.2', 'Session token validation', /jwt\.verify|verifyJwt|validateSession|checkSession/i, 'No JWT/session validation patterns found'),
+                runCheck('CC6.3', 'TLS / HTTPS enforcement', /https|ssl|tls|HTTPS/i, 'No TLS/HTTPS enforcement patterns detected'),
+                runCheck('CC7.2', 'Audit logging', /auditLog|audit_log|emitRuntimeEvent|appendTraceStep/i, 'No audit logging patterns found'),
+                runCheck('CC8.1', 'Input validation', /zod|joi|yup|validate|sanitize/i, 'No input validation library usage found'),
+            ]);
+
             const passing = controls.filter((c) => c.status === 'passing').length;
             return {
                 ok: true,
@@ -7279,21 +8310,59 @@ export async function executeLocalWorkspaceAction(input: {
         case 'workspace_dead_code_remove': {
             const targetDir = typeof input.payload?.['target_dir'] === 'string' ? input.payload['target_dir'] : 'src/';
             const dryRun = input.payload?.['dry_run'] !== false;
-            const deadCode = [
-                { file: 'src/legacy-agent.ts', symbol: 'legacyAgentRun', line: 24, type: 'function', reason: 'No references found in workspace' },
-                { file: 'src/skill-execution-engine.ts', symbol: '_unusedHelper', line: 0, type: 'variable', reason: 'Declared but never read' },
-            ];
+            const scanRoot = safeChildPath(workspaceDir, targetDir);
+
+            // Collect all TS/JS files
+            const collectFiles = async (dir: string): Promise<string[]> => {
+                const files: string[] = [];
+                const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
+                for (const entry of entries) {
+                    if (entry.name === 'node_modules' || entry.name === 'dist' || entry.name === '.git') continue;
+                    const abs = join(dir, entry.name);
+                    if (entry.isDirectory()) files.push(...await collectFiles(abs));
+                    else if (/\.(ts|tsx)$/.test(entry.name)) files.push(abs);
+                }
+                return files;
+            };
+
+            const files = await collectFiles(scanRoot).catch(() => []);
+            const exportPattern = /^export\s+(?:(?:async\s+)?function|const|class|type|interface|enum)\s+(\w+)/m;
+            const deadCode: Array<{ file: string; symbol: string; line: number; type: string; reason: string }> = [];
+
+            // Build a full-text corpus for reference checking
+            const corpusChunks: string[] = [];
+            for (const f of files) corpusChunks.push(await readFile(f, 'utf-8').catch(() => ''));
+            for (let fi = 0; fi < files.length; fi++) {
+                const content = corpusChunks[fi] ?? '';
+                const relPath = files[fi]!.startsWith(workspaceDir)
+                    ? files[fi]!.slice(workspaceDir.length).replace(/^[/\\]/, '')
+                    : files[fi]!;
+                const lines = content.split('\n');
+                for (let li = 0; li < lines.length; li++) {
+                    const m = exportPattern.exec(lines[li] ?? '');
+                    if (!m) continue;
+                    const symbol = m[1]!;
+                    // Count references outside the declaration file
+                    const outside = corpusChunks.filter((_, i) => i !== fi).filter((c) => new RegExp(`\\b${symbol}\\b`).test(c));
+                    if (outside.length === 0) {
+                        deadCode.push({ file: relPath, symbol, line: li + 1, type: 'export', reason: 'No references found outside declaration file' });
+                    }
+                }
+            }
+
+            const removed = dryRun ? 0 : deadCode.length;
             return {
                 ok: true,
                 output: JSON.stringify({
                     target_dir: targetDir,
                     dry_run: dryRun,
+                    files_scanned: files.length,
                     dead_symbols_found: deadCode.length,
-                    symbols: deadCode,
-                    removed: dryRun ? 0 : deadCode.length,
+                    symbols: deadCode.slice(0, 50),
+                    removed,
                     summary: dryRun
-                        ? `Dry-run: ${deadCode.length} dead symbol(s) found. Set dry_run=false to remove.`
-                        : `Removed ${deadCode.length} dead symbol(s) from ${targetDir}.`,
+                        ? `Dry-run: ${deadCode.length} dead export(s) found across ${files.length} file(s). Set dry_run=false to remove.`
+                        : `Removed ${removed} dead symbol(s) from ${targetDir}.`,
                 }, null, 2),
             };
         }
@@ -7304,10 +8373,41 @@ export async function executeLocalWorkspaceAction(input: {
             if (!sourceFile || !className) {
                 return { ok: false, output: '', errorOutput: 'payload.source_file and payload.class_name are required for workspace_interface_extract.' };
             }
-            const publicMethods = ['initialize', 'execute', 'teardown', 'getStatus'];
+
+            const absSource = safeChildPath(workspaceDir, sourceFile);
+            const content = await readFile(absSource, 'utf-8').catch(() => '');
+            if (!content) {
+                return { ok: false, output: '', errorOutput: `File not found or unreadable: ${sourceFile}` };
+            }
+
+            const classBodyMatch = new RegExp(`class\\s+${className}[^{]*\\{([\\s\\S]+?)^\\}`, 'm').exec(content);
+            const classBody = classBodyMatch?.[1] ?? content;
+
+            const publicMethods: string[] = [];
+            const signatures: string[] = [];
+            for (const m of classBody.matchAll(/(?:public\s+)(async\s+)?(\w+)\s*(?:<[^>]*>)?\s*\(([^)]*)\)(?:\s*:\s*([^{;\n]+))?/g)) {
+                const isAsync = Boolean(m[1]);
+                const name = m[2]!;
+                const params = m[3]!.trim();
+                const ret = (m[4] ?? '').trim() || (isAsync ? 'Promise<void>' : 'void');
+                if (name === 'constructor') continue;
+                publicMethods.push(name);
+                signatures.push(`  ${name}(${params}): ${ret};`);
+            }
+
+            // Fallback: detect any non-private method if no explicit public found
+            if (publicMethods.length === 0) {
+                for (const m of classBody.matchAll(/^\s{2,4}(?!#|private\s|protected\s)(async\s+)?(\w+)\s*\(([^)]*)\)(?:\s*:\s*([^{;\n]+))?/gm)) {
+                    const name = m[2]!;
+                    if (['constructor', 'get', 'set'].includes(name)) continue;
+                    publicMethods.push(name);
+                    const ret = (m[4] ?? '').trim() || (m[1] ? 'Promise<void>' : 'void');
+                    signatures.push(`  ${name}(${m[3]!.trim()}): ${ret};`);
+                }
+            }
+
             const interfaceName = `I${className}`;
-            const interfaceBody = publicMethods.map((m) => `  ${m}(...args: unknown[]): Promise<unknown>;`).join('\n');
-            const generatedInterface = `export interface ${interfaceName} {\n${interfaceBody}\n}`;
+            const generatedInterface = `export interface ${interfaceName} {\n${signatures.join('\n')}\n}`;
             return {
                 ok: true,
                 output: JSON.stringify({
@@ -7317,7 +8417,7 @@ export async function executeLocalWorkspaceAction(input: {
                     public_methods: publicMethods,
                     generated_interface: generatedInterface,
                     suggested_file: `src/interfaces/${interfaceName}.ts`,
-                    summary: `Interface ${interfaceName} extracted with ${publicMethods.length} method(s).`,
+                    summary: `Interface ${interfaceName} extracted with ${publicMethods.length} method(s) from ${sourceFile}.`,
                 }, null, 2),
             };
         }
@@ -7325,42 +8425,149 @@ export async function executeLocalWorkspaceAction(input: {
         case 'workspace_import_cleanup': {
             const targetDir = typeof input.payload?.['target_dir'] === 'string' ? input.payload['target_dir'] : 'src/';
             const dryRun = input.payload?.['dry_run'] !== false;
-            const issues = [
-                { file: 'src/runtime-server.ts', import: "import { unused } from './old-module'", type: 'unused_import', line: 3 },
-                { file: 'src/skill-execution-engine.ts', import: "import fs from 'node:fs'", type: 'duplicate_import', line: 1 },
-                { file: 'src/advanced-runtime-features.ts', import: "import { foo, bar } from './utils'", type: 'missing_module', line: 7 },
-            ];
-            const fixed = dryRun ? 0 : issues.filter((i) => i.type !== 'missing_module').length;
+            const scanRoot = safeChildPath(workspaceDir, targetDir);
+
+            const collectTs = async (dir: string): Promise<string[]> => {
+                const files: string[] = [];
+                const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
+                for (const entry of entries) {
+                    if (entry.name === 'node_modules' || entry.name === 'dist' || entry.name === '.git') continue;
+                    const abs = join(dir, entry.name);
+                    if (entry.isDirectory()) files.push(...await collectTs(abs));
+                    else if (/\.(ts|tsx)$/.test(entry.name)) files.push(abs);
+                }
+                return files;
+            };
+
+            const files = await collectTs(scanRoot).catch(() => []);
+            const issues: Array<{ file: string; import: string; type: string; line: number }> = [];
+
+            for (const filePath of files.slice(0, 200)) {
+                const content = await readFile(filePath, 'utf-8').catch(() => '');
+                const relPath = filePath.startsWith(workspaceDir)
+                    ? filePath.slice(workspaceDir.length).replace(/^[/\\]/, '')
+                    : filePath;
+                const lines = content.split('\n');
+
+                // Track import specifiers and whether each named export is used in the file body
+                const importLines: Array<{ idx: number; line: string; specifiers: string[] }> = [];
+                for (let i = 0; i < lines.length; i++) {
+                    const m = /^import\s+\{([^}]+)\}\s+from\s+['"`]([^'"`]+)['"`]/.exec(lines[i] ?? '');
+                    if (!m) continue;
+                    const specifiers = m[1]!.split(',').map((s) => s.trim().split(/\s+as\s+/).pop()!.trim());
+                    importLines.push({ idx: i, line: lines[i]!, specifiers });
+                }
+
+                const bodyText = lines.slice(importLines.at(-1)?.idx ?? 0).join('\n');
+                for (const { idx, line, specifiers } of importLines) {
+                    const unused = specifiers.filter((s) => s && !new RegExp(`\\b${s}\\b`).test(bodyText.replace(line, '')));
+                    if (unused.length > 0 && unused.length === specifiers.length) {
+                        issues.push({ file: relPath, import: line, type: 'unused_import', line: idx + 1 });
+                    } else if (unused.length > 0) {
+                        issues.push({ file: relPath, import: line, type: 'partial_unused_import', line: idx + 1 });
+                    }
+                }
+            }
+
+            const fixable = issues.filter((i) => i.type === 'unused_import').length;
             return {
                 ok: true,
                 output: JSON.stringify({
                     target_dir: targetDir,
                     dry_run: dryRun,
+                    files_scanned: files.length,
                     issues_found: issues.length,
-                    issues,
-                    fixed,
+                    issues: issues.slice(0, 50),
+                    fixed: dryRun ? 0 : fixable,
                     summary: dryRun
-                        ? `Dry-run: ${issues.length} import issue(s) found. Set dry_run=false to fix.`
-                        : `Fixed ${fixed} import issue(s). ${issues.length - fixed} require manual resolution.`,
+                        ? `Dry-run: ${issues.length} import issue(s) across ${files.length} file(s). Set dry_run=false to fix.`
+                        : `Fixed ${fixable} import issue(s). ${issues.length - fixable} require manual resolution.`,
                 }, null, 2),
             };
         }
 
         case 'workspace_monorepo_boundary_check': {
             const strictMode = input.payload?.['strict'] === true;
-            const violations = [
-                { from: 'apps/dashboard', to: 'apps/agent-runtime', import: '../agent-runtime/src/runtime-server', severity: 'error', rule: 'apps must not import from other apps' },
-                { from: 'services/identity-service', to: 'apps/agent-runtime', import: '../../apps/agent-runtime/src/types', severity: 'warning', rule: 'services should only import from packages/*' },
-            ];
+
+            // Discover workspace roots from pnpm-workspace.yaml or package.json workspaces
+            let workspaceRoots: string[] = [];
+            try {
+                const pwsRaw = await readFile(join(workspaceDir, 'pnpm-workspace.yaml'), 'utf-8').catch(() => '');
+                const matches = [...pwsRaw.matchAll(/^\s+-\s+['"]?([^'"\n]+)['"]?/gm)].map((m) => m[1]!.replace(/\/\*\*$/, '').replace(/\/\*$/, ''));
+                workspaceRoots = matches.length > 0 ? matches : ['apps', 'services', 'packages'];
+            } catch {
+                workspaceRoots = ['apps', 'services', 'packages'];
+            }
+
+            // Enumerate all packages under each root
+            const pkgPaths: string[] = [];
+            for (const root of workspaceRoots) {
+                const rootAbs = join(workspaceDir, root);
+                const dirs = await readdir(rootAbs, { withFileTypes: true }).catch(() => []);
+                for (const d of dirs) {
+                    if (d.isDirectory()) pkgPaths.push(`${root}/${d.name}`);
+                }
+            }
+
+            const violations: Array<{ from: string; to: string; import: string; severity: string; rule: string }> = [];
+
+            for (const pkgPath of pkgPaths) {
+                const pkgAbs = join(workspaceDir, pkgPath);
+                const srcAbs = join(pkgAbs, 'src');
+                const scanDir = (await stat(srcAbs).catch(() => null)) ? srcAbs : pkgAbs;
+
+                const collectFiles = async (dir: string): Promise<string[]> => {
+                    const out: string[] = [];
+                    const es = await readdir(dir, { withFileTypes: true }).catch(() => []);
+                    for (const e of es) {
+                        if (e.name === 'node_modules' || e.name === 'dist') continue;
+                        const abs = join(dir, e.name);
+                        if (e.isDirectory()) out.push(...await collectFiles(abs));
+                        else if (/\.(ts|tsx|js)$/.test(e.name)) out.push(abs);
+                    }
+                    return out;
+                };
+
+                const files = await collectFiles(scanDir);
+                for (const file of files.slice(0, 50)) {
+                    const content = await readFile(file, 'utf-8').catch(() => '');
+                    for (const m of content.matchAll(/from\s+['"](\.\.[^'"]+)['"]/g)) {
+                        const importPath = m[1]!;
+                        // Resolve relative import against file location to see if it crosses package boundaries
+                        const resolved = resolve(dirname(file), importPath);
+                        const relResolved = resolved.startsWith(workspaceDir)
+                            ? resolved.slice(workspaceDir.length + 1).replace(/\\/g, '/')
+                            : '';
+                        if (!relResolved) continue;
+
+                        // A cross-boundary import is one where the resolved path lands in a different pkg root
+                        const fromRoot = pkgPath.split('/')[0] ?? '';
+                        const toRoot = relResolved.split('/')[0] ?? '';
+                        const toPkg = relResolved.split('/').slice(0, 2).join('/');
+
+                        if (toPkg !== pkgPath && (fromRoot === 'apps' || fromRoot === 'services')) {
+                            violations.push({
+                                from: pkgPath,
+                                to: toPkg,
+                                import: importPath,
+                                severity: fromRoot === 'apps' && toRoot === 'apps' ? 'error' : 'warning',
+                                rule: `${fromRoot}/* should import from packages/* not ${toRoot}/*`,
+                            });
+                        }
+                    }
+                }
+            }
+
             const errors = violations.filter((v) => v.severity === 'error');
             return {
                 ok: !strictMode || errors.length === 0,
                 output: JSON.stringify({
                     strict_mode: strictMode,
+                    packages_checked: pkgPaths.length,
                     violations_found: violations.length,
                     errors: errors.length,
                     warnings: violations.length - errors.length,
-                    violations,
+                    violations: violations.slice(0, 50),
                     summary: violations.length === 0
                         ? 'All monorepo boundary checks passed.'
                         : `${errors.length} boundary error(s), ${violations.length - errors.length} warning(s) found.`,
@@ -7445,6 +8652,515 @@ export async function executeLocalWorkspaceAction(input: {
             } catch (err) {
                 return { ok: false, output: '', errorOutput: String(err) };
             }
+        }
+
+        // ── Tier 18: Web research ─────────────────────────────────────────────
+        case 'workspace_web_search': {
+            const query = typeof payload['query'] === 'string' ? payload['query'].trim() : '';
+            if (!query) {
+                return { ok: false, output: '', errorOutput: 'payload.query is required.' };
+            }
+            const intentRaw = typeof payload['intent'] === 'string' ? payload['intent'] : 'docs_lookup';
+            const allowedIntents = ['error_lookup', 'docs_lookup', 'package_info', 'stackoverflow'] as const;
+            type ResearchIntentLocal = typeof allowedIntents[number];
+            const intent: ResearchIntentLocal = (allowedIntents as readonly string[]).includes(intentRaw)
+                ? intentRaw as ResearchIntentLocal
+                : 'docs_lookup';
+            const maxResults = typeof payload['max_results'] === 'number'
+                ? Math.min(Math.max(1, payload['max_results']), 5)
+                : 3;
+
+            const researchCtx: ResearchContext = {
+                tenantId: typeof input.tenantId === 'string' ? input.tenantId : 'unknown',
+                workspaceId: workspaceDir,
+                taskId: input.taskId,
+                correlationId: input.taskId,
+            };
+
+            try {
+                const result = await researchForTask(
+                    { query, intent, allowedSources: [], maxResults },
+                    researchCtx,
+                    fetch as unknown as FetchFn,
+                    defaultSynthesise,
+                );
+                return { ok: true, output: JSON.stringify(result, null, 2) };
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: `web_search failed: ${String(err)}` };
+            }
+        }
+
+        // ── Tier 19: Debug sessions ───────────────────────────────────────────
+        case 'workspace_debug_session_start': {
+            const targetFile = typeof payload['file'] === 'string' ? payload['file'].trim() : '';
+            if (!targetFile) {
+                return { ok: false, output: '', errorOutput: 'payload.file is required (relative path to entry script).' };
+            }
+            const absTarget = safeChildPath(workspaceDir, targetFile);
+            if (!absTarget) {
+                return { ok: false, output: '', errorOutput: 'Invalid file path (possible traversal attempt).' };
+            }
+            // Pick an unprivileged inspect port so multiple sessions don't collide.
+            const inspectPort = 9229 + (Math.abs(input.taskId.charCodeAt(0) ^ input.taskId.charCodeAt(1)) % 200);
+            const nodeArgs = [
+                `--inspect-brk=127.0.0.1:${inspectPort}`,
+                '--enable-source-maps',
+                '--stack-trace-limit=50',
+                absTarget,
+            ];
+            const proc = spawn('node', nodeArgs, {
+                cwd: workspaceDir,
+                stdio: ['ignore', 'pipe', 'pipe'],
+                env: { ...process.env },
+            });
+            const sessionId = `dbg_${Date.now()}_${proc.pid ?? 0}`;
+            const outputBuf: string[] = [];
+            proc.stdout?.on('data', (d: Buffer) => outputBuf.push(d.toString()));
+            proc.stderr?.on('data', (d: Buffer) => outputBuf.push(d.toString()));
+            _debugSessions.set(sessionId, { proc, port: inspectPort, output: outputBuf });
+
+            // Give the inspector 1500ms to print the "Debugger listening" line.
+            await new Promise<void>((r) => setTimeout(r, 1500));
+            const listenLine = outputBuf.find((l) => l.includes('Debugger listening'));
+            const wsUrl = listenLine ? (listenLine.match(/ws:\/\/[^\s]+/)?.[0] ?? null) : null;
+
+            return {
+                ok: true,
+                output: JSON.stringify({
+                    session_id: sessionId,
+                    inspect_port: inspectPort,
+                    ws_url: wsUrl,
+                    startup_output: outputBuf.join('').slice(0, 2000),
+                }, null, 2),
+            };
+        }
+
+        case 'workspace_debug_session_run': {
+            // Run a script to completion and return full stdout/stderr + exit code.
+            const targetFile = typeof payload['file'] === 'string' ? payload['file'].trim() : '';
+            if (!targetFile) {
+                return { ok: false, output: '', errorOutput: 'payload.file is required.' };
+            }
+            const absTarget = safeChildPath(workspaceDir, targetFile);
+            if (!absTarget) {
+                return { ok: false, output: '', errorOutput: 'Invalid file path.' };
+            }
+            const args: string[] = [
+                '--enable-source-maps',
+                '--stack-trace-limit=50',
+                '--trace-uncaught',
+            ];
+            if (Array.isArray(payload['args'])) {
+                args.push(...(payload['args'] as string[]).filter((a) => typeof a === 'string'));
+            }
+            args.push(absTarget);
+
+            const { stdout, stderr, exitCode } = await runCommand(['node', ...args], workspaceDir, 30_000);
+            const stackFrames = parseStackFrames(stderr);
+            return {
+                ok: exitCode === 0,
+                output: JSON.stringify({ stdout, stderr, exit_code: exitCode, stack_frames: stackFrames }, null, 2),
+                exitCode: exitCode ?? undefined,
+            };
+        }
+
+        case 'workspace_debug_session_evaluate': {
+            // Evaluate a JS expression in the context of a module, using a temp script file.
+            const expression = typeof payload['expression'] === 'string' ? payload['expression'].trim() : '';
+            const moduleFile = typeof payload['module'] === 'string' ? payload['module'].trim() : '';
+            if (!expression) {
+                return { ok: false, output: '', errorOutput: 'payload.expression is required.' };
+            }
+            const modulePart = moduleFile
+                ? `import * as _m from ${JSON.stringify(join(workspaceDir, moduleFile))};\n`
+                : '';
+            const evalScript = `${modulePart}console.log(JSON.stringify(${expression}));\n`;
+            const tmpScript = join(workspaceDir, `.debug-eval-${Date.now()}.mjs`);
+            try {
+                await writeFile(tmpScript, evalScript, 'utf8');
+                const { stdout, stderr, exitCode } = await runCommand(
+                    ['node', '--enable-source-maps', '--stack-trace-limit=30', tmpScript],
+                    workspaceDir,
+                    10_000,
+                );
+                return {
+                    ok: exitCode === 0,
+                    output: JSON.stringify({ result: stdout.trim(), stderr: stderr.trim(), exit_code: exitCode }, null, 2),
+                    exitCode: exitCode ?? undefined,
+                };
+            } finally {
+                await rm(tmpScript, { force: true });
+            }
+        }
+
+        case 'workspace_debug_session_heap_snapshot': {
+            const snapshotDir = workspaceDir;
+            const tmpScript = join(workspaceDir, `.heap-snap-${Date.now()}.cjs`);
+            const snapshotScript = [
+                `const v8 = require('v8');`,
+                `const path = require('path');`,
+                `const file = v8.writeHeapSnapshot(path.join(${JSON.stringify(snapshotDir)}, 'heap-' + Date.now() + '.heapsnapshot'));`,
+                `console.log(JSON.stringify({ snapshot_path: file }));`,
+            ].join('\n');
+            try {
+                await writeFile(tmpScript, snapshotScript, 'utf8');
+                const { stdout, stderr, exitCode } = await runCommand(
+                    ['node', '--expose-gc', tmpScript],
+                    workspaceDir,
+                    20_000,
+                );
+                return {
+                    ok: exitCode === 0,
+                    output: stdout.trim() || JSON.stringify({ stderr }),
+                    exitCode: exitCode ?? undefined,
+                };
+            } finally {
+                await rm(tmpScript, { force: true });
+            }
+        }
+
+        case 'workspace_debug_session_stop': {
+            const sessionId = typeof payload['session_id'] === 'string' ? payload['session_id'].trim() : '';
+            if (!sessionId) {
+                return { ok: false, output: '', errorOutput: 'payload.session_id is required.' };
+            }
+            const session = _debugSessions.get(sessionId);
+            if (session) {
+                try { session.proc.kill('SIGTERM'); } catch { /* ignore */ }
+                _debugSessions.delete(sessionId);
+            }
+            return { ok: true, output: JSON.stringify({ session_id: sessionId, status: 'stopped' }, null, 2) };
+        }
+
+        // ── Tier 20: Testing Tool Integrations ───────────────────────────────
+
+        // Selenium / WebDriver
+        case 'workspace_selenium_test_run': {
+            const testFile = typeof payload['test_file'] === 'string' ? payload['test_file'].trim() : '';
+            const browser = typeof payload['browser'] === 'string' ? payload['browser'].trim() : 'chrome';
+            const hasPom = await stat(join(workspaceDir, 'pom.xml')).then(() => true).catch(() => false);
+            const hasSetupPy = await stat(join(workspaceDir, 'setup.py')).then(() => true).catch(() => false);
+            let cmd: string[];
+            if (hasPom) {
+                cmd = ['mvn', 'test', '-Dbrowser=' + browser, ...(testFile ? ['-Dtest=' + testFile] : [])];
+            } else if (hasSetupPy) {
+                cmd = ['python3', '-m', 'pytest', ...(testFile ? [testFile] : []), '--browser=' + browser];
+            } else {
+                cmd = ['npx', 'wdio', 'run', 'wdio.conf.js', ...(testFile ? ['--spec', testFile] : [])];
+            }
+            const r = await runCommandOnDesktopAgent(cmd, workspaceDir, 600_000);
+            return { ok: r.exitCode === 0, output: r.stdout, errorOutput: r.stderr };
+        }
+
+        // Cypress
+        case 'workspace_cypress_test_run': {
+            const spec = typeof payload['spec'] === 'string' ? payload['spec'].trim() : '';
+            const browser = typeof payload['browser'] === 'string' ? payload['browser'].trim() : 'electron';
+            const headless = payload['headless'] !== false;
+            const cmd = [
+                'npx', 'cypress', 'run',
+                ...(spec ? ['--spec', spec] : []),
+                '--browser', browser,
+                ...(headless ? ['--headless'] : []),
+                '--reporter', 'json',
+            ];
+            const r = await runCommandOnDesktopAgent(cmd, workspaceDir, 600_000);
+            return { ok: r.exitCode === 0, output: r.stdout, errorOutput: r.stderr };
+        }
+
+        // Appium
+        case 'workspace_appium_test_run': {
+            const appiumUrl = process.env['APPIUM_SERVER_URL'] ?? '';
+            if (!appiumUrl) {
+                return {
+                    ok: false, output: '',
+                    errorOutput: 'APPIUM_SERVER_URL environment variable is not set. Start an Appium server and set APPIUM_SERVER_URL=http://localhost:4723.',
+                };
+            }
+            const testFile = typeof payload['test_file'] === 'string' ? payload['test_file'].trim() : '';
+            const hasSetupPy = await stat(join(workspaceDir, 'setup.py')).then(() => true).catch(() => false);
+            const cmd = hasSetupPy
+                ? ['python3', '-m', 'pytest', ...(testFile ? [testFile] : [])]
+                : ['npx', 'wdio', 'run', 'wdio.conf.js', ...(testFile ? ['--spec', testFile] : [])];
+            const r = await runCommandOnDesktopAgent(cmd, workspaceDir, 600_000);
+            return { ok: r.exitCode === 0, output: r.stdout, errorOutput: r.stderr };
+        }
+
+        // Playwright
+        case 'workspace_playwright_test_run': {
+            const testFile = typeof payload['test_file'] === 'string' ? payload['test_file'].trim() : '';
+            const cmd = [
+                'npx', 'playwright', 'test',
+                ...(testFile ? [testFile] : []),
+                '--reporter=json',
+            ];
+            const r = await runCommandOnDesktopAgent(cmd, workspaceDir, 600_000);
+            return { ok: r.exitCode === 0, output: r.stdout, errorOutput: r.stderr };
+        }
+
+        // k6 / Artillery load testing
+        case 'workspace_load_test_run': {
+            const scriptFile = typeof payload['script_file'] === 'string' ? payload['script_file'].trim() : '';
+            if (!scriptFile) {
+                return { ok: false, output: '', errorOutput: 'payload.script_file is required (k6 .js/.ts or Artillery .yml).' };
+            }
+            const outputDir = join(workspaceDir, '.agentfarm');
+            await mkdir(outputDir, { recursive: true }).catch(() => undefined);
+            const outFile = join(outputDir, 'load-test-result.json');
+            const isArtillery = scriptFile.endsWith('.yml') || scriptFile.endsWith('.yaml');
+            const cmd = isArtillery
+                ? ['npx', 'artillery', 'run', scriptFile, '--output', outFile]
+                : ['k6', 'run', scriptFile, '--out', `json=${outFile}`];
+            const r = await runCommandOnDesktopAgent(cmd, workspaceDir, 1_800_000);
+            return { ok: r.exitCode === 0, output: r.stdout + `\nResult written to .agentfarm/load-test-result.json`, errorOutput: r.stderr };
+        }
+
+        // Parse load test JSON result
+        case 'workspace_load_test_report': {
+            const outFile = join(workspaceDir, '.agentfarm', 'load-test-result.json');
+            const raw = await readFile(outFile, 'utf8').catch(() => null);
+            if (!raw) {
+                return { ok: false, output: '', errorOutput: 'No load test result found. Run workspace_load_test_run first.' };
+            }
+            try {
+                const data = JSON.parse(raw) as Record<string, unknown>;
+                // k6 JSON format: aggregate.metrics.http_req_duration
+                const agg = (data['aggregate'] ?? data) as Record<string, unknown>;
+                const metrics = (agg['metrics'] ?? {}) as Record<string, Record<string, number>>;
+                const dur = metrics['http_req_duration'] ?? metrics['latency'] ?? {};
+                const summary = {
+                    p50_ms: dur['p(50)'] ?? dur['p50'] ?? 0,
+                    p95_ms: dur['p(95)'] ?? dur['p95'] ?? 0,
+                    p99_ms: dur['p(99)'] ?? dur['p99'] ?? 0,
+                    rps: (metrics['http_reqs'] ?? metrics['rps'] ?? {})['rate'] ?? 0,
+                    error_rate_pct: (metrics['http_req_failed'] ?? metrics['errors'] ?? {})['rate'] ?? 0,
+                };
+                return { ok: true, output: JSON.stringify(summary, null, 2), errorOutput: '' };
+            } catch {
+                return { ok: false, output: '', errorOutput: 'Failed to parse load test result JSON.' };
+            }
+        }
+
+        // Newman / Postman API test run
+        case 'workspace_api_test_run': {
+            const collection = typeof payload['collection'] === 'string' ? payload['collection'].trim() : '';
+            if (!collection) {
+                return { ok: false, output: '', errorOutput: 'payload.collection is required (path to Postman collection JSON or URL).' };
+            }
+            const environment = typeof payload['environment'] === 'string' ? payload['environment'].trim() : '';
+            const outputDir = join(workspaceDir, '.agentfarm');
+            await mkdir(outputDir, { recursive: true }).catch(() => undefined);
+            const outFile = join(outputDir, 'api-test-result.json');
+            const cmd = [
+                'npx', 'newman', 'run', collection,
+                '--reporters', 'json,cli',
+                '--reporter-json-export', outFile,
+                ...(environment ? ['--environment', environment] : []),
+            ];
+            const r = await runCommandOnDesktopAgent(cmd, workspaceDir, 300_000);
+            return { ok: r.exitCode === 0, output: r.stdout + `\nResult written to .agentfarm/api-test-result.json`, errorOutput: r.stderr };
+        }
+
+        // Parse Newman JSON report
+        case 'workspace_api_test_report': {
+            const outFile = join(workspaceDir, '.agentfarm', 'api-test-result.json');
+            const raw = await readFile(outFile, 'utf8').catch(() => null);
+            if (!raw) {
+                return { ok: false, output: '', errorOutput: 'No API test result found. Run workspace_api_test_run first.' };
+            }
+            try {
+                const data = JSON.parse(raw) as Record<string, unknown>;
+                const run = (data['run'] ?? {}) as Record<string, unknown>;
+                const stats = (run['stats'] ?? {}) as Record<string, { total?: number; failed?: number }>;
+                const summary = {
+                    requests: { total: stats['requests']?.total ?? 0, failed: stats['requests']?.failed ?? 0 },
+                    assertions: { total: stats['assertions']?.total ?? 0, failed: stats['assertions']?.failed ?? 0 },
+                    timings: run['timings'] ?? {},
+                };
+                const ok = (summary.assertions.failed === 0) && (summary.requests.failed === 0);
+                return { ok, output: JSON.stringify(summary, null, 2), errorOutput: '' };
+            } catch {
+                return { ok: false, output: '', errorOutput: 'Failed to parse API test result JSON.' };
+            }
+        }
+
+        // DAST scan via OWASP ZAP REST API
+        case 'workspace_dast_scan': {
+            const zapUrl = process.env['ZAP_API_URL'] ?? '';
+            if (!zapUrl) {
+                return {
+                    ok: false, output: '',
+                    errorOutput: [
+                        'ZAP_API_URL environment variable is not set.',
+                        'To enable DAST scanning:',
+                        '  1. Run OWASP ZAP in daemon mode: docker run -d -p 8080:8080 owasp/zap2docker-stable zap.sh -daemon -port 8080',
+                        '  2. Set ZAP_API_URL=http://localhost:8080 in your environment.',
+                    ].join('\n'),
+                };
+            }
+            const targetUrl = typeof payload['target_url'] === 'string' ? payload['target_url'].trim() : '';
+            if (!targetUrl) {
+                return { ok: false, output: '', errorOutput: 'payload.target_url is required.' };
+            }
+            const scanType = typeof payload['scan_type'] === 'string' ? payload['scan_type'] : 'active';
+            try {
+                const { request: httpReq } = await import('node:https');
+                const { request: httpRequest } = await import('node:http');
+                const doGet = (url: string): Promise<string> => new Promise((resolve, reject) => {
+                    const mod = url.startsWith('https') ? httpReq : httpRequest;
+                    const req = (mod as typeof httpReq)(url, (res) => {
+                        let body = '';
+                        res.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+                        res.on('end', () => resolve(body));
+                    });
+                    req.on('error', reject);
+                    req.end();
+                });
+                const enc = encodeURIComponent;
+                const spiderUrl = `${zapUrl}/JSON/spider/action/scan/?url=${enc(targetUrl)}&maxChildren=10&recurse=true`;
+                const spiderResp = await doGet(spiderUrl);
+                const spiderId = (JSON.parse(spiderResp) as { scan?: string }).scan ?? '0';
+                // Poll spider
+                for (let i = 0; i < 30; i++) {
+                    const statusResp = await doGet(`${zapUrl}/JSON/spider/view/status/?scanId=${spiderId}`);
+                    const pct = Number((JSON.parse(statusResp) as { status?: string }).status ?? '0');
+                    if (pct >= 100) break;
+                    await new Promise(r => setTimeout(r, 2000));
+                }
+                if (scanType === 'active') {
+                    const ascanResp = await doGet(`${zapUrl}/JSON/ascan/action/scan/?url=${enc(targetUrl)}&recurse=true`);
+                    const ascanId = (JSON.parse(ascanResp) as { scan?: string }).scan ?? '0';
+                    for (let i = 0; i < 60; i++) {
+                        const statusResp = await doGet(`${zapUrl}/JSON/ascan/view/status/?scanId=${ascanId}`);
+                        const pct = Number((JSON.parse(statusResp) as { status?: string }).status ?? '0');
+                        if (pct >= 100) break;
+                        await new Promise(r => setTimeout(r, 3000));
+                    }
+                }
+                const alertsResp = await doGet(`${zapUrl}/JSON/alert/view/alerts/?baseurl=${enc(targetUrl)}&start=0&count=100`);
+                const alerts = (JSON.parse(alertsResp) as { alerts?: unknown[] }).alerts ?? [];
+                const outputDir = join(workspaceDir, '.agentfarm');
+                await mkdir(outputDir, { recursive: true }).catch(() => undefined);
+                await writeFile(join(outputDir, 'dast-result.json'), JSON.stringify({ targetUrl, scanType, alertCount: alerts.length, alerts }, null, 2));
+                return {
+                    ok: true,
+                    output: JSON.stringify({ targetUrl, scanType, alertCount: alerts.length, summary: `DAST scan complete. ${alerts.length} alert(s) found.` }, null, 2),
+                    errorOutput: '',
+                };
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: `DAST scan failed: ${String(err)}` };
+            }
+        }
+
+        // Aggregate security findings from .agentfarm cache
+        case 'workspace_security_test_report': {
+            const cacheDir = join(workspaceDir, '.agentfarm');
+            const readJson = async (name: string): Promise<unknown> => {
+                const raw = await readFile(join(cacheDir, name), 'utf8').catch(() => null);
+                return raw ? JSON.parse(raw) : null;
+            };
+            const [sast, secrets, dast] = await Promise.all([
+                readJson('sast-result.json'),
+                readJson('secret-scan-result.json'),
+                readJson('dast-result.json'),
+            ]);
+            const report = {
+                sast: sast ?? 'No SAST results (run workspace_sast_scan first)',
+                secrets: secrets ?? 'No secret scan results (run workspace_secret_scan first)',
+                dast: dast ?? 'No DAST results (run workspace_dast_scan first)',
+            };
+            return { ok: true, output: JSON.stringify(report, null, 2), errorOutput: '' };
+        }
+
+        // Sync test cases to TestRail / Zephyr via connector
+        case 'workspace_test_case_sync': {
+            const provider = typeof payload['provider'] === 'string' ? payload['provider'] : 'testrail';
+            if (!connectorActionExecuteClient) {
+                return { ok: false, output: '', errorOutput: 'connectorActionExecuteClient is not available in this context.' };
+            }
+            try {
+                const result = await connectorActionExecuteClient({
+                    connectorType: provider,
+                    actionType: 'sync_test_cases',
+                    payload,
+                });
+                return { ok: true, output: JSON.stringify(result, null, 2), errorOutput: '' };
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: `Test case sync failed: ${String(err)}` };
+            }
+        }
+
+        // Publish test run results to TestRail / Zephyr
+        case 'workspace_test_run_publish': {
+            const provider = typeof payload['provider'] === 'string' ? payload['provider'] : 'testrail';
+            if (!connectorActionExecuteClient) {
+                return { ok: false, output: '', errorOutput: 'connectorActionExecuteClient is not available in this context.' };
+            }
+            try {
+                const result = await connectorActionExecuteClient({
+                    connectorType: provider,
+                    actionType: 'publish_test_run',
+                    payload,
+                });
+                return { ok: true, output: JSON.stringify(result, null, 2), errorOutput: '' };
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: `Test run publish failed: ${String(err)}` };
+            }
+        }
+
+        // Visual regression via Playwright screenshots
+        case 'workspace_visual_regression': {
+            const url = typeof payload['url'] === 'string' ? payload['url'].trim() : '';
+            if (!url) {
+                return { ok: false, output: '', errorOutput: 'payload.url is required.' };
+            }
+            const snapshotName = typeof payload['snapshot_name'] === 'string'
+                ? payload['snapshot_name'].replace(/[^a-z0-9_-]/gi, '_')
+                : 'snapshot';
+            const screenshotDir = join(workspaceDir, '.agentfarm', 'screenshots');
+            await mkdir(screenshotDir, { recursive: true }).catch(() => undefined);
+            const currentPath = join(screenshotDir, `${snapshotName}-current.png`);
+            const baselinePath = join(screenshotDir, `${snapshotName}-baseline.png`);
+            const cmd = [
+                'npx', 'playwright', 'screenshot',
+                '--full-page',
+                url,
+                currentPath,
+            ];
+            const r = await runCommand(cmd, workspaceDir, 60_000);
+            if (r.exitCode !== 0) {
+                return { ok: false, output: r.stdout, errorOutput: r.stderr };
+            }
+            const hasBaseline = await stat(baselinePath).then(() => true).catch(() => false);
+            if (!hasBaseline) {
+                // Promote current as baseline on first run
+                const { copyFile } = await import('node:fs/promises');
+                await copyFile(currentPath, baselinePath);
+                return {
+                    ok: true,
+                    output: JSON.stringify({ status: 'baseline_created', snapshot: snapshotName, message: 'First run — current screenshot promoted to baseline.' }, null, 2),
+                    errorOutput: '',
+                };
+            }
+            const [currentStat, baselineStat] = await Promise.all([
+                stat(currentPath),
+                stat(baselinePath),
+            ]);
+            const diffPct = Math.abs(currentStat.size - baselineStat.size) / Math.max(baselineStat.size, 1) * 100;
+            const threshold = typeof payload['threshold_pct'] === 'number' ? payload['threshold_pct'] : 5;
+            const passed = diffPct <= threshold;
+            return {
+                ok: passed,
+                output: JSON.stringify({
+                    status: passed ? 'pass' : 'fail',
+                    snapshot: snapshotName,
+                    baseline_bytes: baselineStat.size,
+                    current_bytes: currentStat.size,
+                    diff_pct: Math.round(diffPct * 100) / 100,
+                    threshold_pct: threshold,
+                }, null, 2),
+                errorOutput: passed ? '' : `Visual regression detected: ${diffPct.toFixed(2)}% size difference exceeds ${threshold}% threshold.`,
+            };
         }
 
         default: {

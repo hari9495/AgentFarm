@@ -1,14 +1,15 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
-import { Space_Grotesk, IBM_Plex_Mono } from 'next/font/google';
+import { Inter, IBM_Plex_Mono } from 'next/font/google';
 import { SubscriptionBanner } from './components/subscription-banner';
 import { SuspensionWall } from './components/suspension-wall';
 import { getSessionPayload } from './lib/internal-session';
 import './globals.css';
 
-const spaceGrotesk = Space_Grotesk({
+const inter = Inter({
     subsets: ['latin'],
-    variable: '--font-space-grotesk',
+    variable: '--font-inter',
+    display: 'swap',
 });
 
 const plexMono = IBM_Plex_Mono({
@@ -26,11 +27,8 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     const session = await getSessionPayload();
     const tenantId = session?.tenantId ?? '';
     return (
-        <html lang="en" className={`${spaceGrotesk.variable} ${plexMono.variable}`} suppressHydrationWarning>
+        <html lang="en" className={`${inter.variable} ${plexMono.variable}`} suppressHydrationWarning>
             <body suppressHydrationWarning className="ops-shell">
-                <div aria-hidden className="ops-ambient" />
-                <div aria-hidden className="ops-grid" />
-                <div aria-hidden className="ops-noise" />
                 <SuspensionWall tenantId={tenantId}>
                     <SubscriptionBanner tenantId={tenantId} />
                     {children}

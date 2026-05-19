@@ -11,16 +11,18 @@ export type SubscriptionStatusCardProps = {
     daysUntilSuspension?: number | null;
     tasksUsed?: number;
     tasksLimit?: number;
+    /** Current-period estimated platform charge ($0.10/successful task). */
+    platformCharge?: number;
 };
 
 // ── Badge ─────────────────────────────────────────────────────────────────────
 
 const STATUS_COLOR: Record<string, { bg: string; text: string; border: string; label: string }> = {
-    active:    { bg: '#ecfdf5', text: '#065f46', border: '#a7f3d0', label: 'Active' },
-    expired:   { bg: '#fef2f2', text: '#991b1b', border: '#fca5a5', label: 'Expired' },
+    active: { bg: '#ecfdf5', text: '#065f46', border: '#a7f3d0', label: 'Active' },
+    expired: { bg: '#fef2f2', text: '#991b1b', border: '#fca5a5', label: 'Expired' },
     suspended: { bg: '#fffbeb', text: '#92400e', border: '#fcd34d', label: 'Suspended' },
     cancelled: { bg: '#f1f5f9', text: '#475569', border: '#cbd5e1', label: 'Cancelled' },
-    none:      { bg: '#f1f5f9', text: '#475569', border: '#cbd5e1', label: 'No Plan' },
+    none: { bg: '#f1f5f9', text: '#475569', border: '#cbd5e1', label: 'No Plan' },
 };
 
 function StatusBadge({ status }: { status: string }) {
@@ -51,8 +53,8 @@ function UsageBar({ used, limit }: { used: number; limit: number }) {
     const pct = limit > 0 ? Math.min(100, (used / limit) * 100) : 0;
     const color =
         pct > 90 ? '#dc2626' :
-        pct > 70 ? '#d97706' :
-        '#059669';
+            pct > 70 ? '#d97706' :
+                '#059669';
 
     return (
         <div style={{ marginTop: '1rem' }}>
@@ -171,6 +173,7 @@ export function SubscriptionStatusCard({
     daysUntilSuspension,
     tasksUsed,
     tasksLimit,
+    platformCharge,
 }: SubscriptionStatusCardProps) {
     const planLabel = plan ?? 'Standard Plan';
     const isExpired = status === 'expired';
@@ -258,6 +261,29 @@ export function SubscriptionStatusCard({
 
             {tasksUsed != null && tasksLimit != null && (
                 <UsageBar used={tasksUsed} limit={tasksLimit} />
+            )}
+
+            {platformCharge != null && (
+                <div
+                    style={{
+                        marginTop: '0.75rem',
+                        padding: '0.6rem 0.75rem',
+                        background: 'var(--surface-2, #f8fafc)',
+                        border: '1px solid var(--line)',
+                        borderRadius: 8,
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        fontSize: '0.83rem',
+                    }}
+                >
+                    <span style={{ color: 'var(--ink-soft)', fontWeight: 500 }}>
+                        Est. charge this period
+                    </span>
+                    <span style={{ fontWeight: 700, color: 'var(--ink)', fontVariantNumeric: 'tabular-nums' }}>
+                        ${platformCharge.toFixed(2)}
+                    </span>
+                </div>
             )}
 
             <div>

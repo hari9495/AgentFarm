@@ -1,5 +1,7 @@
 # Sprint 3: Memory And Compliance Packaging
 
+Status: CLOSED
+
 ## Sprint Goal
 Introduce governed memory reuse, controlled promotion, compliance packaging, and per-task FinOps guardrails while preserving safety and auditability.
 

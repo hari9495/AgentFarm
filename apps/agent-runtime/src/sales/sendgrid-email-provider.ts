@@ -16,6 +16,16 @@ export class SendgridEmailProvider implements IEmailProvider {
                 subject: params.subject,
                 content: [{ type: 'text/html', value: params.body }],
                 ...(params.replyTo ? { reply_to: { email: params.replyTo } } : {}),
+                ...(params.attachments && params.attachments.length > 0
+                    ? {
+                        attachments: params.attachments.map(a => ({
+                            content: a.content.toString('base64'),
+                            filename: a.filename,
+                            type: a.contentType,
+                            disposition: 'attachment',
+                        })),
+                    }
+                    : {}),
             }),
         });
         return {

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getInternalSessionAuthHeader } from '../../../lib/internal-session.js';
+import { getInternalSessionAuthHeader } from '../../../lib/internal-session';
 
 const getApiBaseUrl = (): string => process.env.DASHBOARD_API_BASE_URL ?? 'http://localhost:3000';
 
@@ -25,3 +25,5 @@ export async function GET(
         return NextResponse.json({ error: 'upstream_unavailable' }, { status: 502 });
     }
 }
+
+

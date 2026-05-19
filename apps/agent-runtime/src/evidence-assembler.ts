@@ -16,7 +16,7 @@ export const assembleEvidenceRecord = (input: {
     completedAt: string;
     durationMs: number;
 }): EvidenceRecord => {
-    const { task, actionResult, executionLogs, approvalId, startedAt, completedAt, durationMs } = input;
+    const { actionResult, executionLogs, approvalId, startedAt, completedAt, durationMs } = input;
 
     // Extract quality gate results from action result and logs
     const qualityGateResults: QualityGateCheckResult[] = [];

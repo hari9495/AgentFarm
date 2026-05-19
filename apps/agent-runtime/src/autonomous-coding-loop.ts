@@ -15,6 +15,8 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { getSkillHandler } from './skill-execution-engine.js';
 import { executeLocalWorkspaceAction } from './local-workspace-executor.js';
+import { signOutbound } from './outbound-signer.js';
+import type { AgentPersonaRecord } from '@agentfarm/shared-types';
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -63,6 +65,8 @@ export type AutonomousLoopInput = {
     max_fix_attempts?: number;
     /** Skip real git/file operations — when true (or omitted) uses plan-only mode */
     dry_run?: boolean;
+    /** Agent persona — used to sign outbound messages (e.g. PR body disclosure) */
+    persona?: AgentPersonaRecord | null;
 };
 
 export type AutonomousLoopResult = {
@@ -467,12 +471,14 @@ async function runCreatePr(input: AutonomousLoopInput, branchName: string, steps
         ? (descResult as { summary: string }).summary
         : input.task_description;
 
+    const signedPrBody = signOutbound(prBody, input.persona ?? null);
+
     const prResult = await createGitHubPR({
         token,
         owner,
         repo,
         title: input.task_description,
-        body: prBody,
+        body: signedPrBody,
         head: branchName,
         base,
         draft: false,
@@ -597,7 +603,7 @@ function buildResult(
     input: AutonomousLoopInput,
     steps: LoopStepRecord[],
     branchName: string,
-    loopId: string,
+    _loopId: string,
     startTime: number,
     summary: string,
     checkpointFile?: string,
@@ -631,10 +637,6 @@ export async function resumeFromCheckpoint(loopId: string, input: AutonomousLoop
         const branchName = buildBranchName(input.task_description, input.issue_number);
         return buildResult(input, saved, branchName, loopId, Date.now(), 'Loop already complete — loaded from checkpoint.');
     }
-    // Mark everything after failed index as pending and re-run
-    const resumed = saved.map((s, i) =>
-        i >= failedIndex ? { ...s, status: 'pending' as LoopStepStatus } : s
-    );
     // Re-run the full loop with restored context
     return runAutonomousLoop(input);
 }

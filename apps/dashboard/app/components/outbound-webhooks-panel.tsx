@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, Fragment } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
 type OutboundWebhooksPanelProps = { tenantId: string };
 

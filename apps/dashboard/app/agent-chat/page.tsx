@@ -6,15 +6,16 @@
  */
 
 import { AgentChatPanel } from '../components/agent-chat-panel';
+import { PageHeader } from '../components/page-header';
 
 export default function AgentChatPage() {
     return (
-        <main className="page-shell" style={{ maxWidth: 900 }}>
-            <header className="hero" style={{ marginBottom: '0.3rem' }}>
-                <p className="eyebrow">Autonomous Agent</p>
-                <h1>Agent Chat</h1>
-                <p>Send tasks to the autonomous coding loop and follow each step in real time.</p>
-            </header>
+        <main className="page-shell">
+            <PageHeader
+                eyebrow="Autonomous Agent"
+                title="Agent Chat"
+                description="Send tasks to the autonomous coding loop and follow each step in real time."
+            />
             <AgentChatPanel />
         </main>
     );

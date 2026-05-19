@@ -99,6 +99,102 @@ test('healthCheck returns false when Voicebox responds with non-200', async (t) 
     assert.strictEqual(healthy, false);
 });
 
+// ---------------------------------------------------------------------------
+// createVoiceProfile (multipart upload)
+// ---------------------------------------------------------------------------
+
+test('createVoiceProfile posts multipart form data and returns VoiceProfile', async (t) => {
+    const expected = { id: 'vp-001', name: 'Alex', language: 'en' };
+    const capturedRequests: { url: string; init?: RequestInit }[] = [];
+
+    t.mock.method(globalThis, 'fetch', async (url: string, init?: RequestInit) => {
+        capturedRequests.push({ url, init });
+        return new Response(JSON.stringify(expected), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+        });
+    });
+
+    const client = new VoiceboxClient();
+    const fakeAudio = Buffer.from([0x00, 0x01, 0x02]);
+    const profile = await client.createVoiceProfile(fakeAudio, 'Alex', 'en');
+
+    assert.strictEqual(profile.id, 'vp-001');
+    assert.strictEqual(profile.name, 'Alex');
+    assert.strictEqual(profile.language, 'en');
+
+    const req = capturedRequests[0];
+    assert.ok(req?.url.endsWith('/v1/profiles'), `expected POST to /v1/profiles, got: ${req?.url}`);
+    assert.strictEqual(req?.init?.method, 'POST');
+});
+
+test('createVoiceProfile throws on non-OK response', async (t) => {
+    t.mock.method(globalThis, 'fetch', async () => {
+        return new Response(JSON.stringify({ error: 'bad request' }), {
+            status: 400,
+            headers: { 'content-type': 'application/json' },
+        });
+    });
+
+    const client = new VoiceboxClient();
+    await assert.rejects(
+        () => client.createVoiceProfile(Buffer.from([]), 'Fail', 'en'),
+        (err: Error) => {
+            assert.ok(err.message.includes('400'), `expected 400 in error, got: ${err.message}`);
+            return true;
+        },
+    );
+});
+
+// ---------------------------------------------------------------------------
+// createVoiceProfileFromDescription (design mode)
+// ---------------------------------------------------------------------------
+
+test('createVoiceProfileFromDescription posts design-mode JSON and returns VoiceProfile', async (t) => {
+    const expected = { id: 'vp-design-002', name: 'Morgan', language: 'en' };
+    let capturedBody: unknown;
+
+    t.mock.method(globalThis, 'fetch', async (_url: string, init?: RequestInit) => {
+        capturedBody = init?.body ? JSON.parse(init.body as string) : undefined;
+        return new Response(JSON.stringify(expected), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+        });
+    });
+
+    const client = new VoiceboxClient();
+    const profile = await client.createVoiceProfileFromDescription(
+        'Morgan',
+        'Warm and persuasive',
+        'en',
+    );
+
+    assert.strictEqual(profile.id, 'vp-design-002');
+    assert.strictEqual(profile.name, 'Morgan');
+    assert.deepEqual((capturedBody as any)?.mode, 'design');
+    assert.deepEqual((capturedBody as any)?.name, 'Morgan');
+    assert.deepEqual((capturedBody as any)?.description, 'Warm and persuasive');
+    assert.deepEqual((capturedBody as any)?.language, 'en');
+});
+
+test('createVoiceProfileFromDescription throws on non-OK response', async (t) => {
+    t.mock.method(globalThis, 'fetch', async () => {
+        return new Response(JSON.stringify({ error: 'server error' }), {
+            status: 500,
+            headers: { 'content-type': 'application/json' },
+        });
+    });
+
+    const client = new VoiceboxClient();
+    await assert.rejects(
+        () => client.createVoiceProfileFromDescription('Fail', 'desc', 'en'),
+        (err: Error) => {
+            assert.ok(err.message.includes('500'), `expected 500 in error, got: ${err.message}`);
+            return true;
+        },
+    );
+});
+
 test('healthCheck returns false when fetch throws a network error', async (t) => {
     t.mock.method(globalThis, 'fetch', async (_url: string) => {
         throw new Error('ECONNREFUSED');

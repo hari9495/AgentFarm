@@ -1,4 +1,5 @@
 import { SkillSearchPanel } from '../components/skill-search-panel';
+import { PageHeader } from '../components/page-header';
 
 type SearchParams = {
     workspaceId?: string;
@@ -11,11 +12,12 @@ export default async function SkillSearchPage({ searchParams }: { searchParams: 
     const botId = (params.botId ?? 'bot_dev_001').trim();
 
     return (
-        <main style={{ maxWidth: 1100, margin: '1.5rem auto', padding: '0 1rem' }}>
-            <h1>Skill Search</h1>
-            <p style={{ marginTop: '-0.45rem', color: '#57534e' }}>
-                Find and invoke skills by name, category, or tag. Search across the full skill catalog.
-            </p>
+        <main className="page-shell" style={{ maxWidth: 1100 }}>
+            <PageHeader
+                eyebrow="Skills"
+                title="Skill Search"
+                description="Find and invoke skills by name, category, or tag. Search across the full skill catalog."
+            />
             <SkillSearchPanel workspaceId={workspaceId} botId={botId} />
         </main>
     );

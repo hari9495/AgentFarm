@@ -22,6 +22,9 @@ export class SmtpEmailProvider implements IEmailProvider {
                 to: params.to,
                 subject: params.subject,
                 html: params.body,
+                ...(params.attachments && params.attachments.length > 0
+                    ? { attachments: params.attachments.map(a => ({ filename: a.filename, content: a.content, contentType: a.contentType })) }
+                    : {}),
             });
             return { success: true, messageId: info.messageId as string | undefined, provider: 'smtp' };
         } catch (err) {

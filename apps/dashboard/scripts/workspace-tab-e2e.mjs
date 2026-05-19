@@ -34,7 +34,7 @@ const activateTabByKeyboardAndExpectQuery = async (page, selector, expected, lab
 
         await target.focus();
         await target.press('ArrowRight');
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('load');
         try {
             await expectQuery(page, expected, label);
             return;
@@ -51,7 +51,7 @@ const activateTabByKeyboardAndExpectQuery = async (page, selector, expected, lab
 
     await page.goto(
         `${baseUrl}/?workspaceId=${encodeURIComponent(expectedWorkspaceId)}&tab=${encodeURIComponent(expectedTab)}`,
-        { waitUntil: 'networkidle' },
+        { waitUntil: 'load' },
     );
     await expectQuery(page, expected, `${label} (fallback)`);
 };
@@ -60,7 +60,7 @@ const activateTabByClickAndExpectQuery = async (page, selector, expected, label)
     try {
         await page.waitForSelector(selector, { state: 'visible' });
         await page.click(selector);
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('load');
         await expectQuery(page, expected, label);
     } catch {
         const expectedWorkspaceId = expected.workspaceId;
@@ -71,7 +71,7 @@ const activateTabByClickAndExpectQuery = async (page, selector, expected, label)
 
         await page.goto(
             `${baseUrl}/?workspaceId=${encodeURIComponent(expectedWorkspaceId)}&tab=${encodeURIComponent(expectedTab)}`,
-            { waitUntil: 'networkidle' },
+            { waitUntil: 'load' },
         );
         await expectQuery(page, expected, `${label} (fallback)`);
     }
@@ -104,7 +104,7 @@ const switchWorkspaceAndExpectQuery = async (page, workspaceId, expected, label)
     } catch {
         const fallbackTab = expected.tab ?? 'overview';
         await page.goto(`${baseUrl}/?workspaceId=${encodeURIComponent(workspaceId)}&tab=${encodeURIComponent(fallbackTab)}`, {
-            waitUntil: 'networkidle',
+            waitUntil: 'load',
         });
         await expectQuery(page, expected, `${label} (fallback)`);
     }
@@ -120,7 +120,7 @@ const expectQueryWithFallbackNavigation = async (page, expected, label) => {
             throw new Error(`Expected query for ${label}: ${JSON.stringify(expected)} but got ${page.url()}`);
         }
         await page.goto(`${baseUrl}/?workspaceId=${encodeURIComponent(workspaceId)}&tab=${encodeURIComponent(tab)}`, {
-            waitUntil: 'networkidle',
+            waitUntil: 'load',
         });
         await expectQuery(page, expected, `${label} (fallback)`);
     }
@@ -130,7 +130,12 @@ const expectQueryWithFallbackNavigation = async (page, expected, label) => {
 // The middleware only reads the decoded payload — it does not verify the signature.
 const makeInternalTestToken = () => {
     const header = Buffer.from(JSON.stringify({ alg: 'none', typ: 'JWT' })).toString('base64url');
-    const payload = Buffer.from(JSON.stringify({ scope: 'internal', sub: 'e2e-test', iat: 9_999_999_999 })).toString('base64url');
+    const payload = Buffer.from(JSON.stringify({
+        scope: 'internal',
+        sub: 'e2e-test',
+        iat: 9_999_999_999,
+        workspaceIds: ['ws_primary_001', 'ws_release_002'],
+    })).toString('base64url');
     return `${header}.${payload}.e2e-smoke`;
 };
 
@@ -152,9 +157,9 @@ const main = async () => {
 
         const page = await context.newPage();
 
-        await page.goto(`${baseUrl}/?workspaceId=ws_primary_001&tab=overview`, { waitUntil: 'networkidle' });
+        await page.goto(`${baseUrl}/?workspaceId=ws_primary_001&tab=overview`, { waitUntil: 'load' });
         await page.evaluate(() => window.localStorage.clear());
-        await page.goto(`${baseUrl}/?workspaceId=ws_primary_001&tab=overview`, { waitUntil: 'networkidle' });
+        await page.goto(`${baseUrl}/?workspaceId=ws_primary_001&tab=overview`, { waitUntil: 'load' });
 
         await activateTabByKeyboardAndExpectQuery(
             page,
@@ -171,7 +176,7 @@ const main = async () => {
         );
         // Wait for the Next.js RSC re-render and React hydration to settle before
         // interacting with tab buttons in the new workspace context.
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('load');
 
         await activateTabByClickAndExpectQuery(
             page,
@@ -180,21 +185,21 @@ const main = async () => {
             'switching to observability in workspace 2',
         );
 
-        await page.goto(`${baseUrl}/?workspaceId=ws_primary_001`, { waitUntil: 'networkidle' });
+        await page.goto(`${baseUrl}/?workspaceId=ws_primary_001`, { waitUntil: 'load' });
         await expectQueryWithFallbackNavigation(
             page,
             { workspaceId: 'ws_primary_001', tab: 'approvals' },
             'restoring workspace 1 tab',
         );
 
-        await page.goto(`${baseUrl}/?workspaceId=ws_release_002`, { waitUntil: 'networkidle' });
+        await page.goto(`${baseUrl}/?workspaceId=ws_release_002`, { waitUntil: 'load' });
         await expectQueryWithFallbackNavigation(
             page,
             { workspaceId: 'ws_release_002', tab: 'observability' },
             'restoring workspace 2 tab',
         );
 
-        await page.goto(`${baseUrl}/`, { waitUntil: 'networkidle' });
+        await page.goto(`${baseUrl}/`, { waitUntil: 'load' });
         await expectQuery(page, { workspaceId: 'ws_release_002' }, 'restoring sticky workspace without query');
 
         const currentWorkspace = await page.locator('[data-testid="workspace-switcher-topbar"]').inputValue();

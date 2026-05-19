@@ -1,11 +1,6 @@
 import { randomUUID } from 'crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 
-const getPrisma = async () => {
-    const db = await import('../lib/db.js');
-    return db.prisma;
-};
-
 type SessionContext = {
     userId: string;
     tenantId: string;
@@ -64,8 +59,6 @@ const createStore = (): EnvStore => ({
 });
 
 const toKey = (tenantId: string, workspaceId: string) => `${tenantId}:${workspaceId}`;
-
-const VALID_SHELLS = new Set<string>(['ok', 'missing', 'version_mismatch', 'unknown']);
 
 const isToolchainArray = (value: unknown): value is ToolchainEntry[] => {
     if (!Array.isArray(value)) return false;
@@ -181,122 +174,6 @@ const createInMemoryRepo = (store: EnvStore): EnvRepo => ({
     },
     async createAuditEvent() {
         // no-op in tests
-    },
-});
-
-// ---------------------------------------------------------------------------
-// DB repo
-// ---------------------------------------------------------------------------
-
-const createDbRepo = (prismaClient: Awaited<ReturnType<typeof getPrisma>>): EnvRepo => ({
-    async getProfile({ tenantId, workspaceId }) {
-        const row = await (prismaClient as any).envProfile.findUnique({
-            where: { tenantId_workspaceId: { tenantId, workspaceId } },
-        });
-        if (!row) return null;
-        return {
-            tenantId: row.tenantId,
-            workspaceId: row.workspaceId,
-            toolchain: (row.toolchain as ToolchainEntry[]) ?? [],
-            reconcileStatus: row.reconcileStatus as ReconcileStatus,
-            lastReconcileAt: row.lastReconcileAt?.toISOString(),
-            driftReport: row.driftReport as Record<string, unknown> | undefined,
-            updatedAt: row.updatedAt.toISOString(),
-            createdAt: row.createdAt.toISOString(),
-        };
-    },
-    async upsertProfile({ tenantId, workspaceId, toolchain, nowIso }) {
-        const row = await (prismaClient as any).envProfile.upsert({
-            where: { tenantId_workspaceId: { tenantId, workspaceId } },
-            update: { toolchain, updatedAt: new Date(nowIso) },
-            create: {
-                id: randomUUID(),
-                tenantId,
-                workspaceId,
-                toolchain,
-                reconcileStatus: 'clean',
-                createdAt: new Date(nowIso),
-                updatedAt: new Date(nowIso),
-            },
-        });
-        return {
-            tenantId: row.tenantId,
-            workspaceId: row.workspaceId,
-            toolchain: (row.toolchain as ToolchainEntry[]) ?? [],
-            reconcileStatus: row.reconcileStatus as ReconcileStatus,
-            lastReconcileAt: row.lastReconcileAt?.toISOString(),
-            driftReport: row.driftReport as Record<string, unknown> | undefined,
-            updatedAt: row.updatedAt.toISOString(),
-            createdAt: row.createdAt.toISOString(),
-        };
-    },
-    async reconcile({ tenantId, workspaceId, dryRun, nowIso }) {
-        const correlationId = randomUUID();
-        const existing = await (prismaClient as any).envProfile.findUnique({
-            where: { tenantId_workspaceId: { tenantId, workspaceId } },
-        });
-        const toolchain: ToolchainEntry[] = (existing?.toolchain as ToolchainEntry[]) ?? [];
-        const drifted = computeDrift(toolchain);
-        const reconcileStatus: ReconcileStatus = drifted.length > 0 ? 'drifted' : 'clean';
-        const driftReport: Record<string, unknown> = {
-            drifted_count: drifted.length,
-            entries: drifted.map((d) => ({ name: d.name, required: d.requiredVersion, actual: d.actualVersion, status: d.status })),
-            run_at: nowIso,
-            dry_run: dryRun,
-        };
-        if (!dryRun) {
-            const row = await (prismaClient as any).envProfile.upsert({
-                where: { tenantId_workspaceId: { tenantId, workspaceId } },
-                update: { reconcileStatus, lastReconcileAt: new Date(nowIso), driftReport, updatedAt: new Date(nowIso) },
-                create: {
-                    id: randomUUID(),
-                    tenantId,
-                    workspaceId,
-                    toolchain: [],
-                    reconcileStatus,
-                    lastReconcileAt: new Date(nowIso),
-                    driftReport,
-                    createdAt: new Date(nowIso),
-                    updatedAt: new Date(nowIso),
-                },
-            });
-            const profile: EnvProfileRecord = {
-                tenantId: row.tenantId,
-                workspaceId: row.workspaceId,
-                toolchain: (row.toolchain as ToolchainEntry[]) ?? [],
-                reconcileStatus: row.reconcileStatus as ReconcileStatus,
-                lastReconcileAt: row.lastReconcileAt?.toISOString(),
-                driftReport: row.driftReport as Record<string, unknown> | undefined,
-                updatedAt: row.updatedAt.toISOString(),
-                createdAt: row.createdAt.toISOString(),
-            };
-            return { profile, drifted, dryRun, correlationId };
-        }
-        const profile: EnvProfileRecord = {
-            tenantId,
-            workspaceId,
-            toolchain,
-            reconcileStatus,
-            driftReport,
-            updatedAt: nowIso,
-            createdAt: existing?.createdAt?.toISOString() ?? nowIso,
-        };
-        return { profile, drifted, dryRun, correlationId };
-    },
-    async createAuditEvent({ tenantId, workspaceId, actor, summary, correlationId }) {
-        await (prismaClient as any).auditEvent.create({
-            data: {
-                id: randomUUID(),
-                tenantId,
-                workspaceId,
-                actor,
-                eventType: 'audit_event',
-                severity: 'info',
-                summary,
-                correlationId,
-                createdAt: new Date(),
-            },
-        });
     },
 });
 

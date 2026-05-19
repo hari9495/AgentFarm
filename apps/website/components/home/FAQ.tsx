@@ -83,7 +83,7 @@ export default function FAQ() {
                                 onClick={() => setOpen(open === i ? null : i)}
                                 className="w-full flex items-center justify-between text-left gap-4 py-5 cursor-pointer group"
                             >
-                                <span className="text-[15px] font-medium text-[var(--ink)] group-hover:text-[#f4f4f6] transition-colors">
+                                <span className="text-[15px] font-medium text-[var(--ink)] group-hover:text-[var(--ink)] transition-colors">
                                     {faq.question}
                                 </span>
                                 <motion.div

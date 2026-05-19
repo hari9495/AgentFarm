@@ -6,15 +6,16 @@
  */
 
 import { CostDashboardPanel } from '../components/cost-dashboard-panel';
+import { PageHeader } from '../components/page-header';
 
 export default function CostDashboardPage() {
     return (
-        <main className="page-shell" style={{ maxWidth: 1100 }}>
-            <header className="hero" style={{ marginBottom: '0.3rem' }}>
-                <p className="eyebrow">Platform Observability</p>
-                <h1>Cost Dashboard</h1>
-                <p>LLM token usage, skill invocation analytics, and cost attribution by provider.</p>
-            </header>
+        <main className="page-shell">
+            <PageHeader
+                eyebrow="Platform Observability"
+                title="Cost Dashboard"
+                description="LLM token usage, skill invocation analytics, and cost attribution by provider."
+            />
             <CostDashboardPanel />
         </main>
     );

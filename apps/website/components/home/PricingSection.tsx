@@ -126,8 +126,8 @@ export default function PricingSection() {
                             viewport={{ once: true, margin: "-40px" }}
                             transition={{ delay: i * 0.1, duration: 0.46, ease }}
                             className={`relative rounded-2xl p-7 flex flex-col border transition-all ${plan.highlighted
-                                    ? "bg-[var(--surface-card)] border-[var(--accent-blue)]/50 shadow-[0_0_0_1px_rgba(87,193,255,0.2),0_8px_40px_rgba(87,193,255,0.06)]"
-                                    : "bg-[var(--surface-card)] border-[var(--hairline)]"
+                                ? "bg-[var(--surface-card)] border-[var(--accent-blue)]/50 shadow-[0_0_0_1px_rgba(87,193,255,0.2),0_8px_40px_rgba(87,193,255,0.06)]"
+                                : "bg-[var(--surface-card)] border-[var(--hairline)]"
                                 }`}
                         >
                             {plan.highlighted && (
@@ -172,10 +172,10 @@ export default function PricingSection() {
                             <Link
                                 href={plan.ctaHref}
                                 className={`w-full text-center py-2.5 text-sm font-semibold rounded-xl transition-all ${plan.highlighted
-                                        ? "bg-[var(--accent-blue)] text-[#07080a] hover:bg-[#8dd7ff]"
-                                        : plan.name === "Enterprise"
-                                            ? "bg-white/[0.06] border border-[var(--hairline)] text-[var(--ink)] hover:bg-white/[0.1]"
-                                            : "bg-white text-[#07080a] hover:bg-[#e8e8e8]"
+                                    ? "bg-[var(--accent-blue)] text-[#07080a] hover:bg-[#8dd7ff]"
+                                    : plan.name === "Enterprise"
+                                        ? "bg-[var(--surface-el)] border border-[var(--hairline)] text-[var(--ink)] hover:bg-[var(--hairline)]"
+                                        : "bg-[var(--surface-el)] border border-[var(--hairline)] text-[var(--ink)] hover:bg-[var(--hairline)]"
                                     }`}
                             >
                                 {plan.cta}

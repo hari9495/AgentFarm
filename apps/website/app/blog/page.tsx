@@ -3,16 +3,16 @@ import Link from "next/link";
 
 export const metadata: Metadata = {
     title: "Blog — AgentFarm",
-    description: "Insights on AI engineering, autonomous agents, and the future of software development.",
+    description: "Insights on AI workers, autonomous agents, and the future of work across every department.",
 };
 
 const posts = [
     {
         slug: "introducing-agentfarm",
         category: "Product",
-        title: "Introducing AgentFarm: AI Teammates for Engineering Teams",
+        title: "Introducing AgentFarm: AI Workers for Every Department",
         excerpt:
-            "Today we're announcing AgentFarm - a trusted AI teammate platform built natively for software development workflows.",
+            "Today we're announcing AgentFarm — an AI staffing platform that puts a dedicated AI worker in every department, from engineering to sales to customer support.",
         date: "March 1, 2026",
         readTime: "5 min read",
         image: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=800&q=80",
@@ -30,9 +30,9 @@ const posts = [
     {
         slug: "developer-shortage-2026",
         category: "Insights",
-        title: "The Developer Shortage Is Real — Here's What We Can Do About It",
+        title: "The Talent Shortage Is Real — Here's What We Can Do About It",
         excerpt:
-            "By 2030, the global shortage of software engineers could exceed 4 million. AI teammates are part of the answer.",
+            "By 2030, talent shortages across every function — engineering, sales, support, ops — could cost trillions. AI workers are part of the answer.",
         date: "March 10, 2026",
         readTime: "6 min read",
         image: "https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=800&q=80",
@@ -60,9 +60,9 @@ const posts = [
     {
         slug: "measuring-ai-worker-output",
         category: "Insights",
-        title: "Measuring AI Teammate Output: The Metrics That Matter",
+        title: "Measuring AI Worker Output: The Metrics That Matter",
         excerpt:
-            "PR velocity, test coverage delta, code churn - the metrics we use to evaluate AI teammate productivity.",
+            "Tasks completed, approval rate, time-to-first-action — the metrics we use to evaluate AI worker performance across every role.",
         date: "March 27, 2026",
         readTime: "5 min read",
         image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=800&q=80",
@@ -70,9 +70,9 @@ const posts = [
     {
         slug: "engineer-time-allocation-2026",
         category: "Insights",
-        title: "Why Your Engineers Spend 60% of Their Time Not Engineering",
+        title: "Why Your Teams Spend 60% of Their Time on Low-Value Work",
         excerpt:
-            "Most engineering teams are shocked when they measure it: the majority of an engineer's week has nothing to do with writing code.",
+            "Most teams are shocked when they measure it: the majority of a workweek is consumed by low-value, repetitive tasks. AI workers fix that.",
         date: "April 2, 2026",
         readTime: "6 min read",
         image: "https://images.unsplash.com/photo-1600880292203-757bb62b4baf?auto=format&fit=crop&w=800&q=80",
@@ -80,9 +80,9 @@ const posts = [
     {
         slug: "scale-without-hiring",
         category: "Insights",
-        title: "How to Scale Your Engineering Team Without Hiring",
+        title: "How to Scale Your Team Without Hiring",
         excerpt:
-            "Headcount growth is slow, expensive, and hard to reverse. Here's how high-growth teams are expanding capacity without adding people.",
+            "Headcount growth is slow, expensive, and hard to reverse. Here's how companies are expanding capacity across every department without adding headcount.",
         date: "April 7, 2026",
         readTime: "7 min read",
         image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=800&q=80",
@@ -136,13 +136,13 @@ export default function BlogPage() {
                             <span className="chip chip-accent mb-5">
                                 Blog
                             </span>
-                            <h1 className="mt-3 text-4xl sm:text-6xl font-semibold text-[var(--ink)] tracking-[-0.03em]">
+                            <h1 className="mt-3 text-4xl sm:text-6xl font-semibold text-white tracking-[-0.03em]">
                                 Insights on{" "}
-                                <span className="bg-gradient-to-r from-[var(--accent-blue)] to-purple-400 bg-clip-text text-transparent">AI &amp; Engineering</span>
+                                <span className="bg-gradient-to-r from-[var(--accent-blue)] to-purple-400 bg-clip-text text-transparent">AI Workers &amp; the Future of Work</span>
                             </h1>
-                            <p className="mt-5 text-xl text-[var(--mute)] max-w-2xl leading-relaxed">
-                                Deep dives on building trusted AI teammate systems, autonomous agents, and the
-                                future of software development.
+                            <p className="mt-5 text-xl text-slate-300 max-w-2xl leading-relaxed">
+                                Deep dives on AI workers, autonomous agents, multi-role deployment, and the future of
+                                work across every department.
                             </p>
                         </div>
                     </div>

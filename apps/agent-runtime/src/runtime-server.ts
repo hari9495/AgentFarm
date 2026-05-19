@@ -21,7 +21,7 @@ import type {
     RoleKey,
     TaskLeaseRecord,
 } from '@agentfarm/shared-types';
-import { CONTRACT_VERSIONS } from '@agentfarm/shared-types';
+import { CONTRACT_VERSIONS, PER_TASK_PLATFORM_FEE_USD } from '@agentfarm/shared-types';
 import {
     buildDecision,
     processDeveloperTask,
@@ -35,7 +35,7 @@ import {
 import { maybeNotify, customerNotificationStore } from './notification-hook.js';
 import { loadNotificationConfigFromEnv } from './config/notification-config.js';
 import { customerCRMStore, crmService, loadCRMConfigFromEnv } from './crm-hook.js';
-import { customerERPStore, erpService, loadERPConfigFromEnv } from './erp-hook.js';
+import { customerERPStore, loadERPConfigFromEnv } from './erp-hook.js';
 import {
     createLlmDecisionResolver,
     createLlmDecisionResolverFromConfig,
@@ -69,6 +69,7 @@ import {
     TESTER_ROLE_BLOCKED_ACTIONS,
     isTesterRoleProfile,
 } from './tester-agent-profile.js';
+import { getTesterMcpClients } from './tester-mcp-provisioner.js';
 import {
     getProviderQualityPenalty,
     getQualitySignalSummary,
@@ -90,8 +91,17 @@ import { buildErrorQuery, researchForTask, type FetchFn } from './web-research-s
 import { analyzeImage, type VisionLLMCallerFn, type VisionProvider } from './vision-service.js';
 import { FanOutProgressSink, NoopProgressSink, type ProgressMilestone, type ProgressSink } from './task-progress-reporter.js';
 import { createPrismaMemoryStore, searchMemory } from './prisma-memory-store.js';
+import {
+    createEmbedFn,
+    writeEpisodicMemory,
+    searchEpisodicMemory,
+    searchSemanticMemory,
+    type EmbedFn,
+} from '@agentfarm/memory-service';
 import { estimateCostUsd } from './cost-calculator.js';
 import { globalScheduler } from './skill-scheduler.js';
+import { loadPersonaForBot, loadPersonaForBotWithFallback } from './persona-context-loader.js';
+import { buildTesterEpisodicPattern, buildTesterEpisodicSummary } from './tester-episodic-hooks.js';
 
 type RuntimeMemoryStore = {
     readMemoryForTask: (workspaceId: string, maxResults?: number) => Promise<{
@@ -247,6 +257,7 @@ type TaskExecutionRecordWriter = {
         totalTokens: number | null;
         estimatedCostUsd: number | null;
         modelTier: string | null;
+        platformFeeUsd: number;
         latencyMs: number;
         outcome: TaskExecutionOutcome;
         payloadOverrideSource: PayloadOverrideSource;
@@ -280,6 +291,10 @@ type RuntimeServerOptions = {
     taskExecutionRecordWriter?: TaskExecutionRecordWriter;
     memoryStore?: RuntimeMemoryStore;
     prisma?: import('@prisma/client').PrismaClient;
+    episodicEmbed?: EmbedFn;
+    episodicDeployment?: string;
+    semanticEmbed?: EmbedFn;
+    semanticDeployment?: string;
     llmDecisionResolver?: LlmDecisionResolver;
     llmConfigFetcher?: (input: {
         config: RuntimeConfig;
@@ -762,7 +777,14 @@ const buildEscalationWhatIfOptions = (input: {
     return options;
 };
 
-type RuntimeConnectorType = 'jira' | 'teams' | 'github' | 'email';
+type RuntimeConnectorType =
+    | 'jira' | 'teams' | 'github' | 'email'
+    | 'linear' | 'gitlab' | 'slack'
+    | 'jenkins' | 'circleci'
+    | 'selenium' | 'playwright' | 'cypress' | 'appium'
+    | 'jmeter' | 'postman' | 'soapui'
+    | 'testrail' | 'zephyr'
+    | 'burpsuite' | 'owasp_zap';
 type RuntimeConnectorActionType =
     | 'read_task'
     | 'create_comment'
@@ -791,7 +813,7 @@ const ROLE_CONNECTOR_POLICY: Record<RoleKey, RuntimeConnectorType[]> = {
     project_manager_product_owner_scrum_master: ['jira', 'teams', 'github', 'email'],
 };
 
-const CONNECTOR_ACTION_POLICY: Record<RuntimeConnectorType, RuntimeConnectorActionType[]> = {
+const CONNECTOR_ACTION_POLICY: Partial<Record<RuntimeConnectorType, RuntimeConnectorActionType[]>> = {
     jira: ['read_task', 'create_comment', 'update_status'],
     teams: ['send_message'],
     github: ['create_pr_comment', 'create_pr', 'merge_pr', 'list_prs'],
@@ -1042,7 +1064,7 @@ const LOCAL_WORKSPACE_ACTION_POLICY: Record<RoleKey, RuntimeLocalWorkspaceAction
 const getAllowedActionsForRole = (roleKey: RoleKey): string[] => {
     const connectorActions = ROLE_CONNECTOR_POLICY[roleKey].flatMap((tool) => {
         const roleToolOverrides = ROLE_CONNECTOR_ACTION_OVERRIDES[roleKey]?.[tool];
-        return roleToolOverrides ?? CONNECTOR_ACTION_POLICY[tool];
+        return roleToolOverrides ?? CONNECTOR_ACTION_POLICY[tool] ?? [];
     });
     const localActions = LOCAL_WORKSPACE_ACTION_POLICY[roleKey] ?? [];
     return Array.from(new Set([...connectorActions, ...localActions]));
@@ -1805,6 +1827,7 @@ const createDefaultTaskExecutionRecordWriter = (env: NodeJS.ProcessEnv): TaskExe
                         totalTokens: input.totalTokens ?? undefined,
                         estimatedCostUsd: input.estimatedCostUsd ?? undefined,
                         modelTier: input.modelTier ?? undefined,
+                        platformFeeUsd: input.platformFeeUsd,
                         latencyMs: input.latencyMs,
                         outcome: input.outcome,
                         executedAt: input.executedAt,
@@ -1976,6 +1999,29 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         options.evidenceRecordWriter ?? createFileEvidenceRecordWriter(evidenceRecordPath);
     const localWorkspaceActionExecutor = options.localWorkspaceActionExecutor ?? executeLocalWorkspaceAction;
     const memoryStore = options.memoryStore;
+    const episodicDeployment =
+        options.episodicDeployment
+        ?? env.EPISODIC_EMBEDDING_DEPLOYMENT
+        ?? 'text-embedding-3-small';
+    const episodicEmbed: EmbedFn | null = (() => {
+        if (options.episodicEmbed) return options.episodicEmbed;
+        const endpoint = env.EPISODIC_EMBEDDING_ENDPOINT ?? '';
+        const apiKey = env.EPISODIC_EMBEDDING_API_KEY ?? '';
+        if (!endpoint || !apiKey) return null;
+        return createEmbedFn({ endpoint, deployment: episodicDeployment, apiKey });
+    })();
+    // Sprint 9 — Semantic Memory: reuse embedding service (same env vars; separate deployment override supported)
+    const semanticDeployment =
+        options.semanticDeployment
+        ?? env.EPISODIC_EMBEDDING_DEPLOYMENT
+        ?? 'text-embedding-3-small';
+    const semanticEmbed: EmbedFn | null = (() => {
+        if (options.semanticEmbed) return options.semanticEmbed;
+        const endpoint = env.EPISODIC_EMBEDDING_ENDPOINT ?? '';
+        const apiKey = env.EPISODIC_EMBEDDING_API_KEY ?? '';
+        if (!endpoint || !apiKey) return null;
+        return createEmbedFn({ endpoint, deployment: semanticDeployment, apiKey });
+    })();
     const visionCaller = options.visionCaller;
     const visionProvider = options.visionProvider ?? 'anthropic';
 
@@ -3197,6 +3243,21 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         taskStartTimes.set(task.taskId, now());
 
         task = await enrichTaskWithVision(task);
+
+        // Load agent persona — falls back to role defaults for tester bots with no custom persona
+        const persona = await loadPersonaForBotWithFallback(config.botId, config.tenantId, config.roleKey).catch(() => null);
+
+        // For tester bots: pre-warm MCP connector sessions in the background so the first
+        // test action doesn't incur the full initialization latency.
+        if (config.roleKey === 'tester') {
+            getTesterMcpClients(config.tenantId, config.workspaceId).catch(() => { /* non-blocking */ });
+        }
+
+        // Attach persona to task payload so LLM resolvers can inject it into the system prompt
+        if (persona) {
+            task = { ...task, payload: { ...task.payload, _persona: persona } };
+        }
+
         const progressSink = buildProgressSinkForTask(task, config);
 
         const taskDecision = buildDecision(task);
@@ -3331,6 +3392,99 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
 
             await persistActionResultRecord(task, config, approvedResult);
             return;
+        }
+
+        // ---- Episodic memory recall: attach similar past context to task payload ----
+        if (episodicEmbed && options.prisma) {
+            const episodicQueryKeys = ['prompt', 'objective', 'summary', 'title'];
+            let queryText = '';
+            for (const key of episodicQueryKeys) {
+                const v = task.payload[key];
+                if (typeof v === 'string' && v.trim()) {
+                    queryText = v.trim().slice(0, 500);
+                    break;
+                }
+            }
+            if (queryText) {
+                await searchEpisodicMemory(
+                    {
+                        tenantId: config.tenantId,
+                        botId: config.botId,
+                        workspaceId: config.workspaceId,
+                        queryText,
+                        topK: 5,
+                    },
+                    episodicEmbed,
+                    options.prisma,
+                ).then((episodicResults: import('@agentfarm/shared-types').EpisodicSearchResult[]) => {
+                    if (episodicResults.length > 0) {
+                        task = {
+                            ...task,
+                            payload: {
+                                ...task.payload,
+                                _episodic_context: episodicResults,
+                            },
+                        };
+                    }
+                }).catch(() => { /* non-blocking: episodic recall failure must not halt execution */ });
+            }
+        }
+
+        // ---- Semantic memory recall: attach relevant company knowledge to task payload ----
+        if (semanticEmbed && options.prisma) {
+            const semanticQueryKeys = ['prompt', 'objective', 'summary', 'title'];
+            let semanticQueryText = '';
+            for (const key of semanticQueryKeys) {
+                const v = task.payload[key];
+                if (typeof v === 'string' && v.trim()) {
+                    semanticQueryText = v.trim().slice(0, 500);
+                    break;
+                }
+            }
+            if (semanticQueryText) {
+                await searchSemanticMemory(
+                    {
+                        tenantId: config.tenantId,
+                        botId: config.botId,
+                        queryText: semanticQueryText,
+                        topK: 3,
+                    },
+                    semanticEmbed,
+                    options.prisma,
+                ).then((semanticResults: import('@agentfarm/shared-types').SemanticSearchResult[]) => {
+                    if (semanticResults.length > 0) {
+                        task = {
+                            ...task,
+                            payload: {
+                                ...task.payload,
+                                _semantic_context: semanticResults,
+                            },
+                        };
+                    }
+                }).catch(() => { /* non-blocking: semantic recall failure must not halt execution */ });
+            }
+        }
+
+        // ---- Sprint 11: Connector token injection (non-blocking) ----
+        const runtimeSessionToken = process.env['RUNTIME_INTERNAL_SESSION_TOKEN'];
+        if (runtimeSessionToken && config.workspaceId) {
+            const { resolveAllConnectorTokens } = await import('./connector-token-resolver.js');
+            const RUNTIME_CONNECTOR_TYPES = ['github', 'jira', 'teams', 'email'] as const;
+            await resolveAllConnectorTokens(
+                RUNTIME_CONNECTOR_TYPES,
+                config.workspaceId,
+                { gatewayUrl: GATEWAY_URL, sessionToken: runtimeSessionToken },
+            ).then((tokens) => {
+                if (Object.keys(tokens).length > 0) {
+                    task = {
+                        ...task,
+                        payload: {
+                            ...task.payload,
+                            _connector_tokens: tokens,
+                        },
+                    };
+                }
+            }).catch(() => { /* non-blocking: connector token resolution failure must not halt execution */ });
         }
 
         const result = memoryStore
@@ -3809,7 +3963,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 retries: result.transientRetries,
                 attempts: result.attempts,
             });
-            await maybeNotify(executionTask.payload, result);
+            await maybeNotify(executionTask.payload, result, persona);
             await maybePushCRMUpdate(executionTask.payload, result, config);
             await persistActionResultRecord(executionTask, config, result);
             return;
@@ -3828,7 +3982,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             failure_class: result.failureClass ?? 'runtime_exception',
             error_message: result.errorMessage ?? null,
         });
-        await maybeNotify(executionTask.payload, result);
+        await maybeNotify(executionTask.payload, result, persona);
         await maybePushCRMUpdate(executionTask.payload, result, config);
         await persistActionResultRecord(executionTask, config, result);
     };
@@ -4036,6 +4190,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             totalTokens: result.llmExecution?.totalTokens ?? null,
             estimatedCostUsd: costResult?.costUsd ?? null,
             modelTier: costResult?.modelTier ?? null,
+            platformFeeUsd: taskOutcome === 'success' ? PER_TASK_PLATFORM_FEE_USD : 0,
             latencyMs,
             outcome: taskOutcome,
             payloadOverrideSource: result.payloadOverrideSource,
@@ -4118,6 +4273,55 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                     error_message: err instanceof Error ? err.message : String(err),
                 });
             });
+        }
+
+        // ---- Episodic memory write: upsert vector embedding for this task ----
+        if (episodicEmbed && options.prisma) {
+            writeEpisodicMemory(
+                {
+                    tenantId: config.tenantId,
+                    botId: config.botId,
+                    workspaceId: config.workspaceId,
+                    summary: summarizeTaskForMemory(task, result),
+                    pattern: result.decision.actionType,
+                    confidence: estimateLlmQualityScore(result),
+                    taskId: task.taskId,
+                },
+                episodicEmbed,
+                options.prisma,
+                episodicDeployment,
+            ).catch((err: unknown) => {
+                emitRuntimeEvent('runtime.episodic_memory_write_failed', config, {
+                    task_id: task.taskId,
+                    error_message: err instanceof Error ? err.message : String(err),
+                });
+            });
+
+            // ---- Tester-specific episodic write: richer pattern keys for QA memory ----
+            // Fires in addition to the generic write above.  Uses domain-aware
+            // pattern keys (e.g. "tester:cypress:fail") so future sessions can
+            // recall past test outcomes, flaky suites, and security findings.
+            if (config.roleKey === 'tester') {
+                writeEpisodicMemory(
+                    {
+                        tenantId: config.tenantId,
+                        botId: config.botId,
+                        workspaceId: config.workspaceId,
+                        summary: buildTesterEpisodicSummary(task, result),
+                        pattern: buildTesterEpisodicPattern(task, result),
+                        confidence: estimateLlmQualityScore(result),
+                        taskId: task.taskId,
+                    },
+                    episodicEmbed,
+                    options.prisma,
+                    episodicDeployment,
+                ).catch((err: unknown) => {
+                    emitRuntimeEvent('runtime.episodic_memory_write_failed', config, {
+                        task_id: task.taskId,
+                        error_message: err instanceof Error ? err.message : String(err),
+                    });
+                });
+            }
         }
 
         const workspaceKey =

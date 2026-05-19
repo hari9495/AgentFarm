@@ -6,7 +6,7 @@ import { Zap, BookOpen, Code2, ArrowRight, Terminal, CheckCircle2, GitBranch, Sh
 export const metadata: Metadata = {
   title: "Documentation — AgentFarm",
   description:
-    "AgentFarm developer docs — quickstart guides, core concepts, and API reference.",
+    "AgentFarm docs — quickstart guides, core concepts, and API reference for deploying AI workers across every department.",
 };
 
 const cards = [
@@ -39,27 +39,27 @@ const cards = [
 const quickstartSteps = [
   {
     label: "Step 1",
-    title: "Sign up & create workspace",
-    description: "Create your AgentFarm account and set up your first workspace with your organization name.",
+    title: "Sign up & choose a role",
+    description: "Create your AgentFarm account and pick your first AI worker role from the marketplace — Developer, Sales Rep, Customer Support, or any of the 12 available roles.",
     code: null,
   },
   {
     label: "Step 2",
-    title: "Connect GitHub",
-    description: "Authorize AgentFarm to your GitHub org. We request only the scopes your agent needs.",
-    code: "POST /v1/connectors\n{ tool: \"github\" }",
+    title: "Connect your tools",
+    description: "Connect the tools for your role — GitHub for Developer, HubSpot for Sales, Gmail for Support, Slack for all roles. Each connector uses least-privilege OAuth scopes.",
+    code: "POST /v1/connectors\n{ tool: \"github\" | \"hubspot\" | \"slack\" | \"gmail\" }",
   },
   {
     label: "Step 3",
-    title: "Install skills",
-    description: "Pick skills from the marketplace — Create PR, Run CI Checks, Fix Test Failures, and more.",
-    code: "POST /v1/marketplace/invoke\n{ skill: \"workspace_create_pr\" }",
+    title: "Set persona + approval rules",
+    description: "Give your AI worker a name, email address, and communication style. Configure risk thresholds: LOW tasks auto-execute, MEDIUM/HIGH pause for your sign-off.",
+    code: "POST /v1/personas\n{ botId, name, email, approvalThreshold: \"medium\" }",
   },
   {
     label: "Step 4",
     title: "Assign your first task",
-    description: "Send the agent a task via API, dashboard, or Slack. Your first PR will be open in minutes.",
-    code: "POST /v1/tasks\n{ prompt: \"Add input validation to /api/users\" }",
+    description: "Send the agent a task via the dashboard, API, or Slack. Your first output will be ready for review in minutes.",
+    code: "POST /v1/tasks\n{ prompt: \"Draft follow-up email for lead from yesterday's demo\" }",
   },
 ];
 

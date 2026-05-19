@@ -1,5 +1,7 @@
 # Sprint 1: Trust And Execution Core
 
+Status: CLOSED
+
 ## Sprint Goal
 Establish safe autonomous execution fundamentals: risk routing, approval clarity, post-change quality controls, and audit-grade evidence.
 

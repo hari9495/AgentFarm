@@ -6,7 +6,7 @@ import ButtonLink from "@/components/shared/ButtonLink";
 export const metadata: Metadata = {
     title: "About — AgentFarm",
     description:
-        "We're building a Developer Agent platform that gives engineering teams autonomous execution, approval-driven safety, and a full audit trail on every action.",
+        "AgentFarm is an AI staffing platform. Every department gets a dedicated AI worker — with real tool access, role-scoped skills, and human oversight on every decision that matters.",
 };
 
 const team = [
@@ -39,21 +39,21 @@ const team = [
 const values = [
     {
         icon: Target,
-        title: "Developer-first",
+        title: "People-first thinking",
         description:
-            "Every decision starts with: does this make engineering teams ship faster with stronger controls? If not, we don't build it.",
+            "Every decision starts with: does this free real people to do real meaningful work? AI should handle the repetitive layer, not replace human judgment.",
     },
     {
         icon: Zap,
         title: "Approval-driven execution",
         description:
-            "Speed without safety is just chaos. Every agent action is risk-classified — LOW runs automatically, MEDIUM and HIGH require human sign-off.",
+            "Speed without safety is just chaos. Every agent action is risk-classified — LOW runs automatically, MEDIUM and HIGH require human sign-off before anything ships.",
     },
     {
         icon: Users,
         title: "Radical transparency",
         description:
-            "Open roadmap, public changelog, and an immutable evidence trail for every action the agent takes. Nothing hidden.",
+            "Open roadmap, public changelog, and an immutable evidence trail for every action every agent takes. Nothing hidden, ever.",
     },
 ];
 
@@ -75,18 +75,18 @@ export default function AboutPage() {
                         Our story
                     </div>
                     <h1 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight leading-tight">
-                        We believe every engineering team
+                        We believe every company
                         <br className="hidden sm:block" />
-                        deserves an agent that{" "}
+                        deserves workers that{" "}
                         <span className="bg-gradient-to-r from-sky-300 via-blue-300 to-violet-300 bg-clip-text text-transparent">
-                            actually ships work
+                            actually get things done
                         </span>
                     </h1>
                     <p className="mt-4 text-lg text-slate-300 max-w-2xl leading-relaxed">
-                        AgentFarm started from a simple frustration: the best engineers spend
+                        AgentFarm started from a simple frustration: the best people spend
                         most of their time on work a well-governed AI agent could handle today.
-                        We set out to build that agent — with approval gates, audit trails, and
-                        tenant-isolated execution baked in from day one.
+                        We set out to build the AI staffing platform — 12 roles, every department,
+                        with approval gates, audit trails, and tenant-isolated execution from day one.
                     </p>
                 </div>
             </section>
@@ -96,8 +96,8 @@ export default function AboutPage() {
                 <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
                     {[
                         { value: "2025", label: "Founded" },
-                        { value: "21", label: "Developer skills" },
-                        { value: "299", label: "Tests passing" },
+                        { value: "12", label: "AI worker roles" },
+                        { value: "16", label: "Departments covered" },
                         { value: "Azure", label: "Infrastructure" },
                     ].map(({ value, label }) => (
                         <div key={label}>
@@ -116,9 +116,9 @@ export default function AboutPage() {
                         <Sparkles className="w-8 h-8 mb-4 text-white/80" />
                         <h2 className="text-2xl font-bold mb-4">Our mission</h2>
                         <p className="text-lg text-blue-100 leading-relaxed">
-                            To make 10× engineering productivity the default — not the exception
-                            — by giving every team AI teammates that code, test, review, and
-                            ships alongside humans.
+                            To make AI-powered execution the default for every company — not just
+                            engineering teams — by giving every department an AI worker that ships
+                            real work with real accountability.
                         </p>
                         <div className="mt-6 grid grid-cols-2 gap-4">
                             <div className="bg-white/15 rounded-xl p-3 text-center">
@@ -142,8 +142,8 @@ export default function AboutPage() {
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-[#07080a]/60 to-transparent" />
                         <div className="absolute bottom-4 left-4 right-4 text-white">
-                            <p className="text-sm font-semibold">Built by engineers, for engineers</p>
-                            <p className="text-xs text-[var(--mute)]">Every feature comes from a real team pain point</p>
+                            <p className="text-sm font-semibold">Built for every department</p>
+                            <p className="text-xs text-[var(--mute)]">12 roles, one platform, zero trust gaps</p>
                         </div>
                     </div>
                 </div>

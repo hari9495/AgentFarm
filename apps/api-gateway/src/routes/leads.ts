@@ -88,12 +88,12 @@ export function registerLeadRoutes(app: FastifyInstance, options: { prisma?: Pri
             if (isSalesforceLeadSyncEnabled()) {
                 crmResult = await syncLeadToSalesforce({
                     firstName: lead.firstName,
-                    lastName: lead.lastName,
+                    lastName: lead.lastName ?? undefined,
                     email: lead.email,
-                    company: lead.company,
+                    company: lead.company ?? undefined,
                     phone: trimStr(body.phone) || undefined,
                     description: lead.message ?? undefined,
-                    leadSource: lead.leadSource,
+                    leadSource: lead.leadSource ?? undefined,
                 }).catch((err: unknown) => ({
                     success: false,
                     error: err instanceof Error ? err.message : String(err),

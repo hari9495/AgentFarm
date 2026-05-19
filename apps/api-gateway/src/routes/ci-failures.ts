@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { PrismaClient } from '@prisma/client';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -171,6 +172,7 @@ const createStore = (): CiStore => ({ reports: new Map(), runIndex: new Map() })
 type CiRepo = {
     getReport(input: { id: string; tenantId: string; workspaceId: string }): Promise<CiTriageReport | null>;
     findByRunId(input: { tenantId: string; workspaceId: string; runId: string }): Promise<CiTriageReport | null>;
+    listReports(input: { tenantId: string; workspaceId: string; status?: string; limit?: number }): Promise<{ total: number; runs: CiTriageReport[] }>;
     createReport(input: Omit<CiTriageReport, 'id' | 'createdAt' | 'updatedAt'> & { nowIso: string }): Promise<CiTriageReport>;
     updateReport(input: {
         id: string;
@@ -200,6 +202,15 @@ const createInMemoryRepo = (store: CiStore): CiRepo => ({
         if (!id) return null;
         return store.reports.get(id) ?? null;
     },
+    async listReports({ tenantId, workspaceId, status, limit }) {
+        let results = Array.from(store.reports.values()).filter(
+            (r) => r.tenantId === tenantId && r.workspaceId === workspaceId,
+        );
+        if (status) results = results.filter((r) => r.status === status);
+        const total = results.length;
+        const runs = limit && limit > 0 ? results.slice(0, limit) : results;
+        return { total, runs };
+    },
     async createReport({ nowIso, ...fields }) {
         const record: CiTriageReport = { id: randomUUID(), createdAt: nowIso, updatedAt: nowIso, ...fields };
         store.reports.set(record.id, record);
@@ -223,15 +234,137 @@ const createInMemoryRepo = (store: CiStore): CiRepo => ({
 // Options + helpers
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Prisma-backed repo — used in production when prisma client is injected
+// ---------------------------------------------------------------------------
+
+const mapPrismaRecord = (row: {
+    id: string;
+    tenantId: string;
+    workspaceId: string;
+    provider: string;
+    runId: string;
+    repo: string;
+    branch: string;
+    failedJobs: unknown;
+    logRefs: unknown;
+    status: string;
+    rootCauseHypothesis: string | null;
+    reproSteps: unknown;
+    patchProposal: string | null;
+    confidence: number | null;
+    blastRadius: string | null;
+    correlationId: string;
+    createdAt: Date;
+    updatedAt: Date;
+}): CiTriageReport => ({
+    id: row.id,
+    tenantId: row.tenantId,
+    workspaceId: row.workspaceId,
+    provider: row.provider,
+    runId: row.runId,
+    repo: row.repo,
+    branch: row.branch,
+    failedJobs: Array.isArray(row.failedJobs) ? (row.failedJobs as CiFailedJob[]) : [],
+    logRefs: Array.isArray(row.logRefs) ? (row.logRefs as string[]) : [],
+    status: row.status as CiTriageStatus,
+    rootCauseHypothesis: row.rootCauseHypothesis ?? undefined,
+    reproSteps: Array.isArray(row.reproSteps) ? (row.reproSteps as string[]) : undefined,
+    patchProposal: row.patchProposal ?? undefined,
+    confidence: row.confidence ?? undefined,
+    blastRadius: row.blastRadius ?? undefined,
+    correlationId: row.correlationId,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+});
+
+const createPrismaRepo = (prisma: PrismaClient): CiRepo => ({
+    async getReport({ id, tenantId, workspaceId }) {
+        const row = await prisma.ciTriageReport.findFirst({ where: { id, tenantId, workspaceId } });
+        return row ? mapPrismaRecord(row) : null;
+    },
+
+    async findByRunId({ tenantId, workspaceId, runId }) {
+        const row = await prisma.ciTriageReport.findFirst({ where: { tenantId, workspaceId, runId } });
+        return row ? mapPrismaRecord(row) : null;
+    },
+
+    async listReports({ tenantId, workspaceId, status, limit }) {
+        const where = { tenantId, workspaceId, ...(status ? { status } : {}) };
+        const [total, rows] = await Promise.all([
+            prisma.ciTriageReport.count({ where }),
+            prisma.ciTriageReport.findMany({
+                where,
+                orderBy: { createdAt: 'desc' },
+                ...(limit && limit > 0 ? { take: limit } : {}),
+            }),
+        ]);
+        return { total, runs: rows.map(mapPrismaRecord) };
+    },
+
+    async createReport({ nowIso: _nowIso, ...fields }) {
+        const row = await prisma.ciTriageReport.create({
+            data: {
+                id: randomUUID(),
+                tenantId: fields.tenantId,
+                workspaceId: fields.workspaceId,
+                provider: fields.provider,
+                runId: fields.runId,
+                repo: fields.repo,
+                branch: fields.branch,
+                failedJobs: fields.failedJobs as object[],
+                logRefs: fields.logRefs,
+                status: fields.status,
+                correlationId: fields.correlationId,
+            },
+        });
+        return mapPrismaRecord(row);
+    },
+
+    async updateReport({ id, patch }) {
+        const existing = await prisma.ciTriageReport.findUnique({ where: { id } });
+        if (!existing) return null;
+        const row = await prisma.ciTriageReport.update({
+            where: { id },
+            data: {
+                ...(patch.status !== undefined ? { status: patch.status } : {}),
+                ...(patch.rootCauseHypothesis !== undefined ? { rootCauseHypothesis: patch.rootCauseHypothesis } : {}),
+                ...(patch.reproSteps !== undefined ? { reproSteps: patch.reproSteps } : {}),
+                ...(patch.patchProposal !== undefined ? { patchProposal: patch.patchProposal } : {}),
+                ...(patch.confidence !== undefined ? { confidence: patch.confidence } : {}),
+                ...(patch.blastRadius !== undefined ? { blastRadius: patch.blastRadius } : {}),
+            },
+        });
+        return mapPrismaRecord(row);
+    },
+
+    async createAuditEvent({ tenantId, workspaceId, actor, summary, correlationId }) {
+        await prisma.auditEvent.create({
+            data: {
+                tenantId,
+                workspaceId,
+                botId: actor,
+                eventType: 'bot_runtime_event',
+                severity: 'info',
+                summary,
+                sourceSystem: 'api-gateway:ci-failures',
+                correlationId,
+            },
+        });
+    },
+});
+
 type RegisterCiFailureRoutesOptions = {
     getSession: (request: FastifyRequest) => SessionContext | null;
     now?: () => number;
     store?: CiStore;
     repo?: CiRepo;
+    prisma?: PrismaClient;
 };
 
 const resolveRepo = (options: RegisterCiFailureRoutesOptions, store: CiStore): CiRepo => {
     if (options.repo) return options.repo;
+    if (options.prisma) return createPrismaRepo(options.prisma);
     return createInMemoryRepo(store);
 };
 
@@ -334,6 +467,26 @@ export const registerCiFailureRoutes = async (
             await repo.updateReport({ id: report.id, patch: triageResult, nowIso: triagedAt });
 
             return reply.status(202).send({ triageId: report.id, status: 'queued', correlationId });
+        },
+    );
+
+    // -----------------------------------------------------------------------
+    // GET /v1/workspaces/:workspaceId/ci-failures
+    // -----------------------------------------------------------------------
+    app.get<{ Params: WorkspacePath; Querystring: CiQuery & { status?: string; limit?: string } }>(
+        '/v1/workspaces/:workspaceId/ci-failures',
+        async (request, reply) => {
+            const { workspaceId } = request.params;
+            const session = resolveSession(request, options, request.query.tenant_id);
+            if (!session) return reply.status(401).send({ error: 'unauthorized' });
+            if (!checkAccess(session, workspaceId)) return reply.status(403).send({ error: 'forbidden' });
+
+            const statusFilter = typeof request.query.status === 'string' ? request.query.status : undefined;
+            const limit = typeof request.query.limit === 'string' ? parseInt(request.query.limit, 10) : 50;
+
+            const repo = resolveRepo(options, store);
+            const result = await repo.listReports({ tenantId: session.tenantId, workspaceId, status: statusFilter, limit });
+            return reply.status(200).send(result);
         },
     );
 

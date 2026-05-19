@@ -47,13 +47,13 @@ export default function ContactPage() {
                         <span className="chip chip-accent mb-5">
                             Contact
                         </span>
-                        <h1 className="mt-3 text-4xl sm:text-5xl font-semibold text-[var(--ink)] tracking-[-0.03em] mb-4">
+                        <h1 className="mt-3 text-4xl sm:text-5xl font-semibold text-white tracking-[-0.03em] mb-4">
                             Get in{" "}
                             <span className="bg-gradient-to-r from-[var(--accent-blue)] to-purple-400 bg-clip-text text-transparent">
                                 touch
                             </span>
                         </h1>
-                        <p className="text-xl text-[var(--mute)] max-w-xl mx-auto">
+                        <p className="text-xl text-slate-300 max-w-xl mx-auto">
                             Questions about AgentFarm? Want a personalised demo? We&apos;d love to
                             hear from you.
                         </p>

@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
+import { PageHeader } from '../components/page-header';
 
 export default function SignupPage() {
     const router = useRouter();
@@ -75,13 +76,11 @@ export default function SignupPage() {
 
     return (
         <main className="page-shell" style={{ maxWidth: 480, paddingTop: '3rem' }}>
-            <header className="hero">
-                <p className="eyebrow">AgentFarm Internal</p>
-                <h1 style={{ fontSize: '1.5rem' }}>Internal Access Setup</h1>
-                <p style={{ marginTop: '0.3rem', fontSize: '0.9rem' }}>
-                    Internal dashboard access is intended for approved team members.
-                </p>
-            </header>
+            <PageHeader
+                eyebrow="AgentFarm Internal"
+                title="Internal Access Setup"
+                description="Internal dashboard access is intended for approved team members."
+            />
 
             <form onSubmit={handleSubmit} className="card" style={{ display: 'grid', gap: '0.85rem' }}>
                 {error && (

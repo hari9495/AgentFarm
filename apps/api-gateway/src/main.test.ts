@@ -18,7 +18,6 @@ function buildTestApp(opts: { allowedOrigins?: string } = {}) {
     const app = Fastify({ logger: false });
 
     // Replicate SESSION_SECRET env so verifySessionToken works
-    const originalSecret = process.env['SESSION_SECRET'];
     process.env['SESSION_SECRET'] = process.env['SESSION_SECRET'] ?? 'test-secret-32-chars-minimum-ok!';
 
     // FIX 2 — security headers on every response

@@ -373,7 +373,6 @@ const testCoverageReporter: SkillHandler = (input, startedAt) => {
 // Analyses a list of test run histories to identify flaky tests.
 
 const flakyTestDetector: SkillHandler = (input, startedAt) => {
-    type TestRunRecord = { name: string; passed: boolean };
     const testRuns = Array.isArray(input['test_runs'])
         ? (input['test_runs'] as Array<{ suite?: string; passed?: boolean; name?: string }>)
         : [];

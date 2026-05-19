@@ -342,6 +342,10 @@ test('processDeveloperTask uses llmDecisionResolver output when available', asyn
         action_type: 'read_task',
         summary: 'Post deployment update',
         target: 'deployments',
+        // Gap-1 fix: LLM-classified actionType is injected so executor routes correctly
+        actionType: 'create_comment',
+        // Gap-2 fix: prompt is normalised from summary for workspace_subagent_spawn compat
+        prompt: 'Post deployment update',
     });
 });
 
@@ -421,4 +425,82 @@ test('processDeveloperTask falls back to heuristic decision when llmDecisionReso
     assert.equal(result.decision.actionType, 'read_task');
     assert.equal(result.llmExecution?.classificationSource, 'heuristic');
     assert.equal(result.llmExecution?.fallbackReason, 'llm_resolution_failed');
+});
+
+// ── Epic B2: Kill-Switch Enforcement ──────────────────────────────────────────
+
+test('B2: processDeveloperTask blocks execution when killSwitchCheckFn returns blocked', async () => {
+    const blocked = await processDeveloperTask(
+        taskEnvelope({
+            action_type: 'read_task',
+            summary: 'Read some code',
+            target: 'src/',
+            tenantId: 'tenant-ks',
+            workspaceId: 'ws-ks',
+            botId: 'bot-ks',
+        }),
+        {
+            killSwitchCheckFn: async () => ({ blocked: true, killSwitchId: 'ks-test-001' }),
+        },
+    );
+
+    assert.equal(blocked.status, 'failed');
+    assert.equal(blocked.failureClass, 'kill_switch_blocked');
+    assert.ok(
+        typeof blocked.errorMessage === 'string' && blocked.errorMessage.includes('[KILL_SWITCH_BLOCKED]'),
+        `errorMessage should contain [KILL_SWITCH_BLOCKED], got: ${blocked.errorMessage}`,
+    );
+    assert.ok(
+        typeof blocked.errorMessage === 'string' && blocked.errorMessage.includes('ks-test-001'),
+        `errorMessage should include kill-switch id`,
+    );
+});
+
+test('B2: processDeveloperTask proceeds normally when killSwitchCheckFn returns not blocked', async () => {
+    const result = await processDeveloperTask(
+        taskEnvelope({
+            action_type: 'read_task',
+            summary: 'Read deployment notes',
+            target: 'docs/',
+            tenantId: 'tenant-ks',
+            workspaceId: 'ws-ks',
+            botId: 'bot-ks',
+        }),
+        {
+            killSwitchCheckFn: async () => ({ blocked: false }),
+        },
+    );
+
+    // Low-risk task should succeed normally
+    assert.equal(result.status, 'success');
+});
+
+test('B2: processApprovedTask blocks approved task when kill-switch is active', async () => {
+    const blocked = await processApprovedTask(
+        taskEnvelope(
+            {
+                action_type: 'deploy_code',
+                summary: 'Deploy to production',
+                target: 'prod',
+                tenantId: 'tenant-ks',
+                workspaceId: 'ws-ks',
+                botId: 'bot-ks',
+            },
+            'task_approved_ks',
+        ),
+        {
+            killSwitchCheckFn: async () => ({ blocked: true, killSwitchId: 'ks-prod-halt' }),
+        },
+    );
+
+    assert.equal(blocked.status, 'failed');
+    assert.equal(blocked.failureClass, 'kill_switch_blocked');
+    assert.ok(
+        typeof blocked.errorMessage === 'string' && blocked.errorMessage.includes('[KILL_SWITCH_BLOCKED]'),
+        `errorMessage should contain [KILL_SWITCH_BLOCKED]`,
+    );
+    assert.ok(
+        typeof blocked.errorMessage === 'string' && blocked.errorMessage.includes('ks-prod-halt'),
+        `errorMessage should include kill-switch id`,
+    );
 });

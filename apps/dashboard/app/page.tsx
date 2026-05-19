@@ -12,7 +12,7 @@ import { RuntimeObservabilityPanel } from './components/runtime-observability-pa
 import { LlmConfigPanel } from './components/llm-config-panel';
 import { DashboardTabNav } from './components/dashboard-tab-nav';
 import { DashboardMobileShell } from './components/dashboard-mobile-shell';
-import { DashboardDeepLinkBar } from './components/dashboard-deep-link-bar';
+import { QuickAccessGrid } from './components/quick-access-grid';
 import { DashboardWorkspaceSwitcher } from './components/dashboard-workspace-switcher';
 import { MissionMiniNav } from './components/mission-mini-nav';
 import { KpiAnimatedCounter } from './components/kpi-animated-counter';
@@ -26,9 +26,14 @@ import { OperationalSignalTimeline, type OperationalSignalTimelinePoint } from '
 import AgentPerformancePanel from './components/agent-performance-panel';
 import AgentControlPanel from './components/agent-control-panel';
 import TaskRetryPanel from './components/task-retry-panel';
+import { KillSwitchBanner } from './components/kill-switch-banner';
 import type { DashboardTab } from './components/dashboard-navigation';
 import type { WorkspaceBudgetSnapshot } from './components/workspace-budget-panel-utils';
 import { isInternalSessionToken } from './lib/internal-session';
+import { DeveloperAgentOverviewPanel } from './components/developer-agent-overview-panel';
+import { DeveloperAgentStatusPanel } from './components/developer-agent-status-panel';
+import { MissionHero } from './components/mission-hero';
+import { InternalSidebar } from './components/internal-sidebar';
 
 type TenantSummary = {
     tenant_id: string;
@@ -931,7 +936,7 @@ const getWorkspaceHistoricalMetrics = async (
 const getPendingAgentQuestions = async (
     context: ApiRequestContext,
     workspaceId: string,
-    tenantId: string,
+    _tenantId: string,
 ): Promise<AgentQuestionItem[]> => {
     try {
         const response = await fetch(
@@ -1217,32 +1222,18 @@ export default async function HomePage({
             <DashboardMobileShell
                 workspaceName={workspace.workspace_name}
                 sidebar={(
-                    <>
-                        <p className="eyebrow">AgentFarm Internal</p>
-                        <h2 className="dashboard-sidebar-title">Operations Console</h2>
-                        <p className="sidebar-current-workspace">
-                            Current workspace: <strong>{workspace.workspace_name}</strong>
-                        </p>
-                        <DashboardWorkspaceSwitcher
-                            variant="sidebar"
-                            activeWorkspaceId={workspace.workspace_id}
+                    <Suspense fallback={null}>
+                        <InternalSidebar
                             activeTab={activeTab}
+                            workspaceId={workspace.workspace_id}
+                            workspaceName={workspace.workspace_name}
                             workspaces={workspaceOptions.map((item) => ({
                                 workspaceId: item.workspace_id,
                                 workspaceName: item.workspace_name,
                             }))}
-                            syncFromStorage
+                            pendingCount={pendingAgentQuestions.length}
                         />
-                        <Suspense fallback={null}>
-                            <DashboardTabNav
-                                activeTab={activeTab}
-                                variant="sidebar"
-                                syncFromStorage
-                                workspaceId={workspace.workspace_id}
-                                pendingQuestionCount={pendingAgentQuestions.length}
-                            />
-                        </Suspense>
-                    </>
+                    </Suspense>
                 )}
             >
                 <div className={`mission-control ${unifiedView ? 'mission-control-all' : ''} ${compactMode ? 'mission-control-compact' : ''} ${presentationMode ? 'mission-control-present' : ''}`}>
@@ -1267,9 +1258,12 @@ export default async function HomePage({
                             <span className={`badge ${source === 'live' ? 'low' : 'warn'}`}>
                                 {source === 'live' ? 'Live Data' : 'Fallback Data'}
                             </span>
-                            <span className={`badge ${unifiedView ? 'info' : 'neutral'}`}>
+                            <Link href={unifiedView ? tabbedHref : oneViewHref} className={`badge ${unifiedView ? 'info' : 'neutral'}`} style={{ textDecoration: 'none' }}>
                                 {unifiedView ? 'One View' : 'Tabbed View'}
-                            </span>
+                            </Link>
+                            <Link href={compactToggleHref} className="badge neutral" style={{ textDecoration: 'none' }}>
+                                {compactMode ? 'Comfortable' : 'Compact'}
+                            </Link>
                             <span className="badge neutral">{summary.tenant_name}</span>
                             <span className="badge neutral" title="Press Ctrl+K or ⌘K to open command palette">⌘K</span>
                         </div>
@@ -1284,187 +1278,21 @@ export default async function HomePage({
                             pendingQuestionCount={pendingAgentQuestions.length}
                         />
                     </Suspense>
-                    <Suspense fallback={null}>
-                        <DashboardDeepLinkBar activeTab={activeTab} workspaceId={workspace.workspace_id} />
-                    </Suspense>
-
-                    <section className="card" data-chrome="view-mode" style={{ display: 'flex', gap: '0.55rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                        <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--ink-soft)' }}>
-                            View mode:
-                        </p>
-                        {unifiedView ? (
-                            <Link
-                                href={tabbedHref}
-                                className="secondary-action"
-                                style={{ textDecoration: 'none' }}
-                            >
-                                Switch to Tabbed View
-                            </Link>
-                        ) : (
-                            <Link
-                                href={oneViewHref}
-                                className="secondary-action"
-                                style={{ textDecoration: 'none' }}
-                            >
-                                Open One View (All Dashboards)
-                            </Link>
-                        )}
-                        <Link href={compactToggleHref} className="secondary-action" style={{ textDecoration: 'none' }}>
-                            {compactMode ? 'Use Comfortable Density' : 'Use Compact Density'}
-                        </Link>
-                        <Link href={presentationToggleHref} className="secondary-action" style={{ textDecoration: 'none' }}>
-                            {presentationMode ? 'Exit Presentation' : 'Presentation Mode'}
-                        </Link>
-                    </section>
+                    <KillSwitchBanner />
 
                     {unifiedView && <MissionMiniNav items={missionSections} />}
-
-                    <section className="card" data-chrome="skill-catalog" style={{ display: 'flex', gap: '0.55rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                        <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--ink-soft)' }}>
-                            Internal skill catalog manager:
-                        </p>
-                        <Link
-                            href={`/internal/skills?workspaceId=${encodeURIComponent(workspace.workspace_id)}&botId=${encodeURIComponent(workspace.bot_id)}`}
-                            className="secondary-action"
-                            style={{ textDecoration: 'none' }}
-                        >
-                            Open Internal Skill Manager
-                        </Link>
-                    </section>
-
-                    <section className="card" data-chrome="platform-tools" style={{ display: 'flex', gap: '0.55rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                        <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--ink-soft)' }}>
-                            Platform tools:
-                        </p>
-                        <Link href="/webhooks" className="secondary-action" style={{ textDecoration: 'none' }}>
-                            Webhook Manager
-                        </Link>
-                        <Link href="/knowledge-graph" className="secondary-action" style={{ textDecoration: 'none' }}>
-                            Knowledge Graph
-                        </Link>
-                        <Link href="/connector-marketplace" className="secondary-action" style={{ textDecoration: 'none' }}>
-                            Connector Marketplace
-                        </Link>
-                        <Link href="/analytics" className="secondary-action" style={{ textDecoration: 'none' }}>
-                            Analytics
-                        </Link>
-                        <Link href="/audit" className="secondary-action" style={{ textDecoration: 'none' }}>
-                            Audit Log
-                        </Link>
-                        <Link href="/live" className="secondary-action" style={{ textDecoration: 'none' }}>
-                            Live Feed
-                        </Link>
-                        <Link href="/leads" className="secondary-action" style={{ textDecoration: 'none' }}>
-                            Lead Queue
-                        </Link>
-                        <Link href="/agents" className="secondary-action" style={{ textDecoration: 'none' }}>
-                            Agents
-                        </Link>
-                        <Link href="/billing" className="secondary-action" style={{ textDecoration: 'none' }}>
-                            Billing
-                        </Link>
-                        <Link href="/settings" className="secondary-action" style={{ textDecoration: 'none' }}>
-                            Settings &amp; Ops
-                        </Link>
-                        <Link href="/webhooks-ops" className="secondary-action" style={{ textDecoration: 'none' }}>
-                            Webhook Ops
-                        </Link>
-                        <Link href="/webhooks/inbound" className="secondary-action" style={{ textDecoration: 'none' }}>
-                            Inbound webhooks
-                        </Link>
-                        <Link href="/ab-tests" className="secondary-action" style={{ textDecoration: 'none' }}>
-                            A/B Tests
-                        </Link>
-                        <Link href="/scheduled-reports" className="secondary-action" style={{ textDecoration: 'none' }}>
-                            Scheduled Reports
-                        </Link>
-                        <Link href="/docs" className="secondary-action" style={{ textDecoration: 'none' }}>
-                            API Docs
-                        </Link>
-                        <Link href="/tasks" className="secondary-action" style={{ textDecoration: 'none' }}>
-                            Task History
-                        </Link>
-                        <Link href="/health" className="secondary-action" style={{ textDecoration: 'none' }}>
-                            Health &amp; Status
-                        </Link>
-                        <Link href="/tenant-settings" className="secondary-action" style={{ textDecoration: 'none' }}>
-                            Tenant Settings
-                        </Link>
-                        <Link href="/governance" className="secondary-action" style={{ textDecoration: 'none' }}>
-                            Governance
-                        </Link>
-                        <Link href="/governance/workflows" className="secondary-action" style={{ textDecoration: 'none' }}>
-                            Workflow builder
-                        </Link>
-                        <Link href="/ci" className="secondary-action" style={{ textDecoration: 'none' }}>
-                            CI/CD Triage
-                        </Link>
-                        <Link href="/notifications" className="secondary-action" style={{ textDecoration: 'none' }}>
-                            Notifications
-                        </Link>
-                        <Link href="/meetings" className="secondary-action" style={{ textDecoration: 'none' }}>
-                            Meetings
-                        </Link>
-                        <Link href="/retention" className="secondary-action" style={{ textDecoration: 'none' }}>
-                            Retention
-                        </Link>
-                        <Link href="/loops" className="secondary-action" style={{ textDecoration: 'none' }}>
-                            Loops
-                        </Link>
-                        <Link href="/orchestration" className="secondary-action" style={{ textDecoration: 'none' }}>
-                            Orchestration
-                        </Link>
-                        <Link href="/chat" className="secondary-action" style={{ textDecoration: 'none' }}>
-                            Agent Chat
-                        </Link>
-                        <Link href="/work-memory" className="secondary-action" style={{ textDecoration: 'none' }}>
-                            Work Memory
-                        </Link>
-                        <Link href="/pr-drafts" className="secondary-action" style={{ textDecoration: 'none' }}>
-                            PR Drafts
-                        </Link>
-                        <Link href="/budget" className="secondary-action" style={{ textDecoration: 'none' }}>
-                            Budget
-                        </Link>
-                        <Link href="/desktop" className="secondary-action" style={{ textDecoration: 'none' }}>
-                            Desktop
-                        </Link>
-                        <Link href="/env" className="secondary-action" style={{ textDecoration: 'none' }}>
-                            Env Reconciler
-                        </Link>
-                        <Link href="/snapshots" className="secondary-action" style={{ textDecoration: 'none' }}>
-                            Snapshots
-                        </Link>
-                        <Link href="/handoffs" className="secondary-action" style={{ textDecoration: 'none' }}>
-                            Handoffs
-                        </Link>
-                        <Link href="/pipelines" className="secondary-action" style={{ textDecoration: 'none' }}>
-                            Pipelines
-                        </Link>
-                        <Link href="/activity" className="secondary-action" style={{ textDecoration: 'none' }}>
-                            Activity
-                        </Link>
-                        <Link href="/team" className="secondary-action" style={{ textDecoration: 'none' }}>
-                            Team
-                        </Link>
-                        <Link href="/memory" className="secondary-action" style={{ textDecoration: 'none' }}>
-                            Memory
-                        </Link>
-                        <Link href="/quality" className="secondary-action" style={{ textDecoration: 'none' }}>
-                            Quality
-                        </Link>
-                    </section>
 
                     {(unifiedView || activeTab === 'overview') && (
                         <section id="dashboard-panel-overview" role="tabpanel" aria-labelledby="dashboard-tab-overview" className="dashboard-panel mission-section" style={{ '--stagger-index': '0' } as React.CSSProperties}>
                             {unifiedView && <p className="mission-section-label">Section 01 · Operations Overview</p>}
-                            <header className="hero">
-                                <p className="eyebrow">Overview</p>
-                                <h1>Workspace Operations Summary</h1>
-                                <p>
-                                    Monitor provisioning progress, connector health, and runtime readiness from one operational view.
-                                </p>
-                            </header>
+                            <MissionHero
+                                tenantName={summary.tenant_name}
+                                planName={summary.plan_name}
+                                pendingApprovals={summary.pending_approvals}
+                                activeBots={summary.active_bots}
+                                estimatedCost={usageSummary.estimated_cost}
+                                systemHealthPct={systemHealthPct}
+                            />
 
                             <div className="card health-rings-row">
                                 <p className="eyebrow">System Health</p>
@@ -1506,6 +1334,10 @@ export default async function HomePage({
                             </section>
 
                             <OperationalSignalTimeline points={historicalMetrics.points} source={historicalMetrics.source} />
+
+                            <DeveloperAgentOverviewPanel />
+
+                            <DeveloperAgentStatusPanel botId={workspace.bot_id} workspaceId={workspace.workspace_id} />
 
                             <section className="grid-two">
                                 <article className="card">
@@ -1692,6 +1524,7 @@ export default async function HomePage({
                                 workspaceId={workspace.workspace_id}
                                 language={dashboardLanguage.workspaceLanguage ?? dashboardLanguage.tenantLanguage}
                             />
+                            <QuickAccessGrid />
                             <AgentPerformancePanel />
                             <AgentControlPanel botId={workspace.bot_id} />
                             <TaskRetryPanel botId={workspace.bot_id} />

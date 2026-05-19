@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
-import type { SalesActivityRecord, ProspectRecord } from '@agentfarm/shared-types';
+import type { SalesActivityRecord, ProspectRecord, SalesAgentConfigRecord } from '@agentfarm/shared-types';
 import {
     sendOutreachEmail,
     type OutreachParams,
@@ -11,6 +11,14 @@ import {
     type ClassifyReplyParams,
     type ClassifyReplyResult,
 } from '@agentfarm/agent-runtime/sales/reply-classifier.js';
+import { scheduleFollowUps } from '@agentfarm/agent-runtime/sales/sequence-scheduler.js';
+import {
+    sendBookingInvite,
+    type BookingInviteResult,
+} from '@agentfarm/agent-runtime/sales/booking-invite-sender.js';
+import {
+    sendContractInvite,
+} from '@agentfarm/agent-runtime/sales/contract-sender.js';
 
 type SessionContext = {
     userId: string;
@@ -27,6 +35,16 @@ export type RegisterOutreachRoutesOptions = {
     sendOutreach?: (params: OutreachParams, prisma: PrismaClient) => Promise<OutreachResult>;
     /** Overrides classifyReply — used in tests. */
     classifyReplyFn?: (params: ClassifyReplyParams) => Promise<ClassifyReplyResult>;
+    /** Overrides sendBookingInvite — used in tests. */
+    sendBookingInviteFn?: (
+        prospectId: string,
+        tenantId: string,
+        botId: string,
+        config: SalesAgentConfigRecord,
+        prisma?: PrismaClient,
+    ) => Promise<BookingInviteResult>;
+    /** Overrides sendContractInvite — used in tests. */
+    sendContractInviteFn?: typeof sendContractInvite;
 };
 
 type SendOutreachBody = {
@@ -66,6 +84,10 @@ type PrismaWithSales = {
         create: (args: { data: Record<string, unknown> }) => Promise<{ id: string }>;
         findMany: (args: { where: Record<string, unknown>; orderBy?: Record<string, unknown> }) => Promise<SalesActivityRecord[]>;
     };
+    salesDeal?: {
+        findFirst: (args: { where: Record<string, unknown>; orderBy?: Record<string, unknown> }) => Promise<Record<string, unknown> | null>;
+        update: (args: { where: { id: string }; data: Record<string, unknown> }) => Promise<unknown>;
+    };
 };
 
 const getPrisma = async (): Promise<PrismaClient> => {
@@ -83,6 +105,8 @@ export async function registerOutreachRoutes(
 
     const doSendOutreach = options.sendOutreach ?? sendOutreachEmail;
     const doClassifyReply = options.classifyReplyFn ?? classifyReply;
+    const doSendBookingInvite = options.sendBookingInviteFn ?? sendBookingInvite;
+    const doSendContractInvite = options.sendContractInviteFn ?? sendContractInvite;
 
     // -------------------------------------------------------------------------
     // POST /v1/sales/outreach/send
@@ -117,6 +141,21 @@ export async function registerOutreachRoutes(
             prisma,
         );
 
+        if (result.success) {
+            scheduleFollowUps(
+                {
+                    tenantId: session.tenantId,
+                    botId: body.botId,
+                    prospectId: body.prospectId,
+                    config: config as unknown as SalesAgentConfigRecord,
+                    startFrom: new Date(),
+                },
+                prisma,
+            ).catch((err: unknown) =>
+                request.log.warn({ err }, 'scheduleFollowUps failed — non-critical'),
+            );
+        }
+
         return reply.status(200).send(result);
     });
 
@@ -146,13 +185,15 @@ export async function registerOutreachRoutes(
             originalSubject: body.originalSubject,
         });
 
-        // Map LLM intent to valid ProspectStatus enum values
-        const statusMap: Partial<Record<ClassifyReplyResult['intent'], string>> = {
+        const intentToStatus: Record<string, string> = {
             interested: 'engaged',
+            not_now: 'nurture',
             unsubscribe: 'disqualified',
-            not_now: 'contacted',
+            objection: 'engaged',
+            question: 'engaged',
+            unknown: 'contacted',
         };
-        const newStatus = statusMap[result.intent] ?? 'engaged';
+        const newStatus = intentToStatus[result.intent] ?? 'contacted';
 
         await db.prospect.update({
             where: { id: body.prospectId },
@@ -164,12 +205,83 @@ export async function registerOutreachRoutes(
                 tenantId: session.tenantId,
                 botId: prospect.botId,
                 prospectId: body.prospectId,
-                activityType: 'email',
-                subject: `Reply to: ${body.originalSubject}`,
+                activityType: 'email_replied',
+                subject: body.originalSubject,
                 outcome: result.intent,
                 completedAt: new Date(),
             },
         });
+
+        // When prospect is interested and a booking URL is configured, send invite
+        if (result.intent === 'interested') {
+            const salesConfig = await db.salesAgentConfig.findFirst({
+                where: { tenantId: session.tenantId, botId: prospect.botId },
+            });
+            if (salesConfig?.['bookingUrl']) {
+                const prismaForInvite = await resolvePrisma();
+                doSendBookingInvite(
+                    body.prospectId,
+                    session.tenantId,
+                    prospect.botId,
+                    salesConfig as unknown as SalesAgentConfigRecord,
+                    prismaForInvite,
+                ).catch((err: unknown) =>
+                    request.log.warn({ err }, 'sendBookingInvite failed — non-critical'),
+                );
+
+                await db.salesActivity.create({
+                    data: {
+                        tenantId: session.tenantId,
+                        botId: prospect.botId,
+                        prospectId: body.prospectId,
+                        activityType: 'email_sent',
+                        subject: 'Booking invite sent',
+                        body: 'Booking invite sent with calendar link',
+                        completedAt: new Date(),
+                    },
+                });
+            }
+
+            // If a deal is in 'proposal' stage, advance to 'negotiation'
+            const openDeal = await db.salesDeal?.findFirst?.({
+                where: { prospectId: body.prospectId, tenantId: session.tenantId, stage: 'proposal' },
+                orderBy: { createdAt: 'desc' },
+            });
+            if (openDeal) {
+                await db.salesDeal?.update({
+                    where: { id: String(openDeal['id']) },
+                    data: { stage: 'negotiation', updatedAt: new Date() },
+                });
+                await db.salesActivity.create({
+                    data: {
+                        tenantId: session.tenantId,
+                        botId: prospect.botId,
+                        prospectId: body.prospectId,
+                        dealId: String(openDeal['id']),
+                        activityType: 'note',
+                        subject: 'Deal advanced to negotiation on engaged reply',
+                        completedAt: new Date(),
+                        createdAt: new Date(),
+                        updatedAt: new Date(),
+                    },
+                });
+                const salesConfigForContract = await db.salesAgentConfig.findFirst({
+                    where: { tenantId: session.tenantId, botId: prospect.botId },
+                });
+                if (salesConfigForContract?.['contractUrl']) {
+                    doSendContractInvite(
+                        body.prospectId,
+                        String(openDeal['id']),
+                        session.tenantId,
+                        prospect.botId,
+                        salesConfigForContract as unknown as SalesAgentConfigRecord,
+                        await resolvePrisma(),
+                    ).catch((err: unknown) =>
+                        request.log.warn({ err }, 'sendContractInvite failed — non-critical'),
+                    );
+                }
+            }
+        }
 
         return reply.status(200).send(result);
     });

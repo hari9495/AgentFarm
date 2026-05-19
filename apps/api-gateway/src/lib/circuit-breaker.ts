@@ -82,8 +82,7 @@ function resolveOpts(opts?: CircuitBreakerOpts): Required<CircuitBreakerOpts> {
  * Returns false if the circuit is open and the retry window has not elapsed.
  * Transitions open → half-open automatically when the window expires.
  */
-export function isAllowed(key: string, opts?: CircuitBreakerOpts): boolean {
-    const { openDurationMs } = resolveOpts(opts);
+export function isAllowed(key: string, _opts?: CircuitBreakerOpts): boolean {
     const entry = getOrCreate(key);
 
     if (entry.state === 'closed') {

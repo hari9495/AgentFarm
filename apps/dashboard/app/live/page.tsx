@@ -1,41 +1,19 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
+import { PageHeader } from '../components/page-header';
 import { LiveTaskFeed } from '../components/live-task-feed';
 
 export default function LivePage() {
     const [workspaceId, setWorkspaceId] = useState('');
 
     return (
-        <main style={{
-            minHeight: '100vh',
-            padding: '40px 32px',
-            maxWidth: 900,
-            margin: '0 auto',
-            fontFamily: 'inherit',
-        }}>
-            <Link
-                href="/"
-                style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    color: '#94a3b8',
-                    textDecoration: 'none',
-                    fontSize: 14,
-                    marginBottom: 32,
-                }}
-            >
-                ← Dashboard
-            </Link>
-
-            <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8, marginTop: 0 }}>
-                Live Task Feed
-            </h1>
-            <p style={{ color: '#94a3b8', marginBottom: 28, marginTop: 0, fontSize: 14 }}>
-                Real-time task events streamed from the AgentFarm runtime.
-            </p>
+        <main className="page-shell">
+            <PageHeader
+                eyebrow="Operations"
+                title="Live Task Feed"
+                description="Real-time task events streamed from the AgentFarm runtime."
+            />
 
             <input
                 type="text"

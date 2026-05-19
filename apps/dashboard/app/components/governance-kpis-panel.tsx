@@ -194,7 +194,7 @@ export function GovernanceKPIPanel({ workspaceId, language = 'en' }: Props) {
                 <>
                     {/* SLA strip */}
                     <div style={{ padding: '0.6rem 0.9rem', background: slaStatus(kpis.sla_compliance_pct) === 'healthy' ? '#f0fdf4' : slaStatus(kpis.sla_compliance_pct) === 'watch' ? '#fefce8' : '#fef2f2', borderRadius: 8, marginBottom: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                        <span style={{ fontWeight: 700, fontSize: '1.15rem' }}>{kpis.sla_compliance_pct.toFixed(1)}%</span>
+                        <span style={{ fontWeight: 700, fontSize: '1.15rem' }}>{(kpis.sla_compliance_pct ?? 0).toFixed(1)}%</span>
                         <span style={{ fontSize: '0.85rem', color: '#57534e' }}>Overall {getLabel(language, 'sla')}</span>
                         <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: '#78716c' }}>
                             {new Date(kpis.snapshot_at).toLocaleString()}
@@ -202,67 +202,87 @@ export function GovernanceKPIPanel({ workspaceId, language = 'en' }: Props) {
                     </div>
 
                     {/* Approval KPIs */}
-                    <h3 style={{ margin: '0 0 0.45rem', fontSize: '0.85rem', color: '#57534e', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{getLabel(language, 'approvals')}</h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '0.5rem', marginBottom: '1rem' }}>
-                        <KPICard title="P95 Latency" value={kpis.approvals.p95_latency_ms} unit="ms"
-                            status={kpis.approvals.p95_latency_ms < 5000 ? 'healthy' : kpis.approvals.p95_latency_ms < 15000 ? 'watch' : 'degraded'}
-                            sub={`avg ${kpis.approvals.avg_latency_ms}ms`} />
-                        <KPICard title="Pending" value={kpis.approvals.total_pending}
-                            status={kpis.approvals.total_pending === 0 ? 'healthy' : kpis.approvals.total_pending <= 5 ? 'watch' : 'degraded'}
-                            sub={`${kpis.approvals.sla_breach_count} SLA breach${kpis.approvals.sla_breach_count !== 1 ? 'es' : ''}`} />
-                        <KPICard title="Auto-Approved" value={`${kpis.approvals.auto_approved_pct.toFixed(0)}%`}
-                            status={kpis.approvals.auto_approved_pct >= 70 ? 'healthy' : 'watch'}
-                            sub={`${kpis.approvals.total_approved} approved`} />
-                        <KPICard title="Escalation Rate" value={`${kpis.approvals.escalation_rate_pct.toFixed(1)}%`}
-                            status={kpis.approvals.escalation_rate_pct < 10 ? 'healthy' : kpis.approvals.escalation_rate_pct < 20 ? 'watch' : 'degraded'} />
-                    </div>
+                    {kpis.approvals && (
+                        <>
+                            <h3 style={{ margin: '0 0 0.45rem', fontSize: '0.85rem', color: '#57534e', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{getLabel(language, 'approvals')}</h3>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '0.5rem', marginBottom: '1rem' }}>
+                                <KPICard title="P95 Latency" value={kpis.approvals.p95_latency_ms} unit="ms"
+                                    status={kpis.approvals.p95_latency_ms < 5000 ? 'healthy' : kpis.approvals.p95_latency_ms < 15000 ? 'watch' : 'degraded'}
+                                    sub={`avg ${kpis.approvals.avg_latency_ms}ms`} />
+                                <KPICard title="Pending" value={kpis.approvals.total_pending}
+                                    status={kpis.approvals.total_pending === 0 ? 'healthy' : kpis.approvals.total_pending <= 5 ? 'watch' : 'degraded'}
+                                    sub={`${kpis.approvals.sla_breach_count} SLA breach${kpis.approvals.sla_breach_count !== 1 ? 'es' : ''}`} />
+                                <KPICard title="Auto-Approved" value={`${(kpis.approvals.auto_approved_pct ?? 0).toFixed(0)}%`}
+                                    status={(kpis.approvals.auto_approved_pct ?? 0) >= 70 ? 'healthy' : 'watch'}
+                                    sub={`${kpis.approvals.total_approved} approved`} />
+                                <KPICard title="Escalation Rate" value={`${(kpis.approvals.escalation_rate_pct ?? 0).toFixed(1)}%`}
+                                    status={(kpis.approvals.escalation_rate_pct ?? 0) < 10 ? 'healthy' : (kpis.approvals.escalation_rate_pct ?? 0) < 20 ? 'watch' : 'degraded'} />
+                            </div>
+                        </>
+                    )}
 
                     {/* Audit KPIs */}
-                    <h3 style={{ margin: '0 0 0.45rem', fontSize: '0.85rem', color: '#57534e', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Audit & Evidence</h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '0.5rem', marginBottom: '1rem' }}>
-                        <KPICard title="Completeness" value={`${kpis.audit.completeness_pct.toFixed(1)}%`}
-                            status={auditStatus(kpis.audit.completeness_pct)}
-                            sub={`${kpis.audit.missing_evidence_count} missing`} />
-                        <KPICard title="Events (24h)" value={kpis.audit.events_last_24h}
-                            status="healthy" />
-                        <KPICard title="Retention" value={`${kpis.audit.retention_compliance_pct.toFixed(0)}%`}
-                            status={kpis.audit.retention_compliance_pct >= 100 ? 'healthy' : 'watch'} />
-                    </div>
+                    {kpis.audit && (
+                        <>
+                            <h3 style={{ margin: '0 0 0.45rem', fontSize: '0.85rem', color: '#57534e', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Audit & Evidence</h3>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '0.5rem', marginBottom: '1rem' }}>
+                                <KPICard title="Completeness" value={`${(kpis.audit.completeness_pct ?? 0).toFixed(1)}%`}
+                                    status={auditStatus(kpis.audit.completeness_pct ?? 0)}
+                                    sub={`${kpis.audit.missing_evidence_count} missing`} />
+                                <KPICard title="Events (24h)" value={kpis.audit.events_last_24h}
+                                    status="healthy" />
+                                <KPICard title="Retention" value={`${(kpis.audit.retention_compliance_pct ?? 0).toFixed(0)}%`}
+                                    status={(kpis.audit.retention_compliance_pct ?? 0) >= 100 ? 'healthy' : 'watch'} />
+                            </div>
+                        </>
+                    )}
 
                     {/* Budget KPIs */}
-                    <h3 style={{ margin: '0 0 0.45rem', fontSize: '0.85rem', color: '#57534e', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{getLabel(language, 'budget')}</h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '0.5rem', marginBottom: '1rem' }}>
-                        <KPICard title="Tokens Remaining" value={kpis.budget.tokens_remaining.toLocaleString()}
-                            status={budgetStatus(kpis.budget.overage_risk)}
-                            sub={`${kpis.budget.budget_utilisation_pct.toFixed(0)}% used today`} />
-                        <KPICard title="Cost Today" value={`$${kpis.budget.cost_usd_today.toFixed(2)}`}
-                            status={budgetStatus(kpis.budget.overage_risk)}
-                            sub={`${kpis.budget.tokens_used_today.toLocaleString()} tokens`} />
-                        <KPICard title="Overage Risk" value={kpis.budget.overage_risk}
-                            status={budgetStatus(kpis.budget.overage_risk)} />
-                    </div>
+                    {kpis.budget && (
+                        <>
+                            <h3 style={{ margin: '0 0 0.45rem', fontSize: '0.85rem', color: '#57534e', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{getLabel(language, 'budget')}</h3>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '0.5rem', marginBottom: '1rem' }}>
+                                <KPICard title="Tokens Remaining" value={(kpis.budget.tokens_remaining ?? 0).toLocaleString()}
+                                    status={budgetStatus(kpis.budget.overage_risk)}
+                                    sub={`${(kpis.budget.budget_utilisation_pct ?? 0).toFixed(0)}% used today`} />
+                                <KPICard title="Cost Today" value={`$${(kpis.budget.cost_usd_today ?? 0).toFixed(2)}`}
+                                    status={budgetStatus(kpis.budget.overage_risk)}
+                                    sub={`${(kpis.budget.tokens_used_today ?? 0).toLocaleString()} tokens`} />
+                                <KPICard title="Overage Risk" value={kpis.budget.overage_risk}
+                                    status={budgetStatus(kpis.budget.overage_risk)} />
+                            </div>
+                        </>
+                    )}
 
                     {/* Provider KPIs */}
-                    <h3 style={{ margin: '0 0 0.45rem', fontSize: '0.85rem', color: '#57534e', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Providers</h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '0.5rem', marginBottom: '1rem' }}>
-                        <KPICard title="Avg Health Score" value={`${(kpis.providers.avg_health_score * 100).toFixed(0)}%`}
-                            status={providerStatus(kpis.providers.avg_health_score)}
-                            sub={`${kpis.providers.healthy_count} healthy · ${kpis.providers.degraded_count} degraded`} />
-                        <KPICard title="Unavailable" value={kpis.providers.unavailable_count}
-                            status={kpis.providers.unavailable_count === 0 ? 'healthy' : 'degraded'} />
-                    </div>
+                    {kpis.providers && (
+                        <>
+                            <h3 style={{ margin: '0 0 0.45rem', fontSize: '0.85rem', color: '#57534e', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Providers</h3>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '0.5rem', marginBottom: '1rem' }}>
+                                <KPICard title="Avg Health Score" value={`${((kpis.providers.avg_health_score ?? 0) * 100).toFixed(0)}%`}
+                                    status={providerStatus(kpis.providers.avg_health_score)}
+                                    sub={`${kpis.providers.healthy_count} healthy · ${kpis.providers.degraded_count} degraded`} />
+                                <KPICard title="Unavailable" value={kpis.providers.unavailable_count}
+                                    status={kpis.providers.unavailable_count === 0 ? 'healthy' : 'degraded'} />
+                            </div>
+                        </>
+                    )}
 
                     {/* Execution KPIs */}
-                    <h3 style={{ margin: '0 0 0.45rem', fontSize: '0.85rem', color: '#57534e', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Execution</h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '0.5rem' }}>
-                        <KPICard title="Success Rate" value={`${kpis.execution.success_rate_pct.toFixed(1)}%`}
-                            status={slaStatus(kpis.execution.success_rate_pct)}
-                            sub={`${kpis.execution.tasks_completed_today} tasks today`} />
-                        <KPICard title="Avg Duration" value={kpis.execution.avg_task_duration_ms} unit="ms"
-                            status={kpis.execution.avg_task_duration_ms < 5000 ? 'healthy' : kpis.execution.avg_task_duration_ms < 15000 ? 'watch' : 'degraded'} />
-                        <KPICard title="Failed Today" value={kpis.execution.tasks_failed_today}
-                            status={kpis.execution.tasks_failed_today === 0 ? 'healthy' : kpis.execution.tasks_failed_today < 10 ? 'watch' : 'degraded'} />
-                    </div>
+                    {kpis.execution && (
+                        <>
+                            <h3 style={{ margin: '0 0 0.45rem', fontSize: '0.85rem', color: '#57534e', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Execution</h3>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '0.5rem' }}>
+                                <KPICard title="Success Rate" value={`${(kpis.execution.success_rate_pct ?? 0).toFixed(1)}%`}
+                                    status={slaStatus(kpis.execution.success_rate_pct ?? 0)}
+                                    sub={`${kpis.execution.tasks_completed_today} tasks today`} />
+                                <KPICard title="Avg Duration" value={kpis.execution.avg_task_duration_ms} unit="ms"
+                                    status={kpis.execution.avg_task_duration_ms < 5000 ? 'healthy' : kpis.execution.avg_task_duration_ms < 15000 ? 'watch' : 'degraded'} />
+                                <KPICard title="Failed Today" value={kpis.execution.tasks_failed_today}
+                                    status={kpis.execution.tasks_failed_today === 0 ? 'healthy' : kpis.execution.tasks_failed_today < 10 ? 'watch' : 'degraded'} />
+                            </div>
+                        </>
+                    )}
                 </>
             )}
         </section>

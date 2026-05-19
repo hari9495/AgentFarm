@@ -1,103 +1,103 @@
 import type { Metadata } from "next";
-import { Code2, TestTube2, Server, Rocket, Users, ShieldCheck, CheckCircle2 } from "lucide-react";
+import { Code2, Megaphone, HeadphonesIcon, Users, ShieldCheck, CheckCircle2, Briefcase, BarChart3 } from "lucide-react";
 import ButtonLink from "@/components/shared/ButtonLink";
 
 
 export const metadata: Metadata = {
   title: "Use Cases — AgentFarm",
-  description: "Real-world examples of how engineering teams use AgentFarm's Developer Agent to ship faster, safer, and with a full audit trail.",
+  description: "Real-world examples of how companies across every department use AgentFarm AI workers to ship faster with full human oversight.",
 };
 
 const cases = [
   {
-    icon: Rocket,
-    audience: "Solo Founders",
-    headline: "Ship an MVP in days, not months",
+    icon: Code2,
+    audience: "Engineering Teams",
+    headline: "Ship features without drowning in PR overhead",
     story:
-      "A solo founder with no engineering background activated the Developer Agent and installed Create PR, Run CI Checks, and Fix Test Failures skills. Within 6 days they had a working REST API and dashboard shipped to production — every change approved and logged.",
+      "A 20-person engineering team deployed a Developer Agent and Tester Agent pair. The Developer opens PRs, the Tester runs CI and fixes failures — engineers focus on architecture and review. Every action logged, every PR approval-gated.",
     results: [
-      "MVP shipped in 6 days",
-      "No additional headcount needed",
-      "All changes reviewed and approved",
-      "Full evidence trail from day one",
+      "PR cycle time cut by 60%",
+      "CI failures resolved automatically",
+      "Full audit trail per release",
+      "Engineers focus on design, not drudgery",
     ],
     color: "blue",
-    image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    icon: TestTube2,
-    audience: "Startups (5–20 engineers)",
-    headline: "Stop losing hours to CI failures and flaky tests",
-    story:
-      "A 10-person Series A startup was spending 3+ hours per week diagnosing CI failures. With the Run CI Checks and Fix Test Failures skills, the Developer Agent identifies failures, diagnoses root cause, and pushes a targeted fix — before the developer even refreshes the PR.",
-    results: [
-      "CI failure resolution: hours → minutes",
-      "Test coverage improved across repos",
-      "Every PR gated automatically",
-      "Developers stop babysitting CI",
-    ],
-    color: "green",
-    image: "https://images.unsplash.com/photo-1516116216624-53e697fedbea?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    icon: Code2,
-    audience: "Scale-ups (20–100 engineers)",
-    headline: "PR review and release notes without the bottleneck",
-    story:
-      "A 30-person engineering team was bottlenecked on PR reviews and release documentation. With PR Review Prepare and Release Notes Generate skills, the Developer Agent creates structured review summaries and auto-generates CHANGELOG entries from every merged PR.",
-    results: [
-      "PR review time cut by 40%",
-      "Release notes generated automatically",
-      "Every release audit-ready",
-      "Reviewer fatigue dramatically reduced",
-    ],
-    color: "purple",
     image: "https://images.unsplash.com/photo-1518773553398-650c184e0bb3?auto=format&fit=crop&w=800&q=80",
   },
   {
-    icon: Server,
-    audience: "DevOps-heavy teams",
-    headline: "Automate dependency upgrades and incident patches",
+    icon: Megaphone,
+    audience: "Sales & Marketing",
+    headline: "Outreach that never misses a follow-up",
     story:
-      "A cloud-native company's DevOps team was drowning in dependency alerts and incident patch work. With the Dependency Upgrade Plan and Incident Patch Pack skills, the Developer Agent generates upgrade plans and patch PRs — humans review and approve before anything merges.",
+      "A Series B SaaS company deployed a Sales Rep Agent and Marketing Specialist Agent. The Sales Rep manages CRM updates, follow-up emails, and meeting prep — the Marketing Specialist drafts campaigns, schedules posts, and tracks results. Human reps approve every send.",
     results: [
-      "Dependency backlog cleared in 2 weeks",
-      "Incident patch packs auto-generated",
-      "Human approval required before merge",
-      "Full audit log for every change",
+      "Pipeline coverage up 3×",
+      "Zero missed follow-ups",
+      "Campaigns launched 5× faster",
+      "Every outbound approved before send",
     ],
     color: "orange",
-    image: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=800&q=80",
+    image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=800&q=80",
   },
   {
-    icon: ShieldCheck,
-    audience: "Security-conscious teams",
-    headline: "Catch vulnerabilities before they ship",
+    icon: HeadphonesIcon,
+    audience: "Customer Support",
+    headline: "24/7 support without a 24/7 headcount",
     story:
-      "A fintech team was relying on quarterly pen tests to find security issues. With the Security Fix Suggest and Dependency Upgrade Plan skills, the agent flags vulnerable dependencies and generates targeted security patches on every PR — shifting security left to seconds, not months.",
+      "A consumer fintech deployed a Customer Support Executive Agent that handles Tier 1 tickets via email and chat — checking order status, processing refunds, drafting complex replies for human review. Escalations route to humans in real time.",
     results: [
-      "Security check on every PR",
-      "Dependency alerts automated",
-      "Vulnerable deps patched same sprint",
-      "Audit evidence exported per release",
+      "Tier 1 tickets resolved in <2 min",
+      "Support team handles 3× more volume",
+      "Escalations flagged instantly",
+      "Full ticket history in the audit trail",
     ],
-    color: "pink",
-    image: "https://images.unsplash.com/photo-1555949963-ff9fe0c870eb?auto=format&fit=crop&w=800&q=80",
+    color: "green",
+    image: "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?auto=format&fit=crop&w=800&q=80",
+  },
+  {
+    icon: Briefcase,
+    audience: "Operations & Admin",
+    headline: "Every recurring task handled, every deadline met",
+    story:
+      "An operations-heavy company deployed a Corporate Assistant Agent that manages calendar invites, meeting notes, vendor follow-ups, and internal report compilation. The team stopped losing hours to scheduling and copy-paste work.",
+    results: [
+      "15 hrs/week saved per ops manager",
+      "Zero missed scheduling conflicts",
+      "Reports generated automatically",
+      "All actions logged for review",
+    ],
+    color: "purple",
+    image: "https://images.unsplash.com/photo-1516116216624-53e697fedbea?auto=format&fit=crop&w=800&q=80",
   },
   {
     icon: Users,
-    audience: "Enterprise engineering teams",
+    audience: "HR & Recruiting",
+    headline: "Source, screen, and schedule without the overhead",
+    story:
+      "A fast-growing startup deployed a Recruiter Agent that sourced candidates, screened CVs, scheduled interviews, and drafted offer letters — all under HR team oversight. Human recruiters handled final calls and decisions.",
+    results: [
+      "Time-to-screen cut from days to hours",
+      "Hiring pipeline 2× more candidates",
+      "Offer letters drafted in minutes",
+      "Every decision logged with rationale",
+    ],
+    color: "pink",
+    image: "https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=800&q=80",
+  },
+  {
+    icon: ShieldCheck,
+    audience: "Enterprise & Regulated Industries",
     headline: "Autonomous execution with enterprise-grade governance",
     story:
-      "A regulated enterprise needed AI assistance but couldn't accept uncontrolled code changes. AgentFarm's risk-classification model gives them exactly that: LOW-risk actions auto-execute, HIGH-risk changes pause for human approval via Microsoft Teams. Every action is logged in the evidence plane for compliance.",
+      "A regulated enterprise deployed AI workers across Engineering, Legal, and Finance — each with role-scoped tool access and a strict approval policy. LOW-risk tasks auto-execute. HIGH-risk changes pause for human sign-off via Teams. Every action is logged in the evidence plane.",
     results: [
       "Full audit trail for every agent action",
       "Approval gates on all high-risk changes",
-      "Teams notifications for approvals",
+      "Teams notifications for escalations",
       "Compliance evidence exported on demand",
     ],
     color: "teal",
-    image: "https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=800&q=80",
+    image: "https://images.unsplash.com/photo-1555949963-ff9fe0c870eb?auto=format&fit=crop&w=800&q=80",
   },
 ];
 
@@ -129,14 +129,14 @@ export default function UseCasesPage() {
               <span className="chip chip-accent mb-5">
                 Use Cases
               </span>
-              <h1 className="mt-3 text-4xl sm:text-6xl font-semibold text-[var(--ink)] tracking-[-0.03em]">
+              <h1 className="mt-3 text-4xl sm:text-6xl font-semibold text-white tracking-[-0.03em]">
                 Built for{" "}
                 <span className="bg-gradient-to-r from-[var(--accent-red)] via-[#ff6161] to-pink-400 bg-clip-text text-transparent">
-                  engineering teams
+                  every department
                 </span>
               </h1>
-              <p className="mt-5 text-xl text-[var(--mute)] max-w-2xl leading-relaxed">
-                From solo founders to 100-person engineering orgs — see how AgentFarm's Developer Agent ships real work with approval gates and a full audit trail.
+              <p className="mt-5 text-xl text-slate-300 max-w-2xl leading-relaxed">
+                From solo founders to enterprise teams — see how AgentFarm AI workers handle real work across Engineering, Sales, Support, Ops, HR, and more.
               </p>
             </div>
           </div>
@@ -196,14 +196,14 @@ export default function UseCasesPage() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-8">
             <p className="text-xs font-semibold uppercase tracking-widest text-[var(--accent-blue)] mb-2">ROI estimate</p>
-            <h2 className="text-2xl font-semibold tracking-[-0.03em] text-[var(--ink)]">How much could your team save?</h2>
-            <p className="text-[var(--mute)] text-sm mt-2 max-w-lg mx-auto">Based on median outcomes across AgentFarm customers. Actual results vary by workflow.</p>
+            <h2 className="text-2xl font-semibold tracking-[-0.03em] text-[var(--ink)]">How much could your company save?</h2>
+            <p className="text-[var(--mute)] text-sm mt-2 max-w-lg mx-auto">Based on median outcomes across AgentFarm customers. Actual results vary by role and workflow.</p>
           </div>
           <div className="grid sm:grid-cols-3 gap-4">
             {[
-              { tier: "Solo / 1–3 engineers", hours: "15–25 hrs/wk", cost: "$24k–$40k/yr", note: "Equivalent to 40% of a full-time junior engineer" },
-              { tier: "Startup / 5–20 engineers", hours: "60–100 hrs/wk", cost: "$96k–$160k/yr", note: "Equivalent to 1.5–2.5 full-time engineers" },
-              { tier: "Scale-up / 25–100 engineers", hours: "200–350 hrs/wk", cost: "$320k–$560k/yr", note: "Equivalent to 5–9 full-time engineers" },
+              { tier: "1–3 AI workers", hours: "15–25 hrs/wk", cost: "$24k–$40k/yr", note: "Equivalent to replacing 40% of a full-time role" },
+              { tier: "4–10 AI workers", hours: "80–150 hrs/wk", cost: "$128k–$240k/yr", note: "Equivalent to 2–3 full-time headcount" },
+              { tier: "10+ AI workers", hours: "300–600 hrs/wk", cost: "$480k–$960k/yr", note: "Equivalent to 7–15 full-time employees" },
             ].map(({ tier, hours, cost, note }) => (
               <div key={tier} className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface-card)] p-5">
                 <p className="text-xs font-semibold text-[var(--mute)] mb-3">{tier}</p>
@@ -213,7 +213,7 @@ export default function UseCasesPage() {
               </div>
             ))}
           </div>
-          <p className="text-center text-[11px] text-[var(--ash)] mt-5">Estimate based on $80/hr blended engineering cost and median AgentFarm task automation rates.</p>
+          <p className="text-center text-[11px] text-[var(--ash)] mt-5">Estimate based on $80/hr blended labor cost across all role types and median AgentFarm automation rates.</p>
         </div>
       </section>
 
@@ -230,10 +230,10 @@ export default function UseCasesPage() {
             <div className="absolute inset-0 bg-gradient-to-br from-slate-900/90 via-blue-900/85 to-slate-900/90" />
             <div className="relative py-20 px-10 text-center text-white">
               <h2 className="text-3xl font-extrabold mb-4">
-                Which use case fits you?
+                Which departments would you staff first?
               </h2>
               <p className="text-slate-300 mb-8 max-w-xl mx-auto">
-                Join the waitlist and we&apos;ll set up the right AI workers for your specific team and workflow.
+                Join the waitlist and we&apos;ll help you deploy the right AI workers for your specific team and workflow.
               </p>
               <ButtonLink href="/#waitlist" size="lg">
                 Join the Waitlist

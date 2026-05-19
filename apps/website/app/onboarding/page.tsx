@@ -9,7 +9,7 @@ type StepId = "github" | "team" | "deploy";
 const steps: { id: StepId; title: string; subtitle: string; icon: LucideIcon }[] = [
     { id: "github", title: "Connect GitHub", subtitle: "Authorize org and repositories", icon: Github },
     { id: "team", title: "Invite Team", subtitle: "Add collaborators and roles", icon: Users },
-    { id: "deploy", title: "Deploy First Agent", subtitle: "Choose role and start", icon: Rocket },
+    { id: "deploy", title: "Deploy First AI Worker", subtitle: "Choose a role and start", icon: Rocket },
 ];
 
 type ProvisioningStatusPayload = {
@@ -157,7 +157,7 @@ export default function OnboardingPage() {
                 <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
                     <div className="border-b border-slate-200 dark:border-slate-800 p-6">
                         <h1 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100">Get Started in Minutes</h1>
-                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Connect GitHub, invite your team, and deploy your first AI worker.</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Connect your tools, invite your team, and deploy your first AI worker.</p>
                         <div className="mt-5 h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
                             <div className="h-2 bg-gradient-to-r from-sky-500 via-blue-600 to-emerald-500" style={{ width: `${progress}%` }} />
                         </div>
@@ -212,10 +212,19 @@ export default function OnboardingPage() {
                                     onChange={(e) => setAgent(e.target.value)}
                                     className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2.5 text-sm text-slate-900 dark:text-slate-100 focus:border-sky-500 outline-none"
                                 >
-                                    <option value="ai-backend-developer">AI Backend Developer</option>
-                                    <option value="ai-qa-engineer">AI QA Engineer</option>
-                                    <option value="ai-devops-engineer">AI DevOps Engineer</option>
-                                    <option value="ai-security-engineer">AI Security Engineer</option>
+                                    <option value="ai-developer">Developer</option>
+                                    <option value="ai-tester">Tester</option>
+                                    <option value="ai-fullstack-developer">Full Stack Developer</option>
+                                    <option value="ai-devops-engineer">DevOps Engineer</option>
+                                    <option value="ai-sales-rep">Sales Representative</option>
+                                    <option value="ai-corporate-assistant">Corporate Assistant</option>
+                                    <option value="ai-technical-writer">Technical Writer</option>
+                                    <option value="ai-business-analyst">Business Analyst</option>
+                                    <option value="ai-content-writer">Content Writer</option>
+                                    <option value="ai-customer-support">Customer Support Executive</option>
+                                    <option value="ai-marketing-specialist">Marketing Specialist</option>
+                                    <option value="ai-project-manager">Project Manager / Scrum Master</option>
+                                    <option value="ai-recruiter">Recruiter</option>
                                 </select>
                             </div>
                         )}

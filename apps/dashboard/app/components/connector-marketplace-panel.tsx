@@ -8,12 +8,14 @@ type ConnectorEntry = {
     id: string;
     name: string;
     description: string;
-    category: 'communication' | 'project_management' | 'monitoring' | 'documentation' | 'vcs' | 'ci_cd';
+    category: 'communication' | 'project_management' | 'monitoring' | 'documentation' | 'vcs' | 'ci_cd' | 'testing';
     requiredEnvVars: string[];
     docs_url: string;
     status: ConnectorStatus;
     latency_ms?: number;
     last_checked?: string;
+    /** Only show this connector when the workspace has this agent role active. */
+    requiredRole?: string;
 };
 
 const CONNECTOR_CATALOG: ConnectorEntry[] = [
@@ -98,6 +100,147 @@ const CONNECTOR_CATALOG: ConnectorEntry[] = [
         docs_url: 'https://developer.atlassian.com/cloud/confluence/rest/v2/',
         status: 'unconfigured',
     },
+    // ── Testing connectors (Tester agent only) ──────────────────────────────
+    {
+        id: 'selenium',
+        name: 'Selenium / WebDriver',
+        description: 'Browser automation across Chrome, Firefox, and Safari via WebDriver protocol.',
+        category: 'testing',
+        requiredEnvVars: ['SELENIUM_REMOTE_URL'],
+        docs_url: 'https://www.selenium.dev/documentation/',
+        status: 'unconfigured',
+        requiredRole: 'tester',
+    },
+    {
+        id: 'playwright',
+        name: 'Playwright',
+        description: 'End-to-end browser testing with Chromium, Firefox, and WebKit.',
+        category: 'testing',
+        requiredEnvVars: ['PLAYWRIGHT_BASE_URL'],
+        docs_url: 'https://playwright.dev/docs/intro',
+        status: 'unconfigured',
+        requiredRole: 'tester',
+    },
+    {
+        id: 'cypress',
+        name: 'Cypress',
+        description: 'JavaScript end-to-end and component testing framework for web apps.',
+        category: 'testing',
+        requiredEnvVars: ['CYPRESS_BASE_URL'],
+        docs_url: 'https://docs.cypress.io/',
+        status: 'unconfigured',
+        requiredRole: 'tester',
+    },
+    {
+        id: 'appium',
+        name: 'Appium',
+        description: 'Mobile automation for iOS and Android native, hybrid, and web apps.',
+        category: 'testing',
+        requiredEnvVars: ['APPIUM_SERVER_URL', 'APPIUM_PLATFORM'],
+        docs_url: 'https://appium.io/docs/en/latest/',
+        status: 'unconfigured',
+        requiredRole: 'tester',
+    },
+    {
+        id: 'k6',
+        name: 'k6 / Artillery',
+        description: 'Performance and load testing — p50/p95/p99 latency benchmarks against any backend stack.',
+        category: 'testing',
+        requiredEnvVars: ['K6_CLOUD_TOKEN'],
+        docs_url: 'https://grafana.com/docs/k6/',
+        status: 'unconfigured',
+        requiredRole: 'tester',
+    },
+    {
+        id: 'jmeter',
+        name: 'JMeter',
+        description: 'Apache JMeter load testing for web applications and services.',
+        category: 'testing',
+        requiredEnvVars: ['JMETER_HOME'],
+        docs_url: 'https://jmeter.apache.org/usermanual/',
+        status: 'unconfigured',
+        requiredRole: 'tester',
+    },
+    {
+        id: 'postman',
+        name: 'Postman / Newman',
+        description: 'API testing via Newman CLI — runs Postman collections and publishes per-request failure reports.',
+        category: 'testing',
+        requiredEnvVars: ['POSTMAN_API_KEY'],
+        docs_url: 'https://learning.postman.com/docs/collections/using-newman-cli/',
+        status: 'unconfigured',
+        requiredRole: 'tester',
+    },
+    {
+        id: 'soapui',
+        name: 'SoapUI',
+        description: 'SOAP, REST, and GraphQL API contract testing.',
+        category: 'testing',
+        requiredEnvVars: ['SOAPUI_HOME'],
+        docs_url: 'https://www.soapui.org/docs/',
+        status: 'unconfigured',
+        requiredRole: 'tester',
+    },
+    {
+        id: 'testrail',
+        name: 'TestRail',
+        description: 'Test case management: sync runs, publish results, and link defects automatically.',
+        category: 'testing',
+        requiredEnvVars: ['TESTRAIL_URL', 'TESTRAIL_USER', 'TESTRAIL_API_KEY'],
+        docs_url: 'https://support.testrail.com/hc/en-us/articles/7077792415124',
+        status: 'unconfigured',
+        requiredRole: 'tester',
+    },
+    {
+        id: 'zephyr',
+        name: 'Jira Zephyr',
+        description: 'Zephyr Scale test management inside Jira — sync test cases and run results.',
+        category: 'testing',
+        requiredEnvVars: ['ZEPHYR_TOKEN', 'ZEPHYR_BASE_URL'],
+        docs_url: 'https://support.smartbear.com/zephyr-scale-cloud/docs/',
+        status: 'unconfigured',
+        requiredRole: 'tester',
+    },
+    {
+        id: 'owasp-zap',
+        name: 'OWASP ZAP',
+        description: 'Dynamic Application Security Testing (DAST) — spider + active scan against staging environments.',
+        category: 'testing',
+        requiredEnvVars: ['ZAP_API_KEY', 'ZAP_TARGET_URL'],
+        docs_url: 'https://www.zaproxy.org/docs/',
+        status: 'unconfigured',
+        requiredRole: 'tester',
+    },
+    {
+        id: 'burpsuite',
+        name: 'Burp Suite',
+        description: 'Security testing and vulnerability scanning for web applications.',
+        category: 'testing',
+        requiredEnvVars: ['BURP_API_KEY', 'BURP_BASE_URL'],
+        docs_url: 'https://portswigger.net/burp/documentation/desktop',
+        status: 'unconfigured',
+        requiredRole: 'tester',
+    },
+    {
+        id: 'jenkins-ci',
+        name: 'Jenkins',
+        description: 'CI pipeline integration — trigger builds, report test results, and gate deployments.',
+        category: 'testing',
+        requiredEnvVars: ['JENKINS_URL', 'JENKINS_USER', 'JENKINS_TOKEN'],
+        docs_url: 'https://www.jenkins.io/doc/book/using/',
+        status: 'unconfigured',
+        requiredRole: 'tester',
+    },
+    {
+        id: 'circleci',
+        name: 'CircleCI',
+        description: 'CircleCI pipeline integration — trigger workflows and publish test run statuses.',
+        category: 'testing',
+        requiredEnvVars: ['CIRCLECI_TOKEN', 'CIRCLECI_PROJECT_SLUG'],
+        docs_url: 'https://circleci.com/docs/api/v2/',
+        status: 'unconfigured',
+        requiredRole: 'tester',
+    },
 ];
 
 const CATEGORY_LABELS: Record<ConnectorEntry['category'], string> = {
@@ -107,6 +250,7 @@ const CATEGORY_LABELS: Record<ConnectorEntry['category'], string> = {
     monitoring: 'Monitoring',
     documentation: 'Documentation',
     ci_cd: 'CI / CD',
+    testing: 'Testing & QA',
 };
 
 const STATUS_COLORS: Record<ConnectorStatus, string> = {
@@ -123,8 +267,19 @@ const STATUS_DOT: Record<ConnectorStatus, string> = {
     unconfigured: 'bg-zinc-600',
 };
 
-export function ConnectorMarketplacePanel() {
-    const [connectors, setConnectors] = useState<ConnectorEntry[]>(CONNECTOR_CATALOG);
+type ConnectorMarketplacePanelProps = {
+    /** Role keys for the active agents in this workspace, e.g. ['developer', 'tester']. */
+    agentRoles?: string[];
+};
+
+export function ConnectorMarketplacePanel({ agentRoles = [] }: ConnectorMarketplacePanelProps) {
+    // Only include connectors that are available for the current agent roles.
+    const allowedCatalog = CONNECTOR_CATALOG.filter(
+        (c) => !c.requiredRole || agentRoles.includes(c.requiredRole),
+    );
+    const hasTesterRole = agentRoles.includes('tester');
+
+    const [connectors, setConnectors] = useState<ConnectorEntry[]>(allowedCatalog);
     const [filter, setFilter] = useState<ConnectorEntry['category'] | 'all'>('all');
     const [testing, setTesting] = useState<Record<string, boolean>>({});
     const [selected, setSelected] = useState<ConnectorEntry | null>(null);
@@ -283,6 +438,22 @@ export function ConnectorMarketplacePanel() {
                     </div>
                 ))}
             </div>
+
+            {/* Testing connectors locked notice */}
+            {!hasTesterRole && (
+                <div className="mt-4 flex items-start gap-3 rounded-xl border border-zinc-700 bg-zinc-800/50 p-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="mt-0.5 h-4 w-4 shrink-0 text-zinc-500">
+                        <path fillRule="evenodd" d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1Zm3 8V5.5a3 3 0 1 0-6 0V9h6Z" clipRule="evenodd" />
+                    </svg>
+                    <div>
+                        <p className="text-sm font-medium text-zinc-300">Testing &amp; QA connectors are locked</p>
+                        <p className="mt-0.5 text-xs text-zinc-500">
+                            14 integrations — Selenium, Playwright, Cypress, Appium, k6, JMeter, Postman, SoapUI, TestRail, Zephyr, OWASP ZAP, Burp Suite, Jenkins, CircleCI — are only available after hiring the{' '}
+                            <a href="/marketplace/tester" className="text-blue-400 hover:underline">Tester agent</a>.
+                        </p>
+                    </div>
+                </div>
+            )}
 
             {/* Detail drawer */}
             {selected && (

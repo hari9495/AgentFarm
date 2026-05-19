@@ -1,6 +1,7 @@
 import { NotificationService, CustomerNotificationStore } from '@agentfarm/notification-adapters';
-import type { NotificationPayload, NotificationResult } from '@agentfarm/shared-types';
+import type { AgentPersonaRecord, NotificationPayload, NotificationResult } from '@agentfarm/shared-types';
 import type { ProcessedTaskResult } from './execution-engine.js';
+import { signOutbound } from './outbound-signer.js';
 
 /**
  * Singleton store shared across the runtime process lifetime.
@@ -21,6 +22,7 @@ export const customerNotificationStore = new CustomerNotificationStore();
 export async function maybeNotify(
     payload: Record<string, unknown>,
     result: ProcessedTaskResult,
+    persona?: AgentPersonaRecord | null,
 ): Promise<void> {
     // ---- opt-in guard — must be explicit, not just truthy ----
     if (payload['notify'] !== true) return;
@@ -37,13 +39,18 @@ export async function maybeNotify(
 
     const actionType = (result.decision as { actionType?: string } | undefined)?.actionType ?? 'unknown';
 
+    const agentLabel = persona?.displayName ?? (typeof payload['botId'] === 'string' ? payload['botId'] : undefined);
     const notifPayload: NotificationPayload = {
-        subject: `Task ${result.status}: ${actionType}`,
-        message:
+        subject: agentLabel
+            ? `[${agentLabel}] Task ${result.status}: ${actionType}`
+            : `Task ${result.status}: ${actionType}`,
+        message: signOutbound(
             result.status === 'success'
                 ? `Task completed (${result.attempts} attempt(s))`
                 : `Task failed: ${result.errorMessage ?? 'unknown error'}`,
-        agentId: typeof payload['botId'] === 'string' ? payload['botId'] : undefined,
+            persona,
+        ),
+        agentId: agentLabel,
         taskId: typeof payload['taskId'] === 'string' ? payload['taskId'] : undefined,
         metadata: {
             status: result.status,

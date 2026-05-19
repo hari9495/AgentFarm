@@ -1,4 +1,5 @@
 import { AdapterDiscoveryPanel } from '../components/adapter-discovery-panel';
+import { PageHeader } from '../components/page-header';
 
 type SearchParams = {
     workspaceId?: string;
@@ -9,11 +10,12 @@ export default async function AdaptersPage({ searchParams }: { searchParams: Pro
     const workspaceId = params.workspaceId?.trim() || 'ws_primary_001';
 
     return (
-        <main style={{ maxWidth: 1000, margin: '1.5rem auto', padding: '0 1rem' }}>
-            <h1>Adapter Registry</h1>
-            <p style={{ marginTop: '-0.45rem', color: '#57534e' }}>
-                Discover, register, and health-check integration adapters for this workspace.
-            </p>
+        <main className="page-shell" style={{ maxWidth: 1000 }}>
+            <PageHeader
+                eyebrow="Integrations"
+                title="Adapter Registry"
+                description="Discover, register, and health-check integration adapters for this workspace."
+            />
             <AdapterDiscoveryPanel workspaceId={workspaceId} />
         </main>
     );

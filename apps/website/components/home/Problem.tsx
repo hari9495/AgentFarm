@@ -54,7 +54,7 @@ export default function Problem() {
                         initial={{ opacity: 0 }}
                         whileInView={{ opacity: 1 }}
                         viewport={{ once: true }}
-                        className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#6a6b6c] mb-4"
+                        className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--ash)] mb-4"
                     >
                         The Problem
                     </motion.p>
@@ -63,7 +63,7 @@ export default function Problem() {
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
                         transition={{ duration: 0.44, ease: [0.22, 1, 0.36, 1] }}
-                        className="text-[clamp(1.8rem,3.5vw,2.8rem)] font-semibold text-[#f4f4f6] tracking-tight"
+                        className="text-[clamp(1.8rem,3.5vw,2.8rem)] font-semibold text-[var(--ink)] tracking-tight"
                     >
                         Engineering teams are hitting a wall
                     </motion.h2>
@@ -72,7 +72,7 @@ export default function Problem() {
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
                         transition={{ delay: 0.08, duration: 0.44, ease: [0.22, 1, 0.36, 1] }}
-                        className="mt-4 text-[#9c9c9d] leading-relaxed"
+                        className="mt-4 text-[var(--mute)] leading-relaxed"
                     >
                         The traditional model of hiring, onboarding, and scaling engineers is broken.
                     </motion.p>
@@ -87,7 +87,7 @@ export default function Problem() {
                             viewport={{ once: true, margin: "-30px" }}
                             transition={{ delay: i * 0.08, duration: 0.48, ease: [0.22, 1, 0.36, 1] }}
                             whileHover={{ y: -4, transition: { duration: 0.2, ease: [0.22, 1, 0.36, 1] } }}
-                            className="group bg-[#121212] border border-[#242728] rounded-xl p-6 flex flex-col hover:border-white/10 transition-colors"
+                            className="group bg-[var(--surface-card)] border border-[var(--hairline)] rounded-xl p-6 flex flex-col hover:border-black/10 dark:hover:border-white/10 transition-colors"
                         >
                             {/* Top row: icon + stat */}
                             <div className="flex items-start justify-between mb-5">
@@ -98,18 +98,18 @@ export default function Problem() {
                                     <Icon className="w-5 h-5" style={{ color: accentColor }} />
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-2xl font-semibold text-[#f4f4f6] leading-none" style={{ color: accentColor }}>
+                                    <p className="text-2xl font-semibold text-[var(--ink)] leading-none" style={{ color: accentColor }}>
                                         {stat}
                                     </p>
-                                    <p className="text-[10px] text-[#6a6b6c] mt-0.5">{statLabel}</p>
+                                    <p className="text-[10px] text-[var(--ash)] mt-0.5">{statLabel}</p>
                                 </div>
                             </div>
 
-                            <h3 className="font-semibold text-[#f4f4f6] text-base mb-2">{title}</h3>
-                            <p className="text-sm text-[#9c9c9d] leading-relaxed flex-1">{description}</p>
+                            <h3 className="font-semibold text-[var(--ink)] text-base mb-2">{title}</h3>
+                            <p className="text-sm text-[var(--mute)] leading-relaxed flex-1">{description}</p>
 
                             {/* Accent bar */}
-                            <div className="mt-5 h-px w-full bg-[#242728]" />
+                            <div className="mt-5 h-px w-full bg-[var(--hairline)]" />
                             <div
                                 className="mt-3 h-0.5 rounded-full w-0 group-hover:w-full transition-all duration-500"
                                 style={{ background: `linear-gradient(90deg, ${accentColor}, transparent)` }}

@@ -1,5 +1,7 @@
 # Sprint 5: Dashboard Bot-Scoped UX And Explainability
 
+Status: CLOSED
+
 ## Sprint Goal
 Move website and dashboard operator experience from tenant-global integration views to bot-scoped views with clear policy explainability.
 

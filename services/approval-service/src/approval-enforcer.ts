@@ -10,7 +10,6 @@
 import type {
     KillSwitchRecord,
     KillSwitchType,
-    KillSwitchStatus,
     ApprovalEnforcementContext,
     ApprovalDecision,
     RiskLevel,

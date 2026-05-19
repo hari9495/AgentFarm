@@ -4,7 +4,11 @@ import { buildErrorQuery, researchForTask, type FetchFn } from './web-research-s
 import { buildAuditContextPayload, buildRuntimeAuditContext } from './runtime-audit-integration.js';
 import { preTaskScout } from './pre-task-scout.js';
 import { evaluateEscalation } from './escalation-engine.js';
-import { executeLocalWorkspaceAction } from './local-workspace-executor.js';
+import { executeLocalWorkspaceAction, LOCAL_WORKSPACE_ACTION_TYPES, type LlmCodeGenFn, type AutonomousStep } from './local-workspace-executor.js';
+import { enforceRole } from './role-enforcer.js';
+import type { TaskClassifierFn } from './task-classifier.js';
+import { dispatchConnectorAction } from './connector-dispatcher.js';
+import { globalEpisodicMemory, type TaskMemoryEntry } from './episodic-memory.js';
 
 export type RiskLevel = 'low' | 'medium' | 'high';
 
@@ -45,6 +49,19 @@ export type LlmDecisionMetadata = {
 
 export type PayloadOverrideSource = 'none' | 'llm_generated' | 'executor_inferred';
 
+/**
+ * B2: Injectable kill-switch check function.
+ * Returns { blocked: true } when an active kill-switch halts execution for the given scope.
+ * Defaults to no-op (allow) when not provided.
+ */
+export type KillSwitchCheckFn = (params: {
+    taskId: string;
+    riskLevel: RiskLevel;
+    tenantId: string;
+    workspaceId: string;
+    botId: string;
+}) => Promise<{ blocked: boolean; killSwitchId?: string }>;
+
 export type LlmDecisionResolver = (input: {
     task: TaskEnvelope;
     heuristicDecision: ActionDecision;
@@ -61,7 +78,7 @@ export type ProcessedTaskResult = {
     transientRetries: number;
     executionPayload: Record<string, unknown>;
     payloadOverrideSource: PayloadOverrideSource;
-    failureClass?: 'transient_error' | 'runtime_exception';
+    failureClass?: 'transient_error' | 'runtime_exception' | 'role_enforcement' | 'kill_switch_blocked';
     errorMessage?: string;
     llmExecution?: LlmDecisionMetadata;
 };
@@ -330,13 +347,182 @@ function enrichPayloadWithAuditContext(payload: Record<string, unknown>, taskId:
     };
 }
 
-async function executeLowRiskAction(task: TaskEnvelope, attempt: number): Promise<void> {
+/**
+ * Build an LlmCodeGenFn from environment variables.
+ *
+ * Makes a direct chat-completions call (OpenAI-compatible) to ask the LLM to
+ * produce a JSON array of AutonomousStep objects that implement the requested
+ * code change.  Returns `undefined` when no LLM provider is configured so the
+ * executor falls back gracefully to keyword-based plan inference.
+ *
+ * Supported via AF_MODEL_PROVIDER: openai | github_models | azure_openai.
+ */
+function createCodeGenFn(env: NodeJS.ProcessEnv = process.env): LlmCodeGenFn | undefined {
+    const provider = (env['AF_MODEL_PROVIDER'] ?? env['AGENTFARM_MODEL_PROVIDER'] ?? 'agentfarm').toLowerCase().trim();
+    if (provider === 'agentfarm' || provider === 'mock') return undefined;
+
+    let apiKey: string;
+    let baseUrl: string;
+    let model: string;
+
+    if (provider === 'github_models') {
+        apiKey = env['AF_GITHUB_MODELS_API_KEY'] ?? env['AGENTFARM_GITHUB_MODELS_API_KEY'] ?? '';
+        baseUrl = (env['AF_GITHUB_MODELS_BASE_URL'] ?? env['AGENTFARM_GITHUB_MODELS_BASE_URL'] ?? 'https://models.inference.ai.azure.com').replace(/\/+$/, '');
+        model = env['AF_GITHUB_MODELS_MODEL'] ?? env['AGENTFARM_GITHUB_MODELS_MODEL'] ?? 'openai/gpt-4.1-mini';
+    } else if (provider === 'azure_openai' || provider === 'azure-openai') {
+        const endpoint = (env['AF_AZURE_OPENAI_ENDPOINT'] ?? env['AGENTFARM_AZURE_OPENAI_ENDPOINT'] ?? '').replace(/\/+$/, '');
+        const deployment = env['AF_AZURE_OPENAI_DEPLOYMENT'] ?? env['AGENTFARM_AZURE_OPENAI_DEPLOYMENT'] ?? '';
+        const apiVersion = env['AF_AZURE_OPENAI_API_VERSION'] ?? env['AGENTFARM_AZURE_OPENAI_API_VERSION'] ?? '2024-06-01';
+        apiKey = env['AF_AZURE_OPENAI_API_KEY'] ?? env['AGENTFARM_AZURE_OPENAI_API_KEY'] ?? '';
+        baseUrl = endpoint && deployment
+            ? `${endpoint}/openai/deployments/${deployment}/chat/completions?api-version=${apiVersion}`
+            : '';
+        model = deployment;
+        if (!apiKey || !baseUrl) return undefined;
+    } else {
+        // openai and openai-compatible providers
+        apiKey = env['AF_OPENAI_API_KEY'] ?? env['AGENTFARM_OPENAI_API_KEY'] ?? '';
+        baseUrl = (env['AF_OPENAI_BASE_URL'] ?? env['AGENTFARM_OPENAI_BASE_URL'] ?? 'https://api.openai.com/v1').replace(/\/+$/, '');
+        model = env['AF_OPENAI_MODEL'] ?? env['AGENTFARM_OPENAI_MODEL'] ?? 'gpt-4o-mini';
+    }
+
+    if (!apiKey || !apiKey.trim()) return undefined;
+
+    return async (taskPrompt, fileContents, targetFiles) => {
+        const fileContext = Object.entries(fileContents)
+            .map(([p, c]) => `=== ${p} ===\n${c}`)
+            .join('\n\n');
+
+        const systemPrompt = [
+            'You are an expert software developer agent.',
+            'Analyze the task description and current code, then produce a JSON implementation plan.',
+            'Return ONLY a valid JSON array. Do NOT include markdown fences, explanations, or prose.',
+            'Each element in the array is a step with this shape:',
+            '  { "description": string, "actions": Action[] }',
+            'Where Action is one of:',
+            '  { "action": "code_edit", "file_path": string, "content": string }',
+            '  { "action": "code_edit_patch", "file_path": string, "old_text": string, "new_text": string }',
+            '  { "action": "run_tests", "command"?: string }',
+            '  { "action": "run_build", "command"?: string }',
+            'Use code_edit_patch for targeted edits to existing files.',
+            'Use code_edit only when creating new files or rewriting a file completely.',
+            'Return ONLY the JSON array. No surrounding text.',
+        ].join('\n');
+
+        const userMsg = [
+            `Task: ${taskPrompt}`,
+            targetFiles.length > 0 ? `Target files: ${targetFiles.join(', ')}` : '',
+            fileContext ? `\nCurrent code:\n${fileContext}` : '',
+            '\nGenerate the complete implementation plan as a JSON array.',
+        ].filter(Boolean).join('\n');
+
+        try {
+            // For Azure OpenAI, baseUrl already contains the full deployment path
+            const fetchUrl = (provider === 'azure_openai' || provider === 'azure-openai')
+                ? baseUrl
+                : `${baseUrl}/chat/completions`;
+            const headers: Record<string, string> = { 'content-type': 'application/json' };
+            if (provider === 'azure_openai' || provider === 'azure-openai') {
+                headers['api-key'] = apiKey;
+            } else {
+                headers['authorization'] = `Bearer ${apiKey}`;
+            }
+            const response = await fetch(fetchUrl, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                    model,
+                    temperature: 0,
+                    response_format: { type: 'json_object' },
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: userMsg },
+                    ],
+                }),
+                signal: AbortSignal.timeout(120_000),
+            });
+            if (!response.ok) return [];
+            const parsed = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
+            const content = parsed.choices?.[0]?.message?.content;
+            if (!content) return [];
+
+            let raw: unknown = JSON.parse(content);
+            // LLM may wrap the array under a key such as "steps", "plan", "initial_plan"
+            if (raw !== null && typeof raw === 'object' && !Array.isArray(raw)) {
+                const obj = raw as Record<string, unknown>;
+                raw = obj['steps'] ?? obj['plan'] ?? obj['initial_plan'] ?? obj['actions'] ?? [];
+            }
+            if (!Array.isArray(raw)) return [];
+            return (raw as Record<string, unknown>[]).filter(
+                (s) => s !== null && typeof s === 'object' && Array.isArray(s['actions']),
+            ) as AutonomousStep[];
+        } catch {
+            return [];
+        }
+    };
+}
+
+async function executeLowRiskAction(task: TaskEnvelope, attempt: number, opts?: { llmCodeGenFn?: LlmCodeGenFn }): Promise<void> {
     if (shouldFailTransiently(task.payload, attempt)) {
         throw new Error('TRANSIENT_EXECUTOR_ERROR');
     }
 
     if (task.payload['force_failure'] === true) {
         throw new Error('NON_RETRYABLE_EXECUTOR_ERROR');
+    }
+
+    const rawActionType = task.payload['actionType'];
+    const rawConnector = task.payload['connector'];
+
+    // ── Connector actions (GitHub, Jira, …) ──────────────────────────────────
+    if (typeof rawConnector === 'string' && rawConnector && typeof rawActionType === 'string') {
+        const result = await dispatchConnectorAction(
+            rawConnector,
+            rawActionType,
+            task.payload,
+        );
+        if (!result.ok) {
+            throw new Error(`Connector dispatch failed [${rawConnector}/${rawActionType}]: ${result.error}`);
+        }
+        return;
+    }
+
+    // ── Local workspace actions ───────────────────────────────────────────────
+    // Route workspace_* prefixed actions AND all non-prefixed action types that
+    // are registered in LOCAL_WORKSPACE_ACTION_TYPES (e.g. autonomous_loop,
+    // mcp_tool_call, code_edit, git_commit). Previously only workspace_* was
+    // routed; the rest were silently dropped as no-ops.
+    if (
+        typeof rawActionType === 'string' &&
+        (rawActionType.startsWith('workspace_') || LOCAL_WORKSPACE_ACTION_TYPES.has(rawActionType as import('./local-workspace-executor.js').LocalWorkspaceActionType))
+    ) {
+        const tenantId = typeof task.payload['tenantId'] === 'string' ? task.payload['tenantId'] : 'unknown';
+        const botId = typeof task.payload['botId'] === 'string' ? task.payload['botId'] : 'unknown';
+        const result = await executeLocalWorkspaceAction({
+            tenantId,
+            botId,
+            taskId: task.taskId,
+            actionType: rawActionType as import('./local-workspace-executor.js').LocalWorkspaceActionType,
+            payload: task.payload,
+            llmCodeGenFn: opts?.llmCodeGenFn,
+        });
+        if (!result.ok) {
+            const msg = result.errorOutput ?? result.output ?? 'workspace action failed';
+            throw new Error(`Workspace action failed [${rawActionType}]: ${msg}`);
+        }
+        return;
+    }
+
+    // GAP 4 FIX: Fail loudly instead of silently succeeding when no routing path
+    // matches. A silent no-op masks misconfigured tasks as successes and hides
+    // every routing bug (e.g. missing workspace_ prefix, unknown action type).
+    const resolvedActionType = typeof rawActionType === 'string' && rawActionType ? rawActionType : 'read_task';
+    if (resolvedActionType !== 'read_task') {
+        throw new Error(
+            `Unroutable action type: '${resolvedActionType}'. ` +
+            `Expected a 'workspace_*' prefixed action type (e.g. workspace_subagent_spawn) ` +
+            `or a connector action with payload.connector set.`,
+        );
     }
 }
 
@@ -345,7 +531,7 @@ async function executeTaskWithRetries(
     decision: ActionDecision,
     payloadOverrideSource: PayloadOverrideSource,
     llmExecution?: LlmDecisionMetadata,
-    options?: { maxAttempts?: number },
+    options?: { maxAttempts?: number; llmCodeGenFn?: LlmCodeGenFn },
 ): Promise<ProcessedTaskResult> {
     const maxAttempts = options?.maxAttempts ?? 3;
     let allowedAttempts = maxAttempts;
@@ -357,7 +543,7 @@ async function executeTaskWithRetries(
     while (attempts < allowedAttempts) {
         attempts += 1;
         try {
-            await executeLowRiskAction({ ...task, payload: currentPayload }, attempts);
+            await executeLowRiskAction({ ...task, payload: currentPayload }, attempts, { llmCodeGenFn: options?.llmCodeGenFn });
             return {
                 decision,
                 status: 'success',
@@ -467,7 +653,14 @@ async function executeTaskWithRetries(
 
 export async function processApprovedTask(
     task: TaskEnvelope,
-    options?: { maxAttempts?: number; modelProvider?: string; modelProfile?: string; progressSink?: ProgressSink },
+    options?: {
+        maxAttempts?: number;
+        modelProvider?: string;
+        modelProfile?: string;
+        progressSink?: ProgressSink;
+        /** B2: Kill-switch check — blocks execution even when human approval was granted. */
+        killSwitchCheckFn?: KillSwitchCheckFn;
+    },
 ): Promise<ProcessedTaskResult> {
     const taskWithAuditContext: TaskEnvelope = {
         ...task,
@@ -477,6 +670,33 @@ export async function processApprovedTask(
     const progressCtx = buildProgressReporterContext(taskWithAuditContext);
     await reportProgress(progressCtx, 'task_received', 'Task received for approved execution.', sink);
     const baseDecision = buildDecision(taskWithAuditContext);
+
+    // B2: Kill-switch takes precedence over human approval.
+    if (options?.killSwitchCheckFn) {
+        const tenantId = typeof taskWithAuditContext.payload['tenantId'] === 'string' ? taskWithAuditContext.payload['tenantId'] : '';
+        const workspaceId = typeof taskWithAuditContext.payload['workspaceId'] === 'string' ? taskWithAuditContext.payload['workspaceId'] : '';
+        const botId = typeof taskWithAuditContext.payload['botId'] === 'string' ? taskWithAuditContext.payload['botId'] : '';
+        const ksResult = await options.killSwitchCheckFn({
+            taskId: task.taskId,
+            riskLevel: baseDecision.riskLevel,
+            tenantId,
+            workspaceId,
+            botId,
+        });
+        if (ksResult.blocked) {
+            return {
+                decision: baseDecision,
+                status: 'failed',
+                attempts: 0,
+                transientRetries: 0,
+                executionPayload: taskWithAuditContext.payload,
+                payloadOverrideSource: 'none',
+                failureClass: 'kill_switch_blocked',
+                errorMessage: `[KILL_SWITCH_BLOCKED] Execution blocked by active kill-switch${ksResult.killSwitchId ? ` (${ksResult.killSwitchId})` : ''}. Resume requires authorized control-plane signal and incident reference.`,
+            };
+        }
+    }
+
     const approvedDecision: ActionDecision = {
         ...baseDecision,
         route: 'execute',
@@ -513,6 +733,10 @@ export async function processDeveloperTask(
         modelProfile?: string;
         llmDecisionResolver?: LlmDecisionResolver;
         progressSink?: ProgressSink;
+        /** Injectable classifier fn for role enforcement soft-block (default: keyword heuristic). */
+        roleClassifierFn?: TaskClassifierFn;
+        /** B2: Kill-switch check — halts risky execution within the active control window. */
+        killSwitchCheckFn?: KillSwitchCheckFn;
     },
 ): Promise<ProcessedTaskResult> {
     const taskWithAuditContext: TaskEnvelope = {
@@ -522,6 +746,54 @@ export async function processDeveloperTask(
     const sink: ProgressSink = options?.progressSink ?? new NoopProgressSink();
     const progressCtx = buildProgressReporterContext(taskWithAuditContext);
     await reportProgress(progressCtx, 'task_received', 'Task received for developer execution.', sink);
+
+    // Phase 0: Role enforcement — reject tasks that belong to a different agent role.
+    // Runs before LLM classification to prevent quota spend on out-of-role requests.
+    const enforcement = await enforceRole(taskWithAuditContext, 'developer', {
+        classifierFn: options?.roleClassifierFn,
+    });
+    if (!enforcement.allowed) {
+        const heuristicDecisionForBlock = buildDecision(taskWithAuditContext);
+        return {
+            decision: heuristicDecisionForBlock,
+            status: 'failed',
+            attempts: 0,
+            transientRetries: 0,
+            executionPayload: taskWithAuditContext.payload,
+            payloadOverrideSource: 'none',
+            failureClass: 'role_enforcement',
+            errorMessage: `[ROLE_ENFORCEMENT] ${enforcement.reason} | suggestedRole=${enforcement.suggestedRole ?? 'none'} | declineCode=${enforcement.declineCode}`,
+        };
+    }
+
+    // Phase 0B (B2): Kill-switch enforcement — halts all task types when an active kill-switch
+    // covers this scope. Checked before LLM decision to prevent quota spend on blocked tasks.
+    if (options?.killSwitchCheckFn) {
+        const tenantId = typeof taskWithAuditContext.payload['tenantId'] === 'string' ? taskWithAuditContext.payload['tenantId'] : '';
+        const workspaceId = typeof taskWithAuditContext.payload['workspaceId'] === 'string' ? taskWithAuditContext.payload['workspaceId'] : '';
+        const botId = typeof taskWithAuditContext.payload['botId'] === 'string' ? taskWithAuditContext.payload['botId'] : '';
+        const heuristicForKsCheck = buildDecision(taskWithAuditContext);
+        const ksResult = await options.killSwitchCheckFn({
+            taskId: task.taskId,
+            riskLevel: heuristicForKsCheck.riskLevel,
+            tenantId,
+            workspaceId,
+            botId,
+        });
+        if (ksResult.blocked) {
+            return {
+                decision: heuristicForKsCheck,
+                status: 'failed',
+                attempts: 0,
+                transientRetries: 0,
+                executionPayload: taskWithAuditContext.payload,
+                payloadOverrideSource: 'none',
+                failureClass: 'kill_switch_blocked',
+                errorMessage: `[KILL_SWITCH_BLOCKED] Execution blocked by active kill-switch${ksResult.killSwitchId ? ` (${ksResult.killSwitchId})` : ''}. Resume requires authorized control-plane signal and incident reference.`,
+            };
+        }
+    }
+
     const heuristicDecision = buildDecision(taskWithAuditContext);
     const fallbackProvider = options?.modelProvider ?? 'agentfarm';
     let decision = heuristicDecision;
@@ -540,9 +812,25 @@ export async function processDeveloperTask(
 
     // Phase 2: Scout the codebase before handing context to the LLM
     const scoutContext = await preTaskScout(taskWithAuditContext, executeLocalWorkspaceAction as Parameters<typeof preTaskScout>[1]).catch(() => '');
-    const taskForLlm: TaskEnvelope = scoutContext
-        ? { ...taskWithAuditContext, payload: { ...taskWithAuditContext.payload, _scout_context: scoutContext } }
-        : taskWithAuditContext;
+
+    // Gap A: inject episodic memory context so the LLM knows what was tried before
+    const workspaceIdForMemory =
+        typeof taskWithAuditContext.payload['workspaceId'] === 'string'
+            ? taskWithAuditContext.payload['workspaceId']
+            : '';
+    const recentMemories = workspaceIdForMemory
+        ? await globalEpisodicMemory.readRecentForWorkspace(workspaceIdForMemory).catch(() => [])
+        : [];
+    const episodicContext = globalEpisodicMemory.buildContextBlock(recentMemories);
+
+    const taskForLlm: TaskEnvelope = {
+        ...taskWithAuditContext,
+        payload: {
+            ...taskWithAuditContext.payload,
+            ...(scoutContext ? { _scout_context: scoutContext } : {}),
+            ...(episodicContext ? { _episodic_context: episodicContext } : {}),
+        },
+    };
 
     // Phase 5: Check for ambiguous task before LLM call
     const preEscalation = evaluateEscalation(taskWithAuditContext, 0);
@@ -575,7 +863,29 @@ export async function processDeveloperTask(
                         ...llmResult.payloadOverrides,
                     };
                     payloadOverrideSource = 'llm_generated';
+                } else {
+                    executionPayload = { ...taskWithAuditContext.payload };
                 }
+                // GAP 1 FIX: Wire the LLM's classified actionType into the execution payload.
+                // executeLowRiskAction routes on payload['actionType'] (camelCase). Customers
+                // submit payload['action_type'] (snake_case). Without this line the LLM's
+                // routing decision is ignored and every task silently no-ops.
+                executionPayload['actionType'] = llmResult.decision.actionType;
+
+                // GAP 2 FIX: workspace_subagent_spawn requires payload.prompt. Customers
+                // send the task description as 'description', 'summary', or 'intent'.
+                // Map whichever is present so the subagent handler always has a prompt.
+                if (!executionPayload['prompt']) {
+                    executionPayload['prompt'] =
+                        executionPayload['description'] ??
+                        executionPayload['summary'] ??
+                        executionPayload['intent'] ??
+                        taskWithAuditContext.payload['description'] ??
+                        taskWithAuditContext.payload['summary'] ??
+                        taskWithAuditContext.payload['intent'] ??
+                        '';
+                }
+
                 llmExecution = {
                     classificationSource: 'llm',
                     ...llmResult.metadata,
@@ -603,12 +913,16 @@ export async function processDeveloperTask(
     }
 
     await reportProgress(progressCtx, 'coding_started', 'Executing low-risk developer task.', sink);
+    // Auto-create a code-gen function from env if none was provided externally.
+    // This is used inside workspace_subagent_spawn to generate real code_edit
+    // steps when the caller did not supply a pre-baked initial_plan.
+    const codeGenFn: LlmCodeGenFn | undefined = createCodeGenFn();
     const execResult = await executeTaskWithRetries(
         { ...taskWithAuditContext, payload: executionPayload },
         decision,
         payloadOverrideSource,
         llmExecution,
-        options,
+        { ...options, llmCodeGenFn: codeGenFn },
     );
     await reportProgress(
         progressCtx,
@@ -616,6 +930,33 @@ export async function processDeveloperTask(
         execResult.status === 'success' ? 'Developer task execution completed.' : `Developer task execution failed: ${execResult.errorMessage ?? 'Unknown error'}`,
         sink,
     );
+
+    // Gap A: record this task's outcome in episodic memory for future context
+    if (workspaceIdForMemory) {
+        const promptSummary = (
+            typeof executionPayload['prompt'] === 'string' ? executionPayload['prompt'] :
+                typeof executionPayload['description'] === 'string' ? executionPayload['description'] :
+                    typeof executionPayload['summary'] === 'string' ? executionPayload['summary'] :
+                        decision.actionType
+        ).slice(0, 200);
+        const outcome: TaskMemoryEntry['outcome'] =
+            execResult.status === 'success' ? 'success' :
+                execResult.status === 'approval_required' ? 'approval_required' :
+                    execResult.errorMessage?.toLowerCase().includes('escalat') ? 'escalated' :
+                        'failed';
+        await globalEpisodicMemory.record({
+            taskId: task.taskId,
+            workspaceId: workspaceIdForMemory,
+            botId: typeof taskWithAuditContext.payload['botId'] === 'string'
+                ? taskWithAuditContext.payload['botId'] : 'unknown',
+            actionType: decision.actionType,
+            promptSummary,
+            outcome,
+            timestamp: Date.now(),
+            errorMessage: execResult.errorMessage?.slice(0, 120),
+        }).catch(() => { /* best-effort */ });
+    }
+
     return execResult;
 
 }

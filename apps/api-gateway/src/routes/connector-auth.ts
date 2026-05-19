@@ -14,6 +14,7 @@ type SessionContext = {
     tenantId: string;
     workspaceIds: string[];
     expiresAt: number;
+    scope?: string;
 };
 
 type ConnectorType = 'jira' | 'teams' | 'github' | 'email';
@@ -92,6 +93,16 @@ type ConnectorAuthRepo = {
         correlationId: string;
         actor: string;
     }): Promise<void>;
+    findAllForWorkspace(tenantId: string, workspaceId: string): Promise<Array<{
+        connectorId: string;
+        connectorType: string;
+        status: string;
+        secretRefId: string | null;
+        tokenExpiresAt: Date | null;
+        lastRefreshAt: Date | null;
+        scopeStatus: 'full' | 'partial' | 'insufficient' | null;
+        lastErrorClass: string | null;
+    }>>;
 };
 
 type RegisterConnectorAuthRoutesOptions = {
@@ -233,6 +244,22 @@ const defaultRepo: ConnectorAuthRepo = {
                 result: input.result,
                 correlationId: input.correlationId,
                 actor: input.actor,
+            },
+        });
+    },
+    async findAllForWorkspace(tenantId, workspaceId) {
+        const prisma = await getPrisma();
+        return prisma.connectorAuthMetadata.findMany({
+            where: { tenantId, workspaceId },
+            select: {
+                connectorId: true,
+                connectorType: true,
+                status: true,
+                secretRefId: true,
+                tokenExpiresAt: true,
+                lastRefreshAt: true,
+                scopeStatus: true,
+                lastErrorClass: true,
             },
         });
     },
@@ -1225,6 +1252,82 @@ export const registerConnectorAuthRoutes = async (
             connector_id: connectorId,
             next_action: status === 'consent_pending' ? 'reconsent' : 'refresh',
             reason: request.body?.reason ?? null,
+        };
+    });
+
+    // ---- Sprint 11: Runtime Token Retrieval (internal scope) ----------------
+
+    app.get<{ Querystring: { connector_type?: string; workspace_id?: string } }>('/v1/connectors/token', async (request, reply) => {
+        const session = options.getSession(request);
+        if (!session) {
+            return reply.code(401).send({
+                error: 'unauthorized',
+                message: 'A valid authenticated session is required.',
+            });
+        }
+
+        if (session.scope !== 'internal') {
+            return reply.code(403).send({
+                error: 'forbidden',
+                message: 'This endpoint is restricted to internal runtime sessions.',
+            });
+        }
+
+        const connectorType = normalizeConnectorType(request.query?.connector_type);
+        if (!connectorType) {
+            return reply.code(400).send({
+                error: 'unsupported_connector',
+                message: 'connector_type must be one of jira, teams, github, email',
+            });
+        }
+
+        const workspaceId = request.query?.workspace_id ?? session.workspaceIds[0];
+        if (!workspaceId) {
+            return reply.code(400).send({
+                error: 'missing_workspace',
+                message: 'workspace_id is required.',
+            });
+        }
+
+        const connectorId = buildConnectorId(connectorType, session.tenantId, workspaceId);
+        const metadata = await repo.findAuthMetadata(connectorId);
+        if (!metadata) {
+            return reply.code(404).send({
+                error: 'connector_not_found',
+                message: 'No OAuth connector found for the given type and workspace.',
+            });
+        }
+
+        if (!metadata.secretRefId) {
+            return reply.code(409).send({
+                error: 'connector_not_connected',
+                message: 'Connector exists but no token has been stored. Complete the OAuth flow first.',
+            });
+        }
+
+        const rawToken = await secretStore.getSecret(metadata.secretRefId);
+        if (!rawToken) {
+            return reply.code(503).send({
+                error: 'token_unavailable',
+                message: 'Connector token could not be retrieved from the secret store.',
+            });
+        }
+
+        let credentials: Record<string, string>;
+        try {
+            credentials = JSON.parse(rawToken) as Record<string, string>;
+        } catch {
+            return reply.code(503).send({
+                error: 'token_parse_error',
+                message: 'Stored token is not valid JSON.',
+            });
+        }
+
+        return {
+            connector_id: connectorId,
+            connector_type: connectorType,
+            credentials,
+            token_expires_at: metadata.tokenExpiresAt?.toISOString() ?? null,
         };
     });
 };

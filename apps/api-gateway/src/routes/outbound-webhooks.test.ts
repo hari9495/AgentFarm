@@ -15,7 +15,6 @@ const makeSession = (tenantId = 'tenant_1') => ({
     expiresAt: Date.now() + 60_000,
 });
 
-const noSession = () => null;
 
 // ── Prisma mock ───────────────────────────────────────────────────────────────
 
@@ -204,7 +203,7 @@ const makeDeliveryRecord = (overrides: Record<string, unknown> = {}) => ({
     ...overrides,
 });
 
-const makePrismaWithDelivery = (deliveryOverrides: Record<string, unknown> = {}, fetchSuccess = true) => ({
+const makePrismaWithDelivery = (deliveryOverrides: Record<string, unknown> = {}, _fetchSuccess = true) => ({
     outboundWebhook: {
         create: async ({ data }: { data: Record<string, unknown> }) => makeWebhookRecord({ ...data, id: 'wh_new' }),
         findMany: async () => [makeWebhookRecord()],

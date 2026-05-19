@@ -114,7 +114,7 @@ describe('summarizeMeeting', () => {
 
         const urls: string[] = [];
 
-        t.mock.method(globalThis, 'fetch', async (url: string, opts: RequestInit) => {
+        t.mock.method(globalThis, 'fetch', async (url: string, _opts: RequestInit) => {
             urls.push(url);
 
             if (url.includes('anthropic.com')) {

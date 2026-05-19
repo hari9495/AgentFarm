@@ -199,3 +199,91 @@ describe('GET /v1/workspaces/:workspaceId/ci-failures/:triageId/report', () => {
         assert.equal(res.statusCode, 401);
     });
 });
+
+describe('GET /v1/workspaces/:workspaceId/ci-failures', () => {
+    it('returns empty list when no reports exist', async () => {
+        const app = await buildApp();
+        const res = await app.inject({ method: 'GET', url: '/v1/workspaces/ws-001/ci-failures' });
+        assert.equal(res.statusCode, 200);
+        const body = JSON.parse(res.body);
+        assert.equal(body.total, 0);
+        assert.deepEqual(body.runs, []);
+    });
+
+    it('returns all reports for the workspace', async () => {
+        const app = Fastify({ logger: false });
+        await registerCiFailureRoutes(app, { getSession: () => makeSession() });
+
+        await app.inject({
+            method: 'POST',
+            url: '/v1/workspaces/ws-001/ci-failures/intake',
+            headers: { 'content-type': 'application/json' },
+            payload: JSON.stringify({ ...baseIntake, runId: 'run-list-001' }),
+        });
+        await app.inject({
+            method: 'POST',
+            url: '/v1/workspaces/ws-001/ci-failures/intake',
+            headers: { 'content-type': 'application/json' },
+            payload: JSON.stringify({ ...baseIntake, runId: 'run-list-002' }),
+        });
+
+        const res = await app.inject({ method: 'GET', url: '/v1/workspaces/ws-001/ci-failures' });
+        assert.equal(res.statusCode, 200);
+        const body = JSON.parse(res.body);
+        assert.equal(body.total, 2);
+        assert.equal(body.runs.length, 2);
+    });
+
+    it('filters by status query param', async () => {
+        const app = Fastify({ logger: false });
+        await registerCiFailureRoutes(app, { getSession: () => makeSession() });
+
+        await app.inject({
+            method: 'POST',
+            url: '/v1/workspaces/ws-001/ci-failures/intake',
+            headers: { 'content-type': 'application/json' },
+            payload: JSON.stringify({ ...baseIntake, runId: 'run-status-001' }),
+        });
+
+        // Triage runs synchronously and flips status to 'complete'
+        const queuedRes = await app.inject({ method: 'GET', url: '/v1/workspaces/ws-001/ci-failures?status=queued' });
+        const queuedBody = JSON.parse(queuedRes.body);
+        assert.equal(queuedBody.total, 0);
+
+        const completeRes = await app.inject({ method: 'GET', url: '/v1/workspaces/ws-001/ci-failures?status=complete' });
+        const completeBody = JSON.parse(completeRes.body);
+        assert.equal(completeBody.total, 1);
+    });
+
+    it('respects limit query param', async () => {
+        const app = Fastify({ logger: false });
+        await registerCiFailureRoutes(app, { getSession: () => makeSession() });
+
+        for (let i = 0; i < 5; i++) {
+            await app.inject({
+                method: 'POST',
+                url: '/v1/workspaces/ws-001/ci-failures/intake',
+                headers: { 'content-type': 'application/json' },
+                payload: JSON.stringify({ ...baseIntake, runId: `run-limit-00${i}` }),
+            });
+        }
+
+        const res = await app.inject({ method: 'GET', url: '/v1/workspaces/ws-001/ci-failures?limit=3' });
+        const body = JSON.parse(res.body);
+        assert.equal(body.total, 5);
+        assert.equal(body.runs.length, 3);
+    });
+
+    it('returns 401 when unauthenticated', async () => {
+        const app = await buildApp(null);
+        const res = await app.inject({ method: 'GET', url: '/v1/workspaces/ws-001/ci-failures' });
+        assert.equal(res.statusCode, 401);
+    });
+
+    it('returns 403 when workspace not in session', async () => {
+        const app = await buildApp(makeSession({ workspaceIds: ['ws-other'] }));
+        const res = await app.inject({ method: 'GET', url: '/v1/workspaces/ws-001/ci-failures' });
+        assert.equal(res.statusCode, 403);
+    });
+});
+

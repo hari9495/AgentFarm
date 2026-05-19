@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { PageHeader } from '../components/page-header';
 import { isInternalSessionToken } from '../lib/internal-session';
 
 type ProvisioningStep = {
@@ -120,14 +121,11 @@ export default async function ProvisioningPage({
 
     return (
         <main className="page-shell" style={{ maxWidth: 720 }}>
-            <header className="hero">
-                <p className="eyebrow">AgentFarm</p>
-                <h1 style={{ fontSize: '1.6rem' }}>Provisioning your workspace</h1>
-                <p style={{ marginTop: '0.3rem', fontSize: '0.9rem', color: '#57534e' }}>
-                    Your Developer Agent VM is being prepared. This takes up to{' '}
-                    <strong>{slaMin} minutes</strong>.
-                </p>
-            </header>
+            <PageHeader
+                eyebrow="AgentFarm"
+                title="Provisioning your workspace"
+                description={`Your Developer Agent VM is being prepared. This takes up to ${slaMin} minutes.`}
+            />
 
             {/* Status banner */}
             {isCompleted && (

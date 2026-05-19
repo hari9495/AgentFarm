@@ -3,6 +3,7 @@ import type {
     NotificationPayload,
     NotificationResult,
     CustomerNotificationConfig,
+    AgentPersonaRecord,
 } from '@agentfarm/shared-types';
 import type { NotificationAdapter } from './adapters/base.adapter.js';
 import { WebhookAdapter } from './adapters/webhook.adapter.js';
@@ -70,13 +71,48 @@ export class CustomerNotificationStore {
 }
 
 // -----------------------------------------------------------------------
+// Persona enrichment helper
+// -----------------------------------------------------------------------
+
+/**
+ * Enrich an outbound notification payload with the agent's persona identity.
+ *
+ * - For email: appends "— DisplayName\nEmail\nDisclosure" footer to the message.
+ * - For slack/teams: appends the disclosure statement only (no email footer).
+ * - For webhook: returns the payload unchanged (raw data channel).
+ */
+export function enrichPayloadWithPersona(
+    payload: NotificationPayload,
+    channel: NotificationConfig['channel'],
+    persona: AgentPersonaRecord,
+): NotificationPayload {
+    if (channel === 'webhook') {
+        return payload;
+    }
+
+    let footer: string;
+    if (channel === 'email') {
+        footer = `\n\n— ${persona.displayName}\n${persona.emailAddress}\n${persona.disclosureStatement}`;
+    } else {
+        // slack / teams
+        footer = `\n\n_${persona.disclosureStatement}_`;
+    }
+
+    return { ...payload, message: `${payload.message}${footer}` };
+}
+
+// -----------------------------------------------------------------------
 // NotificationService
 // -----------------------------------------------------------------------
 
 export class NotificationService {
     constructor(private readonly store: CustomerNotificationStore) { }
 
-    async send(customerId: string, payload: NotificationPayload): Promise<NotificationResult> {
+    async send(
+        customerId: string,
+        payload: NotificationPayload,
+        persona?: AgentPersonaRecord,
+    ): Promise<NotificationResult> {
         const entry = this.store.getConfig(customerId);
 
         if (!entry) {
@@ -98,6 +134,10 @@ export class NotificationService {
             };
         }
 
-        return adapter.send(payload);
+        const enrichedPayload = persona
+            ? enrichPayloadWithPersona(payload, entry.config.channel, persona)
+            : payload;
+
+        return adapter.send(enrichedPayload);
     }
 }

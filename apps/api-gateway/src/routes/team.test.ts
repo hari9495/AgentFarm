@@ -16,8 +16,6 @@ const makeSession = (overrides: Record<string, unknown> = {}) => ({
     ...overrides,
 });
 
-const noSession = () => null;
-
 // ── Prisma mock helpers ───────────────────────────────────────────────────────
 
 const makeUser = (overrides: Record<string, unknown> = {}) => ({

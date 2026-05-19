@@ -6,25 +6,25 @@ import ProductSceneSection from "@/components/product/ProductSceneSection";
 import ProductDemoVideo from "@/components/product/ProductDemoVideo";
 
 export const metadata: Metadata = {
-    title: "Product � AgentFarm",
-    description: "Explore AgentFarm's AI teammate capabilities, integrations, and trust controls.",
+    title: "Product — AgentFarm",
+    description: "Explore AgentFarm: 12 AI worker roles for every department, approval-driven safety, tenant-isolated execution, and a full audit trail.",
 };
 
 const features = [
     {
         icon: Code2,
         gradient: "from-blue-500 to-blue-600",
-        title: "Developer Agent � End-to-End Execution",
+        title: "12 AI Worker Roles",
         description:
-            "The Developer Agent implements features, creates branches, opens PRs with full codebase context, and responds to review comments � no human needed for the first pass.",
+            "Developer, Tester, Sales Rep, Marketing Specialist, Customer Support Executive, Corporate Assistant, Recruiter, Business Analyst, Technical Writer, Full Stack Developer, Content Writer, Project Manager — one platform for all 12.",
         image: "https://images.unsplash.com/photo-1518773553398-650c184e0bb3?auto=format&fit=crop&w=800&q=80",
     },
     {
         icon: Zap,
         gradient: "from-yellow-500 to-amber-500",
-        title: "21-Skill Marketplace",
+        title: "Role Marketplace",
         description:
-            "Install exactly the skills your team needs: Create PR, Run CI Checks, Fix Test Failures, Security Fix Suggest, Dependency Upgrade Plan, Release Notes Generate, Explain Code, Refactor Plan, and 13 more.",
+            "Browse roles by department. Each role ships with pre-configured tool access, an approval policy, and a persona. Hire in under 10 minutes — no setup engineers required.",
         image: "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?auto=format&fit=crop&w=800&q=80",
     },
     {
@@ -32,7 +32,7 @@ const features = [
         gradient: "from-red-500 to-red-600",
         title: "Risk-Classified Approval Gates",
         description:
-            "Every action is classified as LOW, MEDIUM, or HIGH risk before execution. Low-risk actions auto-execute. Risky changes pause and request human approval via Teams or email � nothing ships without sign-off.",
+            "Every action is classified as LOW, MEDIUM, or HIGH risk before execution. Low-risk tasks auto-execute. Risky actions pause and notify you for human approval — nothing ships without sign-off.",
         image: "https://images.unsplash.com/photo-1555949963-ff9fe0c870eb?auto=format&fit=crop&w=800&q=80",
     },
     {
@@ -40,15 +40,15 @@ const features = [
         gradient: "from-orange-500 to-orange-600",
         title: "Tenant-Isolated Azure Runtime",
         description:
-            "Each customer gets a dedicated Azure VM. Your code, tokens, and execution environment are never shared with other tenants � zero cross-customer exposure.",
+            "Each customer gets a dedicated Azure VM. Your data, credentials, and execution environment are never shared with other tenants — zero cross-customer exposure.",
         image: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=800&q=80",
     },
     {
         icon: TestTube2,
         gradient: "from-green-500 to-green-600",
-        title: "CI Checks + Test Failure Fixes",
+        title: "Headless + Full Desktop Modes",
         description:
-            "Agent runs CI checks after every PR, identifies test failures, diagnoses root cause, and pushes a targeted fix � all without human intervention for routine failures.",
+            "Agents work programmatically via MCP connectors for tools with APIs. For everything else, they operate in full desktop mode — seeing and using the screen like a human employee.",
         image: "https://images.unsplash.com/photo-1516116216624-53e697fedbea?auto=format&fit=crop&w=800&q=80",
     },
     {
@@ -56,15 +56,15 @@ const features = [
         gradient: "from-violet-500 to-violet-600",
         title: "Full Evidence & Audit Trail",
         description:
-            "The evidence plane logs every agent action, approval decision, and outcome. Export audit evidence for compliance, review action history per PR, and track all approvals end-to-end.",
+            "The evidence plane logs every agent action, approval decision, and outcome across all roles. Export audit evidence for compliance and review action history end-to-end.",
         image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=800&q=80",
     },
     {
         icon: GitBranch,
         gradient: "from-slate-600 to-slate-700",
-        title: "Native GitHub & Jira Integration",
+        title: "100+ Tool Connectors via MCP",
         description:
-            "Branch creation, PR authoring, code review comments, CI triggers, and Jira ticket transitions � all driven natively by the agent via OAuth with least-privilege scopes.",
+            "GitHub, Jira, Slack, HubSpot, Salesforce, Gmail, Google Calendar, and more — all via MCP connectors. Bring your own MCP server for internal systems. Agents share tools across roles.",
         image: "https://images.unsplash.com/photo-1556075798-4825dfaaf498?auto=format&fit=crop&w=800&q=80",
     },
     {
@@ -72,33 +72,33 @@ const features = [
         gradient: "from-pink-500 to-pink-600",
         title: "10 LLM Providers with Fallback Routing",
         description:
-            "AgentFarm routes tasks to the best-performing model across 10 providers � OpenAI, Azure OpenAI, Anthropic, Google, Mistral, GitHub Models, xAI, Together, and more � with health-score fallback.",
+            "AgentFarm routes tasks to the best-performing model across 10 providers — OpenAI, Azure OpenAI, Anthropic, Google, Mistral, GitHub Models, xAI, Together, and more — with health-score fallback.",
         image: "https://images.unsplash.com/photo-1547658719-da2b51169166?auto=format&fit=crop&w=800&q=80",
     },
 ];
 
 const outcomes = [
-    "First PR from the Developer Agent within 15 minutes of setup",
-    "Every action risk-classified � risky changes require human approval before execution",
-    "Security scan on every PR with evidence stored for compliance review",
+    "First AI worker live in your team within 15 minutes of signup",
+    "Every action risk-classified — risky decisions require human approval before execution",
+    "Role-scoped tool access — agents only touch what their role allows",
     "Full audit trail for every agent action, approval decision, and outcome",
 ];
 
 const executionFlow = [
     {
         step: "01",
-        title: "Provision workspace + install skills",
-        detail: "Dedicated Azure VM provisioned in minutes. Install the developer skills your team needs from the marketplace.",
+        title: "Browse roles + hire an AI worker",
+        detail: "Dedicated Azure VM provisioned in minutes. Configure persona and approval rules from the setup wizard.",
     },
     {
         step: "02",
-        title: "Connect GitHub, Jira & Teams",
-        detail: "OAuth connections with least-privilege scopes. Agent reads Jira tickets and posts to Teams channels for approvals.",
+        title: "Connect tools for this role",
+        detail: "OAuth connections with least-privilege scopes. Agent uses only the tools its role allows — nothing more.",
     },
     {
         step: "03",
         title: "Ship with approval-driven assurance",
-        detail: "LOW-risk actions auto-execute. MEDIUM and HIGH-risk actions pause for human approval before proceeding.",
+        detail: "LOW-risk tasks auto-execute. MEDIUM and HIGH-risk actions pause for human approval before proceeding.",
     },
 ];
 
@@ -122,14 +122,14 @@ export default function ProductPage() {
                                 Product
                             </span>
                             <h1 className="mt-3 text-4xl sm:text-6xl font-extrabold text-white leading-tight tracking-tight">
-                                Everything your AI teammate operations{" "}
+                                One platform for{" "}
                                 <span className="bg-gradient-to-r from-violet-300 to-blue-300 bg-clip-text text-transparent">
-                                    needs to ship
+                                    every AI worker role
                                 </span>
                             </h1>
                             <p className="mt-5 text-xl text-slate-300 leading-relaxed">
-                                AgentFarm gives you a full suite of AI engineering teammates, purpose-built
-                                for real software development workflows with approvals and auditability.
+                                AgentFarm gives every department a dedicated AI worker — 12 roles, real tool access,
+                                approval gates on every high-stakes decision, and a full audit trail.
                             </p>
                             <div className="mt-8 flex flex-wrap gap-4">
                                 <ButtonLink href="/#waitlist" size="lg">
@@ -196,7 +196,7 @@ export default function ProductPage() {
                             Built for real engineering workflows
                         </h2>
                         <p className="mt-4 text-lg text-[var(--mute)]">
-                            Every feature is designed around how software teams actually work � not how AI demos pretend they work.
+                            Every feature is designed around how teams across every department actually work — not how AI demos pretend they work.
                         </p>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -242,9 +242,9 @@ export default function ProductPage() {
                         <div className="absolute inset-0 bg-gradient-to-br from-[#07080a]/90 via-[#07080a]/90 to-[#07080a]/90" />
                         <div className="relative py-16 px-10 text-center text-white">
                             <h2 className="text-3xl font-bold mb-4">
-                                Ready to augment your team with trusted AI execution?
+                                Ready to hire your first AI worker?
                             </h2>
-                            <p className="text-blue-100 mb-8 max-w-md mx-auto">Start with a 14-day free trial. No credit card, no commitments.</p>
+                            <p className="text-[var(--mute)] mb-8 max-w-md mx-auto">Start with any role. 14-day free trial, no credit card, no commitments.</p>
                             <ButtonLink href="/#waitlist" size="lg">
                                 Join the Waitlist
                             </ButtonLink>

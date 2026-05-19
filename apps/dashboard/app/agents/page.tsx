@@ -2,8 +2,8 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import AgentCard, { type Agent, type BotStatus } from '../components/agent-card.js';
-import AgentDetailPanel from '../components/agent-detail-panel.js';
+import AgentCard, { type Agent, type BotStatus } from '../components/agent-card';
+import AgentDetailPanel from '../components/agent-detail-panel';
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
@@ -99,21 +99,23 @@ export default function AgentsPage() {
         >
             {/* Top bar */}
             <header
+                className="magic-canvas"
                 style={{
                     height: '56px',
-                    background: '#0a0f1e',
-                    borderBottom: '1px solid #1e293b',
+                    borderBottom: '1px solid var(--m-hairline)',
                     display: 'flex',
                     alignItems: 'center',
                     padding: '0 24px',
                     gap: '16px',
                     flexShrink: 0,
+                    position: 'relative',
+                    overflow: 'hidden',
                 }}
             >
                 <Link
                     href="/"
                     style={{
-                        color: '#475569',
+                        color: 'var(--m-ink-muted)',
                         fontSize: '12px',
                         textDecoration: 'none',
                         display: 'flex',
@@ -123,14 +125,14 @@ export default function AgentsPage() {
                 >
                     ← Dashboard
                 </Link>
-                <span style={{ color: '#1e293b' }}>|</span>
+                <span style={{ color: 'var(--m-hairline)' }}>|</span>
                 <h1
                     style={{
                         fontSize: '15px',
                         fontWeight: 700,
-                        color: '#f1f5f9',
                         margin: 0,
                     }}
+                    className="holo-text-tight"
                 >
                     Agent Builder
                 </h1>
@@ -140,16 +142,8 @@ export default function AgentsPage() {
                             setShowCreate((v) => !v);
                             setCreateError(null);
                         }}
-                        style={{
-                            padding: '7px 14px',
-                            background: '#1d4ed8',
-                            border: '1px solid #2563eb',
-                            borderRadius: '6px',
-                            color: '#eff6ff',
-                            fontSize: '12px',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                        }}
+                        className="magic-btn magic-btn-primary"
+                        style={{ fontSize: '12px', padding: '5px 14px' }}
                     >
                         + New Agent
                     </button>

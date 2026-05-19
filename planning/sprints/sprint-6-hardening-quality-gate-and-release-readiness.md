@@ -1,5 +1,7 @@
 # Sprint 6: Hardening, Quality Gate, and Release Readiness
 
+Status: CLOSED
+
 ## Sprint Goal
 Stabilize release readiness with strict connector-scope hardening, regression coverage, and quality gate closure.
 

@@ -214,6 +214,67 @@ export const registerAgentControlRoutes = async (
         });
     });
 
+    // -----------------------------------------------------------------------
+    // GET /v1/agents/:botId/recent-work
+    //
+    // Returns recent ActionRecords for this bot so the speaking agent can
+    // give human-like standup updates (what shipped yesterday, what is in
+    // progress, what failed).
+    // -----------------------------------------------------------------------
+    app.get<{ Params: BotIdParams; Querystring: { sinceHours?: string; limit?: string } }>(
+        '/v1/agents/:botId/recent-work',
+        async (request, reply) => {
+            const session = options.getSession(request);
+            if (!session) {
+                return reply.code(401).send({ error: 'unauthorized', message: 'A valid authenticated session is required.' });
+            }
+
+            const { botId } = request.params;
+            const sinceHours = Math.min(Math.max(parseInt(request.query.sinceHours ?? '24', 10) || 24, 1), 168);
+            const limit = Math.min(Math.max(parseInt(request.query.limit ?? '20', 10) || 20, 1), 100);
+
+            const db = await resolvePrisma();
+
+            const bot = await db.bot.findUnique({
+                where: { id: botId },
+                select: { id: true, workspaceId: true, workspace: { select: { tenantId: true } } },
+            });
+            if (!bot) {
+                return reply.code(404).send({ code: 'BOT_NOT_FOUND', message: 'Bot not found.' });
+            }
+            if (bot.workspace.tenantId !== session.tenantId) {
+                return reply.code(403).send({ code: 'FORBIDDEN', message: 'Bot does not belong to your tenant.' });
+            }
+
+            const since = new Date(Date.now() - sinceHours * 60 * 60 * 1000);
+            const records = await db.actionRecord.findMany({
+                where: {
+                    botId,
+                    tenantId: session.tenantId,
+                    createdAt: { gte: since },
+                },
+                orderBy: { createdAt: 'desc' },
+                take: limit,
+                select: {
+                    id: true,
+                    actionType: true,
+                    inputSummary: true,
+                    outputSummary: true,
+                    status: true,
+                    createdAt: true,
+                    completedAt: true,
+                },
+            });
+
+            return reply.send({
+                botId,
+                sinceHours,
+                count: records.length,
+                records,
+            });
+        },
+    );
+
     // -------------------------------------------------------------------------
     // Phase 22 — per-agent rate-limit management routes
     // -------------------------------------------------------------------------

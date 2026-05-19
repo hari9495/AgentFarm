@@ -2856,7 +2856,12 @@ test('startup resolves tester aliases and applies tester-only action guardrails'
         };
 
         assert.equal(snapshotBody.snapshot.roleKey, 'tester');
-        assert.deepEqual(snapshotBody.snapshot.allowedConnectorTools.sort(), ['email', 'github', 'jira', 'teams']);
+        assert.deepEqual(snapshotBody.snapshot.allowedConnectorTools.sort(), [
+            'appium', 'burpsuite', 'circleci', 'cypress', 'email', 'github',
+            'gitlab', 'jira', 'jenkins', 'jmeter', 'linear', 'owasp_zap',
+            'playwright', 'postman', 'selenium', 'slack', 'soapui', 'teams',
+            'testrail', 'zephyr',
+        ].sort());
         assert.ok(snapshotBody.snapshot.allowedActions.includes('list_prs'));
         assert.ok(snapshotBody.snapshot.allowedActions.includes('create_pr_comment'));
         assert.ok(snapshotBody.snapshot.allowedActions.includes('run_tests'));

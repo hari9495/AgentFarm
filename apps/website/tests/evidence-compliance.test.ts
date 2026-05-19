@@ -11,11 +11,11 @@ import {
 
 const DB_PATH = process.env.WEBSITE_AUTH_DB_PATH ?? ".auth.sqlite";
 
-test("compliance evidence summary reports approvals, latency, and audit freshness", () => {
+test("compliance evidence summary reports approvals, latency, and audit freshness", async () => {
     const suffix = `${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     const db = new DatabaseSync(DB_PATH);
 
-    const approval = createApprovalRequest({
+    const approval = await createApprovalRequest({
         title: `Compliance evidence scenario ${suffix}`,
         agentSlug: "ai-security-engineer",
         agent: "AI Security Engineer",
@@ -28,7 +28,7 @@ test("compliance evidence summary reports approvals, latency, and audit freshnes
         escalationTimeoutSeconds: 120,
     });
 
-    const decided = updateApprovalDecision({
+    const decided = await updateApprovalDecision({
         id: approval.id,
         decision: "approved",
         decidedBy: "reviewer@agentfarm.local",
@@ -36,7 +36,7 @@ test("compliance evidence summary reports approvals, latency, and audit freshnes
     });
     assert.notEqual(decided, null);
 
-    writeAuditEvent({
+    await writeAuditEvent({
         actorId: "test-suite",
         actorEmail: "test-suite@agentfarm.local",
         action: "compliance.export.requested",
@@ -47,13 +47,13 @@ test("compliance evidence summary reports approvals, latency, and audit freshnes
         reason: "Synthetic audit event for compliance summary test.",
     });
 
-    const summary = getComplianceEvidenceSummary({ windowHours: 24 });
+    const summary = await getComplianceEvidenceSummary({ windowHours: 24 });
     assert.ok(summary.approvalsRequested >= 1);
     assert.ok(summary.approvalsApproved >= 1);
     assert.ok(summary.auditEventsCaptured >= 1);
     assert.equal(typeof summary.approvalDecisionLatencyP95Seconds, "number");
 
-    const pack = exportComplianceEvidencePack();
+    const pack = await exportComplianceEvidencePack();
     assert.ok(pack.approvals.some((item) => item.id === approval.id));
     assert.ok(pack.auditEvents.some((item) => item.action === "compliance.export.requested"));
     assert.equal(pack.retentionPolicy.activeDays, 365);

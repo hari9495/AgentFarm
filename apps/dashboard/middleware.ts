@@ -87,8 +87,9 @@ export function middleware(request: NextRequest) {
         return NextResponse.redirect(loginUrl);
     }
 
-    // Authenticated users with no workspaces are directed to onboarding.
-    if (decodedToken) {
+    // Customer users with no workspaces are directed to onboarding.
+    // Internal (staff) sessions are exempt from the onboarding requirement.
+    if (decodedToken && !hasInternalSession) {
         const workspaceIds = getWorkspaceIdsFromToken(decodedToken);
         if (workspaceIds.length === 0) {
             return NextResponse.redirect(new URL('/onboarding', request.url));

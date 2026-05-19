@@ -1,11 +1,6 @@
 import { randomUUID } from 'crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 
-const getPrisma = async () => {
-    const db = await import('../lib/db.js');
-    return db.prisma;
-};
-
 type SessionContext = {
     userId: string;
     tenantId: string;
@@ -171,124 +166,6 @@ const createInMemoryRepo = (store: DesktopActionStore): DesktopActionRepo => ({
     },
     async createAuditEvent() {
         // no-op in tests
-    },
-});
-
-// ---------------------------------------------------------------------------
-// DB repo
-// ---------------------------------------------------------------------------
-
-const createDbRepo = (prismaClient: Awaited<ReturnType<typeof getPrisma>>): DesktopActionRepo => ({
-    async listActions({ tenantId, workspaceId, limit }) {
-        const rows = await (prismaClient as any).desktopAction.findMany({
-            where: { tenantId, workspaceId },
-            orderBy: { createdAt: 'desc' },
-            take: limit,
-        });
-        return rows.map((r: any) => ({
-            id: r.id,
-            tenantId: r.tenantId,
-            workspaceId: r.workspaceId,
-            actionType: r.actionType as DesktopActionType,
-            target: r.target ?? undefined,
-            inputPayload: r.inputPayload ?? undefined,
-            result: r.result as DesktopActionResult,
-            riskLevel: r.riskLevel as DesktopActionRisk,
-            retryClass: r.retryClass as DesktopActionRetryClass,
-            retryCount: r.retryCount,
-            screenshotRef: r.screenshotRef ?? undefined,
-            approvalId: r.approvalId ?? undefined,
-            errorMessage: r.errorMessage ?? undefined,
-            completedAt: r.completedAt?.toISOString(),
-            correlationId: r.correlationId,
-            createdAt: r.createdAt.toISOString(),
-        }));
-    },
-    async createAction({ tenantId, workspaceId, actionType, target, inputPayload, riskLevel, result, approvalId, correlationId, nowIso }) {
-        const row = await (prismaClient as any).desktopAction.create({
-            data: {
-                id: randomUUID(),
-                tenantId,
-                workspaceId,
-                actionType,
-                target: target ?? null,
-                inputPayload: inputPayload ?? null,
-                result,
-                riskLevel,
-                retryClass: retryClassFor(actionType),
-                retryCount: 0,
-                approvalId: approvalId ?? null,
-                correlationId,
-                createdAt: new Date(nowIso),
-                updatedAt: new Date(nowIso),
-            },
-        });
-        return {
-            id: row.id,
-            tenantId: row.tenantId,
-            workspaceId: row.workspaceId,
-            actionType: row.actionType as DesktopActionType,
-            target: row.target ?? undefined,
-            inputPayload: row.inputPayload ?? undefined,
-            result: row.result as DesktopActionResult,
-            riskLevel: row.riskLevel as DesktopActionRisk,
-            retryClass: row.retryClass as DesktopActionRetryClass,
-            retryCount: row.retryCount,
-            approvalId: row.approvalId ?? undefined,
-            correlationId: row.correlationId,
-            createdAt: row.createdAt.toISOString(),
-        };
-    },
-    async updateAction({ id, tenantId, workspaceId, result, screenshotRef, errorMessage, approvalId, retryCount, nowIso }) {
-        const existing = await (prismaClient as any).desktopAction.findFirst({ where: { id, tenantId, workspaceId } });
-        if (!existing) return null;
-        const completedAt =
-            result === 'success' || result === 'failed' || result === 'blocked' ? new Date(nowIso) : existing.completedAt;
-        const row = await (prismaClient as any).desktopAction.update({
-            where: { id },
-            data: {
-                ...(result !== undefined && { result }),
-                ...(screenshotRef !== undefined && { screenshotRef }),
-                ...(errorMessage !== undefined && { errorMessage }),
-                ...(approvalId !== undefined && { approvalId }),
-                ...(retryCount !== undefined && { retryCount }),
-                completedAt,
-                updatedAt: new Date(nowIso),
-            },
-        });
-        return {
-            id: row.id,
-            tenantId: row.tenantId,
-            workspaceId: row.workspaceId,
-            actionType: row.actionType as DesktopActionType,
-            target: row.target ?? undefined,
-            inputPayload: row.inputPayload ?? undefined,
-            result: row.result as DesktopActionResult,
-            riskLevel: row.riskLevel as DesktopActionRisk,
-            retryClass: row.retryClass as DesktopActionRetryClass,
-            retryCount: row.retryCount,
-            screenshotRef: row.screenshotRef ?? undefined,
-            approvalId: row.approvalId ?? undefined,
-            errorMessage: row.errorMessage ?? undefined,
-            completedAt: row.completedAt?.toISOString(),
-            correlationId: row.correlationId,
-            createdAt: row.createdAt.toISOString(),
-        };
-    },
-    async createAuditEvent({ tenantId, workspaceId, actor, summary, correlationId }) {
-        await (prismaClient as any).auditEvent.create({
-            data: {
-                id: randomUUID(),
-                tenantId,
-                workspaceId,
-                actor,
-                eventType: 'audit_event',
-                severity: 'info',
-                summary,
-                correlationId,
-                createdAt: new Date(),
-            },
-        });
     },
 });
 

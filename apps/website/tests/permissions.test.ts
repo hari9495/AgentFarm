@@ -112,9 +112,9 @@ test("permission matrix for company portal and superadmin APIs", async () => {
     const originalAdminEmail = admin.email;
     const originalMemberEmail = member.email;
 
-    const companySuperadminToken = createSession(superadmin.id).sessionToken;
-    const adminToken = createSession(admin.id).sessionToken;
-    const memberToken = createSession(member.id).sessionToken;
+    const companySuperadminToken = (await createSession(superadmin.id)).sessionToken;
+    const adminToken = (await createSession(admin.id)).sessionToken;
+    const memberToken = (await createSession(member.id)).sessionToken;
 
     const anonymousCompany = await request("/company");
     assert.equal(anonymousCompany.status, 307);
@@ -155,7 +155,7 @@ test("permission matrix for company portal and superadmin APIs", async () => {
     try {
         db.prepare("UPDATE users SET email = ? WHERE id = ?").run("superadmin@customerexample.com", superadmin.id);
 
-        const customerSuperadminToken = createSession(superadmin.id).sessionToken;
+        const customerSuperadminToken = (await createSession(superadmin.id)).sessionToken;
 
         const customerTenantSuperadminPage = await request("/admin/superadmin", customerSuperadminToken);
         if (![200, 307].includes(customerTenantSuperadminPage.status)) {

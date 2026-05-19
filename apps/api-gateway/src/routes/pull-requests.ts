@@ -1,10 +1,6 @@
 import { randomUUID } from 'crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-
-const getPrisma = async () => {
-    const db = await import('../lib/db.js');
-    return db.prisma;
-};
+import type { PrismaClient } from '@prisma/client';
 
 type SessionContext = {
     userId: string;
@@ -124,6 +120,7 @@ const createStore = (): PrStore => ({ drafts: new Map() });
 
 type PrRepo = {
     getDraft(input: { id: string; tenantId: string; workspaceId: string }): Promise<PrDraftRecord | null>;
+    listDrafts(input: { tenantId: string; workspaceId: string; status?: string; limit?: number }): Promise<{ total: number; drafts: PrDraftRecord[] }>;
     createDraft(input: Omit<PrDraftRecord, 'id' | 'createdAt' | 'updatedAt'> & { nowIso: string }): Promise<PrDraftRecord>;
     updateDraft(input: {
         id: string;
@@ -151,6 +148,15 @@ const createInMemoryRepo = (store: PrStore): PrRepo => ({
         if (!d || d.tenantId !== tenantId || d.workspaceId !== workspaceId) return null;
         return d;
     },
+    async listDrafts({ tenantId, workspaceId, status, limit }) {
+        let results = Array.from(store.drafts.values()).filter(
+            (d) => d.tenantId === tenantId && d.workspaceId === workspaceId,
+        );
+        if (status) results = results.filter((d) => d.status === status);
+        const total = results.length;
+        const drafts = limit && limit > 0 ? results.slice(0, limit) : results;
+        return { total, drafts };
+    },
     async createDraft({ nowIso, ...fields }) {
         const record: PrDraftRecord = {
             id: randomUUID(),
@@ -174,16 +180,82 @@ const createInMemoryRepo = (store: PrStore): PrRepo => ({
 });
 
 // ---------------------------------------------------------------------------
-// DB repo
+// Options + helpers
 // ---------------------------------------------------------------------------
 
-const createDbRepo = (prismaClient: Awaited<ReturnType<typeof getPrisma>>): PrRepo => ({
+type RegisterPrRoutesOptions = {
+    getSession: (request: FastifyRequest) => SessionContext | null;
+    now?: () => number;
+    store?: PrStore;
+    repo?: PrRepo;
+    prisma?: PrismaClient;
+};
+
+// ---------------------------------------------------------------------------
+// Prisma-backed repo — used in production when prisma client is injected
+// ---------------------------------------------------------------------------
+
+const mapPrismaRecord = (row: {
+    id: string;
+    tenantId: string;
+    workspaceId: string;
+    branch: string;
+    targetBranch: string | null;
+    changeSummary: string;
+    linkedIssueIds: unknown;
+    title: string;
+    body: string;
+    checklist: unknown;
+    reviewersSuggested: unknown;
+    status: string;
+    prId: string | null;
+    provider: string | null;
+    labels: unknown;
+    correlationId: string;
+    createdAt: Date;
+    updatedAt: Date;
+}): PrDraftRecord => ({
+    id: row.id,
+    tenantId: row.tenantId,
+    workspaceId: row.workspaceId,
+    branch: row.branch,
+    targetBranch: row.targetBranch ?? undefined,
+    changeSummary: row.changeSummary,
+    linkedIssueIds: Array.isArray(row.linkedIssueIds) ? (row.linkedIssueIds as string[]) : [],
+    title: row.title,
+    body: row.body,
+    checklist: Array.isArray(row.checklist) ? (row.checklist as string[]) : [],
+    reviewersSuggested: Array.isArray(row.reviewersSuggested) ? (row.reviewersSuggested as string[]) : [],
+    status: row.status as PrDraftStatus,
+    prId: row.prId ?? undefined,
+    provider: row.provider ?? undefined,
+    labels: Array.isArray(row.labels) ? (row.labels as string[]) : [],
+    correlationId: row.correlationId,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+});
+
+const createPrismaRepo = (prisma: PrismaClient): PrRepo => ({
     async getDraft({ id, tenantId, workspaceId }) {
-        const row = await (prismaClient as any).prDraft.findFirst({ where: { id, tenantId, workspaceId } });
-        return row ? mapRow(row) : null;
+        const row = await prisma.prDraft.findFirst({ where: { id, tenantId, workspaceId } });
+        return row ? mapPrismaRecord(row) : null;
     },
-    async createDraft({ nowIso, ...fields }) {
-        const row = await (prismaClient as any).prDraft.create({
+
+    async listDrafts({ tenantId, workspaceId, status, limit }) {
+        const where = { tenantId, workspaceId, ...(status ? { status } : {}) };
+        const [total, rows] = await Promise.all([
+            prisma.prDraft.count({ where }),
+            prisma.prDraft.findMany({
+                where,
+                orderBy: { createdAt: 'desc' },
+                ...(limit && limit > 0 ? { take: limit } : {}),
+            }),
+        ]);
+        return { total, drafts: rows.map(mapPrismaRecord) };
+    },
+
+    async createDraft({ nowIso: _nowIso, ...fields }) {
+        const row = await prisma.prDraft.create({
             data: {
                 id: randomUUID(),
                 tenantId: fields.tenantId,
@@ -201,72 +273,46 @@ const createDbRepo = (prismaClient: Awaited<ReturnType<typeof getPrisma>>): PrRe
                 provider: fields.provider ?? null,
                 labels: fields.labels,
                 correlationId: fields.correlationId,
-                createdAt: new Date(nowIso),
-                updatedAt: new Date(nowIso),
             },
         });
-        return mapRow(row);
+        return mapPrismaRecord(row);
     },
-    async updateDraft({ id, tenantId, workspaceId, patch, nowIso }) {
-        const existing = await (prismaClient as any).prDraft.findFirst({ where: { id, tenantId, workspaceId } });
+
+    async updateDraft({ id, tenantId, workspaceId, patch }) {
+        const existing = await prisma.prDraft.findFirst({ where: { id, tenantId, workspaceId } });
         if (!existing) return null;
-        const row = await (prismaClient as any).prDraft.update({
+        const row = await prisma.prDraft.update({
             where: { id },
-            data: { ...patch, updatedAt: new Date(nowIso) },
-        });
-        return mapRow(row);
-    },
-    async createAuditEvent({ tenantId, workspaceId, actor, summary, correlationId }) {
-        await (prismaClient as any).auditEvent.create({
             data: {
-                id: randomUUID(),
+                ...(patch.status !== undefined ? { status: patch.status } : {}),
+                ...(patch.prId !== undefined ? { prId: patch.prId } : {}),
+                ...(patch.targetBranch !== undefined ? { targetBranch: patch.targetBranch } : {}),
+                ...(patch.reviewersSuggested !== undefined ? { reviewersSuggested: patch.reviewersSuggested } : {}),
+                ...(patch.labels !== undefined ? { labels: patch.labels } : {}),
+            },
+        });
+        return mapPrismaRecord(row);
+    },
+
+    async createAuditEvent({ tenantId, workspaceId, actor, summary, correlationId }) {
+        await prisma.auditEvent.create({
+            data: {
                 tenantId,
                 workspaceId,
-                actor,
-                eventType: 'audit_event',
+                botId: actor,
+                eventType: 'bot_runtime_event',
                 severity: 'info',
                 summary,
+                sourceSystem: 'api-gateway:pull-requests',
                 correlationId,
-                createdAt: new Date(),
             },
         });
     },
 });
-
-const mapRow = (row: any): PrDraftRecord => ({
-    id: row.id,
-    tenantId: row.tenantId,
-    workspaceId: row.workspaceId,
-    branch: row.branch,
-    targetBranch: row.targetBranch ?? undefined,
-    changeSummary: row.changeSummary,
-    linkedIssueIds: (row.linkedIssueIds as string[]) ?? [],
-    title: row.title,
-    body: row.body,
-    checklist: (row.checklist as string[]) ?? [],
-    reviewersSuggested: (row.reviewersSuggested as string[]) ?? [],
-    status: row.status as PrDraftStatus,
-    prId: row.prId ?? undefined,
-    provider: row.provider ?? undefined,
-    labels: (row.labels as string[]) ?? [],
-    correlationId: row.correlationId,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
-});
-
-// ---------------------------------------------------------------------------
-// Options + helpers
-// ---------------------------------------------------------------------------
-
-type RegisterPrRoutesOptions = {
-    getSession: (request: FastifyRequest) => SessionContext | null;
-    now?: () => number;
-    store?: PrStore;
-    repo?: PrRepo;
-};
 
 const resolveRepo = (options: RegisterPrRoutesOptions, store: PrStore): PrRepo => {
     if (options.repo) return options.repo;
+    if (options.prisma) return createPrismaRepo(options.prisma);
     return createInMemoryRepo(store);
 };
 
@@ -436,6 +482,26 @@ export const registerPrRoutes = async (
     );
 
     // -----------------------------------------------------------------------
+    // GET /v1/workspaces/:workspaceId/pull-requests
+    // -----------------------------------------------------------------------
+    app.get<{ Params: WorkspacePath; Querystring: PrQuery & { status?: string; limit?: string } }>(
+        '/v1/workspaces/:workspaceId/pull-requests',
+        async (request, reply) => {
+            const { workspaceId } = request.params;
+            const session = resolveSession(request, options, request.query.tenant_id);
+            if (!session) return reply.status(401).send({ error: 'unauthorized' });
+            if (!checkAccess(session, workspaceId)) return reply.status(403).send({ error: 'forbidden' });
+
+            const statusFilter = typeof request.query.status === 'string' ? request.query.status : undefined;
+            const limit = typeof request.query.limit === 'string' ? parseInt(request.query.limit, 10) : 50;
+
+            const repo = resolveRepo(options, store);
+            const result = await repo.listDrafts({ tenantId: session.tenantId, workspaceId, status: statusFilter, limit });
+            return reply.status(200).send(result);
+        },
+    );
+
+    // -----------------------------------------------------------------------
     // GET /v1/workspaces/:workspaceId/pull-requests/:prId/status
     // -----------------------------------------------------------------------
     app.get<{ Params: PrStatusPath; Querystring: PrQuery }>(
@@ -445,8 +511,6 @@ export const registerPrRoutes = async (
             const session = resolveSession(request, options, request.query.tenant_id);
             if (!session) return reply.status(401).send({ error: 'unauthorized' });
             if (!checkAccess(session, workspaceId)) return reply.status(403).send({ error: 'forbidden' });
-
-            const repo = resolveRepo(options, store);
 
             // Find draft by prId — scan in-memory store (test) or DB
             const allDrafts = Array.from((store as any).drafts?.values() ?? []) as PrDraftRecord[];

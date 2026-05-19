@@ -38,14 +38,14 @@ const cleanupUser = (db: DatabaseSync, userId: string): void => {
     db.prepare("DELETE FROM users WHERE id = ?").run(userId);
 };
 
-test("provisioning worker: queued job progresses to completed and updates runtime statuses", () => {
+test("provisioning worker: queued job progresses to completed and updates runtime statuses", async () => {
     const db = new DatabaseSync(DB_PATH);
     const suffix = `${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     const userId = createTestUser(db, suffix);
 
-    const init = initializeTenantWorkspaceAndBot({ userId, tenantName: "AgentFarm Provisioning" });
+    const init = await initializeTenantWorkspaceAndBot({ userId, tenantName: "AgentFarm Provisioning" });
 
-    const run = processProvisioningQueue({
+    const run = await processProvisioningQueue({
         limit: 1,
         jobIds: [init.provisioningJobId],
         actorId: "test-worker",
@@ -56,13 +56,13 @@ test("provisioning worker: queued job progresses to completed and updates runtim
     assert.equal(run.completed, 1);
     assert.equal(run.failed, 0);
 
-    const status = getProvisioningStatusForUser(userId);
+    const status = await getProvisioningStatusForUser(userId);
     assert.equal(status.tenant?.tenantStatus, "ready");
     assert.equal(status.workspace?.workspaceStatus, "ready");
     assert.equal(status.bot?.botStatus, "active");
     assert.equal(status.provisioningJob?.status, "completed");
 
-    const audit = listAuditEvents({ tenantId: init.tenant.id, limit: 100 });
+    const audit = await listAuditEvents({ tenantId: init.tenant.id, limit: 100 });
     assert.equal(audit.some((event) => event.action === "provisioning.job.status_updated"), true);
     assert.equal(
         audit.some((event) => event.action === "provisioning.job.completed" && event.targetId === init.provisioningJobId),
@@ -72,14 +72,14 @@ test("provisioning worker: queued job progresses to completed and updates runtim
     cleanupUser(db, userId);
 });
 
-test("provisioning worker: failed jobs mark tenant/workspace/bot degraded and emit failure audit", () => {
+test("provisioning worker: failed jobs mark tenant/workspace/bot degraded and emit failure audit", async () => {
     const db = new DatabaseSync(DB_PATH);
     const suffix = `${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     const userId = createTestUser(db, suffix);
 
-    const init = initializeTenantWorkspaceAndBot({ userId, tenantName: "AgentFarm Provisioning" });
+    const init = await initializeTenantWorkspaceAndBot({ userId, tenantName: "AgentFarm Provisioning" });
 
-    const run = processProvisioningQueue({
+    const run = await processProvisioningQueue({
         limit: 1,
         jobIds: [init.provisioningJobId],
         failJobIds: [init.provisioningJobId],
@@ -91,7 +91,7 @@ test("provisioning worker: failed jobs mark tenant/workspace/bot degraded and em
     assert.equal(run.completed, 0);
     assert.equal(run.failed, 1);
 
-    const status = getProvisioningStatusForUser(userId);
+    const status = await getProvisioningStatusForUser(userId);
     assert.equal(status.tenant?.tenantStatus, "degraded");
     assert.equal(status.workspace?.workspaceStatus, "failed");
     assert.equal(status.bot?.botStatus, "failed");
@@ -100,7 +100,7 @@ test("provisioning worker: failed jobs mark tenant/workspace/bot degraded and em
     assert.equal(status.provisioningJob?.remediationHint, "Retry after 5 minutes or reduce runtime tier.");
     assert.ok((status.provisioningJob?.updatedAt ?? 0) > 0);
 
-    const audit = listAuditEvents({ tenantId: init.tenant.id, limit: 100 });
+    const audit = await listAuditEvents({ tenantId: init.tenant.id, limit: 100 });
     assert.equal(
         audit.some((event) => event.action === "provisioning.job.failed" && event.targetId === init.provisioningJobId),
         true,
@@ -109,17 +109,17 @@ test("provisioning worker: failed jobs mark tenant/workspace/bot degraded and em
     cleanupUser(db, userId);
 });
 
-test("provisioning worker: respects processing limit and only consumes queued jobs", () => {
+test("provisioning worker: respects processing limit and only consumes queued jobs", async () => {
     const db = new DatabaseSync(DB_PATH);
     const suffixA = `${Date.now()}_${Math.floor(Math.random() * 1000)}_a`;
     const suffixB = `${Date.now()}_${Math.floor(Math.random() * 1000)}_b`;
     const userA = createTestUser(db, suffixA);
     const userB = createTestUser(db, suffixB);
 
-    const initA = initializeTenantWorkspaceAndBot({ userId: userA, tenantName: "AgentFarm Provisioning A" });
-    const initB = initializeTenantWorkspaceAndBot({ userId: userB, tenantName: "AgentFarm Provisioning B" });
+    const initA = await initializeTenantWorkspaceAndBot({ userId: userA, tenantName: "AgentFarm Provisioning A" });
+    const initB = await initializeTenantWorkspaceAndBot({ userId: userB, tenantName: "AgentFarm Provisioning B" });
 
-    const firstRun = processProvisioningQueue({
+    const firstRun = await processProvisioningQueue({
         limit: 1,
         jobIds: [initA.provisioningJobId, initB.provisioningJobId],
         actorId: "test-worker",
@@ -128,8 +128,8 @@ test("provisioning worker: respects processing limit and only consumes queued jo
 
     assert.equal(firstRun.processed, 1);
 
-    const statusAAfterFirst = getProvisioningStatusForUser(userA);
-    const statusBAfterFirst = getProvisioningStatusForUser(userB);
+    const statusAAfterFirst = await getProvisioningStatusForUser(userA);
+    const statusBAfterFirst = await getProvisioningStatusForUser(userB);
     const completedCount = [statusAAfterFirst, statusBAfterFirst].filter(
         (status) => status.provisioningJob?.status === "completed",
     ).length;
@@ -140,7 +140,7 @@ test("provisioning worker: respects processing limit and only consumes queued jo
     assert.equal(completedCount, 1);
     assert.equal(queuedCount, 1);
 
-    const secondRun = processProvisioningQueue({
+    const secondRun = await processProvisioningQueue({
         limit: 10,
         jobIds: [initA.provisioningJobId, initB.provisioningJobId],
         actorId: "test-worker",
@@ -149,8 +149,8 @@ test("provisioning worker: respects processing limit and only consumes queued jo
 
     assert.equal(secondRun.processed, 1);
 
-    const statusAFinal = getProvisioningStatusForUser(userA);
-    const statusBFinal = getProvisioningStatusForUser(userB);
+    const statusAFinal = await getProvisioningStatusForUser(userA);
+    const statusBFinal = await getProvisioningStatusForUser(userB);
     assert.equal(statusAFinal.provisioningJob?.status, "completed");
     assert.equal(statusBFinal.provisioningJob?.status, "completed");
 
@@ -158,14 +158,14 @@ test("provisioning worker: respects processing limit and only consumes queued jo
     cleanupUser(db, userB);
 });
 
-test("provisioning auto-tick: processes queued job for a specific user tenant", () => {
+test("provisioning auto-tick: processes queued job for a specific user tenant", async () => {
     const db = new DatabaseSync(DB_PATH);
     const suffix = `${Date.now()}_${Math.floor(Math.random() * 1000)}_auto`;
     const userId = createTestUser(db, suffix);
 
-    initializeTenantWorkspaceAndBot({ userId, tenantName: "AgentFarm Auto Tick" });
+    await initializeTenantWorkspaceAndBot({ userId, tenantName: "AgentFarm Auto Tick" });
 
-    const result = autoProcessProvisioningForUser({
+    const result = await autoProcessProvisioningForUser({
         userId,
         actorId: "test-auto",
         actorEmail: "auto@agentfarm.local",
@@ -175,20 +175,20 @@ test("provisioning auto-tick: processes queued job for a specific user tenant", 
     assert.equal(result.completed, 1);
     assert.equal(result.failed, 0);
 
-    const status = getProvisioningStatusForUser(userId);
+    const status = await getProvisioningStatusForUser(userId);
     assert.equal(status.provisioningJob?.status, "completed");
 
     cleanupUser(db, userId);
 });
 
-test("provisioning retry: failed job creates a new queued retry and is idempotent", () => {
+test("provisioning retry: failed job creates a new queued retry and is idempotent", async () => {
     const db = new DatabaseSync(DB_PATH);
     const suffix = `${Date.now()}_${Math.floor(Math.random() * 1000)}_retry`;
     const userId = createTestUser(db, suffix);
 
-    const init = initializeTenantWorkspaceAndBot({ userId, tenantName: "AgentFarm Retry" });
+    const init = await initializeTenantWorkspaceAndBot({ userId, tenantName: "AgentFarm Retry" });
 
-    processProvisioningQueue({
+    await processProvisioningQueue({
         limit: 1,
         jobIds: [init.provisioningJobId],
         failJobIds: [init.provisioningJobId],
@@ -196,7 +196,7 @@ test("provisioning retry: failed job creates a new queued retry and is idempoten
         actorEmail: "worker@agentfarm.local",
     });
 
-    const firstRetry = retryProvisioningJob({
+    const firstRetry = await retryProvisioningJob({
         jobId: init.provisioningJobId,
         requestedBy: userId,
         actorId: "test-operator",
@@ -211,7 +211,7 @@ test("provisioning retry: failed job creates a new queued retry and is idempoten
     assert.equal(firstRetry.job.status, "queued");
     assert.equal(firstRetry.job.retryOfJobId, init.provisioningJobId);
 
-    const secondRetry = retryProvisioningJob({
+    const secondRetry = await retryProvisioningJob({
         jobId: init.provisioningJobId,
         requestedBy: userId,
         actorId: "test-operator",
@@ -225,7 +225,7 @@ test("provisioning retry: failed job creates a new queued retry and is idempoten
     assert.equal(secondRetry.reused, true);
     assert.equal(secondRetry.job.id, firstRetry.job.id);
 
-    const sourceAgain = retryProvisioningJob({
+    const sourceAgain = await retryProvisioningJob({
         jobId: firstRetry.job.id,
         requestedBy: userId,
         actorId: "test-operator",
@@ -240,15 +240,15 @@ test("provisioning retry: failed job creates a new queued retry and is idempoten
     cleanupUser(db, userId);
 });
 
-test("provisioning retry: rate-limit blocks attempt beyond MAX_RETRY_ATTEMPTS (3)", () => {
+test("provisioning retry: rate-limit blocks attempt beyond MAX_RETRY_ATTEMPTS (3)", async () => {
     const db = new DatabaseSync(DB_PATH);
     const suffix = `${Date.now()}_${Math.floor(Math.random() * 1000)}_ratelimit`;
     const userId = createTestUser(db, suffix);
 
-    const init = initializeTenantWorkspaceAndBot({ userId, tenantName: "AgentFarm Rate Limit" });
+    const init = await initializeTenantWorkspaceAndBot({ userId, tenantName: "AgentFarm Rate Limit" });
 
     // Fail the original job
-    processProvisioningQueue({
+    await processProvisioningQueue({
         limit: 1,
         jobIds: [init.provisioningJobId],
         failJobIds: [init.provisioningJobId],
@@ -258,7 +258,7 @@ test("provisioning retry: rate-limit blocks attempt beyond MAX_RETRY_ATTEMPTS (3
 
     let lastJobId = init.provisioningJobId;
     for (let attempt = 1; attempt <= 3; attempt++) {
-        const retryResult = retryProvisioningJob({
+        const retryResult = await retryProvisioningJob({
             jobId: lastJobId,
             requestedBy: userId,
             actorId: "test-operator",
@@ -271,7 +271,7 @@ test("provisioning retry: rate-limit blocks attempt beyond MAX_RETRY_ATTEMPTS (3
         assert.equal(retryResult.job.retryAttemptCount, attempt, `attempt count should be ${attempt}`);
 
         // Fail the new retry job so we can retry it again
-        processProvisioningQueue({
+        await processProvisioningQueue({
             limit: 1,
             jobIds: [retryResult.job.id],
             failJobIds: [retryResult.job.id],
@@ -283,7 +283,7 @@ test("provisioning retry: rate-limit blocks attempt beyond MAX_RETRY_ATTEMPTS (3
     }
 
     // 4th retry attempt should be blocked
-    const blockedRetry = retryProvisioningJob({
+    const blockedRetry = await retryProvisioningJob({
         jobId: lastJobId,
         requestedBy: userId,
         actorId: "test-operator",

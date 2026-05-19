@@ -1,11 +1,6 @@
 import { randomUUID } from 'crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 
-const getPrisma = async () => {
-    const db = await import('../lib/db.js');
-    return db.prisma;
-};
-
 type SessionContext = {
     userId: string;
     tenantId: string;
@@ -230,148 +225,6 @@ const createInMemoryRepo = (store: IdeStateStore): IdeStateRepo => ({
 });
 
 // ---------------------------------------------------------------------------
-// DB repo
-// ---------------------------------------------------------------------------
-
-const createDbRepo = (prismaClient: Awaited<ReturnType<typeof getPrisma>>): IdeStateRepo => ({
-    async getIdeState({ tenantId, workspaceId }) {
-        const row = await (prismaClient as any).ideState.findUnique({
-            where: { tenantId_workspaceId: { tenantId, workspaceId } },
-        });
-        if (!row) return null;
-        return {
-            tenantId: row.tenantId,
-            workspaceId: row.workspaceId,
-            openFiles: (row.openFiles as string[]) ?? [],
-            activeFile: row.activeFile ?? undefined,
-            breakpoints: (row.breakpoints as BreakpointEntry[]) ?? [],
-            status: row.status,
-            updatedAt: row.updatedAt.toISOString(),
-        };
-    },
-    async upsertIdeState({ tenantId, workspaceId, openFiles, activeFile, breakpoints, status, nowIso }) {
-        const row = await (prismaClient as any).ideState.upsert({
-            where: { tenantId_workspaceId: { tenantId, workspaceId } },
-            update: {
-                ...(openFiles !== undefined && { openFiles }),
-                ...(activeFile !== undefined && { activeFile }),
-                ...(breakpoints !== undefined && { breakpoints }),
-                ...(status !== undefined && { status }),
-                updatedAt: new Date(nowIso),
-            },
-            create: {
-                id: randomUUID(),
-                tenantId,
-                workspaceId,
-                openFiles: openFiles ?? [],
-                activeFile: activeFile ?? null,
-                breakpoints: breakpoints ?? [],
-                status: status ?? 'active',
-                createdAt: new Date(nowIso),
-                updatedAt: new Date(nowIso),
-            },
-        });
-        return {
-            tenantId: row.tenantId,
-            workspaceId: row.workspaceId,
-            openFiles: (row.openFiles as string[]) ?? [],
-            activeFile: row.activeFile ?? undefined,
-            breakpoints: (row.breakpoints as BreakpointEntry[]) ?? [],
-            status: row.status,
-            updatedAt: row.updatedAt.toISOString(),
-        };
-    },
-    async listTerminalSessions({ tenantId, workspaceId }) {
-        const rows = await (prismaClient as any).terminalSession.findMany({
-            where: { tenantId, workspaceId },
-            orderBy: { createdAt: 'desc' },
-        });
-        return rows.map((row: any) => ({
-            id: row.id,
-            tenantId: row.tenantId,
-            workspaceId: row.workspaceId,
-            shell: row.shell,
-            cwd: row.cwd,
-            lastCommand: row.lastCommand ?? undefined,
-            history: (row.history as string[]) ?? [],
-            status: row.status,
-            updatedAt: row.updatedAt.toISOString(),
-            createdAt: row.createdAt.toISOString(),
-        }));
-    },
-    async createTerminalSession({ tenantId, workspaceId, shell, cwd, nowIso }) {
-        const row = await (prismaClient as any).terminalSession.create({
-            data: {
-                id: randomUUID(),
-                tenantId,
-                workspaceId,
-                shell,
-                cwd,
-                history: [],
-                status: 'active',
-                createdAt: new Date(nowIso),
-                updatedAt: new Date(nowIso),
-            },
-        });
-        return {
-            id: row.id,
-            tenantId: row.tenantId,
-            workspaceId: row.workspaceId,
-            shell: row.shell,
-            cwd: row.cwd,
-            lastCommand: row.lastCommand ?? undefined,
-            history: (row.history as string[]) ?? [],
-            status: row.status,
-            updatedAt: row.updatedAt.toISOString(),
-            createdAt: row.createdAt.toISOString(),
-        };
-    },
-    async updateTerminalSession({ id, tenantId, workspaceId, lastCommand, history, status, cwd, nowIso }) {
-        const existing = await (prismaClient as any).terminalSession.findFirst({
-            where: { id, tenantId, workspaceId },
-        });
-        if (!existing) return null;
-        const row = await (prismaClient as any).terminalSession.update({
-            where: { id },
-            data: {
-                ...(lastCommand !== undefined && { lastCommand }),
-                ...(history !== undefined && { history }),
-                ...(status !== undefined && { status }),
-                ...(cwd !== undefined && { cwd }),
-                updatedAt: new Date(nowIso),
-            },
-        });
-        return {
-            id: row.id,
-            tenantId: row.tenantId,
-            workspaceId: row.workspaceId,
-            shell: row.shell,
-            cwd: row.cwd,
-            lastCommand: row.lastCommand ?? undefined,
-            history: (row.history as string[]) ?? [],
-            status: row.status,
-            updatedAt: row.updatedAt.toISOString(),
-            createdAt: row.createdAt.toISOString(),
-        };
-    },
-    async createAuditEvent({ tenantId, workspaceId, actor, summary, correlationId }) {
-        await (prismaClient as any).auditEvent.create({
-            data: {
-                id: randomUUID(),
-                tenantId,
-                workspaceId,
-                actor,
-                eventType: 'audit_event',
-                severity: 'info',
-                summary,
-                correlationId,
-                createdAt: new Date(),
-            },
-        });
-    },
-});
-
-// ---------------------------------------------------------------------------
 // Route registration options
 // ---------------------------------------------------------------------------
 
@@ -386,12 +239,6 @@ type RegisterIdeStateRoutesOptions = {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-const resolveRepo = async (options: RegisterIdeStateRoutesOptions): Promise<IdeStateRepo> => {
-    if (options.repo) return options.repo;
-    const prismaClient = await getPrisma();
-    return createDbRepo(prismaClient);
-};
 
 const resolveSession = (
     request: FastifyRequest,

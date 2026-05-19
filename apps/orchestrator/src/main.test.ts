@@ -95,6 +95,51 @@ test('orchestrator wake completion route rejects invalid terminal status', async
     }
 });
 
+test('B1: GET /v1/wake/runs lists run records with wake source, status, and dedupe metadata', async () => {
+    const isolated = await createIsolatedApp({ now: () => 1_700_000_000_000 });
+    const { app } = isolated;
+
+    try {
+        // Schedule a wake to create a run record
+        await app.inject({
+            method: 'POST',
+            url: '/v1/wake/schedule',
+            payload: {
+                tenant_id: 'tenant-list',
+                workspace_id: 'ws-list',
+                bot_id: 'bot-list',
+                wake_source: 'assignment',
+                dedupe_key: 'list-test-key',
+                correlation_id: 'corr-list',
+            },
+        });
+
+        const listAll = await app.inject({ method: 'GET', url: '/v1/wake/runs' });
+        assert.equal(listAll.statusCode, 200);
+        const listBody = listAll.json() as { count: number; runs: Array<{ botId: string; wakeSource: string; status: string; dedupeKey?: string }> };
+        assert.ok(listBody.count >= 1);
+        const run = listBody.runs.find((r) => r.botId === 'bot-list');
+        assert.ok(run, 'run record for bot-list should be present');
+        assert.equal(run!.wakeSource, 'assignment');
+        assert.ok(run!.status === 'queued' || run!.status === 'active');
+        assert.equal(run!.dedupeKey, 'list-test-key');
+
+        // Filter by bot_id
+        const filtered = await app.inject({ method: 'GET', url: '/v1/wake/runs?bot_id=bot-list' });
+        assert.equal(filtered.statusCode, 200);
+        const filteredBody = filtered.json() as { count: number; runs: Array<unknown> };
+        assert.equal(filteredBody.count, 1);
+
+        // Filter by workspace_id
+        const byWs = await app.inject({ method: 'GET', url: '/v1/wake/runs?workspace_id=ws-list' });
+        assert.equal(byWs.statusCode, 200);
+        const byWsBody = byWs.json() as { count: number; runs: Array<unknown> };
+        assert.equal(byWsBody.count, 1);
+    } finally {
+        await isolated.cleanup();
+    }
+});
+
 test('orchestrator routine scheduler routes create and deduplicate queued runs', async () => {
     const isolated = await createIsolatedApp({ now: () => 1_700_000_123_000 });
     const { app } = isolated;

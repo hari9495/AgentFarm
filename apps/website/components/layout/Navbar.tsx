@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { Menu, X, Bot, ChevronDown, LayoutDashboard, Shield } from "lucide-react";
+import { Menu, X, Bot, ChevronDown } from "lucide-react";
 import ThemeToggle from "@/components/shared/ThemeToggle";
 import CartIcon from "@/components/shared/CartIcon";
 
@@ -18,7 +18,6 @@ const navLinks: NavLink[] = [
   { href: "/marketplace", label: "Marketplace" },
   { href: "/how-it-works", label: "How It Works" },
   { href: "/pricing", label: "Pricing" },
-  { href: "/status", label: "Status" },
   {
     label: "Resources",
     children: [
@@ -27,6 +26,7 @@ const navLinks: NavLink[] = [
       { href: "/changelog", label: "Changelog" },
       { href: "/docs", label: "Docs" },
       { href: "/blog", label: "Blog" },
+      { href: "/status", label: "Status" },
     ],
   },
 ];
@@ -38,14 +38,14 @@ function DropdownMenu({ children, onClose }: { children: ChildLink[]; onClose: (
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 4, scale: 0.97 }}
       transition={{ duration: 0.14, ease: [0.22, 1, 0.36, 1] }}
-      className="absolute top-full left-0 mt-1.5 w-44 bg-[#121212] border border-[#242728] rounded-xl shadow-2xl shadow-black/60 py-1 z-50"
+      className="absolute top-full left-0 mt-1.5 w-44 bg-[var(--surface-card)] border border-[var(--hairline)] rounded-xl shadow-xl shadow-gray-900/10 dark:shadow-black/60 py-1 z-50"
     >
       {children.map((child) => (
         <Link
           key={child.href}
           href={child.href}
           onClick={onClose}
-          className="block px-3.5 py-2 text-sm text-[#9c9c9d] hover:text-[#f4f4f6] hover:bg-white/[0.04] transition-colors rounded-lg mx-1"
+          className="block px-3.5 py-2 text-sm text-[var(--mute)] hover:text-[var(--ink)] hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-colors rounded-lg mx-1"
         >
           {child.label}
         </Link>
@@ -87,7 +87,7 @@ export default function Navbar() {
   }, []);
 
   return (
-    <header className="sticky top-0 z-50 bg-[#07080a]/90 backdrop-blur-xl border-b border-[#242728]">
+    <header className="sticky top-0 z-50 bg-white/90 dark:bg-[#07080a]/90 backdrop-blur-xl border-b border-[var(--hairline)]">
       <nav ref={ref} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-6">
 
         {/* Logo */}
@@ -95,7 +95,7 @@ export default function Navbar() {
           <span className="relative inline-flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-[#ff5757] to-[#a1131a] shadow-lg shadow-red-900/40 transition-transform duration-300 group-hover:scale-105">
             <Bot className="w-4 h-4 text-white" />
           </span>
-          <span className="text-[#f4f4f6] font-semibold tracking-tight text-[15px]">AgentFarm</span>
+          <span className="text-[var(--ink)] font-semibold tracking-tight text-[15px]">AgentFarm</span>
         </Link>
 
         {/* Desktop nav links */}
@@ -106,7 +106,7 @@ export default function Navbar() {
                 <>
                   <button
                     onClick={() => setDropdown(dropdown === l.label ? null : l.label)}
-                    className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-[#9c9c9d] hover:text-[#f4f4f6] hover:bg-white/[0.04] rounded-lg transition-colors cursor-pointer"
+                    className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-[var(--mute)] hover:text-[var(--ink)] hover:bg-black/[0.04] dark:hover:bg-white/[0.04] rounded-lg transition-colors cursor-pointer"
                   >
                     {l.label}
                     <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${dropdown === l.label ? "rotate-180" : ""}`} />
@@ -121,8 +121,8 @@ export default function Navbar() {
                 <Link
                   href={l.href!}
                   className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors block ${pathname === l.href
-                      ? "text-[#f4f4f6] bg-white/[0.06]"
-                      : "text-[#9c9c9d] hover:text-[#f4f4f6] hover:bg-white/[0.04]"
+                    ? "text-[var(--ink)] bg-black/[0.06] dark:bg-white/[0.06]"
+                    : "text-[var(--mute)] hover:text-[var(--ink)] hover:bg-black/[0.04] dark:hover:bg-white/[0.04]"
                     }`}
                 >
                   {l.label}
@@ -136,31 +136,10 @@ export default function Navbar() {
         <div className="hidden md:flex items-center gap-1.5">
           <ThemeToggle />
           <CartIcon />
-          <div className="w-px h-4 bg-[#242728] mx-0.5" />
-          <Link
-            href="/dashboard"
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-medium rounded-lg transition-colors ${pathname.startsWith("/dashboard")
-                ? "text-[#f4f4f6] bg-white/[0.06]"
-                : "text-[#9c9c9d] hover:text-[#f4f4f6] hover:bg-white/[0.04]"
-              }`}
-          >
-            <LayoutDashboard className="w-3.5 h-3.5" />
-            <span className="hidden lg:inline">Dashboard</span>
-          </Link>
-          <Link
-            href="/admin"
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-medium rounded-lg transition-colors ${pathname.startsWith("/admin")
-                ? "text-[#f4f4f6] bg-white/[0.06]"
-                : "text-[#9c9c9d] hover:text-[#f4f4f6] hover:bg-white/[0.04]"
-              }`}
-          >
-            <Shield className="w-3.5 h-3.5" />
-            <span className="hidden lg:inline">Admin</span>
-          </Link>
-          <div className="w-px h-4 bg-[#242728] mx-0.5" />
+          <div className="w-px h-4 bg-[var(--hairline)] mx-0.5" />
           <Link
             href="/login"
-            className="px-3 py-1.5 text-sm font-medium text-[#9c9c9d] hover:text-[#f4f4f6] hover:bg-white/[0.04] rounded-lg transition-colors"
+            className="px-3 py-1.5 text-sm font-medium text-[var(--mute)] hover:text-[var(--ink)] hover:bg-black/[0.04] dark:hover:bg-white/[0.04] rounded-lg transition-colors"
           >
             Sign in
           </Link>
@@ -174,7 +153,7 @@ export default function Navbar() {
 
         {/* Mobile hamburger */}
         <button
-          className="md:hidden p-2 rounded-lg text-[#9c9c9d] hover:text-[#f4f4f6] hover:bg-white/[0.06] transition-colors cursor-pointer"
+          className="md:hidden p-2 rounded-lg text-[var(--mute)] hover:text-[var(--ink)] hover:bg-black/[0.06] dark:hover:bg-white/[0.06] transition-colors cursor-pointer"
           onClick={() => setOpen(!open)}
           aria-label="Toggle menu"
         >
@@ -197,12 +176,12 @@ export default function Navbar() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
-              className="md:hidden absolute inset-x-0 top-14 border-t border-[#242728] bg-[#0d0d0d] px-4 py-4 flex flex-col gap-1 max-h-[calc(100vh-3.5rem)] overflow-y-auto z-40"
+              className="md:hidden absolute inset-x-0 top-14 border-t border-[var(--hairline)] bg-[var(--surface-card)] px-4 py-4 flex flex-col gap-1 max-h-[calc(100vh-3.5rem)] overflow-y-auto z-40"
             >
               {navLinks.map((l) =>
                 l.children ? (
                   <div key={l.label}>
-                    <p className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-[#6a6b6c]">
+                    <p className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-[var(--ash)]">
                       {l.label}
                     </p>
                     {l.children.map((child) => (
@@ -211,8 +190,8 @@ export default function Navbar() {
                         href={child.href}
                         onClick={() => setOpen(false)}
                         className={`block px-4 py-2.5 text-sm font-medium rounded-lg ${pathname === child.href
-                            ? "bg-white/[0.06] text-[#f4f4f6]"
-                            : "text-[#9c9c9d] hover:bg-white/[0.04] hover:text-[#f4f4f6]"
+                          ? "bg-black/[0.06] dark:bg-white/[0.06] text-[var(--ink)]"
+                          : "text-[var(--mute)] hover:bg-black/[0.04] dark:hover:bg-white/[0.04] hover:text-[var(--ink)]"
                           }`}
                       >
                         {child.label}
@@ -225,37 +204,23 @@ export default function Navbar() {
                     href={l.href!}
                     onClick={() => setOpen(false)}
                     className={`px-3 py-2.5 text-sm font-medium rounded-lg ${pathname === l.href
-                        ? "bg-white/[0.06] text-[#f4f4f6]"
-                        : "text-[#9c9c9d] hover:bg-white/[0.04] hover:text-[#f4f4f6]"
+                      ? "bg-black/[0.06] dark:bg-white/[0.06] text-[var(--ink)]"
+                      : "text-[var(--mute)] hover:bg-black/[0.04] dark:hover:bg-white/[0.04] hover:text-[var(--ink)]"
                       }`}
                   >
                     {l.label}
                   </Link>
                 )
               )}
-              <div className="mt-4 flex flex-col gap-2 pt-4 border-t border-[#242728]">
+              <div className="mt-4 flex flex-col gap-2 pt-4 border-t border-[var(--hairline)]">
                 <div className="flex gap-2 justify-end mb-1">
                   <ThemeToggle />
                   <CartIcon />
                 </div>
                 <Link
-                  href="/dashboard"
-                  onClick={() => setOpen(false)}
-                  className="flex items-center justify-center gap-2 w-full px-4 py-2.5 text-sm font-medium border border-[#242728] text-[#9c9c9d] rounded-lg hover:bg-white/[0.04] hover:text-[#f4f4f6]"
-                >
-                  <LayoutDashboard className="w-4 h-4" /> Dashboard
-                </Link>
-                <Link
-                  href="/admin"
-                  onClick={() => setOpen(false)}
-                  className="flex items-center justify-center gap-2 w-full px-4 py-2.5 text-sm font-medium border border-[#242728] text-[#9c9c9d] rounded-lg hover:bg-white/[0.04] hover:text-[#f4f4f6]"
-                >
-                  <Shield className="w-4 h-4" /> Admin
-                </Link>
-                <Link
                   href="/login"
                   onClick={() => setOpen(false)}
-                  className="w-full text-center px-4 py-2.5 text-sm font-medium border border-[#242728] text-[#9c9c9d] rounded-lg hover:bg-white/[0.04] hover:text-[#f4f4f6]"
+                  className="w-full text-center px-4 py-2.5 text-sm font-medium border border-[var(--hairline)] text-[var(--mute)] rounded-lg hover:bg-black/[0.04] dark:hover:bg-white/[0.04] hover:text-[var(--ink)]"
                 >
                   Sign in
                 </Link>

@@ -10,6 +10,19 @@ import {
     CATALOG,
 } from '../lib/event-catalog.js';
 
+// SSRF guard: reject private IPs, loopback, and cloud metadata service addresses
+const PRIVATE_HOST_RE =
+    /^(localhost|127(\.[0-9]+){3}|10(\.[0-9]+){3}|172\.(1[6-9]|2[0-9]|3[01])(\.[0-9]+){2}|192\.168(\.[0-9]+){2}|169\.254(\.[0-9]+){2}|0\.0\.0\.0|\[::1\]|\[fc[0-9a-f:]+\]|\[fd[0-9a-f:]+\])$/i;
+
+function isSsrfTarget(rawUrl: string): boolean {
+    try {
+        const { hostname } = new URL(rawUrl);
+        return PRIVATE_HOST_RE.test(hostname);
+    } catch {
+        return true; // unparseable → reject
+    }
+}
+
 type SessionContext = {
     userId: string;
     tenantId: string;
@@ -52,6 +65,10 @@ export const registerOutboundWebhookRoutes = async (
 
         if (typeof url !== 'string' || !url.startsWith('https://')) {
             return reply.code(400).send({ error: 'url must be an https URL' });
+        }
+
+        if (isSsrfTarget(url)) {
+            return reply.code(400).send({ error: 'url must not target a private or reserved address' });
         }
 
         if (!Array.isArray(events) || events.length === 0) {

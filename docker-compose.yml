@@ -92,6 +92,9 @@ services:
       NODE_ENV: production
       API_SESSION_SECRET: ${API_SESSION_SECRET}
       VOXCPM2_URL: ${VOXCPM2_URL:-http://localhost:8765}
+      VOICEBOX_URL: http://voicebox:17493
+      BROWSER_AGENT_URL: ${BROWSER_AGENT_URL:-http://browser-agent:5002}
+      DESKTOP_AGENT_URL: ${DESKTOP_AGENT_URL:-http://desktop-agent:5003}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3001}
     depends_on:
       migrate:
@@ -103,6 +106,27 @@ services:
       interval: 15s
       timeout: 5s
       retries: 5
+    networks:
+      - agentfarm
+    restart: unless-stopped
+
+  browser-agent:
+    build:
+      context: ./services/browser-agent
+      dockerfile: Dockerfile
+    container_name: agentfarm-browser-agent
+    ports:
+      - '5002:5002'
+    environment:
+      PORT: '5002'
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      BROWSER_TIMEOUT_MS: ${BROWSER_TIMEOUT_MS:-120000}
+    healthcheck:
+      test: [ 'CMD-SHELL', 'wget -qO- http://localhost:5002/health || exit 1' ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
     networks:
       - agentfarm
     restart: unless-stopped
@@ -119,7 +143,10 @@ services:
       RUNTIME_PORT: '4000'
       AF_HEALTH_PORT: '4000'
       API_GATEWAY_URL: http://api-gateway:3000
-      VOXCPM2_URL: http://voicebox:17493
+      VOICEBOX_URL: http://voicebox:17493
+      BROWSER_AGENT_URL: http://browser-agent:5002
+      DESKTOP_AGENT_URL: http://desktop-agent:5003
+      DESKTOP_AGENT_TOKEN: ${DESKTOP_AGENT_TOKEN:-}
       NODE_ENV: production
     depends_on:
       api-gateway:
@@ -176,6 +203,44 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 30s
+    networks:
+      - agentfarm
+    restart: unless-stopped
+
+  desktop-agent:
+    build:
+      context: ./docker/desktop-agent
+      dockerfile: Dockerfile
+    container_name: agentfarm-desktop-agent
+    mem_limit: 3g
+    shm_size: 512m
+    ports:
+      - '5003:5003' # Agent API
+      - '6080:6080' # noVNC WebSocket stream
+    environment:
+      APP_PORT: '5003'
+      NOVNC_PORT: '6080'
+      VNC_PORT: '5901'
+      DISPLAY: ':99'
+      LLM_PROVIDER: ${LLM_PROVIDER:-ollama}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      MAX_VISION_STEPS: ${MAX_VISION_STEPS:-20}
+      VISION_LOOP_TIMEOUT: ${VISION_LOOP_TIMEOUT:-300}
+      OLLAMA_URL: http://host.docker.internal:11434
+      LLM_MODEL: ${LLM_MODEL:-llama3.2:1b}
+      API_GATEWAY_URL: http://api-gateway:3000
+      DESKTOP_AGENT_TOKEN: ${DESKTOP_AGENT_TOKEN:-}
+      # Test tool paths
+      JMETER_HOME: /opt/jmeter
+      APPIUM_SERVER_URL: http://localhost:4723
+      ZAP_HOME: /opt/zaproxy
+    healthcheck:
+      test: [ 'CMD-SHELL', 'wget -qO- http://localhost:5003/health || exit 1' ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
       start_period: 30s
     networks:
       - agentfarm

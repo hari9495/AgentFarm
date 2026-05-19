@@ -6,7 +6,7 @@ const footerCols = [
         heading: "Product",
         links: [
             { href: "/product", label: "Features" },
-            { href: "/marketplace", label: "Skill Marketplace" },
+            { href: "/marketplace", label: "Role Marketplace" },
             { href: "/how-it-works", label: "How It Works" },
             { href: "/pricing", label: "Pricing" },
             { href: "/compare", label: "Compare" },
@@ -67,7 +67,7 @@ export default function Footer() {
                             AgentFarm
                         </Link>
                         <p className="mt-3 text-sm text-[var(--mute)] leading-relaxed max-w-xs">
-                            Developer Agent platform for engineering teams — 21 skills, approval gates, full audit trail on Azure.
+                            AI staffing platform — 12 roles for every department, approval gates, full audit trail on Azure.
                         </p>
                         {/* Social links */}
                         <div className="mt-5 flex items-center gap-2">

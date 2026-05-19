@@ -99,7 +99,7 @@ describe('SkillsRegistry.listActive', () => {
     it('only returns active skills for the given workspace', () => {
         const reg = registry();
         const { skill: s1 } = reg.crystallize({ ...BASE, runId: 'r1', wakeSource: 's', actionTypes: [] });
-        const { skill: s2 } = reg.crystallize({ ...BASE, runId: 'r2', wakeSource: 's', actionTypes: [] });
+        const { skill: _s2 } = reg.crystallize({ ...BASE, runId: 'r2', wakeSource: 's', actionTypes: [] });
         reg.crystallize({ tenantId: 't2', workspaceId: 'other', runId: 'r3', wakeSource: 's', actionTypes: [] });
 
         reg.setStatus(s1.id, 'active');

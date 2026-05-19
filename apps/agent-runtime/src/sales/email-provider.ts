@@ -7,6 +7,7 @@ export interface SendEmailParams {
     body: string;
     replyTo?: string;
     metadata?: Record<string, string>;
+    attachments?: Array<{ filename: string; content: Buffer; contentType: string }>;
 }
 
 export interface SendEmailResult {

@@ -1366,6 +1366,10 @@ export const decideApproval = async (input: {
     return updated;
 };
 
+/** Alias for decideApproval — kept for test-suite compatibility. */
+export const updateApprovalDecision = (input: Parameters<typeof decideApproval>[0]) =>
+    decideApproval(input);
+
 export const escalatePendingApprovals = async (input: {
     tenantId?: string;
     actorId: string;
@@ -2653,7 +2657,7 @@ export const processProvisioningQueue = async (opts: {
     const db = getDb();
     const { limit = 10, jobIds, tenantIds, failJobIds, actorId, actorEmail } = opts;
 
-    let query = `SELECT id, status, tenant_id FROM provisioning_queue WHERE status IN ('pending','in_progress')`;
+    let query = `SELECT id, status, tenant_id FROM provisioning_queue WHERE status IN ('queued','pending','in_progress')`;
     const bindings: (string | number)[] = [];
 
     if (jobIds?.length) {
@@ -2673,13 +2677,38 @@ export const processProvisioningQueue = async (opts: {
     let completed = 0;
     let failed = 0;
     const ts = now();
+    const resolvedActorId = actorId ?? "system-worker";
+    const resolvedActorEmail = actorEmail ?? "worker@agentfarm.local";
 
     for (const row of rows) {
+        const fullRow = await db.prepare(`SELECT * FROM provisioning_queue WHERE id = ?`).bind(row.id).first<Record<string, unknown>>();
+        if (!fullRow) continue;
+        const entry = mapProvisioningQueueEntry(fullRow);
+
         const shouldFail = failJobIds?.includes(row.id) ?? false;
         const newStatus = shouldFail ? "failed" : "completed";
+        const failureReason = shouldFail ? "azure_capacity_unavailable" : null;
+        const remediationHint = shouldFail ? "Retry after 5 minutes or reduce runtime tier." : null;
+
         await db.prepare(
-            `UPDATE provisioning_queue SET status = ?, updated_at = ?, completed_at = ?, actor_id = ?, actor_email = ? WHERE id = ?`,
-        ).bind(newStatus, ts, ts, actorId ?? null, actorEmail ?? null, row.id).run();
+            `UPDATE provisioning_queue SET status = ?, failure_reason = ?, remediation_hint = ?, updated_at = ? WHERE id = ?`,
+        ).bind(newStatus, failureReason, remediationHint, ts, row.id).run();
+
+        await writeAuditEvent({
+            actorId: resolvedActorId,
+            actorEmail: resolvedActorEmail,
+            action: "provisioning.job.status_updated",
+            targetType: "provisioning_job",
+            targetId: entry.id,
+            tenantId: entry.tenantId,
+            beforeState: { status: entry.status },
+            afterState: { status: newStatus, failureReason, remediationHint },
+            reason: `Provisioning state transition: ${entry.status} -> ${newStatus}`,
+        });
+
+        const finalEntry = { ...entry, status: newStatus as ProvisioningJobStatus, failureReason, remediationHint };
+        await finalizeProvisioningJob(finalEntry, resolvedActorId, resolvedActorEmail);
+
         processed++;
         if (shouldFail) failed++;
         else completed++;
@@ -2710,17 +2739,46 @@ export const retryProvisioningJob = async (opts: {
     if (retryAttemptCount >= 3) return { ok: false, error: "retry_limit_exceeded", retryAttemptCount };
     if (row.status !== "failed") return { ok: false, error: "not_retryable" };
 
+    // Check for existing queued retry job (idempotency)
+    const existing = await db.prepare(
+        `SELECT * FROM provisioning_queue WHERE retry_of_job_id = ? AND status = 'queued' ORDER BY created_at DESC LIMIT 1`,
+    ).bind(opts.jobId).first<Record<string, unknown>>();
+    if (existing) {
+        return { ok: true, job: mapProvisioningQueueEntry(existing), reused: true, retryAttemptCount: Number(existing.retry_attempt_count ?? 0) };
+    }
+
     const ts = now();
     const newCount = retryAttemptCount + 1;
+    const newJobId = `prv_${randomHex(8)}`;
     await db.prepare(
-        `UPDATE provisioning_queue SET status = 'pending', retry_attempt_count = ?, updated_at = ?, actor_id = ?, actor_email = ? WHERE id = ?`,
-    ).bind(newCount, ts, opts.actorId ?? null, opts.actorEmail ?? null, opts.jobId).run();
+        `INSERT INTO provisioning_queue
+             (id, tenant_id, workspace_id, bot_id, plan_id, runtime_tier, role_type,
+              correlation_id, requested_at, requested_by, trigger_source, status,
+              failure_reason, remediation_hint, retry_of_job_id, retry_attempt_count, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'retry', 'queued',
+                 NULL, NULL, ?, ?, ?, ?)`,
+    ).bind(
+        newJobId,
+        String(row.tenant_id),
+        String(row.workspace_id),
+        String(row.bot_id),
+        String(row.plan_id),
+        String(row.runtime_tier),
+        String(row.role_type),
+        String(row.correlation_id),
+        ts,
+        opts.requestedBy,
+        opts.jobId,
+        newCount,
+        ts,
+        ts,
+    ).run();
 
-    const updated = await db.prepare(
+    const created = await db.prepare(
         `SELECT * FROM provisioning_queue WHERE id = ?`,
-    ).bind(opts.jobId).first<Record<string, unknown>>();
+    ).bind(newJobId).first<Record<string, unknown>>();
 
-    return { ok: true, job: mapProvisioningQueueEntry(updated!), reused: false, retryAttemptCount: newCount };
+    return { ok: true, job: mapProvisioningQueueEntry(created!), reused: false, retryAttemptCount: newCount };
 };
 
 export const autoProcessProvisioningForUser = async (opts: {

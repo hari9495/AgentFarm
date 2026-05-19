@@ -1,7 +1,10 @@
 import process from 'node:process';
 import { spawn } from 'node:child_process';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const root = process.cwd();
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const dashboardPort = Number.parseInt(process.env.SMOKE_DASHBOARD_PORT ?? '3101', 10);
 const websitePort = Number.parseInt(process.env.SMOKE_WEBSITE_PORT ?? '3102', 10);
 const dashboardBaseUrl = `http://127.0.0.1:${dashboardPort}`;
@@ -179,6 +182,10 @@ const runWebsiteAuthSmoke = async () => {
     }
     logPass('Website build succeeded');
 
+    // Resolve the website SQLite DB so the Node.js instrumentation fallback can
+    // inject a D1-compatible stub when `next start` runs outside Cloudflare Workers.
+    const websiteAuthDbPath = resolve(__dirname, '../apps/website/.auth.sqlite');
+
     const websiteCommand = `pnpm --filter @agentfarm/website exec next start -p ${websitePort}`;
     const websiteProcess = spawn(websiteCommand, [], {
         cwd: root,
@@ -189,6 +196,7 @@ const runWebsiteAuthSmoke = async () => {
             AGENTFARM_ALLOWED_SIGNUP_DOMAINS: process.env.AGENTFARM_ALLOWED_SIGNUP_DOMAINS ?? 'example.com',
             AGENTFARM_ADMIN_DOMAINS: process.env.AGENTFARM_ADMIN_DOMAINS ?? 'example.com',
             AGENTFARM_COMPANY_DOMAINS: process.env.AGENTFARM_COMPANY_DOMAINS ?? 'example.com',
+            WEBSITE_AUTH_DB_PATH: websiteAuthDbPath,
         },
     });
 

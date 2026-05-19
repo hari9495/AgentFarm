@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export type BotStatus =
@@ -28,21 +30,21 @@ export type AgentCardProps = {
 // ── Status badge ──────────────────────────────────────────────────────────────
 
 const STATUS_COLORS: Record<BotStatus, string> = {
-    active:                    '#16a34a',
-    created:                   '#2563eb',
-    bootstrapping:             '#d97706',
-    connector_setup_required:  '#f59e0b',
-    paused:                    '#6b7280',
-    failed:                    '#dc2626',
+    active: '#16a34a',
+    created: '#2563eb',
+    bootstrapping: '#d97706',
+    connector_setup_required: '#f59e0b',
+    paused: '#6b7280',
+    failed: '#dc2626',
 };
 
 const STATUS_LABELS: Record<BotStatus, string> = {
-    active:                    'Active',
-    created:                   'Created',
-    bootstrapping:             'Bootstrapping',
-    connector_setup_required:  'Setup Required',
-    paused:                    'Paused',
-    failed:                    'Failed',
+    active: 'Active',
+    created: 'Created',
+    bootstrapping: 'Bootstrapping',
+    connector_setup_required: 'Setup Required',
+    paused: 'Paused',
+    failed: 'Failed',
 };
 
 function StatusBadge({ status }: { status: BotStatus }) {
@@ -152,6 +154,20 @@ export default function AgentCard({ agent, selected, onClick }: AgentCardProps) 
                         #{shortId}
                     </div>
                     <StatusBadge status={agent.status} />
+                    <div style={{ marginTop: '8px' }}>
+                        <Link
+                            href={`/agents/${agent.id}`}
+                            onClick={(e) => e.stopPropagation()}
+                            style={{
+                                fontSize: '11px',
+                                color: '#38bdf8',
+                                textDecoration: 'none',
+                                fontWeight: 500,
+                            }}
+                        >
+                            View details →
+                        </Link>
+                    </div>
                 </div>
             </div>
         </button>

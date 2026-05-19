@@ -437,3 +437,117 @@ test('DELETE /v1/agents/:botId/rate-limit — returns 403 for operator role', as
         await app.close();
     }
 });
+
+// ---------------------------------------------------------------------------
+// GET /v1/agents/:botId/recent-work — for standup grounding
+// ---------------------------------------------------------------------------
+
+const sampleActionRecords = [
+    {
+        id: 'act_1',
+        actionType: 'git_commit',
+        inputSummary: 'add login feature',
+        outputSummary: 'commit abc123',
+        status: 'completed',
+        createdAt: new Date('2026-01-01T10:00:00Z'),
+        completedAt: new Date('2026-01-01T10:00:30Z'),
+    },
+    {
+        id: 'act_2',
+        actionType: 'workspace_create_pr',
+        inputSummary: 'open PR for login',
+        outputSummary: 'PR #42 opened',
+        status: 'in_progress',
+        createdAt: new Date('2026-01-01T11:00:00Z'),
+        completedAt: null,
+    },
+];
+
+const makeRecentWorkPrisma = (bot: typeof activeBot | null, records: typeof sampleActionRecords) => ({
+    bot: { findUnique: async () => bot },
+    actionRecord: { findMany: async () => records },
+} as any);
+
+test('GET /v1/agents/:botId/recent-work — 401 without session', async () => {
+    const app = Fastify();
+    await registerAgentControlRoutes(app, {
+        getSession: () => null,
+        prisma: makeRecentWorkPrisma(activeBot, sampleActionRecords),
+    });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/v1/agents/bot_1/recent-work' });
+        assert.equal(res.statusCode, 401);
+    } finally {
+        await app.close();
+    }
+});
+
+test('GET /v1/agents/:botId/recent-work — 404 when bot missing', async () => {
+    const app = Fastify();
+    await registerAgentControlRoutes(app, {
+        getSession: () => session(),
+        prisma: makeRecentWorkPrisma(null, []),
+    });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/v1/agents/bot_missing/recent-work' });
+        assert.equal(res.statusCode, 404);
+        assert.equal(res.json().code, 'BOT_NOT_FOUND');
+    } finally {
+        await app.close();
+    }
+});
+
+test('GET /v1/agents/:botId/recent-work — 403 when bot belongs to another tenant', async () => {
+    const app = Fastify();
+    await registerAgentControlRoutes(app, {
+        getSession: () => session(),
+        prisma: makeRecentWorkPrisma(wrongTenantBot, sampleActionRecords),
+    });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/v1/agents/bot_1/recent-work' });
+        assert.equal(res.statusCode, 403);
+        assert.equal(res.json().code, 'FORBIDDEN');
+    } finally {
+        await app.close();
+    }
+});
+
+test('GET /v1/agents/:botId/recent-work — 200 returns records with defaults', async () => {
+    const app = Fastify();
+    await registerAgentControlRoutes(app, {
+        getSession: () => session(),
+        prisma: makeRecentWorkPrisma(activeBot, sampleActionRecords),
+    });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/v1/agents/bot_1/recent-work' });
+        assert.equal(res.statusCode, 200);
+        const body = res.json();
+        assert.equal(body.botId, 'bot_1');
+        assert.equal(body.sinceHours, 24);
+        assert.equal(body.count, 2);
+        assert.equal(body.records.length, 2);
+        assert.equal(body.records[0].actionType, 'git_commit');
+    } finally {
+        await app.close();
+    }
+});
+
+test('GET /v1/agents/:botId/recent-work — clamps sinceHours and limit to safe ranges', async () => {
+    const app = Fastify();
+    await registerAgentControlRoutes(app, {
+        getSession: () => session(),
+        prisma: makeRecentWorkPrisma(activeBot, sampleActionRecords),
+    });
+    try {
+        const res = await app.inject({
+            method: 'GET',
+            url: '/v1/agents/bot_1/recent-work?sinceHours=9999&limit=99999',
+        });
+        assert.equal(res.statusCode, 200);
+        const body = res.json();
+        assert.equal(body.sinceHours, 168, 'sinceHours should be clamped to 168 (7 days)');
+    } finally {
+        await app.close();
+    }
+});
+

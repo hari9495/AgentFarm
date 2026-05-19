@@ -1,11 +1,6 @@
 import { randomUUID } from 'crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 
-const getPrisma = async () => {
-    const db = await import('../lib/db.js');
-    return db.prisma;
-};
-
 type SessionContext = {
     userId: string;
     tenantId: string;
@@ -38,7 +33,6 @@ type ActivityEventRecord = {
 };
 
 type WorkspacePath = { workspaceId: string };
-type EventIdPath = { workspaceId: string; eventId: string };
 type ActivityQuery = { tenant_id?: string; status?: string; category?: string; limit?: string };
 type AckBody = { eventIds?: unknown };
 
@@ -138,82 +132,6 @@ const createInMemoryRepo = (store: ActivityStore): ActivityRepo => ({
             }
         }
         return { acked };
-    },
-});
-
-// ---------------------------------------------------------------------------
-// DB repo
-// ---------------------------------------------------------------------------
-
-const createDbRepo = (prismaClient: Awaited<ReturnType<typeof getPrisma>>): ActivityRepo => ({
-    async listEvents({ tenantId, workspaceId, status, category, limit }) {
-        const where: Record<string, unknown> = { tenantId, workspaceId };
-        if (status) where.status = status;
-        if (category) where.category = category;
-        const rows = await (prismaClient as any).activityEvent.findMany({
-            where,
-            orderBy: { sequence: 'desc' },
-            take: limit,
-        });
-        return rows.map((r: any) => ({
-            id: r.id,
-            tenantId: r.tenantId,
-            workspaceId: r.workspaceId,
-            category: r.category,
-            title: r.title,
-            body: r.body ?? undefined,
-            payload: r.payload ?? undefined,
-            status: r.status,
-            sequence: r.sequence,
-            ackedAt: r.ackedAt?.toISOString(),
-            ackedBy: r.ackedBy ?? undefined,
-            correlationId: r.correlationId,
-            createdAt: r.createdAt.toISOString(),
-        }));
-    },
-    async createEvent({ tenantId, workspaceId, category, title, body, payload, correlationId, nowIso }) {
-        const last = await (prismaClient as any).activityEvent.findFirst({
-            where: { tenantId, workspaceId },
-            orderBy: { sequence: 'desc' },
-            select: { sequence: true },
-        });
-        const seq = (last?.sequence ?? 0) + 1;
-        const row = await (prismaClient as any).activityEvent.create({
-            data: {
-                id: randomUUID(),
-                tenantId,
-                workspaceId,
-                category,
-                title,
-                body: body ?? null,
-                payload: payload ?? null,
-                status: 'unread',
-                sequence: seq,
-                correlationId,
-                createdAt: new Date(nowIso),
-                updatedAt: new Date(nowIso),
-            },
-        });
-        return {
-            id: row.id,
-            tenantId: row.tenantId,
-            workspaceId: row.workspaceId,
-            category: row.category,
-            title: row.title,
-            body: row.body ?? undefined,
-            payload: row.payload ?? undefined,
-            status: row.status,
-            sequence: row.sequence,
-            correlationId: row.correlationId,
-            createdAt: row.createdAt.toISOString(),
-        };
-    },
-    async ackEvents({ tenantId, workspaceId, eventIds, actor, nowIso }) {
-        const result = await (prismaClient as any).activityEvent.updateMany({
-            where: { id: { in: eventIds }, tenantId, workspaceId, status: { not: 'acked' } },
-            data: { status: 'acked', ackedAt: new Date(nowIso), ackedBy: actor, updatedAt: new Date(nowIso) },
-        });
-        return { acked: result.count };
     },
 });
 

@@ -30,13 +30,13 @@ export const metadata: Metadata = {
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL ?? "https://agentfarm.ai"
   ),
-  title: "AgentFarm — Trusted AI Teammates for Engineering Teams",
+  title: "AgentFarm — AI Workers for Every Department",
   description:
-    "Augment engineering teams with secure AI teammates for development, QA, and operations with approval gates and audit-ready workflows.",
+    "Hire AI workers across 12 roles — Developer, Sales Rep, Customer Support, and more. Approval gates, full audit trail, tenant-isolated execution on Azure.",
   openGraph: {
-    title: "AgentFarm — Trusted AI Teammates for Engineering Teams",
+    title: "AgentFarm — AI Workers for Every Department",
     description:
-      "Augment engineering teams with secure AI teammates for development, QA, and operations with approval gates and audit-ready workflows.",
+      "Hire AI workers across 12 roles — Developer, Sales Rep, Customer Support, and more. Approval gates, full audit trail, tenant-isolated execution on Azure.",
     type: "website",
   },
 };
@@ -45,10 +45,10 @@ const jsonLd = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
   name: "AgentFarm",
-  applicationCategory: "DeveloperApplication",
+  applicationCategory: "BusinessApplication",
   operatingSystem: "Web",
   description:
-    "Trusted AI teammate platform for engineering teams. Run development, QA, and operations workflows with approvals and auditable evidence.",
+    "AI staffing platform with 12 worker roles for every department. Approval gates, full audit trail, and tenant-isolated execution on Azure.",
   url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://agentfarm.ai",
   offers: {
     "@type": "Offer",

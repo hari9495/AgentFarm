@@ -40,7 +40,7 @@ export type EvidenceRecord = {
         success: boolean;
         resultSummary?: string;
         errorReason?: string;
-        failureClass?: 'transient_error' | 'runtime_exception' | 'policy_violation';
+        failureClass?: 'transient_error' | 'runtime_exception' | 'policy_violation' | 'role_enforcement' | 'kill_switch_blocked';
     };
     connectorUsed?: string;
     connectorStatus?: 'local' | 'remote' | 'fallback';

@@ -44,9 +44,9 @@ test("session auth: valid session token resolves to the correct user", async () 
     const password = "Test1234!";
 
     const user = await createUser({ email, password, name: "Auth Tester", company: "AgentFarm Test" });
-    const { sessionToken } = createSession(user.id);
+    const { sessionToken } = await createSession(user.id);
 
-    const resolved = getSessionUser(sessionToken);
+    const resolved = await getSessionUser(sessionToken);
     assert.ok(resolved, "should resolve to a user");
     assert.equal(resolved.id, user.id);
     assert.equal(resolved.email, email);
@@ -56,8 +56,8 @@ test("session auth: valid session token resolves to the correct user", async () 
     cleanupUser(db, user.id);
 });
 
-test("session auth: invalid token returns null", () => {
-    const result = getSessionUser("completely-invalid-token-that-never-existed");
+test("session auth: invalid token returns null", async () => {
+    const result = await getSessionUser("completely-invalid-token-that-never-existed");
     assert.equal(result, null);
 });
 
@@ -68,11 +68,11 @@ test("session auth: deleted session token returns null", async () => {
     const password = "Delete1234!";
 
     const user = await createUser({ email, password, name: "Delete Tester", company: "AgentFarm Test" });
-    const { sessionToken } = createSession(user.id);
+    const { sessionToken } = await createSession(user.id);
 
-    deleteSession(sessionToken);
+    await deleteSession(sessionToken);
 
-    const resolved = getSessionUser(sessionToken);
+    const resolved = await getSessionUser(sessionToken);
     assert.equal(resolved, null, "deleted session should not resolve");
 
     cleanupUser(db, user.id);
@@ -85,10 +85,10 @@ test("session auth: tenantId is populated after tenant initialization", async ()
     const password = "Tenant1234!";
 
     const user = await createUser({ email, password, name: "Tenant Tester", company: "AgentFarm Test" });
-    const init = initializeTenantWorkspaceAndBot({ userId: user.id, tenantName: "Auth Test Corp" });
-    const { sessionToken } = createSession(user.id);
+    const init = await initializeTenantWorkspaceAndBot({ userId: user.id, tenantName: "Auth Test Corp" });
+    const { sessionToken } = await createSession(user.id);
 
-    const resolved = getSessionUser(sessionToken);
+    const resolved = await getSessionUser(sessionToken);
     assert.ok(resolved, "should resolve user");
     assert.equal(resolved.tenantId, init.tenant.id, "tenantId should match provisioned tenant");
 
@@ -110,11 +110,11 @@ test("session auth: login returns authenticated user via authenticateUser", asyn
     const badAuth = await authenticateUser(email, "wrongpassword");
     assert.equal(badAuth, null, "wrong password should return null");
 
-    const { sessionToken } = createSession(authenticated.id);
+    const { sessionToken } = await createSession(authenticated.id);
     cleanupUser(db, authenticated.id);
 
     // After cleanup session token should be gone too (cascaded in cleanupUser)
-    const resolved = getSessionUser(sessionToken);
+    const resolved = await getSessionUser(sessionToken);
     assert.equal(resolved, null);
 });
 
@@ -132,10 +132,10 @@ test("workspace RLS: listApprovals scopes results to caller's tenantId", async (
     const userA = await createUser({ email: emailA, password, name: "RLS User A", company: "Tenant A Corp" });
     const userB = await createUser({ email: emailB, password, name: "RLS User B", company: "Tenant B Corp" });
 
-    const initA = initializeTenantWorkspaceAndBot({ userId: userA.id, tenantName: "RLS Tenant A" });
-    const initB = initializeTenantWorkspaceAndBot({ userId: userB.id, tenantName: "RLS Tenant B" });
+    const initA = await initializeTenantWorkspaceAndBot({ userId: userA.id, tenantName: "RLS Tenant A" });
+    const initB = await initializeTenantWorkspaceAndBot({ userId: userB.id, tenantName: "RLS Tenant B" });
 
-    createApprovalRequest({
+    await createApprovalRequest({
         title: "Tenant A Action",
         agentSlug: "dev-agent",
         agent: "Developer Agent",
@@ -148,7 +148,7 @@ test("workspace RLS: listApprovals scopes results to caller's tenantId", async (
         actorEmail: emailA,
     });
 
-    createApprovalRequest({
+    await createApprovalRequest({
         title: "Tenant B Action",
         agentSlug: "dev-agent",
         agent: "Developer Agent",
@@ -161,8 +161,8 @@ test("workspace RLS: listApprovals scopes results to caller's tenantId", async (
         actorEmail: emailB,
     });
 
-    const approvalsForA = listApprovals({ status: "pending", tenantId: initA.tenant.id });
-    const approvalsForB = listApprovals({ status: "pending", tenantId: initB.tenant.id });
+    const approvalsForA = await listApprovals({ status: "pending", tenantId: initA.tenant.id });
+    const approvalsForB = await listApprovals({ status: "pending", tenantId: initB.tenant.id });
 
     // Each tenant should only see their own approval
     assert.ok(
@@ -197,10 +197,10 @@ test("workspace RLS: listRecentActivity scopes to caller's tenantId", async () =
     const userA = await createUser({ email: emailA, password, name: "Activity User A", company: "Activity Corp A" });
     const userB = await createUser({ email: emailB, password, name: "Activity User B", company: "Activity Corp B" });
 
-    const initA = initializeTenantWorkspaceAndBot({ userId: userA.id, tenantName: "Activity Tenant A" });
-    const initB = initializeTenantWorkspaceAndBot({ userId: userB.id, tenantName: "Activity Tenant B" });
+    const initA = await initializeTenantWorkspaceAndBot({ userId: userA.id, tenantName: "Activity Tenant A" });
+    const initB = await initializeTenantWorkspaceAndBot({ userId: userB.id, tenantName: "Activity Tenant B" });
 
-    createApprovalRequest({
+    await createApprovalRequest({
         title: "Activity A Only",
         agentSlug: "dev-agent",
         agent: "Developer Agent",
@@ -213,7 +213,7 @@ test("workspace RLS: listRecentActivity scopes to caller's tenantId", async () =
         actorEmail: emailA,
     });
 
-    createApprovalRequest({
+    await createApprovalRequest({
         title: "Activity B Only",
         agentSlug: "dev-agent",
         agent: "Developer Agent",
@@ -226,8 +226,8 @@ test("workspace RLS: listRecentActivity scopes to caller's tenantId", async () =
         actorEmail: emailB,
     });
 
-    const activityA = listRecentActivity(20, initA.tenant.id);
-    const activityB = listRecentActivity(20, initB.tenant.id);
+    const activityA = await listRecentActivity(20, initA.tenant.id);
+    const activityB = await listRecentActivity(20, initB.tenant.id);
 
     assert.ok(
         activityA.some((e) => e.detail.includes("Activity A Only")),

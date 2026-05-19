@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
+import { PageHeader } from '../components/page-header';
 import { getSessionPayload } from '../lib/internal-session';
 import BudgetPolicyPanel from '../components/budget-policy-panel';
 
@@ -13,37 +13,11 @@ export default async function BudgetPage() {
 
     return (
         <main className="page-shell">
-            <Link
-                href="/"
-                style={{
-                    fontSize: '0.8rem',
-                    color: 'var(--ink-soft)',
-                    textDecoration: 'none',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.25rem',
-                    marginBottom: '0.5rem',
-                }}
-            >
-                ← Back to dashboard
-            </Link>
-
-            <p
-                style={{
-                    margin: '0 0 0.25rem',
-                    fontSize: '0.72rem',
-                    fontWeight: 600,
-                    letterSpacing: '0.1em',
-                    textTransform: 'uppercase',
-                    color: 'var(--ink-muted)',
-                }}
-            >
-                Finance
-            </p>
-            <h1 style={{ margin: '0 0 0.35rem' }}>Budget Policy</h1>
-            <p style={{ margin: '0 0 1.5rem', color: 'var(--ink-soft)', fontSize: '0.9rem' }}>
-                Monitor and control workspace spending limits and hard stops.
-            </p>
+            <PageHeader
+                eyebrow="Finance"
+                title="Budget Policy"
+                description="Monitor and control workspace spending limits and hard stops."
+            />
 
             <BudgetPolicyPanel tenantId={tenantId} workspaceId={workspaceId} />
         </main>

@@ -117,12 +117,28 @@ function scanFile(filePath) {
             for (const imp of relativeServiceImports) {
                 const isSharedPackage = imp.includes('/packages/');
                 if (!isSharedPackage) {
-                    violations.push({
-                        file: filePath,
-                        line: lineNumber,
-                        content: line.trim(),
-                        violatingImport: imp.replace(/^from\s+|['"]/g, ''),
-                    });
+                    // Allow intra-package relative imports (e.g. routes/ → services/ within
+                    // the same app package). Only cross-package relative jumps are violations.
+                    const pathMatch = imp.match(/['"]([^'"]+)/);
+                    const importPath = pathMatch ? pathMatch[1] : null;
+                    let isSamePackage = false;
+                    if (importPath) {
+                        const resolvedPath = path.resolve(path.dirname(filePath), importPath);
+                        const filePackageJson = findNearestPackageJson(filePath);
+                        const importPackageJson = findNearestPackageJson(resolvedPath + '.ts')
+                            || findNearestPackageJson(resolvedPath + '.js')
+                            || findNearestPackageJson(resolvedPath + '/index.ts')
+                            || findNearestPackageJson(resolvedPath);
+                        isSamePackage = !!(filePackageJson && importPackageJson && filePackageJson === importPackageJson);
+                    }
+                    if (!isSamePackage) {
+                        violations.push({
+                            file: filePath,
+                            line: lineNumber,
+                            content: line.trim(),
+                            violatingImport: imp.replace(/^from\s+|['"]/g, ''),
+                        });
+                    }
                 }
             }
         }

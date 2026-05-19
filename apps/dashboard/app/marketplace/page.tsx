@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { PageHeader } from '../components/page-header';
 import { SkillMarketplacePanel } from '../components/skill-marketplace-panel';
 
 type SearchParams = {
@@ -20,17 +21,20 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
 
     return (
         <main className="page-shell" style={{ maxWidth: 960 }}>
-            <header className="hero" style={{ marginBottom: '0.3rem' }}>
-                <p className="eyebrow">Customer Skill Hub</p>
-                <h1>Skill Marketplace</h1>
-                <p>Install and uninstall only the skills purchased for this customer agent.</p>
-            </header>
+            <PageHeader
+                eyebrow="Customer Skill Hub"
+                title="Skill Marketplace"
+                description="Install and uninstall only the skills purchased for this customer agent."
+            />
 
             <div style={{ display: 'flex', gap: '0.55rem', flexWrap: 'wrap' }}>
                 <Link href={`/?workspaceId=${encodeURIComponent(workspaceId)}&tab=overview`} className="secondary-action" style={{ textDecoration: 'none' }}>
                     Back to Dashboard
                 </Link>
-                <Link href={`/internal/skills?${query}`} className="primary-action" style={{ textDecoration: 'none' }}>
+                <Link href="/marketplace/roles" className="primary-action" style={{ textDecoration: 'none' }}>
+                    Browse Agent Roles
+                </Link>
+                <Link href={`/internal/skills?${query}`} className="secondary-action" style={{ textDecoration: 'none' }}>
                     Open Internal Skill Manager
                 </Link>
             </div>

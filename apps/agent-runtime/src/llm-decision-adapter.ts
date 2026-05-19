@@ -4,6 +4,7 @@ import { getRoleSystemPrompt } from './role-system-prompts.js';
 import { buildSystemPrompt } from './system-prompt-builder.js';
 import { resolveLanguage } from './language-resolver.js';
 import type {
+    AgentPersonaRecord,
     ProviderFailoverReasonCode,
     ProviderFailoverTraceRecord,
 } from '@agentfarm/shared-types';
@@ -17,6 +18,21 @@ import { getTaskIntelligenceContext } from './task-intelligence-memory.js';
 import { getProviderQualityPenalty } from './llm-quality-tracker.js';
 import { getRoutingAdvice } from './routing-history-advisor.js';
 import { emitBudgetAlert } from './budget-alert-emitter.js';
+
+// ---------------------------------------------------------------------------
+// Persona-aware system prompt builder
+// Reads _persona from the task payload (injected by runtime-server before LLM call)
+// and forwards it to buildSystemPrompt so the agent speaks as its configured identity.
+// ---------------------------------------------------------------------------
+function buildPromptForTask(task: TaskEnvelope, language: string): string {
+    const persona = task.payload['_persona'] as AgentPersonaRecord | undefined;
+    const roleKey = typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : '';
+    return buildSystemPrompt({
+        basePrompt: getRoleSystemPrompt(roleKey, process.env['GITHUB_REPO'] ?? undefined),
+        language,
+        persona,
+    });
+}
 
 type DecisionRoute = 'execute' | 'approval';
 
@@ -194,19 +210,6 @@ const recordProviderOutcomeByTaskType = (provider: AutoProvider, actionType: str
     current.updatedAt = new Date().toISOString();
     byProvider[provider] = current;
     routingHistoryStore.set(taskType, byProvider);
-};
-
-const historicalFailureRateForTaskType = (provider: AutoProvider, actionType: string): number => {
-    const taskType = normalizeTaskTypeKey(actionType);
-    const entry = routingHistoryStore.get(taskType)?.[provider];
-    if (!entry) {
-        return 0.5;
-    }
-    const total = entry.success + entry.failed;
-    if (total <= 0) {
-        return 0.5;
-    }
-    return entry.failed / total;
 };
 
 const getCooldownStatePath = (): string => {
@@ -779,6 +782,40 @@ const parseAndValidateDecision = (raw: string, fallback: ActionDecision): Parsed
     };
 };
 
+/**
+ * Truncate large string values inside a task payload so the final JSON prompt
+ * never exceeds the LLM context window. Strings longer than MAX_STRING_CHARS
+ * are replaced with a sentinel "[truncated: N chars]". Nested objects and
+ * arrays are recursively processed up to depth 4.
+ */
+const MAX_PROMPT_STRING_CHARS = 4_000;
+const MAX_PROMPT_BYTES = 80_000;
+
+function truncatePayloadValue(value: unknown, depth: number): unknown {
+    if (depth > 4) return '[depth limit]';
+    if (typeof value === 'string') {
+        return value.length > MAX_PROMPT_STRING_CHARS
+            ? `[truncated: ${value.length} chars]`
+            : value;
+    }
+    if (Array.isArray(value)) {
+        return value.slice(0, 50).map((v) => truncatePayloadValue(v, depth + 1));
+    }
+    if (value !== null && typeof value === 'object') {
+        const out: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+            out[k] = truncatePayloadValue(v, depth + 1);
+        }
+        return out;
+    }
+    return value;
+}
+
+function truncateTaskForPrompt(task: TaskEnvelope): TaskEnvelope {
+    const truncatedPayload = truncatePayloadValue(task.payload, 0) as typeof task.payload;
+    return { ...task, payload: truncatedPayload };
+}
+
 const createTaskPrompt = (task: TaskEnvelope, heuristicDecision: ActionDecision): string => {
     const workspaceKey = toWorkspaceKey(task);
     const complexity = evaluateTaskComplexity(task, heuristicDecision);
@@ -799,16 +836,18 @@ const createTaskPrompt = (task: TaskEnvelope, heuristicDecision: ActionDecision)
         ? memoryContext.codeReviewPrompt
         : '';
 
-    return JSON.stringify(
+    const result = JSON.stringify(
         {
             objective: 'Classify AgentFarm task for action type, confidence, risk and route.',
             requiredResponseSchema: {
-                actionType: 'string (snake_case)',
+                actionType: 'string (snake_case) — must match a routable workspace_* action type (e.g. workspace_subagent_spawn) or a connector action',
                 confidence: 'number between 0 and 1',
                 riskLevel: 'low | medium | high',
                 route: 'execute | approval',
                 reason: 'short explanation',
                 payloadOverrides: {
+                    actionType: 'required string — MUST match your top-level actionType so the executor can route correctly (e.g. workspace_subagent_spawn)',
+                    prompt: 'required string — natural language description of the task; used by workspace_subagent_spawn as the sub-agent prompt',
                     specialist_profile: 'optional string',
                     workflow: 'optional string',
                     target_files: 'optional string[]',
@@ -822,6 +861,9 @@ const createTaskPrompt = (task: TaskEnvelope, heuristicDecision: ActionDecision)
                 'For medium or high risk, route must be approval.',
                 'Return JSON only. Do not wrap in markdown.',
                 'Use the task payload and heuristic baseline below.',
+                'ALWAYS set payloadOverrides.actionType equal to your top-level actionType. This is required for routing.',
+                'ALWAYS set payloadOverrides.prompt to the natural language task description. Required for workspace_subagent_spawn.',
+                'For coding, bug-fix, feature, refactor, or test tasks, prefer actionType=workspace_subagent_spawn.',
                 'When choosing workspace_subagent_spawn, include payloadOverrides.initial_plan and payloadOverrides.fix_attempts whenever you can propose a bounded verification-first plan.',
                 'Only use action steps from this set: code_edit, code_edit_patch, run_tests, run_build.',
             ],
@@ -830,12 +872,39 @@ const createTaskPrompt = (task: TaskEnvelope, heuristicDecision: ActionDecision)
             trajectoryHints: intelligence.trajectoryHints,
             learnedWorkspaceRules: codeReviewPatterns,
             learnedWorkspaceRulePrompt: codeReviewPrompt,
-            task,
+            task: truncateTaskForPrompt(task),
             heuristicDecision,
         },
         null,
         2,
     );
+    // Final safety net: if the serialised prompt still exceeds the byte budget,
+    // strip payload entirely and retain only top-level task metadata.
+    if (result.length > MAX_PROMPT_BYTES) {
+        const safeTask = { ...truncateTaskForPrompt(task), payload: { _truncated: true, _original_size: JSON.stringify(task.payload).length } };
+        return JSON.stringify(
+            {
+                objective: 'Classify AgentFarm task for action type, confidence, risk and route.',
+                requiredResponseSchema: {
+                    actionType: 'string (snake_case)',
+                    confidence: 'number between 0 and 1',
+                    riskLevel: 'low | medium | high',
+                    route: 'execute | approval',
+                    reason: 'short explanation',
+                },
+                policy: [
+                    'For medium or high risk, route must be approval.',
+                    'Return JSON only. Do not wrap in markdown.',
+                    'Payload was too large and has been stripped. Use task metadata only.',
+                ],
+                task: safeTask,
+                heuristicDecision,
+            },
+            null,
+            2,
+        );
+    }
+    return result;
 };
 
 const toNumberOrNull = (value: unknown): number | null => {
@@ -913,7 +982,7 @@ const createAnthropicResolver = (input: {
                 model: selectedModel,
                 max_tokens: 512,
                 temperature: 0,
-                system: buildSystemPrompt({ basePrompt: getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : '', process.env['GITHUB_REPO'] ?? undefined), language: resolvedLanguage }),
+                system: buildPromptForTask(task, resolvedLanguage),
                 messages: [
                     {
                         role: 'user',
@@ -988,7 +1057,7 @@ const createGoogleResolver = (input: {
                 contents: [
                     {
                         role: 'user',
-                        parts: [{ text: `${buildSystemPrompt({ basePrompt: getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : '', process.env['GITHUB_REPO'] ?? undefined), language: resolvedLanguage })}\n\n${createTaskPrompt(task, heuristicDecision)}` }],
+                        parts: [{ text: `${buildPromptForTask(task, resolvedLanguage)}\n\n${createTaskPrompt(task, heuristicDecision)}` }],
                     },
                 ],
             }),
@@ -1274,7 +1343,7 @@ const createOpenAiResolver = (input: {
                 messages: [
                     {
                         role: 'system',
-                        content: buildSystemPrompt({ basePrompt: getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : '', process.env['GITHUB_REPO'] ?? undefined), language: resolvedLanguage }),
+                        content: buildPromptForTask(task, resolvedLanguage),
                     },
                     {
                         role: 'user',
@@ -1341,7 +1410,7 @@ const createGitHubModelsResolver = (input: {
                 messages: [
                     {
                         role: 'system',
-                        content: buildSystemPrompt({ basePrompt: getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : '', process.env['GITHUB_REPO'] ?? undefined), language: resolvedLanguage }),
+                        content: buildPromptForTask(task, resolvedLanguage),
                     },
                     {
                         role: 'user',
@@ -1406,7 +1475,7 @@ const createXaiResolver = (input: {
                 temperature: 0,
                 response_format: { type: 'json_object' },
                 messages: [
-                    { role: 'system', content: buildSystemPrompt({ basePrompt: getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : '', process.env['GITHUB_REPO'] ?? undefined), language: resolvedLanguage }) },
+                    { role: 'system', content: buildPromptForTask(task, resolvedLanguage) },
                     { role: 'user', content: createTaskPrompt(task, heuristicDecision) },
                 ],
             }),
@@ -1467,7 +1536,7 @@ const createMistralResolver = (input: {
                 temperature: 0,
                 response_format: { type: 'json_object' },
                 messages: [
-                    { role: 'system', content: buildSystemPrompt({ basePrompt: getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : '', process.env['GITHUB_REPO'] ?? undefined), language: resolvedLanguage }) },
+                    { role: 'system', content: buildPromptForTask(task, resolvedLanguage) },
                     { role: 'user', content: createTaskPrompt(task, heuristicDecision) },
                 ],
             }),
@@ -1528,7 +1597,7 @@ const createTogetherResolver = (input: {
                 temperature: 0,
                 response_format: { type: 'json_object' },
                 messages: [
-                    { role: 'system', content: buildSystemPrompt({ basePrompt: getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : '', process.env['GITHUB_REPO'] ?? undefined), language: resolvedLanguage }) },
+                    { role: 'system', content: buildPromptForTask(task, resolvedLanguage) },
                     { role: 'user', content: createTaskPrompt(task, heuristicDecision) },
                 ],
             }),
@@ -1905,7 +1974,7 @@ const createAzureOpenAiResolver = (input: {
                 messages: [
                     {
                         role: 'system',
-                        content: buildSystemPrompt({ basePrompt: getRoleSystemPrompt(typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : '', process.env['GITHUB_REPO'] ?? undefined), language: resolvedLanguage }),
+                        content: buildPromptForTask(task, resolvedLanguage),
                     },
                     {
                         role: 'user',

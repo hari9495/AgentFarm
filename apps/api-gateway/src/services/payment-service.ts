@@ -61,10 +61,32 @@ export async function verifyStripeWebhook(
 }> {
     const stripeKey = process.env['STRIPE_SECRET_KEY'] ?? '';
     const webhookSecret = process.env['STRIPE_WEBHOOK_SECRET'] ?? '';
-    const stripe = new Stripe(stripeKey);
     const empty = { success: false, providerOrderId: '', providerPaymentId: '', customerEmail: '' };
+    // Without both keys the signature cannot be verified — fail fast before
+    // instantiating the SDK so tests without env vars always get success:false.
+    if (!stripeKey || !webhookSecret) {
+        return empty;
+    }
     try {
+        const stripe = new Stripe(stripeKey);
         const event = stripe.webhooks.constructEvent(payload, signature, webhookSecret);
+
+        // Stripe Checkout hosted-page flow: checkout.session.completed
+        if (event.type === 'checkout.session.completed') {
+            const session = event.data.object as Stripe.Checkout.Session;
+            const providerPaymentId =
+                typeof session.payment_intent === 'string'
+                    ? session.payment_intent
+                    : (session.payment_intent as Stripe.PaymentIntent | null)?.id ?? '';
+            return {
+                success: true,
+                providerOrderId: session.id,      // matches Order.providerOrderId stored at checkout-session creation
+                providerPaymentId,
+                customerEmail: session.customer_email ?? '',
+            };
+        }
+
+        // Direct PaymentIntent flow: payment_intent.succeeded
         if (event.type !== 'payment_intent.succeeded') {
             return empty;
         }
@@ -269,4 +291,45 @@ export async function reactivateSubscription(
             },
         }),
     ]);
+}
+
+// ---------------------------------------------------------------------------
+// Stripe hosted checkout session
+// ---------------------------------------------------------------------------
+
+export async function createStripeCheckoutSession(params: {
+    planId: string;
+    amountCents: number;
+    currency: string;
+    customerEmail: string;
+    tenantId: string;
+    successUrl: string;
+    cancelUrl: string;
+}): Promise<{ checkoutUrl: string; sessionId: string }> {
+    const stripeKey = process.env['STRIPE_SECRET_KEY'] ?? '';
+    const stripe = new Stripe(stripeKey);
+    const session = await stripe.checkout.sessions.create({
+        mode: 'payment',
+        customer_email: params.customerEmail,
+        line_items: [
+            {
+                price_data: {
+                    currency: params.currency,
+                    product_data: {
+                        name: `AgentFarm Plan: ${params.planId}`,
+                        metadata: { planId: params.planId },
+                    },
+                    unit_amount: params.amountCents,
+                },
+                quantity: 1,
+            },
+        ],
+        metadata: {
+            tenantId: params.tenantId,
+            planId: params.planId,
+        },
+        success_url: params.successUrl,
+        cancel_url: params.cancelUrl,
+    });
+    return { checkoutUrl: session.url ?? '', sessionId: session.id };
 }

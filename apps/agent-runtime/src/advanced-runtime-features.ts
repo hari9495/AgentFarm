@@ -724,7 +724,7 @@ export class AdvancedRuntimeFeatures {
         this.recordProvenanceAttestation(task, result);
     }
 
-    public registerPlanCheckpoint(task: TaskEnvelope, decision: ActionDecision, plan: {
+    public registerPlanCheckpoint(task: TaskEnvelope, _decision: ActionDecision, plan: {
         planId: string;
         summary: string;
         risks: string[];

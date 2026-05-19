@@ -23,6 +23,11 @@ import AddToCartButton from "@/components/shared/AddToCartButton";
 import { useFunnelTracking } from "@/lib/use-funnel-tracking";
 import { useCompactMotion } from "@/lib/useCompactMotion";
 
+// ─── Dedicated landing pages for featured role agents ─────────────────────────
+const DEDICATED_DETAIL_PAGES: Record<string, string> = {
+    "ai-backend-developer": "/marketplace/developer",
+};
+
 // ─── Slug → Icon (original 34 hand-crafted bots) ─────────────────────────────
 const ICON_MAP: Record<string, LucideIcon> = {
     "ai-backend-developer": Code2,
@@ -203,6 +208,7 @@ function BotCard({ bot, index }: { bot: Bot; index: number }) {
     const setupTime = bot.available ? "5-10 min setup" : "Going live soon";
     const topIntegration = bot.integrations[0] ?? "GitHub";
     const nextOutcome = bot.useCases[1] ?? bot.useCases[0] ?? "Reliable task delivery";
+    const detailHref = DEDICATED_DETAIL_PAGES[bot.slug] ?? `/marketplace/${bot.slug}`;
 
     function togglePeek() {
         const nextOpen = !peekOpen;
@@ -251,7 +257,7 @@ function BotCard({ bot, index }: { bot: Bot; index: number }) {
             {/* Name + status */}
             <div className="flex items-start justify-between gap-2 mb-1">
                 <Link
-                    href={`/marketplace/${bot.slug}`}
+                    href={detailHref}
                     className="font-semibold text-slate-900 dark:text-slate-100 text-sm leading-snug hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                 >
                     {bot.name}
@@ -327,7 +333,7 @@ function BotCard({ bot, index }: { bot: Bot; index: number }) {
 
             {bot.available && !inCart && (
                 <Link
-                    href="/checkout"
+                    href={detailHref}
                     onClick={() => track({ type: "bot_quick_start_click", slug: bot.slug, name: bot.name })}
                     className="mt-2 inline-flex items-center text-xs font-semibold text-blue-600 hover:text-blue-700 dark:hover:text-blue-400"
                 >

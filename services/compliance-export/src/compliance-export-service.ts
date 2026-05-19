@@ -8,6 +8,7 @@ import type { ExportRequest, ExportResult, FlattenedAuditRecord } from './types.
  */
 export class ComplianceExportService {
     private prisma: PrismaClient;
+    private readonly _exportCache = new Map<string, FlattenedAuditRecord[]>();
 
     constructor(prismaClient: PrismaClient) {
         this.prisma = prismaClient;
@@ -56,6 +57,7 @@ export class ComplianceExportService {
 
             // Flatten records
             const flatRecords = this.flattenAuditRecords(sessions);
+            this._exportCache.set(exportId, flatRecords);
 
             // Calculate statistics
             const totalRecordingDurationMs = sessions.reduce((sum: number, s: any) => {
@@ -109,13 +111,28 @@ export class ComplianceExportService {
      * @param format 'json' or 'csv'
      */
     async getExportData(exportId: string, format: 'json' | 'csv'): Promise<string> {
-        // This would fetch from cache or regenerate the export
-        // For now, return placeholder
-        if (format === 'json') {
-            return JSON.stringify({ exportId, status: 'ready' });
-        } else {
-            return `exportId,status\n${exportId},ready`;
+        const records = this._exportCache.get(exportId);
+        if (!records) {
+            throw new Error(`Export '${exportId}' not found or has expired.`);
         }
+        if (format === 'json') {
+            return JSON.stringify(records);
+        }
+        // CSV
+        const header = 'actionId,sessionId,agentInstanceId,tenantId,taskId,sequence,actionType,targetSelector,pageUrl,success,errorMessage,durationMs,timestamp,screenshotBeforeUrl,screenshotAfterUrl,networkRequestCount';
+        const escapeCell = (v: unknown): string => {
+            const s = v == null ? '' : String(v);
+            return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s;
+        };
+        const rows = records.map(r =>
+            [
+                r.actionId, r.sessionId, r.agentInstanceId, r.tenantId, r.taskId,
+                r.sequence, r.actionType, r.targetSelector, r.pageUrl, r.success,
+                r.errorMessage, r.durationMs, r.timestamp,
+                r.screenshotBeforeUrl, r.screenshotAfterUrl, r.networkRequestCount,
+            ].map(escapeCell).join(',')
+        );
+        return [header, ...rows].join('\n');
     }
 
     /**

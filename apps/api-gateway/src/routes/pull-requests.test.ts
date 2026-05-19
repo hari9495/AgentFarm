@@ -247,3 +247,104 @@ describe('GET /v1/workspaces/:workspaceId/pull-requests/:prId/status', () => {
         assert.equal(res.statusCode, 404);
     });
 });
+
+describe('GET /v1/workspaces/:workspaceId/pull-requests', () => {
+    it('returns empty list when no drafts exist', async () => {
+        const app = await buildApp();
+        const res = await app.inject({
+            method: 'GET',
+            url: '/v1/workspaces/ws-001/pull-requests',
+        });
+        assert.equal(res.statusCode, 200);
+        const body = JSON.parse(res.body);
+        assert.equal(body.total, 0);
+        assert.deepEqual(body.drafts, []);
+    });
+
+    it('returns all drafts for the workspace', async () => {
+        const app = Fastify({ logger: false });
+        await registerPrRoutes(app, { getSession: () => makeSession() });
+
+        // Create two drafts
+        await app.inject({
+            method: 'POST',
+            url: '/v1/workspaces/ws-001/pull-requests/draft',
+            headers: { 'content-type': 'application/json' },
+            payload: JSON.stringify({ branch: 'feat/a', changeSummary: 'Change A' }),
+        });
+        await app.inject({
+            method: 'POST',
+            url: '/v1/workspaces/ws-001/pull-requests/draft',
+            headers: { 'content-type': 'application/json' },
+            payload: JSON.stringify({ branch: 'feat/b', changeSummary: 'Change B' }),
+        });
+
+        const res = await app.inject({ method: 'GET', url: '/v1/workspaces/ws-001/pull-requests' });
+        assert.equal(res.statusCode, 200);
+        const body = JSON.parse(res.body);
+        assert.equal(body.total, 2);
+        assert.equal(body.drafts.length, 2);
+    });
+
+    it('filters by status query param', async () => {
+        const app = Fastify({ logger: false });
+        await registerPrRoutes(app, { getSession: () => makeSession() });
+
+        const draftRes = await app.inject({
+            method: 'POST',
+            url: '/v1/workspaces/ws-001/pull-requests/draft',
+            headers: { 'content-type': 'application/json' },
+            payload: JSON.stringify({ branch: 'feat/c', changeSummary: 'Change C' }),
+        });
+        const { draftId } = JSON.parse(draftRes.body);
+
+        await app.inject({
+            method: 'POST',
+            url: `/v1/workspaces/ws-001/pull-requests/${draftId}/publish`,
+            headers: { 'content-type': 'application/json' },
+            payload: JSON.stringify({}),
+        });
+
+        // draft status should return 0 (the one was published → status=publishing)
+        const draftOnly = await app.inject({ method: 'GET', url: '/v1/workspaces/ws-001/pull-requests?status=draft' });
+        const draftBody = JSON.parse(draftOnly.body);
+        assert.equal(draftBody.total, 0);
+
+        // publishing status should return 1
+        const publishingOnly = await app.inject({ method: 'GET', url: '/v1/workspaces/ws-001/pull-requests?status=publishing' });
+        const publishingBody = JSON.parse(publishingOnly.body);
+        assert.equal(publishingBody.total, 1);
+    });
+
+    it('respects limit query param', async () => {
+        const app = Fastify({ logger: false });
+        await registerPrRoutes(app, { getSession: () => makeSession() });
+
+        for (let i = 0; i < 5; i++) {
+            await app.inject({
+                method: 'POST',
+                url: '/v1/workspaces/ws-001/pull-requests/draft',
+                headers: { 'content-type': 'application/json' },
+                payload: JSON.stringify({ branch: `feat/x${i}`, changeSummary: `Change ${i}` }),
+            });
+        }
+
+        const res = await app.inject({ method: 'GET', url: '/v1/workspaces/ws-001/pull-requests?limit=2' });
+        const body = JSON.parse(res.body);
+        assert.equal(body.total, 5);
+        assert.equal(body.drafts.length, 2);
+    });
+
+    it('returns 401 when unauthenticated', async () => {
+        const app = await buildApp(null);
+        const res = await app.inject({ method: 'GET', url: '/v1/workspaces/ws-001/pull-requests' });
+        assert.equal(res.statusCode, 401);
+    });
+
+    it('returns 403 when workspace is not in session', async () => {
+        const app = await buildApp(makeSession({ workspaceIds: ['ws-other'] }));
+        const res = await app.inject({ method: 'GET', url: '/v1/workspaces/ws-001/pull-requests' });
+        assert.equal(res.statusCode, 403);
+    });
+});
+
