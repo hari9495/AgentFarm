@@ -45,9 +45,41 @@ NOVNC_PID=$!
 
 echo "[desktop-agent] All display services started. noVNC accessible at http://localhost:${NOVNC_PORT}/vnc.html"
 
+# ── Voice sidecar (pipecat_sidecar.py) ───────────────────────────────────────
+# Optional — gated by ENABLE_VOICE_SIDECAR=1. When enabled we configure
+# PulseAudio (virtual mic + monitor source) then launch the Python sidecar
+# that exposes /v1/capture/start, /v1/capture/stop, /v1/inject. The Node
+# agent on port 5003 is unaffected; the sidecar listens on PIPECAT_PORT
+# (default 7800) and shares lifecycle with this entrypoint.
+PIPECAT_PID=""
+if [ "${ENABLE_VOICE_SIDECAR:-0}" = "1" ]; then
+    if [ -x /app/pulse-setup.sh ]; then
+        /app/pulse-setup.sh || echo "[desktop-agent] pulse-setup.sh exited non-zero (voice path degraded)"
+        # AgentMicSource is the virtual mic Teams (and all new Chrome connections)
+        # should read from. The pipecat sidecar uses PULSE_MONITOR_SOURCE to
+        # explicitly target MeetingOut.monitor via parec, so the default does
+        # not need to point there.
+        pactl set-default-source AgentMicSource 2>/dev/null && \
+            echo "[desktop-agent] PulseAudio default source → AgentMicSource" || \
+            echo "[desktop-agent] Warning: could not set default PulseAudio source"
+    fi
+    if [ -f /app/pipecat_sidecar.py ]; then
+        echo "[desktop-agent] Starting pipecat voice sidecar on port ${PIPECAT_PORT:-7800}"
+        PULSE_MONITOR_SOURCE="MeetingOut.monitor" python3 /app/pipecat_sidecar.py &
+        PIPECAT_PID=$!
+    else
+        echo "[desktop-agent] pipecat_sidecar.py missing — voice path disabled"
+    fi
+else
+    echo "[desktop-agent] ENABLE_VOICE_SIDECAR != 1 — voice sidecar not started"
+fi
+
 # Graceful shutdown on SIGTERM / SIGINT
 cleanup() {
     echo "[desktop-agent] Shutting down..."
+    if [ -n "${PIPECAT_PID}" ]; then
+        kill "${PIPECAT_PID}" 2>/dev/null || true
+    fi
     kill "${NOVNC_PID}" "${X11VNC_PID}" "${XVFB_PID}" 2>/dev/null || true
 }
 trap cleanup SIGTERM SIGINT

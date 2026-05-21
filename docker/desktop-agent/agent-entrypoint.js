@@ -16,6 +16,7 @@
  *   DELETE /v1/sessions/:id
  *   POST /v1/sessions/:id/task        { goal: string }
  *   GET  /v1/sessions/:id/task        ?screenshot=true  to include last frame
+ *   POST /v1/meeting/join             { platform: 'meet'|'teams'|'zoom', url, displayName?, timeout? }
  *
  * Env vars:
  *   DISPLAY             virtual display  (default :99)
@@ -882,6 +883,58 @@ const server = http.createServer(async (req, res) => {
 
             const result = await runShellCommand(cmd, workDir, timeoutMs);
             return send(res, 200, result);
+        }
+
+        // ── POST /v1/meeting/join — platform-specific meeting join ───────────
+        // Dispatches to the appropriate Playwright join script based on platform.
+        // body: { platform: 'meet'|'teams'|'zoom', url: string, displayName?: string, timeout?: number }
+        if (method === 'POST' && pathname === '/v1/meeting/join') {
+            let body;
+            try {
+                body = await readBody(req);
+            } catch {
+                return send(res, 400, { error: 'Invalid JSON body' });
+            }
+
+            const platform = typeof body.platform === 'string' ? body.platform.toLowerCase().trim() : '';
+            const meetUrl = typeof body.url === 'string' ? body.url.trim() : '';
+            const joinDisplayName = typeof body.displayName === 'string' ? body.displayName.trim() : undefined;
+            const joinTimeout = typeof body.timeout === 'number' ? Math.min(Math.max(body.timeout, 10_000), 300_000) : 90_000;
+
+            if (!platform) return send(res, 400, { error: "'platform' is required ('meet', 'teams', or 'zoom')" });
+            if (!meetUrl) return send(res, 400, { error: "'url' is required" });
+
+            const PLATFORM_SCRIPTS = {
+                meet: '/app/meet-join.mjs',
+                teams: '/app/teams-join.mjs',
+                zoom: '/app/zoom-join.mjs',
+            };
+            const script = PLATFORM_SCRIPTS[platform];
+            if (!script) {
+                return send(res, 400, { error: `unsupported platform '${platform}'; must be one of: meet, teams, zoom` });
+            }
+
+            const scriptArgs = [script, meetUrl, '--timeout', String(joinTimeout)];
+            if (joinDisplayName) scriptArgs.push('--name', joinDisplayName);
+
+            const child = spawn(process.execPath, scriptArgs, {
+                detached: true,
+                stdio: ['ignore', 'pipe', 'pipe'],
+                env: { ...process.env, DISPLAY },
+            });
+
+            child.stdout.on('data', (d) => log('info', `[${platform}-join] ${d.toString().trimEnd()}`));
+            child.stderr.on('data', (d) => log('info', `[${platform}-join] ${d.toString().trimEnd()}`));
+            child.on('exit', (code) => log('info', `[${platform}-join] exited with code ${code}`));
+            child.unref();
+
+            return send(res, 202, {
+                ok: true,
+                platform,
+                url: meetUrl,
+                pid: child.pid ?? null,
+                message: `${platform} join script launched; check desktop stream at /vnc.html`,
+            });
         }
 
         // 404 fallthrough

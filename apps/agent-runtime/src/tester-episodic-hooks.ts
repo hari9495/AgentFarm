@@ -13,8 +13,7 @@
 // Both are pure functions; no side-effects, easy to unit-test.
 // ============================================================================
 
-import type { TaskEnvelope } from '@agentfarm/shared-types';
-import type { ProcessedTaskResult } from './execution-engine.js';
+import type { TaskEnvelope, ProcessedTaskResult } from './execution-engine.js';
 
 // ---------------------------------------------------------------------------
 // Internal helpers

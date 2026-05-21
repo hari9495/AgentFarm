@@ -1,3 +1,4 @@
+> **Status:** Mixed planned + shipped behavior. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for the authoritative gap tracker.
 # Testing Guide
 
 > AgentFarm testing conventions, patterns, and quality gate reference.

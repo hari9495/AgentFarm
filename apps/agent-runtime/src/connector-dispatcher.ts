@@ -1,15 +1,21 @@
 /**
  * connector-dispatcher.ts
  *
- * Unified HTTP connector layer for GitHub and Jira. Handles:
- *   - GitHub REST API: create_pr, add_pr_comment, merge_pr, list_prs
+ * Unified HTTP connector layer for GitHub, Jira, TestRail, and Zephyr Scale.
+ * Handles:
+ *   - GitHub REST API: create_pr, add_pr_comment, merge_pr, list_prs,
+ *     list_pr_review_comments, list_pr_reviews, reply_to_review_comment
  *   - Jira REST API v3: get_task, create_task, update_task_status,
  *     add_comment, assign_task, list_tasks
+ *   - TestRail REST API v2: get_cases, add_run, add_results_for_cases,
+ *     close_run, get_runs, get_results
+ *   - Zephyr Scale REST API: get_test_cases, create_test_cycle,
+ *     update_test_execution, get_test_executions
  *   - OAuth 2.0 token refresh (in-process cache, automatic retry)
  *
  * Token resolution order:
  *   1. payload.credentials object (test injection / API gateway forwarding)
- *   2. Environment variables (GITHUB_TOKEN, JIRA_API_TOKEN, etc.)
+ *   2. Environment variables (GITHUB_TOKEN, JIRA_API_TOKEN, TESTRAIL_URL, etc.)
  *
  * All functions accept an optional `fetchImpl` for unit-test injection.
  */
@@ -181,6 +187,29 @@ interface GitHubComment {
     created_at: string;
 }
 
+interface GitHubReviewComment {
+    id: number;
+    html_url: string;
+    body: string;
+    path: string;
+    line: number | null;
+    original_line: number | null;
+    diff_hunk: string;
+    user: { login: string };
+    created_at: string;
+    updated_at: string;
+    in_reply_to_id?: number;
+}
+
+interface GitHubReview {
+    id: number;
+    user: { login: string };
+    body: string;
+    state: 'APPROVED' | 'CHANGES_REQUESTED' | 'COMMENTED' | 'DISMISSED' | 'PENDING';
+    submitted_at: string;
+    html_url: string;
+}
+
 interface GitHubMergeResult {
     sha: string;
     merged: boolean;
@@ -280,6 +309,60 @@ export class GitHubConnector {
         return jsonFetch<GitHubPR[]>(
             `${this.base}/repos/${owner}/${repo}/pulls?${qs}`,
             { method: 'GET', headers: ghHeaders(token) },
+            this.fetchImpl,
+        );
+    }
+
+    /** List inline review comments on a pull request. */
+    async listPRReviewComments(params: {
+        pullNumber: number;
+        perPage?: number;
+        page?: number;
+    }): Promise<JsonResponse<GitHubReviewComment[]>> {
+        const { token, owner, repo } = this.creds;
+        const qs = new URLSearchParams({
+            per_page: String(params.perPage ?? 100),
+            page: String(params.page ?? 1),
+        });
+        return jsonFetch<GitHubReviewComment[]>(
+            `${this.base}/repos/${owner}/${repo}/pulls/${params.pullNumber}/comments?${qs}`,
+            { method: 'GET', headers: ghHeaders(token) },
+            this.fetchImpl,
+        );
+    }
+
+    /** List all reviews (approved, change-requested, commented) on a pull request. */
+    async listPRReviews(params: {
+        pullNumber: number;
+        perPage?: number;
+        page?: number;
+    }): Promise<JsonResponse<GitHubReview[]>> {
+        const { token, owner, repo } = this.creds;
+        const qs = new URLSearchParams({
+            per_page: String(params.perPage ?? 100),
+            page: String(params.page ?? 1),
+        });
+        return jsonFetch<GitHubReview[]>(
+            `${this.base}/repos/${owner}/${repo}/pulls/${params.pullNumber}/reviews?${qs}`,
+            { method: 'GET', headers: ghHeaders(token) },
+            this.fetchImpl,
+        );
+    }
+
+    /** Reply to an existing inline review comment on a pull request. */
+    async replyToReviewComment(params: {
+        pullNumber: number;
+        commentId: number;
+        body: string;
+    }): Promise<JsonResponse<GitHubReviewComment>> {
+        const { token, owner, repo } = this.creds;
+        return jsonFetch<GitHubReviewComment>(
+            `${this.base}/repos/${owner}/${repo}/pulls/${params.pullNumber}/comments/${params.commentId}/replies`,
+            {
+                method: 'POST',
+                headers: ghHeaders(token),
+                body: JSON.stringify({ body: params.body }),
+            },
             this.fetchImpl,
         );
     }
@@ -522,6 +605,378 @@ export class JiraConnector {
 
 // ─── Credential resolution ────────────────────────────────────────────────────
 
+// ─── TestRail connector ───────────────────────────────────────────────────────
+
+export interface TestRailCredentials {
+    /** e.g. https://yourorg.testrail.io */
+    baseUrl: string;
+    /** TestRail account email */
+    email: string;
+    /** TestRail API key or password */
+    apiKey: string;
+    /** Default project ID */
+    projectId?: number;
+}
+
+interface TestRailCase {
+    id: number;
+    title: string;
+    section_id: number;
+    template_id: number;
+    type_id: number;
+    priority_id: number;
+    estimate?: string;
+    custom_fields?: Record<string, unknown>;
+}
+
+interface TestRailRun {
+    id: number;
+    name: string;
+    description?: string;
+    project_id: number;
+    suite_id?: number;
+    is_completed: boolean;
+    created_on: number;
+    url: string;
+}
+
+interface TestRailResult {
+    id: number;
+    test_id: number;
+    status_id: number; // 1=Passed, 2=Blocked, 3=Untested, 4=Retest, 5=Failed
+    comment?: string;
+    elapsed?: string;
+    defects?: string;
+    created_on: number;
+}
+
+export class TestRailConnector {
+    private readonly creds: TestRailCredentials;
+    private readonly base: string;
+    private readonly fetchImpl: typeof fetch;
+
+    constructor(creds: TestRailCredentials, fetchImpl: typeof fetch = fetch) {
+        this.creds = creds;
+        this.base = creds.baseUrl.replace(/\/$/, '');
+        this.fetchImpl = fetchImpl;
+    }
+
+    private headers(): Record<string, string> {
+        const encoded = Buffer.from(`${this.creds.email}:${this.creds.apiKey}`).toString('base64');
+        return {
+            Authorization: `Basic ${encoded}`,
+            'Content-Type': 'application/json',
+        };
+    }
+
+    private url(path: string): string {
+        return `${this.base}/index.php?/api/v2/${path}`;
+    }
+
+    async getCases(params: {
+        projectId?: number;
+        suiteId?: number;
+        sectionId?: number;
+        limit?: number;
+        offset?: number;
+    }): Promise<JsonResponse<{ cases: TestRailCase[]; _links: unknown }>> {
+        const pid = params.projectId ?? this.creds.projectId;
+        if (!pid) return { ok: false, error: 'TestRail getCases: projectId is required' };
+        const qs = new URLSearchParams({ limit: String(params.limit ?? 250), offset: String(params.offset ?? 0) });
+        if (params.suiteId) qs.set('suite_id', String(params.suiteId));
+        if (params.sectionId) qs.set('section_id', String(params.sectionId));
+        return jsonFetch<{ cases: TestRailCase[]; _links: unknown }>(
+            `${this.url(`get_cases/${pid}`)}&${qs}`,
+            { method: 'GET', headers: this.headers() },
+            this.fetchImpl,
+        );
+    }
+
+    async addRun(params: {
+        projectId?: number;
+        suiteId?: number;
+        name: string;
+        description?: string;
+        caseIds?: number[];
+        assignedtoId?: number;
+    }): Promise<JsonResponse<TestRailRun>> {
+        const pid = params.projectId ?? this.creds.projectId;
+        if (!pid) return { ok: false, error: 'TestRail addRun: projectId is required' };
+        const body: Record<string, unknown> = {
+            name: params.name,
+            description: params.description ?? '',
+            include_all: !params.caseIds || params.caseIds.length === 0,
+            ...(params.caseIds && params.caseIds.length > 0 ? { case_ids: params.caseIds } : {}),
+            ...(params.suiteId ? { suite_id: params.suiteId } : {}),
+            ...(params.assignedtoId ? { assignedto_id: params.assignedtoId } : {}),
+        };
+        return jsonFetch<TestRailRun>(
+            this.url(`add_run/${pid}`),
+            { method: 'POST', headers: this.headers(), body: JSON.stringify(body) },
+            this.fetchImpl,
+        );
+    }
+
+    async addResultsForCases(params: {
+        runId: number;
+        results: Array<{
+            case_id: number;
+            /** 1=Passed, 2=Blocked, 3=Untested, 4=Retest, 5=Failed */
+            status_id: number;
+            comment?: string;
+            elapsed?: string;
+            defects?: string;
+        }>;
+    }): Promise<JsonResponse<TestRailResult[]>> {
+        return jsonFetch<TestRailResult[]>(
+            this.url(`add_results_for_cases/${params.runId}`),
+            { method: 'POST', headers: this.headers(), body: JSON.stringify({ results: params.results }) },
+            this.fetchImpl,
+        );
+    }
+
+    async closeRun(runId: number): Promise<JsonResponse<TestRailRun>> {
+        return jsonFetch<TestRailRun>(
+            this.url(`close_run/${runId}`),
+            { method: 'POST', headers: this.headers(), body: '{}' },
+            this.fetchImpl,
+        );
+    }
+
+    async getRuns(params: {
+        projectId?: number;
+        limit?: number;
+        offset?: number;
+        isCompleted?: boolean;
+    }): Promise<JsonResponse<{ runs: TestRailRun[] }>> {
+        const pid = params.projectId ?? this.creds.projectId;
+        if (!pid) return { ok: false, error: 'TestRail getRuns: projectId is required' };
+        const qs = new URLSearchParams({ limit: String(params.limit ?? 50), offset: String(params.offset ?? 0) });
+        if (params.isCompleted !== undefined) qs.set('is_completed', params.isCompleted ? '1' : '0');
+        return jsonFetch<{ runs: TestRailRun[] }>(
+            `${this.url(`get_runs/${pid}`)}&${qs}`,
+            { method: 'GET', headers: this.headers() },
+            this.fetchImpl,
+        );
+    }
+
+    async getResults(params: {
+        testId: number;
+        limit?: number;
+    }): Promise<JsonResponse<{ results: TestRailResult[] }>> {
+        const qs = new URLSearchParams({ limit: String(params.limit ?? 50) });
+        return jsonFetch<{ results: TestRailResult[] }>(
+            `${this.url(`get_results/${params.testId}`)}&${qs}`,
+            { method: 'GET', headers: this.headers() },
+            this.fetchImpl,
+        );
+    }
+}
+
+// ─── Zephyr Scale connector ───────────────────────────────────────────────────
+
+export interface ZephyrCredentials {
+    /** e.g. https://api.zephyrscale.smartbear.com/v2 */
+    baseUrl: string;
+    /** Bearer API token from Zephyr Scale app settings */
+    apiToken: string;
+    /** Jira project key, e.g. "ENG" */
+    projectKey: string;
+}
+
+interface ZephyrTestCase {
+    id: string;
+    key: string;
+    name: string;
+    status: { name: string };
+    priority: { name: string };
+    labels: string[];
+    folder?: { name: string };
+}
+
+interface ZephyrTestCycle {
+    id: string;
+    key: string;
+    name: string;
+    status: { name: string };
+    projectKey: string;
+    createdOn: string;
+}
+
+interface ZephyrTestExecution {
+    id: string;
+    testCaseKey: string;
+    testCycleKey: string;
+    statusName: string;
+    actualEndDate?: string;
+    comment?: string;
+    executionTime?: number;
+}
+
+export class ZephyrConnector {
+    private readonly creds: ZephyrCredentials;
+    private readonly base: string;
+    private readonly fetchImpl: typeof fetch;
+
+    constructor(creds: ZephyrCredentials, fetchImpl: typeof fetch = fetch) {
+        this.creds = creds;
+        this.base = creds.baseUrl.replace(/\/$/, '');
+        this.fetchImpl = fetchImpl;
+    }
+
+    private headers(): Record<string, string> {
+        return {
+            Authorization: `Bearer ${this.creds.apiToken}`,
+            'Content-Type': 'application/json',
+        };
+    }
+
+    async getTestCases(params: {
+        folderId?: string;
+        maxResults?: number;
+        startAt?: number;
+    }): Promise<JsonResponse<{ values: ZephyrTestCase[]; total: number }>> {
+        const qs = new URLSearchParams({
+            projectKey: this.creds.projectKey,
+            maxResults: String(params.maxResults ?? 200),
+            startAt: String(params.startAt ?? 0),
+        });
+        if (params.folderId) qs.set('folderId', params.folderId);
+        return jsonFetch<{ values: ZephyrTestCase[]; total: number }>(
+            `${this.base}/testcases?${qs}`,
+            { method: 'GET', headers: this.headers() },
+            this.fetchImpl,
+        );
+    }
+
+    async createTestCycle(params: {
+        name: string;
+        description?: string;
+        statusName?: string;
+        plannedStartDate?: string;
+        plannedEndDate?: string;
+        folderId?: string;
+    }): Promise<JsonResponse<ZephyrTestCycle>> {
+        const body: Record<string, unknown> = {
+            projectKey: this.creds.projectKey,
+            name: params.name,
+            description: params.description ?? '',
+            status: { name: params.statusName ?? 'Not Started' },
+            ...(params.plannedStartDate ? { plannedStartDate: params.plannedStartDate } : {}),
+            ...(params.plannedEndDate ? { plannedEndDate: params.plannedEndDate } : {}),
+            ...(params.folderId ? { folder: { id: params.folderId } } : {}),
+        };
+        return jsonFetch<ZephyrTestCycle>(
+            `${this.base}/testcycles`,
+            { method: 'POST', headers: this.headers(), body: JSON.stringify(body) },
+            this.fetchImpl,
+        );
+    }
+
+    async getTestExecutions(params: {
+        testCycleKey: string;
+        maxResults?: number;
+        startAt?: number;
+    }): Promise<JsonResponse<{ values: ZephyrTestExecution[]; total: number }>> {
+        const qs = new URLSearchParams({
+            testCycle: params.testCycleKey,
+            maxResults: String(params.maxResults ?? 200),
+            startAt: String(params.startAt ?? 0),
+        });
+        return jsonFetch<{ values: ZephyrTestExecution[]; total: number }>(
+            `${this.base}/testexecutions?${qs}`,
+            { method: 'GET', headers: this.headers() },
+            this.fetchImpl,
+        );
+    }
+
+    async updateTestExecution(params: {
+        testExecutionId: string;
+        statusName: string;
+        comment?: string;
+        executionTimeMs?: number;
+        actualEndDate?: string;
+    }): Promise<JsonResponse<ZephyrTestExecution>> {
+        const body: Record<string, unknown> = {
+            status: { name: params.statusName },
+            ...(params.comment ? { comment: params.comment } : {}),
+            ...(params.executionTimeMs ? { executionTime: params.executionTimeMs } : {}),
+            ...(params.actualEndDate ? { actualEndDate: params.actualEndDate } : {}),
+        };
+        return jsonFetch<ZephyrTestExecution>(
+            `${this.base}/testexecutions/${encodeURIComponent(params.testExecutionId)}`,
+            { method: 'PUT', headers: this.headers(), body: JSON.stringify(body) },
+            this.fetchImpl,
+        );
+    }
+
+    async bulkUpdateExecutions(params: {
+        testCycleKey: string;
+        results: Array<{
+            testCaseKey: string;
+            statusName: string;
+            comment?: string;
+            executionTimeMs?: number;
+        }>;
+    }): Promise<JsonResponse<{ updated: number; errors: unknown[] }>> {
+        // Zephyr Scale doesn't have a native bulk endpoint; we do parallel updates
+        const executions = await this.getTestExecutions({ testCycleKey: params.testCycleKey, maxResults: 500 });
+        if (!executions.ok) return executions as { ok: false; error: string };
+
+        const execMap = new Map(executions.data.values.map((e) => [e.testCaseKey, e.id]));
+        const updatePromises = params.results.map(async (r) => {
+            const execId = execMap.get(r.testCaseKey);
+            if (!execId) return { ok: false, error: `No execution found for ${r.testCaseKey}` };
+            return this.updateTestExecution({
+                testExecutionId: execId,
+                statusName: r.statusName,
+                comment: r.comment,
+                executionTimeMs: r.executionTimeMs,
+            });
+        });
+
+        const outcomes = await Promise.allSettled(updatePromises);
+        const errors: unknown[] = [];
+        let updated = 0;
+        for (const o of outcomes) {
+            if (o.status === 'fulfilled' && o.value.ok) updated++;
+            else errors.push(o.status === 'rejected' ? o.reason : (o.value as { error: string }).error);
+        }
+        return { ok: true, data: { updated, errors } };
+    }
+}
+
+// ─── Credential resolution ────────────────────────────────────────────────────
+
+/**
+ * Gap 6 fix: Enforce per-tenant credential isolation.
+ *
+ * In a multi-tenant environment, every connector request MUST carry explicit
+ * credentials scoped to that tenant. Falling back to process-wide environment
+ * variables means one tenant could inadvertently act as another — a data
+ * isolation and privilege-escalation risk.
+ *
+ * Enforcement policy:
+ *   - If `payload.tenant_id` is set AND does not match a dev/test bypass
+ *     marker (dev, test, local, default, ci) AND `payload.credentials` is
+ *     absent → reject with CREDENTIAL_ISOLATION_REQUIRED.
+ *   - Dev/CI tenants are allowed to fall back to env vars for local testing.
+ */
+const DEV_TENANT_BYPASS = new Set(['dev', 'test', 'local', 'default', 'ci', 'localhost']);
+
+function assertTenantCredentialIsolation(payload: Record<string, unknown>): void {
+    const tenantId = typeof payload['tenant_id'] === 'string' ? payload['tenant_id'].trim() : '';
+    if (!tenantId) return; // no tenant context → no enforcement (backwards compat)
+    if (DEV_TENANT_BYPASS.has(tenantId.toLowerCase())) return; // dev/test bypass
+    const hasExplicitCreds = payload['credentials'] !== undefined && payload['credentials'] !== null;
+    if (!hasExplicitCreds) {
+        throw new Error(
+            `CREDENTIAL_ISOLATION_REQUIRED: tenant "${tenantId}" must supply explicit credentials in payload.credentials. ` +
+            `Falling back to process-wide environment variables is not permitted for production tenants.`,
+        );
+    }
+}
+
 function resolveGitHubCreds(
     payload: Record<string, unknown>,
 ): GitHubCredentials | null {
@@ -579,9 +1034,180 @@ function resolveJiraCreds(
     return { baseUrl, email, apiToken, projectKey };
 }
 
-// ─── Unified dispatcher ───────────────────────────────────────────────────────
+function resolveTestRailCreds(payload: Record<string, unknown>): TestRailCredentials | null {
+    const creds = payload['credentials'] as Record<string, unknown> | undefined;
+    const baseUrl =
+        (typeof creds?.['testrail_url'] === 'string' ? creds['testrail_url'] : null) ??
+        (typeof creds?.['base_url'] === 'string' ? creds['base_url'] : null) ??
+        process.env['TESTRAIL_URL'] ?? null;
+    const email =
+        (typeof creds?.['email'] === 'string' ? creds['email'] : null) ??
+        process.env['TESTRAIL_EMAIL'] ?? null;
+    const apiKey =
+        (typeof creds?.['api_key'] === 'string' ? creds['api_key'] : null) ??
+        (typeof creds?.['password'] === 'string' ? creds['password'] : null) ??
+        process.env['TESTRAIL_API_KEY'] ?? null;
+    if (!baseUrl || !email || !apiKey) return null;
+    const projectId = typeof creds?.['project_id'] === 'number'
+        ? creds['project_id']
+        : (process.env['TESTRAIL_PROJECT_ID'] ? Number(process.env['TESTRAIL_PROJECT_ID']) : undefined);
+    return { baseUrl, email, apiKey, projectId };
+}
 
-export type ConnectorDispatchResult =
+function resolveZephyrCreds(payload: Record<string, unknown>): ZephyrCredentials | null {
+    const creds = payload['credentials'] as Record<string, unknown> | undefined;
+    const baseUrl =
+        (typeof creds?.['zephyr_url'] === 'string' ? creds['zephyr_url'] : null) ??
+        (typeof creds?.['base_url'] === 'string' ? creds['base_url'] : null) ??
+        process.env['ZEPHYR_BASE_URL'] ?? 'https://api.zephyrscale.smartbear.com/v2';
+    const apiToken =
+        (typeof creds?.['api_token'] === 'string' ? creds['api_token'] : null) ??
+        process.env['ZEPHYR_API_TOKEN'] ?? null;
+    const projectKey =
+        (typeof creds?.['project_key'] === 'string' ? creds['project_key'] : null) ??
+        (typeof payload['projectKey'] === 'string' ? payload['projectKey'] : null) ??
+        process.env['ZEPHYR_PROJECT_KEY'] ?? null;
+    if (!apiToken || !projectKey) return null;
+    return { baseUrl: baseUrl ?? 'https://api.zephyrscale.smartbear.com/v2', apiToken, projectKey };
+}
+
+// ─── TestRail dispatch ────────────────────────────────────────────────────────
+
+async function dispatchTestRail(
+    tr: TestRailConnector,
+    actionType: string,
+    payload: Record<string, unknown>,
+): Promise<ConnectorDispatchResult> {
+    switch (actionType) {
+        case 'get_cases':
+        case 'sync_test_cases': {
+            const result = await tr.getCases({
+                projectId: typeof payload['project_id'] === 'number' ? payload['project_id'] : undefined,
+                suiteId: typeof payload['suite_id'] === 'number' ? payload['suite_id'] : undefined,
+                sectionId: typeof payload['section_id'] === 'number' ? payload['section_id'] : undefined,
+                limit: typeof payload['limit'] === 'number' ? payload['limit'] : 250,
+                offset: typeof payload['offset'] === 'number' ? payload['offset'] : 0,
+            });
+            return result;
+        }
+        case 'add_run':
+        case 'publish_test_run': {
+            const name = String(payload['name'] ?? `Automated run ${new Date().toISOString()}`);
+            const caseIds = Array.isArray(payload['case_ids'])
+                ? (payload['case_ids'] as unknown[]).filter((n): n is number => typeof n === 'number')
+                : undefined;
+            const result = await tr.addRun({
+                projectId: typeof payload['project_id'] === 'number' ? payload['project_id'] : undefined,
+                suiteId: typeof payload['suite_id'] === 'number' ? payload['suite_id'] : undefined,
+                name,
+                description: typeof payload['description'] === 'string' ? payload['description'] : undefined,
+                caseIds,
+                assignedtoId: typeof payload['assignedto_id'] === 'number' ? payload['assignedto_id'] : undefined,
+            });
+            if (!result.ok) return result;
+            // If results are included, add them immediately
+            const results = payload['results'] as Array<{ case_id: number; status_id: number; comment?: string; elapsed?: string }> | undefined;
+            if (Array.isArray(results) && results.length > 0) {
+                const addResult = await tr.addResultsForCases({ runId: result.data.id, results });
+                if (!addResult.ok) return addResult;
+                if (payload['close_run'] === true) {
+                    await tr.closeRun(result.data.id);
+                }
+            }
+            return result;
+        }
+        case 'add_results': {
+            const runId = Number(payload['run_id']);
+            if (!Number.isInteger(runId) || runId <= 0) return { ok: false, error: 'TestRail add_results: run_id must be a positive integer' };
+            const results = payload['results'] as Array<{ case_id: number; status_id: number; comment?: string }>;
+            if (!Array.isArray(results)) return { ok: false, error: 'TestRail add_results: results array is required' };
+            return tr.addResultsForCases({ runId, results });
+        }
+        case 'close_run': {
+            const runId = Number(payload['run_id']);
+            if (!Number.isInteger(runId) || runId <= 0) return { ok: false, error: 'TestRail close_run: run_id must be a positive integer' };
+            return tr.closeRun(runId);
+        }
+        case 'get_runs': {
+            return tr.getRuns({
+                projectId: typeof payload['project_id'] === 'number' ? payload['project_id'] : undefined,
+                limit: typeof payload['limit'] === 'number' ? payload['limit'] : 50,
+                offset: typeof payload['offset'] === 'number' ? payload['offset'] : 0,
+                isCompleted: typeof payload['is_completed'] === 'boolean' ? payload['is_completed'] : undefined,
+            });
+        }
+        case 'get_results': {
+            const testId = Number(payload['test_id']);
+            if (!Number.isInteger(testId) || testId <= 0) return { ok: false, error: 'TestRail get_results: test_id must be a positive integer' };
+            return tr.getResults({ testId, limit: typeof payload['limit'] === 'number' ? payload['limit'] : 50 });
+        }
+        default:
+            return { ok: false, error: `TestRail: unsupported action "${actionType}"` };
+    }
+}
+
+// ─── Zephyr dispatch ──────────────────────────────────────────────────────────
+
+async function dispatchZephyr(
+    z: ZephyrConnector,
+    actionType: string,
+    payload: Record<string, unknown>,
+): Promise<ConnectorDispatchResult> {
+    switch (actionType) {
+        case 'get_test_cases':
+        case 'sync_test_cases': {
+            return z.getTestCases({
+                folderId: typeof payload['folder_id'] === 'string' ? payload['folder_id'] : undefined,
+                maxResults: typeof payload['max_results'] === 'number' ? payload['max_results'] : 200,
+                startAt: typeof payload['start_at'] === 'number' ? payload['start_at'] : 0,
+            });
+        }
+        case 'create_test_cycle': {
+            const name = String(payload['name'] ?? `Automated cycle ${new Date().toISOString()}`);
+            return z.createTestCycle({
+                name,
+                description: typeof payload['description'] === 'string' ? payload['description'] : undefined,
+                statusName: typeof payload['status_name'] === 'string' ? payload['status_name'] : 'In Progress',
+                plannedStartDate: typeof payload['planned_start_date'] === 'string' ? payload['planned_start_date'] : undefined,
+                plannedEndDate: typeof payload['planned_end_date'] === 'string' ? payload['planned_end_date'] : undefined,
+                folderId: typeof payload['folder_id'] === 'string' ? payload['folder_id'] : undefined,
+            });
+        }
+        case 'get_executions': {
+            const testCycleKey = String(payload['test_cycle_key'] ?? '');
+            if (!testCycleKey) return { ok: false, error: 'Zephyr get_executions: test_cycle_key is required' };
+            return z.getTestExecutions({
+                testCycleKey,
+                maxResults: typeof payload['max_results'] === 'number' ? payload['max_results'] : 200,
+                startAt: typeof payload['start_at'] === 'number' ? payload['start_at'] : 0,
+            });
+        }
+        case 'update_execution': {
+            const execId = String(payload['execution_id'] ?? '');
+            if (!execId) return { ok: false, error: 'Zephyr update_execution: execution_id is required' };
+            const statusName = String(payload['status_name'] ?? 'Pass');
+            return z.updateTestExecution({
+                testExecutionId: execId,
+                statusName,
+                comment: typeof payload['comment'] === 'string' ? payload['comment'] : undefined,
+                executionTimeMs: typeof payload['execution_time_ms'] === 'number' ? payload['execution_time_ms'] : undefined,
+                actualEndDate: typeof payload['actual_end_date'] === 'string' ? payload['actual_end_date'] : undefined,
+            });
+        }
+        case 'publish_test_run':
+        case 'bulk_update_executions': {
+            const testCycleKey = String(payload['test_cycle_key'] ?? '');
+            if (!testCycleKey) return { ok: false, error: 'Zephyr bulk_update_executions: test_cycle_key is required' };
+            const results = payload['results'] as Array<{ testCaseKey: string; statusName: string; comment?: string; executionTimeMs?: number }>;
+            if (!Array.isArray(results)) return { ok: false, error: 'Zephyr bulk_update_executions: results array is required' };
+            return z.bulkUpdateExecutions({ testCycleKey, results });
+        }
+        default:
+            return { ok: false, error: `Zephyr: unsupported action "${actionType}"` };
+    }
+}
+
+type ConnectorDispatchResult =
     | { ok: true; data: unknown }
     | { ok: false; error: string };
 
@@ -599,6 +1225,13 @@ export async function dispatchConnectorAction(
     payload: Record<string, unknown>,
     fetchImpl: typeof fetch = fetch,
 ): Promise<ConnectorDispatchResult> {
+    // Gap 6 fix: enforce per-tenant credential isolation before resolving any creds
+    try {
+        assertTenantCredentialIsolation(payload);
+    } catch (err) {
+        return { ok: false, error: String(err) };
+    }
+
     if (connector === 'github') {
         const creds = resolveGitHubCreds(payload);
         if (!creds) {
@@ -621,6 +1254,30 @@ export async function dispatchConnectorAction(
         }
         const jira = new JiraConnector(creds, fetchImpl);
         return dispatchJira(jira, actionType, payload);
+    }
+
+    if (connector === 'testrail') {
+        const creds = resolveTestRailCreds(payload);
+        if (!creds) {
+            return {
+                ok: false,
+                error: 'TestRail: missing credentials. Set TESTRAIL_URL, TESTRAIL_EMAIL, TESTRAIL_API_KEY or pass payload.credentials.',
+            };
+        }
+        const tr = new TestRailConnector(creds, fetchImpl);
+        return dispatchTestRail(tr, actionType, payload);
+    }
+
+    if (connector === 'zephyr') {
+        const creds = resolveZephyrCreds(payload);
+        if (!creds) {
+            return {
+                ok: false,
+                error: 'Zephyr: missing credentials. Set ZEPHYR_API_TOKEN, ZEPHYR_PROJECT_KEY or pass payload.credentials.',
+            };
+        }
+        const z = new ZephyrConnector(creds, fetchImpl);
+        return dispatchZephyr(z, actionType, payload);
     }
 
     return { ok: false, error: `dispatchConnectorAction: unsupported connector "${connector}"` };
@@ -682,6 +1339,43 @@ async function dispatchGitHub(
                 page: typeof payload['page'] === 'number' ? payload['page'] : undefined,
             });
             return result;
+        }
+        case 'list_pr_review_comments': {
+            const prNumber = Number(payload['pull_number'] ?? payload['pr_number']);
+            if (!Number.isInteger(prNumber) || prNumber <= 0) {
+                return { ok: false, error: 'GitHub list_pr_review_comments: pull_number must be a positive integer' };
+            }
+            return gh.listPRReviewComments({
+                pullNumber: prNumber,
+                perPage: typeof payload['per_page'] === 'number' ? payload['per_page'] : undefined,
+                page: typeof payload['page'] === 'number' ? payload['page'] : undefined,
+            });
+        }
+        case 'list_pr_reviews': {
+            const prNumber = Number(payload['pull_number'] ?? payload['pr_number']);
+            if (!Number.isInteger(prNumber) || prNumber <= 0) {
+                return { ok: false, error: 'GitHub list_pr_reviews: pull_number must be a positive integer' };
+            }
+            return gh.listPRReviews({
+                pullNumber: prNumber,
+                perPage: typeof payload['per_page'] === 'number' ? payload['per_page'] : undefined,
+                page: typeof payload['page'] === 'number' ? payload['page'] : undefined,
+            });
+        }
+        case 'reply_to_review_comment': {
+            const prNumber = Number(payload['pull_number'] ?? payload['pr_number']);
+            const commentId = Number(payload['comment_id']);
+            if (!Number.isInteger(prNumber) || prNumber <= 0) {
+                return { ok: false, error: 'GitHub reply_to_review_comment: pull_number must be a positive integer' };
+            }
+            if (!Number.isInteger(commentId) || commentId <= 0) {
+                return { ok: false, error: 'GitHub reply_to_review_comment: comment_id must be a positive integer' };
+            }
+            const body = String(payload['body'] ?? '');
+            if (!body.trim()) {
+                return { ok: false, error: 'GitHub reply_to_review_comment: body is required' };
+            }
+            return gh.replyToReviewComment({ pullNumber: prNumber, commentId, body });
         }
         default:
             return { ok: false, error: `GitHub connector does not support action "${actionType}"` };

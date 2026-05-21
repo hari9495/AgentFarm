@@ -9,6 +9,7 @@ import { enforceRole } from './role-enforcer.js';
 import type { TaskClassifierFn } from './task-classifier.js';
 import { dispatchConnectorAction } from './connector-dispatcher.js';
 import { globalEpisodicMemory, type TaskMemoryEntry } from './episodic-memory.js';
+import { extractPersonKeyFromPayload } from './person-key-extractor.js';
 
 export type RiskLevel = 'low' | 'medium' | 'high';
 
@@ -159,6 +160,7 @@ const MEDIUM_RISK_ACTIONS = new Set([
     'workspace_create_pr',
     'workspace_run_ci_checks',
     'workspace_fix_test_failures',
+    'workspace_pr_review_poll',
     'workspace_release_notes_generate',
     'workspace_incident_patch_pack',
     'workspace_memory_profile',
@@ -660,6 +662,12 @@ export async function processApprovedTask(
         progressSink?: ProgressSink;
         /** B2: Kill-switch check — blocks execution even when human approval was granted. */
         killSwitchCheckFn?: KillSwitchCheckFn;
+        /**
+         * LLM code-generation function — injected so that workspace_subagent_spawn can call
+         * the real LLM to produce AutonomousStep[] instead of falling back to keyword inference.
+         * When omitted the function is auto-created from env vars (AF_MODEL_PROVIDER, etc.).
+         */
+        llmCodeGenFn?: LlmCodeGenFn;
     },
 ): Promise<ProcessedTaskResult> {
     const taskWithAuditContext: TaskEnvelope = {
@@ -715,13 +723,54 @@ export async function processApprovedTask(
     };
 
     await reportProgress(progressCtx, 'coding_started', 'Executing approved task.', sink);
-    const result = await executeTaskWithRetries(taskWithAuditContext, approvedDecision, 'none', llmExecution, options);
+    // Always ensure a code-gen function is available — build one from env vars when the
+    // caller did not inject one.  This is critical for workspace_subagent_spawn tasks that
+    // go through the approval queue: without this they silently fall back to keyword inference.
+    const resolvedCodeGenFn = options?.llmCodeGenFn ?? createCodeGenFn();
+    const result = await executeTaskWithRetries(
+        taskWithAuditContext,
+        approvedDecision,
+        'none',
+        llmExecution,
+        { ...options, llmCodeGenFn: resolvedCodeGenFn },
+    );
     await reportProgress(
         progressCtx,
         result.status === 'success' ? 'completed' : 'failed',
         result.status === 'success' ? 'Approved task execution completed.' : `Approved task execution failed: ${result.errorMessage ?? 'Unknown error'}`,
         sink,
     );
+
+    // Record episodic memory after approved-path execution so the agent recalls
+    // what it did and can build on it in follow-up tasks.
+    const workspaceIdForApproved = typeof taskWithAuditContext.payload['workspaceId'] === 'string'
+        ? taskWithAuditContext.payload['workspaceId'] : task.taskId;
+    const executionPayloadForApproved = result.executionPayload ?? taskWithAuditContext.payload;
+    const promptSummaryForApproved = (
+        typeof executionPayloadForApproved['description'] === 'string' ? executionPayloadForApproved['description'] :
+            typeof executionPayloadForApproved['summary'] === 'string' ? executionPayloadForApproved['summary'] :
+                approvedDecision.actionType
+    ).slice(0, 200);
+    const outcomeForApproved: TaskMemoryEntry['outcome'] =
+        result.status === 'success' ? 'success' :
+            result.status === 'approval_required' ? 'approval_required' :
+                result.errorMessage?.toLowerCase().includes('escalat') ? 'escalated' :
+                    'failed';
+    const personForApproved = extractPersonKeyFromPayload(executionPayloadForApproved);
+    await globalEpisodicMemory.record({
+        taskId: task.taskId,
+        workspaceId: workspaceIdForApproved,
+        botId: typeof taskWithAuditContext.payload['botId'] === 'string'
+            ? taskWithAuditContext.payload['botId'] : 'unknown',
+        actionType: approvedDecision.actionType,
+        promptSummary: promptSummaryForApproved,
+        outcome: outcomeForApproved,
+        timestamp: Date.now(),
+        errorMessage: result.errorMessage?.slice(0, 120),
+        personKey: personForApproved?.personKey,
+        personLabel: personForApproved?.personLabel,
+    }).catch(() => { /* best-effort — don't fail the task if memory write fails */ });
+
     return result;
 }
 
@@ -823,12 +872,24 @@ export async function processDeveloperTask(
         : [];
     const episodicContext = globalEpisodicMemory.buildContextBlock(recentMemories);
 
+    // Gap 4: per-person episodic recall — if this task targets a specific
+    // recipient/candidate/customer, inject prior history with that person so
+    // the agent doesn't repeat itself or contradict prior commitments.
+    const personForTask = extractPersonKeyFromPayload(taskWithAuditContext.payload);
+    const recentPersonMemories = personForTask
+        ? await globalEpisodicMemory.readRecentForPerson(personForTask.personKey).catch(() => [])
+        : [];
+    const personEpisodicContext = personForTask
+        ? globalEpisodicMemory.buildContextBlock(recentPersonMemories, { label: personForTask.personLabel })
+        : '';
+
     const taskForLlm: TaskEnvelope = {
         ...taskWithAuditContext,
         payload: {
             ...taskWithAuditContext.payload,
             ...(scoutContext ? { _scout_context: scoutContext } : {}),
             ...(episodicContext ? { _episodic_context: episodicContext } : {}),
+            ...(personEpisodicContext ? { _episodic_person_context: personEpisodicContext } : {}),
         },
     };
 
@@ -944,6 +1005,9 @@ export async function processDeveloperTask(
                 execResult.status === 'approval_required' ? 'approval_required' :
                     execResult.errorMessage?.toLowerCase().includes('escalat') ? 'escalated' :
                         'failed';
+        // Gap 4: re-extract from final executionPayload (LLM may have populated
+        // recipient fields not present at request time).
+        const personForRecord = extractPersonKeyFromPayload(executionPayload) ?? personForTask;
         await globalEpisodicMemory.record({
             taskId: task.taskId,
             workspaceId: workspaceIdForMemory,
@@ -954,6 +1018,8 @@ export async function processDeveloperTask(
             outcome,
             timestamp: Date.now(),
             errorMessage: execResult.errorMessage?.slice(0, 120),
+            personKey: personForRecord?.personKey,
+            personLabel: personForRecord?.personLabel,
         }).catch(() => { /* best-effort */ });
     }
 

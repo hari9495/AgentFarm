@@ -196,14 +196,14 @@ export function createPrismaJobRepository(prisma: PrismaClient): ProvisioningJob
 
         async markBotActive(botId) {
             await prisma.bot.update({
-                where: { workspaceId: botId },
+                where: { id: botId },
                 data: { status: "active" },
             });
         },
 
         async markBotFailed(botId) {
             await prisma.bot.update({
-                where: { workspaceId: botId },
+                where: { id: botId },
                 data: { status: "failed" },
             });
         },

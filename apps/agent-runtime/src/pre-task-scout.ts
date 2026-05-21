@@ -18,6 +18,7 @@ export const SCOUT_TRIGGER_ACTIONS = new Set([
     'workspace_fix_test_failures',
     'create_pr_from_workspace',
     'workspace_create_pr',
+    'workspace_pr_review_poll',
     'autonomous_loop',
     'workspace_github_issue_fix',
     'workspace_generate_from_template',

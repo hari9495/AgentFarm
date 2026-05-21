@@ -19,6 +19,14 @@ type TaskIntelligenceStore = {
         importStyle?: 'esm' | 'cjs' | 'mixed' | 'unknown';
         lastUpdatedAt: string;
     }>;
+    /** Per-task completion records keyed by taskId, used to calibrate effort estimates */
+    taskRecords: Record<string, {
+        description: string;
+        complexity: string;
+        estimatedMinutes: number;
+        actualMinutes?: number;
+        completedAt?: string;
+    }>;
 };
 
 const DEFAULT_TASK_INTELLIGENCE_PATH = resolve(tmpdir(), 'agentfarm-task-intelligence-memory.json');
@@ -35,6 +43,7 @@ const loadStore = (): TaskIntelligenceStore => {
             version: 1,
             trajectories: {},
             conventions: {},
+            taskRecords: {},
         };
     }
 
@@ -44,12 +53,14 @@ const loadStore = (): TaskIntelligenceStore => {
             version: 1,
             trajectories: parsed.trajectories ?? {},
             conventions: parsed.conventions ?? {},
+            taskRecords: parsed.taskRecords ?? {},
         };
     } catch {
         return {
             version: 1,
             trajectories: {},
             conventions: {},
+            taskRecords: {},
         };
     }
 };
@@ -181,4 +192,38 @@ export const getTaskIntelligenceContext = (input: {
         trajectoryHints,
         conventionHints,
     };
+};
+
+/**
+ * Persists the actual time taken to complete a task so future effort estimates
+ * can be calibrated against real historical data.
+ */
+export const recordTaskCompletion = (
+    taskId: string,
+    actualMinutes: number,
+    meta?: { description?: string; complexity?: string; estimatedMinutes?: number },
+): void => {
+    const store = loadStore();
+    store.taskRecords[taskId] = {
+        description: meta?.description ?? '',
+        complexity: meta?.complexity ?? 'unknown',
+        estimatedMinutes: meta?.estimatedMinutes ?? 0,
+        actualMinutes,
+        completedAt: new Date().toISOString(),
+    };
+    saveStore(store);
+};
+
+/**
+ * Returns the average actual minutes across the provided task IDs that have a
+ * recorded completion time. Returns null when no matching records exist.
+ */
+export const getHistoricalMinutes = (taskIds: string[]): number | null => {
+    if (taskIds.length === 0) return null;
+    const store = loadStore();
+    const actuals = taskIds
+        .map((id) => store.taskRecords[id]?.actualMinutes)
+        .filter((v): v is number => typeof v === 'number' && v > 0);
+    if (actuals.length === 0) return null;
+    return actuals.reduce((sum, v) => sum + v, 0) / actuals.length;
 };

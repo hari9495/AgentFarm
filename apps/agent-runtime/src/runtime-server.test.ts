@@ -522,7 +522,7 @@ test('runtime injects learned code review patterns into memory context before ll
                 payload: {
                     workspaceId: 'ws_test',
                     action_type: 'read_task',
-                    summary: 'Read current deployment status',
+                    summary: 'Read current deployment status data',
                     target: 'deployments',
                 },
             },
@@ -1493,7 +1493,7 @@ test('approval intake retries transient failures with exponential backoff then s
                 task_id: 'task-intake-retry-success',
                 payload: {
                     action_type: 'merge_release',
-                    summary: 'Retry intake request',
+                    summary: 'Retry the intake request again',
                     target: 'main',
                 },
             },
@@ -1874,7 +1874,7 @@ test('approval batch route groups pending approvals by risk and action type', as
                     task_id: taskId,
                     payload: {
                         action_type: 'merge_release',
-                        summary: `Queued for batch ${taskId}`,
+                        summary: `Release queued for batch ${taskId}`,
                         target: 'main',
                     },
                 },
@@ -1932,7 +1932,7 @@ test('approval batch decision resolves all tasks in the selected batch', async (
                     task_id: taskId,
                     payload: {
                         action_type: 'merge_release',
-                        summary: `Resolve in batch ${taskId}`,
+                        summary: `Merge release resolve for batch ${taskId}`,
                         target: 'main',
                     },
                 },
@@ -2291,7 +2291,7 @@ test('rejected decision persists cancelled action result for graceful cancellati
                 task_id: 'decision-cancel-1',
                 payload: {
                     action_type: 'merge_release',
-                    summary: 'Cancel this risky action',
+                    summary: 'Cancel this risky release action',
                     target: 'main',
                 },
             },
@@ -2861,6 +2861,7 @@ test('startup resolves tester aliases and applies tester-only action guardrails'
             'gitlab', 'jira', 'jenkins', 'jmeter', 'linear', 'owasp_zap',
             'playwright', 'postman', 'selenium', 'slack', 'soapui', 'teams',
             'testrail', 'zephyr',
+            'google_meet', 'microsoft_teams', 'zoom',
         ].sort());
         assert.ok(snapshotBody.snapshot.allowedActions.includes('list_prs'));
         assert.ok(snapshotBody.snapshot.allowedActions.includes('create_pr_comment'));
@@ -2926,6 +2927,7 @@ test('startup loads latest persisted capability snapshot by botId when available
                     'workspace_diff',
                     'workspace_memory_write',
                     'workspace_memory_read',
+                    'workspace_memory_search',
                     'run_shell_command',
                     'create_pr_from_workspace',
                     // Tier 3: IDE-level capabilities
@@ -2955,6 +2957,10 @@ test('startup loads latest persisted capability snapshot by botId when available
                     'workspace_repl_stop',
                     'workspace_debug_breakpoint',
                     'workspace_profiler_run',
+                    'workspace_debug_session_start',
+                    'workspace_debug_session_run',
+                    'workspace_debug_session_evaluate',
+                    'workspace_debug_session_stop',
                     // Tier 6: Language adapters
                     'workspace_language_adapter_python',
                     'workspace_language_adapter_java',
@@ -2996,12 +3002,14 @@ test('startup loads latest persisted capability snapshot by botId when available
                     'workspace_meeting_join',
                     'workspace_meeting_speak',
                     'workspace_meeting_interview_live',
+                    'workspace_visual_task',
                     'workspace_subagent_spawn',
                     'workspace_github_pr_status',
                     'workspace_github_issue_triage',
                     'workspace_github_issue_fix',
                     'workspace_azure_deploy_plan',
                     'workspace_slack_notify',
+                    'workspace_pr_review_poll',
                 ],
                 policyPackVersion: 'mvp-v1',
                 frozenAt: new Date().toISOString(),
@@ -4173,7 +4181,7 @@ test('task execution record marks payload overrides as llm_generated when resolv
                 task_id: 'llm-metadata-overrides-1',
                 payload: {
                     action_type: 'read_task',
-                    summary: 'Collect deployment status',
+                    summary: 'Collect current deployment status data',
                     target: 'deployments',
                 },
             },
@@ -4338,7 +4346,7 @@ test('runtime persists evidence records for completed tasks', async () => {
                 task_id: 'evidence-task-1',
                 payload: {
                     action_type: 'read_task',
-                    summary: 'Read evidence test task',
+                    summary: 'Read evidence for this test task',
                     target: 'ticket-123',
                 },
             },
@@ -4379,7 +4387,7 @@ test('/runtime/transcripts records a transcript entry after a task completes', a
                 task_id: 'transcript-task-1',
                 payload: {
                     action_type: 'read_task',
-                    summary: 'Read a ticket',
+                    summary: 'Read a ticket for test',
                     target: 'ticket-001',
                     force_failure: true,
                 },
@@ -4452,7 +4460,7 @@ test('/runtime/interview-events captures partial transcript events from meeting 
                 task_id: 'interview-events-task-1',
                 payload: {
                     action_type: 'workspace_meeting_interview_live',
-                    summary: 'Capture interview stream events',
+                    summary: 'Capture live interview stream events transcript',
                     target: 'teams interview room',
                     session_id: 'runtime-events-session-1',
                     current_question: 'Explain your system design approach.',
@@ -5375,6 +5383,159 @@ test('startRuntimeServer starts and closes cleanly', async () => {
     try {
         const address = app.server.address();
         assert.ok(address !== null);
+    } finally {
+        await app.close();
+    }
+});
+
+// ---------------------------------------------------------------------------
+// Gap 1: Intent clarifier — vague task triggers clarification_requested
+// ---------------------------------------------------------------------------
+test('intent clarifier flags vague task as clarification_required before LLM execution', async () => {
+    const persisted: ActionResultRecord[] = [];
+    const app = buildRuntimeServer({
+        env: baseEnv(),
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+        actionResultWriter: async (record) => { persisted.push(record); },
+    });
+
+    try {
+        await app.inject({ method: 'POST', url: '/startup' });
+
+        await app.inject({
+            method: 'POST',
+            url: '/tasks/intake',
+            payload: {
+                task_id: 'clarity-vague-task',
+                payload: {
+                    // 1 word + code_edit without file_path → clarity score well below 0.65
+                    action_type: 'code_edit',
+                    prompt: 'fix',
+                },
+            },
+        });
+
+        const record = await waitForValue(() => persisted[0], { timeoutMs: 2_000, pollMs: 25 });
+        assert.ok(record, 'action result should be persisted');
+        assert.equal(record?.taskId, 'clarity-vague-task');
+        assert.equal(record?.status, 'failed');
+        assert.equal(record?.actionType, 'clarification_requested');
+        assert.ok(record?.errorMessage?.includes('Task paused for clarification'));
+    } finally {
+        await app.close();
+    }
+});
+
+// ---------------------------------------------------------------------------
+// Gap 2: Connector readiness — missing OAuth blocks execution early
+// ---------------------------------------------------------------------------
+test('connector readiness check blocks task when required connector tokens are missing', async () => {
+    const persisted: ActionResultRecord[] = [];
+    const app = buildRuntimeServer({
+        env: {
+            ...baseEnv(),
+            // Activates the connector readiness branch; gateway has no live connector tokens
+            RUNTIME_INTERNAL_SESSION_TOKEN: 'test-session-token',
+        },
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+        actionResultWriter: async (record) => { persisted.push(record); },
+    });
+
+    try {
+        await app.inject({ method: 'POST', url: '/startup' });
+
+        await app.inject({
+            method: 'POST',
+            url: '/tasks/intake',
+            payload: {
+                task_id: 'connector-readiness-task',
+                payload: {
+                    // git_push requires github connector — won't be present in test env
+                    action_type: 'git_push',
+                    summary: 'Push fix to main branch via GitHub connector',
+                    connector_type: 'github',
+                    target: 'main',
+                },
+            },
+        });
+
+        // The connector check fires after clarity check; because the task description
+        // is clear (≥ 5 words, not vague, no file_path requirement for git_push) but
+        // the github token resolution will fail → connector_setup_required record.
+        const record = await waitForValue(
+            () => persisted.find((r) => r.taskId === 'connector-readiness-task'),
+            { timeoutMs: 3_000, pollMs: 25 },
+        );
+        assert.ok(record, 'action result should be persisted');
+        assert.equal(record?.status, 'failed');
+        assert.equal(record?.failureClass, 'runtime_exception');
+        assert.ok(record?.errorMessage?.includes('GitHub') || record?.errorMessage?.includes('github') || record?.errorMessage?.includes('connector'), 'error message should reference missing connector');
+    } finally {
+        await app.close();
+    }
+});
+
+// ---------------------------------------------------------------------------
+// Gap 5: Confidence scorer — low-risk task auto-approved when confidence ≥ 0.85
+// ---------------------------------------------------------------------------
+test('confidence scorer auto-approves low-risk task when LLM confidence is high', async () => {
+    const persisted: ActionResultRecord[] = [];
+    const app = buildRuntimeServer({
+        env: baseEnv(),
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+        actionResultWriter: async (record) => { persisted.push(record); },
+        llmDecisionResolver: async ({ heuristicDecision }) => ({
+            decision: {
+                ...heuristicDecision,
+                actionType: 'comment_issue',
+                riskLevel: 'low',
+                route: 'approval',   // LLM says "needs approval" but confidence is high
+                confidence: 0.95,
+                reason: 'Commenting on issue is low risk but requires routing approval',
+            },
+            metadata: {
+                modelProvider: 'agentfarm',
+                model: 'test-model',
+                modelProfile: 'speed_first',
+                promptTokens: 10,
+                completionTokens: 5,
+                totalTokens: 15,
+            },
+        }),
+    });
+
+    try {
+        await app.inject({ method: 'POST', url: '/startup' });
+
+        await app.inject({
+            method: 'POST',
+            url: '/tasks/intake',
+            payload: {
+                task_id: 'confidence-auto-approve-task',
+                payload: {
+                    action_type: 'comment_issue',
+                    summary: 'Post a comment on the issue with the resolution summary and test results.',
+                    connector_type: 'jira',
+                    ticket_id: 'PROJ-123',
+                },
+            },
+        });
+
+        // Confidence scorer should override approval_required → success
+        const record = await waitForValue(
+            () => persisted.find((r) => r.taskId === 'confidence-auto-approve-task'),
+            { timeoutMs: 2_000, pollMs: 25 },
+        );
+        assert.ok(record, 'action result should be persisted');
+        assert.equal(record?.status, 'success');
+        assert.equal(record?.route, 'execute');
+        assert.ok(record?.routeReason?.includes('auto') || record?.routeReason?.includes('confidence') || record?.routeReason?.includes('low'), 'reason should reference auto-approval');
     } finally {
         await app.close();
     }

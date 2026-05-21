@@ -5,6 +5,10 @@
 // as dry-run output objects so the runtime can present results without
 // requiring live credentials in every environment.
 
+import { spawnSync } from 'node:child_process';
+import { readdir } from 'node:fs/promises';
+import { join } from 'node:path';
+
 export type SkillInput = Record<string, unknown>;
 
 export type SkillOutput = {
@@ -136,6 +140,8 @@ const codeReviewSummarizer: SkillHandler = (input, startedAt) => {
 
 // ── 3. pr-comment-drafter ─────────────────────────────────────────────────────
 // Drafts inline review comments for specific lines in a PR diff.
+// Accepts optional `diff_analysis` produced by `analyzeDiffWithLLM` for
+// context-aware, code-specific commentary instead of generic templates.
 
 const prCommentDrafter: SkillHandler = (input, startedAt) => {
     const prNumber = str(input['pr_number'], 'unknown');
@@ -144,33 +150,50 @@ const prCommentDrafter: SkillHandler = (input, startedAt) => {
     const codeSnippet = str(input['code_snippet'], '');
     const concernType = str(input['concern_type'], 'general');
 
-    const templates: Record<string, string> = {
-        security: `⚠️ **Security concern on line ${lineNumber}**: This code handles sensitive data. Please ensure it is validated and sanitised before use.`,
-        performance: `🔍 **Performance note on line ${lineNumber}**: Consider caching or batching this operation to reduce latency under load.`,
-        test_coverage: `🧪 **Missing test coverage**: The logic at line ${lineNumber} is not covered by existing tests. Please add a unit test.`,
-        naming: `📝 **Naming suggestion**: The identifier at line ${lineNumber} could be more descriptive to improve readability.`,
-        general: `💬 **Review note on line ${lineNumber}**: Please review this section for correctness and edge-case handling.`,
-    };
+    // If LLM diff analysis is available, use it for context-specific commentary
+    const diffAnalysis = input['diff_analysis'] as
+        | { concern: string; suggestion: string; severity: 'low' | 'medium' | 'high' }
+        | undefined;
 
-    const draftComment = templates[concernType] ?? templates['general'];
+    let draftComment: string;
+    let effectiveSeverity: 'low' | 'medium' | 'high' = 'low';
+
+    if (diffAnalysis && diffAnalysis.concern && diffAnalysis.suggestion) {
+        effectiveSeverity = diffAnalysis.severity ?? 'low';
+        const icon = effectiveSeverity === 'high' ? '🚨' : effectiveSeverity === 'medium' ? '⚠️' : '💬';
+        draftComment =
+            `${icon} **${filePath}:${lineNumber}** — ${diffAnalysis.concern}\n\n` +
+            `**Suggestion:** ${diffAnalysis.suggestion}`;
+    } else {
+        const templates: Record<string, string> = {
+            security: `⚠️ **Security concern on line ${lineNumber}**: This code handles sensitive data. Please ensure it is validated and sanitised before use.`,
+            performance: `🔍 **Performance note on line ${lineNumber}**: Consider caching or batching this operation to reduce latency under load.`,
+            test_coverage: `🧪 **Missing test coverage**: The logic at line ${lineNumber} is not covered by existing tests. Please add a unit test.`,
+            naming: `📝 **Naming suggestion**: The identifier at line ${lineNumber} could be more descriptive to improve readability.`,
+            general: `💬 **Review note on line ${lineNumber}**: Please review this section for correctness and edge-case handling.`,
+        };
+        draftComment = templates[concernType] ?? templates['general']!;
+    }
+
     const contextNote = codeSnippet ? `\n\nContext:\n\`\`\`\n${codeSnippet.slice(0, 200)}\n\`\`\`` : '';
 
     return {
         ok: true,
         skill_id: 'pr-comment-drafter',
-        summary: `Drafted ${concernType} comment for ${filePath}:${lineNumber} in PR #${prNumber}`,
-        risk_level: 'low',
+        summary: `Drafted ${diffAnalysis ? 'LLM-analysed' : concernType} comment for ${filePath}:${lineNumber} in PR #${prNumber}`,
+        risk_level: effectiveSeverity,
         requires_approval: false,
         actions_taken: [
-            `Generated ${concernType} review comment`,
+            diffAnalysis ? 'Used LLM diff analysis from analyzeDiffWithLLM' : `Generated ${concernType} review comment`,
             `Target: ${filePath} line ${lineNumber}`,
         ],
         result: {
             pr_number: prNumber,
             file_path: filePath,
             line_number: lineNumber,
-            concern_type: concernType,
+            concern_type: diffAnalysis ? 'llm_analysis' : concernType,
             draft_comment: draftComment + contextNote,
+            llm_enhanced: diffAnalysis != null,
         },
         duration_ms: elapsed(startedAt),
     };
@@ -178,6 +201,7 @@ const prCommentDrafter: SkillHandler = (input, startedAt) => {
 
 // ── 4. issue-autopilot ────────────────────────────────────────────────────────
 // Reads an issue and generates a branch name, implementation plan, and draft PR.
+// Accepts optional `llm_plan` produced by `analyzeIssueWithLLM` for richer output.
 
 const issueAutopilot: SkillHandler = (input, startedAt) => {
     const issueNumber = str(input['issue_number'], 'unknown');
@@ -197,32 +221,55 @@ const issueAutopilot: SkillHandler = (input, startedAt) => {
     const prPrefix = isBug ? 'fix' : 'feat';
     const prTitle = `${prPrefix}(${repoName}): ${issueTitle}`;
 
-    const planSteps = [
-        `1. Checkout branch: git checkout -b ${branchName}`,
-        `2. Reproduce issue in a test (test-first approach)`,
-        `3. Implement fix/feature in the relevant module`,
-        `4. Run full test suite: pnpm test`,
-        `5. Open draft PR: "${prTitle}" targeting main`,
-        `6. Link PR to issue #${issueNumber} in description`,
-    ];
+    // If LLM pre-analysis is provided, build a richer plan from it
+    const llmPlan = input['llm_plan'] as { subtasks?: string[]; affected_areas?: string[]; approach?: string } | undefined;
+
+    let planSteps: string[];
+    let affectedAreas: string[] = [];
+    let approach = '';
+    if (llmPlan && Array.isArray(llmPlan.subtasks) && llmPlan.subtasks.length > 0) {
+        affectedAreas = Array.isArray(llmPlan.affected_areas) ? llmPlan.affected_areas : [];
+        approach = typeof llmPlan.approach === 'string' ? llmPlan.approach : '';
+        planSteps = [
+            `1. Checkout branch: git checkout -b ${branchName}`,
+            ...llmPlan.subtasks.map((t, i) => `${i + 2}. ${t}`),
+            `${llmPlan.subtasks.length + 2}. Run full test suite: pnpm test`,
+            `${llmPlan.subtasks.length + 3}. Open PR: "${prTitle}" targeting main`,
+        ];
+    } else {
+        planSteps = [
+            `1. Checkout branch: git checkout -b ${branchName}`,
+            `2. Reproduce issue in a test (test-first approach)`,
+            `3. Implement fix/feature in the relevant module`,
+            `4. Run full test suite: pnpm test`,
+            `5. Open draft PR: "${prTitle}" targeting main`,
+            `6. Link PR to issue #${issueNumber} in description`,
+        ];
+    }
+
+    const prBodyExtras = approach ? `\n\n## Approach\n${approach}` : '';
+    const scopeNote = affectedAreas.length > 0 ? `\n\n## Affected Areas\n${affectedAreas.map((a) => `- ${a}`).join('\n')}` : '';
 
     return {
         ok: true,
         skill_id: 'issue-autopilot',
-        summary: `Issue #${issueNumber}: branch "${branchName}" + ${planSteps.length}-step plan generated`,
+        summary: `Issue #${issueNumber}: branch "${branchName}" + ${planSteps.length}-step plan generated${llmPlan ? ' (LLM-enhanced)' : ''}`,
         risk_level: 'medium',
         requires_approval: true,
         actions_taken: [
             `Classified issue as ${isBug ? 'bug fix' : 'feature'}`,
             `Generated branch name: ${branchName}`,
             `Drafted PR title: ${prTitle}`,
+            llmPlan ? 'Applied LLM decomposition from analyzeIssueWithLLM' : 'Used heuristic template plan',
         ],
         result: {
             issue_number: issueNumber,
             branch_name: branchName,
             pr_title: prTitle,
-            pr_body: `Closes #${issueNumber}\n\n## Summary\n${issueBody || issueTitle}\n\n## Checklist\n- [ ] Tests added\n- [ ] Docs updated\n- [ ] Reviewed`,
+            pr_body: `Closes #${issueNumber}\n\n## Summary\n${issueBody || issueTitle}${prBodyExtras}${scopeNote}\n\n## Checklist\n- [ ] Tests added\n- [ ] Docs updated\n- [ ] Reviewed`,
             implementation_plan: planSteps,
+            affected_areas: affectedAreas,
+            llm_enhanced: llmPlan != null,
         },
         duration_ms: elapsed(startedAt),
     };
@@ -423,6 +470,8 @@ const flakyTestDetector: SkillHandler = (input, startedAt) => {
 
 // ── 9. test-generator ─────────────────────────────────────────────────────────
 // Generates a unit test stub for a given function/module.
+// Accepts optional llm_test_code field — when provided by the caller (via
+// generateTestsWithLLM), uses it verbatim instead of the placeholder template.
 
 const testGenerator: SkillHandler = (input, startedAt) => {
     const filePath = str(input['file_path'], 'src/unknown.ts');
@@ -430,6 +479,10 @@ const testGenerator: SkillHandler = (input, startedAt) => {
     const functionSignature = str(input['function_signature'], `${functionName}(input: unknown): unknown`);
     const testFramework = str(input['test_framework'], 'node:test');
     const edge_cases = strArr(input['edge_cases']);
+    // llm_test_code: real assertion-filled test code generated by generateTestsWithLLM()
+    const llmTestCode = typeof input['llm_test_code'] === 'string' && input['llm_test_code'].trim()
+        ? input['llm_test_code'].trim()
+        : null;
 
     const defaultEdgeCases = edge_cases.length > 0
         ? edge_cases
@@ -438,8 +491,12 @@ const testGenerator: SkillHandler = (input, startedAt) => {
     const importPath = filePath.replace(/\.ts$/, '.js').replace(/^src\//, './');
 
     let testCode: string;
+    const llmEnhanced = llmTestCode !== null;
 
-    if (testFramework === 'jest') {
+    if (llmEnhanced) {
+        // Use the LLM-generated code that has real assertions
+        testCode = llmTestCode;
+    } else if (testFramework === 'jest') {
         testCode = `import { ${functionName} } from '${importPath}';\n\ndescribe('${functionName}', () => {\n${defaultEdgeCases.map((c) => `  it('${c}', () => {\n    // TODO: implement\n    expect(${functionName}(/* args */)).toBeDefined();\n  });`).join('\n\n')}\n});\n`;
     } else {
         testCode = `import assert from 'node:assert/strict';\nimport { describe, it } from 'node:test';\nimport { ${functionName} } from '${importPath}';\n\ndescribe('${functionName}', () => {\n${defaultEdgeCases.map((c) => `  it('${c}', () => {\n    // TODO: implement\n    assert.ok(${functionName}(/* args */));\n  });`).join('\n\n')}\n});\n`;
@@ -448,11 +505,11 @@ const testGenerator: SkillHandler = (input, startedAt) => {
     return {
         ok: true,
         skill_id: 'test-generator',
-        summary: `Generated ${defaultEdgeCases.length} test case(s) for ${functionName} in ${filePath}`,
+        summary: `Generated ${defaultEdgeCases.length} test case(s) for ${functionName} in ${filePath}${llmEnhanced ? ' (LLM-enhanced)' : ''}`,
         risk_level: 'low',
         requires_approval: false,
         actions_taken: [
-            `Generated test stub using ${testFramework}`,
+            llmEnhanced ? 'Used LLM-generated tests with real assertions' : `Generated test stub using ${testFramework}`,
             `Covered ${defaultEdgeCases.length} edge case(s)`,
         ],
         result: {
@@ -463,6 +520,7 @@ const testGenerator: SkillHandler = (input, startedAt) => {
             output_file: filePath.replace(/\.ts$/, '.test.ts'),
             test_code: testCode,
             edge_cases: defaultEdgeCases,
+            llm_enhanced: llmEnhanced,
         },
         duration_ms: elapsed(startedAt),
     };
@@ -1134,24 +1192,51 @@ const prDescriptionGenerator: SkillHandler = (input, startedAt) => {
 
 // ── 22. stale-pr-detector ─────────────────────────────────────────────────────
 // Finds PRs with no activity past a configurable staleness threshold.
+// Requires caller to supply open_prs from GitHub connector / gh CLI.
 
 const stalePrDetector: SkillHandler = (input, startedAt) => {
     const staleThresholdDays = typeof input['stale_threshold_days'] === 'number' ? input['stale_threshold_days'] : 14;
     const repo = str(input['repo'], 'agentfarm/monorepo');
-    const fakePrs = [
-        { number: 42, title: 'Refactor auth middleware', author: 'alice', days_since_update: 18, labels: ['enhancement'] },
-        { number: 58, title: 'Fix dashboard flicker', author: 'bob', days_since_update: 22, labels: ['bug'] },
-        { number: 71, title: 'Add SAML SSO support', author: 'carol', days_since_update: 7, labels: ['feature'] },
-    ];
-    const stale = fakePrs.filter((pr) => pr.days_since_update >= staleThresholdDays);
+
+    // Real PR data must be provided by the caller via GitHub connector or gh CLI.
+    // Expected shape: [{ number, title, author, updated_at (ISO 8601), labels? }]
+    type PrItem = { number: number; title: string; author: string; updated_at: string; labels?: string[] };
+    const openPrs = Array.isArray(input['open_prs']) ? (input['open_prs'] as PrItem[]) : null;
+
+    if (!openPrs) {
+        return {
+            ok: false,
+            skill_id: 'stale-pr-detector',
+            summary: 'open_prs input required — provide real PR list from GitHub connector or gh CLI',
+            risk_level: 'low',
+            requires_approval: false,
+            actions_taken: [],
+            result: {
+                error: 'missing_open_prs',
+                how_to_get: `gh pr list --repo ${repo} --state open --json number,title,author,updatedAt,labels`,
+                expected_shape: '[{ number: number, title: string, author: string, updated_at: string (ISO), labels?: string[] }]',
+            },
+            duration_ms: elapsed(startedAt),
+        };
+    }
+
+    const now = Date.now();
+    const prsWithAge = openPrs.map((pr) => {
+        const updatedMs = new Date(pr.updated_at).getTime();
+        const daysSinceUpdate = Number.isNaN(updatedMs) ? 0 : Math.floor((now - updatedMs) / (1000 * 60 * 60 * 24));
+        return { number: pr.number, title: pr.title, author: typeof pr.author === 'object' ? (pr.author as Record<string, unknown>)['login'] ?? String(pr.author) : String(pr.author), days_since_update: daysSinceUpdate, labels: pr.labels ?? [] };
+    });
+
+    const stale = prsWithAge.filter((pr) => pr.days_since_update >= staleThresholdDays);
+
     return {
         ok: true,
         skill_id: 'stale-pr-detector',
-        summary: `Found ${stale.length} stale PR(s) in ${repo} (>${staleThresholdDays}d inactive)`,
-        risk_level: 'low',
+        summary: `Found ${stale.length} stale PR(s) in ${repo} (>${staleThresholdDays}d inactive) out of ${openPrs.length} open`,
+        risk_level: stale.length > 0 ? 'medium' : 'low',
         requires_approval: false,
-        actions_taken: [`Scanned ${fakePrs.length} open PRs`, `Flagged ${stale.length} as stale`],
-        result: { repo, stale_threshold_days: staleThresholdDays, stale_prs: stale, total_open: fakePrs.length },
+        actions_taken: [`Scanned ${openPrs.length} open PRs`, `Flagged ${stale.length} as stale (>${staleThresholdDays} days)`],
+        result: { repo, stale_threshold_days: staleThresholdDays, stale_prs: stale, total_open: openPrs.length },
         duration_ms: elapsed(startedAt),
     };
 };
@@ -1277,75 +1362,258 @@ const openapiSpecLinter: SkillHandler = (input, startedAt) => {
 
 // ── 28. monorepo-dep-graph ────────────────────────────────────────────────────
 // Builds a dependency graph for all packages in the monorepo.
+// Requires caller to supply packages (from pnpm ls --json or package.json scan).
 
 const monorepoDepGraph: SkillHandler = (input, startedAt) => {
     const includeExternal = input['include_external'] !== false;
-    const nodes = [
-        { id: 'apps/agent-runtime', deps: ['packages/shared-types', 'packages/queue-contracts', 'packages/observability'] },
-        { id: 'apps/dashboard', deps: ['packages/shared-types', 'packages/connector-contracts'] },
-        { id: 'apps/api-gateway', deps: ['packages/shared-types', 'packages/connector-contracts', 'packages/observability'] },
-        { id: 'services/identity-service', deps: ['packages/shared-types', 'packages/db-schema'] },
-        { id: 'services/evidence-service', deps: ['packages/shared-types', 'packages/db-schema', 'packages/queue-contracts'] },
-        { id: 'packages/shared-types', deps: [] },
-        { id: 'packages/queue-contracts', deps: ['packages/shared-types'] },
-        { id: 'packages/connector-contracts', deps: ['packages/shared-types'] },
-        { id: 'packages/observability', deps: ['packages/shared-types'] },
-        { id: 'packages/db-schema', deps: ['packages/shared-types'] },
-    ];
-    const circularChecks: string[] = [];
+
+    // Real package data must be provided by the caller.
+    // Expected shape: [{ id: string (package name or path), deps: string[] }]
+    type PackageNode = { id: string; deps: string[] };
+    const packages: PackageNode[] | null = Array.isArray(input['packages'])
+        ? (input['packages'] as PackageNode[]) : null;
+
+    if (!packages) {
+        return {
+            ok: false,
+            skill_id: 'monorepo-dep-graph',
+            summary: 'packages input required — provide workspace package metadata from pnpm ls or package.json scan',
+            risk_level: 'low',
+            requires_approval: false,
+            actions_taken: [],
+            result: {
+                error: 'missing_packages',
+                how_to_get: 'pnpm ls --json --depth 1 (run in monorepo root), then map each entry to {id, deps}',
+                alternative: 'Scan each workspace package.json for "name" and "dependencies" keys',
+                expected_shape: '[{ id: "package-name-or-relative-path", deps: ["dep1", "dep2"] }]',
+            },
+            duration_ms: elapsed(startedAt),
+        };
+    }
+
+    // Build adjacency map and detect cycles via DFS
+    const depMap = new Map(packages.map((p) => [p.id, p.deps]));
+    const circularDeps: string[] = [];
+
+    const detectCycles = (id: string, visited: Set<string>, stack: string[]): boolean => {
+        visited.add(id);
+        const deps = depMap.get(id) ?? [];
+        for (const dep of deps) {
+            if (!depMap.has(dep)) continue; // skip external deps
+            if (stack.includes(dep)) {
+                circularDeps.push(`${stack.slice(stack.indexOf(dep)).join(' → ')} → ${dep}`);
+                return true;
+            }
+            if (!visited.has(dep)) {
+                if (detectCycles(dep, visited, [...stack, dep])) return true;
+            }
+        }
+        return false;
+    };
+
+    const visited = new Set<string>();
+    for (const pkg of packages) {
+        if (!visited.has(pkg.id)) {
+            detectCycles(pkg.id, visited, [pkg.id]);
+        }
+    }
+
+    // Compute reverse deps (who depends on each package)
+    const reverseDeps = new Map<string, string[]>();
+    for (const pkg of packages) {
+        for (const dep of pkg.deps) {
+            const list = reverseDeps.get(dep) ?? [];
+            list.push(pkg.id);
+            reverseDeps.set(dep, list);
+        }
+    }
+
+    const nodes = packages.map((p) => ({
+        id: p.id,
+        deps: p.deps,
+        dependents: reverseDeps.get(p.id) ?? [],
+    }));
+
     return {
-        ok: true,
+        ok: circularDeps.length === 0,
         skill_id: 'monorepo-dep-graph',
-        summary: `Dependency graph built for ${nodes.length} workspace packages`,
-        risk_level: 'low',
+        summary: `Dependency graph built for ${packages.length} workspace packages${circularDeps.length > 0 ? ` — ⚠️ ${circularDeps.length} circular dep(s) detected` : ''}`,
+        risk_level: circularDeps.length > 0 ? 'high' : 'low',
         requires_approval: false,
-        actions_taken: [`Mapped ${nodes.length} packages`, `Checked for circular deps`],
-        result: { nodes, include_external: includeExternal, circular_deps: circularChecks, total_packages: nodes.length },
+        actions_taken: [
+            `Mapped ${packages.length} packages`,
+            `Built reverse-dependency index`,
+            circularDeps.length > 0 ? `Detected ${circularDeps.length} circular dep(s)` : 'No circular deps found',
+        ],
+        result: {
+            nodes,
+            include_external: includeExternal,
+            circular_deps: circularDeps,
+            total_packages: packages.length,
+        },
         duration_ms: elapsed(startedAt),
     };
 };
 
 // ── 29. dead-code-detector ────────────────────────────────────────────────────
 // Detects unreachable exports, unused files, and dead function paths.
+// Requires caller to supply import_map (built from grep/ts-prune) or exported_symbols.
 
 const deadCodeDetector: SkillHandler = (input, startedAt) => {
     const targetDir = str(input['target_dir'], 'src/');
-    const symbols = [
-        { symbol: 'legacyAgentRun', file: 'src/legacy.ts', type: 'function', reason: 'No importers found' },
-        { symbol: 'DEPRECATED_TIMEOUT', file: 'src/constants.ts', type: 'const', reason: 'Exported but never imported' },
-        { symbol: 'OldDashboardWidget', file: 'app/components/old.tsx', type: 'component', reason: 'No JSX usages' },
-    ];
+
+    // import_map: { [filePath]: string[] } — each key is a source file, value is list of files that import it.
+    // exported_symbols: [{ symbol, file, type }] — explicit exports; cross-referenced against import_map to find unused ones.
+    type ImportMap = Record<string, string[]>;
+    type ExportedSymbol = { symbol: string; file: string; type: string };
+
+    const importMap: ImportMap | null = (typeof input['import_map'] === 'object' && input['import_map'] !== null)
+        ? (input['import_map'] as ImportMap) : null;
+    const exportedSymbols: ExportedSymbol[] | null = Array.isArray(input['exported_symbols'])
+        ? (input['exported_symbols'] as ExportedSymbol[]) : null;
+
+    if (!importMap && !exportedSymbols) {
+        return {
+            ok: false,
+            skill_id: 'dead-code-detector',
+            summary: 'import_map or exported_symbols input required for real dead-code analysis',
+            risk_level: 'low',
+            requires_approval: false,
+            actions_taken: [],
+            result: {
+                error: 'missing_analysis_data',
+                how_to_get_import_map: `grep -rn "^import" ${targetDir} --include="*.ts" --include="*.tsx" | awk -F: '{print $2}' | grep -oP 'from ["\x27](.+?)["\x27]' | sort | uniq`,
+                how_to_get_exported_symbols: `grep -rn "^export" ${targetDir} --include="*.ts" --include="*.tsx" | grep -v "export type" | head -200`,
+                note: 'Pass import_map as { [sourceFile]: importingFiles[] } or exported_symbols as [{symbol, file, type}]',
+            },
+            duration_ms: elapsed(startedAt),
+        };
+    }
+
+    const deadSymbols: Array<{ symbol: string; file: string; type: string; reason: string }> = [];
+
+    if (importMap) {
+        // Files with no importers are potentially unreachable (skip index/main/entry files)
+        for (const [file, importers] of Object.entries(importMap)) {
+            const isEntryFile = /\/(index|main|app|server|cli)\.(ts|tsx|js)$/.test(file);
+            if (importers.length === 0 && !isEntryFile) {
+                deadSymbols.push({ symbol: file, file, type: 'file', reason: 'No importers found in provided import map' });
+            }
+        }
+    }
+
+    if (exportedSymbols && importMap) {
+        // Find exported symbols not referenced in any importer list
+        const allReferencedFiles = new Set(Object.values(importMap).flat());
+        for (const sym of exportedSymbols) {
+            if (!allReferencedFiles.has(sym.file)) {
+                deadSymbols.push({ ...sym, reason: 'File not imported anywhere in import_map' });
+            }
+        }
+    } else if (exportedSymbols && !importMap) {
+        // Without import_map we can only report exported symbols as candidates
+        for (const sym of exportedSymbols) {
+            deadSymbols.push({ ...sym, reason: 'Exported symbol — provide import_map to confirm if unused' });
+        }
+    }
+
+    const entryCount = importMap ? Object.keys(importMap).length : (exportedSymbols?.length ?? 0);
+
     return {
         ok: true,
         skill_id: 'dead-code-detector',
-        summary: `Dead code scan: ${symbols.length} symbol(s) found in ${targetDir}`,
-        risk_level: 'low',
+        summary: `Dead code scan: ${deadSymbols.length} candidate(s) found in ${targetDir} (${entryCount} entries analysed)`,
+        risk_level: deadSymbols.length > 0 ? 'medium' : 'low',
         requires_approval: false,
-        actions_taken: [`Scanned ${targetDir} for unreferenced exports`],
-        result: { target_dir: targetDir, dead_symbols: symbols, count: symbols.length },
+        actions_taken: [`Analysed ${entryCount} entries in ${targetDir}`],
+        result: { target_dir: targetDir, dead_symbols: deadSymbols, count: deadSymbols.length },
         duration_ms: elapsed(startedAt),
     };
 };
 
 // ── 30. code-churn-analyzer ───────────────────────────────────────────────────
 // Identifies high-churn files that may need refactoring or better test coverage.
+// Requires caller to supply git_log_lines (raw git log) or churn_data (pre-parsed).
 
 const codeChurnAnalyzer: SkillHandler = (input, startedAt) => {
     const lookbackDays = typeof input['lookback_days'] === 'number' ? input['lookback_days'] : 30;
     const repo = str(input['repo'], 'agentfarm/monorepo');
-    const highChurn = [
-        { file: 'apps/agent-runtime/src/runtime-server.ts', commits: 24, authors: 4, lines_changed: 880 },
-        { file: 'apps/dashboard/app/page.tsx', commits: 18, authors: 3, lines_changed: 620 },
-        { file: 'packages/shared-types/src/index.ts', commits: 15, authors: 5, lines_changed: 410 },
-    ];
+    const topN = typeof input['top_n'] === 'number' ? input['top_n'] : 20;
+
+    // Option A: pre-parsed churn data [{ file, commits, authors?, lines_changed? }]
+    type ChurnEntry = { file: string; commits: number; authors?: number; lines_changed?: number };
+    const churnData: ChurnEntry[] | null = Array.isArray(input['churn_data'])
+        ? (input['churn_data'] as ChurnEntry[]) : null;
+
+    // Option B: raw output of:
+    //   git log --since="30 days ago" --name-only --pretty=format:"" | grep -v "^$" | sort | uniq -c | sort -rn
+    const gitLogRaw: string | null = typeof input['git_log_lines'] === 'string' ? input['git_log_lines'] : null;
+
+    if (!churnData && !gitLogRaw) {
+        return {
+            ok: false,
+            skill_id: 'code-churn-analyzer',
+            summary: 'churn_data or git_log_lines input required for real churn analysis',
+            risk_level: 'low',
+            requires_approval: false,
+            actions_taken: [],
+            result: {
+                error: 'missing_git_data',
+                how_to_get_git_log: `git log --since="${lookbackDays} days ago" --name-only --pretty=format:"" | grep -v "^$" | sort | uniq -c | sort -rn`,
+                how_to_provide: 'Pass the command output as git_log_lines (string) OR parse into [{file, commits}] and pass as churn_data',
+            },
+            duration_ms: elapsed(startedAt),
+        };
+    }
+
+    let ranked: Array<{ file: string; commits: number; authors: number; lines_changed: number }> = [];
+
+    if (churnData) {
+        ranked = churnData
+            .map((e) => ({ file: e.file, commits: e.commits, authors: e.authors ?? 1, lines_changed: e.lines_changed ?? 0 }))
+            .sort((a, b) => b.commits - a.commits);
+    } else if (gitLogRaw) {
+        // Parse "  N filename" lines from `uniq -c | sort -rn` or plain filenames (one per commit entry)
+        const fileCommits = new Map<string, number>();
+        for (const line of gitLogRaw.split('\n')) {
+            const trimmed = line.trim();
+            if (!trimmed) continue;
+            const withCount = trimmed.match(/^(\d+)\s+(.+)$/);
+            if (withCount) {
+                const count = parseInt(withCount[1]!, 10);
+                const file = withCount[2]!.trim();
+                fileCommits.set(file, (fileCommits.get(file) ?? 0) + count);
+            } else {
+                // Plain filename — each occurrence = 1 commit touch
+                fileCommits.set(trimmed, (fileCommits.get(trimmed) ?? 0) + 1);
+            }
+        }
+        ranked = Array.from(fileCommits.entries())
+            .map(([file, commits]) => ({ file, commits, authors: 1, lines_changed: 0 }))
+            .sort((a, b) => b.commits - a.commits);
+    }
+
+    const highChurn = ranked.slice(0, topN);
+
     return {
         ok: true,
         skill_id: 'code-churn-analyzer',
-        summary: `Code churn analysis: ${highChurn.length} high-churn file(s) in the last ${lookbackDays} days`,
-        risk_level: 'low',
+        summary: `Code churn analysis: ${highChurn.length} high-churn file(s) identified over the last ${lookbackDays} days in ${repo}`,
+        risk_level: highChurn.length > 0 ? 'medium' : 'low',
         requires_approval: false,
-        actions_taken: [`Analyzed git history over ${lookbackDays} days in ${repo}`],
-        result: { repo, lookback_days: lookbackDays, high_churn_files: highChurn, recommendation: 'High-churn files are candidates for refactoring or increased test coverage.' },
+        actions_taken: [
+            `Analysed ${ranked.length} file(s) from git history over ${lookbackDays} days in ${repo}`,
+            `Ranked by commit frequency — top ${highChurn.length} shown`,
+        ],
+        result: {
+            repo,
+            lookback_days: lookbackDays,
+            high_churn_files: highChurn,
+            total_files_touched: ranked.length,
+            recommendation: highChurn.length > 0
+                ? `Top ${highChurn.length} high-churn file(s) are candidates for refactoring or increased test coverage.`
+                : 'No high-churn files detected in this period.',
+        },
         duration_ms: elapsed(startedAt),
     };
 };
@@ -1425,24 +1693,38 @@ const accessibilityChecker: SkillHandler = (input, startedAt) => {
 
 // ── 34. type-coverage-reporter ────────────────────────────────────────────────
 // Reports TypeScript type coverage percentage and lists any-typed symbols.
+// Accepts optional tsc_result field — when provided by the caller (via
+// runTypeCoverageWithTsc), uses real tsc output instead of hardcoded estimates.
 
 const typeCoverageReporter: SkillHandler = (input, startedAt) => {
     const targetDir = str(input['target_dir'], 'src/');
     const minCoveragePct = typeof input['min_coverage_pct'] === 'number' ? input['min_coverage_pct'] : 90;
-    const estimatedCoverage = 87.4;
-    const anyTyped = [
+
+    // tsc_result: supplied by the caller after running runTypeCoverageWithTsc()
+    const tscResult = input['tsc_result'] !== null &&
+        typeof input['tsc_result'] === 'object' &&
+        !Array.isArray(input['tsc_result'])
+        ? (input['tsc_result'] as { coveragePct: number; anyTypedSymbols: Array<{ file: string; symbol: string; line: number; type: string }> })
+        : null;
+
+    const coveragePct = tscResult ? tscResult.coveragePct : 87.4;
+    const anyTyped = tscResult ? tscResult.anyTypedSymbols : [
         { file: 'src/advanced-runtime-features.ts', symbol: 'rawPayload', line: 44, type: 'any' },
         { file: 'src/runtime-server.ts', symbol: 'handlerResult', line: 112, type: 'any' },
     ];
-    const passing = estimatedCoverage >= minCoveragePct;
+    const realData = tscResult !== null;
+
+    const passing = coveragePct >= minCoveragePct;
     return {
         ok: passing,
         skill_id: 'type-coverage-reporter',
-        summary: `Type coverage: ${estimatedCoverage}% (minimum ${minCoveragePct}%) — ${passing ? 'PASS' : 'FAIL'}`,
+        summary: `Type coverage: ${coveragePct.toFixed(1)}% (minimum ${minCoveragePct}%) — ${passing ? 'PASS' : 'FAIL'}${realData ? ' [tsc]' : ' [estimated]'}`,
         risk_level: passing ? 'low' : 'medium',
         requires_approval: false,
-        actions_taken: [`Measured type coverage in ${targetDir}`],
-        result: { target_dir: targetDir, coverage_pct: estimatedCoverage, min_coverage_pct: minCoveragePct, passing, any_typed_symbols: anyTyped },
+        actions_taken: [
+            realData ? `Measured real type coverage via tsc in ${targetDir}` : `Estimated type coverage in ${targetDir}`,
+        ],
+        result: { target_dir: targetDir, coverage_pct: coveragePct, min_coverage_pct: minCoveragePct, passing, any_typed_symbols: anyTyped, real_measurement: realData },
         duration_ms: elapsed(startedAt),
     };
 };
@@ -1700,3 +1982,313 @@ export const getSkillHandler = (skillId: string): SkillHandler | undefined =>
     SKILL_HANDLERS[skillId];
 
 export const listRegisteredSkillIds = (): string[] => Object.keys(SKILL_HANDLERS);
+
+// ---------------------------------------------------------------------------
+// Async LLM helpers — call before the synchronous skill handlers to enrich them
+// ---------------------------------------------------------------------------
+
+/**
+ * Uses the Anthropic API to decompose a GitHub issue into actionable subtasks,
+ * affected code areas, and an implementation approach.
+ *
+ * Pass the returned value as `llm_plan` in the `issue-autopilot` skill input to
+ * get a richer, LLM-informed implementation plan instead of the heuristic template.
+ *
+ * Returns null if ANTHROPIC_API_KEY is not set or the API call fails.
+ */
+export async function analyzeIssueWithLLM(
+    issueTitle: string,
+    issueBody: string,
+): Promise<{ subtasks: string[]; affected_areas: string[]; approach: string } | null> {
+    const apiKey = process.env['ANTHROPIC_API_KEY'];
+    if (!apiKey) return null;
+    try {
+        const resp = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+                'x-api-key': apiKey,
+                'anthropic-version': '2023-06-01',
+                'content-type': 'application/json',
+            },
+            body: JSON.stringify({
+                model: 'claude-haiku-4-5',
+                max_tokens: 1024,
+                messages: [{
+                    role: 'user',
+                    content: [
+                        'You are a senior software engineer. Analyse this GitHub issue and respond with ONLY valid JSON (no markdown):',
+                        `{"subtasks":["step 1","step 2",...],"affected_areas":["module/path",...],"approach":"brief paragraph"}`,
+                        '',
+                        `Title: ${issueTitle}`,
+                        `Body: ${issueBody.slice(0, 1500)}`,
+                    ].join('\n'),
+                }],
+            }),
+        });
+        if (!resp.ok) return null;
+        const json = await resp.json() as { content?: Array<{ type: string; text?: string }> };
+        const text = json.content?.find((c) => c.type === 'text')?.text?.trim();
+        if (!text) return null;
+        // Strip any accidental markdown fences
+        const cleaned = text.replace(/^```[a-z]*\n?/i, '').replace(/\n?```$/i, '').trim();
+        const parsed = JSON.parse(cleaned) as { subtasks?: unknown; affected_areas?: unknown; approach?: unknown };
+        return {
+            subtasks: Array.isArray(parsed.subtasks) ? (parsed.subtasks as string[]) : [],
+            affected_areas: Array.isArray(parsed.affected_areas) ? (parsed.affected_areas as string[]) : [],
+            approach: typeof parsed.approach === 'string' ? parsed.approach : '',
+        };
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Uses the Anthropic API to analyse a code diff at a specific file/line and
+ * return a concrete concern + actionable suggestion.
+ *
+ * Pass the returned value as `diff_analysis` in the `pr-comment-drafter` skill
+ * input to get a code-specific review comment instead of a generic template.
+ *
+ * Returns null if ANTHROPIC_API_KEY is not set or the API call fails.
+ */
+export async function analyzeDiffWithLLM(
+    diff: string,
+    filePath: string,
+    lineNumber: number,
+): Promise<{ concern: string; suggestion: string; severity: 'low' | 'medium' | 'high' } | null> {
+    const apiKey = process.env['ANTHROPIC_API_KEY'];
+    if (!apiKey) return null;
+    try {
+        const resp = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+                'x-api-key': apiKey,
+                'anthropic-version': '2023-06-01',
+                'content-type': 'application/json',
+            },
+            body: JSON.stringify({
+                model: 'claude-haiku-4-5',
+                max_tokens: 512,
+                messages: [{
+                    role: 'user',
+                    content: [
+                        'You are a code reviewer. Analyse this diff snippet and respond with ONLY valid JSON (no markdown):',
+                        `{"concern":"what is wrong or risky","suggestion":"concrete fix or improvement","severity":"low|medium|high"}`,
+                        '',
+                        `File: ${filePath}  Line: ${lineNumber}`,
+                        `Diff:\n${diff.slice(0, 2000)}`,
+                    ].join('\n'),
+                }],
+            }),
+        });
+        if (!resp.ok) return null;
+        const json = await resp.json() as { content?: Array<{ type: string; text?: string }> };
+        const text = json.content?.find((c) => c.type === 'text')?.text?.trim();
+        if (!text) return null;
+        const cleaned = text.replace(/^```[a-z]*\n?/i, '').replace(/\n?```$/i, '').trim();
+        const parsed = JSON.parse(cleaned) as { concern?: unknown; suggestion?: unknown; severity?: unknown };
+        const sev = parsed.severity;
+        return {
+            concern: typeof parsed.concern === 'string' ? parsed.concern : 'Review this change carefully.',
+            suggestion: typeof parsed.suggestion === 'string' ? parsed.suggestion : 'Consider refactoring for clarity.',
+            severity: (sev === 'high' || sev === 'medium' || sev === 'low') ? sev : 'low',
+        };
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Uses the Anthropic API to generate test code with real assertions for a
+ * TypeScript function. Pass the returned string as `llm_test_code` in the
+ * `test-generator` skill input.
+ *
+ * Returns null if ANTHROPIC_API_KEY is not set or the API call fails.
+ */
+export async function generateTestsWithLLM(
+    filePath: string,
+    functionName: string,
+    functionSignature: string,
+    functionSource: string,
+    edgeCases: string[],
+    testFramework: string,
+): Promise<string | null> {
+    const apiKey = process.env['ANTHROPIC_API_KEY'];
+    if (!apiKey) return null;
+    const importPath = filePath.replace(/\.ts$/, '.js').replace(/^src\//, './');
+    const edgeCaseList = edgeCases.length > 0
+        ? edgeCases.join(', ')
+        : 'valid input, null/undefined input, empty input, boundary values';
+    const useJest = testFramework === 'jest';
+    try {
+        const resp = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+                'x-api-key': apiKey,
+                'anthropic-version': '2023-06-01',
+                'content-type': 'application/json',
+            },
+            body: JSON.stringify({
+                model: 'claude-haiku-4-5',
+                max_tokens: 2048,
+                messages: [{
+                    role: 'user',
+                    content: [
+                        `You are a senior TypeScript engineer. Write ${useJest ? 'Jest' : 'node:test'} tests for this function.`,
+                        'Respond with ONLY the complete test file code — no explanation, no markdown fences.',
+                        `Use real assertions with concrete expected values derived from the function logic.`,
+                        `Cover these edge cases: ${edgeCaseList}`,
+                        '',
+                        `Import path: '${importPath}'`,
+                        `Function signature: ${functionSignature}`,
+                        '',
+                        `Source:\n${functionSource.slice(0, 3000)}`,
+                    ].join('\n'),
+                }],
+            }),
+        });
+        if (!resp.ok) return null;
+        const json = await resp.json() as { content?: Array<{ type: string; text?: string }> };
+        const text = json.content?.find((c) => c.type === 'text')?.text?.trim();
+        if (!text) return null;
+        // Strip accidental markdown fences
+        return text.replace(/^```[a-z]*\n?/i, '').replace(/\n?```$/i, '').trim();
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Runs `tsc --noEmit` in the given directory and parses the output to measure
+ * real TypeScript type coverage. Returns the percentage of files without
+ * implicit-any errors and a list of any-typed symbols.
+ *
+ * Pass the returned object as `tsc_result` in the `type-coverage-reporter`
+ * skill input.
+ *
+ * Returns null if tsc is not available or the directory does not have a tsconfig.
+ */
+export async function runTypeCoverageWithTsc(
+    rootDir: string,
+): Promise<{ coveragePct: number; anyTypedSymbols: Array<{ file: string; symbol: string; line: number; type: string }> } | null> {
+    try {
+        // Get the list of TypeScript source files for the denominator
+        let totalFiles = 0;
+        const countFiles = async (dir: string): Promise<void> => {
+            const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
+            for (const e of entries) {
+                if (e.name === 'node_modules' || e.name === '.git') continue;
+                if (e.isDirectory()) {
+                    await countFiles(join(dir, e.name));
+                } else if (e.isFile() && (e.name.endsWith('.ts') || e.name.endsWith('.tsx')) && !e.name.endsWith('.d.ts')) {
+                    totalFiles++;
+                }
+            }
+        };
+        await countFiles(rootDir);
+        if (totalFiles === 0) return null;
+
+        // Run tsc --noEmit to find implicit-any and other type errors
+        const tscResult = spawnSync(
+            'npx',
+            ['tsc', '--noEmit', '--noImplicitAny'],
+            { cwd: rootDir, encoding: 'utf-8', timeout: 120_000 },
+        );
+
+        // tsc exits 1 when there are errors — that is expected, we want the output
+        const output = (tscResult.stdout ?? '') + (tscResult.stderr ?? '');
+        if (!output && tscResult.error) return null;
+
+        // Parse implicit-any errors: TS7006 (param), TS7005 (var), TS7034 (implicit any in loop)
+        const anyPattern = /^(.+?)\((\d+),\d+\): error TS70(?:05|06|34): (.+?) implicitly has an 'any' type/gm;
+        const filesWithAny = new Set<string>();
+        const anyTypedSymbols: Array<{ file: string; symbol: string; line: number; type: string }> = [];
+
+        let match: RegExpExecArray | null;
+        while ((match = anyPattern.exec(output)) !== null) {
+            const file = match[1].trim();
+            const line = parseInt(match[2], 10);
+            // Extract symbol name from the error message text
+            const msgText = match[3].trim();
+            const symbolMatch = /^'([^']+)'/.exec(msgText);
+            const symbol = symbolMatch ? symbolMatch[1] : msgText.slice(0, 30);
+            filesWithAny.add(file);
+            if (anyTypedSymbols.length < 50) {
+                anyTypedSymbols.push({ file, symbol, line, type: 'any' });
+            }
+        }
+
+        const filesWithAnyCount = filesWithAny.size;
+        const cleanFiles = Math.max(0, totalFiles - filesWithAnyCount);
+        const coveragePct = Math.round((cleanFiles / totalFiles) * 1000) / 10;
+
+        return { coveragePct, anyTypedSymbols };
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Uses the Anthropic API to synthesise a minimal code fix for failing tests.
+ * Given the test failure output and a list of candidate source files, asks the
+ * LLM to return a targeted search-and-replace patch for each file that needs
+ * changing.
+ *
+ * Returns an array of patches or null if ANTHROPIC_API_KEY is not set / call fails.
+ * Each patch contains: filePath, searchString, replacement.
+ */
+export async function synthesizeCodeFixWithLLM(
+    testOutput: string,
+    taskDescription: string,
+    targetFiles: string[],
+): Promise<Array<{ filePath: string; searchString: string; replacement: string }> | null> {
+    const apiKey = process.env['ANTHROPIC_API_KEY'];
+    if (!apiKey) return null;
+    const filesHint = targetFiles.length > 0
+        ? `Candidate files that may need changes: ${targetFiles.slice(0, 8).join(', ')}`
+        : 'Identify the relevant file from the error messages.';
+    try {
+        const resp = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+                'x-api-key': apiKey,
+                'anthropic-version': '2023-06-01',
+                'content-type': 'application/json',
+            },
+            body: JSON.stringify({
+                model: 'claude-haiku-4-5',
+                max_tokens: 1536,
+                messages: [{
+                    role: 'user',
+                    content: [
+                        'You are a senior software engineer fixing a test failure.',
+                        'Respond with ONLY valid JSON (no markdown). Return a list of minimal search-and-replace patches:',
+                        `{"fixes":[{"filePath":"src/foo.ts","searchString":"exact code to find","replacement":"corrected code"}]}`,
+                        'Rules: searchString must be the exact literal text in the file. Keep fixes minimal.',
+                        `${filesHint}`,
+                        '',
+                        `Task: ${taskDescription}`,
+                        '',
+                        `Test failure output:\n${testOutput.slice(0, 3000)}`,
+                    ].join('\n'),
+                }],
+            }),
+        });
+        if (!resp.ok) return null;
+        const json = await resp.json() as { content?: Array<{ type: string; text?: string }> };
+        const text = json.content?.find((c) => c.type === 'text')?.text?.trim();
+        if (!text) return null;
+        const cleaned = text.replace(/^```[a-z]*\n?/i, '').replace(/\n?```$/i, '').trim();
+        const parsed = JSON.parse(cleaned) as { fixes?: unknown };
+        if (!Array.isArray(parsed.fixes)) return null;
+        return (parsed.fixes as Array<Record<string, unknown>>)
+            .filter((f) => typeof f['filePath'] === 'string' && typeof f['searchString'] === 'string' && typeof f['replacement'] === 'string')
+            .map((f) => ({
+                filePath: f['filePath'] as string,
+                searchString: f['searchString'] as string,
+                replacement: f['replacement'] as string,
+            }));
+    } catch {
+        return null;
+    }
+}

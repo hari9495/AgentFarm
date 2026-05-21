@@ -3,6 +3,11 @@ import assert from 'node:assert/strict';
 import { sendBookingInvite } from './booking-invite-sender.js';
 import type { SalesAgentConfigRecord } from '@agentfarm/shared-types';
 
+// sendBookingInvite now hard-requires ANTHROPIC_API_KEY and a sender address
+// to avoid silent 401 calls and sending from undefined domains.
+process.env['ANTHROPIC_API_KEY'] = process.env['ANTHROPIC_API_KEY'] ?? 'test-key';
+process.env['SALES_FROM_EMAIL'] = process.env['SALES_FROM_EMAIL'] ?? 'sales@test.local';
+
 // ---------------------------------------------------------------------------
 // Minimal config fixture
 // ---------------------------------------------------------------------------

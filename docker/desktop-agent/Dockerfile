@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.7
 # Desktop Agent Container
 # Full virtual desktop for tasks that require GUI interaction:
 #   - Visual app testing  (browser automation, desktop apps)
@@ -8,35 +9,47 @@
 #        → websockify + noVNC (browser-accessible stream)
 #        → Node.js 20 (agent process) + Python 3 (PyAutoGUI)
 #        → Playwright Chromium (headless-optional browser automation)
+#
+# Build stages (each is a resumable cache checkpoint):
+#   system      — OS packages, k6, JMeter, ZAP, Node.js, noVNC
+#   py-light    — lightweight Python automation libs
+#   py-heavy    — heavy ML voice-sidecar wheels (faster-whisper, silero-vad)
+#   node-tools  — global npm packages (Playwright Chromium, Newman, Appium)
+#   runtime     — application code (fastest-changing, always last)
+#
+# BuildKit cache mounts on pip/apt/npm mean that if a layer fails mid-way
+# and you re-run the build, downloaded packages are already on disk and the
+# step resumes in seconds rather than re-downloading gigabytes.
 
-FROM ubuntu:22.04
+# ── Stage 1: system ──────────────────────────────────────────────────────────
+FROM ubuntu:22.04 AS system
 
 ENV DEBIAN_FRONTEND=noninteractive \
     DISPLAY=:99 \
     VNC_PORT=5900 \
     NOVNC_PORT=6080 \
     XVFB_SCREEN=1280x800x24 \
-    # noVNC web root
     NOVNC_HOME=/opt/novnc \
-    # Agent entry point script path
-    AGENT_SCRIPT=/app/agent-entrypoint.js
+    AGENT_SCRIPT=/app/agent-entrypoint.js \
+    JMETER_VERSION=5.6.3 \
+    JMETER_HOME=/opt/jmeter \
+    ZAP_VERSION=2.17.0 \
+    ZAP_HOME=/opt/zaproxy
 
-# ── System dependencies ──────────────────────────────────────────────────────
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# apt cache is mounted so the layer itself stays lean but re-runs are instant.
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && apt-get install -y --no-install-recommends \
     # Virtual display + VNC
     xvfb \
     x11vnc \
-    # websockify ships noVNC glue
     websockify \
-    # Window manager (minimal, just enough for apps to render)
     openbox \
-    # Screenshot + input emulation
     xdotool \
     scrot \
-    # Fonts so rendered text is legible
     fonts-liberation \
     fonts-dejavu-core \
-    # Python for PyAutoGUI
+    # Python
     python3 \
     python3-pip \
     # General utilities
@@ -52,80 +65,113 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     chromium-chromedriver \
     # Firefox for cross-browser Selenium testing
     firefox \
-    && rm -rf /var/lib/apt/lists/*
+    # Audio stack for the pipecat voice sidecar
+    pulseaudio \
+    pulseaudio-utils \
+    alsa-utils \
+    ffmpeg \
+    libavcodec-extra \
+    libportaudio2 \
+    libsndfile1
 
-# ── k6 load testing tool ─────────────────────────────────────────────────────
+# ── k6 ───────────────────────────────────────────────────────────────────────
 RUN curl -fsSL https://github.com/grafana/k6/releases/download/v0.50.0/k6-v0.50.0-linux-amd64.tar.gz \
     | tar -xz --strip-components=1 -C /usr/local/bin k6-v0.50.0-linux-amd64/k6 \
     && chmod +x /usr/local/bin/k6
 
 # ── Apache JMeter ────────────────────────────────────────────────────────────
-ENV JMETER_VERSION=5.6.3 \
-    JMETER_HOME=/opt/jmeter
 RUN mkdir -p ${JMETER_HOME} \
     && curl -fsSL https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-${JMETER_VERSION}.tgz \
     | tar -xz --strip-components=1 -C ${JMETER_HOME} \
     && ln -sf ${JMETER_HOME}/bin/jmeter /usr/local/bin/jmeter
 
 # ── OWASP ZAP CLI ────────────────────────────────────────────────────────────
-ENV ZAP_VERSION=2.15.0 \
-    ZAP_HOME=/opt/zaproxy
-# Download with retries; if GitHub is unreachable at build time, create a
-# stub so dependent RUN steps (PATH, HEALTHCHECK) don't break the image.
+# If GitHub is unreachable at build time a no-op stub is installed instead.
 RUN mkdir -p ${ZAP_HOME} \
-    && ( curl -sSL --retry 3 --retry-delay 5 --max-time 120 \
+    && ( curl -fsSL --retry 3 --retry-delay 5 --max-time 180 \
     "https://github.com/zaproxy/zaproxy/releases/download/v${ZAP_VERSION}/ZAP_${ZAP_VERSION}_Linux.tar.gz" \
-    -o /tmp/zap.tar.gz \
-    && tar -xz --strip-components=1 -C ${ZAP_HOME} -f /tmp/zap.tar.gz \
+    | tar -xz --strip-components=1 -C ${ZAP_HOME} \
     && ln -sf ${ZAP_HOME}/zap.sh /usr/local/bin/zap \
-    && rm -f /tmp/zap.tar.gz \
-    || ( echo "WARNING: ZAP download failed — installing stub" \
-    && printf '#!/bin/sh\necho "ZAP unavailable: download failed at image build time. Install manually or rebuild with network access."\nexit 1\n' \
-    > /usr/local/bin/zap \
-    && chmod +x /usr/local/bin/zap ) )
+    || ( printf '#!/bin/sh\necho "ZAP stub: rebuild with network access"\nexit 1\n' \
+    > /usr/local/bin/zap && chmod +x /usr/local/bin/zap ) )
 
-# ── Python automation libraries ──────────────────────────────────────────────
-RUN pip3 install --no-cache-dir \
-    pyautogui \
-    pillow \
-    opencv-python-headless \
-    selenium \
-    appium-python-client
-
-# ── Node.js 20 (via NodeSource) ──────────────────────────────────────────────
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+# ── Node.js 20 ───────────────────────────────────────────────────────────────
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    ( curl -fsSL --max-time 60 https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y --no-install-recommends nodejs \
-    && rm -rf /var/lib/apt/lists/*
+    ) \
+    || ( apt-get install -y --no-install-recommends nodejs npm )
 
-# ── noVNC web client (static files) ─────────────────────────────────────────
+# ── noVNC static files ───────────────────────────────────────────────────────
 RUN mkdir -p ${NOVNC_HOME} \
     && curl -fsSL https://github.com/novnc/noVNC/archive/refs/tags/v1.4.0.tar.gz \
     | tar -xz --strip-components=1 -C ${NOVNC_HOME}
 
-# ── Playwright + Chromium ────────────────────────────────────────────────────
-RUN npm install -g playwright \
+# ── Stage 2: py-light — lightweight Python automation packages ───────────────
+FROM system AS py-light
+
+# pip download cache is mounted: wheels survive a layer rebuild so re-runs
+# after a crash skip network downloads and resolve from disk in seconds.
+RUN --mount=type=cache,target=/root/.cache/pip \
+    python3 -m pip install --upgrade pip \
+    && python3 -m pip install --prefer-binary \
+    "pyautogui==0.9.54" \
+    "pillow==10.4.0" \
+    "opencv-python-headless==4.9.0.80" \
+    "selenium==4.21.0" \
+    "appium-python-client==3.2.0"
+
+# ── Stage 3: py-heavy — ML voice-sidecar wheels ──────────────────────────────
+# Kept in its own stage so a failed re-run doesn't invalidate the py-light
+# checkpoint.  faster-whisper pulls CTranslate2 + torch — several hundred MB.
+FROM py-light AS py-heavy
+
+RUN --mount=type=cache,target=/root/.cache/pip \
+    python3 -m pip install --prefer-binary \
+    "faster-whisper==1.0.3" \
+    "silero-vad==5.1.2" \
+    "sounddevice==0.4.7" \
+    "soundfile==0.12.1" \
+    "numpy>=1.24,<2.0" \
+    "requests>=2.31.0"
+
+# ── Stage 4: node-tools — global npm packages ────────────────────────────────
+# npm cache is mounted so Playwright Chromium (~170 MB) and Newman wheels are
+# not re-downloaded on unrelated source changes.
+FROM py-heavy AS node-tools
+
+RUN --mount=type=cache,target=/root/.npm \
+    npm install -g playwright \
     && npx playwright install --with-deps chromium \
     && rm -rf /root/.cache/ms-playwright/chromium*/chrome-linux/*/nacl_helper
 
-# ── Newman (Postman CLI) + Appium server ─────────────────────────────────────
-RUN npm install -g newman newman-reporter-html appium
+RUN --mount=type=cache,target=/root/.npm \
+    npm install -g newman newman-reporter-html appium
 
-# ── Appium drivers for mobile/desktop testing ─────────────────────────────────
 RUN appium driver install uiautomator2 || true \
     && appium driver install xcuitest || true
 
+# ── Stage 5: runtime — application code (fastest-changing layer last) ────────
+FROM node-tools AS runtime
+
 ENV PATH="${PATH}:/opt/jmeter/bin:/opt/zaproxy"
 
-# ── Application code ─────────────────────────────────────────────────────────
 WORKDIR /app
 COPY . .
 
-# ── Entrypoint ───────────────────────────────────────────────────────────────
-# Files are at build context root (docker/desktop-agent/) so paths are relative
-RUN chmod +x /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh /app/pulse-setup.sh \
+    # Playwright is installed globally (npm install -g playwright) but ESM
+    # dynamic import() does not search /usr/lib/node_modules.  Symlinking it
+    # into /app/node_modules means `import('playwright')` resolves without
+    # NODE_PATH hacks.
+    && mkdir -p /app/node_modules \
+    && ln -sf /usr/lib/node_modules/playwright /app/node_modules/playwright
 
 EXPOSE ${NOVNC_PORT}
 EXPOSE 5003
+# pipecat voice sidecar HTTP control plane
+EXPOSE 7800
 
 HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=3 \
     CMD wget -qO- http://localhost:5003/health || exit 1

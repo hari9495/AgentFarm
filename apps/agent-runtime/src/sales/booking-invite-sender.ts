@@ -63,7 +63,11 @@ export async function sendBookingInvite(
 
         // Generate personalised email via LLM
         const apiKey = process.env.ANTHROPIC_API_KEY;
+        if (!apiKey) {
+            return { subject: '', body: '', sent: false, error: 'ANTHROPIC_API_KEY not set' };
+        }
         const system = `You are an expert sales assistant. Generate a concise, personalised booking invite email.
+Use only the facts provided. Do NOT invent meeting times, attendee names, or company details.
 Return ONLY valid JSON with no markdown: { "subject": "...", "body": "..." }`;
 
         const lastActivity = recentActivities[0];
@@ -79,7 +83,7 @@ Last interaction: ${lastActivity ? `${String(lastActivity['activityType'])} — 
             method: 'POST',
             headers: {
                 'content-type': 'application/json',
-                'x-api-key': apiKey ?? '',
+                'x-api-key': apiKey,
                 'anthropic-version': '2023-06-01',
             },
             body: JSON.stringify({
@@ -97,10 +101,29 @@ Last interaction: ${lastActivity ? `${String(lastActivity['activityType'])} — 
         const parsed = await llmRes.json() as { content: Array<{ type: string; text?: string }> };
         const raw = parsed.content.filter(b => b.type === 'text').map(b => b.text ?? '').join('');
         const cleaned = raw.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
-        const { subject, body } = JSON.parse(cleaned) as { subject: string; body: string };
+
+        let parsedJson: unknown;
+        try {
+            parsedJson = JSON.parse(cleaned);
+        } catch (err) {
+            return { subject: '', body: '', sent: false, error: `LLM returned invalid JSON: ${String(err)}` };
+        }
+        if (!parsedJson || typeof parsedJson !== 'object') {
+            return { subject: '', body: '', sent: false, error: 'LLM output is not an object' };
+        }
+        const llmObj = parsedJson as Record<string, unknown>;
+        const subject = typeof llmObj['subject'] === 'string' ? llmObj['subject'].trim() : '';
+        const body = typeof llmObj['body'] === 'string' ? llmObj['body'].trim() : '';
+        if (!subject || !body) {
+            return { subject, body, sent: false, error: 'LLM returned empty subject or body — refusing to send' };
+        }
 
         // Send email
         const provider = emailProviderOverride ?? getEmailProvider(config.emailProvider);
+        const fromEmail = process.env.SALES_FROM_EMAIL ?? process.env.SALES_EMAIL_FROM;
+        if (!fromEmail) {
+            return { subject, body, sent: false, error: 'No sender address: set SALES_FROM_EMAIL env var' };
+        }
         const emailConfig: EmailProviderConfig = {
             apiKey: process.env.SALES_EMAIL_API_KEY,
             host: process.env.SALES_SMTP_HOST,
@@ -108,14 +131,19 @@ Last interaction: ${lastActivity ? `${String(lastActivity['activityType'])} — 
             secure: process.env.SALES_SMTP_SECURE === 'true',
             user: process.env.SALES_SMTP_USER,
             pass: process.env.SALES_SMTP_PASS,
-            fromEmail: process.env.SALES_FROM_EMAIL ?? 'sales@agentfarm.dev',
+            fromEmail,
             fromName: process.env.SALES_FROM_NAME,
         };
 
+        const recipient = String(prospect['email'] ?? '');
+        if (!recipient || !recipient.includes('@')) {
+            return { subject, body, sent: false, error: 'Prospect has no valid email address' };
+        }
+
         const sendResult = await provider.sendEmail(
             {
-                to: String(prospect['email'] ?? ''),
-                from: emailConfig.fromEmail ?? 'sales@agentfarm.dev',
+                to: recipient,
+                from: fromEmail,
                 subject,
                 body,
             },

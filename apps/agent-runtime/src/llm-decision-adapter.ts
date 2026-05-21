@@ -864,6 +864,7 @@ const createTaskPrompt = (task: TaskEnvelope, heuristicDecision: ActionDecision)
                 'ALWAYS set payloadOverrides.actionType equal to your top-level actionType. This is required for routing.',
                 'ALWAYS set payloadOverrides.prompt to the natural language task description. Required for workspace_subagent_spawn.',
                 'For coding, bug-fix, feature, refactor, or test tasks, prefer actionType=workspace_subagent_spawn.',
+                'For tasks about responding to PR review comments, addressing reviewer feedback, or polling an open PR for new comments and applying suggested fixes, use actionType=workspace_pr_review_poll with payloadOverrides.pr_number set.',
                 'When choosing workspace_subagent_spawn, include payloadOverrides.initial_plan and payloadOverrides.fix_attempts whenever you can propose a bounded verification-first plan.',
                 'Only use action steps from this set: code_edit, code_edit_patch, run_tests, run_build.',
             ],

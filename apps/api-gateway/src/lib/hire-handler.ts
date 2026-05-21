@@ -13,6 +13,8 @@
 import type { PrismaClient } from '@prisma/client';
 import { CONTRACT_VERSIONS } from '@agentfarm/shared-types';
 import type { AgentHireRecord } from '@agentfarm/shared-types';
+import type { EmbedFn } from '@agentfarm/memory-service';
+import { seedOnboardingKnowledge } from './onboarding-knowledge-seed.js';
 
 // Active (in-flight) statuses — a new job should not be created if one of
 // these already exists for the same botId.
@@ -32,6 +34,12 @@ export interface EnrollParams {
     planId: string;
     /** The user / system actor that triggered the hire (e.g. 'payment_webhook'). */
     requestedBy: string;
+    /** Optional: repo URL seeded into the agent's starting knowledge base. */
+    repoUrl?: string;
+    /** Optional: tech stack summary for knowledge seeding (e.g. 'TypeScript, Node.js, PostgreSQL'). */
+    techStack?: string;
+    /** Optional: team coding conventions for knowledge seeding. */
+    teamConventions?: string;
 }
 
 export interface EnrollResult {
@@ -50,15 +58,17 @@ export interface EnrollResult {
  *  1. Resolve workspace + bot from tenantId.
  *  2. Guard against duplicate active ProvisioningJobs (idempotent).
  *  3. Create ProvisioningJob with status='queued'.
- *  4. Return EnrollResult including the AgentHireRecord for audit logging.
+ *  4. Seed onboarding knowledge into the agent's semantic memory (non-blocking).
+ *  5. Return EnrollResult including the AgentHireRecord for audit logging.
  *
  * @throws if no Workspace or Bot is found for the tenant.
  */
 export async function enrollAgentAfterPayment(
     params: EnrollParams,
     prisma: PrismaClient,
+    embedFn?: EmbedFn | null,
 ): Promise<EnrollResult> {
-    const { orderId, tenantId, planId, requestedBy } = params;
+    const { orderId, tenantId, planId, requestedBy, repoUrl, techStack, teamConventions } = params;
 
     // 1. Resolve workspace
     const workspace = await (prisma.workspace as any).findFirst({
@@ -144,6 +154,22 @@ export async function enrollAgentAfterPayment(
         triggerSource: 'payment_webhook',
         requestedAt: requestedAt.toISOString(),
     };
+
+    // Non-blocking: seed the agent's starting knowledge base so first task session
+    // begins with context instead of a cold start. Failures must not block enrolment.
+    seedOnboardingKnowledge(
+        {
+            botId: bot.id,
+            tenantId,
+            workspaceId: workspace.id,
+            roleKey: bot.role,
+            repoUrl,
+            techStack,
+            teamConventions,
+        },
+        embedFn ?? null,
+        prisma,
+    ).catch(() => { /* non-blocking — knowledge seed failure must not abort enrolment */ });
 
     return {
         jobId: job.id,

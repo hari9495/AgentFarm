@@ -69,6 +69,7 @@ import {
     TESTER_ROLE_BLOCKED_ACTIONS,
     isTesterRoleProfile,
 } from './tester-agent-profile.js';
+import { evaluateTesterEditGuard } from './tester-edit-guard.js';
 import { getTesterMcpClients } from './tester-mcp-provisioner.js';
 import {
     getProviderQualityPenalty,
@@ -96,12 +97,32 @@ import {
     writeEpisodicMemory,
     searchEpisodicMemory,
     searchSemanticMemory,
+    writeSemanticMemory,
+    writeEpisodicMemoryNoEmbed,
+    searchEpisodicMemoryNoEmbed,
     type EmbedFn,
 } from '@agentfarm/memory-service';
 import { estimateCostUsd } from './cost-calculator.js';
 import { globalScheduler } from './skill-scheduler.js';
 import { loadPersonaForBot, loadPersonaForBotWithFallback } from './persona-context-loader.js';
+import { applyDisclosureToConnectorPayload } from './outbound-disclosure.js';
+import type { AgentPersonaRecord } from '@agentfarm/shared-types';
 import { buildTesterEpisodicPattern, buildTesterEpisodicSummary } from './tester-episodic-hooks.js';
+import {
+    SALES_REP_ROLE_ALLOWED_CONNECTORS,
+    SALES_REP_ROLE_ALLOWED_LOCAL_ACTIONS,
+    SALES_REP_ROLE_BLOCKED_ACTIONS,
+    isSalesRepRoleProfile,
+} from './sales-rep-agent-profile.js';
+import { buildSalesRepEpisodicPattern, buildSalesRepEpisodicSummary } from './sales-rep-episodic-hooks.js';
+import { getSalesRepMcpClients } from './sales-rep-mcp-provisioner.js';
+import { assessTaskClarity, buildClarificationMessage } from './intent-clarifier.js';
+import { checkConnectorReadiness } from './connector-readiness-check.js';
+import { routeModelForTask } from './model-router.js';
+import { scoreActionConfidence } from './confidence-scorer.js';
+import {
+    startDesktopAgentWatchdog,
+} from './desktop-agent-watchdog.js';
 
 type RuntimeMemoryStore = {
     readMemoryForTask: (workspaceId: string, maxResults?: number) => Promise<{
@@ -784,7 +805,10 @@ type RuntimeConnectorType =
     | 'selenium' | 'playwright' | 'cypress' | 'appium'
     | 'jmeter' | 'postman' | 'soapui'
     | 'testrail' | 'zephyr'
-    | 'burpsuite' | 'owasp_zap';
+    | 'burpsuite' | 'owasp_zap'
+    | 'google_meet' | 'microsoft_teams' | 'zoom'
+    // Sales Rep connectors
+    | 'hubspot' | 'salesforce' | 'apollo' | 'hunter' | 'linkedin' | 'calendar';
 type RuntimeConnectorActionType =
     | 'read_task'
     | 'create_comment'
@@ -806,7 +830,7 @@ const ROLE_CONNECTOR_POLICY: Record<RoleKey, RuntimeConnectorType[]> = {
     business_analyst: ['jira', 'teams', 'email'],
     technical_writer: ['teams', 'email'],
     content_writer: ['teams', 'email'],
-    sales_rep: ['teams', 'email'],
+    sales_rep: [...SALES_REP_ROLE_ALLOWED_CONNECTORS],
     marketing_specialist: ['teams', 'email'],
     corporate_assistant: ['teams', 'email'],
     customer_support_executive: ['jira', 'teams', 'email'],
@@ -858,6 +882,7 @@ const LOCAL_WORKSPACE_ACTION_POLICY: Record<RoleKey, RuntimeLocalWorkspaceAction
         'workspace_diff',
         'workspace_memory_write',
         'workspace_memory_read',
+        'workspace_memory_search',
         'run_shell_command',
         'create_pr_from_workspace',
         // Tier 3: IDE-level capabilities
@@ -887,6 +912,10 @@ const LOCAL_WORKSPACE_ACTION_POLICY: Record<RoleKey, RuntimeLocalWorkspaceAction
         'workspace_repl_stop',
         'workspace_debug_breakpoint',
         'workspace_profiler_run',
+        'workspace_debug_session_start',
+        'workspace_debug_session_run',
+        'workspace_debug_session_evaluate',
+        'workspace_debug_session_stop',
         // Tier 6: Language adapters
         'workspace_language_adapter_python',
         'workspace_language_adapter_java',
@@ -932,6 +961,7 @@ const LOCAL_WORKSPACE_ACTION_POLICY: Record<RoleKey, RuntimeLocalWorkspaceAction
         'workspace_meeting_join',
         'workspace_meeting_speak',
         'workspace_meeting_interview_live',
+        'workspace_visual_task',
         // Tier 12: Sub-agent delegation, GitHub intelligence, Slack notifications
         'workspace_subagent_spawn',
         'workspace_github_pr_status',
@@ -939,6 +969,8 @@ const LOCAL_WORKSPACE_ACTION_POLICY: Record<RoleKey, RuntimeLocalWorkspaceAction
         'workspace_github_issue_fix',
         'workspace_azure_deploy_plan',
         'workspace_slack_notify',
+        // PR review polling — autonomous response to reviewer comments
+        'workspace_pr_review_poll',
     ],
     fullstack_developer: [
         // Tier 0-1
@@ -968,6 +1000,7 @@ const LOCAL_WORKSPACE_ACTION_POLICY: Record<RoleKey, RuntimeLocalWorkspaceAction
         'workspace_diff',
         'workspace_memory_write',
         'workspace_memory_read',
+        'workspace_memory_search',
         'run_shell_command',
         'create_pr_from_workspace',
         // Tier 3: IDE-level capabilities
@@ -1042,6 +1075,7 @@ const LOCAL_WORKSPACE_ACTION_POLICY: Record<RoleKey, RuntimeLocalWorkspaceAction
         'workspace_meeting_join',
         'workspace_meeting_speak',
         'workspace_meeting_interview_live',
+        'workspace_visual_task',
         // Tier 12: Sub-agent delegation, GitHub intelligence, Slack notifications
         'workspace_subagent_spawn',
         'workspace_github_pr_status',
@@ -1049,12 +1083,14 @@ const LOCAL_WORKSPACE_ACTION_POLICY: Record<RoleKey, RuntimeLocalWorkspaceAction
         'workspace_github_issue_fix',
         'workspace_azure_deploy_plan',
         'workspace_slack_notify',
+        // PR review polling — autonomous response to reviewer comments
+        'workspace_pr_review_poll',
     ],
     tester: [...TESTER_ROLE_ALLOWED_LOCAL_ACTIONS],
     business_analyst: [],
     technical_writer: [],
     content_writer: [],
-    sales_rep: [],
+    sales_rep: [...SALES_REP_ROLE_ALLOWED_LOCAL_ACTIONS],
     marketing_specialist: [],
     corporate_assistant: [],
     customer_support_executive: [],
@@ -1126,6 +1162,9 @@ const roleKeyFromRoleProfile = (roleProfile: string): RoleKey | null => {
     const normalized = roleProfile.trim().toLowerCase().replace(/[\s/]+/g, '_');
     if (isTesterRoleProfile(normalized)) {
         return 'tester';
+    }
+    if (isSalesRepRoleProfile(normalized)) {
+        return 'sales_rep';
     }
     const aliases: Record<string, RoleKey> = {
         recruiter: 'recruiter',
@@ -2517,7 +2556,14 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             send: async (event) => {
                 const connectorType = target['connector_type'];
                 const message = buildProgressMessage(task, event.milestone, event.detail);
+                const persona = (task.payload['_persona'] as AgentPersonaRecord | null | undefined) ?? null;
                 if (connectorType === 'jira' && typeof target['issue_key'] === 'string') {
+                    const signed = applyDisclosureToConnectorPayload({
+                        connectorType: 'jira',
+                        actionType: 'create_comment',
+                        payload: { issue_key: target['issue_key'], body: message },
+                        persona,
+                    });
                     await connectorActionExecuteClient({
                         baseUrl: config.connectorApiUrl,
                         token: config.connectorExecuteToken,
@@ -2527,10 +2573,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                         roleKey: config.roleKey,
                         connectorType: 'jira',
                         actionType: 'create_comment',
-                        payload: {
-                            issue_key: target['issue_key'],
-                            body: message,
-                        },
+                        payload: signed.payload as { issue_key: string; body: string },
                         correlationId: `${config.correlationId}:${task.taskId}:progress:${event.milestone}`,
                     });
                     return;
@@ -2541,6 +2584,16 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                     && typeof target['team_id'] === 'string'
                     && typeof target['channel_id'] === 'string'
                 ) {
+                    const signed = applyDisclosureToConnectorPayload({
+                        connectorType: 'teams',
+                        actionType: 'send_message',
+                        payload: {
+                            team_id: target['team_id'],
+                            channel_id: target['channel_id'],
+                            text: message,
+                        },
+                        persona,
+                    });
                     await connectorActionExecuteClient({
                         baseUrl: config.connectorApiUrl,
                         token: config.connectorExecuteToken,
@@ -2550,17 +2603,23 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                         roleKey: config.roleKey,
                         connectorType: 'teams',
                         actionType: 'send_message',
-                        payload: {
-                            team_id: target['team_id'],
-                            channel_id: target['channel_id'],
-                            text: message,
-                        },
+                        payload: signed.payload as { team_id: string; channel_id: string; text: string },
                         correlationId: `${config.correlationId}:${task.taskId}:progress:${event.milestone}`,
                     });
                     return;
                 }
 
                 if (connectorType === 'email' && typeof target['to'] === 'string') {
+                    const signed = applyDisclosureToConnectorPayload({
+                        connectorType: 'email',
+                        actionType: 'send_email',
+                        payload: {
+                            to: target['to'],
+                            subject: typeof target['subject'] === 'string' ? target['subject'] : `AgentFarm task progress ${task.taskId}`,
+                            body: message,
+                        },
+                        persona,
+                    });
                     await connectorActionExecuteClient({
                         baseUrl: config.connectorApiUrl,
                         token: config.connectorExecuteToken,
@@ -2570,11 +2629,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                         roleKey: config.roleKey,
                         connectorType: 'email',
                         actionType: 'send_email',
-                        payload: {
-                            to: target['to'],
-                            subject: typeof target['subject'] === 'string' ? target['subject'] : `AgentFarm task progress ${task.taskId}`,
-                            body: message,
-                        },
+                        payload: signed.payload as { to: string; subject: string; body: string },
                         correlationId: `${config.correlationId}:${task.taskId}:progress:${event.milestone}`,
                     });
                 }
@@ -2661,6 +2716,20 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             source: input.source,
             payloadKeys: Object.keys(input.task.payload),
         });
+        const connectorPersona = (input.task.payload['_persona'] as AgentPersonaRecord | null | undefined) ?? null;
+        const signedConnectorPayload = applyDisclosureToConnectorPayload({
+            connectorType: input.connectorType,
+            actionType: input.decision.actionType,
+            payload: input.task.payload,
+            persona: connectorPersona,
+        });
+        if (signedConnectorPayload.modifiedFields.length > 0) {
+            advancedFeatures.appendTraceStep(input.task.taskId, 'outbound_disclosure_applied', {
+                connectorType: input.connectorType,
+                actionType: input.decision.actionType,
+                fields: signedConnectorPayload.modifiedFields,
+            });
+        }
         const connectorResponse = await connectorActionExecuteClient({
             baseUrl: input.config.connectorApiUrl,
             token: input.config.connectorExecuteToken,
@@ -2679,7 +2748,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 | 'merge_pr'
                 | 'list_prs'
                 | 'send_email',
-            payload: input.task.payload,
+            payload: signedConnectorPayload.payload,
             correlationId: `${input.config.correlationId}:${input.task.taskId}`,
             claimToken:
                 typeof input.task.payload['_claim_token'] === 'string'
@@ -3165,6 +3234,41 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 errorMessage: `Tester role blocked action '${decision.actionType}'.`,
             };
         }
+        // Gap 5: Tester role may only edit test files. Reject source-file edits
+        // before they reach the executor so we get a loud audit-trail failure.
+        const testerEditGate = evaluateTesterEditGuard({
+            roleKey: config.roleKey,
+            actionType: decision.actionType,
+            payload: task.payload,
+        });
+        if (!testerEditGate.allowed) {
+            advancedFeatures.appendTraceStep(task.taskId, 'tester_edit_path_blocked', {
+                actionType: decision.actionType,
+                filePath: testerEditGate.filePath ?? null,
+                reason: testerEditGate.reason ?? null,
+            });
+            emitRuntimeEvent('runtime.tester_edit_path_blocked', config, {
+                task_id: task.taskId,
+                action_type: decision.actionType,
+                file_path: testerEditGate.filePath ?? null,
+                reason: testerEditGate.reason ?? null,
+                role_key: config.roleKey,
+            });
+            return {
+                decision: {
+                    ...decision,
+                    route: 'execute',
+                    reason: testerEditGate.reason ?? 'Tester role file-path guard rejected edit.',
+                },
+                status: 'failed',
+                attempts: 0,
+                transientRetries: 0,
+                executionPayload: task.payload,
+                payloadOverrideSource,
+                failureClass: 'runtime_exception',
+                errorMessage: testerEditGate.reason ?? 'Tester role file-path guard rejected edit.',
+            };
+        }
         const connectorType = normalizeConnectorType(task.payload['connector_type']);
         task = enrichTaskWithRuntimeContext(task, config);
         const snapshotPolicy = evaluateSnapshotExecutionPolicy({
@@ -3235,6 +3339,9 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             modelProvider: activeModelProvider,
             modelProfile: resolveDefaultModelProfile(capabilitySnapshotCache),
             progressSink,
+            // llmCodeGenFn is intentionally omitted: processApprovedTask auto-builds one
+            // from AF_MODEL_PROVIDER env vars, ensuring workspace_subagent_spawn tasks
+            // approved by humans still use real LLM code generation.
         });
     };
 
@@ -3252,10 +3359,50 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         if (config.roleKey === 'tester') {
             getTesterMcpClients(config.tenantId, config.workspaceId).catch(() => { /* non-blocking */ });
         }
+        // For sales rep bots: pre-warm CRM and outreach MCP sessions in the background.
+        if (config.roleKey === 'sales_rep') {
+            getSalesRepMcpClients(config.tenantId, config.workspaceId).catch(() => { /* non-blocking */ });
+        }
 
         // Attach persona to task payload so LLM resolvers can inject it into the system prompt
         if (persona) {
             task = { ...task, payload: { ...task.payload, _persona: persona } };
+        }
+
+        // ---- Gap 1: Intent clarity check — ask for clarification instead of guessing ----
+        const clarityResult = await assessTaskClarity(task).catch(() => ({ clear: true, clarityScore: 1, questions: [], reason: 'clarity check failed — defaulting to clear' }));
+        if (!clarityResult.clear) {
+            workerLoop.processedTasks += 1;
+            workerLoop.failedTasks += 1;
+            advancedFeatures.appendTraceStep(task.taskId, 'clarification_requested', {
+                clarityScore: clarityResult.clarityScore,
+                questions: clarityResult.questions,
+                reason: clarityResult.reason,
+            });
+            emitRuntimeEvent('runtime.task_clarification_requested', config, {
+                task_id: task.taskId,
+                clarity_score: clarityResult.clarityScore,
+                reason: clarityResult.reason,
+                questions: clarityResult.questions,
+            });
+            const clarificationMessage = buildClarificationMessage(clarityResult, task.taskId, persona?.displayName ?? undefined);
+            await persistActionResultRecord(task, config, {
+                decision: {
+                    actionType: 'clarification_requested',
+                    route: 'approval',
+                    riskLevel: 'low',
+                    confidence: clarityResult.clarityScore,
+                    reason: clarityResult.reason,
+                },
+                status: 'failed',
+                attempts: 0,
+                transientRetries: 0,
+                executionPayload: { ...task.payload, _clarification_message: clarificationMessage, _questions: clarityResult.questions },
+                payloadOverrideSource: 'none',
+                failureClass: 'runtime_exception',
+                errorMessage: `Task paused for clarification: ${clarityResult.reason}`,
+            });
+            return;
         }
 
         const progressSink = buildProgressSinkForTask(task, config);
@@ -3348,6 +3495,48 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             return;
         }
 
+        // ---- Gap 2: Connector readiness check — surface missing OAuth setup before wasting tokens ----
+        const _connectorSessionToken = env['RUNTIME_INTERNAL_SESSION_TOKEN'];
+        if (_connectorSessionToken) {
+            const connectorCheck = await checkConnectorReadiness(
+                taskDecision.actionType ?? '',
+                {
+                    gatewayUrl: GATEWAY_URL,
+                    sessionToken: _connectorSessionToken,
+                    workspaceId: config.workspaceId,
+                },
+            ).catch(() => ({ ready: true, missing: [], guidance: '' }));
+
+            if (!connectorCheck.ready) {
+                workerLoop.processedTasks += 1;
+                workerLoop.failedTasks += 1;
+                advancedFeatures.appendTraceStep(task.taskId, 'connector_setup_required', {
+                    missing: connectorCheck.missing,
+                    guidance: connectorCheck.guidance,
+                });
+                emitRuntimeEvent('runtime.connector_setup_required', config, {
+                    task_id: task.taskId,
+                    action_type: taskDecision.actionType,
+                    missing_connectors: connectorCheck.missing,
+                });
+                await persistActionResultRecord(task, config, {
+                    decision: {
+                        ...taskDecision,
+                        route: 'approval',
+                        reason: `Connector setup required: ${connectorCheck.missing.join(', ')}`,
+                    },
+                    status: 'failed',
+                    attempts: 0,
+                    transientRetries: 0,
+                    executionPayload: task.payload,
+                    payloadOverrideSource: 'none',
+                    failureClass: 'runtime_exception',
+                    errorMessage: connectorCheck.guidance,
+                });
+                return;
+            }
+        }
+
         const cachedApproval = workerLoop.approvedDecisionCache.get(task.taskId);
 
         if (cachedApproval && taskDecision.route === 'approval') {
@@ -3395,7 +3584,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         }
 
         // ---- Episodic memory recall: attach similar past context to task payload ----
-        if (episodicEmbed && options.prisma) {
+        {
             const episodicQueryKeys = ['prompt', 'objective', 'summary', 'title'];
             let queryText = '';
             for (const key of episodicQueryKeys) {
@@ -3406,27 +3595,36 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 }
             }
             if (queryText) {
-                await searchEpisodicMemory(
-                    {
-                        tenantId: config.tenantId,
-                        botId: config.botId,
-                        workspaceId: config.workspaceId,
-                        queryText,
-                        topK: 5,
-                    },
-                    episodicEmbed,
-                    options.prisma,
-                ).then((episodicResults: import('@agentfarm/shared-types').EpisodicSearchResult[]) => {
-                    if (episodicResults.length > 0) {
-                        task = {
-                            ...task,
-                            payload: {
-                                ...task.payload,
-                                _episodic_context: episodicResults,
-                            },
-                        };
-                    }
-                }).catch(() => { /* non-blocking: episodic recall failure must not halt execution */ });
+                const recallPromise = episodicEmbed && options.prisma
+                    // Vector similarity path (full fidelity)
+                    ? searchEpisodicMemory(
+                        { tenantId: config.tenantId, botId: config.botId, workspaceId: config.workspaceId, queryText, topK: 5 },
+                        episodicEmbed,
+                        options.prisma,
+                    )
+                    // Text fallback path (no embedding key configured)
+                    : options.prisma
+                        ? searchEpisodicMemoryNoEmbed(
+                            { tenantId: config.tenantId, botId: config.botId, workspaceId: config.workspaceId, queryText, topK: 5 },
+                            options.prisma,
+                        )
+                        : null;
+
+                if (recallPromise) {
+                    await recallPromise
+                        .then((episodicResults: import('@agentfarm/shared-types').EpisodicSearchResult[]) => {
+                            if (episodicResults.length > 0) {
+                                task = {
+                                    ...task,
+                                    payload: {
+                                        ...task.payload,
+                                        _episodic_context: episodicResults,
+                                    },
+                                };
+                            }
+                        })
+                        .catch(() => { /* non-blocking: episodic recall failure must not halt execution */ });
+                }
             }
         }
 
@@ -3466,7 +3664,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         }
 
         // ---- Sprint 11: Connector token injection (non-blocking) ----
-        const runtimeSessionToken = process.env['RUNTIME_INTERNAL_SESSION_TOKEN'];
+        const runtimeSessionToken = env['RUNTIME_INTERNAL_SESSION_TOKEN'];
         if (runtimeSessionToken && config.workspaceId) {
             const { resolveAllConnectorTokens } = await import('./connector-token-resolver.js');
             const RUNTIME_CONNECTOR_TYPES = ['github', 'jira', 'teams', 'email'] as const;
@@ -3487,22 +3685,39 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             }).catch(() => { /* non-blocking: connector token resolution failure must not halt execution */ });
         }
 
+        // ---- Gap 3: Model router — select the best LLM model for this task type ----
+        const modelRoute = routeModelForTask(
+            taskDecision.actionType ?? '',
+            activeModelProvider,
+            resolveDefaultModelProfile(capabilitySnapshotCache),
+        );
+        if (modelRoute.overridden) {
+            advancedFeatures.appendTraceStep(task.taskId, 'model_routed', {
+                actionType: taskDecision.actionType,
+                provider: modelRoute.provider,
+                profile: modelRoute.profile,
+                reason: modelRoute.reason,
+            });
+        }
+        const effectiveModelProvider = modelRoute.provider;
+        const effectiveModelProfile = modelRoute.profile;
+
         const result = memoryStore
             ? await processDeveloperTaskWithMemory(
                 task,
                 memoryStore,
                 {
                     maxAttempts: 3,
-                    modelProvider: activeModelProvider,
-                    modelProfile: resolveDefaultModelProfile(capabilitySnapshotCache),
+                    modelProvider: effectiveModelProvider,
+                    modelProfile: effectiveModelProfile,
                     llmDecisionResolver,
                     progressSink,
                 },
             )
             : await processDeveloperTask(task, {
                 maxAttempts: 3,
-                modelProvider: activeModelProvider,
-                modelProfile: resolveDefaultModelProfile(capabilitySnapshotCache),
+                modelProvider: effectiveModelProvider,
+                modelProfile: effectiveModelProfile,
                 llmDecisionResolver,
                 progressSink,
             });
@@ -3600,6 +3815,40 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             return;
         }
 
+        // Gap 5: Tester role may only edit test files. Block source-file edits
+        // at the runtime gate to keep production code safe from QA agents.
+        const testerEditGateMain = evaluateTesterEditGuard({
+            roleKey: config.roleKey,
+            actionType: result.decision.actionType,
+            payload: executionTask.payload,
+        });
+        if (!testerEditGateMain.allowed) {
+            workerLoop.failedTasks += 1;
+            advancedFeatures.appendTraceStep(task.taskId, 'tester_edit_path_blocked', {
+                actionType: result.decision.actionType,
+                filePath: testerEditGateMain.filePath ?? null,
+                reason: testerEditGateMain.reason ?? null,
+            });
+            emitRuntimeEvent('runtime.tester_edit_path_blocked', config, {
+                task_id: task.taskId,
+                action_type: result.decision.actionType,
+                file_path: testerEditGateMain.filePath ?? null,
+                reason: testerEditGateMain.reason ?? null,
+                role_key: config.roleKey,
+            });
+            await persistActionResultRecord(executionTask, config, {
+                ...result,
+                decision: {
+                    ...result.decision,
+                    reason: testerEditGateMain.reason ?? 'Tester role file-path guard rejected edit.',
+                },
+                status: 'failed',
+                failureClass: 'runtime_exception',
+                errorMessage: testerEditGateMain.reason ?? 'Tester role file-path guard rejected edit.',
+            });
+            return;
+        }
+
         if (isBudgetDenied(executionTask)) {
             workerLoop.failedTasks += 1;
             advancedFeatures.appendTraceStep(task.taskId, 'budget_hard_stop_denied', {
@@ -3627,6 +3876,25 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 riskLevel: result.decision.riskLevel === 'low' ? 'medium' : result.decision.riskLevel,
                 reason: 'Plan-first guard requires approval before mutating execution.',
             };
+        }
+
+        // ---- Gap 5: Confidence scorer — auto-approve low/medium-risk tasks when confidence is high ----
+        if (result.status === 'approval_required') {
+            const confidenceScore = scoreActionConfidence({
+                actionType: result.decision.actionType ?? '',
+                riskLevel: (result.decision.riskLevel as 'low' | 'medium' | 'high') ?? 'medium',
+                confidence: typeof result.decision.confidence === 'number' ? result.decision.confidence : 0,
+                hasEpisodicContext: Array.isArray(task.payload['_episodic_context']) && (task.payload['_episodic_context'] as unknown[]).length > 0,
+            });
+            if (confidenceScore.autoApprove) {
+                advancedFeatures.appendTraceStep(task.taskId, 'confidence_auto_approved', {
+                    actionType: result.decision.actionType,
+                    effectiveScore: confidenceScore.effectiveScore,
+                    reason: confidenceScore.reason,
+                });
+                result.status = 'success';
+                result.decision = { ...result.decision, route: 'execute', reason: confidenceScore.reason };
+            }
         }
 
         if (result.status === 'approval_required') {
@@ -4302,13 +4570,15 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             // pattern keys (e.g. "tester:cypress:fail") so future sessions can
             // recall past test outcomes, flaky suites, and security findings.
             if (config.roleKey === 'tester') {
+                const testerPattern = buildTesterEpisodicPattern(task, result);
+                const testerSummary = buildTesterEpisodicSummary(task, result);
                 writeEpisodicMemory(
                     {
                         tenantId: config.tenantId,
                         botId: config.botId,
                         workspaceId: config.workspaceId,
-                        summary: buildTesterEpisodicSummary(task, result),
-                        pattern: buildTesterEpisodicPattern(task, result),
+                        summary: testerSummary,
+                        pattern: testerPattern,
                         confidence: estimateLlmQualityScore(result),
                         taskId: task.taskId,
                     },
@@ -4321,7 +4591,100 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                         error_message: err instanceof Error ? err.message : String(err),
                     });
                 });
+
+                // ---- Tester semantic memory: persist bug patterns for cross-project RAG ----
+                // Written in addition to episodic memory so future tasks across projects
+                // can recall past defects, flaky suites, and security findings via pgvector.
+                if (semanticEmbed && options.prisma && testerSummary && !testerPattern.endsWith(':clean')) {
+                    writeSemanticMemory(
+                        {
+                            tenantId: config.tenantId,
+                            botId: config.botId,
+                            content: testerSummary,
+                            sourceType: 'tester_finding',
+                        },
+                        semanticEmbed,
+                        options.prisma,
+                        semanticDeployment,
+                    ).catch((err: unknown) => {
+                        emitRuntimeEvent('runtime.semantic_memory_write_failed', config, {
+                            task_id: task.taskId,
+                            error_message: err instanceof Error ? err.message : String(err),
+                        });
+                    });
+                }
             }
+
+            // ---- Sales Rep-specific episodic write: richer pattern keys for CRM memory ----
+            // Fires in addition to the generic write above.  Uses domain-aware
+            // pattern keys (e.g. "sales_rep:deal:closed_won") so future sessions
+            // can recall past outreach outcomes, deal stages, and reply signals.
+            if (config.roleKey === 'sales_rep') {
+                const salesRepPattern = buildSalesRepEpisodicPattern(task, result);
+                const salesRepSummary = buildSalesRepEpisodicSummary(task, result);
+                writeEpisodicMemory(
+                    {
+                        tenantId: config.tenantId,
+                        botId: config.botId,
+                        workspaceId: config.workspaceId,
+                        summary: salesRepSummary,
+                        pattern: salesRepPattern,
+                        confidence: estimateLlmQualityScore(result),
+                        taskId: task.taskId,
+                    },
+                    episodicEmbed,
+                    options.prisma,
+                    episodicDeployment,
+                ).catch((err: unknown) => {
+                    emitRuntimeEvent('runtime.episodic_memory_write_failed', config, {
+                        task_id: task.taskId,
+                        error_message: err instanceof Error ? err.message : String(err),
+                    });
+                });
+
+                // ---- Sales Rep semantic memory: persist deal and prospect knowledge for RAG ----
+                // Written so future tasks can recall past deals, prospect profiles, and
+                // response patterns across sequences via pgvector similarity search.
+                if (semanticEmbed && options.prisma && salesRepSummary) {
+                    writeSemanticMemory(
+                        {
+                            tenantId: config.tenantId,
+                            botId: config.botId,
+                            content: salesRepSummary,
+                            sourceType: 'sales_rep_activity',
+                        },
+                        semanticEmbed,
+                        options.prisma,
+                        semanticDeployment,
+                    ).catch((err: unknown) => {
+                        emitRuntimeEvent('runtime.semantic_memory_write_failed', config, {
+                            task_id: task.taskId,
+                            error_message: err instanceof Error ? err.message : String(err),
+                        });
+                    });
+                }
+            }
+        }
+
+        // ---- Episodic memory text fallback: persist when no embedding key is configured ----
+        if (!episodicEmbed && options.prisma) {
+            writeEpisodicMemoryNoEmbed(
+                {
+                    tenantId: config.tenantId,
+                    botId: config.botId,
+                    workspaceId: config.workspaceId,
+                    summary: summarizeTaskForMemory(task, result),
+                    pattern: result.decision.actionType,
+                    confidence: estimateLlmQualityScore(result),
+                    taskId: task.taskId,
+                },
+                options.prisma,
+            ).catch((err: unknown) => {
+                emitRuntimeEvent('runtime.episodic_memory_write_failed', config, {
+                    task_id: task.taskId,
+                    error_message: err instanceof Error ? err.message : String(err),
+                });
+            });
         }
 
         const workspaceKey =
@@ -6938,5 +7301,21 @@ export async function startRuntimeServer(options: RuntimeServerOptions = {}): Pr
     await startupChecks();
     await app.listen({ host: '0.0.0.0', port });
     app.log.info({ port }, 'agent-runtime listening');
+
+    // ---- Gap 6: Desktop agent watchdog — auto-detect when the VM display goes down ----
+    const desktopAgentUrl = env['DESKTOP_AGENT_URL'] as string | undefined;
+    if (desktopAgentUrl) {
+        startDesktopAgentWatchdog({
+            desktopAgentUrl,
+            onDown: (url, failures) => {
+                app.log.warn({ url, failures }, 'desktop-agent unreachable — VM display may have crashed');
+            },
+            onRecover: (url) => {
+                app.log.info({ url }, 'desktop-agent recovered');
+            },
+        });
+        app.log.info({ desktopAgentUrl }, 'desktop-agent watchdog started');
+    }
+
     return app;
 }

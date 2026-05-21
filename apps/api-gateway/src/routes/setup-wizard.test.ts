@@ -27,8 +27,30 @@ function buildPrismaStub() {
     const sessions = new Map<string, WizardRow>();
     let seq = 0;
 
+    const bots = new Map<string, { id: string; workspaceId: string; role: string; status: string }>();
+    const personas = new Map<string, unknown>();
+
     const stub = {
         sessions,
+        workspace: {
+            findFirst: async ({ where }: { where: { tenantId: string } }) => {
+                return { id: `workspace_${where.tenantId}`, tenantId: where.tenantId };
+            },
+        },
+        bot: {
+            create: async ({ data }: { data: Record<string, unknown> }) => {
+                const bot = { id: `bot_${++seq}`, workspaceId: String(data.workspaceId), role: String(data.role), status: String(data.status) };
+                bots.set(bot.id, bot);
+                return bot;
+            },
+        },
+        agentPersona: {
+            create: async ({ data }: { data: Record<string, unknown> }) => {
+                const persona = { id: `persona_${++seq}`, ...data };
+                personas.set(String(data.botId), persona);
+                return persona;
+            },
+        },
         setupWizardSession: {
             create: async ({ data }: { data: Partial<WizardRow> }) => {
                 const now = new Date();
@@ -230,7 +252,7 @@ test('POST /v1/setup-wizard/:sessionId/complete — completes wizard after all s
     await app.inject({
         method: 'PATCH',
         url: `/v1/setup-wizard/${id}/step`,
-        payload: { step: 'set_approval_rules', payload: { botId: 'bot_abc' } },
+        payload: { step: 'set_approval_rules', payload: { displayName: 'Dev Bot', emailAddress: 'devbot@example.com' } },
     });
     // 4: set_approval_rules
     await app.inject({

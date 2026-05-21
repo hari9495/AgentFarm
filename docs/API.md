@@ -1,3 +1,4 @@
+> **Status:** Mixed planned + shipped behavior. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for the authoritative gap tracker.
 # API Reference
 
 > AgentFarm API Gateway — Fastify v5, port 3000 (default)

@@ -1,3 +1,4 @@
+> **Status:** Mixed planned + shipped behavior. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for the authoritative gap tracker.
 # AgentFarm Test Strategy
 
 > Last updated: May 10, 2026 | AgentFarm monorepo audit
@@ -369,3 +370,89 @@ Enforced by `tools/eslint-plugin-agentfarm-boundaries.cjs`:
 | E2E smoke | `node scripts/e2e-smoke.mjs` | NOT FOUND — needs investigation (CI integration) |
 | DB smoke lane | `pnpm --filter @agentfarm/agent-runtime exec ts-node src/db-snapshot-smoke.ts` | NOT FOUND — needs investigation (CI integration) |
 | Azure SWA verify | `node scripts/website-swa-verify.mjs` | NOT FOUND — needs investigation |
+
+---
+
+## Tester Agent Actions
+
+The Tester agent (role `tester`) exposes a rich set of workspace actions for QA tasks.
+All actions live in `apps/agent-runtime/src/local-workspace-executor.ts`; the allowlist is
+enforced in `apps/agent-runtime/src/tester-agent-profile.ts`.
+
+### Confirmed Implemented Actions
+
+| Action | Description | Notes |
+|---|---|---|
+| `workspace_run_tests` | Run any test command; capture pass/fail/coverage | Core runner |
+| `workspace_test_coverage_report` | Parse LCOV/JSON coverage; surface gap lines | Tiers 1–2 |
+| `workspace_test_impact_analysis` | BFS transitive import resolver, depth 1–5; finds all affected tests | Fixed Sprint 6 — was filename-grep only |
+| `workspace_playwright_test_run` | Run Playwright scripts against a URL; screenshot on failure | |
+| `workspace_cypress_test_run` | Run Cypress specs; parse results | |
+| `workspace_selenium_test_run` | Run Selenium Java/Python test suite | |
+| `workspace_appium_test_run` | Run Appium mobile test suite | |
+| `workspace_axe_scan` | WCAG accessibility scan (axe-playwright → axe-cli → curl+regex fallback) | **New in Sprint 6** |
+| `workspace_create_bug` | Auto-file defect from test failure to GitHub/Jira/Linear (local JSON fallback) | **New in Sprint 6** |
+| `workspace_mutation_test` | Stryker Mutator integration: auto-detect config or generate on-the-fly; reports score + survivor list | **New in Sprint 7** |
+| `workspace_contract_test` | Pact consumer/provider contract testing: verify, publish, or generate consumer stub | **New in Sprint 7** |
+| `workspace_generate_test` (LLM path) | LLM-guided generation via claude-haiku when `ANTHROPIC_API_KEY` is set; regex fallback always active | **New in Sprint 7** |
+| `workspace_visual_regression` | SHA256 exact-match + ImageMagick pixel diff | |
+| `workspace_dast_scan` | OWASP ZAP active scan (`AGENTFARM_ZAP_API_URL` env var required); HTTP header passive fallback always available | Env-dependent for active scan |
+| `workspace_load_test_run` | Run k6 / Artillery / Locust load tests | |
+| `workspace_api_contract_test` | Run Newman (Postman collection) contract test | |
+| `workspace_sast_scan` | Static analysis (semgrep / eslint / pattern grep fallback) | |
+| `workspace_exploratory_session` | SFDPOT-guided charter builder; accepts `acceptance_criteria`, `story_description`, or `jira_story` | AC ingestion added Sprint 6 |
+
+### SFDPOT Routing — Updated in Sprint 8
+
+Eleven SFDPOT exploration actions were previously mapped to `skip`. Nine now dispatch directly:
+
+| SFDPOT Action | Was | Now |
+|---|---|---|
+| `Confirm responsive layout at 375px, 768px, 1280px, 1920px` | skip | dispatch → `workspace_playwright_test_run` + `{ viewports: [...] }` |
+| `Check focus order is logical (Tab traversal)` | skip | dispatch → `workspace_playwright_test_run` + `{ keyboard_nav: true }` |
+| `Test with screen reader role announcements (axe scan)` | skip | dispatch → `workspace_axe_scan` |
+| `Verify on iOS Safari (mobile viewport emulation)` | skip | dispatch → `workspace_playwright_test_run` + `{ device: 'iPhone 12' }` |
+| `Test on Chrome, Firefox, and Edge` | skip | dispatch → `workspace_playwright_test_run` + `{ browsers: ['chromium','firefox','webkit'] }` |
+| `Check with keyboard-only navigation (no mouse)` | skip | dispatch → `workspace_axe_scan` + `{ rules: ['keyboard'] }` |
+| `Slow network throttle (Slow 3G) — check loading states` | skip | dispatch → `workspace_playwright_test_run` + `{ cdp_throttle: 'slow3g' }` |
+| `Disable JavaScript — assert graceful degradation` | skip | dispatch → `workspace_playwright_test_run` + `{ javascript_disabled: true }` |
+| `Session timeout — assert redirect to login without data loss` | skip | dispatch → `workspace_playwright_test_run` + `{ session_expire: true }` |
+| `Set system clock to year-end boundary (Dec 31) and verify date pickers` | skip | dispatch → `workspace_playwright_test_run` + `{ fake_date: '2024-12-31' }` |
+| `Check "expires in X days" countdown accuracy` | skip | dispatch → `workspace_playwright_test_run` + `{ fake_date: '2024-12-29' }` |
+| `Verify timestamps display in the correct timezone` | skip | dispatch → `workspace_playwright_test_run` + `{ fake_timezone: 'America/New_York' }` |
+| `Test with DST-transition datetime values` | skip | dispatch → `workspace_playwright_test_run` + `{ fake_date: '2024-11-03' }` |
+
+One skip remains (truly concurrent request execution is outside a single action type):
+- `Trigger concurrent requests (double-click submit) — assert no duplicate actions`
+
+### `workspace_playwright_test_run` — Extended in Sprint 8
+
+The action now handles special payload flags injected by SFDPOT dispatch:
+
+| Payload flag | Behaviour |
+|---|---|
+| `browsers: string[]` | Adds `--project=<browser>` per entry (multi-browser run) |
+| `cdp_throttle: 'slow3g'` | Writes a temp Playwright config; exposes `AGENTFARM_CDP_THROTTLE=slow3g` env var for tests |
+| `javascript_disabled: true` | Config override: `contextOptions.javaScriptEnabled: false` |
+| `fake_date: 'YYYY-MM-DD'` | Sets `AGENTFARM_FAKE_DATE` env var; use `page.clock.setFixedTime(new Date(process.env.AGENTFARM_FAKE_DATE))` in tests |
+| `fake_timezone: 'TZ'` | Config override: `use.timezoneId` |
+| `session_expire: true` | Config override: `use.storageState: undefined` (clears auth state) |
+
+### Gaps — Resolved in Sprint 8
+
+| Gap | Sprint | What was built |
+|---|---|---|
+| Test data management | 8 | `workspace_generate_test_data` — seed/reset/generate/list with Prisma + npm script detection; synthetic fixture JSON/SQL/CSV |
+| Cross-browser SFDPOT dispatch | 8 | `'Test on Chrome, Firefox, and Edge'` now dispatches with `browsers: ['chromium','firefox','webkit']` |
+| 9 more SFDPOT skips | 8 | keyboard-only, throttle, disable-JS, session timeout, clock/DST — all converted to dispatches |
+| TestRail / Zephyr fallback | 8 | Both `workspace_test_case_sync` and `workspace_test_run_publish` now write to `.agentfarm/test-registry.json` when connector is absent |
+| Coverage-weighted regression | 8 | `workspace_test_impact_analysis` parses `coverage-final.json` / `lcov.info`; returns `coverage_weighted[]` sorted lowest coverage first |
+| Mobile real-device | 8 | `workspace_mobile_test` — BrowserStack (Tier 1) → Sauce Labs (Tier 2) → Playwright emulation (Tier 3) |
+
+### Remaining Gaps
+
+| Gap | Status | Notes |
+|---|---|---|
+| Concurrent request testing | **Infeasible in single action** | Requires orchestration layer above the executor |
+
+> `workspace_mutation_test`, `workspace_contract_test`, and LLM-guided test generation were gaps in Sprint 6 and were fully implemented in Sprint 7. See the "Confirmed Implemented Actions" table above.

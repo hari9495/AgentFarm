@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16
+    image: pgvector/pgvector:pg16
     container_name: agentfarm-postgres
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-agentfarm}
@@ -218,6 +218,7 @@ services:
     ports:
       - '5003:5003' # Agent API
       - '6080:6080' # noVNC WebSocket stream
+      - '7800:7800' # pipecat voice sidecar (gated by ENABLE_VOICE_SIDECAR)
     environment:
       APP_PORT: '5003'
       NOVNC_PORT: '6080'
@@ -236,12 +237,95 @@ services:
       JMETER_HOME: /opt/jmeter
       APPIUM_SERVER_URL: http://localhost:4723
       ZAP_HOME: /opt/zaproxy
+      # Voice sidecar (pipecat_sidecar.py). On by default — set to 0 to
+      # disable PulseAudio + Silero VAD + faster-whisper inside the container.
+      ENABLE_VOICE_SIDECAR: ${ENABLE_VOICE_SIDECAR:-1}
+      PIPECAT_PORT: '7800'
+      PIPECAT_TOKEN: ${PIPECAT_TOKEN:-}
+      WHISPER_MODEL: ${WHISPER_MODEL:-small}
+      WHISPER_DEVICE: ${WHISPER_DEVICE:-cpu}
+      WHISPER_COMPUTE_TYPE: ${WHISPER_COMPUTE_TYPE:-int8}
+      PULSE_INJECT_SINK: ${PULSE_INJECT_SINK:-AgentMic}
+      # pipecat captures MeetingOut.monitor to hear participant speech.
+      # pulse-setup.sh creates MeetingOut as the default output sink so
+      # Chromium routes its audio (what participants say) there.
+      PULSE_MONITOR_SOURCE: ${PULSE_MONITOR_SOURCE:-MeetingOut.monitor}
     healthcheck:
       test: [ 'CMD-SHELL', 'wget -qO- http://localhost:5003/health || exit 1' ]
       interval: 15s
       timeout: 5s
       retries: 5
       start_period: 30s
+    networks:
+      - agentfarm
+    restart: unless-stopped
+
+  meeting-agent:
+    build:
+      context: .
+      dockerfile: services/meeting-agent/Dockerfile
+    container_name: agentfarm-meeting-agent
+    ports:
+      - '7799:7799'
+    environment:
+      MEETING_AGENT_PORT: '7799'
+      MEETING_AGENT_HOST: '0.0.0.0'
+      MEETING_AGENT_TOKEN: ${MEETING_AGENT_TOKEN:-}
+      # Default to the voxcpm container exposed by this compose file. Override
+      # SUPERTONIC_URL to point at a hosted TTS gateway if needed.
+      SUPERTONIC_URL: ${SUPERTONIC_URL:-http://voxcpm:8765}
+      SUPERTONIC_API_KEY: ${SUPERTONIC_API_KEY:-}
+      SUPERTONIC_MODEL: ${SUPERTONIC_MODEL:-supertonic}
+      # Voice fan-out: when ENABLE_VOICE_SIDECAR=1 the desktop-agent exposes
+      # the pipecat sidecar on port 7800; meeting-agent forwards each /say
+      # payload's audio there so it lands on the meeting microphone, and
+      # auto-engages live capture at /start so the sidecar posts inbound
+      # utterances back to /v1/sessions/:id/transcript/inbound on this same
+      # service via MEETING_AGENT_PUBLIC_URL.
+      DESKTOP_AGENT_VOICE_URL: ${DESKTOP_AGENT_VOICE_URL:-http://desktop-agent:7800}
+      DESKTOP_AGENT_VOICE_TOKEN: ${PIPECAT_TOKEN:-}
+      MEETING_AGENT_PUBLIC_URL: ${MEETING_AGENT_PUBLIC_URL:-http://meeting-agent:7799}
+      # Used by POST /v1/sessions/:id/join to launch the Playwright browser
+      # join script on the desktop-agent (port 5003 control plane).
+      DESKTOP_AGENT_URL: ${DESKTOP_AGENT_URL:-http://desktop-agent:5003}
+      # LLM brain for autonomous meeting responses (optional).
+      # Set MEETING_BRAIN_PROVIDER=openai or anthropic and supply an API key
+      # to enable the agent to reply to participant utterances automatically.
+      MEETING_BRAIN_PROVIDER: ${MEETING_BRAIN_PROVIDER:-}
+      MEETING_BRAIN_API_KEY: ${MEETING_BRAIN_API_KEY:-}
+      MEETING_BRAIN_BASE_URL: ${MEETING_BRAIN_BASE_URL:-}
+      MEETING_BRAIN_MODEL: ${MEETING_BRAIN_MODEL:-}
+      MEETING_BRAIN_SYSTEM_PROMPT: ${MEETING_BRAIN_SYSTEM_PROMPT:-}
+      MEETING_BRAIN_MAX_TOKENS: ${MEETING_BRAIN_MAX_TOKENS:-}
+    depends_on:
+      voxcpm:
+        condition: service_healthy
+    healthcheck:
+      test: [ 'CMD-SHELL', 'node -e "fetch(\"http://localhost:7799/health\").then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"' ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - agentfarm
+    restart: unless-stopped
+
+  voxcpm:
+    build:
+      context: ./docker/voxcpm2
+      dockerfile: Dockerfile
+    container_name: agentfarm-voxcpm
+    ports:
+      - '8765:8765'
+    environment:
+      PORT: '8765'
+      SAMPLE_RATE: '22050'
+    healthcheck:
+      test: [ 'CMD-SHELL', 'python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen(\"http://localhost:8765/health\").status==200 else 1)"' ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     networks:
       - agentfarm
     restart: unless-stopped

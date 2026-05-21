@@ -1330,6 +1330,29 @@ export const registerConnectorAuthRoutes = async (
             token_expires_at: metadata.tokenExpiresAt?.toISOString() ?? null,
         };
     });
+
+    // ---- Sprint 11: Connector Health Summary --------------------------------
+
+    app.get<{ Querystring: { workspace_id?: string } }>('/v1/connectors/health/summary', async (request, reply) => {
+        const session = options.getSession(request);
+        if (!session) {
+            return reply.code(401).send({ error: 'unauthorized', message: 'A valid authenticated session is required.' });
+        }
+
+        const workspaceId = request.query?.workspace_id ?? session.workspaceIds[0];
+        if (!workspaceId || !session.workspaceIds.includes(workspaceId)) {
+            return reply.code(403).send({ error: 'forbidden', message: 'Workspace is not accessible by this session.' });
+        }
+
+        const all = await repo.findAllForWorkspace(session.tenantId, workspaceId);
+        const connectors = all.map((m) => ({
+            connector_type: m.connectorType,
+            is_connected: m.status === 'connected',
+            status: m.status,
+        }));
+
+        return reply.send({ connectors });
+    });
 };
 
 export type { RegisterConnectorAuthRoutesOptions, ConnectorAuthRepo, SessionContext };

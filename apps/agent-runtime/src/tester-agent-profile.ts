@@ -17,6 +17,8 @@ export const TESTER_ROLE_ALLOWED_CONNECTORS = [
     'testrail', 'zephyr',
     // Security
     'burpsuite', 'owasp_zap',
+    // Meeting platforms
+    'google_meet', 'microsoft_teams', 'zoom',
 ] as const;
 
 export const TESTER_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = [
@@ -89,6 +91,7 @@ export const TESTER_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = [
     'workspace_playwright_test_run',
     'workspace_load_test_run',
     'workspace_load_test_report',
+    'workspace_load_test_regression',
     'workspace_api_test_run',
     'workspace_api_test_report',
     'workspace_dast_scan',
@@ -96,6 +99,32 @@ export const TESTER_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = [
     'workspace_test_case_sync',
     'workspace_test_run_publish',
     'workspace_visual_regression',
+    // ── Meetings / Standup / Scrum / Interviews ───────────────────────────
+    'workspace_meeting_join',
+    'workspace_meeting_speak',
+    'workspace_meeting_interview_live',
+    'workspace_standup_report',
+    // ── Exploratory testing ───────────────────────────────────────────────
+    'workspace_exploratory_session',
+    // ── Generic visual GUI loop (Gap 1) ───────────────────────────────────
+    'workspace_visual_task',
+    // ── Accessibility testing & defect reporting (Gap T-ax / T-bug fix) ──
+    'workspace_axe_scan',
+    'workspace_create_bug',
+    // ── Tier 22: Mutation testing & contract testing ───────────────────────
+    'workspace_mutation_test',
+    'workspace_contract_test',
+    // ── Tier 23: Test data management & real-device cloud testing ─────────
+    'workspace_generate_test_data',
+    'workspace_mobile_test',
+    // ── Test authoring: direct file writes for test code (Gap T1 fix) ─────
+    'code_edit',
+    // ── Source control: commit and push test branches (Gap T2 fix) ────────
+    'git_commit',
+    'git_push',
+    // ── Working memory: persist and search test session context (Gap T3 fix)
+    'workspace_memory_write',
+    'workspace_memory_search',
 ];
 
 export const TESTER_ROLE_BLOCKED_ACTIONS = [

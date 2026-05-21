@@ -1,3 +1,4 @@
+> **Status:** Mixed planned + shipped behavior. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for the authoritative gap tracker.
 # Payments & E-Signature
 
 > AgentFarm dual-provider payment infrastructure (Stripe + Razorpay) with Zoho Sign e-signature contract workflow.

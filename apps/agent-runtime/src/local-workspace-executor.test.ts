@@ -1785,8 +1785,35 @@ test('workspace_generate_test creates test stubs for exported symbols', async ()
     assert.ok(parsed.symbols.includes('sub'));
 
     const testContent = await readFile(pjoin(wsDir, 'src', 'math.test.ts'), 'utf-8');
-    assert.ok(testContent.includes('add'));
-    assert.ok(testContent.includes('sub'));
+    // Must contain real assertions, not just symbol name references
+    assert.ok(testContent.includes('assert.equal(add(2, 3), 5)'), `Expected 'assert.equal(add(2, 3), 5)' in generated test:\n${testContent}`);
+    assert.ok(testContent.includes('assert.equal(add(0, 0), 0)'), `Expected 'assert.equal(add(0, 0), 0)' in generated test:\n${testContent}`);
+    assert.ok(testContent.includes('assert.equal(sub(5, 3), 2)'), `Expected 'assert.equal(sub(5, 3), 2)' in generated test:\n${testContent}`);
+    assert.ok(!testContent.includes('TODO'), 'Generated test must not contain TODO stubs');
+});
+
+test('workspace_generate_test uses jest format when framework=jest', async () => {
+    const { executeLocalWorkspaceAction, getWorkspaceDir } = await import('./local-workspace-executor.js');
+    const { writeFile, mkdir, readFile } = await import('node:fs/promises');
+    const { join: pjoin } = await import('node:path');
+
+    const tenantId = 'tenant-gentest-jest';
+    const botId = 'bot-gentest-jest';
+    const workspaceKey = 'repo-gentest-jest-1';
+    const wsDir = getWorkspaceDir(tenantId, botId, workspaceKey);
+    await mkdir(pjoin(wsDir, 'src'), { recursive: true });
+    await writeFile(pjoin(wsDir, 'src', 'validate.ts'), 'export function isEmail(email: string): boolean { return email.includes("@"); }\n', 'utf-8');
+
+    const result = await executeLocalWorkspaceAction({
+        tenantId, botId, taskId: 'task-gentest-jest',
+        actionType: 'workspace_generate_test',
+        payload: { workspace_key: workspaceKey, file_path: 'src/validate.ts', framework: 'jest' },
+    });
+    assert.equal(result.ok, true, result.errorOutput);
+    const testContent = await readFile(pjoin(wsDir, 'src', 'validate.test.ts'), 'utf-8');
+    assert.ok(testContent.includes('describe('), `Jest format must use describe(): ${testContent}`);
+    assert.ok(testContent.includes("toBe('boolean')") || testContent.includes('toBe(true)'), `Jest format must use toBe assertions: ${testContent}`);
+    assert.ok(!testContent.includes('assert.'), 'Jest format must not use node:assert');
 });
 
 test('workspace_generate_test errors when file_path is missing', async () => {
@@ -2467,9 +2494,9 @@ test('workspace_explain_code returns structural summary for file', async () => {
         },
     });
     assert.equal(result.ok, true, result.errorOutput);
-    const parsed = JSON.parse(result.output) as { structural_summary: { function_declarations: number; imports: number } };
-    assert.ok(parsed.structural_summary.function_declarations >= 2);
-    assert.ok(parsed.structural_summary.imports >= 1);
+    const parsed = JSON.parse(result.output) as { functions: unknown[]; imports: string[]; purpose_summary: string };
+    assert.ok(parsed.functions.length >= 2);
+    assert.ok(parsed.imports.length >= 1);
 });
 
 test('workspace_add_docstring detects undocumented exports in dry_run', async () => {
@@ -2553,8 +2580,8 @@ test('workspace_semantic_search finds matches with context', async () => {
         },
     });
     assert.equal(result.ok, true, result.errorOutput);
-    const parsed = JSON.parse(result.output) as { total_matches: number; results: { context_before: string }[] };
-    assert.ok(parsed.total_matches >= 1);
+    const parsed = JSON.parse(result.output) as { total_raw_matches: number; results: { context_before: string }[] };
+    assert.ok(parsed.total_raw_matches >= 1);
     assert.ok(parsed.results[0].context_before.length >= 0);
 });
 
@@ -3534,4 +3561,227 @@ test('workspace_create_pr body includes disclosure footer when _persona present'
     const parsed = JSON.parse(result.output) as { body: string };
     assert.ok(parsed.body.includes('alex@agentfarm.ai'), 'PR body should contain agent email');
     assert.ok(parsed.body.includes('This message was sent by an AI agent.'), 'PR body should contain disclosure statement');
+});
+
+// ── Gap T4: workspace_sast_scan — enhanced patterns ──────────────────────────
+
+test('workspace_sast_scan detects SQL template injection at high severity', async () => {
+    const workspaceKey = 'sast-sql-test';
+    await executeLocalWorkspaceAction({
+        tenantId: 'tenant-sast', botId: 'bot-sast', taskId: 'task-sast-1',
+        actionType: 'code_edit',
+        payload: {
+            workspace_key: workspaceKey,
+            file_path: 'src/db.ts',
+            content: 'const row = await db.query(`SELECT * FROM users WHERE id = ${userId}`);\n',
+        },
+    });
+
+    const result = await executeLocalWorkspaceAction({
+        tenantId: 'tenant-sast', botId: 'bot-sast', taskId: 'task-sast-1',
+        actionType: 'workspace_sast_scan',
+        payload: { workspace_key: workspaceKey, target: 'src/', min_severity: 'high', semgrep: false },
+    });
+
+    assert.equal(result.ok, true, result.errorOutput);
+    const report = JSON.parse(result.output) as { findings: Array<{ rule: string; engine: string }> };
+    const sqlFinding = report.findings.find(f => f.rule === 'sql-template-injection');
+    assert.ok(sqlFinding, 'sql-template-injection rule should trigger');
+    assert.equal(sqlFinding!.engine, 'regex');
+});
+
+test('workspace_sast_scan detects command injection pattern', async () => {
+    const workspaceKey = 'sast-cmd-test';
+    await executeLocalWorkspaceAction({
+        tenantId: 'tenant-sast', botId: 'bot-sast', taskId: 'task-sast-2',
+        actionType: 'code_edit',
+        payload: {
+            workspace_key: workspaceKey,
+            file_path: 'src/exec.ts',
+            content: "import { execSync } from 'child_process';\nconst out = execSync(req.body.cmd);\n",
+        },
+    });
+
+    const result = await executeLocalWorkspaceAction({
+        tenantId: 'tenant-sast', botId: 'bot-sast', taskId: 'task-sast-2',
+        actionType: 'workspace_sast_scan',
+        payload: { workspace_key: workspaceKey, target: 'src/', min_severity: 'high', semgrep: false },
+    });
+
+    assert.equal(result.ok, true, result.errorOutput);
+    const report = JSON.parse(result.output) as { findings: Array<{ rule: string }> };
+    assert.ok(report.findings.some(f => f.rule === 'command-injection'), 'command-injection rule should trigger');
+});
+
+test('workspace_sast_scan detects CORS wildcard', async () => {
+    const workspaceKey = 'sast-cors-test';
+    await executeLocalWorkspaceAction({
+        tenantId: 'tenant-sast', botId: 'bot-sast', taskId: 'task-sast-3',
+        actionType: 'code_edit',
+        payload: {
+            workspace_key: workspaceKey,
+            file_path: 'src/server.ts',
+            content: "app.use(cors('*'));\n",
+        },
+    });
+
+    const result = await executeLocalWorkspaceAction({
+        tenantId: 'tenant-sast', botId: 'bot-sast', taskId: 'task-sast-3',
+        actionType: 'workspace_sast_scan',
+        payload: { workspace_key: workspaceKey, target: 'src/', min_severity: 'low', semgrep: false },
+    });
+
+    assert.equal(result.ok, true, result.errorOutput);
+    const report = JSON.parse(result.output) as { findings: Array<{ rule: string }> };
+    assert.ok(report.findings.some(f => f.rule === 'cors-wildcard'), 'cors-wildcard rule should trigger');
+});
+
+test('workspace_sast_scan findings include engine field', async () => {
+    const workspaceKey = 'sast-engine-test';
+    await executeLocalWorkspaceAction({
+        tenantId: 'tenant-sast', botId: 'bot-sast', taskId: 'task-sast-4',
+        actionType: 'code_edit',
+        payload: {
+            workspace_key: workspaceKey,
+            file_path: 'src/xss.ts',
+            content: 'el.innerHTML = userInput;\n',
+        },
+    });
+
+    const result = await executeLocalWorkspaceAction({
+        tenantId: 'tenant-sast', botId: 'bot-sast', taskId: 'task-sast-4',
+        actionType: 'workspace_sast_scan',
+        payload: { workspace_key: workspaceKey, target: 'src/', min_severity: 'low', semgrep: false },
+    });
+
+    assert.equal(result.ok, true, result.errorOutput);
+    const report = JSON.parse(result.output) as { findings: Array<{ engine: string }> };
+    assert.ok(report.findings.length > 0, 'at least one finding expected');
+    assert.ok(report.findings.every(f => f.engine === 'regex' || f.engine === 'semgrep'), 'all findings must have engine field');
+});
+
+// ── Gap T6: workspace_visual_regression — SHA256 + ImageMagick + fallback ────
+
+test('workspace_visual_regression returns error when url is missing', async () => {
+    const result = await executeLocalWorkspaceAction({
+        tenantId: 'tenant-visual', botId: 'bot-visual', taskId: 'task-vr-1',
+        actionType: 'workspace_visual_regression',
+        payload: { workspace_key: 'visual-no-url' },
+    });
+
+    assert.equal(result.ok, false);
+    assert.ok((result.errorOutput ?? '').includes('url'), 'should mention missing url');
+});
+
+// ── Gap T7: workspace_dast_scan — passive fallback when ZAP not configured ───
+
+test('workspace_dast_scan passive fallback returns ok:true when ZAP_API_URL unset', async () => {
+    const savedZap = process.env['ZAP_API_URL'];
+    delete process.env['ZAP_API_URL'];
+
+    // Use a clearly non-routable target — passive scan should handle HEAD failure gracefully
+    const result = await executeLocalWorkspaceAction({
+        tenantId: 'tenant-dast', botId: 'bot-dast', taskId: 'task-dast-1',
+        actionType: 'workspace_dast_scan',
+        payload: { workspace_key: 'dast-test', target_url: 'http://localhost:19999' },
+    });
+
+    if (savedZap !== undefined) process.env['ZAP_API_URL'] = savedZap;
+
+    assert.equal(result.ok, true, result.errorOutput);
+    const report = JSON.parse(result.output) as { mode: string };
+    assert.equal(report.mode, 'passive_fallback');
+});
+
+test('workspace_dast_scan returns error when target_url is missing', async () => {
+    const savedZap = process.env['ZAP_API_URL'];
+    delete process.env['ZAP_API_URL'];
+
+    const result = await executeLocalWorkspaceAction({
+        tenantId: 'tenant-dast', botId: 'bot-dast', taskId: 'task-dast-2',
+        actionType: 'workspace_dast_scan',
+        payload: { workspace_key: 'dast-test' },
+    });
+
+    if (savedZap !== undefined) process.env['ZAP_API_URL'] = savedZap;
+
+    assert.equal(result.ok, false);
+    assert.ok((result.errorOutput ?? '').includes('target_url'), 'should mention missing target_url');
+});
+
+// TIER 11: workspace_visual_task � desktop-agent vision loop dispatcher
+
+test('workspace_visual_task rejects empty goal', async () => {
+    const result = await executeLocalWorkspaceAction({
+        tenantId: 'tenant-vt', botId: 'bot-vt', taskId: 'task-vt-empty',
+        actionType: 'workspace_visual_task',
+        payload: { goal: '   ' },
+    });
+    assert.equal(result.ok, false);
+    assert.ok((result.errorOutput ?? '').includes('goal'));
+});
+
+test('workspace_visual_task fails fast when DESKTOP_AGENT_URL is not configured', async () => {
+    const prev = process.env['DESKTOP_AGENT_URL'];
+    delete process.env['DESKTOP_AGENT_URL'];
+    try {
+        const result = await executeLocalWorkspaceAction({
+            tenantId: 'tenant-vt', botId: 'bot-vt', taskId: 'task-vt-noenv',
+            actionType: 'workspace_visual_task',
+            payload: { goal: 'open notepad and type hello' },
+        });
+        assert.equal(result.ok, false);
+        assert.ok((result.errorOutput ?? '').toLowerCase().includes('desktop_agent_url'));
+    } finally {
+        if (prev !== undefined) process.env['DESKTOP_AGENT_URL'] = prev;
+    }
+});
+
+test('workspace_visual_task round-trips create -> submit -> poll against the desktop-agent', async () => {
+    const calls: Array<{ method: string; url: string; body?: unknown }> = [];
+    let pollCount = 0;
+    const originalFetch = globalThis.fetch;
+    (globalThis as unknown as { fetch: typeof fetch }).fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === 'string' ? input : input.toString();
+        const method = (init?.method ?? 'GET').toUpperCase();
+        const bodyText = typeof init?.body === 'string' ? init.body : undefined;
+        calls.push({ method, url, body: bodyText ? JSON.parse(bodyText) : undefined });
+        if (method === 'POST' && url.endsWith('/v1/sessions')) {
+            return new Response(JSON.stringify({ sessionId: 'session-abc', streamUrl: '/novnc/?session=session-abc' }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        }
+        if (method === 'POST' && /\/v1\/sessions\/session-abc\/task$/.test(url)) {
+            return new Response(JSON.stringify({ taskId: 'task-xyz', status: 'running' }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        }
+        if (method === 'GET' && /\/v1\/sessions\/session-abc\/task$/.test(url)) {
+            pollCount += 1;
+            const status = pollCount >= 2 ? 'completed' : 'running';
+            return new Response(JSON.stringify({ taskId: 'task-xyz', status, stepCount: pollCount, result: status === 'completed' ? 'ok' : '' }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        }
+        if (method === 'DELETE' && /\/v1\/sessions\/session-abc$/.test(url)) {
+            return new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } });
+        }
+        return new Response('not found', { status: 404 });
+    }) as typeof fetch;
+
+    const prevUrl = process.env['DESKTOP_AGENT_URL'];
+    process.env['DESKTOP_AGENT_URL'] = 'http://desktop.local:5003';
+    try {
+        const result = await executeLocalWorkspaceAction({
+            tenantId: 'tenant-vt', botId: 'bot-vt', taskId: 'task-vt-happy',
+            actionType: 'workspace_visual_task',
+            payload: { goal: 'open notepad and type hello', poll_interval_ms: 500, timeout_ms: 30_000 },
+        });
+        assert.equal(result.ok, true, result.errorOutput);
+        const parsed = JSON.parse(result.output) as { sessionId: string; status: string };
+        assert.equal(parsed.sessionId, 'session-abc');
+        assert.equal(parsed.status, 'completed');
+        const methods = calls.map((c) => `${c.method} ${c.url.replace('http://desktop.local:5003', '')}`);
+        assert.ok(methods.includes('POST /v1/sessions'));
+        assert.ok(methods.includes('POST /v1/sessions/session-abc/task'));
+        assert.ok(methods.some((m) => m === 'GET /v1/sessions/session-abc/task'));
+        assert.ok(methods.includes('DELETE /v1/sessions/session-abc'));
+    } finally {
+        if (prevUrl !== undefined) process.env['DESKTOP_AGENT_URL'] = prevUrl; else delete process.env['DESKTOP_AGENT_URL'];
+        (globalThis as unknown as { fetch: typeof fetch }).fetch = originalFetch;
+    }
 });

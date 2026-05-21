@@ -1,3 +1,4 @@
+> **Status:** Mixed planned + shipped behavior. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for the authoritative gap tracker.
 # Agent Roles
 
 > AgentFarm — 12 agent role profiles with connectors, capabilities, and risk posture.
@@ -31,14 +32,26 @@ Roles are defined in:
 - Run shell commands, tests, and build scripts
 - Interact with version control (git)
 - Create and update tickets in task trackers
-- Create pull request drafts
-- Triage CI failures
+- Create pull request drafts and **post real PR review comments, approvals, and change-requests** via `workspace_post_pr_review` (GitHub API; local draft fallback when `GITHUB_TOKEN` is not set)
+- Triage CI failures; **poll live GitHub Actions run status** via `workspace_ci_status_poll` (`run_id` or `head_sha`; requires `GITHUB_TOKEN`)
 - Query and update work memory
+- **Generate DB migrations** via `workspace_migration_generate` — auto-detects Prisma, TypeORM, or Drizzle from `package.json`; runs `prisma migrate dev --create-only` / `typeorm migration:generate` / `drizzle-kit generate` respectively
+- **Apply dependency upgrades** via `workspace_dependency_upgrade_apply` — runs `pnpm update` / `yarn upgrade` / `npm update` (auto-detects package manager from lock file); accepts a `packages` list or `latest=true` for all
+
+**Workspace analysis skills (real input required):**
+- `stale-pr-detector` — accepts `open_prs: [{number, title, author, updated_at, labels?}]`; computes `days_since_update` from ISO `updated_at`; returns guidance if input is missing
+- `dead-code-detector` — accepts `import_map: {[file]: importingFiles[]}` and/or `exported_symbols: [{symbol, file, type}]`; identifies files with zero importers
+- `monorepo-dep-graph` — accepts `packages: [{id, deps[]}]`; runs DFS cycle detection; builds reverse-dep index; returns guidance if input is missing
+- `code-churn-analyzer` — accepts `churn_data: [{file, commits, authors?, lines_changed?}]` **or** `git_log_lines` (raw output of `git log --since="X days ago" --name-only --pretty=format:""`); returns guidance if neither is provided
+
+**Autonomous coding loop (`autonomous_loop` action):**
+- In live mode (`dry_run: false`), `executeCreateBranch` calls `git_branch` workspace executor to create the branch via real `git checkout -b`
+- In live mode, `runImplementChanges` applies explicit `file_edits` first; for any target file with **no** explicit content, calls Anthropic `claude-haiku-4-5` to synthesize the file content from the task description
 
 **Connector actions permitted:**
 `create_issue`, `update_issue`, `close_issue`, `comment_on_issue`, `create_pr`, `review_pr`, `merge_pr`, `create_branch`, `push_commit`, `run_pipeline`, `send_message`, `send_email`, `search_knowledge_base`
 
-**Workspace tier access:** Tiers 1–10 (code, shell, git, test, IDE intelligence, REPL, language adapters, governance, release, productivity). Tier 11/12 (desktop/meeting/sub-agent) blocked by default.
+**Workspace tier access:** Tiers 1–10 (code, shell, git, test, IDE intelligence, REPL, language adapters, governance, release, productivity). Tier 11/12 (desktop/meeting/sub-agent) blocked by default. Tiers 20–22 (GitHub integration, DB migrations, dependency upgrades) enabled.
 
 **Risk posture:** Code changes to non-test files = `MEDIUM`. Changes to CI config, build scripts, Dockerfile = `HIGH`.
 
@@ -62,21 +75,35 @@ Roles are defined in:
 
 ### 3. `tester`
 
-**Purpose:** Test writing, test coverage analysis, and quality assurance.
+**Purpose:** Test writing, test coverage analysis, quality assurance, and automated defect reporting.
 
 **Capabilities:**
 - Write unit, integration, and E2E tests
-- Analyze coverage reports and identify gaps
-- Run test suites and interpret failures
-- Create bug reports from test failures
+- Analyse coverage reports and identify gaps
+- Run test suites (Playwright, Cypress, Selenium, Appium, k6/Locust/Artillery) and interpret failures
+- Perform WCAG accessibility scans via `workspace_axe_scan` (axe-playwright / axe-cli / static fallback)
+- File defect reports from test failures via `workspace_create_bug` (Jira / GitHub / Linear, local fallback)
+- Mutation testing via `workspace_mutation_test` — runs Stryker Mutator (auto-detects or generates config); reports mutation score, killed/survived/no-coverage counts, and survivor details
+- Consumer-driven contract testing via `workspace_contract_test` — verifies Pact contracts, publishes to Pact Broker, or scaffolds consumer test stubs from a provider+endpoint spec
+- **Test data management** via `workspace_generate_test_data` (Tier 23) — seeds real DBs (Prisma / npm scripts), resets test databases, generates synthetic fixture JSON/SQL/CSV, and lists existing fixture files
+- **Real-device cloud testing** via `workspace_mobile_test` (Tier 23) — runs mobile tests on BrowserStack (Tier 1) or Sauce Labs (Tier 2); falls back to Playwright device emulation (Tier 3) when no cloud credentials are set
+- Coverage-weighted test impact analysis — `workspace_test_impact_analysis` now parses `coverage/coverage-final.json` (Istanbul/c8) or `coverage/lcov.info`; returns `coverage_weighted` array sorted by lowest coverage first (highest risk)
+- TestRail / Zephyr sync with local JSON fallback — `workspace_test_case_sync` and `workspace_test_run_publish` now write to `.agentfarm/test-registry.json` when no connector is configured
+- Transitive test impact analysis — resolves barrel re-exports and import chains up to configurable depth
+- SFDPOT-guided exploratory sessions, accepting acceptance criteria from Jira stories or PRD payloads
+- Visual regression detection (SHA256 exact-match + ImageMagick pixel diff)
+- DAST scanning via `workspace_dast_scan` (OWASP ZAP active scan or HTTP header passive fallback)
+- Load / performance test runs and regression comparison
+- API contract testing via Newman/Postman collection runner
+- LLM-guided test file generation via `workspace_generate_test` (uses `claude-haiku` when `ANTHROPIC_API_KEY` is set; falls back to regex-based generator)
 - Suggest test improvements
 
 **Connector actions permitted:**
-`create_issue`, `comment_on_issue`, `close_issue`, `send_message`
+`create_issue`, `update_issue`, `comment_on_issue`, `close_issue`, `send_message`, `sync_test_cases`, `publish_test_run`
 
-**Workspace tier access:** Tiers 1–6 (file ops, shell exec up to test runner, read-only IDE intelligence). No write-to-main-code permissions. No deployment access.
+**Workspace tier access:** Tiers 1–7 (file ops, shell exec, git, test runner, IDE intelligence, REPL, language adapters), plus all Tier 20 testing tool integrations, Tier 21 accessibility/defect actions, Tier 22 mutation/contract testing, and Tier 23 test data management and real-device testing. No write-to-main-code permissions beyond `code_edit` for test files. No deployment access.
 
-**Risk posture:** Test-only file changes = `LOW`. Any modification outside `/tests/` or `*.test.*` = `MEDIUM`.
+**Risk posture:** Test-only file changes = `LOW`. Any modification outside `/tests/` or `*.test.*` = `MEDIUM`. Defect creation on external trackers = `LOW`.
 
 ---
 

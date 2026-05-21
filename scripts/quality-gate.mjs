@@ -5,7 +5,7 @@ import { spawn } from 'node:child_process';
 
 const repoRoot = process.cwd();
 const reportDir = resolve(repoRoot, 'operations', 'quality');
-const reportPath = resolve(reportDir, '12.1-quality-gate-report.md');
+const reportPath = resolve(reportDir, '13.1-quality-gate-report.md');
 
 const checks = [
     {
@@ -342,6 +342,8 @@ for (const check of checks) {
             result.output.includes('Can\'t reach database server') ||
             result.output.includes('Environment variable not found: DATABASE_URL') ||
             result.output.includes('Missing required environment variable DATABASE_URL') ||
+            result.output.includes('DATABASE_URL is not pointing at the test DB') ||
+            result.output.includes('FORCE_DB_SMOKE') ||
             result.output.includes('P1012') ||
             result.output.includes('P1001') ||
             result.output.includes('P3009') ||
@@ -369,7 +371,7 @@ const allPassed = results.length === checks.length && results.every((item) => it
 
 await mkdir(reportDir, { recursive: true });
 const lines = [
-    '# Sprint 11 Quality Gate Report',
+    '# Sprint 13 Quality Gate Report — Tester Agent Gap Fixes',
     '',
     `- Started: ${startedAt.toISOString()}`,
     `- Ended: ${endedAt.toISOString()}`,

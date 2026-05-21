@@ -19,6 +19,7 @@ import type {
     TaskComplexity,
 } from '@agentfarm/shared-types';
 import { CONTRACT_VERSIONS } from '@agentfarm/shared-types';
+import { getHistoricalMinutes } from './task-intelligence-memory.js';
 
 export type { EffortEstimate, TaskComplexity };
 
@@ -122,15 +123,30 @@ export function estimateTaskEffort(input: EstimationInput): EffortEstimate {
         const totalRiskScore = detectedRiskScore + riskBonus;
 
         const complexity = classifyComplexity(fileCount, totalRiskScore);
-        const estimatedMinutes = COMPLEXITY_MINUTES[complexity];
+        const heuristicMinutes = COMPLEXITY_MINUTES[complexity];
         const breakdown = buildBreakdown(complexity, input.hasExistingTests ?? true);
+
+        // Blend with historical actuals when available (60 % historical / 40 % heuristic)
+        const historicalAvg = getHistoricalMinutes(input.similarPastTaskIds ?? []);
+        const estimatedMinutes = historicalAvg !== null
+            ? Math.round(historicalAvg * 0.6 + heuristicMinutes * 0.4)
+            : heuristicMinutes;
 
         // Confidence is inversely proportional to risk and complexity
         const baseConfidence = 0.9;
-        const confidenceScore = Math.max(
-            0.3,
-            baseConfidence - totalRiskScore * 0.08 - (fileCount > 10 ? 0.1 : 0),
+        const historicalBoost = historicalAvg !== null ? 0.1 : 0;
+        const confidenceScore = Math.min(
+            0.95,
+            Math.max(
+                0.3,
+                baseConfidence - totalRiskScore * 0.08 - (fileCount > 10 ? 0.1 : 0) + historicalBoost,
+            ),
         );
+
+        const riskFactors = [...factors];
+        if (historicalAvg !== null) {
+            riskFactors.push(`historical average: ${Math.round(historicalAvg)} min`);
+        }
 
         return {
             id: randomUUID(),
@@ -142,7 +158,7 @@ export function estimateTaskEffort(input: EstimationInput): EffortEstimate {
             confidenceScore: parseFloat(confidenceScore.toFixed(2)),
             complexity,
             breakdown,
-            riskFactors: factors,
+            riskFactors,
             similarPastTaskIds: input.similarPastTaskIds ?? [],
             estimatedAt: new Date().toISOString(),
             correlationId: input.correlationId,

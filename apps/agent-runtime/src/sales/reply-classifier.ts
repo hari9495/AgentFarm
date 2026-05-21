@@ -64,7 +64,32 @@ export async function classifyReply(params: ClassifyReplyParams): Promise<Classi
             .map((b) => b.text ?? '')
             .join('');
         const cleaned = raw.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
-        return JSON.parse(cleaned) as ClassifyReplyResult;
+
+        let parsedJson: unknown;
+        try {
+            parsedJson = JSON.parse(cleaned);
+        } catch {
+            return FALLBACK_RESULT;
+        }
+        if (!parsedJson || typeof parsedJson !== 'object') return FALLBACK_RESULT;
+        const obj = parsedJson as Record<string, unknown>;
+
+        const ALLOWED_INTENTS: readonly ReplyIntent[] = [
+            'interested', 'not_now', 'unsubscribe', 'objection', 'question', 'unknown',
+        ] as const;
+        const rawIntent = typeof obj['intent'] === 'string' ? obj['intent'] : '';
+        const intent: ReplyIntent = (ALLOWED_INTENTS as readonly string[]).includes(rawIntent)
+            ? (rawIntent as ReplyIntent)
+            : 'unknown';
+
+        const confidenceRaw = typeof obj['confidence'] === 'number' ? obj['confidence'] : 0;
+        const confidence = Math.max(0, Math.min(1, confidenceRaw));
+        const suggestedAction = typeof obj['suggestedAction'] === 'string' && obj['suggestedAction'].trim()
+            ? obj['suggestedAction']
+            : 'manual_review';
+        const reasoning = typeof obj['reasoning'] === 'string' ? obj['reasoning'] : '';
+
+        return { intent, confidence, suggestedAction, reasoning };
     } catch {
         return FALLBACK_RESULT;
     }

@@ -15,8 +15,8 @@ type Props = {
  * Replaces the legacy MarketplaceDeployButton for the hire flow.
  */
 export default function HireAgentButton({ roleKey, source = "marketplace", className, label }: Props) {
-    const params = new URLSearchParams({ role: roleKey, source });
-    const href = `/onboarding?${params.toString()}`;
+    const params = new URLSearchParams({ source });
+    const href = `/hire/${encodeURIComponent(roleKey)}?${params.toString()}`;
 
     return (
         <Link

@@ -237,6 +237,170 @@ export class RepoKnowledgeGraph {
         return snapshot;
     }
 
+    /**
+     * Indexes a TypeScript workspace using the TypeScript compiler API for
+     * accurate, type-aware symbol extraction. Enriches (and replaces) the
+     * regex-based results with compiler-verified exported declarations.
+     *
+     * Falls back to the regex `indexWorkspace` path if the `typescript` package
+     * is unavailable or if tsconfig cannot be located/parsed.
+     *
+     * @param rootDir  Absolute root directory of the workspace.
+     * @param tsConfigPath  Optional explicit path to tsconfig.json.
+     *                      Defaults to `<rootDir>/tsconfig.json`.
+     */
+    async indexWorkspaceWithTsServer(
+        rootDir: string,
+        tsConfigPath?: string,
+    ): Promise<KnowledgeGraphSnapshot> {
+        // Dynamic import — avoids a hard dependency at module load time
+        let ts: typeof import('typescript');
+        try {
+            ts = await import('typescript');
+        } catch {
+            // typescript package not available in this environment — fall back
+            return this.indexWorkspace(rootDir);
+        }
+
+        const configFile = tsConfigPath ?? join(rootDir, 'tsconfig.json');
+        const configHost: import('typescript').ParseConfigFileHost = {
+            ...ts.sys,
+            onUnRecoverableConfigFileDiagnostic: () => { /* swallow */ },
+        };
+
+        const parsedConfig = ts.getParsedCommandLineOfConfigFile(
+            configFile,
+            {},
+            configHost,
+        );
+
+        if (!parsedConfig || parsedConfig.errors.length > 0) {
+            // tsconfig unreadable — fall back
+            return this.indexWorkspace(rootDir);
+        }
+
+        let program: import('typescript').Program;
+        try {
+            program = ts.createProgram({
+                rootNames: parsedConfig.fileNames,
+                options: parsedConfig.options,
+            });
+        } catch {
+            return this.indexWorkspace(rootDir);
+        }
+
+        const checker = program.getTypeChecker();
+
+        this.symbols = [];
+        this.callEdges = [];
+
+        const kindOf = (node: import('typescript').Node): SymbolKind => {
+            if (ts.isFunctionDeclaration(node) || ts.isFunctionExpression(node) ||
+                ts.isArrowFunction(node) || ts.isMethodDeclaration(node)) return 'function';
+            if (ts.isClassDeclaration(node)) return 'class';
+            if (ts.isInterfaceDeclaration(node)) return 'interface';
+            if (ts.isTypeAliasDeclaration(node)) return 'type';
+            if (ts.isEnumDeclaration(node)) return 'enum';
+            return 'const';
+        };
+
+        for (const sourceFile of program.getSourceFiles()) {
+            if (sourceFile.isDeclarationFile) continue;
+            if (sourceFile.fileName.includes('node_modules')) continue;
+
+            const relPath = relative(rootDir, sourceFile.fileName);
+
+            ts.forEachChild(sourceFile, (node) => {
+                // Only process top-level exported declarations
+                const modifiers = ts.canHaveModifiers(node) ? ts.getModifiers(node) : undefined;
+                const isExported = modifiers?.some(
+                    (m) => m.kind === ts.SyntaxKind.ExportKeyword,
+                ) ?? false;
+
+                if (!isExported) return;
+
+                let name: string | undefined;
+                if (
+                    (ts.isFunctionDeclaration(node) || ts.isClassDeclaration(node) ||
+                        ts.isInterfaceDeclaration(node) || ts.isTypeAliasDeclaration(node) ||
+                        ts.isEnumDeclaration(node)) && node.name
+                ) {
+                    name = node.name.text;
+                } else if (ts.isVariableStatement(node)) {
+                    const firstDecl = node.declarationList.declarations[0];
+                    if (firstDecl && ts.isIdentifier(firstDecl.name)) {
+                        name = firstDecl.name.text;
+                    }
+                }
+
+                if (!name) return;
+
+                const pos = sourceFile.getLineAndCharacterOfPosition(node.getStart());
+                let signature: string | undefined;
+                try {
+                    const sym = checker.getSymbolAtLocation(
+                        ts.isFunctionDeclaration(node) && node.name ? node.name :
+                            ts.isClassDeclaration(node) && node.name ? node.name :
+                                ts.isInterfaceDeclaration(node) && node.name ? node.name :
+                                    ts.isTypeAliasDeclaration(node) && node.name ? node.name :
+                                        ts.isEnumDeclaration(node) && node.name ? node.name :
+                                            node,
+                    );
+                    if (sym) {
+                        signature = checker.typeToString(checker.getTypeOfSymbolAtLocation(sym, node)).slice(0, 120);
+                    }
+                } catch {
+                    // type resolution failure is non-fatal
+                }
+
+                this.symbols.push({
+                    name,
+                    kind: kindOf(node),
+                    file: relPath,
+                    line: pos.line + 1,
+                    exported: true,
+                    signature,
+                });
+            });
+
+            // Build call edges: find all call expressions and match callee names
+            const symbolNames = new Set(this.symbols.map((s) => s.name));
+            const visitForCalls = (node: import('typescript').Node, currentFn: string): void => {
+                if (ts.isFunctionDeclaration(node) && node.name) {
+                    currentFn = node.name.text;
+                } else if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) &&
+                    node.initializer &&
+                    (ts.isArrowFunction(node.initializer) || ts.isFunctionExpression(node.initializer))) {
+                    currentFn = node.name.text;
+                }
+
+                if (ts.isCallExpression(node)) {
+                    const exprText = node.expression.getText(sourceFile).split('(')[0].split('.').pop() ?? '';
+                    if (exprText && symbolNames.has(exprText) && exprText !== currentFn) {
+                        const pos2 = sourceFile.getLineAndCharacterOfPosition(node.getStart());
+                        this.callEdges.push({
+                            caller: currentFn,
+                            callee: exprText,
+                            file: relPath,
+                            line: pos2.line + 1,
+                        });
+                    }
+                }
+
+                ts.forEachChild(node, (child) => visitForCalls(child, currentFn));
+            };
+            ts.forEachChild(sourceFile, (child) => visitForCalls(child, 'module'));
+        }
+
+        this.lastIndexed = new Date().toISOString();
+        const snapshot = this.getSnapshot(program.getSourceFiles().filter(
+            (f) => !f.isDeclarationFile && !f.fileName.includes('node_modules'),
+        ).length);
+        await ensureStateDir();
+        await writeFile(GRAPH_SNAPSHOT_FILE, JSON.stringify(snapshot, null, 2), 'utf-8');
+        return snapshot;
+    }
+
     getSnapshot(fileCount = this.symbols.length): KnowledgeGraphSnapshot {
         return {
             symbols: this.symbols,

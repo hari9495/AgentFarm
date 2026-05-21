@@ -1,0 +1,5 @@
+# Vendored binary tarballs — too large for git.
+# Download once with: .\vendor\download-zap.ps1
+*.tar.gz
+*.tgz
+*.zip

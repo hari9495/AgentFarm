@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getInternalSessionAuthHeader } from '../../../../lib/internal-session';
-import type { BrowserActionType } from '@prisma/client';
+type BrowserActionType = 'click' | 'fill' | 'navigate' | 'select' | 'submit' | 'key_press' | 'screenshot' | 'hover' | 'scroll' | 'wait';
 import { prisma } from '../../../../lib/prisma';
 
 const resolveRiskLevelFromActionType = (actionType: BrowserActionType): 'low' | 'medium' | 'high' => {

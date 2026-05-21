@@ -4,7 +4,7 @@ WORKDIR /app
 
 RUN corepack enable && corepack prepare pnpm@9.12.0 --activate
 
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml tsconfig.base.json ./
 COPY packages/ ./packages/
 COPY services/ ./services/
 COPY apps/ ./apps/
@@ -12,8 +12,9 @@ COPY apps/ ./apps/
 RUN pnpm install --frozen-lockfile
 
 # Build shared packages, services, then the dashboard
-RUN pnpm --filter "./packages/**" run build --if-present
-RUN pnpm --filter "./services/**" run build --if-present
+RUN pnpm --filter "./packages/**" run --if-present build
+RUN pnpm --filter "./services/**" run --if-present build
+RUN pnpm --filter @agentfarm/db-schema run prisma:generate
 RUN pnpm --filter @agentfarm/dashboard run build
 
 # ── Stage 2: runner ───────────────────────────────────────────────────────────

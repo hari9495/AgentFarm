@@ -4,7 +4,7 @@ WORKDIR /app
 
 RUN corepack enable && corepack prepare pnpm@9.12.0 --activate
 
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml tsconfig.base.json ./
 COPY packages/ ./packages/
 COPY services/ ./services/
 COPY apps/ ./apps/
@@ -17,8 +17,8 @@ ENV DATABASE_URL=$DATABASE_URL
 RUN pnpm --filter @agentfarm/db-schema prisma:generate
 
 # Build shared packages, services, then the app
-RUN pnpm --filter "./packages/**" run build --if-present
-RUN pnpm --filter "./services/**" run build --if-present
+RUN pnpm --filter "./packages/**" run --if-present build
+RUN pnpm --filter "./services/**" run --if-present build
 RUN pnpm --filter @agentfarm/trigger-service run build
 
 # Patch workspace package.json exports that point to TypeScript source
@@ -31,7 +31,7 @@ RUN node -e " \
     if (!fs.existsSync(pj)) continue; \
     const di = d + '/' + p + '/dist/index.js'; \
     if (!fs.existsSync(di)) continue; \
-    const j = JSON.parse(fs.readFileSync(pj, 'utf8')); \
+    const raw = fs.readFileSync(pj, 'utf8').replace(/^\uFEFF/, ''); const j = JSON.parse(raw); \
     let c = false; \
     if (j.main && j.main.endsWith('.ts')) { j.main = './dist/index.js'; c = true; } \
     if (j.exports && j.exports['.'] && j.exports['.'].default && j.exports['.'].default.endsWith('.ts')) { \

@@ -88,9 +88,19 @@ Generate 3-5 suggested conversation topics and 2-3 risk signals.`;
                 const parsed = await llmRes.json() as { content: Array<{ type: string; text?: string }> };
                 const raw = parsed.content.filter(b => b.type === 'text').map(b => b.text ?? '').join('');
                 const cleaned = raw.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
-                const llmData = JSON.parse(cleaned) as { suggestedTopics?: string[]; riskSignals?: string[] };
-                if (Array.isArray(llmData.suggestedTopics)) suggestedTopics = llmData.suggestedTopics;
-                if (Array.isArray(llmData.riskSignals)) riskSignals = llmData.riskSignals;
+                let llmData: unknown;
+                try { llmData = JSON.parse(cleaned); } catch { llmData = null; }
+                if (llmData && typeof llmData === 'object') {
+                    const obj = llmData as Record<string, unknown>;
+                    const topics = Array.isArray(obj['suggestedTopics'])
+                        ? (obj['suggestedTopics'] as unknown[]).filter((t): t is string => typeof t === 'string' && t.trim().length > 0)
+                        : [];
+                    const risks = Array.isArray(obj['riskSignals'])
+                        ? (obj['riskSignals'] as unknown[]).filter((t): t is string => typeof t === 'string' && t.trim().length > 0)
+                        : [];
+                    if (topics.length > 0) suggestedTopics = topics;
+                    if (risks.length > 0) riskSignals = risks;
+                }
             }
         }
     } catch {

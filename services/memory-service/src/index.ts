@@ -25,3 +25,5 @@ export { searchEpisodicMemory } from './episodic-read-hook.js';
 // Sprint 9 — Semantic Memory / Company Knowledge RAG
 export { writeSemanticMemory } from './semantic-write-hook.js';
 export { searchSemanticMemory } from './semantic-search-hook.js';
+// Sprint 14 — Episodic Memory Text Fallback (no embedding required)
+export { writeEpisodicMemoryNoEmbed, searchEpisodicMemoryNoEmbed } from './episodic-text-fallback.js';

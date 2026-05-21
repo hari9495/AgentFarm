@@ -24,7 +24,13 @@ import type {
     LoopRunResult,
     LoopDecision,
 } from '@agentfarm/shared-types';
-import { getSkillHandler } from './skill-execution-engine.js';
+import { readFile } from 'node:fs/promises';
+import { resolve as resolvePath } from 'node:path';
+import {
+    getSkillHandler,
+    generateTestsWithLLM,
+    runTypeCoverageWithTsc,
+} from './skill-execution-engine.js';
 import type { SkillOutput } from './skill-execution-engine.js';
 
 // Hard ceiling on loop iterations. Prevents runaway agent loops from
@@ -195,6 +201,12 @@ export class AutonomousLoopOrchestrator {
 
     /**
      * Execute a single skill and return its output.
+     *
+     * Pre-enriches inputs for skills that have an LLM/tsc-backed mode but
+     * accept caller-supplied results (so the sync handler can use real data
+     * instead of hardcoded defaults):
+     *   - test-generator: calls generateTestsWithLLM() to populate llm_test_code
+     *   - type-coverage-reporter: calls runTypeCoverageWithTsc() to populate tsc_result
      */
     private async executeSkill(skillId: string, inputs: Record<string, unknown>): Promise<SkillOutput> {
         const handler = getSkillHandler(skillId);
@@ -211,9 +223,96 @@ export class AutonomousLoopOrchestrator {
             };
         }
 
+        const enrichedInputs = await this.enrichInputsForSkill(skillId, inputs);
+
         const startedAt = Date.now();
-        const output = handler(inputs, startedAt);
+        const output = handler(enrichedInputs, startedAt);
         return output;
+    }
+
+    /**
+     * Pre-compute LLM/tsc results for skills whose sync handler accepts an
+     * optional result field. Failures are swallowed — the handler then falls
+     * back to its built-in heuristic/template path.
+     */
+    private async enrichInputsForSkill(
+        skillId: string,
+        inputs: Record<string, unknown>,
+    ): Promise<Record<string, unknown>> {
+        if (skillId === 'test-generator') {
+            // Skip if caller already supplied test code or if ANTHROPIC_API_KEY is missing.
+            if (typeof inputs['llm_test_code'] === 'string' && (inputs['llm_test_code'] as string).trim()) {
+                return inputs;
+            }
+            if (!process.env['ANTHROPIC_API_KEY']) return inputs;
+
+            const filePath = typeof inputs['file_path'] === 'string' ? inputs['file_path'] : '';
+            const functionName = typeof inputs['function_name'] === 'string' ? inputs['function_name'] : '';
+            if (!filePath || !functionName) return inputs;
+
+            const functionSignature = typeof inputs['function_signature'] === 'string'
+                ? inputs['function_signature']
+                : `${functionName}(input: unknown): unknown`;
+            const testFramework = typeof inputs['test_framework'] === 'string'
+                ? inputs['test_framework']
+                : 'node:test';
+            const edgeCases = Array.isArray(inputs['edge_cases'])
+                ? (inputs['edge_cases'] as unknown[]).filter((x): x is string => typeof x === 'string')
+                : [];
+
+            // Read source file when available; fall back to caller-supplied function_source
+            let functionSource = typeof inputs['function_source'] === 'string'
+                ? (inputs['function_source'] as string)
+                : '';
+            if (!functionSource) {
+                try {
+                    const workspaceRoot = typeof inputs['workspace_dir'] === 'string'
+                        ? inputs['workspace_dir'] as string
+                        : process.cwd();
+                    const absPath = resolvePath(workspaceRoot, filePath);
+                    functionSource = await readFile(absPath, 'utf8');
+                } catch {
+                    // Source unavailable — let the handler use its template fallback.
+                    return inputs;
+                }
+            }
+
+            const llmCode = await generateTestsWithLLM(
+                filePath,
+                functionName,
+                functionSignature,
+                functionSource,
+                edgeCases,
+                testFramework,
+            );
+            if (llmCode) {
+                return { ...inputs, llm_test_code: llmCode };
+            }
+            return inputs;
+        }
+
+        if (skillId === 'type-coverage-reporter') {
+            // Skip if caller already supplied a real tsc_result
+            if (
+                inputs['tsc_result'] !== null &&
+                typeof inputs['tsc_result'] === 'object' &&
+                !Array.isArray(inputs['tsc_result'])
+            ) {
+                return inputs;
+            }
+            const targetDir = typeof inputs['target_dir'] === 'string' ? inputs['target_dir'] : '';
+            const workspaceRoot = typeof inputs['workspace_dir'] === 'string'
+                ? inputs['workspace_dir'] as string
+                : process.cwd();
+            const rootDir = targetDir ? resolvePath(workspaceRoot, targetDir) : workspaceRoot;
+            const tscResult = await runTypeCoverageWithTsc(rootDir);
+            if (tscResult) {
+                return { ...inputs, tsc_result: tscResult };
+            }
+            return inputs;
+        }
+
+        return inputs;
     }
 
     /**

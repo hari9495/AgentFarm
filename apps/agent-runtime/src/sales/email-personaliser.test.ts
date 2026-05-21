@@ -2,6 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { personaliseEmail } from './email-personaliser.js';
 
+// personaliseEmail now hard-requires ANTHROPIC_API_KEY to avoid silent 401 calls.
+// Set a dummy value for tests; fetch is mocked so the value is never sent.
+process.env['ANTHROPIC_API_KEY'] = process.env['ANTHROPIC_API_KEY'] ?? 'test-key';
+
 const mockProspect = {
     firstName: 'Jane',
     lastName: 'Smith',

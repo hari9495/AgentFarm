@@ -1,3 +1,4 @@
+> **Status:** Mixed planned + shipped behavior. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for the authoritative gap tracker.
 # AgentFarm Memory System
 
 > Last updated: May 10, 2026 | AgentFarm monorepo audit

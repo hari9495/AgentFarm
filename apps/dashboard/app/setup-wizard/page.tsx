@@ -183,6 +183,35 @@ const CONNECTOR_CATALOG: CatalogEntry[] = [
             { name: 'server_url', label: 'Appium Server URL', type: 'url', placeholder: 'http://localhost:4723', helpText: 'URL of your Appium server. Leave as default if running in the agent VM.', required: true },
         ],
     },
+    {
+        id: 'google_meet',
+        displayName: 'Google Meet',
+        authType: 'oauth',
+        fields: [
+            { name: 'client_id', label: 'OAuth Client ID', type: 'secret', placeholder: 'your-google-client-id', helpText: 'Create an OAuth 2.0 Client ID in Google Cloud Console with Calendar and Meet scopes.', required: true },
+            { name: 'client_secret', label: 'OAuth Client Secret', type: 'secret', placeholder: 'your-google-client-secret', required: true },
+        ],
+    },
+    {
+        id: 'microsoft_teams',
+        displayName: 'Microsoft Teams',
+        authType: 'oauth',
+        fields: [
+            { name: 'tenant_id', label: 'Azure Tenant ID', type: 'text', placeholder: 'your-tenant-id', required: true },
+            { name: 'client_id', label: 'App Registration Client ID', type: 'secret', placeholder: 'your-client-id', required: true },
+            { name: 'client_secret', label: 'App Registration Secret', type: 'secret', placeholder: 'your-client-secret', required: true },
+        ],
+    },
+    {
+        id: 'zoom',
+        displayName: 'Zoom',
+        authType: 'oauth',
+        fields: [
+            { name: 'account_id', label: 'Zoom Account ID', type: 'text', placeholder: 'your-account-id', required: true },
+            { name: 'client_id', label: 'OAuth Client ID', type: 'secret', placeholder: 'your-zoom-client-id', helpText: 'Create a Server-to-Server OAuth app in the Zoom App Marketplace.', required: true },
+            { name: 'client_secret', label: 'OAuth Client Secret', type: 'secret', placeholder: 'your-zoom-client-secret', required: true },
+        ],
+    },
 ];
 
 // ---------------------------------------------------------------------------
@@ -190,7 +219,7 @@ const CONNECTOR_CATALOG: CatalogEntry[] = [
 // ---------------------------------------------------------------------------
 
 const ROLE_SUGGESTED_CONNECTORS: Record<string, string[]> = {
-    tester: ['github', 'jira', 'testrail', 'zephyr', 'newman', 'owasp_zap'],
+    tester: ['github', 'jira', 'testrail', 'zephyr', 'newman', 'owasp_zap', 'google_meet', 'microsoft_teams', 'zoom'],
     developer: ['github', 'jira', 'slack', 'linear'],
     fullstack_developer: ['github', 'jira', 'slack'],
     business_analyst: ['jira', 'notion', 'slack'],

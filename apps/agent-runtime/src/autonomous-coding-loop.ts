@@ -13,7 +13,7 @@
 import { writeFile, readFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { getSkillHandler } from './skill-execution-engine.js';
+import { getSkillHandler, analyzeIssueWithLLM, synthesizeCodeFixWithLLM, analyzeDiffWithLLM } from './skill-execution-engine.js';
 import { executeLocalWorkspaceAction } from './local-workspace-executor.js';
 import { signOutbound } from './outbound-signer.js';
 import type { AgentPersonaRecord } from '@agentfarm/shared-types';
@@ -63,10 +63,16 @@ export type AutonomousLoopInput = {
     workspace_key?: string;
     /** Maximum fix-attempt cycles before giving up */
     max_fix_attempts?: number;
-    /** Skip real git/file operations — when true (or omitted) uses plan-only mode */
+    /** Skip real git/file operations — when true uses plan-only mode; defaults to live execution */
     dry_run?: boolean;
     /** Agent persona — used to sign outbound messages (e.g. PR body disclosure) */
     persona?: AgentPersonaRecord | null;
+    /**
+     * How long to poll the opened PR for review comments and respond to them.
+     * Set to 0 (default) to skip review-comment polling.
+     * Value is in minutes; the loop polls every 30 seconds.
+     */
+    pr_review_wait_mins?: number;
 };
 
 export type AutonomousLoopResult = {
@@ -137,7 +143,7 @@ function stepRecord(step: LoopStep): LoopStepRecord {
 // Core pipeline steps
 // ---------------------------------------------------------------------------
 
-function runAnalyzeIssue(input: AutonomousLoopInput): LoopStepRecord {
+async function runAnalyzeIssue(input: AutonomousLoopInput): Promise<LoopStepRecord> {
     const startedAt = Date.now();
     const handler = getSkillHandler('issue-autopilot');
     const record: LoopStepRecord = { step: 'analyze_issue', status: 'running', started_at: new Date().toISOString(), attempt: 1 };
@@ -146,11 +152,18 @@ function runAnalyzeIssue(input: AutonomousLoopInput): LoopStepRecord {
         return { ...record, status: 'failed', error: 'issue-autopilot skill handler not registered', completed_at: new Date().toISOString() };
     }
 
+    // Attempt LLM-based issue decomposition; fall back gracefully if unavailable
+    const llmPlan = await analyzeIssueWithLLM(
+        input.task_description,
+        `Autonomous loop task: ${input.task_description}`,
+    );
+
     const result = handler({
         issue_number: input.issue_number ?? 0,
         issue_title: input.task_description,
         issue_body: `Autonomous loop task: ${input.task_description}`,
         repo: input.repo ?? 'agentfarm/monorepo',
+        llm_plan: llmPlan ?? undefined,
     }, startedAt);
 
     return {
@@ -180,6 +193,42 @@ function runCreateBranch(branchName: string, dryRun: boolean): LoopStepRecord {
     };
 }
 
+async function executeCreateBranch(
+    branchName: string,
+    input: AutonomousLoopInput,
+    workspaceKey: string,
+): Promise<LoopStepRecord> {
+    const record: LoopStepRecord = { step: 'create_branch', status: 'running', started_at: new Date().toISOString(), attempt: 1 };
+
+    // Dry-run: use the skill plan without executing
+    if (input.dry_run === true) {
+        return runCreateBranch(branchName, true);
+    }
+
+    const tenantId = input.tenantId ?? '';
+    const botId = input.botId ?? '';
+    if (!tenantId || !botId) {
+        return { ...record, status: 'failed', completed_at: new Date().toISOString(), error: 'tenantId and botId are required for live git branch execution.' };
+    }
+
+    // Execute the branch creation via workspace executor (real git checkout -b)
+    const gitResult = await executeLocalWorkspaceAction({
+        tenantId,
+        botId,
+        taskId: workspaceKey,
+        actionType: 'git_branch',
+        payload: { branch_name: branchName, task_description: branchName, task_type: 'feat' },
+    });
+
+    return {
+        ...record,
+        status: gitResult.ok ? 'success' : 'failed',
+        completed_at: new Date().toISOString(),
+        output: { branch_name: branchName, git_output: gitResult.output },
+        error: gitResult.ok ? undefined : (gitResult.errorOutput ?? 'git branch creation failed'),
+    };
+}
+
 async function runImplementChanges(
     input: AutonomousLoopInput,
     branchName: string,
@@ -188,7 +237,7 @@ async function runImplementChanges(
     const record: LoopStepRecord = { step: 'implement_changes', status: 'running', started_at: new Date().toISOString(), attempt: 1 };
 
     // Dry-run: return a structured plan without executing any file writes
-    if (input.dry_run !== false) {
+    if (input.dry_run === true) {
         const changes = (input.target_files ?? ['src/index.ts']).map((file) => ({
             file,
             action: 'edit',
@@ -202,7 +251,7 @@ async function runImplementChanges(
         };
     }
 
-    // Live mode: call code_edit for each file that has content provided
+    // Live mode: call code_edit for each file
     const tenantId = input.tenantId ?? '';
     const botId = input.botId ?? '';
     if (!tenantId || !botId) {
@@ -216,29 +265,69 @@ async function runImplementChanges(
         return { ...record, status: 'success', completed_at: new Date().toISOString(), output: { branch: branchName, note: 'No target_files specified — nothing to write.' } };
     }
 
-    const results: Array<{ file: string; ok?: boolean; output?: string; error?: string; skipped?: boolean }> = [];
+    const results: Array<{ file: string; ok?: boolean; output?: string; error?: string; skipped?: boolean; synthesized?: boolean }> = [];
     for (const file of targetFiles) {
-        const edit = fileEdits.find((e) => e.file === file);
-        if (!edit) {
+        const explicitEdit = fileEdits.find((e) => e.file === file);
+        let content: string | null = explicitEdit?.content ?? null;
+        let synthesized = false;
+
+        // If no explicit content provided, synthesize via LLM (live mode only)
+        if (!content) {
+            const apiKey = process.env['ANTHROPIC_API_KEY'];
+            if (apiKey) {
+                try {
+                    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+                        method: 'POST',
+                        headers: {
+                            'x-api-key': apiKey,
+                            'anthropic-version': '2023-06-01',
+                            'content-type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            model: 'claude-haiku-4-5',
+                            max_tokens: 2048,
+                            messages: [{
+                                role: 'user',
+                                content: `You are a TypeScript developer. Generate the complete file content for "${file}" to implement the following task:\n\n${input.task_description}\n\nReturn ONLY the raw file content with no markdown fences or explanation.`,
+                            }],
+                        }),
+                    });
+                    if (resp.ok) {
+                        const json = await resp.json() as { content?: Array<{ type: string; text?: string }> };
+                        const text = json.content?.find((c) => c.type === 'text')?.text;
+                        if (text?.trim()) {
+                            content = text.trim();
+                            synthesized = true;
+                        }
+                    }
+                } catch {
+                    // LLM synthesis failed — skip this file rather than writing garbage
+                }
+            }
+        }
+
+        if (!content) {
             results.push({ file, skipped: true });
             continue;
         }
+
         const editResult = await executeLocalWorkspaceAction({
             tenantId,
             botId,
             taskId: workspaceKey,
             actionType: 'code_edit',
-            payload: { workspace_key: workspaceKey, file_path: file, content: edit.content },
+            payload: { workspace_key: workspaceKey, file_path: file, content },
         });
-        results.push({ file, ok: editResult.ok, output: editResult.output, error: editResult.errorOutput });
+        results.push({ file, ok: editResult.ok, output: editResult.output, error: editResult.errorOutput, synthesized });
     }
 
     const anyFailed = results.some((r) => r.ok === false);
+    const synthesizedCount = results.filter((r) => r.synthesized).length;
     return {
         ...record,
         status: anyFailed ? 'failed' : 'success',
         completed_at: new Date().toISOString(),
-        output: { branch: branchName, results },
+        output: { branch: branchName, results, synthesized_files: synthesizedCount },
         error: anyFailed ? 'One or more file edits failed — see output.results for detail.' : undefined,
     };
 }
@@ -247,7 +336,7 @@ async function runTests(input: AutonomousLoopInput, workspaceKey: string): Promi
     const record: LoopStepRecord = { step: 'run_tests', status: 'running', started_at: new Date().toISOString(), attempt: 1 };
 
     // Dry-run: return simulated passing result
-    if (input.dry_run !== false) {
+    if (input.dry_run === true) {
         const passed = Math.floor(Math.random() * 50) + 250;
         return {
             ...record,
@@ -281,22 +370,96 @@ async function runTests(input: AutonomousLoopInput, workspaceKey: string): Promi
     };
 }
 
-function runFixFailures(taskDescription: string, testOutput: unknown, attempt: number): LoopStepRecord {
+async function runFixFailures(
+    taskDescription: string,
+    testOutput: unknown,
+    attempt: number,
+    input: AutonomousLoopInput,
+    workspaceKey: string,
+): Promise<LoopStepRecord> {
     const record: LoopStepRecord = { step: 'fix_failures', status: 'running', started_at: new Date().toISOString(), attempt };
+
+    // Step 1: Diagnose the failure using ci-failure-explainer
     const handler = getSkillHandler('ci-failure-explainer');
-    if (!handler) {
-        return { ...record, status: 'failed', error: 'ci-failure-explainer not registered', completed_at: new Date().toISOString() };
+    const diagnosisResult = handler
+        ? handler({ ci_log: JSON.stringify(testOutput), job_name: 'unit-tests', repo: 'agentfarm/monorepo' }, Date.now())
+        : null;
+
+    // Step 2: Ask LLM for a targeted code fix (search-and-replace patches)
+    const testOutputStr = typeof testOutput === 'string'
+        ? testOutput
+        : JSON.stringify(testOutput ?? '').slice(0, 4000);
+
+    const patches = input.dry_run
+        ? null
+        : await synthesizeCodeFixWithLLM(
+            testOutputStr,
+            taskDescription,
+            input.target_files ?? [],
+        );
+
+    // Step 3: In live mode, apply each patch via code_read + code_edit
+    const appliedFiles: string[] = [];
+    const applyErrors: string[] = [];
+
+    if (!input.dry_run && patches && patches.length > 0 && input.tenantId && input.botId) {
+        for (const patch of patches) {
+            // Read current file content
+            const readResult = await executeLocalWorkspaceAction({
+                tenantId: input.tenantId,
+                botId: input.botId,
+                taskId: workspaceKey,
+                actionType: 'code_read',
+                payload: { workspace_key: workspaceKey, file_path: patch.filePath },
+            });
+
+            if (!readResult.ok) {
+                applyErrors.push(`Could not read ${patch.filePath}: ${readResult.errorOutput ?? 'unknown error'}`);
+                continue;
+            }
+
+            const original = readResult.output;
+            if (!original.includes(patch.searchString)) {
+                applyErrors.push(`Search string not found in ${patch.filePath} — skipping patch`);
+                continue;
+            }
+
+            // Apply the replacement (first occurrence only, as the LLM targets a specific site)
+            const fixed = original.replace(patch.searchString, patch.replacement);
+
+            const editResult = await executeLocalWorkspaceAction({
+                tenantId: input.tenantId,
+                botId: input.botId,
+                taskId: workspaceKey,
+                actionType: 'code_edit',
+                payload: { workspace_key: workspaceKey, file_path: patch.filePath, content: fixed },
+            });
+
+            if (editResult.ok) {
+                appliedFiles.push(patch.filePath);
+            } else {
+                applyErrors.push(`Edit failed for ${patch.filePath}: ${editResult.errorOutput ?? 'unknown error'}`);
+            }
+        }
     }
-    const result = handler({
-        ci_log: JSON.stringify(testOutput),
-        job_name: 'unit-tests',
-        repo: 'agentfarm/monorepo',
-    }, Date.now());
+
+    const realFixApplied = appliedFiles.length > 0;
+    const status = diagnosisResult || realFixApplied ? 'success' : 'failed';
+
     return {
         ...record,
-        status: 'success',
+        status,
         completed_at: new Date().toISOString(),
-        output: { analysis: result, task: taskDescription, auto_fix_applied: true },
+        output: {
+            diagnosis: diagnosisResult,
+            task: taskDescription,
+            patches_suggested: patches?.length ?? 0,
+            files_patched: appliedFiles,
+            apply_errors: applyErrors,
+            dry_run: input.dry_run ?? false,
+            auto_fix_applied: realFixApplied,
+        },
+        error: status === 'failed' ? 'No diagnosis and no fix applied' : undefined,
     };
 }
 
@@ -312,7 +475,7 @@ async function runCommitAndPush(
     const record: LoopStepRecord = { step: 'commit_push', status: 'running', started_at: new Date().toISOString(), attempt: 1 };
 
     // Dry-run: skip real git operations
-    if (input.dry_run !== false) {
+    if (input.dry_run === true) {
         return {
             ...record,
             status: 'success',
@@ -413,6 +576,166 @@ export async function createGitHubPR(params: {
     } catch (err) {
         return { ok: false, error: `PR creation failed: ${String(err)}` };
     }
+}
+
+// ---------------------------------------------------------------------------
+// PR review comment polling + automated response
+// ---------------------------------------------------------------------------
+
+export type PRReviewPollResult = {
+    replied: number;
+    fixed: number;
+    errors: string[];
+    skipped_dry_run: boolean;
+};
+
+/**
+ * Polls the opened PR for review comments for up to `pollDurationMs` milliseconds
+ * (polls every 30 s). For each pending review comment:
+ *   - Requests a code-level fix via LLM → applies via code_edit if applicable
+ *   - Posts a reply comment explaining the resolution
+ *
+ * Designed to be called after runCreatePr succeeds. Safe to call with no env
+ * vars — returns early with skipped_dry_run:false, errors listing the missing config.
+ */
+export async function pollAndRespondPRComments(params: {
+    prNumber: number;
+    owner: string;
+    repo: string;
+    token: string;
+    input: AutonomousLoopInput;
+    workspaceKey: string;
+    pollDurationMs?: number;
+    fetchImpl?: typeof fetch;
+}): Promise<PRReviewPollResult> {
+    const { prNumber, owner, repo, token, input, workspaceKey } = params;
+    const fetchImpl = params.fetchImpl ?? fetch;
+    const pollDurationMs = params.pollDurationMs ?? 0;
+    const result: PRReviewPollResult = { replied: 0, fixed: 0, errors: [], skipped_dry_run: false };
+
+    if (input.dry_run) {
+        result.skipped_dry_run = true;
+        return result;
+    }
+    if (!token || !owner || !repo) {
+        result.errors.push('Missing GITHUB_TOKEN, GITHUB_OWNER, or GITHUB_REPO');
+        return result;
+    }
+
+    const githubHeaders = {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+    };
+
+    const deadline = Date.now() + pollDurationMs;
+    const pollInterval = 30_000;
+    const seenCommentIds = new Set<number>();
+
+    const processBatch = async (): Promise<void> => {
+        // Fetch pull request review comments (inline code comments)
+        let reviewComments: Array<{ id: number; body: string; path: string; line?: number; position?: number }> = [];
+        try {
+            const commentsResp = await fetchImpl(
+                `https://api.github.com/repos/${owner}/${repo}/pulls/${prNumber}/comments?per_page=50`,
+                { headers: githubHeaders },
+            );
+            if (commentsResp.ok) {
+                reviewComments = await commentsResp.json() as typeof reviewComments;
+            }
+        } catch (err) {
+            result.errors.push(`Failed to fetch review comments: ${String(err)}`);
+            return;
+        }
+
+        for (const comment of reviewComments) {
+            if (seenCommentIds.has(comment.id)) continue;
+            seenCommentIds.add(comment.id);
+
+            const filePath = comment.path;
+            const lineNumber = comment.line ?? comment.position ?? 0;
+            const commentBody = comment.body ?? '';
+
+            // Use LLM to analyse the review comment and decide on a response
+            const analysis = await analyzeDiffWithLLM(commentBody, filePath, lineNumber);
+
+            let replyBody: string;
+            let fixApplied = false;
+
+            if (analysis) {
+                // Attempt to synthesize a code fix for concrete concerns
+                const patches = input.target_files || filePath
+                    ? await synthesizeCodeFixWithLLM(
+                        `Review comment on ${filePath}:${lineNumber} — ${commentBody}`,
+                        input.task_description,
+                        filePath ? [filePath] : (input.target_files ?? []),
+                    )
+                    : null;
+
+                if (patches && patches.length > 0 && input.tenantId && input.botId) {
+                    for (const patch of patches) {
+                        const readResult = await executeLocalWorkspaceAction({
+                            tenantId: input.tenantId,
+                            botId: input.botId,
+                            taskId: workspaceKey,
+                            actionType: 'code_read',
+                            payload: { workspace_key: workspaceKey, file_path: patch.filePath },
+                        });
+                        if (readResult.ok && readResult.output.includes(patch.searchString)) {
+                            const fixed = readResult.output.replace(patch.searchString, patch.replacement);
+                            const editResult = await executeLocalWorkspaceAction({
+                                tenantId: input.tenantId,
+                                botId: input.botId,
+                                taskId: workspaceKey,
+                                actionType: 'code_edit',
+                                payload: { workspace_key: workspaceKey, file_path: patch.filePath, content: fixed },
+                            });
+                            if (editResult.ok) {
+                                result.fixed++;
+                                fixApplied = true;
+                            }
+                        }
+                    }
+                }
+
+                replyBody = fixApplied
+                    ? `Thanks for the review! I've applied the fix: ${analysis.suggestion}`
+                    : `Acknowledged — ${analysis.concern}. ${analysis.suggestion}`;
+            } else {
+                replyBody = 'Acknowledged — will address in follow-up.';
+            }
+
+            // Post reply to the review comment
+            try {
+                const replyResp = await fetchImpl(
+                    `https://api.github.com/repos/${owner}/${repo}/pulls/${prNumber}/comments/${comment.id}/replies`,
+                    {
+                        method: 'POST',
+                        headers: { ...githubHeaders, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ body: replyBody }),
+                    },
+                );
+                if (replyResp.ok) {
+                    result.replied++;
+                } else {
+                    result.errors.push(`Reply to comment ${comment.id} failed: ${replyResp.status}`);
+                }
+            } catch (err) {
+                result.errors.push(`Reply to comment ${comment.id} threw: ${String(err)}`);
+            }
+        }
+    };
+
+    // Initial pass
+    await processBatch();
+
+    // Continue polling until the deadline (if a positive duration was given)
+    while (Date.now() < deadline) {
+        await new Promise<void>((resolve) => setTimeout(resolve, pollInterval));
+        await processBatch();
+    }
+
+    return result;
 }
 
 async function runCreatePr(input: AutonomousLoopInput, branchName: string, steps: LoopStepRecord[]): Promise<LoopStepRecord> {
@@ -529,15 +852,15 @@ export async function runAutonomousLoop(input: AutonomousLoopInput): Promise<Aut
         stepRecord('create_pr'),
     ];
 
-    // Step 1: Analyze issue
-    steps[0] = runAnalyzeIssue(input);
+    // Step 1: Analyze issue (LLM-enhanced when ANTHROPIC_API_KEY available)
+    steps[0] = await runAnalyzeIssue(input);
     await saveCheckpoint(loopId, steps);
     if (steps[0].status === 'failed') {
         return buildResult(input, steps, branchName, loopId, startTime, 'Issue analysis failed — loop aborted.');
     }
 
-    // Step 2: Create branch
-    steps[1] = runCreateBranch(branchName, input.dry_run !== false);
+    // Step 2: Create branch (executes real git checkout -b in live mode)
+    steps[1] = await executeCreateBranch(branchName, input, workspaceKey);
     await saveCheckpoint(loopId, steps);
     if (steps[1].status === 'failed') {
         return buildResult(input, steps, branchName, loopId, startTime, 'Branch creation failed — loop aborted.');
@@ -554,7 +877,7 @@ export async function runAutonomousLoop(input: AutonomousLoopInput): Promise<Aut
 
     while (testRecord.status === 'failed' && fixAttempts < maxFixAttempts) {
         fixAttempts++;
-        const fixRecord = runFixFailures(input.task_description, testRecord.output, fixAttempts);
+        const fixRecord = await runFixFailures(input.task_description, testRecord.output, fixAttempts, input, workspaceKey);
         fixRecords.push(fixRecord);
         await saveCheckpoint(loopId, [...steps, ...fixRecords]);
         testRecord = await runTests(input, workspaceKey);
@@ -584,6 +907,31 @@ export async function runAutonomousLoop(input: AutonomousLoopInput): Promise<Aut
     const prIndex = steps.findIndex((s) => s.step === 'create_pr');
     steps[prIndex] = await runCreatePr(input, branchName, steps);
     const checkpointFile = await saveCheckpoint(loopId, steps);
+
+    // Step 7 (optional): Poll PR for review comments and respond
+    const prReviewMins = input.pr_review_wait_mins ?? 0;
+    if (
+        prReviewMins > 0 &&
+        !input.dry_run &&
+        steps[prIndex].status === 'success' &&
+        typeof (steps[prIndex].output as Record<string, unknown>)?.['pr_number'] === 'number'
+    ) {
+        const prNumber = (steps[prIndex].output as Record<string, unknown>)['pr_number'] as number;
+        const token = process.env['GITHUB_TOKEN'] ?? '';
+        const owner = process.env['GITHUB_OWNER'] ?? '';
+        const repo = process.env['GITHUB_REPO'] ?? '';
+        if (token && owner && repo) {
+            await pollAndRespondPRComments({
+                prNumber,
+                owner,
+                repo,
+                token,
+                input,
+                workspaceKey,
+                pollDurationMs: prReviewMins * 60 * 1000,
+            });
+        }
+    }
 
     const allOk = steps.every((s) => s.status === 'success' || s.status === 'skipped');
     return buildResult(
