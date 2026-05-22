@@ -22,6 +22,20 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, resolve, relative } from 'node:path';
 import type { LocalWorkspaceResult } from './local-workspace-executor.js';
 import { buildTechnicalWriterStandupSummary } from './technical-writer-standup-builder.js';
+import {
+    buildInterviewPlanFromCode,
+    buildInterviewPlanFromDescription,
+    synthesiseDocBrief,
+    type SmeInterviewQuestion,
+    type SmeInterviewResponse,
+} from './technical-writer/sme-interview-builder.js';
+import {
+    buildSprintDoc,
+    type SprintDocType,
+    type SprintData,
+    type UserStory,
+    type RetroItem,
+} from './technical-writer/sprint-doc-builder.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -33,7 +47,9 @@ export type TechnicalWriterActionType =
     | 'workspace_tw_api_doc_code'
     | 'workspace_tw_release_notes'
     | 'workspace_tw_style_check'
-    | 'workspace_tw_standup_report';
+    | 'workspace_tw_standup_report'
+    | 'workspace_tw_sme_interview'
+    | 'workspace_tw_sprint_doc';
 
 export function isTechnicalWriterActionType(t: string): t is TechnicalWriterActionType {
     return (
@@ -42,7 +58,9 @@ export function isTechnicalWriterActionType(t: string): t is TechnicalWriterActi
         t === 'workspace_tw_api_doc_code' ||
         t === 'workspace_tw_release_notes' ||
         t === 'workspace_tw_style_check' ||
-        t === 'workspace_tw_standup_report'
+        t === 'workspace_tw_standup_report' ||
+        t === 'workspace_tw_sme_interview' ||
+        t === 'workspace_tw_sprint_doc'
     );
 }
 
@@ -915,6 +933,20 @@ const JARGON_PATTERNS: Array<{ re: RegExp; suggestion: string }> = [
     { re: /\brobust\b/gi, suggestion: 'Describe the specific reliability property' },
     { re: /\bbest.in.class\b/gi, suggestion: 'Use a measurable claim' },
     { re: /\bworld.class\b/gi, suggestion: 'Use a measurable claim' },
+    { re: /\bcutting.edge\b/gi, suggestion: 'Describe the specific technology or advantage' },
+    { re: /\bgame.changer?\b/gi, suggestion: 'Describe the specific impact' },
+    { re: /\bvery\s+\w/gi, suggestion: 'Use a stronger, more precise adjective' },
+    { re: /\bquite\s+\w/gi, suggestion: 'Remove "quite" or use a precise descriptor' },
+    { re: /\brather\s+\w/gi, suggestion: 'Remove "rather" or use a precise descriptor' },
+];
+
+const INCLUSIVE_LANGUAGE_PATTERNS: Array<{ re: RegExp; rule: string; suggestion: string }> = [
+    { re: /\bblacklist(?:ed|ing|s)?\b/gi, rule: 'inclusive-no-blacklist', suggestion: 'Use "denylist" or "blocklist"' },
+    { re: /\bwhitelist(?:ed|ing|s)?\b/gi, rule: 'inclusive-no-whitelist', suggestion: 'Use "allowlist"' },
+    { re: /\b(?:master[\s/-]slave|slave[\s/-]master)\b/gi, rule: 'inclusive-no-master-slave', suggestion: 'Use "primary/replica" or "leader/follower"' },
+    { re: /\bmaster\s+branch\b/gi, rule: 'inclusive-no-master-branch', suggestion: 'Use "main branch"' },
+    { re: /\bsanity[\s-]check\b/gi, rule: 'inclusive-no-sanity-check', suggestion: 'Use "quick check" or "validity check"' },
+    { re: /\bdummy\s+(?:data|value|variable|record|entry)\b/gi, rule: 'inclusive-no-dummy', suggestion: 'Use "placeholder", "sample", or "stub"' },
 ];
 
 const SENTENCE_MAX_WORDS = 35;
@@ -1002,6 +1034,32 @@ function checkProseStyle(content: string, filePath: string): StyleFileResult {
             }
         }
 
+        // Inclusive language
+        for (const { re, rule, suggestion } of INCLUSIVE_LANGUAGE_PATTERNS) {
+            re.lastIndex = 0;
+            let m: RegExpExecArray | null;
+            while ((m = re.exec(line)) !== null) {
+                violations.push({
+                    line: humanLineNo,
+                    col: m.index + 1,
+                    rule,
+                    text: m[0],
+                    suggestion,
+                });
+            }
+        }
+
+        // Double space
+        if (/\w {2,}\w/.test(line)) {
+            violations.push({
+                line: humanLineNo,
+                col: 1,
+                rule: 'double-space',
+                text: line.slice(0, 60),
+                suggestion: 'Replace double spaces with a single space.',
+            });
+        }
+
         // Trailing whitespace
         if (line !== line.trimEnd()) {
             violations.push({
@@ -1084,6 +1142,61 @@ function buildGitLogArgs(options: {
     }
 
     return args;
+}
+
+// ---------------------------------------------------------------------------
+// Payload parsers for new action types
+// ---------------------------------------------------------------------------
+
+function buildSprintContextFromPayload(payload: Record<string, unknown>) {
+    const sprintNumber = typeof payload['sprint_number'] === 'number' ? payload['sprint_number'] : undefined;
+    const sprintGoal = typeof payload['sprint_goal'] === 'string' ? payload['sprint_goal'] : undefined;
+    const daysRemaining = typeof payload['sprint_days_remaining'] === 'number' ? payload['sprint_days_remaining'] : undefined;
+    const docsUpdatedThisSprint = typeof payload['docs_updated_this_sprint'] === 'number' ? payload['docs_updated_this_sprint'] : undefined;
+    const docImpactStories = Array.isArray(payload['doc_impact_stories'])
+        ? (payload['doc_impact_stories'] as unknown[]).filter((s): s is string => typeof s === 'string')
+        : undefined;
+
+    if (sprintNumber === undefined && sprintGoal === undefined && daysRemaining === undefined) return undefined;
+
+    return { sprintNumber, sprintGoal, daysRemaining, docsUpdatedThisSprint, docImpactStories };
+}
+
+function parseUserStories(raw: unknown): UserStory[] {
+    if (!Array.isArray(raw)) return [];
+    return raw.flatMap((s) => {
+        if (typeof s !== 'object' || s === null) return [];
+        const obj = s as Record<string, unknown>;
+        return [{
+            id: String(obj['id'] ?? ''),
+            title: String(obj['title'] ?? ''),
+            asA: String(obj['as_a'] ?? obj['asA'] ?? ''),
+            iWant: String(obj['i_want'] ?? obj['iWant'] ?? ''),
+            soThat: String(obj['so_that'] ?? obj['soThat'] ?? ''),
+            acceptanceCriteria: Array.isArray(obj['acceptance_criteria'])
+                ? (obj['acceptance_criteria'] as unknown[]).filter((ac): ac is string => typeof ac === 'string')
+                : [],
+            points: typeof obj['points'] === 'number' ? obj['points'] : undefined,
+            status: typeof obj['status'] === 'string' ? obj['status'] : undefined,
+            docImpact: Array.isArray(obj['doc_impact'])
+                ? (obj['doc_impact'] as unknown[]).filter((d): d is string => typeof d === 'string')
+                : undefined,
+        }];
+    });
+}
+
+function parseRetroItems(raw: unknown): RetroItem[] {
+    if (!Array.isArray(raw)) return [];
+    return raw.flatMap((item) => {
+        if (typeof item !== 'object' || item === null) return [];
+        const obj = item as Record<string, unknown>;
+        const category = String(obj['category'] ?? 'went-well') as RetroItem['category'];
+        return [{
+            category,
+            text: String(obj['text'] ?? ''),
+            owner: typeof obj['owner'] === 'string' ? obj['owner'] : undefined,
+        }];
+    });
 }
 
 // ---------------------------------------------------------------------------
@@ -1436,10 +1549,14 @@ export async function handleTechnicalWriterAction(params: {
         // Generate a structured standup summary from episodic memory.
         //
         // payload:
-        //   recent_memory?  — array of memory string records
-        //   bot_name?       — display name of the TW agent
-        //   team_name?      — display name of the team
-        //   dry_run?        — return summary only (default: true)
+        //   recent_memory?            — array of memory string records
+        //   bot_name?                 — display name of the TW agent
+        //   team_name?                — display name of the team
+        //   sprint_number?            — current sprint number
+        //   sprint_goal?              — sprint goal text
+        //   sprint_days_remaining?    — calendar days left in the sprint
+        //   docs_updated_this_sprint? — count of doc sections updated
+        //   doc_impact_stories?       — string[] of story IDs with doc impact
         // ------------------------------------------------------------------
         case 'workspace_tw_standup_report': {
             const rawMemory = Array.isArray(payload['recent_memory'])
@@ -1453,9 +1570,182 @@ export async function handleTechnicalWriterAction(params: {
                 ? payload['team_name'].trim()
                 : 'the team';
 
-            const summary = buildTechnicalWriterStandupSummary(rawMemory, { botName, teamName });
+            const sprintContext = buildSprintContextFromPayload(payload);
+
+            const summary = buildTechnicalWriterStandupSummary(rawMemory, { botName, teamName, sprintContext });
 
             return safeJson({ dry_run: true, summary });
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_tw_sme_interview
+        // Generate an SME interview plan from source code or a feature
+        // description, or synthesise SME responses into a doc brief.
+        //
+        // payload:
+        //   mode             — 'plan_from_code' | 'plan_from_description' | 'synthesise'
+        //   source_file?     — path to source file (mode: plan_from_code)
+        //   source_content?  — inline source code (alternative to source_file)
+        //   feature_summary? — short context for the interview plan
+        //   description?     — feature description text (mode: plan_from_description)
+        //   title?           — title for the plan or brief
+        //   questions?       — array of SmeInterviewQuestion (mode: synthesise)
+        //   responses?       — array of SmeInterviewResponse (mode: synthesise)
+        //   output_path?     — path to write the markdown output
+        // ------------------------------------------------------------------
+        case 'workspace_tw_sme_interview': {
+            try {
+                const mode = typeof payload['mode'] === 'string' ? payload['mode'] : 'plan_from_description';
+                const outputPath = typeof payload['output_path'] === 'string' ? payload['output_path'].trim() : '';
+
+                if (mode === 'plan_from_code') {
+                    let source = typeof payload['source_content'] === 'string' ? payload['source_content'] : '';
+                    const sourceFilePath = typeof payload['source_file'] === 'string' ? payload['source_file'].trim() : '';
+
+                    if (!source && sourceFilePath) {
+                        const content = await readDocFile(workspaceDir, sourceFilePath);
+                        if (content === null) {
+                            return { ok: false, output: '', errorOutput: `Source file not found: ${sourceFilePath}` };
+                        }
+                        source = content;
+                    }
+
+                    if (!source) {
+                        return { ok: false, output: '', errorOutput: 'payload.source_file or payload.source_content is required for mode plan_from_code.' };
+                    }
+
+                    const featureSummary = typeof payload['feature_summary'] === 'string' ? payload['feature_summary'] : '';
+                    const plan = buildInterviewPlanFromCode(source, sourceFilePath || 'source', featureSummary);
+
+                    if (outputPath) await writeDocFile(workspaceDir, outputPath, plan.markdownOutput);
+
+                    return safeJson({
+                        mode: 'plan_from_code',
+                        title: plan.title,
+                        question_count: plan.questions.length,
+                        markdown_output: plan.markdownOutput,
+                        written_to: outputPath || null,
+                    });
+                }
+
+                if (mode === 'synthesise') {
+                    const rawQuestions = Array.isArray(payload['questions']) ? payload['questions'] : [];
+                    const rawResponses = Array.isArray(payload['responses']) ? payload['responses'] : [];
+
+                    const questions = rawQuestions.filter(
+                        (q): q is SmeInterviewQuestion =>
+                            typeof q === 'object' && q !== null &&
+                            typeof (q as Record<string, unknown>)['id'] === 'string' &&
+                            typeof (q as Record<string, unknown>)['question'] === 'string',
+                    );
+                    const responses = rawResponses.filter(
+                        (r): r is SmeInterviewResponse =>
+                            typeof r === 'object' && r !== null &&
+                            typeof (r as Record<string, unknown>)['questionId'] === 'string' &&
+                            typeof (r as Record<string, unknown>)['answer'] === 'string',
+                    );
+
+                    if (questions.length === 0) {
+                        return { ok: false, output: '', errorOutput: 'payload.questions array is required for mode synthesise.' };
+                    }
+
+                    const brief = synthesiseDocBrief(questions, responses);
+
+                    if (outputPath) await writeDocFile(workspaceDir, outputPath, brief.markdownBrief);
+
+                    return safeJson({
+                        mode: 'synthesise',
+                        title: brief.title,
+                        key_points: brief.keyPoints.length,
+                        open_questions: brief.openQuestions.length,
+                        markdown_brief: brief.markdownBrief,
+                        written_to: outputPath || null,
+                    });
+                }
+
+                // Default: plan_from_description
+                const description = typeof payload['description'] === 'string' ? payload['description'] : '';
+                const title = typeof payload['title'] === 'string' ? payload['title'] : '';
+
+                if (!description && !title) {
+                    return { ok: false, output: '', errorOutput: 'payload.description or payload.title is required for mode plan_from_description.' };
+                }
+
+                const plan = buildInterviewPlanFromDescription(description || title, title);
+
+                if (outputPath) await writeDocFile(workspaceDir, outputPath, plan.markdownOutput);
+
+                return safeJson({
+                    mode: 'plan_from_description',
+                    title: plan.title,
+                    question_count: plan.questions.length,
+                    markdown_output: plan.markdownOutput,
+                    written_to: outputPath || null,
+                });
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: String(err) };
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_tw_sprint_doc
+        // Generate Agile sprint documentation.
+        //
+        // payload:
+        //   doc_type      — 'review' | 'retrospective' | 'user_stories' |
+        //                   'acceptance_criteria' | 'sprint_plan'
+        //   sprint        — SprintData object
+        //   stories?      — array of UserStory objects
+        //   retro_items?  — array of RetroItem objects (for retrospective)
+        //   output_path?  — where to write the generated markdown
+        // ------------------------------------------------------------------
+        case 'workspace_tw_sprint_doc': {
+            try {
+                const docType = typeof payload['doc_type'] === 'string'
+                    ? (payload['doc_type'] as SprintDocType)
+                    : 'review';
+
+                const validDocTypes: SprintDocType[] = ['review', 'retrospective', 'user_stories', 'acceptance_criteria', 'sprint_plan'];
+                if (!validDocTypes.includes(docType)) {
+                    return { ok: false, output: '', errorOutput: `Invalid doc_type "${docType}". Must be one of: ${validDocTypes.join(', ')}.` };
+                }
+
+                const rawSprint = payload['sprint'] as Record<string, unknown> | undefined;
+                if (!rawSprint || typeof rawSprint !== 'object') {
+                    return { ok: false, output: '', errorOutput: 'payload.sprint (SprintData object) is required.' };
+                }
+
+                const sprintData: SprintData = {
+                    sprintNumber: typeof rawSprint['sprint_number'] === 'number' ? rawSprint['sprint_number'] : 0,
+                    teamName: typeof rawSprint['team_name'] === 'string' ? rawSprint['team_name'] : 'Team',
+                    startDate: typeof rawSprint['start_date'] === 'string' ? rawSprint['start_date'] : '',
+                    endDate: typeof rawSprint['end_date'] === 'string' ? rawSprint['end_date'] : '',
+                    goals: Array.isArray(rawSprint['goals'])
+                        ? (rawSprint['goals'] as unknown[]).filter((g): g is string => typeof g === 'string')
+                        : [],
+                    velocity: typeof rawSprint['velocity'] === 'number' ? rawSprint['velocity'] : undefined,
+                    plannedPoints: typeof rawSprint['planned_points'] === 'number' ? rawSprint['planned_points'] : undefined,
+                    completedPoints: typeof rawSprint['completed_points'] === 'number' ? rawSprint['completed_points'] : undefined,
+                };
+
+                const stories = parseUserStories(payload['stories']);
+                const retroItems = parseRetroItems(payload['retro_items']);
+
+                const markdown = buildSprintDoc(docType, sprintData, stories, retroItems);
+
+                const outputPath = typeof payload['output_path'] === 'string' ? payload['output_path'].trim() : '';
+                if (outputPath) await writeDocFile(workspaceDir, outputPath, markdown);
+
+                return safeJson({
+                    doc_type: docType,
+                    sprint_number: sprintData.sprintNumber,
+                    story_count: stories.length,
+                    doc_content: markdown,
+                    written_to: outputPath || null,
+                });
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: String(err) };
+            }
         }
     }
 }

@@ -83,6 +83,23 @@ export function buildTechnicalWriterEpisodicPattern(
         return `tw:standup:${oc}`;
     }
 
+    // SME interview
+    if (at === 'workspace_tw_sme_interview') {
+        const mode = typeof result.executionPayload['mode'] === 'string'
+            ? result.executionPayload['mode']
+            : 'plan';
+        if (mode === 'synthesise') return `tw:sme_interview:brief:${oc}`;
+        return `tw:sme_interview:plan:${oc}`;
+    }
+
+    // Sprint doc
+    if (at === 'workspace_tw_sprint_doc') {
+        const docType = typeof result.executionPayload['doc_type'] === 'string'
+            ? result.executionPayload['doc_type']
+            : 'unknown';
+        return `tw:sprint_doc:${docType}:${oc}`;
+    }
+
     // Fallback
     return `tw:action:${oc}`;
 }
@@ -124,6 +141,23 @@ export function buildTechnicalWriterEpisodicSummary(
     }
     if (pattern === 'tw:pr:opened') {
         return `Documentation PR opened: ${taskLabel}`;
+    }
+
+    if (pattern.startsWith('tw:sme_interview:plan')) {
+        return `SME interview plan generated (mode: ${result.executionPayload['mode'] ?? 'plan'}): ${taskLabel}`;
+    }
+    if (pattern.startsWith('tw:sme_interview:brief')) {
+        const openQ = typeof result.executionPayload['open_questions'] === 'number'
+            ? ` — ${result.executionPayload['open_questions']} open question(s)`
+            : '';
+        return `SME doc brief synthesised${openQ}: ${taskLabel}`;
+    }
+
+    if (pattern.startsWith('tw:sprint_doc')) {
+        const docType = typeof result.executionPayload['doc_type'] === 'string'
+            ? result.executionPayload['doc_type']
+            : 'unknown';
+        return `Sprint ${docType} document built (sprint ${result.executionPayload['sprint_number'] ?? '?'}): ${taskLabel}`;
     }
 
     return `Technical writer action "${at}" completed with status "${oc}": ${taskLabel}`;
