@@ -480,4 +480,47 @@ export class RoutineScheduler {
             auditEvents: this.auditEvents.map((entry) => ({ ...entry })),
         };
     }
+
+    /**
+     * Register a daily 09:00 standup task for a Corporate Assistant agent.
+     *
+     * Creates a `ScheduledTaskRecord` with cron `0 9 * * *` and action type
+     * `workspace_ca_standup_report`.  The task is gated behind the
+     * `scheduler.ca_standup` feature flag — call
+     * `enableFeatureFlag('scheduler.ca_standup')` to activate it.
+     *
+     * Actual standup summary generation happens at execution time inside the
+     * agent-runtime's CA action handler (`workspace_ca_standup_report` →
+     * `buildCorporateAssistantStandupSummary`).
+     */
+    async registerCorporateAssistantDailyStandup(params: {
+        botId: string;
+        tenantId: string;
+        workspaceId: string;
+        correlationId: string;
+        config?: { botName?: string; teamName?: string; meetingType?: string };
+    }): Promise<ScheduledTaskRecord> {
+        return this.createScheduledTask({
+            botId: params.botId,
+            tenantId: params.tenantId,
+            workspaceId: params.workspaceId,
+            scheduleType: 'daily' as ScheduleType,
+            scheduleExpression: '0 9 * * *',
+            taskPayload: {
+                action: 'workspace_ca_standup_report',
+                bot_name: params.config?.botName ?? '',
+                team_name: params.config?.teamName ?? '',
+                meeting_type: params.config?.meetingType ?? 'standup',
+            },
+            policyPackVersion: '1.0.0',
+            policy: {
+                dedupeKey: `ca-standup-${params.botId}`,
+                concurrencyPolicy: 'skip',
+                maxRetries: 2,
+                retryBackoffMs: 5000,
+            } as SchedulePolicy,
+            featureFlagKey: 'scheduler.ca_standup',
+            correlationId: params.correlationId,
+        });
+    }
 }

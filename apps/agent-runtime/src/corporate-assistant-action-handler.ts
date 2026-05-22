@@ -52,7 +52,8 @@ export type CorporateAssistantActionType =
     | 'workspace_ca_document_create'
     | 'workspace_ca_document_update'
     | 'workspace_ca_escalate'
-    | 'workspace_ca_message_send';
+    | 'workspace_ca_message_send'
+    | 'workspace_ca_standup_report';
 
 export function isCorporateAssistantActionType(t: string): t is CorporateAssistantActionType {
     return (
@@ -65,7 +66,8 @@ export function isCorporateAssistantActionType(t: string): t is CorporateAssista
         t === 'workspace_ca_document_create' ||
         t === 'workspace_ca_document_update' ||
         t === 'workspace_ca_escalate' ||
-        t === 'workspace_ca_message_send'
+        t === 'workspace_ca_message_send' ||
+        t === 'workspace_ca_standup_report'
     );
 }
 
@@ -406,6 +408,34 @@ export async function handleCorporateAssistantAction(params: {
             } catch (err) {
                 return { ok: false, output: '', errorOutput: String(err) };
             }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_ca_standup_report
+        // Build a structured standup summary for the CA role and optionally
+        // speak it at a meeting.
+        // payload: { recent_memory?, bot_name?, team_name?, meeting_type? }
+        // ------------------------------------------------------------------
+        case 'workspace_ca_standup_report': {
+            const { buildCorporateAssistantStandupSummary, buildCorporateAssistantMeetingContext } =
+                await import('./corporate-assistant-standup-builder.js');
+            const botName = typeof payload['bot_name'] === 'string' && payload['bot_name'].trim()
+                ? payload['bot_name'].trim()
+                : 'AI Corporate Assistant';
+            const teamName = typeof payload['team_name'] === 'string' && payload['team_name'].trim()
+                ? payload['team_name'].trim()
+                : 'the team';
+            const rawMemory = Array.isArray(payload['recent_memory'])
+                ? (payload['recent_memory'] as unknown[]).filter((x) => typeof x === 'string') as string[]
+                : [];
+            const meetingType = (['standup', 'scrum_planning', 'sprint_review', 'retrospective', 'all_hands', 'one_on_one'] as const)
+                .includes(payload['meeting_type'] as never)
+                ? (payload['meeting_type'] as 'standup' | 'scrum_planning' | 'sprint_review' | 'retrospective' | 'all_hands' | 'one_on_one')
+                : 'standup';
+
+            const summary = buildCorporateAssistantStandupSummary(rawMemory, { botName, teamName });
+            const context = buildCorporateAssistantMeetingContext(meetingType, { botName, teamName, standupSummary: summary });
+            return safeJsonResult({ summary, context });
         }
 
         default: {

@@ -42,6 +42,7 @@ import {
 import type { AgentPersonaRecord } from '@agentfarm/shared-types';
 import { handleSalesAction } from './sales-action-handler.js';
 import { handleCorporateAssistantAction } from './corporate-assistant-action-handler.js';
+import { handleTesterAction } from './tester-action-handler.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -257,7 +258,8 @@ export type LocalWorkspaceActionType =
     | 'workspace_ca_document_create'
     | 'workspace_ca_document_update'
     | 'workspace_ca_escalate'
-    | 'workspace_ca_message_send';
+    | 'workspace_ca_message_send'
+    | 'workspace_ca_standup_report';
 
 export type LocalWorkspaceResult = {
     ok: boolean;
@@ -696,6 +698,7 @@ export const LOCAL_WORKSPACE_ACTION_TYPES = new Set<LocalWorkspaceActionType>([
     'workspace_ca_document_update',
     'workspace_ca_escalate',
     'workspace_ca_message_send',
+    'workspace_ca_standup_report',
 ]);
 
 // ---------------------------------------------------------------------------
@@ -8411,79 +8414,6 @@ export async function executeLocalWorkspaceAction(input: {
             };
         }
 
-        // workspace_standup_report: build a standup from episodic memory and speak it in the current meeting.
-        //
-        // payload:
-        //   recent_memory    – string[]  episodic memory lines from the last 24h (injected by runtime)
-        //   bot_name         – string    persona name (injected from agent persona)
-        //   team_name        – string    team channel or meeting name
-        //   meeting_url      – string?   if provided, join meeting first then speak
-        //   meeting_type     – 'standup' | 'scrum_planning' | 'sprint_review' | 'retrospective'
-        //   dry_run          – boolean
-        case 'workspace_standup_report': {
-            const { buildStandupSummary, buildMeetingContext } = await import('./tester-standup-builder.js');
-            const dryRun = payload['dry_run'] === true;
-            const botName = typeof payload['bot_name'] === 'string' && payload['bot_name'].trim()
-                ? payload['bot_name'].trim()
-                : 'AI Tester';
-            const teamName = typeof payload['team_name'] === 'string' && payload['team_name'].trim()
-                ? payload['team_name'].trim()
-                : 'the team';
-            const meetingType = (['standup', 'scrum_planning', 'sprint_review', 'retrospective'] as const)
-                .includes(payload['meeting_type'] as never)
-                ? (payload['meeting_type'] as 'standup' | 'scrum_planning' | 'sprint_review' | 'retrospective')
-                : 'standup';
-            const rawMemory = Array.isArray(payload['recent_memory'])
-                ? (payload['recent_memory'] as unknown[]).filter((x) => typeof x === 'string') as string[]
-                : [];
-
-            const summary = buildStandupSummary(rawMemory, { botName, teamName });
-            const context = buildMeetingContext(meetingType, { botName, teamName, standupSummary: summary });
-
-            if (dryRun) {
-                return {
-                    ok: true,
-                    output: JSON.stringify({ dry_run: true, summary, context }, null, 2),
-                };
-            }
-
-            // If a meeting URL was provided, join it first, then speak.
-            const meetingUrlRaw = typeof payload['meeting_url'] === 'string' ? payload['meeting_url'].trim() : '';
-            if (meetingUrlRaw) {
-                const joinResult = await executeLocalWorkspaceAction({
-                    tenantId,
-                    botId,
-                    taskId,
-                    actionType: 'workspace_meeting_join',
-                    payload: { meeting_url: meetingUrlRaw, mode: 'browser' },
-                    connectorActionExecuteClient,
-                });
-                if (!joinResult.ok) {
-                    return { ok: false, output: '', errorOutput: `Failed to join meeting: ${joinResult.errorOutput}` };
-                }
-                // Brief pause to let the meeting UI load
-                await new Promise<void>((resolve) => setTimeout(resolve, 4000));
-            }
-
-            const speakResult = await executeLocalWorkspaceAction({
-                tenantId,
-                botId,
-                taskId,
-                actionType: 'workspace_meeting_speak',
-                payload: {
-                    mode: 'statement',
-                    script: [context.openingStatement, context.closingStatement],
-                    pace_seconds: 3,
-                },
-                connectorActionExecuteClient,
-            });
-            return {
-                ok: speakResult.ok,
-                output: JSON.stringify({ summary, spoken: speakResult.ok }, null, 2),
-                errorOutput: speakResult.errorOutput,
-            };
-        }
-
         // workspace_exploratory_session: run an SFDPOT-guided exploratory testing session.
         //
         // payload:
@@ -11357,132 +11287,6 @@ export async function executeLocalWorkspaceAction(input: {
             }
         }
 
-        // Aggregate security findings from .agentfarm cache
-        case 'workspace_security_test_report': {
-            const cacheDir = join(workspaceDir, '.agentfarm');
-            const readJson = async (name: string): Promise<unknown> => {
-                const raw = await readFile(join(cacheDir, name), 'utf8').catch(() => null);
-                return raw ? JSON.parse(raw) : null;
-            };
-            const [sast, secrets, dast] = await Promise.all([
-                readJson('sast-result.json'),
-                readJson('secret-scan-result.json'),
-                readJson('dast-result.json'),
-            ]);
-            const report = {
-                sast: sast ?? 'No SAST results (run workspace_sast_scan first)',
-                secrets: secrets ?? 'No secret scan results (run workspace_secret_scan first)',
-                dast: dast ?? 'No DAST results (run workspace_dast_scan first)',
-            };
-            return { ok: true, output: JSON.stringify(report, null, 2), errorOutput: '' };
-        }
-
-        // Sync test cases to TestRail / Zephyr via connector
-        case 'workspace_test_case_sync': {
-            const provider = typeof payload['provider'] === 'string' ? payload['provider'] : 'testrail';
-            if (!connectorActionExecuteClient) {
-                // Local JSON fallback — persist test cases to .agentfarm/test-registry.json
-                const registryPath = join(workspaceDir, '.agentfarm', 'test-registry.json');
-                await mkdir(join(workspaceDir, '.agentfarm'), { recursive: true }).catch(() => undefined);
-                let registry: { provider: string; test_cases: unknown[]; runs: unknown[]; last_updated: string } = {
-                    provider: 'local',
-                    test_cases: [],
-                    runs: [],
-                    last_updated: new Date().toISOString(),
-                };
-                try {
-                    registry = JSON.parse(await readFile(registryPath, 'utf-8'));
-                } catch {
-                    // no existing registry — use defaults
-                }
-                const incomingCases = Array.isArray(payload['test_cases']) ? payload['test_cases'] : [];
-                const existingIds = new Set((registry.test_cases as { id?: unknown }[]).map((tc) => tc.id));
-                for (const tc of incomingCases) {
-                    const tcObj = typeof tc === 'object' && tc !== null ? tc as { id?: unknown } : { id: undefined };
-                    if (tcObj.id && existingIds.has(tcObj.id)) {
-                        const idx = (registry.test_cases as { id?: unknown }[]).findIndex((t) => t.id === tcObj.id);
-                        if (idx !== -1) registry.test_cases[idx] = tc;
-                    } else {
-                        registry.test_cases.push(tc);
-                        if (tcObj.id) existingIds.add(tcObj.id);
-                    }
-                }
-                registry.last_updated = new Date().toISOString();
-                await writeFile(registryPath, JSON.stringify(registry, null, 2), 'utf-8');
-                return {
-                    ok: true,
-                    output: JSON.stringify({
-                        provider: 'local',
-                        file: '.agentfarm/test-registry.json',
-                        synced_count: incomingCases.length,
-                        total_cases: registry.test_cases.length,
-                        note: `No ${provider} connector configured — test cases saved locally. Configure connector credentials to sync to ${provider}.`,
-                    }, null, 2),
-                    errorOutput: '',
-                };
-            }
-            try {
-                const result = await connectorActionExecuteClient({
-                    connectorType: provider,
-                    actionType: 'sync_test_cases',
-                    payload,
-                });
-                return { ok: true, output: JSON.stringify(result, null, 2), errorOutput: '' };
-            } catch (err) {
-                return { ok: false, output: '', errorOutput: `Test case sync failed: ${String(err)}` };
-            }
-        }
-
-        // Publish test run results to TestRail / Zephyr
-        case 'workspace_test_run_publish': {
-            const provider = typeof payload['provider'] === 'string' ? payload['provider'] : 'testrail';
-            if (!connectorActionExecuteClient) {
-                // Local JSON fallback — persist run results to .agentfarm/test-registry.json
-                const registryPath = join(workspaceDir, '.agentfarm', 'test-registry.json');
-                await mkdir(join(workspaceDir, '.agentfarm'), { recursive: true }).catch(() => undefined);
-                let registry: { provider: string; test_cases: unknown[]; runs: unknown[]; last_updated: string } = {
-                    provider: 'local',
-                    test_cases: [],
-                    runs: [],
-                    last_updated: new Date().toISOString(),
-                };
-                try {
-                    registry = JSON.parse(await readFile(registryPath, 'utf-8'));
-                } catch {
-                    // no existing registry — use defaults
-                }
-                const runRecord = {
-                    id: `run-${Date.now()}`,
-                    published_at: new Date().toISOString(),
-                    ...(typeof payload === 'object' && payload !== null ? payload : {}),
-                };
-                registry.runs.push(runRecord);
-                registry.last_updated = new Date().toISOString();
-                await writeFile(registryPath, JSON.stringify(registry, null, 2), 'utf-8');
-                return {
-                    ok: true,
-                    output: JSON.stringify({
-                        provider: 'local',
-                        file: '.agentfarm/test-registry.json',
-                        run_id: runRecord.id,
-                        total_runs: registry.runs.length,
-                        note: `No ${provider} connector configured — run results saved locally. Configure connector credentials to publish to ${provider}.`,
-                    }, null, 2),
-                    errorOutput: '',
-                };
-            }
-            try {
-                const result = await connectorActionExecuteClient({
-                    connectorType: provider,
-                    actionType: 'publish_test_run',
-                    payload,
-                });
-                return { ok: true, output: JSON.stringify(result, null, 2), errorOutput: '' };
-            } catch (err) {
-                return { ok: false, output: '', errorOutput: `Test run publish failed: ${String(err)}` };
-            }
-        }
-
         // Visual regression via Playwright screenshots
         case 'workspace_visual_regression': {
             // Gap T6 fix: SHA256 exact-match + ImageMagick pixel diff (replaces file-size comparison)
@@ -11732,99 +11536,6 @@ export async function executeLocalWorkspaceAction(input: {
                     '  Full scan: npm install axe-playwright playwright',
                     '  Or CLI:    npm install -g @axe-core/cli',
                 ].join('\n'),
-            };
-        }
-
-        // workspace_create_bug: file a defect report from a test failure.
-        // Tries connectorActionExecuteClient (GitHub/Jira/Linear) then falls back
-        // to writing .agentfarm/defect-reports/<id>.json for manual triage.
-        // payload: { test_name, error_message, stack_trace?, environment?, severity?, component?, provider? }
-        case 'workspace_create_bug': {
-            const testName = typeof payload['test_name'] === 'string' ? payload['test_name'] : 'Unknown test';
-            const errorMessage = typeof payload['error_message'] === 'string' ? payload['error_message'] : '';
-            const stackTrace = typeof payload['stack_trace'] === 'string' ? payload['stack_trace'] : '';
-            const environment = typeof payload['environment'] === 'string' ? payload['environment'] : 'test';
-            const severity = typeof payload['severity'] === 'string' ? payload['severity'] : 'medium';
-            const component = typeof payload['component'] === 'string' ? payload['component'] : '';
-            const provider = typeof payload['provider'] === 'string' ? payload['provider'].toLowerCase() : 'github';
-
-            if (!errorMessage) {
-                return { ok: false, output: '', errorOutput: 'payload.error_message is required.' };
-            }
-
-            const title = `[BUG] ${testName}: ${errorMessage.slice(0, 100)}`;
-            const body = [
-                '## Bug Report — Auto-generated from Test Failure',
-                '',
-                `**Test:** \`${testName}\``,
-                `**Environment:** ${environment}`,
-                `**Severity:** ${severity}`,
-                ...(component ? [`**Component:** ${component}`] : []),
-                '',
-                '### Error',
-                '```',
-                errorMessage,
-                '```',
-                ...(stackTrace ? ['', '### Stack Trace', '```', stackTrace.slice(0, 2000), '```'] : []),
-                '',
-                '### Steps to Reproduce',
-                `1. Run test \`${testName}\``,
-                '2. Observe the failure.',
-                '',
-                '---',
-                `_Auto-generated by AgentFarm Tester agent at ${new Date().toISOString()}._`,
-            ].join('\n');
-
-            // Try connector (GitHub / Jira / Linear)
-            if (connectorActionExecuteClient) {
-                const bugPersona = extractPersonaFromPayload(payload);
-                const signedBug = applyDisclosureToConnectorPayload({
-                    connectorType: provider,
-                    actionType: 'create_issue',
-                    payload: {
-                        title,
-                        body,
-                        labels: ['bug', 'auto-generated'],
-                        severity,
-                        ...(component ? { component } : {}),
-                    },
-                    persona: bugPersona,
-                });
-                const connResult = await connectorActionExecuteClient({
-                    connectorType: provider,
-                    actionType: 'create_issue',
-                    payload: signedBug.payload,
-                });
-                if (connResult.ok) {
-                    return {
-                        ok: true,
-                        output: JSON.stringify({ status: 'created', provider, title }, null, 2),
-                    };
-                }
-            }
-
-            // Local fallback: write to .agentfarm/defect-reports/
-            const defectDir = join(workspaceDir, '.agentfarm', 'defect-reports');
-            await mkdir(defectDir, { recursive: true }).catch(() => undefined);
-            const safeId = testName.replace(/[^a-z0-9_-]/gi, '_').slice(0, 60);
-            const reportPath = join(defectDir, `${safeId}-${Date.now()}.json`);
-            await writeFile(
-                reportPath,
-                JSON.stringify(
-                    { title, test_name: testName, error_message: errorMessage, stack_trace: stackTrace, environment, severity, component, created_at: new Date().toISOString(), status: 'open', markdown_body: body },
-                    null, 2,
-                ),
-            );
-            return {
-                ok: true,
-                output: JSON.stringify({
-                    status: 'saved_locally',
-                    report_path: reportPath.replace(workspaceDir, '.'),
-                    title,
-                    note: connectorActionExecuteClient
-                        ? `Connector "${provider}" unavailable — defect saved locally. Configure connector to auto-file issues.`
-                        : `No "${provider}" connector configured — defect saved locally at ${reportPath.replace(workspaceDir, '.')}.`,
-                }, null, 2),
             };
         }
 
@@ -12812,8 +12523,37 @@ export async function executeLocalWorkspaceAction(input: {
         case 'workspace_ca_document_create':
         case 'workspace_ca_document_update':
         case 'workspace_ca_escalate':
-        case 'workspace_ca_message_send': {
+        case 'workspace_ca_message_send':
+        case 'workspace_ca_standup_report': {
             return handleCorporateAssistantAction({ actionType, tenantId, botId, taskId, payload });
+        }
+
+        // ====================================================================
+        // TIER 26: TESTER DOMAIN ACTIONS
+        // ====================================================================
+        case 'workspace_standup_report':
+        case 'workspace_test_case_sync':
+        case 'workspace_test_run_publish':
+        case 'workspace_create_bug':
+        case 'workspace_security_test_report': {
+            return handleTesterAction({
+                actionType,
+                tenantId,
+                botId,
+                taskId,
+                payload,
+                workspaceDir,
+                connectorActionExecuteClient,
+                executeAction: (aType, aPayload) =>
+                    executeLocalWorkspaceAction({
+                        tenantId,
+                        botId,
+                        taskId,
+                        actionType: aType as LocalWorkspaceActionType,
+                        payload: aPayload,
+                        connectorActionExecuteClient,
+                    }),
+            });
         }
 
         default: {
