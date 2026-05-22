@@ -132,6 +132,8 @@ type ApprovalItem = {
     proposed_rollback?: string | null;
     lint_status?: string | null;
     test_status?: string | null;
+    gate_type?: string | null;
+    gate_category?: string | null;
     packet_complete?: boolean;
     risk_level: 'low' | 'medium' | 'high';
     decision_status: string;

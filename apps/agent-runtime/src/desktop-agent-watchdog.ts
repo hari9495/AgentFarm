@@ -110,6 +110,7 @@ export function startDesktopAgentWatchdog(
     // Start polling immediately, then on interval
     void poll();
     timer = setInterval(() => void poll(), intervalMs);
+    timer.unref();
 
     return {
         stop: () => {

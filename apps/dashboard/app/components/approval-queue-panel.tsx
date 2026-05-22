@@ -24,6 +24,8 @@ type ApprovalItem = {
     proposed_rollback?: string | null;
     lint_status?: string | null;
     test_status?: string | null;
+    gate_type?: string | null;
+    gate_category?: string | null;
     packet_complete?: boolean;
     risk_level: 'low' | 'medium' | 'high';
     decision_status: string;
@@ -80,6 +82,12 @@ const riskBadgeClass = (risk: ApprovalItem['risk_level']): string => {
     return 'badge low';
 };
 
+const gateCategoryBadgeClass = (category: string): string => {
+    if (category === 'compliance') return 'badge high';
+    if (category === 'strategy') return 'badge medium';
+    return 'badge';
+};
+
 const getApprovalHeadline = (approval: ApprovalItem): string => {
     return approval.change_summary?.trim() || approval.action_summary;
 };
@@ -93,6 +101,7 @@ const getApprovalSearchText = (approval: ApprovalItem): string => {
         approval.proposed_rollback ?? '',
         approval.lint_status ?? '',
         approval.test_status ?? '',
+        approval.gate_type ?? '',
         approval.selected_option_id ?? '',
     ].join(' ').toLowerCase();
 };
@@ -863,6 +872,14 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                                     <span>Quality: {getQualityStatus(approval)}</span>
                                                 </div>
                                             )}
+                                            {approval.gate_type && (
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.78rem', paddingLeft: '1.55rem', flexWrap: 'wrap' }}>
+                                                    <span className={gateCategoryBadgeClass(approval.gate_category ?? 'quality')}>
+                                                        {approval.gate_category ?? 'quality'}
+                                                    </span>
+                                                    <span style={{ color: '#57534e' }}>human validation gate — {approval.gate_type}</span>
+                                                </div>
+                                            )}
                                             <span style={{ fontSize: '0.78rem', color: '#57534e', display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
                                                 {approval.approval_id}
                                                 <button
@@ -1143,6 +1160,29 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                         <span className="badge">{selectedApproval.packet_complete ? 'packet complete' : 'summary fallback'}</span>
                                     </div>
 
+                                    {selectedApproval.gate_type && (
+                                        <div style={{
+                                            background: selectedApproval.gate_category === 'compliance' ? '#fef2f2' : selectedApproval.gate_category === 'strategy' ? '#f0f9ff' : '#f9fafb',
+                                            border: '1px solid',
+                                            borderColor: selectedApproval.gate_category === 'compliance' ? '#fca5a5' : selectedApproval.gate_category === 'strategy' ? '#bae6fd' : '#e5e7eb',
+                                            borderRadius: '0.35rem',
+                                            padding: '0.65rem',
+                                            display: 'grid',
+                                            gap: '0.35rem',
+                                        }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                                                <span className={gateCategoryBadgeClass(selectedApproval.gate_category ?? 'quality')}>
+                                                    {selectedApproval.gate_category ?? 'quality'}
+                                                </span>
+                                                <strong>Human Validation Gate</strong>
+                                                <span style={{ fontSize: '0.8rem', color: '#57534e' }}>— {selectedApproval.gate_type}</span>
+                                            </div>
+                                            {selectedApproval.change_summary && (
+                                                <p style={{ margin: 0, fontSize: '0.85rem', color: '#44403c' }}>{selectedApproval.change_summary}</p>
+                                            )}
+                                        </div>
+                                    )}
+
                                     <div>
                                         <strong>Requested</strong>
                                         <p style={{ margin: '0.2rem 0 0', color: '#44403c' }}>{new Date(selectedApproval.requested_at).toLocaleString()}</p>
@@ -1252,14 +1292,14 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                                                                         check.status === 'passed'
                                                                                             ? '#dcfce7'
                                                                                             : check.status === 'failed'
-                                                                                              ? '#fee2e2'
-                                                                                              : '#fef3c7',
+                                                                                                ? '#fee2e2'
+                                                                                                : '#fef3c7',
                                                                                     color:
                                                                                         check.status === 'passed'
                                                                                             ? '#166534'
                                                                                             : check.status === 'failed'
-                                                                                              ? '#991b1b'
-                                                                                              : '#92400e',
+                                                                                                ? '#991b1b'
+                                                                                                : '#92400e',
                                                                                 }}
                                                                             >
                                                                                 {check.checkType} {check.status}

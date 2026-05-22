@@ -124,6 +124,24 @@ import {
 import { getCorporateAssistantDefaultPersona } from './corporate-assistant-persona-defaults.js';
 import { buildCorporateAssistantEpisodicPattern, buildCorporateAssistantEpisodicSummary } from './corporate-assistant-episodic-hooks.js';
 import { getCorporateAssistantMcpClients } from './corporate-assistant-mcp-provisioner.js';
+import {
+    TECHNICAL_WRITER_ROLE_ALLOWED_CONNECTORS,
+    TECHNICAL_WRITER_ROLE_ALLOWED_LOCAL_ACTIONS,
+    TECHNICAL_WRITER_ROLE_BLOCKED_ACTIONS,
+    isTechnicalWriterRoleProfile,
+} from './technical-writer-agent-profile.js';
+import { getTechnicalWriterDefaultPersona } from './technical-writer-persona-defaults.js';
+import { buildTechnicalWriterEpisodicPattern, buildTechnicalWriterEpisodicSummary } from './technical-writer-episodic-hooks.js';
+import { getTechnicalWriterMcpClients } from './technical-writer-mcp-provisioner.js';
+import {
+    CONTENT_WRITER_ROLE_ALLOWED_CONNECTORS,
+    CONTENT_WRITER_ROLE_ALLOWED_LOCAL_ACTIONS,
+    CONTENT_WRITER_ROLE_BLOCKED_ACTIONS,
+    isContentWriterRoleProfile,
+} from './content-writer-agent-profile.js';
+import { getContentWriterDefaultPersona } from './content-writer-persona-defaults.js';
+import { buildContentWriterEpisodicPattern, buildContentWriterEpisodicSummary } from './content-writer-episodic-hooks.js';
+import { getContentWriterMcpClients } from './content-writer-mcp-provisioner.js';
 import { assessTaskClarity, buildClarificationMessage } from './intent-clarifier.js';
 import { enforceRole } from './role-enforcer.js';
 import { checkConnectorReadiness } from './connector-readiness-check.js';
@@ -820,7 +838,11 @@ type RuntimeConnectorType =
     | 'hubspot' | 'salesforce' | 'apollo' | 'hunter' | 'linkedin' | 'calendar'
     // Corporate Assistant connectors
     | 'gmail' | 'outlook' | 'smtp' | 'google_calendar' | 'outlook_calendar'
-    | 'google_drive' | 'confluence';
+    | 'google_drive' | 'confluence'
+    // Content Writer CMS connectors
+    | 'wordpress' | 'contentful' | 'hubspot_cms'
+    // Content Writer analytics
+    | 'google_analytics';
 type RuntimeConnectorActionType =
     | 'read_task'
     | 'create_comment'
@@ -840,8 +862,8 @@ const ROLE_CONNECTOR_POLICY: Record<RoleKey, RuntimeConnectorType[]> = {
     fullstack_developer: ['jira', 'teams', 'github', 'email'],
     tester: [...TESTER_ROLE_ALLOWED_CONNECTORS],
     business_analyst: ['jira', 'teams', 'email'],
-    technical_writer: ['teams', 'email'],
-    content_writer: ['teams', 'email'],
+    technical_writer: [...TECHNICAL_WRITER_ROLE_ALLOWED_CONNECTORS],
+    content_writer: [...CONTENT_WRITER_ROLE_ALLOWED_CONNECTORS],
     sales_rep: [...SALES_REP_ROLE_ALLOWED_CONNECTORS],
     marketing_specialist: ['teams', 'email'],
     corporate_assistant: [...CORPORATE_ASSISTANT_ROLE_ALLOWED_CONNECTORS],
@@ -1100,8 +1122,8 @@ const LOCAL_WORKSPACE_ACTION_POLICY: Record<RoleKey, RuntimeLocalWorkspaceAction
     ],
     tester: [...TESTER_ROLE_ALLOWED_LOCAL_ACTIONS],
     business_analyst: [],
-    technical_writer: [],
-    content_writer: [],
+    technical_writer: [...TECHNICAL_WRITER_ROLE_ALLOWED_LOCAL_ACTIONS],
+    content_writer: [...CONTENT_WRITER_ROLE_ALLOWED_LOCAL_ACTIONS],
     sales_rep: [...SALES_REP_ROLE_ALLOWED_LOCAL_ACTIONS],
     marketing_specialist: [],
     corporate_assistant: [...CORPORATE_ASSISTANT_ROLE_ALLOWED_LOCAL_ACTIONS],
@@ -1123,6 +1145,24 @@ const isTesterBlockedAction = (roleKey: RoleKey, actionType: string): boolean =>
         return false;
     }
     return TESTER_ROLE_BLOCKED_ACTIONS.includes(actionType as (typeof TESTER_ROLE_BLOCKED_ACTIONS)[number]);
+};
+
+const isTechnicalWriterBlockedAction = (roleKey: RoleKey, actionType: string): boolean => {
+    if (roleKey !== 'technical_writer') {
+        return false;
+    }
+    return TECHNICAL_WRITER_ROLE_BLOCKED_ACTIONS.includes(
+        actionType as (typeof TECHNICAL_WRITER_ROLE_BLOCKED_ACTIONS)[number],
+    );
+};
+
+const isContentWriterBlockedAction = (roleKey: RoleKey, actionType: string): boolean => {
+    if (roleKey !== 'content_writer') {
+        return false;
+    }
+    return CONTENT_WRITER_ROLE_BLOCKED_ACTIONS.includes(
+        actionType as (typeof CONTENT_WRITER_ROLE_BLOCKED_ACTIONS)[number],
+    );
 };
 
 const defaultSleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
@@ -1180,6 +1220,9 @@ const roleKeyFromRoleProfile = (roleProfile: string): RoleKey | null => {
     }
     if (isCorporateAssistantRoleProfile(normalized)) {
         return 'corporate_assistant';
+    }
+    if (isTechnicalWriterRoleProfile(normalized)) {
+        return 'technical_writer';
     }
     const aliases: Record<string, RoleKey> = {
         recruiter: 'recruiter',
@@ -3249,6 +3292,38 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 errorMessage: `Tester role blocked action '${decision.actionType}'.`,
             };
         }
+        if (isTechnicalWriterBlockedAction(config.roleKey, decision.actionType)) {
+            return {
+                decision: {
+                    ...decision,
+                    route: 'execute',
+                    reason: `Action '${decision.actionType}' is explicitly blocked for technical_writer role.`,
+                },
+                status: 'failed',
+                attempts: 0,
+                transientRetries: 0,
+                executionPayload: task.payload,
+                payloadOverrideSource,
+                failureClass: 'runtime_exception',
+                errorMessage: `Technical writer role blocked action '${decision.actionType}'.`,
+            };
+        }
+        if (isContentWriterBlockedAction(config.roleKey, decision.actionType)) {
+            return {
+                decision: {
+                    ...decision,
+                    route: 'execute',
+                    reason: `Action '${decision.actionType}' is explicitly blocked for content_writer role.`,
+                },
+                status: 'failed',
+                attempts: 0,
+                transientRetries: 0,
+                executionPayload: task.payload,
+                payloadOverrideSource,
+                failureClass: 'runtime_exception',
+                errorMessage: `Content writer role blocked action '${decision.actionType}'.`,
+            };
+        }
         // Gap 5: Tester role may only edit test files. Reject source-file edits
         // before they reach the executor so we get a loud audit-trail failure.
         const testerEditGate = evaluateTesterEditGuard({
@@ -3418,6 +3493,14 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         // For sales rep bots: pre-warm CRM and outreach MCP sessions in the background.
         if (config.roleKey === 'sales_rep') {
             getSalesRepMcpClients(config.tenantId, config.workspaceId).catch(() => { /* non-blocking */ });
+        }
+        // For technical writer bots: pre-warm documentation connector sessions in the background.
+        if (config.roleKey === 'technical_writer') {
+            getTechnicalWriterMcpClients(config.tenantId, config.workspaceId).catch(() => { /* non-blocking */ });
+        }
+        // For content writer bots: pre-warm Google Drive, Slack, and email MCP sessions in the background.
+        if (config.roleKey === 'content_writer') {
+            getContentWriterMcpClients(config.tenantId, config.workspaceId).catch(() => { /* non-blocking */ });
         }
 
         // Attach persona to task payload so LLM resolvers can inject it into the system prompt
@@ -4720,9 +4803,104 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                     });
                 }
             }
-        }
 
-        // ---- Episodic memory text fallback: persist when no embedding key is configured ----
+            // ---- Technical Writer-specific episodic write: richer pattern keys for doc memory ----
+            // Fires in addition to the generic write above.  Uses domain-aware
+            // pattern keys (e.g. "tw:api_doc:generated") so future sessions can
+            // recall past doc outputs, style violations, and PR submissions.
+            if (config.roleKey === 'technical_writer') {
+                const twPattern = buildTechnicalWriterEpisodicPattern(task, result);
+                const twSummary = buildTechnicalWriterEpisodicSummary(task, result);
+                writeEpisodicMemory(
+                    {
+                        tenantId: config.tenantId,
+                        botId: config.botId,
+                        workspaceId: config.workspaceId,
+                        summary: twSummary,
+                        pattern: twPattern,
+                        confidence: estimateLlmQualityScore(result),
+                        taskId: task.taskId,
+                    },
+                    episodicEmbed,
+                    options.prisma,
+                    episodicDeployment,
+                ).catch((err: unknown) => {
+                    emitRuntimeEvent('runtime.episodic_memory_write_failed', config, {
+                        task_id: task.taskId,
+                        error_message: err instanceof Error ? err.message : String(err),
+                    });
+                });
+
+                // ---- TW semantic memory: persist doc artifacts for cross-project RAG ----
+                // Written so future tasks can recall past API docs, release notes,
+                // and style guide findings across repositories via pgvector search.
+                if (semanticEmbed && options.prisma && twSummary && !twPattern.endsWith(':fail')) {
+                    writeSemanticMemory(
+                        {
+                            tenantId: config.tenantId,
+                            botId: config.botId,
+                            content: twSummary,
+                            sourceType: 'technical_writer_artifact',
+                        },
+                        semanticEmbed,
+                        options.prisma,
+                        semanticDeployment,
+                    ).catch((err: unknown) => {
+                        emitRuntimeEvent('runtime.semantic_memory_write_failed', config, {
+                            task_id: task.taskId,
+                            error_message: err instanceof Error ? err.message : String(err),
+                        });
+                    });
+                }
+            }
+            // ---- Content Writer-specific episodic write: richer pattern keys for content memory ----
+            // Fires in addition to the generic write above. Uses domain-aware
+            // pattern keys (e.g. "cw:draft:blog:success") so future sessions can
+            // recall past drafts, fact check outcomes, and editorial routing decisions.
+            if (config.roleKey === 'content_writer') {
+                const cwPattern = buildContentWriterEpisodicPattern(task, result);
+                const cwSummary = buildContentWriterEpisodicSummary(task, result);
+                writeEpisodicMemory(
+                    {
+                        tenantId: config.tenantId,
+                        botId: config.botId,
+                        workspaceId: config.workspaceId,
+                        summary: cwSummary,
+                        pattern: cwPattern,
+                        confidence: estimateLlmQualityScore(result),
+                        taskId: task.taskId,
+                    },
+                    episodicEmbed,
+                    options.prisma,
+                    episodicDeployment,
+                ).catch((err: unknown) => {
+                    emitRuntimeEvent('runtime.episodic_memory_write_failed', config, {
+                        task_id: task.taskId,
+                        error_message: err instanceof Error ? err.message : String(err),
+                    });
+                });
+
+                // ---- CW semantic memory: persist draft artifacts for cross-campaign RAG ----
+                if (semanticEmbed && options.prisma && cwSummary && !cwPattern.endsWith(':fail')) {
+                    writeSemanticMemory(
+                        {
+                            tenantId: config.tenantId,
+                            botId: config.botId,
+                            content: cwSummary,
+                            sourceType: 'content_writer_artifact',
+                        },
+                        semanticEmbed,
+                        options.prisma,
+                        semanticDeployment,
+                    ).catch((err: unknown) => {
+                        emitRuntimeEvent('runtime.semantic_memory_write_failed', config, {
+                            task_id: task.taskId,
+                            error_message: err instanceof Error ? err.message : String(err),
+                        });
+                    });
+                }
+            }
+        }
         if (!episodicEmbed && options.prisma) {
             writeEpisodicMemoryNoEmbed(
                 {

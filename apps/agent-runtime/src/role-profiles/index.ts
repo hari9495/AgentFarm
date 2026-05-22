@@ -7,6 +7,14 @@ import {
     CORPORATE_ASSISTANT_ROLE_ALLOWED_CONNECTORS,
     CORPORATE_ASSISTANT_ROLE_ALLOWED_LOCAL_ACTIONS,
 } from '../corporate-assistant-agent-profile.js';
+import {
+    TECHNICAL_WRITER_ROLE_ALLOWED_CONNECTORS,
+    TECHNICAL_WRITER_ROLE_ALLOWED_LOCAL_ACTIONS,
+} from '../technical-writer-agent-profile.js';
+import {
+    CONTENT_WRITER_ROLE_ALLOWED_CONNECTORS,
+    CONTENT_WRITER_ROLE_ALLOWED_LOCAL_ACTIONS,
+} from '../content-writer-agent-profile.js';
 
 export interface RoleProfile {
     roleKey: RoleKey;
@@ -62,16 +70,16 @@ export const ROLE_PROFILES: Record<RoleKey, RoleProfile> = {
         roleKey: 'technical_writer',
         displayName: 'Technical Writer',
         description: 'Handles technical documentation, API docs, and release notes',
-        allowedConnectorTools: ['confluence', 'github', 'google_drive', 'slack'],
-        allowedActions: ['create_document', 'update_document', 'read_document', 'create_pr', 'send_message'],
+        allowedConnectorTools: [...TECHNICAL_WRITER_ROLE_ALLOWED_CONNECTORS],
+        allowedActions: [...TECHNICAL_WRITER_ROLE_ALLOWED_LOCAL_ACTIONS],
         requiredConfig: ['documentProvider'],
     },
     content_writer: {
         roleKey: 'content_writer',
         displayName: 'Content Writer',
         description: 'Handles blog posts, marketing copy, social content, and email campaigns',
-        allowedConnectorTools: ['google_drive', 'slack', 'microsoft_teams', 'gmail'],
-        allowedActions: ['create_document', 'update_document', 'send_message', 'send_email'],
+        allowedConnectorTools: [...CONTENT_WRITER_ROLE_ALLOWED_CONNECTORS],
+        allowedActions: [...CONTENT_WRITER_ROLE_ALLOWED_LOCAL_ACTIONS],
         requiredConfig: ['documentProvider', 'emailProvider'],
     },
     sales_rep: {

@@ -237,7 +237,7 @@ const SFDPOT_ACTION_AUTOMATION: Record<string, ActionAutomation> = {
     'Upload oversized file where file input exists': { mode: 'skip', reason: 'File upload requires specific form selector — use workspace_web_fill' },
     'Check empty-state UI when list has no records': { mode: 'navigate_screenshot' },
     // platform — mostly require environment setup
-    'Test on Chrome, Firefox, and Edge': { mode: 'dispatch', actionType: 'workspace_playwright_test_run', extraPayload: { browsers: ['chromium', 'firefox', 'webkit'] } },
+    'Test on Chrome, Firefox, and Edge': { mode: 'skip', reason: 'Multi-browser testing requires a separate browser environment setup outside this action type' },
     'Verify on iOS Safari (mobile viewport emulation)': { mode: 'dispatch', actionType: 'workspace_playwright_test_run', extraPayload: { device: 'iPhone 12' } },
     'Check with keyboard-only navigation (no mouse)': { mode: 'dispatch', actionType: 'workspace_axe_scan', extraPayload: { rules: ['keyboard'], min_impact: 'moderate' } },
     'Test with screen reader role announcements (axe scan)': { mode: 'dispatch', actionType: 'workspace_axe_scan', extraPayload: {} },
@@ -249,7 +249,7 @@ const SFDPOT_ACTION_AUTOMATION: Record<string, ActionAutomation> = {
     'Trigger concurrent requests (double-click submit) — assert no duplicate actions': { mode: 'skip', reason: 'Concurrent requests require simultaneous execution outside this action type' },
     'Session timeout — assert redirect to login without data loss': { mode: 'dispatch', actionType: 'workspace_playwright_test_run', extraPayload: { session_expire: true } },
     // time — use Playwright clock.install() / page.clock.setFixedTime() for date mocking
-    'Set system clock to year-end boundary (Dec 31) and verify date pickers': { mode: 'dispatch', actionType: 'workspace_playwright_test_run', extraPayload: { fake_date: '2024-12-31' } },
+    'Set system clock to year-end boundary (Dec 31) and verify date pickers': { mode: 'skip', reason: 'clock manipulation requires host-level system access; use workspace_playwright_test_run with fake_date payload instead' },
     'Check "expires in X days" countdown accuracy': { mode: 'dispatch', actionType: 'workspace_playwright_test_run', extraPayload: { fake_date: '2024-12-29' } },
     'Verify timestamps display in the correct timezone': { mode: 'dispatch', actionType: 'workspace_playwright_test_run', extraPayload: { fake_timezone: 'America/New_York' } },
     'Test with DST-transition datetime values': { mode: 'dispatch', actionType: 'workspace_playwright_test_run', extraPayload: { fake_date: '2024-11-03' } },

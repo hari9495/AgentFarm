@@ -108,6 +108,8 @@ const HIGH_RISK_ACTIONS = new Set([
     // Tier 12: Sub-agent delegation and GitHub issue auto-fix
     'workspace_subagent_spawn',
     'workspace_github_issue_fix',
+    // Content Writer: human validation gate — always requires human expert review
+    'workspace_cw_request_human_gate',
 ]);
 
 const MEDIUM_RISK_ACTIONS = new Set([

@@ -14,6 +14,8 @@
 import type { TaskEnvelope } from './execution-engine.js';
 import { DEVELOPER_BLOCKED_KEYWORDS } from './role-profiles/developer-role-profile.js';
 import { CORPORATE_ASSISTANT_BLOCKED_KEYWORDS } from './role-profiles/corporate-assistant-role-profile.js';
+import { TECHNICAL_WRITER_BLOCKED_KEYWORDS } from './role-profiles/technical-writer-role-profile.js';
+import { CONTENT_WRITER_BLOCKED_KEYWORDS } from './role-profiles/content-writer-role-profile.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -141,6 +143,45 @@ export function extractTaskDescription(task: TaskEnvelope): string {
  * match, and 0.50 on a neutral (no signal either way).
  */
 export function heuristicClassify(taskDescription: string, roleKey: string): ClassificationResult {
+    if (roleKey === 'technical_writer') {
+        const lower = taskDescription.toLowerCase();
+
+        // Positive TW signals.
+        const TW_POSITIVE_KEYWORDS = [
+            'document', 'documentation', 'api doc', 'release notes',
+            'style guide', 'technical writing', 'openapi', 'swagger',
+            'readme', 'changelog', 'jsdoc', 'docstring', 'doc diff',
+            'update docs', 'write docs', 'generate docs', 'doc update',
+            'api reference', 'user guide', 'runbook',
+        ];
+        const positiveMatch = TW_POSITIVE_KEYWORDS.find(kw => lower.includes(kw));
+        if (positiveMatch) {
+            return {
+                belongsToRole: true,
+                confidence: 0.80,
+                reason: `Task contains technical-writer-role keyword: "${positiveMatch}"`,
+                suggestedRole: null,
+            };
+        }
+
+        const blockedMatch = TECHNICAL_WRITER_BLOCKED_KEYWORDS.find(kw => lower.includes(kw));
+        if (blockedMatch) {
+            return {
+                belongsToRole: false,
+                confidence: 0.85,
+                reason: `Task contains non-technical-writer keyword: "${blockedMatch}"`,
+                suggestedRole: null,
+            };
+        }
+
+        return {
+            belongsToRole: true,
+            confidence: 0.50,
+            reason: 'No strong role signal for technical_writer; defaulting to allow',
+            suggestedRole: null,
+        };
+    }
+
     if (roleKey === 'corporate_assistant') {
         const lower = taskDescription.toLowerCase();
 
@@ -175,6 +216,47 @@ export function heuristicClassify(taskDescription: string, roleKey: string): Cla
             belongsToRole: true,
             confidence: 0.50,
             reason: 'No strong role signal for corporate_assistant; defaulting to allow',
+            suggestedRole: null,
+        };
+    }
+
+    if (roleKey === 'content_writer') {
+        const lower = taskDescription.toLowerCase();
+
+        // Positive CW signals.
+        const CW_POSITIVE_KEYWORDS = [
+            'write a blog', 'blog post', 'blog article',
+            'email campaign', 'newsletter draft', 'newsletter content',
+            'social media post', 'linkedin post', 'twitter thread', 'instagram caption',
+            'internal announcement', 'company announcement', 'content brief',
+            'draft copy', 'marketing copy', 'copywriting',
+            'content calendar', 'editorial calendar',
+            'write content', 'create content', 'produce content',
+        ];
+        const positiveMatch = CW_POSITIVE_KEYWORDS.find(kw => lower.includes(kw));
+        if (positiveMatch) {
+            return {
+                belongsToRole: true,
+                confidence: 0.80,
+                reason: `Task contains content-writer-role keyword: "${positiveMatch}"`,
+                suggestedRole: null,
+            };
+        }
+
+        const blockedMatch = CONTENT_WRITER_BLOCKED_KEYWORDS.find(kw => lower.includes(kw));
+        if (blockedMatch) {
+            return {
+                belongsToRole: false,
+                confidence: 0.85,
+                reason: `Task contains non-content-writer keyword: "${blockedMatch}"`,
+                suggestedRole: null,
+            };
+        }
+
+        return {
+            belongsToRole: true,
+            confidence: 0.50,
+            reason: 'No strong role signal for content_writer; defaulting to allow',
             suggestedRole: null,
         };
     }

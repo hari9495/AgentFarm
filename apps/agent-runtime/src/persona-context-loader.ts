@@ -86,17 +86,16 @@ export function clearPersonaCache(): void {
 // ---------------------------------------------------------------------------
 
 import { getTesterDefaultPersona } from './tester-persona-defaults.js';
+import { getTechnicalWriterDefaultPersona } from './technical-writer-persona-defaults.js';
+import { getContentWriterDefaultPersona } from './content-writer-persona-defaults.js';
 
 /**
  * Load the persona for a bot, falling back to role-specific defaults when the
  * gateway returns null (no custom persona configured).
  *
- * Currently only the `tester` role has a built-in default. All other roles
- * behave identically to `loadPersonaForBot` — they return null when unconfigured.
- *
  * @param botId    The bot ID.
  * @param tenantId The tenant ID.
- * @param role     The bot's role key (e.g. 'tester', 'developer').
+ * @param role     The bot's role key (e.g. 'tester', 'technical_writer').
  */
 export async function loadPersonaForBotWithFallback(
     botId: string,
@@ -108,6 +107,12 @@ export async function loadPersonaForBotWithFallback(
 
     if (role === 'tester') {
         return getTesterDefaultPersona(botId, tenantId);
+    }
+    if (role === 'technical_writer') {
+        return getTechnicalWriterDefaultPersona(botId, tenantId);
+    }
+    if (role === 'content_writer') {
+        return getContentWriterDefaultPersona(botId, tenantId);
     }
 
     return null;

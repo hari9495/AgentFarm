@@ -40,6 +40,7 @@ export const NEVER_AUTO_APPROVE = new Set([
     'workspace_bulk_refactor',  // wide blast radius
     'workspace_autonomous_plan_execute',  // open-ended execution
     'workspace_github_issue_fix',         // may push code
+    'workspace_cw_request_human_gate',    // CW capability gap — always requires human expert review
 ]);
 
 /**

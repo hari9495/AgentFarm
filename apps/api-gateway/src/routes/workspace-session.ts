@@ -369,7 +369,7 @@ const createDbRepo = (): WorkspaceSessionRepo => {
             const workspace = await prisma.workspace.findUnique({
                 where: { id: input.workspaceId },
                 select: {
-                    bots: {
+                    bot: {
                         select: {
                             id: true,
                         },
@@ -381,7 +381,7 @@ const createDbRepo = (): WorkspaceSessionRepo => {
                 data: {
                     tenantId: input.tenantId,
                     workspaceId: input.workspaceId,
-                    botId: workspace?.bots?.[0]?.id ?? input.workspaceId,
+                    botId: workspace?.bot?.id ?? input.workspaceId,
                     eventType: 'audit_event',
                     severity: 'info',
                     summary: input.summary,

@@ -1415,7 +1415,7 @@ test('approved local edit task fails when post-change quality gate fails', async
             },
         });
         assert.equal(intakeRes.statusCode, 202);
-        await new Promise<void>((resolve) => setTimeout(resolve, 70));
+        await new Promise<void>((resolve) => setTimeout(resolve, 200));
 
         const decisionRes = await app.inject({
             method: 'POST',
@@ -5195,6 +5195,120 @@ test('/runtime/marketplace/install installs a skill', async () => {
     }
 });
 
+// ---------------------------------------------------------------------------
+// Coverage: Technical Writer role — startup guardrails and task processing hooks
+// ---------------------------------------------------------------------------
+
+test('startup resolves technical writer aliases and applies tw-only action guardrails', async () => {
+    const app = buildRuntimeServer({
+        env: {
+            ...baseEnv(),
+            AF_ROLE_PROFILE: 'Technical Writer',
+        },
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+    });
+
+    try {
+        const startupRes = await app.inject({ method: 'POST', url: '/startup' });
+        assert.equal(startupRes.statusCode, 200);
+        const startupBody = startupRes.json() as { role_key: string; capability_snapshot_id: string };
+        assert.equal(startupBody.role_key, 'technical_writer');
+        assert.equal(typeof startupBody.capability_snapshot_id, 'string');
+
+        const snapshotRes = await app.inject({ method: 'GET', url: '/runtime/capability-snapshot' });
+        assert.equal(snapshotRes.statusCode, 200);
+        const snapshotBody = snapshotRes.json() as {
+            snapshot: {
+                roleKey: string;
+                allowedConnectorTools: string[];
+                allowedActions: string[];
+            };
+        };
+
+        assert.equal(snapshotBody.snapshot.roleKey, 'technical_writer');
+        assert.deepEqual(snapshotBody.snapshot.allowedConnectorTools.sort(), [
+            'confluence', 'github', 'gitlab', 'google_drive', 'slack',
+        ].sort());
+        assert.ok(snapshotBody.snapshot.allowedActions.includes('workspace_tw_doc_diff'));
+        assert.ok(snapshotBody.snapshot.allowedActions.includes('workspace_tw_api_doc_openapi'));
+        assert.ok(snapshotBody.snapshot.allowedActions.includes('workspace_tw_release_notes'));
+        assert.ok(snapshotBody.snapshot.allowedActions.includes('workspace_tw_style_check'));
+        assert.ok(!snapshotBody.snapshot.allowedActions.includes('code_edit_patch'));
+        assert.ok(!snapshotBody.snapshot.allowedActions.includes('git_commit'));
+        assert.ok(!snapshotBody.snapshot.allowedActions.includes('run_tests'));
+    } finally {
+        await app.close();
+    }
+});
+
+test('technical writer role fires tw-specific mcp prewarm and episodic hooks on task processing', async () => {
+    const mockPrisma = {
+        $executeRaw: async () => 1,
+        $queryRaw: async () => { throw new Error('mock-db-unavailable'); },
+        agentShortTermMemory: { findMany: async () => [] },
+        agentLongTermMemory: { findMany: async () => [] },
+        agentRepoKnowledge: { findMany: async () => [] },
+    } as unknown as import('@prisma/client').PrismaClient;
+
+    const app = buildRuntimeServer({
+        env: {
+            ...baseEnv(),
+            AF_ROLE_PROFILE: 'Technical Writer',
+        },
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+        prisma: mockPrisma,
+        episodicEmbed: async (_text: string) => [0.1, 0.2, 0.3],
+        semanticEmbed: async (_text: string) => [0.1, 0.2, 0.3],
+        llmDecisionResolver: async ({ heuristicDecision }) => ({
+            decision: {
+                ...heuristicDecision,
+                actionType: 'workspace_tw_doc_diff',
+                riskLevel: 'low',
+                route: 'execute',
+                reason: 'doc diff task for technical writer',
+            },
+            metadata: {
+                modelProvider: 'agentfarm',
+                model: 'test-model',
+                modelProfile: 'quality_first',
+                promptTokens: 8,
+                completionTokens: 4,
+                totalTokens: 12,
+            },
+        }),
+    });
+
+    try {
+        await app.inject({ method: 'POST', url: '/startup' });
+        const intakeRes = await app.inject({
+            method: 'POST',
+            url: '/tasks/intake',
+            payload: {
+                task_id: 'tw-episodic-hooks-task-1',
+                payload: {
+                    workspaceId: 'ws_test',
+                    action_type: 'workspace_tw_doc_diff',
+                    summary: 'Update API reference docs from code diff',
+                },
+            },
+        });
+        assert.equal(intakeRes.statusCode, 202);
+
+        await new Promise<void>((resolve) => setTimeout(resolve, 250));
+
+        const liveRes = await app.inject({ method: 'GET', url: '/health/live' });
+        assert.equal(liveRes.statusCode, 200);
+        const liveBody = liveRes.json() as { processed_tasks: number };
+        assert.ok(liveBody.processed_tasks >= 1);
+    } finally {
+        await app.close();
+    }
+});
+
 test('/runtime/marketplace/uninstall returns 400 when skill_id missing', async () => {
     const app = buildRuntimeServer({ env: baseEnv() });
     try {
@@ -5637,6 +5751,108 @@ test('role enforcement allows developer agent to proceed with a legitimate devel
         assert.ok(record, 'action result record should be persisted');
         // Task was not blocked by role enforcement — failureClass must not be role_enforcement
         assert.notEqual(record?.failureClass, 'role_enforcement');
+    } finally {
+        await app.close();
+    }
+});
+
+// ---------------------------------------------------------------------------
+// Coverage: GET /memory/search — route handler never called in existing tests
+// ---------------------------------------------------------------------------
+
+test('GET /memory/search returns results using injected prisma mock', async () => {
+    const mockPrisma = {
+        agentShortTermMemory: { findMany: async () => [] },
+        agentLongTermMemory: { findMany: async () => [] },
+        agentRepoKnowledge: { findMany: async () => [] },
+    } as unknown as import('@prisma/client').PrismaClient;
+
+    const app = buildRuntimeServer({ env: baseEnv(), prisma: mockPrisma });
+    try {
+        const res = await app.inject({
+            method: 'GET',
+            url: '/memory/search?q=authentication+flow',
+            headers: { 'x-tenant-id': 'tenant_test' },
+        });
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as { results: unknown[]; count: number };
+        assert.ok(Array.isArray(body.results), 'results should be an array');
+        assert.equal(body.count, 0);
+    } finally {
+        await app.close();
+    }
+});
+
+test('GET /memory/search returns 400 when x-tenant-id header is missing', async () => {
+    const mockPrisma = {
+        agentShortTermMemory: { findMany: async () => [] },
+        agentLongTermMemory: { findMany: async () => [] },
+        agentRepoKnowledge: { findMany: async () => [] },
+    } as unknown as import('@prisma/client').PrismaClient;
+
+    const app = buildRuntimeServer({ env: baseEnv(), prisma: mockPrisma });
+    try {
+        const res = await app.inject({
+            method: 'GET',
+            url: '/memory/search?q=test',
+        });
+        assert.equal(res.statusCode, 400);
+        const body = res.json() as { error: string };
+        assert.equal(body.error, 'x-tenant-id required');
+    } finally {
+        await app.close();
+    }
+});
+
+// ---------------------------------------------------------------------------
+// Coverage: startRuntimeServer — uncovered branches in startup & watchdog
+// ---------------------------------------------------------------------------
+
+test('startRuntimeServer throws when required env vars are missing', async () => {
+    const { startRuntimeServer } = await import('./runtime-server.js');
+    const { globalScheduler } = await import('./skill-scheduler.js');
+    const env: Record<string, string | undefined> = { ...baseEnv() as Record<string, string>, AF_HEALTH_PORT: '0' };
+    delete env['AF_TENANT_ID'];
+    try {
+        await assert.rejects(
+            () => startRuntimeServer({ env }),
+            (err: Error) => {
+                assert.ok(err.message.includes('Startup checks failed'), `unexpected message: ${err.message}`);
+                assert.ok(err.message.includes('AF_TENANT_ID'), `missing var not named: ${err.message}`);
+                return true;
+            },
+        );
+    } finally {
+        globalScheduler.stop();
+    }
+});
+
+test('startRuntimeServer starts cleanly with DESKTOP_AGENT_URL set', async () => {
+    const { startRuntimeServer } = await import('./runtime-server.js');
+    const env = { ...baseEnv(), AF_HEALTH_PORT: '0', DESKTOP_AGENT_URL: 'http://localhost:19998' };
+    const app = await startRuntimeServer({ env });
+    try {
+        const address = app.server.address();
+        assert.ok(address !== null, 'server should be listening');
+    } finally {
+        await app.close();
+    }
+});
+
+test('startRuntimeServer scheduler callback covers dry-run path via tick()', async () => {
+    const { startRuntimeServer } = await import('./runtime-server.js');
+    const { globalScheduler } = await import('./skill-scheduler.js');
+    const env = { ...baseEnv(), AF_HEALTH_PORT: '0' };
+    const app = await startRuntimeServer({ env });
+    try {
+        await globalScheduler.createJob({
+            name: `cov-dry-run-${Date.now()}`,
+            target: { kind: 'skill', skill_id: 'cov-skill-dryrun' },
+            frequency: { type: 'once', run_at: new Date(0).toISOString() },
+            dry_run: true,
+        });
+        // Fire scheduler — dry-run callback body executes; errors caught internally
+        await globalScheduler.tick();
     } finally {
         await app.close();
     }

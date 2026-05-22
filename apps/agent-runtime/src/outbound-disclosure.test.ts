@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest';
+import assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
 import {
     applyDisclosureToConnectorPayload,
     applyDisclosureToText,
@@ -18,9 +19,9 @@ describe('applyDisclosureToConnectorPayload', () => {
             payload: { to: 'a@b.com', subject: 'hi', body: 'Hello world.' },
             persona,
         });
-        expect(result.modifiedFields).toEqual(['body']);
-        expect(String(result.payload['body'])).toContain('AI agent');
-        expect(String(result.payload['body'])).toContain('Alex');
+        assert.deepEqual(result.modifiedFields, ['body']);
+        assert.ok(String(result.payload['body']).includes('AI agent'));
+        assert.ok(String(result.payload['body']).includes('Alex'));
     });
 
     it('injects disclosure into teams send_message text', () => {
@@ -30,8 +31,8 @@ describe('applyDisclosureToConnectorPayload', () => {
             payload: { team_id: 't', channel_id: 'c', text: 'progress update' },
             persona,
         });
-        expect(result.modifiedFields).toEqual(['text']);
-        expect(String(result.payload['text'])).toContain('AI agent');
+        assert.deepEqual(result.modifiedFields, ['text']);
+        assert.ok(String(result.payload['text']).includes('AI agent'));
     });
 
     it('injects disclosure into jira create_comment body', () => {
@@ -41,8 +42,8 @@ describe('applyDisclosureToConnectorPayload', () => {
             payload: { issue_key: 'PROJ-1', body: 'Started working on it.' },
             persona,
         });
-        expect(result.modifiedFields).toEqual(['body']);
-        expect(String(result.payload['body'])).toContain('AI agent');
+        assert.deepEqual(result.modifiedFields, ['body']);
+        assert.ok(String(result.payload['body']).includes('AI agent'));
     });
 
     it('is idempotent — already-disclosed body is returned unchanged', () => {
@@ -53,8 +54,8 @@ describe('applyDisclosureToConnectorPayload', () => {
             payload: { to: 'a@b.com', body: seeded },
             persona,
         });
-        expect(result.modifiedFields).toEqual([]);
-        expect(result.payload['body']).toBe(seeded);
+        assert.deepEqual(result.modifiedFields, []);
+        assert.equal(result.payload['body'], seeded);
     });
 
     it('returns payload unchanged when persona has no disclosure', () => {
@@ -65,8 +66,8 @@ describe('applyDisclosureToConnectorPayload', () => {
             payload,
             persona: null,
         });
-        expect(result.modifiedFields).toEqual([]);
-        expect(result.payload).toBe(payload);
+        assert.deepEqual(result.modifiedFields, []);
+        assert.equal(result.payload, payload);
     });
 
     it('skips status-only actions (update_status, merge_pr, list_prs)', () => {
@@ -78,8 +79,8 @@ describe('applyDisclosureToConnectorPayload', () => {
                 payload,
                 persona,
             });
-            expect(result.modifiedFields).toEqual([]);
-            expect(result.payload['body']).toBe('should NOT be touched');
+            assert.deepEqual(result.modifiedFields, []);
+            assert.equal(result.payload['body'], 'should NOT be touched');
         }
     });
 
@@ -90,7 +91,7 @@ describe('applyDisclosureToConnectorPayload', () => {
             payload: { body: 'Implements feature X' },
             persona,
         });
-        expect(String(result.payload['body'])).toContain('AI Agent Notice');
+        assert.ok(String(result.payload['body']).includes('AI Agent Notice'));
     });
 
     it('uses slack formatting for slack connector send_message', () => {
@@ -101,7 +102,7 @@ describe('applyDisclosureToConnectorPayload', () => {
             persona,
         });
         // Slack format uses "> _...statement..._" italic block-quote
-        expect(String(result.payload['message'])).toContain('_This message was sent');
+        assert.ok(String(result.payload['message']).includes('_This message was sent'));
     });
 });
 
@@ -112,8 +113,8 @@ describe('applyDisclosureToText', () => {
             persona,
             channel: 'slack',
         });
-        expect(result.wasModified).toBe(true);
-        expect(result.text).toContain('AI agent');
+        assert.equal(result.wasModified, true);
+        assert.ok(result.text.includes('AI agent'));
     });
 
     it('returns original text when persona is null', () => {
@@ -122,20 +123,20 @@ describe('applyDisclosureToText', () => {
             persona: null,
             channel: 'slack',
         });
-        expect(result.wasModified).toBe(false);
-        expect(result.text).toBe('Build is green');
+        assert.equal(result.wasModified, false);
+        assert.equal(result.text, 'Build is green');
     });
 });
 
 describe('buildMeetingDisclosureAnnouncement', () => {
     it('returns named announcement when persona configured', () => {
         const announcement = buildMeetingDisclosureAnnouncement(persona);
-        expect(announcement).toContain('Alex');
-        expect(announcement).toContain('AI agent');
+        assert.ok(announcement.includes('Alex'));
+        assert.ok(announcement.includes('AI agent'));
     });
 
     it('returns empty string when persona has no disclosure', () => {
-        expect(buildMeetingDisclosureAnnouncement(null)).toBe('');
-        expect(buildMeetingDisclosureAnnouncement({ displayName: 'X', disclosureStatement: '' })).toBe('');
+        assert.equal(buildMeetingDisclosureAnnouncement(null), '');
+        assert.equal(buildMeetingDisclosureAnnouncement({ displayName: 'X', disclosureStatement: '' }), '');
     });
 });

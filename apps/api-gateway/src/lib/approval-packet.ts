@@ -20,6 +20,8 @@ export type ApprovalPacket = {
     proposed_rollback: string | null;
     lint_status: string | null;
     test_status: string | null;
+    gate_type: string | null;
+    gate_category: string | null;
     packet_complete: boolean;
     evidence_bundle?: EvidenceBundle;
 };
@@ -33,6 +35,8 @@ const FIELD_PREFIXES = {
     proposed_rollback: 'Proposed rollback:',
     lint_status: 'Lint status:',
     test_status: 'Test status:',
+    gate_type: 'Gate type:',
+    gate_category: 'Gate category:',
 } as const;
 
 const normalizeLineForPrefixMatch = (line: string): string => {
@@ -73,6 +77,8 @@ export const parseApprovalPacket = (actionSummary: string, evidenceBundle?: Evid
         proposed_rollback: null,
         lint_status: null,
         test_status: null,
+        gate_type: null,
+        gate_category: null,
     };
 
     for (const line of lines) {
@@ -104,6 +110,16 @@ export const parseApprovalPacket = (actionSummary: string, evidenceBundle?: Evid
         const testStatus = extractFieldValue(line, FIELD_PREFIXES.test_status);
         if (testStatus !== null) {
             packet.test_status = testStatus;
+            continue;
+        }
+        const gateType = extractFieldValue(line, FIELD_PREFIXES.gate_type);
+        if (gateType !== null) {
+            packet.gate_type = gateType;
+            continue;
+        }
+        const gateCategory = extractFieldValue(line, FIELD_PREFIXES.gate_category);
+        if (gateCategory !== null) {
+            packet.gate_category = gateCategory;
         }
     }
 

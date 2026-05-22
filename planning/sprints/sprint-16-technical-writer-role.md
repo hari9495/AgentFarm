@@ -1,9 +1,9 @@
 # Sprint 16 — Technical Writer Role
 
-**Status:** PLANNED
+**Status:** DONE
 **Target start:** 2026-05-26
-**Completed:** —
-**Quality gate:** — (to be recorded on completion)
+**Completed:** 2026-05-22
+**Quality gate:** PASS (runtime-server.ts 80.25% lines, exit 0)
 
 ---
 

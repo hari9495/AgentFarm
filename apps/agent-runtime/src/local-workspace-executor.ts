@@ -43,6 +43,12 @@ import type { AgentPersonaRecord } from '@agentfarm/shared-types';
 import { handleSalesAction } from './sales-action-handler.js';
 import { handleCorporateAssistantAction } from './corporate-assistant-action-handler.js';
 import { handleTesterAction } from './tester-action-handler.js';
+import { handleTechnicalWriterAction, type TechnicalWriterActionType } from './technical-writer-action-handler.js';
+import { handleContentWriterAction, isContentWriterActionType } from './content-writer-action-handler.js';
+import type { ProseCallerFn } from './content-writer/llm-prose-writer.js';
+import { streamLLM } from './llm-decision-adapter.js';
+import { globalEpisodicMemory } from './episodic-memory.js';
+import type { TaskOutcome } from './episodic-memory.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -259,7 +265,38 @@ export type LocalWorkspaceActionType =
     | 'workspace_ca_document_update'
     | 'workspace_ca_escalate'
     | 'workspace_ca_message_send'
-    | 'workspace_ca_standup_report';
+    | 'workspace_ca_standup_report'
+    // Tier 26 (Technical Writer domain actions)
+    | 'workspace_tw_doc_diff'
+    | 'workspace_tw_api_doc_openapi'
+    | 'workspace_tw_api_doc_code'
+    | 'workspace_tw_release_notes'
+    | 'workspace_tw_style_check'
+    | 'workspace_tw_standup_report'
+    // Tier 27 (General file write — used by TW and future roles)
+    | 'workspace_write_file'
+    // Tier 28 (Content Writer domain actions)
+    | 'workspace_cw_research_topic'
+    | 'workspace_cw_write_prose'
+    | 'workspace_cw_seo_optimize'
+    | 'workspace_cw_publish_cms'
+    | 'workspace_cw_promote_draft'
+    | 'workspace_cw_scheduled_publish'
+    | 'workspace_cw_adapt_tone'
+    | 'workspace_cw_source_images'
+    | 'workspace_cw_schedule_content'
+    | 'workspace_cw_fact_check'
+    | 'workspace_cw_revision_apply'
+    | 'workspace_cw_brand_voice_learn'
+    | 'workspace_cw_verify_facts'
+    | 'workspace_cw_review_prose'
+    | 'workspace_cw_detect_plagiarism'
+    | 'workspace_cw_clarify_brief'
+    | 'workspace_cw_localize_content'
+    | 'workspace_cw_analytics_report'
+    | 'workspace_cw_send_for_review'
+    | 'workspace_cw_run_workflow'
+    | 'workspace_cw_request_human_gate';
 
 export type LocalWorkspaceResult = {
     ok: boolean;
@@ -699,6 +736,22 @@ export const LOCAL_WORKSPACE_ACTION_TYPES = new Set<LocalWorkspaceActionType>([
     'workspace_ca_escalate',
     'workspace_ca_message_send',
     'workspace_ca_standup_report',
+    // Tier 21 accessibility + Tier 22 mutation/contract + Tier 23 test data + mobile
+    'workspace_axe_scan',
+    'workspace_create_bug',
+    'workspace_mutation_test',
+    'workspace_contract_test',
+    'workspace_generate_test_data',
+    'workspace_mobile_test',
+    // Tier 26 (Technical Writer domain actions)
+    'workspace_tw_doc_diff',
+    'workspace_tw_api_doc_openapi',
+    'workspace_tw_api_doc_code',
+    'workspace_tw_release_notes',
+    'workspace_tw_style_check',
+    'workspace_tw_standup_report',
+    // Tier 27 (General file write)
+    'workspace_write_file',
 ]);
 
 // ---------------------------------------------------------------------------
@@ -2996,6 +3049,31 @@ function extractPersonaFromPayload(payload: Record<string, unknown>): ExtractedP
     return { displayName, emailAddress, disclosureStatement };
 }
 
+/**
+ * Build a ProseCallerFn backed by streamLLM using the runtime's configured
+ * model provider (AF_MODEL_PROVIDER env var). Returns undefined when no
+ * provider is configured so the CW handler can surface a clear error.
+ */
+function buildProseCallerFn(): ProseCallerFn | undefined {
+    const provider = (process.env['AF_MODEL_PROVIDER'] ?? process.env['AGENTFARM_MODEL_PROVIDER'] ?? '').toLowerCase().trim() as Parameters<typeof streamLLM>[0];
+    if (!provider || provider === 'agentfarm') return undefined;
+    return async (systemPrompt: string, userPrompt: string) => {
+        try {
+            const chunks: string[] = [];
+            for await (const chunk of streamLLM(provider, [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: userPrompt },
+            ])) {
+                chunks.push(chunk);
+            }
+            const text = chunks.join('') || null;
+            return { text };
+        } catch (err) {
+            return { text: null, error: String(err) };
+        }
+    };
+}
+
 export async function executeLocalWorkspaceAction(input: {
     tenantId: string;
     botId: string;
@@ -3007,6 +3085,10 @@ export async function executeLocalWorkspaceAction(input: {
      *  When provided and the task has no pre-generated plan, workspace_subagent_spawn
      *  calls this to produce real code_edit steps from the prompt + file contents. */
     llmCodeGenFn?: LlmCodeGenFn;
+    /** Optional LLM prose caller injected by the execution engine.
+     *  Required for all workspace_cw_* actions that generate or transform text via LLM.
+     *  When omitted the executor builds one from AF_MODEL_PROVIDER env vars if available. */
+    callerFn?: ProseCallerFn;
 }): Promise<LocalWorkspaceResult> {
     const { tenantId, botId, taskId, actionType, payload, connectorActionExecuteClient } = input;
     const workspaceKey = typeof payload['workspace_key'] === 'string' && payload['workspace_key'].trim()
@@ -12529,6 +12611,51 @@ export async function executeLocalWorkspaceAction(input: {
         }
 
         // ====================================================================
+        // TIER 26: TECHNICAL WRITER DOMAIN ACTIONS
+        // ====================================================================
+        case 'workspace_tw_doc_diff':
+        case 'workspace_tw_api_doc_openapi':
+        case 'workspace_tw_api_doc_code':
+        case 'workspace_tw_release_notes':
+        case 'workspace_tw_style_check':
+        case 'workspace_tw_standup_report': {
+            return handleTechnicalWriterAction({
+                actionType: actionType as TechnicalWriterActionType,
+                tenantId,
+                botId,
+                taskId,
+                payload,
+                workspaceDir,
+                runCommand,
+            });
+        }
+
+        // ====================================================================
+        // TIER 27: GENERAL FILE WRITE
+        // ====================================================================
+        // workspace_write_file: write (create or overwrite) a documentation or
+        // data file in the task workspace without triggering code coherence checks.
+        // payload: { file_path, content, create_dirs? }
+        case 'workspace_write_file': {
+            const writeFilePath = typeof payload['file_path'] === 'string' ? payload['file_path'].trim() : '';
+            const writeContent = typeof payload['content'] === 'string' ? payload['content'] : '';
+            if (!writeFilePath) {
+                return { ok: false, output: '', errorOutput: 'payload.file_path is required for workspace_write_file.' };
+            }
+            try {
+                const safePath = safeChildPath(workspaceDir, writeFilePath);
+                await mkdir(dirname(safePath), { recursive: true });
+                await writeFile(safePath, writeContent, 'utf-8');
+                return {
+                    ok: true,
+                    output: JSON.stringify({ written: writeFilePath, bytes: writeContent.length }),
+                };
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: String(err) };
+            }
+        }
+
+        // ====================================================================
         // TIER 26: TESTER DOMAIN ACTIONS
         // ====================================================================
         case 'workspace_standup_report':
@@ -12554,6 +12681,60 @@ export async function executeLocalWorkspaceAction(input: {
                         connectorActionExecuteClient,
                     }),
             });
+        }
+
+        // ====================================================================
+        // TIER 28: CONTENT WRITER DOMAIN ACTIONS
+        // ====================================================================
+        case 'workspace_cw_research_topic':
+        case 'workspace_cw_write_prose':
+        case 'workspace_cw_seo_optimize':
+        case 'workspace_cw_publish_cms':
+        case 'workspace_cw_promote_draft':
+        case 'workspace_cw_scheduled_publish':
+        case 'workspace_cw_adapt_tone':
+        case 'workspace_cw_source_images':
+        case 'workspace_cw_schedule_content':
+        case 'workspace_cw_fact_check':
+        case 'workspace_cw_revision_apply':
+        case 'workspace_cw_brand_voice_learn':
+        case 'workspace_cw_verify_facts':
+        case 'workspace_cw_review_prose':
+        case 'workspace_cw_detect_plagiarism':
+        case 'workspace_cw_clarify_brief':
+        case 'workspace_cw_localize_content':
+        case 'workspace_cw_analytics_report':
+        case 'workspace_cw_send_for_review':
+        case 'workspace_cw_run_workflow':
+        case 'workspace_cw_request_human_gate': {
+            if (!isContentWriterActionType(actionType)) {
+                return { ok: false, output: '', errorOutput: `Unrecognised content writer action: ${actionType}` };
+            }
+            const cwResult = await handleContentWriterAction({
+                actionType,
+                tenantId,
+                botId,
+                taskId,
+                payload,
+                workspaceDir,
+                callerFn: input.callerFn ?? buildProseCallerFn(),
+            });
+            // Record outcome in episodic memory so the agent remembers past content tasks
+            const cwOutcome: TaskOutcome = cwResult.ok ? 'success' : 'failed';
+            const cwTitle = typeof payload['title'] === 'string' ? payload['title'] : '';
+            const cwTopic = typeof payload['topic'] === 'string' ? payload['topic'] : '';
+            const promptSummary = (cwTitle || cwTopic || actionType).slice(0, 200);
+            void globalEpisodicMemory.record({
+                taskId,
+                workspaceId: workspaceDir,
+                botId,
+                actionType,
+                promptSummary,
+                outcome: cwOutcome,
+                timestamp: Date.now(),
+                errorMessage: cwResult.errorOutput ? cwResult.errorOutput.slice(0, 200) : undefined,
+            });
+            return cwResult;
         }
 
         default: {
