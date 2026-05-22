@@ -318,6 +318,13 @@ export async function handleSalesAction(params: {
                 if (!prospectId) {
                     return { ok: false, output: '', errorOutput: 'payload.prospect_id is required.' };
                 }
+                const prospectRow = await (prisma as unknown as PrismaWithProspect).prospect.findUnique({ where: { id: prospectId } });
+                if (!prospectRow) {
+                    return { ok: false, output: '', errorOutput: `Prospect not found: ${prospectId}` };
+                }
+                if (String(prospectRow['tenantId'] ?? '') !== tenantId) {
+                    return { ok: false, output: '', errorOutput: 'Tenant isolation violation' };
+                }
                 const startFrom = typeof payload['start_from'] === 'string'
                     ? new Date(payload['start_from'])
                     : undefined;

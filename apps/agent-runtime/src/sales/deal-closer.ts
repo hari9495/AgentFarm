@@ -42,6 +42,9 @@ export async function closeDealWon(
 
         const deal = await db.salesDeal.findUnique({ where: { id: dealId } });
         if (!deal) return { closed: false, outcome: 'won', error: 'Deal not found' };
+        if (String(deal['tenantId'] ?? '') !== tenantId) {
+            return { closed: false, outcome: 'won', error: 'Tenant isolation violation' };
+        }
 
         const prospect = await db.prospect.findUnique({ where: { id: String(deal['prospectId'] ?? '') } });
         const closedAt = signedAt;
@@ -136,6 +139,9 @@ export async function closeDealLost(
 
         const deal = await db.salesDeal.findUnique({ where: { id: dealId } });
         if (!deal) return { closed: false, outcome: 'lost', error: 'Deal not found' };
+        if (String(deal['tenantId'] ?? '') !== tenantId) {
+            return { closed: false, outcome: 'lost', error: 'Tenant isolation violation' };
+        }
 
         const prospect = await db.prospect.findUnique({ where: { id: String(deal['prospectId'] ?? '') } });
         const closedAt = new Date();

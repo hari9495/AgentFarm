@@ -3,6 +3,10 @@ import {
     TESTER_ROLE_ALLOWED_CONNECTORS,
     TESTER_ROLE_ALLOWED_LOCAL_ACTIONS,
 } from '../tester-agent-profile.js';
+import {
+    CORPORATE_ASSISTANT_ROLE_ALLOWED_CONNECTORS,
+    CORPORATE_ASSISTANT_ROLE_ALLOWED_LOCAL_ACTIONS,
+} from '../corporate-assistant-agent-profile.js';
 
 export interface RoleProfile {
     roleKey: RoleKey;
@@ -98,8 +102,8 @@ export const ROLE_PROFILES: Record<RoleKey, RoleProfile> = {
         roleKey: 'corporate_assistant',
         displayName: 'Corporate Assistant',
         description: 'Handles scheduling, email management, document prep, and internal communication',
-        allowedConnectorTools: ['gmail', 'outlook', 'google_calendar', 'slack', 'microsoft_teams', 'google_drive', 'confluence'],
-        allowedActions: ['send_email', 'schedule_meeting', 'create_document', 'send_message', 'read_document', 'read_calendar'],
+        allowedConnectorTools: [...CORPORATE_ASSISTANT_ROLE_ALLOWED_CONNECTORS],
+        allowedActions: [...CORPORATE_ASSISTANT_ROLE_ALLOWED_LOCAL_ACTIONS],
         requiredConfig: ['emailProvider', 'calendarProvider'],
     },
     customer_support_executive: {

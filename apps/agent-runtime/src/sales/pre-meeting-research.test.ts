@@ -75,7 +75,7 @@ describe('generatePreMeetingBrief', () => {
         });
 
         const prisma = makePrisma(
-            { id: 'p-1', firstName: 'Alice', lastName: 'Chen', company: 'ACME', title: 'VP Eng', botId: 'bot-1' },
+            { id: 'p-1', firstName: 'Alice', lastName: 'Chen', company: 'ACME', title: 'VP Eng', botId: 'bot-1', tenantId: 'tenant-1' },
             [
                 { activityType: 'email', subject: 'Introduction', outcome: 'opened', completedAt: new Date().toISOString() },
                 { activityType: 'email_replied', subject: 'Re: Introduction', outcome: 'interested', completedAt: new Date().toISOString() },
@@ -107,7 +107,7 @@ describe('generatePreMeetingBrief', () => {
         mockLlmFetchError();
 
         const prisma = makePrisma(
-            { id: 'p-3', firstName: 'Bob', lastName: 'Kim', company: 'TechCo', botId: 'bot-1' },
+            { id: 'p-3', firstName: 'Bob', lastName: 'Kim', company: 'TechCo', botId: 'bot-1', tenantId: 'tenant-1' },
             [],
             null,
         );
@@ -127,7 +127,7 @@ describe('generatePreMeetingBrief', () => {
         const prisma = {
             prospect: {
                 async findUnique(_args: unknown) {
-                    return { id: 'p-4', firstName: 'Cara', lastName: 'Jones', company: 'Startup', botId: 'bot-1' };
+                    return { id: 'p-4', firstName: 'Cara', lastName: 'Jones', company: 'Startup', botId: 'bot-1', tenantId: 'tenant-1' };
                 },
             },
             salesActivity: {

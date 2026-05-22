@@ -4,13 +4,17 @@ export class MailgunEmailProvider implements IEmailProvider {
     readonly providerName = 'mailgun' as const;
 
     async sendEmail(params: SendEmailParams, config: EmailProviderConfig): Promise<SendEmailResult> {
-        const domain = config.fromEmail?.split('@')[1] ?? 'mail.example.com';
+        const fromEmail = config.fromEmail;
+        if (!fromEmail || !fromEmail.includes('@')) {
+            return { success: false, error: 'MailgunEmailProvider: fromEmail is not configured or invalid. Set SALES_FROM_EMAIL env var.', provider: 'mailgun' };
+        }
+        const domain = fromEmail.split('@')[1]!;
         const auth = Buffer.from(`api:${config.apiKey ?? ''}`).toString('base64');
 
         const form = new FormData();
-        form.append('from', config.fromName && config.fromEmail
-            ? `${config.fromName} <${config.fromEmail}>`
-            : (config.fromEmail ?? params.from));
+        form.append('from', config.fromName
+            ? `${config.fromName} <${fromEmail}>`
+            : fromEmail);
         form.append('to', params.to);
         form.append('subject', params.subject);
         form.append('html', params.body);

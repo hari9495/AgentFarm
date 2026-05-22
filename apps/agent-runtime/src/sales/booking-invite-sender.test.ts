@@ -96,6 +96,7 @@ describe('sendBookingInvite', () => {
             email: 'alice@example.com',
             company: 'ACME',
             botId: 'bot-1',
+            tenantId: 'tenant-1',
         });
 
         const result = await sendBookingInvite(
@@ -156,6 +157,7 @@ describe('sendBookingInvite', () => {
             email: 'bob@example.com',
             company: 'ACME',
             botId: 'bot-1',
+            tenantId: 'tenant-1',
         });
 
         const result = await sendBookingInvite(

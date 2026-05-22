@@ -5540,3 +5540,104 @@ test('confidence scorer auto-approves low-risk task when LLM confidence is high'
         await app.close();
     }
 });
+
+// ---------------------------------------------------------------------------
+// Sprint 2 — Role Enforcement: processOneTask gate
+// ---------------------------------------------------------------------------
+test('role enforcement blocks developer agent from executing a recruiter action type', async () => {
+    const persisted: ActionResultRecord[] = [];
+
+    // baseEnv() uses AF_ROLE_PROFILE='Developer Agent' → roleKey='developer'.
+    // 'create_job_posting' is in DEVELOPER_BLOCKED_ACTIONS → hard block, no LLM call needed.
+    const app = buildRuntimeServer({
+        env: baseEnv(),
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+        actionResultWriter: async (record) => { persisted.push(record); },
+    });
+
+    try {
+        await app.inject({ method: 'POST', url: '/startup' });
+
+        await app.inject({
+            method: 'POST',
+            url: '/tasks/intake',
+            payload: {
+                task_id: 'role-block-recruiter-1',
+                payload: {
+                    action_type: 'create_job_posting',
+                    summary: 'Write a job description for a senior backend engineer',
+                },
+            },
+        });
+
+        const record = await waitForValue(
+            () => persisted.find((r) => r.taskId === 'role-block-recruiter-1'),
+            { timeoutMs: 2_000, pollMs: 25 },
+        );
+        assert.ok(record, 'action result record should be persisted');
+        assert.equal(record?.status, 'failed');
+        assert.equal(record?.failureClass, 'role_enforcement');
+    } finally {
+        await app.close();
+    }
+});
+
+test('role enforcement allows developer agent to proceed with a legitimate developer task', async () => {
+    const persisted: ActionResultRecord[] = [];
+
+    const app = buildRuntimeServer({
+        env: baseEnv(),
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+        actionResultWriter: async (record) => { persisted.push(record); },
+        // Provide a resolver so the task doesn't stall waiting for a real LLM.
+        llmDecisionResolver: async ({ heuristicDecision }) => ({
+            decision: {
+                ...heuristicDecision,
+                actionType: 'review_code',
+                riskLevel: 'low',
+                route: 'execute',
+                confidence: 0.9,
+                reason: 'Code review is a core developer task',
+            },
+            metadata: {
+                modelProvider: 'agentfarm',
+                model: 'test-model',
+                modelProfile: 'speed_first',
+                promptTokens: 8,
+                completionTokens: 3,
+                totalTokens: 11,
+            },
+        }),
+    });
+
+    try {
+        await app.inject({ method: 'POST', url: '/startup' });
+
+        await app.inject({
+            method: 'POST',
+            url: '/tasks/intake',
+            payload: {
+                task_id: 'role-allow-developer-1',
+                payload: {
+                    action_type: 'review_code',
+                    summary: 'Review the auth.ts module for potential security issues',
+                    target: 'src/auth.ts',
+                },
+            },
+        });
+
+        const record = await waitForValue(
+            () => persisted.find((r) => r.taskId === 'role-allow-developer-1'),
+            { timeoutMs: 2_000, pollMs: 25 },
+        );
+        assert.ok(record, 'action result record should be persisted');
+        // Task was not blocked by role enforcement — failureClass must not be role_enforcement
+        assert.notEqual(record?.failureClass, 'role_enforcement');
+    } finally {
+        await app.close();
+    }
+});

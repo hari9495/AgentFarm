@@ -13,6 +13,7 @@
 
 import type { TaskEnvelope } from './execution-engine.js';
 import { DEVELOPER_BLOCKED_KEYWORDS } from './role-profiles/developer-role-profile.js';
+import { CORPORATE_ASSISTANT_BLOCKED_KEYWORDS } from './role-profiles/corporate-assistant-role-profile.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -140,6 +141,44 @@ export function extractTaskDescription(task: TaskEnvelope): string {
  * match, and 0.50 on a neutral (no signal either way).
  */
 export function heuristicClassify(taskDescription: string, roleKey: string): ClassificationResult {
+    if (roleKey === 'corporate_assistant') {
+        const lower = taskDescription.toLowerCase();
+
+        // Positive CA signals.
+        const CA_POSITIVE_KEYWORDS = [
+            'schedule meeting', 'send email', 'create document', 'set up meeting',
+            'book meeting', 'calendar invite', 'draft email', 'compose email',
+            'prepare agenda', 'meeting notes', 'standup report', 'send message',
+            'follow up', 'internal memo', 'out of office',
+        ];
+        const positiveMatch = CA_POSITIVE_KEYWORDS.find(kw => lower.includes(kw));
+        if (positiveMatch) {
+            return {
+                belongsToRole: true,
+                confidence: 0.80,
+                reason: `Task contains corporate-assistant-role keyword: "${positiveMatch}"`,
+                suggestedRole: null,
+            };
+        }
+
+        const blockedMatch = CORPORATE_ASSISTANT_BLOCKED_KEYWORDS.find(kw => lower.includes(kw));
+        if (blockedMatch) {
+            return {
+                belongsToRole: false,
+                confidence: 0.85,
+                reason: `Task contains non-corporate-assistant keyword: "${blockedMatch}"`,
+                suggestedRole: null,
+            };
+        }
+
+        return {
+            belongsToRole: true,
+            confidence: 0.50,
+            reason: 'No strong role signal for corporate_assistant; defaulting to allow',
+            suggestedRole: null,
+        };
+    }
+
     if (roleKey !== 'developer') {
         // No heuristic for other roles yet — allow through.
         return {

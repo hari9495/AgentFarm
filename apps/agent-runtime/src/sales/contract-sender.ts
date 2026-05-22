@@ -49,6 +49,13 @@ export async function sendContractInvite(
             ]);
         }
 
+        if (prospect && prospect['tenantId'] !== tenantId) {
+            return { subject: '', body: '', sent: false, error: 'Tenant isolation violation' };
+        }
+        if (deal && deal['tenantId'] !== tenantId) {
+            return { subject: '', body: '', sent: false, error: 'Tenant isolation violation' };
+        }
+
         if (!prospect) {
             return { subject: '', body: '', sent: false, error: 'Prospect not found' };
         }

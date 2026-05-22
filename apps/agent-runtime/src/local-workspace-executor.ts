@@ -41,6 +41,7 @@ import {
 } from './outbound-disclosure.js';
 import type { AgentPersonaRecord } from '@agentfarm/shared-types';
 import { handleSalesAction } from './sales-action-handler.js';
+import { handleCorporateAssistantAction } from './corporate-assistant-action-handler.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -245,7 +246,18 @@ export type LocalWorkspaceActionType =
     | 'workspace_pre_meeting_research'
     | 'workspace_booking_invite'
     | 'workspace_contract_send'
-    | 'workspace_deal_close';
+    | 'workspace_deal_close'
+    // Tier 25 (Corporate Assistant domain actions)
+    | 'workspace_ca_email_compose'
+    | 'workspace_ca_email_send'
+    | 'workspace_ca_email_classify'
+    | 'workspace_ca_calendar_check'
+    | 'workspace_ca_calendar_schedule'
+    | 'workspace_ca_calendar_cancel'
+    | 'workspace_ca_document_create'
+    | 'workspace_ca_document_update'
+    | 'workspace_ca_escalate'
+    | 'workspace_ca_message_send';
 
 export type LocalWorkspaceResult = {
     ok: boolean;
@@ -673,6 +685,17 @@ export const LOCAL_WORKSPACE_ACTION_TYPES = new Set<LocalWorkspaceActionType>([
     'workspace_migration_generate',
     // Tier 22 (Dependency upgrades)
     'workspace_dependency_upgrade_apply',
+    // Tier 25 (Corporate Assistant domain actions)
+    'workspace_ca_email_compose',
+    'workspace_ca_email_send',
+    'workspace_ca_email_classify',
+    'workspace_ca_calendar_check',
+    'workspace_ca_calendar_schedule',
+    'workspace_ca_calendar_cancel',
+    'workspace_ca_document_create',
+    'workspace_ca_document_update',
+    'workspace_ca_escalate',
+    'workspace_ca_message_send',
 ]);
 
 // ---------------------------------------------------------------------------
@@ -12775,6 +12798,22 @@ export async function executeLocalWorkspaceAction(input: {
         case 'workspace_contract_send':
         case 'workspace_deal_close': {
             return handleSalesAction({ actionType, tenantId, botId, taskId, payload });
+        }
+
+        // ====================================================================
+        // TIER 25: CORPORATE ASSISTANT DOMAIN ACTIONS
+        // ====================================================================
+        case 'workspace_ca_email_compose':
+        case 'workspace_ca_email_send':
+        case 'workspace_ca_email_classify':
+        case 'workspace_ca_calendar_check':
+        case 'workspace_ca_calendar_schedule':
+        case 'workspace_ca_calendar_cancel':
+        case 'workspace_ca_document_create':
+        case 'workspace_ca_document_update':
+        case 'workspace_ca_escalate':
+        case 'workspace_ca_message_send': {
+            return handleCorporateAssistantAction({ actionType, tenantId, botId, taskId, payload });
         }
 
         default: {

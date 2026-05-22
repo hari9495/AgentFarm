@@ -22,6 +22,11 @@ export function createNotificationProvider(
             return new TeamsNotificationProvider(target);
         case 'email': {
             if (!emailProvider) return null;
+            const fromEmail = process.env['SALES_FROM_EMAIL'] ?? process.env['SALES_EMAIL_FROM'];
+            if (!fromEmail) {
+                console.warn('[notification-provider-factory] Cannot create email notification provider: SALES_FROM_EMAIL env var is not set.');
+                return null;
+            }
             const emailConfig: EmailProviderConfig = {
                 apiKey: process.env['SALES_EMAIL_API_KEY'],
                 host: process.env['SALES_SMTP_HOST'],
@@ -29,7 +34,7 @@ export function createNotificationProvider(
                 secure: process.env['SALES_SMTP_SECURE'] === 'true',
                 user: process.env['SALES_SMTP_USER'],
                 pass: process.env['SALES_SMTP_PASS'],
-                fromEmail: process.env['SALES_FROM_EMAIL'] ?? 'sales@agentfarm.dev',
+                fromEmail,
                 fromName: process.env['SALES_FROM_NAME'],
             };
             return new EmailNotificationProvider(target, emailProvider, emailConfig);

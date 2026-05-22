@@ -116,7 +116,16 @@ import {
 } from './sales-rep-agent-profile.js';
 import { buildSalesRepEpisodicPattern, buildSalesRepEpisodicSummary } from './sales-rep-episodic-hooks.js';
 import { getSalesRepMcpClients } from './sales-rep-mcp-provisioner.js';
+import {
+    CORPORATE_ASSISTANT_ROLE_ALLOWED_CONNECTORS,
+    CORPORATE_ASSISTANT_ROLE_ALLOWED_LOCAL_ACTIONS,
+    isCorporateAssistantRoleProfile,
+} from './corporate-assistant-agent-profile.js';
+import { getCorporateAssistantDefaultPersona } from './corporate-assistant-persona-defaults.js';
+import { buildCorporateAssistantEpisodicPattern, buildCorporateAssistantEpisodicSummary } from './corporate-assistant-episodic-hooks.js';
+import { getCorporateAssistantMcpClients } from './corporate-assistant-mcp-provisioner.js';
 import { assessTaskClarity, buildClarificationMessage } from './intent-clarifier.js';
+import { enforceRole } from './role-enforcer.js';
 import { checkConnectorReadiness } from './connector-readiness-check.js';
 import { routeModelForTask } from './model-router.js';
 import { scoreActionConfidence } from './confidence-scorer.js';
@@ -808,7 +817,10 @@ type RuntimeConnectorType =
     | 'burpsuite' | 'owasp_zap'
     | 'google_meet' | 'microsoft_teams' | 'zoom'
     // Sales Rep connectors
-    | 'hubspot' | 'salesforce' | 'apollo' | 'hunter' | 'linkedin' | 'calendar';
+    | 'hubspot' | 'salesforce' | 'apollo' | 'hunter' | 'linkedin' | 'calendar'
+    // Corporate Assistant connectors
+    | 'gmail' | 'outlook' | 'smtp' | 'google_calendar' | 'outlook_calendar'
+    | 'google_drive' | 'confluence';
 type RuntimeConnectorActionType =
     | 'read_task'
     | 'create_comment'
@@ -832,7 +844,7 @@ const ROLE_CONNECTOR_POLICY: Record<RoleKey, RuntimeConnectorType[]> = {
     content_writer: ['teams', 'email'],
     sales_rep: [...SALES_REP_ROLE_ALLOWED_CONNECTORS],
     marketing_specialist: ['teams', 'email'],
-    corporate_assistant: ['teams', 'email'],
+    corporate_assistant: [...CORPORATE_ASSISTANT_ROLE_ALLOWED_CONNECTORS],
     customer_support_executive: ['jira', 'teams', 'email'],
     project_manager_product_owner_scrum_master: ['jira', 'teams', 'github', 'email'],
 };
@@ -1092,7 +1104,7 @@ const LOCAL_WORKSPACE_ACTION_POLICY: Record<RoleKey, RuntimeLocalWorkspaceAction
     content_writer: [],
     sales_rep: [...SALES_REP_ROLE_ALLOWED_LOCAL_ACTIONS],
     marketing_specialist: [],
-    corporate_assistant: [],
+    corporate_assistant: [...CORPORATE_ASSISTANT_ROLE_ALLOWED_LOCAL_ACTIONS],
     customer_support_executive: [],
     project_manager_product_owner_scrum_master: ['code_read'],
 };
@@ -1165,6 +1177,9 @@ const roleKeyFromRoleProfile = (roleProfile: string): RoleKey | null => {
     }
     if (isSalesRepRoleProfile(normalized)) {
         return 'sales_rep';
+    }
+    if (isCorporateAssistantRoleProfile(normalized)) {
+        return 'corporate_assistant';
     }
     const aliases: Record<string, RoleKey> = {
         recruiter: 'recruiter',
@@ -3350,6 +3365,47 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         taskStartTimes.set(task.taskId, now());
 
         task = await enrichTaskWithVision(task);
+
+        // ---- Role enforcement: hard block + semantic soft-block ----
+        // First gate in task processing. Declined tasks never reach the LLM,
+        // persona load, or plan generation — keeping role boundaries hard.
+        const roleEnforcement = await enforceRole(task, config.roleKey as RoleKey).catch(() => ({ allowed: true as const }));
+        if (!roleEnforcement.allowed) {
+            workerLoop.processedTasks += 1;
+            workerLoop.failedTasks += 1;
+            advancedFeatures.appendTraceStep(task.taskId, 'role_enforcement_blocked', {
+                declineCode: roleEnforcement.declineCode,
+                reason: roleEnforcement.reason,
+                suggestedRole: roleEnforcement.suggestedRole ?? null,
+                roleKey: config.roleKey,
+            });
+            emitRuntimeEvent('runtime.task_role_enforcement_blocked', config, {
+                task_id: task.taskId,
+                role_key: config.roleKey,
+                decline_code: roleEnforcement.declineCode,
+                reason: roleEnforcement.reason,
+                suggested_role: roleEnforcement.suggestedRole ?? null,
+            });
+            await persistActionResultRecord(task, config, {
+                decision: {
+                    actionType: typeof task.payload['action_type'] === 'string'
+                        ? task.payload['action_type']
+                        : 'unknown',
+                    route: 'execute',
+                    riskLevel: 'low',
+                    confidence: 1,
+                    reason: roleEnforcement.reason,
+                },
+                status: 'failed',
+                attempts: 0,
+                transientRetries: 0,
+                executionPayload: task.payload,
+                payloadOverrideSource: 'none',
+                failureClass: 'role_enforcement',
+                errorMessage: `Role enforcement blocked (${roleEnforcement.declineCode}): ${roleEnforcement.reason}`,
+            });
+            return;
+        }
 
         // Load agent persona — falls back to role defaults for tester bots with no custom persona
         const persona = await loadPersonaForBotWithFallback(config.botId, config.tenantId, config.roleKey).catch(() => null);

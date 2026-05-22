@@ -20,10 +20,13 @@ export class EmailNotificationProvider implements INotificationProvider {
                 : '';
             const body = `Deal ${payload.outcome}: ${payload.prospectName} at ${payload.company}${valueText}${daysText}\n\nTenant: ${payload.tenantId} | Bot: ${payload.botId} | Deal: ${payload.dealId}`;
 
+            if (!this.emailConfig.fromEmail) {
+                return { sent: false, error: 'EmailNotificationProvider: fromEmail is not configured. Set SALES_FROM_EMAIL env var.' };
+            }
             const result = await this.emailProvider.sendEmail(
                 {
                     to: this.toEmail,
-                    from: this.emailConfig.fromEmail ?? 'sales@agentfarm.dev',
+                    from: this.emailConfig.fromEmail,
                     subject,
                     body,
                 },

@@ -92,7 +92,7 @@ describe('sendContractInvite', () => {
 
     test('returns sent:false when prospect not found in DB', async () => {
         const config = makeConfig();
-        const db = makePrismaStub(null, { id: 'd1', prospectId: 'p1', title: 'Deal', value: 5000, currency: 'USD', createdAt: new Date() });
+        const db = makePrismaStub(null, { id: 'd1', prospectId: 'p1', title: 'Deal', value: 5000, currency: 'USD', createdAt: new Date(), tenantId: 't1' });
         const result = await sendContractInvite('p1', 'd1', 't1', 'bot-1', config, db as never);
         assert.equal(result.sent, false);
         assert.ok(result.error?.includes('not found'));
@@ -100,7 +100,7 @@ describe('sendContractInvite', () => {
 
     test('returns sent:false when deal not found in DB', async () => {
         const config = makeConfig();
-        const db = makePrismaStub({ id: 'p1', email: 'test@example.com', firstName: 'Jane', lastName: 'Doe', company: 'Acme' }, null);
+        const db = makePrismaStub({ id: 'p1', email: 'test@example.com', firstName: 'Jane', lastName: 'Doe', company: 'Acme', tenantId: 't1' }, null);
         const result = await sendContractInvite('p1', 'd1', 't1', 'bot-1', config, db as never);
         assert.equal(result.sent, false);
         assert.ok(result.error?.includes('not found'));
@@ -108,8 +108,8 @@ describe('sendContractInvite', () => {
 
     test('returns sent:false when LLM call fails', async () => {
         const config = makeConfig();
-        const prospect = { id: 'p1', email: 'j@acme.com', firstName: 'Jane', lastName: 'Doe', company: 'Acme' };
-        const deal = { id: 'd1', prospectId: 'p1', title: 'Deal A', value: 5000, currency: 'USD', createdAt: new Date(), botId: 'bot-1' };
+        const prospect = { id: 'p1', email: 'j@acme.com', firstName: 'Jane', lastName: 'Doe', company: 'Acme', tenantId: 't1' };
+        const deal = { id: 'd1', prospectId: 'p1', title: 'Deal A', value: 5000, currency: 'USD', createdAt: new Date(), botId: 'bot-1', tenantId: 't1' };
         const db = makePrismaStub(prospect, deal);
 
         mockFetch = async () => new Response('error', { status: 500 });
@@ -122,8 +122,8 @@ describe('sendContractInvite', () => {
 
     test('calls email provider and creates DB records on success', async () => {
         const config = makeConfig();
-        const prospect = { id: 'p1', email: 'j@acme.com', firstName: 'Jane', lastName: 'Doe', company: 'Acme' };
-        const deal = { id: 'd1', prospectId: 'p1', title: 'Deal A', value: 5000, currency: 'USD', createdAt: new Date(), botId: 'bot-1' };
+        const prospect = { id: 'p1', email: 'j@acme.com', firstName: 'Jane', lastName: 'Doe', company: 'Acme', tenantId: 't1' };
+        const deal = { id: 'd1', prospectId: 'p1', title: 'Deal A', value: 5000, currency: 'USD', createdAt: new Date(), botId: 'bot-1', tenantId: 't1' };
 
         let contractEventCreated = false;
         let dealUpdated = false;

@@ -46,6 +46,9 @@ export async function sendBookingInvite(
 
         if (db) {
             prospect = await db.prospect.findUnique({ where: { id: prospectId } });
+            if (prospect && prospect['tenantId'] !== tenantId) {
+                return { subject: '', body: '', sent: false, error: 'Tenant isolation violation' };
+            }
             if (prospect) {
                 recentActivities = await db.salesActivity.findMany({
                     where: { prospectId, tenantId },

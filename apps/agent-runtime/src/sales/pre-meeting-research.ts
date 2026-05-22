@@ -43,6 +43,9 @@ export async function generatePreMeetingBrief(
                 where: { prospectId, tenantId },
             }),
         ]);
+        if (prospect && prospect['tenantId'] !== tenantId) {
+            throw new Error(`Tenant isolation violation: prospect ${prospectId} does not belong to tenant ${tenantId}`);
+        }
     }
 
     const prospectName = prospect
