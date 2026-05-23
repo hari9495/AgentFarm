@@ -18,8 +18,8 @@
  *   - Each case is fully self-contained; no shared mutable state.
  */
 
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { dirname, resolve, relative } from 'node:path';
+import { mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
+import { dirname, resolve, relative, join, extname } from 'node:path';
 import type { LocalWorkspaceResult } from './local-workspace-executor.js';
 import { buildTechnicalWriterStandupSummary } from './technical-writer-standup-builder.js';
 import {
@@ -133,6 +133,27 @@ import {
     buildVerificationReport,
     type StepVerificationResult,
 } from './technical-writer/step-verifier.js';
+import {
+    buildInteractionReport,
+    type InteractionStep,
+    type InteractionStepResult,
+} from './technical-writer/product-interactor.js';
+import {
+    parseGhPrReviewComments,
+    isActionableComment,
+    buildReviewResponseReport,
+    type ReviewFix,
+} from './technical-writer/pr-review-responder.js';
+import {
+    extractDocEntry,
+    buildDocIndex,
+    findCoveringDocs,
+    type DocIndexEntry,
+} from './technical-writer/doc-indexer.js';
+import {
+    parseGithubIssues,
+    buildRoadmapContext,
+} from './technical-writer/roadmap-context-builder.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -163,7 +184,12 @@ export type TechnicalWriterActionType =
     | 'workspace_tw_screenshot_doc'
     | 'workspace_tw_doc_gap_scan'
     // Accuracy verification — closes the "does the doc actually work?" gap
-    | 'workspace_tw_verify_doc_steps';
+    | 'workspace_tw_verify_doc_steps'
+    // Full parity with human TW — the four remaining gaps
+    | 'workspace_tw_interact_product'   // gap 1: login, fill, click, assert
+    | 'workspace_tw_pr_review_respond'  // gap 2: read review comments, apply fixes
+    | 'workspace_tw_doc_index'          // gap 3: index entire doc set
+    | 'workspace_tw_roadmap_context';   // gap 4: deprecation + upcoming features
 
 const TW_ACTION_TYPES = new Set<string>([
     'workspace_tw_doc_diff', 'workspace_tw_api_doc_openapi', 'workspace_tw_api_doc_code',
@@ -177,11 +203,27 @@ const TW_ACTION_TYPES = new Set<string>([
     'workspace_tw_product_crawl', 'workspace_tw_screenshot_doc', 'workspace_tw_doc_gap_scan',
     // Accuracy verification
     'workspace_tw_verify_doc_steps',
+    // Full human-parity actions
+    'workspace_tw_interact_product',
+    'workspace_tw_pr_review_respond',
+    'workspace_tw_doc_index',
+    'workspace_tw_roadmap_context',
 ]);
 
 export function isTechnicalWriterActionType(t: string): t is TechnicalWriterActionType {
     return TW_ACTION_TYPES.has(t);
 }
+
+/**
+ * Callback type for multi-step authenticated product interaction.
+ * The executor provides this using a persistent Playwright page within
+ * the shared BrowserContext (getWebContext). Keeps session state (cookies,
+ * login) across steps so the agent can navigate authenticated flows.
+ */
+export type InteractPageFn = (
+    steps: InteractionStep[],
+    options?: { captureScreenshots?: boolean; taskId?: string },
+) => Promise<InteractionStepResult[]>;
 
 /**
  * Callback type for browser-based page reading.
@@ -1507,8 +1549,14 @@ export async function handleTechnicalWriterAction(params: {
      * Returns null on navigation failure — the caller skips that URL gracefully.
      */
     browsePage?: BrowsePageFn;
+    /**
+     * Optional multi-step interaction runner.
+     * Provided by the executor via a persistent Playwright page.
+     * Used by workspace_tw_interact_product.
+     */
+    interactPage?: InteractPageFn;
 }): Promise<LocalWorkspaceResult> {
-    const { actionType, payload, workspaceDir, runCommand, callLlm, browsePage } = params;
+    const { actionType, taskId, payload, workspaceDir, runCommand, callLlm, browsePage, interactPage } = params;
 
     switch (actionType) {
 
@@ -3334,6 +3382,444 @@ export async function handleTechnicalWriterAction(params: {
                     })),
                     written_to: outputPath || null,
                     report: finalReport,
+                });
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: String(err) };
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_tw_interact_product
+        // Execute a multi-step interaction sequence against the live product
+        // (navigate → login → fill → click → assert → read) using a persistent
+        // Playwright page that maintains session state across steps.
+        //
+        // Closes gap 1: the agent can now log in, navigate authenticated flows,
+        // and observe the real UI — not just read static HTML.
+        //
+        // payload:
+        //   steps               — InteractionStep[] (type, url?, credentials?,
+        //                         fields?, target?, expected?, label?)
+        //   capture_screenshots? — boolean (default false)
+        //   output_path?         — write the interaction report as markdown
+        // ------------------------------------------------------------------
+        case 'workspace_tw_interact_product': {
+            try {
+                if (!interactPage) {
+                    return { ok: false, output: '', errorOutput: 'workspace_tw_interact_product requires an interactPage callback.' };
+                }
+
+                const rawSteps = payload['steps'];
+                if (!Array.isArray(rawSteps) || rawSteps.length === 0) {
+                    return { ok: false, output: '', errorOutput: 'payload.steps (array of InteractionStep objects) is required.' };
+                }
+
+                // Coerce raw payload objects into typed InteractionStep records
+                const steps: InteractionStep[] = (rawSteps as unknown[])
+                    .filter((s): s is Record<string, unknown> => typeof s === 'object' && s !== null)
+                    .map((s): InteractionStep => {
+                        const rawCreds = s['credentials'];
+                        const rawFields = s['fields'];
+                        return {
+                            type: (typeof s['type'] === 'string' ? s['type'] : 'read') as InteractionStep['type'],
+                            label:       typeof s['label']    === 'string' ? s['label']    : undefined,
+                            url:         typeof s['url']      === 'string' ? s['url']      : undefined,
+                            target:      typeof s['target']   === 'string' ? s['target']   : undefined,
+                            expected:    typeof s['expected'] === 'string' ? s['expected'] : undefined,
+                            credentials: typeof rawCreds === 'object' && rawCreds !== null
+                                ? {
+                                    username: String((rawCreds as Record<string, unknown>)['username'] ?? ''),
+                                    password: String((rawCreds as Record<string, unknown>)['password'] ?? ''),
+                                }
+                                : undefined,
+                            fields: typeof rawFields === 'object' && rawFields !== null
+                                ? rawFields as Record<string, string>
+                                : undefined,
+                        };
+                    });
+
+                const captureScreenshots = payload['capture_screenshots'] === true;
+                const outputPath = typeof payload['output_path'] === 'string' ? payload['output_path'].trim() : '';
+
+                const results = await interactPage(steps, { captureScreenshots, taskId });
+                const report  = buildInteractionReport(results);
+
+                // LLM enhancement: narrative of what was observed
+                let finalReport = report.markdownReport;
+                if (callLlm && report.passCount > 0 && report.observedPages.length > 0) {
+                    const pagesSummary = report.observedPages
+                        .slice(0, 5)
+                        .map((p) => `**${p.title}**: ${p.text.slice(0, 300)}`)
+                        .join('\n\n');
+                    const llmResult = await callLlmSafe(callLlm, {
+                        system: 'You are an expert technical writer documenting product UX based on first-hand observation.',
+                        user: `You navigated the following product pages:\n\n${pagesSummary}\n\nWrite a concise "What Was Observed" narrative (3–5 sentences) that another technical writer could use as background context when writing documentation. Note UI patterns, terminology, and user flow. Use the actual UI labels you observed.`,
+                    });
+                    if (llmResult) finalReport += '\n\n---\n\n## Observed Product Narrative\n\n' + llmResult;
+                }
+
+                if (outputPath) await writeDocFile(workspaceDir, outputPath, finalReport);
+
+                return safeJson({
+                    total_steps:          report.totalSteps,
+                    pass_count:           report.passCount,
+                    fail_count:           report.failCount,
+                    observed_features:    report.observedFeatures,
+                    observed_page_count:  report.observedPages.length,
+                    written_to:           outputPath || null,
+                    report:               finalReport,
+                });
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: String(err) };
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_tw_pr_review_respond
+        // Read all inline review comments on a GitHub PR, apply LLM-generated
+        // fixes to the doc files, and post a summary comment back on the PR.
+        //
+        // Closes gap 2: the agent can now close the review→revise loop
+        // without human intervention for actionable inline comments.
+        //
+        // payload:
+        //   pr_number  — integer PR number
+        //   repo       — "owner/repo" string
+        //   auto_fix?  — boolean (default true); set false to plan-only
+        //   output_path? — write the response report as markdown
+        // ------------------------------------------------------------------
+        case 'workspace_tw_pr_review_respond': {
+            try {
+                if (!runCommand) {
+                    return { ok: false, output: '', errorOutput: 'workspace_tw_pr_review_respond requires a runCommand callback.' };
+                }
+
+                const prNumber = typeof payload['pr_number'] === 'number'
+                    ? payload['pr_number']
+                    : parseInt(String(payload['pr_number'] ?? ''), 10);
+                const repo = typeof payload['repo'] === 'string' ? payload['repo'].trim() : '';
+                const autoFix = payload['auto_fix'] !== false;
+                const outputPath = typeof payload['output_path'] === 'string' ? payload['output_path'].trim() : '';
+
+                if (isNaN(prNumber) || prNumber <= 0) {
+                    return { ok: false, output: '', errorOutput: 'payload.pr_number (positive integer) is required.' };
+                }
+                if (!repo || !repo.includes('/')) {
+                    return { ok: false, output: '', errorOutput: 'payload.repo ("owner/repo") is required.' };
+                }
+
+                const [owner, repoName] = repo.split('/', 2) as [string, string];
+
+                // Fetch inline review comments via gh CLI
+                const ghResult = await runCommand(
+                    ['gh', 'api', `repos/${owner}/${repoName}/pulls/${prNumber}/comments`],
+                    workspaceDir, 30_000,
+                );
+                if (ghResult.exitCode !== 0) {
+                    return { ok: false, output: '', errorOutput: `gh api failed: ${ghResult.stderr.slice(0, 200)}` };
+                }
+
+                let rawComments: unknown[];
+                try {
+                    rawComments = JSON.parse(ghResult.stdout) as unknown[];
+                } catch {
+                    return { ok: false, output: '', errorOutput: 'Could not parse gh api response as JSON.' };
+                }
+
+                const comments = parseGhPrReviewComments(rawComments);
+                const fixes: ReviewFix[] = [];
+
+                for (const comment of comments.slice(0, 30)) {
+                    if (!isActionableComment(comment)) {
+                        fixes.push({ comment, status: 'skipped', fixSummary: 'Non-actionable — no change requested.' });
+                        continue;
+                    }
+                    if (!autoFix || !callLlm) {
+                        fixes.push({ comment, status: 'manual', fixSummary: 'Auto-fix disabled or no LLM callback.' });
+                        continue;
+                    }
+
+                    // Read the file and apply the fix
+                    const fileContent = await readDocFile(workspaceDir, comment.path);
+                    if (fileContent === null) {
+                        fixes.push({ comment, status: 'manual', fixSummary: `File not in workspace: ${comment.path}` });
+                        continue;
+                    }
+
+                    const fileLines = fileContent.split('\n');
+                    const lineContext = comment.line
+                        ? fileLines.slice(Math.max(0, comment.line - 5), comment.line + 5).join('\n')
+                        : fileContent.slice(0, 600);
+
+                    const llmResult = await callLlmSafe(callLlm, {
+                        system: "You are a precise technical writer applying a reviewer's inline comment. Return ONLY the corrected text, no explanations.",
+                        user: `File: ${comment.path}\nReviewer comment: "${comment.body}"\n\nContext:\n\`\`\`\n${lineContext}\n\`\`\`\n\nApply the reviewer's requested change and return the corrected text only.`,
+                    });
+
+                    if (!llmResult) {
+                        fixes.push({ comment, status: 'manual', fixSummary: 'LLM returned no result — manual review required.' });
+                        continue;
+                    }
+
+                    // Splice fix into the file at the anchored line
+                    let newContent: string;
+                    if (comment.line && comment.line <= fileLines.length) {
+                        fileLines.splice(comment.line - 1, 1, llmResult.trim());
+                        newContent = fileLines.join('\n');
+                    } else {
+                        newContent = llmResult;
+                    }
+
+                    await writeDocFile(workspaceDir, comment.path, newContent);
+                    fixes.push({ comment, status: 'fixed', fixSummary: `Applied fix to ${comment.path}:${comment.line ?? '?'}`, newContent });
+                }
+
+                const responseReport = buildReviewResponseReport(fixes);
+
+                // Post a summary comment on the PR
+                if (responseReport.fixedCount > 0) {
+                    const prComment = `🤖 **TW Agent** applied ${responseReport.fixedCount} doc fix(es) from review comments.${responseReport.manualCount > 0 ? `\n⚠️ ${responseReport.manualCount} comment(s) still require manual review.` : ''}`;
+                    await runCommand(
+                        ['gh', 'pr', 'comment', String(prNumber), '--repo', repo, '--body', prComment],
+                        workspaceDir, 15_000,
+                    ).catch(() => { /* non-fatal: comment posting failure doesn't fail the action */ });
+                }
+
+                if (outputPath) await writeDocFile(workspaceDir, outputPath, responseReport.markdownReport);
+
+                return safeJson({
+                    total_comments: responseReport.totalComments,
+                    fixed_count:    responseReport.fixedCount,
+                    skipped_count:  responseReport.skippedCount,
+                    manual_count:   responseReport.manualCount,
+                    written_to:     outputPath || null,
+                    report:         responseReport.markdownReport,
+                });
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: String(err) };
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_tw_doc_index
+        // Walk all Markdown files in the workspace and build a cross-linked
+        // index of titles, sections, topics, and doc types.
+        //
+        // Closes gap 3: the agent now has a complete mental model of the
+        // entire doc set — not just files it personally created.
+        //
+        // payload:
+        //   doc_dirs?    — string[] of directories to scan (default: ['.'])
+        //   extensions?  — string[] of file extensions (default: ['.md', '.mdx'])
+        //   output_path? — write the index summary as markdown
+        //   memory_key?  — key for the JSON index file (default: 'tw_doc_index')
+        // ------------------------------------------------------------------
+        case 'workspace_tw_doc_index': {
+            try {
+                const rawDirs = payload['doc_dirs'];
+                const docDirs: string[] = Array.isArray(rawDirs)
+                    ? (rawDirs as unknown[]).filter((d): d is string => typeof d === 'string')
+                    : ['.'];
+
+                const rawExts = payload['extensions'];
+                const extensions = new Set<string>(
+                    Array.isArray(rawExts)
+                        ? (rawExts as unknown[]).filter((e): e is string => typeof e === 'string')
+                        : ['.md', '.mdx'],
+                );
+
+                const outputPath = typeof payload['output_path'] === 'string' ? payload['output_path'].trim() : '';
+                const memoryKey = typeof payload['memory_key'] === 'string' ? payload['memory_key'].trim() : 'tw_doc_index';
+
+                // Walk directories recursively to collect doc file paths
+                const docFilePaths: string[] = [];
+
+                async function walkDir(relDir: string): Promise<void> {
+                    let safePath: string;
+                    try {
+                        safePath = safeWorkspacePath(workspaceDir, relDir);
+                    } catch {
+                        return;
+                    }
+                    let entries;
+                    try {
+                        entries = await readdir(safePath, { withFileTypes: true });
+                    } catch {
+                        return;
+                    }
+                    for (const entry of entries) {
+                        if (entry.name.startsWith('.')) continue;
+                        if (['node_modules', 'dist', 'build', '.git', 'coverage'].includes(entry.name)) continue;
+                        const entryRel = join(relDir, entry.name);
+                        if (entry.isDirectory()) {
+                            await walkDir(entryRel);
+                        } else if (entry.isFile() && extensions.has(extname(entry.name).toLowerCase())) {
+                            docFilePaths.push(entryRel);
+                        }
+                    }
+                }
+
+                for (const dir of docDirs) {
+                    await walkDir(dir);
+                }
+
+                if (docFilePaths.length === 0) {
+                    return safeJson({
+                        total_docs: 0,
+                        message: 'No documentation files found in the specified directories.',
+                        memory_key: memoryKey,
+                        written_to: null,
+                    });
+                }
+
+                // Extract index entries (cap at 500 files)
+                const entries: DocIndexEntry[] = [];
+                for (const fp of docFilePaths.slice(0, 500)) {
+                    const content = await readDocFile(workspaceDir, fp);
+                    if (content !== null) entries.push(extractDocEntry(fp, content));
+                }
+
+                const index = buildDocIndex(entries);
+
+                // LLM enhancement: synthesise a doc set assessment
+                let finalSummary = index.markdownSummary;
+                if (callLlm && entries.length > 0) {
+                    const sample = entries.slice(0, 10).map((e) => `- ${e.title} (${e.docType}, ${e.wordCount} words)`).join('\n');
+                    const llmResult = await callLlmSafe(callLlm, {
+                        system: 'You are a technical writing lead reviewing a repository documentation set.',
+                        user: `This repository has ${entries.length} documentation file(s). Sample:\n${sample}\n\nIn 3–5 sentences describe the overall documentation structure, coverage strengths, and any obvious gaps. Be concise and actionable.`,
+                    });
+                    if (llmResult) finalSummary += '\n\n---\n\n## Documentation Set Assessment\n\n' + llmResult;
+                }
+
+                // Persist the index JSON for future memory lookups
+                const memoryPath = `.tw-doc-index/${memoryKey}.json`;
+                const indexJson = JSON.stringify({ entries, topicMap: index.topicMap }, null, 2);
+                await writeDocFile(workspaceDir, memoryPath, indexJson);
+
+                if (outputPath) await writeDocFile(workspaceDir, outputPath, finalSummary);
+
+                const byType = Object.fromEntries(
+                    (['tutorial', 'guide', 'api', 'reference', 'faq', 'onboarding', 'changelog', 'readme', 'adr', 'unknown'] as const)
+                        .map((t): [string, number] => [t, entries.filter((e) => e.docType === t).length])
+                        .filter(([, n]) => n > 0),
+                );
+
+                return safeJson({
+                    total_docs:   index.totalDocs,
+                    doc_types:    byType,
+                    total_topics: Object.keys(index.topicMap).length,
+                    memory_path:  memoryPath,
+                    written_to:   outputPath || null,
+                    summary:      finalSummary,
+                });
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: String(err) };
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_tw_roadmap_context
+        // Fetch GitHub issues labelled deprecation / breaking-change /
+        // enhancement and read local planning files (ROADMAP.md etc.)
+        // to build a strategic context document.
+        //
+        // Closes gap 4: the agent now knows what's deprecated (don't document
+        // it), what's breaking (update existing docs), and what's shipping
+        // next (prioritise new docs).
+        //
+        // payload:
+        //   repo            — "owner/repo" (required)
+        //   planning_files? — string[] of local file paths (default: ROADMAP.md)
+        //   output_path?    — write context as markdown
+        // ------------------------------------------------------------------
+        case 'workspace_tw_roadmap_context': {
+            try {
+                if (!runCommand) {
+                    return { ok: false, output: '', errorOutput: 'workspace_tw_roadmap_context requires a runCommand callback.' };
+                }
+
+                const repo = typeof payload['repo'] === 'string' ? payload['repo'].trim() : '';
+                if (!repo || !repo.includes('/')) {
+                    return { ok: false, output: '', errorOutput: 'payload.repo ("owner/repo") is required.' };
+                }
+
+                const rawPlanFiles = payload['planning_files'];
+                const planningFiles: string[] = Array.isArray(rawPlanFiles)
+                    ? (rawPlanFiles as unknown[]).filter((p): p is string => typeof p === 'string')
+                    : ['ROADMAP.md', 'CHANGELOG.md', 'docs/ROADMAP.md'];
+
+                const outputPath = typeof payload['output_path'] === 'string' ? payload['output_path'].trim() : '';
+
+                // Fetch issues in three label groups (deprecation, breaking, enhancement)
+                const LABEL_QUERIES = ['deprecation', 'breaking-change', 'enhancement'];
+                const allIssues: unknown[] = [];
+
+                for (const label of LABEL_QUERIES) {
+                    const r = await runCommand(
+                        ['gh', 'issue', 'list', '--repo', repo, '--label', label,
+                         '--json', 'number,title,body,url,labels,milestone', '--limit', '50'],
+                        workspaceDir, 20_000,
+                    );
+                    if (r.exitCode === 0 && r.stdout.trim()) {
+                        try {
+                            const parsed = JSON.parse(r.stdout) as unknown[];
+                            allIssues.push(...parsed);
+                        } catch { /* skip malformed */ }
+                    }
+                }
+
+                // Deduplicate issues by number
+                const seen = new Set<number>();
+                const deduped = (allIssues as Record<string, unknown>[]).filter((i) => {
+                    const n = typeof i['number'] === 'number' ? i['number'] : NaN;
+                    if (isNaN(n) || seen.has(n)) return false;
+                    seen.add(n);
+                    return true;
+                });
+
+                const { deprecated, upcoming, breaking } = parseGithubIssues(deduped);
+
+                // Read local planning files
+                let planningDocContent = '';
+                for (const fp of planningFiles) {
+                    const content = await readDocFile(workspaceDir, fp);
+                    if (content) {
+                        planningDocContent += `\n\n### ${fp}\n\n${content.slice(0, 1000)}`;
+                    }
+                }
+
+                const context = buildRoadmapContext(deprecated, upcoming, breaking, planningDocContent || undefined);
+
+                // LLM enhancement: doc prioritisation recommendation
+                let finalContext = context.markdownContext;
+                if (callLlm && (deprecated.length + upcoming.length + breaking.length) > 0) {
+                    const snapshot = [
+                        deprecated.length > 0 ? `${deprecated.length} deprecated: ${deprecated.slice(0, 3).map((d) => d.name).join(', ')}` : '',
+                        breaking.length  > 0  ? `${breaking.length} breaking changes` : '',
+                        upcoming.filter((u) => u.needsDocs).length > 0
+                            ? `${upcoming.filter((u) => u.needsDocs).length} features needing docs`
+                            : '',
+                    ].filter(Boolean).join('; ');
+
+                    const llmResult = await callLlmSafe(callLlm, {
+                        system: 'You are a technical writing manager prioritising documentation work.',
+                        user: `Roadmap snapshot: ${snapshot}\n\nWrite a concise 5-bullet prioritisation recommendation:\n- What to write this sprint\n- What existing docs need updating urgently  \n- What NOT to document (deprecated)\n\nBe specific and actionable.`,
+                    });
+                    if (llmResult) finalContext += '\n\n---\n\n## Documentation Prioritisation Recommendation\n\n' + llmResult;
+                }
+
+                if (outputPath) await writeDocFile(workspaceDir, outputPath, finalContext);
+
+                return safeJson({
+                    repo,
+                    deprecated_count:   deprecated.length,
+                    upcoming_count:     upcoming.length,
+                    breaking_count:     breaking.length,
+                    do_not_document:    context.doNotDocumentList,
+                    high_priority_docs: context.highPriorityDocTargets,
+                    written_to:         outputPath || null,
+                    context:            finalContext,
                 });
             } catch (err) {
                 return { ok: false, output: '', errorOutput: String(err) };

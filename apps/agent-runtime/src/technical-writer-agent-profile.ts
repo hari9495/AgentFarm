@@ -62,6 +62,11 @@ export const TECHNICAL_WRITER_ROLE_ALLOWED_LOCAL_ACTIONS: (LocalWorkspaceActionT
     'workspace_tw_doc_gap_scan',
     // Accuracy verification — closes the "does the doc actually work?" gap
     'workspace_tw_verify_doc_steps',
+    // Full human-parity — the four remaining gaps
+    'workspace_tw_interact_product',    // gap 1: authenticated product interaction
+    'workspace_tw_pr_review_respond',   // gap 2: review→revise loop
+    'workspace_tw_doc_index',           // gap 3: mental model of whole doc set
+    'workspace_tw_roadmap_context',     // gap 4: long-range strategic judgment
 ];
 
 export const TECHNICAL_WRITER_ROLE_BLOCKED_ACTIONS = [

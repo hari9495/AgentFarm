@@ -148,6 +148,15 @@ export function buildTechnicalWriterEpisodicPattern(
         return 'tw:verify_doc_steps:some_failures';
     }
 
+    // Human-parity actions
+    if (at === 'workspace_tw_interact_product') return `tw:interact_product:${oc}`;
+    if (at === 'workspace_tw_pr_review_respond') {
+        const fixedCount = typeof result.executionPayload['fixed_count'] === 'number' ? result.executionPayload['fixed_count'] : 0;
+        return fixedCount > 0 ? 'tw:pr_review_respond:fixes_applied' : `tw:pr_review_respond:${oc}`;
+    }
+    if (at === 'workspace_tw_doc_index') return `tw:doc_index:${oc}`;
+    if (at === 'workspace_tw_roadmap_context') return `tw:roadmap_context:${oc}`;
+
     // Fallback
     return `tw:action:${oc}`;
 }
@@ -277,6 +286,31 @@ export function buildTechnicalWriterEpisodicSummary(
             ? 'all steps passed'
             : `${failed} step(s) failed, ${errors} error(s)`;
         return `Doc step verification: ${total} steps — ${passed} passed, ${outcome} (${skipped} skipped): ${taskLabel}`;
+    }
+
+    if (pattern.startsWith('tw:interact_product')) {
+        const pages    = result.executionPayload['observed_page_count'] ?? '?';
+        const features = (result.executionPayload['observed_features'] as unknown[] | undefined)?.length ?? '?';
+        return `Product interaction session: ${pages} page(s) observed, ${features} UI feature(s) captured: ${taskLabel}`;
+    }
+
+    if (pattern.startsWith('tw:pr_review_respond')) {
+        const fixed  = result.executionPayload['fixed_count']  ?? '?';
+        const manual = result.executionPayload['manual_count'] ?? '?';
+        return `PR review response: ${fixed} comment(s) auto-fixed, ${manual} requiring manual review: ${taskLabel}`;
+    }
+
+    if (pattern.startsWith('tw:doc_index')) {
+        const total  = result.executionPayload['total_docs']    ?? '?';
+        const topics = result.executionPayload['total_topics']  ?? '?';
+        return `Doc index built: ${total} file(s) indexed, ${topics} topic(s) mapped: ${taskLabel}`;
+    }
+
+    if (pattern.startsWith('tw:roadmap_context')) {
+        const deprecated = result.executionPayload['deprecated_count'] ?? '?';
+        const breaking   = result.executionPayload['breaking_count']   ?? '?';
+        const upcoming   = result.executionPayload['upcoming_count']   ?? '?';
+        return `Roadmap context built: ${deprecated} deprecated, ${breaking} breaking, ${upcoming} upcoming: ${taskLabel}`;
     }
 
     return `Technical writer action "${at}" completed with status "${oc}": ${taskLabel}`;

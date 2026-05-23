@@ -290,6 +290,10 @@ export type LocalWorkspaceActionType =
     | 'workspace_tw_screenshot_doc'
     | 'workspace_tw_doc_gap_scan'
     | 'workspace_tw_verify_doc_steps'
+    | 'workspace_tw_interact_product'
+    | 'workspace_tw_pr_review_respond'
+    | 'workspace_tw_doc_index'
+    | 'workspace_tw_roadmap_context'
     // Tier 27 (General file write — used by TW and future roles)
     | 'workspace_write_file'
     // Tier 28 (Content Writer domain actions)
@@ -784,6 +788,10 @@ export const LOCAL_WORKSPACE_ACTION_TYPES = new Set<LocalWorkspaceActionType>([
     'workspace_tw_screenshot_doc',
     'workspace_tw_doc_gap_scan',
     'workspace_tw_verify_doc_steps',
+    'workspace_tw_interact_product',
+    'workspace_tw_pr_review_respond',
+    'workspace_tw_doc_index',
+    'workspace_tw_roadmap_context',
     // Tier 27 (General file write)
     'workspace_write_file',
 ]);
@@ -12764,6 +12772,137 @@ export async function executeLocalWorkspaceAction(input: {
                 workspaceDir,
                 runCommand,
                 browsePage: browsePageFnVerify,
+            });
+        }
+
+        // workspace_tw_interact_product
+        // Multi-step authenticated interaction (navigate → login → fill → click
+        // → assert → read) using a single persistent Playwright page.
+        case 'workspace_tw_interact_product': {
+            const interactPageFn = async (
+                steps: import('./technical-writer/product-interactor.js').InteractionStep[],
+                opts?: { captureScreenshots?: boolean; taskId?: string },
+            ): Promise<import('./technical-writer/product-interactor.js').InteractionStepResult[]> => {
+                const ctx  = await getWebContext(tenantId, botId);
+                const page = await ctx.newPage();
+                const results: import('./technical-writer/product-interactor.js').InteractionStepResult[] = [];
+
+                for (const step of steps) {
+                    try {
+                        if (step.type === 'navigate') {
+                            if (!step.url) { results.push({ step, status: 'fail', details: 'No url provided for navigate step.' }); continue; }
+                            await page.goto(step.url, { waitUntil: 'domcontentloaded' });
+                            const title = await page.title().catch(() => '');
+                            const text  = (await page.innerText('body').catch(() => '')).slice(0, 2000);
+                            results.push({ step, status: 'pass', details: `Navigated to ${page.url()}`, pageTitle: title, pageText: text });
+
+                        } else if (step.type === 'login') {
+                            if (!step.url) { results.push({ step, status: 'fail', details: 'No url for login step.' }); continue; }
+                            await page.goto(step.url, { waitUntil: 'domcontentloaded' });
+                            const { username = '', password = '' } = step.credentials ?? {};
+                            // Fill username
+                            for (const sel of ['input[type="email"]', 'input[name="username"]', 'input[name="email"]', '#username']) {
+                                const el = page.locator(sel).first();
+                                if (await el.isVisible({ timeout: 1_500 }).catch(() => false)) { await el.fill(username); break; }
+                            }
+                            // Fill password
+                            for (const sel of ['input[type="password"]']) {
+                                const el = page.locator(sel).first();
+                                if (await el.isVisible({ timeout: 1_500 }).catch(() => false)) { await el.fill(password); break; }
+                            }
+                            await Promise.all([page.waitForLoadState('networkidle').catch(() => null), page.keyboard.press('Enter')]);
+                            const title = await page.title().catch(() => '');
+                            const text  = (await page.innerText('body').catch(() => '')).slice(0, 2000);
+                            const stillLogin = /login|signin|auth|logon/i.test(page.url());
+                            results.push({ step, status: stillLogin ? 'fail' : 'pass', details: stillLogin ? 'Still on login page after submission.' : `Logged in — now at ${page.url()}`, pageTitle: title, pageText: text });
+
+                        } else if (step.type === 'fill') {
+                            if (!step.fields) { results.push({ step, status: 'fail', details: 'No fields provided.' }); continue; }
+                            for (const [fieldName, value] of Object.entries(step.fields)) {
+                                const escapedName = fieldName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                                const label = page.locator('label').filter({ hasText: new RegExp(escapedName, 'i') }).first();
+                                let filled = false;
+                                if (await label.isVisible({ timeout: 2_000 }).catch(() => false)) {
+                                    const forAttr = await label.getAttribute('for').catch(() => null);
+                                    if (forAttr) {
+                                        const input = page.locator(`[id="${forAttr}"]`).first();
+                                        if (await input.isVisible({ timeout: 1_000 }).catch(() => false)) { await input.fill(value); filled = true; }
+                                    }
+                                }
+                                if (!filled) {
+                                    const fb = page.locator(`input[name*="${escapedName}" i], input[placeholder*="${escapedName}" i]`).first();
+                                    if (await fb.isVisible({ timeout: 1_000 }).catch(() => false)) { await fb.fill(value); filled = true; }
+                                }
+                                if (!filled) { results.push({ step, status: 'fail', details: `Could not find input for field: ${fieldName}` }); continue; }
+                            }
+                            results.push({ step, status: 'pass', details: `Filled ${Object.keys(step.fields).length} field(s).` });
+
+                        } else if (step.type === 'click') {
+                            if (!step.target) { results.push({ step, status: 'fail', details: 'No target text provided for click.' }); continue; }
+                            const escapedTarget = step.target.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                            const el = page.locator(`button, a, [role="button"]`).filter({ hasText: new RegExp(escapedTarget, 'i') }).first();
+                            if (!(await el.isVisible({ timeout: 3_000 }).catch(() => false))) {
+                                results.push({ step, status: 'fail', details: `Element not found: "${step.target}"` }); continue;
+                            }
+                            await el.click();
+                            await page.waitForTimeout(1_000);
+                            const title = await page.title().catch(() => '');
+                            const text  = (await page.innerText('body').catch(() => '')).slice(0, 2000);
+                            results.push({ step, status: 'pass', details: `Clicked "${step.target}"`, pageTitle: title, pageText: text });
+
+                        } else if (step.type === 'read') {
+                            const title = await page.title().catch(() => '');
+                            const text  = (await page.innerText('body').catch(() => '')).slice(0, 2000);
+                            results.push({ step, status: 'pass', details: `Read page "${title}"`, pageTitle: title, pageText: text });
+
+                        } else if (step.type === 'assert') {
+                            if (!step.expected) { results.push({ step, status: 'fail', details: 'No expected text for assert.' }); continue; }
+                            const body = (await page.innerText('body').catch(() => '')).toLowerCase();
+                            const found = body.includes(step.expected.toLowerCase());
+                            results.push({ step, status: found ? 'pass' : 'fail', details: found ? `Found: "${step.expected}"` : `Not found: "${step.expected}"` });
+                        }
+
+                        // Optional screenshot after each step
+                        if (opts?.captureScreenshots) {
+                            try {
+                                const { chromium } = await import('playwright');
+                                const browser = await chromium.launch({ headless: true });
+                                const ssPage  = await browser.newPage();
+                                await ssPage.goto(page.url(), { waitUntil: 'networkidle' });
+                                const ssPath = `/tmp/agentfarm-tw-interact-${opts.taskId ?? taskId}-${Date.now()}.png`;
+                                await ssPage.screenshot({ path: ssPath });
+                                await browser.close();
+                                if (results.length > 0) results[results.length - 1]!.screenshotPath = ssPath;
+                            } catch { /* non-fatal */ }
+                        }
+
+                    } catch (err) {
+                        results.push({ step, status: 'error', details: String(err) });
+                    }
+                }
+
+                await page.close().catch(() => { /* non-fatal */ });
+                return results;
+            };
+
+            return handleTechnicalWriterAction({
+                actionType: actionType as TechnicalWriterActionType,
+                tenantId, botId, taskId, payload, workspaceDir, runCommand,
+                interactPage: interactPageFn,
+            });
+        }
+
+        // workspace_tw_pr_review_respond
+        // workspace_tw_doc_index
+        // workspace_tw_roadmap_context
+        // These three actions use only runCommand (gh CLI) + Node.js fs — no
+        // special browser closure needed.
+        case 'workspace_tw_pr_review_respond':
+        case 'workspace_tw_doc_index':
+        case 'workspace_tw_roadmap_context': {
+            return handleTechnicalWriterAction({
+                actionType: actionType as TechnicalWriterActionType,
+                tenantId, botId, taskId, payload, workspaceDir, runCommand,
             });
         }
 
