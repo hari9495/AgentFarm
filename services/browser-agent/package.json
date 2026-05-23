@@ -1,0 +1,10 @@
+{
+    "name": "@agentfarm/browser-agent",
+    "version": "0.1.0",
+    "private": true,
+    "description": "Python Flask + Playwright browser automation service (not a Node package)",
+    "scripts": {
+        "start": "python app.py",
+        "build": "echo 'Python service — no build step'"
+    }
+}
