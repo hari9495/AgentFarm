@@ -106,6 +106,21 @@ import {
     type CodeChangeRecord,
     type DocAuditOptions,
 } from './technical-writer/doc-auditor.js';
+import {
+    type LlmCallFn,
+    callLlmSafe,
+    hasPlaceholders,
+    buildManualProsePrompt,
+    buildTutorialProsePrompt,
+    buildWhitepaperProsePrompt,
+    buildFaqProsePrompt,
+    buildOnboardingProsePrompt,
+    buildDocDiffNarrativePrompt,
+    buildSmeBriefProsePrompt,
+    buildReleaseNotesEnhancementPrompt,
+    buildApiDocEnhancementPrompt,
+    buildCodeDocEnhancementPrompt,
+} from './technical-writer/llm-enhancer.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -1429,8 +1444,17 @@ export async function handleTechnicalWriterAction(params: {
         cwd: string,
         timeoutMs?: number,
     ) => Promise<{ stdout: string; stderr: string; exitCode: number }>;
+    /**
+     * Optional LLM call for prose generation.
+     * When provided, content-generation actions use it to fill placeholder
+     * text and enhance auto-generated prose with real, model-written copy.
+     * Receives (userPrompt, systemPrompt?) and returns the generated text.
+     * LLM failures are always non-fatal — the pure-function output is used
+     * as the fallback.
+     */
+    callLlm?: LlmCallFn;
 }): Promise<LocalWorkspaceResult> {
-    const { actionType, payload, workspaceDir, runCommand } = params;
+    const { actionType, payload, workspaceDir, runCommand, callLlm } = params;
 
     switch (actionType) {
 
@@ -1483,8 +1507,34 @@ export async function handleTechnicalWriterAction(params: {
 
                 const docContent = buildDocUpdateFromDiff(changedFiles, existingContent, docTitle);
 
+                // LLM enhancement: prepend a prose narrative summary of the changes.
+                let finalDocContent = docContent;
+                if (callLlm && changedFiles.length > 0) {
+                    const extraContext =
+                        typeof payload['context'] === 'string' ? payload['context'] : undefined;
+                    const narrativePrompt = buildDocDiffNarrativePrompt(
+                        changedFiles.map((f) => ({
+                            file: f.filePath,
+                            additions: f.additions,
+                            deletions: f.deletions,
+                            changed_symbols: f.changedSymbols,
+                        })),
+                        docTitle,
+                        extraContext,
+                    );
+                    const narrativeSummary = await callLlmSafe(callLlm, narrativePrompt);
+                    if (narrativeSummary) {
+                        // Insert the LLM narrative before the raw diff breakdown.
+                        const replaced = docContent.replace(
+                            /\n## (Recent Changes|Change Summary)\n/,
+                            `\n${narrativeSummary}\n\n## Change Details\n`,
+                        );
+                        finalDocContent = replaced !== docContent ? replaced : narrativeSummary + '\n\n' + docContent;
+                    }
+                }
+
                 if (docFilePathRaw) {
-                    await writeDocFile(workspaceDir, docFilePathRaw, docContent);
+                    await writeDocFile(workspaceDir, docFilePathRaw, finalDocContent);
                 }
 
                 return safeJson({
@@ -1494,7 +1544,7 @@ export async function handleTechnicalWriterAction(params: {
                         deletions: f.deletions,
                         changed_symbols: f.changedSymbols,
                     })),
-                    doc_content: docContent,
+                    doc_content: finalDocContent,
                     written_to: docFilePathRaw || null,
                 });
             } catch (err) {
@@ -1534,7 +1584,16 @@ export async function handleTechnicalWriterAction(params: {
                 }
 
                 const { info, endpoints } = parseOpenApiSpec(specContent);
-                const markdown = generateApiDocMarkdown(info, endpoints);
+                let markdown = generateApiDocMarkdown(info, endpoints);
+
+                // LLM enhancement: fill in missing endpoint/parameter descriptions.
+                if (callLlm && endpoints.length > 0) {
+                    const enhanced = await callLlmSafe(
+                        callLlm,
+                        buildApiDocEnhancementPrompt(markdown, info.title),
+                    );
+                    if (enhanced) markdown = enhanced;
+                }
 
                 const outputPath = typeof payload['output_path'] === 'string'
                     ? payload['output_path'].trim()
@@ -1592,7 +1651,17 @@ export async function handleTechnicalWriterAction(params: {
                     return { ok: false, output: '', errorOutput: 'No source files could be read.' };
                 }
 
-                const markdown = generateCodeDocMarkdown(sourceFiles);
+                let markdown = generateCodeDocMarkdown(sourceFiles);
+                const symbolCount = sourceFiles.reduce((n, f) => n + f.symbols.length, 0);
+
+                // LLM enhancement: write natural-language descriptions for undocumented symbols.
+                if (callLlm && symbolCount > 0) {
+                    const enhanced = await callLlmSafe(
+                        callLlm,
+                        buildCodeDocEnhancementPrompt(markdown, sourceFiles.map((f) => f.path)),
+                    );
+                    if (enhanced) markdown = enhanced;
+                }
 
                 const outputPath = typeof payload['output_path'] === 'string'
                     ? payload['output_path'].trim()
@@ -1600,8 +1669,6 @@ export async function handleTechnicalWriterAction(params: {
                 if (outputPath) {
                     await writeDocFile(workspaceDir, outputPath, markdown);
                 }
-
-                const symbolCount = sourceFiles.reduce((n, f) => n + f.symbols.length, 0);
 
                 return safeJson({
                     files_processed: sourceFiles.length,
@@ -1670,12 +1737,21 @@ export async function handleTechnicalWriterAction(params: {
                     return { ok: false, output: '', errorOutput: 'No commits provided and no runCommand callback available to run git log.' };
                 }
 
-                const notes = buildReleaseNotesMarkdown(commits, {
+                let notes = buildReleaseNotesMarkdown(commits, {
                     projectName: typeof payload['project_name'] === 'string' ? payload['project_name'] : undefined,
                     version: typeof payload['version'] === 'string' ? payload['version'] : undefined,
                     fromRef: typeof payload['from_ref'] === 'string' ? payload['from_ref'] : undefined,
                     toRef: typeof payload['to_ref'] === 'string' ? payload['to_ref'] : undefined,
                 });
+
+                // LLM enhancement: rewrite terse commit messages as user-facing change descriptions.
+                if (callLlm && commits.length > 0) {
+                    const enhanced = await callLlmSafe(
+                        callLlm,
+                        buildReleaseNotesEnhancementPrompt(notes),
+                    );
+                    if (enhanced) notes = enhanced;
+                }
 
                 const outputPath = typeof payload['output_path'] === 'string'
                     ? payload['output_path'].trim()
@@ -1864,14 +1940,40 @@ export async function handleTechnicalWriterAction(params: {
 
                     const brief = synthesiseDocBrief(questions, responses);
 
-                    if (outputPath) await writeDocFile(workspaceDir, outputPath, brief.markdownBrief);
+                    // LLM enhancement: write a professional doc brief from the Q&A responses.
+                    let finalMarkdownBrief = brief.markdownBrief;
+                    if (callLlm && responses.length > 0) {
+                        const qaList = questions
+                            .map((q) => {
+                                const resp = responses.find((r) => r.questionId === q.id);
+                                return {
+                                    question: q.question,
+                                    answer: resp?.answer ?? '',
+                                    category: q.category,
+                                };
+                            })
+                            .filter((qa) => qa.answer.trim().length > 0);
+                        if (qaList.length > 0) {
+                            const briefTitle =
+                                typeof payload['title'] === 'string' && payload['title'].trim()
+                                    ? payload['title'].trim()
+                                    : brief.title;
+                            const llmBrief = await callLlmSafe(
+                                callLlm,
+                                buildSmeBriefProsePrompt(qaList, briefTitle),
+                            );
+                            if (llmBrief) finalMarkdownBrief = llmBrief;
+                        }
+                    }
+
+                    if (outputPath) await writeDocFile(workspaceDir, outputPath, finalMarkdownBrief);
 
                     return safeJson({
                         mode: 'synthesise',
                         title: brief.title,
                         key_points: brief.keyPoints.length,
                         open_questions: brief.openQuestions.length,
-                        markdown_brief: brief.markdownBrief,
+                        markdown_brief: finalMarkdownBrief,
                         written_to: outputPath || null,
                     });
                 }
@@ -1951,6 +2053,19 @@ export async function handleTechnicalWriterAction(params: {
                     markdown = buildManualTemplate(meta, features);
                 }
 
+                // LLM enhancement: fill in all _[Add: ...]_ placeholder sections with real prose.
+                if (callLlm && hasPlaceholders(markdown)) {
+                    const enhanced = await callLlmSafe(
+                        callLlm,
+                        buildManualProsePrompt(markdown, {
+                            title: meta.title,
+                            product: meta.product,
+                            audience: meta.audience,
+                        }),
+                    );
+                    if (enhanced) markdown = enhanced;
+                }
+
                 const outputPath = typeof payload['output_path'] === 'string' ? payload['output_path'].trim() : '';
                 if (outputPath) await writeDocFile(workspaceDir, outputPath, markdown);
 
@@ -2008,6 +2123,15 @@ export async function handleTechnicalWriterAction(params: {
                     markdown = buildFaqMarkdown({ title, product, categories: [...new Set(categorized.map((e) => e.category))], entries: categorized });
                 } else {
                     markdown = buildFaqTemplate(title, product, categories);
+                }
+
+                // LLM enhancement: generate real Q&A entries to replace placeholder text.
+                if (callLlm && hasPlaceholders(markdown)) {
+                    const enhanced = await callLlmSafe(
+                        callLlm,
+                        buildFaqProsePrompt(markdown, { title, product, categories }),
+                    );
+                    if (enhanced) markdown = enhanced;
                 }
 
                 if (outputPath) await writeDocFile(workspaceDir, outputPath, markdown);
@@ -2071,6 +2195,18 @@ export async function handleTechnicalWriterAction(params: {
                     markdown = buildTutorialMarkdown(tmpl);
                 }
 
+                // LLM enhancement: fill in step descriptions, expected outputs, and troubleshooting tips.
+                if (callLlm && hasPlaceholders(markdown)) {
+                    const tutTitle = typeof payload['title'] === 'string' ? payload['title'] : 'Tutorial';
+                    const tutLevel = typeof payload['level'] === 'string' ? payload['level'] : 'beginner';
+                    const tutProduct = typeof payload['product'] === 'string' ? payload['product'] : undefined;
+                    const enhanced = await callLlmSafe(
+                        callLlm,
+                        buildTutorialProsePrompt(markdown, { title: tutTitle, level: tutLevel, product: tutProduct }),
+                    );
+                    if (enhanced) markdown = enhanced;
+                }
+
                 if (outputPath) await writeDocFile(workspaceDir, outputPath, markdown);
                 return safeJson({ mode, written_to: outputPath || null, doc_content: markdown });
             } catch (err) {
@@ -2109,6 +2245,15 @@ export async function handleTechnicalWriterAction(params: {
                 } else {
                     const flow = buildOnboardingTemplate(product, role);
                     markdown = buildOnboardingFlowMarkdown(flow);
+                }
+
+                // LLM enhancement: write real task descriptions and welcome copy to replace placeholders.
+                if (callLlm && hasPlaceholders(markdown)) {
+                    const enhanced = await callLlmSafe(
+                        callLlm,
+                        buildOnboardingProsePrompt(markdown, { product, role }),
+                    );
+                    if (enhanced) markdown = enhanced;
                 }
 
                 if (outputPath) await writeDocFile(workspaceDir, outputPath, markdown);
@@ -2163,6 +2308,19 @@ export async function handleTechnicalWriterAction(params: {
                     markdown = buildWhitepaperFromSections(meta, sections);
                 } else {
                     markdown = buildWhitepaperTemplate(meta);
+                }
+
+                // LLM enhancement: write substantive content for every placeholder section.
+                if (callLlm && hasPlaceholders(markdown)) {
+                    const enhanced = await callLlmSafe(
+                        callLlm,
+                        buildWhitepaperProsePrompt(markdown, {
+                            title: meta.title,
+                            organization: meta.organization || undefined,
+                            abstract: rawMeta['abstract'] as string | undefined,
+                        }),
+                    );
+                    if (enhanced) markdown = enhanced;
                 }
 
                 const outputPath = typeof payload['output_path'] === 'string' ? payload['output_path'].trim() : '';
