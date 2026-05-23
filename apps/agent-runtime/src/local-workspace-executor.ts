@@ -45,6 +45,7 @@ import { handleCorporateAssistantAction } from './agents/corporate-assistant/cor
 import { handleTesterAction } from './agents/tester/tester-action-handler.js';
 import { handleTechnicalWriterAction, type TechnicalWriterActionType } from './agents/technical-writer/technical-writer-action-handler.js';
 import { handleContentWriterAction, isContentWriterActionType } from './agents/content-writer/content-writer-action-handler.js';
+import { handleDeveloperAction, isDeveloperActionType, type DeveloperActionType } from './agents/developer/developer-action-handler.js';
 import type { ProseCallerFn } from './agents/content-writer/llm-prose-writer.js';
 import { streamLLM } from './llm-decision-adapter.js';
 import { globalEpisodicMemory } from './episodic-memory.js';
@@ -317,7 +318,28 @@ export type LocalWorkspaceActionType =
     | 'workspace_cw_analytics_report'
     | 'workspace_cw_send_for_review'
     | 'workspace_cw_run_workflow'
-    | 'workspace_cw_request_human_gate';
+    | 'workspace_cw_request_human_gate'
+    // Tier 29 (Developer domain actions)
+    | 'workspace_dev_implement_feature'
+    | 'workspace_dev_fix_bug'
+    | 'workspace_dev_code_review'
+    | 'workspace_dev_refactor'
+    | 'workspace_dev_write_tests'
+    | 'workspace_dev_debug_session'
+    | 'workspace_dev_create_pr'
+    | 'workspace_dev_handle_issue'
+    | 'workspace_dev_branch_manage'
+    | 'workspace_dev_commit'
+    | 'workspace_dev_security_audit'
+    | 'workspace_dev_dependency_audit'
+    | 'workspace_dev_performance_audit'
+    | 'workspace_dev_code_quality'
+    | 'workspace_dev_api_design'
+    | 'workspace_dev_db_migration'
+    | 'workspace_dev_onboard_codebase'
+    | 'workspace_dev_standup_report'
+    | 'workspace_dev_incident_response'
+    | 'workspace_dev_tech_spec';
 
 export type LocalWorkspaceResult = {
     ok: boolean;
@@ -794,6 +816,27 @@ export const LOCAL_WORKSPACE_ACTION_TYPES = new Set<LocalWorkspaceActionType>([
     'workspace_tw_roadmap_context',
     // Tier 27 (General file write)
     'workspace_write_file',
+    // Tier 29 (Developer domain actions)
+    'workspace_dev_implement_feature',
+    'workspace_dev_fix_bug',
+    'workspace_dev_code_review',
+    'workspace_dev_refactor',
+    'workspace_dev_write_tests',
+    'workspace_dev_debug_session',
+    'workspace_dev_create_pr',
+    'workspace_dev_handle_issue',
+    'workspace_dev_branch_manage',
+    'workspace_dev_commit',
+    'workspace_dev_security_audit',
+    'workspace_dev_dependency_audit',
+    'workspace_dev_performance_audit',
+    'workspace_dev_code_quality',
+    'workspace_dev_api_design',
+    'workspace_dev_db_migration',
+    'workspace_dev_onboard_codebase',
+    'workspace_dev_standup_report',
+    'workspace_dev_incident_response',
+    'workspace_dev_tech_spec',
 ]);
 
 // ---------------------------------------------------------------------------
@@ -13037,6 +13080,69 @@ export async function executeLocalWorkspaceAction(input: {
                 errorMessage: cwResult.errorOutput ? cwResult.errorOutput.slice(0, 200) : undefined,
             });
             return cwResult;
+        }
+
+        // ====================================================================
+        // TIER 29: DEVELOPER DOMAIN ACTIONS
+        // ====================================================================
+        case 'workspace_dev_implement_feature':
+        case 'workspace_dev_fix_bug':
+        case 'workspace_dev_code_review':
+        case 'workspace_dev_refactor':
+        case 'workspace_dev_write_tests':
+        case 'workspace_dev_debug_session':
+        case 'workspace_dev_create_pr':
+        case 'workspace_dev_handle_issue':
+        case 'workspace_dev_branch_manage':
+        case 'workspace_dev_commit':
+        case 'workspace_dev_security_audit':
+        case 'workspace_dev_dependency_audit':
+        case 'workspace_dev_performance_audit':
+        case 'workspace_dev_code_quality':
+        case 'workspace_dev_api_design':
+        case 'workspace_dev_db_migration':
+        case 'workspace_dev_onboard_codebase':
+        case 'workspace_dev_standup_report':
+        case 'workspace_dev_incident_response':
+        case 'workspace_dev_tech_spec': {
+            if (!isDeveloperActionType(actionType)) {
+                return { ok: false, output: '', errorOutput: `Unrecognised developer action: ${actionType}` };
+            }
+            const devResult = await handleDeveloperAction({
+                actionType: actionType as DeveloperActionType,
+                tenantId,
+                botId,
+                taskId,
+                payload,
+                workspaceDir,
+                executeAction: (aType, aPayload) =>
+                    executeLocalWorkspaceAction({
+                        tenantId,
+                        botId,
+                        taskId,
+                        actionType: aType as LocalWorkspaceActionType,
+                        payload: aPayload,
+                        connectorActionExecuteClient,
+                    }),
+                runCommand,
+                callLlm: buildTwLlmCallerFn(),
+            });
+            // Record outcome in episodic memory
+            const devOutcome: TaskOutcome = devResult.ok ? 'success' : 'failed';
+            const devTitle = typeof payload['title'] === 'string' ? payload['title'] : '';
+            const devDesc  = typeof payload['description'] === 'string' ? payload['description'] : '';
+            const devSummary = (devTitle || devDesc || actionType).slice(0, 200);
+            void globalEpisodicMemory.record({
+                taskId,
+                workspaceId: workspaceDir,
+                botId,
+                actionType,
+                promptSummary: devSummary,
+                outcome: devOutcome,
+                timestamp: Date.now(),
+                errorMessage: devResult.errorOutput ? devResult.errorOutput.slice(0, 200) : undefined,
+            });
+            return devResult;
         }
 
         default: {

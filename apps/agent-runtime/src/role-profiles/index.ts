@@ -15,6 +15,10 @@ import {
     CONTENT_WRITER_ROLE_ALLOWED_CONNECTORS,
     CONTENT_WRITER_ROLE_ALLOWED_LOCAL_ACTIONS,
 } from '../agents/content-writer/content-writer-agent-profile.js';
+import {
+    DEVELOPER_ROLE_ALLOWED_CONNECTORS,
+    DEVELOPER_ROLE_ALLOWED_LOCAL_ACTIONS,
+} from '../agents/developer/developer-agent-profile.js';
 
 export interface RoleProfile {
     roleKey: RoleKey;
@@ -37,18 +41,18 @@ export const ROLE_PROFILES: Record<RoleKey, RoleProfile> = {
     developer: {
         roleKey: 'developer',
         displayName: 'Developer',
-        description: 'Handles code review, PR drafts, bug triage, and issue management',
-        allowedConnectorTools: ['github', 'gitlab', 'jira', 'slack', 'confluence'],
-        allowedActions: ['create_pr', 'review_code', 'create_issue', 'comment_issue', 'run_pipeline', 'send_message'],
-        requiredConfig: ['codeRepoProvider', 'issueTrackerProvider'],
+        description: 'Handles full software development lifecycle — feature implementation, bug fixes, code review, refactoring, security audits, performance profiling, and PR management',
+        allowedConnectorTools: [...DEVELOPER_ROLE_ALLOWED_CONNECTORS],
+        allowedActions: [...DEVELOPER_ROLE_ALLOWED_LOCAL_ACTIONS],
+        requiredConfig: ['codeRepoProvider'],
     },
     fullstack_developer: {
         roleKey: 'fullstack_developer',
         displayName: 'Fullstack Developer',
         description: 'Handles frontend + backend code review, PR drafts, design handoff, and issue management',
-        allowedConnectorTools: ['github', 'gitlab', 'jira', 'slack', 'confluence', 'figma'],
-        allowedActions: ['create_pr', 'review_code', 'create_issue', 'comment_issue', 'run_pipeline', 'send_message', 'read_design'],
-        requiredConfig: ['codeRepoProvider', 'issueTrackerProvider'],
+        allowedConnectorTools: [...DEVELOPER_ROLE_ALLOWED_CONNECTORS, 'figma'],
+        allowedActions: [...DEVELOPER_ROLE_ALLOWED_LOCAL_ACTIONS],
+        requiredConfig: ['codeRepoProvider'],
     },
     tester: {
         roleKey: 'tester',
