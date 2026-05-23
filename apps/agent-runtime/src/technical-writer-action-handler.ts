@@ -36,6 +36,45 @@ import {
     type UserStory,
     type RetroItem,
 } from './technical-writer/sprint-doc-builder.js';
+import {
+    buildManualFromSections,
+    buildManualTemplate,
+    type ManualMetadata,
+    type ManualSection,
+    type ManualAudience,
+} from './technical-writer/manual-builder.js';
+import {
+    buildFaqMarkdown,
+    buildFaqTemplate,
+    extractFaqFromSupportText,
+    categorizeFaqEntries,
+    DEFAULT_FAQ_CATEGORIES,
+    type FaqDocument,
+    type FaqEntry,
+} from './technical-writer/faq-builder.js';
+import {
+    buildTutorialMarkdown,
+    buildTutorialSeries,
+    buildTutorialTemplate,
+    type Tutorial,
+    type TutorialSeries,
+    type TutorialLevel,
+} from './technical-writer/tutorial-builder.js';
+import {
+    buildOnboardingFlowMarkdown,
+    buildOnboardingChecklist,
+    buildOnboardingTemplate,
+    type OnboardingFlow,
+    type OnboardingRole,
+    type OnboardingPhase,
+    type OnboardingTask,
+} from './technical-writer/onboarding-builder.js';
+import {
+    buildWhitepaperFromSections,
+    buildWhitepaperTemplate,
+    type WhitepaperMetadata,
+    type WhitepaperSection,
+} from './technical-writer/whitepaper-builder.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -49,19 +88,24 @@ export type TechnicalWriterActionType =
     | 'workspace_tw_style_check'
     | 'workspace_tw_standup_report'
     | 'workspace_tw_sme_interview'
-    | 'workspace_tw_sprint_doc';
+    | 'workspace_tw_sprint_doc'
+    | 'workspace_tw_manual'
+    | 'workspace_tw_faq'
+    | 'workspace_tw_tutorial'
+    | 'workspace_tw_onboarding'
+    | 'workspace_tw_whitepaper'
+    | 'workspace_tw_endpoint_verify';
+
+const TW_ACTION_TYPES = new Set<string>([
+    'workspace_tw_doc_diff', 'workspace_tw_api_doc_openapi', 'workspace_tw_api_doc_code',
+    'workspace_tw_release_notes', 'workspace_tw_style_check', 'workspace_tw_standup_report',
+    'workspace_tw_sme_interview', 'workspace_tw_sprint_doc', 'workspace_tw_manual',
+    'workspace_tw_faq', 'workspace_tw_tutorial', 'workspace_tw_onboarding',
+    'workspace_tw_whitepaper', 'workspace_tw_endpoint_verify',
+]);
 
 export function isTechnicalWriterActionType(t: string): t is TechnicalWriterActionType {
-    return (
-        t === 'workspace_tw_doc_diff' ||
-        t === 'workspace_tw_api_doc_openapi' ||
-        t === 'workspace_tw_api_doc_code' ||
-        t === 'workspace_tw_release_notes' ||
-        t === 'workspace_tw_style_check' ||
-        t === 'workspace_tw_standup_report' ||
-        t === 'workspace_tw_sme_interview' ||
-        t === 'workspace_tw_sprint_doc'
-    );
+    return TW_ACTION_TYPES.has(t);
 }
 
 // ---------------------------------------------------------------------------
@@ -1148,6 +1192,137 @@ function buildGitLogArgs(options: {
 // Payload parsers for new action types
 // ---------------------------------------------------------------------------
 
+function parseManualSections(raw: unknown): ManualSection[] {
+    if (!Array.isArray(raw)) return [];
+    return raw.flatMap((s) => {
+        if (typeof s !== 'object' || s === null) return [];
+        const obj = s as Record<string, unknown>;
+        return [{
+            id: String(obj['id'] ?? ''),
+            title: String(obj['title'] ?? ''),
+            level: ([1, 2, 3].includes(Number(obj['level'])) ? Number(obj['level']) : 1) as ManualSection['level'],
+            content: String(obj['content'] ?? ''),
+            subsections: parseManualSections(obj['subsections']),
+        }];
+    });
+}
+
+function parseFaqEntries(raw: unknown): FaqEntry[] {
+    if (!Array.isArray(raw)) return [];
+    return raw.flatMap((e) => {
+        if (typeof e !== 'object' || e === null) return [];
+        const obj = e as Record<string, unknown>;
+        return [{
+            id: String(obj['id'] ?? ''),
+            question: String(obj['question'] ?? ''),
+            answer: String(obj['answer'] ?? ''),
+            category: String(obj['category'] ?? 'Other'),
+            tags: Array.isArray(obj['tags']) ? (obj['tags'] as unknown[]).filter((t): t is string => typeof t === 'string') : undefined,
+            relatedQuestions: Array.isArray(obj['related_questions'])
+                ? (obj['related_questions'] as unknown[]).filter((r): r is string => typeof r === 'string')
+                : undefined,
+        }];
+    });
+}
+
+function parseTutorial(obj: Record<string, unknown>): Tutorial {
+    const rawLevel = String(obj['level'] ?? 'beginner');
+    const level: TutorialLevel = (['beginner', 'intermediate', 'advanced'].includes(rawLevel) ? rawLevel : 'beginner') as TutorialLevel;
+    return {
+        title: String(obj['title'] ?? ''),
+        level,
+        estimatedTime: String(obj['estimated_time'] ?? obj['estimatedTime'] ?? '15 minutes'),
+        learningObjectives: Array.isArray(obj['learning_objectives'])
+            ? (obj['learning_objectives'] as unknown[]).filter((o): o is string => typeof o === 'string')
+            : [],
+        prerequisites: Array.isArray(obj['prerequisites'])
+            ? (obj['prerequisites'] as unknown[]).filter((p): p is string => typeof p === 'string')
+            : [],
+        steps: Array.isArray(obj['steps']) ? obj['steps'].flatMap((s) => {
+            if (typeof s !== 'object' || s === null) return [];
+            const st = s as Record<string, unknown>;
+            const rawCode = typeof st['code'] === 'object' && st['code'] !== null ? st['code'] as Record<string, unknown> : null;
+            return [{
+                stepNumber: typeof st['step_number'] === 'number' ? st['step_number'] : typeof st['stepNumber'] === 'number' ? st['stepNumber'] : 1,
+                title: String(st['title'] ?? ''),
+                description: String(st['description'] ?? ''),
+                code: rawCode ? { language: String(rawCode['language'] ?? 'bash'), content: String(rawCode['content'] ?? ''), filename: typeof rawCode['filename'] === 'string' ? rawCode['filename'] : undefined } : undefined,
+                expectedOutput: typeof st['expected_output'] === 'string' ? st['expected_output'] : undefined,
+                checkpoint: typeof st['checkpoint'] === 'string' ? st['checkpoint'] : undefined,
+                troubleshooting: Array.isArray(st['troubleshooting']) ? (st['troubleshooting'] as unknown[]).filter((t): t is string => typeof t === 'string') : undefined,
+            }];
+        }) : [],
+        nextSteps: Array.isArray(obj['next_steps'])
+            ? (obj['next_steps'] as unknown[]).filter((n): n is string => typeof n === 'string')
+            : undefined,
+        product: typeof obj['product'] === 'string' ? obj['product'] : undefined,
+    };
+}
+
+function parseTutorials(raw: unknown): Tutorial[] {
+    if (!Array.isArray(raw)) return [];
+    return raw.flatMap((t) => {
+        if (typeof t !== 'object' || t === null) return [];
+        return [parseTutorial(t as Record<string, unknown>)];
+    });
+}
+
+function parseOnboardingFlow(raw: unknown): OnboardingFlow | null {
+    if (typeof raw !== 'object' || raw === null) return null;
+    const obj = raw as Record<string, unknown>;
+    const rawRole = String(obj['role'] ?? 'end-user');
+    const role: OnboardingRole = (['developer', 'admin', 'end-user'].includes(rawRole) ? rawRole : 'end-user') as OnboardingRole;
+    const phases: OnboardingPhase[] = Array.isArray(obj['phases']) ? obj['phases'].flatMap((p) => {
+        if (typeof p !== 'object' || p === null) return [];
+        const ph = p as Record<string, unknown>;
+        return [{
+            phase: String(ph['phase'] ?? ''),
+            goals: Array.isArray(ph['goals']) ? (ph['goals'] as unknown[]).filter((g): g is string => typeof g === 'string') : [],
+            tasks: Array.isArray(ph['tasks']) ? ph['tasks'].flatMap((t) => {
+                if (typeof t !== 'object' || t === null) return [];
+                const tk = t as Record<string, unknown>;
+                return [{
+                    id: String(tk['id'] ?? ''),
+                    title: String(tk['title'] ?? ''),
+                    description: String(tk['description'] ?? ''),
+                    estimatedTime: typeof tk['estimated_time'] === 'string' ? tk['estimated_time'] : undefined,
+                    docLink: typeof tk['doc_link'] === 'string' ? tk['doc_link'] : undefined,
+                    required: tk['required'] !== false,
+                    completionCriteria: typeof tk['completion_criteria'] === 'string' ? tk['completion_criteria'] : undefined,
+                    subtasks: Array.isArray(tk['subtasks']) ? (tk['subtasks'] as unknown[]).filter((s): s is string => typeof s === 'string') : undefined,
+                } as OnboardingTask];
+            }) : [],
+        } as OnboardingPhase];
+    }) : [];
+    return {
+        title: String(obj['title'] ?? 'Onboarding Guide'),
+        role,
+        product: String(obj['product'] ?? ''),
+        welcome: typeof obj['welcome'] === 'string' ? obj['welcome'] : undefined,
+        phases,
+    };
+}
+
+function parseWhitepaperSections(raw: unknown): WhitepaperSection[] {
+    if (!Array.isArray(raw)) return [];
+    return raw.flatMap((s) => {
+        if (typeof s !== 'object' || s === null) return [];
+        const obj = s as Record<string, unknown>;
+        return [{
+            id: String(obj['id'] ?? ''),
+            title: String(obj['title'] ?? ''),
+            content: String(obj['content'] ?? ''),
+            callouts: undefined,
+            figures: undefined,
+            subsections: Array.isArray(obj['subsections']) ? obj['subsections'].flatMap((sub) => {
+                if (typeof sub !== 'object' || sub === null) return [];
+                const s2 = sub as Record<string, unknown>;
+                return [{ title: String(s2['title'] ?? ''), content: String(s2['content'] ?? '') }];
+            }) : undefined,
+        }];
+    });
+}
+
 function buildSprintContextFromPayload(payload: Record<string, unknown>) {
     const sprintNumber = typeof payload['sprint_number'] === 'number' ? payload['sprint_number'] : undefined;
     const sprintGoal = typeof payload['sprint_goal'] === 'string' ? payload['sprint_goal'] : undefined;
@@ -1681,6 +1856,409 @@ export async function handleTechnicalWriterAction(params: {
                     question_count: plan.questions.length,
                     markdown_output: plan.markdownOutput,
                     written_to: outputPath || null,
+                });
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: String(err) };
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_tw_manual
+        // Generate a user manual — either from pre-written sections or as a
+        // skeleton template driven by a feature list.
+        //
+        // payload:
+        //   mode          — 'from_sections' | 'template' (default: template)
+        //   metadata      — ManualMetadata object (title, product, version, audience, …)
+        //   features?     — string[] of feature names (mode: template)
+        //   sections?     — ManualSection[] (mode: from_sections)
+        //   output_path?  — where to write the generated markdown
+        // ------------------------------------------------------------------
+        case 'workspace_tw_manual': {
+            try {
+                const mode = typeof payload['mode'] === 'string' ? payload['mode'] : 'template';
+                const rawMeta = payload['metadata'] as Record<string, unknown> | undefined;
+                if (!rawMeta || typeof rawMeta !== 'object') {
+                    return { ok: false, output: '', errorOutput: 'payload.metadata (ManualMetadata) is required.' };
+                }
+
+                const meta: ManualMetadata = {
+                    title: String(rawMeta['title'] ?? 'User Manual'),
+                    product: String(rawMeta['product'] ?? ''),
+                    version: String(rawMeta['version'] ?? '1.0'),
+                    audience: (['end-user', 'developer', 'admin', 'all'].includes(String(rawMeta['audience']))
+                        ? String(rawMeta['audience'])
+                        : 'all') as ManualAudience,
+                    authors: Array.isArray(rawMeta['authors'])
+                        ? (rawMeta['authors'] as unknown[]).filter((a): a is string => typeof a === 'string')
+                        : [],
+                    date: typeof rawMeta['date'] === 'string' ? rawMeta['date'] : undefined,
+                    description: typeof rawMeta['description'] === 'string' ? rawMeta['description'] : undefined,
+                    confidentiality: typeof rawMeta['confidentiality'] === 'string'
+                        ? rawMeta['confidentiality'] as ManualMetadata['confidentiality']
+                        : 'public',
+                };
+
+                let markdown: string;
+                if (mode === 'from_sections') {
+                    const sections = parseManualSections(payload['sections']);
+                    if (sections.length === 0) {
+                        return { ok: false, output: '', errorOutput: 'payload.sections (ManualSection[]) is required for mode from_sections.' };
+                    }
+                    markdown = buildManualFromSections(meta, sections);
+                } else {
+                    const features = Array.isArray(payload['features'])
+                        ? (payload['features'] as unknown[]).filter((f): f is string => typeof f === 'string')
+                        : [];
+                    markdown = buildManualTemplate(meta, features);
+                }
+
+                const outputPath = typeof payload['output_path'] === 'string' ? payload['output_path'].trim() : '';
+                if (outputPath) await writeDocFile(workspaceDir, outputPath, markdown);
+
+                return safeJson({ mode, title: meta.title, written_to: outputPath || null, doc_content: markdown });
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: String(err) };
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_tw_faq
+        // Build an FAQ document from Q&A pairs, generate a skeleton by
+        // category, or extract Q&A candidates from raw support text.
+        //
+        // payload:
+        //   mode           — 'from_entries' | 'template' | 'extract' (default: template)
+        //   title?         — FAQ document title
+        //   product?       — product name
+        //   categories?    — string[] of category names
+        //   entries?       — FaqEntry[] (mode: from_entries)
+        //   raw_text?      — unstructured support text (mode: extract)
+        //   output_path?   — where to write the generated markdown
+        // ------------------------------------------------------------------
+        case 'workspace_tw_faq': {
+            try {
+                const mode = typeof payload['mode'] === 'string' ? payload['mode'] : 'template';
+                const title = typeof payload['title'] === 'string' ? payload['title'] : 'Frequently Asked Questions';
+                const product = typeof payload['product'] === 'string' ? payload['product'] : '';
+                const categories = Array.isArray(payload['categories'])
+                    ? (payload['categories'] as unknown[]).filter((c): c is string => typeof c === 'string')
+                    : DEFAULT_FAQ_CATEGORIES;
+                const outputPath = typeof payload['output_path'] === 'string' ? payload['output_path'].trim() : '';
+
+                let markdown: string;
+                let extractedCount: number | undefined;
+
+                if (mode === 'from_entries') {
+                    const entries = parseFaqEntries(payload['entries']);
+                    if (entries.length === 0) {
+                        return { ok: false, output: '', errorOutput: 'payload.entries (FaqEntry[]) is required for mode from_entries.' };
+                    }
+                    const intro = typeof payload['intro'] === 'string' ? payload['intro'] : undefined;
+                    markdown = buildFaqMarkdown({ title, product, categories, entries, intro });
+                } else if (mode === 'extract') {
+                    const rawText = typeof payload['raw_text'] === 'string' ? payload['raw_text'] : '';
+                    if (!rawText) {
+                        return { ok: false, output: '', errorOutput: 'payload.raw_text is required for mode extract.' };
+                    }
+                    const defaultCategory = typeof payload['default_category'] === 'string'
+                        ? payload['default_category']
+                        : 'Troubleshooting';
+                    const result = extractFaqFromSupportText(rawText, defaultCategory);
+                    const categorized = categorizeFaqEntries(result.candidates);
+                    extractedCount = categorized.length;
+                    markdown = buildFaqMarkdown({ title, product, categories: [...new Set(categorized.map((e) => e.category))], entries: categorized });
+                } else {
+                    markdown = buildFaqTemplate(title, product, categories);
+                }
+
+                if (outputPath) await writeDocFile(workspaceDir, outputPath, markdown);
+
+                return safeJson({
+                    mode,
+                    title,
+                    extracted_count: extractedCount,
+                    written_to: outputPath || null,
+                    doc_content: markdown,
+                });
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: String(err) };
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_tw_tutorial
+        // Generate a step-by-step tutorial or a series of tutorials.
+        //
+        // payload:
+        //   mode           — 'single' | 'series' | 'template' (default: template)
+        //   tutorial?      — Tutorial object (mode: single)
+        //   series?        — TutorialSeries object (mode: series)
+        //   title?         — tutorial title (mode: template)
+        //   level?         — 'beginner' | 'intermediate' | 'advanced' (mode: template)
+        //   step_count?    — number of steps (mode: template, default: 5)
+        //   product?       — product name (mode: template)
+        //   output_path?   — where to write the generated markdown
+        // ------------------------------------------------------------------
+        case 'workspace_tw_tutorial': {
+            try {
+                const mode = typeof payload['mode'] === 'string' ? payload['mode'] : 'template';
+                const outputPath = typeof payload['output_path'] === 'string' ? payload['output_path'].trim() : '';
+                let markdown: string;
+
+                if (mode === 'series') {
+                    const rawSeries = payload['series'] as Record<string, unknown> | undefined;
+                    if (!rawSeries) return { ok: false, output: '', errorOutput: 'payload.series (TutorialSeries) is required for mode series.' };
+                    const series: TutorialSeries = {
+                        title: String(rawSeries['title'] ?? 'Tutorial Series'),
+                        description: String(rawSeries['description'] ?? ''),
+                        tutorials: parseTutorials(rawSeries['tutorials']),
+                    };
+                    if (series.tutorials.length === 0) {
+                        return { ok: false, output: '', errorOutput: 'payload.series.tutorials must be a non-empty array.' };
+                    }
+                    markdown = buildTutorialSeries(series);
+                } else if (mode === 'single') {
+                    const rawTutorial = payload['tutorial'] as Record<string, unknown> | undefined;
+                    if (!rawTutorial) return { ok: false, output: '', errorOutput: 'payload.tutorial (Tutorial) is required for mode single.' };
+                    const tutorial = parseTutorial(rawTutorial);
+                    markdown = buildTutorialMarkdown(tutorial);
+                } else {
+                    const title = typeof payload['title'] === 'string' ? payload['title'] : '_[Tutorial Title]_';
+                    const rawLevel = typeof payload['level'] === 'string' ? payload['level'] : 'beginner';
+                    const level: TutorialLevel = (['beginner', 'intermediate', 'advanced'].includes(rawLevel) ? rawLevel : 'beginner') as TutorialLevel;
+                    const stepCount = typeof payload['step_count'] === 'number' ? payload['step_count'] : 5;
+                    const product = typeof payload['product'] === 'string' ? payload['product'] : undefined;
+                    const tmpl = buildTutorialTemplate(title, level, stepCount, product);
+                    markdown = buildTutorialMarkdown(tmpl);
+                }
+
+                if (outputPath) await writeDocFile(workspaceDir, outputPath, markdown);
+                return safeJson({ mode, written_to: outputPath || null, doc_content: markdown });
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: String(err) };
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_tw_onboarding
+        // Generate a role-specific onboarding guide.
+        //
+        // payload:
+        //   mode           — 'from_flow' | 'template' | 'checklist' (default: template)
+        //   product        — product name
+        //   role?          — 'developer' | 'admin' | 'end-user' (default: end-user)
+        //   flow?          — OnboardingFlow object (mode: from_flow or checklist)
+        //   output_path?   — where to write the generated markdown
+        // ------------------------------------------------------------------
+        case 'workspace_tw_onboarding': {
+            try {
+                const mode = typeof payload['mode'] === 'string' ? payload['mode'] : 'template';
+                const product = typeof payload['product'] === 'string' ? payload['product'] : 'the product';
+                const rawRole = typeof payload['role'] === 'string' ? payload['role'] : 'end-user';
+                const role: OnboardingRole = (['developer', 'admin', 'end-user'].includes(rawRole) ? rawRole : 'end-user') as OnboardingRole;
+                const outputPath = typeof payload['output_path'] === 'string' ? payload['output_path'].trim() : '';
+
+                let markdown: string;
+
+                if (mode === 'checklist') {
+                    const flow = parseOnboardingFlow(payload['flow']) ?? buildOnboardingTemplate(product, role);
+                    markdown = buildOnboardingChecklist(flow);
+                } else if (mode === 'from_flow') {
+                    const flow = parseOnboardingFlow(payload['flow']);
+                    if (!flow) return { ok: false, output: '', errorOutput: 'payload.flow (OnboardingFlow) is required for mode from_flow.' };
+                    markdown = buildOnboardingFlowMarkdown(flow);
+                } else {
+                    const flow = buildOnboardingTemplate(product, role);
+                    markdown = buildOnboardingFlowMarkdown(flow);
+                }
+
+                if (outputPath) await writeDocFile(workspaceDir, outputPath, markdown);
+                return safeJson({ mode, role, product, written_to: outputPath || null, doc_content: markdown });
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: String(err) };
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_tw_whitepaper
+        // Generate a white paper document.
+        //
+        // payload:
+        //   mode          — 'from_sections' | 'template' (default: template)
+        //   metadata      — WhitepaperMetadata object
+        //   sections?     — WhitepaperSection[] (mode: from_sections)
+        //   output_path?  — where to write the generated markdown
+        // ------------------------------------------------------------------
+        case 'workspace_tw_whitepaper': {
+            try {
+                const mode = typeof payload['mode'] === 'string' ? payload['mode'] : 'template';
+                const rawMeta = payload['metadata'] as Record<string, unknown> | undefined;
+                if (!rawMeta || typeof rawMeta !== 'object') {
+                    return { ok: false, output: '', errorOutput: 'payload.metadata (WhitepaperMetadata) is required.' };
+                }
+
+                const meta: WhitepaperMetadata = {
+                    title: String(rawMeta['title'] ?? 'White Paper'),
+                    subtitle: typeof rawMeta['subtitle'] === 'string' ? rawMeta['subtitle'] : undefined,
+                    authors: Array.isArray(rawMeta['authors'])
+                        ? (rawMeta['authors'] as unknown[]).filter((a): a is string => typeof a === 'string')
+                        : [String(rawMeta['author'] ?? 'Author')],
+                    organization: String(rawMeta['organization'] ?? rawMeta['organisation'] ?? ''),
+                    date: typeof rawMeta['date'] === 'string' ? rawMeta['date'] : undefined,
+                    abstract: String(rawMeta['abstract'] ?? '_[Add abstract]_'),
+                    keywords: Array.isArray(rawMeta['keywords'])
+                        ? (rawMeta['keywords'] as unknown[]).filter((k): k is string => typeof k === 'string')
+                        : undefined,
+                    version: typeof rawMeta['version'] === 'string' ? rawMeta['version'] : undefined,
+                    confidentiality: typeof rawMeta['confidentiality'] === 'string'
+                        ? rawMeta['confidentiality'] as WhitepaperMetadata['confidentiality']
+                        : 'public',
+                };
+
+                let markdown: string;
+                if (mode === 'from_sections') {
+                    const sections = parseWhitepaperSections(payload['sections']);
+                    if (sections.length === 0) {
+                        return { ok: false, output: '', errorOutput: 'payload.sections (WhitepaperSection[]) is required for mode from_sections.' };
+                    }
+                    markdown = buildWhitepaperFromSections(meta, sections);
+                } else {
+                    markdown = buildWhitepaperTemplate(meta);
+                }
+
+                const outputPath = typeof payload['output_path'] === 'string' ? payload['output_path'].trim() : '';
+                if (outputPath) await writeDocFile(workspaceDir, outputPath, markdown);
+
+                return safeJson({ mode, title: meta.title, written_to: outputPath || null, doc_content: markdown });
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: String(err) };
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_tw_endpoint_verify
+        // Read-only verification of HTTP endpoints before documenting them.
+        // Only GET and HEAD methods are allowed — no write operations.
+        //
+        // payload:
+        //   endpoints     — string URL or string[] of URLs
+        //   method?       — 'GET' | 'HEAD' (default: HEAD)
+        //   headers?      — Record<string, string> of request headers
+        //   timeout_ms?   — per-request timeout (default 10000, max 30000)
+        //   sample_body?  — true to capture first 500 chars of response body (GET only)
+        // ------------------------------------------------------------------
+        case 'workspace_tw_endpoint_verify': {
+            try {
+                if (!runCommand) {
+                    return { ok: false, output: '', errorOutput: 'workspace_tw_endpoint_verify requires a runCommand callback.' };
+                }
+
+                const rawEndpoints = payload['endpoints'];
+                const urls: string[] = Array.isArray(rawEndpoints)
+                    ? (rawEndpoints as unknown[]).filter((u): u is string => typeof u === 'string')
+                    : typeof rawEndpoints === 'string'
+                        ? [rawEndpoints]
+                        : [];
+
+                if (urls.length === 0) {
+                    return { ok: false, output: '', errorOutput: 'payload.endpoints (string or string[]) is required.' };
+                }
+
+                const rawMethod = typeof payload['method'] === 'string' ? payload['method'].toUpperCase() : 'HEAD';
+                const method = rawMethod === 'GET' ? 'GET' : 'HEAD';
+                const sampleBody = method === 'GET' && payload['sample_body'] === true;
+                const timeoutMs = Math.min(
+                    typeof payload['timeout_ms'] === 'number' ? payload['timeout_ms'] : 10_000,
+                    30_000,
+                );
+                const headers = typeof payload['headers'] === 'object' && payload['headers'] !== null
+                    ? payload['headers'] as Record<string, string>
+                    : {};
+
+                const results: Array<{
+                    url: string;
+                    status: number | null;
+                    contentType: string;
+                    responseTimeMs: number | null;
+                    sampleBody?: string;
+                    error?: string;
+                    documented: boolean;
+                }> = [];
+
+                for (const url of urls.slice(0, 20)) { // cap at 20 to prevent abuse
+                    // Validate URL scheme — only allow http/https
+                    if (!/^https?:\/\//i.test(url)) {
+                        results.push({ url, status: null, contentType: '', responseTimeMs: null, error: 'Only http:// and https:// URLs are allowed.', documented: false });
+                        continue;
+                    }
+
+                    const headerArgs = Object.entries(headers).flatMap(([k, v]) => ['-H', `${k}: ${v}`]);
+                    const bodyFlag = sampleBody ? [] : ['-o', '/dev/null'];
+                    const args = [
+                        'curl', '-s', '-X', method,
+                        '-w', '%{http_code}|%{content_type}|%{time_total}',
+                        ...headerArgs,
+                        ...bodyFlag,
+                        '--max-time', String(Math.ceil(timeoutMs / 1000)),
+                        url,
+                    ];
+
+                    const r = await runCommand(args, workspaceDir, timeoutMs + 2_000);
+
+                    if (r.exitCode !== 0 && !r.stdout.trim()) {
+                        results.push({ url, status: null, contentType: '', responseTimeMs: null, error: r.stderr.slice(0, 200), documented: false });
+                        continue;
+                    }
+
+                    // stdout format when no body: "200|application/json|0.123"
+                    // stdout format with body: "<body>200|application/json|0.123"
+                    const lastLine = r.stdout.trim().split('\n').pop() ?? r.stdout.trim();
+                    const [statusStr, contentType = '', timeStr = ''] = lastLine.split('|');
+                    const status = parseInt(statusStr ?? '', 10);
+                    const responseTimeMs = parseFloat(timeStr) * 1000;
+
+                    let sampleBodyText: string | undefined;
+                    if (sampleBody && r.stdout.length > lastLine.length) {
+                        sampleBodyText = r.stdout.slice(0, r.stdout.length - lastLine.length).slice(0, 500);
+                    }
+
+                    results.push({
+                        url,
+                        status: isNaN(status) ? null : status,
+                        contentType: contentType.split(';')[0]?.trim() ?? '',
+                        responseTimeMs: isNaN(responseTimeMs) ? null : Math.round(responseTimeMs),
+                        sampleBody: sampleBodyText,
+                        documented: !isNaN(status) && status < 500,
+                    });
+                }
+
+                const successCount = results.filter((r) => r.documented).length;
+                const failCount = results.length - successCount;
+
+                // Produce a Markdown verification report
+                const reportLines = [
+                    '# Endpoint Verification Report',
+                    '',
+                    `**Method:** ${method}  `,
+                    `**Checked:** ${results.length} endpoint(s)  `,
+                    `**Reachable:** ${successCount}  `,
+                    `**Unreachable / error:** ${failCount}`,
+                    '',
+                    '| URL | Status | Content-Type | Time (ms) | Safe to Document? |',
+                    '|-----|--------|--------------|-----------|-------------------|',
+                    ...results.map((r) => {
+                        const statusBadge = r.status !== null ? String(r.status) : '—';
+                        const safe = r.documented ? '✅ Yes' : '❌ No';
+                        return `| \`${r.url}\` | ${statusBadge} | ${r.contentType || '—'} | ${r.responseTimeMs ?? '—'} | ${safe} |`;
+                    }),
+                ];
+
+                return safeJson({
+                    results,
+                    success_count: successCount,
+                    fail_count: failCount,
+                    verification_report: reportLines.join('\n'),
                 });
             } catch (err) {
                 return { ok: false, output: '', errorOutput: String(err) };

@@ -100,6 +100,21 @@ export function buildTechnicalWriterEpisodicPattern(
         return `tw:sprint_doc:${docType}:${oc}`;
     }
 
+    // Content format actions
+    if (at === 'workspace_tw_manual')      return `tw:manual:${oc}`;
+    if (at === 'workspace_tw_faq')         return `tw:faq:${oc}`;
+    if (at === 'workspace_tw_tutorial')    return `tw:tutorial:${oc}`;
+    if (at === 'workspace_tw_onboarding')  return `tw:onboarding:${oc}`;
+    if (at === 'workspace_tw_whitepaper')  return `tw:whitepaper:${oc}`;
+
+    // Endpoint verification
+    if (at === 'workspace_tw_endpoint_verify') {
+        const failCount = typeof result.executionPayload['fail_count'] === 'number'
+            ? result.executionPayload['fail_count']
+            : 0;
+        return failCount > 0 ? 'tw:endpoint_verify:partial' : `tw:endpoint_verify:${oc}`;
+    }
+
     // Fallback
     return `tw:action:${oc}`;
 }
@@ -158,6 +173,23 @@ export function buildTechnicalWriterEpisodicSummary(
             ? result.executionPayload['doc_type']
             : 'unknown';
         return `Sprint ${docType} document built (sprint ${result.executionPayload['sprint_number'] ?? '?'}): ${taskLabel}`;
+    }
+
+    if (pattern === 'tw:manual:success')     return `User manual generated: ${taskLabel}`;
+    if (pattern === 'tw:manual:fail')        return `User manual generation failed: ${taskLabel}`;
+    if (pattern === 'tw:faq:success')        return `FAQ document generated: ${taskLabel}`;
+    if (pattern === 'tw:faq:fail')           return `FAQ generation failed: ${taskLabel}`;
+    if (pattern === 'tw:tutorial:success')   return `Tutorial generated: ${taskLabel}`;
+    if (pattern === 'tw:tutorial:fail')      return `Tutorial generation failed: ${taskLabel}`;
+    if (pattern === 'tw:onboarding:success') return `Onboarding guide generated: ${taskLabel}`;
+    if (pattern === 'tw:onboarding:fail')    return `Onboarding guide generation failed: ${taskLabel}`;
+    if (pattern === 'tw:whitepaper:success') return `White paper generated: ${taskLabel}`;
+    if (pattern === 'tw:whitepaper:fail')    return `White paper generation failed: ${taskLabel}`;
+
+    if (pattern.startsWith('tw:endpoint_verify')) {
+        const success = result.executionPayload['success_count'] ?? '?';
+        const fail = result.executionPayload['fail_count'] ?? '?';
+        return `Endpoint verification complete — ${success} reachable, ${fail} unreachable: ${taskLabel}`;
     }
 
     return `Technical writer action "${at}" completed with status "${oc}": ${taskLabel}`;
