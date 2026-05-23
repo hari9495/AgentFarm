@@ -273,6 +273,22 @@ export type LocalWorkspaceActionType =
     | 'workspace_tw_release_notes'
     | 'workspace_tw_style_check'
     | 'workspace_tw_standup_report'
+    | 'workspace_tw_sme_interview'
+    | 'workspace_tw_sprint_doc'
+    | 'workspace_tw_manual'
+    | 'workspace_tw_faq'
+    | 'workspace_tw_tutorial'
+    | 'workspace_tw_onboarding'
+    | 'workspace_tw_whitepaper'
+    | 'workspace_tw_endpoint_verify'
+    | 'workspace_tw_audience_rewrite'
+    | 'workspace_tw_feedback_analysis'
+    | 'workspace_tw_nav_audit'
+    | 'workspace_tw_localization'
+    | 'workspace_tw_doc_audit'
+    | 'workspace_tw_product_crawl'
+    | 'workspace_tw_screenshot_doc'
+    | 'workspace_tw_doc_gap_scan'
     // Tier 27 (General file write — used by TW and future roles)
     | 'workspace_write_file'
     // Tier 28 (Content Writer domain actions)
@@ -750,6 +766,22 @@ export const LOCAL_WORKSPACE_ACTION_TYPES = new Set<LocalWorkspaceActionType>([
     'workspace_tw_release_notes',
     'workspace_tw_style_check',
     'workspace_tw_standup_report',
+    'workspace_tw_sme_interview',
+    'workspace_tw_sprint_doc',
+    'workspace_tw_manual',
+    'workspace_tw_faq',
+    'workspace_tw_tutorial',
+    'workspace_tw_onboarding',
+    'workspace_tw_whitepaper',
+    'workspace_tw_endpoint_verify',
+    'workspace_tw_audience_rewrite',
+    'workspace_tw_feedback_analysis',
+    'workspace_tw_nav_audit',
+    'workspace_tw_localization',
+    'workspace_tw_doc_audit',
+    'workspace_tw_product_crawl',
+    'workspace_tw_screenshot_doc',
+    'workspace_tw_doc_gap_scan',
     // Tier 27 (General file write)
     'workspace_write_file',
 ]);
@@ -12618,7 +12650,71 @@ export async function executeLocalWorkspaceAction(input: {
         case 'workspace_tw_api_doc_code':
         case 'workspace_tw_release_notes':
         case 'workspace_tw_style_check':
-        case 'workspace_tw_standup_report': {
+        case 'workspace_tw_standup_report':
+        case 'workspace_tw_sme_interview':
+        case 'workspace_tw_sprint_doc':
+        case 'workspace_tw_manual':
+        case 'workspace_tw_faq':
+        case 'workspace_tw_tutorial':
+        case 'workspace_tw_onboarding':
+        case 'workspace_tw_whitepaper':
+        case 'workspace_tw_endpoint_verify':
+        case 'workspace_tw_audience_rewrite':
+        case 'workspace_tw_feedback_analysis':
+        case 'workspace_tw_nav_audit':
+        case 'workspace_tw_localization':
+        case 'workspace_tw_doc_audit':
+        case 'workspace_tw_product_crawl':
+        case 'workspace_tw_screenshot_doc':
+        case 'workspace_tw_doc_gap_scan': {
+            // Build the browsePage callback from the existing web-actions infrastructure.
+            const browsePageFn = async (
+                url: string,
+                opts?: { extract?: 'text' | 'tables' | 'all'; screenshot?: boolean; taskId?: string },
+            ) => {
+                try {
+                    const ctx = await getWebContext(tenantId, botId);
+                    const extractTarget = opts?.extract === 'tables' ? 'table' : opts?.extract === 'all' ? 'all' : undefined;
+                    const pageResult = await webReadPage(ctx, { url });
+                    if (!pageResult.ok) return null;
+
+                    const text = pageResult.output;
+                    const headings: string[] = [];
+                    for (const m of text.matchAll(/^#{1,4}\s+(.+)/gm)) {
+                        if (m[1]) headings.push(m[1].trim());
+                    }
+
+                    let tables: unknown[] | undefined;
+                    if (extractTarget) {
+                        const extracted = await webExtractData(ctx, { url, target: extractTarget as 'table' | 'all' });
+                        if (extracted.ok) {
+                            try { tables = JSON.parse(extracted.output) as unknown[]; } catch { /* ignore */ }
+                        }
+                    }
+
+                    let screenshotPath: string | undefined;
+                    if (opts?.screenshot) {
+                        const ssPath = `/tmp/agentfarm-tw-${opts.taskId ?? taskId}-${Date.now()}.png`;
+                        try {
+                            const { chromium } = await import('playwright');
+                            const browser = await chromium.launch({ headless: true });
+                            const page = await browser.newPage();
+                            await page.goto(url, { waitUntil: 'networkidle' });
+                            await page.screenshot({ path: ssPath });
+                            await browser.close();
+                            screenshotPath = ssPath;
+                        } catch { /* screenshot failure is non-fatal */ }
+                    }
+
+                    const titleMatch = text.match(/^#\s+(.+)/m);
+                    const title = titleMatch?.[1]?.trim() ?? new URL(url).hostname;
+
+                    return { ok: true, title, text: text.slice(0, 8000), headings, tables, screenshotPath };
+                } catch {
+                    return null;
+                }
+            };
+
             return handleTechnicalWriterAction({
                 actionType: actionType as TechnicalWriterActionType,
                 tenantId,
@@ -12627,6 +12723,7 @@ export async function executeLocalWorkspaceAction(input: {
                 payload,
                 workspaceDir,
                 runCommand,
+                browsePage: browsePageFn,
             });
         }
 

@@ -1,4 +1,5 @@
 import type { LocalWorkspaceActionType } from './local-workspace-executor.js';
+import type { TechnicalWriterActionType } from './technical-writer-action-handler.js';
 
 export const TECHNICAL_WRITER_ROLE_ALLOWED_CONNECTORS = [
     // Version control / code
@@ -9,7 +10,7 @@ export const TECHNICAL_WRITER_ROLE_ALLOWED_CONNECTORS = [
     'slack',
 ] as const;
 
-export const TECHNICAL_WRITER_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = [
+export const TECHNICAL_WRITER_ROLE_ALLOWED_LOCAL_ACTIONS: (LocalWorkspaceActionType | TechnicalWriterActionType)[] = [
     // Memory — persist and recall doc context
     'workspace_memory_write',
     'workspace_memory_read',
@@ -41,6 +42,24 @@ export const TECHNICAL_WRITER_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionTy
     'workspace_create_pr',
     // File write (Tier 27 — produce documentation files on disk)
     'workspace_write_file',
+    // Sprint doc + all extended TW actions (Sprint 16)
+    'workspace_tw_sme_interview',
+    'workspace_tw_sprint_doc',
+    'workspace_tw_manual',
+    'workspace_tw_faq',
+    'workspace_tw_tutorial',
+    'workspace_tw_onboarding',
+    'workspace_tw_whitepaper',
+    'workspace_tw_endpoint_verify',
+    'workspace_tw_audience_rewrite',
+    'workspace_tw_feedback_analysis',
+    'workspace_tw_nav_audit',
+    'workspace_tw_localization',
+    'workspace_tw_doc_audit',
+    // Browser/UI discovery actions — closes product-knowledge + self-direction gaps
+    'workspace_tw_product_crawl',
+    'workspace_tw_screenshot_doc',
+    'workspace_tw_doc_gap_scan',
 ];
 
 export const TECHNICAL_WRITER_ROLE_BLOCKED_ACTIONS = [

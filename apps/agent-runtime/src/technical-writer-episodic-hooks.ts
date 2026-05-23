@@ -121,6 +121,23 @@ export function buildTechnicalWriterEpisodicPattern(
         return failCount > 0 ? 'tw:endpoint_verify:partial' : `tw:endpoint_verify:${oc}`;
     }
 
+    // Browser/UI discovery
+    if (at === 'workspace_tw_product_crawl') {
+        const pageCount = typeof result.executionPayload['pages_crawled'] === 'number'
+            ? result.executionPayload['pages_crawled']
+            : 0;
+        return pageCount > 0 ? `tw:product_crawl:${oc}` : 'tw:product_crawl:fail';
+    }
+    if (at === 'workspace_tw_screenshot_doc') return `tw:screenshot_doc:${oc}`;
+    if (at === 'workspace_tw_doc_gap_scan') {
+        const pct = typeof result.executionPayload['coverage_percent'] === 'number'
+            ? result.executionPayload['coverage_percent']
+            : 0;
+        if (pct >= 80) return 'tw:doc_gap_scan:high_coverage';
+        if (pct >= 50) return 'tw:doc_gap_scan:medium_coverage';
+        return 'tw:doc_gap_scan:low_coverage';
+    }
+
     // Fallback
     return `tw:action:${oc}`;
 }
@@ -222,6 +239,22 @@ export function buildTechnicalWriterEpisodicSummary(
         const success = result.executionPayload['success_count'] ?? '?';
         const fail = result.executionPayload['fail_count'] ?? '?';
         return `Endpoint verification complete — ${success} reachable, ${fail} unreachable: ${taskLabel}`;
+    }
+
+    if (pattern.startsWith('tw:product_crawl')) {
+        const pages = result.executionPayload['pages_crawled'] ?? '?';
+        const features = result.executionPayload['features_found'] ?? '?';
+        return `Product crawl complete — ${pages} page(s) read, ${features} features found: ${taskLabel}`;
+    }
+    if (pattern.startsWith('tw:screenshot_doc')) {
+        const title = result.executionPayload['title'] ?? taskLabel;
+        const shot = result.executionPayload['screenshot_path'] ? ' (screenshot captured)' : '';
+        return `UI page documented${shot}: ${title}`;
+    }
+    if (pattern.startsWith('tw:doc_gap_scan')) {
+        const pct = result.executionPayload['coverage_percent'] ?? '?';
+        const gaps = result.executionPayload['undocumented_count'] ?? '?';
+        return `Doc gap scan: ${pct}% covered, ${gaps} undocumented feature(s): ${taskLabel}`;
     }
 
     return `Technical writer action "${at}" completed with status "${oc}": ${taskLabel}`;

@@ -121,6 +121,13 @@ import {
     buildApiDocEnhancementPrompt,
     buildCodeDocEnhancementPrompt,
 } from './technical-writer/llm-enhancer.js';
+import {
+    buildProductDiscoveryReport,
+    buildScreenshotDocPage,
+    extractFeaturesFromCode,
+    findDocGaps,
+    type CrawledPage,
+} from './technical-writer/product-explorer.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -145,7 +152,11 @@ export type TechnicalWriterActionType =
     | 'workspace_tw_feedback_analysis'
     | 'workspace_tw_nav_audit'
     | 'workspace_tw_localization'
-    | 'workspace_tw_doc_audit';
+    | 'workspace_tw_doc_audit'
+    // Browser/UI discovery — closes the product-knowledge and self-direction gaps
+    | 'workspace_tw_product_crawl'
+    | 'workspace_tw_screenshot_doc'
+    | 'workspace_tw_doc_gap_scan';
 
 const TW_ACTION_TYPES = new Set<string>([
     'workspace_tw_doc_diff', 'workspace_tw_api_doc_openapi', 'workspace_tw_api_doc_code',
@@ -155,11 +166,35 @@ const TW_ACTION_TYPES = new Set<string>([
     'workspace_tw_whitepaper', 'workspace_tw_endpoint_verify',
     'workspace_tw_audience_rewrite', 'workspace_tw_feedback_analysis',
     'workspace_tw_nav_audit', 'workspace_tw_localization', 'workspace_tw_doc_audit',
+    // Browser/UI discovery
+    'workspace_tw_product_crawl', 'workspace_tw_screenshot_doc', 'workspace_tw_doc_gap_scan',
 ]);
 
 export function isTechnicalWriterActionType(t: string): t is TechnicalWriterActionType {
     return TW_ACTION_TYPES.has(t);
 }
+
+/**
+ * Callback type for browser-based page reading.
+ * The executor provides this from the existing Playwright/web-actions
+ * infrastructure (getWebContext + webReadPage + webExtractData).
+ * Returns null on navigation failure so the caller can skip gracefully.
+ */
+export type BrowsePageFn = (
+    url: string,
+    options?: {
+        extract?: 'text' | 'tables' | 'all';
+        screenshot?: boolean;
+        taskId?: string;
+    },
+) => Promise<{
+    ok: boolean;
+    title: string;
+    text: string;
+    headings: string[];
+    tables?: unknown[];
+    screenshotPath?: string;
+} | null>;
 
 // ---------------------------------------------------------------------------
 // Internal helpers
@@ -1453,8 +1488,18 @@ export async function handleTechnicalWriterAction(params: {
      * as the fallback.
      */
     callLlm?: LlmCallFn;
+    /**
+     * Optional browser page reader.
+     * Provided by the executor from the existing Playwright/web-actions
+     * infrastructure. Navigates to a URL and returns structured page content
+     * (title, text, headings, optional tables and screenshot path).
+     * Used by workspace_tw_product_crawl, workspace_tw_screenshot_doc, and
+     * workspace_tw_doc_gap_scan (URL mode).
+     * Returns null on navigation failure — the caller skips that URL gracefully.
+     */
+    browsePage?: BrowsePageFn;
 }): Promise<LocalWorkspaceResult> {
-    const { actionType, payload, workspaceDir, runCommand, callLlm } = params;
+    const { actionType, payload, workspaceDir, runCommand, callLlm, browsePage } = params;
 
     switch (actionType) {
 
@@ -2790,6 +2835,289 @@ export async function handleTechnicalWriterAction(params: {
                     top_actions: result.prioritisedActions.slice(0, 5),
                     written_to: outputPath || null,
                     report: result.markdownReport,
+                });
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: String(err) };
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_tw_product_crawl
+        // Navigate to real product pages and extract structured content as
+        // documentation source material. Closes the "writes from payload
+        // data, not from actual product knowledge" gap.
+        //
+        // payload:
+        //   urls              — string URL or string[] of pages to crawl (max 10)
+        //   credentials?      — { url, username, password } for authenticated products
+        //   extract?          — 'text' | 'tables' | 'all' (default: 'text')
+        //   max_chars?        — max chars of body text per page (default: 3000)
+        //   output_path?      — write discovery report as markdown
+        // ------------------------------------------------------------------
+        case 'workspace_tw_product_crawl': {
+            try {
+                if (!browsePage) {
+                    return { ok: false, output: '', errorOutput: 'workspace_tw_product_crawl requires a browsePage callback.' };
+                }
+
+                const rawUrls = payload['urls'];
+                const urls: string[] = Array.isArray(rawUrls)
+                    ? (rawUrls as unknown[]).filter((u): u is string => typeof u === 'string')
+                    : typeof rawUrls === 'string' ? [rawUrls] : [];
+
+                if (urls.length === 0) {
+                    return { ok: false, output: '', errorOutput: 'payload.urls (string or string[]) is required.' };
+                }
+
+                const extract = typeof payload['extract'] === 'string' ? payload['extract'] as 'text' | 'tables' | 'all' : 'text';
+                const maxChars = typeof payload['max_chars'] === 'number' ? Math.min(payload['max_chars'], 8000) : 3000;
+                const outputPath = typeof payload['output_path'] === 'string' ? payload['output_path'].trim() : '';
+                const taskId = params.taskId;
+
+                // Optional: login before crawling
+                const creds = payload['credentials'] as Record<string, unknown> | undefined;
+                if (creds && typeof creds['url'] === 'string' && typeof creds['username'] === 'string' && typeof creds['password'] === 'string') {
+                    // Login via the browsePage callback by visiting the login URL first.
+                    // The underlying BrowserContext retains the session cookie for subsequent calls.
+                    await browsePage(creds['url'] as string, { extract: 'text' });
+                }
+
+                const crawled: CrawledPage[] = [];
+
+                for (const url of urls.slice(0, 10)) {
+                    if (!/^https?:\/\//i.test(url)) continue; // scheme check
+                    const result = await browsePage(url, { extract, screenshot: false, taskId });
+                    if (!result || !result.ok) continue;
+
+                    crawled.push({
+                        url,
+                        title: result.title,
+                        text: result.text.slice(0, maxChars),
+                        headings: result.headings,
+                        tables: result.tables,
+                        screenshotPath: result.screenshotPath,
+                        extractedAt: new Date().toISOString(),
+                    });
+                }
+
+                if (crawled.length === 0) {
+                    return { ok: false, output: '', errorOutput: 'No pages could be crawled. Check URLs and network access.' };
+                }
+
+                const report = buildProductDiscoveryReport(crawled);
+
+                // LLM enhancement: generate doc outline from the crawled product content.
+                let finalReport = report.markdownReport;
+                if (callLlm && crawled.length > 0) {
+                    const pagesSummary = crawled
+                        .map((p) => `### ${p.title || p.url}\n${p.headings.slice(0, 5).join(', ')}\n${p.text.slice(0, 400)}`)
+                        .join('\n\n');
+                    const llmResult = await callLlmSafe(callLlm, {
+                        system: 'You are an expert technical writer analyzing a product to plan documentation. Identify the key user-facing features, workflows, and concepts that need documentation based on what you see.',
+                        user: `Based on the following pages crawled from the product, write a "Documentation Planning Brief" that lists:\n1. The top 5-10 user-facing features that need documentation\n2. Suggested doc titles and brief descriptions\n3. Recommended documentation structure\n\nCRAWLED PAGES:\n${pagesSummary}`,
+                    });
+                    if (llmResult) finalReport = finalReport + '\n\n---\n\n## Documentation Planning Brief (AI-Generated)\n\n' + llmResult;
+                }
+
+                if (outputPath) await writeDocFile(workspaceDir, outputPath, finalReport);
+
+                return safeJson({
+                    pages_crawled: crawled.length,
+                    features_found: report.allFeatures.length,
+                    features: report.allFeatures.slice(0, 30),
+                    pages: crawled.map((p) => ({ url: p.url, title: p.title, heading_count: p.headings.length })),
+                    written_to: outputPath || null,
+                    report: finalReport,
+                });
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: String(err) };
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_tw_screenshot_doc
+        // Take a screenshot of a product page and generate a documentation
+        // page skeleton with embedded screenshot reference, heading outline,
+        // and extracted page content. Closes the "can't observe the UI" gap.
+        //
+        // payload:
+        //   url               — page URL to screenshot and document
+        //   label?            — human-readable name for the page
+        //   output_path?      — write the generated doc page as markdown
+        //   screenshot_dir?   — directory to save screenshot file
+        // ------------------------------------------------------------------
+        case 'workspace_tw_screenshot_doc': {
+            try {
+                if (!browsePage) {
+                    return { ok: false, output: '', errorOutput: 'workspace_tw_screenshot_doc requires a browsePage callback.' };
+                }
+
+                const url = typeof payload['url'] === 'string' ? payload['url'].trim() : '';
+                if (!url) {
+                    return { ok: false, output: '', errorOutput: 'payload.url is required.' };
+                }
+                if (!/^https?:\/\//i.test(url)) {
+                    return { ok: false, output: '', errorOutput: 'payload.url must be an http/https URL.' };
+                }
+
+                const label = typeof payload['label'] === 'string' ? payload['label'].trim() : '';
+                const outputPath = typeof payload['output_path'] === 'string' ? payload['output_path'].trim() : '';
+
+                const result = await browsePage(url, { extract: 'all', screenshot: true, taskId: params.taskId });
+                if (!result || !result.ok) {
+                    return { ok: false, output: '', errorOutput: `Could not load page: ${url}` };
+                }
+
+                const crawledPage: CrawledPage = {
+                    url,
+                    title: result.title,
+                    text: result.text.slice(0, 2000),
+                    headings: result.headings,
+                    tables: result.tables,
+                    screenshotPath: result.screenshotPath,
+                    extractedAt: new Date().toISOString(),
+                };
+
+                let docPage = buildScreenshotDocPage(crawledPage, label || undefined);
+
+                // LLM enhancement: write real descriptions for each page section.
+                if (callLlm && hasPlaceholders(docPage)) {
+                    const enhanced = await callLlmSafe(callLlm, {
+                        system: 'You are an expert technical writer documenting a product UI page. Write clear, user-focused descriptions for each section based on the page structure and content.',
+                        user: `Complete this UI documentation page. Fill in ALL _[Add: ...]_ placeholders with clear, user-focused descriptions based on the page content below.\n\nPage content from ${url}:\nTitle: ${result.title}\nHeadings: ${result.headings.join(', ')}\nText: ${result.text.slice(0, 800)}\n\nDOC PAGE TEMPLATE:\n${docPage}`,
+                    });
+                    if (enhanced) docPage = enhanced;
+                }
+
+                if (outputPath) await writeDocFile(workspaceDir, outputPath, docPage);
+
+                return safeJson({
+                    url,
+                    title: result.title,
+                    heading_count: result.headings.length,
+                    screenshot_path: result.screenshotPath ?? null,
+                    written_to: outputPath || null,
+                    doc_content: docPage,
+                });
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: String(err) };
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_tw_doc_gap_scan
+        // Discover what's in the codebase or product that has no documentation.
+        // Closes the "no self-direction" gap — the agent can now find its own
+        // work without being told what to document.
+        //
+        // payload:
+        //   source_type       — 'code' | 'urls' (where to discover features)
+        //   source_files?     — string[] of code file paths (source_type: code)
+        //   product_urls?     — string[] of product URLs to crawl (source_type: urls)
+        //   doc_file_paths?   — existing doc files to check coverage against
+        //   output_path?      — write the gap report as markdown
+        // ------------------------------------------------------------------
+        case 'workspace_tw_doc_gap_scan': {
+            try {
+                const sourceType = typeof payload['source_type'] === 'string'
+                    ? payload['source_type']
+                    : 'code';
+                const outputPath = typeof payload['output_path'] === 'string' ? payload['output_path'].trim() : '';
+
+                // Read existing doc files
+                const rawDocPaths = payload['doc_file_paths'];
+                const docFilePaths: string[] = Array.isArray(rawDocPaths)
+                    ? (rawDocPaths as unknown[]).filter((p): p is string => typeof p === 'string')
+                    : [];
+
+                const docFiles: Array<{ path: string; content: string }> = [];
+                for (const fp of docFilePaths) {
+                    const content = await readDocFile(workspaceDir, fp);
+                    if (content !== null) docFiles.push({ path: fp, content });
+                }
+
+                let features: string[] = [];
+
+                if (sourceType === 'code') {
+                    // Extract features from source code
+                    const rawSourcePaths = payload['source_files'];
+                    const sourceFilePaths: string[] = Array.isArray(rawSourcePaths)
+                        ? (rawSourcePaths as unknown[]).filter((p): p is string => typeof p === 'string')
+                        : [];
+
+                    if (sourceFilePaths.length === 0) {
+                        return { ok: false, output: '', errorOutput: 'payload.source_files is required for source_type: code.' };
+                    }
+
+                    const sourceFiles: Array<{ path: string; content: string }> = [];
+                    for (const fp of sourceFilePaths) {
+                        const content = await readDocFile(workspaceDir, fp);
+                        if (content !== null) sourceFiles.push({ path: fp, content });
+                    }
+
+                    features = extractFeaturesFromCode(sourceFiles);
+
+                } else if (sourceType === 'urls') {
+                    // Extract features by crawling product URLs
+                    if (!browsePage) {
+                        return { ok: false, output: '', errorOutput: 'source_type: urls requires a browsePage callback.' };
+                    }
+
+                    const rawUrls = payload['product_urls'];
+                    const urls: string[] = Array.isArray(rawUrls)
+                        ? (rawUrls as unknown[]).filter((u): u is string => typeof u === 'string')
+                        : [];
+
+                    if (urls.length === 0) {
+                        return { ok: false, output: '', errorOutput: 'payload.product_urls is required for source_type: urls.' };
+                    }
+
+                    const crawled: CrawledPage[] = [];
+                    for (const url of urls.slice(0, 10)) {
+                        if (!/^https?:\/\//i.test(url)) continue;
+                        const result = await browsePage(url, { extract: 'text' });
+                        if (!result || !result.ok) continue;
+                        crawled.push({
+                            url, title: result.title, text: result.text.slice(0, 2000),
+                            headings: result.headings, extractedAt: new Date().toISOString(),
+                        });
+                    }
+
+                    const discReport = buildProductDiscoveryReport(crawled);
+                    features = discReport.allFeatures;
+
+                } else {
+                    return { ok: false, output: '', errorOutput: `Unknown source_type "${sourceType}". Use "code" or "urls".` };
+                }
+
+                if (features.length === 0) {
+                    return { ok: false, output: '', errorOutput: 'No features could be extracted from the source.' };
+                }
+
+                const gapReport = findDocGaps(features, docFiles);
+
+                // LLM enhancement: write a doc plan for the top gaps.
+                let finalReport = gapReport.markdownReport;
+                if (callLlm && gapReport.undocumentedFeatures.length > 0) {
+                    const topGaps = gapReport.prioritizedGaps.slice(0, 10).map((g) => `- ${g.feature}: ${g.reason}`).join('\n');
+                    const llmResult = await callLlmSafe(callLlm, {
+                        system: 'You are an expert technical writer planning documentation work. Given a list of undocumented features, write a concrete documentation plan.',
+                        user: `Write a "Documentation Sprint Plan" for these undocumented features:\n${topGaps}\n\nFor each feature, write:\n- One sentence describing what needs to be documented\n- Suggested doc type (tutorial, reference, guide, etc.)\n- Estimated complexity (low/medium/high)\n\nReturn as a Markdown table.`,
+                    });
+                    if (llmResult) finalReport = finalReport + '\n\n---\n\n## Recommended Documentation Sprint Plan\n\n' + llmResult;
+                }
+
+                if (outputPath) await writeDocFile(workspaceDir, outputPath, finalReport);
+
+                return safeJson({
+                    source_type: sourceType,
+                    total_features: gapReport.totalFeatures,
+                    coverage_percent: gapReport.coveragePercent,
+                    undocumented_count: gapReport.undocumentedFeatures.length,
+                    partial_count: gapReport.partialFeatures.length,
+                    top_gaps: gapReport.prioritizedGaps.slice(0, 10),
+                    written_to: outputPath || null,
+                    report: finalReport,
                 });
             } catch (err) {
                 return { ok: false, output: '', errorOutput: String(err) };
