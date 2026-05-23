@@ -85,9 +85,9 @@ export function clearPersonaCache(): void {
 // Role-aware fallback loader
 // ---------------------------------------------------------------------------
 
-import { getTesterDefaultPersona } from './tester-persona-defaults.js';
-import { getTechnicalWriterDefaultPersona } from './technical-writer-persona-defaults.js';
-import { getContentWriterDefaultPersona } from './content-writer-persona-defaults.js';
+import { getTesterDefaultPersona } from './agents/tester/tester-persona-defaults.js';
+import { getTechnicalWriterDefaultPersona } from './agents/technical-writer/technical-writer-persona-defaults.js';
+import { getContentWriterDefaultPersona } from './agents/content-writer/content-writer-persona-defaults.js';
 
 /**
  * Load the persona for a bot, falling back to role-specific defaults when the

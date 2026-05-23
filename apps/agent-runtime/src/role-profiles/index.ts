@@ -2,19 +2,19 @@ import type { RoleKey } from '@agentfarm/shared-types';
 import {
     TESTER_ROLE_ALLOWED_CONNECTORS,
     TESTER_ROLE_ALLOWED_LOCAL_ACTIONS,
-} from '../tester-agent-profile.js';
+} from '../agents/tester/tester-agent-profile.js';
 import {
     CORPORATE_ASSISTANT_ROLE_ALLOWED_CONNECTORS,
     CORPORATE_ASSISTANT_ROLE_ALLOWED_LOCAL_ACTIONS,
-} from '../corporate-assistant-agent-profile.js';
+} from '../agents/corporate-assistant/corporate-assistant-agent-profile.js';
 import {
     TECHNICAL_WRITER_ROLE_ALLOWED_CONNECTORS,
     TECHNICAL_WRITER_ROLE_ALLOWED_LOCAL_ACTIONS,
-} from '../technical-writer-agent-profile.js';
+} from '../agents/technical-writer/technical-writer-agent-profile.js';
 import {
     CONTENT_WRITER_ROLE_ALLOWED_CONNECTORS,
     CONTENT_WRITER_ROLE_ALLOWED_LOCAL_ACTIONS,
-} from '../content-writer-agent-profile.js';
+} from '../agents/content-writer/content-writer-agent-profile.js';
 
 export interface RoleProfile {
     roleKey: RoleKey;

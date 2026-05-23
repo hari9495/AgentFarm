@@ -32,7 +32,7 @@ import {
     type FetchFn,
 } from './web-research-service.js';
 import { generateTestFile, generateTestFileWithLlm } from './test-generator.js';
-import { mapActionToExecutableSteps } from './tester-exploration-engine.js';
+import { mapActionToExecutableSteps } from './agents/tester/tester-exploration-engine.js';
 import { buildSastSemanticPrompt, callSastLlmIfConfigured, selectFilesForSemanticAnalysis } from './sast-semantic-analyzer.js';
 import {
     applyDisclosureToConnectorPayload,
@@ -40,12 +40,12 @@ import {
     buildMeetingDisclosureAnnouncement,
 } from './outbound-disclosure.js';
 import type { AgentPersonaRecord } from '@agentfarm/shared-types';
-import { handleSalesAction } from './sales-action-handler.js';
-import { handleCorporateAssistantAction } from './corporate-assistant-action-handler.js';
-import { handleTesterAction } from './tester-action-handler.js';
-import { handleTechnicalWriterAction, type TechnicalWriterActionType } from './technical-writer-action-handler.js';
-import { handleContentWriterAction, isContentWriterActionType } from './content-writer-action-handler.js';
-import type { ProseCallerFn } from './content-writer/llm-prose-writer.js';
+import { handleSalesAction } from './agents/sales-agent/sales-action-handler.js';
+import { handleCorporateAssistantAction } from './agents/corporate-assistant/corporate-assistant-action-handler.js';
+import { handleTesterAction } from './agents/tester/tester-action-handler.js';
+import { handleTechnicalWriterAction, type TechnicalWriterActionType } from './agents/technical-writer/technical-writer-action-handler.js';
+import { handleContentWriterAction, isContentWriterActionType } from './agents/content-writer/content-writer-action-handler.js';
+import type { ProseCallerFn } from './agents/content-writer/llm-prose-writer.js';
 import { streamLLM } from './llm-decision-adapter.js';
 import { globalEpisodicMemory } from './episodic-memory.js';
 import type { TaskOutcome } from './episodic-memory.js';
@@ -8547,7 +8547,7 @@ export async function executeLocalWorkspaceAction(input: {
         //   app_url          – string?  base URL to open before starting
         //   dry_run          – boolean
         case 'workspace_exploratory_session': {
-            const { buildExplorationCharter, pickNextHeuristicAction, buildExplorationSessionLog } = await import('./tester-exploration-engine.js');
+            const { buildExplorationCharter, pickNextHeuristicAction, buildExplorationSessionLog } = await import('./agents/tester/tester-exploration-engine.js');
             const dryRun = payload['dry_run'] === true;
             const area = typeof payload['area'] === 'string' && payload['area'].trim()
                 ? payload['area'].trim()
@@ -12780,12 +12780,12 @@ export async function executeLocalWorkspaceAction(input: {
         // → assert → read) using a single persistent Playwright page.
         case 'workspace_tw_interact_product': {
             const interactPageFn = async (
-                steps: import('./technical-writer/product-interactor.js').InteractionStep[],
+                steps: import('./agents/technical-writer/product-interactor.js').InteractionStep[],
                 opts?: { captureScreenshots?: boolean; taskId?: string },
-            ): Promise<import('./technical-writer/product-interactor.js').InteractionStepResult[]> => {
+            ): Promise<import('./agents/technical-writer/product-interactor.js').InteractionStepResult[]> => {
                 const ctx  = await getWebContext(tenantId, botId);
                 const page = await ctx.newPage();
-                const results: import('./technical-writer/product-interactor.js').InteractionStepResult[] = [];
+                const results: import('./agents/technical-writer/product-interactor.js').InteractionStepResult[] = [];
 
                 for (const step of steps) {
                     try {

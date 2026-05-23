@@ -55,52 +55,52 @@
             "default": "./src/role-profiles/index.ts"
         },
         "./sales/prospect-finder.js": {
-            "types": "./src/sales/prospect-finder.ts",
-            "default": "./src/sales/prospect-finder.ts"
+            "types": "./src/agents/sales-agent/prospect-finder.ts",
+            "default": "./src/agents/sales-agent/prospect-finder.ts"
         },
         "./sales/outreach.js": {
-            "types": "./src/sales/outreach-orchestrator.ts",
-            "default": "./src/sales/outreach-orchestrator.ts"
+            "types": "./src/agents/sales-agent/outreach-orchestrator.ts",
+            "default": "./src/agents/sales-agent/outreach-orchestrator.ts"
         },
         "./sales/reply-classifier.js": {
-            "types": "./src/sales/reply-classifier.ts",
-            "default": "./src/sales/reply-classifier.ts"
+            "types": "./src/agents/sales-agent/reply-classifier.ts",
+            "default": "./src/agents/sales-agent/reply-classifier.ts"
         },
         "./sales/sequence-scheduler.js": {
-            "types": "./src/sales/sequence-scheduler.ts",
-            "default": "./src/sales/sequence-scheduler.ts"
+            "types": "./src/agents/sales-agent/sequence-scheduler.ts",
+            "default": "./src/agents/sales-agent/sequence-scheduler.ts"
         },
         "./sales/email-personaliser.js": {
-            "types": "./src/sales/email-personaliser.ts",
-            "default": "./src/sales/email-personaliser.ts"
+            "types": "./src/agents/sales-agent/email-personaliser.ts",
+            "default": "./src/agents/sales-agent/email-personaliser.ts"
         },
         "./sales/booking-invite-sender.js": {
-            "types": "./src/sales/booking-invite-sender.ts",
-            "default": "./src/sales/booking-invite-sender.ts"
+            "types": "./src/agents/sales-agent/booking-invite-sender.ts",
+            "default": "./src/agents/sales-agent/booking-invite-sender.ts"
         },
         "./sales/pre-meeting-research.js": {
-            "types": "./src/sales/pre-meeting-research.ts",
-            "default": "./src/sales/pre-meeting-research.ts"
+            "types": "./src/agents/sales-agent/pre-meeting-research.ts",
+            "default": "./src/agents/sales-agent/pre-meeting-research.ts"
         },
         "./sales/email-provider-factory.js": {
-            "types": "./src/sales/email-provider-factory.ts",
-            "default": "./src/sales/email-provider-factory.ts"
+            "types": "./src/agents/sales-agent/email-provider-factory.ts",
+            "default": "./src/agents/sales-agent/email-provider-factory.ts"
         },
         "./sales/email-provider.js": {
-            "types": "./src/sales/email-provider.ts",
-            "default": "./src/sales/email-provider.ts"
+            "types": "./src/agents/sales-agent/email-provider.ts",
+            "default": "./src/agents/sales-agent/email-provider.ts"
         },
         "./sales/contract-sender.js": {
-            "types": "./src/sales/contract-sender.ts",
-            "default": "./src/sales/contract-sender.ts"
+            "types": "./src/agents/sales-agent/contract-sender.ts",
+            "default": "./src/agents/sales-agent/contract-sender.ts"
         },
         "./sales/deal-closer.js": {
-            "types": "./src/sales/deal-closer.ts",
-            "default": "./src/sales/deal-closer.ts"
+            "types": "./src/agents/sales-agent/deal-closer.ts",
+            "default": "./src/agents/sales-agent/deal-closer.ts"
         },
         "./sales/browser-executor.js": {
-            "types": "./src/sales/browser-executor.ts",
-            "default": "./src/sales/browser-executor.ts"
+            "types": "./src/agents/sales-agent/browser-executor.ts",
+            "default": "./src/agents/sales-agent/browser-executor.ts"
         }
     },
     "scripts": {
@@ -113,7 +113,6 @@
         "test:coverage": "pnpm exec c8 --reporter=text-summary --reporter=json-summary --exclude=src/**/*.test.ts tsx --test src/**/*.test.ts && node ../../scripts/coverage-threshold-check.mjs coverage/coverage-summary.json 80 lines src/runtime-server.ts src/execution-engine.ts src/action-result-writer.ts"
     },
     "devDependencies": {
-        "@types/nodemailer": "^6.4.17",
         "ts-node": "^10.9.2",
         "tsx": "^4.20.6",
         "typescript": "^5.7.2",
@@ -127,12 +126,14 @@
         "@agentfarm/browser-actions": "workspace:*",
         "@agentfarm/crm-adapters": "workspace:*",
         "@agentfarm/erp-adapters": "workspace:*",
-        "@agentfarm/memory-service": "workspace:*",
         "@agentfarm/notification-adapters": "workspace:*",
         "@agentfarm/shared-types": "workspace:*",
         "@prisma/client": "^6.19.3",
         "fastify": "^5.2.1",
         "nodemailer": "^6.9.16",
         "playwright": "^1.59.1"
+    },
+    "devDependencies": {
+        "@types/nodemailer": "^6.4.17"
     }
 }

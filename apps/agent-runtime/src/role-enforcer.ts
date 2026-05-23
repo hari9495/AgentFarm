@@ -26,7 +26,7 @@ import { classifyTaskForRole } from './task-classifier.js';
 import {
     DEVELOPER_BLOCKED_ACTIONS,
     SUGGEST_ROLE_FOR_BLOCKED,
-} from './role-profiles/developer-role-profile.js';
+} from './agents/developer/developer-role-profile.js';
 
 // ---------------------------------------------------------------------------
 // Internal helpers

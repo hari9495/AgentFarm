@@ -68,9 +68,9 @@ import {
     TESTER_ROLE_ALLOWED_LOCAL_ACTIONS,
     TESTER_ROLE_BLOCKED_ACTIONS,
     isTesterRoleProfile,
-} from './tester-agent-profile.js';
-import { evaluateTesterEditGuard } from './tester-edit-guard.js';
-import { getTesterMcpClients } from './tester-mcp-provisioner.js';
+} from './agents/tester/tester-agent-profile.js';
+import { evaluateTesterEditGuard } from './agents/tester/tester-edit-guard.js';
+import { getTesterMcpClients } from './agents/tester/tester-mcp-provisioner.js';
 import {
     getProviderQualityPenalty,
     getQualitySignalSummary,
@@ -107,41 +107,41 @@ import { globalScheduler } from './skill-scheduler.js';
 import { loadPersonaForBot, loadPersonaForBotWithFallback } from './persona-context-loader.js';
 import { applyDisclosureToConnectorPayload } from './outbound-disclosure.js';
 import type { AgentPersonaRecord } from '@agentfarm/shared-types';
-import { buildTesterEpisodicPattern, buildTesterEpisodicSummary } from './tester-episodic-hooks.js';
+import { buildTesterEpisodicPattern, buildTesterEpisodicSummary } from './agents/tester/tester-episodic-hooks.js';
 import {
     SALES_REP_ROLE_ALLOWED_CONNECTORS,
     SALES_REP_ROLE_ALLOWED_LOCAL_ACTIONS,
     SALES_REP_ROLE_BLOCKED_ACTIONS,
     isSalesRepRoleProfile,
-} from './sales-rep-agent-profile.js';
-import { buildSalesRepEpisodicPattern, buildSalesRepEpisodicSummary } from './sales-rep-episodic-hooks.js';
-import { getSalesRepMcpClients } from './sales-rep-mcp-provisioner.js';
+} from './agents/sales-agent/sales-rep-agent-profile.js';
+import { buildSalesRepEpisodicPattern, buildSalesRepEpisodicSummary } from './agents/sales-agent/sales-rep-episodic-hooks.js';
+import { getSalesRepMcpClients } from './agents/sales-agent/sales-rep-mcp-provisioner.js';
 import {
     CORPORATE_ASSISTANT_ROLE_ALLOWED_CONNECTORS,
     CORPORATE_ASSISTANT_ROLE_ALLOWED_LOCAL_ACTIONS,
     isCorporateAssistantRoleProfile,
-} from './corporate-assistant-agent-profile.js';
-import { getCorporateAssistantDefaultPersona } from './corporate-assistant-persona-defaults.js';
-import { buildCorporateAssistantEpisodicPattern, buildCorporateAssistantEpisodicSummary } from './corporate-assistant-episodic-hooks.js';
-import { getCorporateAssistantMcpClients } from './corporate-assistant-mcp-provisioner.js';
+} from './agents/corporate-assistant/corporate-assistant-agent-profile.js';
+import { getCorporateAssistantDefaultPersona } from './agents/corporate-assistant/corporate-assistant-persona-defaults.js';
+import { buildCorporateAssistantEpisodicPattern, buildCorporateAssistantEpisodicSummary } from './agents/corporate-assistant/corporate-assistant-episodic-hooks.js';
+import { getCorporateAssistantMcpClients } from './agents/corporate-assistant/corporate-assistant-mcp-provisioner.js';
 import {
     TECHNICAL_WRITER_ROLE_ALLOWED_CONNECTORS,
     TECHNICAL_WRITER_ROLE_ALLOWED_LOCAL_ACTIONS,
     TECHNICAL_WRITER_ROLE_BLOCKED_ACTIONS,
     isTechnicalWriterRoleProfile,
-} from './technical-writer-agent-profile.js';
-import { getTechnicalWriterDefaultPersona } from './technical-writer-persona-defaults.js';
-import { buildTechnicalWriterEpisodicPattern, buildTechnicalWriterEpisodicSummary } from './technical-writer-episodic-hooks.js';
-import { getTechnicalWriterMcpClients } from './technical-writer-mcp-provisioner.js';
+} from './agents/technical-writer/technical-writer-agent-profile.js';
+import { getTechnicalWriterDefaultPersona } from './agents/technical-writer/technical-writer-persona-defaults.js';
+import { buildTechnicalWriterEpisodicPattern, buildTechnicalWriterEpisodicSummary } from './agents/technical-writer/technical-writer-episodic-hooks.js';
+import { getTechnicalWriterMcpClients } from './agents/technical-writer/technical-writer-mcp-provisioner.js';
 import {
     CONTENT_WRITER_ROLE_ALLOWED_CONNECTORS,
     CONTENT_WRITER_ROLE_ALLOWED_LOCAL_ACTIONS,
     CONTENT_WRITER_ROLE_BLOCKED_ACTIONS,
     isContentWriterRoleProfile,
-} from './content-writer-agent-profile.js';
-import { getContentWriterDefaultPersona } from './content-writer-persona-defaults.js';
-import { buildContentWriterEpisodicPattern, buildContentWriterEpisodicSummary } from './content-writer-episodic-hooks.js';
-import { getContentWriterMcpClients } from './content-writer-mcp-provisioner.js';
+} from './agents/content-writer/content-writer-agent-profile.js';
+import { getContentWriterDefaultPersona } from './agents/content-writer/content-writer-persona-defaults.js';
+import { buildContentWriterEpisodicPattern, buildContentWriterEpisodicSummary } from './agents/content-writer/content-writer-episodic-hooks.js';
+import { getContentWriterMcpClients } from './agents/content-writer/content-writer-mcp-provisioner.js';
 import { assessTaskClarity, buildClarificationMessage } from './intent-clarifier.js';
 import { enforceRole } from './role-enforcer.js';
 import { checkConnectorReadiness } from './connector-readiness-check.js';

@@ -12,10 +12,10 @@
  */
 
 import type { TaskEnvelope } from './execution-engine.js';
-import { DEVELOPER_BLOCKED_KEYWORDS } from './role-profiles/developer-role-profile.js';
-import { CORPORATE_ASSISTANT_BLOCKED_KEYWORDS } from './role-profiles/corporate-assistant-role-profile.js';
-import { TECHNICAL_WRITER_BLOCKED_KEYWORDS } from './role-profiles/technical-writer-role-profile.js';
-import { CONTENT_WRITER_BLOCKED_KEYWORDS } from './role-profiles/content-writer-role-profile.js';
+import { DEVELOPER_BLOCKED_KEYWORDS } from './agents/developer/developer-role-profile.js';
+import { CORPORATE_ASSISTANT_BLOCKED_KEYWORDS } from './agents/corporate-assistant/corporate-assistant-role-profile.js';
+import { TECHNICAL_WRITER_BLOCKED_KEYWORDS } from './agents/technical-writer/technical-writer-role-profile.js';
+import { CONTENT_WRITER_BLOCKED_KEYWORDS } from './agents/content-writer/content-writer-role-profile.js';
 
 // ---------------------------------------------------------------------------
 // Types
