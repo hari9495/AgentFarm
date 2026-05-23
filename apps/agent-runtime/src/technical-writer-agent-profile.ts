@@ -60,6 +60,8 @@ export const TECHNICAL_WRITER_ROLE_ALLOWED_LOCAL_ACTIONS: (LocalWorkspaceActionT
     'workspace_tw_product_crawl',
     'workspace_tw_screenshot_doc',
     'workspace_tw_doc_gap_scan',
+    // Accuracy verification — closes the "does the doc actually work?" gap
+    'workspace_tw_verify_doc_steps',
 ];
 
 export const TECHNICAL_WRITER_ROLE_BLOCKED_ACTIONS = [

@@ -138,6 +138,16 @@ export function buildTechnicalWriterEpisodicPattern(
         return 'tw:doc_gap_scan:low_coverage';
     }
 
+    // Accuracy verification
+    if (at === 'workspace_tw_verify_doc_steps') {
+        const failCount  = typeof result.executionPayload['fail_count']  === 'number' ? result.executionPayload['fail_count']  : 0;
+        const errorCount = typeof result.executionPayload['error_count'] === 'number' ? result.executionPayload['error_count'] : 0;
+        if (oc !== 'success') return 'tw:verify_doc_steps:fail';
+        if (failCount + errorCount === 0) return 'tw:verify_doc_steps:all_pass';
+        if (failCount + errorCount > 3)   return 'tw:verify_doc_steps:many_failures';
+        return 'tw:verify_doc_steps:some_failures';
+    }
+
     // Fallback
     return `tw:action:${oc}`;
 }
@@ -255,6 +265,18 @@ export function buildTechnicalWriterEpisodicSummary(
         const pct = result.executionPayload['coverage_percent'] ?? '?';
         const gaps = result.executionPayload['undocumented_count'] ?? '?';
         return `Doc gap scan: ${pct}% covered, ${gaps} undocumented feature(s): ${taskLabel}`;
+    }
+
+    if (pattern.startsWith('tw:verify_doc_steps')) {
+        const total   = result.executionPayload['total_steps']   ?? '?';
+        const passed  = result.executionPayload['pass_count']    ?? '?';
+        const failed  = result.executionPayload['fail_count']    ?? '?';
+        const errors  = result.executionPayload['error_count']   ?? '?';
+        const skipped = result.executionPayload['skipped_count'] ?? '?';
+        const outcome = pattern === 'tw:verify_doc_steps:all_pass'
+            ? 'all steps passed'
+            : `${failed} step(s) failed, ${errors} error(s)`;
+        return `Doc step verification: ${total} steps — ${passed} passed, ${outcome} (${skipped} skipped): ${taskLabel}`;
     }
 
     return `Technical writer action "${at}" completed with status "${oc}": ${taskLabel}`;

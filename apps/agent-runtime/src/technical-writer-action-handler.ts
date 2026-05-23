@@ -128,6 +128,11 @@ import {
     findDocGaps,
     type CrawledPage,
 } from './technical-writer/product-explorer.js';
+import {
+    extractStepsFromMarkdown,
+    buildVerificationReport,
+    type StepVerificationResult,
+} from './technical-writer/step-verifier.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -156,7 +161,9 @@ export type TechnicalWriterActionType =
     // Browser/UI discovery — closes the product-knowledge and self-direction gaps
     | 'workspace_tw_product_crawl'
     | 'workspace_tw_screenshot_doc'
-    | 'workspace_tw_doc_gap_scan';
+    | 'workspace_tw_doc_gap_scan'
+    // Accuracy verification — closes the "does the doc actually work?" gap
+    | 'workspace_tw_verify_doc_steps';
 
 const TW_ACTION_TYPES = new Set<string>([
     'workspace_tw_doc_diff', 'workspace_tw_api_doc_openapi', 'workspace_tw_api_doc_code',
@@ -168,6 +175,8 @@ const TW_ACTION_TYPES = new Set<string>([
     'workspace_tw_nav_audit', 'workspace_tw_localization', 'workspace_tw_doc_audit',
     // Browser/UI discovery
     'workspace_tw_product_crawl', 'workspace_tw_screenshot_doc', 'workspace_tw_doc_gap_scan',
+    // Accuracy verification
+    'workspace_tw_verify_doc_steps',
 ]);
 
 export function isTechnicalWriterActionType(t: string): t is TechnicalWriterActionType {
@@ -3116,6 +3125,213 @@ export async function handleTechnicalWriterAction(params: {
                     undocumented_count: gapReport.undocumentedFeatures.length,
                     partial_count: gapReport.partialFeatures.length,
                     top_gaps: gapReport.prioritizedGaps.slice(0, 10),
+                    written_to: outputPath || null,
+                    report: finalReport,
+                });
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: String(err) };
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_tw_verify_doc_steps
+        // Walk through every procedural step in a documentation file and
+        // verify it actually works: API endpoints are reachable, UI pages
+        // load, and read-only CLI commands succeed.
+        //
+        // Closes the "accuracy verification" gap — the agent can now confirm
+        // the docs it writes are correct before publishing them.
+        //
+        // payload:
+        //   file_path?    — doc file to verify (relative to workspaceDir)
+        //   content?      — inline doc content (alternative to file_path)
+        //   safe_mode?    — boolean (default: true); skip CLI execution when true
+        //   base_url?     — prepend to relative URLs found in steps
+        //   output_path?  — write verification report as markdown
+        // ------------------------------------------------------------------
+        case 'workspace_tw_verify_doc_steps': {
+            try {
+                // 1. Load the document
+                let content = typeof payload['content'] === 'string' ? payload['content'] : '';
+                const filePath = typeof payload['file_path'] === 'string' ? payload['file_path'].trim() : '';
+                if (!content && filePath) {
+                    const fc = await readDocFile(workspaceDir, filePath);
+                    if (fc === null) return { ok: false, output: '', errorOutput: `File not found: ${filePath}` };
+                    content = fc;
+                }
+                if (!content) {
+                    return { ok: false, output: '', errorOutput: 'payload.content or payload.file_path is required.' };
+                }
+
+                // 2. Extract and classify steps
+                const steps = extractStepsFromMarkdown(content);
+                if (steps.length === 0) {
+                    return safeJson({
+                        total_steps: 0,
+                        pass_count: 0,
+                        fail_count: 0,
+                        skipped_count: 0,
+                        error_count: 0,
+                        results: [],
+                        written_to: null,
+                        report: 'No procedural steps found in the document.',
+                    });
+                }
+
+                const safeMode   = payload['safe_mode'] !== false; // default true
+                const baseUrl    = typeof payload['base_url'] === 'string' ? payload['base_url'].replace(/\/$/, '') : '';
+                const outputPath = typeof payload['output_path'] === 'string' ? payload['output_path'].trim() : '';
+                const timeoutMs  = 10_000;
+
+                // 3. Verify each step according to its type
+                const verifyResults: StepVerificationResult[] = [];
+
+                for (const step of steps) {
+                    const t0 = Date.now();
+
+                    // --------------------------------------------------------
+                    // api_call — use curl (HEAD by default) via runCommand
+                    // --------------------------------------------------------
+                    if (step.type === 'api_call') {
+                        if (!runCommand) {
+                            verifyResults.push({ step, status: 'skipped', details: 'No runCommand callback — cannot verify API calls.' });
+                            continue;
+                        }
+
+                        let url = step.url ?? '';
+                        if (url && !url.startsWith('http') && baseUrl) {
+                            url = baseUrl + (url.startsWith('/') ? url : '/' + url);
+                        }
+                        if (!url) {
+                            verifyResults.push({ step, status: 'skipped', details: 'No URL detected in step.' });
+                            continue;
+                        }
+
+                        const method = step.method ?? 'GET';
+                        const args = [
+                            'curl', '-s', '-X', method,
+                            '-w', '%{http_code}',
+                            '-o', '/dev/null',
+                            '--max-time', String(Math.ceil(timeoutMs / 1000)),
+                            url,
+                        ];
+                        const r = await runCommand(args, workspaceDir, timeoutMs + 2_000);
+                        const durationMs = Date.now() - t0;
+                        const raw = r.stdout.trim().split('\n').pop() ?? '';
+                        const statusCode = parseInt(raw, 10);
+
+                        if (r.exitCode !== 0 && !raw) {
+                            verifyResults.push({ step, status: 'error', details: `curl error: ${r.stderr.slice(0, 150)}`, durationMs });
+                        } else if (isNaN(statusCode) || statusCode >= 500) {
+                            verifyResults.push({ step, status: 'fail', details: `HTTP ${isNaN(statusCode) ? 'unknown' : statusCode} — server error or unreachable.`, responseCode: isNaN(statusCode) ? undefined : statusCode, durationMs });
+                        } else if (statusCode >= 400) {
+                            verifyResults.push({ step, status: 'fail', details: `HTTP ${statusCode} — client error; check URL or authentication.`, responseCode: statusCode, durationMs });
+                        } else {
+                            verifyResults.push({ step, status: 'pass', details: `HTTP ${statusCode} — endpoint reachable.`, responseCode: statusCode, durationMs });
+                        }
+
+                    // --------------------------------------------------------
+                    // ui_navigation — load the URL via browsePage
+                    // --------------------------------------------------------
+                    } else if (step.type === 'ui_navigation') {
+                        if (!browsePage) {
+                            verifyResults.push({ step, status: 'skipped', details: 'No browsePage callback — cannot verify UI navigation.' });
+                            continue;
+                        }
+
+                        let url = step.url ?? '';
+                        if (!url && baseUrl) url = baseUrl;
+                        if (!url) {
+                            verifyResults.push({ step, status: 'skipped', details: 'No URL detected in step.' });
+                            continue;
+                        }
+
+                        const pageResult = await browsePage(url, { extract: 'text' });
+                        const durationMs = Date.now() - t0;
+                        if (!pageResult || !pageResult.ok) {
+                            verifyResults.push({ step, status: 'fail', details: `Page failed to load: ${url}`, durationMs });
+                        } else {
+                            const title = pageResult.title ? `"${pageResult.title}"` : url;
+                            verifyResults.push({ step, status: 'pass', details: `Page loaded: ${title}`, durationMs });
+                        }
+
+                    // --------------------------------------------------------
+                    // cli_command — execute only read-only/safe commands when
+                    //               safe_mode is disabled; otherwise skip
+                    // --------------------------------------------------------
+                    } else if (step.type === 'cli_command') {
+                        if (safeMode) {
+                            verifyResults.push({ step, status: 'skipped', details: 'CLI command skipped (safe_mode: true). Set safe_mode: false to execute CLI steps.' });
+                            continue;
+                        }
+                        if (!runCommand) {
+                            verifyResults.push({ step, status: 'skipped', details: 'No runCommand callback — cannot execute CLI commands.' });
+                            continue;
+                        }
+
+                        const cmd = step.command ?? '';
+                        if (!cmd) {
+                            verifyResults.push({ step, status: 'skipped', details: 'No command detected in step.' });
+                            continue;
+                        }
+
+                        // Only allow read-only commands even in non-safe mode
+                        const SAFE_CLI_RE = /^(git\s+(status|log|diff|show)|ls|cat|echo|node\s+--version|npm\s+--version|yarn\s+--version|pnpm\s+--version|curl|ping|which)\b/i;
+                        if (!SAFE_CLI_RE.test(cmd)) {
+                            verifyResults.push({ step, status: 'skipped', details: `Command "${cmd.slice(0, 60)}" is not in the safe-run allowlist. Verify manually.` });
+                            continue;
+                        }
+
+                        const tokens = cmd.split(/\s+/).filter(Boolean);
+                        const r = await runCommand(tokens, workspaceDir, timeoutMs + 2_000);
+                        const durationMs = Date.now() - t0;
+                        if (r.exitCode !== 0) {
+                            verifyResults.push({ step, status: 'fail', details: `Exit code ${r.exitCode}: ${r.stderr.slice(0, 150)}`, durationMs });
+                        } else {
+                            verifyResults.push({ step, status: 'pass', details: 'Command succeeded (exit 0).', durationMs });
+                        }
+
+                    // --------------------------------------------------------
+                    // manual — always skipped; requires human verification
+                    // --------------------------------------------------------
+                    } else {
+                        verifyResults.push({ step, status: 'skipped', details: 'Manual step — requires human verification.' });
+                    }
+                }
+
+                // 4. Build structured report
+                const report = buildVerificationReport(verifyResults);
+
+                // 5. LLM enhancement: suggest doc fixes for failed steps
+                let finalReport = report.markdownReport;
+                if (callLlm && report.failCount + report.errorCount > 0) {
+                    const failSummary = verifyResults
+                        .filter((r) => r.status === 'fail' || r.status === 'error')
+                        .map((r) => `Step ${r.step.number} (${r.step.type}): "${r.step.text.slice(0, 150)}" → ${r.details}`)
+                        .join('\n');
+                    const llmResult = await callLlmSafe(callLlm, {
+                        system: 'You are an expert technical writer. Given a list of documentation steps that failed automated verification, suggest specific, actionable fixes.',
+                        user: `The following documentation steps failed verification:\n\n${failSummary}\n\nFor each failed step:\n1. Briefly explain the likely root cause (broken URL, wrong command, stale info, etc.)\n2. Write a concrete fix to the documentation text (e.g., correct URL, updated command, add a prerequisite note)\n\nReturn your fixes as a numbered list, referencing each step number.`,
+                    });
+                    if (llmResult) finalReport += '\n\n---\n\n## Suggested Documentation Fixes\n\n' + llmResult;
+                }
+
+                if (outputPath) await writeDocFile(workspaceDir, outputPath, finalReport);
+
+                return safeJson({
+                    total_steps:   report.totalSteps,
+                    pass_count:    report.passCount,
+                    fail_count:    report.failCount,
+                    skipped_count: report.skippedCount,
+                    error_count:   report.errorCount,
+                    results: report.results.map((r) => ({
+                        step_number:   r.step.number,
+                        step_type:     r.step.type,
+                        status:        r.status,
+                        details:       r.details,
+                        response_code: r.responseCode,
+                        duration_ms:   r.durationMs,
+                    })),
                     written_to: outputPath || null,
                     report: finalReport,
                 });

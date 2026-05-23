@@ -289,6 +289,7 @@ export type LocalWorkspaceActionType =
     | 'workspace_tw_product_crawl'
     | 'workspace_tw_screenshot_doc'
     | 'workspace_tw_doc_gap_scan'
+    | 'workspace_tw_verify_doc_steps'
     // Tier 27 (General file write — used by TW and future roles)
     | 'workspace_write_file'
     // Tier 28 (Content Writer domain actions)
@@ -782,6 +783,7 @@ export const LOCAL_WORKSPACE_ACTION_TYPES = new Set<LocalWorkspaceActionType>([
     'workspace_tw_product_crawl',
     'workspace_tw_screenshot_doc',
     'workspace_tw_doc_gap_scan',
+    'workspace_tw_verify_doc_steps',
     // Tier 27 (General file write)
     'workspace_write_file',
 ]);
@@ -12724,6 +12726,44 @@ export async function executeLocalWorkspaceAction(input: {
                 workspaceDir,
                 runCommand,
                 browsePage: browsePageFn,
+            });
+        }
+
+        // workspace_tw_verify_doc_steps
+        // Accuracy verification: walk every procedural step in a doc and check
+        // it actually works — API endpoints reachable, UI pages load, CLI read-
+        // only commands succeed. Closes the final TW accuracy-verification gap.
+        case 'workspace_tw_verify_doc_steps': {
+            const browsePageFnVerify = async (
+                url: string,
+                opts?: { extract?: 'text' | 'tables' | 'all'; screenshot?: boolean; taskId?: string },
+            ) => {
+                try {
+                    const ctx = await getWebContext(tenantId, botId);
+                    const pageResult = await webReadPage(ctx, { url });
+                    if (!pageResult.ok) return null;
+                    const text = pageResult.output;
+                    const headings: string[] = [];
+                    for (const m of text.matchAll(/^#{1,4}\s+(.+)/gm)) {
+                        if (m[1]) headings.push(m[1].trim());
+                    }
+                    const titleMatch = text.match(/^#\s+(.+)/m);
+                    const title = titleMatch?.[1]?.trim() ?? new URL(url).hostname;
+                    return { ok: true, title, text: text.slice(0, 8000), headings };
+                } catch {
+                    return null;
+                }
+            };
+
+            return handleTechnicalWriterAction({
+                actionType: actionType as TechnicalWriterActionType,
+                tenantId,
+                botId,
+                taskId,
+                payload,
+                workspaceDir,
+                runCommand,
+                browsePage: browsePageFnVerify,
             });
         }
 
