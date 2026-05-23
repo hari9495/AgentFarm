@@ -1964,7 +1964,7 @@ export async function handleTechnicalWriterAction(params: {
 
             const summary = buildTechnicalWriterStandupSummary(rawMemory, { botName, teamName, sprintContext });
 
-            return safeJson({ dry_run: true, summary });
+            return safeJson({ summary, bot_name: botName, team_name: teamName });
         }
 
         // ------------------------------------------------------------------
