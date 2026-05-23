@@ -83,7 +83,6 @@ import {
 } from './audience-rewriter.js';
 import {
     analyzeFeedback,
-    classifyFeedbackItem,
     type FeedbackItem,
     type FeedbackSource,
 } from './feedback-analyzer.js';
@@ -2492,7 +2491,8 @@ export async function handleTechnicalWriterAction(params: {
                     }
 
                     const headerArgs = Object.entries(headers).flatMap(([k, v]) => ['-H', `${k}: ${v}`]);
-                    const bodyFlag = sampleBody ? [] : ['-o', '/dev/null'];
+                    const nullDevice = process.platform === 'win32' ? 'NUL' : '/dev/null';
+                    const bodyFlag = sampleBody ? [] : ['-o', nullDevice];
                     const args = [
                         'curl', '-s', '-X', method,
                         '-w', '%{http_code}|%{content_type}|%{time_total}',
@@ -3256,10 +3256,11 @@ export async function handleTechnicalWriterAction(params: {
                         }
 
                         const method = step.method ?? 'GET';
+                        const nullOut = process.platform === 'win32' ? 'NUL' : '/dev/null';
                         const args = [
                             'curl', '-s', '-X', method,
                             '-w', '%{http_code}',
-                            '-o', '/dev/null',
+                            '-o', nullOut,
                             '--max-time', String(Math.ceil(timeoutMs / 1000)),
                             url,
                         ];
@@ -3564,10 +3565,13 @@ export async function handleTechnicalWriterAction(params: {
                     // Splice fix into the file at the anchored line
                     let newContent: string;
                     if (comment.line && comment.line <= fileLines.length) {
+                        // Line-anchored: splice the fix in at the exact line
                         fileLines.splice(comment.line - 1, 1, llmResult.trim());
                         newContent = fileLines.join('\n');
                     } else {
-                        newContent = llmResult;
+                        // No line anchor: append the fix as an editor note so the
+                        // file is not silently replaced with a partial snippet
+                        newContent = fileContent + `\n\n<!-- TW-AGENT FIX (${comment.author}): ${comment.body.slice(0, 80)}\n${llmResult.trim()}\n-->`;
                     }
 
                     await writeDocFile(workspaceDir, comment.path, newContent);
@@ -3575,6 +3579,23 @@ export async function handleTechnicalWriterAction(params: {
                 }
 
                 const responseReport = buildReviewResponseReport(fixes);
+
+                // Commit the applied fixes so they appear in the PR diff
+                if (responseReport.fixedCount > 0 && runCommand) {
+                    const fixedPaths = fixes
+                        .filter((f) => f.status === 'fixed')
+                        .map((f) => f.comment.path);
+                    // Stage only the modified doc files (never `git add -A`)
+                    for (const p of fixedPaths) {
+                        await runCommand(['git', 'add', p], workspaceDir, 10_000).catch(() => {});
+                    }
+                    await runCommand(
+                        ['git', 'commit', '-m', `docs: apply ${responseReport.fixedCount} PR review fix(es) [tw-agent]`],
+                        workspaceDir, 15_000,
+                    ).catch(() => { /* non-fatal: commit failure won't break the report */ });
+                    await runCommand(['git', 'push'], workspaceDir, 20_000)
+                        .catch(() => { /* non-fatal */ });
+                }
 
                 // Post a summary comment on the PR
                 if (responseReport.fixedCount > 0) {

@@ -135,13 +135,13 @@ function analyzeCode(source: string): ExtractedCodeContext {
 // Question generation
 // ---------------------------------------------------------------------------
 
-let questionCounter = 0;
-function nextId(prefix: string): string {
-    questionCounter++;
-    return `${prefix}-${questionCounter}`;
+/** Returns a per-call counter factory so concurrent invocations get independent IDs. */
+function makeIdGenerator(): (prefix: string) => string {
+    let counter = 0;
+    return (prefix: string) => `${prefix}-${++counter}`;
 }
 
-function generateQuestionsFromCode(source: string, filePath: string): SmeInterviewQuestion[] {
+function generateQuestionsFromCode(source: string, filePath: string, nextId: (prefix: string) => string): SmeInterviewQuestion[] {
     const ctx = analyzeCode(source);
     const questions: SmeInterviewQuestion[] = [];
     const fileName = filePath.split(/[/\\]/).pop() ?? filePath;
@@ -268,7 +268,7 @@ function generateQuestionsFromCode(source: string, filePath: string): SmeIntervi
     return questions;
 }
 
-function generateQuestionsFromDescription(description: string): SmeInterviewQuestion[] {
+function generateQuestionsFromDescription(description: string, nextId: (prefix: string) => string): SmeInterviewQuestion[] {
     const questions: SmeInterviewQuestion[] = [];
     const titleLine = description.split('\n')[0]?.slice(0, 60) ?? 'this feature';
 
@@ -452,7 +452,8 @@ export function buildInterviewPlanFromCode(
     filePath: string,
     featureSummary = '',
 ): SmeInterviewPlan {
-    const questions = generateQuestionsFromCode(source, filePath);
+    const nextId = makeIdGenerator();
+    const questions = generateQuestionsFromCode(source, filePath, nextId);
     const title = filePath.split(/[/\\]/).pop() ?? filePath;
     const plan: SmeInterviewPlan = { title, featureSummary, questions, markdownOutput: '' };
     plan.markdownOutput = buildInterviewMarkdown(plan);
@@ -467,7 +468,8 @@ export function buildInterviewPlanFromDescription(
     description: string,
     title = '',
 ): SmeInterviewPlan {
-    const questions = generateQuestionsFromDescription(description);
+    const nextId = makeIdGenerator();
+    const questions = generateQuestionsFromDescription(description, nextId);
     const resolvedTitle = title || (description.split('\n')[0]?.slice(0, 60) ?? 'Feature');
     const plan: SmeInterviewPlan = { title: resolvedTitle, featureSummary: description.slice(0, 200), questions, markdownOutput: '' };
     plan.markdownOutput = buildInterviewMarkdown(plan);

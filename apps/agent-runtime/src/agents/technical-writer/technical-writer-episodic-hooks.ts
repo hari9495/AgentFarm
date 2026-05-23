@@ -199,6 +199,9 @@ export function buildTechnicalWriterEpisodicSummary(
     if (pattern === 'tw:pr:opened') {
         return `Documentation PR opened: ${taskLabel}`;
     }
+    if (pattern.startsWith('tw:standup')) {
+        return `Standup report generated (${oc}): ${taskLabel}`;
+    }
 
     if (pattern.startsWith('tw:sme_interview:plan')) {
         return `SME interview plan generated (mode: ${result.executionPayload['mode'] ?? 'plan'}): ${taskLabel}`;

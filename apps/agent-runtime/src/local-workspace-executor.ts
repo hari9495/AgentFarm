@@ -3116,6 +3116,32 @@ function buildProseCallerFn(): ProseCallerFn | undefined {
     };
 }
 
+/**
+ * Build a LlmCallFn for the Technical Writer action handler.
+ * Signature matches LlmCallFn: (prompt: string, systemPrompt?: string) => Promise<string>
+ * Backed by the same AF_MODEL_PROVIDER env var used by the Content Writer.
+ * Returns undefined when no provider is configured — TW actions degrade
+ * gracefully to pure-function (template) output in that case.
+ */
+function buildTwLlmCallerFn(): ((prompt: string, systemPrompt?: string) => Promise<string>) | undefined {
+    const provider = (process.env['AF_MODEL_PROVIDER'] ?? process.env['AGENTFARM_MODEL_PROVIDER'] ?? '').toLowerCase().trim() as Parameters<typeof streamLLM>[0];
+    if (!provider || provider === 'agentfarm') return undefined;
+    return async (prompt: string, systemPrompt?: string) => {
+        try {
+            const messages: Array<{ role: 'system' | 'user'; content: string }> = [];
+            if (systemPrompt) messages.push({ role: 'system', content: systemPrompt });
+            messages.push({ role: 'user', content: prompt });
+            const chunks: string[] = [];
+            for await (const chunk of streamLLM(provider, messages)) {
+                chunks.push(chunk);
+            }
+            return chunks.join('');
+        } catch {
+            return '';
+        }
+    };
+}
+
 export async function executeLocalWorkspaceAction(input: {
     tenantId: string;
     botId: string;
@@ -12704,14 +12730,14 @@ export async function executeLocalWorkspaceAction(input: {
 
                     let screenshotPath: string | undefined;
                     if (opts?.screenshot) {
+                        // Use a page from the SHARED context so authenticated session
+                        // cookies carry over — avoids a fresh unauthenticated browser.
                         const ssPath = `/tmp/agentfarm-tw-${opts.taskId ?? taskId}-${Date.now()}.png`;
                         try {
-                            const { chromium } = await import('playwright');
-                            const browser = await chromium.launch({ headless: true });
-                            const page = await browser.newPage();
-                            await page.goto(url, { waitUntil: 'networkidle' });
-                            await page.screenshot({ path: ssPath });
-                            await browser.close();
+                            const ssPage = await ctx.newPage();
+                            await ssPage.goto(url, { waitUntil: 'networkidle' });
+                            await ssPage.screenshot({ path: ssPath });
+                            await ssPage.close();
                             screenshotPath = ssPath;
                         } catch { /* screenshot failure is non-fatal */ }
                     }
@@ -12733,6 +12759,7 @@ export async function executeLocalWorkspaceAction(input: {
                 payload,
                 workspaceDir,
                 runCommand,
+                callLlm: buildTwLlmCallerFn(),
                 browsePage: browsePageFn,
             });
         }
@@ -12771,6 +12798,7 @@ export async function executeLocalWorkspaceAction(input: {
                 payload,
                 workspaceDir,
                 runCommand,
+                callLlm: buildTwLlmCallerFn(),
                 browsePage: browsePageFnVerify,
             });
         }
@@ -12862,16 +12890,12 @@ export async function executeLocalWorkspaceAction(input: {
                             results.push({ step, status: found ? 'pass' : 'fail', details: found ? `Found: "${step.expected}"` : `Not found: "${step.expected}"` });
                         }
 
-                        // Optional screenshot after each step
+                        // Optional screenshot after each step — use the SAME
+                        // persistent page so the authenticated session state is captured.
                         if (opts?.captureScreenshots) {
                             try {
-                                const { chromium } = await import('playwright');
-                                const browser = await chromium.launch({ headless: true });
-                                const ssPage  = await browser.newPage();
-                                await ssPage.goto(page.url(), { waitUntil: 'networkidle' });
                                 const ssPath = `/tmp/agentfarm-tw-interact-${opts.taskId ?? taskId}-${Date.now()}.png`;
-                                await ssPage.screenshot({ path: ssPath });
-                                await browser.close();
+                                await page.screenshot({ path: ssPath });
                                 if (results.length > 0) results[results.length - 1]!.screenshotPath = ssPath;
                             } catch { /* non-fatal */ }
                         }
@@ -12888,6 +12912,7 @@ export async function executeLocalWorkspaceAction(input: {
             return handleTechnicalWriterAction({
                 actionType: actionType as TechnicalWriterActionType,
                 tenantId, botId, taskId, payload, workspaceDir, runCommand,
+                callLlm: buildTwLlmCallerFn(),
                 interactPage: interactPageFn,
             });
         }
@@ -12903,6 +12928,7 @@ export async function executeLocalWorkspaceAction(input: {
             return handleTechnicalWriterAction({
                 actionType: actionType as TechnicalWriterActionType,
                 tenantId, botId, taskId, payload, workspaceDir, runCommand,
+                callLlm: buildTwLlmCallerFn(),
             });
         }
 

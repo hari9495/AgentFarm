@@ -1,4 +1,4 @@
-import { initObservability } from '@agentfarm/observability';
+﻿import { initObservability } from '@agentfarm/observability';
 initObservability({
     serviceName: 'api-gateway',
     azureConnectionString: process.env.APPLICATIONINSIGHTS_CONNECTION_STRING,
@@ -13,20 +13,20 @@ import { rateLimitAsync, rateLimitTenantAsync } from './lib/rate-limit.js';
 import { buildSessionToken, verifySessionToken, type SessionPayload } from './lib/session-auth.js';
 import { prisma } from './lib/db.js';
 import { checkSubscription } from './lib/subscription-guard.js';
-import { registerAuthRoutes } from './routes/auth.js';
-import { registerPortalAuthRoutes } from './routes/portal-auth.js';
-import { registerPortalDataRoutes } from './routes/portal-data.js';
+import { registerAuthRoutes } from './routes/auth/auth.js';
+import { registerPortalAuthRoutes } from './routes/auth/portal-auth.js';
+import { registerPortalDataRoutes } from './routes/admin/portal-data.js';
 import { parseApprovalPacket } from './lib/approval-packet.js';
-import { registerConnectorAuthRoutes } from './routes/connector-auth.js';
-import { registerMcpRegistryRoutes } from './routes/mcp-registry.js';
-import { registerLanguageRoutes } from './routes/language.js';
-import { registerConnectorActionRoutes } from './routes/connector-actions.js';
+import { registerConnectorAuthRoutes } from './routes/connectors/connector-auth.js';
+import { registerMcpRegistryRoutes } from './routes/connectors/mcp-registry.js';
+import { registerLanguageRoutes } from './routes/platform/language.js';
+import { registerConnectorActionRoutes } from './routes/connectors/connector-actions.js';
 import { createDefaultSecretStore } from './lib/secret-store.js';
-import { registerApprovalRoutes } from './routes/approvals.js';
-import { registerOnboardingConfigRoutes } from './routes/onboarding-config.js';
-import { registerAuditRoutes } from './routes/audit.js';
-import { registerRoleRoutes } from './routes/roles.js';
-import { registerSnapshotRoutes } from './routes/snapshots.js';
+import { registerApprovalRoutes } from './routes/governance/approvals.js';
+import { registerOnboardingConfigRoutes } from './routes/admin/onboarding-config.js';
+import { registerAuditRoutes } from './routes/governance/audit.js';
+import { registerRoleRoutes } from './routes/auth/roles.js';
+import { registerSnapshotRoutes } from './routes/memory/snapshots.js';
 import { startProvisioningWorker, stopProvisioningWorker } from './services/provisioning-worker.js';
 import {
     startConnectorTokenLifecycleWorker,
@@ -44,83 +44,83 @@ import {
     getInternalLoginPolicyConfig,
     isInternalLoginPolicyEmpty,
 } from './lib/internal-login-policy.js';
-import { registerInternalLoginPolicyRoutes } from './routes/internal-login-policy.js';
-import { registerRuntimeLlmConfigRoutes } from './routes/runtime-llm-config.js';
-import { registerRuntimeTaskRoutes } from './routes/runtime-tasks.js';
-import { registerWorkspaceSessionRoutes } from './routes/workspace-session.js';
-import { registerDesktopProfileRoutes } from './routes/desktop-profile.js';
-import { registerIdeStateRoutes } from './routes/ide-state.js';
-import { registerBudgetPolicyRoutes } from './routes/budget-policy.js';
-import { registerGovernanceWorkflowRoutes } from './routes/governance-workflows.js';
-import { registerKillSwitchRoutes } from './routes/kill-switches.js';
-import { registerPluginLoadingRoutes } from './routes/plugin-loading.js';
-import { registerActivityRoutes } from './routes/activity-events.js';
-import { registerEnvReconcilerRoutes } from './routes/env-reconciler.js';
-import { registerDesktopActionRoutes } from './routes/desktop-actions.js';
-import { registerPrRoutes } from './routes/pull-requests.js';
-import { registerCiFailureRoutes } from './routes/ci-failures.js';
-import { registerWorkMemoryRoutes } from './routes/work-memory.js';
-import { registerReproPackRoutes } from './routes/repro-packs.js';
-import { registerSkillPipelineRoutes } from './routes/skill-pipelines.js';
-import { registerSkillSchedulerRoutes } from './routes/skill-scheduler.js';
-import { registerWebhookRoutes } from './routes/webhooks.js';
-import { registerConnectorHealthRoutes } from './routes/connector-health.js';
-import { registerKnowledgeGraphRoutes } from './routes/knowledge-graph.js';
-import { registerAgentFeedbackRoutes } from './routes/agent-feedback.js';
-import { registerAutonomousLoopRoutes } from './routes/autonomous-loops.js';
-import { registerSkillCompositionRoutes } from './routes/skill-composition-execute.js';
-import { registerGovernanceKPIRoutes } from './routes/governance-kpis.js';
-import { registerAdapterRegistryRoutes } from './routes/adapter-registry.js';
-import { registerHandoffRoutes } from './routes/handoffs.js';
-import { registerWakeRunRoutes } from './routes/wake-runs.js';
-import { registerRoutineSchedulerRoutes } from './routes/routine-scheduler.js';
-import { registerObservabilityRoutes } from './routes/observability.js';
-import { registerQuestionRoutes } from './routes/questions.js';
-import { registerMemoryRoutes } from './routes/memory.js';
-import { registerKnowledgeBaseRoutes } from './routes/knowledge-base.js';
-import { registerAgentLifecycleRoutes } from './routes/agent-lifecycle.js';
-import { registerEpisodicMemoryRoutes } from './routes/episodic-memory.js';
+import { registerInternalLoginPolicyRoutes } from './routes/auth/internal-login-policy.js';
+import { registerRuntimeLlmConfigRoutes } from './routes/runtime/runtime-llm-config.js';
+import { registerRuntimeTaskRoutes } from './routes/runtime/runtime-tasks.js';
+import { registerWorkspaceSessionRoutes } from './routes/workspace/workspace-session.js';
+import { registerDesktopProfileRoutes } from './routes/workspace/desktop-profile.js';
+import { registerIdeStateRoutes } from './routes/workspace/ide-state.js';
+import { registerBudgetPolicyRoutes } from './routes/governance/budget-policy.js';
+import { registerGovernanceWorkflowRoutes } from './routes/governance/governance-workflows.js';
+import { registerKillSwitchRoutes } from './routes/governance/kill-switches.js';
+import { registerPluginLoadingRoutes } from './routes/connectors/plugin-loading.js';
+import { registerActivityRoutes } from './routes/governance/activity-events.js';
+import { registerEnvReconcilerRoutes } from './routes/admin/env-reconciler.js';
+import { registerDesktopActionRoutes } from './routes/workspace/desktop-actions.js';
+import { registerPrRoutes } from './routes/workspace/pull-requests.js';
+import { registerCiFailureRoutes } from './routes/workspace/ci-failures.js';
+import { registerWorkMemoryRoutes } from './routes/memory/work-memory.js';
+import { registerReproPackRoutes } from './routes/workspace/repro-packs.js';
+import { registerSkillPipelineRoutes } from './routes/runtime/skill-pipelines.js';
+import { registerSkillSchedulerRoutes } from './routes/runtime/skill-scheduler.js';
+import { registerWebhookRoutes } from './routes/connectors/webhooks.js';
+import { registerConnectorHealthRoutes } from './routes/connectors/connector-health.js';
+import { registerKnowledgeGraphRoutes } from './routes/memory/knowledge-graph.js';
+import { registerAgentFeedbackRoutes } from './routes/agents/agent-feedback.js';
+import { registerAutonomousLoopRoutes } from './routes/runtime/autonomous-loops.js';
+import { registerSkillCompositionRoutes } from './routes/runtime/skill-composition-execute.js';
+import { registerGovernanceKPIRoutes } from './routes/governance/governance-kpis.js';
+import { registerAdapterRegistryRoutes } from './routes/connectors/adapter-registry.js';
+import { registerHandoffRoutes } from './routes/agents/handoffs.js';
+import { registerWakeRunRoutes } from './routes/runtime/wake-runs.js';
+import { registerRoutineSchedulerRoutes } from './routes/runtime/routine-scheduler.js';
+import { registerObservabilityRoutes } from './routes/platform/observability.js';
+import { registerQuestionRoutes } from './routes/agents/questions.js';
+import { registerMemoryRoutes } from './routes/memory/memory.js';
+import { registerKnowledgeBaseRoutes } from './routes/memory/knowledge-base.js';
+import { registerAgentLifecycleRoutes } from './routes/agents/agent-lifecycle.js';
+import { registerEpisodicMemoryRoutes } from './routes/memory/episodic-memory.js';
 import { createEmbedFn } from '@agentfarm/memory-service';
 import { registerMeetingRoutes } from './routes/meetings.js';
-import { registerBillingRoutes } from './routes/billing.js';
-import { registerAnalyticsRoutes } from './routes/analytics.js';
-import { registerAgentControlRoutes } from './routes/agent-control.js';
-import { registerLeadRoutes } from './routes/leads.js';
-import { registerProspectsRoutes } from './routes/prospects.js';
-import { registerSalesConfigRoutes } from './routes/sales-config.js';
-import { registerOutreachRoutes } from './routes/outreach.js';
-import { registerAgentsRoutes } from './routes/agents.js';
-import { registerPersonaRoutes } from './routes/personas.js';
-import { registerDisclosureRoutes } from './routes/disclosure.js';
-import { registerSetupWizardRoutes } from './routes/setup-wizard.js';
-import { registerAdminProvisionRoutes } from './routes/admin-provision.js';
-import { registerAgentDispatchRoutes } from './routes/agent-dispatch.js';
-import { registerZohoSignWebhookRoutes } from './routes/zoho-sign-webhook.js';
-import { registerBookingWebhookRoutes } from './routes/booking-webhook.js';
-import { registerContractWebhookRoutes } from './routes/contract-webhook.js';
-import { registerDealsRoutes } from './routes/deals.js';
-import { registerBrowserTasksRoutes } from './routes/browser-tasks.js';
-import { registerDesktopSessionsRoutes } from './routes/desktop-sessions.js';
-import { registerNotificationRoutes } from './routes/notifications.js';
-import { registerRetentionPolicyRoutes } from './routes/retention-policy.js';
-import { registerSseTaskRoutes } from './routes/sse-tasks.js';
-import { registerOutboundWebhookRoutes } from './routes/outbound-webhooks.js';
-import { registerTeamRoutes } from './routes/team.js';
-import { registerScheduleRoutes } from './routes/schedules.js';
-import { registerChatRoutes } from './routes/chat.js';
-import { registerBotVersionRoutes } from './routes/bot-versions.js';
-import { registerOrchestrationRoutes } from './routes/orchestration.js';
-import { registerMarketplaceRoutes } from './routes/marketplace.js';
-import { registerAbTestRoutes } from './routes/ab-tests.js';
-import { registerCircuitBreakerRoutes } from './routes/circuit-breakers.js';
-import { registerTaskQueueRoutes } from './routes/task-queue.js';
-import { registerScheduledReportRoutes } from './routes/scheduled-reports.js';
-import { registerApiKeyRoutes } from './routes/api-keys.js';
-import { registerAgentMessageRoutes } from './routes/agent-messages.js';
+import { registerBillingRoutes } from './routes/platform/billing.js';
+import { registerAnalyticsRoutes } from './routes/platform/analytics.js';
+import { registerAgentControlRoutes } from './routes/agents/agent-control.js';
+import { registerLeadRoutes } from './routes/sales/leads.js';
+import { registerProspectsRoutes } from './routes/sales/prospects.js';
+import { registerSalesConfigRoutes } from './routes/sales/sales-config.js';
+import { registerOutreachRoutes } from './routes/sales/outreach.js';
+import { registerAgentsRoutes } from './routes/agents/agents.js';
+import { registerPersonaRoutes } from './routes/agents/personas.js';
+import { registerDisclosureRoutes } from './routes/governance/disclosure.js';
+import { registerSetupWizardRoutes } from './routes/admin/setup-wizard.js';
+import { registerAdminProvisionRoutes } from './routes/admin/admin-provision.js';
+import { registerAgentDispatchRoutes } from './routes/agents/agent-dispatch.js';
+import { registerZohoSignWebhookRoutes } from './routes/sales/zoho-sign-webhook.js';
+import { registerBookingWebhookRoutes } from './routes/sales/booking-webhook.js';
+import { registerContractWebhookRoutes } from './routes/sales/contract-webhook.js';
+import { registerDealsRoutes } from './routes/sales/deals.js';
+import { registerBrowserTasksRoutes } from './routes/sales/browser-tasks.js';
+import { registerDesktopSessionsRoutes } from './routes/workspace/desktop-sessions.js';
+import { registerNotificationRoutes } from './routes/platform/notifications.js';
+import { registerRetentionPolicyRoutes } from './routes/governance/retention-policy.js';
+import { registerSseTaskRoutes } from './routes/runtime/sse-tasks.js';
+import { registerOutboundWebhookRoutes } from './routes/connectors/outbound-webhooks.js';
+import { registerTeamRoutes } from './routes/auth/team.js';
+import { registerScheduleRoutes } from './routes/runtime/schedules.js';
+import { registerChatRoutes } from './routes/platform/chat.js';
+import { registerBotVersionRoutes } from './routes/agents/bot-versions.js';
+import { registerOrchestrationRoutes } from './routes/runtime/orchestration.js';
+import { registerMarketplaceRoutes } from './routes/admin/marketplace.js';
+import { registerAbTestRoutes } from './routes/platform/ab-tests.js';
+import { registerCircuitBreakerRoutes } from './routes/governance/circuit-breakers.js';
+import { registerTaskQueueRoutes } from './routes/runtime/task-queue.js';
+import { registerScheduledReportRoutes } from './routes/platform/scheduled-reports.js';
+import { registerApiKeyRoutes } from './routes/auth/api-keys.js';
+import { registerAgentMessageRoutes } from './routes/agents/agent-messages.js';
 import { validateApiKey } from './lib/api-key-auth.js';
 import { startDrainSweep, stopDrainSweep } from './lib/task-queue.js';
 
-// 1 MB max request body — prevents large payload DoS
+// 1 MB max request body â€” prevents large payload DoS
 const app = Fastify({
     logger: true,
     bodyLimit: 1_048_576,
@@ -411,7 +411,7 @@ app.get('/health', async () => ({
     ts: new Date().toISOString(),
 }));
 
-// Public status page endpoint — no auth required
+// Public status page endpoint â€” no auth required
 app.get('/status', async (_request, _reply) => {
     const updatedAt = new Date().toISOString();
     const services: { name: string; status: 'operational' | 'degraded' | 'outage'; latencyMs?: number }[] = [];
@@ -445,7 +445,7 @@ app.get('/status', async (_request, _reply) => {
     };
 });
 
-// Detailed health — requires internal session
+// Detailed health â€” requires internal session
 app.get('/health/detail', async (request, reply) => {
     const session = readSession(request);
     if (!session || session.scope !== 'internal') {
@@ -466,7 +466,7 @@ app.get('/health/detail', async (request, reply) => {
     };
 });
 
-// Dev-only session helper — disabled in production
+// Dev-only session helper â€” disabled in production
 app.get('/v1/auth/dev-session', async (_request, reply) => {
     if (process.env.NODE_ENV === 'production') {
         return reply.code(404).send({ error: 'not_found' });
@@ -500,9 +500,9 @@ const isPublicPath = (url: string): boolean => {
     return (
         PUBLIC_PATHS.has(path) ||
         path === '/auth/logout' ||
-        // All /portal/* routes use portal sessions — not operator sessions
+        // All /portal/* routes use portal sessions â€” not operator sessions
         path.startsWith('/portal/') ||
-        // Webhook event catalog is public — consumers read it without credentials
+        // Webhook event catalog is public â€” consumers read it without credentials
         path.startsWith('/v1/webhooks/events')
     );
 };
@@ -577,7 +577,7 @@ app.addHook('preHandler', async (request, reply) => {
 
     let session = readSession(request);
 
-    // API key fallback — Bearer af_<key> is a long-lived programmatic key
+    // API key fallback â€” Bearer af_<key> is a long-lived programmatic key
     if (!session) {
         const authHeader = request.headers['authorization'] as string | undefined;
         if (typeof authHeader === 'string' && authHeader.startsWith('Bearer af_')) {
@@ -607,7 +607,7 @@ app.addHook('preHandler', async (request, reply) => {
     }
 });
 
-// Subscription guard — runs after auth gate so session is available.
+// Subscription guard â€” runs after auth gate so session is available.
 // Populates request.session then checks tenant subscription status.
 app.addHook('preHandler', async (request, reply) => {
     (request as any).session = readSession(request) ?? undefined;
@@ -760,11 +760,11 @@ await registerAgentDispatchRoutes(app, {
 await registerAdminProvisionRoutes(app, {
     getSession: (request) => readSession(request),
 });
-// Sprint 9 — Fire-agent terminate route
+// Sprint 9 â€” Fire-agent terminate route
 await registerAgentLifecycleRoutes(app, {
     getSession: (request) => readSession(request),
 });
-// Sprint 9 — Semantic Memory / Company Knowledge RAG
+// Sprint 9 â€” Semantic Memory / Company Knowledge RAG
 await registerKnowledgeBaseRoutes(app, prisma, {
     getSession: (request) => readSession(request),
     embedFn: (() => {
@@ -776,7 +776,7 @@ await registerKnowledgeBaseRoutes(app, prisma, {
     })(),
     embeddingDeployment: process.env['EPISODIC_EMBEDDING_DEPLOYMENT'] ?? 'text-embedding-3-small',
 });
-// Sprint 11 — Episodic Memory Browse + Redact API
+// Sprint 11 â€” Episodic Memory Browse + Redact API
 await registerEpisodicMemoryRoutes(app, {
     getSession: (request) => readSession(request),
 });
@@ -1178,7 +1178,7 @@ app.get<{ Params: JobIdParams }>('/v1/provisioning/jobs/:jobId', async (request,
     };
 });
 
-// Global error handler — prevents stack traces leaking to clients
+// Global error handler â€” prevents stack traces leaking to clients
 app.setErrorHandler((error: FastifyError, _request, reply) => {
     const status = error.statusCode ?? 500;
     if (status >= 500) {
