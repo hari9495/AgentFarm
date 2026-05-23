@@ -108,6 +108,12 @@ export function buildTechnicalWriterEpisodicPattern(
     if (at === 'workspace_tw_whitepaper')  return `tw:whitepaper:${oc}`;
 
     // Endpoint verification
+    if (at === 'workspace_tw_audience_rewrite')  return `tw:audience_rewrite:${oc}`;
+    if (at === 'workspace_tw_feedback_analysis') return `tw:feedback_analysis:${oc}`;
+    if (at === 'workspace_tw_nav_audit')         return `tw:nav_audit:${oc}`;
+    if (at === 'workspace_tw_localization')      return `tw:localization:${oc}`;
+    if (at === 'workspace_tw_doc_audit')         return `tw:doc_audit:${oc}`;
+
     if (at === 'workspace_tw_endpoint_verify') {
         const failCount = typeof result.executionPayload['fail_count'] === 'number'
             ? result.executionPayload['fail_count']
@@ -185,6 +191,32 @@ export function buildTechnicalWriterEpisodicSummary(
     if (pattern === 'tw:onboarding:fail')    return `Onboarding guide generation failed: ${taskLabel}`;
     if (pattern === 'tw:whitepaper:success') return `White paper generated: ${taskLabel}`;
     if (pattern === 'tw:whitepaper:fail')    return `White paper generation failed: ${taskLabel}`;
+
+    if (pattern.startsWith('tw:audience_rewrite')) {
+        const mode = typeof result.executionPayload['mode'] === 'string' ? result.executionPayload['mode'] : 'analyze';
+        const score = result.executionPayload['match_score'];
+        const scoreStr = typeof score === 'number' ? ` (score: ${score}/100)` : '';
+        return `Audience ${mode} complete${scoreStr}: ${taskLabel}`;
+    }
+    if (pattern.startsWith('tw:feedback_analysis')) {
+        const gaps = result.executionPayload['top_gaps'];
+        const gapCount = Array.isArray(gaps) ? gaps.length : '?';
+        return `Feedback analysis complete — ${gapCount} top gap(s) identified: ${taskLabel}`;
+    }
+    if (pattern.startsWith('tw:nav_audit')) {
+        const score = result.executionPayload['health_score'];
+        const label = result.executionPayload['health_label'];
+        return `Navigation audit complete — ${score}/100 (${label}): ${taskLabel}`;
+    }
+    if (pattern.startsWith('tw:localization')) {
+        const urgent = result.executionPayload['urgent'];
+        return `Localisation status checked — ${urgent} urgent item(s): ${taskLabel}`;
+    }
+    if (pattern.startsWith('tw:doc_audit')) {
+        const score = result.executionPayload['overall_health_score'];
+        const label = result.executionPayload['health_label'];
+        return `Doc lifecycle audit complete — ${score}/100 (${label}): ${taskLabel}`;
+    }
 
     if (pattern.startsWith('tw:endpoint_verify')) {
         const success = result.executionPayload['success_count'] ?? '?';

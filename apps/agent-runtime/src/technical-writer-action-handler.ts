@@ -75,6 +75,37 @@ import {
     type WhitepaperMetadata,
     type WhitepaperSection,
 } from './technical-writer/whitepaper-builder.js';
+import {
+    analyzeAudienceMatch,
+    adaptForAudience,
+    compareAudiences,
+    type AudiencePersona,
+} from './technical-writer/audience-rewriter.js';
+import {
+    analyzeFeedback,
+    classifyFeedbackItem,
+    type FeedbackItem,
+    type FeedbackSource,
+} from './technical-writer/feedback-analyzer.js';
+import {
+    auditNavigation,
+    type DocFile as NavDocFile,
+} from './technical-writer/nav-auditor.js';
+import {
+    buildLocalizationStatus,
+    buildLocalizationReport,
+    generateStringExport,
+    parseGitLastModified,
+    type LocalizationManifest,
+    type SourceFileInfo,
+    type TranslationFileInfo,
+} from './technical-writer/localization-tracker.js';
+import {
+    auditDocLifecycle,
+    type AuditDocFile,
+    type CodeChangeRecord,
+    type DocAuditOptions,
+} from './technical-writer/doc-auditor.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -94,7 +125,12 @@ export type TechnicalWriterActionType =
     | 'workspace_tw_tutorial'
     | 'workspace_tw_onboarding'
     | 'workspace_tw_whitepaper'
-    | 'workspace_tw_endpoint_verify';
+    | 'workspace_tw_endpoint_verify'
+    | 'workspace_tw_audience_rewrite'
+    | 'workspace_tw_feedback_analysis'
+    | 'workspace_tw_nav_audit'
+    | 'workspace_tw_localization'
+    | 'workspace_tw_doc_audit';
 
 const TW_ACTION_TYPES = new Set<string>([
     'workspace_tw_doc_diff', 'workspace_tw_api_doc_openapi', 'workspace_tw_api_doc_code',
@@ -102,6 +138,8 @@ const TW_ACTION_TYPES = new Set<string>([
     'workspace_tw_sme_interview', 'workspace_tw_sprint_doc', 'workspace_tw_manual',
     'workspace_tw_faq', 'workspace_tw_tutorial', 'workspace_tw_onboarding',
     'workspace_tw_whitepaper', 'workspace_tw_endpoint_verify',
+    'workspace_tw_audience_rewrite', 'workspace_tw_feedback_analysis',
+    'workspace_tw_nav_audit', 'workspace_tw_localization', 'workspace_tw_doc_audit',
 ]);
 
 export function isTechnicalWriterActionType(t: string): t is TechnicalWriterActionType {
@@ -2259,6 +2297,341 @@ export async function handleTechnicalWriterAction(params: {
                     success_count: successCount,
                     fail_count: failCount,
                     verification_report: reportLines.join('\n'),
+                });
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: String(err) };
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_tw_audience_rewrite
+        // Analyse or adapt document content for a target audience persona.
+        //
+        // payload:
+        //   mode            — 'analyze' | 'adapt' | 'compare' (default: analyze)
+        //   file_path?      — doc file to read (relative to workspaceDir)
+        //   content?        — inline doc content (alternative to file_path)
+        //   target_audience — 'end-user' | 'developer' | 'admin'
+        //   vocabulary_map? — Record<string,string> custom substitution overrides
+        //   output_path?    — write adapted content here (mode: adapt only)
+        // ------------------------------------------------------------------
+        case 'workspace_tw_audience_rewrite': {
+            try {
+                const mode = typeof payload['mode'] === 'string' ? payload['mode'] : 'analyze';
+                let content = typeof payload['content'] === 'string' ? payload['content'] : '';
+                const filePath = typeof payload['file_path'] === 'string' ? payload['file_path'].trim() : '';
+
+                if (!content && filePath) {
+                    const fc = await readDocFile(workspaceDir, filePath);
+                    if (fc === null) return { ok: false, output: '', errorOutput: `File not found: ${filePath}` };
+                    content = fc;
+                }
+                if (!content) return { ok: false, output: '', errorOutput: 'payload.content or payload.file_path is required.' };
+
+                const rawPersona = typeof payload['target_audience'] === 'string' ? payload['target_audience'] : 'end-user';
+                const persona: AudiencePersona = (['end-user', 'developer', 'admin'].includes(rawPersona) ? rawPersona : 'end-user') as AudiencePersona;
+                const customVocabMap = typeof payload['vocabulary_map'] === 'object' && payload['vocabulary_map'] !== null
+                    ? payload['vocabulary_map'] as Record<string, string>
+                    : {};
+                const outputPath = typeof payload['output_path'] === 'string' ? payload['output_path'].trim() : '';
+
+                if (mode === 'compare') {
+                    const comparisons = compareAudiences(content);
+                    const reportLines = ['# Audience Comparison\n'];
+                    for (const [p, analysis] of Object.entries(comparisons)) {
+                        reportLines.push(`## ${p}: ${analysis.matchScore}/100 — ${analysis.matchLabel}`);
+                    }
+                    return safeJson({ mode, comparisons: Object.fromEntries(Object.entries(comparisons).map(([p, a]) => [p, { score: a.matchScore, label: a.matchLabel, mismatch_count: a.mismatches.length }])), report: reportLines.join('\n') });
+                }
+
+                if (mode === 'adapt') {
+                    const adaptation = adaptForAudience(content, persona, customVocabMap);
+                    if (outputPath) await writeDocFile(workspaceDir, outputPath, adaptation.adapted);
+                    return safeJson({
+                        mode,
+                        persona,
+                        substitution_count: adaptation.substitutionCount,
+                        manual_rewrite_needed: adaptation.manualRewriteNeeded.length,
+                        adapted_content: adaptation.adapted,
+                        written_to: outputPath || null,
+                        report: adaptation.markdownReport,
+                    });
+                }
+
+                // Default: analyze
+                const analysis = analyzeAudienceMatch(content, persona);
+                return safeJson({
+                    mode,
+                    persona,
+                    match_score: analysis.matchScore,
+                    match_label: analysis.matchLabel,
+                    mismatch_count: analysis.mismatches.length,
+                    missing_sections: analysis.missingSections,
+                    inappropriate_sections: analysis.inappropriateSections,
+                    stats: analysis.stats,
+                    report: analysis.markdownReport,
+                });
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: String(err) };
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_tw_feedback_analysis
+        // Analyse user feedback to surface doc gaps and recommended actions.
+        //
+        // payload:
+        //   feedback_items    — array of { id, text, source?, doc_section?, date? }
+        //   doc_sections?     — string[] of known section names for coverage check
+        //   output_path?      — where to write the Markdown report
+        // ------------------------------------------------------------------
+        case 'workspace_tw_feedback_analysis': {
+            try {
+                const rawItems = payload['feedback_items'];
+                if (!Array.isArray(rawItems) || rawItems.length === 0) {
+                    return { ok: false, output: '', errorOutput: 'payload.feedback_items (array) is required.' };
+                }
+
+                const items: FeedbackItem[] = rawItems.flatMap((item) => {
+                    if (typeof item !== 'object' || item === null) return [];
+                    const obj = item as Record<string, unknown>;
+                    return [{
+                        id: String(obj['id'] ?? ''),
+                        text: String(obj['text'] ?? ''),
+                        source: (typeof obj['source'] === 'string' ? obj['source'] : 'other') as FeedbackSource,
+                        docSection: typeof obj['doc_section'] === 'string' ? obj['doc_section'] : undefined,
+                        date: typeof obj['date'] === 'string' ? obj['date'] : undefined,
+                        tags: Array.isArray(obj['tags']) ? (obj['tags'] as unknown[]).filter((t): t is string => typeof t === 'string') : undefined,
+                    }];
+                });
+
+                const knownSections = Array.isArray(payload['doc_sections'])
+                    ? (payload['doc_sections'] as unknown[]).filter((s): s is string => typeof s === 'string')
+                    : [];
+
+                const result = analyzeFeedback(items, knownSections);
+                const outputPath = typeof payload['output_path'] === 'string' ? payload['output_path'].trim() : '';
+                if (outputPath) await writeDocFile(workspaceDir, outputPath, result.markdownReport);
+
+                return safeJson({
+                    total_items: result.totalItems,
+                    sentiment_breakdown: result.sentimentBreakdown,
+                    top_gaps: result.topGaps.slice(0, 5).map((g) => ({ section: g.section, priority: g.priority, recommendation: g.recommendation })),
+                    written_to: outputPath || null,
+                    report: result.markdownReport,
+                });
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: String(err) };
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_tw_nav_audit
+        // Audit doc tree for orphans, broken links, duplicate titles, structure.
+        //
+        // payload:
+        //   file_paths        — string[] of doc file paths (relative to workspaceDir)
+        //   required_sections? — string[] override for section completeness check
+        //   output_path?      — where to write the Markdown report
+        // ------------------------------------------------------------------
+        case 'workspace_tw_nav_audit': {
+            try {
+                const rawPaths = payload['file_paths'];
+                const filePaths: string[] = Array.isArray(rawPaths)
+                    ? (rawPaths as unknown[]).filter((p): p is string => typeof p === 'string')
+                    : typeof rawPaths === 'string' ? [rawPaths] : [];
+
+                if (filePaths.length === 0) return { ok: false, output: '', errorOutput: 'payload.file_paths is required.' };
+
+                const files: NavDocFile[] = [];
+                for (const fp of filePaths) {
+                    const content = await readDocFile(workspaceDir, fp);
+                    if (content !== null) files.push({ path: fp, content });
+                }
+
+                const requiredSections = Array.isArray(payload['required_sections'])
+                    ? (payload['required_sections'] as unknown[]).filter((s): s is string => typeof s === 'string')
+                    : undefined;
+
+                const result = auditNavigation(files, requiredSections);
+                const outputPath = typeof payload['output_path'] === 'string' ? payload['output_path'].trim() : '';
+                if (outputPath) await writeDocFile(workspaceDir, outputPath, result.markdownReport);
+
+                return safeJson({
+                    health_score: result.healthScore,
+                    health_label: result.healthLabel,
+                    total_files: result.totalFiles,
+                    total_issues: result.issues.length,
+                    orphaned_pages: result.orphanedPages.length,
+                    broken_links: result.brokenLinks.length,
+                    duplicate_titles: result.duplicateTitles.length,
+                    toc: result.markdownToc,
+                    written_to: outputPath || null,
+                    report: result.markdownReport,
+                });
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: String(err) };
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_tw_localization
+        // Track translation status, find stale/missing translations, export strings.
+        //
+        // payload:
+        //   mode              — 'status' | 'export' | 'report' (default: status)
+        //   manifest          — LocalizationManifest object
+        //   source_files?     — array of { path, last_modified, char_count } (mode: status/report)
+        //   translations?     — Record<locale, [{path, locale, last_modified}]> (mode: status/report)
+        //   export_file?      — source file path to extract strings from (mode: export)
+        //   export_content?   — inline content alternative (mode: export)
+        //   string_prefix?    — prefix for generated string IDs (mode: export)
+        //   output_path?      — where to write the output
+        // ------------------------------------------------------------------
+        case 'workspace_tw_localization': {
+            try {
+                const mode = typeof payload['mode'] === 'string' ? payload['mode'] : 'status';
+                const rawManifest = payload['manifest'] as Record<string, unknown> | undefined;
+                if (!rawManifest) return { ok: false, output: '', errorOutput: 'payload.manifest (LocalizationManifest) is required.' };
+
+                const manifest: LocalizationManifest = {
+                    sourceLocale: String(rawManifest['source_locale'] ?? 'en'),
+                    targetLocales: Array.isArray(rawManifest['target_locales'])
+                        ? (rawManifest['target_locales'] as unknown[]).filter((l): l is string => typeof l === 'string')
+                        : [],
+                    localeDirs: typeof rawManifest['locale_dirs'] === 'object' && rawManifest['locale_dirs'] !== null
+                        ? rawManifest['locale_dirs'] as Record<string, string>
+                        : {},
+                };
+                const outputPath = typeof payload['output_path'] === 'string' ? payload['output_path'].trim() : '';
+
+                if (mode === 'export') {
+                    let content = typeof payload['export_content'] === 'string' ? payload['export_content'] : '';
+                    const exportFile = typeof payload['export_file'] === 'string' ? payload['export_file'].trim() : '';
+                    if (!content && exportFile) {
+                        const fc = await readDocFile(workspaceDir, exportFile);
+                        if (fc === null) return { ok: false, output: '', errorOutput: `File not found: ${exportFile}` };
+                        content = fc;
+                    }
+                    if (!content) return { ok: false, output: '', errorOutput: 'payload.export_file or payload.export_content required for mode export.' };
+
+                    const exported = generateStringExport(exportFile || 'source', content, manifest.sourceLocale);
+                    if (outputPath) await writeDocFile(workspaceDir, outputPath, exported.jsonExport);
+                    return safeJson({ mode, string_count: exported.strings.length, json_export: exported.jsonExport, markdown_table: exported.markdownTable, written_to: outputPath || null });
+                }
+
+                // status or report
+                const rawSources = Array.isArray(payload['source_files']) ? payload['source_files'] : [];
+                const sourceFiles: SourceFileInfo[] = rawSources.flatMap((s) => {
+                    if (typeof s !== 'object' || s === null) return [];
+                    const obj = s as Record<string, unknown>;
+                    return [{ path: String(obj['path'] ?? ''), lastModified: String(obj['last_modified'] ?? obj['lastModified'] ?? ''), charCount: typeof obj['char_count'] === 'number' ? obj['char_count'] : 0 }];
+                });
+
+                const rawTrans = payload['translations'] as Record<string, unknown> | undefined ?? {};
+                const translations: Record<string, TranslationFileInfo[]> = {};
+                for (const [locale, files] of Object.entries(rawTrans)) {
+                    if (!Array.isArray(files)) continue;
+                    translations[locale] = files.flatMap((f) => {
+                        if (typeof f !== 'object' || f === null) return [];
+                        const obj = f as Record<string, unknown>;
+                        return [{ path: String(obj['path'] ?? ''), locale, lastModified: typeof obj['last_modified'] === 'string' ? obj['last_modified'] : null }];
+                    });
+                }
+
+                // If no translation data provided, try to infer from git log via runCommand
+                if (Object.keys(translations).length === 0 && sourceFiles.length > 0 && runCommand) {
+                    for (const locale of manifest.targetLocales) {
+                        translations[locale] = [];
+                        const dir = manifest.localeDirs[locale] ?? `docs/${locale}/`;
+                        for (const sf of sourceFiles) {
+                            const translationPath = dir + sf.path;
+                            const logResult = await runCommand(['git', 'log', '--format=%ai -- %s', '-1', '--', translationPath], workspaceDir, 10_000);
+                            const lastMod = parseGitLastModified(logResult.stdout);
+                            translations[locale].push({ path: translationPath, locale, lastModified: lastMod });
+                        }
+                    }
+                }
+
+                const statuses = buildLocalizationStatus(manifest, sourceFiles, translations);
+                const report = buildLocalizationReport(manifest, statuses);
+
+                if (outputPath) await writeDocFile(workspaceDir, outputPath, report.markdownReport);
+
+                const urgentCount = statuses.filter((s) => s.status === 'stale' || s.status === 'missing').length;
+                return safeJson({ mode, total_pairs: statuses.length, urgent: urgentCount, per_locale: report.summary.perLocale, written_to: outputPath || null, report: report.markdownReport });
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: String(err) };
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_tw_doc_audit
+        // Full lifecycle audit: staleness, coverage, quality, broken links.
+        //
+        // payload:
+        //   file_paths          — string[] of doc file paths (relative to workspaceDir)
+        //   feature_list?       — string[] of features to check coverage
+        //   required_sections?  — string[] section names every doc must have
+        //   staleness_days?     — days threshold for stale flag (default: 180)
+        //   use_git_dates?      — true to fetch last-modified dates from git log
+        //   code_changes?       — [{file_path, last_changed}] for code-changed checks
+        //   output_path?        — where to write the Markdown report
+        // ------------------------------------------------------------------
+        case 'workspace_tw_doc_audit': {
+            try {
+                const rawPaths = payload['file_paths'];
+                const filePaths: string[] = Array.isArray(rawPaths)
+                    ? (rawPaths as unknown[]).filter((p): p is string => typeof p === 'string')
+                    : typeof rawPaths === 'string' ? [rawPaths] : [];
+
+                if (filePaths.length === 0) return { ok: false, output: '', errorOutput: 'payload.file_paths is required.' };
+
+                const useGitDates = payload['use_git_dates'] === true && !!runCommand;
+
+                const auditFiles: AuditDocFile[] = [];
+                for (const fp of filePaths) {
+                    const content = await readDocFile(workspaceDir, fp);
+                    if (content === null) continue;
+                    let lastModified: string | undefined;
+                    if (useGitDates) {
+                        const logResult = await runCommand!(['git', 'log', '--format=%ai', '-1', '--', fp], workspaceDir, 10_000);
+                        const dateMatch = logResult.stdout.trim().match(/^(\d{4}-\d{2}-\d{2})/);
+                        if (dateMatch) lastModified = dateMatch[1];
+                    }
+                    auditFiles.push({ path: fp, content, lastModified });
+                }
+
+                const featureList = Array.isArray(payload['feature_list'])
+                    ? (payload['feature_list'] as unknown[]).filter((f): f is string => typeof f === 'string')
+                    : [];
+                const requiredSections = Array.isArray(payload['required_sections'])
+                    ? (payload['required_sections'] as unknown[]).filter((s): s is string => typeof s === 'string')
+                    : undefined;
+                const stalenessThresholdDays = typeof payload['staleness_days'] === 'number' ? payload['staleness_days'] : 180;
+
+                const rawCodeChanges = Array.isArray(payload['code_changes']) ? payload['code_changes'] : [];
+                const codeChanges: CodeChangeRecord[] = rawCodeChanges.flatMap((c) => {
+                    if (typeof c !== 'object' || c === null) return [];
+                    const obj = c as Record<string, unknown>;
+                    return [{ filePath: String(obj['file_path'] ?? obj['filePath'] ?? ''), lastChanged: String(obj['last_changed'] ?? obj['lastChanged'] ?? '') }];
+                });
+
+                const options: DocAuditOptions = { featureList, requiredSections, stalenessThresholdDays, codeChanges };
+                const result = auditDocLifecycle(auditFiles, options);
+
+                const outputPath = typeof payload['output_path'] === 'string' ? payload['output_path'].trim() : '';
+                if (outputPath) await writeDocFile(workspaceDir, outputPath, result.markdownReport);
+
+                return safeJson({
+                    overall_health_score: result.overallHealthScore,
+                    health_label: result.healthLabel,
+                    total_files: result.totalFiles,
+                    total_actions: result.prioritisedActions.length,
+                    feature_coverage: result.featureCoverage.map((f) => ({ feature: f.feature, status: f.status })),
+                    top_actions: result.prioritisedActions.slice(0, 5),
+                    written_to: outputPath || null,
+                    report: result.markdownReport,
                 });
             } catch (err) {
                 return { ok: false, output: '', errorOutput: String(err) };
