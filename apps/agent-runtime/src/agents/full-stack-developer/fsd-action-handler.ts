@@ -50,6 +50,16 @@ import {
     type FsdCeremonyType,
 } from './fsd-standup-builder.js';
 
+import {
+    enrichComponentCode,
+    enrichApiTypes,
+    generateDesignAwareComponent,
+    runTestFixLoop,
+    runAxeCli,
+    parseAxeCliOutput,
+    measureBundleFromBuild,
+} from './fsd-llm-enricher.js';
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -238,11 +248,24 @@ export async function handleFsdAction(
 
             const scaffold = generateComponentScaffold(spec);
 
+            // Gap 1: LLM enrichment — fill the TODO body with real implementation
+            const componentCode = callLlm
+                ? await enrichComponentCode({
+                    scaffoldCode:  scaffold.code,
+                    componentName,
+                    description,
+                    framework,
+                    styling,
+                    props: spec.props,
+                    callLlm,
+                })
+                : scaffold.code;
+
             // Write component file
             const fileName = outputPath || `src/components/${scaffold.filename}`;
             await executeAction('workspace_write_file', {
                 file_path: fileName,
-                content:   scaffold.code,
+                content:   componentCode,
             });
 
             // Write style file if generated
@@ -264,10 +287,11 @@ export async function handleFsdAction(
                 component_name: componentName,
                 framework,
                 styling,
-                file_path:  fileName,
-                test_path:  testFileName,
-                has_styles: !!scaffold.styleFilename,
-                summary: `Generated ${framework} component "${componentName}" with ${styling} styling`,
+                file_path:      fileName,
+                test_path:      testFileName,
+                has_styles:     !!scaffold.styleFilename,
+                llm_enriched:   !!callLlm,
+                summary: `Generated ${framework} component "${componentName}"${callLlm ? ' (LLM-enriched)' : ' (scaffold)'} with ${styling} styling`,
             });
         }
 
@@ -314,20 +338,47 @@ export async function handleFsdAction(
                 content:   cssOutput,
             });
 
-            const spec: ComponentSpec = {
-                name:        componentName,
-                description: `Component generated from design handoff with ${tokens.length} design tokens`,
-                framework,
-                styling:     'css-modules',
-                props:       [],
-                hasState:    false,
-                isAsync:     false,
-            };
-            const scaffold = generateComponentScaffold(spec);
+            const description = str(payload['description'], `UI component using ${tokens.length} design tokens from Figma`);
+
+            // Gap 6: LLM-aware design handoff — generate component that actually uses the token values
+            let componentCode: string;
+            let llmEnriched = false;
+
+            if (callLlm && tokens.length > 0) {
+                const llmCode = await generateDesignAwareComponent({
+                    componentName,
+                    tokensCss: cssOutput,
+                    description,
+                    framework,
+                    callLlm,
+                });
+                if (llmCode) {
+                    componentCode = llmCode;
+                    llmEnriched   = true;
+                } else {
+                    // Fallback: scaffold + fill body
+                    const spec: ComponentSpec = {
+                        name: componentName, description, framework, styling: 'css-modules',
+                        props: [], hasState: false, isAsync: false,
+                    };
+                    const scaffold = generateComponentScaffold(spec);
+                    componentCode  = scaffold.code;
+                }
+            } else {
+                const spec: ComponentSpec = {
+                    name: componentName, description, framework, styling: 'css-modules',
+                    props: [], hasState: false, isAsync: false,
+                };
+                const scaffold = generateComponentScaffold(spec);
+                componentCode  = scaffold.code;
+            }
+
+            const ext         = framework === 'vue' ? '.vue' : framework === 'svelte' ? '.svelte' : '.tsx';
+            const componentFile = `${outputDir}/${componentName}${ext}`;
 
             await executeAction('workspace_write_file', {
-                file_path: `${outputDir}/${scaffold.filename}`,
-                content:   scaffold.code,
+                file_path: componentFile,
+                content:   componentCode,
             });
 
             return safeJson({
@@ -335,8 +386,9 @@ export async function handleFsdAction(
                 framework,
                 tokens_extracted: tokens.length,
                 tokens_file:      `${outputDir}/tokens.css`,
-                component_file:   `${outputDir}/${scaffold.filename}`,
-                summary: `Design handoff complete: ${tokens.length} tokens → ${componentName}`,
+                component_file:   componentFile,
+                llm_enriched:     llmEnriched,
+                summary: `Design handoff complete: ${tokens.length} tokens → ${componentName}${llmEnriched ? ' (LLM design-aware)' : ' (scaffold)'}`,
             });
         }
 
@@ -387,11 +439,22 @@ export async function handleFsdAction(
         //   target_url?       — URL to audit (delegates to workspace_web_read_page)
         // ====================================================================
         case 'workspace_fsd_accessibility_audit': {
-            const axeJson   = str(payload['axe_json']);
+            let axeJson     = str(payload['axe_json']);
             let htmlContent = str(payload['html_content']);
             const filePath  = str(payload['file_path']);
             const targetUrl = str(payload['target_url']);
+            let liveRun     = false;
 
+            // Gap 4: Live axe-cli audit — try running axe-cli against a real URL first
+            if (!axeJson && targetUrl && runCommand) {
+                const liveAxeJson = await runAxeCli({ url: targetUrl, runCommand, workspaceDir });
+                if (liveAxeJson) {
+                    axeJson = liveAxeJson;
+                    liveRun = true;
+                }
+            }
+
+            // Fall back: fetch HTML from URL or file if axe-cli not available
             if (!htmlContent && !axeJson) {
                 if (filePath) {
                     const r = await executeAction('workspace_read_file', { file_path: filePath });
@@ -402,12 +465,16 @@ export async function handleFsdAction(
                 }
             }
 
-            const report = buildA11yReport({ axeJson: axeJson || undefined, htmlContent: htmlContent || undefined });
+            // Parse with live axe output if available, otherwise HTML heuristic scan
+            const report = liveRun && axeJson
+                ? parseAxeCliOutput(axeJson)
+                : buildA11yReport({ axeJson: axeJson || undefined, htmlContent: htmlContent || undefined });
 
             return safeJson({
                 score:           report.score,
                 violations:      report.violations,
                 violation_count: report.violations.length,
+                live_run:        liveRun,
                 summary:         report.summary,
             });
         }
@@ -472,16 +539,7 @@ export async function handleFsdAction(
             const fidMs        = typeof payload['fid']           === 'number' ? payload['fid']           : null;
             const a11yScore    = typeof payload['a11y_score']    === 'number' ? payload['a11y_score']    : null;
             const seoScore     = typeof payload['seo_score']     === 'number' ? payload['seo_score']     : null;
-            const bundleSizeKb = typeof payload['bundle_size_kb'] === 'number' ? payload['bundle_size_kb'] : null;
-
-            const healthReport = buildFrontendHealthReport({
-                lcp:          lcpMs,
-                cls:          clsVal,
-                fid:          fidMs,
-                a11yScore,
-                seoScore,
-                bundleSizeKb,
-            });
+            let   bundleSizeKb = typeof payload['bundle_size_kb'] === 'number' ? payload['bundle_size_kb'] : null;
 
             const budget: PerformanceBudget = {
                 maxBundleKb: typeof payload['max_bundle_kb'] === 'number' ? payload['max_bundle_kb'] : 500,
@@ -490,17 +548,41 @@ export async function handleFsdAction(
                 maxCls:      typeof payload['max_cls']       === 'number' ? payload['max_cls']       : 0.1,
             };
 
+            // Gap 5: Live bundle measurement — run the actual build if bundle data not provided
             type BundleFileEntry = { name: string; sizeKb: number };
-            const bundleDataRaw  = payload['bundle_data'] as { files?: BundleFileEntry[] } | undefined;
-            const bundleFiles    = bundleDataRaw?.files ?? [];
+            let bundleFiles: BundleFileEntry[] = [];
+            let liveBuild = false;
 
-            const perfReport = buildPerformanceReport({ files: bundleFiles }, budget);
+            const bundleDataRaw = payload['bundle_data'] as { files?: BundleFileEntry[] } | undefined;
+            if (bundleDataRaw?.files) {
+                bundleFiles = bundleDataRaw.files;
+            } else if (runCommand && payload['run_build'] !== false) {
+                const measured = await measureBundleFromBuild({
+                    executeAction,
+                    runCommand,
+                    workspaceDir,
+                    distDir: str(payload['dist_dir'], 'dist'),
+                });
+                if (measured) {
+                    bundleFiles   = measured.files;
+                    bundleSizeKb  = measured.totalKb;
+                    liveBuild     = true;
+                }
+            }
+
+            const healthReport = buildFrontendHealthReport({
+                lcp: lcpMs, cls: clsVal, fid: fidMs, a11yScore, seoScore, bundleSizeKb,
+            });
+
+            const perfReport      = buildPerformanceReport({ files: bundleFiles }, budget);
             const regressionCount = healthReport.openIssues.length + perfReport.issues.length;
 
             return safeJson({
                 health_report:    healthReport,
                 perf_report:      perfReport,
                 regression_count: regressionCount,
+                live_build:       liveBuild,
+                bundle_files:     bundleFiles,
                 summary:          healthReport.summary,
             });
         }
@@ -578,16 +660,27 @@ export async function handleFsdAction(
 
             const scaffold = generateApiClientCode(endpoints, { baseUrl, httpClient, framework, moduleName });
 
+            // Write client
             const clientPath = `${outputDir}/${scaffold.clientFilename}`;
             await executeAction('workspace_write_file', {
                 file_path: clientPath,
                 content:   scaffold.clientCode,
             });
 
+            // Gap 2: Enrich API types — use OpenAPI spec if provided, else use LLM
+            const openApiSpec     = str(payload['openapi_spec']);
+            const enrichedTypes   = await enrichApiTypes({
+                typesCode:   scaffold.typesCode,
+                endpoints,
+                openApiSpec: openApiSpec || undefined,
+                callLlm:     callLlm || undefined,
+            });
+            const typesEnriched   = enrichedTypes !== scaffold.typesCode;
+
             const typesPath = `${outputDir}/${scaffold.typesFilename}`;
             await executeAction('workspace_write_file', {
                 file_path: typesPath,
-                content:   scaffold.typesCode,
+                content:   enrichedTypes,
             });
 
             const hookPath = scaffold.hookFilename ? `${outputDir}/${scaffold.hookFilename}` : null;
@@ -605,7 +698,8 @@ export async function handleFsdAction(
                 client_file:     clientPath,
                 types_file:      typesPath,
                 hook_file:       hookPath,
-                summary: `API client generated (${httpClient}): ${endpoints.length} endpoint(s)`,
+                types_enriched:  typesEnriched,
+                summary: `API client generated (${httpClient}): ${endpoints.length} endpoint(s)${typesEnriched ? ', types enriched' : ''}`,
             });
         }
 
@@ -800,7 +894,7 @@ export async function handleFsdAction(
             if (!dryRun) {
                 const spec: ComponentSpec = {
                     name:        componentName,
-                    description: `Frontend component for: ${title}`,
+                    description: `Frontend component for: ${title}. ${description}`,
                     framework,
                     styling:     'tailwind',
                     props:       [],
@@ -808,32 +902,61 @@ export async function handleFsdAction(
                     isAsync:     true,
                 };
                 const scaffold = generateComponentScaffold(spec);
+
+                // Gap 1+3 applied to flagship: LLM-enriched component
+                const componentCode = callLlm
+                    ? await enrichComponentCode({
+                        scaffoldCode:  scaffold.code,
+                        componentName,
+                        description:   spec.description,
+                        framework,
+                        styling:       'tailwind',
+                        props:         [],
+                        callLlm,
+                    })
+                    : scaffold.code;
+
                 await executeAction('workspace_write_file', {
                     file_path: `src/components/${scaffold.filename}`,
-                    content:   scaffold.code,
+                    content:   componentCode,
                 });
-                steps.push(`Frontend component: generated`);
+                steps.push(`Frontend component: ${callLlm ? 'LLM-enriched' : 'scaffold'}`);
 
-                // Step 4: API integration
+                // Step 4: API integration with LLM-enriched types
                 const endpoints: ApiEndpoint[] = [
-                    { method: 'GET',  path: `/api/${componentName.toLowerCase()}`, auth: true,  requestBody: undefined,                           responseType: `${componentName}Response` },
-                    { method: 'POST', path: `/api/${componentName.toLowerCase()}`, auth: true,  requestBody: `Create${componentName}Request`,      responseType: `${componentName}Response` },
+                    { method: 'GET',  path: `/api/${componentName.toLowerCase()}`, auth: true, responseType: `${componentName}Response` },
+                    { method: 'POST', path: `/api/${componentName.toLowerCase()}`, auth: true, requestBody: `Create${componentName}Request`, responseType: `${componentName}Response` },
                 ];
                 const apiScaffold = generateApiClientCode(
                     endpoints,
                     { baseUrl: '/api', httpClient, framework, moduleName: componentName.toLowerCase() },
                 );
+                const enrichedTypesCode = await enrichApiTypes({
+                    typesCode: apiScaffold.typesCode,
+                    endpoints,
+                    callLlm:   callLlm || undefined,
+                });
                 await executeAction('workspace_write_file', {
                     file_path: `src/api/${apiScaffold.clientFilename}`,
                     content:   apiScaffold.clientCode,
                 });
-                steps.push(`API integration: generated`);
+                await executeAction('workspace_write_file', {
+                    file_path: `src/api/${apiScaffold.typesFilename}`,
+                    content:   enrichedTypesCode,
+                });
+                steps.push(`API integration: generated${callLlm ? ' (types enriched)' : ''}`);
             }
 
-            // Step 5: Tests
+            // Step 5: Gap 3 — Iterative test-fix loop (up to 3 attempts)
             if (shouldRunTests && !dryRun) {
-                const testResult = await executeAction('run_tests', { workspace_dir: workspaceDir });
-                steps.push(`Tests: ${testResult.ok ? 'passed' : 'failed'}`);
+                const loopResult = await runTestFixLoop({
+                    executeAction,
+                    workspaceDir,
+                    maxAttempts: 3,
+                    callLlm: callLlm || undefined,
+                });
+                steps.push(...loopResult.steps);
+                steps.push(`Tests final: ${loopResult.passed ? 'passed' : 'still failing after fixes'}`);
             }
 
             // Step 6: PR
