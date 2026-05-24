@@ -110,6 +110,16 @@ import {
     applyPerfSuggestions,
 } from './fsd-perf-profiler.js';
 
+import {
+    buildNegotiationActionSummary,
+    buildNegotiationLlmPrompt,
+    parseNegotiationLlmOutput,
+    buildFallbackTerms,
+    type NegotiationType,
+    type NegotiationTerm,
+    type NegotiationRequest,
+} from './fsd-negotiator.js';
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -137,7 +147,9 @@ export type FsdActionType =
     | 'workspace_fsd_arch_review'
     // ── Live debugging + framework adapter (Sprint 16 Phase 5) ───────────────
     | 'workspace_fsd_browser_debug'
-    | 'workspace_fsd_perf_profile';
+    | 'workspace_fsd_perf_profile'
+    // ── Cross-team negotiation (Sprint 16 Phase 6) ────────────────────────────
+    | 'workspace_fsd_negotiate';
 
 export const FSD_ACTION_TYPES = new Set<FsdActionType>([
     'workspace_fsd_ui_component',
@@ -163,6 +175,8 @@ export const FSD_ACTION_TYPES = new Set<FsdActionType>([
     // ── Live debugging + framework adapter (Sprint 16 Phase 5) ───────────────
     'workspace_fsd_browser_debug',
     'workspace_fsd_perf_profile',
+    // ── Cross-team negotiation (Sprint 16 Phase 6) ────────────────────────────
+    'workspace_fsd_negotiate',
 ]);
 
 export function isFsdActionType(at: string): at is FsdActionType {
@@ -1775,6 +1789,119 @@ export async function handleFsdAction(
                 hot_functions: report.hotFunctions,
                 hot_fn_count:  report.hotFunctions.length,
                 summary:       report.summary,
+            });
+        }
+
+        // ====================================================================
+        // workspace_fsd_negotiate
+        // Cross-team negotiation via the human approval dashboard.
+        // The agent frames a structured negotiation request with 2–4 concrete
+        // options. The ApprovalEnforcer (this action is HIGH_RISK) intercepts
+        // execution, creates an approval record whose action_summary carries
+        // the formatted request, and routes it to the dashboard's Negotiate tab.
+        // The human selects an option and approves/rejects; selected_option_id
+        // is returned with the decision.
+        //
+        // payload:
+        //   negotiation_type   — deadline_extension | scope_reduction |
+        //                        resource_request | dependency_unblock |
+        //                        priority_conflict
+        //   title              — short title for the negotiation (required)
+        //   current_situation  — what is blocked / at stake
+        //   agent_proposal?    — preferred resolution (LLM generates if absent)
+        //   justification?     — rationale (LLM generates if absent)
+        //   terms?             — NegotiationTerm[] (LLM generates if absent)
+        //   urgency?           — low | medium | high (default: medium)
+        //   constraints?       — constraints fed to LLM prompt
+        //   team_context?      — team context fed to LLM prompt
+        //   original_deadline? — original deadline string (informational)
+        // ====================================================================
+        case 'workspace_fsd_negotiate': {
+            const VALID_TYPES: NegotiationType[] = [
+                'deadline_extension', 'scope_reduction', 'resource_request',
+                'dependency_unblock', 'priority_conflict',
+            ];
+            const typeRaw = str(payload['negotiation_type']);
+            const type: NegotiationType = (VALID_TYPES as string[]).includes(typeRaw)
+                ? (typeRaw as NegotiationType)
+                : 'priority_conflict';
+
+            const title            = str(payload['title'], 'Cross-team negotiation');
+            const currentSituation = str(payload['current_situation']);
+            const constraints      = str(payload['constraints']);
+            const teamContext      = str(payload['team_context']);
+            const originalDeadline = str(payload['original_deadline']);
+            const urgencyRaw       = str(payload['urgency']);
+            const urgency          = (['low', 'medium', 'high'] as const).includes(urgencyRaw as 'low')
+                ? (urgencyRaw as 'low' | 'medium' | 'high')
+                : 'medium';
+
+            // ── Parse inline terms from payload ───────────────────────────
+            const termsRaw = Array.isArray(payload['terms']) ? (payload['terms'] as unknown[]) : [];
+            let terms: NegotiationTerm[] = termsRaw
+                .filter((t): t is Record<string, unknown> =>
+                    typeof t === 'object' && t !== null
+                    && (typeof (t as Record<string, unknown>)['optionId'] === 'string'
+                        || typeof (t as Record<string, unknown>)['option_id'] === 'string'),
+                )
+                .map((t) => ({
+                    optionId:    str(t['optionId'] ?? t['option_id']),
+                    description: str(t['description']),
+                    impact:      str(t['impact']),
+                }))
+                .filter((t) => t.optionId.length > 0)
+                .slice(0, 4);
+
+            let agentProposal = str(payload['agent_proposal']);
+            let justification = str(payload['justification']);
+
+            // ── LLM generation when terms or proposal are missing ─────────
+            if ((terms.length === 0 || !agentProposal) && callLlm) {
+                const prompt = buildNegotiationLlmPrompt({
+                    type, title, currentSituation, constraints, teamContext,
+                });
+                const llmRaw = await callLlmSafe(
+                    callLlm,
+                    prompt,
+                    'You are an expert engineering lead facilitating negotiations. Be specific, constructive, and practical.',
+                );
+                const parsed = parseNegotiationLlmOutput(llmRaw);
+                if (!agentProposal) agentProposal = parsed.agentProposal;
+                if (!justification) justification = parsed.justification;
+                if (terms.length === 0) terms = parsed.terms;
+            }
+
+            // ── Fallback terms so there are always options ────────────────
+            if (terms.length === 0) {
+                terms = buildFallbackTerms(type);
+            }
+
+            const request: NegotiationRequest = {
+                type,
+                title,
+                currentSituation,
+                agentProposal:    agentProposal || 'See options below for possible resolutions.',
+                justification:    justification || 'Human-level decision required to unblock progress.',
+                terms,
+                urgency,
+                ...(originalDeadline ? { originalDeadline } : {}),
+            };
+
+            // ── Build the action_summary that the dashboard will display ──
+            const actionSummary = buildNegotiationActionSummary(request);
+
+            return safeJson({
+                negotiation_type:  type,
+                title,
+                urgency,
+                current_situation: currentSituation,
+                agent_proposal:    request.agentProposal,
+                justification:     request.justification,
+                terms,
+                term_count:        terms.length,
+                action_summary:    actionSummary,
+                status:            'pending_human_decision',
+                summary:           `Negotiation request submitted: "${title}" (${urgency} urgency, ${terms.length} option(s) for human review).`,
             });
         }
     }

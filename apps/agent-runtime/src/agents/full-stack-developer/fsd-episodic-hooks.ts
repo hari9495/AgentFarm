@@ -134,6 +134,14 @@ export function buildFsdEpisodicPattern(
         return `fsd:perf_profile:${oc}`;
     }
 
+    // ── Cross-team negotiation (Sprint 16 Phase 6) ─────────────────────────
+    if (at === 'workspace_fsd_negotiate') {
+        if (oc === 'fail') return 'fsd:negotiate:fail';
+        // The action records "pending_human_decision" — outcome is decided later
+        // via the approval record, but we track submission as the episodic event
+        return 'fsd:negotiate:submitted';
+    }
+
     // Fallback — still namespaced under "fsd:" so it is easy to query
     return `fsd:${at}:${oc}`;
 }
@@ -328,6 +336,18 @@ export function buildFsdEpisodicSummary(
     }
     if (pattern.startsWith('fsd:perf_profile'))
         return `CPU profile ${oc} (score ${result.executionPayload['score'] ?? '?'}/100): ${taskLabel}`;
+
+    // ── Cross-team negotiation (Sprint 16 Phase 6) ─────────────────────────
+
+    if (pattern === 'fsd:negotiate:fail')
+        return `Negotiation request failed to submit: ${taskLabel}`;
+
+    if (pattern === 'fsd:negotiate:submitted') {
+        const type      = result.executionPayload['negotiation_type'] ?? 'unknown';
+        const urgency   = result.executionPayload['urgency'] ?? 'medium';
+        const termCount = result.executionPayload['term_count'] ?? 0;
+        return `Negotiation request submitted (${type as string}, ${urgency as string} urgency, ${termCount as number} option(s)): ${taskLabel}`;
+    }
 
     // Fallback
     return `Full-stack action "${at}" completed with status "${oc}": ${taskLabel}`;

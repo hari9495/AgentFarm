@@ -154,7 +154,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
     const [batchCards, setBatchCards] = useState<ApprovalBatchCard[]>([]);
     const [batchBusy, setBatchBusy] = useState(false);
     const [selectedApprovalId, setSelectedApprovalId] = useState<string | null>(focusedApprovalId ?? null);
-    const [drawerTab, setDrawerTab] = useState<'summary' | 'evidence'>('summary');
+    const [drawerTab, setDrawerTab] = useState<'summary' | 'evidence' | 'negotiate'>('summary');
     const [evidenceBusy, setEvidenceBusy] = useState(false);
     const [evidenceData, setEvidenceData] = useState<{
         approval_id: string;
@@ -1149,6 +1149,24 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                             >
                                 Evidence
                             </button>
+                            {selectedApproval.gate_type === 'negotiation' && (
+                                <button
+                                    type="button"
+                                    onClick={() => setDrawerTab('negotiate')}
+                                    style={{
+                                        padding: '0.5rem 0.75rem',
+                                        background: drawerTab === 'negotiate' ? '#f0f9ff' : 'transparent',
+                                        border: 'none',
+                                        borderBottom: drawerTab === 'negotiate' ? '2px solid #0284c7' : 'none',
+                                        cursor: 'pointer',
+                                        fontSize: '0.85rem',
+                                        fontWeight: drawerTab === 'negotiate' ? 'bold' : 'normal',
+                                        color: '#0369a1',
+                                    }}
+                                >
+                                    Negotiate
+                                </button>
+                            )}
                         </div>
 
                         <div style={{ overflowY: 'auto', display: 'grid', gap: '0.65rem' }}>
@@ -1235,6 +1253,158 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                     )}
                                 </>
                             )}
+
+                            {drawerTab === 'negotiate' && (() => {
+                                const busy = busyByApproval[selectedApproval.approval_id] === true;
+                                const negotiationOptions = parseWhatIfOptions(selectedApproval.action_summary);
+                                const selectedOptionValue =
+                                    selectedOptionByApproval[selectedApproval.approval_id]
+                                    ?? selectedApproval.selected_option_id
+                                    ?? '';
+
+                                // Parse the full action_summary for display (lines before "Option N")
+                                const summaryLines = selectedApproval.action_summary
+                                    .split(/\r?\n/)
+                                    .filter((line) => !line.match(/^Option\s+\d+\s*\(/i));
+
+                                return (
+                                    <div style={{ display: 'grid', gap: '0.75rem' }}>
+                                        {/* Context block */}
+                                        <div style={{
+                                            background: '#f0f9ff',
+                                            border: '1px solid #bae6fd',
+                                            borderRadius: '0.35rem',
+                                            padding: '0.75rem',
+                                            display: 'grid',
+                                            gap: '0.35rem',
+                                        }}>
+                                            <strong style={{ color: '#0369a1', fontSize: '0.85rem' }}>Negotiation Request</strong>
+                                            <pre style={{
+                                                margin: 0,
+                                                fontSize: '0.78rem',
+                                                color: '#1e3a5f',
+                                                whiteSpace: 'pre-wrap',
+                                                wordBreak: 'break-word',
+                                                fontFamily: 'inherit',
+                                                lineHeight: 1.55,
+                                            }}>
+                                                {summaryLines.join('\n').trim()}
+                                            </pre>
+                                        </div>
+
+                                        {/* Options */}
+                                        {negotiationOptions.length > 0 ? (
+                                            <div style={{ display: 'grid', gap: '0.45rem' }}>
+                                                <strong style={{ fontSize: '0.85rem' }}>Select an Option</strong>
+                                                {negotiationOptions.map((option) => {
+                                                    const isSelected = selectedOptionValue === option.optionId;
+                                                    return (
+                                                        <label
+                                                            key={option.optionId}
+                                                            style={{
+                                                                display: 'flex',
+                                                                alignItems: 'flex-start',
+                                                                gap: '0.5rem',
+                                                                padding: '0.55rem 0.7rem',
+                                                                borderRadius: '0.3rem',
+                                                                border: `1px solid ${isSelected ? '#0284c7' : '#e2e8f0'}`,
+                                                                background: isSelected ? '#e0f2fe' : '#f8fafc',
+                                                                cursor: selectedApproval.decision_status !== 'pending' ? 'default' : 'pointer',
+                                                            }}
+                                                        >
+                                                            <input
+                                                                type="radio"
+                                                                name={`negotiate-option-${selectedApproval.approval_id}`}
+                                                                value={option.optionId}
+                                                                checked={isSelected}
+                                                                disabled={selectedApproval.decision_status !== 'pending'}
+                                                                onChange={() => {
+                                                                    setSelectedOptionByApproval((prev) => ({
+                                                                        ...prev,
+                                                                        [selectedApproval.approval_id]: option.optionId,
+                                                                    }));
+                                                                }}
+                                                                style={{ marginTop: '0.15rem', flexShrink: 0 }}
+                                                            />
+                                                            <div style={{ display: 'grid', gap: '0.15rem' }}>
+                                                                <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#0c4a6e' }}>
+                                                                    {option.optionId}
+                                                                </span>
+                                                                <span style={{ fontSize: '0.78rem', color: '#44403c' }}>{option.summary}</span>
+                                                            </div>
+                                                        </label>
+                                                    );
+                                                })}
+                                            </div>
+                                        ) : (
+                                            <p style={{ fontSize: '0.82rem', color: '#57534e', fontStyle: 'italic' }}>
+                                                No options found in the action summary.
+                                            </p>
+                                        )}
+
+                                        {/* Decision buttons — only when still pending */}
+                                        {selectedApproval.decision_status === 'pending' && (
+                                            <div style={{ display: 'grid', gap: '0.4rem' }}>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Decision reason (optional)"
+                                                    value={reasonByApproval[selectedApproval.approval_id] ?? ''}
+                                                    onChange={(event) => {
+                                                        const value = event.target.value;
+                                                        setReasonByApproval((prev) => ({
+                                                            ...prev,
+                                                            [selectedApproval.approval_id]: value,
+                                                        }));
+                                                    }}
+                                                    className="approval-input"
+                                                    style={{ minWidth: 0, width: '100%' }}
+                                                />
+                                                <div style={{ display: 'flex', gap: '0.4rem' }}>
+                                                    <button
+                                                        type="button"
+                                                        disabled={busy || !selectedOptionValue}
+                                                        onClick={() => void submitDecision(selectedApproval, 'approved')}
+                                                        className="secondary-action"
+                                                        title={!selectedOptionValue ? 'Select an option first' : 'Accept selected option'}
+                                                    >
+                                                        Accept Option
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        disabled={busy}
+                                                        onClick={() => void submitDecision(selectedApproval, 'rejected')}
+                                                        className="danger-action"
+                                                    >
+                                                        Reject All
+                                                    </button>
+                                                </div>
+                                                {!selectedOptionValue && (
+                                                    <p style={{ fontSize: '0.75rem', color: '#b45309', margin: 0 }}>
+                                                        Select an option above before clicking &ldquo;Accept Option&rdquo;.
+                                                    </p>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {/* Already-decided state */}
+                                        {selectedApproval.decision_status !== 'pending' && (
+                                            <div style={{
+                                                padding: '0.55rem 0.7rem',
+                                                borderRadius: '0.3rem',
+                                                background: selectedApproval.decision_status === 'approved' ? '#f0fdf4' : '#fef2f2',
+                                                border: `1px solid ${selectedApproval.decision_status === 'approved' ? '#86efac' : '#fca5a5'}`,
+                                                fontSize: '0.82rem',
+                                                color: selectedApproval.decision_status === 'approved' ? '#166534' : '#991b1b',
+                                            }}>
+                                                Decision: <strong>{selectedApproval.decision_status}</strong>
+                                                {selectedApproval.selected_option_id && (
+                                                    <> — selected option: <strong>{selectedApproval.selected_option_id}</strong></>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })()}
 
                             {drawerTab === 'evidence' && (
                                 <>

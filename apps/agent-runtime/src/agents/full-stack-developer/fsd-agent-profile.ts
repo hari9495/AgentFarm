@@ -89,6 +89,8 @@ export const FSD_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = [
     // ── Live debugging + framework adapter (Sprint 16 Phase 5) ───────────────
     'workspace_fsd_browser_debug',
     'workspace_fsd_perf_profile',
+    // ── Cross-team negotiation (Sprint 16 Phase 6) ────────────────────────────
+    'workspace_fsd_negotiate',
 ];
 
 // ---------------------------------------------------------------------------
@@ -115,6 +117,7 @@ export const FSD_ROLE_HIGH_RISK_ACTIONS: ReadonlyArray<string> = [
     'workspace_migration_generate',
     'workspace_fsd_deploy_preview',
     'workspace_fsd_fullstack_feature',
+    'workspace_fsd_negotiate',
     'git_push',
 ] as const;
 
