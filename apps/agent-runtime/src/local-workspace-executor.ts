@@ -3411,6 +3411,77 @@ function buildTwLlmCallerFn(): ((prompt: string, systemPrompt?: string) => Promi
     };
 }
 
+/**
+ * Build a LlmCodeGenFn backed by the same AF_MODEL_PROVIDER env var used by
+ * the Technical Writer and other LLM-aware actions.
+ *
+ * The returned function is called by executeAutonomousLoop when tests fail and
+ * no pre-built fix_attempts step is available.  It receives the failure output
+ * as part of the prompt, reads the current file contents, and asks the LLM to
+ * generate minimal code_edit_patch steps to make the tests pass.
+ *
+ * Returns undefined when no LLM provider is configured — the loop then
+ * surfaces the test failure directly rather than attempting live re-planning.
+ */
+function buildLlmCodeGenFn(): LlmCodeGenFn | undefined {
+    const llm = buildTwLlmCallerFn();
+    if (!llm) return undefined;
+
+    return async (taskPrompt: string, fileContents: Record<string, string>, targetFiles: string[]): Promise<AutonomousStep[]> => {
+        const fileContext = Object.entries(fileContents)
+            .map(([p, c]) => `=== ${p} ===\n${c.slice(0, 2000)}`)
+            .join('\n\n');
+
+        const userMsg = [
+            `Task: ${taskPrompt.slice(0, 1200)}`,
+            targetFiles.length > 0 ? `Files to edit: ${targetFiles.join(', ')}` : '',
+            fileContext ? `\nCurrent file contents:\n${fileContext}` : '',
+            '\nGenerate a JSON array of implementation steps to complete the task.',
+        ].filter(Boolean).join('\n');
+
+        const systemMsg = [
+            'You are an expert software developer. Produce ONLY a valid JSON array. No prose, no markdown fences.',
+            'Each step: { "description": string, "actions": Action[] }',
+            'Action shapes — use ONLY these:',
+            '  { "action": "code_edit_patch", "file_path": "relative/path", "old_text": "<exact text to replace>", "new_text": "<replacement>" }',
+            '  { "action": "code_edit", "file_path": "relative/path", "content": "<full file content>" }',
+            '  { "action": "run_tests", "command": "<optional override>" }',
+            'Rules:',
+            '  - code_edit_patch: old_text must be copied EXACTLY from the file — any mismatch causes failure.',
+            '  - Keep old_text short (1–5 lines). Prefer multiple small patches over one large one.',
+            '  - Use code_edit only for new files or complete rewrites.',
+            '  - Do NOT include explanations outside the JSON array.',
+            'Return ONLY the JSON array starting with [ and ending with ].',
+        ].join('\n');
+
+        try {
+            const raw = await llm(userMsg, systemMsg);
+            const s = raw.indexOf('[');
+            const e = raw.lastIndexOf(']');
+            if (s === -1 || e === -1) return [];
+            const parsed = JSON.parse(raw.slice(s, e + 1)) as unknown[];
+            if (!Array.isArray(parsed)) return [];
+            return parsed
+                .filter((step): step is Record<string, unknown> => typeof step === 'object' && step !== null)
+                .map((step) => ({
+                    description: typeof step['description'] === 'string' ? step['description'] : undefined,
+                    actions: (Array.isArray(step['actions']) ? step['actions'] : [])
+                        .filter((a): a is Record<string, unknown> => typeof a === 'object' && a !== null)
+                        .map((a) => ({
+                            action:     typeof a['action']    === 'string' ? a['action']    : 'code_edit',
+                            file_path:  typeof a['file_path'] === 'string' ? a['file_path'] : '',
+                            content:    typeof a['content']   === 'string' ? a['content']   : undefined,
+                            old_text:   typeof a['old_text']  === 'string' ? a['old_text']  : undefined,
+                            new_text:   typeof a['new_text']  === 'string' ? a['new_text']  : undefined,
+                            command:    typeof a['command']   === 'string' ? a['command']   : undefined,
+                        })),
+                })) as AutonomousStep[];
+        } catch {
+            return [];
+        }
+    };
+}
+
 export async function executeLocalWorkspaceAction(input: {
     tenantId: string;
     botId: string;
@@ -9493,6 +9564,10 @@ export async function executeLocalWorkspaceAction(input: {
                 ? Math.max(1, Math.min(10, Math.floor(payload['max_attempts'])))
                 : 3;
 
+            // Build a live-replan function so the loop can call the LLM with the
+            // actual test failure output instead of running out of pre-baked fix_attempts.
+            const issueFixCodeGenFn = buildLlmCodeGenFn();
+
             const fixLoopPayload: AutonomousLoopPayload = {
                 test_command: testCmdForFix,
                 test_commands: testCommands.length > 0 ? testCommands : undefined,
@@ -9500,6 +9575,12 @@ export async function executeLocalWorkspaceAction(input: {
                 max_attempts: maxAttemptsForFix,
                 initial_plan: initialPlan,
                 fix_attempts: fixAttempts,
+                // Wire LLM re-planning: when tests fail and pre-built fix_attempts are
+                // exhausted, the loop calls issueFixCodeGenFn with the failure output
+                // to generate new code edits dynamically (Gap 2 fix).
+                llmCodeGenFn: issueFixCodeGenFn,
+                targetFiles: [],          // executor will infer from changed git files
+                prompt: `Fix GitHub issue #${issueNumber}: ${issueTitle}\n${issueBody.slice(0, 400)}`,
             };
 
             const fixResult = await executeAutonomousLoop(workspaceDir, fixLoopPayload);

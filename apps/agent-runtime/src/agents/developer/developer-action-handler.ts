@@ -200,17 +200,26 @@ export async function handleDeveloperAction(
                 });
             }
 
-            // No issue number — use autonomous plan execute with the description
-            const result = await executeAction('workspace_autonomous_plan_execute', {
-                prompt:       description,
-                target_files: payload['target_files'],
-                dry_run:      dryRun,
+            // No issue number — delegate to workspace_subagent_spawn which accepts a
+            // natural-language prompt natively: it reads the target files, calls the
+            // injected LLM code-gen function to generate real code_edit steps, runs
+            // tests to verify, and retries with LLM-generated fixes on failure.
+            // (workspace_autonomous_plan_execute requires a pre-built plan[] array and
+            // would return an error here — this was the original bug.)
+            const result = await executeAction('workspace_subagent_spawn', {
+                prompt:        description,
+                target_files:  payload['target_files'],
+                test_command:  str(payload['test_command']),
+                build_command: str(payload['build_command']),
+                max_attempts:  typeof payload['max_attempts'] === 'number' ? payload['max_attempts'] : 3,
+                dry_run:       dryRun,
             });
             const data = parseSubOutput(result);
             return safeJson({
                 ok:            result.ok,
-                summary:       data['summary'] ?? (result.ok ? 'Feature implemented.' : 'Implementation failed.'),
+                summary:       data['summary'] ?? data['specialist_brief'] ?? (result.ok ? 'Feature implemented.' : 'Implementation failed.'),
                 files_changed: data['files_changed'] ?? [],
+                plan_source:   data['plan_source'] ?? 'subagent',
                 dry_run:       dryRun,
             });
         }

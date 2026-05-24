@@ -382,6 +382,58 @@ function createCodeGenFn(env: NodeJS.ProcessEnv = process.env): LlmCodeGenFn | u
     const provider = (env['AF_MODEL_PROVIDER'] ?? env['AGENTFARM_MODEL_PROVIDER'] ?? 'agentfarm').toLowerCase().trim();
     if (provider === 'agentfarm' || provider === 'mock') return undefined;
 
+    // ── Anthropic path — uses the messages API directly ──────────────────────
+    if (provider === 'anthropic') {
+        const apiKey = env['AF_ANTHROPIC_API_KEY'] ?? env['AGENTFARM_ANTHROPIC_API_KEY'] ?? '';
+        const model  = env['AF_ANTHROPIC_MODEL']   ?? env['AGENTFARM_ANTHROPIC_MODEL']   ?? 'claude-3-5-haiku-latest';
+        if (!apiKey || !apiKey.trim()) return undefined;
+
+        return async (taskPrompt, fileContents, targetFiles) => {
+            const fileContext = Object.entries(fileContents)
+                .map(([p, c]) => `=== ${p} ===\n${c.slice(0, 3000)}`)
+                .join('\n\n');
+            const systemMsg = [
+                'You are an expert software developer. Produce ONLY a valid JSON array. No prose, no markdown.',
+                'Each step: { "description": string, "actions": Action[] }',
+                'Action shapes: code_edit_patch (old_text must be exact), code_edit, run_tests, run_build.',
+                'Return ONLY the JSON array starting with [ and ending with ].',
+            ].join('\n');
+            const userMsg = [
+                `Task: ${taskPrompt.slice(0, 1200)}`,
+                targetFiles.length > 0 ? `Target files: ${targetFiles.join(', ')}` : '',
+                fileContext ? `\nCurrent code:\n${fileContext}` : '',
+                '\nReturn a JSON array of implementation steps.',
+            ].filter(Boolean).join('\n');
+            try {
+                const response = await fetch('https://api.anthropic.com/v1/messages', {
+                    method: 'POST',
+                    headers: {
+                        'content-type':       'application/json',
+                        'x-api-key':          apiKey,
+                        'anthropic-version':  '2023-06-01',
+                    },
+                    body: JSON.stringify({
+                        model,
+                        max_tokens: 4096,
+                        system:    systemMsg,
+                        messages:  [{ role: 'user', content: userMsg }],
+                    }),
+                    signal: AbortSignal.timeout(120_000),
+                });
+                if (!response.ok) return [];
+                const parsed = await response.json() as { content?: Array<{ type: string; text?: string }> };
+                const text = parsed.content?.find((b) => b.type === 'text')?.text ?? '';
+                const s = text.indexOf('['); const e = text.lastIndexOf(']');
+                if (s === -1 || e === -1) return [];
+                let raw: unknown = JSON.parse(text.slice(s, e + 1));
+                if (!Array.isArray(raw)) return [];
+                return (raw as Record<string, unknown>[]).filter(
+                    (step) => step !== null && typeof step === 'object' && Array.isArray(step['actions']),
+                ) as AutonomousStep[];
+            } catch { return []; }
+        };
+    }
+
     let apiKey: string;
     let baseUrl: string;
     let model: string;
@@ -423,6 +475,7 @@ function createCodeGenFn(env: NodeJS.ProcessEnv = process.env): LlmCodeGenFn | u
             'Where Action is one of:',
             '  { "action": "code_edit", "file_path": string, "content": string }',
             '  { "action": "code_edit_patch", "file_path": string, "old_text": string, "new_text": string }',
+            '    CRITICAL: old_text must be copied EXACTLY from the file — whitespace-sensitive.',
             '  { "action": "run_tests", "command"?: string }',
             '  { "action": "run_build", "command"?: string }',
             'Use code_edit_patch for targeted edits to existing files.',
