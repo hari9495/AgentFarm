@@ -11,10 +11,16 @@
 //   • Architectural decisions that were already made
 //   • The current sprint goal and blockers
 //   • Open questions from previous spec analyses
+//   • Org/team ownership and political context (Gap 3)
+//   • Strategic roadmap milestones (Gap 2)
 //
 // How it updates:
 //   workspace_fsd_project_context_sync  — full rescan (reads package.json,
 //     README, ADR files, episodic memory; LLM synthesises into context)
+//   workspace_fsd_org_context_sync      — syncs org profile from CODEOWNERS +
+//     GitHub teams + Jira/Linear
+//   workspace_fsd_strategic_plan        — creates/updates the roadmap
+//   workspace_fsd_roadmap_tick          — advances the autonomous roadmap
 //   workspace_fsd_arch_review           — appends new ADR as a key decision
 //   workspace_fsd_scaffold_project      — sets the initial tech stack
 //   workspace_fsd_standup_report        — updates current sprint state
@@ -22,6 +28,9 @@
 //
 // Pure functions — no side-effects, easy to unit-test.
 // ============================================================================
+
+import type { OrgProfile } from './fsd-org-profile.js';
+import type { ProjectRoadmap } from './fsd-strategic-planner.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -64,6 +73,10 @@ export interface ProjectContext {
     openQuestions:  string[];
     lastUpdatedAt:  string;
     contextVersion: number;
+    /** Gap 3 — Org/political context (teams, ownership, frozen paths, mandates) */
+    orgProfile?:    OrgProfile;
+    /** Gap 2 — Strategic roadmap for long-horizon project execution */
+    roadmap?:       ProjectRoadmap;
 }
 
 // ---------------------------------------------------------------------------
@@ -134,6 +147,22 @@ export function formatContextForLlm(ctx: ProjectContext): string {
 
     if (ctx.teamContext)
         lines.push(`Team: ${ctx.teamContext.slice(0, 150)}`);
+
+    // Gap 3 — Org context inline block
+    if (ctx.orgProfile) {
+        lines.push(`Org: ${ctx.orgProfile.orgName}`);
+        if (ctx.orgProfile.techMandates.length > 0)
+            lines.push(`Tech mandates: ${ctx.orgProfile.techMandates.slice(0, 3).join(' | ')}`);
+        if (ctx.orgProfile.frozenPaths.length > 0)
+            lines.push(`Frozen paths: ${ctx.orgProfile.frozenPaths.slice(0, 3).join(', ')}`);
+    }
+
+    // Gap 2 — Roadmap summary
+    if (ctx.roadmap) {
+        const done  = ctx.roadmap.milestones.filter((m) => m.status === 'done').length;
+        const total = ctx.roadmap.milestones.length;
+        lines.push(`Roadmap: ${ctx.roadmap.goal} (${done}/${total} milestones done, tick #${ctx.roadmap.tickCount})`);
+    }
 
     return lines.join('\n');
 }

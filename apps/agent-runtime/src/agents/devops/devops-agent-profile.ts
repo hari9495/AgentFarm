@@ -97,6 +97,14 @@ export const DEVOPS_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = [
     // Incident & reporting
     'workspace_devops_incident_triage',
     'workspace_devops_standup_report',
+    // ── Gap 4 — Cloud & GitHub org bootstrap ─────────────────────────────────
+    'workspace_bootstrap_aws_org',
+    'workspace_bootstrap_github_org',
+    'workspace_bootstrap_k8s_cluster',
+    // ── Gap 6 — Hardware / network physical debugging ────────────────────────
+    'workspace_infra_ipmi_console',
+    'workspace_infra_netconf_query',
+    'workspace_infra_remote_diag',
 ];
 
 // ---------------------------------------------------------------------------

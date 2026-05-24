@@ -133,6 +133,23 @@ import {
     type ProjectContext,
 } from './fsd-project-context.js';
 
+import {
+    buildOrgContextSyncPrompt,
+    parseOrgProfileFromLlm,
+    formatOrgProfileForLlm,
+} from './fsd-org-profile.js';
+
+import {
+    buildStrategicPlanPrompt,
+    parseRoadmapFromLlm,
+    computeTickResult,
+    updateMilestoneProgress,
+    selectNextMilestone,
+    selectNextTask,
+    formatRoadmapSummary,
+    type ProjectRoadmap,
+} from './fsd-strategic-planner.js';
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -164,7 +181,13 @@ export type FsdActionType =
     // ── Cross-team negotiation (Sprint 16 Phase 6) ────────────────────────────
     | 'workspace_fsd_negotiate'
     // ── Long-term project memory (Sprint 16 Phase 7) ──────────────────────────
-    | 'workspace_fsd_project_context_sync';
+    | 'workspace_fsd_project_context_sync'
+    // ── Gap 3 — Org/political context ─────────────────────────────────────────
+    | 'workspace_fsd_org_context_sync'
+    // ── Gap 2 — Self-directed long-horizon projects ───────────────────────────
+    | 'workspace_fsd_strategic_plan'
+    | 'workspace_fsd_roadmap_tick'
+    | 'workspace_fsd_roadmap_status';
 
 export const FSD_ACTION_TYPES = new Set<FsdActionType>([
     'workspace_fsd_ui_component',
@@ -194,6 +217,12 @@ export const FSD_ACTION_TYPES = new Set<FsdActionType>([
     'workspace_fsd_negotiate',
     // ── Long-term project memory (Sprint 16 Phase 7) ──────────────────────────
     'workspace_fsd_project_context_sync',
+    // ── Gap 3 — Org/political context ─────────────────────────────────────────
+    'workspace_fsd_org_context_sync',
+    // ── Gap 2 — Self-directed long-horizon projects ───────────────────────────
+    'workspace_fsd_strategic_plan',
+    'workspace_fsd_roadmap_tick',
+    'workspace_fsd_roadmap_status',
 ]);
 
 export function isFsdActionType(at: string): at is FsdActionType {
@@ -2087,6 +2116,287 @@ export async function handleFsdAction(
                 sprint_goal:     syncedCtx.currentSprint?.goal ?? null,
                 context_file:    CONTEXT_FILE,
                 summary: `Project context synced: "${syncedCtx.projectName}" — ${techEntries} tech stack entr${techEntries === 1 ? 'y' : 'ies'}, ${syncedCtx.keyDecisions.length} key decision(s).`,
+            });
+        }
+
+        // ====================================================================
+        // workspace_fsd_org_context_sync  (Gap 3 — Org/political context)
+        // Synthesises an OrgProfile from CODEOWNERS, GitHub teams, and
+        // Jira/Linear project data.  Persists to `.agentfarm/org-profile.json`
+        // and injects into every subsequent LLM call.
+        //
+        // payload:
+        //   codeowners_path?  — path to CODEOWNERS (default: .github/CODEOWNERS)
+        //   github_teams?     — JSON string of GitHub teams list
+        //   jira_projects?    — raw Jira project list text
+        //   linear_teams?     — raw Linear team list text
+        //   org_name?         — org display name
+        //   force?            — true to reset existing profile
+        // ====================================================================
+        case 'workspace_fsd_org_context_sync': {
+            const codeownersPath = str(payload['codeowners_path'], '.github/CODEOWNERS');
+            const orgName        = str(payload['org_name'], projectCtx?.projectName ?? 'My Organisation');
+            const force          = payload['force'] === true;
+
+            const ORG_FILE = '.agentfarm/org-profile.json';
+
+            // Load existing org profile unless force-reset
+            let existingOrgProfile = undefined;
+            if (!force) {
+                const existingRead = await executeAction('workspace_read_file', { file_path: ORG_FILE });
+                if (existingRead.ok && existingRead.output) {
+                    try { existingOrgProfile = JSON.parse(existingRead.output); } catch { /* ignore */ }
+                }
+            }
+
+            // Read CODEOWNERS
+            const coResult  = await executeAction('workspace_read_file', { file_path: codeownersPath });
+            const codeownersContent = coResult.ok ? coResult.output : '';
+
+            const githubTeams  = str(payload['github_teams']);
+            const jiraProjects = str(payload['jira_projects']);
+            const linearTeams  = str(payload['linear_teams']);
+
+            let orgProfile = existingOrgProfile;
+
+            if (callLlmBase) {
+                const syncPrompt = buildOrgContextSyncPrompt({
+                    codeownersContent,
+                    githubTeams:  githubTeams  || 'Not provided',
+                    jiraProjects: jiraProjects || 'Not provided',
+                    linearTeams:  linearTeams  || 'Not provided',
+                    existingProfile: existingOrgProfile,
+                });
+                const llmRaw = await callLlmSafe(
+                    callLlmBase,
+                    syncPrompt,
+                    'You are a senior engineering manager building an org context profile. Return valid JSON only.',
+                );
+                orgProfile = parseOrgProfileFromLlm(llmRaw, orgName);
+            }
+
+            if (!orgProfile) {
+                const { createEmptyOrgProfile } = await import('./fsd-org-profile.js');
+                orgProfile = createEmptyOrgProfile(orgName);
+            }
+
+            // Persist org profile
+            await executeAction('workspace_write_file', {
+                file_path: ORG_FILE,
+                content:   JSON.stringify(orgProfile, null, 2),
+            });
+
+            // Also store in project context
+            await saveProjectCtx({ ...(projectCtx ?? createEmptyProjectContext()), orgProfile });
+
+            return safeJson({
+                org_name:       orgProfile.orgName,
+                team_count:     orgProfile.teams.length,
+                frozen_paths:   orgProfile.frozenPaths.length,
+                tech_mandates:  orgProfile.techMandates.length,
+                org_file:       ORG_FILE,
+                formatted:      formatOrgProfileForLlm(orgProfile),
+                summary: `Org context synced: "${orgProfile.orgName}" — ${orgProfile.teams.length} team(s), ${orgProfile.frozenPaths.length} frozen path(s)`,
+            });
+        }
+
+        // ====================================================================
+        // workspace_fsd_strategic_plan  (Gap 2 — Self-directed long projects)
+        // Creates or updates a milestone-based project roadmap that the agent
+        // can execute autonomously via `workspace_fsd_roadmap_tick`.
+        //
+        // payload:
+        //   goal              — one-sentence project goal (required on first call)
+        //   tech_stack?       — tech stack context for the LLM
+        //   constraints?      — hard constraints (budget, team size, etc.)
+        //   timeframe_weeks?  — target timeframe in weeks
+        //   force?            — true to discard the existing roadmap
+        // ====================================================================
+        case 'workspace_fsd_strategic_plan': {
+            const goal             = str(payload['goal'], projectCtx?.currentSprint?.goal ?? 'Build the project');
+            const techStack        = str(payload['tech_stack']);
+            const constraints      = str(payload['constraints']);
+            const timeframeWeeks   = typeof payload['timeframe_weeks'] === 'number' ? payload['timeframe_weeks'] : undefined;
+            const force            = payload['force'] === true;
+
+            const ROADMAP_FILE = '.agentfarm/roadmap.json';
+
+            // Load existing roadmap
+            let existingRoadmap: ProjectRoadmap | undefined;
+            if (!force) {
+                const rmRead = await executeAction('workspace_read_file', { file_path: ROADMAP_FILE });
+                if (rmRead.ok && rmRead.output) {
+                    try { existingRoadmap = JSON.parse(rmRead.output) as ProjectRoadmap; } catch { /* ignore */ }
+                }
+            }
+
+            const projectName = projectCtx?.projectName ?? 'My Project';
+
+            let roadmap: ProjectRoadmap;
+            if (callLlmBase) {
+                const planPrompt = buildStrategicPlanPrompt({
+                    projectName,
+                    goal,
+                    techStack:       techStack       || (projectCtx?.techStack ? Object.values(projectCtx.techStack).flat().join(', ') : undefined),
+                    constraints:     constraints     || undefined,
+                    timeframeWeeks:  timeframeWeeks  || undefined,
+                    existingRoadmap: existingRoadmap || undefined,
+                });
+                const llmRaw = await callLlmSafe(
+                    callLlmBase,
+                    planPrompt,
+                    'You are a principal engineer planning a software project. Return valid JSON only.',
+                );
+                roadmap = parseRoadmapFromLlm(llmRaw, projectName, goal);
+            } else {
+                roadmap = existingRoadmap ?? {
+                    projectName,
+                    goal,
+                    milestones: [],
+                    lastTickAt: null,
+                    tickCount:  0,
+                    createdAt:  new Date().toISOString(),
+                    updatedAt:  new Date().toISOString(),
+                };
+            }
+
+            await executeAction('workspace_write_file', {
+                file_path: ROADMAP_FILE,
+                content:   JSON.stringify(roadmap, null, 2),
+            });
+
+            // Store roadmap in project context
+            await saveProjectCtx({ ...(projectCtx ?? createEmptyProjectContext(projectName)), roadmap });
+
+            return safeJson({
+                project_name:    projectName,
+                goal:            roadmap.goal,
+                milestone_count: roadmap.milestones.length,
+                roadmap_file:    ROADMAP_FILE,
+                milestones:      roadmap.milestones.map((m) => ({
+                    id: m.id, title: m.title, status: m.status, task_count: m.tasks.length,
+                })),
+                summary: `Strategic plan created: "${roadmap.goal}" — ${roadmap.milestones.length} milestone(s)`,
+            });
+        }
+
+        // ====================================================================
+        // workspace_fsd_roadmap_tick  (Gap 2 — autonomous execution tick)
+        // Advances the roadmap by one tick: picks the next milestone and task,
+        // optionally executes the action, and persists progress.
+        //
+        // payload:
+        //   execute?          — true to actually run the focused task action
+        //   completed_task?   — manually mark a task as done before ticking
+        //   milestone_id?     — override which milestone to tick
+        // ====================================================================
+        case 'workspace_fsd_roadmap_tick': {
+            const ROADMAP_FILE = '.agentfarm/roadmap.json';
+            const execute       = payload['execute'] === true;
+            const completedTask = str(payload['completed_task']);
+            const milestoneIdOverride = str(payload['milestone_id']);
+
+            // Load roadmap
+            let roadmap: ProjectRoadmap | null = null;
+            const rmRead = await executeAction('workspace_read_file', { file_path: ROADMAP_FILE });
+            if (rmRead.ok && rmRead.output) {
+                try { roadmap = JSON.parse(rmRead.output) as ProjectRoadmap; } catch { /* ignore */ }
+            }
+
+            if (!roadmap) {
+                return {
+                    ok: false, output: '',
+                    errorOutput: 'workspace_fsd_roadmap_tick: no roadmap found — run workspace_fsd_strategic_plan first',
+                };
+            }
+
+            // Mark completed task if provided
+            if (completedTask) {
+                const targetId = milestoneIdOverride || (selectNextMilestone(roadmap)?.id ?? '');
+                if (targetId) {
+                    roadmap = updateMilestoneProgress(roadmap, targetId, completedTask);
+                }
+            }
+
+            // Compute the tick
+            const { updatedRoadmap, tick } = computeTickResult(roadmap);
+            roadmap = updatedRoadmap;
+
+            // Persist updated roadmap
+            await executeAction('workspace_write_file', {
+                file_path: ROADMAP_FILE,
+                content:   JSON.stringify(roadmap, null, 2),
+            });
+            await saveProjectCtx({ ...(projectCtx ?? createEmptyProjectContext()), roadmap });
+
+            // Optionally execute the focused task
+            let executionResult: string | null = null;
+            if (execute && tick.focusedTask) {
+                const taskResult = await executeAction('workspace_dev_implement_feature', {
+                    title:         tick.focusedTask,
+                    description:   tick.focusedTask,
+                    workspace_dir: workspaceDir,
+                });
+                executionResult = taskResult.ok ? taskResult.output.slice(0, 300) : `Failed: ${taskResult.errorOutput ?? ''}`;
+            }
+
+            return safeJson({
+                tick_number:        roadmap.tickCount,
+                active_milestone:   tick.activeMilestoneId,
+                focused_task:       tick.focusedTask,
+                milestone_done:     tick.milestoneCompleted,
+                narrative:          tick.narrative,
+                execution_result:   executionResult,
+                roadmap_summary:    formatRoadmapSummary(roadmap),
+                summary: tick.narrative,
+            });
+        }
+
+        // ====================================================================
+        // workspace_fsd_roadmap_status  (Gap 2 — roadmap inspection)
+        // Returns the current roadmap state without advancing it.
+        // ====================================================================
+        case 'workspace_fsd_roadmap_status': {
+            const ROADMAP_FILE = '.agentfarm/roadmap.json';
+
+            let roadmap: ProjectRoadmap | null = null;
+            const rmRead = await executeAction('workspace_read_file', { file_path: ROADMAP_FILE });
+            if (rmRead.ok && rmRead.output) {
+                try { roadmap = JSON.parse(rmRead.output) as ProjectRoadmap; } catch { /* ignore */ }
+            }
+
+            if (!roadmap) {
+                return safeJson({
+                    has_roadmap: false,
+                    summary:     'No roadmap found — run workspace_fsd_strategic_plan to create one',
+                });
+            }
+
+            const next = selectNextMilestone(roadmap);
+            const nextTask = next ? selectNextTask(next) : null;
+            const done   = roadmap.milestones.filter((m) => m.status === 'done').length;
+            const total  = roadmap.milestones.length;
+
+            return safeJson({
+                has_roadmap:         true,
+                project_name:        roadmap.projectName,
+                goal:                roadmap.goal,
+                milestone_count:     total,
+                milestones_done:     done,
+                tick_count:          roadmap.tickCount,
+                last_tick_at:        roadmap.lastTickAt,
+                next_milestone:      next ? { id: next.id, title: next.title, status: next.status } : null,
+                next_task:           nextTask,
+                milestones:          roadmap.milestones.map((m) => ({
+                    id:           m.id,
+                    title:        m.title,
+                    status:       m.status,
+                    tasks_done:   m.completedTasks.length,
+                    tasks_total:  m.tasks.length,
+                    target_date:  m.targetDate,
+                })),
+                roadmap_summary:     formatRoadmapSummary(roadmap),
+                summary:             formatRoadmapSummary(roadmap),
             });
         }
     }

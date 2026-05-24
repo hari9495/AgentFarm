@@ -4204,6 +4204,67 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                     ].join('\n');
                 }
 
+                // ── Bootstrap high-risk approval summaries ────────────────────────────
+                if (result.decision.actionType === 'workspace_bootstrap_aws_org') {
+                    const bsAccount = typeof executionTask.payload['account_name'] === 'string' ? executionTask.payload['account_name'] : 'unknown';
+                    const bsEmail   = typeof executionTask.payload['account_email'] === 'string' ? executionTask.payload['account_email'] : 'unknown';
+                    const bsBudget  = typeof executionTask.payload['billing_threshold'] === 'number' ? executionTask.payload['billing_threshold'] : 100;
+                    const bsDryRun  = executionTask.payload['dry_run'] === true;
+                    actionSummary = [
+                        `AWS org account bootstrap — account: ${bsAccount}  email: ${bsEmail}`,
+                        `Billing alert threshold: $${bsBudget}  |  dry-run: ${bsDryRun}`,
+                        `Risk: Creates a new AWS account under the org and sets up IAM roles. Billing starts immediately on resource creation.`,
+                        `Rollback: Close the account via AWS Organizations console. Contact AWS support if billing has accrued.`,
+                    ].join('\n');
+                }
+
+                if (result.decision.actionType === 'workspace_bootstrap_github_org') {
+                    const bsOrg   = typeof executionTask.payload['org'] === 'string' ? executionTask.payload['org'] : 'unknown';
+                    const bsRepos = Array.isArray(executionTask.payload['repos']) ? (executionTask.payload['repos'] as string[]).length : 0;
+                    const bsDry   = executionTask.payload['dry_run'] === true;
+                    actionSummary = [
+                        `GitHub org bootstrap — org: ${bsOrg}  repos to create: ${bsRepos}`,
+                        `dry-run: ${bsDry}`,
+                        `Risk: Creates repositories and teams, sets branch protection. Repos are private by default.`,
+                        `Rollback: Delete repositories and teams via GitHub org settings or gh CLI.`,
+                    ].join('\n');
+                }
+
+                if (result.decision.actionType === 'workspace_bootstrap_k8s_cluster') {
+                    const bsCluster = typeof executionTask.payload['cluster_name'] === 'string' ? executionTask.payload['cluster_name'] : 'unknown';
+                    const bsRegion  = typeof executionTask.payload['region'] === 'string' ? executionTask.payload['region'] : 'us-east-1';
+                    const bsNodes   = typeof executionTask.payload['node_count'] === 'number' ? executionTask.payload['node_count'] : 2;
+                    const bsTool    = typeof executionTask.payload['tool'] === 'string' ? executionTask.payload['tool'] : 'eksctl';
+                    const bsDry     = executionTask.payload['dry_run'] === true;
+                    actionSummary = [
+                        `K8s cluster bootstrap — cluster: ${bsCluster}  region: ${bsRegion}  nodes: ${bsNodes}  tool: ${bsTool}`,
+                        `dry-run: ${bsDry}`,
+                        `Risk: Provisions EC2 instances and a managed control plane. AWS costs begin immediately.`,
+                        `Rollback: Run \`eksctl delete cluster --name ${bsCluster}\` or destroy the Terraform state.`,
+                    ].join('\n');
+                }
+
+                if (result.decision.actionType === 'workspace_infra_ipmi_console') {
+                    const ipmiHost   = typeof executionTask.payload['host']   === 'string' ? executionTask.payload['host']   : 'unknown';
+                    const ipmiAction = typeof executionTask.payload['action'] === 'string' ? executionTask.payload['action'] : 'status';
+                    actionSummary = [
+                        `IPMI console action — host: ${ipmiHost}  action: ${ipmiAction}`,
+                        `Risk: Power-off or reset commands will immediately halt the server and may interrupt live traffic.`,
+                        `Rollback: Power the server back on via IPMI or physical access. Check logs after restart.`,
+                    ].join('\n');
+                }
+
+                if (result.decision.actionType === 'workspace_fsd_roadmap_tick') {
+                    const rmGoal = typeof executionTask.payload['goal'] === 'string' ? executionTask.payload['goal'] : '(current roadmap goal)';
+                    const rmExec = executionTask.payload['execute'] === true;
+                    actionSummary = [
+                        `Autonomous roadmap tick — goal: ${rmGoal}`,
+                        `execute_action: ${rmExec} — ${rmExec ? 'the agent will run the focused task action automatically' : 'tick only, no actions executed'}`,
+                        `Risk: With execute=true, the agent will implement a roadmap task without further confirmation.`,
+                        `Rollback: Review the changes made and revert via git if needed.`,
+                    ].join('\n');
+                }
+
                 // Store approval summary for transcript
                 taskApprovalSummaries.set(task.taskId, actionSummary);
 

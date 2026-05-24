@@ -51,6 +51,9 @@ import { handleDevopsAction, isDevopsActionType, type DevopsActionType } from '.
 import { handleMobileAction, isMobileActionType, type MobileActionType } from './agents/mobile/mobile-action-handler.js';
 import { handleCrossrepoAction, isCrossrepoActionType, type CrossrepoActionType } from './agents/developer/crossrepo-action-handler.js';
 import { handleProactiveScanAction, isProactiveScanActionType, type ProactiveScanActionType } from './agents/developer/proactive-scan-action-handler.js';
+import { handlePairmodeAction, isPairmodeActionType, type PairmodeActionType } from './agents/developer/pairmode-action-handler.js';
+import { handleBootstrapAction, isBootstrapActionType, type BootstrapActionType } from './agents/devops/bootstrap-action-handler.js';
+import { handleInfraDebugAction, isInfraDebugActionType, type InfraDebugActionType } from './agents/devops/infra-debug-action-handler.js';
 import type { ProseCallerFn } from './agents/content-writer/llm-prose-writer.js';
 import { streamLLM } from './llm-decision-adapter.js';
 import { globalEpisodicMemory } from './episodic-memory.js';
@@ -412,7 +415,23 @@ export type LocalWorkspaceActionType =
     // Tier 34 (Proactive tech debt)
     | 'workspace_dev_proactive_scan'
     | 'workspace_dev_tech_debt_report'
-    | 'workspace_dev_autofix_deps';
+    | 'workspace_dev_autofix_deps'
+    // Tier 35 (Pair programming — Gap 1)
+    | 'workspace_dev_pair_suggest'
+    | 'workspace_dev_inline_assist'
+    // Tier 36 (FSD org context + strategic roadmap — Gaps 2 & 3)
+    | 'workspace_fsd_org_context_sync'
+    | 'workspace_fsd_strategic_plan'
+    | 'workspace_fsd_roadmap_tick'
+    | 'workspace_fsd_roadmap_status'
+    // Tier 37 (Cloud & GitHub org bootstrap — Gap 4)
+    | 'workspace_bootstrap_aws_org'
+    | 'workspace_bootstrap_github_org'
+    | 'workspace_bootstrap_k8s_cluster'
+    // Tier 38 (Hardware / network physical debugging — Gap 6)
+    | 'workspace_infra_ipmi_console'
+    | 'workspace_infra_netconf_query'
+    | 'workspace_infra_remote_diag';
 
 export type LocalWorkspaceResult = {
     ok: boolean;
@@ -978,6 +997,22 @@ export const LOCAL_WORKSPACE_ACTION_TYPES = new Set<LocalWorkspaceActionType>([
     'workspace_dev_proactive_scan',
     'workspace_dev_tech_debt_report',
     'workspace_dev_autofix_deps',
+    // Tier 35 (Pair programming — Gap 1)
+    'workspace_dev_pair_suggest',
+    'workspace_dev_inline_assist',
+    // Tier 36 (FSD org context + strategic roadmap — Gaps 2 & 3)
+    'workspace_fsd_org_context_sync',
+    'workspace_fsd_strategic_plan',
+    'workspace_fsd_roadmap_tick',
+    'workspace_fsd_roadmap_status',
+    // Tier 37 (Cloud & GitHub org bootstrap — Gap 4)
+    'workspace_bootstrap_aws_org',
+    'workspace_bootstrap_github_org',
+    'workspace_bootstrap_k8s_cluster',
+    // Tier 38 (Hardware / network physical debugging — Gap 6)
+    'workspace_infra_ipmi_console',
+    'workspace_infra_netconf_query',
+    'workspace_infra_remote_diag',
 ]);
 
 // ---------------------------------------------------------------------------
@@ -1016,6 +1051,15 @@ const ALLOWED_COMMANDS = new Set([
     'k6',
     'mvn',
     'java',
+    // Tier 37: cloud bootstrap (Gap 4)
+    'aws',
+    'eksctl',
+    'terraform',
+    'kubectl',
+    // Tier 38: infra debug (Gap 6)
+    'ipmitool',
+    'netconf-console',
+    'ssh',
 ]);
 
 function assertAllowedCommand(cmd: string): void {
@@ -13559,6 +13603,152 @@ export async function executeLocalWorkspaceAction(input: {
                 errorMessage:  scanResult.errorOutput ? scanResult.errorOutput.slice(0, 200) : undefined,
             });
             return scanResult;
+        }
+
+        // ====================================================================
+        // TIER 35: PAIR PROGRAMMING (Gap 1)
+        // ====================================================================
+        case 'workspace_dev_pair_suggest':
+        case 'workspace_dev_inline_assist': {
+            if (!isPairmodeActionType(actionType)) {
+                return { ok: false, output: '', errorOutput: `Unrecognised pairmode action: ${actionType}` };
+            }
+            const pairResult = await handlePairmodeAction({
+                actionType: actionType as PairmodeActionType,
+                tenantId,
+                botId,
+                taskId,
+                payload,
+                workspaceDir,
+                executeAction: (aType, aPayload) =>
+                    executeLocalWorkspaceAction({
+                        tenantId, botId, taskId,
+                        actionType: aType as LocalWorkspaceActionType,
+                        payload: aPayload,
+                        connectorActionExecuteClient,
+                    }),
+                callLlm: buildTwLlmCallerFn(),
+            });
+            void globalEpisodicMemory.record({
+                taskId,
+                workspaceId: workspaceDir,
+                botId,
+                actionType,
+                promptSummary: (typeof payload['task_context'] === 'string' ? payload['task_context'] : actionType).slice(0, 200),
+                outcome:       pairResult.ok ? 'success' : 'failed',
+                timestamp:     Date.now(),
+                errorMessage:  pairResult.errorOutput ? pairResult.errorOutput.slice(0, 200) : undefined,
+            });
+            return pairResult;
+        }
+
+        // ====================================================================
+        // TIER 36: FSD ORG CONTEXT + STRATEGIC ROADMAP (Gaps 2 & 3)
+        // ====================================================================
+        case 'workspace_fsd_org_context_sync':
+        case 'workspace_fsd_strategic_plan':
+        case 'workspace_fsd_roadmap_tick':
+        case 'workspace_fsd_roadmap_status': {
+            if (!isFsdActionType(actionType)) {
+                return { ok: false, output: '', errorOutput: `Unrecognised FSD gap action: ${actionType}` };
+            }
+            const fsdGapResult = await handleFsdAction({
+                actionType: actionType as FsdActionType,
+                tenantId, botId, taskId,
+                payload, workspaceDir,
+                executeAction: (aType, aPayload) =>
+                    executeLocalWorkspaceAction({
+                        tenantId, botId, taskId,
+                        actionType: aType as LocalWorkspaceActionType,
+                        payload: aPayload,
+                        connectorActionExecuteClient,
+                    }),
+                runCommand,
+                callLlm: buildTwLlmCallerFn(),
+            });
+            void globalEpisodicMemory.record({
+                taskId,
+                workspaceId: workspaceDir,
+                botId,
+                actionType,
+                promptSummary: actionType,
+                outcome:       fsdGapResult.ok ? 'success' : 'failed',
+                timestamp:     Date.now(),
+                errorMessage:  fsdGapResult.errorOutput ? fsdGapResult.errorOutput.slice(0, 200) : undefined,
+            });
+            return fsdGapResult;
+        }
+
+        // ====================================================================
+        // TIER 37: CLOUD & GITHUB ORG BOOTSTRAP (Gap 4)
+        // ====================================================================
+        case 'workspace_bootstrap_aws_org':
+        case 'workspace_bootstrap_github_org':
+        case 'workspace_bootstrap_k8s_cluster': {
+            if (!isBootstrapActionType(actionType)) {
+                return { ok: false, output: '', errorOutput: `Unrecognised bootstrap action: ${actionType}` };
+            }
+            const bootstrapResult = await handleBootstrapAction({
+                actionType: actionType as BootstrapActionType,
+                tenantId, botId, taskId,
+                payload, workspaceDir,
+                executeAction: (aType, aPayload) =>
+                    executeLocalWorkspaceAction({
+                        tenantId, botId, taskId,
+                        actionType: aType as LocalWorkspaceActionType,
+                        payload: aPayload,
+                        connectorActionExecuteClient,
+                    }),
+                runCommand,
+            });
+            void globalEpisodicMemory.record({
+                taskId,
+                workspaceId: workspaceDir,
+                botId,
+                actionType,
+                promptSummary: (typeof payload['account_name'] === 'string' ? payload['account_name'] :
+                                 typeof payload['org']          === 'string' ? payload['org'] :
+                                 typeof payload['cluster_name'] === 'string' ? payload['cluster_name'] : actionType).slice(0, 200),
+                outcome:       bootstrapResult.ok ? 'success' : 'failed',
+                timestamp:     Date.now(),
+                errorMessage:  bootstrapResult.errorOutput ? bootstrapResult.errorOutput.slice(0, 200) : undefined,
+            });
+            return bootstrapResult;
+        }
+
+        // ====================================================================
+        // TIER 38: HARDWARE / NETWORK PHYSICAL DEBUGGING (Gap 6)
+        // ====================================================================
+        case 'workspace_infra_ipmi_console':
+        case 'workspace_infra_netconf_query':
+        case 'workspace_infra_remote_diag': {
+            if (!isInfraDebugActionType(actionType)) {
+                return { ok: false, output: '', errorOutput: `Unrecognised infra-debug action: ${actionType}` };
+            }
+            const infraResult = await handleInfraDebugAction({
+                actionType: actionType as InfraDebugActionType,
+                tenantId, botId, taskId,
+                payload, workspaceDir,
+                executeAction: (aType, aPayload) =>
+                    executeLocalWorkspaceAction({
+                        tenantId, botId, taskId,
+                        actionType: aType as LocalWorkspaceActionType,
+                        payload: aPayload,
+                        connectorActionExecuteClient,
+                    }),
+                runCommand,
+            });
+            void globalEpisodicMemory.record({
+                taskId,
+                workspaceId: workspaceDir,
+                botId,
+                actionType,
+                promptSummary: (typeof payload['host'] === 'string' ? payload['host'] : actionType).slice(0, 200),
+                outcome:       infraResult.ok ? 'success' : 'failed',
+                timestamp:     Date.now(),
+                errorMessage:  infraResult.errorOutput ? infraResult.errorOutput.slice(0, 200) : undefined,
+            });
+            return infraResult;
         }
 
         default: {

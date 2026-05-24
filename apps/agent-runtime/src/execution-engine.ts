@@ -117,6 +117,14 @@ const HIGH_RISK_ACTIONS = new Set([
     'workspace_devops_pipeline_trigger',
     // Mobile: app store submissions reach millions of users — irreversible without store review
     'workspace_mob_store_upload',
+    // Bootstrap: provisioning new cloud accounts / orgs has billing + security implications
+    'workspace_bootstrap_aws_org',
+    'workspace_bootstrap_github_org',
+    'workspace_bootstrap_k8s_cluster',
+    // Infra debug: IPMI power-off/reset can take down live servers
+    'workspace_infra_ipmi_console',
+    // Roadmap execution: autonomous multi-step plan execution
+    'workspace_fsd_roadmap_tick',
 ]);
 
 const MEDIUM_RISK_ACTIONS = new Set([

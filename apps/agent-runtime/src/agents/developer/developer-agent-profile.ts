@@ -219,6 +219,9 @@ export const DEVELOPER_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = 
     'workspace_dev_proactive_scan',
     'workspace_dev_tech_debt_report',
     'workspace_dev_autofix_deps',
+    // ── Gap 1 — Real-time pair programming (Tier 35) ──────────────────────────
+    'workspace_dev_pair_suggest',
+    'workspace_dev_inline_assist',
 ];
 
 // ---------------------------------------------------------------------------

@@ -93,6 +93,12 @@ export const FSD_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = [
     'workspace_fsd_negotiate',
     // ── Long-term project memory (Sprint 16 Phase 7) ──────────────────────────
     'workspace_fsd_project_context_sync',
+    // ── Gap 3 — Org/political context ─────────────────────────────────────────
+    'workspace_fsd_org_context_sync',
+    // ── Gap 2 — Self-directed long-horizon projects ───────────────────────────
+    'workspace_fsd_strategic_plan',
+    'workspace_fsd_roadmap_tick',
+    'workspace_fsd_roadmap_status',
 ];
 
 // ---------------------------------------------------------------------------
