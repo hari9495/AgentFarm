@@ -209,6 +209,16 @@ export const DEVELOPER_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = 
     'workspace_cleanup',
     // ── Web research ─────────────────────────────────────────────────────────
     'workspace_web_search',
+    // ── Cross-repo navigation (Tier 33) ──────────────────────────────────────
+    'workspace_crossrepo_clone',
+    'workspace_crossrepo_search',
+    'workspace_crossrepo_refactor',
+    'workspace_crossrepo_status',
+    'workspace_crossrepo_pr_create',
+    // ── Proactive tech debt scanner (Tier 34) ────────────────────────────────
+    'workspace_dev_proactive_scan',
+    'workspace_dev_tech_debt_report',
+    'workspace_dev_autofix_deps',
 ];
 
 // ---------------------------------------------------------------------------

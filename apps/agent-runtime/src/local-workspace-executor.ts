@@ -49,6 +49,8 @@ import { handleDeveloperAction, isDeveloperActionType, type DeveloperActionType 
 import { handleFsdAction, isFsdActionType, type FsdActionType } from './agents/full-stack-developer/fsd-action-handler.js';
 import { handleDevopsAction, isDevopsActionType, type DevopsActionType } from './agents/devops/devops-action-handler.js';
 import { handleMobileAction, isMobileActionType, type MobileActionType } from './agents/mobile/mobile-action-handler.js';
+import { handleCrossrepoAction, isCrossrepoActionType, type CrossrepoActionType } from './agents/developer/crossrepo-action-handler.js';
+import { handleProactiveScanAction, isProactiveScanActionType, type ProactiveScanActionType } from './agents/developer/proactive-scan-action-handler.js';
 import type { ProseCallerFn } from './agents/content-writer/llm-prose-writer.js';
 import { streamLLM } from './llm-decision-adapter.js';
 import { globalEpisodicMemory } from './episodic-memory.js';
@@ -400,7 +402,17 @@ export type LocalWorkspaceActionType =
     | 'workspace_mob_a11y_audit'
     | 'workspace_mob_store_upload'
     | 'workspace_mob_scaffold_project'
-    | 'workspace_mob_standup_report';
+    | 'workspace_mob_standup_report'
+    // Tier 33 (Cross-repo navigation)
+    | 'workspace_crossrepo_clone'
+    | 'workspace_crossrepo_search'
+    | 'workspace_crossrepo_refactor'
+    | 'workspace_crossrepo_status'
+    | 'workspace_crossrepo_pr_create'
+    // Tier 34 (Proactive tech debt)
+    | 'workspace_dev_proactive_scan'
+    | 'workspace_dev_tech_debt_report'
+    | 'workspace_dev_autofix_deps';
 
 export type LocalWorkspaceResult = {
     ok: boolean;
@@ -956,6 +968,16 @@ export const LOCAL_WORKSPACE_ACTION_TYPES = new Set<LocalWorkspaceActionType>([
     'workspace_mob_store_upload',
     'workspace_mob_scaffold_project',
     'workspace_mob_standup_report',
+    // Tier 33 (Cross-repo navigation)
+    'workspace_crossrepo_clone',
+    'workspace_crossrepo_search',
+    'workspace_crossrepo_refactor',
+    'workspace_crossrepo_status',
+    'workspace_crossrepo_pr_create',
+    // Tier 34 (Proactive tech debt)
+    'workspace_dev_proactive_scan',
+    'workspace_dev_tech_debt_report',
+    'workspace_dev_autofix_deps',
 ]);
 
 // ---------------------------------------------------------------------------
@@ -13444,6 +13466,99 @@ export async function executeLocalWorkspaceAction(input: {
                 errorMessage:  mobileResult.errorOutput ? mobileResult.errorOutput.slice(0, 200) : undefined,
             });
             return mobileResult;
+        }
+
+        // ====================================================================
+        // TIER 33: CROSS-REPO NAVIGATION
+        // ====================================================================
+        case 'workspace_crossrepo_clone':
+        case 'workspace_crossrepo_search':
+        case 'workspace_crossrepo_refactor':
+        case 'workspace_crossrepo_status':
+        case 'workspace_crossrepo_pr_create': {
+            if (!isCrossrepoActionType(actionType)) {
+                return { ok: false, output: '', errorOutput: `Unrecognised cross-repo action: ${actionType}` };
+            }
+            const crossrepoResult = await handleCrossrepoAction({
+                actionType: actionType as CrossrepoActionType,
+                tenantId,
+                botId,
+                taskId,
+                payload,
+                workspaceDir,
+                executeAction: (aType, aPayload) =>
+                    executeLocalWorkspaceAction({
+                        tenantId,
+                        botId,
+                        taskId,
+                        actionType: aType as LocalWorkspaceActionType,
+                        payload: aPayload,
+                        connectorActionExecuteClient,
+                    }),
+                runCommand,
+                callLlm: buildTwLlmCallerFn(),
+            });
+            const crossrepoOutcome: TaskOutcome = crossrepoResult.ok ? 'success' : 'failed';
+            const crossrepoLabel = (
+                typeof payload['description'] === 'string' ? payload['description'] :
+                typeof payload['pattern']     === 'string' ? payload['pattern'] : actionType
+            ).slice(0, 200) as string;
+            void globalEpisodicMemory.record({
+                taskId,
+                workspaceId: workspaceDir,
+                botId,
+                actionType,
+                promptSummary: crossrepoLabel,
+                outcome:       crossrepoOutcome,
+                timestamp:     Date.now(),
+                errorMessage:  crossrepoResult.errorOutput ? crossrepoResult.errorOutput.slice(0, 200) : undefined,
+            });
+            return crossrepoResult;
+        }
+
+        // ====================================================================
+        // TIER 34: PROACTIVE TECH DEBT SCANNER
+        // ====================================================================
+        case 'workspace_dev_proactive_scan':
+        case 'workspace_dev_tech_debt_report':
+        case 'workspace_dev_autofix_deps': {
+            if (!isProactiveScanActionType(actionType)) {
+                return { ok: false, output: '', errorOutput: `Unrecognised proactive scan action: ${actionType}` };
+            }
+            const scanResult = await handleProactiveScanAction({
+                actionType: actionType as ProactiveScanActionType,
+                tenantId,
+                botId,
+                taskId,
+                payload,
+                workspaceDir,
+                executeAction: (aType, aPayload) =>
+                    executeLocalWorkspaceAction({
+                        tenantId,
+                        botId,
+                        taskId,
+                        actionType: aType as LocalWorkspaceActionType,
+                        payload: aPayload,
+                        connectorActionExecuteClient,
+                    }),
+                runCommand,
+                callLlm: buildTwLlmCallerFn(),
+            });
+            const scanOutcome: TaskOutcome = scanResult.ok ? 'success' : 'failed';
+            const scanLabel = (
+                typeof payload['project_name'] === 'string' ? payload['project_name'] : actionType
+            ).slice(0, 200) as string;
+            void globalEpisodicMemory.record({
+                taskId,
+                workspaceId: workspaceDir,
+                botId,
+                actionType,
+                promptSummary: scanLabel,
+                outcome:       scanOutcome,
+                timestamp:     Date.now(),
+                errorMessage:  scanResult.errorOutput ? scanResult.errorOutput.slice(0, 200) : undefined,
+            });
+            return scanResult;
         }
 
         default: {
