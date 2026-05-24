@@ -137,6 +137,26 @@
         "./sales/demo-presenter.js": {
             "types": "./src/agents/sales-agent/demo-presenter.ts",
             "default": "./src/agents/sales-agent/demo-presenter.ts"
+        },
+        "./sales/negotiation-handler.js": {
+            "types": "./src/agents/sales-agent/negotiation-handler.ts",
+            "default": "./src/agents/sales-agent/negotiation-handler.ts"
+        },
+        "./sales/proposal-generator.js": {
+            "types": "./src/agents/sales-agent/proposal-generator.ts",
+            "default": "./src/agents/sales-agent/proposal-generator.ts"
+        },
+        "./sales/upsell-handler.js": {
+            "types": "./src/agents/sales-agent/upsell-handler.ts",
+            "default": "./src/agents/sales-agent/upsell-handler.ts"
+        },
+        "./sales/nps-handler.js": {
+            "types": "./src/agents/sales-agent/nps-handler.ts",
+            "default": "./src/agents/sales-agent/nps-handler.ts"
+        },
+        "./sales/qbr-generator.js": {
+            "types": "./src/agents/sales-agent/qbr-generator.ts",
+            "default": "./src/agents/sales-agent/qbr-generator.ts"
         }
     },
     "scripts": {

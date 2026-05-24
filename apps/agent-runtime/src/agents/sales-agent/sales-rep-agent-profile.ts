@@ -93,6 +93,13 @@ export const SALES_REP_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = 
     'workspace_demo_present',
     'workspace_slide_deck_generate',
     'workspace_demo_followup',
+    // ── Negotiation & Closing (Sprint 21) ─────────────────────────────────
+    'workspace_negotiation_offer',
+    'workspace_proposal_generate',
+    // ── Relationship Management (Sprint 21) ───────────────────────────────
+    'workspace_upsell',
+    'workspace_nps_send',
+    'workspace_qbr_prepare',
 ];
 
 export const SALES_REP_ROLE_BLOCKED_ACTIONS = [

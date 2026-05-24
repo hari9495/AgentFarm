@@ -183,6 +183,33 @@ export function buildSalesRepEpisodicPattern(
     }
     if (at === 'workspace_demo_followup') return `sales_rep:demo:followup:${oc}`;
 
+    // ── Negotiation ──────────────────────────────────────────────────────
+    if (at === 'workspace_negotiation_offer') {
+        const status = String(task.payload['status'] ?? '');
+        if (status === 'accepted') return 'sales_rep:negotiation:accepted';
+        if (status === 'rejected') return 'sales_rep:negotiation:rejected';
+        if (status === 'escalated') return 'sales_rep:negotiation:escalated';
+        return `sales_rep:negotiation:offer:${oc}`;
+    }
+
+    // ── Proposal generation ──────────────────────────────────────────────
+    if (at === 'workspace_proposal_generate') {
+        const sent = task.payload['send_to_prospect'] === true;
+        return sent ? `sales_rep:proposal:sent:${oc}` : `sales_rep:proposal:generated:${oc}`;
+    }
+
+    // ── Upsell / cross-sell ──────────────────────────────────────────────
+    if (at === 'workspace_upsell') return `sales_rep:upsell:${oc}`;
+
+    // ── NPS / CSAT ───────────────────────────────────────────────────────
+    if (at === 'workspace_nps_send') {
+        const surveyType = String(task.payload['survey_type'] ?? 'nps');
+        return `sales_rep:${surveyType}:sent:${oc}`;
+    }
+
+    // ── QBR ──────────────────────────────────────────────────────────────
+    if (at === 'workspace_qbr_prepare') return `sales_rep:qbr:generated:${oc}`;
+
     // ── CRM updates (generic) ────────────────────────────────────────────
     if (at.startsWith('workspace_crm_') || at.startsWith('workspace_hubspot_') ||
         at.startsWith('workspace_salesforce_')) {

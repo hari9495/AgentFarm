@@ -100,6 +100,12 @@ import { registerBookingWebhookRoutes } from './routes/sales/booking-webhook.js'
 import { registerContractWebhookRoutes } from './routes/sales/contract-webhook.js';
 import { registerDealsRoutes } from './routes/sales/deals.js';
 import { registerBrowserTasksRoutes } from './routes/sales/browser-tasks.js';
+import { registerTwilioWebhookRoutes } from './routes/sales/twilio-webhook.js';
+import { registerKpiRoutes } from './routes/sales/kpi.js';
+import { registerNpsWebhookRoutes } from './routes/sales/nps-webhook.js';
+import { startMarketSignalWorker, stopMarketSignalWorker } from './services/market-signal-worker.js';
+import { startNpsWorker, stopNpsWorker } from './services/nps-worker.js';
+import { startUpsellWorker, stopUpsellWorker } from './services/upsell-worker.js';
 import { registerDesktopSessionsRoutes } from './routes/workspace/desktop-sessions.js';
 import { registerNotificationRoutes } from './routes/platform/notifications.js';
 import { registerRetentionPolicyRoutes } from './routes/governance/retention-policy.js';
@@ -785,6 +791,9 @@ await registerBookingWebhookRoutes(app, { prisma });
 await registerContractWebhookRoutes(app, { prisma });
 await registerDealsRoutes(app, { getSession: (request) => readSession(request), prisma });
 await registerBrowserTasksRoutes(app, { getSession: (request) => readSession(request), prisma });
+await registerTwilioWebhookRoutes(app, { prisma });
+await registerKpiRoutes(app, { getSession: (request) => readSession(request), prisma: prisma as never });
+await registerNpsWebhookRoutes(app, { prisma });
 await registerDesktopSessionsRoutes(app, { getSession: (request) => readSession(request) });
 registerNotificationRoutes(app, { getSession: (request) => readSession(request) });
 registerSkillPipelineRoutes(app, { getSession: (request) => readSession(request) });
@@ -1242,6 +1251,9 @@ const start = async (): Promise<void> => {
         );
         startNurtureWorker(prisma);
         startSalesSequenceWorker(prisma);
+        startMarketSignalWorker(prisma);
+        startNpsWorker(prisma);
+        startUpsellWorker(prisma);
         startDrainSweep({
             agentRuntimeUrl: process.env.AGENT_RUNTIME_URL ?? 'http://localhost:3001',
             prisma: prisma as never,
@@ -1258,6 +1270,9 @@ const stop = async (): Promise<void> => {
     stopConnectorHealthWorker();
     stopNurtureWorker();
     stopSalesSequenceWorker();
+    stopMarketSignalWorker();
+    stopNpsWorker();
+    stopUpsellWorker();
     stopDrainSweep();
     await app.close();
     process.exit(0);

@@ -42,6 +42,15 @@ type CreateSalesConfigBody = {
     marketResearchEnabled?: boolean;
     newsApiKey?: string;
     marketResearchIntervalHours?: number;
+    // Negotiation & Closing
+    maxDiscountPercent?: number;
+    discountApprovalRequired?: boolean;
+    discountApproverEmail?: string;
+    // Relationship Management
+    npsEnabled?: boolean;
+    npsDelayDays?: number[];
+    upsellEnabled?: boolean;
+    upsellCheckInDays?: number;
 };
 
 type UpdateSalesConfigBody = Partial<Omit<CreateSalesConfigBody, 'botId'>>;
@@ -152,6 +161,13 @@ export async function registerSalesConfigRoutes(
                     marketResearchEnabled: body.marketResearchEnabled ?? false,
                     newsApiKey: body.newsApiKey ?? null,
                     marketResearchIntervalHours: body.marketResearchIntervalHours ?? null,
+                    maxDiscountPercent: body.maxDiscountPercent ?? null,
+                    discountApprovalRequired: body.discountApprovalRequired ?? false,
+                    discountApproverEmail: body.discountApproverEmail ?? null,
+                    npsEnabled: body.npsEnabled ?? false,
+                    npsDelayDays: body.npsDelayDays ?? [30, 60, 90],
+                    upsellEnabled: body.upsellEnabled ?? false,
+                    upsellCheckInDays: body.upsellCheckInDays ?? 90,
                 },
             });
 
@@ -200,6 +216,13 @@ export async function registerSalesConfigRoutes(
                 'marketResearchEnabled',
                 'newsApiKey',
                 'marketResearchIntervalHours',
+                'maxDiscountPercent',
+                'discountApprovalRequired',
+                'discountApproverEmail',
+                'npsEnabled',
+                'npsDelayDays',
+                'upsellEnabled',
+                'upsellCheckInDays',
             ];
             for (const f of fields) {
                 if (body[f] !== undefined) updateData[f] = body[f];

@@ -27,6 +27,11 @@ import { runMarketResearch } from './market-research-handler.js';
 import { generateDemoScript } from './demo-script-generator.js';
 import { generateSlideDeck } from './slide-deck-generator.js';
 import { presentDemo, sendDemoFollowup } from './demo-presenter.js';
+import { handleNegotiationOffer } from './negotiation-handler.js';
+import { generateProposal } from './proposal-generator.js';
+import { sendUpsellEmail } from './upsell-handler.js';
+import { sendNpsSurvey } from './nps-handler.js';
+import { generateQbr } from './qbr-generator.js';
 import type { LeadCandidate } from './lead-source-provider.js';
 import type { EmailProviderConfig } from './email-provider.js';
 import type { LinkedInOutreachType } from '@agentfarm/shared-types';
@@ -54,7 +59,12 @@ export type SalesActionType =
     | 'workspace_demo_script_generate'
     | 'workspace_demo_present'
     | 'workspace_slide_deck_generate'
-    | 'workspace_demo_followup';
+    | 'workspace_demo_followup'
+    | 'workspace_negotiation_offer'
+    | 'workspace_proposal_generate'
+    | 'workspace_upsell'
+    | 'workspace_nps_send'
+    | 'workspace_qbr_prepare';
 
 export function isSalesActionType(t: string): t is SalesActionType {
     return (
@@ -76,7 +86,12 @@ export function isSalesActionType(t: string): t is SalesActionType {
         t === 'workspace_demo_script_generate' ||
         t === 'workspace_demo_present' ||
         t === 'workspace_slide_deck_generate' ||
-        t === 'workspace_demo_followup'
+        t === 'workspace_demo_followup' ||
+        t === 'workspace_negotiation_offer' ||
+        t === 'workspace_proposal_generate' ||
+        t === 'workspace_upsell' ||
+        t === 'workspace_nps_send' ||
+        t === 'workspace_qbr_prepare'
     );
 }
 
@@ -788,6 +803,167 @@ export async function handleSalesAction(params: {
                         meetingNotes: typeof payload['meeting_notes'] === 'string' ? payload['meeting_notes'] : undefined,
                         questionsAsked,
                         demoOutcome,
+                    },
+                    prisma as unknown as import('@prisma/client').PrismaClient,
+                );
+                return safeJsonResult(result);
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: String(err) };
+            } finally {
+                await prisma.$disconnect().catch(() => undefined);
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_negotiation_offer — multi-turn pricing negotiation
+        // payload: { prospect_id, deal_id?, list_price?, prospect_counter?, currency? }
+        // ------------------------------------------------------------------
+        case 'workspace_negotiation_offer': {
+            const prisma = await createPrisma();
+            try {
+                const config = requireConfig(await loadSalesConfig(tenantId, botId, prisma), botId);
+                const prospectId = typeof payload['prospect_id'] === 'string' ? payload['prospect_id'] : '';
+                if (!prospectId) {
+                    return { ok: false, output: '', errorOutput: 'payload.prospect_id is required.' };
+                }
+                const result = await handleNegotiationOffer(
+                    {
+                        prospectId,
+                        tenantId,
+                        botId,
+                        dealId: typeof payload['deal_id'] === 'string' ? payload['deal_id'] : undefined,
+                        config,
+                        listPrice: typeof payload['list_price'] === 'number' ? payload['list_price'] : undefined,
+                        prospectCounter: typeof payload['prospect_counter'] === 'number' ? payload['prospect_counter'] : undefined,
+                        currency: typeof payload['currency'] === 'string' ? payload['currency'] : undefined,
+                    },
+                    prisma as unknown as import('@prisma/client').PrismaClient,
+                );
+                return safeJsonResult(result);
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: String(err) };
+            } finally {
+                await prisma.$disconnect().catch(() => undefined);
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_proposal_generate — generate full HTML proposal document
+        // payload: { prospect_id, deal_id?, list_price?, discount_percent?, currency?, send_to_prospect? }
+        // ------------------------------------------------------------------
+        case 'workspace_proposal_generate': {
+            const prisma = await createPrisma();
+            try {
+                const config = requireConfig(await loadSalesConfig(tenantId, botId, prisma), botId);
+                const prospectId = typeof payload['prospect_id'] === 'string' ? payload['prospect_id'] : '';
+                if (!prospectId) {
+                    return { ok: false, output: '', errorOutput: 'payload.prospect_id is required.' };
+                }
+                const result = await generateProposal(
+                    {
+                        prospectId,
+                        tenantId,
+                        botId,
+                        dealId: typeof payload['deal_id'] === 'string' ? payload['deal_id'] : undefined,
+                        config,
+                        listPrice: typeof payload['list_price'] === 'number' ? payload['list_price'] : undefined,
+                        discountPercent: typeof payload['discount_percent'] === 'number' ? payload['discount_percent'] : undefined,
+                        currency: typeof payload['currency'] === 'string' ? payload['currency'] : undefined,
+                        sendToProspect: payload['send_to_prospect'] === true,
+                    },
+                    prisma as unknown as import('@prisma/client').PrismaClient,
+                );
+                return safeJsonResult(result);
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: String(err) };
+            } finally {
+                await prisma.$disconnect().catch(() => undefined);
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_upsell — send upsell / cross-sell email to closed_won customer
+        // payload: { prospect_id, deal_id? }
+        // ------------------------------------------------------------------
+        case 'workspace_upsell': {
+            const prisma = await createPrisma();
+            try {
+                const config = requireConfig(await loadSalesConfig(tenantId, botId, prisma), botId);
+                const prospectId = typeof payload['prospect_id'] === 'string' ? payload['prospect_id'] : '';
+                if (!prospectId) {
+                    return { ok: false, output: '', errorOutput: 'payload.prospect_id is required.' };
+                }
+                const result = await sendUpsellEmail(
+                    {
+                        prospectId,
+                        tenantId,
+                        botId,
+                        config,
+                        dealId: typeof payload['deal_id'] === 'string' ? payload['deal_id'] : undefined,
+                    },
+                    prisma as unknown as import('@prisma/client').PrismaClient,
+                );
+                return safeJsonResult(result);
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: String(err) };
+            } finally {
+                await prisma.$disconnect().catch(() => undefined);
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_nps_send — send NPS or CSAT survey to closed_won customer
+        // payload: { prospect_id, deal_id?, survey_type?: 'nps'|'csat' }
+        // ------------------------------------------------------------------
+        case 'workspace_nps_send': {
+            const prisma = await createPrisma();
+            try {
+                const config = requireConfig(await loadSalesConfig(tenantId, botId, prisma), botId);
+                const prospectId = typeof payload['prospect_id'] === 'string' ? payload['prospect_id'] : '';
+                if (!prospectId) {
+                    return { ok: false, output: '', errorOutput: 'payload.prospect_id is required.' };
+                }
+                const rawSurveyType = typeof payload['survey_type'] === 'string' ? payload['survey_type'] : 'nps';
+                const surveyType = rawSurveyType === 'csat' ? 'csat' : 'nps';
+                const result = await sendNpsSurvey(
+                    {
+                        prospectId,
+                        tenantId,
+                        botId,
+                        config,
+                        dealId: typeof payload['deal_id'] === 'string' ? payload['deal_id'] : undefined,
+                        surveyType,
+                    },
+                    prisma as unknown as import('@prisma/client').PrismaClient,
+                );
+                return safeJsonResult(result);
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: String(err) };
+            } finally {
+                await prisma.$disconnect().catch(() => undefined);
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_qbr_prepare — generate a QBR presentation deck
+        // payload: { prospect_id, deal_id?, quarter? }
+        // ------------------------------------------------------------------
+        case 'workspace_qbr_prepare': {
+            const prisma = await createPrisma();
+            try {
+                const config = requireConfig(await loadSalesConfig(tenantId, botId, prisma), botId);
+                const prospectId = typeof payload['prospect_id'] === 'string' ? payload['prospect_id'] : '';
+                if (!prospectId) {
+                    return { ok: false, output: '', errorOutput: 'payload.prospect_id is required.' };
+                }
+                const result = await generateQbr(
+                    {
+                        prospectId,
+                        tenantId,
+                        botId,
+                        config,
+                        dealId: typeof payload['deal_id'] === 'string' ? payload['deal_id'] : undefined,
+                        quarter: typeof payload['quarter'] === 'string' ? payload['quarter'] : undefined,
                     },
                     prisma as unknown as import('@prisma/client').PrismaClient,
                 );
