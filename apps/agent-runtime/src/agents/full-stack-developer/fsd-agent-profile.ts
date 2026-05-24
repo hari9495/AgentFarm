@@ -81,6 +81,11 @@ export const FSD_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = [
     'workspace_fsd_scaffold_project',
     'workspace_fsd_deploy_preview',
     'workspace_fsd_standup_report',
+    // ── Advanced capabilities (Sprint 16 Phase 4) ─────────────────────────────
+    'workspace_fsd_visual_review',
+    'workspace_fsd_clarify_spec',
+    'workspace_fsd_security_deep_scan',
+    'workspace_fsd_arch_review',
 ];
 
 // ---------------------------------------------------------------------------

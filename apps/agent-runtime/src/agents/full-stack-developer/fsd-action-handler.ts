@@ -60,6 +60,36 @@ import {
     measureBundleFromBuild,
 } from './fsd-llm-enricher.js';
 
+import {
+    buildVisualCritiquePrompt,
+    parseVisualCritiqueResponse,
+    analyzeCssForVisualIssues,
+    summariseVisualReport,
+    type VisualIssue,
+} from './fsd-visual-inspector.js';
+
+import {
+    analyzeSpecCompleteness,
+    buildClarificationPrompt,
+    parseLlmClarificationResponse,
+    formatQuestionsForHuman,
+} from './fsd-spec-analyzer.js';
+
+import {
+    buildBusinessLogicSecurityPrompt,
+    parseSecurityFindings,
+    runStaticSecurityChecks,
+    buildSecurityReport,
+    type SecurityFinding,
+} from './fsd-security-analyzer.js';
+
+import {
+    buildArchReviewContext,
+    buildAdrPrompt,
+    parseAdrFromLlm,
+    formatAdrAsMarkdown,
+} from './fsd-arch-advisor.js';
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -79,7 +109,12 @@ export type FsdActionType =
     | 'workspace_fsd_fullstack_feature'
     | 'workspace_fsd_scaffold_project'
     | 'workspace_fsd_deploy_preview'
-    | 'workspace_fsd_standup_report';
+    | 'workspace_fsd_standup_report'
+    // ── Advanced capabilities (Sprint 16 Phase 4) ─────────────────────────────
+    | 'workspace_fsd_visual_review'
+    | 'workspace_fsd_clarify_spec'
+    | 'workspace_fsd_security_deep_scan'
+    | 'workspace_fsd_arch_review';
 
 export const FSD_ACTION_TYPES = new Set<FsdActionType>([
     'workspace_fsd_ui_component',
@@ -97,6 +132,11 @@ export const FSD_ACTION_TYPES = new Set<FsdActionType>([
     'workspace_fsd_scaffold_project',
     'workspace_fsd_deploy_preview',
     'workspace_fsd_standup_report',
+    // ── Advanced capabilities (Sprint 16 Phase 4) ─────────────────────────────
+    'workspace_fsd_visual_review',
+    'workspace_fsd_clarify_spec',
+    'workspace_fsd_security_deep_scan',
+    'workspace_fsd_arch_review',
 ]);
 
 export function isFsdActionType(at: string): at is FsdActionType {
@@ -1184,6 +1224,305 @@ export async function handleFsdAction(
                 ceremony_context: ceremonyCtx,
                 frontend_health:  frontendHealth,
                 spoken_text:      llmEnhancement || summary.spokenText,
+            });
+        }
+
+        // ====================================================================
+        // workspace_fsd_visual_review
+        // Visual UI review: static CSS analysis + desktop-vision critique.
+        //
+        // Delegates to the existing workspace_visual_task action (real desktop
+        // vision agent) and augments with static CSS analysis for contrast,
+        // touch targets, font sizes, and line-height.
+        //
+        // payload:
+        //   css_file_path?    — relative path to CSS/SCSS file to scan
+        //   screenshot_url?   — URL of the live page to screenshot and inspect
+        //   component_name?   — component label for the vision prompt
+        //   framework?        — frontend framework (default: React)
+        //   design_system?    — e.g. "Tailwind", "Material UI 5"
+        // ====================================================================
+        case 'workspace_fsd_visual_review': {
+            const cssFilePath   = str(payload['css_file_path']);
+            const screenshotUrl = str(payload['screenshot_url']);
+            const componentName = str(payload['component_name']);
+            const framework     = str(payload['framework'], 'React');
+            const designSystem  = str(payload['design_system']);
+
+            const allIssues: VisualIssue[] = [];
+            let screenshotPath: string | undefined;
+            let liveRun = false;
+
+            // 1. Static CSS analysis — no browser required
+            if (cssFilePath) {
+                const cssResult = await executeAction('workspace_read_file', { file_path: cssFilePath });
+                if (cssResult.ok && cssResult.output) {
+                    const staticIssues = analyzeCssForVisualIssues(cssResult.output);
+                    allIssues.push(...staticIssues);
+                }
+            }
+
+            // 2. Vision-model critique — delegate to workspace_visual_task
+            if (screenshotUrl || componentName) {
+                const visualGoal = componentName
+                    ? `Review the UI component "${componentName}" for visual issues: spacing, alignment, contrast, typography. Framework: ${framework}${designSystem ? `. Design system: ${designSystem}` : ''}.`
+                    : `Review this page for visual UI issues. Focus on: spacing, alignment, contrast, typography, layout.`;
+
+                const visionResult = await executeAction('workspace_visual_task', {
+                    goal: visualGoal,
+                    ...(screenshotUrl ? { url: screenshotUrl } : {}),
+                });
+
+                if (visionResult.ok && visionResult.output) {
+                    screenshotPath = screenshotUrl || undefined;
+                    liveRun = true;
+
+                    // Try structured JSON first
+                    const visionIssues = parseVisualCritiqueResponse(visionResult.output);
+                    if (visionIssues.length > 0) {
+                        allIssues.push(...visionIssues);
+                    } else if (callLlm && visionResult.output.length > 20) {
+                        // Vision agent returned prose — ask LLM to re-structure it
+                        const prompt = buildVisualCritiquePrompt({
+                            componentName: componentName || undefined,
+                            framework,
+                            designSystem:  designSystem || undefined,
+                        });
+                        const llmRaw = await callLlmSafe(
+                            callLlm,
+                            `${prompt}\n\nVision output to structure:\n${visionResult.output.slice(0, 3000)}`,
+                        );
+                        allIssues.push(...parseVisualCritiqueResponse(llmRaw));
+                    }
+                }
+            }
+
+            const { score, summary } = summariseVisualReport(allIssues);
+
+            return safeJson({
+                score,
+                issues:          allIssues,
+                issue_count:     allIssues.length,
+                critical_count:  allIssues.filter((i) => i.severity === 'critical').length,
+                warning_count:   allIssues.filter((i) => i.severity === 'warning').length,
+                screenshot_path: screenshotPath,
+                live_run:        liveRun,
+                summary,
+            });
+        }
+
+        // ====================================================================
+        // workspace_fsd_clarify_spec
+        // Ambiguity resolution: score spec completeness and produce a
+        // prioritised list of clarifying questions before implementation.
+        //
+        // payload:
+        //   title?               — task / feature title
+        //   description?         — task description
+        //   acceptance_criteria? — string or string[]
+        //   framework?           — frontend framework
+        //   figma_url?           — Figma design link
+        //   design?              — design description
+        //   api_contract?        — API contract / OpenAPI URL
+        //   auth?                — auth requirements
+        //   error_handling?      — error-handling expectations
+        //   performance?         — performance targets
+        //   browser_support?     — browser / device matrix
+        //   endpoints?           — existing endpoint definitions (array)
+        // ====================================================================
+        case 'workspace_fsd_clarify_spec': {
+            const rawSpec = {
+                title:               str(payload['title'])               || undefined,
+                description:         str(payload['description'])         || undefined,
+                acceptance_criteria: payload['acceptance_criteria'] as string | string[] | undefined,
+                framework:           str(payload['framework'])           || undefined,
+                figma_url:           str(payload['figma_url'])           || undefined,
+                design:              str(payload['design'])              || undefined,
+                api_contract:        str(payload['api_contract'])        || undefined,
+                auth:                str(payload['auth'])                || undefined,
+                error_handling:      str(payload['error_handling'])      || undefined,
+                performance:         str(payload['performance'])         || undefined,
+                browser_support:     str(payload['browser_support'])     || undefined,
+                endpoints:           Array.isArray(payload['endpoints']) ? payload['endpoints'] as unknown[] : undefined,
+            };
+
+            const analysis = analyzeSpecCompleteness(rawSpec);
+
+            // LLM enrichment: domain-specific follow-up questions beyond the static gaps
+            let allQuestions = [...analysis.questions];
+            if (callLlm && analysis.gaps.length > 0 && rawSpec.title && rawSpec.description) {
+                const clPrompt = buildClarificationPrompt({
+                    title:       rawSpec.title,
+                    description: rawSpec.description,
+                    gaps:        analysis.gaps,
+                    framework:   rawSpec.framework,
+                });
+                const llmRaw      = await callLlmSafe(callLlm, clPrompt, 'You are a senior developer doing requirements clarification.');
+                const llmQuestions = parseLlmClarificationResponse(llmRaw, allQuestions.length + 1);
+                allQuestions = [...allQuestions, ...llmQuestions];
+            }
+
+            const formattedOutput = formatQuestionsForHuman(allQuestions);
+
+            return safeJson({
+                score:                analysis.score,
+                is_ready_to_implement: analysis.isReadyToImplement,
+                gaps:                 analysis.gaps,
+                questions:            allQuestions,
+                formatted_output:     formattedOutput,
+                summary:              analysis.summary,
+            });
+        }
+
+        // ====================================================================
+        // workspace_fsd_security_deep_scan
+        // Adversarial security analysis: static pattern scan + LLM red-team
+        // review focused on business-logic vulnerabilities that SAST misses.
+        //
+        // payload:
+        //   file_path?           — path to feature source file to read
+        //   feature_code?        — raw source code string (alternative to file_path)
+        //   feature_title?       — short feature name for context
+        //   feature_description? — what the feature does
+        //   auth_code?           — auth/permission code snippet for context
+        //   framework?           — framework/runtime context (default: Node.js/TypeScript)
+        // ====================================================================
+        case 'workspace_fsd_security_deep_scan': {
+            const featureTitle       = str(payload['feature_title'], 'Feature');
+            const featureDescription = str(payload['feature_description']);
+            const filePath           = str(payload['file_path']);
+            let   featureCode        = str(payload['feature_code']);
+            const authCode           = str(payload['auth_code']);
+            const framework          = str(payload['framework'], 'Node.js/TypeScript');
+
+            // Read code from file if not inlined
+            if (!featureCode && filePath) {
+                const readResult = await executeAction('workspace_read_file', { file_path: filePath });
+                featureCode = readResult.ok ? readResult.output : '';
+            }
+
+            if (!featureCode) {
+                return {
+                    ok: false,
+                    output: '',
+                    errorOutput: 'workspace_fsd_security_deep_scan: feature_code or file_path is required',
+                };
+            }
+
+            // 1. Static scan — fast regex patterns (eval, innerHTML, secrets, etc.)
+            const staticFindings = runStaticSecurityChecks(featureCode);
+
+            // 2. LLM adversarial scan — business-logic vulnerabilities
+            let llmFindings: SecurityFinding[] = [];
+            if (callLlm) {
+                const secPrompt = buildBusinessLogicSecurityPrompt({
+                    featureTitle,
+                    featureDescription: featureDescription || featureTitle,
+                    featureCode,
+                    authCode:  authCode || undefined,
+                    framework,
+                });
+                const llmRaw = await callLlmSafe(
+                    callLlm,
+                    secPrompt,
+                    'You are a senior application security engineer. Think like an attacker.',
+                );
+                llmFindings = parseSecurityFindings(llmRaw);
+            }
+
+            const report = buildSecurityReport(staticFindings, llmFindings);
+
+            return safeJson({
+                score:             report.score,
+                critical_count:    report.criticalCount,
+                high_count:        report.highCount,
+                finding_count:     report.findings.length,
+                findings:          report.findings,
+                executive_summary: report.executiveSummary,
+                static_scan_count: staticFindings.length,
+                llm_scan_count:    llmFindings.length,
+                summary:           report.executiveSummary,
+            });
+        }
+
+        // ====================================================================
+        // workspace_fsd_arch_review
+        // Architectural trade-off reasoning: given a question and codebase
+        // context, produces a full Architecture Decision Record (ADR) with
+        // options, trade-offs, recommendation, and implementation plan.
+        //
+        // payload:
+        //   question            — the architectural question to answer (required)
+        //   requirements?       — string[] of non-functional requirements
+        //   constraints?        — string[] of hard constraints
+        //   team_size?          — number of developers
+        //   delivery_timeline?  — e.g. "6 weeks"
+        //   output_dir?         — where to write the ADR markdown (default: docs/adr)
+        // ====================================================================
+        case 'workspace_fsd_arch_review': {
+            const question         = str(payload['question']);
+            const requirements     = Array.isArray(payload['requirements'])  ? (payload['requirements']  as string[]) : undefined;
+            const constraints      = Array.isArray(payload['constraints'])   ? (payload['constraints']   as string[]) : undefined;
+            const teamSize         = typeof payload['team_size'] === 'number' ? payload['team_size']                  : undefined;
+            const deliveryTimeline = str(payload['delivery_timeline'])       || undefined;
+            const outputDir        = str(payload['output_dir'], 'docs/adr');
+
+            if (!question) {
+                return {
+                    ok: false,
+                    output: '',
+                    errorOutput: 'workspace_fsd_arch_review: question is required',
+                };
+            }
+
+            // 1. Scout codebase to extract stack fingerprint
+            const scoutResult    = await executeAction('workspace_scout', {
+                workspace_dir: workspaceDir,
+                query:         question,
+            });
+            const codebaseContext = buildArchReviewContext(scoutResult.ok ? scoutResult.output : '');
+
+            if (!callLlm) {
+                return safeJson({
+                    question,
+                    codebase_context: codebaseContext,
+                    adr:              null,
+                    summary:          'LLM not available — codebase context extracted but ADR not generated',
+                });
+            }
+
+            // 2. Generate ADR via LLM
+            const adrPrompt = buildAdrPrompt({
+                question,
+                codebaseContext,
+                requirements,
+                constraints,
+                teamSize,
+                deliveryTimeline,
+            });
+            const llmRaw = await callLlmSafe(
+                callLlm,
+                adrPrompt,
+                'You are a principal software architect. Return only valid JSON.',
+            );
+            const adr = parseAdrFromLlm(llmRaw, question);
+
+            // 3. Write ADR as Markdown
+            const adrMd       = formatAdrAsMarkdown(adr);
+            const adrSlug     = adr.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60);
+            const adrFileName = `${outputDir}/adr-${adrSlug}.md`;
+
+            await executeAction('workspace_write_file', {
+                file_path: adrFileName,
+                content:   adrMd,
+            });
+
+            return safeJson({
+                question,
+                codebase_context: codebaseContext,
+                adr,
+                adr_file:         adrFileName,
+                summary:          `ADR generated: "${adr.title}" — ${adr.options.length} option(s), ${adr.implementationPlan.length} implementation step(s)`,
             });
         }
     }

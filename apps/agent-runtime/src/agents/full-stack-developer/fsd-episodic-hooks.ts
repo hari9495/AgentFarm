@@ -98,6 +98,30 @@ export function buildFsdEpisodicPattern(
 
     if (at === 'workspace_fsd_standup_report')   return `fsd:standup:${oc}`;
 
+    // ── Advanced capabilities (Sprint 16 Phase 4) ─────────────────────────────
+    if (at === 'workspace_fsd_visual_review') {
+        const criticalCount = numericPayload(result, 'critical_count');
+        const issueCount    = numericPayload(result, 'issue_count');
+        if (criticalCount > 0) return 'fsd:visual_review:critical';
+        return issueCount > 0 ? 'fsd:visual_review:issues' : 'fsd:visual_review:success';
+    }
+
+    if (at === 'workspace_fsd_clarify_spec') {
+        const ready    = result.executionPayload['is_ready_to_implement'];
+        const gapCount = numericPayload(result, 'gap_count');
+        if (ready === true) return 'fsd:clarify_spec:ready';
+        return gapCount > 0 ? 'fsd:clarify_spec:blocking_gaps' : `fsd:clarify_spec:${oc}`;
+    }
+
+    if (at === 'workspace_fsd_security_deep_scan') {
+        const criticalCount = numericPayload(result, 'critical_count');
+        const findingCount  = numericPayload(result, 'finding_count');
+        if (criticalCount > 0) return 'fsd:security_deep_scan:critical';
+        return findingCount > 0 ? 'fsd:security_deep_scan:findings' : 'fsd:security_deep_scan:clean';
+    }
+
+    if (at === 'workspace_fsd_arch_review')      return `fsd:arch_review:${oc}`;
+
     // Fallback — still namespaced under "fsd:" so it is easy to query
     return `fsd:${at}:${oc}`;
 }
@@ -213,6 +237,58 @@ export function buildFsdEpisodicSummary(
     // Standup
     if (pattern.startsWith('fsd:standup'))
         return `FSD standup generated (${oc}): ${taskLabel}`;
+
+    // ── Advanced capabilities (Sprint 16 Phase 4) ─────────────────────────────
+
+    // Visual review
+    if (pattern === 'fsd:visual_review:critical') {
+        const count = result.executionPayload['critical_count'] ?? '?';
+        return `Visual review: ${count} critical issue(s) found: ${taskLabel}`;
+    }
+    if (pattern === 'fsd:visual_review:issues') {
+        const count = result.executionPayload['issue_count'] ?? '?';
+        return `Visual review: ${count} issue(s) found: ${taskLabel}`;
+    }
+    if (pattern.startsWith('fsd:visual_review'))
+        return `Visual review ${oc}: no issues found: ${taskLabel}`;
+
+    // Spec clarification
+    if (pattern === 'fsd:clarify_spec:ready')
+        return `Spec ready to implement (${result.executionPayload['score'] ?? '?'}/100): ${taskLabel}`;
+    if (pattern === 'fsd:clarify_spec:blocking_gaps') {
+        const qCount = Array.isArray(result.executionPayload['questions'])
+            ? (result.executionPayload['questions'] as unknown[]).length
+            : '?';
+        return `Spec needs clarification: ${qCount} question(s) generated: ${taskLabel}`;
+    }
+    if (pattern.startsWith('fsd:clarify_spec'))
+        return `Spec analysis ${oc}: ${taskLabel}`;
+
+    // Security deep scan
+    if (pattern === 'fsd:security_deep_scan:critical') {
+        const count = result.executionPayload['critical_count'] ?? '?';
+        return `Security scan: ${count} critical vulnerability(ies) found: ${taskLabel}`;
+    }
+    if (pattern === 'fsd:security_deep_scan:findings') {
+        const count = result.executionPayload['finding_count'] ?? '?';
+        return `Security scan: ${count} finding(s), score ${result.executionPayload['score'] ?? '?'}/100: ${taskLabel}`;
+    }
+    if (pattern === 'fsd:security_deep_scan:clean')
+        return `Security scan: clean — no vulnerabilities found: ${taskLabel}`;
+    if (pattern.startsWith('fsd:security_deep_scan'))
+        return `Security deep scan ${oc}: ${taskLabel}`;
+
+    // Architecture review
+    if (pattern === 'fsd:arch_review:success') {
+        const adrTitle = typeof result.executionPayload['adr'] === 'object' && result.executionPayload['adr'] !== null
+            ? ((result.executionPayload['adr'] as Record<string, unknown>)['title'] as string | undefined) ?? ''
+            : '';
+        return adrTitle
+            ? `ADR generated: "${adrTitle}": ${taskLabel}`
+            : `Architecture review complete: ${taskLabel}`;
+    }
+    if (pattern.startsWith('fsd:arch_review'))
+        return `Architecture review ${oc}: ${taskLabel}`;
 
     // Fallback
     return `Full-stack action "${at}" completed with status "${oc}": ${taskLabel}`;

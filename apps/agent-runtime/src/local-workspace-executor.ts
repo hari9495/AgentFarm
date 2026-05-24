@@ -356,7 +356,11 @@ export type LocalWorkspaceActionType =
     | 'workspace_fsd_fullstack_feature'
     | 'workspace_fsd_scaffold_project'
     | 'workspace_fsd_deploy_preview'
-    | 'workspace_fsd_standup_report';
+    | 'workspace_fsd_standup_report'
+    | 'workspace_fsd_visual_review'
+    | 'workspace_fsd_clarify_spec'
+    | 'workspace_fsd_security_deep_scan'
+    | 'workspace_fsd_arch_review';
 
 export type LocalWorkspaceResult = {
     ok: boolean;
@@ -870,6 +874,10 @@ export const LOCAL_WORKSPACE_ACTION_TYPES = new Set<LocalWorkspaceActionType>([
     'workspace_fsd_scaffold_project',
     'workspace_fsd_deploy_preview',
     'workspace_fsd_standup_report',
+    'workspace_fsd_visual_review',
+    'workspace_fsd_clarify_spec',
+    'workspace_fsd_security_deep_scan',
+    'workspace_fsd_arch_review',
 ]);
 
 // ---------------------------------------------------------------------------
@@ -13195,7 +13203,11 @@ export async function executeLocalWorkspaceAction(input: {
         case 'workspace_fsd_fullstack_feature':
         case 'workspace_fsd_scaffold_project':
         case 'workspace_fsd_deploy_preview':
-        case 'workspace_fsd_standup_report': {
+        case 'workspace_fsd_standup_report':
+        case 'workspace_fsd_visual_review':
+        case 'workspace_fsd_clarify_spec':
+        case 'workspace_fsd_security_deep_scan':
+        case 'workspace_fsd_arch_review': {
             if (!isFsdActionType(actionType)) {
                 return { ok: false, output: '', errorOutput: `Unrecognised FSD action: ${actionType}` };
             }
