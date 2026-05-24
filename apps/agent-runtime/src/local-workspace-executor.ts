@@ -47,6 +47,8 @@ import { handleTechnicalWriterAction, type TechnicalWriterActionType } from './a
 import { handleContentWriterAction, isContentWriterActionType } from './agents/content-writer/content-writer-action-handler.js';
 import { handleDeveloperAction, isDeveloperActionType, type DeveloperActionType } from './agents/developer/developer-action-handler.js';
 import { handleFsdAction, isFsdActionType, type FsdActionType } from './agents/full-stack-developer/fsd-action-handler.js';
+import { handleDevopsAction, isDevopsActionType, type DevopsActionType } from './agents/devops/devops-action-handler.js';
+import { handleMobileAction, isMobileActionType, type MobileActionType } from './agents/mobile/mobile-action-handler.js';
 import type { ProseCallerFn } from './agents/content-writer/llm-prose-writer.js';
 import { streamLLM } from './llm-decision-adapter.js';
 import { globalEpisodicMemory } from './episodic-memory.js';
@@ -366,7 +368,39 @@ export type LocalWorkspaceActionType =
     // ── Cross-team negotiation (Sprint 16 Phase 6) ────────────────────────────
     | 'workspace_fsd_negotiate'
     // ── Long-term project memory (Sprint 16 Phase 7) ──────────────────────────
-    | 'workspace_fsd_project_context_sync';
+    | 'workspace_fsd_project_context_sync'
+    // Tier 31 (DevOps / Infrastructure domain actions)
+    | 'workspace_devops_tf_plan'
+    | 'workspace_devops_tf_apply'
+    | 'workspace_devops_tf_validate'
+    | 'workspace_devops_tf_generate'
+    | 'workspace_devops_k8s_deploy'
+    | 'workspace_devops_k8s_rollback'
+    | 'workspace_devops_k8s_status'
+    | 'workspace_devops_k8s_logs'
+    | 'workspace_devops_k8s_generate'
+    | 'workspace_devops_docker_build'
+    | 'workspace_devops_docker_push'
+    | 'workspace_devops_pipeline_trigger'
+    | 'workspace_devops_pipeline_status'
+    | 'workspace_devops_incident_triage'
+    | 'workspace_devops_standup_report'
+    // Tier 32 (Mobile / iOS + Android domain actions)
+    | 'workspace_mob_ios_component'
+    | 'workspace_mob_ios_build'
+    | 'workspace_mob_ios_test'
+    | 'workspace_mob_android_component'
+    | 'workspace_mob_android_build'
+    | 'workspace_mob_android_test'
+    | 'workspace_mob_api_client'
+    | 'workspace_mob_push_notify'
+    | 'workspace_mob_deep_link'
+    | 'workspace_mob_auth_implement'
+    | 'workspace_mob_perf_profile'
+    | 'workspace_mob_a11y_audit'
+    | 'workspace_mob_store_upload'
+    | 'workspace_mob_scaffold_project'
+    | 'workspace_mob_standup_report';
 
 export type LocalWorkspaceResult = {
     ok: boolean;
@@ -890,6 +924,38 @@ export const LOCAL_WORKSPACE_ACTION_TYPES = new Set<LocalWorkspaceActionType>([
     'workspace_fsd_negotiate',
     // ── Long-term project memory (Sprint 16 Phase 7) ──────────────────────────
     'workspace_fsd_project_context_sync',
+    // Tier 31 (DevOps / Infrastructure domain actions)
+    'workspace_devops_tf_plan',
+    'workspace_devops_tf_apply',
+    'workspace_devops_tf_validate',
+    'workspace_devops_tf_generate',
+    'workspace_devops_k8s_deploy',
+    'workspace_devops_k8s_rollback',
+    'workspace_devops_k8s_status',
+    'workspace_devops_k8s_logs',
+    'workspace_devops_k8s_generate',
+    'workspace_devops_docker_build',
+    'workspace_devops_docker_push',
+    'workspace_devops_pipeline_trigger',
+    'workspace_devops_pipeline_status',
+    'workspace_devops_incident_triage',
+    'workspace_devops_standup_report',
+    // Tier 32 (Mobile / iOS + Android domain actions)
+    'workspace_mob_ios_component',
+    'workspace_mob_ios_build',
+    'workspace_mob_ios_test',
+    'workspace_mob_android_component',
+    'workspace_mob_android_build',
+    'workspace_mob_android_test',
+    'workspace_mob_api_client',
+    'workspace_mob_push_notify',
+    'workspace_mob_deep_link',
+    'workspace_mob_auth_implement',
+    'workspace_mob_perf_profile',
+    'workspace_mob_a11y_audit',
+    'workspace_mob_store_upload',
+    'workspace_mob_scaffold_project',
+    'workspace_mob_standup_report',
 ]);
 
 // ---------------------------------------------------------------------------
@@ -13262,6 +13328,122 @@ export async function executeLocalWorkspaceAction(input: {
                 errorMessage:  fsdResult.errorOutput ? fsdResult.errorOutput.slice(0, 200) : undefined,
             });
             return fsdResult;
+        }
+
+        // ====================================================================
+        // TIER 31: DEVOPS / INFRASTRUCTURE DOMAIN ACTIONS
+        // ====================================================================
+        case 'workspace_devops_tf_plan':
+        case 'workspace_devops_tf_apply':
+        case 'workspace_devops_tf_validate':
+        case 'workspace_devops_tf_generate':
+        case 'workspace_devops_k8s_deploy':
+        case 'workspace_devops_k8s_rollback':
+        case 'workspace_devops_k8s_status':
+        case 'workspace_devops_k8s_logs':
+        case 'workspace_devops_k8s_generate':
+        case 'workspace_devops_docker_build':
+        case 'workspace_devops_docker_push':
+        case 'workspace_devops_pipeline_trigger':
+        case 'workspace_devops_pipeline_status':
+        case 'workspace_devops_incident_triage':
+        case 'workspace_devops_standup_report': {
+            if (!isDevopsActionType(actionType)) {
+                return { ok: false, output: '', errorOutput: `Unrecognised DevOps action: ${actionType}` };
+            }
+            const devopsResult = await handleDevopsAction({
+                actionType: actionType as DevopsActionType,
+                tenantId,
+                botId,
+                taskId,
+                payload,
+                workspaceDir,
+                executeAction: (aType, aPayload) =>
+                    executeLocalWorkspaceAction({
+                        tenantId,
+                        botId,
+                        taskId,
+                        actionType: aType as LocalWorkspaceActionType,
+                        payload: aPayload,
+                        connectorActionExecuteClient,
+                    }),
+                runCommand,
+                callLlm: buildTwLlmCallerFn(),
+            });
+            // Record outcome in episodic memory
+            const devopsOutcome: TaskOutcome = devopsResult.ok ? 'success' : 'failed';
+            const devopsTitle   = typeof payload['title']       === 'string' ? payload['title']       : '';
+            const devopsDesc    = typeof payload['description'] === 'string' ? payload['description'] : '';
+            const devoopsSummary = (devopsTitle || devopsDesc || actionType).slice(0, 200);
+            void globalEpisodicMemory.record({
+                taskId,
+                workspaceId: workspaceDir,
+                botId,
+                actionType,
+                promptSummary: devoopsSummary,
+                outcome:       devopsOutcome,
+                timestamp:     Date.now(),
+                errorMessage:  devopsResult.errorOutput ? devopsResult.errorOutput.slice(0, 200) : undefined,
+            });
+            return devopsResult;
+        }
+
+        // ====================================================================
+        // TIER 32: MOBILE / iOS + ANDROID DOMAIN ACTIONS
+        // ====================================================================
+        case 'workspace_mob_ios_component':
+        case 'workspace_mob_ios_build':
+        case 'workspace_mob_ios_test':
+        case 'workspace_mob_android_component':
+        case 'workspace_mob_android_build':
+        case 'workspace_mob_android_test':
+        case 'workspace_mob_api_client':
+        case 'workspace_mob_push_notify':
+        case 'workspace_mob_deep_link':
+        case 'workspace_mob_auth_implement':
+        case 'workspace_mob_perf_profile':
+        case 'workspace_mob_a11y_audit':
+        case 'workspace_mob_store_upload':
+        case 'workspace_mob_scaffold_project':
+        case 'workspace_mob_standup_report': {
+            if (!isMobileActionType(actionType)) {
+                return { ok: false, output: '', errorOutput: `Unrecognised Mobile action: ${actionType}` };
+            }
+            const mobileResult = await handleMobileAction({
+                actionType: actionType as MobileActionType,
+                tenantId,
+                botId,
+                taskId,
+                payload,
+                workspaceDir,
+                executeAction: (aType, aPayload) =>
+                    executeLocalWorkspaceAction({
+                        tenantId,
+                        botId,
+                        taskId,
+                        actionType: aType as LocalWorkspaceActionType,
+                        payload: aPayload,
+                        connectorActionExecuteClient,
+                    }),
+                runCommand,
+                callLlm: buildTwLlmCallerFn(),
+            });
+            // Record outcome in episodic memory
+            const mobileOutcome: TaskOutcome = mobileResult.ok ? 'success' : 'failed';
+            const mobileTitle   = typeof payload['title']       === 'string' ? payload['title']       : '';
+            const mobileDesc    = typeof payload['description'] === 'string' ? payload['description'] : '';
+            const mobileSummary = (mobileTitle || mobileDesc || actionType).slice(0, 200);
+            void globalEpisodicMemory.record({
+                taskId,
+                workspaceId: workspaceDir,
+                botId,
+                actionType,
+                promptSummary: mobileSummary,
+                outcome:       mobileOutcome,
+                timestamp:     Date.now(),
+                errorMessage:  mobileResult.errorOutput ? mobileResult.errorOutput.slice(0, 200) : undefined,
+            });
+            return mobileResult;
         }
 
         default: {
