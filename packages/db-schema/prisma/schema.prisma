@@ -1476,8 +1476,30 @@ model SalesAgentConfig {
   reEngageDaysAfterLoss     Int?
   browserEnabled            Boolean  @default(false)
   browserAllowedDomains     String?
-  createdAt                 DateTime @default(now())
-  updatedAt                 DateTime @updatedAt
+  // Telephony — cold calling via Twilio
+  telephonyProvider         String?
+  twilioAccountSid          String?
+  twilioAuthToken           String?
+  twilioFromNumber          String?
+  callWebhookBaseUrl        String?
+  // LinkedIn outbound
+  phantombusterApiKey             String?
+  phantombusterLinkedInPhantomId  String?
+  // Market research / social listening
+  marketResearchEnabled          Boolean @default(false)
+  newsApiKey                     String?
+  marketResearchIntervalHours    Int?
+  // Negotiation & Closing
+  maxDiscountPercent        Float?    // e.g. 15.0 = 15% max autonomous discount
+  discountApprovalRequired  Boolean   @default(false)
+  discountApproverEmail     String?
+  // Relationship Management
+  npsEnabled                Boolean   @default(false)
+  npsDelayDays              Int[]     @default([30, 60, 90])
+  upsellEnabled             Boolean   @default(false)
+  upsellCheckInDays         Int       @default(90)
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
 
   @@index([tenantId])
   @@index([botId])
@@ -1587,12 +1609,20 @@ model Prospect {
   notes           String?
   lastContactedAt DateTime?
   nextFollowUpAt  DateTime?
+  // Referral tracking
+  referralSource  String?
+  referredBy      String?        // email of the referrer
+  referralNotes   String?
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 
   deals           SalesDeal[]
   activities      SalesActivity[]
   sequenceEntries SalesSequenceEntry[]
+  callRecords     CallRecord[]
+  negotiations    SalesNegotiation[]
+  proposals       SalesProposal[]
+  npsResponses    NpsResponse[]
 
   @@unique([tenantId, email])
   @@index([tenantId])
@@ -1712,6 +1742,121 @@ model SalesSequenceEntry {
   @@index([prospectId])
   @@index([scheduledFor])
   @@index([sentAt])
+}
+
+// ── CallRecord — cold call session (Twilio) ──────────────────────────────────
+
+model CallRecord {
+  id              String   @id @default(cuid())
+  tenantId        String
+  botId           String
+  prospectId      String
+  activityId      String?
+  twilioCallSid   String   @unique
+  status          String   @default("initiated")   // initiated|ringing|in-progress|completed|failed|no-answer|voicemail
+  toNumber        String
+  fromNumber      String
+  durationSeconds Int?
+  transcript      Json     @default("[]")          // CallTurn[]
+  outcome         String?
+  initiatedAt     DateTime @default(now())
+  completedAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  prospect Prospect @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([botId])
+  @@index([prospectId])
+  @@index([twilioCallSid])
+  @@index([tenantId, status])
+}
+
+// ── SalesNegotiation — pricing negotiation state ─────────────────────────────
+
+model SalesNegotiation {
+  id              String   @id @default(cuid())
+  tenantId        String
+  botId           String
+  prospectId      String
+  dealId          String?
+  status          String   @default("open")        // open|accepted|rejected|escalated|expired
+  listPrice       Float
+  currency        String   @default("USD")
+  currentOffer    Float
+  counterOffer    Float?
+  discountPercent Float?
+  approvalRequired Boolean @default(false)
+  approvalStatus  String?                          // pending|approved|rejected
+  approverEmail   String?
+  turns           Json     @default("[]")          // NegotiationTurn[]
+  outcome         String?
+  initiatedAt     DateTime @default(now())
+  resolvedAt      DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  prospect Prospect   @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([botId])
+  @@index([prospectId])
+  @@index([tenantId, status])
+}
+
+// ── SalesProposal — generated proposal documents ─────────────────────────────
+
+model SalesProposal {
+  id           String   @id @default(cuid())
+  tenantId     String
+  botId        String
+  prospectId   String
+  dealId       String?
+  title        String
+  htmlContent  String   @db.Text
+  listPrice    Float?
+  currency     String   @default("USD")
+  sections     Json     @default("[]")             // ProposalSection[]
+  status       String   @default("draft")          // draft|sent|accepted|rejected
+  sentAt       DateTime?
+  activityId   String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  prospect Prospect @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([botId])
+  @@index([prospectId])
+  @@index([tenantId, status])
+}
+
+// ── NpsResponse — post-sale NPS/CSAT survey responses ────────────────────────
+
+model NpsResponse {
+  id           String   @id @default(cuid())
+  tenantId     String
+  botId        String
+  prospectId   String
+  dealId       String?
+  surveyType   String   @default("nps")            // nps|csat
+  score        Int?                                // NPS: 0-10, CSAT: 1-5
+  feedback     String?
+  sentAt       DateTime @default(now())
+  respondedAt  DateTime?
+  token        String   @unique                    // one-click response token
+  activityId   String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  prospect Prospect @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([botId])
+  @@index([prospectId])
+  @@index([token])
+  @@index([tenantId, surveyType])
 }
 
 // ── Portal auth models ────────────────────────────────────────────────────────
@@ -2059,6 +2204,8 @@ enum ProspectStatus {
   proposal_sent
   closed_won
   closed_lost
+  unsubscribed
+  call_attempted
 }
 
 enum DealStage {
@@ -2089,4 +2236,28 @@ enum SalesActivityType {
   email_sent
   note
   browser_task
+  // Sprint 20 — Lead Generation
+  referral_received
+  referral_requested
+  market_signal
+  call_answered
+  call_no_answer
+  call_voicemail
+  linkedin_connect
+  // Sprint 20 — Product Presentations
+  demo_script_generated
+  demo_presented
+  demo_followup_sent
+  slide_deck_generated
+  // Sprint 21 — Negotiation & Closing
+  negotiation_offer
+  negotiation_counter
+  negotiation_accepted
+  negotiation_rejected
+  proposal_generated
+  // Sprint 21 — Relationship Management
+  upsell_sent
+  nps_sent
+  nps_responded
+  qbr_generated
 }

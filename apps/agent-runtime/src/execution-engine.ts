@@ -125,6 +125,8 @@ const HIGH_RISK_ACTIONS = new Set([
     'workspace_infra_ipmi_console',
     // Roadmap execution: autonomous multi-step plan execution
     'workspace_fsd_roadmap_tick',
+    // Deep debug: GDB sessions on remote hosts via SSH can disrupt live processes
+    'workspace_dev_gdb_session',
 ]);
 
 const MEDIUM_RISK_ACTIONS = new Set([

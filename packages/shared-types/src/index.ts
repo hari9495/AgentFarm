@@ -2270,6 +2270,15 @@ export interface SalesAgentConfigRecord {
   marketResearchEnabled?: boolean;
   newsApiKey?: string;
   marketResearchIntervalHours?: number;
+  // Negotiation & Closing
+  maxDiscountPercent?: number;
+  discountApprovalRequired?: boolean;
+  discountApproverEmail?: string;
+  // Relationship Management
+  npsEnabled?: boolean;
+  npsDelayDays?: number[];
+  upsellEnabled?: boolean;
+  upsellCheckInDays?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -2417,6 +2426,7 @@ export type SalesActivityType =
   | 'email_sent'
   | 'note'
   | 'browser_task'
+  // Sprint 20 — Lead Generation
   | 'referral_received'
   | 'referral_requested'
   | 'market_signal'
@@ -2424,10 +2434,22 @@ export type SalesActivityType =
   | 'call_no_answer'
   | 'call_voicemail'
   | 'linkedin_connect'
+  // Sprint 20 — Product Presentations
   | 'demo_script_generated'
   | 'demo_presented'
   | 'demo_followup_sent'
-  | 'slide_deck_generated';
+  | 'slide_deck_generated'
+  // Sprint 21 — Negotiation & Closing
+  | 'negotiation_offer'
+  | 'negotiation_counter'
+  | 'negotiation_accepted'
+  | 'negotiation_rejected'
+  | 'proposal_generated'
+  // Sprint 21 — Relationship Management
+  | 'upsell_sent'
+  | 'nps_sent'
+  | 'nps_responded'
+  | 'qbr_generated';
 
 export interface ProspectRecord {
   id: string;
@@ -2698,5 +2720,123 @@ export interface SlideDeck {
   slides: SlideDeckSlide[];
   htmlContent: string;
   generatedAt: string;
+}
+
+// ============================================================================
+// NEGOTIATION TYPES (Sprint 21)
+// ============================================================================
+
+export interface NegotiationTurn {
+  speaker: 'agent' | 'prospect';
+  offer: number;
+  discountPercent: number;
+  message: string;
+  timestamp: string;
+}
+
+export interface SalesNegotiationRecord {
+  id: string;
+  tenantId: string;
+  botId: string;
+  prospectId: string;
+  dealId?: string | null;
+  status: 'open' | 'accepted' | 'rejected' | 'escalated' | 'expired';
+  listPrice: number;
+  currency: string;
+  currentOffer: number;
+  counterOffer?: number | null;
+  discountPercent?: number | null;
+  approvalRequired: boolean;
+  approvalStatus?: 'pending' | 'approved' | 'rejected' | null;
+  approverEmail?: string | null;
+  turns: NegotiationTurn[];
+  outcome?: string | null;
+  initiatedAt: Date;
+  resolvedAt?: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ============================================================================
+// PROPOSAL TYPES (Sprint 21)
+// ============================================================================
+
+export interface ProposalSection {
+  title: string;
+  body: string;
+}
+
+export interface SalesProposalRecord {
+  id: string;
+  tenantId: string;
+  botId: string;
+  prospectId: string;
+  dealId?: string | null;
+  title: string;
+  htmlContent: string;
+  listPrice?: number | null;
+  currency: string;
+  sections: ProposalSection[];
+  status: 'draft' | 'sent' | 'accepted' | 'rejected';
+  sentAt?: Date | null;
+  activityId?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ============================================================================
+// NPS / CSAT TYPES (Sprint 21)
+// ============================================================================
+
+export interface NpsResponseRecord {
+  id: string;
+  tenantId: string;
+  botId: string;
+  prospectId: string;
+  dealId?: string | null;
+  surveyType: 'nps' | 'csat';
+  score?: number | null;        // NPS: 0-10, CSAT: 1-5
+  feedback?: string | null;
+  sentAt: Date;
+  respondedAt?: Date | null;
+  token: string;
+  activityId?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ============================================================================
+// KPI REPORT TYPES (Sprint 21)
+// ============================================================================
+
+export interface SalesFunnelStage {
+  stage: string;
+  count: number;
+  value: number;
+}
+
+export interface SalesKpiReport {
+  tenantId: string;
+  generatedAt: string;
+  // Conversion
+  totalLeads: number;
+  totalOpportunities: number;
+  totalClosedWon: number;
+  totalClosedLost: number;
+  leadToOpportunityRate: number;    // %
+  opportunityToWinRate: number;     // %
+  overallConversionRate: number;    // %
+  // Revenue
+  totalWonValue: number;
+  avgDealValue: number;
+  avgDaysToClose: number;
+  // Retention (closed_won still active vs total closed_won)
+  closedWonCount: number;
+  churnedCount: number;             // closed_won → closed_lost re-engagement lost
+  retentionRate: number;            // %
+  // Pipeline
+  openPipelineValue: number;
+  openDealCount: number;
+  funnel: SalesFunnelStage[];
 }
 

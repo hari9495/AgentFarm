@@ -54,6 +54,11 @@ import { handleProactiveScanAction, isProactiveScanActionType, type ProactiveSca
 import { handlePairmodeAction, isPairmodeActionType, type PairmodeActionType } from './agents/developer/pairmode-action-handler.js';
 import { handleBootstrapAction, isBootstrapActionType, type BootstrapActionType } from './agents/devops/bootstrap-action-handler.js';
 import { handleInfraDebugAction, isInfraDebugActionType, type InfraDebugActionType } from './agents/devops/infra-debug-action-handler.js';
+import { handleUxAnalyticsAction, isUxAnalyticsActionType, type UxAnalyticsActionType } from './agents/full-stack-developer/ux-analytics-action-handler.js';
+import { handleDeepDebugAction, isDeepDebugActionType, type DeepDebugActionType } from './agents/developer/deep-debug-action-handler.js';
+import { handleArchResearchAction, isArchResearchActionType, type ArchResearchActionType } from './agents/developer/arch-research-action-handler.js';
+import { handleDesignScoreAction, isDesignScoreActionType, type DesignScoreActionType } from './agents/full-stack-developer/design-score-action-handler.js';
+import { handleContextSweepAction, isContextSweepActionType, type ContextSweepActionType } from './agents/developer/context-sweep-action-handler.js';
 import type { ProseCallerFn } from './agents/content-writer/llm-prose-writer.js';
 import { streamLLM } from './llm-decision-adapter.js';
 import { globalEpisodicMemory } from './episodic-memory.js';
@@ -431,7 +436,25 @@ export type LocalWorkspaceActionType =
     // Tier 38 (Hardware / network physical debugging — Gap 6)
     | 'workspace_infra_ipmi_console'
     | 'workspace_infra_netconf_query'
-    | 'workspace_infra_remote_diag';
+    | 'workspace_infra_remote_diag'
+    // Tier 39 (UX analytics & A/B testing — Gap 5a)
+    | 'workspace_fsd_analytics_snapshot'
+    | 'workspace_fsd_session_replay_analyze'
+    | 'workspace_fsd_ab_test_read'
+    // Tier 40 (Deep debugging: race / memory / GDB / log — Gap 5b)
+    | 'workspace_dev_race_detect'
+    | 'workspace_dev_memory_sanitize'
+    | 'workspace_dev_gdb_session'
+    | 'workspace_dev_log_correlate'
+    // Tier 41 (Architecture research & critique-refine — Gap 5c)
+    | 'workspace_dev_arch_research'
+    | 'workspace_dev_arch_second_opinion'
+    // Tier 42 (Design scoring & reference compare — Gap 5d)
+    | 'workspace_fsd_design_score'
+    | 'workspace_fsd_design_reference'
+    // Tier 43 (Team context sweep & meeting digest — Gap 5e)
+    | 'workspace_dev_context_sweep'
+    | 'workspace_dev_meeting_digest';
 
 export type LocalWorkspaceResult = {
     ok: boolean;
@@ -1013,6 +1036,24 @@ export const LOCAL_WORKSPACE_ACTION_TYPES = new Set<LocalWorkspaceActionType>([
     'workspace_infra_ipmi_console',
     'workspace_infra_netconf_query',
     'workspace_infra_remote_diag',
+    // Tier 39 (UX analytics & A/B testing — Gap 5a)
+    'workspace_fsd_analytics_snapshot',
+    'workspace_fsd_session_replay_analyze',
+    'workspace_fsd_ab_test_read',
+    // Tier 40 (Deep debugging: race / memory / GDB / log — Gap 5b)
+    'workspace_dev_race_detect',
+    'workspace_dev_memory_sanitize',
+    'workspace_dev_gdb_session',
+    'workspace_dev_log_correlate',
+    // Tier 41 (Architecture research & critique-refine — Gap 5c)
+    'workspace_dev_arch_research',
+    'workspace_dev_arch_second_opinion',
+    // Tier 42 (Design scoring & reference compare — Gap 5d)
+    'workspace_fsd_design_score',
+    'workspace_fsd_design_reference',
+    // Tier 43 (Team context sweep & meeting digest — Gap 5e)
+    'workspace_dev_context_sweep',
+    'workspace_dev_meeting_digest',
 ]);
 
 // ---------------------------------------------------------------------------
@@ -13749,6 +13790,184 @@ export async function executeLocalWorkspaceAction(input: {
                 errorMessage:  infraResult.errorOutput ? infraResult.errorOutput.slice(0, 200) : undefined,
             });
             return infraResult;
+        }
+
+        // ====================================================================
+        // TIER 39: UX ANALYTICS & A/B TESTING (Gap 5a)
+        // ====================================================================
+        case 'workspace_fsd_analytics_snapshot':
+        case 'workspace_fsd_session_replay_analyze':
+        case 'workspace_fsd_ab_test_read': {
+            if (!isUxAnalyticsActionType(actionType)) {
+                return { ok: false, output: '', errorOutput: `Unrecognised UX analytics action: ${actionType}` };
+            }
+            const uxResult = await handleUxAnalyticsAction({
+                actionType: actionType as UxAnalyticsActionType,
+                tenantId, botId, taskId,
+                payload, workspaceDir,
+                executeAction: (aType, aPayload) =>
+                    executeLocalWorkspaceAction({
+                        tenantId, botId, taskId,
+                        actionType: aType as LocalWorkspaceActionType,
+                        payload: aPayload,
+                        connectorActionExecuteClient,
+                    }),
+                callLlm: buildTwLlmCallerFn(),
+            });
+            void globalEpisodicMemory.record({
+                taskId,
+                workspaceId: workspaceDir,
+                botId,
+                actionType,
+                promptSummary: (typeof payload['page_url'] === 'string' ? payload['page_url'] : actionType).slice(0, 200),
+                outcome:       uxResult.ok ? 'success' : 'failed',
+                timestamp:     Date.now(),
+                errorMessage:  uxResult.errorOutput ? uxResult.errorOutput.slice(0, 200) : undefined,
+            });
+            return uxResult;
+        }
+
+        // ====================================================================
+        // TIER 40: DEEP DEBUGGING — SUBTLE BUGS (Gap 5b)
+        // ====================================================================
+        case 'workspace_dev_race_detect':
+        case 'workspace_dev_memory_sanitize':
+        case 'workspace_dev_gdb_session':
+        case 'workspace_dev_log_correlate': {
+            if (!isDeepDebugActionType(actionType)) {
+                return { ok: false, output: '', errorOutput: `Unrecognised deep-debug action: ${actionType}` };
+            }
+            const deepDbgResult = await handleDeepDebugAction({
+                actionType: actionType as DeepDebugActionType,
+                tenantId, botId, taskId,
+                payload, workspaceDir,
+                executeAction: (aType, aPayload) =>
+                    executeLocalWorkspaceAction({
+                        tenantId, botId, taskId,
+                        actionType: aType as LocalWorkspaceActionType,
+                        payload: aPayload,
+                        connectorActionExecuteClient,
+                    }),
+                runCommand,
+                callLlm: buildTwLlmCallerFn(),
+            });
+            void globalEpisodicMemory.record({
+                taskId,
+                workspaceId: workspaceDir,
+                botId,
+                actionType,
+                promptSummary: (typeof payload['binary'] === 'string' ? payload['binary'] :
+                                 typeof payload['log_file'] === 'string' ? payload['log_file'] : actionType).slice(0, 200),
+                outcome:       deepDbgResult.ok ? 'success' : 'failed',
+                timestamp:     Date.now(),
+                errorMessage:  deepDbgResult.errorOutput ? deepDbgResult.errorOutput.slice(0, 200) : undefined,
+            });
+            return deepDbgResult;
+        }
+
+        // ====================================================================
+        // TIER 41: ARCHITECTURE RESEARCH & CRITIQUE-REFINE (Gap 5c)
+        // ====================================================================
+        case 'workspace_dev_arch_research':
+        case 'workspace_dev_arch_second_opinion': {
+            if (!isArchResearchActionType(actionType)) {
+                return { ok: false, output: '', errorOutput: `Unrecognised arch-research action: ${actionType}` };
+            }
+            const archResult = await handleArchResearchAction({
+                actionType: actionType as ArchResearchActionType,
+                tenantId, botId, taskId,
+                payload, workspaceDir,
+                executeAction: (aType, aPayload) =>
+                    executeLocalWorkspaceAction({
+                        tenantId, botId, taskId,
+                        actionType: aType as LocalWorkspaceActionType,
+                        payload: aPayload,
+                        connectorActionExecuteClient,
+                    }),
+                callLlm: buildTwLlmCallerFn(),
+            });
+            void globalEpisodicMemory.record({
+                taskId,
+                workspaceId: workspaceDir,
+                botId,
+                actionType,
+                promptSummary: (typeof payload['problem'] === 'string' ? payload['problem'] :
+                                 typeof payload['proposal'] === 'string' ? payload['proposal'] : actionType).slice(0, 200),
+                outcome:       archResult.ok ? 'success' : 'failed',
+                timestamp:     Date.now(),
+                errorMessage:  archResult.errorOutput ? archResult.errorOutput.slice(0, 200) : undefined,
+            });
+            return archResult;
+        }
+
+        // ====================================================================
+        // TIER 42: DESIGN SCORING & REFERENCE COMPARE (Gap 5d)
+        // ====================================================================
+        case 'workspace_fsd_design_score':
+        case 'workspace_fsd_design_reference': {
+            if (!isDesignScoreActionType(actionType)) {
+                return { ok: false, output: '', errorOutput: `Unrecognised design-score action: ${actionType}` };
+            }
+            const designResult = await handleDesignScoreAction({
+                actionType: actionType as DesignScoreActionType,
+                tenantId, botId, taskId,
+                payload, workspaceDir,
+                executeAction: (aType, aPayload) =>
+                    executeLocalWorkspaceAction({
+                        tenantId, botId, taskId,
+                        actionType: aType as LocalWorkspaceActionType,
+                        payload: aPayload,
+                        connectorActionExecuteClient,
+                    }),
+                callLlm: buildTwLlmCallerFn(),
+            });
+            void globalEpisodicMemory.record({
+                taskId,
+                workspaceId: workspaceDir,
+                botId,
+                actionType,
+                promptSummary: (typeof payload['screenshot_path'] === 'string' ? payload['screenshot_path'] :
+                                 typeof payload['component_type'] === 'string' ? payload['component_type'] : actionType).slice(0, 200),
+                outcome:       designResult.ok ? 'success' : 'failed',
+                timestamp:     Date.now(),
+                errorMessage:  designResult.errorOutput ? designResult.errorOutput.slice(0, 200) : undefined,
+            });
+            return designResult;
+        }
+
+        // ====================================================================
+        // TIER 43: TEAM CONTEXT SWEEP & MEETING DIGEST (Gap 5e)
+        // ====================================================================
+        case 'workspace_dev_context_sweep':
+        case 'workspace_dev_meeting_digest': {
+            if (!isContextSweepActionType(actionType)) {
+                return { ok: false, output: '', errorOutput: `Unrecognised context-sweep action: ${actionType}` };
+            }
+            const sweepResult = await handleContextSweepAction({
+                actionType: actionType as ContextSweepActionType,
+                tenantId, botId, taskId,
+                payload, workspaceDir,
+                executeAction: (aType, aPayload) =>
+                    executeLocalWorkspaceAction({
+                        tenantId, botId, taskId,
+                        actionType: aType as LocalWorkspaceActionType,
+                        payload: aPayload,
+                        connectorActionExecuteClient,
+                    }),
+                callLlm: buildTwLlmCallerFn(),
+            });
+            void globalEpisodicMemory.record({
+                taskId,
+                workspaceId: workspaceDir,
+                botId,
+                actionType,
+                promptSummary: (typeof payload['channel'] === 'string' ? payload['channel'] :
+                                 typeof payload['transcript'] === 'string' ? payload['transcript'].slice(0, 120) : actionType).slice(0, 200),
+                outcome:       sweepResult.ok ? 'success' : 'failed',
+                timestamp:     Date.now(),
+                errorMessage:  sweepResult.errorOutput ? sweepResult.errorOutput.slice(0, 200) : undefined,
+            });
+            return sweepResult;
         }
 
         default: {

@@ -4265,6 +4265,18 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                     ].join('\n');
                 }
 
+                if (result.decision.actionType === 'workspace_dev_gdb_session') {
+                    const gdbBinary  = typeof executionTask.payload['binary']  === 'string' ? executionTask.payload['binary']  : 'unknown';
+                    const gdbMode    = typeof executionTask.payload['mode']    === 'string' ? executionTask.payload['mode']    : 'backtrace';
+                    const gdbRemote  = typeof executionTask.payload['ssh_host'] === 'string' ? executionTask.payload['ssh_host'] : undefined;
+                    actionSummary = [
+                        `GDB debug session — binary: ${gdbBinary}  mode: ${gdbMode}`,
+                        gdbRemote ? `Remote host: ${gdbRemote} (SSH connection required)` : 'Local process',
+                        `Risk: Attaching GDB to a live process freezes it; kill or detach commands can terminate live services.`,
+                        `Rollback: Detach the debugger (gdb detach) and restart the affected service if needed.`,
+                    ].join('\n');
+                }
+
                 // Store approval summary for transcript
                 taskApprovalSummaries.set(task.taskId, actionSummary);
 

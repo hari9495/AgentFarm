@@ -222,6 +222,17 @@ export const DEVELOPER_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = 
     // ── Gap 1 — Real-time pair programming (Tier 35) ──────────────────────────
     'workspace_dev_pair_suggest',
     'workspace_dev_inline_assist',
+    // ── Gap 5b — Deep debugging: race detect / mem sanitize / GDB / log (Tier 40)
+    'workspace_dev_race_detect',
+    'workspace_dev_memory_sanitize',
+    'workspace_dev_gdb_session',
+    'workspace_dev_log_correlate',
+    // ── Gap 5c — Architecture research & critique-refine (Tier 41) ───────────
+    'workspace_dev_arch_research',
+    'workspace_dev_arch_second_opinion',
+    // ── Gap 5e — Team context sweep & meeting digest (Tier 43) ───────────────
+    'workspace_dev_context_sweep',
+    'workspace_dev_meeting_digest',
 ];
 
 // ---------------------------------------------------------------------------

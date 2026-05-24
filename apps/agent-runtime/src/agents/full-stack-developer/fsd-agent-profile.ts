@@ -99,6 +99,13 @@ export const FSD_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = [
     'workspace_fsd_strategic_plan',
     'workspace_fsd_roadmap_tick',
     'workspace_fsd_roadmap_status',
+    // ── Gap 5a — UX analytics, session replay & A/B testing (Tier 39) ─────────
+    'workspace_fsd_analytics_snapshot',
+    'workspace_fsd_session_replay_analyze',
+    'workspace_fsd_ab_test_read',
+    // ── Gap 5d — Aesthetic / design scoring & reference compare (Tier 42) ─────
+    'workspace_fsd_design_score',
+    'workspace_fsd_design_reference',
 ];
 
 // ---------------------------------------------------------------------------
