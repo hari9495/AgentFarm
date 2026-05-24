@@ -90,6 +90,19 @@ import {
     formatAdrAsMarkdown,
 } from './fsd-arch-advisor.js';
 
+import {
+    buildPlaywrightDebugScript,
+    parseBrowserDebugOutput,
+    buildDebugAnalysisPrompt,
+    applyDebugSuggestions,
+} from './fsd-browser-debugger.js';
+
+import {
+    isKnownFramework,
+    buildUnknownFrameworkComponentPrompt,
+    parseUnknownFrameworkOutput,
+} from './fsd-framework-adapter.js';
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -114,7 +127,9 @@ export type FsdActionType =
     | 'workspace_fsd_visual_review'
     | 'workspace_fsd_clarify_spec'
     | 'workspace_fsd_security_deep_scan'
-    | 'workspace_fsd_arch_review';
+    | 'workspace_fsd_arch_review'
+    // ── Live debugging + framework adapter (Sprint 16 Phase 5) ───────────────
+    | 'workspace_fsd_browser_debug';
 
 export const FSD_ACTION_TYPES = new Set<FsdActionType>([
     'workspace_fsd_ui_component',
@@ -137,6 +152,8 @@ export const FSD_ACTION_TYPES = new Set<FsdActionType>([
     'workspace_fsd_clarify_spec',
     'workspace_fsd_security_deep_scan',
     'workspace_fsd_arch_review',
+    // ── Live debugging + framework adapter (Sprint 16 Phase 5) ───────────────
+    'workspace_fsd_browser_debug',
 ]);
 
 export function isFsdActionType(at: string): at is FsdActionType {
@@ -272,16 +289,50 @@ export async function handleFsdAction(
         case 'workspace_fsd_ui_component': {
             const componentName = str(payload['component_name'], 'MyComponent');
             const description   = str(payload['description']);
-            const framework     = isUiFramework(payload['framework']) ? payload['framework'] : 'react';
+            const frameworkRaw  = str(payload['framework'], 'react');
             const styling       = isStylingMethod(payload['styling']) ? payload['styling'] : 'tailwind';
             const outputPath    = str(payload['output_path']);
+            const props         = Array.isArray(payload['props']) ? (payload['props'] as ComponentSpec['props']) : [];
 
+            // ── Unknown framework path — LLM-driven generation ────────────────
+            if (!isKnownFramework(frameworkRaw) && callLlm) {
+                const prompt = buildUnknownFrameworkComponentPrompt({
+                    framework:     frameworkRaw,
+                    componentName,
+                    description,
+                    styling,
+                    props,
+                    hasState: payload['has_state'] === true,
+                    isAsync:  payload['is_async']  === true,
+                });
+                const llmRaw    = await callLlmSafe(callLlm, prompt, `You are an expert ${frameworkRaw} developer.`);
+                const files     = parseUnknownFrameworkOutput(llmRaw, componentName, frameworkRaw);
+                const outputDir = outputPath || 'src/components';
+                const written: string[] = [];
+                for (const f of files) {
+                    const fp = `${outputDir}/${f.filename}`;
+                    await executeAction('workspace_write_file', { file_path: fp, content: f.content });
+                    written.push(fp);
+                }
+                return safeJson({
+                    component_name:    componentName,
+                    framework:         frameworkRaw,
+                    styling,
+                    written_files:     written,
+                    llm_enriched:      true,
+                    unknown_framework: true,
+                    summary: `Generated ${frameworkRaw} component "${componentName}" via LLM (unknown framework adapter)`,
+                });
+            }
+
+            // ── Known framework path — scaffold + enrichment ──────────────────
+            const framework = isUiFramework(payload['framework']) ? payload['framework'] : 'react';
             const spec: ComponentSpec = {
                 name:        componentName,
                 description,
                 framework,
                 styling,
-                props:    Array.isArray(payload['props']) ? (payload['props'] as ComponentSpec['props']) : [],
+                props,
                 hasState: payload['has_state'] === true,
                 isAsync:  payload['is_async']  === true,
             };
@@ -1523,6 +1574,105 @@ export async function handleFsdAction(
                 adr,
                 adr_file:         adrFileName,
                 summary:          `ADR generated: "${adr.title}" — ${adr.options.length} option(s), ${adr.implementationPlan.length} implementation step(s)`,
+            });
+        }
+
+        // ====================================================================
+        // workspace_fsd_browser_debug
+        // Live runtime error capture: launches headless Chromium via Playwright,
+        // intercepts console errors, uncaught JS exceptions, and HTTP failures,
+        // then asks the LLM to suggest a concrete fix for each finding.
+        //
+        // payload:
+        //   target_url    — URL of the running app to debug (required)
+        //   timeout_ms?   — Playwright navigation timeout in ms (default: 30000)
+        //   source_file?  — relative path of source file to include as LLM context
+        //   source_code?  — raw source code string for LLM context
+        // ====================================================================
+        case 'workspace_fsd_browser_debug': {
+            const targetUrl  = str(payload['target_url']);
+            const timeoutMs  = typeof payload['timeout_ms'] === 'number' ? payload['timeout_ms'] : 30_000;
+            const sourceFile = str(payload['source_file']);
+            let   sourceCode = str(payload['source_code']);
+
+            if (!targetUrl) {
+                return {
+                    ok: false,
+                    output: '',
+                    errorOutput: 'workspace_fsd_browser_debug: target_url is required',
+                };
+            }
+
+            if (!runCommand) {
+                return {
+                    ok: false,
+                    output: '',
+                    errorOutput: 'workspace_fsd_browser_debug: runCommand callback not available',
+                };
+            }
+
+            // Read source file for LLM fix context if not inlined
+            if (!sourceCode && sourceFile) {
+                const readResult = await executeAction('workspace_read_file', { file_path: sourceFile });
+                sourceCode = readResult.ok ? readResult.output : '';
+            }
+
+            // 1. Write the self-contained Playwright script to a temp file
+            const script     = buildPlaywrightDebugScript(targetUrl, timeoutMs);
+            const scriptPath = '__fsd_browser_debug.cjs';
+            await executeAction('workspace_write_file', {
+                file_path: scriptPath,
+                content:   script,
+            });
+
+            // 2. Run the script — capture stdout + stderr
+            let report = parseBrowserDebugOutput('', targetUrl);   // safe default
+            try {
+                const runResult = await runCommand(
+                    ['node', scriptPath],
+                    workspaceDir,
+                    timeoutMs + 10_000,
+                );
+                report = parseBrowserDebugOutput(
+                    runResult.stdout + '\n' + runResult.stderr,
+                    targetUrl,
+                );
+            } catch (runErr) {
+                const msg = runErr instanceof Error ? runErr.message : String(runErr);
+                report = {
+                    targetUrl,
+                    errors: [{
+                        id:       'BROWSER-000',
+                        source:   'other',
+                        severity: 'error',
+                        message:  `Playwright not available or script error: ${msg}. Ensure playwright is installed (npm install playwright).`,
+                    }],
+                    networkFailures: [],
+                    score:   0,
+                    summary: `Browser debug failed — Playwright not available: ${msg}`,
+                };
+            }
+
+            // 3. LLM analysis: root-cause each error + suggest fixes
+            if (callLlm && report.errors.length > 0) {
+                const analysisPrompt = buildDebugAnalysisPrompt(report, sourceCode || undefined);
+                const llmRaw         = await callLlmSafe(
+                    callLlm,
+                    analysisPrompt,
+                    'You are a senior full-stack developer debugging a live web app.',
+                );
+                report = { ...report, errors: applyDebugSuggestions(llmRaw, report.errors) };
+            }
+
+            return safeJson({
+                target_url:        targetUrl,
+                score:             report.score,
+                errors:            report.errors,
+                error_count:       report.errors.filter((e) => e.severity === 'error').length,
+                warning_count:     report.errors.filter((e) => e.severity === 'warning').length,
+                network_failures:  report.networkFailures,
+                net_failure_count: report.networkFailures.length,
+                summary:           report.summary,
             });
         }
     }

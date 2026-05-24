@@ -122,6 +122,11 @@ export function buildFsdEpisodicPattern(
 
     if (at === 'workspace_fsd_arch_review')      return `fsd:arch_review:${oc}`;
 
+    if (at === 'workspace_fsd_browser_debug') {
+        const errorCount = numericPayload(result, 'error_count');
+        return errorCount > 0 ? 'fsd:browser_debug:errors' : `fsd:browser_debug:${oc}`;
+    }
+
     // Fallback — still namespaced under "fsd:" so it is easy to query
     return `fsd:${at}:${oc}`;
 }
@@ -289,6 +294,17 @@ export function buildFsdEpisodicSummary(
     }
     if (pattern.startsWith('fsd:arch_review'))
         return `Architecture review ${oc}: ${taskLabel}`;
+
+    // Browser debug
+    if (pattern === 'fsd:browser_debug:errors') {
+        const eCount = result.executionPayload['error_count'] ?? '?';
+        const nCount = result.executionPayload['net_failure_count'] ?? 0;
+        return `Browser debug: ${eCount} error(s), ${nCount} network failure(s) at ${taskLabel}`;
+    }
+    if (pattern === 'fsd:browser_debug:success')
+        return `Browser debug: no runtime errors detected at ${taskLabel}`;
+    if (pattern.startsWith('fsd:browser_debug'))
+        return `Browser debug ${oc}: ${taskLabel}`;
 
     // Fallback
     return `Full-stack action "${at}" completed with status "${oc}": ${taskLabel}`;

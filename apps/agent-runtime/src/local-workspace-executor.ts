@@ -360,7 +360,8 @@ export type LocalWorkspaceActionType =
     | 'workspace_fsd_visual_review'
     | 'workspace_fsd_clarify_spec'
     | 'workspace_fsd_security_deep_scan'
-    | 'workspace_fsd_arch_review';
+    | 'workspace_fsd_arch_review'
+    | 'workspace_fsd_browser_debug';
 
 export type LocalWorkspaceResult = {
     ok: boolean;
@@ -878,6 +879,7 @@ export const LOCAL_WORKSPACE_ACTION_TYPES = new Set<LocalWorkspaceActionType>([
     'workspace_fsd_clarify_spec',
     'workspace_fsd_security_deep_scan',
     'workspace_fsd_arch_review',
+    'workspace_fsd_browser_debug',
 ]);
 
 // ---------------------------------------------------------------------------
@@ -13207,7 +13209,8 @@ export async function executeLocalWorkspaceAction(input: {
         case 'workspace_fsd_visual_review':
         case 'workspace_fsd_clarify_spec':
         case 'workspace_fsd_security_deep_scan':
-        case 'workspace_fsd_arch_review': {
+        case 'workspace_fsd_arch_review':
+        case 'workspace_fsd_browser_debug': {
             if (!isFsdActionType(actionType)) {
                 return { ok: false, output: '', errorOutput: `Unrecognised FSD action: ${actionType}` };
             }
