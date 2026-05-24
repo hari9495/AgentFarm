@@ -103,6 +103,13 @@ import {
     parseUnknownFrameworkOutput,
 } from './fsd-framework-adapter.js';
 
+import {
+    buildPlaywrightProfilingScript,
+    parseCpuProfile,
+    buildPerfOptimizationPrompt,
+    applyPerfSuggestions,
+} from './fsd-perf-profiler.js';
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -129,7 +136,8 @@ export type FsdActionType =
     | 'workspace_fsd_security_deep_scan'
     | 'workspace_fsd_arch_review'
     // ── Live debugging + framework adapter (Sprint 16 Phase 5) ───────────────
-    | 'workspace_fsd_browser_debug';
+    | 'workspace_fsd_browser_debug'
+    | 'workspace_fsd_perf_profile';
 
 export const FSD_ACTION_TYPES = new Set<FsdActionType>([
     'workspace_fsd_ui_component',
@@ -154,6 +162,7 @@ export const FSD_ACTION_TYPES = new Set<FsdActionType>([
     'workspace_fsd_arch_review',
     // ── Live debugging + framework adapter (Sprint 16 Phase 5) ───────────────
     'workspace_fsd_browser_debug',
+    'workspace_fsd_perf_profile',
 ]);
 
 export function isFsdActionType(at: string): at is FsdActionType {
@@ -1673,6 +1682,99 @@ export async function handleFsdAction(
                 network_failures:  report.networkFailures,
                 net_failure_count: report.networkFailures.length,
                 summary:           report.summary,
+            });
+        }
+
+        // ====================================================================
+        // workspace_fsd_perf_profile
+        // Live CPU hot-path detection via Chrome DevTools Protocol.
+        // Attaches a CDP Profiler session to a running page, samples for
+        // `duration_ms` milliseconds, and returns the top functions by
+        // self-time — exactly what the Chrome DevTools Performance tab shows.
+        // LLM pass adds root-cause and optimisation suggestion per hot function.
+        //
+        // payload:
+        //   target_url    — URL of the running app to profile (required)
+        //   duration_ms?  — profiling window in ms (default: 5000)
+        //   source_file?  — path to source file to include as LLM context
+        //   source_code?  — raw source code string for LLM context
+        // ====================================================================
+        case 'workspace_fsd_perf_profile': {
+            const targetUrl  = str(payload['target_url']);
+            const durationMs = typeof payload['duration_ms'] === 'number' ? payload['duration_ms'] : 5_000;
+            const sourceFile = str(payload['source_file']);
+            let   sourceCode = str(payload['source_code']);
+
+            if (!targetUrl) {
+                return {
+                    ok: false,
+                    output: '',
+                    errorOutput: 'workspace_fsd_perf_profile: target_url is required',
+                };
+            }
+
+            if (!runCommand) {
+                return {
+                    ok: false,
+                    output: '',
+                    errorOutput: 'workspace_fsd_perf_profile: runCommand callback not available',
+                };
+            }
+
+            // Read source file for LLM context if not inlined
+            if (!sourceCode && sourceFile) {
+                const readResult = await executeAction('workspace_read_file', { file_path: sourceFile });
+                sourceCode = readResult.ok ? readResult.output : '';
+            }
+
+            // 1. Write the Playwright profiling script to a temp file
+            const script     = buildPlaywrightProfilingScript(targetUrl, durationMs);
+            const scriptPath = '__fsd_perf_profile.cjs';
+            await executeAction('workspace_write_file', {
+                file_path: scriptPath,
+                content:   script,
+            });
+
+            // 2. Run the script — total timeout is profiling window + 40s headroom
+            let report = parseCpuProfile('', targetUrl);   // safe default
+            try {
+                const runResult = await runCommand(
+                    ['node', scriptPath],
+                    workspaceDir,
+                    durationMs + 40_000,
+                );
+                report = parseCpuProfile(runResult.stdout + '\n' + runResult.stderr, targetUrl);
+            } catch (runErr) {
+                const msg = runErr instanceof Error ? runErr.message : String(runErr);
+                report = {
+                    targetUrl,
+                    totalSamples: 0,
+                    durationMs,
+                    hotFunctions: [],
+                    score:        0,
+                    summary:      `Profiling failed — Playwright not available or script error: ${msg}. Run: npm install playwright`,
+                };
+            }
+
+            // 3. LLM pass — root-cause + optimisation per hot function
+            if (callLlm && report.hotFunctions.length > 0) {
+                const optPrompt = buildPerfOptimizationPrompt(report, sourceCode || undefined);
+                const llmRaw    = await callLlmSafe(
+                    callLlm,
+                    optPrompt,
+                    'You are a senior performance engineer. Be specific and actionable.',
+                );
+                report = { ...report, hotFunctions: applyPerfSuggestions(llmRaw, report.hotFunctions) };
+            }
+
+            return safeJson({
+                target_url:    targetUrl,
+                score:         report.score,
+                total_samples: report.totalSamples,
+                duration_ms:   report.durationMs,
+                hot_functions: report.hotFunctions,
+                hot_fn_count:  report.hotFunctions.length,
+                summary:       report.summary,
             });
         }
     }

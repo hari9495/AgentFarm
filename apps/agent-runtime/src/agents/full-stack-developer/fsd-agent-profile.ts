@@ -88,6 +88,7 @@ export const FSD_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = [
     'workspace_fsd_arch_review',
     // ── Live debugging + framework adapter (Sprint 16 Phase 5) ───────────────
     'workspace_fsd_browser_debug',
+    'workspace_fsd_perf_profile',
 ];
 
 // ---------------------------------------------------------------------------

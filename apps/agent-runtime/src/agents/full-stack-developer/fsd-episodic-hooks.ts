@@ -127,6 +127,13 @@ export function buildFsdEpisodicPattern(
         return errorCount > 0 ? 'fsd:browser_debug:errors' : `fsd:browser_debug:${oc}`;
     }
 
+    if (at === 'workspace_fsd_perf_profile') {
+        const score = numericPayload(result, 'score');
+        if (score === 0)   return 'fsd:perf_profile:failed';
+        if (score < 50)    return 'fsd:perf_profile:hotspot';
+        return `fsd:perf_profile:${oc}`;
+    }
+
     // Fallback — still namespaced under "fsd:" so it is easy to query
     return `fsd:${at}:${oc}`;
 }
@@ -305,6 +312,22 @@ export function buildFsdEpisodicSummary(
         return `Browser debug: no runtime errors detected at ${taskLabel}`;
     if (pattern.startsWith('fsd:browser_debug'))
         return `Browser debug ${oc}: ${taskLabel}`;
+
+    // CPU perf profile
+    if (pattern === 'fsd:perf_profile:failed')
+        return `CPU profile failed (Playwright unavailable): ${taskLabel}`;
+    if (pattern === 'fsd:perf_profile:hotspot') {
+        const score  = result.executionPayload['score'] ?? '?';
+        const topFns = Array.isArray(result.executionPayload['hot_functions'])
+            ? (result.executionPayload['hot_functions'] as Array<{ functionName: string; selfPercent: number }>)
+            : [];
+        const topFn  = topFns[0];
+        return topFn
+            ? `CPU hotspot detected (score ${score}/100): "${topFn.functionName}" at ${topFn.selfPercent}% — ${taskLabel}`
+            : `CPU hotspot detected (score ${score}/100): ${taskLabel}`;
+    }
+    if (pattern.startsWith('fsd:perf_profile'))
+        return `CPU profile ${oc} (score ${result.executionPayload['score'] ?? '?'}/100): ${taskLabel}`;
 
     // Fallback
     return `Full-stack action "${at}" completed with status "${oc}": ${taskLabel}`;
