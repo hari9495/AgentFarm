@@ -46,6 +46,7 @@ import { handleTesterAction } from './agents/tester/tester-action-handler.js';
 import { handleTechnicalWriterAction, type TechnicalWriterActionType } from './agents/technical-writer/technical-writer-action-handler.js';
 import { handleContentWriterAction, isContentWriterActionType } from './agents/content-writer/content-writer-action-handler.js';
 import { handleDeveloperAction, isDeveloperActionType, type DeveloperActionType } from './agents/developer/developer-action-handler.js';
+import { handleFsdAction, isFsdActionType, type FsdActionType } from './agents/full-stack-developer/fsd-action-handler.js';
 import type { ProseCallerFn } from './agents/content-writer/llm-prose-writer.js';
 import { streamLLM } from './llm-decision-adapter.js';
 import { globalEpisodicMemory } from './episodic-memory.js';
@@ -339,7 +340,23 @@ export type LocalWorkspaceActionType =
     | 'workspace_dev_onboard_codebase'
     | 'workspace_dev_standup_report'
     | 'workspace_dev_incident_response'
-    | 'workspace_dev_tech_spec';
+    | 'workspace_dev_tech_spec'
+    // Tier 30 (Full-Stack Developer domain actions)
+    | 'workspace_fsd_ui_component'
+    | 'workspace_fsd_design_handoff'
+    | 'workspace_fsd_responsive_check'
+    | 'workspace_fsd_accessibility_audit'
+    | 'workspace_fsd_seo_audit'
+    | 'workspace_fsd_perf_audit'
+    | 'workspace_fsd_state_manage'
+    | 'workspace_fsd_api_integrate'
+    | 'workspace_fsd_auth_implement'
+    | 'workspace_fsd_realtime_setup'
+    | 'workspace_fsd_env_setup'
+    | 'workspace_fsd_fullstack_feature'
+    | 'workspace_fsd_scaffold_project'
+    | 'workspace_fsd_deploy_preview'
+    | 'workspace_fsd_standup_report';
 
 export type LocalWorkspaceResult = {
     ok: boolean;
@@ -837,6 +854,22 @@ export const LOCAL_WORKSPACE_ACTION_TYPES = new Set<LocalWorkspaceActionType>([
     'workspace_dev_standup_report',
     'workspace_dev_incident_response',
     'workspace_dev_tech_spec',
+    // Tier 30 (Full-Stack Developer domain actions)
+    'workspace_fsd_ui_component',
+    'workspace_fsd_design_handoff',
+    'workspace_fsd_responsive_check',
+    'workspace_fsd_accessibility_audit',
+    'workspace_fsd_seo_audit',
+    'workspace_fsd_perf_audit',
+    'workspace_fsd_state_manage',
+    'workspace_fsd_api_integrate',
+    'workspace_fsd_auth_implement',
+    'workspace_fsd_realtime_setup',
+    'workspace_fsd_env_setup',
+    'workspace_fsd_fullstack_feature',
+    'workspace_fsd_scaffold_project',
+    'workspace_fsd_deploy_preview',
+    'workspace_fsd_standup_report',
 ]);
 
 // ---------------------------------------------------------------------------
@@ -13143,6 +13176,64 @@ export async function executeLocalWorkspaceAction(input: {
                 errorMessage: devResult.errorOutput ? devResult.errorOutput.slice(0, 200) : undefined,
             });
             return devResult;
+        }
+
+        // ====================================================================
+        // TIER 30: FULL-STACK DEVELOPER DOMAIN ACTIONS
+        // ====================================================================
+        case 'workspace_fsd_ui_component':
+        case 'workspace_fsd_design_handoff':
+        case 'workspace_fsd_responsive_check':
+        case 'workspace_fsd_accessibility_audit':
+        case 'workspace_fsd_seo_audit':
+        case 'workspace_fsd_perf_audit':
+        case 'workspace_fsd_state_manage':
+        case 'workspace_fsd_api_integrate':
+        case 'workspace_fsd_auth_implement':
+        case 'workspace_fsd_realtime_setup':
+        case 'workspace_fsd_env_setup':
+        case 'workspace_fsd_fullstack_feature':
+        case 'workspace_fsd_scaffold_project':
+        case 'workspace_fsd_deploy_preview':
+        case 'workspace_fsd_standup_report': {
+            if (!isFsdActionType(actionType)) {
+                return { ok: false, output: '', errorOutput: `Unrecognised FSD action: ${actionType}` };
+            }
+            const fsdResult = await handleFsdAction({
+                actionType: actionType as FsdActionType,
+                tenantId,
+                botId,
+                taskId,
+                payload,
+                workspaceDir,
+                executeAction: (aType, aPayload) =>
+                    executeLocalWorkspaceAction({
+                        tenantId,
+                        botId,
+                        taskId,
+                        actionType: aType as LocalWorkspaceActionType,
+                        payload: aPayload,
+                        connectorActionExecuteClient,
+                    }),
+                runCommand,
+                callLlm: buildTwLlmCallerFn(),
+            });
+            // Record outcome in episodic memory
+            const fsdOutcome: TaskOutcome = fsdResult.ok ? 'success' : 'failed';
+            const fsdTitle   = typeof payload['title']       === 'string' ? payload['title']       : '';
+            const fsdDesc    = typeof payload['description'] === 'string' ? payload['description'] : '';
+            const fsdSummary = (fsdTitle || fsdDesc || actionType).slice(0, 200);
+            void globalEpisodicMemory.record({
+                taskId,
+                workspaceId: workspaceDir,
+                botId,
+                actionType,
+                promptSummary: fsdSummary,
+                outcome:       fsdOutcome,
+                timestamp:     Date.now(),
+                errorMessage:  fsdResult.errorOutput ? fsdResult.errorOutput.slice(0, 200) : undefined,
+            });
+            return fsdResult;
         }
 
         default: {

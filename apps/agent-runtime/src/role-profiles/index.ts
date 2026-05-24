@@ -19,6 +19,10 @@ import {
     DEVELOPER_ROLE_ALLOWED_CONNECTORS,
     DEVELOPER_ROLE_ALLOWED_LOCAL_ACTIONS,
 } from '../agents/developer/developer-agent-profile.js';
+import {
+    FSD_ROLE_ALLOWED_CONNECTORS,
+    FSD_ROLE_ALLOWED_LOCAL_ACTIONS,
+} from '../agents/full-stack-developer/fsd-agent-profile.js';
 
 export interface RoleProfile {
     roleKey: RoleKey;
@@ -49,9 +53,9 @@ export const ROLE_PROFILES: Record<RoleKey, RoleProfile> = {
     fullstack_developer: {
         roleKey: 'fullstack_developer',
         displayName: 'Fullstack Developer',
-        description: 'Handles frontend + backend code review, PR drafts, design handoff, and issue management',
-        allowedConnectorTools: [...DEVELOPER_ROLE_ALLOWED_CONNECTORS, 'figma'],
-        allowedActions: [...DEVELOPER_ROLE_ALLOWED_LOCAL_ACTIONS],
+        description: 'Handles end-to-end full-stack development — UI component generation, design handoff from Figma, responsive/a11y/SEO/performance audits, API integration, auth flows, realtime (WebSocket/SSE), state management, and full-stack feature delivery',
+        allowedConnectorTools: [...FSD_ROLE_ALLOWED_CONNECTORS],
+        allowedActions: [...FSD_ROLE_ALLOWED_LOCAL_ACTIONS],
         requiredConfig: ['codeRepoProvider'],
     },
     tester: {
