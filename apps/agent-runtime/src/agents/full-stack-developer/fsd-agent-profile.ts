@@ -91,6 +91,8 @@ export const FSD_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = [
     'workspace_fsd_perf_profile',
     // ── Cross-team negotiation (Sprint 16 Phase 6) ────────────────────────────
     'workspace_fsd_negotiate',
+    // ── Long-term project memory (Sprint 16 Phase 7) ──────────────────────────
+    'workspace_fsd_project_context_sync',
 ];
 
 // ---------------------------------------------------------------------------

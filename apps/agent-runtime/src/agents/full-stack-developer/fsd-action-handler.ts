@@ -120,6 +120,19 @@ import {
     type NegotiationRequest,
 } from './fsd-negotiator.js';
 
+import {
+    createEmptyProjectContext,
+    formatContextForLlm,
+    mergeContextUpdate,
+    updateContextFromAdr,
+    updateContextFromScaffold,
+    updateContextFromStandup,
+    updateContextFromSpec,
+    buildContextSyncPrompt,
+    parseContextFromLlm,
+    type ProjectContext,
+} from './fsd-project-context.js';
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -149,7 +162,9 @@ export type FsdActionType =
     | 'workspace_fsd_browser_debug'
     | 'workspace_fsd_perf_profile'
     // ── Cross-team negotiation (Sprint 16 Phase 6) ────────────────────────────
-    | 'workspace_fsd_negotiate';
+    | 'workspace_fsd_negotiate'
+    // ── Long-term project memory (Sprint 16 Phase 7) ──────────────────────────
+    | 'workspace_fsd_project_context_sync';
 
 export const FSD_ACTION_TYPES = new Set<FsdActionType>([
     'workspace_fsd_ui_component',
@@ -177,6 +192,8 @@ export const FSD_ACTION_TYPES = new Set<FsdActionType>([
     'workspace_fsd_perf_profile',
     // ── Cross-team negotiation (Sprint 16 Phase 6) ────────────────────────────
     'workspace_fsd_negotiate',
+    // ── Long-term project memory (Sprint 16 Phase 7) ──────────────────────────
+    'workspace_fsd_project_context_sync',
 ]);
 
 export function isFsdActionType(at: string): at is FsdActionType {
@@ -290,7 +307,39 @@ function isHttpClient(v: unknown): v is HttpClient {
 export async function handleFsdAction(
     params: FsdActionParams,
 ): Promise<FsdActionResult> {
-    const { actionType, payload, workspaceDir, executeAction, runCommand, callLlm } = params;
+    const { actionType, payload, workspaceDir, executeAction, runCommand, callLlm: callLlmBase } = params;
+
+    // ── Load project context (best-effort, non-blocking) ─────────────────────
+    const CONTEXT_FILE = '.agentfarm/project-context.json';
+    let projectCtx: ProjectContext | null = null;
+    try {
+        const ctxRead = await executeAction('workspace_read_file', { file_path: CONTEXT_FILE });
+        if (ctxRead.ok && ctxRead.output) {
+            projectCtx = JSON.parse(ctxRead.output) as ProjectContext;
+        }
+    } catch { /* no context yet — proceed without it */ }
+
+    // ── Shadow callLlm with context-enriched wrapper ──────────────────────────
+    // Every callLlmSafe(callLlm, ...) in this handler automatically receives
+    // the project state in its system prompt — no per-call changes needed.
+    const callLlm: LlmCallFn | undefined = (callLlmBase && projectCtx)
+        ? (prompt: string, sys?: string): Promise<string> =>
+            callLlmBase(
+                prompt,
+                `${sys ?? 'You are a senior full-stack developer.'}\n\n${formatContextForLlm(projectCtx!)}`,
+            )
+        : callLlmBase;
+
+    // ── Context persistence helper ────────────────────────────────────────────
+    const saveProjectCtx = async (updated: ProjectContext): Promise<void> => {
+        try {
+            await executeAction('workspace_write_file', {
+                file_path: CONTEXT_FILE,
+                content:   JSON.stringify(updated, null, 2),
+            });
+            projectCtx = updated;
+        } catch { /* write failed — non-fatal */ }
+    };
 
     switch (actionType) {
 
@@ -1173,6 +1222,12 @@ export async function handleFsdAction(
             await executeAction('workspace_write_file', { file_path: exampleFp, content: envTemplate.exampleContent });
             writtenFiles.push(envFp, exampleFp);
 
+            // ── Persist tech stack to project context ─────────────────────
+            await saveProjectCtx(updateContextFromScaffold(
+                projectCtx ?? createEmptyProjectContext(projectName),
+                { project_name: projectName, framework, state_lib: stateLib, auth_strategy: authStrategy },
+            ));
+
             return safeJson({
                 project_name:  projectName,
                 framework,
@@ -1292,6 +1347,14 @@ export async function handleFsdAction(
                 `Generate a concise standup message for a full-stack developer agent.\n\nBot name: ${botName}\nTeam: ${teamName}\nFrontend health: ${frontendHealth.summary}\nDraft: ${summary.spokenText}`,
                 'You are an AI full-stack developer. Write a brief, professional standup message.',
             );
+
+            // ── Persist sprint state to project context ───────────────────
+            if (sprintContext.sprintGoal) {
+                await saveProjectCtx(updateContextFromStandup(
+                    projectCtx ?? createEmptyProjectContext(),
+                    { sprint_goal: sprintContext.sprintGoal },
+                ));
+            }
 
             return safeJson({
                 summary,
@@ -1437,6 +1500,14 @@ export async function handleFsdAction(
             }
 
             const formattedOutput = formatQuestionsForHuman(allQuestions);
+
+            // ── Persist open questions to project context ─────────────────
+            if (allQuestions.length > 0) {
+                await saveProjectCtx(updateContextFromSpec(
+                    projectCtx ?? createEmptyProjectContext(),
+                    allQuestions,
+                ));
+            }
 
             return safeJson({
                 score:                analysis.score,
@@ -1590,6 +1661,16 @@ export async function handleFsdAction(
                 file_path: adrFileName,
                 content:   adrMd,
             });
+
+            // ── Persist ADR decision to project context ───────────────────
+            await saveProjectCtx(updateContextFromAdr(
+                projectCtx ?? createEmptyProjectContext(),
+                {
+                    title:     adr.title,
+                    decision:  adr.decision,
+                    rationale: adr.context,   // context = why this decision was needed
+                },
+            ));
 
             return safeJson({
                 question,
@@ -1902,6 +1983,110 @@ export async function handleFsdAction(
                 action_summary:    actionSummary,
                 status:            'pending_human_decision',
                 summary:           `Negotiation request submitted: "${title}" (${urgency} urgency, ${terms.length} option(s) for human review).`,
+            });
+        }
+
+        // ====================================================================
+        // workspace_fsd_project_context_sync
+        // Full project context rescan — reads package.json, README, ADR files,
+        // and recent episodic memory, then asks the LLM to synthesise them into
+        // a ProjectContext saved at `.agentfarm/project-context.json`.
+        //
+        // After this runs, every LLM call in this handler will automatically
+        // receive project context injected into its system prompt.
+        //
+        // payload:
+        //   package_json_path?  — path to package.json (default: package.json)
+        //   readme_path?        — path to README (default: README.md)
+        //   adr_dir?            — directory containing ADR .md files
+        //                          (default: docs/adr)
+        //   force?              — true to overwrite existing context fully
+        //                          (default: false — merges with existing)
+        // ====================================================================
+        case 'workspace_fsd_project_context_sync': {
+            const packageJsonPath = str(payload['package_json_path'], 'package.json');
+            const readmePath      = str(payload['readme_path'],       'README.md');
+            const adrDir          = str(payload['adr_dir'],           'docs/adr');
+            const force           = payload['force'] === true;
+
+            // ── Collect workspace files ───────────────────────────────────
+            const pkgResult    = await executeAction('workspace_read_file', { file_path: packageJsonPath });
+            const readmeResult = await executeAction('workspace_read_file', { file_path: readmePath });
+
+            // Discover ADR files
+            const adrListResult = await executeAction('workspace_list_files', {
+                path:    adrDir,
+                pattern: '*.md',
+            });
+            const adrFiles: string[] = [];
+            if (adrListResult.ok && adrListResult.output) {
+                const adrPaths = adrListResult.output
+                    .split('\n')
+                    .map((p) => p.trim())
+                    .filter((p) => p.endsWith('.md'))
+                    .slice(0, 5);
+                for (const adrPath of adrPaths) {
+                    const adrContent = await executeAction('workspace_read_file', { file_path: adrPath });
+                    if (adrContent.ok) adrFiles.push(adrContent.output.slice(0, 1200));
+                }
+            }
+
+            // Recent episodic activity for context
+            const memResult = await executeAction('workspace_memory_search', {
+                query: 'fsd full-stack',
+                limit: 8,
+            });
+            const recentTasks = memResult.ok ? memResult.output : undefined;
+
+            const fileContents = {
+                packageJson: pkgResult.ok    ? pkgResult.output    : undefined,
+                readme:      readmeResult.ok ? readmeResult.output : undefined,
+                adrFiles:    adrFiles.length > 0 ? adrFiles : undefined,
+                recentTasks,
+            };
+
+            const baseCtx = force
+                ? createEmptyProjectContext()
+                : (projectCtx ?? createEmptyProjectContext());
+
+            // ── LLM synthesis ─────────────────────────────────────────────
+            let syncedCtx: ProjectContext;
+            if (callLlmBase) {
+                // Use raw LLM caller (not context-wrapped) to avoid circular injection
+                const syncPrompt = buildContextSyncPrompt(fileContents);
+                const llmRaw     = await callLlmSafe(
+                    callLlmBase,
+                    syncPrompt,
+                    'You are a software project analyst. Extract factual metadata accurately. Return valid JSON only.',
+                );
+                syncedCtx = parseContextFromLlm(llmRaw, baseCtx);
+            } else {
+                // No LLM — parse package.json name at minimum
+                syncedCtx = baseCtx;
+                if (pkgResult.ok) {
+                    try {
+                        const pkg = JSON.parse(pkgResult.output) as { name?: string; description?: string };
+                        syncedCtx = mergeContextUpdate(baseCtx, {
+                            projectName: pkg.name        ?? baseCtx.projectName,
+                            description: pkg.description ?? baseCtx.description,
+                        });
+                    } catch { /* invalid JSON — keep base */ }
+                }
+            }
+
+            await saveProjectCtx(syncedCtx);
+
+            const techEntries = Object.values(syncedCtx.techStack).flat().length;
+            return safeJson({
+                synced:          true,
+                project_name:    syncedCtx.projectName,
+                description:     syncedCtx.description,
+                tech_stack:      syncedCtx.techStack,
+                decision_count:  syncedCtx.keyDecisions.length,
+                question_count:  syncedCtx.openQuestions.length,
+                sprint_goal:     syncedCtx.currentSprint?.goal ?? null,
+                context_file:    CONTEXT_FILE,
+                summary: `Project context synced: "${syncedCtx.projectName}" — ${techEntries} tech stack entr${techEntries === 1 ? 'y' : 'ies'}, ${syncedCtx.keyDecisions.length} key decision(s).`,
             });
         }
     }

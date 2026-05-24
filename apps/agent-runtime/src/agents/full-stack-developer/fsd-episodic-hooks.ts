@@ -142,6 +142,11 @@ export function buildFsdEpisodicPattern(
         return 'fsd:negotiate:submitted';
     }
 
+    // ── Long-term project memory (Sprint 16 Phase 7) ───────────────────────
+    if (at === 'workspace_fsd_project_context_sync') {
+        return oc === 'fail' ? 'fsd:context_sync:fail' : 'fsd:context_sync:success';
+    }
+
     // Fallback — still namespaced under "fsd:" so it is easy to query
     return `fsd:${at}:${oc}`;
 }
@@ -347,6 +352,20 @@ export function buildFsdEpisodicSummary(
         const urgency   = result.executionPayload['urgency'] ?? 'medium';
         const termCount = result.executionPayload['term_count'] ?? 0;
         return `Negotiation request submitted (${type as string}, ${urgency as string} urgency, ${termCount as number} option(s)): ${taskLabel}`;
+    }
+
+    // ── Long-term project memory (Sprint 16 Phase 7) ─────────────────────────
+
+    if (pattern === 'fsd:context_sync:fail')
+        return `Project context sync failed: ${taskLabel}`;
+
+    if (pattern === 'fsd:context_sync:success') {
+        const name    = result.executionPayload['project_name'] ?? 'unknown';
+        const dCount  = result.executionPayload['decision_count'] ?? 0;
+        const techLen = typeof result.executionPayload['tech_stack'] === 'object'
+            ? Object.values(result.executionPayload['tech_stack'] as Record<string, string[]>).flat().length
+            : 0;
+        return `Project context synced: "${name as string}" — ${techLen} tech entries, ${dCount as number} decision(s): ${taskLabel}`;
     }
 
     // Fallback

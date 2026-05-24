@@ -364,7 +364,9 @@ export type LocalWorkspaceActionType =
     | 'workspace_fsd_browser_debug'
     | 'workspace_fsd_perf_profile'
     // ── Cross-team negotiation (Sprint 16 Phase 6) ────────────────────────────
-    | 'workspace_fsd_negotiate';
+    | 'workspace_fsd_negotiate'
+    // ── Long-term project memory (Sprint 16 Phase 7) ──────────────────────────
+    | 'workspace_fsd_project_context_sync';
 
 export type LocalWorkspaceResult = {
     ok: boolean;
@@ -886,6 +888,8 @@ export const LOCAL_WORKSPACE_ACTION_TYPES = new Set<LocalWorkspaceActionType>([
     'workspace_fsd_perf_profile',
     // ── Cross-team negotiation (Sprint 16 Phase 6) ────────────────────────────
     'workspace_fsd_negotiate',
+    // ── Long-term project memory (Sprint 16 Phase 7) ──────────────────────────
+    'workspace_fsd_project_context_sync',
 ]);
 
 // ---------------------------------------------------------------------------
@@ -13218,7 +13222,8 @@ export async function executeLocalWorkspaceAction(input: {
         case 'workspace_fsd_arch_review':
         case 'workspace_fsd_browser_debug':
         case 'workspace_fsd_perf_profile':
-        case 'workspace_fsd_negotiate': {
+        case 'workspace_fsd_negotiate':
+        case 'workspace_fsd_project_context_sync': {
             if (!isFsdActionType(actionType)) {
                 return { ok: false, output: '', errorOutput: `Unrecognised FSD action: ${actionType}` };
             }
