@@ -4132,6 +4132,78 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                     }
                 }
 
+                // ── DevOps high-risk approval summaries ─────────────────────────────
+                // Terraform apply: show plan stats so the approver knows what resources
+                // will be created / changed / destroyed before clicking Approve.
+                if (result.decision.actionType === 'workspace_devops_tf_apply') {
+                    const tfWorkingDir = typeof executionTask.payload['working_dir'] === 'string'
+                        ? executionTask.payload['working_dir']
+                        : '<workspace root>';
+                    const tfEnvironment = typeof executionTask.payload['environment'] === 'string'
+                        ? executionTask.payload['environment']
+                        : 'production';
+                    const tfAutoApprove = executionTask.payload['auto_approve'] === true;
+                    actionSummary = [
+                        `Terraform apply — environment: ${tfEnvironment}`,
+                        `Working dir: ${tfWorkingDir}`,
+                        `Auto-approve flag: ${tfAutoApprove ? 'yes (DANGER — skips plan confirmation)' : 'no'}`,
+                        `Risk: This will permanently mutate cloud infrastructure. Verify the plan output in the Evidence tab before approving.`,
+                        `Rollback: terraform apply -target=<resource> to revert individual resources; full rollback may require manual state manipulation.`,
+                    ].join('\n');
+                }
+
+                // Kubernetes deploy: show namespace, manifest source, dry_run flag.
+                if (result.decision.actionType === 'workspace_devops_k8s_deploy') {
+                    const k8sNamespace   = typeof executionTask.payload['namespace']    === 'string' ? executionTask.payload['namespace']    : 'default';
+                    const k8sManifestDir = typeof executionTask.payload['manifest_dir'] === 'string' ? executionTask.payload['manifest_dir'] : 'k8s/';
+                    const k8sDryRun      = executionTask.payload['dry_run'] === true;
+                    actionSummary = [
+                        `Kubernetes deploy → namespace: ${k8sNamespace}`,
+                        `Manifest source: ${k8sManifestDir}`,
+                        `Dry-run: ${k8sDryRun ? 'yes (safe — no live changes)' : 'no (LIVE deployment)'}`,
+                        `Risk: Deploying to a live namespace may disrupt running workloads. Verify the manifest and target namespace.`,
+                        `Rollback: kubectl rollout undo deployment/<name> -n ${k8sNamespace}`,
+                    ].join('\n');
+                }
+
+                // Kubernetes rollback: show deployment name and namespace.
+                if (result.decision.actionType === 'workspace_devops_k8s_rollback') {
+                    const k8sRollbackDep = typeof executionTask.payload['deployment'] === 'string' ? executionTask.payload['deployment'] : '(all)';
+                    const k8sRollbackNs  = typeof executionTask.payload['namespace']  === 'string' ? executionTask.payload['namespace']  : 'default';
+                    actionSummary = [
+                        `Kubernetes rollback — deployment: ${k8sRollbackDep}  namespace: ${k8sRollbackNs}`,
+                        `Risk: Rollback replaces the current version with the previous revision. Ensure the prior image is still available in the registry.`,
+                        `Undo this rollback: kubectl rollout undo deployment/${k8sRollbackDep} -n ${k8sRollbackNs}`,
+                    ].join('\n');
+                }
+
+                // Pipeline trigger: show connector and pipeline target.
+                if (result.decision.actionType === 'workspace_devops_pipeline_trigger') {
+                    const ciConnector = typeof executionTask.payload['connector']   === 'string' ? executionTask.payload['connector']   : 'unknown';
+                    const ciPipeline  = typeof executionTask.payload['pipeline_id'] === 'string' ? executionTask.payload['pipeline_id'] : 'unknown';
+                    const ciBranch    = typeof executionTask.payload['branch']      === 'string' ? executionTask.payload['branch']      : 'default';
+                    actionSummary = [
+                        `CI/CD pipeline trigger — connector: ${ciConnector}  pipeline: ${ciPipeline}  branch: ${ciBranch}`,
+                        `Risk: This pipeline may deploy to production or consume build resources. Confirm the target environment and branch.`,
+                        `Rollback: Cancel the run via the CI/CD provider console immediately if triggered in error.`,
+                    ].join('\n');
+                }
+
+                // ── Mobile high-risk approval summary ────────────────────────────────
+                // Store upload: show platform, app name, and version — cannot be retracted
+                // once in review without going through another store review cycle.
+                if (result.decision.actionType === 'workspace_mob_store_upload') {
+                    const mobPlatform = typeof executionTask.payload['platform'] === 'string' ? executionTask.payload['platform'] : 'unknown';
+                    const mobAppName  = typeof executionTask.payload['app_name'] === 'string' ? executionTask.payload['app_name'] : 'unknown';
+                    const mobVersion  = typeof executionTask.payload['version']  === 'string' ? executionTask.payload['version']  : 'unknown';
+                    const mobTrack    = typeof executionTask.payload['track']    === 'string' ? executionTask.payload['track']    : 'production';
+                    actionSummary = [
+                        `App store upload — platform: ${mobPlatform}  app: ${mobAppName}  version: ${mobVersion}  track: ${mobTrack}`,
+                        `Risk: Once submitted, the build enters app review. Removing a published release requires contacting the store.`,
+                        `Rollback: Submit a new corrected build with a higher version number, or use phased rollout to limit exposure.`,
+                    ].join('\n');
+                }
+
                 // Store approval summary for transcript
                 taskApprovalSummaries.set(task.taskId, actionSummary);
 

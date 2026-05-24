@@ -110,6 +110,13 @@ const HIGH_RISK_ACTIONS = new Set([
     'workspace_github_issue_fix',
     // Content Writer: human validation gate — always requires human expert review
     'workspace_cw_request_human_gate',
+    // DevOps: infrastructure mutations that affect cost, uptime, or production traffic
+    'workspace_devops_tf_apply',
+    'workspace_devops_k8s_deploy',
+    'workspace_devops_k8s_rollback',
+    'workspace_devops_pipeline_trigger',
+    // Mobile: app store submissions reach millions of users — irreversible without store review
+    'workspace_mob_store_upload',
 ]);
 
 const MEDIUM_RISK_ACTIONS = new Set([
