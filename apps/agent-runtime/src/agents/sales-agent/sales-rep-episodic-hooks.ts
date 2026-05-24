@@ -147,6 +147,31 @@ export function buildSalesRepEpisodicPattern(
         return `sales_rep:meeting:live:${oc}`;
     }
 
+    // ── Referrals ────────────────────────────────────────────────────────
+    if (at === 'workspace_referral_log') return `sales_rep:referral:received:${oc}`;
+    if (at === 'workspace_referral_request') return `sales_rep:referral:requested:${oc}`;
+
+    // ── LinkedIn outreach ────────────────────────────────────────────────
+    if (at === 'workspace_linkedin_outreach') {
+        const outreachType = String(task.payload['outreach_type'] ?? 'connection_request');
+        return `sales_rep:linkedin:${outreachType}:${oc}`;
+    }
+
+    // ── Cold calling ─────────────────────────────────────────────────────
+    if (at === 'workspace_cold_call') {
+        const callStatus = String(task.payload['call_status'] ?? '').toLowerCase();
+        if (callStatus === 'no-answer' || callStatus === 'voicemail') {
+            return `sales_rep:call:${callStatus}`;
+        }
+        return oc === 'success' ? 'sales_rep:call:initiated' : `sales_rep:call:failed`;
+    }
+
+    // ── Market research ──────────────────────────────────────────────────
+    if (at === 'workspace_market_research') {
+        const count = Number(task.payload['signals_found'] ?? 0);
+        return count > 0 ? 'sales_rep:market_research:signals_found' : 'sales_rep:market_research:no_signals';
+    }
+
     // ── CRM updates (generic) ────────────────────────────────────────────
     if (at.startsWith('workspace_crm_') || at.startsWith('workspace_hubspot_') ||
         at.startsWith('workspace_salesforce_')) {

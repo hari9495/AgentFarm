@@ -2257,6 +2257,19 @@ export interface SalesAgentConfigRecord {
   reEngageDaysAfterLoss?: number;
   browserEnabled?: boolean;
   browserAllowedDomains?: string;
+  // Telephony — cold calling via Twilio
+  telephonyProvider?: 'twilio';
+  twilioAccountSid?: string;
+  twilioAuthToken?: string;
+  twilioFromNumber?: string;
+  callWebhookBaseUrl?: string;
+  // LinkedIn outbound
+  phantombusterApiKey?: string;
+  phantombusterLinkedInPhantomId?: string;
+  // Market research / social listening
+  marketResearchEnabled?: boolean;
+  newsApiKey?: string;
+  marketResearchIntervalHours?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -2373,7 +2386,9 @@ export type ProspectStatus =
   | 'meeting_booked'
   | 'proposal_sent'
   | 'closed_won'
-  | 'closed_lost';
+  | 'closed_lost'
+  | 'unsubscribed'
+  | 'call_attempted';
 
 export type DealStage =
   | 'discovery'
@@ -2401,7 +2416,14 @@ export type SalesActivityType =
   | 'handoff_sent'
   | 'email_sent'
   | 'note'
-  | 'browser_task';
+  | 'browser_task'
+  | 'referral_received'
+  | 'referral_requested'
+  | 'market_signal'
+  | 'call_answered'
+  | 'call_no_answer'
+  | 'call_voicemail'
+  | 'linkedin_connect';
 
 export interface ProspectRecord {
   id: string;
@@ -2424,6 +2446,9 @@ export interface ProspectRecord {
   sequenceStep: number;
   lastContactedAt: Date | null;
   nextFollowUpAt: Date | null;
+  referralSource?: string | null;
+  referredBy?: string | null;
+  referralNotes?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -2530,5 +2555,94 @@ export interface BrowserStepResponse {
   errorMessage?: string;
   durationMs?: number;
   timestamp: string;
+}
+
+// ============================================================================
+// COLD CALLING TYPES
+// ============================================================================
+
+export type CallStatus =
+  | 'initiated'
+  | 'ringing'
+  | 'in-progress'
+  | 'completed'
+  | 'failed'
+  | 'no-answer'
+  | 'voicemail';
+
+export interface CallTurn {
+  speaker: 'agent' | 'prospect';
+  text: string;
+  intent?: string;
+  timestamp: string;
+}
+
+export interface CallRecord {
+  id: string;
+  tenantId: string;
+  botId: string;
+  prospectId: string;
+  activityId?: string;
+  twilioCallSid: string;
+  status: CallStatus;
+  toNumber: string;
+  fromNumber: string;
+  durationSeconds?: number;
+  transcript: CallTurn[];
+  outcome?: string;
+  initiatedAt: Date;
+  completedAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ============================================================================
+// LINKEDIN OUTREACH TYPES
+// ============================================================================
+
+export type LinkedInOutreachType = 'connection_request' | 'message' | 'inmail';
+
+export interface LinkedInOutreachRecord {
+  id: string;
+  tenantId: string;
+  botId: string;
+  prospectId: string;
+  linkedinUrl: string;
+  outreachType: LinkedInOutreachType;
+  message: string;
+  status: 'sent' | 'failed' | 'pending';
+  provider: 'browser' | 'phantombuster';
+  activityId?: string;
+  sentAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ============================================================================
+// MARKET SIGNAL TYPES
+// ============================================================================
+
+export interface MarketSignal {
+  signalType: 'news' | 'job_posting' | 'social';
+  title: string;
+  summary: string;
+  url: string;
+  publishedAt: string;
+  source: string;
+}
+
+// ============================================================================
+// REFERRAL TYPES
+// ============================================================================
+
+export interface ReferralRecord {
+  id: string;
+  tenantId: string;
+  botId: string;
+  prospectId: string;
+  referredByEmail: string;
+  referredByName?: string;
+  notes?: string;
+  createdAt: Date;
 }
 

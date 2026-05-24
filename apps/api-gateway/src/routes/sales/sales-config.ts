@@ -29,6 +29,19 @@ type CreateSalesConfigBody = {
     followUpDays?: number[];
     maxProspectsPerDay?: number;
     active?: boolean;
+    // Telephony — cold calling
+    telephonyProvider?: string;
+    twilioAccountSid?: string;
+    twilioAuthToken?: string;
+    twilioFromNumber?: string;
+    callWebhookBaseUrl?: string;
+    // LinkedIn outbound
+    phantombusterApiKey?: string;
+    phantombusterLinkedInPhantomId?: string;
+    // Market research
+    marketResearchEnabled?: boolean;
+    newsApiKey?: string;
+    marketResearchIntervalHours?: number;
 };
 
 type UpdateSalesConfigBody = Partial<Omit<CreateSalesConfigBody, 'botId'>>;
@@ -129,6 +142,16 @@ export async function registerSalesConfigRoutes(
                     followUpDays: body.followUpDays ?? [3, 7, 14],
                     maxProspectsPerDay: body.maxProspectsPerDay ?? 50,
                     active: body.active ?? true,
+                    telephonyProvider: body.telephonyProvider ?? null,
+                    twilioAccountSid: body.twilioAccountSid ?? null,
+                    twilioAuthToken: body.twilioAuthToken ?? null,
+                    twilioFromNumber: body.twilioFromNumber ?? null,
+                    callWebhookBaseUrl: body.callWebhookBaseUrl ?? null,
+                    phantombusterApiKey: body.phantombusterApiKey ?? null,
+                    phantombusterLinkedInPhantomId: body.phantombusterLinkedInPhantomId ?? null,
+                    marketResearchEnabled: body.marketResearchEnabled ?? false,
+                    newsApiKey: body.newsApiKey ?? null,
+                    marketResearchIntervalHours: body.marketResearchIntervalHours ?? null,
                 },
             });
 
@@ -167,6 +190,16 @@ export async function registerSalesConfigRoutes(
                 'followUpDays',
                 'maxProspectsPerDay',
                 'active',
+                'telephonyProvider',
+                'twilioAccountSid',
+                'twilioAuthToken',
+                'twilioFromNumber',
+                'callWebhookBaseUrl',
+                'phantombusterApiKey',
+                'phantombusterLinkedInPhantomId',
+                'marketResearchEnabled',
+                'newsApiKey',
+                'marketResearchIntervalHours',
             ];
             for (const f of fields) {
                 if (body[f] !== undefined) updateData[f] = body[f];

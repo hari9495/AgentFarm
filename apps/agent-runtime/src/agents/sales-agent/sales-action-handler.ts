@@ -20,8 +20,13 @@ import { generatePreMeetingBrief } from './pre-meeting-research.js';
 import { sendBookingInvite } from './booking-invite-sender.js';
 import { sendContractInvite } from './contract-sender.js';
 import { closeDealWon, closeDealLost } from './deal-closer.js';
+import { logReferral, requestReferral } from './referral-handler.js';
+import { sendLinkedInOutreach } from './linkedin-outreach-handler.js';
+import { initiateColdCall } from './cold-call-handler.js';
+import { runMarketResearch } from './market-research-handler.js';
 import type { LeadCandidate } from './lead-source-provider.js';
 import type { EmailProviderConfig } from './email-provider.js';
+import type { LinkedInOutreachType } from '@agentfarm/shared-types';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -37,7 +42,12 @@ export type SalesActionType =
     | 'workspace_pre_meeting_research'
     | 'workspace_booking_invite'
     | 'workspace_contract_send'
-    | 'workspace_deal_close';
+    | 'workspace_deal_close'
+    | 'workspace_referral_log'
+    | 'workspace_referral_request'
+    | 'workspace_linkedin_outreach'
+    | 'workspace_cold_call'
+    | 'workspace_market_research';
 
 export function isSalesActionType(t: string): t is SalesActionType {
     return (
@@ -50,7 +60,12 @@ export function isSalesActionType(t: string): t is SalesActionType {
         t === 'workspace_pre_meeting_research' ||
         t === 'workspace_booking_invite' ||
         t === 'workspace_contract_send' ||
-        t === 'workspace_deal_close'
+        t === 'workspace_deal_close' ||
+        t === 'workspace_referral_log' ||
+        t === 'workspace_referral_request' ||
+        t === 'workspace_linkedin_outreach' ||
+        t === 'workspace_cold_call' ||
+        t === 'workspace_market_research'
     );
 }
 
@@ -482,6 +497,150 @@ export async function handleSalesAction(params: {
                     );
                     return safeJsonResult(result);
                 }
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: String(err) };
+            } finally {
+                await prisma.$disconnect().catch(() => undefined);
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_referral_log — record an inbound referral for a prospect
+        // payload: { prospect_id, referred_by_email, referred_by_name?, referral_notes? }
+        // ------------------------------------------------------------------
+        case 'workspace_referral_log': {
+            const prisma = await createPrisma();
+            try {
+                const prospectId = typeof payload['prospect_id'] === 'string' ? payload['prospect_id'] : '';
+                const referredByEmail = typeof payload['referred_by_email'] === 'string' ? payload['referred_by_email'] : '';
+                if (!prospectId || !referredByEmail) {
+                    return { ok: false, output: '', errorOutput: 'payload.prospect_id and payload.referred_by_email are required.' };
+                }
+                const result = await logReferral(
+                    {
+                        prospectId,
+                        tenantId,
+                        botId,
+                        referredByEmail,
+                        referredByName: typeof payload['referred_by_name'] === 'string' ? payload['referred_by_name'] : undefined,
+                        referralNotes: typeof payload['referral_notes'] === 'string' ? payload['referral_notes'] : undefined,
+                    },
+                    prisma as unknown as import('@prisma/client').PrismaClient,
+                );
+                return safeJsonResult(result);
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: String(err) };
+            } finally {
+                await prisma.$disconnect().catch(() => undefined);
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_referral_request — ask a closed_won customer for referrals
+        // payload: { prospect_id }
+        // ------------------------------------------------------------------
+        case 'workspace_referral_request': {
+            const prisma = await createPrisma();
+            try {
+                const config = requireConfig(await loadSalesConfig(tenantId, botId, prisma), botId);
+                const prospectId = typeof payload['prospect_id'] === 'string' ? payload['prospect_id'] : '';
+                if (!prospectId) {
+                    return { ok: false, output: '', errorOutput: 'payload.prospect_id is required.' };
+                }
+                const result = await requestReferral(
+                    { prospectId, tenantId, botId, config },
+                    prisma as unknown as import('@prisma/client').PrismaClient,
+                );
+                return safeJsonResult(result);
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: String(err) };
+            } finally {
+                await prisma.$disconnect().catch(() => undefined);
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_linkedin_outreach — send LinkedIn connection request or message
+        // payload: { prospect_id, outreach_type?: 'connection_request'|'message'|'inmail' }
+        // ------------------------------------------------------------------
+        case 'workspace_linkedin_outreach': {
+            const prisma = await createPrisma();
+            try {
+                const config = requireConfig(await loadSalesConfig(tenantId, botId, prisma), botId);
+                const prospectId = typeof payload['prospect_id'] === 'string' ? payload['prospect_id'] : '';
+                if (!prospectId) {
+                    return { ok: false, output: '', errorOutput: 'payload.prospect_id is required.' };
+                }
+                const VALID_TYPES: LinkedInOutreachType[] = ['connection_request', 'message', 'inmail'];
+                const rawType = typeof payload['outreach_type'] === 'string' ? payload['outreach_type'] : 'connection_request';
+                const outreachType: LinkedInOutreachType = (VALID_TYPES as string[]).includes(rawType)
+                    ? rawType as LinkedInOutreachType
+                    : 'connection_request';
+                const result = await sendLinkedInOutreach(
+                    { prospectId, tenantId, botId, outreachType, config },
+                    prisma as unknown as import('@prisma/client').PrismaClient,
+                );
+                return safeJsonResult(result);
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: String(err) };
+            } finally {
+                await prisma.$disconnect().catch(() => undefined);
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_cold_call — initiate an AI-driven outbound phone call via Twilio
+        // payload: { prospect_id, phone_number? }
+        // ------------------------------------------------------------------
+        case 'workspace_cold_call': {
+            const prisma = await createPrisma();
+            try {
+                const config = requireConfig(await loadSalesConfig(tenantId, botId, prisma), botId);
+                const prospectId = typeof payload['prospect_id'] === 'string' ? payload['prospect_id'] : '';
+                if (!prospectId) {
+                    return { ok: false, output: '', errorOutput: 'payload.prospect_id is required.' };
+                }
+                const result = await initiateColdCall(
+                    {
+                        prospectId,
+                        tenantId,
+                        botId,
+                        config,
+                        phoneNumberOverride: typeof payload['phone_number'] === 'string' ? payload['phone_number'] : undefined,
+                    },
+                    prisma as unknown as import('@prisma/client').PrismaClient,
+                );
+                return safeJsonResult(result);
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: String(err) };
+            } finally {
+                await prisma.$disconnect().catch(() => undefined);
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_market_research — fetch industry news signals via NewsAPI
+        // payload: { keywords?, industry?, limit? }
+        // ------------------------------------------------------------------
+        case 'workspace_market_research': {
+            const prisma = await createPrisma();
+            try {
+                const config = requireConfig(await loadSalesConfig(tenantId, botId, prisma), botId);
+                const keywords = Array.isArray(payload['keywords'])
+                    ? (payload['keywords'] as unknown[]).filter((k): k is string => typeof k === 'string')
+                    : undefined;
+                const result = await runMarketResearch(
+                    {
+                        tenantId,
+                        botId,
+                        config,
+                        keywords,
+                        industry: typeof payload['industry'] === 'string' ? payload['industry'] : undefined,
+                        limit: typeof payload['limit'] === 'number' ? payload['limit'] : undefined,
+                    },
+                    prisma as unknown as import('@prisma/client').PrismaClient,
+                );
+                return safeJsonResult(result);
             } catch (err) {
                 return { ok: false, output: '', errorOutput: String(err) };
             } finally {

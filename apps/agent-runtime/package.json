@@ -101,6 +101,30 @@
         "./sales/browser-executor.js": {
             "types": "./src/agents/sales-agent/browser-executor.ts",
             "default": "./src/agents/sales-agent/browser-executor.ts"
+        },
+        "./sales/twilio-provider.js": {
+            "types": "./src/agents/sales-agent/twilio-call-provider.ts",
+            "default": "./src/agents/sales-agent/twilio-call-provider.ts"
+        },
+        "./sales/call-scripts.js": {
+            "types": "./src/agents/sales-agent/call-script-generator.ts",
+            "default": "./src/agents/sales-agent/call-script-generator.ts"
+        },
+        "./sales/cold-call-handler.js": {
+            "types": "./src/agents/sales-agent/cold-call-handler.ts",
+            "default": "./src/agents/sales-agent/cold-call-handler.ts"
+        },
+        "./sales/linkedin-outreach.js": {
+            "types": "./src/agents/sales-agent/linkedin-outreach-handler.ts",
+            "default": "./src/agents/sales-agent/linkedin-outreach-handler.ts"
+        },
+        "./sales/market-research.js": {
+            "types": "./src/agents/sales-agent/market-research-handler.ts",
+            "default": "./src/agents/sales-agent/market-research-handler.ts"
+        },
+        "./sales/referral-handler.js": {
+            "types": "./src/agents/sales-agent/referral-handler.ts",
+            "default": "./src/agents/sales-agent/referral-handler.ts"
         }
     },
     "scripts": {

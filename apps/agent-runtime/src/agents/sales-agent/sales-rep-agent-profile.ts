@@ -82,6 +82,12 @@ export const SALES_REP_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = 
     'workspace_booking_invite',
     'workspace_contract_send',
     'workspace_deal_close',
+    // ── Lead generation expansion (Sprint 20) ────────────────────────────
+    'workspace_referral_log',
+    'workspace_referral_request',
+    'workspace_linkedin_outreach',
+    'workspace_cold_call',
+    'workspace_market_research',
 ];
 
 export const SALES_REP_ROLE_BLOCKED_ACTIONS = [
