@@ -24,6 +24,9 @@ import { logReferral, requestReferral } from './referral-handler.js';
 import { sendLinkedInOutreach } from './linkedin-outreach-handler.js';
 import { initiateColdCall } from './cold-call-handler.js';
 import { runMarketResearch } from './market-research-handler.js';
+import { generateDemoScript } from './demo-script-generator.js';
+import { generateSlideDeck } from './slide-deck-generator.js';
+import { presentDemo, sendDemoFollowup } from './demo-presenter.js';
 import type { LeadCandidate } from './lead-source-provider.js';
 import type { EmailProviderConfig } from './email-provider.js';
 import type { LinkedInOutreachType } from '@agentfarm/shared-types';
@@ -47,7 +50,11 @@ export type SalesActionType =
     | 'workspace_referral_request'
     | 'workspace_linkedin_outreach'
     | 'workspace_cold_call'
-    | 'workspace_market_research';
+    | 'workspace_market_research'
+    | 'workspace_demo_script_generate'
+    | 'workspace_demo_present'
+    | 'workspace_slide_deck_generate'
+    | 'workspace_demo_followup';
 
 export function isSalesActionType(t: string): t is SalesActionType {
     return (
@@ -65,7 +72,11 @@ export function isSalesActionType(t: string): t is SalesActionType {
         t === 'workspace_referral_request' ||
         t === 'workspace_linkedin_outreach' ||
         t === 'workspace_cold_call' ||
-        t === 'workspace_market_research'
+        t === 'workspace_market_research' ||
+        t === 'workspace_demo_script_generate' ||
+        t === 'workspace_demo_present' ||
+        t === 'workspace_slide_deck_generate' ||
+        t === 'workspace_demo_followup'
     );
 }
 
@@ -637,6 +648,146 @@ export async function handleSalesAction(params: {
                         keywords,
                         industry: typeof payload['industry'] === 'string' ? payload['industry'] : undefined,
                         limit: typeof payload['limit'] === 'number' ? payload['limit'] : undefined,
+                    },
+                    prisma as unknown as import('@prisma/client').PrismaClient,
+                );
+                return safeJsonResult(result);
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: String(err) };
+            } finally {
+                await prisma.$disconnect().catch(() => undefined);
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_demo_script_generate — build a personalised demo script
+        // payload: { prospect_id, deal_id?, duration_minutes?, focus_areas? }
+        // ------------------------------------------------------------------
+        case 'workspace_demo_script_generate': {
+            const prisma = await createPrisma();
+            try {
+                const config = requireConfig(await loadSalesConfig(tenantId, botId, prisma), botId);
+                const prospectId = typeof payload['prospect_id'] === 'string' ? payload['prospect_id'] : '';
+                if (!prospectId) {
+                    return { ok: false, output: '', errorOutput: 'payload.prospect_id is required.' };
+                }
+                const focusAreas = Array.isArray(payload['focus_areas'])
+                    ? (payload['focus_areas'] as unknown[]).filter((f): f is string => typeof f === 'string')
+                    : undefined;
+                const result = await generateDemoScript(
+                    {
+                        prospectId,
+                        tenantId,
+                        botId,
+                        config,
+                        durationMinutes: typeof payload['duration_minutes'] === 'number' ? payload['duration_minutes'] : undefined,
+                        focusAreas,
+                    },
+                    prisma as unknown as import('@prisma/client').PrismaClient,
+                );
+                return safeJsonResult(result);
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: String(err) };
+            } finally {
+                await prisma.$disconnect().catch(() => undefined);
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_demo_present — join a meeting and deliver the demo live
+        // payload: { prospect_id, meeting_url, deal_id? }
+        // High-risk: requires approval (workspace_meeting_interview_live gate)
+        // ------------------------------------------------------------------
+        case 'workspace_demo_present': {
+            const prisma = await createPrisma();
+            try {
+                const config = requireConfig(await loadSalesConfig(tenantId, botId, prisma), botId);
+                const prospectId = typeof payload['prospect_id'] === 'string' ? payload['prospect_id'] : '';
+                const meetingUrl = typeof payload['meeting_url'] === 'string' ? payload['meeting_url'] : '';
+                if (!prospectId || !meetingUrl) {
+                    return { ok: false, output: '', errorOutput: 'payload.prospect_id and payload.meeting_url are required.' };
+                }
+                const result = await presentDemo(
+                    {
+                        prospectId,
+                        tenantId,
+                        botId,
+                        meetingUrl,
+                        dealId: typeof payload['deal_id'] === 'string' ? payload['deal_id'] : undefined,
+                        config,
+                    },
+                    prisma as unknown as import('@prisma/client').PrismaClient,
+                );
+                return safeJsonResult(result);
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: String(err) };
+            } finally {
+                await prisma.$disconnect().catch(() => undefined);
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_slide_deck_generate — generate reveal.js HTML slide deck
+        // payload: { prospect_id, deal_id?, custom_sections? }
+        // ------------------------------------------------------------------
+        case 'workspace_slide_deck_generate': {
+            const prisma = await createPrisma();
+            try {
+                const config = requireConfig(await loadSalesConfig(tenantId, botId, prisma), botId);
+                const prospectId = typeof payload['prospect_id'] === 'string' ? payload['prospect_id'] : '';
+                if (!prospectId) {
+                    return { ok: false, output: '', errorOutput: 'payload.prospect_id is required.' };
+                }
+                const customSections = Array.isArray(payload['custom_sections'])
+                    ? (payload['custom_sections'] as unknown[]).filter((s): s is string => typeof s === 'string')
+                    : undefined;
+                const result = await generateSlideDeck(
+                    {
+                        prospectId,
+                        tenantId,
+                        botId,
+                        config,
+                        customSections,
+                    },
+                    prisma as unknown as import('@prisma/client').PrismaClient,
+                );
+                return safeJsonResult(result);
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: String(err) };
+            } finally {
+                await prisma.$disconnect().catch(() => undefined);
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_demo_followup — send post-demo summary email
+        // payload: { prospect_id, deal_id?, meeting_notes?, questions_asked?, demo_outcome? }
+        // ------------------------------------------------------------------
+        case 'workspace_demo_followup': {
+            const prisma = await createPrisma();
+            try {
+                const config = requireConfig(await loadSalesConfig(tenantId, botId, prisma), botId);
+                const prospectId = typeof payload['prospect_id'] === 'string' ? payload['prospect_id'] : '';
+                if (!prospectId) {
+                    return { ok: false, output: '', errorOutput: 'payload.prospect_id is required.' };
+                }
+                const questionsAsked = Array.isArray(payload['questions_asked'])
+                    ? (payload['questions_asked'] as unknown[]).filter((q): q is string => typeof q === 'string')
+                    : undefined;
+                const rawOutcome = typeof payload['demo_outcome'] === 'string' ? payload['demo_outcome'] : 'completed';
+                const demoOutcome = (['completed', 'partial', 'rescheduled'] as const).includes(rawOutcome as 'completed' | 'partial' | 'rescheduled')
+                    ? (rawOutcome as 'completed' | 'partial' | 'rescheduled')
+                    : 'completed';
+                const result = await sendDemoFollowup(
+                    {
+                        prospectId,
+                        tenantId,
+                        botId,
+                        dealId: typeof payload['deal_id'] === 'string' ? payload['deal_id'] : undefined,
+                        config,
+                        meetingNotes: typeof payload['meeting_notes'] === 'string' ? payload['meeting_notes'] : undefined,
+                        questionsAsked,
+                        demoOutcome,
                     },
                     prisma as unknown as import('@prisma/client').PrismaClient,
                 );

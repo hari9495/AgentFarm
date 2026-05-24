@@ -172,6 +172,17 @@ export function buildSalesRepEpisodicPattern(
         return count > 0 ? 'sales_rep:market_research:signals_found' : 'sales_rep:market_research:no_signals';
     }
 
+    // ── Product presentations ─────────────────────────────────────────────
+    if (at === 'workspace_demo_script_generate') return `sales_rep:demo:script_generated:${oc}`;
+    if (at === 'workspace_slide_deck_generate') return `sales_rep:demo:slide_deck_generated:${oc}`;
+    if (at === 'workspace_demo_present') {
+        const demoOutcome = String(task.payload['outcome'] ?? '').toLowerCase();
+        if (demoOutcome === 'completed') return 'sales_rep:demo:presented:completed';
+        if (demoOutcome === 'no_show') return 'sales_rep:demo:presented:no_show';
+        return `sales_rep:demo:presented:${oc}`;
+    }
+    if (at === 'workspace_demo_followup') return `sales_rep:demo:followup:${oc}`;
+
     // ── CRM updates (generic) ────────────────────────────────────────────
     if (at.startsWith('workspace_crm_') || at.startsWith('workspace_hubspot_') ||
         at.startsWith('workspace_salesforce_')) {

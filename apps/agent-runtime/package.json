@@ -125,6 +125,18 @@
         "./sales/referral-handler.js": {
             "types": "./src/agents/sales-agent/referral-handler.ts",
             "default": "./src/agents/sales-agent/referral-handler.ts"
+        },
+        "./sales/demo-script-generator.js": {
+            "types": "./src/agents/sales-agent/demo-script-generator.ts",
+            "default": "./src/agents/sales-agent/demo-script-generator.ts"
+        },
+        "./sales/slide-deck-generator.js": {
+            "types": "./src/agents/sales-agent/slide-deck-generator.ts",
+            "default": "./src/agents/sales-agent/slide-deck-generator.ts"
+        },
+        "./sales/demo-presenter.js": {
+            "types": "./src/agents/sales-agent/demo-presenter.ts",
+            "default": "./src/agents/sales-agent/demo-presenter.ts"
         }
     },
     "scripts": {

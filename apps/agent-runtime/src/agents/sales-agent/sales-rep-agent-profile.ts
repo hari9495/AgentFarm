@@ -88,6 +88,11 @@ export const SALES_REP_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = 
     'workspace_linkedin_outreach',
     'workspace_cold_call',
     'workspace_market_research',
+    // ── Product presentation expansion (Sprint 20) ────────────────────────
+    'workspace_demo_script_generate',
+    'workspace_demo_present',
+    'workspace_slide_deck_generate',
+    'workspace_demo_followup',
 ];
 
 export const SALES_REP_ROLE_BLOCKED_ACTIONS = [

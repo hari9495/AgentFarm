@@ -2423,7 +2423,11 @@ export type SalesActivityType =
   | 'call_answered'
   | 'call_no_answer'
   | 'call_voicemail'
-  | 'linkedin_connect';
+  | 'linkedin_connect'
+  | 'demo_script_generated'
+  | 'demo_presented'
+  | 'demo_followup_sent'
+  | 'slide_deck_generated';
 
 export interface ProspectRecord {
   id: string;
@@ -2644,5 +2648,55 @@ export interface ReferralRecord {
   referredByName?: string;
   notes?: string;
   createdAt: Date;
+}
+
+// ============================================================================
+// DEMO / PRESENTATION TYPES
+// ============================================================================
+
+export interface DemoScriptSection {
+  title: string;
+  durationMinutes: number;
+  speakingNotes: string;
+  slideTitle?: string;
+  slidePoints: string[];
+  objectionHandlers: Array<{
+    trigger: string;
+    response: string;
+  }>;
+}
+
+export interface DemoScript {
+  id: string;
+  prospectId: string;
+  tenantId: string;
+  prospectName: string;
+  company: string;
+  industry?: string;
+  title?: string;
+  totalDurationMinutes: number;
+  opener: string;
+  sections: DemoScriptSection[];
+  close: string;
+  callToAction: string;
+  postDemoNextSteps: string[];
+  generatedAt: string;
+}
+
+export interface SlideDeckSlide {
+  title: string;
+  points: string[];
+  speakerNotes?: string;
+  type: 'title' | 'problem' | 'solution' | 'feature' | 'social_proof' | 'close';
+}
+
+export interface SlideDeck {
+  prospectId: string;
+  prospectName: string;
+  company: string;
+  totalSlides: number;
+  slides: SlideDeckSlide[];
+  htmlContent: string;
+  generatedAt: string;
 }
 
