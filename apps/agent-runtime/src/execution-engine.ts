@@ -966,7 +966,9 @@ export async function processDeveloperTask(
     const recentMemories = workspaceIdForMemory
         ? await globalEpisodicMemory.readRecentForWorkspace(workspaceIdForMemory).catch(() => [])
         : [];
-    const episodicContext = globalEpisodicMemory.buildContextBlock(recentMemories);
+    // Use compact format for workspace history — same signal, ~80% fewer tokens than the
+    // full diff-heavy buildContextBlock. Person context stays verbose (fewer entries, higher value).
+    const episodicContext = globalEpisodicMemory.buildCompactContextBlock(recentMemories);
 
     // Gap 4: per-person episodic recall — if this task targets a specific
     // recipient/candidate/customer, inject prior history with that person so

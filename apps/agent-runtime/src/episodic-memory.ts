@@ -173,6 +173,35 @@ export class EpisodicMemoryStore {
         ].join('\n');
     }
 
+    /**
+     * Build a compact single-line-per-entry summary for workspace history injection.
+     * Cuts token cost by ~80% vs buildContextBlock — no diffs, no file lists, no error
+     * detail. Used for the _episodic_context payload field where volume matters most.
+     * Format: "✓ workspace_create_pr→success (2d ago)"
+     */
+    buildCompactContextBlock(entries: TaskMemoryEntry[], opts?: { label?: string }): string {
+        if (entries.length === 0) return '';
+        const now = Date.now();
+        const lines = entries.slice(0, 15).map((e) => {
+            const icon = e.outcome === 'success' ? '✓' : e.outcome === 'escalated' ? '⚠' : '✗';
+            const ageMs = now - e.timestamp;
+            const age = ageMs < 60 * 60 * 1_000
+                ? `${Math.round(ageMs / 60_000)}m`
+                : ageMs < 24 * 60 * 60 * 1_000
+                    ? `${Math.round(ageMs / 3_600_000)}h`
+                    : `${Math.round(ageMs / 86_400_000)}d`;
+            const errHint = e.outcome !== 'success' && e.errorMessage
+                ? ` — ${e.errorMessage.slice(0, 60)}`
+                : '';
+            return `${icon} ${e.actionType}→${e.outcome} (${age} ago)${errHint}`;
+        });
+        const label = opts?.label?.trim();
+        const header = label
+            ? `=== Recent history with ${label} (${entries.length} entries) ===`
+            : `=== Recent task history (${entries.length} entries) ===`;
+        return [header, ...lines, '=== End ==='].join('\n');
+    }
+
     /** Clear all in-process entries for a workspace (e.g. on agent deprovision). */
     clearWorkspace(workspaceId: string): void {
         this.store.delete(workspaceId);

@@ -82,7 +82,7 @@ import {
     fireEvaluatorWebhook,
     resolveEvaluatorWebhookUrl,
 } from './evaluator-webhook.js';
-import { persistQualitySignal } from './quality-signal-store.js';
+import { persistQualitySignal, seedQualityStoreFromDb } from './quality-signal-store.js';
 import { storeHeuristicScore, checkEvaluatorResult, purgeStalePendingEntries } from './output-verifier.js';
 import { trackApprovalOutcomes, emitApprovalRejectionAlert } from './approval-alert-emitter.js';
 import { getAuditLogWriter } from './action-observability.js';
@@ -7681,6 +7681,9 @@ export async function startRuntimeServer(options: RuntimeServerOptions = {}): Pr
                 const { PrismaClient } = await import('@prisma/client') as { PrismaClient: new () => import('@prisma/client').PrismaClient };
                 const memoryPrisma = new PrismaClient();
                 resolvedOptions = { ...options, memoryStore: createPrismaMemoryStore(memoryPrisma) };
+                // Warm the in-memory quality tracker from DB so the first post-restart
+                // task benefits from historical provider quality signals immediately.
+                void seedQualityStoreFromDb(memoryPrisma);
             } catch {
                 // Prisma unavailable or misconfigured — proceed without memory store
             }
