@@ -184,7 +184,8 @@
         "ts-node": "^10.9.2",
         "tsx": "^4.20.6",
         "typescript": "^5.7.2",
-        "vitest": "^2.1.8"
+        "vitest": "^2.1.8",
+        "@types/nodemailer": "^6.4.17"
     },
     "dependencies": {
         "@agentfarm/agent-observability": "workspace:*",
@@ -200,8 +201,5 @@
         "fastify": "^5.2.1",
         "nodemailer": "^6.9.16",
         "playwright": "^1.59.1"
-    },
-    "devDependencies": {
-        "@types/nodemailer": "^6.4.17"
     }
 }

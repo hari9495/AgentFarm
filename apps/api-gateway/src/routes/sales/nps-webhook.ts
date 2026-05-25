@@ -24,10 +24,50 @@ export type RegisterNpsWebhookRoutesOptions = {
 type TokenParams = { token: string };
 type NpsBody = { score: number; feedback?: string };
 
+// Structural type — only needs the fields used here
+type PrismaWithNpsLookup = {
+    npsResponse: {
+        findFirst: (args: { where: { token: string }; select: { surveyType: true } }) => Promise<{ surveyType: string } | null>;
+    };
+};
+
 const getPrisma = async (): Promise<PrismaClient> => {
     const { prisma } = await import('../lib/db.js');
     return prisma;
 };
+
+/**
+ * Validates a score against the survey type retrieved from the DB.
+ *   NPS  → 0-10 (integer, 0 = "not at all likely" is valid)
+ *   CSAT → 1-5  (1 = Very dissatisfied, 5 = Very satisfied; 0 is not a CSAT option)
+ * Returns an error string or null if valid.
+ */
+async function validateScoreForToken(
+    prisma: PrismaClient,
+    token: string,
+    score: number,
+): Promise<string | null> {
+    if (isNaN(score) || !Number.isInteger(score)) return 'score must be an integer';
+
+    const row = await (prisma as unknown as PrismaWithNpsLookup).npsResponse.findFirst({
+        where: { token },
+        select: { surveyType: true },
+    });
+
+    // If token doesn't exist yet we still do a basic range check (NPS range covers everything)
+    if (!row) {
+        if (score < 0 || score > 10) return 'score must be 0-10';
+        return null;
+    }
+
+    if (row.surveyType === 'csat') {
+        if (score < 1 || score > 5) return 'CSAT score must be 1-5';
+    } else {
+        // nps
+        if (score < 0 || score > 10) return 'NPS score must be 0-10';
+    }
+    return null;
+}
 
 export async function registerNpsWebhookRoutes(
     app: FastifyInstance,
@@ -43,11 +83,13 @@ export async function registerNpsWebhookRoutes(
         async (request, reply) => {
             const { token } = request.params;
             const score = Number(request.body?.score);
-            if (isNaN(score) || score < 0 || score > 10) {
-                return reply.status(400).send({ code: 'INVALID_SCORE', message: 'score must be 0-10' });
-            }
 
             const prisma = await resolvePrisma();
+            const scoreError = await validateScoreForToken(prisma, token, score);
+            if (scoreError) {
+                return reply.status(400).send({ code: 'INVALID_SCORE', message: scoreError });
+            }
+
             const result = await recordNpsResponse(
                 { token, score, feedback: request.body?.feedback },
                 prisma,
@@ -68,11 +110,13 @@ export async function registerNpsWebhookRoutes(
             const { token } = request.params;
             const query = request.query as Record<string, string | undefined>;
             const score = Number(query['score'] ?? '');
-            if (isNaN(score) || score < 0 || score > 10) {
-                return reply.status(400).send({ code: 'INVALID_SCORE' });
-            }
 
             const prisma = await resolvePrisma();
+            const scoreError = await validateScoreForToken(prisma, token, score);
+            if (scoreError) {
+                return reply.status(400).send({ code: 'INVALID_SCORE', message: scoreError });
+            }
+
             await recordNpsResponse({ token, score }, prisma).catch(() => undefined);
 
             // Redirect to a thank-you page if one is configured, else JSON

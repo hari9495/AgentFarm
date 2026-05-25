@@ -301,16 +301,16 @@ export async function generateContract(
     let contractId: string | undefined;
 
     if (db) {
+        const finalPrice = listPrice * (1 - discountPercent / 100);
         const created = await db.salesProposal.create({
             data: {
                 tenantId, botId, prospectId,
                 dealId: dealId ?? null,
+                title: `${company} — ${contractDurationMonths}-month agreement`,
                 htmlContent,
                 sections: JSON.stringify(sections),
                 currency,
-                listPrice,
-                discountPercent,
-                finalPrice: listPrice * (1 - discountPercent / 100),
+                listPrice: finalPrice,    // store the negotiated price
                 createdAt: now,
                 updatedAt: now,
             },
