@@ -6,8 +6,12 @@
  * is marked `paid`. Creates a ProvisioningJob row with status `queued` which
  * the provisioning-worker picks up automatically (polls every 5 s).
  *
- * Idempotent: if an active ProvisioningJob already exists for the bot, the
- * existing jobId is returned without creating a duplicate.
+ * Idempotent: keyed on orderId — if a ProvisioningJob already exists for this
+ * order the existing result is returned without creating a duplicate.
+ *
+ * Multi-agent: reads plan.roleType from the purchased plan and finds or creates
+ * the bot with that role in the tenant's workspace, so buying a developer_agent
+ * plan and a tester_agent plan provisions two distinct bots.
  */
 
 import type { PrismaClient } from '@prisma/client';
@@ -15,18 +19,6 @@ import { CONTRACT_VERSIONS } from '@agentfarm/shared-types';
 import type { AgentHireRecord } from '@agentfarm/shared-types';
 import type { EmbedFn } from '@agentfarm/memory-service';
 import { seedOnboardingKnowledge } from './onboarding-knowledge-seed.js';
-
-// Active (in-flight) statuses — a new job should not be created if one of
-// these already exists for the same botId.
-const ACTIVE_STATUSES = [
-    'queued',
-    'validating',
-    'creating_resources',
-    'bootstrapping_vm',
-    'starting_container',
-    'registering_runtime',
-    'healthchecking',
-] as const;
 
 export interface EnrollParams {
     orderId: string;
@@ -46,7 +38,7 @@ export interface EnrollResult {
     jobId: string;
     botId: string;
     workspaceId: string;
-    /** true when an existing active job was found and reused (idempotent). */
+    /** true when an existing job for this orderId was found and reused (idempotent). */
     reused: boolean;
     hireRecord: AgentHireRecord;
 }
@@ -55,13 +47,14 @@ export interface EnrollResult {
  * Enrol an agent after a successful payment.
  *
  * Steps:
- *  1. Resolve workspace + bot from tenantId.
- *  2. Guard against duplicate active ProvisioningJobs (idempotent).
- *  3. Create ProvisioningJob with status='queued'.
- *  4. Seed onboarding knowledge into the agent's semantic memory (non-blocking).
- *  5. Return EnrollResult including the AgentHireRecord for audit logging.
+ *  1. Resolve workspace from tenantId.
+ *  2. Look up plan.roleType so the correct agent type is provisioned.
+ *  3. Guard against duplicate — idempotent on orderId.
+ *  4. Find or create the bot for this role in the workspace.
+ *  5. Create ProvisioningJob with status='queued'.
+ *  6. Seed onboarding knowledge (non-blocking).
  *
- * @throws if no Workspace or Bot is found for the tenant.
+ * @throws if no Workspace is found for the tenant.
  */
 export async function enrollAgentAfterPayment(
     params: EnrollParams,
@@ -79,23 +72,17 @@ export async function enrollAgentAfterPayment(
         throw new Error(`[hire-handler] No workspace found for tenantId=${tenantId}`);
     }
 
-    // 2. Resolve bot
-    const bot = await (prisma.bot as any).findFirst({
-        where: { workspaceId: workspace.id },
-    }) as { id: string; workspaceId: string; role: string } | null;
+    // 2. Look up the purchased plan to determine which agent role to provision
+    const plan = await (prisma.plan as any).findUnique({
+        where: { id: planId },
+        select: { roleType: true },
+    }) as { roleType: string } | null;
+    const roleType = plan?.roleType ?? 'developer_agent';
 
-    if (!bot) {
-        throw new Error(`[hire-handler] No bot found for workspaceId=${workspace.id}`);
-    }
-
-    // 3. Guard against duplicate — return existing active job if present
+    // 3. Idempotency guard keyed on orderId — consistent with the admin-provision path
     const existing = await (prisma.provisioningJob as any).findFirst({
-        where: {
-            botId: bot.id,
-            status: { in: [...ACTIVE_STATUSES] },
-        },
-        orderBy: { createdAt: 'desc' },
-    });
+        where: { orderId },
+    }) as { id: string; botId: string } | null;
 
     const correlationId = `corr_hire_${orderId}_${Date.now()}`;
     const requestedAt = new Date();
@@ -108,21 +95,32 @@ export async function enrollAgentAfterPayment(
             orderId,
             tenantId,
             workspaceId: workspace.id,
-            botId: bot.id,
+            botId: existing.botId,
             planId,
             triggerSource: 'payment_webhook',
             requestedAt: requestedAt.toISOString(),
         };
         return {
             jobId: existing.id,
-            botId: bot.id,
+            botId: existing.botId,
             workspaceId: workspace.id,
             reused: true,
             hireRecord,
         };
     }
 
-    // 4. Create the provisioning job — worker will pick it up automatically
+    // 4. Find the bot for this role; create one if this role hasn't been purchased before
+    let bot = await (prisma.bot as any).findFirst({
+        where: { workspaceId: workspace.id, role: roleType },
+    }) as { id: string; workspaceId: string; role: string } | null;
+
+    if (!bot) {
+        bot = await (prisma.bot as any).create({
+            data: { workspaceId: workspace.id, role: roleType, status: 'created' },
+        }) as { id: string; workspaceId: string; role: string };
+    }
+
+    // 5. Create the provisioning job — worker will pick it up automatically
     const job = await prisma.provisioningJob.create({
         data: {
             tenantId,

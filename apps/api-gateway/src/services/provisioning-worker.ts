@@ -459,6 +459,33 @@ async function handleCompletion(job: ProvisioningJobRecord): Promise<void> {
         data: { status: 'ready' },
     });
 
+    // Write the per-agent subscription so isSubscriptionSuspended can enforce
+    // per-agent isolation when the customer has multiple agents.
+    // agentId = bot.id — the unique identifier for this specific agent instance.
+    const now = new Date();
+    const tenantSub = await prisma.tenantSubscription.findUnique({
+        where: { tenantId: job.tenantId },
+        select: { id: true, paymentProvider: true, expiresAt: true },
+    });
+    await prisma.agentSubscription.upsert({
+        where: { tenantId_agentId: { tenantId: job.tenantId, agentId: job.botId } },
+        create: {
+            tenantId: job.tenantId,
+            agentId: job.botId,
+            tenantSubscriptionId: tenantSub?.id ?? null,
+            planId: job.planId,
+            status: 'active',
+            paymentProvider: tenantSub?.paymentProvider ?? 'system',
+            startedAt: now,
+            expiresAt: tenantSub?.expiresAt ?? new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
+        },
+        update: {
+            status: 'active',
+            planId: job.planId,
+            reactivatedAt: now,
+        },
+    });
+
     await transitionTo(job, 'completed', { completedAt: new Date() });
     await emitAudit(job, 'Provisioning completed — bot is active', 'info');
     console.log(`[provisioning-worker] [${job.correlationId}] provisioning COMPLETED`);
