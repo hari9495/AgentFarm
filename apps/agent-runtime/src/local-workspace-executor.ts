@@ -5086,6 +5086,10 @@ export async function executeLocalWorkspaceAction(input: {
                 scripts?: Record<string, string>;
                 readme_excerpt?: string;
                 dependencies?: Record<string, string>;
+                /** Git situational awareness — helps the agent understand recent history */
+                current_branch?: string;
+                recent_commits?: string[];      // last 10 one-line commit summaries
+                uncommitted_changes?: string[]; // git status --short lines
             };
             const scout: ScoutResult = { top_level_dirs: [], key_files: [] };
 
@@ -5158,6 +5162,24 @@ export async function executeLocalWorkspaceAction(input: {
                     } catch { /* try next */ }
                 }
             }
+
+            // Git situational awareness: branch, recent history, dirty files.
+            // A human developer always checks `git log` and `git status` before
+            // touching code — this gives the agent the same orientation.
+            try {
+                const branchRes = await runCommand(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], workspaceDir, 5_000);
+                if (branchRes.exitCode === 0 && branchRes.stdout.trim()) {
+                    scout.current_branch = branchRes.stdout.trim();
+                }
+                const logRes = await runCommand(['git', 'log', '--oneline', '-10'], workspaceDir, 5_000);
+                if (logRes.exitCode === 0 && logRes.stdout.trim()) {
+                    scout.recent_commits = logRes.stdout.trim().split('\n').slice(0, 10);
+                }
+                const statusRes = await runCommand(['git', 'status', '--short'], workspaceDir, 5_000);
+                if (statusRes.exitCode === 0 && statusRes.stdout.trim()) {
+                    scout.uncommitted_changes = statusRes.stdout.trim().split('\n').slice(0, 20);
+                }
+            } catch { /* not a git repo or git unavailable */ }
 
             return { ok: true, output: JSON.stringify(scout, null, 2) };
         }

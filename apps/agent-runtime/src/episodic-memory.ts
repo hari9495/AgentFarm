@@ -11,6 +11,8 @@
  * Wire the read path into processDeveloperTask via _episodic_context payload injection.
  */
 
+import { appendFile, readFile } from 'node:fs/promises';
+
 export type TaskOutcome = 'success' | 'failed' | 'approval_required' | 'escalated';
 
 export type TaskMemoryEntry = {
@@ -381,24 +383,81 @@ export function createPgEpisodicMemoryFns(
     return { pgWrite, pgRead };
 }
 
+// ---------------------------------------------------------------------------
+// File-based episodic memory (JSONL) — Tier 2 persistence
+// ---------------------------------------------------------------------------
+// Gives memory durability across process restarts without requiring a database.
+// Each entry is appended as one JSON line. Reads scan the whole file and filter
+// by workspaceId — fast enough for dev environments (100s of entries).
+// Production deployments should use the pg-backed Tier 1 store instead.
+// ---------------------------------------------------------------------------
+
+/**
+ * Creates write-through callbacks that persist episodic memory to a local
+ * newline-delimited JSON file.  Activated automatically when DATABASE_URL is
+ * absent.  Path defaults to `.agentfarm-memory.jsonl` in the working directory;
+ * override with the `AF_MEMORY_FILE` environment variable.
+ */
+export function createFileEpisodicMemoryFns(filePath: string): { pgWrite: PgWriteFn; pgRead: PgReadFn } {
+    const pgWrite: PgWriteFn = async (entry: TaskMemoryEntry): Promise<void> => {
+        await appendFile(filePath, JSON.stringify(entry) + '\n', 'utf-8');
+    };
+
+    const pgRead: PgReadFn = async (workspaceId: string, limit: number): Promise<TaskMemoryEntry[]> => {
+        try {
+            const content = await readFile(filePath, 'utf-8');
+            const entries = content
+                .trim()
+                .split('\n')
+                .filter(Boolean)
+                .map((l) => { try { return JSON.parse(l) as TaskMemoryEntry; } catch { return null; } })
+                .filter((e): e is TaskMemoryEntry => e !== null && e.workspaceId === workspaceId);
+            // Return the last `limit` entries most-recent-first
+            return entries.slice(-limit).reverse();
+        } catch {
+            return [];
+        }
+    };
+
+    return { pgWrite, pgRead };
+}
+
 /**
  * Attempts to create a pg-backed store when DATABASE_URL is present.
- * Falls back to a pure in-memory store when it cannot import @prisma/client.
+ * Falls back to a JSONL file-based store (Tier 2) so memory persists across
+ * restarts even without a database — useful for local development.
+ * Final fallback is a pure in-memory store (no durability).
  * This is called lazily so the module can always be imported safely.
  */
 async function tryCreatePgBackedStore(): Promise<EpisodicMemoryStore> {
+    // ── Tier 1: PostgreSQL / pgvector ──────────────────────────────────────────
     const dbUrl = process.env['DATABASE_URL'];
-    if (!dbUrl) return new EpisodicMemoryStore();
+    if (dbUrl) {
+        try {
+            const { PrismaClient } = await import('@prisma/client');
+            const prisma = new PrismaClient();
+            const tenantId = process.env['AF_DEFAULT_TENANT_ID'] ?? 'global';
+            const { pgWrite, pgRead } = createPgEpisodicMemoryFns(prisma as unknown as PrismaLike, tenantId);
+            return new EpisodicMemoryStore({ pgWrite, pgRead });
+        } catch {
+            // @prisma/client not available or DB unreachable — fall through to Tier 2
+        }
+    }
+
+    // ── Tier 2: local JSONL file ───────────────────────────────────────────────
+    // Gives cross-restart durability without any infrastructure requirement.
+    const memFilePath = process.env['AF_MEMORY_FILE'] ?? '.agentfarm-memory.jsonl';
     try {
-        const { PrismaClient } = await import('@prisma/client');
-        const prisma = new PrismaClient();
-        const tenantId = process.env['AF_DEFAULT_TENANT_ID'] ?? 'global';
-        const { pgWrite, pgRead } = createPgEpisodicMemoryFns(prisma as unknown as PrismaLike, tenantId);
+        // Validate write access with a no-op append before committing to this tier.
+        await appendFile(memFilePath, '', 'utf-8');
+        const { pgWrite, pgRead } = createFileEpisodicMemoryFns(memFilePath);
         return new EpisodicMemoryStore({ pgWrite, pgRead });
     } catch {
-        // @prisma/client not available or DB unreachable — use in-memory
-        return new EpisodicMemoryStore();
+        // File path not writable (e.g. read-only filesystem) — fall through
     }
+
+    // ── Tier 3: pure in-memory (no durability) ─────────────────────────────────
+    return new EpisodicMemoryStore();
 }
 
 /**
