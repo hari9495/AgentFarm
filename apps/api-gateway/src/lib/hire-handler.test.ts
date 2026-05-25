@@ -81,7 +81,10 @@ function makePrisma(overrides: Partial<{
     planFindUnique: unknown;
     botFindFirst: unknown;
     botCreate: unknown;
-    jobFindFirst: unknown;
+    /** Returned when the findFirst query contains `orderId` (step 3 idempotency). */
+    orderJobFindFirst: unknown;
+    /** Returned when the findFirst query contains `botId` (step 4b bot-level guard). */
+    liveJobFindFirst: unknown;
 }>): PrismaClient & { _created: unknown[] } {
     const created: unknown[] = [];
     return {
@@ -105,7 +108,14 @@ function makePrisma(overrides: Partial<{
             },
         },
         provisioningJob: {
-            findFirst: async () => overrides.jobFindFirst ?? null,
+            // Distinguish the two findFirst calls by inspecting the where clause.
+            findFirst: async (args: { where: Record<string, unknown> }) => {
+                if ('orderId' in args.where) {
+                    return overrides.orderJobFindFirst ?? null;
+                }
+                // botId + status.notIn — the bot-level live-job guard
+                return overrides.liveJobFindFirst ?? null;
+            },
             create: async (args: { data: Record<string, unknown> }) => {
                 const job = { ...stubJob, ...args.data, id: 'job-new-001' };
                 created.push({ _type: 'job', ...job });
@@ -126,8 +136,9 @@ describe('enrollAgentAfterPayment', () => {
         const prisma = makePrisma({
             workspaceFindFirst: stubWorkspace,
             planFindUnique: stubPlan,
-            botFindFirst: stubBot,   // bot already exists for this role
-            jobFindFirst: null,      // no prior job for this orderId
+            botFindFirst: stubBot,       // bot already exists for this role
+            orderJobFindFirst: null,     // no prior job for this orderId
+            liveJobFindFirst: null,      // no live job for this bot
         });
 
         const result = await enrollAgentAfterPayment({
@@ -155,8 +166,9 @@ describe('enrollAgentAfterPayment', () => {
         const prisma = makePrisma({
             workspaceFindFirst: stubWorkspace,
             planFindUnique: testerPlan,
-            botFindFirst: null,   // no tester_agent bot yet
-            jobFindFirst: null,
+            botFindFirst: null,          // no tester_agent bot yet
+            orderJobFindFirst: null,
+            liveJobFindFirst: null,
         });
 
         const result = await enrollAgentAfterPayment({
@@ -202,7 +214,7 @@ describe('enrollAgentAfterPayment', () => {
         const prisma = makePrisma({
             workspaceFindFirst: stubWorkspace,
             planFindUnique: stubPlan,
-            jobFindFirst: existingJob,  // job for this orderId already exists
+            orderJobFindFirst: existingJob,  // job for this orderId already exists
         });
 
         const result = await enrollAgentAfterPayment({
@@ -228,7 +240,8 @@ describe('enrollAgentAfterPayment', () => {
             workspaceFindFirst: stubWorkspace,
             planFindUnique: { roleType: 'developer_agent' },
             botFindFirst: devBot,
-            jobFindFirst: null,
+            orderJobFindFirst: null,
+            liveJobFindFirst: null,
         });
         const devResult = await enrollAgentAfterPayment({
             orderId: 'ord-dev-001',
@@ -247,7 +260,8 @@ describe('enrollAgentAfterPayment', () => {
             planFindUnique: { roleType: 'tester_agent' },
             botFindFirst: null,    // no tester bot yet
             botCreate: { id: 'bot-tester-001', workspaceId: WORKSPACE_ID, role: 'tester_agent', status: 'created' },
-            jobFindFirst: null,
+            orderJobFindFirst: null,
+            liveJobFindFirst: null,
         });
         const testerResult = await enrollAgentAfterPayment({
             orderId: 'ord-tester-001',
@@ -261,6 +275,34 @@ describe('enrollAgentAfterPayment', () => {
         assert.equal(prisma2._created.length, 2);  // bot + job both created
         assert.equal((prisma2._created[0] as any)._type, 'bot');
         assert.equal((prisma2._created[1] as any)._type, 'job');
+    });
+
+    test('repeated purchase — same plan bought again reuses live job, no new provisioning cycle', async () => {
+        // Simulates buying the same developer_agent plan a second (or 10th) time.
+        // The bot already exists and has a live (non-failed) ProvisioningJob.
+        const liveJob = { id: 'job-live-001', botId: BOT_ID };
+        const prisma = makePrisma({
+            workspaceFindFirst: stubWorkspace,
+            planFindUnique: stubPlan,            // roleType = 'developer_agent'
+            botFindFirst: stubBot,               // bot already exists
+            orderJobFindFirst: null,             // this new orderId has no prior job
+            liveJobFindFirst: liveJob,           // but bot already has a live job
+        });
+
+        const result = await enrollAgentAfterPayment({
+            orderId: 'ord-repeat-002',           // fresh orderId — different from prior purchases
+            tenantId: TENANT_ID,
+            planId: PLAN_ID,
+            requestedBy: 'payment_webhook',
+        }, prisma);
+
+        // Must be reused — no new Azure provisioning cycle
+        assert.equal(result.reused, true);
+        assert.equal(result.jobId, liveJob.id);
+        assert.equal(result.botId, BOT_ID);
+
+        // Nothing was created — neither a new bot nor a new job
+        assert.equal(prisma._created.length, 0);
     });
 
 });

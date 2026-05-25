@@ -120,6 +120,40 @@ export async function enrollAgentAfterPayment(
         }) as { id: string; workspaceId: string; role: string };
     }
 
+    // 4b. Bot-level idempotency: if this bot already has a live provisioning job
+    // (not failed/cleaned-up), reuse it — prevents repeated purchases of the same
+    // plan from triggering multiple Azure VM provisioning cycles for the same bot.
+    const TERMINAL_STATUSES = ['failed', 'cleaned_up', 'cleanup_pending'];
+    const liveJob = await (prisma.provisioningJob as any).findFirst({
+        where: {
+            botId: bot.id,
+            status: { notIn: TERMINAL_STATUSES },
+        },
+        orderBy: { createdAt: 'desc' },
+    }) as { id: string; botId: string } | null;
+
+    if (liveJob) {
+        const hireRecord: AgentHireRecord = {
+            contractVersion: CONTRACT_VERSIONS.AGENT_HIRE,
+            correlationId,
+            jobId: liveJob.id,
+            orderId,
+            tenantId,
+            workspaceId: workspace.id,
+            botId: bot.id,
+            planId,
+            triggerSource: 'payment_webhook',
+            requestedAt: requestedAt.toISOString(),
+        };
+        return {
+            jobId: liveJob.id,
+            botId: bot.id,
+            workspaceId: workspace.id,
+            reused: true,
+            hireRecord,
+        };
+    }
+
     // 5. Create the provisioning job — worker will pick it up automatically
     const job = await prisma.provisioningJob.create({
         data: {
