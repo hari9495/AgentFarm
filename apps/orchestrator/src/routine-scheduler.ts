@@ -27,7 +27,10 @@ import {
     type ProactiveBaRequirementConflictInput,
     type ProactiveBaStakeholderThreadInput,
     type ProactiveBaEpicInput,
+    type ProactiveSignalDetectionInput,
 } from './proactive-signal-detector.js';
+
+export type { ProactiveSignalDetectionInput };
 
 export interface CreateScheduledTaskRequest {
     botId: string;
@@ -40,43 +43,6 @@ export interface CreateScheduledTaskRequest {
     policy: SchedulePolicy;
     featureFlagKey: string;
     correlationId: string;
-}
-
-export interface ProactivePullRequestInput {
-    id: string;
-    title: string;
-    daysSinceUpdate: number;
-}
-
-export interface ProactiveTicketInput {
-    id: string;
-    title: string;
-    hoursSinceUpdate: number;
-}
-
-export interface ProactiveSignalDetectionInput {
-    tenantId: string;
-    workspaceId: string;
-    botId: string;
-    correlationId: string;
-    pullRequests?: ProactivePullRequestInput[];
-    tickets?: ProactiveTicketInput[];
-    budgetUtilizationRatio?: number;
-    ciFailures?: ProactiveCiFailureInput[];
-    dependencyVulnerabilities?: ProactiveDependencyCveInput[];
-    stalePrThresholdDays?: number;
-    staleTicketThresholdHours?: number;
-    budgetWarningThreshold?: number;
-    ciFailureThresholdCount?: number;
-    dependencySeverityThreshold?: 'medium' | 'high' | 'critical';
-    // BA-specific inputs
-    storiesWithoutAcceptanceCriteria?: ProactiveBaStoryInput[];
-    requirementConflicts?: ProactiveBaRequirementConflictInput[];
-    stakeholderThreads?: ProactiveBaStakeholderThreadInput[];
-    epicsWithoutBrd?: ProactiveBaEpicInput[];
-    missingAcThresholdHours?: number;
-    epicWithoutBrdThresholdDays?: number;
-    stakeholderThreadThresholdHours?: number;
 }
 
 export interface RoutineSchedulerState {
@@ -396,19 +362,32 @@ export class RoutineScheduler {
     }
 
     /**
-     * Verify scheduled runs emit same contracts as manual runs
-     * This is a contract assertion method
+     * Verify that a scheduled task's record contains all required contract fields.
+     * Checks the task record rather than comparing two run IDs, because the
+     * runtime owns run records — the scheduler only owns the task definition.
      */
     async verifyRunContractsMatch(
         scheduledTaskId: string,
-        manualRunId: string
+        _manualRunId: string
     ): Promise<{ matchesContract: boolean; differences: string[] }> {
-        // In production, compare actual run records
-        // Both should have same approval, evidence, and audit contracts
-        return {
-            matchesContract: true,
-            differences: [],
-        };
+        const task = this.scheduledTasks.get(scheduledTaskId);
+        if (!task) {
+            return { matchesContract: false, differences: [`scheduled task ${scheduledTaskId} not found`] };
+        }
+
+        const differences: string[] = [];
+
+        if (!task.correlationId) differences.push('missing correlationId');
+        if (!task.tenantId) differences.push('missing tenantId');
+        if (!task.workspaceId) differences.push('missing workspaceId');
+        if (!task.botId) differences.push('missing botId');
+        if (!task.policy?.dedupeKey) differences.push('missing policy.dedupeKey');
+        if (!task.policy?.concurrencyPolicy) differences.push('missing policy.concurrencyPolicy');
+        if (!task.policyPackVersion) differences.push('missing policyPackVersion');
+        if (!task.featureFlagKey) differences.push('missing featureFlagKey');
+        if (typeof task.failureCount !== 'number') differences.push('missing failureCount');
+
+        return { matchesContract: differences.length === 0, differences };
     }
 
     async detectProactiveSignals(input: ProactiveSignalDetectionInput): Promise<ProactiveSignalRecord[]> {

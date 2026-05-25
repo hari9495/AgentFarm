@@ -362,6 +362,13 @@ export const runProactiveDetection = async (
         budgetWarningThreshold: input?.budgetWarningThreshold,
         ciFailureThresholdCount: input?.ciFailureThresholdCount,
         dependencySeverityThreshold: input?.dependencySeverityThreshold,
+        storiesWithoutAcceptanceCriteria: input?.storiesWithoutAcceptanceCriteria,
+        requirementConflicts: input?.requirementConflicts,
+        stakeholderThreads: input?.stakeholderThreads,
+        epicsWithoutBrd: input?.epicsWithoutBrd,
+        missingAcThresholdHours: input?.missingAcThresholdHours,
+        epicWithoutBrdThresholdDays: input?.epicWithoutBrdThresholdDays,
+        stakeholderThreadThresholdHours: input?.stakeholderThreadThresholdHours,
     };
 
     const connectorHints = connectors.map((connector) => connector.tool);
