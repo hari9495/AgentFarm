@@ -402,10 +402,20 @@ export async function startContainerOnVm(
         `AGENTFARM_REGION=${region}`,
     ].map((e) => `-e "${e}"`).join(' ');
 
+    const netName = `agentfarm-net-${job.botId.slice(-8)}`;
     const script = [
         `docker login ${registryServer} -u ${registryUsername} -p ${registryPassword}`,
         `docker pull ${image}`,
-        `docker run -d --name ${containerName} --publish ${port}:${port} ${envArgs} --restart unless-stopped ${image}`,
+        // Isolated network per agent — containers on different networks cannot
+        // reach each other directly even though they share the same VM.
+        `docker network create ${netName} 2>/dev/null || true`,
+        `docker run -d --name ${containerName}` +
+            ` --publish ${port}:${port}` +
+            ` --network ${netName}` +
+            ` --cpus=1.0 --memory=2g --memory-swap=2g` +
+            ` --security-opt=no-new-privileges` +
+            ` ${envArgs}` +
+            ` --restart unless-stopped ${image}`,
     ];
 
     try {

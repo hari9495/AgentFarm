@@ -83,9 +83,16 @@ write_files:
       RestartSec=10
       ExecStartPre=-/usr/bin/docker stop agentfarm-bot-${cfg.botId.slice(-8)}
       ExecStartPre=-/usr/bin/docker rm agentfarm-bot-${cfg.botId.slice(-8)}
+      ExecStartPre=-/usr/bin/docker network rm agentfarm-net-${cfg.botId.slice(-8)}
+      ExecStartPre=/usr/bin/docker network create agentfarm-net-${cfg.botId.slice(-8)}
       ExecStart=/usr/bin/docker run --name agentfarm-bot-${cfg.botId.slice(-8)} \\
         --env-file /etc/agentfarm/bot.env \\
         --publish 8080:8080 \\
+        --network agentfarm-net-${cfg.botId.slice(-8)} \\
+        --cpus=1.0 \\
+        --memory=2g \\
+        --memory-swap=2g \\
+        --security-opt=no-new-privileges \\
         --restart unless-stopped \\
         ${image}
       ExecStop=/usr/bin/docker stop -t 10 agentfarm-bot-${cfg.botId.slice(-8)}
