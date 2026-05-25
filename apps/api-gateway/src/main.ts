@@ -127,6 +127,9 @@ import { registerAgentMessageRoutes } from './routes/agents/agent-messages.js';
 import { validateApiKey } from './lib/api-key-auth.js';
 import { startDrainSweep, stopDrainSweep } from './lib/task-queue.js';
 
+// Single shared secret store — avoids redundant vault API calls across routes and workers.
+const secretStore = createDefaultSecretStore();
+
 // 1 MB max request body â€” prevents large payload DoS
 const app = Fastify({
     logger: true,
@@ -275,7 +278,7 @@ const getWorkspaceBotSummaries = async (tenantId: string) => {
         role_type: ws.bot?.[0]?.role ?? 'Developer Agent',
         bot_id: ws.bot?.[0]?.id ?? null,
         bot_name: ws.bot?.[0]?.name ?? 'Unnamed Bot',
-        bot_status: ws.bots?.[0]?.status ?? 'created',
+        bot_status: ws.bot?.[0]?.status ?? 'created',
         workspace_status: ws.status,
         runtime_tier: 'dedicated_vm',
         last_heartbeat_at: new Date().toISOString(),
@@ -627,7 +630,7 @@ await registerPortalAuthRoutes(app);
 await registerPortalDataRoutes(app);
 await registerConnectorAuthRoutes(app, {
     getSession: (request) => readSession(request),
-    secretStore: createDefaultSecretStore(),
+    secretStore: secretStore,
 });
 await registerMcpRegistryRoutes(app, {
     getSession: (request) => readSession(request),
@@ -637,7 +640,7 @@ await registerLanguageRoutes(app, {
 });
 await registerConnectorActionRoutes(app, {
     getSession: (request) => readSession(request),
-    secretStore: createDefaultSecretStore(),
+    secretStore: secretStore,
 });
 await registerApprovalRoutes(app, {
     getSession: (request) => readSession(request),
@@ -656,7 +659,7 @@ await registerInternalLoginPolicyRoutes(app, {
 });
 await registerRuntimeLlmConfigRoutes(app, {
     getSession: (request) => readSession(request),
-    secretStore: createDefaultSecretStore(),
+    secretStore: secretStore,
 });
 await registerRuntimeTaskRoutes(app, {
     getSession: (request) => readSession(request),
@@ -1238,12 +1241,12 @@ const start = async (): Promise<void> => {
                 error: (msg, err) => app.log.error({ err }, msg),
             },
             {
-                secretStore: createDefaultSecretStore(),
+                secretStore: secretStore,
             },
         );
         startConnectorHealthWorker(
             {
-                secretStore: createDefaultSecretStore(),
+                secretStore: secretStore,
             },
             {
                 info: (msg) => app.log.info(msg),
@@ -1285,3 +1288,4 @@ process.on('SIGTERM', () => void stop());
 process.on('SIGINT', () => void stop());
 
 void start();
+

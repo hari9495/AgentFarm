@@ -206,9 +206,30 @@ def _call_llm(screenshot_b64: str, prompt: str) -> str:
     return '[{"action":"done","value":"No LLM configured"}]'
 
 
+# Module-level singletons — initialized once on first use to avoid
+# re-creating HTTP connection pools on every vision step.
+_openai_client: Any = None
+_anthropic_client: Any = None
+
+
+def _get_openai_client() -> Any:
+    global _openai_client
+    if _openai_client is None:
+        import openai  # type: ignore
+        _openai_client = openai.OpenAI(api_key=OPENAI_API_KEY)
+    return _openai_client
+
+
+def _get_anthropic_client() -> Any:
+    global _anthropic_client
+    if _anthropic_client is None:
+        import anthropic  # type: ignore
+        _anthropic_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+    return _anthropic_client
+
+
 def _call_openai(screenshot_b64: str, prompt: str) -> str:
-    import openai  # type: ignore
-    client = openai.OpenAI(api_key=OPENAI_API_KEY)
+    client = _get_openai_client()
     response = client.chat.completions.create(
         model="gpt-4o",
         max_tokens=512,
@@ -224,8 +245,7 @@ def _call_openai(screenshot_b64: str, prompt: str) -> str:
 
 
 def _call_anthropic(screenshot_b64: str, prompt: str) -> str:
-    import anthropic  # type: ignore
-    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+    client = _get_anthropic_client()
     response = client.messages.create(
         model="claude-haiku-4-5-20251001",
         max_tokens=512,
@@ -234,11 +254,7 @@ def _call_anthropic(screenshot_b64: str, prompt: str) -> str:
             "content": [
                 {
                     "type": "image",
-                    "source": {
-                        "type": "base64",
-                        "media_type": "image/png",
-                        "data": screenshot_b64,
-                    },
+                    "source": {"type": "base64", "media_type": "image/png", "data": screenshot_b64},
                 },
                 {"type": "text", "text": prompt},
             ],
@@ -252,53 +268,66 @@ def _call_anthropic(screenshot_b64: str, prompt: str) -> str:
 # Vision loop (runs in background thread)
 # ---------------------------------------------------------------------------
 
+def _update_task(session_id: str, **fields: Any) -> None:
+    """Thread-safe update of current_task fields."""
+    with _sessions_lock:
+        s = _sessions.get(session_id)
+        if s and s.get("current_task"):
+            s["current_task"].update(fields)
+
+
+def _append_task_step(session_id: str, step: dict[str, Any]) -> None:
+    """Thread-safe append to current_task steps list."""
+    with _sessions_lock:
+        s = _sessions.get(session_id)
+        if s and s.get("current_task"):
+            s["current_task"].setdefault("steps", []).append(step)
+
+
 def _run_vision_loop(session_id: str, goal: str) -> None:
     with _sessions_lock:
-        session = _sessions.get(session_id)
-    if session is None:
+        s = _sessions.get(session_id)
+        if s is None:
+            return
+        task_id = s.get("current_task", {}).get("taskId")
+
+    if task_id is None:
         return
 
-    task = session["current_task"]
-    task["status"] = "running"
+    _update_task(session_id, status="running")
     deadline = time.monotonic() + VISION_LOOP_TIMEOUT
+    local_steps: list[dict[str, Any]] = []
 
     for step_num in range(MAX_VISION_STEPS):
         if time.monotonic() > deadline:
-            task["status"] = "timeout"
-            task["result"] = "Task timed out"
+            _update_task(session_id, status="timeout", result="Task timed out")
             break
 
         screenshot_b64 = _screenshot()
         if screenshot_b64 is None:
-            task["steps"].append({
-                "step": step_num,
-                "action": "screenshot",
-                "ok": False,
-                "errorMessage": "Screenshot failed — display may not be ready",
-                "timestamp": _now(),
-            })
+            step = {"step": step_num, "action": "screenshot", "ok": False,
+                    "errorMessage": "Screenshot failed — display may not be ready",
+                    "timestamp": _now()}
+            local_steps.append(step)
+            _append_task_step(session_id, step)
             time.sleep(1)
             continue
 
-        task["last_screenshot"] = screenshot_b64
-
-        actions = _llm_decide(screenshot_b64, goal, task["steps"])
+        _update_task(session_id, last_screenshot=screenshot_b64)
+        actions = _llm_decide(screenshot_b64, goal, local_steps)
 
         done = False
         for act in actions:
             act_name = act.get("action", "")
             result = _execute_action(act)
-            task["steps"].append({
-                "step": step_num,
-                "action": act_name,
-                "target": act.get("target", ""),
-                "value": act.get("value", ""),
-                **result,
-                "timestamp": _now(),
-            })
+            step = {"step": step_num, "action": act_name,
+                    "target": act.get("target", ""), "value": act.get("value", ""),
+                    **result, "timestamp": _now()}
+            local_steps.append(step)
+            _append_task_step(session_id, step)
             if act_name == "done":
-                task["status"] = "completed"
-                task["result"] = act.get("value") or "Task completed"
+                _update_task(session_id, status="completed",
+                             result=act.get("value") or "Task completed")
                 done = True
                 break
             time.sleep(0.4)
@@ -307,9 +336,11 @@ def _run_vision_loop(session_id: str, goal: str) -> None:
             break
         time.sleep(1)
     else:
-        if task["status"] == "running":
-            task["status"] = "completed"
-            task["result"] = "Max steps reached"
+        with _sessions_lock:
+            s = _sessions.get(session_id)
+            if s and s.get("current_task", {}).get("status") == "running":
+                s["current_task"]["status"] = "completed"
+                s["current_task"]["result"] = "Max steps reached"
 
     with _sessions_lock:
         if session_id in _sessions:
@@ -1023,35 +1054,6 @@ def _voicebox_tts(text: str, voice_id: str = "en-US-GuyNeural", lang: str = "en"
                     return _proc.stdout
         except Exception as _exc:
             logger.warning("[tts] OpenAI TTS failed (%s), trying edge-tts", _exc)
-        try:
-            import urllib.request as _ur, json as _js
-            _payload = _js.dumps({
-                "text": text,
-                "model_id": "eleven_flash_v2_5",   # lowest latency; multilingual
-                "voice_settings": {"stability": 0.5, "similarity_boost": 0.75},
-            }).encode()
-            _req = _ur.Request(
-                f"https://api.elevenlabs.io/v1/text-to-speech/{ELEVENLABS_VOICE_ID}",
-                data=_payload,
-                headers={
-                    "xi-api-key": ELEVENLABS_API_KEY,
-                    "Content-Type": "application/json",
-                    "Accept": "audio/mpeg",
-                },
-                method="POST",
-            )
-            with _ur.urlopen(_req, timeout=15) as _resp:
-                _mp3 = _resp.read()
-            if _mp3:
-                _proc = subprocess.run(
-                    ["ffmpeg", "-y", "-i", "pipe:0", "-f", "wav", "pipe:1"],
-                    input=_mp3, capture_output=True, timeout=30,
-                )
-                if _proc.returncode == 0:
-                    logger.debug("[tts] ElevenLabs ok, %d bytes", len(_proc.stdout))
-                    return _proc.stdout
-        except Exception as _exc:
-            logger.warning("[tts] ElevenLabs failed (%s), falling back to edge-tts", _exc)
 
     # ── edge-tts (fallback) ────────────────────────────────────────────────
     try:

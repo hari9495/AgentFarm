@@ -276,6 +276,9 @@ async function runImplementChanges(
             const apiKey = process.env['ANTHROPIC_API_KEY'];
             if (apiKey) {
                 try {
+                    // Use the runtime's configured model rather than a hardcoded version.
+                    // Falls back to the current fast Haiku model if env is unset.
+                    const model = process.env['AF_SYNTHESIS_MODEL'] ?? 'claude-haiku-4-5-20251001';
                     const resp = await fetch('https://api.anthropic.com/v1/messages', {
                         method: 'POST',
                         headers: {
@@ -284,7 +287,7 @@ async function runImplementChanges(
                             'content-type': 'application/json',
                         },
                         body: JSON.stringify({
-                            model: 'claude-haiku-4-5',
+                            model,
                             max_tokens: 2048,
                             messages: [{
                                 role: 'user',
@@ -978,13 +981,84 @@ function buildResult(
 export async function resumeFromCheckpoint(loopId: string, input: AutonomousLoopInput): Promise<AutonomousLoopResult | null> {
     const saved = await loadCheckpoint(loopId);
     if (!saved) return null;
-    // Find first failed/pending step and re-run from there
+
+    const branchName = buildBranchName(input.task_description, input.issue_number);
+    const workspaceKey = input.workspace_key ?? loopId;
+    const startTime = Date.now();
+
     const failedIndex = saved.findIndex((s) => s.status === 'failed' || s.status === 'pending');
     if (failedIndex === -1) {
-        // All already complete
-        const branchName = buildBranchName(input.task_description, input.issue_number);
-        return buildResult(input, saved, branchName, loopId, Date.now(), 'Loop already complete — loaded from checkpoint.');
+        return buildResult(input, saved, branchName, loopId, startTime, 'Loop already complete — loaded from checkpoint.');
     }
-    // Re-run the full loop with restored context
-    return runAutonomousLoop(input);
+
+    // Resume from exactly the first incomplete step, preserving all prior successes.
+    const steps = [...saved];
+    const resumeStep = steps[failedIndex]?.step;
+
+    // Replay only the steps that haven't succeeded yet.
+    if (resumeStep === 'analyze_issue' || failedIndex === 0) {
+        steps[0] = await runAnalyzeIssue(input);
+        await saveCheckpoint(loopId, steps);
+        if (steps[0].status === 'failed') {
+            return buildResult(input, steps, branchName, loopId, startTime, 'Issue analysis failed on resume.');
+        }
+    }
+
+    if (steps.findIndex((s) => s.step === 'create_branch' && s.status !== 'success') !== -1) {
+        const idx = steps.findIndex((s) => s.step === 'create_branch');
+        if (idx !== -1) {
+            steps[idx] = await executeCreateBranch(branchName, input, workspaceKey);
+            await saveCheckpoint(loopId, steps);
+            if (steps[idx].status === 'failed') {
+                return buildResult(input, steps, branchName, loopId, startTime, 'Branch creation failed on resume.');
+            }
+        }
+    }
+
+    if (steps.findIndex((s) => s.step === 'implement_changes' && s.status !== 'success') !== -1) {
+        const idx = steps.findIndex((s) => s.step === 'implement_changes');
+        if (idx !== -1) {
+            steps[idx] = await runImplementChanges(input, branchName, workspaceKey);
+            await saveCheckpoint(loopId, steps);
+        }
+    }
+
+    const testIdx = steps.findIndex((s) => s.step === 'run_tests');
+    if (testIdx !== -1 && steps[testIdx].status !== 'success') {
+        const maxFix = input.max_fix_attempts ?? 3;
+        let testRecord = await runTests(input, workspaceKey);
+        let fixAttempts = 0;
+        while (testRecord.status === 'failed' && fixAttempts < maxFix) {
+            fixAttempts++;
+            await runFixFailures(input.task_description, testRecord.output, fixAttempts, input, workspaceKey);
+            testRecord = await runTests(input, workspaceKey);
+        }
+        steps[testIdx] = testRecord;
+        await saveCheckpoint(loopId, steps);
+        if (testRecord.status === 'failed') {
+            return buildResult(input, steps, branchName, loopId, startTime, `Tests still failing after ${fixAttempts} fix attempt(s) on resume.`);
+        }
+    }
+
+    const commitIdx = steps.findIndex((s) => s.step === 'commit_push');
+    if (commitIdx !== -1 && steps[commitIdx].status !== 'success') {
+        steps[commitIdx] = await runCommitAndPush(input, branchName, workspaceKey);
+        await saveCheckpoint(loopId, steps);
+        if (steps[commitIdx].status === 'failed') {
+            return buildResult(input, steps, branchName, loopId, startTime, 'Commit/push failed on resume.');
+        }
+    }
+
+    const prIdx = steps.findIndex((s) => s.step === 'create_pr');
+    if (prIdx !== -1 && steps[prIdx].status !== 'success') {
+        steps[prIdx] = await runCreatePr(input, branchName, steps);
+        await saveCheckpoint(loopId, steps);
+    }
+
+    const allOk = steps.every((s) => s.status === 'success' || s.status === 'skipped');
+    return buildResult(input, steps, branchName, loopId, startTime,
+        allOk ? `Resumed and completed from checkpoint at step "${resumeStep}".`
+              : 'Loop resumed with warnings — check step details.',
+        await saveCheckpoint(loopId, steps),
+    );
 }
