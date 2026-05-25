@@ -487,9 +487,15 @@ async function handle(
                             }
                         }
 
+                        const sessionRecord = session.machine.getSession();
+
                         let reply: string | null;
                         try {
-                            reply = await ctx.brain!.think(history, { memoryContext });
+                            reply = await ctx.brain!.think(history, {
+                                memoryContext,
+                                meetingMode: sessionRecord.mode,
+                                agentName: sessionRecord.botId,
+                            });
                         } catch (err) {
                             ctx.log(`[meeting-agent] brain.think failed: ${(err as Error).message}`);
                             return;

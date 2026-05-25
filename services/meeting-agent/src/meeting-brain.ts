@@ -65,10 +65,47 @@ export interface BrainTurn {
 const DEFAULT_OPENAI_BASE_URL = 'https://api.openai.com/v1';
 const DEFAULT_OPENAI_MODEL = 'gpt-4o-mini';
 const DEFAULT_ANTHROPIC_BASE_URL = 'https://api.anthropic.com';
-const DEFAULT_ANTHROPIC_MODEL = 'claude-3-5-sonnet-latest';
+const DEFAULT_ANTHROPIC_MODEL = 'claude-sonnet-4-6';
 const DEFAULT_ANTHROPIC_API_VERSION = '2023-06-01';
 
 type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string };
+
+// ── Mode-specific behavioural guidance ───────────────────────────────────────
+
+function buildModeGuidance(mode: string): string {
+    switch (mode) {
+        case 'standup':
+            return (
+                'MEETING MODE: Daily standup.\n' +
+                'When it is your turn, give a structured update in three parts:\n' +
+                '1. What you completed since the last standup.\n' +
+                '2. What you plan to work on today.\n' +
+                '3. Any blockers.\n' +
+                'Keep your update under 30 seconds of speech (roughly 60-80 words). ' +
+                'Always respond when someone asks about your status or calls on you. ' +
+                'Do not skip your turn or say you have nothing to report.'
+            );
+        case 'interview_assistant':
+            return (
+                'MEETING MODE: Interview.\n' +
+                'You are being interviewed. Treat EVERY participant statement or question as ' +
+                'directed at you — do not wait to be addressed by name. ' +
+                'Answer each question thoughtfully and completely. ' +
+                'If you are unsure about something, say so honestly rather than fabricating an answer. ' +
+                'Do not stay silent — always respond.'
+            );
+        case 'interactive_qa':
+            return (
+                'MEETING MODE: Interactive Q&A / one-on-one.\n' +
+                'This is a focused session. Respond to questions, direct statements, and requests. ' +
+                'You do not need to be addressed by name — assume most speech is directed at you. ' +
+                'Give complete, helpful answers. Ask a clarifying question if the intent is unclear ' +
+                'rather than guessing and giving a wrong answer.'
+            );
+        default:
+            return '';
+    }
+}
 
 // ── MeetingBrain ─────────────────────────────────────────────────────────────
 
@@ -102,16 +139,36 @@ export class MeetingBrain {
      * speak and return the reply text.  Returns `null` when the agent should
      * stay silent (LLM returned blank or whitespace-only content).
      *
-     * @param opts.memoryContext - Optional past-exchange context block built by
-     *   `MeetingEpisodicMemory.buildContextBlock()`.  When provided it is
-     *   appended to the system prompt so the LLM is aware of prior interactions
-     *   with the current speaker without polluting the message history.
+     * @param opts.memoryContext  - Optional past-exchange context block built by
+     *   `MeetingEpisodicMemory.buildContextBlock()`.
+     * @param opts.meetingMode    - The session's MeetingMode ('standup' |
+     *   'interview_assistant' | 'interactive_qa'). When provided, mode-specific
+     *   behavioural instructions are appended to the system prompt so the LLM
+     *   knows how to participate appropriately.
+     * @param opts.agentName      - The agent's display name. Injected so the LLM
+     *   knows how it will be addressed by participants.
      */
-    async think(history: BrainTurn[], opts?: { memoryContext?: string }): Promise<string | null> {
-        const effectiveSystemPrompt =
-            opts?.memoryContext
-                ? `${this.systemPrompt}\n\n${opts.memoryContext}`
-                : this.systemPrompt;
+    async think(history: BrainTurn[], opts?: {
+        memoryContext?: string;
+        meetingMode?: string;
+        agentName?: string;
+    }): Promise<string | null> {
+        const parts: string[] = [this.systemPrompt];
+
+        if (opts?.agentName) {
+            parts.push(`Your name in this meeting is "${opts.agentName}". Participants may address you by this name.`);
+        }
+
+        if (opts?.meetingMode) {
+            const modeGuidance = buildModeGuidance(opts.meetingMode);
+            if (modeGuidance) parts.push(modeGuidance);
+        }
+
+        if (opts?.memoryContext) {
+            parts.push(opts.memoryContext);
+        }
+
+        const effectiveSystemPrompt = parts.join('\n\n');
 
         const messages: ChatMessage[] = history.map((turn) => ({
             role: turn.role,

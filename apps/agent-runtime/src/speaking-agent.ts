@@ -150,9 +150,9 @@ export async function fetchRecentWorkContext(
  *
  * Rules:
  *   - Empty / whitespace-only transcripts (silence, noise) → false
- *   - Standup mode → always true (round-robin participation)
- *   - Otherwise: true if the agent is addressed by displayName, OR the turn
- *     contains a question mark (someone asked the room something).
+ *   - standup / interview_assistant → always respond (round-robin / 1:1)
+ *   - interactive_qa → respond to questions, direct commands, or address by name
+ *   - Otherwise: respond when addressed by name or a question is asked
  */
 export function shouldRespond(
     transcribedText: string,
@@ -162,12 +162,23 @@ export function shouldRespond(
     const text = (transcribedText ?? '').trim();
     if (!text) return false;
     if (text.length < 3) return false; // Filter out noise tokens like "um", "ah"
+
+    // Modes that always respond
     if (meetingPurpose === 'standup') return true;
+    if (meetingPurpose === 'interview_assistant') return true;
 
     const lower = text.toLowerCase();
     const name = (displayName ?? '').trim().toLowerCase();
+
+    // Addressed by name
     if (name && lower.includes(name)) return true;
+
+    // Any question
     if (text.includes('?')) return true;
+
+    // Direct commands / invitations that don't use a name or question mark
+    if (/\b(tell me|explain|describe|introduce|walk me through|show me|help me|can you|please|what do you|how do you|what did you|what have you|what are you)\b/i.test(lower)) return true;
+
     return false;
 }
 
@@ -357,7 +368,7 @@ export async function listenAndRespond(
             'anthropic-version': '2023-06-01',
         },
         body: JSON.stringify({
-            model: 'claude-sonnet-4-20250514',
+            model: 'claude-sonnet-4-6',
             max_tokens: 512,
             system: buildSystemPrompt(persona, sessionRecord.meetingPurpose, recentWork),
             messages: history,

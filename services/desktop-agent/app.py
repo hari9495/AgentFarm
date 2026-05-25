@@ -227,7 +227,7 @@ def _call_anthropic(screenshot_b64: str, prompt: str) -> str:
     import anthropic  # type: ignore
     client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
     response = client.messages.create(
-        model="claude-3-haiku-20240307",
+        model="claude-haiku-4-5-20251001",
         max_tokens=512,
         messages=[{
             "role": "user",
@@ -791,6 +791,9 @@ def set_avatar_state(session_id: str):
 
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://host.docker.internal:11434")
 OLLAMA_MODEL = os.environ.get("LLM_MODEL", "llama3.2:1b")
+# Agent persona — override via env to avoid hardcoding "Alex" everywhere
+AGENT_DISPLAY_NAME = os.environ.get("AGENT_DISPLAY_NAME", "Alex")
+AGENT_MEETING_MODE = os.environ.get("AGENT_MEETING_MODE", "interactive_qa")  # standup | interview_assistant | interactive_qa
 VOICEBOX_URL = os.environ.get("VOICEBOX_URL", "http://localhost:17493")
 ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY", "")
 # Default voice: "Adam" (pNInz6obpgDQGcFmaJgB).  Override with ELEVENLABS_VOICE_ID env var.
@@ -1308,9 +1311,8 @@ def _playwright_join_and_converse(session_id: str, meeting_url: str) -> None:
             _pulse_env = {**os.environ, "PULSE_RUNTIME_PATH": _pulse_rt}
 
             # ── Step 3: Conversation loop ───────────────────────────────────
-            # Greet participants like a human colleague joining late
             _greet_text = (
-                "Hey everyone! I just joined. I'm Alex, your AI assistant. "
+                f"Hey everyone! I just joined. I'm {AGENT_DISPLAY_NAME}, your AI assistant. "
                 "Feel free to talk — I'm here to help!"
             )
             _greet_wav = _voicebox_tts(_greet_text)
@@ -1331,9 +1333,27 @@ def _playwright_join_and_converse(session_id: str, meeting_url: str) -> None:
                 logger.info("[playwright-join] greeted participants")
 
             _start_avatar_loop("idle")
+            _mode_guidance = {
+                "standup": (
+                    "This is a daily standup. When it is your turn, give a structured update: "
+                    "(1) what you completed since the last standup, "
+                    "(2) what you plan to work on today, "
+                    "(3) any blockers. Keep it under 30 seconds. Always respond when called on."
+                ),
+                "interview_assistant": (
+                    "This is an interview. You are being interviewed. "
+                    "Treat EVERY statement or question as directed at you — do not wait to be addressed by name. "
+                    "Answer every question thoughtfully. Do not stay silent."
+                ),
+                "interactive_qa": (
+                    "This is a focused Q&A or one-on-one session. "
+                    "Assume most speech is directed at you. "
+                    "Respond to questions AND direct statements or commands."
+                ),
+            }.get(AGENT_MEETING_MODE, "")
             history: list[dict[str, Any]] = [
                 {"role": "system", "content": (
-                    "You are Alex, an AI assistant attending this meeting via voice. "
+                    f"You are {AGENT_DISPLAY_NAME}, an AI assistant attending this meeting via voice. "
                     "You CAN hear everything said in this meeting — each message you receive "
                     "is a live transcript of what a participant just said to you. "
                     "NEVER say you cannot hear, that audio is not working, or that you are "
@@ -1342,7 +1362,9 @@ def _playwright_join_and_converse(session_id: str, meeting_url: str) -> None:
                     "then continue with a relevant response. "
                     "Respond DIRECTLY to what was just said — reference the specific words, "
                     "question, or topic the person raised. "
-                    "Keep every reply to 1–2 sentences. No filler like 'Certainly!' or 'Great question!'. "
+                    f"{_mode_guidance} "
+                    "Keep every reply to 1–2 sentences unless the question requires more detail. "
+                    "No filler like 'Certainly!' or 'Great question!'. "
                     "ALWAYS reply in the exact same language the speaker used."
                 )}
             ]

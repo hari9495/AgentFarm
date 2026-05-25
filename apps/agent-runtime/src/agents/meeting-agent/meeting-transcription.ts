@@ -174,7 +174,7 @@ export async function summarizeMeeting(
             'anthropic-version': '2023-06-01',
         },
         body: JSON.stringify({
-            model: 'claude-sonnet-4-20250514',
+            model: 'claude-sonnet-4-6',
             max_tokens: 1500,
             system: buildSystemPrompt({ basePrompt: 'You are a meeting assistant. Extract a concise summary and action items.', language }),
             messages: [
@@ -440,7 +440,7 @@ export type MeetingParticipationParams = {
     meetingUrl: string;
     platform: MeetingPlatform;
     language?: string;
-    /** Maximum capture-respond turns before exiting. Default 10. */
+    /** Maximum capture-respond turns before exiting. Default 200. */
     maxTurns?: number;
     /** Seconds of audio to capture per turn. Default 10. */
     captureDurationSeconds?: number;
@@ -464,7 +464,7 @@ export async function runMeetingParticipation(
         meetingUrl,
         platform,
         language = 'en',
-        maxTurns = 10,
+        maxTurns = 200,
         captureDurationSeconds = 10,
     } = params;
 
