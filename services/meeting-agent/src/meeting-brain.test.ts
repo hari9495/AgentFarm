@@ -321,7 +321,7 @@ describe('MeetingBrain.think() — Anthropic provider', () => {
         assert.equal(hasSystemRole, false, 'system role must not appear in Anthropic messages array');
     });
 
-    it('uses claude-3-5-sonnet-latest as the default model', async () => {
+    it('uses claude-sonnet-4-6 as the default model', async () => {
         let capturedBody: unknown;
         const brain = new MeetingBrain({
             provider: 'anthropic',
@@ -336,6 +336,6 @@ describe('MeetingBrain.think() — Anthropic provider', () => {
             },
         });
         await brain.think([]);
-        assert.equal((capturedBody as { model: string }).model, 'claude-3-5-sonnet-latest');
+        assert.equal((capturedBody as { model: string }).model, 'claude-sonnet-4-6');
     });
 });
