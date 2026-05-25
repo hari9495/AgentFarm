@@ -23,6 +23,10 @@ import {
     runProactiveDetection,
     type ProactiveCiFailureInput,
     type ProactiveDependencyCveInput,
+    type ProactiveBaStoryInput,
+    type ProactiveBaRequirementConflictInput,
+    type ProactiveBaStakeholderThreadInput,
+    type ProactiveBaEpicInput,
 } from './proactive-signal-detector.js';
 
 export interface CreateScheduledTaskRequest {
@@ -65,6 +69,14 @@ export interface ProactiveSignalDetectionInput {
     budgetWarningThreshold?: number;
     ciFailureThresholdCount?: number;
     dependencySeverityThreshold?: 'medium' | 'high' | 'critical';
+    // BA-specific inputs
+    storiesWithoutAcceptanceCriteria?: ProactiveBaStoryInput[];
+    requirementConflicts?: ProactiveBaRequirementConflictInput[];
+    stakeholderThreads?: ProactiveBaStakeholderThreadInput[];
+    epicsWithoutBrd?: ProactiveBaEpicInput[];
+    missingAcThresholdHours?: number;
+    epicWithoutBrdThresholdDays?: number;
+    stakeholderThreadThresholdHours?: number;
 }
 
 export interface RoutineSchedulerState {

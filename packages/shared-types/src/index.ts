@@ -1701,7 +1701,17 @@ export interface AgentMemoryInjectionContext {
   approvalRejectionRate: number; // 0-1, for prompt bias adjustment
 }
 
-export type ProactiveSignalType = 'stale_pr' | 'stale_ticket' | 'budget_warning' | 'ci_failure_on_main' | 'dependency_cve';
+export type ProactiveSignalType =
+  | 'stale_pr'
+  | 'stale_ticket'
+  | 'budget_warning'
+  | 'ci_failure_on_main'
+  | 'dependency_cve'
+  // Business Analyst proactive signals
+  | 'ba_missing_acceptance_criteria'  // story >N hours old with no acceptance criteria
+  | 'ba_contradictory_requirements'   // two requirements conflict semantically
+  | 'ba_undocumented_requirement'     // stakeholder thread implies an untracked requirement
+  | 'ba_epic_without_brd';            // epic exists >N days with no linked BRD
 
 export type ProactiveSignalStatus = 'open' | 'resolved';
 

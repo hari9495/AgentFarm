@@ -348,6 +348,10 @@ const parseProactiveSignalType = (value: unknown): ProactiveSignalType | null =>
         || value === 'budget_warning'
         || value === 'ci_failure_on_main'
         || value === 'dependency_cve'
+        || value === 'ba_missing_acceptance_criteria'
+        || value === 'ba_contradictory_requirements'
+        || value === 'ba_undocumented_requirement'
+        || value === 'ba_epic_without_brd'
     ) {
         return value;
     }
@@ -1066,6 +1070,90 @@ export const buildOrchestratorServer = async (
                 }))
             : [];
 
+        // BA: stories missing acceptance criteria
+        const storiesWithoutAcceptanceCriteria = Array.isArray(body.stories_without_acceptance_criteria)
+            ? body.stories_without_acceptance_criteria
+                .filter((row): row is { id: string; title: string; type: string; has_acceptance_criteria: boolean; hours_since_created: number } => {
+                    if (typeof row !== 'object' || row === null) return false;
+                    const c = row as Record<string, unknown>;
+                    return typeof c.id === 'string'
+                        && typeof c.title === 'string'
+                        && typeof c.type === 'string'
+                        && typeof c.has_acceptance_criteria === 'boolean'
+                        && typeof c.hours_since_created === 'number';
+                })
+                .map((row) => ({
+                    id: row.id,
+                    title: row.title,
+                    type: (row.type === 'story' || row.type === 'task' || row.type === 'bug' || row.type === 'epic' ? row.type : 'task') as 'story' | 'task' | 'bug' | 'epic',
+                    hasAcceptanceCriteria: row.has_acceptance_criteria,
+                    hoursSinceCreated: row.hours_since_created,
+                }))
+            : [];
+
+        // BA: contradictory requirement pairs
+        const requirementConflicts = Array.isArray(body.requirement_conflicts)
+            ? body.requirement_conflicts
+                .filter((row): row is { requirement_a_id: string; requirement_a_text: string; requirement_b_id: string; requirement_b_text: string; conflict_description: string; severity: string } => {
+                    if (typeof row !== 'object' || row === null) return false;
+                    const c = row as Record<string, unknown>;
+                    return typeof c.requirement_a_id === 'string'
+                        && typeof c.requirement_a_text === 'string'
+                        && typeof c.requirement_b_id === 'string'
+                        && typeof c.requirement_b_text === 'string'
+                        && typeof c.conflict_description === 'string'
+                        && typeof c.severity === 'string';
+                })
+                .map((row) => ({
+                    requirementAId: row.requirement_a_id,
+                    requirementAText: row.requirement_a_text,
+                    requirementBId: row.requirement_b_id,
+                    requirementBText: row.requirement_b_text,
+                    conflictDescription: row.conflict_description,
+                    severity: (row.severity === 'low' || row.severity === 'medium' || row.severity === 'high' ? row.severity : 'medium') as 'low' | 'medium' | 'high',
+                }))
+            : [];
+
+        // BA: stakeholder threads implying undocumented requirements
+        const stakeholderThreads = Array.isArray(body.stakeholder_threads)
+            ? body.stakeholder_threads
+                .filter((row): row is { thread_id: string; channel: string; platform: string; summary: string; hours_since_posted: number } => {
+                    if (typeof row !== 'object' || row === null) return false;
+                    const c = row as Record<string, unknown>;
+                    return typeof c.thread_id === 'string'
+                        && typeof c.channel === 'string'
+                        && typeof c.platform === 'string'
+                        && typeof c.summary === 'string'
+                        && typeof c.hours_since_posted === 'number';
+                })
+                .map((row) => ({
+                    threadId: row.thread_id,
+                    channel: row.channel,
+                    platform: (row.platform === 'slack' || row.platform === 'teams' ? row.platform : 'slack') as 'slack' | 'teams',
+                    summary: row.summary,
+                    hoursSincePosted: row.hours_since_posted,
+                }))
+            : [];
+
+        // BA: epics without linked BRD
+        const epicsWithoutBrd = Array.isArray(body.epics_without_brd)
+            ? body.epics_without_brd
+                .filter((row): row is { id: string; title: string; has_linked_brd: boolean; days_since_created: number } => {
+                    if (typeof row !== 'object' || row === null) return false;
+                    const c = row as Record<string, unknown>;
+                    return typeof c.id === 'string'
+                        && typeof c.title === 'string'
+                        && typeof c.has_linked_brd === 'boolean'
+                        && typeof c.days_since_created === 'number';
+                })
+                .map((row) => ({
+                    id: row.id,
+                    title: row.title,
+                    hasLinkedBrd: row.has_linked_brd,
+                    daysSinceCreated: row.days_since_created,
+                }))
+            : [];
+
         const detected = await routineScheduler.detectProactiveSignals({
             tenantId,
             workspaceId,
@@ -1083,6 +1171,14 @@ export const buildOrchestratorServer = async (
             dependencySeverityThreshold: body.dependency_severity_threshold === 'medium' || body.dependency_severity_threshold === 'high' || body.dependency_severity_threshold === 'critical'
                 ? body.dependency_severity_threshold
                 : undefined,
+            // BA-specific
+            storiesWithoutAcceptanceCriteria,
+            requirementConflicts,
+            stakeholderThreads,
+            epicsWithoutBrd,
+            missingAcThresholdHours: typeof body.missing_ac_threshold_hours === 'number' ? body.missing_ac_threshold_hours : undefined,
+            epicWithoutBrdThresholdDays: typeof body.epic_without_brd_threshold_days === 'number' ? body.epic_without_brd_threshold_days : undefined,
+            stakeholderThreadThresholdHours: typeof body.stakeholder_thread_threshold_hours === 'number' ? body.stakeholder_thread_threshold_hours : undefined,
         });
 
         if (!(await persistOrFail(reply))) {
@@ -1107,7 +1203,7 @@ export const buildOrchestratorServer = async (
         if (query.signal_type && !signalType) {
             return reply.code(400).send({
                 error: 'invalid_request',
-                message: 'signal_type must be stale_pr, stale_ticket, budget_warning, ci_failure_on_main, or dependency_cve.',
+                message: 'signal_type must be one of: stale_pr, stale_ticket, budget_warning, ci_failure_on_main, dependency_cve, ba_missing_acceptance_criteria, ba_contradictory_requirements, ba_undocumented_requirement, ba_epic_without_brd.',
             });
         }
 
