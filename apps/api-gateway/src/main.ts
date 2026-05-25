@@ -100,7 +100,7 @@ import { registerBookingWebhookRoutes } from './routes/sales/booking-webhook.js'
 import { registerContractWebhookRoutes } from './routes/sales/contract-webhook.js';
 import { registerDealsRoutes } from './routes/sales/deals.js';
 import { registerBrowserTasksRoutes } from './routes/sales/browser-tasks.js';
-import { registerTwilioWebhookRoutes } from './routes/sales/twilio-webhook.js';
+import { registerCallsWebhookRoutes } from './routes/sales/calls-webhook.js';
 import { registerKpiRoutes } from './routes/sales/kpi.js';
 import { registerNpsWebhookRoutes } from './routes/sales/nps-webhook.js';
 import { startMarketSignalWorker, stopMarketSignalWorker } from './services/market-signal-worker.js';
@@ -792,7 +792,7 @@ await registerBookingWebhookRoutes(app, { prisma });
 await registerContractWebhookRoutes(app, { prisma });
 await registerDealsRoutes(app, { getSession: (request) => readSession(request), prisma });
 await registerBrowserTasksRoutes(app, { getSession: (request) => readSession(request), prisma });
-await registerTwilioWebhookRoutes(app, { prisma });
+await registerCallsWebhookRoutes(app, { prisma });
 await registerKpiRoutes(app, { getSession: (request) => readSession(request), prisma: prisma as never });
 await registerNpsWebhookRoutes(app, { prisma });
 await registerDesktopSessionsRoutes(app, { getSession: (request) => readSession(request) });

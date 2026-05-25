@@ -1476,12 +1476,28 @@ model SalesAgentConfig {
   reEngageDaysAfterLoss     Int?
   browserEnabled            Boolean  @default(false)
   browserAllowedDomains     String?
-  // Telephony — cold calling via Twilio
-  telephonyProvider         String?
+  // Telephony — cold calling (multi-provider: twilio | signalwire | plivo | vonage)
+  telephonyProvider         String?   // 'twilio' | 'signalwire' | 'plivo' | 'vonage'
+  callWebhookBaseUrl        String?
+  // Twilio
   twilioAccountSid          String?
   twilioAuthToken           String?
   twilioFromNumber          String?
-  callWebhookBaseUrl        String?
+  // SignalWire
+  signalwireProjectId       String?
+  signalwireApiToken        String?
+  signalwireSpaceUrl        String?
+  signalwireFromNumber      String?
+  // Plivo
+  plivoAuthId               String?
+  plivoAuthToken            String?
+  plivoFromNumber           String?
+  // Vonage
+  vonageApiKey              String?
+  vonageApiSecret           String?
+  vonageApplicationId       String?
+  vonagePrivateKey          String?   @db.Text
+  vonageFromNumber          String?
   // LinkedIn outbound
   phantombusterApiKey             String?
   phantombusterLinkedInPhantomId  String?
@@ -1763,7 +1779,11 @@ model CallRecord {
   botId           String
   prospectId      String
   activityId      String?
-  twilioCallSid   String   @unique
+  // Provider-agnostic call ID (written for all providers)
+  callId          String?  @unique
+  // Legacy Twilio-specific field — kept for backward compatibility
+  twilioCallSid   String?  @unique
+  provider        String   @default("twilio")      // twilio | signalwire | plivo | vonage
   status          String   @default("initiated")   // initiated|ringing|in-progress|completed|failed|no-answer|voicemail
   toNumber        String
   fromNumber      String
@@ -1780,6 +1800,7 @@ model CallRecord {
   @@index([tenantId])
   @@index([botId])
   @@index([prospectId])
+  @@index([callId])
   @@index([twilioCallSid])
   @@index([tenantId, status])
 }

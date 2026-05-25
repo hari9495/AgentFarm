@@ -106,6 +106,26 @@
             "types": "./src/agents/sales-agent/twilio-call-provider.ts",
             "default": "./src/agents/sales-agent/twilio-call-provider.ts"
         },
+        "./sales/signalwire-provider.js": {
+            "types": "./src/agents/sales-agent/signalwire-call-provider.ts",
+            "default": "./src/agents/sales-agent/signalwire-call-provider.ts"
+        },
+        "./sales/plivo-provider.js": {
+            "types": "./src/agents/sales-agent/plivo-call-provider.ts",
+            "default": "./src/agents/sales-agent/plivo-call-provider.ts"
+        },
+        "./sales/vonage-provider.js": {
+            "types": "./src/agents/sales-agent/vonage-call-provider.ts",
+            "default": "./src/agents/sales-agent/vonage-call-provider.ts"
+        },
+        "./sales/telephony-provider.js": {
+            "types": "./src/agents/sales-agent/telephony-provider.ts",
+            "default": "./src/agents/sales-agent/telephony-provider.ts"
+        },
+        "./sales/telephony-provider-factory.js": {
+            "types": "./src/agents/sales-agent/telephony-provider-factory.ts",
+            "default": "./src/agents/sales-agent/telephony-provider-factory.ts"
+        },
         "./sales/call-scripts.js": {
             "types": "./src/agents/sales-agent/call-script-generator.ts",
             "default": "./src/agents/sales-agent/call-script-generator.ts"

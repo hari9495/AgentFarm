@@ -1,27 +1,32 @@
 /**
  * cold-call-handler.ts
  *
- * Handles workspace_cold_call: initiates an AI-driven outbound phone call via Twilio.
+ * Handles workspace_cold_call: initiates an AI-driven outbound phone call.
+ *
+ * Supported telephony providers (via telephonyProvider in SalesAgentConfig):
+ *   'twilio'     — Twilio (default)
+ *   'signalwire' — SignalWire (TwiML-compatible, different base URL)
+ *   'plivo'      — Plivo (XML with <GetInput>)
+ *   'vonage'     — Vonage/Nexmo (NCCO JSON + RS256 JWT)
  *
  * Flow:
- *   1. Load prospect + validate telephony config
+ *   1. Load prospect + validate telephony config via provider factory
  *   2. Generate call script via LLM (call-script-generator.ts)
- *   3. Encode script in base64url and embed in Twilio answer webhook URL
- *   4. Initiate call via Twilio REST API (twilio-call-provider.ts)
+ *   3. Encode script in base64url and embed in answer webhook URL
+ *   4. Initiate call via the resolved provider
  *   5. Persist CallRecord + SalesActivity, update prospect status
  *
- * The actual multi-turn conversation is driven by the Twilio webhook route
- * (api-gateway/src/routes/sales/twilio-webhook.ts) — not this file.
+ * The actual multi-turn conversation is driven by the calls webhook route
+ * (api-gateway/src/routes/sales/calls-webhook.ts).
  *
- * NOTE: Requires a `callRecord` Prisma model. Run `prisma migrate` after adding:
- *   model callRecord { id String @id @default(cuid()) ... }
+ * NOTE: Requires a `CallRecord` Prisma model. Run `prisma migrate` after adding it.
  * DB writes are wrapped in try/catch and are non-fatal if the model doesn't exist yet.
  */
 
 import type { PrismaClient } from '@prisma/client';
 import type { SalesAgentConfigRecord } from '@agentfarm/shared-types';
 import { generateCallScript } from './call-script-generator.js';
-import { initiateCall } from './twilio-call-provider.js';
+import { getTelephonyProvider } from './telephony-provider-factory.js';
 
 type PrismaWithCall = {
     prospect: {
@@ -47,6 +52,8 @@ export interface ColdCallParams {
 export interface ColdCallResult {
     ok: boolean;
     initiated: boolean;
+    callId?: string;
+    /** @deprecated Use callId — kept for backward compat */
     callSid?: string;
     callRecordId?: string;
     error?: string;
@@ -58,22 +65,17 @@ export async function initiateColdCall(
 ): Promise<ColdCallResult> {
     const { prospectId, tenantId, botId, config, phoneNumberOverride } = params;
 
-    if (config.telephonyProvider !== 'twilio') {
-        return { ok: false, initiated: false, error: 'telephonyProvider must be "twilio" in SalesAgentConfig' };
-    }
-
-    const accountSid = config.twilioAccountSid;
-    const authToken = config.twilioAuthToken;
-    const fromNumber = config.twilioFromNumber;
     const webhookBase = config.callWebhookBaseUrl?.replace(/\/+$/, '');
-
-    if (!accountSid || !authToken || !fromNumber || !webhookBase) {
-        return {
-            ok: false,
-            initiated: false,
-            error: 'Missing Twilio config: twilioAccountSid, twilioAuthToken, twilioFromNumber, callWebhookBaseUrl are all required',
-        };
+    if (!webhookBase) {
+        return { ok: false, initiated: false, error: 'callWebhookBaseUrl is required in SalesAgentConfig' };
     }
+
+    // Resolve provider from config — returns error if credentials are missing
+    const factoryResult = getTelephonyProvider(config);
+    if ('error' in factoryResult) {
+        return { ok: false, initiated: false, error: factoryResult.error };
+    }
+    const { provider, fromNumber } = factoryResult.result;
 
     const db = prisma ? (prisma as unknown as PrismaWithCall) : null;
 
@@ -104,24 +106,24 @@ export async function initiateColdCall(
         icp: config.icp,
     });
 
-    // Encode script + context in URL-safe base64 so the answer webhook can serve TwiML
-    // without a DB lookup (reducing latency on call answer)
+    // Encode script + context in URL-safe base64 so the answer webhook can serve the
+    // opening response without a DB lookup (reduces latency on call answer)
     const scriptPayload = { script, prospectName, company, productDescription: config.productDescription, icp: config.icp };
     const encodedScript = Buffer.from(JSON.stringify(scriptPayload)).toString('base64url');
 
-    const answerUrl = `${webhookBase}/v1/sales/calls/answer/${tenantId}/${botId}/${prospectId}?s=${encodedScript}`;
-    const statusUrl = `${webhookBase}/v1/sales/calls/status/${tenantId}/${botId}/${prospectId}`;
+    // Provider slug in webhook URL so the webhook knows which provider is calling
+    const providerSlug = config.telephonyProvider ?? 'twilio';
+    const answerUrl = `${webhookBase}/v1/sales/calls/answer/${tenantId}/${botId}/${prospectId}?s=${encodedScript}&p=${providerSlug}`;
+    const statusUrl = `${webhookBase}/v1/sales/calls/status/${tenantId}/${botId}/${prospectId}?p=${providerSlug}`;
 
-    const callResult = await initiateCall({
-        accountSid,
-        authToken,
+    const callResult = await provider.initiateCall({
         fromNumber,
         toNumber,
         answerWebhookUrl: answerUrl,
         statusCallbackUrl: statusUrl,
     });
 
-    if (!callResult.callSid) {
+    if (!callResult.callId) {
         return { ok: false, initiated: false, error: callResult.error };
     }
 
@@ -134,7 +136,10 @@ export async function initiateColdCall(
                 tenantId,
                 botId,
                 prospectId,
-                twilioCallSid: callResult.callSid,
+                // callId is the provider-agnostic field; twilioCallSid kept for Twilio compat
+                callId: callResult.callId,
+                twilioCallSid: providerSlug === 'twilio' ? callResult.callId : null,
+                provider: providerSlug,
                 status: 'initiated',
                 toNumber,
                 fromNumber,
@@ -166,5 +171,5 @@ export async function initiateColdCall(
         }).catch(() => undefined);
     }
 
-    return { ok: true, initiated: true, callSid: callResult.callSid, callRecordId };
+    return { ok: true, initiated: true, callId: callResult.callId, callSid: callResult.callId, callRecordId };
 }

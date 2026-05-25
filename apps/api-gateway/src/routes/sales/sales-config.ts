@@ -29,12 +29,28 @@ type CreateSalesConfigBody = {
     followUpDays?: number[];
     maxProspectsPerDay?: number;
     active?: boolean;
-    // Telephony — cold calling
+    // Telephony — cold calling (multi-provider: twilio | signalwire | plivo | vonage)
     telephonyProvider?: string;
+    callWebhookBaseUrl?: string;
+    // Twilio
     twilioAccountSid?: string;
     twilioAuthToken?: string;
     twilioFromNumber?: string;
-    callWebhookBaseUrl?: string;
+    // SignalWire
+    signalwireProjectId?: string;
+    signalwireApiToken?: string;
+    signalwireSpaceUrl?: string;
+    signalwireFromNumber?: string;
+    // Plivo
+    plivoAuthId?: string;
+    plivoAuthToken?: string;
+    plivoFromNumber?: string;
+    // Vonage
+    vonageApiKey?: string;
+    vonageApiSecret?: string;
+    vonageApplicationId?: string;
+    vonagePrivateKey?: string;
+    vonageFromNumber?: string;
     // LinkedIn outbound
     phantombusterApiKey?: string;
     phantombusterLinkedInPhantomId?: string;
@@ -157,10 +173,22 @@ export async function registerSalesConfigRoutes(
                     maxProspectsPerDay: body.maxProspectsPerDay ?? 50,
                     active: body.active ?? true,
                     telephonyProvider: body.telephonyProvider ?? null,
+                    callWebhookBaseUrl: body.callWebhookBaseUrl ?? null,
                     twilioAccountSid: body.twilioAccountSid ?? null,
                     twilioAuthToken: body.twilioAuthToken ?? null,
                     twilioFromNumber: body.twilioFromNumber ?? null,
-                    callWebhookBaseUrl: body.callWebhookBaseUrl ?? null,
+                    signalwireProjectId: body.signalwireProjectId ?? null,
+                    signalwireApiToken: body.signalwireApiToken ?? null,
+                    signalwireSpaceUrl: body.signalwireSpaceUrl ?? null,
+                    signalwireFromNumber: body.signalwireFromNumber ?? null,
+                    plivoAuthId: body.plivoAuthId ?? null,
+                    plivoAuthToken: body.plivoAuthToken ?? null,
+                    plivoFromNumber: body.plivoFromNumber ?? null,
+                    vonageApiKey: body.vonageApiKey ?? null,
+                    vonageApiSecret: body.vonageApiSecret ?? null,
+                    vonageApplicationId: body.vonageApplicationId ?? null,
+                    vonagePrivateKey: body.vonagePrivateKey ?? null,
+                    vonageFromNumber: body.vonageFromNumber ?? null,
                     phantombusterApiKey: body.phantombusterApiKey ?? null,
                     phantombusterLinkedInPhantomId: body.phantombusterLinkedInPhantomId ?? null,
                     marketResearchEnabled: body.marketResearchEnabled ?? false,
@@ -216,10 +244,22 @@ export async function registerSalesConfigRoutes(
                 'maxProspectsPerDay',
                 'active',
                 'telephonyProvider',
+                'callWebhookBaseUrl',
                 'twilioAccountSid',
                 'twilioAuthToken',
                 'twilioFromNumber',
-                'callWebhookBaseUrl',
+                'signalwireProjectId',
+                'signalwireApiToken',
+                'signalwireSpaceUrl',
+                'signalwireFromNumber',
+                'plivoAuthId',
+                'plivoAuthToken',
+                'plivoFromNumber',
+                'vonageApiKey',
+                'vonageApiSecret',
+                'vonageApplicationId',
+                'vonagePrivateKey',
+                'vonageFromNumber',
                 'phantombusterApiKey',
                 'phantombusterLinkedInPhantomId',
                 'marketResearchEnabled',

@@ -2257,12 +2257,28 @@ export interface SalesAgentConfigRecord {
   reEngageDaysAfterLoss?: number;
   browserEnabled?: boolean;
   browserAllowedDomains?: string;
-  // Telephony — cold calling via Twilio
-  telephonyProvider?: 'twilio';
+  // Telephony — cold calling (multi-provider)
+  telephonyProvider?: 'twilio' | 'signalwire' | 'plivo' | 'vonage';
+  callWebhookBaseUrl?: string;
+  // Twilio
   twilioAccountSid?: string;
   twilioAuthToken?: string;
   twilioFromNumber?: string;
-  callWebhookBaseUrl?: string;
+  // SignalWire
+  signalwireProjectId?: string;
+  signalwireApiToken?: string;
+  signalwireSpaceUrl?: string;
+  signalwireFromNumber?: string;
+  // Plivo
+  plivoAuthId?: string;
+  plivoAuthToken?: string;
+  plivoFromNumber?: string;
+  // Vonage
+  vonageApiKey?: string;
+  vonageApiSecret?: string;
+  vonageApplicationId?: string;
+  vonagePrivateKey?: string;
+  vonageFromNumber?: string;
   // LinkedIn outbound
   phantombusterApiKey?: string;
   phantombusterLinkedInPhantomId?: string;
