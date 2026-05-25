@@ -18,6 +18,7 @@ import { getTaskIntelligenceContext } from './task-intelligence-memory.js';
 import { getProviderQualityPenalty } from './llm-quality-tracker.js';
 import { getRoutingAdvice } from './routing-history-advisor.js';
 import { emitBudgetAlert } from './budget-alert-emitter.js';
+import { globalLearningStore } from './loop-learning-store.js';
 
 // ---------------------------------------------------------------------------
 // Persona-aware system prompt builder
@@ -827,6 +828,8 @@ const createTaskPrompt = (task: TaskEnvelope, heuristicDecision: ActionDecision)
         ? task.payload['_memory_context'] as {
             codeReviewPatterns?: unknown;
             codeReviewPrompt?: unknown;
+            approvalRejectionRate?: unknown;
+            recentMemories?: unknown[];
         }
         : null;
     const codeReviewPatterns = Array.isArray(memoryContext?.codeReviewPatterns)
@@ -835,6 +838,30 @@ const createTaskPrompt = (task: TaskEnvelope, heuristicDecision: ActionDecision)
     const codeReviewPrompt = typeof memoryContext?.codeReviewPrompt === 'string'
         ? memoryContext.codeReviewPrompt
         : '';
+    // Wire approvalRejectionRate — computed by readMemoryForTask but previously dropped before the LLM saw it
+    const approvalRejectionRate = typeof memoryContext?.approvalRejectionRate === 'number'
+        ? memoryContext.approvalRejectionRate
+        : null;
+    // Compact summary of the last 3 task outcomes so the LLM gets behaviour history without raw DB records
+    const recentOutcomes = Array.isArray(memoryContext?.recentMemories)
+        ? (memoryContext.recentMemories as Array<Record<string, unknown>>)
+            .slice(0, 3)
+            .map((r) => {
+                const actions = Array.isArray(r['actionsTaken'])
+                    ? (r['actionsTaken'] as string[]).slice(0, 2).join(', ')
+                    : 'unknown';
+                const status = typeof r['executionStatus'] === 'string' ? r['executionStatus'] : '?';
+                const connectors = Array.isArray(r['connectorsUsed'])
+                    ? (r['connectorsUsed'] as string[]).slice(0, 2).join(', ')
+                    : '';
+                return `${actions} → ${status}${connectors ? ` [${connectors}]` : ''}`;
+            })
+            .join(' | ')
+        : '';
+
+    // Look up any skill sequence learned during autonomous loops for this workspace.
+    // If found, surface it so the LLM can prefer the proven path instead of guessing.
+    const learnedPattern = globalLearningStore.findPattern(workspaceKey);
 
     // ---------------------------------------------------------------------------
     // Hoist large context fields ABOVE the 4 000-char truncation cap.
@@ -844,13 +871,17 @@ const createTaskPrompt = (task: TaskEnvelope, heuristicDecision: ActionDecision)
     // JSON, the LLM receives the FULL codebase and history context without any
     // silent truncation. The sanitised task payload strips these fields so we
     // never show both the full version AND "[truncated: N chars]" for the same key.
+    //
+    // Simple tasks skip scout and episodic context entirely — they don't benefit
+    // from ~9K tokens of codebase history, and skipping saves meaningful LLM cost.
     // ---------------------------------------------------------------------------
     const CONTEXT_FIELD_CAP = 12_000; // per-field hard cap for top-level context blocks
     const CONTEXT_FIELD_NAMES = ['_scout_context', '_episodic_context', '_episodic_person_context'];
-    const scoutContext = typeof task.payload['_scout_context'] === 'string'
+    const isSimpleTask = complexity.complexity === 'simple';
+    const scoutContext = !isSimpleTask && typeof task.payload['_scout_context'] === 'string'
         ? task.payload['_scout_context'].slice(0, CONTEXT_FIELD_CAP)
         : null;
-    const episodicContext = typeof task.payload['_episodic_context'] === 'string'
+    const episodicContext = !isSimpleTask && typeof task.payload['_episodic_context'] === 'string'
         ? task.payload['_episodic_context'].slice(0, CONTEXT_FIELD_CAP)
         : null;
     const episodicPersonContext = typeof task.payload['_episodic_person_context'] === 'string'
@@ -908,6 +939,7 @@ const createTaskPrompt = (task: TaskEnvelope, heuristicDecision: ActionDecision)
             },
             policy: [
                 'For medium or high risk, route must be approval.',
+                'If agentRejectionRate >= 0.3, prefer approval routing and include detailed justification in reason.',
                 'Return JSON only. Do not wrap in markdown.',
                 'Use the task payload and heuristic baseline below.',
                 'ALWAYS set payloadOverrides.actionType equal to your top-level actionType. This is required for routing.',
@@ -924,6 +956,17 @@ const createTaskPrompt = (task: TaskEnvelope, heuristicDecision: ActionDecision)
             trajectoryHints: intelligence.trajectoryHints,
             learnedWorkspaceRules: codeReviewPatterns,
             learnedWorkspaceRulePrompt: codeReviewPrompt,
+            // ── Memory signals (previously computed but never shown to the LLM) ──
+            ...(approvalRejectionRate !== null && { agentRejectionRate: approvalRejectionRate }),
+            ...(recentOutcomes && { recentTaskOutcomes: recentOutcomes }),
+            ...(learnedPattern && learnedPattern.success_rate >= 0.7 && {
+                learnedSkillSequence: {
+                    sequence: learnedPattern.successful_sequence,
+                    successRate: learnedPattern.success_rate,
+                    useCount: learnedPattern.use_count,
+                },
+            }),
+            // ─────────────────────────────────────────────────────────────────────
             task: truncateTaskForPrompt(sanitizedTask),
             heuristicDecision,
         },
