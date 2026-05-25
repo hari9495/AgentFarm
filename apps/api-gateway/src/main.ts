@@ -9,6 +9,7 @@ import Fastify from 'fastify';
 import type { FastifyError } from 'fastify';
 import { timingSafeEqual } from 'node:crypto';
 import helmet from '@fastify/helmet';
+import cors from '@fastify/cors';
 import { rateLimitAsync, rateLimitTenantAsync } from './lib/rate-limit.js';
 import { buildSessionToken, verifySessionToken, type SessionPayload } from './lib/session-auth.js';
 import { prisma } from './lib/db.js';
@@ -145,6 +146,26 @@ await app.register(helmet, {
     },
     referrerPolicy: { policy: ['strict-origin-when-cross-origin'] },
     frameguard: { action: 'deny' },
+});
+await app.register(cors, {
+    origin: (origin, callback) => {
+        const allowedOriginsEnv = process.env['ALLOWED_ORIGINS'];
+        if (!allowedOriginsEnv || !origin) {
+            callback(null, true);
+            return;
+        }
+        const allowedList = allowedOriginsEnv.split(',').map((s) => s.trim());
+        if (allowedList.includes(origin)) {
+            callback(null, true);
+        } else {
+            const err = new Error('origin not allowed') as Error & { statusCode: number };
+            err.statusCode = 403;
+            callback(err, false);
+        }
+    },
+    credentials: true,
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
 });
 const port = Number(process.env.API_GATEWAY_PORT ?? 3000);
 const requireAuth = process.env.API_REQUIRE_AUTH === 'true';
@@ -537,20 +558,6 @@ app.addHook('preHandler', async (request, reply) => {
             message: 'Too many requests. Retry after the reset window.',
         });
         return;
-    }
-
-    // CORS origin validation
-    const allowedOriginsEnv = process.env['ALLOWED_ORIGINS'];
-    const origin = request.headers['origin'];
-    if (allowedOriginsEnv && typeof origin === 'string') {
-        const allowedList = allowedOriginsEnv.split(',').map((s) => s.trim());
-        if (!allowedList.includes(origin)) {
-            reply.header('Vary', 'Origin');
-            void reply.code(403).send({ error: 'origin not allowed' });
-            return;
-        }
-        reply.header('Access-Control-Allow-Origin', origin);
-        reply.header('Vary', 'Origin');
     }
 
     // Per-tenant rate limit (only when a session exists)
