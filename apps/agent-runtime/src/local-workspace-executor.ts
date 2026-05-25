@@ -9236,6 +9236,17 @@ export async function executeLocalWorkspaceAction(input: {
                 parsed['specialist_brief'] = specialistBrief;
                 parsed['plan_source'] = planSource;
 
+                // Gap 7b: extract test_failure_summary from the last failed attempt so
+                // episodic memory contains concrete test output for future similar tasks.
+                // execution-engine reads this field when writing TaskMemoryEntry.
+                if (!loopResult.ok && Array.isArray(parsed['attempts'])) {
+                    const attempts = parsed['attempts'] as Array<{ passed?: boolean; test_output?: string }>;
+                    const lastFailed = [...attempts].reverse().find((a) => !a.passed);
+                    if (lastFailed?.test_output) {
+                        parsed['test_failure_summary'] = lastFailed.test_output.slice(0, 400);
+                    }
+                }
+
                 // Gap G: surface structured escalation context when the loop gives up
                 if (
                     !loopResult.ok &&
