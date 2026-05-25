@@ -125,6 +125,77 @@ test('POST /v1/task-queue — viewer role returns 403', async () => {
     }
 });
 
+test('POST /v1/task-queue — workspace not in session returns 403', async () => {
+    clearQueue();
+    const session = buildSession('operator'); // workspaceIds: ['ws_1']
+    const app = Fastify({ logger: false });
+    try {
+        await registerTaskQueueRoutes(app, {
+            getSession: () => session,
+            prisma: buildPrismaStub() as never,
+        });
+
+        const res = await app.inject({
+            method: 'POST',
+            url: '/v1/task-queue',
+            payload: { workspaceId: 'ws_other', priority: 'normal', payload: {} },
+        });
+
+        assert.equal(res.statusCode, 403);
+        assert.equal(res.json<{ error: string }>().error, 'forbidden');
+    } finally {
+        await app.close();
+    }
+});
+
+test('POST /v1/task-queue — botId with suspended agent subscription returns 403', async () => {
+    clearQueue();
+    const session = buildSession('operator');
+    const app = Fastify({ logger: false });
+    try {
+        await registerTaskQueueRoutes(app, {
+            getSession: () => session,
+            prisma: buildPrismaStub() as never,
+            isAgentSubscriptionSuspended: async () => true,
+        });
+
+        const res = await app.inject({
+            method: 'POST',
+            url: '/v1/task-queue',
+            payload: { workspaceId: 'ws_1', botId: 'bot_unpurchased', priority: 'normal', payload: {} },
+        });
+
+        assert.equal(res.statusCode, 403);
+        assert.equal(res.json<{ error: string }>().error, 'agent_subscription_suspended');
+    } finally {
+        await app.close();
+    }
+});
+
+test('POST /v1/task-queue — botId with active agent subscription passes through (202)', async () => {
+    clearQueue();
+    const session = buildSession('operator');
+    const app = Fastify({ logger: false });
+    try {
+        await registerTaskQueueRoutes(app, {
+            getSession: () => session,
+            prisma: buildPrismaStub() as never,
+            isAgentSubscriptionSuspended: async () => false,
+        });
+
+        const res = await app.inject({
+            method: 'POST',
+            url: '/v1/task-queue',
+            payload: { workspaceId: 'ws_1', botId: 'bot_purchased', priority: 'normal', payload: {} },
+        });
+
+        assert.equal(res.statusCode, 202);
+        assert.equal(res.json<{ queued: boolean }>().queued, true);
+    } finally {
+        await app.close();
+    }
+});
+
 test('GET /v1/task-queue — returns entries for the callers tenant', async () => {
     clearQueue();
     const session = buildSession('viewer');

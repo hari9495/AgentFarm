@@ -13,6 +13,7 @@ import { randomUUID } from 'node:crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { ROLE_RANK } from '../../lib/require-role.js';
 import { checkDependenciesMet, type DepCheckDb } from '../../lib/task-dep-utils.js';
+import { isSubscriptionSuspended } from '../../lib/subscription-guard.js';
 import {
     enqueueTask,
     getQueueSnapshot,
@@ -53,6 +54,8 @@ type TaskQueuePrisma = {
 export type RegisterTaskQueueRoutesOptions = {
     getSession: (request: FastifyRequest) => SessionContext | null;
     prisma?: TaskQueuePrisma;
+    /** Injectable for tests — defaults to the real subscription-guard check. */
+    isAgentSubscriptionSuspended?: (tenantId: string, botId: string) => Promise<boolean>;
 };
 
 const VALID_PRIORITIES: QueuePriority[] = ['high', 'normal', 'low'];
@@ -75,6 +78,7 @@ export async function registerTaskQueueRoutes(
         : getPrisma;
 
     const { getSession } = options;
+    const checkAgentSuspended = options.isAgentSubscriptionSuspended ?? isSubscriptionSuspended;
 
     // ── POST /v1/task-queue ──────────────────────────────────────────────────
     // Operator+ — validate body, create DB entry, enqueue in memory.
@@ -102,6 +106,10 @@ export async function registerTaskQueueRoutes(
             return reply.code(400).send({ error: 'invalid_input', message: 'workspaceId is required.' });
         }
 
+        if (!session.workspaceIds.includes(workspaceId)) {
+            return reply.code(403).send({ error: 'forbidden', message: 'workspaceId is not in your session scope.' });
+        }
+
         const rawPriority = body.priority ?? 'normal';
         if (!VALID_PRIORITIES.includes(rawPriority as QueuePriority)) {
             return reply.code(400).send({
@@ -116,6 +124,16 @@ export async function registerTaskQueueRoutes(
         }
 
         const botId = typeof body.botId === 'string' ? body.botId.trim() || undefined : undefined;
+
+        if (botId) {
+            const suspended = await checkAgentSuspended(session.tenantId, botId);
+            if (suspended) {
+                return reply.code(403).send({
+                    error: 'agent_subscription_suspended',
+                    message: 'This agent does not have an active subscription.',
+                });
+            }
+        }
 
         const parentTaskId = typeof body.parentTaskId === 'string' && body.parentTaskId.trim()
             ? body.parentTaskId.trim()
