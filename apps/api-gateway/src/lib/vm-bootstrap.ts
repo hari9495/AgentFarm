@@ -93,6 +93,7 @@ write_files:
         --memory=2g \\
         --memory-swap=2g \\
         --security-opt=no-new-privileges \\
+        --cap-drop=ALL \\
         --restart unless-stopped \\
         ${image}
       ExecStop=/usr/bin/docker stop -t 10 agentfarm-bot-${cfg.botId.slice(-8)}

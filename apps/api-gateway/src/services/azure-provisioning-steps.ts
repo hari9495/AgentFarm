@@ -414,6 +414,7 @@ export async function startContainerOnVm(
             ` --network ${netName}` +
             ` --cpus=1.0 --memory=2g --memory-swap=2g` +
             ` --security-opt=no-new-privileges` +
+            ` --cap-drop=ALL` +
             ` ${envArgs}` +
             ` --restart unless-stopped ${image}`,
     ];
