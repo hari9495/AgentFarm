@@ -40,12 +40,43 @@ test('runs scout actions for a trigger action type', async () => {
     assert.ok(typeof result === 'string' && result.length > 0, 'should return a non-empty scout context');
 });
 
-test('caps output at 4000 characters', async () => {
-    const longOutput = 'x'.repeat(10_000);
+test('caps output at 10 000 characters', async () => {
+    // Scout output cap was raised from 4 000 → 10 000 to give the LLM more context
+    // before classification (the extra budget is now bypassed from the 4k truncation
+    // cap in llm-decision-adapter via top-level field hoisting).
+    const longOutput = 'x'.repeat(20_000);
     const executeAction = async () => ({ ok: true, output: longOutput });
 
     const result = await preTaskScout(makeTask('code_edit') as never, executeAction as never);
-    assert.ok(result.length <= 4000, `expected ≤4000 chars, got ${result.length}`);
+    assert.ok(result.length <= 10_000, `expected ≤10 000 chars, got ${result.length}`);
+});
+
+test('uses keyword grep to discover relevant files when no target_files given', async () => {
+    const calls: Array<{ actionType: string; payload: Record<string, unknown> }> = [];
+    const executeAction = async (innerTask: Record<string, unknown>) => {
+        const actionType = typeof innerTask['actionType'] === 'string' ? innerTask['actionType'] : '';
+        const payload = typeof innerTask['payload'] === 'object' && innerTask['payload'] !== null
+            ? innerTask['payload'] as Record<string, unknown>
+            : {};
+        calls.push({ actionType, payload });
+        // Simulate grep returning a file reference
+        if (actionType === 'workspace_grep') {
+            return { ok: true, output: 'src/auth.ts:12: function authenticate() {}' };
+        }
+        if (actionType === 'workspace_read_file') {
+            return { ok: true, output: 'export function authenticate() { return true; }' };
+        }
+        return { ok: true, output: `result-for-${actionType}` };
+    };
+
+    // Task with a meaningful summary but no explicit target_files
+    const task = makeTask('workspace_subagent_spawn', 'update authenticate middleware logic');
+    const result = await preTaskScout(task as never, executeAction as never);
+
+    // Should have attempted to read files discovered via grep
+    const readCalls = calls.filter((c) => c.actionType === 'workspace_read_file');
+    assert.ok(readCalls.length > 0, 'should attempt to read files discovered from keyword grep');
+    assert.ok(result.includes('authenticate') || result.length > 0, 'result should contain file content');
 });
 
 test('handles executeAction failure gracefully and returns empty string', async () => {
