@@ -1532,7 +1532,9 @@ export type NotificationEventTrigger =
   | 'kill_switch_activated'
   | 'meeting_completed'
   | 'skill_crystallized'
-  | 'security_event';
+  | 'security_event'
+  | 'quality_divergence'       // evaluator score diverges from heuristic by ≥0.3
+  | 'approval_rejection_high'; // agent rejection rate exceeds threshold
 
 export interface NotificationChannelConfig {
   channel: NotificationChannel;

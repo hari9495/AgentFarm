@@ -82,6 +82,9 @@ import {
     fireEvaluatorWebhook,
     resolveEvaluatorWebhookUrl,
 } from './evaluator-webhook.js';
+import { persistQualitySignal } from './quality-signal-store.js';
+import { storeHeuristicScore, checkEvaluatorResult, purgeStalePendingEntries } from './output-verifier.js';
+import { trackApprovalOutcomes, emitApprovalRejectionAlert } from './approval-alert-emitter.js';
 import { getAuditLogWriter } from './action-observability.js';
 import { estimateTaskEffort, formatEstimateForApproval } from './effort-estimator.js';
 import {
@@ -4753,10 +4756,11 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         });
 
         {
+            const heuristicScore = estimateLlmQualityScore(result);
             const _qs = recordQualitySignal({
                 provider: modelProvider,
                 actionType: result.decision.actionType,
-                score: estimateLlmQualityScore(result),
+                score: heuristicScore,
                 source: 'runtime_outcome',
                 taskId: task.taskId,
                 correlationId: config.correlationId,
@@ -4780,7 +4784,23 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                     correlationId: _qs.correlationId ?? config.correlationId,
                     observedAt: _qs.observedAt,
                 }, task.taskId);
+
+                // Persist to DB so the 7-day rolling window survives restarts.
+                if (options.prisma) {
+                    persistQualitySignal(options.prisma, _qs, {
+                        tenantId: config.tenantId,
+                        workspaceId: config.workspaceId,
+                    }).catch(() => { /* non-blocking */ });
+                }
             }
+
+            // Store heuristic score so the evaluator callback can compare.
+            storeHeuristicScore(task.taskId, heuristicScore, {
+                tenantId: config.tenantId,
+                workspaceId: config.workspaceId,
+                botId: config.botId,
+                actionType: result.decision.actionType,
+            });
         }
 
         const evaluatorWebhookUrl = resolveEvaluatorWebhookUrl(process.env);
@@ -4808,12 +4828,13 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         }
 
         if (memoryStore) {
+            const approvalOutcomes = collectApprovalOutcomes(result);
             memoryStore.writeMemoryAfterTask({
                 workspaceId: config.workspaceId,
                 tenantId: config.tenantId,
                 taskId: task.taskId,
                 actionsTaken: [result.decision.actionType],
-                approvalOutcomes: collectApprovalOutcomes(result),
+                approvalOutcomes,
                 connectorsUsed: collectConnectorsUsed(task, result.decision.actionType),
                 llmProvider: modelProvider,
                 executionStatus: result.status,
@@ -4825,6 +4846,18 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                     error_message: err instanceof Error ? err.message : String(err),
                 });
             });
+
+            // Track rejection rate and alert if threshold exceeded.
+            const { currentRate, shouldAlert } = trackApprovalOutcomes(approvalOutcomes);
+            if (shouldAlert) {
+                emitApprovalRejectionAlert({
+                    tenantId: config.tenantId,
+                    workspaceId: config.workspaceId,
+                    botId: config.botId,
+                    taskId: task.taskId,
+                    currentRate,
+                }).catch(() => { /* non-blocking */ });
+            }
         }
 
         // ---- Episodic memory write: upsert vector embedding for this task ----
@@ -5340,6 +5373,10 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         if (workerLoop.running && workerLoop.handle) {
             return;
         }
+
+        // Purge stale output-verifier entries every 15 minutes.
+        const verifierPurgeHandle = setInterval(() => { purgeStalePendingEntries(); }, 15 * 60 * 1_000);
+        app.addHook('onClose', async () => { clearInterval(verifierPurgeHandle); });
 
         workerLoop.running = true;
         workerLoop.handle = setInterval(() => {
@@ -6773,10 +6810,20 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
 
         emitQualitySignal(qualitySignalRecord, signal.taskId);
 
+        // When the signal comes from an external evaluator, compare its score
+        // to the heuristic we stored at task completion.  Large divergence means
+        // the LLM may have reported success for an action that didn't actually
+        // land in the external system (e.g. a PR that was never opened).
+        let verificationResult: { flagged: boolean; divergence: number } | null = null;
+        if (signal.source === 'evaluator' && signal.taskId) {
+            verificationResult = await checkEvaluatorResult(signal.taskId, signal.score);
+        }
+
         return reply.code(201).send({
             quality_signal: qualitySignalRecord,
             source: signal.source,
             task_id: signal.taskId ?? null,
+            ...(verificationResult !== null ? { verification: verificationResult } : {}),
         });
     });
 
