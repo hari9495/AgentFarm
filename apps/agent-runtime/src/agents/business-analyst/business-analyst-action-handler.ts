@@ -5,13 +5,19 @@
  * every workspace_ba_* action type.
  *
  * For each action the handler executes in order:
+ *   0. Stakeholder auto-load  — if payload.stakeholder_id set, load profile from gateway
  *   1. RAG context retrieval  — prior BRDs, compliance checklists, BA lessons
  *   2. Tone adaptation        — rewrite prose style if a stakeholder profile exists
  *   3. Content generation     — LLM draft using enriched system prompt
  *   4. Completeness check     — scored for BRD-family document types
  *   5. Risk gate              — classify → auto-execute | async notify | escalate
- *   6. Post-run persistence   — KB ingestion on approval, lesson write on rejection
+ *   6. Post-run persistence   — version control + KB ingest + document store + tickets
  *   7. Episodic memory        — pattern + summary written after every run
+ *   8. Stakeholder auto-save  — updated profile written back to gateway
+ *
+ * Proactive monitoring action types (ac_check, epic_check, conflict_scan) use a
+ * separate lightweight pipeline that searches the KB and reports findings without
+ * going through the full generation/gate pipeline.
  *
  * Mirrors the structure of developer-action-handler.ts but uses document
  * generation (callLlm) rather than code execution sub-actions.
@@ -50,6 +56,24 @@ import {
     type BaFeedbackItem,
     type BaDocumentTypeFilter,
 } from './business-analyst-lesson-pipeline.js';
+import {
+    loadStakeholderProfile,
+    saveStakeholderProfile,
+} from './business-analyst-stakeholder-store.js';
+import {
+    writeTicketsFromDocument,
+    type BaTicketWriteRequest,
+    type TicketPlatform,
+} from './business-analyst-ticket-writer.js';
+import {
+    persistBaDocument,
+    type BaDocumentPersistRequest,
+} from './business-analyst-document-store.js';
+import { buildVersionedDocument } from './business-analyst-document-versioner.js';
+import {
+    detectRequirementConflicts,
+    formatConflictsForNotification,
+} from './business-analyst-conflict-detector.js';
 import type { TaskEnvelope, ProcessedTaskResult } from '../../execution-engine.js';
 
 // ---------------------------------------------------------------------------
@@ -68,7 +92,10 @@ export type BaActionType =
     | 'workspace_ba_stakeholder_update'
     | 'workspace_ba_uat_checklist'
     | 'workspace_ba_elicit_requirements'
-    | 'share_spec_external';
+    | 'share_spec_external'
+    | 'workspace_ba_proactive_ac_check'
+    | 'workspace_ba_proactive_epic_check'
+    | 'workspace_ba_proactive_conflict_scan';
 
 export const BA_ACTION_TYPES = new Set<BaActionType>([
     'workspace_ba_draft_brd',
@@ -83,11 +110,24 @@ export const BA_ACTION_TYPES = new Set<BaActionType>([
     'workspace_ba_uat_checklist',
     'workspace_ba_elicit_requirements',
     'share_spec_external',
+    'workspace_ba_proactive_ac_check',
+    'workspace_ba_proactive_epic_check',
+    'workspace_ba_proactive_conflict_scan',
 ]);
 
 export function isBaActionType(at: string): at is BaActionType {
     return BA_ACTION_TYPES.has(at as BaActionType);
 }
+
+// ---------------------------------------------------------------------------
+// Shared types
+// ---------------------------------------------------------------------------
+
+/** Connector function used by ticket write-back and document persistence. */
+type ExecuteActionFn = (
+    actionType: string,
+    payload: Record<string, unknown>,
+) => Promise<{ ok: boolean; output: string; errorOutput?: string }>;
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -119,6 +159,18 @@ export interface BaActionParams {
     approvalEscalationDeadlineIso?: string;
     /** Override auto-approve completeness threshold. Default: 0.85. */
     autoApproveThreshold?: number;
+    /**
+     * Connector function for ticket write-back (Jira/Linear/GitHub) and
+     * document persistence (file system / Confluence / Notion).
+     */
+    executeAction?: ExecuteActionFn;
+    /** Local workspace directory for file-system document persistence. */
+    workspaceDir?: string;
+    /**
+     * Stable document identifier used for version control.
+     * Defaults to `<taskId>-<documentType>` when not provided.
+     */
+    documentId?: string;
 }
 
 export interface BaActionResult {
@@ -418,16 +470,244 @@ function buildUserPrompt(actionType: BaActionType, payload: Record<string, unkno
 }
 
 // ---------------------------------------------------------------------------
-// Core handler
+// Proactive monitoring handlers
+// ---------------------------------------------------------------------------
+
+/** Fetches approved BA documents from the KB for proactive analysis. */
+async function fetchKbDocuments(params: {
+    tenantId: string;
+    botId?: string;
+    queryText: string;
+    topK: number;
+    gatewayBaseUrl: string;
+    serviceToken: string;
+}): Promise<Array<{ content: string; sourceUrl?: string }>> {
+    const base = params.gatewayBaseUrl.replace(/\/+$/, '');
+    try {
+        const res = await fetch(`${base}/v1/knowledge-base/search`, {
+            method: 'POST',
+            headers: {
+                'content-type': 'application/json',
+                Authorization: `Bearer ${params.serviceToken}`,
+            },
+            body: JSON.stringify({
+                tenantId: params.tenantId,
+                botId: params.botId,
+                queryText: params.queryText,
+                topK: params.topK,
+                minSimilarity: 0.25,
+            }),
+            signal: AbortSignal.timeout(15_000),
+        });
+        if (!res.ok) return [];
+        const data = (await res.json()) as {
+            results?: Array<{ content?: string; sourceUrl?: string; sourceType?: string }>;
+        };
+        return (data.results ?? [])
+            .filter((r) => r.sourceType === 'ba_approved_document' && r.content)
+            .map((r) => ({ content: r.content ?? '', sourceUrl: r.sourceUrl }));
+    } catch {
+        return [];
+    }
+}
+
+async function handleProactiveConflictScan(params: BaActionParams): Promise<BaActionResult> {
+    const { tenantId, botId, workspaceId, gatewayBaseUrl, serviceToken, callLlm, payload } = params;
+
+    const maxDocuments =
+        typeof payload['max_documents'] === 'number' ? payload['max_documents'] : 20;
+    const minKeywordOverlap =
+        typeof payload['min_keyword_overlap'] === 'number' ? payload['min_keyword_overlap'] : 2;
+
+    const result = await detectRequirementConflicts({
+        tenantId,
+        botId,
+        workspaceId,
+        gatewayBaseUrl,
+        serviceToken,
+        callLlm,
+        maxDocuments,
+        minKeywordOverlap,
+    });
+
+    const notification = formatConflictsForNotification(result);
+
+    return {
+        ok: true,
+        output: notification,
+        documentType: 'conflict_report',
+        ragContextUsed: result.documentsScanned > 0,
+        conflictsDetected: result.conflicts.length,
+        documentsScanned: result.documentsScanned,
+        requirementsExtracted: result.requirementsExtracted,
+    };
+}
+
+async function handleProactiveAcCheck(params: BaActionParams): Promise<BaActionResult> {
+    const { tenantId, botId, workspaceId, gatewayBaseUrl, serviceToken, callLlm } = params;
+
+    if (!callLlm) {
+        return {
+            ok: false,
+            output: '',
+            errorOutput: 'callLlm is required for proactive acceptance criteria check.',
+        };
+    }
+
+    const docs = await fetchKbDocuments({
+        tenantId,
+        botId,
+        queryText: 'As a user I want acceptance criteria given when then user story',
+        topK: 15,
+        gatewayBaseUrl,
+        serviceToken,
+    });
+
+    if (docs.length === 0) {
+        return {
+            ok: true,
+            output: '✅ No approved user stories found in the knowledge base requiring an AC check.',
+            documentType: 'proactive_ac_check',
+            ragContextUsed: false,
+        };
+    }
+
+    // Identify stories that lack Given/When/Then acceptance criteria
+    const storiesWithoutAc = docs.filter((d) => {
+        const lower = d.content.toLowerCase();
+        // Must look like a user story and must be missing AC
+        const isStory = /\bas\s+a\b/i.test(d.content);
+        const hasAc =
+            lower.includes('given') &&
+            lower.includes('when') &&
+            (lower.includes('then') || lower.includes('acceptance criteria'));
+        return isStory && !hasAc;
+    });
+
+    if (storiesWithoutAc.length === 0) {
+        return {
+            ok: true,
+            output: `✅ All ${docs.length} approved user stories have acceptance criteria.`,
+            documentType: 'proactive_ac_check',
+            ragContextUsed: true,
+            storiesChecked: docs.length,
+        };
+    }
+
+    const excerpts = storiesWithoutAc
+        .slice(0, 5)
+        .map((d, i) => `### Story ${i + 1}\n${d.content.slice(0, 600)}`)
+        .join('\n\n---\n\n');
+
+    const generated = await callLlmSafe(
+        callLlm,
+        `The following approved user stories are missing acceptance criteria. For each, generate clear Given/When/Then acceptance criteria that cover the happy path, at least one error path, and any relevant edge cases.\n\n${excerpts}`,
+        'You are a senior business analyst. Generate concise, testable acceptance criteria for each user story presented. Format each as: **Story N Acceptance Criteria** followed by Given/When/Then scenarios as a bulleted list.',
+    );
+
+    const lines: string[] = [
+        `⚠️ Found ${storiesWithoutAc.length} of ${docs.length} approved user stories missing acceptance criteria.`,
+        '',
+        generated || '_Could not generate acceptance criteria — LLM returned empty response._',
+    ];
+
+    return {
+        ok: true,
+        output: lines.join('\n'),
+        documentType: 'proactive_ac_check',
+        ragContextUsed: true,
+        storiesChecked: docs.length,
+        storiesNeedingAc: storiesWithoutAc.length,
+    };
+}
+
+async function handleProactiveEpicCheck(params: BaActionParams): Promise<BaActionResult> {
+    const { tenantId, botId, workspaceId, gatewayBaseUrl, serviceToken, callLlm } = params;
+
+    if (!callLlm) {
+        return {
+            ok: false,
+            output: '',
+            errorOutput: 'callLlm is required for proactive epic BRD check.',
+        };
+    }
+
+    const docs = await fetchKbDocuments({
+        tenantId,
+        botId,
+        queryText: 'epic feature initiative business objective requirement stakeholder',
+        topK: 15,
+        gatewayBaseUrl,
+        serviceToken,
+    });
+
+    if (docs.length === 0) {
+        return {
+            ok: true,
+            output: '✅ No approved BA documents found requiring an epic BRD coverage check.',
+            documentType: 'proactive_epic_check',
+            ragContextUsed: false,
+        };
+    }
+
+    // Identify epics / initiatives without BRD coverage
+    const epicsWithoutBrd = docs.filter((d) => {
+        const lower = d.content.toLowerCase();
+        const hasBrdContent =
+            lower.includes('business requirements') ||
+            lower.includes('brd') ||
+            (lower.includes('req-') && lower.includes('scope')) ||
+            (lower.includes('objective') && lower.includes('success criteria'));
+        return !hasBrdContent;
+    });
+
+    if (epicsWithoutBrd.length === 0) {
+        return {
+            ok: true,
+            output: `✅ All ${docs.length} approved documents appear to have BRD coverage.`,
+            documentType: 'proactive_epic_check',
+            ragContextUsed: true,
+            epicsChecked: docs.length,
+        };
+    }
+
+    const excerpts = epicsWithoutBrd
+        .slice(0, 3)
+        .map((d, i) => `### Initiative ${i + 1}\n${d.content.slice(0, 700)}`)
+        .join('\n\n---\n\n');
+
+    const generated = await callLlmSafe(
+        callLlm,
+        `The following business initiatives do not appear to have Business Requirements Documents. For each, produce a brief BRD outline with: Executive Summary, 5-8 numbered functional requirements (REQ-NNN), Out-of-Scope items, and Success Criteria.\n\n${excerpts}`,
+        'You are a senior business analyst. Generate concise BRD outlines. Use the format: ## Executive Summary, ## Functional Requirements (numbered REQ-001, REQ-002…), ## Out of Scope, ## Success Criteria.',
+    );
+
+    const lines: string[] = [
+        `⚠️ Found ${epicsWithoutBrd.length} of ${docs.length} approved documents without BRD coverage.`,
+        '',
+        generated || '_Could not generate BRD outlines — LLM returned empty response._',
+    ];
+
+    return {
+        ok: true,
+        output: lines.join('\n'),
+        documentType: 'proactive_epic_check',
+        ragContextUsed: true,
+        epicsChecked: docs.length,
+        epicsNeedingBrd: epicsWithoutBrd.length,
+    };
+}
+
+// ---------------------------------------------------------------------------
+// Core handler (internal)
 // ---------------------------------------------------------------------------
 
 /**
- * Route a BA action through the full pipeline: RAG → tone → generate → gate → persist.
- *
- * This is the single entry point called by the agent runtime execution engine
- * when an action type matches BA_ACTION_TYPES.
+ * Inner implementation — called by the public handleBaAction wrapper after
+ * stakeholder auto-load. Uses `params.stakeholderProfile` as the resolved
+ * profile (auto-loaded value already substituted by the wrapper).
  */
-export async function handleBaAction(params: BaActionParams): Promise<BaActionResult> {
+async function _handleBaActionCore(params: BaActionParams): Promise<BaActionResult> {
     const {
         actionType,
         tenantId,
@@ -439,12 +719,28 @@ export async function handleBaAction(params: BaActionParams): Promise<BaActionRe
         serviceToken,
         callLlm,
         notificationExecutor,
-        stakeholderProfile,
+        stakeholderProfile,       // already resolved by wrapper
         approvalNotificationTarget,
         approvalNotificationChannel = 'slack',
         approvalEscalationDeadlineIso,
         autoApproveThreshold = 0.85,
+        executeAction,
+        workspaceDir,
+        documentId,
     } = params;
+
+    // -------------------------------------------------------------------------
+    // Proactive monitoring actions use a separate lightweight pipeline
+    // -------------------------------------------------------------------------
+    if (actionType === 'workspace_ba_proactive_conflict_scan') {
+        return handleProactiveConflictScan(params);
+    }
+    if (actionType === 'workspace_ba_proactive_ac_check') {
+        return handleProactiveAcCheck(params);
+    }
+    if (actionType === 'workspace_ba_proactive_epic_check') {
+        return handleProactiveEpicCheck(params);
+    }
 
     const audience = (str(payload['audience'], 'internal')) as DocumentAudience;
     const projectTitle = str(payload['title'] ?? payload['project_title'], actionType);
@@ -485,7 +781,7 @@ export async function handleBaAction(params: BaActionParams): Promise<BaActionRe
     // -------------------------------------------------------------------------
     let toneHint = '';
     if (stakeholderProfile) {
-        toneHint = detectBaStakeholderTone(stakeholderProfile); // e.g. 'executive'
+        toneHint = detectBaStakeholderTone(stakeholderProfile);
     }
 
     // -------------------------------------------------------------------------
@@ -549,19 +845,115 @@ export async function handleBaAction(params: BaActionParams): Promise<BaActionRe
 
     // AUTO-EXECUTE (low risk)
     if (isAutoApproved(gateResult)) {
-        // Persist to KB for future RAG retrieval
+        const resolvedDocumentId = documentId ?? `${taskId}-${documentType}`;
+
+        // Version control — track document revisions across sessions
+        let versionedContent = generatedContent;
         if (generatedContent) {
+            try {
+                const versionResult = await buildVersionedDocument({
+                    documentId: resolvedDocumentId,
+                    currentContent: generatedContent,
+                    workspaceId,
+                    callLlm,
+                    gatewayBaseUrl,
+                    serviceToken,
+                    author: 'BA Agent',
+                });
+                versionedContent = versionResult.versionedContent;
+            } catch (e) {
+                console.warn('[ba-action-handler] version control failed:', e);
+            }
+        }
+
+        // Persist to KB for future RAG retrieval
+        if (versionedContent) {
             await ingestApprovedDocument({
                 tenantId,
                 botId,
                 documentTitle: projectTitle,
                 documentType: actionToRagDocType(actionType),
-                content: generatedContent,
+                content: versionedContent,
                 domain: domain,
                 complianceFrameworks: complianceFrameworks,
                 gatewayBaseUrl,
                 serviceToken,
             });
+        }
+
+        // Persist to durable storage (FS / Confluence / Notion)
+        const persistWorkspaceDir = (workspaceDir ?? str(payload['workspace_dir'])) || undefined;
+        const confluenceSpaceKey = str(payload['confluence_space_key']) || undefined;
+        const notionDatabaseId = str(payload['notion_database_id']) || undefined;
+
+        if (executeAction && versionedContent && (persistWorkspaceDir || confluenceSpaceKey || notionDatabaseId)) {
+            const persistReq: BaDocumentPersistRequest = {
+                documentType,
+                documentTitle: projectTitle,
+                content: versionedContent,
+                workspaceDir: persistWorkspaceDir,
+                confluenceSpaceKey,
+                confluenceParentPageId: str(payload['confluence_parent_page_id']) || undefined,
+                notionDatabaseId,
+                domain: domain || undefined,
+            };
+            try {
+                const persistResult = await persistBaDocument(persistReq, executeAction);
+                if (persistResult.ok) {
+                    console.info('[ba-action-handler] document persisted:', persistResult.summary);
+                } else if (persistResult.errors.length > 0) {
+                    console.warn('[ba-action-handler] document persist partial failure:', persistResult.errors);
+                }
+            } catch (e) {
+                console.warn('[ba-action-handler] document persistence failed:', e);
+            }
+        }
+
+        // Ticket write-back — Jira / Linear / GitHub for actionable document types
+        const ticketableTypes: BaActionType[] = [
+            'workspace_ba_draft_user_story',
+            'workspace_ba_finalize_acceptance_criteria',
+            'workspace_ba_uat_checklist',
+        ];
+        if (executeAction && versionedContent && ticketableTypes.includes(actionType)) {
+            const ticketPlatform = str(payload['ticket_platform']) as TicketPlatform | '';
+            const ticketProjectKey =
+                str(payload['ticket_project_key']) ||
+                str(payload['jira_project_key']) ||
+                str(payload['linear_team_id']) ||
+                str(payload['github_repo']);
+
+            if (ticketPlatform && ticketProjectKey) {
+                const ticketDocType =
+                    actionType === 'workspace_ba_draft_user_story' ? 'user_story'
+                    : actionType === 'workspace_ba_finalize_acceptance_criteria' ? 'acceptance_criteria'
+                    : 'uat_checklist';
+
+                const ticketReq: BaTicketWriteRequest = {
+                    platform: ticketPlatform as TicketPlatform,
+                    projectKey: ticketProjectKey,
+                    documentType: ticketDocType,
+                    content: versionedContent,
+                    documentTitle: projectTitle,
+                    epicId:
+                        str(payload['epic_id']) ||
+                        str(payload['jira_epic']) ||
+                        str(payload['linear_cycle']) ||
+                        undefined,
+                    priority: (str(payload['priority']) as BaTicketWriteRequest['priority']) || 'medium',
+                    baLabel: 'ba-generated',
+                };
+                try {
+                    const receipt = await writeTicketsFromDocument(ticketReq, executeAction);
+                    if (!receipt.skipped) {
+                        console.info(`[ba-action-handler] ${receipt.ticketsCreated} ticket(s) created in ${ticketPlatform}`);
+                    } else if (receipt.skipReason) {
+                        console.info(`[ba-action-handler] ticket write skipped: ${receipt.skipReason}`);
+                    }
+                } catch (e) {
+                    console.warn('[ba-action-handler] ticket write-back failed:', e);
+                }
+            }
         }
 
         await writeEpisodicMemory({
@@ -575,7 +967,7 @@ export async function handleBaAction(params: BaActionParams): Promise<BaActionRe
 
         return {
             ok: true,
-            output: generatedContent,
+            output: versionedContent,
             documentType,
             riskLevel: 'low',
             completenessScore,
@@ -682,6 +1074,60 @@ export async function handleBaAction(params: BaActionParams): Promise<BaActionRe
 }
 
 // ---------------------------------------------------------------------------
+// Public entry point
+// ---------------------------------------------------------------------------
+
+/**
+ * Route a BA action through the full pipeline: RAG → tone → generate → gate → persist.
+ *
+ * This is the single entry point called by the agent runtime execution engine
+ * when an action type matches BA_ACTION_TYPES.
+ *
+ * Automatically loads the stakeholder profile from the gateway when
+ * `payload.stakeholder_id` is present and no profile was explicitly provided.
+ * Automatically saves the profile back after the action completes.
+ */
+export async function handleBaAction(params: BaActionParams): Promise<BaActionResult> {
+    const { workspaceId, gatewayBaseUrl, serviceToken, stakeholderProfile, payload } = params;
+
+    // -------------------------------------------------------------------------
+    // 0. Stakeholder auto-load
+    //    If no profile was passed by the caller but payload has stakeholder_id,
+    //    attempt to load the profile from the gateway memory API.
+    // -------------------------------------------------------------------------
+    let resolvedProfile = stakeholderProfile;
+    const stakeholderIdFromPayload = str(payload['stakeholder_id']);
+    if (!resolvedProfile && stakeholderIdFromPayload) {
+        try {
+            const loaded = await loadStakeholderProfile(
+                stakeholderIdFromPayload,
+                workspaceId,
+                gatewayBaseUrl,
+                serviceToken,
+            );
+            if (loaded) resolvedProfile = loaded;
+        } catch {
+            // Non-fatal — continue without profile
+        }
+    }
+
+    // Run the core action pipeline with the resolved profile
+    const result = await _handleBaActionCore({ ...params, stakeholderProfile: resolvedProfile });
+
+    // -------------------------------------------------------------------------
+    // 8. Stakeholder auto-save (fire-and-forget — never block the result)
+    //    The profile accumulates interaction history across sessions.
+    // -------------------------------------------------------------------------
+    if (resolvedProfile) {
+        saveStakeholderProfile(resolvedProfile, workspaceId, gatewayBaseUrl, serviceToken).catch(
+            (e) => console.warn('[ba-action-handler] stakeholder auto-save failed:', e),
+        );
+    }
+
+    return result;
+}
+
+// ---------------------------------------------------------------------------
 // Post-decision handlers — called after a stakeholder approves or rejects
 // ---------------------------------------------------------------------------
 
@@ -689,7 +1135,8 @@ export async function handleBaAction(params: BaActionParams): Promise<BaActionRe
  * Call after a BA document receives stakeholder approval.
  *
  * Ingests the approved document into the knowledge base so it becomes
- * available as prior work for future RAG retrievals.
+ * available as prior work for future RAG retrievals.  Also persists the
+ * document to durable storage and writes tickets when connectors are provided.
  */
 export async function onBaDocumentApproved(params: {
     tenantId: string;
@@ -703,12 +1150,25 @@ export async function onBaDocumentApproved(params: {
     complianceFrameworks?: string[];
     gatewayBaseUrl: string;
     serviceToken: string;
+    /** Connector for document persistence and ticket write-back. */
+    executeAction?: ExecuteActionFn;
+    /** Local workspace directory for file-system persistence. */
+    workspaceDir?: string;
+    /** Ticket platform for write-back (jira | linear | github). */
+    ticketPlatform?: TicketPlatform;
+    /** Project / team / repo key for ticket write-back. */
+    ticketProjectKey?: string;
+    /** Epic / cycle / milestone ID for ticket grouping. */
+    ticketEpicId?: string;
 }): Promise<void> {
     const {
         tenantId, botId, workspaceId, taskId, actionType,
         documentTitle, documentContent, domain, complianceFrameworks,
-        gatewayBaseUrl, serviceToken,
+        gatewayBaseUrl, serviceToken, executeAction, workspaceDir,
+        ticketPlatform, ticketProjectKey, ticketEpicId,
     } = params;
+
+    const documentType = ACTION_TYPE_TO_DOC_TYPE[actionType] ?? 'draft_brd';
 
     await ingestApprovedDocument({
         tenantId,
@@ -722,10 +1182,60 @@ export async function onBaDocumentApproved(params: {
         serviceToken,
     });
 
+    // Persist to durable storage when connectors are available
+    if (executeAction && documentContent && workspaceDir) {
+        const persistReq: BaDocumentPersistRequest = {
+            documentType,
+            documentTitle,
+            content: documentContent,
+            workspaceDir,
+            domain,
+        };
+        try {
+            const pr = await persistBaDocument(persistReq, executeAction);
+            if (pr.ok) {
+                console.info('[ba-action-handler] approved doc persisted:', pr.summary);
+            }
+        } catch (e) {
+            console.warn('[ba-action-handler] persistence failed on approval:', e);
+        }
+    }
+
+    // Write tickets for ticketable document types
+    const ticketableTypes: BaActionType[] = [
+        'workspace_ba_draft_user_story',
+        'workspace_ba_finalize_acceptance_criteria',
+        'workspace_ba_uat_checklist',
+    ];
+    if (executeAction && ticketPlatform && ticketProjectKey && ticketableTypes.includes(actionType)) {
+        const ticketDocType =
+            actionType === 'workspace_ba_draft_user_story' ? 'user_story'
+            : actionType === 'workspace_ba_finalize_acceptance_criteria' ? 'acceptance_criteria'
+            : 'uat_checklist';
+
+        const ticketReq: BaTicketWriteRequest = {
+            platform: ticketPlatform,
+            projectKey: ticketProjectKey,
+            documentType: ticketDocType,
+            content: documentContent,
+            documentTitle,
+            epicId: ticketEpicId,
+            baLabel: 'ba-generated',
+        };
+        try {
+            const receipt = await writeTicketsFromDocument(ticketReq, executeAction);
+            if (!receipt.skipped) {
+                console.info(`[ba-action-handler] ${receipt.ticketsCreated} ticket(s) created on approval for ${ticketPlatform}`);
+            }
+        } catch (e) {
+            console.warn('[ba-action-handler] ticket write failed on approval:', e);
+        }
+    }
+
     await writeEpisodicMemory({
         tenantId,
         workspaceId,
-        pattern: `ba:${ACTION_TYPE_TO_DOC_TYPE[actionType] ?? 'draft_brd'}:approved`,
+        pattern: `ba:${documentType}:approved`,
         summary: `BA document approved and ingested: ${documentTitle.slice(0, 80)}`,
         gatewayBaseUrl,
         serviceToken,
