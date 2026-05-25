@@ -88,6 +88,7 @@ export function clearPersonaCache(): void {
 import { getTesterDefaultPersona } from './agents/tester/tester-persona-defaults.js';
 import { getTechnicalWriterDefaultPersona } from './agents/technical-writer/technical-writer-persona-defaults.js';
 import { getContentWriterDefaultPersona } from './agents/content-writer/content-writer-persona-defaults.js';
+import { getBusinessAnalystDefaultPersona } from './agents/business-analyst/business-analyst-persona-defaults.js';
 
 /**
  * Load the persona for a bot, falling back to role-specific defaults when the
@@ -113,6 +114,9 @@ export async function loadPersonaForBotWithFallback(
     }
     if (role === 'content_writer') {
         return getContentWriterDefaultPersona(botId, tenantId);
+    }
+    if (role === 'business_analyst') {
+        return getBusinessAnalystDefaultPersona(botId, tenantId);
     }
 
     return null;
