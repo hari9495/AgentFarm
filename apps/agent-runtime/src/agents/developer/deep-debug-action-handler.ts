@@ -509,6 +509,7 @@ export async function handleDeepDebugAction(
             const r = await run(runCommand, gdbArgs, workspaceDir, 120_000);
             const combined = r.stdout + r.stderr;
 
+            // Initial LLM analysis of the GDB output
             let analysis = '';
             if (callLlm && combined.length > 50) {
                 const prompt = [
@@ -523,13 +524,103 @@ export async function handleDeepDebugAction(
                 analysis = await callLlmSafe(callLlm, prompt, 'You are a debugging expert. Be specific and actionable.');
             }
 
+            // Gap 4 (Iterative debug loop): feed LLM analysis back into further GDB
+            // rounds — like a human debugger who reads output, decides what to examine
+            // next, and runs follow-up commands to converge on the root cause.
+            const MAX_DEBUG_ROUNDS = 2;
+            type DebugRound = { round: number; commands: string[]; raw_output: string; analysis: string };
+            const allRounds: DebugRound[] = [
+                { round: 1, commands: gdbCmds.map((c) => c.cmd), raw_output: combined.slice(0, 4000), analysis },
+            ];
+
+            if (callLlm && combined.length > 50) {
+                let prevAnalysis = analysis;
+                for (let round = 2; round <= MAX_DEBUG_ROUNDS + 1; round++) {
+                    // Extract next_steps from the previous LLM response
+                    let nextSteps: string[] = [];
+                    try {
+                        const s = prevAnalysis.indexOf('{'); const e = prevAnalysis.lastIndexOf('}');
+                        if (s !== -1 && e !== -1) {
+                            const pa = JSON.parse(prevAnalysis.slice(s, e + 1)) as Record<string, unknown>;
+                            nextSteps = Array.isArray(pa['next_steps'])
+                                ? (pa['next_steps'] as string[]).slice(0, 3)
+                                : [];
+                        }
+                    } catch { /* ignore */ }
+                    if (nextSteps.length === 0) break;
+
+                    // Map natural-language next_steps to concrete GDB commands
+                    const followUpCmds = nextSteps.map((step) => {
+                        const lower = step.toLowerCase();
+                        if (lower.includes('backtrace') || lower.includes('stack trace')) return 'bt full';
+                        if (lower.includes('thread')) return 'info threads';
+                        if (lower.includes('register')) return 'info registers';
+                        if (lower.includes('locals') || lower.includes('local variable')) return 'info locals';
+                        if (lower.includes('watchpoint') || lower.includes('watch ')) {
+                            const wm = /watch\s+(\w+)/i.exec(step);
+                            return wm ? `watch ${wm[1]}` : 'info watchpoints';
+                        }
+                        const printMatch = /(?:print|examine|inspect)\s+(\w+)/i.exec(step);
+                        if (printMatch) return `print ${printMatch[1]}`;
+                        return 'info locals';
+                    });
+
+                    const followScript = buildGdbScript(followUpCmds);
+                    const followFile = `.agentfarm/gdb-follow-${round}.gdb`;
+                    await executeAction('workspace_write_file', { file_path: followFile, content: followScript });
+
+                    let followArgs: string[];
+                    if (host && user) {
+                        const remoteCmd = pid
+                            ? `${debugger_} -batch -x ${followFile} -p ${pid}`
+                            : `${debugger_} -batch -x ${followFile} ${binary || ''}`;
+                        followArgs = ['ssh', '-o', 'StrictHostKeyChecking=no', `${user}@${host}`, remoteCmd];
+                    } else if (pid) {
+                        followArgs = [debugger_, '-batch', '-x', followFile, '-p', String(pid)];
+                    } else if (coreFile) {
+                        followArgs = [debugger_, '-batch', '-x', followFile, binary || '', coreFile];
+                    } else {
+                        followArgs = [debugger_, '-batch', '-x', followFile, binary || ''];
+                    }
+
+                    let followCombined = '';
+                    try {
+                        const followR = await run(runCommand, followArgs, workspaceDir, 60_000);
+                        followCombined = (followR.stdout + followR.stderr).slice(0, 2000);
+                    } catch { break; }
+
+                    const followPrompt = [
+                        `You are continuing a GDB debugging session. Previous analysis:`,
+                        prevAnalysis.slice(0, 500),
+                        ``,
+                        `Follow-up commands run (${followUpCmds.join(', ')}):`,
+                        followCombined,
+                        ``,
+                        `Update your analysis. Converge on the root cause.`,
+                        `Return JSON: { "finding": string, "next_steps": string[], "severity": "critical"|"high"|"medium" }`,
+                    ].join('\n');
+
+                    const followAnalysis = await callLlmSafe(
+                        callLlm, followPrompt,
+                        'You are a debugging expert. Converge on the root cause. Be specific.',
+                    );
+                    allRounds.push({ round, commands: followUpCmds, raw_output: followCombined, analysis: followAnalysis });
+                    prevAnalysis = followAnalysis;
+                }
+            }
+
+            const finalAnalysis = allRounds[allRounds.length - 1]?.analysis ?? analysis;
+
             return safeJson({
                 debugger: debugger_,
                 mode,
-                remote:   !!(host && user),
-                raw_output: combined.slice(0, 4000),
+                remote:        !!(host && user),
+                raw_output:    combined.slice(0, 4000),
                 analysis,
-                summary: `GDB session (${mode}): ${combined.split('\n').length} lines of output`,
+                rounds:        allRounds.length,
+                debug_rounds:  allRounds,
+                final_analysis: finalAnalysis,
+                summary: `GDB session (${mode}): ${allRounds.length} round(s), ${combined.split('\n').length} output lines`,
             });
         }
 

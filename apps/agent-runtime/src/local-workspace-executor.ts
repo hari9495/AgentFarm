@@ -3073,15 +3073,42 @@ async function executeAutonomousLoop(
         let fixStep: AutonomousStep | undefined = fixAttempts[attempt - 1];
         if (!fixStep && payload.llmCodeGenFn) {
             const targetFiles = payload.targetFiles ?? [];
-            const failureOutput = (testResult.stdout + testResult.stderr).slice(0, 1500);
+            const rawFailureOutput = (testResult.stdout + testResult.stderr).slice(0, 1500);
+
+            // Gap 3 (structured test failure parsing): extract file:line:message
+            // entries from common test output formats (Jest, pytest, Go, mocha)
+            // so the LLM gets structured context rather than a raw string dump.
+            const structuredFailures: Array<{ file: string; line: string; message: string }> = [];
+            const jestFileRe = /FAIL\s+([\w./\\-]+\.(?:test|spec)\.[jt]sx?)/gm;
+            const lineColRe  = /([\w./\\-]+\.[jt]sx?)[:]([\d]+)(?:[:]\d+)?:\s*(.{1,120})/gm;
+            const goTestRe   = /---\s+FAIL:\s+([\w/]+)\s+\([\d.]+s\)/gm;
+            const pytestRe   = /FAILED\s+([\w./\\-]+\.py)::([\w]+)/gm;
+            let _m: RegExpExecArray | null;
+            while ((_m = jestFileRe.exec(rawFailureOutput)) !== null)
+                structuredFailures.push({ file: _m[1]!, line: '', message: 'test file failed' });
+            while ((_m = lineColRe.exec(rawFailureOutput)) !== null)
+                structuredFailures.push({ file: _m[1]!, line: _m[2]!, message: _m[3]!.trim() });
+            while ((_m = goTestRe.exec(rawFailureOutput)) !== null)
+                structuredFailures.push({ file: '', line: '', message: `Go test failed: ${_m[1]}` });
+            while ((_m = pytestRe.exec(rawFailureOutput)) !== null)
+                structuredFailures.push({ file: _m[1]!, line: '', message: `pytest failed: ${_m[2]}` });
+            const failuresSection = structuredFailures.length > 0
+                ? `\nFAILURES (structured):\n${structuredFailures.slice(0, 20).map((f) => `  ${f.file}${f.line ? ':' + f.line : ''}: ${f.message}`).join('\n')}`
+                : '';
+
             const fixPrompt = [
                 payload.prompt ?? 'Fix the failing tests.',
                 `\nTests failed at attempt ${attempt}:`,
-                failureOutput,
+                rawFailureOutput,
+                failuresSection,
                 '\nGenerate the minimal code changes to make the tests pass.',
+                'Focus on the specific files and lines listed in FAILURES above.',
             ].join('\n');
             const fileContents: Record<string, string> = {};
-            for (const fp of targetFiles.slice(0, 4)) {
+            // Load target files + any files specifically mentioned in failures
+            const failureFiles = [...new Set(structuredFailures.map((f) => f.file).filter(Boolean))];
+            const allFilesToLoad = [...new Set([...targetFiles, ...failureFiles])];
+            for (const fp of allFilesToLoad.slice(0, 6)) {
                 try {
                     fileContents[fp] = (await readFile(join(workspaceDir, fp), 'utf-8')).slice(0, 3000);
                 } catch { /* file may have moved or been deleted */ }
@@ -9231,6 +9258,59 @@ export async function executeLocalWorkspaceAction(input: {
                 enrichedOutput = JSON.stringify(parsed, null, 2);
             } catch { /* leave output as-is */ }
 
+            // Gap 7 (Learn from mistakes): capture git diff after a successful loop
+            // so episodic memory contains concrete before/after evidence for future tasks.
+            // Gap 5 (Pair programming): proactively suggest the next step after success.
+            if (loopResult.ok) {
+                // Capture changed files + diff text
+                let filesChangedList: string[] = [];
+                let codeDiffText = '';
+                try {
+                    const diffNamesRes = await runCommand(['git', 'diff', 'HEAD~1', 'HEAD', '--name-only'], workspaceDir, 10_000);
+                    if (diffNamesRes.exitCode === 0 && diffNamesRes.stdout.trim()) {
+                        filesChangedList = diffNamesRes.stdout.trim().split('\n').filter(Boolean).slice(0, 10);
+                    }
+                    const diffRes = await runCommand(['git', 'diff', 'HEAD~1', 'HEAD'], workspaceDir, 15_000);
+                    if (diffRes.exitCode === 0 && diffRes.stdout.trim()) {
+                        codeDiffText = diffRes.stdout.slice(0, 2000);
+                    }
+                } catch { /* best-effort — workspace may have no prior commit */ }
+
+                // Pair suggestion: lightweight LLM call for the next recommended step
+                let pairSuggestion: Record<string, unknown> | null = null;
+                if (targetFiles.length > 0 || filesChangedList.length > 0) {
+                    const twLlm = buildTwLlmCallerFn();
+                    if (twLlm) {
+                        try {
+                            const touchedFiles = filesChangedList.length > 0 ? filesChangedList : targetFiles;
+                            const pairPrompt = [
+                                `You are a senior pair programmer reviewing a completed change.`,
+                                `Task just completed: ${prompt.slice(0, 300)}`,
+                                `Files touched: ${touchedFiles.slice(0, 5).join(', ')}`,
+                                ``,
+                                `Suggest the single most valuable next step the developer should take.`,
+                                `Return JSON: { "next_step": string, "rationale": string, "priority": "high"|"medium"|"low" }`,
+                                `Valid JSON only — no markdown fences.`,
+                            ].join('\n');
+                            const pairRaw = await twLlm(pairPrompt, 'You are an expert pair programmer. Be concrete and specific. Under 3 sentences.');
+                            const ps = pairRaw.indexOf('{'); const pe = pairRaw.lastIndexOf('}');
+                            if (ps !== -1 && pe !== -1) {
+                                pairSuggestion = JSON.parse(pairRaw.slice(ps, pe + 1)) as Record<string, unknown>;
+                            }
+                        } catch { /* best-effort — pair suggestion is advisory */ }
+                    }
+                }
+
+                // Merge these into enrichedOutput
+                try {
+                    const base = JSON.parse(enrichedOutput) as Record<string, unknown>;
+                    if (filesChangedList.length > 0) base['files_changed'] = filesChangedList;
+                    if (codeDiffText) base['code_diff'] = codeDiffText;
+                    if (pairSuggestion) base['pair_suggestion'] = pairSuggestion;
+                    enrichedOutput = JSON.stringify(base, null, 2);
+                } catch { /* leave as-is */ }
+            }
+
             // Gap B + F: auto-commit with persona + create PR when requested
             if (loopResult.ok && (payload['auto_pr'] === true || payload['auto_commit_and_pr'] === true)) {
                 const persona = extractPersonaFromPayload(payload);
@@ -9601,8 +9681,53 @@ export async function executeLocalWorkspaceAction(input: {
                 return { ok: false, output: '', errorOutput: `git commit failed: ${commitResult.stderr}` };
             }
 
-            // Step 5: Create PR
-            const prBody = `Fixes #${issueNumber}\n\nAutomatically resolved by AgentFarm developer agent.\n\nIssue: ${issueTitle}`;
+            // Step 5: Build a rich PR body from diff stat + issue context (Gap 8 fix).
+            // Replace the old hardcoded body with a structured description so reviewers
+            // understand what changed and why — the way a human developer would write it.
+            let prBody = `Fixes #${issueNumber}\n\n`;
+            try {
+                const diffStatRes  = await runCommand(['git', 'diff', 'HEAD~1', 'HEAD', '--stat'], workspaceDir, 15_000);
+                const commitLogRes = await runCommand(['git', 'log', '--oneline', '-1'], workspaceDir, 10_000);
+                const diffFilesRes = await runCommand(['git', 'diff', 'HEAD~1', 'HEAD', '--name-only'], workspaceDir, 10_000);
+
+                const changedFiles = diffFilesRes.exitCode === 0
+                    ? diffFilesRes.stdout.trim().split('\n').filter(Boolean)
+                    : [];
+
+                prBody += `## What Changed\n`;
+                if (commitLogRes.exitCode === 0 && commitLogRes.stdout.trim()) {
+                    prBody += `${commitLogRes.stdout.trim()}\n\n`;
+                }
+                if (changedFiles.length > 0) {
+                    prBody += `**Files modified:** ${changedFiles.slice(0, 8).join(', ')}\n\n`;
+                }
+                if (diffStatRes.exitCode === 0 && diffStatRes.stdout.trim()) {
+                    prBody += `\`\`\`\n${diffStatRes.stdout.trim().slice(0, 800)}\n\`\`\`\n\n`;
+                }
+
+                prBody += `## Why\n`;
+                prBody += `${issueBody.slice(0, 500).replace(/\r\n/g, '\n').trim()}\n\n`;
+
+                prBody += `## Testing\n`;
+                // Surface test outcome from loop result
+                try {
+                    const loopOut = JSON.parse(fixResult.output) as Record<string, unknown>;
+                    const attempts = Array.isArray(loopOut['attempts'])
+                        ? (loopOut['attempts'] as Array<Record<string, unknown>>)
+                        : [];
+                    const lastAttempt = attempts[attempts.length - 1];
+                    const testPassed = lastAttempt ? lastAttempt['passed'] === true : false;
+                    prBody += testPassed
+                        ? `✅ Automated tests passed (AgentFarm autonomous loop, ${attempts.length} attempt${attempts.length !== 1 ? 's' : ''}).\n`
+                        : `⚠️ Tests could not be fully verified by AgentFarm — please review manually.\n`;
+                } catch {
+                    prBody += `Automated fix applied by AgentFarm developer agent.\n`;
+                }
+            } catch {
+                // Fallback: simple body if git commands fail (e.g. first commit with no parent)
+                prBody = `Fixes #${issueNumber}\n\n${issueTitle}\n\n${issueBody.slice(0, 400)}\n\nAutomated fix by AgentFarm developer agent.`;
+            }
+
             const prResult = await runCommand(
                 ['gh', 'pr', 'create', '--title', `fix: ${issueTitle.slice(0, 72)}`, '--body', prBody, '--head', branchName, ...repoArgs],
                 workspaceDir,

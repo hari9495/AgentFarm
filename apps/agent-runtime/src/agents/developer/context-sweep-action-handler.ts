@@ -245,6 +245,24 @@ export async function handleContextSweepAction(
             const includeCmts  = payload['include_commits'] !== false;
             const storeMemory  = payload['store_in_memory'] !== false;
 
+            // Gap 7 (Team context delta): load the previous sweep result from memory
+            // so we can compute a delta — only new signals since the last sweep — rather
+            // than returning the same synthesis on every call.
+            let lastSweepContent = '';
+            let lastSweepDate = '';
+            try {
+                const prevMemRes = await executeAction('workspace_memory_search', {
+                    query: `context_sweep ${projectName}`,
+                    tags:  ['context_sweep'],
+                    limit: 1,
+                });
+                if (prevMemRes.ok && prevMemRes.output.trim()) {
+                    lastSweepContent = prevMemRes.output.slice(0, 1500);
+                    const tsMatch = /Context sweep \((\d{4}-\d{2}-\d{2})\)/.exec(lastSweepContent);
+                    if (tsMatch) lastSweepDate = tsMatch[1]!;
+                }
+            } catch { /* best-effort — delta is advisory */ }
+
             const signals: TeamSignal[] = [];
 
             // ── Slack sweep ──────────────────────────────────────────────────
@@ -336,10 +354,28 @@ export async function handleContextSweepAction(
                 sweepResult = parseContextSweep(llmRaw);
             }
 
+            // Gap 7 (delta detection): identify signals that weren't in the previous
+            // sweep so the agent can focus on what's NEW instead of re-reporting stale facts.
+            const deltaSignals = lastSweepContent
+                ? signals.filter((s) => !lastSweepContent.includes(s.content.slice(0, 60)))
+                : signals;
+
+            // LLM delta synthesis (only when there are new signals)
+            let deltaResult: ContextSweepResult | null = null;
+            if (callLlm && deltaSignals.length > 0 && lastSweepContent) {
+                const deltaPrompt = buildContextSweepPrompt(deltaSignals, projectName);
+                const deltaRaw = await callLlmSafe(
+                    callLlm, deltaPrompt,
+                    'You are a principal engineer. Focus only on what is NEW since the last status check.',
+                );
+                deltaResult = parseContextSweep(deltaRaw);
+            }
+
             // ── Store in episodic memory ──────────────────────────────────────
+            const todayStr = new Date().toISOString().slice(0, 10);
             if (storeMemory && callLlm) {
                 const memContent = [
-                    `Context sweep (${new Date().toISOString().slice(0, 10)}):`,
+                    `Context sweep (${todayStr}):`,
                     `Urgency: ${sweepResult.urgency}`,
                     sweepResult.stressPoints.length > 0  ? `Stress: ${sweepResult.stressPoints.slice(0, 2).join(' | ')}` : '',
                     sweepResult.blockers.length > 0       ? `Blockers: ${sweepResult.blockers.map((b) => b.what).slice(0, 2).join(' | ')}` : '',
@@ -364,7 +400,21 @@ export async function handleContextSweepAction(
                 decisions:         sweepResult.decisions,
                 agent_next_action: sweepResult.agentNextAction,
                 stored_in_memory:  storeMemory,
-                summary: `Context sweep: ${signals.length} signal(s), urgency=${sweepResult.urgency}, ${sweepResult.blockers.length} blocker(s), ${sweepResult.decisions.length} decision(s)`,
+                // Delta fields: new signals since the last sweep
+                monitoring_since:  lastSweepDate || null,
+                delta_signal_count: deltaSignals.length,
+                delta_signals: deltaResult
+                    ? {
+                        urgency:        deltaResult.urgency,
+                        stress_points:  deltaResult.stressPoints,
+                        blockers:       deltaResult.blockers,
+                        decisions:      deltaResult.decisions,
+                        agent_next_action: deltaResult.agentNextAction,
+                    }
+                    : null,
+                summary: lastSweepDate
+                    ? `Context sweep (since ${lastSweepDate}): ${deltaSignals.length} new signal(s) of ${signals.length} total, urgency=${sweepResult.urgency}`
+                    : `Context sweep: ${signals.length} signal(s), urgency=${sweepResult.urgency}, ${sweepResult.blockers.length} blocker(s)`,
             });
         }
 

@@ -82,6 +82,12 @@ export type ProcessedTaskResult = {
     failureClass?: 'transient_error' | 'runtime_exception' | 'role_enforcement' | 'kill_switch_blocked';
     errorMessage?: string;
     llmExecution?: LlmDecisionMetadata;
+    /**
+     * Gap 7 (Learn from mistakes): raw JSON output from the workspace action,
+     * forwarded from executeLocalWorkspaceAction so episodic memory can capture
+     * files_changed, code_diff, and test_failure_summary without a second I/O call.
+     */
+    actionOutput?: string;
 };
 
 const HIGH_RISK_ACTIONS = new Set([
@@ -536,7 +542,7 @@ function createCodeGenFn(env: NodeJS.ProcessEnv = process.env): LlmCodeGenFn | u
     };
 }
 
-async function executeLowRiskAction(task: TaskEnvelope, attempt: number, opts?: { llmCodeGenFn?: LlmCodeGenFn }): Promise<void> {
+async function executeLowRiskAction(task: TaskEnvelope, attempt: number, opts?: { llmCodeGenFn?: LlmCodeGenFn }): Promise<{ actionOutput?: string }> {
     if (shouldFailTransiently(task.payload, attempt)) {
         throw new Error('TRANSIENT_EXECUTOR_ERROR');
     }
@@ -558,7 +564,7 @@ async function executeLowRiskAction(task: TaskEnvelope, attempt: number, opts?: 
         if (!result.ok) {
             throw new Error(`Connector dispatch failed [${rawConnector}/${rawActionType}]: ${result.error}`);
         }
-        return;
+        return {};
     }
 
     // ── Local workspace actions ───────────────────────────────────────────────
@@ -584,7 +590,8 @@ async function executeLowRiskAction(task: TaskEnvelope, attempt: number, opts?: 
             const msg = result.errorOutput ?? result.output ?? 'workspace action failed';
             throw new Error(`Workspace action failed [${rawActionType}]: ${msg}`);
         }
-        return;
+        // Gap 7: return the raw output so the caller can persist it in episodic memory
+        return { actionOutput: result.output };
     }
 
     // GAP 4 FIX: Fail loudly instead of silently succeeding when no routing path
@@ -598,6 +605,7 @@ async function executeLowRiskAction(task: TaskEnvelope, attempt: number, opts?: 
             `or a connector action with payload.connector set.`,
         );
     }
+    return {};
 }
 
 async function executeTaskWithRetries(
@@ -617,7 +625,7 @@ async function executeTaskWithRetries(
     while (attempts < allowedAttempts) {
         attempts += 1;
         try {
-            await executeLowRiskAction({ ...task, payload: currentPayload }, attempts, { llmCodeGenFn: options?.llmCodeGenFn });
+            const { actionOutput } = await executeLowRiskAction({ ...task, payload: currentPayload }, attempts, { llmCodeGenFn: options?.llmCodeGenFn });
             return {
                 decision,
                 status: 'success',
@@ -626,6 +634,7 @@ async function executeTaskWithRetries(
                 executionPayload: currentPayload,
                 payloadOverrideSource,
                 llmExecution,
+                actionOutput,
             };
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : String(err);
@@ -829,6 +838,19 @@ export async function processApprovedTask(
                 result.errorMessage?.toLowerCase().includes('escalat') ? 'escalated' :
                     'failed';
     const personForApproved = extractPersonKeyFromPayload(executionPayloadForApproved);
+    // Gap 7 (Learn from mistakes): extract files_changed + code_diff from action output
+    let approvedFilesChanged: string[] | undefined;
+    let approvedCodeDiff: string | undefined;
+    try {
+        const approvedJson = JSON.parse(result.actionOutput ?? '{}') as Record<string, unknown>;
+        if (Array.isArray(approvedJson['files_changed'])) {
+            approvedFilesChanged = (approvedJson['files_changed'] as unknown[])
+                .filter((f): f is string => typeof f === 'string').slice(0, 10);
+        }
+        if (typeof approvedJson['code_diff'] === 'string' && (approvedJson['code_diff'] as string).trim()) {
+            approvedCodeDiff = (approvedJson['code_diff'] as string).slice(0, 2000);
+        }
+    } catch { /* skip */ }
     await globalEpisodicMemory.record({
         taskId: task.taskId,
         workspaceId: workspaceIdForApproved,
@@ -841,6 +863,8 @@ export async function processApprovedTask(
         errorMessage: result.errorMessage?.slice(0, 120),
         personKey: personForApproved?.personKey,
         personLabel: personForApproved?.personLabel,
+        filesChanged: approvedFilesChanged,
+        codeDiff: approvedCodeDiff,
     }).catch(() => { /* best-effort — don't fail the task if memory write fails */ });
 
     return result;
@@ -1080,6 +1104,25 @@ export async function processDeveloperTask(
         // Gap 4: re-extract from final executionPayload (LLM may have populated
         // recipient fields not present at request time).
         const personForRecord = extractPersonKeyFromPayload(executionPayload) ?? personForTask;
+        // Gap 7 (Learn from mistakes): extract files_changed + code_diff from action
+        // output JSON so future tasks can learn what specifically changed and how.
+        let filesChangedForRecord: string[] | undefined;
+        let codeDiffForRecord: string | undefined;
+        let testFailureForRecord: string | undefined;
+        try {
+            const outputJson = JSON.parse(execResult.actionOutput ?? '{}') as Record<string, unknown>;
+            if (Array.isArray(outputJson['files_changed'])) {
+                filesChangedForRecord = (outputJson['files_changed'] as unknown[])
+                    .filter((f): f is string => typeof f === 'string')
+                    .slice(0, 10);
+            }
+            if (typeof outputJson['code_diff'] === 'string' && (outputJson['code_diff'] as string).trim()) {
+                codeDiffForRecord = (outputJson['code_diff'] as string).slice(0, 2000);
+            }
+            if (typeof outputJson['test_failure_summary'] === 'string' && (outputJson['test_failure_summary'] as string).trim()) {
+                testFailureForRecord = (outputJson['test_failure_summary'] as string).slice(0, 400);
+            }
+        } catch { /* actionOutput may not be JSON — skip */ }
         await globalEpisodicMemory.record({
             taskId: task.taskId,
             workspaceId: workspaceIdForMemory,
@@ -1092,6 +1135,9 @@ export async function processDeveloperTask(
             errorMessage: execResult.errorMessage?.slice(0, 120),
             personKey: personForRecord?.personKey,
             personLabel: personForRecord?.personLabel,
+            filesChanged: filesChangedForRecord,
+            codeDiff: codeDiffForRecord,
+            testFailureSummary: testFailureForRecord,
         }).catch(() => { /* best-effort */ });
     }
 

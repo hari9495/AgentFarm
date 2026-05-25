@@ -38,6 +38,13 @@ export type TaskMemoryEntry = {
     personKey?: string;
     /** Human-readable label for the person (e.g. "Jane Doe <jane@acme.com>"). */
     personLabel?: string;
+    /**
+     * Gap 7 (Learn from mistakes): truncated output of `git diff HEAD~1 HEAD`
+     * captured after a successful task. Gives the LLM concrete before/after
+     * evidence so it can avoid repeating the same approach on similar tasks.
+     * Capped at 2 000 chars.
+     */
+    codeDiff?: string;
 };
 
 /**
@@ -133,7 +140,9 @@ export class EpisodicMemoryStore {
                     ? ` [${e.filesChanged.slice(0, 3).join(', ')}]`
                     : '';
             const err = e.errorMessage ? ` — ${e.errorMessage.slice(0, 80)}` : '';
-            return `${icon} [${ts}] ${e.actionType}: ${e.promptSummary.slice(0, 120)}${files}${err}`;
+            // Gap 7: surface diff line count so the LLM knows how large the change was
+            const diffHint = e.codeDiff ? ` [diff:${e.codeDiff.split('\n').length}L]` : '';
+            return `${icon} [${ts}] ${e.actionType}: ${e.promptSummary.slice(0, 120)}${files}${diffHint}${err}`;
         });
         const label = opts?.label?.trim();
         const header = label
@@ -267,6 +276,7 @@ export function createPgEpisodicMemoryFns(
             timestamp: entry.timestamp,
             personKey: entry.personKey ?? null,
             personLabel: entry.personLabel ?? null,
+            codeDiff: entry.codeDiff ?? null,
         });
 
         const embedding = await getOpenAIEmbedding(`${patternText} ${summaryText}`);
@@ -347,6 +357,7 @@ export function createPgEpisodicMemoryFns(
                 errorMessage: parsed.errorMessage ?? undefined,
                 personKey: parsed.personKey ?? undefined,
                 personLabel: parsed.personLabel ?? undefined,
+                codeDiff: parsed.codeDiff ?? undefined,
             };
         });
     };

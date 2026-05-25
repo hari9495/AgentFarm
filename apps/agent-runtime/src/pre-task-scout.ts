@@ -152,10 +152,58 @@ export async function preTaskScout(
             ? [task.payload['target'].trim()]
             : [];
 
+    // Gap 8 LARGE_CODEBASE FIX: when no explicit target_files given, discover
+    // relevant source files from the task keywords using grep-based scoring.
+    if (rawTargetFiles.length === 0) {
+        const taskText = [
+            typeof task.payload['summary'] === 'string' ? task.payload['summary'] : '',
+            typeof task.payload['prompt'] === 'string' ? task.payload['prompt'] : '',
+            typeof task.payload['description'] === 'string' ? task.payload['description'] : '',
+        ].join(' ').trim();
+
+        if (taskText.length >= 5) {
+            // Extract the 5 most significant words to grep for relevant files
+            const keywords = taskText
+                .split(/\s+/)
+                .filter((w) => w.length > 3 && !/^(the|and|for|with|that|this|from|into|when|have|will|your|their|then|than|some|more|also|been|were|what|which|should|would|could|about)$/i.test(w))
+                .slice(0, 5);
+
+            if (keywords.length > 0) {
+                try {
+                    const relGrepResult = await executeAction({
+                        tenantId,
+                        botId,
+                        taskId: scoutTaskId,
+                        actionType: 'workspace_grep',
+                        payload: {
+                            ...task.payload,
+                            pattern: keywords.join('|'),
+                            include: '*.{ts,tsx,js,jsx,py,go,java,cs,rs}',
+                        },
+                    });
+                    if (relGrepResult.ok && relGrepResult.output.trim()) {
+                        // Extract file names from grep output (format: "file:line:content")
+                        const relevantFiles = [...new Set(
+                            relGrepResult.output
+                                .split('\n')
+                                .map((l) => l.split(':')[0] ?? '')
+                                .filter((f) => f.length > 0 && !f.includes('node_modules') && !f.includes('.git'))
+                        )].slice(0, 6);
+                        rawTargetFiles.push(...relevantFiles);
+                    }
+                } catch { /* best-effort */ }
+            }
+        }
+    }
+
     if (rawTargetFiles.length > 0) {
-        const FILE_CONTENT_CAP = 3000;
+        const FILE_CONTENT_CAP = 5000;
         const fileParts: string[] = [];
-        for (const filePath of rawTargetFiles.slice(0, 4)) {
+        const loadedFiles = new Set<string>();
+
+        for (const filePath of rawTargetFiles.slice(0, 8)) {
+            if (loadedFiles.has(filePath)) continue;
+            loadedFiles.add(filePath);
             try {
                 const readResult = await executeAction({
                     tenantId,
@@ -167,6 +215,46 @@ export async function preTaskScout(
                 if (readResult.ok && readResult.output.trim()) {
                     const truncated = readResult.output.slice(0, FILE_CONTENT_CAP);
                     fileParts.push(`--- ${filePath} ---\n${truncated}`);
+
+                    // Gap 8 IMPORT HOP: for TypeScript/JavaScript files, extract
+                    // import paths and load 1 hop of local dependencies so the LLM
+                    // understands the full call graph — not just one file in isolation.
+                    if (/\.[jt]sx?$/.test(filePath)) {
+                        const importRe = /(?:import|from)\s+['"](\.[^'"]+)['"]/g;
+                        let m: RegExpExecArray | null;
+                        const dir = filePath.includes('/') ? filePath.slice(0, filePath.lastIndexOf('/')) : '';
+                        const importedPaths: string[] = [];
+                        while ((m = importRe.exec(readResult.output)) !== null) {
+                            const rel = m[1]!;
+                            // Resolve to likely file path (try .ts, .tsx, .js extensions)
+                            const base = dir ? `${dir}/${rel.replace(/^\.\//, '')}` : rel.replace(/^\.\//, '');
+                            for (const ext of ['.ts', '.tsx', '.js', '.jsx', '']) {
+                                const candidate = ext ? (base.endsWith(ext) ? base : `${base}${ext}`) : base;
+                                if (!loadedFiles.has(candidate)) {
+                                    importedPaths.push(candidate);
+                                    break;
+                                }
+                            }
+                        }
+                        // Load up to 3 imported deps (short excerpts — just types/exports)
+                        for (const importedFile of importedPaths.slice(0, 3)) {
+                            if (loadedFiles.has(importedFile)) continue;
+                            try {
+                                const depResult = await executeAction({
+                                    tenantId,
+                                    botId,
+                                    taskId: scoutTaskId,
+                                    actionType: 'workspace_read_file',
+                                    payload: { ...task.payload, file_path: importedFile },
+                                });
+                                if (depResult.ok && depResult.output.trim()) {
+                                    loadedFiles.add(importedFile);
+                                    // Only show the first 1500 chars of deps (types/exports)
+                                    fileParts.push(`--- ${importedFile} (dep) ---\n${depResult.output.slice(0, 1500)}`);
+                                }
+                            } catch { /* dep file may not exist */ }
+                        }
+                    }
                 }
             } catch {
                 // Best-effort — file may not exist in workspace yet
@@ -178,6 +266,6 @@ export async function preTaskScout(
     }
 
     const full = parts.join('\n\n');
-    return full.slice(0, 4000);
+    return full.slice(0, 10000);
 }
 

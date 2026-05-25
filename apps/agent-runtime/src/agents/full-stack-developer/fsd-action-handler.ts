@@ -2331,13 +2331,78 @@ export async function handleFsdAction(
 
             // Optionally execute the focused task
             let executionResult: string | null = null;
+            let replanResult: string | null = null;
             if (execute && tick.focusedTask) {
                 const taskResult = await executeAction('workspace_dev_implement_feature', {
                     title:         tick.focusedTask,
                     description:   tick.focusedTask,
                     workspace_dir: workspaceDir,
                 });
-                executionResult = taskResult.ok ? taskResult.output.slice(0, 300) : `Failed: ${taskResult.errorOutput ?? ''}`;
+                executionResult = taskResult.ok
+                    ? taskResult.output.slice(0, 300)
+                    : `Failed: ${taskResult.errorOutput ?? ''}`;
+
+                // Gap 6 (Long-horizon replanning): when a milestone task fails,
+                // ask the LLM to suggest a smaller, more achievable alternative
+                // instead of leaving the roadmap stuck on an impossible task.
+                if (!taskResult.ok && callLlm && tick.activeMilestoneId) {
+                    const currentMilestone = roadmap.milestones.find((m) => m.id === tick.activeMilestoneId);
+                    const replanPrompt = [
+                        `You are a technical project manager. A milestone task just failed.`,
+                        `Project: ${roadmap.projectName}`,
+                        `Goal: ${roadmap.goal}`,
+                        `Milestone: ${currentMilestone?.title ?? tick.activeMilestoneId}`,
+                        `Failed task: ${tick.focusedTask}`,
+                        `Error: ${(taskResult.errorOutput ?? '').slice(0, 400)}`,
+                        `Remaining tasks: ${currentMilestone?.tasks?.slice(0, 5).join(', ') ?? 'unknown'}`,
+                        ``,
+                        `Suggest a smaller, more achievable alternative task that makes progress toward the same milestone goal.`,
+                        `The alternative must be simpler and more atomic than the failed task.`,
+                        ``,
+                        `Return JSON: { "alternative_task": string, "rationale": string }`,
+                        `Valid JSON only.`,
+                    ].join('\n');
+
+                    try {
+                        const replanRaw = await callLlm(
+                            replanPrompt,
+                            'You are a pragmatic technical project manager. Break tasks down to the smallest executable unit.',
+                        );
+                        const s = replanRaw.indexOf('{'); const e = replanRaw.lastIndexOf('}');
+                        if (s !== -1 && e !== -1) {
+                            const replanData = JSON.parse(replanRaw.slice(s, e + 1)) as Record<string, unknown>;
+                            const altTask = typeof replanData['alternative_task'] === 'string'
+                                ? (replanData['alternative_task'] as string).trim()
+                                : '';
+                            if (altTask) {
+                                replanResult = altTask;
+                                // Inject the alternative task into the milestone's task list
+                                // (right after the failed task so it runs next tick)
+                                const mIdx = roadmap.milestones.findIndex((m) => m.id === tick.activeMilestoneId);
+                                if (mIdx !== -1) {
+                                    const mile = roadmap.milestones[mIdx]!;
+                                    const failedIdx = mile.tasks.indexOf(tick.focusedTask!);
+                                    const newTasks = [...mile.tasks];
+                                    const insertAt = failedIdx >= 0 ? failedIdx + 1 : newTasks.length;
+                                    newTasks.splice(insertAt, 0, altTask);
+                                    roadmap = {
+                                        ...roadmap,
+                                        milestones: roadmap.milestones.map((m, i) =>
+                                            i === mIdx
+                                                ? { ...m, tasks: newTasks, notes: `${m.notes}\nReplanned: "${tick.focusedTask}" → "${altTask}" (${new Date().toISOString().slice(0, 10)})` }
+                                                : m
+                                        ),
+                                    };
+                                    // Persist updated roadmap with replanned task
+                                    await executeAction('workspace_write_file', {
+                                        file_path: ROADMAP_FILE,
+                                        content:   JSON.stringify(roadmap, null, 2),
+                                    });
+                                }
+                            }
+                        }
+                    } catch { /* replan is best-effort — never block the tick */ }
+                }
             }
 
             return safeJson({
@@ -2347,8 +2412,11 @@ export async function handleFsdAction(
                 milestone_done:     tick.milestoneCompleted,
                 narrative:          tick.narrative,
                 execution_result:   executionResult,
+                replan_result:      replanResult,
                 roadmap_summary:    formatRoadmapSummary(roadmap),
-                summary: tick.narrative,
+                summary: replanResult
+                    ? `${tick.narrative} | Replanned: "${replanResult.slice(0, 80)}"`
+                    : tick.narrative,
             });
         }
 
