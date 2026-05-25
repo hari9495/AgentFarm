@@ -3,7 +3,7 @@ import { randomUUID } from 'crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 
 const getPrisma = async () => {
-    const db = await import('../lib/db.js');
+    const db = await import('../../lib/db.js');
     return db.prisma;
 };
 

@@ -1,11 +1,11 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
-import { ROLE_RANK } from '../lib/require-role.js';
+import { ROLE_RANK } from '../../lib/require-role.js';
 import {
     startOrchestrationRun,
     completeSubTask,
     cancelOrchestrationRun,
-} from '../lib/orchestration-service.js';
+} from '../../lib/orchestration-service.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -25,7 +25,7 @@ export type RegisterOrchestrationRoutesOptions = {
 };
 
 const getPrisma = async () => {
-    const db = await import('../lib/db.js');
+    const db = await import('../../lib/db.js');
     return db.prisma;
 };
 

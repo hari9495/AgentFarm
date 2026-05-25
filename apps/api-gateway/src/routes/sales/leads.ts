@@ -3,7 +3,7 @@ import type { PrismaClient } from '@prisma/client';
 import {
     isSalesforceLeadSyncEnabled,
     syncLeadToSalesforce,
-} from '../lib/salesforce-lead-sync.js';
+} from '../../lib/salesforce-lead-sync.js';
 
 type LeadFormBody = {
     firstName?: string;
@@ -38,7 +38,7 @@ const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 export function registerLeadRoutes(app: FastifyInstance, options: { prisma?: PrismaClient } = {}): void {
     const getPrisma = async (): Promise<PrismaClient> => {
         if (options.prisma) return options.prisma;
-        const { prisma: dbPrisma } = await import('../lib/db.js');
+        const { prisma: dbPrisma } = await import('../../lib/db.js');
         return dbPrisma;
     };
 

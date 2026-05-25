@@ -16,8 +16,8 @@ import { PrismaClient } from '@prisma/client';
 import { createQuestion, answerQuestion, sweepExpiredQuestions } from '@agentfarm/agent-question-service';
 import { PrismaQuestionStore } from '@agentfarm/agent-question-service';
 import type { IQuestionStore } from '@agentfarm/agent-question-service';
-import { createDefaultSecretStore } from '../lib/secret-store.js';
-import { createRealProviderExecutor } from '../lib/provider-clients.js';
+import { createDefaultSecretStore } from '../../lib/secret-store.js';
+import { createRealProviderExecutor } from '../../lib/provider-clients.js';
 
 type QuestionNotificationTarget = {
     channelId?: string;

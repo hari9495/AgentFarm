@@ -9,7 +9,7 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 
 const getPrisma = async () => {
-    const db = await import('../lib/db.js');
+    const db = await import('../../lib/db.js');
     return db.prisma;
 };
 
@@ -30,7 +30,7 @@ let globalProviderState: any = null;
 const getProviderState = async () => {
     if (!globalProviderState) {
         const mod = await import('@agentfarm/agent-runtime/provider-state-persistence.js').catch(
-            () => import('../agent-runtime-stubs.js'),
+            () => import('../../agent-runtime-stubs.js'),
         );
         globalProviderState = mod.globalProviderState;
     }

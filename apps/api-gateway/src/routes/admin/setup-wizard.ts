@@ -18,10 +18,10 @@ import {
     type ApprovalPolicyConfig,
     type WizardCompletionPayload,
 } from '@agentfarm/shared-types';
-import { validateStepPayload } from '../lib/wizard-step-validator.js';
+import { validateStepPayload } from '../../lib/wizard-step-validator.js';
 
 const getPrisma = async () => {
-    const db = await import('../lib/db.js');
+    const db = await import('../../lib/db.js');
     return db.prisma;
 };
 

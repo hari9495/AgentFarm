@@ -1,11 +1,11 @@
 import { randomBytes } from 'node:crypto';
 import { URL } from 'node:url';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { createInMemorySecretStore, type SecretStore } from '../lib/secret-store.js';
-import { writeAuditEvent } from '../lib/audit-writer.js';
+import { createInMemorySecretStore, type SecretStore } from '../../lib/secret-store.js';
+import { writeAuditEvent } from '../../lib/audit-writer.js';
 
 const getPrisma = async () => {
-    const db = await import('../lib/db.js');
+    const db = await import('../../lib/db.js');
     return db.prisma;
 };
 

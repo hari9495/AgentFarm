@@ -9,7 +9,7 @@
 
 import { randomUUID } from 'crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { assessRecovery, buildManifest } from '../lib/run-recovery-worker.js';
+import { assessRecovery, buildManifest } from '../../lib/run-recovery-worker.js';
 
 // ---------------------------------------------------------------------------
 // Local types
@@ -174,7 +174,7 @@ export async function registerReproPackRoutes(
     const store = createStore();
 
     const defaultGetPrisma = async (): Promise<ReproPackPrismaClient> => {
-        const db = await import('../lib/db.js');
+        const db = await import('../../lib/db.js');
         return db.prisma as unknown as ReproPackPrismaClient;
     };
     const getPrisma = options.getPrisma ?? defaultGetPrisma;

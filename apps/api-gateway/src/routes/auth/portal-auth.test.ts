@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import Fastify from 'fastify';
-import { hashPassword } from '../lib/password.js';
+import { hashPassword } from '../../lib/password.js';
 import { registerPortalAuthRoutes, type PortalAuthRepo } from './portal-auth.js';
 
 // ---------------------------------------------------------------------------

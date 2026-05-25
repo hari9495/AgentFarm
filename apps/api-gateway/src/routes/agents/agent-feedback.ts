@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
 
 const getPrisma = async () => {
-    const db = await import('../lib/db.js');
+    const db = await import('../../lib/db.js');
     return db.prisma;
 };
 
@@ -65,7 +65,7 @@ export function registerAgentFeedbackRoutes(app: FastifyInstance, options: Regis
             return reply.status(400).send({ error: 'task_id, skill_id, and rating required' });
         }
         const { globalFeedback } = await import('@agentfarm/agent-runtime/agent-feedback.js').catch(
-            () => import('../agent-runtime-stubs.js'),
+            () => import('../../agent-runtime-stubs.js'),
         );
         const record = globalFeedback.submitFeedback(body);
         return reply.status(201).send(record);
@@ -78,7 +78,7 @@ export function registerAgentFeedbackRoutes(app: FastifyInstance, options: Regis
             const session = getSession(req);
             if (!session) return reply.status(401).send({ error: 'unauthorized' });
             const { globalFeedback } = await import('@agentfarm/agent-runtime/agent-feedback.js').catch(
-                () => import('../agent-runtime-stubs.js'),
+                () => import('../../agent-runtime-stubs.js'),
             );
             return reply.send({ feedback: globalFeedback.getFeedback(req.params.taskId) });
         },
@@ -91,7 +91,7 @@ export function registerAgentFeedbackRoutes(app: FastifyInstance, options: Regis
             const session = getSession(req);
             if (!session) return reply.status(401).send({ error: 'unauthorized' });
             const { globalFeedback } = await import('@agentfarm/agent-runtime/agent-feedback.js').catch(
-                () => import('../agent-runtime-stubs.js'),
+                () => import('../../agent-runtime-stubs.js'),
             );
             return reply.send(globalFeedback.getSkillRating(req.params.skillId));
         },
@@ -102,7 +102,7 @@ export function registerAgentFeedbackRoutes(app: FastifyInstance, options: Regis
         const session = getSession(req);
         if (!session) return reply.status(401).send({ error: 'unauthorized' });
         const { globalFeedback } = await import('@agentfarm/agent-runtime/agent-feedback.js').catch(
-            () => import('../agent-runtime-stubs.js'),
+            () => import('../../agent-runtime-stubs.js'),
         );
         return reply.send({ skills: globalFeedback.getAllSkillRatings() });
     });
@@ -114,7 +114,7 @@ export function registerAgentFeedbackRoutes(app: FastifyInstance, options: Regis
             const session = getSession(req);
             if (!session) return reply.status(401).send({ error: 'unauthorized' });
             const { globalFeedback } = await import('@agentfarm/agent-runtime/agent-feedback.js').catch(
-                () => import('../agent-runtime-stubs.js'),
+                () => import('../../agent-runtime-stubs.js'),
             );
             return reply.send({ feedback: globalFeedback.listAll(Number(req.query.limit ?? 100)) });
         },

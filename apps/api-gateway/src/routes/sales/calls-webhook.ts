@@ -97,7 +97,7 @@ export async function registerCallsWebhookRoutes(
     const resolvePrisma = options.prisma
         ? () => Promise.resolve(options.prisma!)
         : async () => {
-            const { prisma } = await import('../lib/db.js');
+            const { prisma } = await import('../../lib/db.js');
             return prisma;
         };
 

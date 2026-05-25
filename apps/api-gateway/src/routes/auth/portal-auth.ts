@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { hashPassword, verifyPassword } from '../lib/password.js';
+import { hashPassword, verifyPassword } from '../../lib/password.js';
 
 // ── Repo types ────────────────────────────────────────────────────────────────
 
@@ -54,7 +54,7 @@ export type RegisterPortalAuthRoutesOptions = {
 // ── Default Prisma-backed repo ────────────────────────────────────────────────
 
 const getPrismaRepo = async (): Promise<PortalAuthRepo> => {
-    const { prisma } = await import('../lib/db.js');
+    const { prisma } = await import('../../lib/db.js');
 
     return {
         async findTenant(id) {

@@ -11,15 +11,15 @@
 
 import { randomUUID } from 'node:crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { ROLE_RANK } from '../lib/require-role.js';
-import { checkDependenciesMet, type DepCheckDb } from '../lib/task-dep-utils.js';
+import { ROLE_RANK } from '../../lib/require-role.js';
+import { checkDependenciesMet, type DepCheckDb } from '../../lib/task-dep-utils.js';
 import {
     enqueueTask,
     getQueueSnapshot,
     getQueueDepth,
     cancelFromQueue,
     type QueuePriority,
-} from '../lib/task-queue.js';
+} from '../../lib/task-queue.js';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -58,7 +58,7 @@ export type RegisterTaskQueueRoutesOptions = {
 const VALID_PRIORITIES: QueuePriority[] = ['high', 'normal', 'low'];
 
 const getPrisma = async (): Promise<TaskQueuePrisma> => {
-    const db = await import('../lib/db.js');
+    const db = await import('../../lib/db.js');
     return db.prisma as unknown as TaskQueuePrisma;
 };
 

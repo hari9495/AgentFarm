@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { RoleCatalogRecord, RoleKey, TenantRoleSubscriptionRecord } from '@agentfarm/shared-types';
 
 const getPrisma = async () => {
-    const db = await import('../lib/db.js');
+    const db = await import('../../lib/db.js');
     return db.prisma;
 };
 

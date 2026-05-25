@@ -5,7 +5,7 @@ import {
     type ConnectorTool,
     type NormalizedActionType,
 } from '@agentfarm/connector-contracts';
-import type { SecretStore } from '../lib/secret-store.js';
+import type { SecretStore } from '../../lib/secret-store.js';
 
 type SessionContext = {
     userId: string;
@@ -290,7 +290,7 @@ const ACTION_ALIAS: Record<ConnectorActionType, NormalizedActionType> = {
 };
 
 const getPrisma = async () => {
-    const db = await import('../lib/db.js');
+    const db = await import('../../lib/db.js');
     return db.prisma;
 };
 
@@ -655,7 +655,7 @@ export const registerConnectorActionRoutes = async (
     let providerExecutor = options.providerExecutor;
     let connectorHealthProbe = options.connectorHealthProbe;
     if (!providerExecutor && options.secretStore) {
-        const { createRealProviderExecutor, createRealConnectorHealthProbe } = await import('../lib/provider-clients.js');
+        const { createRealProviderExecutor, createRealConnectorHealthProbe } = await import('../../lib/provider-clients.js');
         providerExecutor = createRealProviderExecutor(options.secretStore);
         if (!connectorHealthProbe) {
             connectorHealthProbe = createRealConnectorHealthProbe(options.secretStore);

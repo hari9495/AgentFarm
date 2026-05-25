@@ -13,7 +13,7 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
 import type { TaskProgressEvent } from '@agentfarm/shared-types';
-import { dispatchOutboundWebhooks } from '../lib/webhook-dispatcher.js';
+import { dispatchOutboundWebhooks } from '../../lib/webhook-dispatcher.js';
 
 // ── Event model ───────────────────────────────────────────────────────────────
 
@@ -265,7 +265,7 @@ export async function registerSseTaskRoutes(
                     payload: evt as unknown as Record<string, unknown>,
                 });
                 if (sseEvent.type === 'task_completed' || sseEvent.type === 'task_failed') {
-                    const db = deps.prisma ?? (await import('../lib/db.js')).prisma;
+                    const db = deps.prisma ?? (await import('../../lib/db.js')).prisma;
                     dispatchOutboundWebhooks({
                         tenantId: sseEvent.tenantId,
                         workspaceId: sseEvent.workspaceId,
@@ -286,7 +286,7 @@ export async function registerSseTaskRoutes(
             const queue = resolveQueue(tenantId, workspaceId);
             const event = queue.push({ type, tenantId, workspaceId, taskId, payload });
             if (event.type === 'task_completed' || event.type === 'task_failed') {
-                const db = deps.prisma ?? (await import('../lib/db.js')).prisma;
+                const db = deps.prisma ?? (await import('../../lib/db.js')).prisma;
                 dispatchOutboundWebhooks({
                     tenantId: event.tenantId,
                     workspaceId: event.workspaceId,

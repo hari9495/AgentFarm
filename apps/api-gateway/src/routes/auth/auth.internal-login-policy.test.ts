@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import Fastify from 'fastify';
-import { hashPassword } from '../lib/password.js';
-import { verifySessionToken } from '../lib/session-auth.js';
+import { hashPassword } from '../../lib/password.js';
+import { verifySessionToken } from '../../lib/session-auth.js';
 import { registerAuthRoutes, type AuthRepo } from './auth.js';
 
 type StoredUser = {

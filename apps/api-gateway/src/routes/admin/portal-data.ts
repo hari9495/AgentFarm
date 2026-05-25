@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
-import { requirePortalSession, type PortalSessionData } from '../lib/portal-session.js';
+import { requirePortalSession, type PortalSessionData } from '../../lib/portal-session.js';
 
 // ── Repo record types ──────────────────────────────────────────────────────
 
@@ -304,7 +304,7 @@ export const registerPortalDataRoutes = async (
     const resolvePrisma = options.prisma
         ? () => Promise.resolve(options.prisma!)
         : async () => {
-            const { prisma } = await import('../lib/db.js');
+            const { prisma } = await import('../../lib/db.js');
             return prisma;
         };
 

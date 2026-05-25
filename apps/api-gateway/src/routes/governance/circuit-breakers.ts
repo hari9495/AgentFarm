@@ -6,8 +6,8 @@
  */
 
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { ROLE_RANK } from '../lib/require-role.js';
-import { getAllCircuitStates, resetCircuit, type CircuitEntry } from '../lib/circuit-breaker.js';
+import { ROLE_RANK } from '../../lib/require-role.js';
+import { getAllCircuitStates, resetCircuit, type CircuitEntry } from '../../lib/circuit-breaker.js';
 
 type SessionContext = {
     userId: string;

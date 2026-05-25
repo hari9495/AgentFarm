@@ -38,7 +38,7 @@ export type RegisterNotificationRoutesOptions = {
 };
 
 const defaultGetPrisma = async (): Promise<NotificationPrismaClient> => {
-    const db = await import('../lib/db.js');
+    const db = await import('../../lib/db.js');
     return db.prisma as unknown as NotificationPrismaClient;
 };
 

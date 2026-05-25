@@ -10,7 +10,7 @@ import {
     type SessionContext,
     type ActionLogRow,
 } from './connector-actions.js';
-import { createInMemorySecretStore } from '../lib/secret-store.js';
+import { createInMemorySecretStore } from '../../lib/secret-store.js';
 
 type Metadata = {
     connectorId: string;

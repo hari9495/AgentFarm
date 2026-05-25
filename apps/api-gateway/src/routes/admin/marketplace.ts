@@ -1,12 +1,12 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
-import { ROLE_RANK } from '../lib/require-role.js';
+import { ROLE_RANK } from '../../lib/require-role.js';
 import {
     listListings,
     installSkill,
     uninstallSkill,
     publishListing,
-} from '../lib/marketplace-service.js';
+} from '../../lib/marketplace-service.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -26,7 +26,7 @@ export type RegisterMarketplaceRoutesOptions = {
 };
 
 const getPrisma = async () => {
-    const db = await import('../lib/db.js');
+    const db = await import('../../lib/db.js');
     return db.prisma;
 };
 

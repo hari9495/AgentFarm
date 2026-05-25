@@ -60,7 +60,7 @@ const VALID_TRANSITIONS: Partial<Record<DealStage, DealStage[]>> = {
 };
 
 const getPrisma = async (): Promise<PrismaClient> => {
-    const { prisma } = await import('../lib/db.js');
+    const { prisma } = await import('../../lib/db.js');
     return prisma;
 };
 

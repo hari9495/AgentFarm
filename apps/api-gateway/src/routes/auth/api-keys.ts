@@ -1,13 +1,13 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
-import { generateApiKey, hashApiKey, getKeyPrefix } from '../lib/api-key-auth.js';
-import { ROLE_RANK } from '../lib/require-role.js';
+import { generateApiKey, hashApiKey, getKeyPrefix } from '../../lib/api-key-auth.js';
+import { ROLE_RANK } from '../../lib/require-role.js';
 
 const ALLOWED_ROLES = ['viewer', 'operator', 'admin'] as const;
 type AllowedRole = (typeof ALLOWED_ROLES)[number];
 
 const getPrisma = async () => {
-    const db = await import('../lib/db.js');
+    const db = await import('../../lib/db.js');
     return db.prisma;
 };
 

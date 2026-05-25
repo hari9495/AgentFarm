@@ -84,7 +84,7 @@ export const registerPluginLoadingRoutes = async (
     const trustedPublishers = options.trustedPublishers ?? [];
     const featureEnabled = options.featureEnabled ?? false;
     const getPrisma: () => Promise<PluginPrismaClient> = options.getPrisma ?? (async () => {
-        const db = await import('../lib/db.js');
+        const db = await import('../../lib/db.js');
         return db.prisma as unknown as PluginPrismaClient;
     });
 

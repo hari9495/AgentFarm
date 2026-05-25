@@ -3,12 +3,12 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
 import type { TaskLeaseRecord } from '@agentfarm/shared-types';
 import { parseGoal } from '@agentfarm/agent-runtime/natural-language-parser.js';
-import { rateLimitAgent, getAgentRateLimitConfig } from '../lib/agent-rate-limit.js';
-import { isAllowed as cbIsAllowed, recordSuccess as cbRecordSuccess, recordFailure as cbRecordFailure } from '../lib/circuit-breaker.js';
-import { checkDependenciesMet, type DepCheckDb } from '../lib/task-dep-utils.js';
+import { rateLimitAgent, getAgentRateLimitConfig } from '../../lib/agent-rate-limit.js';
+import { isAllowed as cbIsAllowed, recordSuccess as cbRecordSuccess, recordFailure as cbRecordFailure } from '../../lib/circuit-breaker.js';
+import { checkDependenciesMet, type DepCheckDb } from '../../lib/task-dep-utils.js';
 
 const getPrisma = async () => {
-    const db = await import('../lib/db.js');
+    const db = await import('../../lib/db.js');
     return db.prisma;
 };
 

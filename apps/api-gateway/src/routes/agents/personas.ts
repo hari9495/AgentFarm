@@ -1,10 +1,10 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
-import { ROLE_RANK } from '../lib/require-role.js';
+import { ROLE_RANK } from '../../lib/require-role.js';
 import type { AgentPersonaRecord, CreatePersonaInput, UpdatePersonaInput } from '@agentfarm/shared-types';
 
 const getPrisma = async () => {
-    const db = await import('../lib/db.js');
+    const db = await import('../../lib/db.js');
     return db.prisma;
 };
 

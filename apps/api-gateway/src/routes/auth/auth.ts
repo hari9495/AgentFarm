@@ -1,8 +1,8 @@
 import type { Prisma } from '@prisma/client';
 import type { FastifyInstance } from 'fastify';
-import { hashPassword, verifyPassword } from '../lib/password.js';
-import { buildSessionToken } from '../lib/session-auth.js';
-import { isInternalAccessAllowed } from '../lib/internal-login-policy.js';
+import { hashPassword, verifyPassword } from '../../lib/password.js';
+import { buildSessionToken } from '../../lib/session-auth.js';
+import { isInternalAccessAllowed } from '../../lib/internal-login-policy.js';
 
 type SignupBody = {
     name: string;
@@ -43,7 +43,7 @@ export type AuthRepo = {
 };
 
 const getPrismaRepo = async (): Promise<AuthRepo> => {
-    const { prisma } = await import('../lib/db.js');
+    const { prisma } = await import('../../lib/db.js');
 
     return {
         async findUserByEmail(email) {

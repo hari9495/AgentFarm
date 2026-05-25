@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import type { SecretStore } from '../lib/secret-store.js';
+import type { SecretStore } from '../../lib/secret-store.js';
 
 type SessionContext = {
     userId: string;

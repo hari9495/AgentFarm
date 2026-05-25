@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import Fastify from 'fastify';
 import { registerTeamRoutes } from './team.js';
-import { buildSessionToken, verifySessionToken } from '../lib/session-auth.js';
-import { requireRole } from '../lib/require-role.js';
+import { buildSessionToken, verifySessionToken } from '../../lib/session-auth.js';
+import { requireRole } from '../../lib/require-role.js';
 
 // ── Session helpers ───────────────────────────────────────────────────────────
 

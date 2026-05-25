@@ -3,7 +3,7 @@ import {
     buildSanitizedInternalLoginPolicyReport,
     getInternalLoginPolicyConfig,
     type InternalLoginPolicyConfig,
-} from '../lib/internal-login-policy.js';
+} from '../../lib/internal-login-policy.js';
 
 type SessionContext = {
     userId: string;

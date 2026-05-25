@@ -14,10 +14,10 @@
 
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
-import { writeAuditEvent } from '../lib/audit-writer.js';
+import { writeAuditEvent } from '../../lib/audit-writer.js';
 
 const getPrisma = async () => {
-    const db = await import('../lib/db.js');
+    const db = await import('../../lib/db.js');
     return db.prisma;
 };
 

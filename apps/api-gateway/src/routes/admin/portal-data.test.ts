@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import Fastify from 'fastify';
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import type { PortalSessionData } from '../lib/portal-session.js';
+import type { PortalSessionData } from '../../lib/portal-session.js';
 import { registerPortalDataRoutes, type PortalDataRepo } from './portal-data.js';
 
 // ---------------------------------------------------------------------------

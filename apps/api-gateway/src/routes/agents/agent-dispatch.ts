@@ -1,10 +1,10 @@
 import { randomUUID } from 'crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { AgentDispatchRequest, AgentDispatchResult } from '@agentfarm/shared-types';
-import { validate } from '../lib/validate.js';
+import { validate } from '../../lib/validate.js';
 
 const getPrisma = async () => {
-    const db = await import('../lib/db.js');
+    const db = await import('../../lib/db.js');
     return db.prisma;
 };
 

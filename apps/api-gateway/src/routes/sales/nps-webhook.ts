@@ -32,7 +32,7 @@ type PrismaWithNpsLookup = {
 };
 
 const getPrisma = async (): Promise<PrismaClient> => {
-    const { prisma } = await import('../lib/db.js');
+    const { prisma } = await import('../../lib/db.js');
     return prisma;
 };
 
@@ -122,7 +122,7 @@ export async function registerNpsWebhookRoutes(
             // Redirect to a thank-you page if one is configured, else JSON
             const thankYouUrl = process.env['NPS_THANKYOU_URL'];
             if (thankYouUrl) {
-                return reply.redirect(302, thankYouUrl);
+                return reply.redirect(thankYouUrl, 302); // Fastify v5: (url, code) not (code, url)
             }
             return reply.status(200).send({ ok: true, message: 'Thank you for your feedback!' });
         },

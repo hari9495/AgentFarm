@@ -47,7 +47,7 @@ type PrismaWithKpi = {
 const STAGES = ['discovery', 'proposal', 'negotiation', 'closed_won', 'closed_lost'] as const;
 
 const getPrisma = async (): Promise<PrismaClient> => {
-    const { prisma } = await import('../lib/db.js');
+    const { prisma } = await import('../../lib/db.js');
     return prisma;
 };
 

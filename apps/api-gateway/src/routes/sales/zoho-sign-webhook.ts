@@ -1,9 +1,9 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
-import { verifyTimingSafeEqual } from '../lib/webhook-verify.js';
+import { verifyTimingSafeEqual } from '../../lib/webhook-verify.js';
 
 const getPrisma = async () => {
-    const db = await import('../lib/db.js');
+    const db = await import('../../lib/db.js');
     return db.prisma;
 };
 

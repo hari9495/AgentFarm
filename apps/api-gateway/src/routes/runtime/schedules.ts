@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
-import { ROLE_RANK } from '../lib/require-role.js';
+import { ROLE_RANK } from '../../lib/require-role.js';
 
 // ---------------------------------------------------------------------------
 // Cron validation — exactly 5 whitespace-separated fields, each matching the
@@ -33,7 +33,7 @@ export type RegisterScheduleRoutesOptions = {
 };
 
 const getPrisma = async () => {
-    const db = await import('../lib/db.js');
+    const db = await import('../../lib/db.js');
     return db.prisma;
 };
 

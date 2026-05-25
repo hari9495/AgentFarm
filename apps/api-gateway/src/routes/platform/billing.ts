@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
-import { ROLE_RANK } from '../lib/require-role.js';
+import { ROLE_RANK } from '../../lib/require-role.js';
 import {
     getProviderForCountry,
     createStripeOrder,
@@ -12,16 +12,16 @@ import {
     markOrderPaid,
     createInvoiceRecord,
     reactivateSubscription,
-} from '../services/payment-service.js';
-import { generateContractPdf } from '../services/contract-generator.js';
-import { uploadContractDocument, submitDocumentForSigning } from '../services/zoho-sign-client.js';
-import { writeAuditEvent } from '../lib/audit-writer.js';
-import { validate } from '../lib/validate.js';
-import { enrollAgentAfterPayment } from '../lib/hire-handler.js';
-import { computeMeteringPeriodSummary } from '../lib/usage-meter.js';
+} from '../../services/payment-service.js';
+import { generateContractPdf } from '../../services/contract-generator.js';
+import { uploadContractDocument, submitDocumentForSigning } from '../../services/zoho-sign-client.js';
+import { writeAuditEvent } from '../../lib/audit-writer.js';
+import { validate } from '../../lib/validate.js';
+import { enrollAgentAfterPayment } from '../../lib/hire-handler.js';
+import { computeMeteringPeriodSummary } from '../../lib/usage-meter.js';
 
 const getPrisma = async () => {
-    const db = await import('../lib/db.js');
+    const db = await import('../../lib/db.js');
     return db.prisma;
 };
 

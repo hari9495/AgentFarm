@@ -16,7 +16,7 @@ let globalLoopOrchestrator: any = null;
 const getLoopOrchestrator = async () => {
     if (!globalLoopOrchestrator) {
         const mod = await import('@agentfarm/agent-runtime/autonomous-loop-orchestrator.js').catch(
-            () => import('../agent-runtime-stubs.js'),
+            () => import('../../agent-runtime-stubs.js'),
         );
         globalLoopOrchestrator = mod.globalLoopOrchestrator;
     }

@@ -40,7 +40,7 @@ type CreateBody = { botId: string; goal: string; prospectId?: string; dealId?: s
 type ListQuery = { page?: string; limit?: string; botId?: string };
 
 const getPrisma = async (): Promise<PrismaClient> => {
-    const { prisma } = await import('../lib/db.js');
+    const { prisma } = await import('../../lib/db.js');
     return prisma;
 };
 

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import Fastify from 'fastify';
-import { createInMemorySecretStore } from '../lib/secret-store.js';
+import { createInMemorySecretStore } from '../../lib/secret-store.js';
 import { registerRuntimeLlmConfigRoutes } from './runtime-llm-config.js';
 
 const internalSession = {

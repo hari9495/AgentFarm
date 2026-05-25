@@ -26,7 +26,7 @@ export function registerSkillSchedulerRoutes(app: FastifyInstance, options: Opti
     // List jobs
     app.get('/scheduler/jobs', async (_req, reply) => {
         const { globalScheduler } = await import('@agentfarm/agent-runtime/skill-scheduler.js').catch(
-            () => import('../agent-runtime-stubs.js'),
+            () => import('../../agent-runtime-stubs.js'),
         );
         return reply.send({ jobs: globalScheduler.listJobs() });
     });
@@ -42,7 +42,7 @@ export function registerSkillSchedulerRoutes(app: FastifyInstance, options: Opti
                 return reply.status(400).send({ error: 'name, target, and frequency required' });
             }
             const { globalScheduler } = await import('@agentfarm/agent-runtime/skill-scheduler.js').catch(
-                () => import('../agent-runtime-stubs.js'),
+                () => import('../../agent-runtime-stubs.js'),
             );
             const job = await globalScheduler.createJob({
                 name: body.name,
@@ -61,7 +61,7 @@ export function registerSkillSchedulerRoutes(app: FastifyInstance, options: Opti
             const session = options.getSession(req);
             if (!session) return reply.code(401).send({ error: 'unauthorized' });
             const { globalScheduler } = await import('@agentfarm/agent-runtime/skill-scheduler.js').catch(
-                () => import('../agent-runtime-stubs.js'),
+                () => import('../../agent-runtime-stubs.js'),
             );
             const ok = globalScheduler.deleteJob(req.params.id);
             if (!ok) return reply.status(404).send({ error: 'job not found' });
@@ -76,7 +76,7 @@ export function registerSkillSchedulerRoutes(app: FastifyInstance, options: Opti
             const session = options.getSession(req);
             if (!session) return reply.code(401).send({ error: 'unauthorized' });
             const { globalScheduler } = await import('@agentfarm/agent-runtime/skill-scheduler.js').catch(
-                () => import('../agent-runtime-stubs.js'),
+                () => import('../../agent-runtime-stubs.js'),
             );
             const ok = globalScheduler.pauseJob(req.params.id);
             if (!ok) return reply.status(404).send({ error: 'job not found' });
@@ -91,7 +91,7 @@ export function registerSkillSchedulerRoutes(app: FastifyInstance, options: Opti
             const session = options.getSession(req);
             if (!session) return reply.code(401).send({ error: 'unauthorized' });
             const { globalScheduler } = await import('@agentfarm/agent-runtime/skill-scheduler.js').catch(
-                () => import('../agent-runtime-stubs.js'),
+                () => import('../../agent-runtime-stubs.js'),
             );
             const ok = globalScheduler.resumeJob(req.params.id);
             if (!ok) return reply.status(404).send({ error: 'job not found' });
@@ -105,7 +105,7 @@ export function registerSkillSchedulerRoutes(app: FastifyInstance, options: Opti
         async (req: FastifyRequest<{ Querystring: { limit?: string } }>, reply) => {
             const limit = Number(req.query.limit ?? 50);
             const { globalScheduler } = await import('@agentfarm/agent-runtime/skill-scheduler.js').catch(
-                () => import('../agent-runtime-stubs.js'),
+                () => import('../../agent-runtime-stubs.js'),
             );
             return reply.send({ history: globalScheduler.getHistory(limit) });
         },

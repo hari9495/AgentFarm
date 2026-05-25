@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import Fastify from 'fastify';
 import { registerTaskQueueRoutes } from './task-queue.js';
-import { clearQueue } from '../lib/task-queue.js';
+import { clearQueue } from '../../lib/task-queue.js';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

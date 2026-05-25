@@ -1,14 +1,14 @@
 import { randomBytes } from 'node:crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
-import { ROLE_RANK } from '../lib/require-role.js';
-import { replayDelivery, dispatchOutboundWebhooks } from '../lib/webhook-dispatcher.js';
+import { ROLE_RANK } from '../../lib/require-role.js';
+import { replayDelivery, dispatchOutboundWebhooks } from '../../lib/webhook-dispatcher.js';
 import {
     isValidEventType,
     getAllEventTypes,
     getEventDefinition,
     CATALOG,
-} from '../lib/event-catalog.js';
+} from '../../lib/event-catalog.js';
 
 // SSRF guard: reject private IPs, loopback, and cloud metadata service addresses
 const PRIVATE_HOST_RE =
@@ -37,7 +37,7 @@ export type RegisterOutboundWebhookRoutesOptions = {
 };
 
 const getPrisma = async () => {
-    const db = await import('../lib/db.js');
+    const db = await import('../../lib/db.js');
     return db.prisma;
 };
 

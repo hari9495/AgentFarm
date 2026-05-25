@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
-import { verifyHmacSha256 } from '../lib/webhook-verify.js';
+import { verifyHmacSha256 } from '../../lib/webhook-verify.js';
 import {
     closeDealWon,
     closeDealLost,
@@ -27,7 +27,7 @@ export type RegisterContractWebhookRoutesOptions = {
 };
 
 const getPrisma = async (): Promise<PrismaClient> => {
-    const { prisma } = await import('../lib/db.js');
+    const { prisma } = await import('../../lib/db.js');
     return prisma;
 };
 

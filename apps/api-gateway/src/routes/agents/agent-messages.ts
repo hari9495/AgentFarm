@@ -85,7 +85,7 @@ export type RegisterAgentMessageRoutesOptions = {
 };
 
 const defaultGetPrisma = async (): Promise<AgentMessagePrismaClient> => {
-    const db = await import('../lib/db.js');
+    const db = await import('../../lib/db.js');
     return db.prisma as unknown as AgentMessagePrismaClient;
 };
 

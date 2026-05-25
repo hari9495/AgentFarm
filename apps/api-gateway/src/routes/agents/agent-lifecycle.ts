@@ -37,7 +37,7 @@ export type RegisterAgentLifecycleRoutesOptions = {
 };
 
 const getPrismaDefault = async () => {
-    const db = await import('../lib/db.js');
+    const db = await import('../../lib/db.js');
     return db.prisma;
 };
 

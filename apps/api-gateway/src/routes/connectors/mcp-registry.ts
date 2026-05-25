@@ -3,7 +3,7 @@ import {
     MANAGED_MCP_CATALOG,
     findConnectorById,
     buildConnectorHeaders,
-} from '../lib/managed-mcp-catalog.js';
+} from '../../lib/managed-mcp-catalog.js';
 
 type SessionContext = {
     userId: string;
@@ -38,7 +38,7 @@ type McpServerRepo = {
 };
 
 const getPrisma = async () => {
-    const db = await import('../lib/db.js');
+    const db = await import('../../lib/db.js');
     return db.prisma;
 };
 

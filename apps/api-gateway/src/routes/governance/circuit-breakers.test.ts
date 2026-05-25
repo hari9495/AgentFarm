@@ -12,7 +12,7 @@ import {
     recordFailure,
     resetCircuit,
     isAllowed,
-} from '../lib/circuit-breaker.js';
+} from '../../lib/circuit-breaker.js';
 
 // ── Session helpers ───────────────────────────────────────────────────────────
 

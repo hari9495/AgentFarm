@@ -1,8 +1,8 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
-import { ROLE_RANK } from '../lib/require-role.js';
-import { snapshotBotConfig, applyBotConfigVersion } from '../lib/bot-versioning.js';
-import { writeAuditEvent } from '../lib/audit-writer.js';
+import { ROLE_RANK } from '../../lib/require-role.js';
+import { snapshotBotConfig, applyBotConfigVersion } from '../../lib/bot-versioning.js';
+import { writeAuditEvent } from '../../lib/audit-writer.js';
 
 type SessionContext = {
     userId: string;
@@ -18,7 +18,7 @@ export type RegisterBotVersionRoutesOptions = {
 };
 
 const getPrisma = async () => {
-    const db = await import('../lib/db.js');
+    const db = await import('../../lib/db.js');
     return db.prisma;
 };
 

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import Fastify from 'fastify';
-import { verifySessionToken } from '../lib/session-auth.js';
+import { verifySessionToken } from '../../lib/session-auth.js';
 import { registerAuthRoutes, type AuthRepo } from './auth.js';
 
 // ---------------------------------------------------------------------------

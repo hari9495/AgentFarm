@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import Fastify from 'fastify';
 import { registerOutboundWebhookRoutes } from './outbound-webhooks.js';
-import { dispatchOutboundWebhooks } from '../lib/webhook-dispatcher.js';
-import { resetCircuit } from '../lib/circuit-breaker.js';
+import { dispatchOutboundWebhooks } from '../../lib/webhook-dispatcher.js';
+import { resetCircuit } from '../../lib/circuit-breaker.js';
 
 // ── Session helpers ───────────────────────────────────────────────────────────
 

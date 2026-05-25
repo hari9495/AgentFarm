@@ -1,13 +1,13 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { BotStatus, type PrismaClient } from '@prisma/client';
-import { writeAuditEvent } from '../lib/audit-writer.js';
-import { ROLE_RANK } from '../lib/require-role.js';
-import { snapshotBotConfig } from '../lib/bot-versioning.js';
-import { invalidateAgentRateLimitCache } from '../lib/agent-rate-limit.js';
-import { dispatchOutboundWebhooks } from '../lib/webhook-dispatcher.js';
+import { writeAuditEvent } from '../../lib/audit-writer.js';
+import { ROLE_RANK } from '../../lib/require-role.js';
+import { snapshotBotConfig } from '../../lib/bot-versioning.js';
+import { invalidateAgentRateLimitCache } from '../../lib/agent-rate-limit.js';
+import { dispatchOutboundWebhooks } from '../../lib/webhook-dispatcher.js';
 
 const getPrisma = async () => {
-    const db = await import('../lib/db.js');
+    const db = await import('../../lib/db.js');
     return db.prisma;
 };
 

@@ -7,7 +7,7 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 
 const getPrisma = async () => {
-    const db = await import('../lib/db.js');
+    const db = await import('../../lib/db.js');
     return db.prisma;
 };
 
@@ -45,7 +45,7 @@ export function registerKnowledgeGraphRoutes(app: FastifyInstance, options: Regi
         if (!session) return reply.status(401).send({ error: 'unauthorized' });
         const { globalKnowledgeGraph } = await import(
             '@agentfarm/agent-runtime/repo-knowledge-graph.js'
-        ).catch(() => import('../agent-runtime-stubs.js'));
+        ).catch(() => import('../../agent-runtime-stubs.js'));
         const runtimeSymbols = globalKnowledgeGraph.listSymbols?.() ?? [];
 
         // DB-backed graph — fill in records the runtime hasn't indexed in-memory yet
@@ -107,7 +107,7 @@ export function registerKnowledgeGraphRoutes(app: FastifyInstance, options: Regi
             const { q, kind, limit } = req.query;
             const { globalKnowledgeGraph } = await import(
                 '@agentfarm/agent-runtime/repo-knowledge-graph.js'
-            ).catch(() => import('../agent-runtime-stubs.js'));
+            ).catch(() => import('../../agent-runtime-stubs.js'));
             let symbols = globalKnowledgeGraph.listSymbols?.() ?? [];
             if (q) {
                 const lq = q.toLowerCase();
@@ -130,7 +130,7 @@ export function registerKnowledgeGraphRoutes(app: FastifyInstance, options: Regi
             if (!symbol) return reply.status(400).send({ error: 'symbol required' });
             const { globalKnowledgeGraph } = await import(
                 '@agentfarm/agent-runtime/repo-knowledge-graph.js'
-            ).catch(() => import('../agent-runtime-stubs.js'));
+            ).catch(() => import('../../agent-runtime-stubs.js'));
             const callers = globalKnowledgeGraph.getCallers?.(symbol) ?? [];
             return reply.send({ symbol, callers });
         },
@@ -143,7 +143,7 @@ export function registerKnowledgeGraphRoutes(app: FastifyInstance, options: Regi
         const rootDir = req.body?.root_dir ?? '.';
         const { globalKnowledgeGraph } = await import(
             '@agentfarm/agent-runtime/repo-knowledge-graph.js'
-        ).catch(() => import('../agent-runtime-stubs.js'));
+        ).catch(() => import('../../agent-runtime-stubs.js'));
         await globalKnowledgeGraph.indexDirectory?.(rootDir);
         return reply.send({ ok: true, indexed_at: new Date().toISOString() });
     });
@@ -157,7 +157,7 @@ export function registerKnowledgeGraphRoutes(app: FastifyInstance, options: Regi
             const context = req.query.context;
             const { globalKnowledgeGraph } = await import(
                 '@agentfarm/agent-runtime/repo-knowledge-graph.js'
-            ).catch(() => import('../agent-runtime-stubs.js'));
+            ).catch(() => import('../../agent-runtime-stubs.js'));
             const suggestions = globalKnowledgeGraph.suggestSkills?.(context) ?? [];
             return reply.send({ suggestions });
         },

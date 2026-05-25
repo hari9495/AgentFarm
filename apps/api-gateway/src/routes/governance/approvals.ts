@@ -2,10 +2,10 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { parseApprovalPacket, type EvidenceBundle } from '../lib/approval-packet.js';
+import { parseApprovalPacket, type EvidenceBundle } from '../../lib/approval-packet.js';
 
 const getPrisma = async () => {
-    const db = await import('../lib/db.js');
+    const db = await import('../../lib/db.js');
     return db.prisma;
 };
 

@@ -15,7 +15,7 @@ let globalCompositionEngine: any = null;
 const getCompositionEngine = async () => {
     if (!globalCompositionEngine) {
         const mod = await import('@agentfarm/agent-runtime/skill-composition-engine.js').catch(
-            () => import('../agent-runtime-stubs.js'),
+            () => import('../../agent-runtime-stubs.js'),
         );
         globalCompositionEngine = mod.globalCompositionEngine;
     }

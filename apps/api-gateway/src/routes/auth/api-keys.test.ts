@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import Fastify from 'fastify';
 import { registerApiKeyRoutes } from './api-keys.js';
-import { generateApiKey, getKeyPrefix } from '../lib/api-key-auth.js';
+import { generateApiKey, getKeyPrefix } from '../../lib/api-key-auth.js';
 
 // ── Session helpers ───────────────────────────────────────────────────────────
 

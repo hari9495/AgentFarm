@@ -5,7 +5,7 @@ import type {
     BudgetDecisionType,
     BudgetDenialReason,
 } from '@agentfarm/shared-types';
-import { dispatchOutboundWebhooks } from '../lib/webhook-dispatcher.js';
+import { dispatchOutboundWebhooks } from '../../lib/webhook-dispatcher.js';
 
 const BUDGET_LEDGER_SOURCE = 'api-gateway-budget-ledger';
 const BUDGET_LEDGER_PREFIX = 'BUDGET_LEDGER:';
@@ -106,7 +106,7 @@ type BudgetLimitsRequest = {
 };
 
 const getPrisma = async () => {
-    const db = await import('../lib/db.js');
+    const db = await import('../../lib/db.js');
     return db.prisma;
 };
 
