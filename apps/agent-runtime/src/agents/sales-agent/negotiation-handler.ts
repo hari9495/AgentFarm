@@ -20,7 +20,7 @@ import type { PrismaClient } from '@prisma/client';
 import type { SalesAgentConfigRecord } from '@agentfarm/shared-types';
 import { getEmailProvider } from './email-provider-factory.js';
 import type { EmailProviderConfig } from './email-provider.js';
-import { appendGdprFooter, resolveOptOutUrl } from '../gdpr-email-footer.js';
+import { appendGdprFooter, resolveOptOutUrl } from '../../gdpr-email-footer.js';
 
 // ---------------------------------------------------------------------------
 // DB structural types
@@ -178,7 +178,7 @@ export async function handleNegotiationOffer(
     let currentOffer: number;
     let discountPercent: number;
     let isEscalation = false;
-    let newStatus: 'open' | 'accepted' | 'rejected' | 'escalated' = 'open';
+    let newStatus: 'open' | 'accepted' | 'escalated' = 'open';
 
     if (!negotiation) {
         // Opening turn — offer list price
@@ -283,8 +283,6 @@ export async function handleNegotiationOffer(
         // Log activity
         const activityType = newStatus === 'accepted'
             ? 'negotiation_accepted'
-            : newStatus === 'rejected'
-            ? 'negotiation_rejected'
             : isEscalation
             ? 'negotiation_counter'   // escalated = special counter
             : 'negotiation_offer';

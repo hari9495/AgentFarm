@@ -268,6 +268,28 @@ export type LocalWorkspaceActionType =
     | 'workspace_booking_invite'
     | 'workspace_contract_send'
     | 'workspace_deal_close'
+    // Sprint 20 (Lead generation expansion)
+    | 'workspace_referral_log'
+    | 'workspace_referral_request'
+    | 'workspace_linkedin_outreach'
+    | 'workspace_cold_call'
+    | 'workspace_market_research'
+    // Sprint 20 (Product presentation expansion)
+    | 'workspace_demo_script_generate'
+    | 'workspace_demo_present'
+    | 'workspace_slide_deck_generate'
+    | 'workspace_demo_followup'
+    // Sprint 21 (Negotiation & Closing)
+    | 'workspace_negotiation_offer'
+    | 'workspace_proposal_generate'
+    // Sprint 21 (Relationship Management)
+    | 'workspace_upsell'
+    | 'workspace_nps_send'
+    | 'workspace_qbr_prepare'
+    // Sprint 22 (Closing Gaps)
+    | 'workspace_contract_generate'
+    | 'workspace_objection_rebuttal'
+    | 'workspace_crm_sync'
     // Tier 25 (Corporate Assistant domain actions)
     | 'workspace_ca_email_compose'
     | 'workspace_ca_email_send'
@@ -882,6 +904,39 @@ export const LOCAL_WORKSPACE_ACTION_TYPES = new Set<LocalWorkspaceActionType>([
     'workspace_migration_generate',
     // Tier 22 (Dependency upgrades)
     'workspace_dependency_upgrade_apply',
+    // Tier 24 (Sales Rep domain actions)
+    'workspace_prospect_research',
+    'workspace_icp_score',
+    'workspace_email_personalize',
+    'workspace_outreach_send',
+    'workspace_sequence_create',
+    'workspace_reply_classify',
+    'workspace_pre_meeting_research',
+    'workspace_booking_invite',
+    'workspace_contract_send',
+    'workspace_deal_close',
+    // Sprint 20 (Lead generation expansion)
+    'workspace_referral_log',
+    'workspace_referral_request',
+    'workspace_linkedin_outreach',
+    'workspace_cold_call',
+    'workspace_market_research',
+    // Sprint 20 (Product presentation expansion)
+    'workspace_demo_script_generate',
+    'workspace_demo_present',
+    'workspace_slide_deck_generate',
+    'workspace_demo_followup',
+    // Sprint 21 (Negotiation & Closing)
+    'workspace_negotiation_offer',
+    'workspace_proposal_generate',
+    // Sprint 21 (Relationship Management)
+    'workspace_upsell',
+    'workspace_nps_send',
+    'workspace_qbr_prepare',
+    // Sprint 22 (Closing Gaps)
+    'workspace_contract_generate',
+    'workspace_objection_rebuttal',
+    'workspace_crm_sync',
     // Tier 25 (Corporate Assistant domain actions)
     'workspace_ca_email_compose',
     'workspace_ca_email_send',
@@ -13165,7 +13220,29 @@ export async function executeLocalWorkspaceAction(input: {
         case 'workspace_pre_meeting_research':
         case 'workspace_booking_invite':
         case 'workspace_contract_send':
-        case 'workspace_deal_close': {
+        case 'workspace_deal_close':
+        // Sprint 20 (Lead generation expansion)
+        case 'workspace_referral_log':
+        case 'workspace_referral_request':
+        case 'workspace_linkedin_outreach':
+        case 'workspace_cold_call':
+        case 'workspace_market_research':
+        // Sprint 20 (Product presentation expansion)
+        case 'workspace_demo_script_generate':
+        case 'workspace_demo_present':
+        case 'workspace_slide_deck_generate':
+        case 'workspace_demo_followup':
+        // Sprint 21 (Negotiation & Closing)
+        case 'workspace_negotiation_offer':
+        case 'workspace_proposal_generate':
+        // Sprint 21 (Relationship Management)
+        case 'workspace_upsell':
+        case 'workspace_nps_send':
+        case 'workspace_qbr_prepare':
+        // Sprint 22 (Closing Gaps)
+        case 'workspace_contract_generate':
+        case 'workspace_objection_rebuttal':
+        case 'workspace_crm_sync': {
             return handleSalesAction({ actionType, tenantId, botId, taskId, payload });
         }
 

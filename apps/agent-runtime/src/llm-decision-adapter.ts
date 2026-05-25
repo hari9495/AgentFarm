@@ -965,6 +965,15 @@ const createTaskPrompt = (task: TaskEnvelope, heuristicDecision: ActionDecision)
     return result;
 };
 
+/**
+ * @internal Exposed only for unit-testing the prompt structure.
+ * Never import this from application or production code.
+ */
+export const _createTaskPromptForTesting: (
+    task: TaskEnvelope,
+    heuristicDecision: ActionDecision,
+) => string = createTaskPrompt;
+
 const toNumberOrNull = (value: unknown): number | null => {
     return typeof value === 'number' && Number.isFinite(value) ? value : null;
 };

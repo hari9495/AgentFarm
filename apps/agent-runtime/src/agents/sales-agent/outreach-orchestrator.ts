@@ -3,7 +3,7 @@ import type { PrismaClient } from '@prisma/client';
 import { personaliseEmail, type PersonaliseEmailParams, type PersonalisedEmail } from './email-personaliser.js';
 import { getEmailProvider } from './email-provider-factory.js';
 import type { IEmailProvider, EmailProviderConfig } from './email-provider.js';
-import { appendGdprFooter, resolveOptOutUrl } from '../gdpr-email-footer.js';
+import { appendGdprFooter, resolveOptOutUrl } from '../../gdpr-email-footer.js';
 
 export interface OutreachParams {
     tenantId: string;

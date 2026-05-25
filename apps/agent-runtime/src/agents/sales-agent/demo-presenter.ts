@@ -20,7 +20,7 @@ import { runBrowserTask } from './browser-executor.js';
 import { generateDemoScript, generateDemoFollowupEmail } from './demo-script-generator.js';
 import { getEmailProvider } from './email-provider-factory.js';
 import type { EmailProviderConfig } from './email-provider.js';
-import { appendGdprFooter, resolveOptOutUrl } from '../gdpr-email-footer.js';
+import { appendGdprFooter, resolveOptOutUrl } from '../../gdpr-email-footer.js';
 
 type PrismaWithDemo = {
     prospect: {

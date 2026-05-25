@@ -43,7 +43,7 @@ export type SendEmailParams = {
     persona: Pick<AgentPersonaRecord, 'displayName' | 'emailAddress' | 'disclosureStatement'>;
     providerName: SalesEmailProvider;
     /** Optional provider override — used in tests to inject a mock. */
-    providerOverride?: import('../sales/email-provider.js').IEmailProvider;
+    providerOverride?: import('../sales-agent/email-provider.js').IEmailProvider;
 };
 
 export type SendEmailResult = {

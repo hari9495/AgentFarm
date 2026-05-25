@@ -23,7 +23,7 @@ import type { PrismaClient } from '@prisma/client';
 import type { SalesAgentConfigRecord } from '@agentfarm/shared-types';
 import { getEmailProvider } from './email-provider-factory.js';
 import type { EmailProviderConfig } from './email-provider.js';
-import { appendGdprFooter, resolveOptOutUrl } from '../gdpr-email-footer.js';
+import { appendGdprFooter, resolveOptOutUrl } from '../../gdpr-email-footer.js';
 
 // ---------------------------------------------------------------------------
 // DB structural types
