@@ -514,4 +514,118 @@ export class RoutineScheduler {
             correlationId: params.correlationId,
         });
     }
+
+    /**
+     * Register recurring proactive monitoring tasks for a Business Analyst bot.
+     *
+     * Registers three scheduled tasks:
+     *   1. Story AC coverage check  — every 6 hours (detects stories missing acceptance criteria)
+     *   2. Orphan epic BRD check    — daily at 08:00 (detects epics with no linked BRD)
+     *   3. Requirement conflict scan — daily at 10:00 (detects contradictory requirements)
+     *
+     * All three are gated behind the `scheduler.ba_proactive` feature flag.
+     * Call `enableFeatureFlag('scheduler.ba_proactive')` to activate them.
+     *
+     * At execution time, the agent-runtime dispatches these to the BA action
+     * handler as `workspace_ba_stakeholder_update` tasks whose payload contains
+     * the proactive signal data (stories, epics, conflicts) for the agent to act on.
+     */
+    async registerBaProactiveMonitoring(params: {
+        botId: string;
+        tenantId: string;
+        workspaceId: string;
+        correlationId: string;
+        config?: {
+            /** Cron for AC coverage check. Default: every 6 hours. */
+            acCheckCron?: string;
+            /** Cron for orphan epic BRD check. Default: daily 08:00. */
+            epicBrdCheckCron?: string;
+            /** Cron for requirement conflict scan. Default: daily 10:00. */
+            conflictScanCron?: string;
+        };
+    }): Promise<{ acCheck: ScheduledTaskRecord; epicBrdCheck: ScheduledTaskRecord; conflictScan: ScheduledTaskRecord }> {
+        const {
+            botId, tenantId, workspaceId, correlationId,
+            config = {},
+        } = params;
+
+        const {
+            acCheckCron     = '0 */6 * * *',    // every 6 hours
+            epicBrdCheckCron = '0 8 * * *',      // daily 08:00
+            conflictScanCron = '0 10 * * *',     // daily 10:00
+        } = config;
+
+        const [acCheck, epicBrdCheck, conflictScan] = await Promise.all([
+            // 1. AC coverage — fires every 6 hours
+            this.createScheduledTask({
+                botId,
+                tenantId,
+                workspaceId,
+                scheduleType: 'recurring' as ScheduleType,
+                scheduleExpression: acCheckCron,
+                taskPayload: {
+                    action: 'workspace_ba_proactive_ac_check',
+                    signal_type: 'ba_story_missing_ac',
+                    description: 'Proactive: detect user stories missing acceptance criteria',
+                },
+                policyPackVersion: '1.0.0',
+                policy: {
+                    dedupeKey: `ba-ac-check-${botId}`,
+                    concurrencyPolicy: 'skip',
+                    maxRetries: 1,
+                    retryBackoffMs: 60_000,
+                } as SchedulePolicy,
+                featureFlagKey: 'scheduler.ba_proactive',
+                correlationId,
+            }),
+
+            // 2. Orphan epic BRD check — fires daily at 08:00
+            this.createScheduledTask({
+                botId,
+                tenantId,
+                workspaceId,
+                scheduleType: 'daily' as ScheduleType,
+                scheduleExpression: epicBrdCheckCron,
+                taskPayload: {
+                    action: 'workspace_ba_proactive_epic_check',
+                    signal_type: 'ba_epic_missing_brd',
+                    description: 'Proactive: detect epics with no linked BRD document',
+                },
+                policyPackVersion: '1.0.0',
+                policy: {
+                    dedupeKey: `ba-epic-brd-check-${botId}`,
+                    concurrencyPolicy: 'skip',
+                    maxRetries: 1,
+                    retryBackoffMs: 60_000,
+                } as SchedulePolicy,
+                featureFlagKey: 'scheduler.ba_proactive',
+                correlationId,
+            }),
+
+            // 3. Requirement conflict scan — fires daily at 10:00
+            this.createScheduledTask({
+                botId,
+                tenantId,
+                workspaceId,
+                scheduleType: 'daily' as ScheduleType,
+                scheduleExpression: conflictScanCron,
+                taskPayload: {
+                    action: 'workspace_ba_proactive_conflict_scan',
+                    signal_type: 'ba_requirement_conflict',
+                    description: 'Proactive: scan for contradictory requirements across stories and BRDs',
+                },
+                policyPackVersion: '1.0.0',
+                policy: {
+                    dedupeKey: `ba-conflict-scan-${botId}`,
+                    concurrencyPolicy: 'skip',
+                    maxRetries: 1,
+                    retryBackoffMs: 60_000,
+                } as SchedulePolicy,
+                featureFlagKey: 'scheduler.ba_proactive',
+                correlationId,
+            }),
+        ]);
+
+        return { acCheck, epicBrdCheck, conflictScan };
+    }
 }

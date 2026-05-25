@@ -154,6 +154,194 @@ export class InMemoryBaLessonStore implements IBaLessonStore {
 }
 
 // ---------------------------------------------------------------------------
+// Gateway-backed lesson store — persistent cross-session implementation
+// ---------------------------------------------------------------------------
+
+/**
+ * Gateway-backed implementation of IBaLessonStore.
+ *
+ * Replaces InMemoryBaLessonStore for production use. Lessons are written to
+ * the gateway's long-term memory patterns API and read back on every new
+ * document draft. This eliminates the session-scoped data loss of the in-memory
+ * store — lessons survive agent restarts and workspace re-connections.
+ *
+ * Persistence format:
+ *   Pattern key:  ba:lesson:<category>:<workspaceId>:<lessonId>
+ *   Summary:      [category] feedback text (human-readable for RAG)
+ *   Metadata:     JSON-serialised BaLesson for full reconstruction
+ *
+ * markApplied() is a no-op — the gateway pattern store has no per-lesson
+ * update mechanism. Applied-state tracking can be added via a separate API
+ * call when that endpoint is available.
+ */
+export class GatewayBaLessonStore implements IBaLessonStore {
+    constructor(
+        private readonly gatewayBaseUrl: string,
+        private readonly serviceToken: string,
+    ) {}
+
+    async save(lesson: BaLesson): Promise<void> {
+        const base = this.gatewayBaseUrl.replace(/\/+$/, '');
+        try {
+            await fetch(`${base}/v1/memory/patterns`, {
+                method: 'POST',
+                headers: {
+                    'content-type': 'application/json',
+                    Authorization: `Bearer ${this.serviceToken}`,
+                },
+                body: JSON.stringify({
+                    tenantId: lesson.tenantId,
+                    workspaceId: lesson.workspaceId,
+                    // Include lessonId in key to avoid overwriting different lessons
+                    // in the same category — unlike the original persistLessonToMemory
+                    pattern: `ba:lesson:${lesson.category}:${lesson.workspaceId}:${lesson.id}`,
+                    summary: `[${lesson.category}] ${lesson.feedback.slice(0, 200)}`,
+                    confidence: 0.7,
+                    observedCount: 1,
+                    lastSeen: lesson.learnedAt,
+                    // Encode full lesson as JSON in metadata for reconstruction
+                    metadata: {
+                        lessonId: lesson.id,
+                        category: lesson.category,
+                        docTypes: lesson.applicableDocTypes,
+                        feedback: lesson.feedback,
+                        sourceTaskId: lesson.sourceTaskId,
+                        sourceDocumentId: lesson.sourceDocumentId,
+                        correlationId: lesson.correlationId,
+                        learnedAt: lesson.learnedAt,
+                    },
+                }),
+                signal: AbortSignal.timeout(10_000),
+            });
+        } catch (err) {
+            console.warn(`[GatewayBaLessonStore] save failed for lesson ${lesson.id}: ${String(err)}`);
+        }
+    }
+
+    async findByWorkspace(
+        workspaceId: string,
+        filter?: { docType?: BaDocumentTypeFilter; category?: BaLessonCategory; limit?: number },
+    ): Promise<BaLesson[]> {
+        const base = this.gatewayBaseUrl.replace(/\/+$/, '');
+        try {
+            const res = await fetch(
+                `${base}/v1/workspaces/${encodeURIComponent(workspaceId)}/memory/patterns`,
+                {
+                    method: 'GET',
+                    headers: {
+                        'content-type': 'application/json',
+                        Authorization: `Bearer ${this.serviceToken}`,
+                    },
+                    signal: AbortSignal.timeout(10_000),
+                },
+            );
+
+            if (!res.ok) return [];
+
+            const data = (await res.json()) as {
+                patterns?: Array<{
+                    pattern?: string;
+                    summary?: string;
+                    confidence?: number;
+                    lastSeen?: string;
+                    metadata?: Record<string, unknown>;
+                }>;
+            };
+
+            const patterns = data.patterns ?? [];
+
+            // Filter to ba:lesson: patterns for this workspace
+            const lessonPatterns = patterns.filter(
+                (p) =>
+                    typeof p.pattern === 'string' &&
+                    p.pattern.startsWith(`ba:lesson:`) &&
+                    p.pattern.includes(`:${workspaceId}:`),
+            );
+
+            // Reconstruct BaLesson objects from pattern metadata
+            let lessons: BaLesson[] = lessonPatterns.map((p): BaLesson | null => {
+                const meta = p.metadata as Record<string, unknown> | undefined;
+
+                // Use stored metadata if available, else parse from pattern key + summary
+                if (meta?.lessonId) {
+                    return {
+                        id: String(meta['lessonId']),
+                        tenantId: '', // not stored in pattern (not needed for retrieval)
+                        workspaceId,
+                        sourceTaskId: String(meta['sourceTaskId'] ?? ''),
+                        sourceDocumentId: String(meta['sourceDocumentId'] ?? ''),
+                        feedback: String(meta['feedback'] ?? p.summary ?? '').replace(/^\[[\w_]+\] /, ''),
+                        category: (meta['category'] as BaLessonCategory) ?? 'clarity',
+                        applicableDocTypes: Array.isArray(meta['docTypes'])
+                            ? (meta['docTypes'] as BaDocumentTypeFilter[])
+                            : ['any'],
+                        appliedToFutureTask: false,
+                        learnedAt: String(meta['learnedAt'] ?? p.lastSeen ?? new Date().toISOString()),
+                        correlationId: String(meta['correlationId'] ?? ''),
+                    };
+                }
+
+                // Fallback: reconstruct from pattern key and summary
+                const keyParts = (p.pattern ?? '').split(':');
+                // Key format: ba:lesson:<category>:<workspaceId>:<lessonId>
+                const category = (keyParts[2] as BaLessonCategory) ?? 'clarity';
+                const rawSummary = p.summary ?? '';
+                // Strip "[category] " prefix from summary
+                const feedback = rawSummary.replace(/^\[[\w_]+\] /, '');
+                if (!feedback) return null;
+
+                return {
+                    id: keyParts[4] ?? Math.random().toString(36).slice(2),
+                    tenantId: '',
+                    workspaceId,
+                    sourceTaskId: '',
+                    sourceDocumentId: '',
+                    feedback,
+                    category,
+                    applicableDocTypes: ['any'],
+                    appliedToFutureTask: false,
+                    learnedAt: p.lastSeen ?? new Date().toISOString(),
+                    correlationId: '',
+                };
+            }).filter((l): l is BaLesson => l !== null);
+
+            // Apply filters
+            if (filter?.category) {
+                lessons = lessons.filter((l) => l.category === filter.category);
+            }
+            if (filter?.docType && filter.docType !== 'any') {
+                lessons = lessons.filter(
+                    (l) =>
+                        l.applicableDocTypes.includes(filter.docType!) ||
+                        l.applicableDocTypes.includes('any'),
+                );
+            }
+
+            // Sort by recency
+            lessons.sort(
+                (a, b) => new Date(b.learnedAt).getTime() - new Date(a.learnedAt).getTime(),
+            );
+
+            return filter?.limit ? lessons.slice(0, filter.limit) : lessons;
+        } catch (err) {
+            console.warn(`[GatewayBaLessonStore] findByWorkspace failed: ${String(err)}`);
+            return [];
+        }
+    }
+
+    /**
+     * Mark a lesson as applied. No-op in this implementation — the gateway
+     * pattern store has no per-lesson update mechanism.
+     *
+     * Applied state tracking may be added in a future sprint via a dedicated
+     * PATCH /v1/memory/patterns/:patternKey endpoint.
+     */
+    async markApplied(_lessonId: string): Promise<void> {
+        // no-op — acceptable limitation for cross-session persistence
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Category classifier (heuristic — no LLM required)
 // ---------------------------------------------------------------------------
 

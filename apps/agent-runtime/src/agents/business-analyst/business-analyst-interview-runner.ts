@@ -23,11 +23,12 @@
  */
 
 import { VoiceboxClient } from '../../voicebox-client.js';
-import { startMeetingSession, logMeetingEvent } from '../meeting-agent/meeting-transcription.js';
+import { startMeetingSession } from '../meeting-agent/meeting-transcription.js';
 import type {
     MeetingPlatform,
     MeetingProviderExecutor,
 } from '../meeting-agent/meeting-transcription.js';
+import { logMeetingEvent } from '../meeting-agent/meeting-audit-logger.js';
 import { speakResponse } from '../../speaking-agent.js';
 import type { BaProseCallerFn } from './business-analyst-tone-adapter.js';
 import {
@@ -46,6 +47,7 @@ import {
     MAX_TURNS_PER_TOPIC,
     type BaInterviewSessionState,
     type ElicitedRequirement,
+    type InterviewTopic,
 } from './business-analyst-interview-protocol.js';
 import {
     classifyAnswer,
