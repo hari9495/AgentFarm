@@ -2,12 +2,13 @@
  * semantic-search-hook.test.ts — unit tests for searchSemanticMemory
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, test, mock } from 'node:test';
+import assert from 'node:assert/strict';
 import type { EmbedFn } from './embedding-service.js';
 import { searchSemanticMemory } from './semantic-search-hook.js';
 
 const MOCK_VECTOR = Array.from({ length: 1536 }, (_, i) => i * 0.001);
-const makeEmbed = (): EmbedFn => vi.fn().mockResolvedValue(MOCK_VECTOR);
+const makeEmbed = (): EmbedFn => mock.fn(async () => MOCK_VECTOR) as unknown as EmbedFn;
 
 const mockRow = (overrides: object = {}) => ({
     id: 'mem_1',
@@ -24,11 +25,11 @@ const mockRow = (overrides: object = {}) => ({
 });
 
 const makePrisma = (rows: object[] = [mockRow()]) => ({
-    $queryRaw: vi.fn().mockResolvedValue(rows),
+    $queryRaw: mock.fn(async () => rows),
 });
 
 describe('searchSemanticMemory', () => {
-    it('returns SemanticSearchResult[] on success', async () => {
+    test('returns SemanticSearchResult[] on success', async () => {
         const embed = makeEmbed();
         const prisma = makePrisma();
         const results = await searchSemanticMemory(
@@ -36,13 +37,13 @@ describe('searchSemanticMemory', () => {
             embed,
             prisma as never,
         );
-        expect(results).toHaveLength(1);
-        expect(results[0].similarity).toBeCloseTo(0.92);
-        expect(results[0].memory.content).toBe('Company uses TypeScript monorepo.');
-        expect(results[0].memory.createdAt).toBe('2026-05-22T00:00:00.000Z');
+        assert.equal(results.length, 1);
+        assert.ok(Math.abs(results[0].similarity - 0.92) < 0.001, 'similarity should be close to 0.92');
+        assert.equal(results[0].memory.content, 'Company uses TypeScript monorepo.');
+        assert.equal(results[0].memory.createdAt, '2026-05-22T00:00:00.000Z');
     });
 
-    it('returns empty array when no matches', async () => {
+    test('returns empty array when no matches', async () => {
         const embed = makeEmbed();
         const prisma = makePrisma([]);
         const results = await searchSemanticMemory(
@@ -50,10 +51,10 @@ describe('searchSemanticMemory', () => {
             embed,
             prisma as never,
         );
-        expect(results).toHaveLength(0);
+        assert.equal(results.length, 0);
     });
 
-    it('calls embed with the queryText', async () => {
+    test('calls embed with the queryText', async () => {
         const embed = makeEmbed();
         const prisma = makePrisma();
         await searchSemanticMemory(
@@ -61,10 +62,11 @@ describe('searchSemanticMemory', () => {
             embed,
             prisma as never,
         );
-        expect(embed).toHaveBeenCalledWith('architecture overview');
+        const embedMock = embed as unknown as ReturnType<typeof mock.fn>;
+        assert.equal(embedMock.mock.calls[0].arguments[0], 'architecture overview');
     });
 
-    it('issues two-branch query when botId is provided', async () => {
+    test('issues one $queryRaw call when botId is provided', async () => {
         const embed = makeEmbed();
         const prisma = makePrisma([mockRow({ botId: 'bot_5' })]);
         const results = await searchSemanticMemory(
@@ -72,12 +74,11 @@ describe('searchSemanticMemory', () => {
             embed,
             prisma as never,
         );
-        expect(results[0].memory.botId).toBe('bot_5');
-        // Verify $queryRaw was called once (the botId-aware branch)
-        expect((prisma.$queryRaw as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1);
+        assert.equal(results[0].memory.botId, 'bot_5');
+        assert.equal(prisma.$queryRaw.mock.calls.length, 1);
     });
 
-    it('maps botId null to null on the result', async () => {
+    test('maps botId null to null on the result', async () => {
         const embed = makeEmbed();
         const prisma = makePrisma([mockRow({ botId: null })]);
         const results = await searchSemanticMemory(
@@ -85,6 +86,6 @@ describe('searchSemanticMemory', () => {
             embed,
             prisma as never,
         );
-        expect(results[0].memory.botId).toBeNull();
+        assert.equal(results[0].memory.botId, null);
     });
 });
