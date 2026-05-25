@@ -836,9 +836,41 @@ const createTaskPrompt = (task: TaskEnvelope, heuristicDecision: ActionDecision)
         ? memoryContext.codeReviewPrompt
         : '';
 
+    // ---------------------------------------------------------------------------
+    // Hoist large context fields ABOVE the 4 000-char truncation cap.
+    // _scout_context (≤10 000 chars) and _episodic_context are both too large for
+    // truncatePayloadValue's MAX_PROMPT_STRING_CHARS = 4 000 limit. By extracting
+    // them here and injecting as dedicated top-level keys in the classification
+    // JSON, the LLM receives the FULL codebase and history context without any
+    // silent truncation. The sanitised task payload strips these fields so we
+    // never show both the full version AND "[truncated: N chars]" for the same key.
+    // ---------------------------------------------------------------------------
+    const CONTEXT_FIELD_CAP = 12_000; // per-field hard cap for top-level context blocks
+    const CONTEXT_FIELD_NAMES = ['_scout_context', '_episodic_context', '_episodic_person_context'];
+    const scoutContext = typeof task.payload['_scout_context'] === 'string'
+        ? task.payload['_scout_context'].slice(0, CONTEXT_FIELD_CAP)
+        : null;
+    const episodicContext = typeof task.payload['_episodic_context'] === 'string'
+        ? task.payload['_episodic_context'].slice(0, CONTEXT_FIELD_CAP)
+        : null;
+    const episodicPersonContext = typeof task.payload['_episodic_person_context'] === 'string'
+        ? task.payload['_episodic_person_context'].slice(0, CONTEXT_FIELD_CAP)
+        : null;
+    // Sanitise: remove hoisted fields from payload so truncateTaskForPrompt doesn't
+    // produce a confusing "[truncated: N chars]" duplicate in the task.payload block.
+    const sanitizedPayload = Object.fromEntries(
+        Object.entries(task.payload).filter(([k]) => !CONTEXT_FIELD_NAMES.includes(k))
+    ) as typeof task.payload;
+    const sanitizedTask: TaskEnvelope = { ...task, payload: sanitizedPayload };
+
     const result = JSON.stringify(
         {
             objective: 'Classify AgentFarm task for action type, confidence, risk and route.',
+            // ── Context blocks (bypass 4 000-char cap — read these FIRST) ──────────
+            ...(scoutContext ? { codebaseContext: scoutContext } : {}),
+            ...(episodicContext ? { recentTaskHistory: episodicContext } : {}),
+            ...(episodicPersonContext ? { personTaskHistory: episodicPersonContext } : {}),
+            // ────────────────────────────────────────────────────────────────────────
             requiredResponseSchema: {
                 actionType: 'string (snake_case) — must match a routable workspace_* action type (e.g. workspace_subagent_spawn) or a connector action',
                 confidence: 'number between 0 and 1',
@@ -892,7 +924,7 @@ const createTaskPrompt = (task: TaskEnvelope, heuristicDecision: ActionDecision)
             trajectoryHints: intelligence.trajectoryHints,
             learnedWorkspaceRules: codeReviewPatterns,
             learnedWorkspaceRulePrompt: codeReviewPrompt,
-            task: truncateTaskForPrompt(task),
+            task: truncateTaskForPrompt(sanitizedTask),
             heuristicDecision,
         },
         null,
@@ -900,11 +932,17 @@ const createTaskPrompt = (task: TaskEnvelope, heuristicDecision: ActionDecision)
     );
     // Final safety net: if the serialised prompt still exceeds the byte budget,
     // strip payload entirely and retain only top-level task metadata.
+    // Context blocks (codebaseContext / recentTaskHistory) are always preserved —
+    // they contain the most actionable information for classification.
     if (result.length > MAX_PROMPT_BYTES) {
-        const safeTask = { ...truncateTaskForPrompt(task), payload: { _truncated: true, _original_size: JSON.stringify(task.payload).length } };
+        const safeTask = { ...truncateTaskForPrompt(sanitizedTask), payload: { _truncated: true, _original_size: JSON.stringify(task.payload).length } };
         return JSON.stringify(
             {
                 objective: 'Classify AgentFarm task for action type, confidence, risk and route.',
+                // Context blocks always included even when payload is stripped.
+                ...(scoutContext ? { codebaseContext: scoutContext } : {}),
+                ...(episodicContext ? { recentTaskHistory: episodicContext } : {}),
+                ...(episodicPersonContext ? { personTaskHistory: episodicPersonContext } : {}),
                 requiredResponseSchema: {
                     actionType: 'string (snake_case)',
                     confidence: 'number between 0 and 1',

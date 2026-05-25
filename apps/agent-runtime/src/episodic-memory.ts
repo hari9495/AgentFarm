@@ -139,9 +139,25 @@ export class EpisodicMemoryStore {
                 e.filesChanged && e.filesChanged.length > 0
                     ? ` [${e.filesChanged.slice(0, 3).join(', ')}]`
                     : '';
-            const err = e.errorMessage ? ` — ${e.errorMessage.slice(0, 80)}` : '';
-            // Gap 7: surface diff line count so the LLM knows how large the change was
-            const diffHint = e.codeDiff ? ` [diff:${e.codeDiff.split('\n').length}L]` : '';
+            const err = e.errorMessage
+                ? ` — ${e.errorMessage.slice(0, 80)}`
+                : e.testFailureSummary
+                  ? ` — test: ${e.testFailureSummary.slice(0, 100)}`
+                  : '';
+            // Gap 7: surface actual changed lines (not just count) so the LLM can
+            // learn what code was written or reverted — helps avoid repeating the same
+            // approach on similar tasks. Filter to +/- lines, skip file headers.
+            const diffChangedLines = e.codeDiff
+                ? e.codeDiff
+                      .split('\n')
+                      .filter((l) => (l.startsWith('+') || l.startsWith('-')) && !l.startsWith('+++') && !l.startsWith('---'))
+                      .slice(0, 6)
+                      .join(' | ')
+                      .slice(0, 240)
+                : '';
+            const diffHint = e.codeDiff
+                ? ` [diff:${e.codeDiff.split('\n').length}L${diffChangedLines ? ': ' + diffChangedLines : ''}]`
+                : '';
             return `${icon} [${ts}] ${e.actionType}: ${e.promptSummary.slice(0, 120)}${files}${diffHint}${err}`;
         });
         const label = opts?.label?.trim();
