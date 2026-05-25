@@ -365,6 +365,62 @@ export async function healthCheck(
 }
 
 // ---------------------------------------------------------------------------
+// Start an additional bot container on an existing workspace VM.
+// Used for the vm_resize path (second, third… agent in a workspace).
+// Azure Run Command executes docker commands on the live VM without SSH.
+// ---------------------------------------------------------------------------
+
+export async function startContainerOnVm(
+    job: JobRef,
+    resourceGroup: string,
+    vmResourceName: string,
+    port: number,
+): Promise<StepResult> {
+    const computeClient = getComputeClient();
+    const image = process.env['AZURE_BOT_IMAGE'] ?? '';
+    const registryServer = process.env['AZURE_BOT_REGISTRY_SERVER'] ?? '';
+    const registryUsername = process.env['AZURE_BOT_REGISTRY_USERNAME'] ?? '';
+    const registryPassword = process.env['AZURE_BOT_REGISTRY_PASSWORD'] ?? '';
+    const evidenceApiEndpoint =
+        process.env['EVIDENCE_API_ENDPOINT'] ?? 'http://api-gateway:3000/v1';
+    const region = getAzureRegion();
+    const containerName = `agentfarm-bot-${job.botId.slice(-8)}`;
+
+    // Build env args inline so we don't depend on a pre-existing env file on the VM.
+    const envArgs = [
+        `AGENTFARM_CORRELATION_ID=${job.correlationId}`,
+        `AGENTFARM_TENANT_ID=${job.tenantId}`,
+        `AGENTFARM_WORKSPACE_ID=${job.workspaceId}`,
+        `AGENTFARM_BOT_ID=${job.botId}`,
+        `AGENTFARM_ROLE_TYPE=${job.roleType}`,
+        `AGENTFARM_POLICY_PACK_VERSION=mvp-v1`,
+        `AGENTFARM_CONTRACT_VERSION=1.0`,
+        `AGENTFARM_APPROVAL_API_URL=http://api-gateway:3000`,
+        `AGENTFARM_EVIDENCE_API_ENDPOINT=${evidenceApiEndpoint}`,
+        `AGENTFARM_HEALTH_PORT=${port}`,
+        `AGENTFARM_LOG_LEVEL=info`,
+        `AGENTFARM_REGION=${region}`,
+    ].map((e) => `-e "${e}"`).join(' ');
+
+    const script = [
+        `docker login ${registryServer} -u ${registryUsername} -p ${registryPassword}`,
+        `docker pull ${image}`,
+        `docker run -d --name ${containerName} --publish ${port}:${port} ${envArgs} --restart unless-stopped ${image}`,
+    ];
+
+    try {
+        await computeClient.virtualMachines.beginRunCommandAndWait(resourceGroup, vmResourceName, {
+            commandId: 'RunShellScript',
+            script,
+        });
+        return { success: true };
+    } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return { success: false, errorCode: 'START_CONTAINER_FAILED', errorMessage: msg };
+    }
+}
+
+// ---------------------------------------------------------------------------
 // VM resize: deallocate → update hardware profile → restart
 // Required when active agent count in a workspace crosses a size tier boundary.
 // ---------------------------------------------------------------------------

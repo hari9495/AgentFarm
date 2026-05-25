@@ -81,14 +81,14 @@ write_files:
       [Service]
       Restart=on-failure
       RestartSec=10
-      ExecStartPre=-/usr/bin/docker stop agentfarm-bot
-      ExecStartPre=-/usr/bin/docker rm agentfarm-bot
-      ExecStart=/usr/bin/docker run --name agentfarm-bot \\
+      ExecStartPre=-/usr/bin/docker stop agentfarm-bot-${cfg.botId.slice(-8)}
+      ExecStartPre=-/usr/bin/docker rm agentfarm-bot-${cfg.botId.slice(-8)}
+      ExecStart=/usr/bin/docker run --name agentfarm-bot-${cfg.botId.slice(-8)} \\
         --env-file /etc/agentfarm/bot.env \\
         --publish 8080:8080 \\
         --restart unless-stopped \\
         ${image}
-      ExecStop=/usr/bin/docker stop -t 10 agentfarm-bot
+      ExecStop=/usr/bin/docker stop -t 10 agentfarm-bot-${cfg.botId.slice(-8)}
       [Install]
       WantedBy=multi-user.target
 

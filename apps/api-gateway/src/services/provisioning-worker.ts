@@ -24,6 +24,7 @@ import {
     healthCheck,
     cleanupResources,
     resizeWorkspaceVm,
+    startContainerOnVm,
     wsVmName,
 } from './azure-provisioning-steps.js';
 import { vmSkuForAgentCount } from '../lib/azure-client.js';
@@ -513,7 +514,7 @@ async function handleCompletion(
                 vmSize: ctx['vmSize'] ?? 'Standard_B2s',
                 status: 'running',
                 activeContainerCount: 1,
-                nextContainerPort: 8082,
+                nextContainerPort: 8081,
             },
             update: {
                 status: 'running',
@@ -545,7 +546,7 @@ async function processResizeJob(job: ProvisioningJobRecord): Promise<void> {
     }
 
     try {
-        // 1. Count active agent subscriptions for this workspace to determine target SKU.
+        // 1. Count bots in this workspace to determine target SKU.
         const activeBots = await prisma.bot.findMany({
             where: {
                 workspaceId: job.workspaceId,
@@ -556,14 +557,19 @@ async function processResizeJob(job: ProvisioningJobRecord): Promise<void> {
         const activeCount = activeBots.length;
         const targetSku = vmSkuForAgentCount(activeCount);
 
-        // 2. Look up the current workspace VM.
+        // 2. Look up the current workspace VM — need port, IP, and name for all steps.
         const workspaceVm = await (prisma as any).workspaceVm.findUnique({
             where: { workspaceId: job.workspaceId },
-        }) as { vmName: string; resourceGroup: string; vmSize: string; activeContainerCount: number; privateIp: string } | null;
+        }) as {
+            vmName: string;
+            resourceGroup: string;
+            vmSize: string;
+            activeContainerCount: number;
+            privateIp: string;
+            nextContainerPort: number;
+        } | null;
 
         if (!workspaceVm) {
-            // WorkspaceVm doesn't exist yet — this can happen if the initial provision
-            // job hasn't completed. Fail this job so the hire-handler can re-queue it.
             await handleFailure(job, 'validating', 'WORKSPACE_VM_NOT_FOUND',
                 `No WorkspaceVm record found for workspaceId=${job.workspaceId}. Initial provisioning may still be in progress.`);
             return;
@@ -574,46 +580,82 @@ async function processResizeJob(job: ProvisioningJobRecord): Promise<void> {
         // 3. Resize the VM if the tier has changed.
         if (workspaceVm.vmSize !== targetSku) {
             console.log(`[provisioning-worker] [${job.correlationId}] resizing VM from ${workspaceVm.vmSize} → ${targetSku} (${activeCount} active agents)`);
-            const result = await resizeWorkspaceVm(workspaceVm.resourceGroup, workspaceVm.vmName, targetSku);
-            if (!result.success) {
-                await handleFailure(job, 'creating_resources', result.errorCode ?? 'VM_RESIZE_FAILED', result.errorMessage ?? 'Resize failed');
+            const resizeResult = await resizeWorkspaceVm(workspaceVm.resourceGroup, workspaceVm.vmName, targetSku);
+            if (!resizeResult.success) {
+                await handleFailure(job, 'creating_resources', resizeResult.errorCode ?? 'VM_RESIZE_FAILED', resizeResult.errorMessage ?? 'Resize failed');
                 return;
             }
-            // Update DB record with new size.
             await (prisma as any).workspaceVm.update({
                 where: { workspaceId: job.workspaceId },
                 data: { vmSize: targetSku },
             });
             await emitAudit(job, `Workspace VM resized: ${workspaceVm.vmSize} → ${targetSku} (${activeCount} active agents)`, 'info');
         } else {
-            await emitAudit(job, `Workspace VM already at correct size ${targetSku} for ${activeCount} active agents — no resize needed`, 'info');
+            await emitAudit(job, `Workspace VM size ${targetSku} already correct for ${activeCount} active agents`, 'info');
         }
 
-        // 4. Increment active container count for the new agent.
-        await (prisma as any).workspaceVm.update({
-            where: { workspaceId: job.workspaceId },
-            data: { activeContainerCount: activeCount },
-        });
+        // 4. Start a new Docker container for this bot on the shared VM.
+        //    Each bot gets a unique port allocated from nextContainerPort.
+        //    Azure Run Command executes `docker run` on the live VM without SSH.
+        const containerPort = workspaceVm.nextContainerPort;
+        await transitionTo(job, 'starting_container');
+        const startResult = await startContainerOnVm(
+            job,
+            workspaceVm.resourceGroup,
+            workspaceVm.vmName,
+            containerPort,
+        );
+        if (!startResult.success) {
+            await handleFailure(job, 'starting_container', startResult.errorCode ?? 'START_CONTAINER_FAILED', startResult.errorMessage ?? 'Container start failed');
+            return;
+        }
+        await emitAudit(job, `Container agentfarm-bot-${job.botId.slice(-8)} started on VM at port ${containerPort}`, 'info');
 
-        // 5. Register the agent's runtime instance pointing at the shared VM.
+        // 5. Wait for the new container's /health endpoint to respond.
+        const containerEndpoint = `http://${workspaceVm.privateIp}:${containerPort}`;
+        const healthResult = await startContainer(job, { containerEndpoint });
+        if (!healthResult.success) {
+            await handleFailure(job, 'starting_container', healthResult.errorCode ?? 'CONTAINER_HEALTH_TIMEOUT', healthResult.errorMessage ?? 'Health check timed out');
+            return;
+        }
+
+        // 6. Register the RuntimeInstance with the bot's own container endpoint.
+        await transitionTo(job, 'registering_runtime');
         await prisma.runtimeInstance.upsert({
             where: { botId: job.botId },
             create: {
                 botId: job.botId,
                 workspaceId: job.workspaceId,
                 tenantId: job.tenantId,
-                status: 'ready',
+                status: 'starting',
                 contractVersion: CONTRACT_VERSION,
-                endpoint: `http://${workspaceVm.privateIp}:8080`,
+                endpoint: containerEndpoint,
             },
             update: {
-                status: 'ready',
-                endpoint: `http://${workspaceVm.privateIp}:8080`,
+                status: 'starting',
+                endpoint: containerEndpoint,
                 lastSeenAt: new Date(),
             },
         });
 
-        // 6. Finalise using the shared completion handler (writes AgentSubscription, etc.)
+        // 7. Final health check post-registration.
+        await transitionTo(job, 'healthchecking');
+        const finalHealth = await healthCheck(job, { containerEndpoint });
+        if (!finalHealth.success) {
+            await handleFailure(job, 'healthchecking', finalHealth.errorCode ?? 'HEALTH_CHECK_FAILED', finalHealth.errorMessage ?? 'Post-registration health check failed');
+            return;
+        }
+
+        // 8. Update WorkspaceVm: increment port counter and container count.
+        await (prisma as any).workspaceVm.update({
+            where: { workspaceId: job.workspaceId },
+            data: {
+                activeContainerCount: activeCount,
+                nextContainerPort: containerPort + 1,
+            },
+        });
+
+        // 9. Write AgentSubscription, mark bot/workspace active, transition to completed.
         await handleCompletion(job, {});
     } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
