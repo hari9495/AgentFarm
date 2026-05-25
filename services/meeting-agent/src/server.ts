@@ -203,6 +203,7 @@ function detectPlatform(meetingUrl: string): MeetingPlatform | null {
     if (/^https:\/\/teams\.microsoft\.com\//u.test(meetingUrl)) return 'teams';
     if (/^https:\/\/teams\.live\.com\//u.test(meetingUrl)) return 'teams';
     if (/^https?:\/\/([a-z0-9-]+\.)?zoom\.us\//u.test(meetingUrl)) return 'zoom';
+    if (/^https?:\/\/([a-z0-9-]+\.)?webex\.com\//u.test(meetingUrl)) return 'webex';
     return null;
 }
 

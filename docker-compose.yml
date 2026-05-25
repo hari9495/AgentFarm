@@ -242,7 +242,7 @@ services:
       ENABLE_VOICE_SIDECAR: ${ENABLE_VOICE_SIDECAR:-1}
       PIPECAT_PORT: '7800'
       PIPECAT_TOKEN: ${PIPECAT_TOKEN:-}
-      WHISPER_MODEL: ${WHISPER_MODEL:-small}
+      WHISPER_MODEL: ${WHISPER_MODEL:-medium}
       WHISPER_DEVICE: ${WHISPER_DEVICE:-cpu}
       WHISPER_COMPUTE_TYPE: ${WHISPER_COMPUTE_TYPE:-int8}
       PULSE_INJECT_SINK: ${PULSE_INJECT_SINK:-AgentMic}
@@ -288,13 +288,14 @@ services:
       # Used by POST /v1/sessions/:id/join to launch the Playwright browser
       # join script on the desktop-agent (port 5003 control plane).
       DESKTOP_AGENT_URL: ${DESKTOP_AGENT_URL:-http://desktop-agent:5003}
-      # LLM brain for autonomous meeting responses (optional).
-      # Set MEETING_BRAIN_PROVIDER=openai or anthropic and supply an API key
-      # to enable the agent to reply to participant utterances automatically.
-      MEETING_BRAIN_PROVIDER: ${MEETING_BRAIN_PROVIDER:-}
-      MEETING_BRAIN_API_KEY: ${MEETING_BRAIN_API_KEY:-}
+      # LLM brain for autonomous meeting responses.
+      # Defaults to anthropic using the same ANTHROPIC_API_KEY already set for
+      # the rest of the stack. Override MEETING_BRAIN_PROVIDER=openai and
+      # MEETING_BRAIN_API_KEY=<openai-key> to switch providers.
+      MEETING_BRAIN_PROVIDER: ${MEETING_BRAIN_PROVIDER:-anthropic}
+      MEETING_BRAIN_API_KEY: ${MEETING_BRAIN_API_KEY:-${ANTHROPIC_API_KEY:-}}
       MEETING_BRAIN_BASE_URL: ${MEETING_BRAIN_BASE_URL:-}
-      MEETING_BRAIN_MODEL: ${MEETING_BRAIN_MODEL:-}
+      MEETING_BRAIN_MODEL: ${MEETING_BRAIN_MODEL:-claude-sonnet-4-6}
       MEETING_BRAIN_SYSTEM_PROMPT: ${MEETING_BRAIN_SYSTEM_PROMPT:-}
       MEETING_BRAIN_MAX_TOKENS: ${MEETING_BRAIN_MAX_TOKENS:-}
     depends_on:

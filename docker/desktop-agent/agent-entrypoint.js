@@ -901,17 +901,18 @@ const server = http.createServer(async (req, res) => {
             const joinDisplayName = typeof body.displayName === 'string' ? body.displayName.trim() : undefined;
             const joinTimeout = typeof body.timeout === 'number' ? Math.min(Math.max(body.timeout, 10_000), 300_000) : 90_000;
 
-            if (!platform) return send(res, 400, { error: "'platform' is required ('meet', 'teams', or 'zoom')" });
+            if (!platform) return send(res, 400, { error: "'platform' is required ('meet', 'teams', 'zoom', or 'webex')" });
             if (!meetUrl) return send(res, 400, { error: "'url' is required" });
 
             const PLATFORM_SCRIPTS = {
                 meet: '/app/meet-join.mjs',
                 teams: '/app/teams-join.mjs',
                 zoom: '/app/zoom-join.mjs',
+                webex: '/app/webex-join.mjs',
             };
             const script = PLATFORM_SCRIPTS[platform];
             if (!script) {
-                return send(res, 400, { error: `unsupported platform '${platform}'; must be one of: meet, teams, zoom` });
+                return send(res, 400, { error: `unsupported platform '${platform}'; must be one of: meet, teams, zoom, webex` });
             }
 
             const scriptArgs = [script, meetUrl, '--timeout', String(joinTimeout)];
