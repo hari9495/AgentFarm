@@ -157,6 +157,18 @@
         "./sales/qbr-generator.js": {
             "types": "./src/agents/sales-agent/qbr-generator.ts",
             "default": "./src/agents/sales-agent/qbr-generator.ts"
+        },
+        "./sales/contract-content-generator.js": {
+            "types": "./src/agents/sales-agent/contract-content-generator.ts",
+            "default": "./src/agents/sales-agent/contract-content-generator.ts"
+        },
+        "./sales/objection-rebuttal-handler.js": {
+            "types": "./src/agents/sales-agent/objection-rebuttal-handler.ts",
+            "default": "./src/agents/sales-agent/objection-rebuttal-handler.ts"
+        },
+        "./sales/crm-sync-handler.js": {
+            "types": "./src/agents/sales-agent/crm-sync-handler.ts",
+            "default": "./src/agents/sales-agent/crm-sync-handler.ts"
         }
     },
     "scripts": {

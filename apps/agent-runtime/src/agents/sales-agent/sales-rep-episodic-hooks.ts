@@ -210,6 +210,24 @@ export function buildSalesRepEpisodicPattern(
     // ── QBR ──────────────────────────────────────────────────────────────
     if (at === 'workspace_qbr_prepare') return `sales_rep:qbr:generated:${oc}`;
 
+    // ── Contract generation ───────────────────────────────────────────────
+    if (at === 'workspace_contract_generate') {
+        const sent = task.payload['send_to_prospect'] === true;
+        return sent ? `sales_rep:contract:generated_and_sent:${oc}` : `sales_rep:contract:generated:${oc}`;
+    }
+
+    // ── Objection rebuttal ────────────────────────────────────────────────
+    if (at === 'workspace_objection_rebuttal') {
+        const objType = String(task.payload['objection_type'] ?? 'other');
+        return `sales_rep:objection:rebuttal:${objType}:${oc}`;
+    }
+
+    // ── CRM sync ──────────────────────────────────────────────────────────
+    if (at === 'workspace_crm_sync') {
+        const provider = String(task.payload['provider'] ?? 'auto');
+        return `sales_rep:crm:synced:${provider}:${oc}`;
+    }
+
     // ── CRM updates (generic) ────────────────────────────────────────────
     if (at.startsWith('workspace_crm_') || at.startsWith('workspace_hubspot_') ||
         at.startsWith('workspace_salesforce_')) {

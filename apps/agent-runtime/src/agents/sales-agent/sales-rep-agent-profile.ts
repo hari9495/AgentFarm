@@ -100,6 +100,10 @@ export const SALES_REP_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = 
     'workspace_upsell',
     'workspace_nps_send',
     'workspace_qbr_prepare',
+    // ── Closing Gaps (Sprint 22) ──────────────────────────────────────────
+    'workspace_contract_generate',
+    'workspace_objection_rebuttal',
+    'workspace_crm_sync',
 ];
 
 export const SALES_REP_ROLE_BLOCKED_ACTIONS = [

@@ -106,6 +106,7 @@ import { registerNpsWebhookRoutes } from './routes/sales/nps-webhook.js';
 import { startMarketSignalWorker, stopMarketSignalWorker } from './services/market-signal-worker.js';
 import { startNpsWorker, stopNpsWorker } from './services/nps-worker.js';
 import { startUpsellWorker, stopUpsellWorker } from './services/upsell-worker.js';
+import { startCrmSyncWorker, stopCrmSyncWorker } from './services/crm-sync-worker.js';
 import { registerDesktopSessionsRoutes } from './routes/workspace/desktop-sessions.js';
 import { registerNotificationRoutes } from './routes/platform/notifications.js';
 import { registerRetentionPolicyRoutes } from './routes/governance/retention-policy.js';
@@ -1254,6 +1255,7 @@ const start = async (): Promise<void> => {
         startMarketSignalWorker(prisma);
         startNpsWorker(prisma);
         startUpsellWorker(prisma);
+        startCrmSyncWorker(prisma);
         startDrainSweep({
             agentRuntimeUrl: process.env.AGENT_RUNTIME_URL ?? 'http://localhost:3001',
             prisma: prisma as never,
@@ -1273,6 +1275,7 @@ const stop = async (): Promise<void> => {
     stopMarketSignalWorker();
     stopNpsWorker();
     stopUpsellWorker();
+    stopCrmSyncWorker();
     stopDrainSweep();
     await app.close();
     process.exit(0);

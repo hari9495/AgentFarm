@@ -51,6 +51,11 @@ type CreateSalesConfigBody = {
     npsDelayDays?: number[];
     upsellEnabled?: boolean;
     upsellCheckInDays?: number;
+    // External CRM sync
+    crmSyncEnabled?: boolean;
+    hubspotAccessToken?: string;
+    salesforceInstanceUrl?: string;
+    salesforceAccessToken?: string;
 };
 
 type UpdateSalesConfigBody = Partial<Omit<CreateSalesConfigBody, 'botId'>>;
@@ -168,6 +173,10 @@ export async function registerSalesConfigRoutes(
                     npsDelayDays: body.npsDelayDays ?? [30, 60, 90],
                     upsellEnabled: body.upsellEnabled ?? false,
                     upsellCheckInDays: body.upsellCheckInDays ?? 90,
+                    crmSyncEnabled: body.crmSyncEnabled ?? false,
+                    hubspotAccessToken: body.hubspotAccessToken ?? null,
+                    salesforceInstanceUrl: body.salesforceInstanceUrl ?? null,
+                    salesforceAccessToken: body.salesforceAccessToken ?? null,
                 },
             });
 
@@ -223,6 +232,10 @@ export async function registerSalesConfigRoutes(
                 'npsDelayDays',
                 'upsellEnabled',
                 'upsellCheckInDays',
+                'crmSyncEnabled',
+                'hubspotAccessToken',
+                'salesforceInstanceUrl',
+                'salesforceAccessToken',
             ];
             for (const f of fields) {
                 if (body[f] !== undefined) updateData[f] = body[f];

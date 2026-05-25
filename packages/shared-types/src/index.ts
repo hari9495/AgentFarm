@@ -2279,6 +2279,11 @@ export interface SalesAgentConfigRecord {
   npsDelayDays?: number[];
   upsellEnabled?: boolean;
   upsellCheckInDays?: number;
+  // External CRM sync — HubSpot / Salesforce
+  crmSyncEnabled?: boolean;
+  hubspotAccessToken?: string;
+  salesforceInstanceUrl?: string;
+  salesforceAccessToken?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -2449,7 +2454,11 @@ export type SalesActivityType =
   | 'upsell_sent'
   | 'nps_sent'
   | 'nps_responded'
-  | 'qbr_generated';
+  | 'qbr_generated'
+  // Sprint 22 — Closing Gaps
+  | 'contract_generated'
+  | 'objection_rebuttal_sent'
+  | 'crm_synced';
 
 export interface ProspectRecord {
   id: string;

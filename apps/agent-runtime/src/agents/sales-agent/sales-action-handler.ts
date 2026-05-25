@@ -32,6 +32,11 @@ import { generateProposal } from './proposal-generator.js';
 import { sendUpsellEmail } from './upsell-handler.js';
 import { sendNpsSurvey } from './nps-handler.js';
 import { generateQbr } from './qbr-generator.js';
+import { generateContract } from './contract-content-generator.js';
+import { handleObjectionRebuttal } from './objection-rebuttal-handler.js';
+import { syncToCrm } from './crm-sync-handler.js';
+import type { ObjectionType } from './objection-rebuttal-handler.js';
+import type { CrmSyncProvider } from './crm-sync-handler.js';
 import type { LeadCandidate } from './lead-source-provider.js';
 import type { EmailProviderConfig } from './email-provider.js';
 import type { LinkedInOutreachType } from '@agentfarm/shared-types';
@@ -64,7 +69,10 @@ export type SalesActionType =
     | 'workspace_proposal_generate'
     | 'workspace_upsell'
     | 'workspace_nps_send'
-    | 'workspace_qbr_prepare';
+    | 'workspace_qbr_prepare'
+    | 'workspace_contract_generate'
+    | 'workspace_objection_rebuttal'
+    | 'workspace_crm_sync';
 
 export function isSalesActionType(t: string): t is SalesActionType {
     return (
@@ -91,7 +99,10 @@ export function isSalesActionType(t: string): t is SalesActionType {
         t === 'workspace_proposal_generate' ||
         t === 'workspace_upsell' ||
         t === 'workspace_nps_send' ||
-        t === 'workspace_qbr_prepare'
+        t === 'workspace_qbr_prepare' ||
+        t === 'workspace_contract_generate' ||
+        t === 'workspace_objection_rebuttal' ||
+        t === 'workspace_crm_sync'
     );
 }
 
@@ -964,6 +975,116 @@ export async function handleSalesAction(params: {
                         config,
                         dealId: typeof payload['deal_id'] === 'string' ? payload['deal_id'] : undefined,
                         quarter: typeof payload['quarter'] === 'string' ? payload['quarter'] : undefined,
+                    },
+                    prisma as unknown as import('@prisma/client').PrismaClient,
+                );
+                return safeJsonResult(result);
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: String(err) };
+            } finally {
+                await prisma.$disconnect().catch(() => undefined);
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_contract_generate — generate full HTML contract document
+        // payload: { prospect_id, deal_id?, list_price?, discount_percent?,
+        //            currency?, contract_duration_months?, deliverables?,
+        //            payment_terms?, send_to_prospect? }
+        // ------------------------------------------------------------------
+        case 'workspace_contract_generate': {
+            const prisma = await createPrisma();
+            try {
+                const config = requireConfig(await loadSalesConfig(tenantId, botId, prisma), botId);
+                const prospectId = typeof payload['prospect_id'] === 'string' ? payload['prospect_id'] : '';
+                if (!prospectId) {
+                    return { ok: false, output: '', errorOutput: 'payload.prospect_id is required.' };
+                }
+                const result = await generateContract(
+                    {
+                        prospectId,
+                        tenantId,
+                        botId,
+                        config,
+                        dealId: typeof payload['deal_id'] === 'string' ? payload['deal_id'] : undefined,
+                        listPrice: typeof payload['list_price'] === 'number' ? payload['list_price'] : undefined,
+                        discountPercent: typeof payload['discount_percent'] === 'number' ? payload['discount_percent'] : undefined,
+                        currency: typeof payload['currency'] === 'string' ? payload['currency'] : undefined,
+                        contractDurationMonths: typeof payload['contract_duration_months'] === 'number' ? payload['contract_duration_months'] : undefined,
+                        deliverables: typeof payload['deliverables'] === 'string' ? payload['deliverables'] : undefined,
+                        paymentTerms: typeof payload['payment_terms'] === 'string' ? payload['payment_terms'] : undefined,
+                        sendToProspect: payload['send_to_prospect'] === true,
+                    },
+                    prisma as unknown as import('@prisma/client').PrismaClient,
+                );
+                // Strip htmlContent from the result to keep output lean; caller can fetch via contractId
+                const { htmlContent: _html, ...rest } = result;
+                return safeJsonResult(rest);
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: String(err) };
+            } finally {
+                await prisma.$disconnect().catch(() => undefined);
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_objection_rebuttal — compose & send rebuttal email
+        // payload: { prospect_id, deal_id?, objection_type?, objection_text? }
+        // ------------------------------------------------------------------
+        case 'workspace_objection_rebuttal': {
+            const prisma = await createPrisma();
+            try {
+                const config = requireConfig(await loadSalesConfig(tenantId, botId, prisma), botId);
+                const prospectId = typeof payload['prospect_id'] === 'string' ? payload['prospect_id'] : '';
+                if (!prospectId) {
+                    return { ok: false, output: '', errorOutput: 'payload.prospect_id is required.' };
+                }
+                const rawType = typeof payload['objection_type'] === 'string' ? payload['objection_type'] : 'other';
+                const validTypes: ObjectionType[] = ['price', 'timing', 'competitor', 'features', 'authority', 'need', 'other'];
+                const objectionType: ObjectionType = validTypes.includes(rawType as ObjectionType) ? rawType as ObjectionType : 'other';
+                const result = await handleObjectionRebuttal(
+                    {
+                        prospectId,
+                        tenantId,
+                        botId,
+                        config,
+                        dealId: typeof payload['deal_id'] === 'string' ? payload['deal_id'] : undefined,
+                        objectionType,
+                        objectionText: typeof payload['objection_text'] === 'string' ? payload['objection_text'] : undefined,
+                    },
+                    prisma as unknown as import('@prisma/client').PrismaClient,
+                );
+                return safeJsonResult(result);
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: String(err) };
+            } finally {
+                await prisma.$disconnect().catch(() => undefined);
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_crm_sync — push contact + deal to HubSpot / Salesforce
+        // payload: { prospect_id, deal_id?, provider?: 'hubspot'|'salesforce'|'auto' }
+        // ------------------------------------------------------------------
+        case 'workspace_crm_sync': {
+            const prisma = await createPrisma();
+            try {
+                const config = requireConfig(await loadSalesConfig(tenantId, botId, prisma), botId);
+                const prospectId = typeof payload['prospect_id'] === 'string' ? payload['prospect_id'] : '';
+                if (!prospectId) {
+                    return { ok: false, output: '', errorOutput: 'payload.prospect_id is required.' };
+                }
+                const rawProvider = typeof payload['provider'] === 'string' ? payload['provider'] : 'auto';
+                const validProviders: CrmSyncProvider[] = ['hubspot', 'salesforce', 'auto'];
+                const provider: CrmSyncProvider = validProviders.includes(rawProvider as CrmSyncProvider) ? rawProvider as CrmSyncProvider : 'auto';
+                const result = await syncToCrm(
+                    {
+                        prospectId,
+                        tenantId,
+                        botId,
+                        config: config as Parameters<typeof syncToCrm>[0]['config'],
+                        dealId: typeof payload['deal_id'] === 'string' ? payload['deal_id'] : undefined,
+                        provider,
                     },
                     prisma as unknown as import('@prisma/client').PrismaClient,
                 );

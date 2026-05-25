@@ -1498,6 +1498,11 @@ model SalesAgentConfig {
   npsDelayDays              Int[]     @default([30, 60, 90])
   upsellEnabled             Boolean   @default(false)
   upsellCheckInDays         Int       @default(90)
+  // External CRM sync — HubSpot / Salesforce
+  crmSyncEnabled            Boolean   @default(false)
+  hubspotAccessToken        String?
+  salesforceInstanceUrl     String?
+  salesforceAccessToken     String?
   createdAt                 DateTime  @default(now())
   updatedAt                 DateTime  @updatedAt
 
@@ -1613,6 +1618,9 @@ model Prospect {
   referralSource  String?
   referredBy      String?        // email of the referrer
   referralNotes   String?
+  // External CRM IDs (written back after sync)
+  hubspotContactId     String?
+  salesforceContactId  String?
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 
@@ -1645,6 +1653,9 @@ model SalesDeal {
   closedAt          DateTime?
   contractSentAt    DateTime?
   contractSignedAt  DateTime?
+  // External CRM IDs (written back after sync)
+  hubspotDealId       String?
+  salesforceDealId    String?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
@@ -2260,4 +2271,8 @@ enum SalesActivityType {
   nps_sent
   nps_responded
   qbr_generated
+  // Sprint 22 — Closing Gaps
+  contract_generated
+  objection_rebuttal_sent
+  crm_synced
 }
