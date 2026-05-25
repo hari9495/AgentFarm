@@ -454,14 +454,18 @@ test('createLlmDecisionResolverFromConfig auto mode falls back to next configure
             heuristicDecision: lowRiskDecision,
         });
 
-        assert.equal(calledUrls.length, 2);
+        assert.equal(calledUrls.length, 3);
         assert.match(calledUrls[0] ?? '', /models\.inference\.ai\.azure\.com/);
-        assert.match(calledUrls[1] ?? '', /api\.openai\.com/);
+        assert.match(calledUrls[1] ?? '', /models\.inference\.ai\.azure\.com/);
+        assert.match(calledUrls[2] ?? '', /api\.openai\.com/);
         assert.equal(result.metadata.modelProvider, 'openai');
         assert.equal(result.metadata.fallbackReason, 'auto_failover_provider_unavailable');
         assert.equal(result.metadata.failoverTrace?.[0]?.provider, 'github_models');
         assert.equal(result.metadata.failoverTrace?.[0]?.reasonCode, 'provider_unavailable');
-        assert.equal(result.metadata.failoverTrace?.[0]?.disposition, 'attempt_failed');
+        assert.equal(result.metadata.failoverTrace?.[0]?.disposition, 'attempt_failed_retrying');
+        assert.equal(result.metadata.failoverTrace?.[1]?.provider, 'github_models');
+        assert.equal(result.metadata.failoverTrace?.[1]?.reasonCode, 'provider_unavailable');
+        assert.equal(result.metadata.failoverTrace?.[1]?.disposition, 'attempt_failed');
     } finally {
         globalThis.fetch = originalFetch;
     }
@@ -516,9 +520,10 @@ test('createLlmDecisionResolverFromConfig auto mode falls back from anthropic to
             heuristicDecision: lowRiskDecision,
         });
 
-        assert.equal(calledUrls.length, 2);
+        assert.equal(calledUrls.length, 3);
         assert.match(calledUrls[0] ?? '', /api\.anthropic\.com/);
-        assert.match(calledUrls[1] ?? '', /generativelanguage\.googleapis\.com/);
+        assert.match(calledUrls[1] ?? '', /api\.anthropic\.com/);
+        assert.match(calledUrls[2] ?? '', /generativelanguage\.googleapis\.com/);
         assert.equal(result.metadata.modelProvider, 'google');
     } finally {
         globalThis.fetch = originalFetch;
@@ -695,9 +700,10 @@ test('createLlmDecisionResolverFromConfig auto mode falls back from mistral to t
             heuristicDecision: lowRiskDecision,
         });
 
-        assert.equal(calledUrls.length, 2);
+        assert.equal(calledUrls.length, 3);
         assert.match(calledUrls[0] ?? '', /api\.mistral\.ai/);
-        assert.match(calledUrls[1] ?? '', /api\.together\.xyz/);
+        assert.match(calledUrls[1] ?? '', /api\.mistral\.ai/);
+        assert.match(calledUrls[2] ?? '', /api\.together\.xyz/);
         assert.equal(result.metadata.modelProvider, 'together');
     } finally {
         globalThis.fetch = originalFetch;

@@ -263,6 +263,7 @@ export type ProviderFailoverReasonCode =
 
 export type ProviderFailoverDisposition =
   | 'attempt_failed'
+  | 'attempt_failed_retrying'
   | 'skipped_cooldown'
   | 'skipped_unconfigured';
 

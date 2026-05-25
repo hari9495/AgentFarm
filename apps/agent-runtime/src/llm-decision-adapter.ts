@@ -1927,6 +1927,13 @@ const createAutoResolver = (input: {
             providers.sort((a, b) => (advice.get(a) ?? 0) - (advice.get(b) ?? 0));
         }
 
+        // Number of attempts per provider before switching to the next one.
+        // Permanent errors (auth_failure, billing_disabled, rate_limit) skip the retry
+        // immediately since re-calling the same endpoint cannot recover them.
+        const MAX_RETRIES_PER_PROVIDER = 2;
+        const isRetryableError = (code: ProviderFailoverReasonCode): boolean =>
+            code !== 'auth_failure' && code !== 'billing_disabled' && code !== 'rate_limit';
+
         let lastError: unknown = null;
         const failoverTrace: ProviderFailoverTraceRecord[] = [];
         for (const provider of providers) {
@@ -1955,37 +1962,54 @@ const createAutoResolver = (input: {
                 continue;
             }
 
-            const start = Date.now();
-            try {
-                const result = await resolver({ task, heuristicDecision });
-                recordProviderCall(provider, Date.now() - start, true);
-                recordProviderOutcomeByTaskType(provider, heuristicDecision.actionType, true);
-                clearProviderCooldown(provider);
-                return {
-                    ...result,
-                    metadata: {
-                        ...result.metadata,
-                        fallbackReason:
-                            failoverTrace.length > 0
-                                ? `auto_failover_${failoverTrace[failoverTrace.length - 1]?.reasonCode ?? 'unclassified'}`
-                                : undefined,
-                        failoverTrace: failoverTrace.length > 0 ? failoverTrace : undefined,
-                    },
-                };
-            } catch (error: unknown) {
-                recordProviderCall(provider, Date.now() - start, false);
-                recordProviderOutcomeByTaskType(provider, heuristicDecision.actionType, false);
-                const reasonCode = classifyFailoverReason(error);
-                const cooldownUntil = markProviderCooldown(provider, reasonCode);
-                failoverTrace.push({
-                    provider,
-                    reasonCode,
-                    disposition: 'attempt_failed',
-                    occurredAt: new Date().toISOString(),
-                    detail: error instanceof Error ? error.message : String(error),
-                    cooldownUntil,
-                });
-                lastError = error;
+            for (let attempt = 0; attempt < MAX_RETRIES_PER_PROVIDER; attempt++) {
+                const start = Date.now();
+                try {
+                    const result = await resolver({ task, heuristicDecision });
+                    recordProviderCall(provider, Date.now() - start, true);
+                    recordProviderOutcomeByTaskType(provider, heuristicDecision.actionType, true);
+                    clearProviderCooldown(provider);
+                    return {
+                        ...result,
+                        metadata: {
+                            ...result.metadata,
+                            fallbackReason:
+                                failoverTrace.length > 0
+                                    ? `auto_failover_${failoverTrace[failoverTrace.length - 1]?.reasonCode ?? 'unclassified'}`
+                                    : undefined,
+                            failoverTrace: failoverTrace.length > 0 ? failoverTrace : undefined,
+                        },
+                    };
+                } catch (error: unknown) {
+                    recordProviderCall(provider, Date.now() - start, false);
+                    recordProviderOutcomeByTaskType(provider, heuristicDecision.actionType, false);
+                    const reasonCode = classifyFailoverReason(error);
+                    const isFinalAttempt = attempt >= MAX_RETRIES_PER_PROVIDER - 1 || !isRetryableError(reasonCode);
+
+                    if (isFinalAttempt) {
+                        const cooldownUntil = markProviderCooldown(provider, reasonCode);
+                        failoverTrace.push({
+                            provider,
+                            reasonCode,
+                            disposition: 'attempt_failed',
+                            occurredAt: new Date().toISOString(),
+                            detail: error instanceof Error ? error.message : String(error),
+                            cooldownUntil,
+                        });
+                        lastError = error;
+                        break;
+                    }
+
+                    failoverTrace.push({
+                        provider,
+                        reasonCode,
+                        disposition: 'attempt_failed_retrying',
+                        occurredAt: new Date().toISOString(),
+                        detail: error instanceof Error ? error.message : String(error),
+                        cooldownUntil: null,
+                    });
+                    lastError = error;
+                }
             }
         }
 
