@@ -10,6 +10,16 @@ const makeMockPrisma = (overrides?: Partial<{
     tenantSubscriptionFindMany: (args?: any) => Promise<any[]>;
     agentSubscriptionFindMany: (args?: any) => Promise<any[]>;
     transaction: (...args: any[]) => Promise<any>;
+    /** bot.findFirst result for the suspended agent — used by maybeQueueScaleDown. */
+    botFindFirst: any | null;
+    /** workspaceVm.findUnique result — null means no VM provisioned. */
+    workspaceVmFindUnique: any | null;
+    /** Remaining active bot count after suspension. */
+    botCount: number;
+    /** provisioningJob.findFirst result — null means no in-flight resize job. */
+    resizeJobFindFirst: any | null;
+    /** Captures created provisioning jobs. */
+    jobsCreated: any[];
 }>) => ({
     tenantSubscription: {
         findMany: overrides?.tenantSubscriptionFindMany ?? (async () => []),
@@ -18,6 +28,20 @@ const makeMockPrisma = (overrides?: Partial<{
     agentSubscription: {
         findMany: overrides?.agentSubscriptionFindMany ?? (async () => []),
         update: async () => ({}),
+    },
+    bot: {
+        findFirst: async () => overrides?.botFindFirst ?? null,
+        count: async () => overrides?.botCount ?? 0,
+    },
+    workspaceVm: {
+        findUnique: async () => overrides?.workspaceVmFindUnique ?? null,
+    },
+    provisioningJob: {
+        findFirst: async () => overrides?.resizeJobFindFirst ?? null,
+        create: async (args: any) => {
+            if (overrides?.jobsCreated) overrides.jobsCreated.push(args.data);
+            return { id: 'job-resize-001', ...args.data };
+        },
     },
     $transaction: overrides?.transaction ?? (async (ops: any[]) => Promise.all(ops)),
     subscriptionEvent: { create: async () => ({}) },
@@ -34,7 +58,7 @@ const pastDate = (daysAgo: number) => new Date(Date.now() - daysAgo * 24 * 60 * 
 test('runSubscriptionSweep — no subscriptions — returns { expired: 0, suspended: 0 }', async () => {
     const prisma = makeMockPrisma();
     const result = await runSubscriptionSweep(prisma);
-    assert.deepEqual(result, { expired: 0, suspended: 0 });
+    assert.deepEqual(result, { expired: 0, suspended: 0, scaled_down: 0 });
 });
 
 test('runSubscriptionSweep — 2 active tenant subs past expiresAt — returns { expired: 2, suspended: 0 }', async () => {
@@ -51,7 +75,7 @@ test('runSubscriptionSweep — 2 active tenant subs past expiresAt — returns {
         transaction: async (ops: any[]) => { txCalls++; return Promise.all(ops); },
     });
     const result = await runSubscriptionSweep(prisma);
-    assert.deepEqual(result, { expired: 2, suspended: 0 });
+    assert.deepEqual(result, { expired: 2, suspended: 0, scaled_down: 0 });
     assert.equal(txCalls, 2);
 });
 
@@ -66,7 +90,7 @@ test('runSubscriptionSweep — 1 active agent sub past expiresAt — returns { e
         transaction: async (ops: any[]) => { txCalls++; return Promise.all(ops); },
     });
     const result = await runSubscriptionSweep(prisma);
-    assert.deepEqual(result, { expired: 1, suspended: 0 });
+    assert.deepEqual(result, { expired: 1, suspended: 0, scaled_down: 0 });
     assert.equal(txCalls, 1);
 });
 
@@ -84,7 +108,7 @@ test('runSubscriptionSweep — 1 expired tenant sub past grace period — return
         transaction: async (ops: any[]) => { txCalls++; return Promise.all(ops); },
     });
     const result = await runSubscriptionSweep(prisma);
-    assert.deepEqual(result, { expired: 0, suspended: 1 });
+    assert.deepEqual(result, { expired: 0, suspended: 1, scaled_down: 0 });
     assert.equal(txCalls, 1);
 });
 
@@ -99,7 +123,7 @@ test('runSubscriptionSweep — 1 expired agent sub past grace period — returns
         transaction: async (ops: any[]) => { txCalls++; return Promise.all(ops); },
     });
     const result = await runSubscriptionSweep(prisma);
-    assert.deepEqual(result, { expired: 0, suspended: 1 });
+    assert.deepEqual(result, { expired: 0, suspended: 1, scaled_down: 0 });
     assert.equal(txCalls, 1);
 });
 
@@ -119,7 +143,7 @@ test('runSubscriptionSweep — mix: 2 active expired + 1 past grace — returns 
         transaction: async (ops: any[]) => { txCalls++; return Promise.all(ops); },
     });
     const result = await runSubscriptionSweep(prisma);
-    assert.deepEqual(result, { expired: 2, suspended: 1 });
+    assert.deepEqual(result, { expired: 2, suspended: 1, scaled_down: 0 });
     assert.equal(txCalls, 3); // 2 active→expired + 1 expired→suspended
 });
 
@@ -204,4 +228,100 @@ test('runRenewalReminderSweep — 2 subs expiring in window — returns { remind
     const result = await runRenewalReminderSweep(prisma);
     assert.deepEqual(result, { reminders: 2 });
     assert.equal(createCount.n, 2);
+});
+
+// ---------------------------------------------------------------------------
+// Scale-down (VM resize on agent suspension) tests
+// ---------------------------------------------------------------------------
+
+test('scale-down — agent suspended, VM tier drops → queues vm_resize job, scaled_down=1', async () => {
+    const jobsCreated: any[] = [];
+    // 1 agent suspended; 0 remaining active → B4ms (2 agents) → B2s (0 agents): tier drop
+    const expiredAgentSub = [{
+        id: 'as_sd1',
+        tenantId: 'tenant-sd',
+        agentId: 'bot-sd-001',
+        planId: 'plan-sd-001',
+        expiresAt: pastDate(5),
+    }];
+    const prisma = makeMockPrisma({
+        agentSubscriptionFindMany: async (args: any) => {
+            if (args?.where?.status === 'expired') return expiredAgentSub;
+            return [];
+        },
+        transaction: async (ops: any[]) => Promise.all(ops),
+        botFindFirst: { workspaceId: 'ws-sd-001', id: 'bot-sd-001', role: 'developer_agent' },
+        workspaceVmFindUnique: { vmSize: 'Standard_B4ms' },  // currently B4ms (2-3 agents)
+        botCount: 1,  // 1 remaining active agent after suspension → B2s tier
+        resizeJobFindFirst: null,
+        jobsCreated,
+    });
+
+    const result = await runSubscriptionSweep(prisma);
+
+    assert.equal(result.suspended, 1);
+    assert.equal(result.scaled_down, 1);
+    assert.equal(jobsCreated.length, 1);
+    assert.equal(jobsCreated[0].runtimeTier, 'vm_resize');
+    assert.equal(jobsCreated[0].workspaceId, 'ws-sd-001');
+    assert.equal(jobsCreated[0].triggerSource, 'subscription_sweep');
+});
+
+test('scale-down — agent suspended, still in same VM tier → no resize job, scaled_down=0', async () => {
+    const jobsCreated: any[] = [];
+    // 1 agent suspended; 2 remaining → target still B4ms (2-3 agents), same as current
+    const expiredAgentSub = [{
+        id: 'as_sd2',
+        tenantId: 'tenant-sd',
+        agentId: 'bot-sd-002',
+        planId: 'plan-sd-001',
+        expiresAt: pastDate(5),
+    }];
+    const prisma = makeMockPrisma({
+        agentSubscriptionFindMany: async (args: any) => {
+            if (args?.where?.status === 'expired') return expiredAgentSub;
+            return [];
+        },
+        transaction: async (ops: any[]) => Promise.all(ops),
+        botFindFirst: { workspaceId: 'ws-sd-002', id: 'bot-sd-002', role: 'developer_agent' },
+        workspaceVmFindUnique: { vmSize: 'Standard_B4ms' },  // B4ms (2-3 agents)
+        botCount: 2,  // 2 remaining → still B4ms tier, no resize needed
+        resizeJobFindFirst: null,
+        jobsCreated,
+    });
+
+    const result = await runSubscriptionSweep(prisma);
+
+    assert.equal(result.suspended, 1);
+    assert.equal(result.scaled_down, 0);
+    assert.equal(jobsCreated.length, 0);
+});
+
+test('scale-down — resize job already queued → no duplicate job created', async () => {
+    const jobsCreated: any[] = [];
+    const expiredAgentSub = [{
+        id: 'as_sd3',
+        tenantId: 'tenant-sd',
+        agentId: 'bot-sd-003',
+        planId: 'plan-sd-001',
+        expiresAt: pastDate(5),
+    }];
+    const prisma = makeMockPrisma({
+        agentSubscriptionFindMany: async (args: any) => {
+            if (args?.where?.status === 'expired') return expiredAgentSub;
+            return [];
+        },
+        transaction: async (ops: any[]) => Promise.all(ops),
+        botFindFirst: { workspaceId: 'ws-sd-003', id: 'bot-sd-003', role: 'developer_agent' },
+        workspaceVmFindUnique: { vmSize: 'Standard_B4ms' },
+        botCount: 1,  // tier would drop
+        resizeJobFindFirst: { id: 'job-already-queued' },  // duplicate guard triggers
+        jobsCreated,
+    });
+
+    const result = await runSubscriptionSweep(prisma);
+
+    assert.equal(result.suspended, 1);
+    assert.equal(result.scaled_down, 0);  // no new job because one is already queued
+    assert.equal(jobsCreated.length, 0);
 });

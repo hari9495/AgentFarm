@@ -154,14 +154,24 @@ export async function enrollAgentAfterPayment(
         };
     }
 
-    // 5. Create the provisioning job — worker will pick it up automatically
+    // 5. Determine job type:
+    //    • 'initial_provision' — no VM exists yet for this workspace; create one at small size.
+    //    • 'vm_resize'         — VM already exists; resize it to accommodate the new agent.
+    const existingVm = await (prisma as any).workspaceVm.findUnique({
+        where: { workspaceId: workspace.id },
+        select: { vmSize: true },
+    }) as { vmSize: string } | null;
+
+    const runtimeTier = existingVm ? 'vm_resize' : 'initial_provision';
+
+    // 6. Create the provisioning job — worker will pick it up automatically
     const job = await prisma.provisioningJob.create({
         data: {
             tenantId,
             workspaceId: workspace.id,
             botId: bot.id,
             planId,
-            runtimeTier: 'dedicated_vm',
+            runtimeTier,
             roleType: bot.role,
             correlationId,
             triggerSource: 'payment_webhook',
@@ -170,7 +180,7 @@ export async function enrollAgentAfterPayment(
             requestedAt,
             orderId,
             triggeredBy: 'billing',
-            metadata: JSON.stringify({ source: 'payment_webhook' }),
+            metadata: JSON.stringify({ source: 'payment_webhook', vmExists: existingVm !== null }),
         },
     });
 

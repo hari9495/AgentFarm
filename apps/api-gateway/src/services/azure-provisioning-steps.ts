@@ -22,6 +22,7 @@ import {
     getNetworkClient,
     getAzureRegion,
     vmSkuForTier,
+    vmSkuForAgentCount,
 } from '../lib/azure-client.js';
 import { buildCloudInitScript } from '../lib/vm-bootstrap.js';
 
@@ -78,12 +79,13 @@ function subnetName(): string {
     return 'bots-subnet';
 }
 
-function nicName(botId: string): string {
-    return `bot-${botId.slice(-8)}-nic`;
+// Workspace-level naming — all bots in the same workspace share one VM and one NIC.
+export function wsNicName(workspaceId: string): string {
+    return `ws-${workspaceId.slice(-8)}-nic`;
 }
 
-function vmName(botId: string): string {
-    return `bot-${botId.slice(-8)}-vm`;
+export function wsVmName(workspaceId: string): string {
+    return `ws-${workspaceId.slice(-8)}-vm`;
 }
 
 async function sleep(ms: number): Promise<void> {
@@ -118,7 +120,8 @@ export async function createResources(job: JobRef): Promise<StepResult> {
     const rg = rgName(job.tenantId);
     const vnet = vnetName(job.tenantId);
     const subnet = subnetName();
-    const nic = nicName(job.botId);
+    // Workspace-level NIC: shared by all bots in this workspace.
+    const nic = wsNicName(job.workspaceId);
 
     try {
         // 1. Resource group
@@ -181,8 +184,11 @@ export async function bootstrapVm(
     const computeClient = getComputeClient();
     const rg = context['resourceGroupName'] ?? rgName(job.tenantId);
     const location = context['location'] ?? getAzureRegion();
-    const vm = vmName(job.botId);
-    const sku = vmSkuForTier(job.runtimeTier);
+    // Workspace-level VM name — all bots in the workspace share one VM.
+    const vm = wsVmName(job.workspaceId);
+    // Initial provisioning always starts with 1 active agent; the VM is resized
+    // later via vm_resize jobs as more agents are added.
+    const sku = vmSkuForAgentCount(1);
     const nicId = context['nicId'] ?? '';
 
     const customData = buildCloudInitScript({
@@ -264,10 +270,9 @@ export async function bootstrapVm(
             };
         }
 
-        // Resolve private IP from NIC
+        // Resolve private IP from the workspace-level NIC
         const networkClient = getNetworkClient();
-        const nicName_ = nicName(job.botId);
-        const nicObj = await networkClient.networkInterfaces.get(rg, nicName_);
+        const nicObj = await networkClient.networkInterfaces.get(rg, wsNicName(job.workspaceId));
         const privateIp = nicObj.ipConfigurations?.[0]?.privateIPAddress ?? '0.0.0.0';
 
         return {
@@ -275,6 +280,7 @@ export async function bootstrapVm(
             context: {
                 ...context,
                 vmName: vm,
+                vmSize: sku,
                 vmPrivateIp: privateIp,
                 containerEndpoint: `http://${privateIp}:8080`,
             },
@@ -355,6 +361,31 @@ export async function healthCheck(
     } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
         return { success: false, errorCode: 'HEALTH_CHECK_ERROR', errorMessage: msg };
+    }
+}
+
+// ---------------------------------------------------------------------------
+// VM resize: deallocate → update hardware profile → restart
+// Required when active agent count in a workspace crosses a size tier boundary.
+// ---------------------------------------------------------------------------
+
+export async function resizeWorkspaceVm(
+    resourceGroup: string,
+    vmResourceName: string,
+    targetSku: string,
+): Promise<StepResult> {
+    const computeClient = getComputeClient();
+    try {
+        // Azure requires the VM to be deallocated before changing vmSize.
+        await computeClient.virtualMachines.beginDeallocateAndWait(resourceGroup, vmResourceName);
+        await computeClient.virtualMachines.beginUpdateAndWait(resourceGroup, vmResourceName, {
+            hardwareProfile: { vmSize: targetSku as never },
+        });
+        await computeClient.virtualMachines.beginStartAndWait(resourceGroup, vmResourceName);
+        return { success: true, context: { vmSize: targetSku } };
+    } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return { success: false, errorCode: 'VM_RESIZE_FAILED', errorMessage: msg };
     }
 }
 

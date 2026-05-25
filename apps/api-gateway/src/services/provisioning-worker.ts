@@ -23,7 +23,10 @@ import {
     startContainer,
     healthCheck,
     cleanupResources,
+    resizeWorkspaceVm,
+    wsVmName,
 } from './azure-provisioning-steps.js';
+import { vmSkuForAgentCount } from '../lib/azure-client.js';
 import {
     PROVISIONING_STUCK_ALERT_MS,
     STUCK_MONITOR_STATES,
@@ -438,7 +441,10 @@ async function monitorAndRemediateProvisioning(logger: { info: (msg: string) => 
 // Complete: mark RuntimeInstance ready + update Bot/Workspace status
 // ---------------------------------------------------------------------------
 
-async function handleCompletion(job: ProvisioningJobRecord): Promise<void> {
+async function handleCompletion(
+    job: ProvisioningJobRecord,
+    ctx: Record<string, string> = {},
+): Promise<void> {
     // Mark RuntimeInstance as ready
     await prisma.runtimeInstance.updateMany({
         where: { botId: job.botId },
@@ -486,9 +492,133 @@ async function handleCompletion(job: ProvisioningJobRecord): Promise<void> {
         },
     });
 
+    // For initial provisioning: persist the WorkspaceVm record so subsequent
+    // agent purchases can detect the existing VM and trigger a resize instead
+    // of creating a duplicate VM.
+    if (job.runtimeTier === 'initial_provision' && ctx['vmPrivateIp']) {
+        const rg = `agentfarm-${job.tenantId.slice(-8)}-rg`;
+        const vm = wsVmName(job.workspaceId);
+        const subscriptionId = process.env['AZURE_SUBSCRIPTION_ID'] ?? '';
+        const vmResourceId = `/subscriptions/${subscriptionId}/resourceGroups/${rg}/providers/Microsoft.Compute/virtualMachines/${vm}`;
+        await (prisma as any).workspaceVm.upsert({
+            where: { workspaceId: job.workspaceId },
+            create: {
+                workspaceId: job.workspaceId,
+                tenantId: job.tenantId,
+                vmName: vm,
+                vmResourceId,
+                resourceGroup: rg,
+                privateIp: ctx['vmPrivateIp'],
+                region: ctx['location'] ?? process.env['AZURE_REGION'] ?? 'eastus2',
+                vmSize: ctx['vmSize'] ?? 'Standard_B2s',
+                status: 'running',
+                activeContainerCount: 1,
+                nextContainerPort: 8082,
+            },
+            update: {
+                status: 'running',
+                privateIp: ctx['vmPrivateIp'],
+                vmSize: ctx['vmSize'] ?? 'Standard_B2s',
+                activeContainerCount: 1,
+            },
+        });
+    }
+
     await transitionTo(job, 'completed', { completedAt: new Date() });
     await emitAudit(job, 'Provisioning completed — bot is active', 'info');
     console.log(`[provisioning-worker] [${job.correlationId}] provisioning COMPLETED`);
+}
+
+// ---------------------------------------------------------------------------
+// Resize job: scale workspace VM up or down based on active agent count
+// ---------------------------------------------------------------------------
+
+async function processResizeJob(job: ProvisioningJobRecord): Promise<void> {
+    console.log(`[provisioning-worker] [${job.correlationId}] starting vm_resize job ${job.id}`);
+
+    const claimed = await prisma.provisioningJob.updateMany({
+        where: { id: job.id, status: 'queued' },
+        data: { status: 'validating', startedAt: new Date() },
+    });
+    if (claimed.count === 0) {
+        return; // already claimed by another worker
+    }
+
+    try {
+        // 1. Count active agent subscriptions for this workspace to determine target SKU.
+        const activeBots = await prisma.bot.findMany({
+            where: {
+                workspaceId: job.workspaceId,
+                status: { in: ['active', 'created'] as never },
+            },
+            select: { id: true },
+        });
+        const activeCount = activeBots.length;
+        const targetSku = vmSkuForAgentCount(activeCount);
+
+        // 2. Look up the current workspace VM.
+        const workspaceVm = await (prisma as any).workspaceVm.findUnique({
+            where: { workspaceId: job.workspaceId },
+        }) as { vmName: string; resourceGroup: string; vmSize: string; activeContainerCount: number; privateIp: string } | null;
+
+        if (!workspaceVm) {
+            // WorkspaceVm doesn't exist yet — this can happen if the initial provision
+            // job hasn't completed. Fail this job so the hire-handler can re-queue it.
+            await handleFailure(job, 'validating', 'WORKSPACE_VM_NOT_FOUND',
+                `No WorkspaceVm record found for workspaceId=${job.workspaceId}. Initial provisioning may still be in progress.`);
+            return;
+        }
+
+        await transitionTo(job, 'creating_resources');
+
+        // 3. Resize the VM if the tier has changed.
+        if (workspaceVm.vmSize !== targetSku) {
+            console.log(`[provisioning-worker] [${job.correlationId}] resizing VM from ${workspaceVm.vmSize} → ${targetSku} (${activeCount} active agents)`);
+            const result = await resizeWorkspaceVm(workspaceVm.resourceGroup, workspaceVm.vmName, targetSku);
+            if (!result.success) {
+                await handleFailure(job, 'creating_resources', result.errorCode ?? 'VM_RESIZE_FAILED', result.errorMessage ?? 'Resize failed');
+                return;
+            }
+            // Update DB record with new size.
+            await (prisma as any).workspaceVm.update({
+                where: { workspaceId: job.workspaceId },
+                data: { vmSize: targetSku },
+            });
+            await emitAudit(job, `Workspace VM resized: ${workspaceVm.vmSize} → ${targetSku} (${activeCount} active agents)`, 'info');
+        } else {
+            await emitAudit(job, `Workspace VM already at correct size ${targetSku} for ${activeCount} active agents — no resize needed`, 'info');
+        }
+
+        // 4. Increment active container count for the new agent.
+        await (prisma as any).workspaceVm.update({
+            where: { workspaceId: job.workspaceId },
+            data: { activeContainerCount: activeCount },
+        });
+
+        // 5. Register the agent's runtime instance pointing at the shared VM.
+        await prisma.runtimeInstance.upsert({
+            where: { botId: job.botId },
+            create: {
+                botId: job.botId,
+                workspaceId: job.workspaceId,
+                tenantId: job.tenantId,
+                status: 'ready',
+                contractVersion: CONTRACT_VERSION,
+                endpoint: `http://${workspaceVm.privateIp}:8080`,
+            },
+            update: {
+                status: 'ready',
+                endpoint: `http://${workspaceVm.privateIp}:8080`,
+                lastSeenAt: new Date(),
+            },
+        });
+
+        // 6. Finalise using the shared completion handler (writes AgentSubscription, etc.)
+        await handleCompletion(job, {});
+    } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        await handleFailure(job, job.status, 'RESIZE_UNEXPECTED_ERROR', msg);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -496,6 +626,11 @@ async function handleCompletion(job: ProvisioningJobRecord): Promise<void> {
 // ---------------------------------------------------------------------------
 
 async function processJob(job: ProvisioningJobRecord): Promise<void> {
+    // vm_resize jobs run a shorter, separate path — no new VM created.
+    if (job.runtimeTier === 'vm_resize') {
+        return processResizeJob(job);
+    }
+
     console.log(`[provisioning-worker] [${job.correlationId}] starting job ${job.id} from status=${job.status}`);
 
     // Claim the job: transition queued → validating atomically
@@ -555,8 +690,8 @@ async function processJob(job: ProvisioningJobRecord): Promise<void> {
         }
     }
 
-    // All steps passed — finalise
-    await handleCompletion(job);
+    // All steps passed — finalise (pass accumulated ctx so WorkspaceVm can be written)
+    await handleCompletion(job, ctx);
 }
 
 // ---------------------------------------------------------------------------

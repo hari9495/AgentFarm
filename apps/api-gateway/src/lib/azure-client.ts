@@ -93,7 +93,7 @@ export function getNetworkClient(): NetworkManagementClient {
 // Provisioning config helpers
 // ---------------------------------------------------------------------------
 
-/** Map runtimeTier to Azure VM SKU. */
+/** Map runtimeTier to Azure VM SKU (legacy — used only for non-shared provisioning). */
 export function vmSkuForTier(runtimeTier: string): string {
     const SKU_MAP: Record<string, string> = {
         standard: 'Standard_B2s',
@@ -101,6 +101,22 @@ export function vmSkuForTier(runtimeTier: string): string {
         enterprise: 'Standard_D4s_v3',
     };
     return SKU_MAP[runtimeTier] ?? 'Standard_B2s';
+}
+
+/**
+ * Derive Azure VM SKU from the number of active agents sharing the workspace VM.
+ *
+ * Tiers:
+ *   1 agent        → Standard_B2s    (2 vCPU,  4 GB, burstable)
+ *   2–3 agents     → Standard_B4ms   (4 vCPU, 16 GB, burstable)
+ *   4–6 agents     → Standard_D4s_v3 (4 vCPU, 16 GB, general purpose)
+ *   7+ agents      → Standard_D8s_v3 (8 vCPU, 32 GB, general purpose)
+ */
+export function vmSkuForAgentCount(agentCount: number): string {
+    if (agentCount <= 1) return 'Standard_B2s';
+    if (agentCount <= 3) return 'Standard_B4ms';
+    if (agentCount <= 6) return 'Standard_D4s_v3';
+    return 'Standard_D8s_v3';
 }
 
 /** Default Azure region for new resource groups. Override with AZURE_REGION env. */

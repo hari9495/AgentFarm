@@ -85,6 +85,8 @@ function makePrisma(overrides: Partial<{
     orderJobFindFirst: unknown;
     /** Returned when the findFirst query contains `botId` (step 4b bot-level guard). */
     liveJobFindFirst: unknown;
+    /** Returned for workspaceVm.findUnique — null means first agent (initial_provision). */
+    workspaceVmFindUnique: unknown;
 }>): PrismaClient & { _created: unknown[] } {
     const created: unknown[] = [];
     return {
@@ -122,6 +124,11 @@ function makePrisma(overrides: Partial<{
                 return job;
             },
         },
+        workspaceVm: {
+            // null → first agent in workspace (initial_provision)
+            // non-null → VM already exists (vm_resize)
+            findUnique: async () => overrides.workspaceVmFindUnique ?? null,
+        },
         _created: created,
     } as unknown as PrismaClient & { _created: unknown[] };
 }
@@ -136,9 +143,10 @@ describe('enrollAgentAfterPayment', () => {
         const prisma = makePrisma({
             workspaceFindFirst: stubWorkspace,
             planFindUnique: stubPlan,
-            botFindFirst: stubBot,       // bot already exists for this role
-            orderJobFindFirst: null,     // no prior job for this orderId
-            liveJobFindFirst: null,      // no live job for this bot
+            botFindFirst: stubBot,          // bot already exists for this role
+            orderJobFindFirst: null,        // no prior job for this orderId
+            liveJobFindFirst: null,         // no live job for this bot
+            workspaceVmFindUnique: { vmSize: 'Standard_B2s' },  // VM exists → vm_resize
         });
 
         const result = await enrollAgentAfterPayment({
@@ -159,6 +167,8 @@ describe('enrollAgentAfterPayment', () => {
         // Only the provisioning job was created (bot already existed)
         assert.equal(prisma._created.length, 1);
         assert.equal((prisma._created[0] as any)._type, 'job');
+        // VM already exists → resize, not initial provision
+        assert.equal((prisma._created[0] as any).runtimeTier, 'vm_resize');
     });
 
     test('new role — creates bot when none exists for the purchased plan role', async () => {
@@ -275,6 +285,56 @@ describe('enrollAgentAfterPayment', () => {
         assert.equal(prisma2._created.length, 2);  // bot + job both created
         assert.equal((prisma2._created[0] as any)._type, 'bot');
         assert.equal((prisma2._created[1] as any)._type, 'job');
+    });
+
+    test('runtimeTier=initial_provision — first agent in workspace, no WorkspaceVm yet', async () => {
+        const prisma = makePrisma({
+            workspaceFindFirst: stubWorkspace,
+            planFindUnique: stubPlan,
+            botFindFirst: null,             // no bot yet
+            orderJobFindFirst: null,
+            liveJobFindFirst: null,
+            workspaceVmFindUnique: null,    // no VM exists → initial_provision
+        });
+
+        const result = await enrollAgentAfterPayment({
+            orderId: 'ord-first-001',
+            tenantId: TENANT_ID,
+            planId: PLAN_ID,
+            requestedBy: 'payment_webhook',
+        }, prisma);
+
+        assert.equal(result.reused, false);
+        assert.equal(prisma._created.length, 2);  // bot + job
+        assert.equal((prisma._created[0] as any)._type, 'bot');
+        assert.equal((prisma._created[1] as any)._type, 'job');
+        assert.equal((prisma._created[1] as any).runtimeTier, 'initial_provision');
+    });
+
+    test('runtimeTier=vm_resize — second agent added, WorkspaceVm already exists', async () => {
+        const existingVm = { vmSize: 'Standard_B2s' };
+        const testerPlan = { roleType: 'tester_agent' };
+        const prisma = makePrisma({
+            workspaceFindFirst: stubWorkspace,
+            planFindUnique: testerPlan,
+            botFindFirst: null,             // no tester bot yet
+            orderJobFindFirst: null,
+            liveJobFindFirst: null,
+            workspaceVmFindUnique: existingVm,  // VM already exists → resize
+        });
+
+        const result = await enrollAgentAfterPayment({
+            orderId: 'ord-tester-002',
+            tenantId: TENANT_ID,
+            planId: 'plan-tester-001',
+            requestedBy: 'payment_webhook',
+        }, prisma);
+
+        assert.equal(result.reused, false);
+        assert.equal(prisma._created.length, 2);  // bot + job
+        assert.equal((prisma._created[0] as any)._type, 'bot');
+        assert.equal((prisma._created[1] as any)._type, 'job');
+        assert.equal((prisma._created[1] as any).runtimeTier, 'vm_resize');
     });
 
     test('repeated purchase — same plan bought again reuses live job, no new provisioning cycle', async () => {
