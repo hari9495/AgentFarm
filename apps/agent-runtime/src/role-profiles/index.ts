@@ -16,6 +16,10 @@ import {
     CONTENT_WRITER_ROLE_ALLOWED_LOCAL_ACTIONS,
 } from '../agents/content-writer/content-writer-agent-profile.js';
 import {
+    MARKETING_SPECIALIST_ROLE_ALLOWED_CONNECTORS,
+    MARKETING_SPECIALIST_ROLE_ALLOWED_LOCAL_ACTIONS,
+} from '../agents/marketing-specialist/marketing-specialist-agent-profile.js';
+import {
     DEVELOPER_ROLE_ALLOWED_CONNECTORS,
     DEVELOPER_ROLE_ALLOWED_LOCAL_ACTIONS,
 } from '../agents/developer/developer-agent-profile.js';
@@ -113,9 +117,9 @@ export const ROLE_PROFILES: Record<RoleKey, RoleProfile> = {
     marketing_specialist: {
         roleKey: 'marketing_specialist',
         displayName: 'Marketing Specialist',
-        description: 'Handles campaigns, email marketing, content distribution, and CRM updates',
-        allowedConnectorTools: ['google_drive', 'slack', 'gmail', 'sendgrid', 'mailgun', 'hubspot', 'salesforce', 'microsoft_teams'],
-        allowedActions: ['create_document', 'send_email', 'create_campaign', 'update_crm', 'send_message', 'schedule_post'],
+        description: 'Handles full campaign lifecycle — planning, PPC optimisation, SEO/keyword research, email sequences, social scheduling, A/B testing, KPI reporting, competitor analysis, and cross-team alignment',
+        allowedConnectorTools: [...MARKETING_SPECIALIST_ROLE_ALLOWED_CONNECTORS],
+        allowedActions: [...MARKETING_SPECIALIST_ROLE_ALLOWED_LOCAL_ACTIONS],
         requiredConfig: ['emailProvider', 'crmProvider'],
     },
     corporate_assistant: {

@@ -61,6 +61,7 @@ import { handleDesignScoreAction, isDesignScoreActionType, type DesignScoreActio
 import { handleContextSweepAction, isContextSweepActionType, type ContextSweepActionType } from './agents/developer/context-sweep-action-handler.js';
 import { handlePmAction, isPmActionType, type PmActionType } from './agents/project-manager/project-manager-action-handler.js';
 import { handleBaAction, isBaActionType, type BaActionType } from './agents/business-analyst/business-analyst-action-handler.js';
+import { handleMarketingSpecialistAction, isMarketingSpecialistActionType, type MarketingSpecialistActionType } from './agents/marketing-specialist/marketing-specialist-action-handler.js';
 import type { ProseCallerFn } from './agents/content-writer/llm-prose-writer.js';
 import { streamLLM } from './llm-decision-adapter.js';
 import { globalEpisodicMemory } from './episodic-memory.js';
@@ -451,6 +452,11 @@ export type LocalWorkspaceActionType =
     | 'workspace_devops_dns'
     | 'workspace_devops_lb'
     | 'workspace_devops_service_mesh'
+    // Tier 31e (DevOps P3 gap actions — SLO, Compliance, Registry, Load Test)
+    | 'workspace_devops_slo'
+    | 'workspace_devops_compliance_scan'
+    | 'workspace_devops_registry'
+    | 'workspace_devops_load_test'
     // Tier 32 (Mobile / iOS + Android domain actions)
     | 'workspace_mob_ios_component'
     | 'workspace_mob_ios_build'
@@ -553,7 +559,24 @@ export type LocalWorkspaceActionType =
     | 'workspace_ba_proactive_ac_check'
     | 'workspace_ba_proactive_epic_check'
     | 'workspace_ba_proactive_conflict_scan'
-    | 'workspace_ba_rtm_generate';
+    | 'workspace_ba_rtm_generate'
+    // Tier 46 (Marketing Specialist domain actions)
+    | 'workspace_ms_plan_campaign'
+    | 'workspace_ms_monitor_campaign'
+    | 'workspace_ms_optimize_ppc'
+    | 'workspace_ms_segment_audience'
+    | 'workspace_ms_analyze_competitor'
+    | 'workspace_ms_keyword_research'
+    | 'workspace_ms_build_email_sequence'
+    | 'workspace_ms_schedule_social'
+    | 'workspace_ms_generate_kpi_report'
+    | 'workspace_ms_analyze_ab_test'
+    | 'workspace_ms_market_research'
+    | 'workspace_ms_optimize_conversion'
+    | 'workspace_ms_coordinate_assets'
+    | 'workspace_ms_align_cross_team'
+    | 'workspace_ms_run_campaign_workflow'
+    | 'workspace_ms_request_human_gate';
 
 export type LocalWorkspaceResult = {
     ok: boolean;
@@ -1158,6 +1181,11 @@ export const LOCAL_WORKSPACE_ACTION_TYPES = new Set<LocalWorkspaceActionType>([
     'workspace_devops_dns',
     'workspace_devops_lb',
     'workspace_devops_service_mesh',
+    // Tier 31e (DevOps P3 gap actions — SLO, Compliance, Registry, Load Test)
+    'workspace_devops_slo',
+    'workspace_devops_compliance_scan',
+    'workspace_devops_registry',
+    'workspace_devops_load_test',
     // Tier 32 (Mobile / iOS + Android domain actions)
     'workspace_mob_ios_component',
     'workspace_mob_ios_build',
@@ -1259,6 +1287,23 @@ export const LOCAL_WORKSPACE_ACTION_TYPES = new Set<LocalWorkspaceActionType>([
     'workspace_ba_proactive_epic_check',
     'workspace_ba_proactive_conflict_scan',
     'workspace_ba_rtm_generate',
+    // Tier 46 (Marketing Specialist domain actions)
+    'workspace_ms_plan_campaign',
+    'workspace_ms_monitor_campaign',
+    'workspace_ms_optimize_ppc',
+    'workspace_ms_segment_audience',
+    'workspace_ms_analyze_competitor',
+    'workspace_ms_keyword_research',
+    'workspace_ms_build_email_sequence',
+    'workspace_ms_schedule_social',
+    'workspace_ms_generate_kpi_report',
+    'workspace_ms_analyze_ab_test',
+    'workspace_ms_market_research',
+    'workspace_ms_optimize_conversion',
+    'workspace_ms_coordinate_assets',
+    'workspace_ms_align_cross_team',
+    'workspace_ms_run_campaign_workflow',
+    'workspace_ms_request_human_gate',
 ]);
 
 // ---------------------------------------------------------------------------
@@ -13949,7 +13994,11 @@ export async function executeLocalWorkspaceAction(input: {
         case 'workspace_devops_k8s_exec':
         case 'workspace_devops_dns':
         case 'workspace_devops_lb':
-        case 'workspace_devops_service_mesh': {
+        case 'workspace_devops_service_mesh':
+        case 'workspace_devops_slo':
+        case 'workspace_devops_compliance_scan':
+        case 'workspace_devops_registry':
+        case 'workspace_devops_load_test': {
             if (!isDevopsActionType(actionType)) {
                 return { ok: false, output: '', errorOutput: `Unrecognised DevOps action: ${actionType}` };
             }
@@ -14596,6 +14645,51 @@ export async function executeLocalWorkspaceAction(input: {
                 errorMessage: baResult.errorOutput ? baResult.errorOutput.slice(0, 200) : undefined,
             });
             return baResult;
+        }
+
+        // Tier 46 — Marketing Specialist domain actions
+        case 'workspace_ms_plan_campaign':
+        case 'workspace_ms_monitor_campaign':
+        case 'workspace_ms_optimize_ppc':
+        case 'workspace_ms_segment_audience':
+        case 'workspace_ms_analyze_competitor':
+        case 'workspace_ms_keyword_research':
+        case 'workspace_ms_build_email_sequence':
+        case 'workspace_ms_schedule_social':
+        case 'workspace_ms_generate_kpi_report':
+        case 'workspace_ms_analyze_ab_test':
+        case 'workspace_ms_market_research':
+        case 'workspace_ms_optimize_conversion':
+        case 'workspace_ms_coordinate_assets':
+        case 'workspace_ms_align_cross_team':
+        case 'workspace_ms_run_campaign_workflow':
+        case 'workspace_ms_request_human_gate': {
+            if (!isMarketingSpecialistActionType(actionType)) {
+                return { ok: false, output: '', errorOutput: `Unrecognised Marketing Specialist action: ${actionType}` };
+            }
+            const msResult = await handleMarketingSpecialistAction({
+                actionType: actionType as MarketingSpecialistActionType,
+                tenantId,
+                botId,
+                taskId,
+                workspaceDir: workspaceDir ?? taskId,
+                payload,
+            });
+            const msTitle =
+                typeof payload['campaignName'] === 'string' ? payload['campaignName'] :
+                typeof payload['title'] === 'string' ? payload['title'] :
+                typeof payload['description'] === 'string' ? payload['description'] : actionType;
+            void globalEpisodicMemory.record({
+                taskId,
+                workspaceId: workspaceDir,
+                botId,
+                actionType,
+                promptSummary: msTitle.slice(0, 200),
+                outcome: msResult.ok ? 'success' : 'failed',
+                timestamp: Date.now(),
+                errorMessage: msResult.errorOutput ? msResult.errorOutput.slice(0, 200) : undefined,
+            });
+            return msResult;
         }
 
         default: {

@@ -257,6 +257,75 @@ import {
 
 import type { MeshProvider, IstioRetryPolicy, IstioCircuitBreaker } from './devops-service-mesh-builder.js';
 
+import {
+    calculateErrorBudget,
+    buildBurnRateAlerts,
+    buildSlothSloYaml,
+    buildPyrraObjectiveYaml,
+    buildSloAlertRulesCrd,
+    formatErrorBudgetReport,
+    buildSloPrompt,
+    parseSloOutput,
+} from './devops-slo-builder.js';
+
+import type { SloSpec } from './devops-slo-builder.js';
+
+import {
+    buildKubeBenchArgs,
+    buildKubeBenchJobYaml,
+    buildKubeBenchLogsArgs,
+    buildFalcoRulesYaml,
+    buildFalcoRulesConfigMapYaml,
+    FALCO_HARDENED_RULES,
+    buildFalcoStatusArgs,
+    buildFalcoLogsArgs,
+    buildFalcoRestartArgs,
+    parseKubeBenchOutput,
+    parseFalcoAlerts,
+    formatComplianceReport,
+    buildComplianceScanPrompt,
+    buildFalcoRulePrompt,
+} from './devops-compliance-scanner.js';
+
+import type { FalcoRule, ComplianceTarget } from './devops-compliance-scanner.js';
+
+import {
+    buildEcrListImagesArgs,
+    buildEcrDeleteImagesArgs,
+    buildEcrPutLifecyclePolicyArgs,
+    buildEcrLifecyclePolicyJson,
+    buildGhcrListVersionsArgs,
+    buildGhcrDeleteVersionArgs,
+    buildGcloudImagesListArgs,
+    buildGcloudImagesDeleteArgs,
+    buildAcrShowTagsArgs,
+    buildAcrPurgePolicyArgs,
+    buildDockerMirrorCommands,
+    buildCraneCopyArgs,
+    buildSkopeoCopyArgs,
+    applyRetentionPolicy,
+    parseEcrImages,
+    formatRegistryCleanupReport,
+    buildEcrDescribeReposArgs,
+} from './devops-registry-builder.js';
+
+import type { RegistryProvider, RetentionPolicy } from './devops-registry-builder.js';
+
+import {
+    buildK6Script,
+    buildK6RunArgs,
+    buildGatlingArgs,
+    buildJMeterArgs,
+    parseK6Output,
+    compareBenchmarks,
+    formatLoadTestReport,
+    buildK6ScriptPrompt,
+    buildGatlingScriptPrompt,
+    parseLoadTestScriptOutput,
+} from './devops-load-test-builder.js';
+
+import type { LoadTestScenario } from './devops-load-test-builder.js';
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -330,7 +399,15 @@ export type DevopsActionType =
     | 'workspace_devops_dns'
     | 'workspace_devops_lb'
     // ── P2 Gap 10 — Service Mesh (Istio / Linkerd) ───────────────────────────
-    | 'workspace_devops_service_mesh';
+    | 'workspace_devops_service_mesh'
+    // ── P3 Gap 11 — SLO / Error Budgets ──────────────────────────────────────
+    | 'workspace_devops_slo'
+    // ── P3 Gap 12 — CIS Compliance Scanning ──────────────────────────────────
+    | 'workspace_devops_compliance_scan'
+    // ── P3 Gap 13 — Container Registry Hygiene ───────────────────────────────
+    | 'workspace_devops_registry'
+    // ── P3 Gap 14 — Load / Performance Testing ───────────────────────────────
+    | 'workspace_devops_load_test';
 
 export const DEVOPS_ACTION_TYPES = new Set<DevopsActionType>([
     'workspace_devops_tf_plan',
@@ -377,6 +454,10 @@ export const DEVOPS_ACTION_TYPES = new Set<DevopsActionType>([
     'workspace_devops_dns',
     'workspace_devops_lb',
     'workspace_devops_service_mesh',
+    'workspace_devops_slo',
+    'workspace_devops_compliance_scan',
+    'workspace_devops_registry',
+    'workspace_devops_load_test',
 ]);
 
 export function isDevopsActionType(at: string): at is DevopsActionType {
@@ -2679,6 +2760,592 @@ export async function handleDevopsAction(params: DevopsActionParams): Promise<De
             }
 
             return { ok: false, output: '', errorOutput: `Unknown service_mesh action: ${meshAction}` };
+        }
+
+        // ====================================================================
+        // workspace_devops_slo
+        // payload: action (calculate|generate_sloth|generate_pyrra|generate_alerts|
+        //                   generate_all|burn_rate_alerts),
+        //          [calculate] objective (number), window_days, current_error_rate, elapsed_days?
+        //          [generate_*] name, namespace, service, description, objective,
+        //                       objective_type?, window?, good_metric, total_metric, output_dir?
+        //          [generate_all] also calls LLM if description provided
+        // ====================================================================
+        case 'workspace_devops_slo': {
+            const sloAction = str(payload['action'], 'calculate');
+
+            if (sloAction === 'calculate') {
+                const objective        = num(payload['objective'], 99.9);
+                const windowDays       = num(payload['window_days'], 30);
+                const currentErrorRate = typeof payload['current_error_rate'] === 'number'
+                    ? (payload['current_error_rate'] as number) : 0;
+                const elapsedDays = typeof payload['elapsed_days'] === 'number'
+                    ? (payload['elapsed_days'] as number) : undefined;
+                const status = calculateErrorBudget(objective, windowDays, currentErrorRate, elapsedDays);
+                return safeJson({ ok: true, action: 'calculate', status, report: formatErrorBudgetReport(status), summary: `SLO ${objective}% (${windowDays}d): ${status.status.toUpperCase()}, burn rate ${status.burnRate.toFixed(2)}x` });
+            }
+
+            if (sloAction === 'burn_rate_alerts') {
+                const sloName    = str(payload['slo_name'], 'my-slo');
+                const objective  = num(payload['objective'], 99.9);
+                const window     = str(payload['window'], '30d');
+                const alerts     = buildBurnRateAlerts(sloName, objective, window);
+                return safeJson({ ok: true, action: 'burn_rate_alerts', slo_name: sloName, alert_count: alerts.length, alerts, summary: `${alerts.length} multi-window burn-rate alert(s) generated for "${sloName}".` });
+            }
+
+            // All generate_* actions need a SloSpec
+            const name       = str(payload['name'], 'my-slo');
+            const namespace  = str(payload['namespace'], 'default');
+            const service    = str(payload['service'], name);
+            const description = str(payload['description'], `SLO for ${service}`);
+            const objective   = num(payload['objective'], 99.9);
+            const window      = str(payload['window'], '30d');
+            const goodMetric  = str(payload['good_metric']);
+            const totalMetric = str(payload['total_metric']);
+            const outputDir   = str(payload['output_dir'], '.');
+
+            if ((sloAction.startsWith('generate') || sloAction === 'generate_all') && callLlm && str(payload['description']) && !goodMetric) {
+                const metrics = Array.isArray(payload['metrics']) ? (payload['metrics'] as string[]) : [];
+                const prompt  = buildSloPrompt({
+                    service, namespace, description: str(payload['description']),
+                    metrics,
+                    currentP99:       str(payload['current_p99'])        || undefined,
+                    currentErrorRate: str(payload['current_error_rate']) || undefined,
+                    environment:      (str(payload['environment'], 'production')) as 'production' | 'staging',
+                });
+                const llmRaw = await callLlmSafe(callLlm, prompt, 'You are an SRE expert. Return JSON only.');
+                const files  = parseSloOutput(llmRaw);
+                const written: string[] = [];
+                for (const f of files) {
+                    const fp = outputDir !== '.' ? `${outputDir}/${f.filename}` : f.filename;
+                    await executeAction('workspace_write_file', { file_path: fp, content: f.content });
+                    written.push(fp);
+                }
+                return safeJson({ ok: true, action: sloAction, service, files_written: written, summary: `Generated ${written.length} SLO file(s) for "${service}" via LLM.` });
+            }
+
+            if (!goodMetric || !totalMetric) {
+                return { ok: false, output: '', errorOutput: 'good_metric and total_metric required for SLO generation (or provide description + metrics for LLM generation)' };
+            }
+
+            const spec: SloSpec = {
+                name, namespace, service, description, objective, window,
+                objectiveType: (str(payload['objective_type'], 'availability')) as SloSpec['objectiveType'],
+                sli: { name: `${name}-sli`, description, sloName: name, goodMetric, totalMetric },
+                labels: typeof payload['labels'] === 'object' && payload['labels'] !== null ? (payload['labels'] as Record<string, string>) : undefined,
+            };
+
+            const files: Array<{ filename: string; content: string }> = [];
+
+            if (sloAction === 'generate_sloth' || sloAction === 'generate_all') {
+                files.push({ filename: `${name}-sloth.yaml`, content: buildSlothSloYaml(spec) });
+            }
+            if (sloAction === 'generate_pyrra' || sloAction === 'generate_all') {
+                files.push({ filename: `${name}-pyrra.yaml`, content: buildPyrraObjectiveYaml(spec) });
+            }
+            if (sloAction === 'generate_alerts' || sloAction === 'generate_all') {
+                files.push({ filename: `${name}-prometheus-rule.yaml`, content: buildSloAlertRulesCrd(spec) });
+            }
+            if (!files.length) {
+                return { ok: false, output: '', errorOutput: `Unknown slo action: ${sloAction}` };
+            }
+
+            const written: string[] = [];
+            for (const f of files) {
+                const fp = outputDir !== '.' ? `${outputDir}/${f.filename}` : f.filename;
+                await executeAction('workspace_write_file', { file_path: fp, content: f.content });
+                written.push(fp);
+            }
+            return safeJson({ ok: true, action: sloAction, slo_name: name, service, objective, window, files_written: written, summary: `Generated ${written.length} SLO manifest(s) for "${service}" (${objective}% over ${window}).` });
+        }
+
+        // ====================================================================
+        // workspace_devops_compliance_scan
+        // payload: action (run_kube_bench|run_kube_bench_job|get_job_logs|
+        //                   falco_status|falco_logs|falco_generate_rules|
+        //                   falco_apply_rules|falco_hardened_rules),
+        //          namespace?, targets? (array), output_format?, image_tag?
+        //          [falco_generate_rules] description, threat, service
+        //          [falco_apply_rules] rules_file | rules (FalcoRule[])
+        //          [run_kube_bench] analyze_failures? (calls LLM), service, environment?
+        // ====================================================================
+        case 'workspace_devops_compliance_scan': {
+            const compAction = str(payload['action'], 'run_kube_bench');
+            const namespace  = str(payload['namespace'], 'kube-system');
+
+            if (compAction === 'run_kube_bench') {
+                if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+                const targets = Array.isArray(payload['targets']) ? (payload['targets'] as ComplianceTarget[]) : undefined;
+                const args    = buildKubeBenchArgs({ targets, outputFormat: 'json' });
+                const result  = await runCommand(args, workspaceDir, 300_000);
+                const parsed  = parseKubeBenchOutput(result.stdout);
+                const report  = formatComplianceReport(parsed);
+                let remediation = null;
+                if (callLlm && payload['analyze_failures'] !== false && parsed.totals.fail > 0) {
+                    const service  = str(payload['service'], 'cluster');
+                    const env      = (str(payload['environment'], 'production')) as 'production' | 'staging';
+                    const failedChecks = parsed.controls.flatMap((c) => c.tests.filter((t) => t.result === 'FAIL'));
+                    const prompt   = buildComplianceScanPrompt({ service, failedChecks, environment: env });
+                    remediation    = await callLlmSafe(callLlm, prompt, 'You are a Kubernetes security expert. Return JSON only.');
+                }
+                return safeJson({ ok: result.exitCode === 0, action: 'run_kube_bench', totals: parsed.totals, controls: parsed.controls.length, report, remediation, summary: `kube-bench: ${parsed.totals.pass} PASS, ${parsed.totals.fail} FAIL, ${parsed.totals.warn} WARN` });
+            }
+
+            if (compAction === 'run_kube_bench_job') {
+                if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+                const targets   = Array.isArray(payload['targets']) ? (payload['targets'] as ComplianceTarget[]) : undefined;
+                const jobYaml   = buildKubeBenchJobYaml({ namespace, imageTag: str(payload['image_tag']) || undefined, targets });
+                const jobFile   = `/tmp/kube-bench-job.yaml`;
+                await executeAction('workspace_write_file', { file_path: jobFile, content: jobYaml });
+                const applyRes  = await runCommand(['kubectl', 'apply', '-f', jobFile], workspaceDir, 15_000);
+                return safeJson({ ok: applyRes.exitCode === 0, action: 'run_kube_bench_job', namespace, job_file: jobFile, exit_code: applyRes.exitCode, summary: applyRes.exitCode === 0 ? `kube-bench Job created in "${namespace}". Use get_job_logs to retrieve results.` : applyRes.stderr.slice(0, 200) });
+            }
+
+            if (compAction === 'get_job_logs') {
+                if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+                const args   = buildKubeBenchLogsArgs(namespace);
+                const result = await runCommand(args, workspaceDir, 30_000);
+                const parsed = parseKubeBenchOutput(result.stdout);
+                const report = formatComplianceReport(parsed);
+                return safeJson({ ok: result.exitCode === 0, action: 'get_job_logs', totals: parsed.totals, report, raw: result.stdout.slice(0, 4000), summary: `kube-bench logs: ${parsed.totals.pass} PASS, ${parsed.totals.fail} FAIL` });
+            }
+
+            if (compAction === 'falco_status') {
+                if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+                const ns     = str(payload['falco_namespace'], 'falco');
+                const args   = buildFalcoStatusArgs(ns);
+                const result = await runCommand(args, workspaceDir, 15_000);
+                return safeJson({ ok: result.exitCode === 0, action: 'falco_status', namespace: ns, raw: result.stdout.slice(0, 2000), summary: result.exitCode === 0 ? 'Falco DaemonSet status retrieved.' : result.stderr.slice(0, 200) });
+            }
+
+            if (compAction === 'falco_logs') {
+                if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+                const ns     = str(payload['falco_namespace'], 'falco');
+                const tail   = num(payload['tail_lines'], 200);
+                const args   = buildFalcoLogsArgs(ns, tail);
+                const result = await runCommand(args, workspaceDir, 30_000);
+                const alerts = parseFalcoAlerts(result.stdout);
+                return safeJson({ ok: result.exitCode === 0, action: 'falco_logs', namespace: ns, alerts, alert_count: alerts.length, raw: result.stdout.slice(0, 4000), summary: `Falco: ${alerts.length} alert(s) found.` });
+            }
+
+            if (compAction === 'falco_hardened_rules') {
+                const ns     = str(payload['falco_namespace'], 'falco');
+                const cmName = str(payload['configmap_name'], 'falco-hardened-rules');
+                const yaml   = buildFalcoRulesConfigMapYaml(FALCO_HARDENED_RULES, { name: cmName, namespace: ns });
+                const outputDir = str(payload['output_dir'], '.');
+                const fp     = outputDir !== '.' ? `${outputDir}/${cmName}.yaml` : `${cmName}.yaml`;
+                await executeAction('workspace_write_file', { file_path: fp, content: yaml });
+                return safeJson({ ok: true, action: 'falco_hardened_rules', file_written: fp, rule_count: FALCO_HARDENED_RULES.length, summary: `${FALCO_HARDENED_RULES.length} hardened Falco rules written to ${fp}.` });
+            }
+
+            if (compAction === 'falco_generate_rules') {
+                if (!callLlm) return { ok: false, output: '', errorOutput: 'LLM not available for rule generation' };
+                const service     = str(payload['service'], 'my-service');
+                const description = str(payload['description']);
+                const threat      = str(payload['threat']);
+                if (!description || !threat) return { ok: false, output: '', errorOutput: 'description and threat required for falco_generate_rules' };
+                const ns       = str(payload['falco_namespace'], 'falco');
+                const prompt   = buildFalcoRulePrompt({ service, description, threat, namespace: ns });
+                const llmRaw   = await callLlmSafe(callLlm, prompt, 'You are a Falco security expert. Return JSON only.');
+                const files    = parseLoadTestScriptOutput(llmRaw); // same JSON array shape { filename, content }
+                const outputDir = str(payload['output_dir'], '.');
+                const written: string[] = [];
+                for (const f of files) {
+                    const fp = outputDir !== '.' ? `${outputDir}/${f.filename}` : f.filename;
+                    await executeAction('workspace_write_file', { file_path: fp, content: f.content });
+                    written.push(fp);
+                }
+                return safeJson({ ok: true, action: 'falco_generate_rules', service, files_written: written, summary: `Generated ${written.length} Falco rule file(s) for "${service}".` });
+            }
+
+            if (compAction === 'falco_apply_rules') {
+                if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+                const ns = str(payload['falco_namespace'], 'falco');
+                // Apply rules from file path
+                const rulesFile = str(payload['rules_file']);
+                if (rulesFile) {
+                    const applyArgs    = ['kubectl', 'apply', '-f', rulesFile, '-n', ns];
+                    const applyResult  = await runCommand(applyArgs, workspaceDir, 15_000);
+                    if (!applyResult.exitCode) {
+                        await runCommand(buildFalcoRestartArgs(ns), workspaceDir, 30_000).catch(() => null);
+                    }
+                    return safeJson({ ok: applyResult.exitCode === 0, action: 'falco_apply_rules', namespace: ns, rules_file: rulesFile, exit_code: applyResult.exitCode, summary: applyResult.exitCode === 0 ? `Falco rules applied from "${rulesFile}". DaemonSet restarted.` : applyResult.stderr.slice(0, 200) });
+                }
+                // Apply inline rules
+                const rulesRaw = payload['rules'];
+                if (!Array.isArray(rulesRaw)) return { ok: false, output: '', errorOutput: 'rules_file or rules array required' };
+                const rules   = rulesRaw as FalcoRule[];
+                const cmName  = str(payload['configmap_name'], 'falco-custom-rules');
+                const yaml    = buildFalcoRulesConfigMapYaml(rules, { name: cmName, namespace: ns });
+                const tmpFile = `/tmp/${cmName}.yaml`;
+                await executeAction('workspace_write_file', { file_path: tmpFile, content: yaml });
+                const applyResult = await runCommand(['kubectl', 'apply', '-f', tmpFile, '-n', ns], workspaceDir, 15_000);
+                if (applyResult.exitCode === 0) {
+                    await runCommand(buildFalcoRestartArgs(ns), workspaceDir, 30_000).catch(() => null);
+                }
+                return safeJson({ ok: applyResult.exitCode === 0, action: 'falco_apply_rules', namespace: ns, rule_count: rules.length, exit_code: applyResult.exitCode, summary: applyResult.exitCode === 0 ? `${rules.length} Falco rule(s) applied. DaemonSet restarted.` : applyResult.stderr.slice(0, 200) });
+            }
+
+            return { ok: false, output: '', errorOutput: `Unknown compliance_scan action: ${compAction}` };
+        }
+
+        // ====================================================================
+        // workspace_devops_registry
+        // payload: action (list_images|list_repos|delete_images|put_lifecycle_policy|
+        //                   list_versions|delete_version|list_gcr|delete_gcr|
+        //                   show_acr_tags|purge_acr|mirror_image|crane_copy|
+        //                   apply_retention),
+        //          provider (ecr|ghcr|gcr|gar|acr), repository,
+        //          [ecr] region?, registry_id?
+        //          [delete_images] image_digests (array) — requires allow_destructive: true
+        //          [put_lifecycle_policy] keep_latest?, max_age_days?, keep_tag_prefixes?
+        //          [ghcr] owner, package_name, token, version_id?
+        //          [acr] registry, filter?, ago?, keep_latest?, dry_run?
+        //          [mirror] source_image, dest_registry, dest_repo, dest_tag?, tool?
+        //          [apply_retention] tags (ImageTag[]), retention_policy (RetentionPolicy)
+        // ====================================================================
+        case 'workspace_devops_registry': {
+            const regAction  = str(payload['action'], 'list_images');
+            const provider   = (str(payload['provider'], 'ecr')) as RegistryProvider;
+            const repository = str(payload['repository']);
+
+            const isDestructive = ['delete_images', 'delete_version', 'delete_gcr', 'purge_acr'].includes(regAction);
+            if (isDestructive && payload['allow_destructive'] !== true) {
+                return { ok: false, output: '', errorOutput: `Registry delete operations require allow_destructive: true` };
+            }
+
+            if (provider === 'ecr') {
+                if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+                const region = str(payload['region']) || undefined;
+
+                if (regAction === 'list_repos') {
+                    const args   = buildEcrDescribeReposArgs(region, str(payload['registry_id']) || undefined);
+                    const result = await runCommand(args, workspaceDir, 30_000);
+                    return safeJson({ ok: result.exitCode === 0, action: 'list_repos', provider, raw: result.stdout.slice(0, 4000), summary: 'ECR repositories listed.' });
+                }
+
+                if (!repository) return { ok: false, output: '', errorOutput: 'repository required for ECR operations' };
+
+                if (regAction === 'list_images') {
+                    const args   = buildEcrListImagesArgs({ repository, region, filter: (str(payload['filter']) as 'TAGGED' | 'UNTAGGED') || undefined });
+                    const result = await runCommand(args, workspaceDir, 30_000);
+                    const images = parseEcrImages(result.stdout);
+                    return safeJson({ ok: result.exitCode === 0, action: 'list_images', provider, repository, image_count: images.length, images: images.slice(0, 50), summary: `${images.length} image(s) in ECR repo "${repository}".` });
+                }
+
+                if (regAction === 'delete_images') {
+                    const digests = Array.isArray(payload['image_digests']) ? (payload['image_digests'] as string[]) : [];
+                    if (!digests.length) return { ok: false, output: '', errorOutput: 'image_digests array required for delete_images' };
+                    const args   = buildEcrDeleteImagesArgs({ repository, imageDigests: digests, region });
+                    const result = await runCommand(args, workspaceDir, 30_000);
+                    return safeJson({ ok: result.exitCode === 0, action: 'delete_images', provider, repository, deleted_count: digests.length, exit_code: result.exitCode, summary: result.exitCode === 0 ? `Deleted ${digests.length} image(s) from "${repository}".` : result.stderr.slice(0, 200) });
+                }
+
+                if (regAction === 'put_lifecycle_policy') {
+                    const policyJson = buildEcrLifecyclePolicyJson({
+                        keepLatestCount:  num(payload['keep_latest'], 10),
+                        maxTaggedAgeDays: typeof payload['max_age_days'] === 'number' ? (payload['max_age_days'] as number) : undefined,
+                        keepTagPrefixes:  Array.isArray(payload['keep_tag_prefixes']) ? (payload['keep_tag_prefixes'] as string[]) : undefined,
+                    });
+                    const args   = buildEcrPutLifecyclePolicyArgs({ repository, policyJson, region });
+                    const result = await runCommand(args, workspaceDir, 30_000);
+                    return safeJson({ ok: result.exitCode === 0, action: 'put_lifecycle_policy', provider, repository, exit_code: result.exitCode, policy: JSON.parse(policyJson), summary: result.exitCode === 0 ? `ECR lifecycle policy applied to "${repository}".` : result.stderr.slice(0, 200) });
+                }
+
+                if (regAction === 'apply_retention') {
+                    // List images, apply retention, delete what's unwanted
+                    const listArgs   = buildEcrListImagesArgs({ repository, region });
+                    const listResult = await runCommand(listArgs, workspaceDir, 30_000);
+                    const images     = parseEcrImages(listResult.stdout);
+                    const policy: RetentionPolicy = {
+                        keepLatest:      typeof payload['keep_latest']       === 'number' ? (payload['keep_latest'] as number)       : undefined,
+                        keepTagPattern:  str(payload['keep_tag_pattern'])    || undefined,
+                        maxAgeDays:      typeof payload['max_age_days']      === 'number' ? (payload['max_age_days'] as number)      : undefined,
+                        keepTags:        Array.isArray(payload['keep_tags']) ? (payload['keep_tags'] as string[]) : undefined,
+                    };
+                    const { keep, delete: toDelete } = applyRetentionPolicy(images, policy);
+                    const report = formatRegistryCleanupReport(toDelete, keep);
+                    if (!toDelete.length || payload['dry_run'] === true) {
+                        return safeJson({ ok: true, action: 'apply_retention', dry_run: payload['dry_run'] === true, provider, repository, kept: keep.length, to_delete: toDelete.length, report, summary: payload['dry_run'] ? `Dry run: ${toDelete.length} image(s) would be deleted.` : 'Nothing to delete.' });
+                    }
+                    const digests = toDelete.filter((t) => t.digest).map((t) => t.digest as string);
+                    if (digests.length) {
+                        const delArgs   = buildEcrDeleteImagesArgs({ repository, imageDigests: digests, region });
+                        await runCommand(delArgs, workspaceDir, 60_000);
+                    }
+                    return safeJson({ ok: true, action: 'apply_retention', provider, repository, kept: keep.length, deleted: toDelete.length, report, summary: report });
+                }
+            }
+
+            if (provider === 'ghcr') {
+                if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+                const owner       = str(payload['owner']);
+                const packageName = str(payload['package_name'], repository);
+                const token       = str(payload['token']);
+                if (!owner || !token) return { ok: false, output: '', errorOutput: 'owner and token required for ghcr' };
+
+                if (regAction === 'list_versions') {
+                    const args   = buildGhcrListVersionsArgs({ owner, packageName, token, perPage: num(payload['per_page'], 100) });
+                    const result = await runCommand(args, workspaceDir, 30_000);
+                    return safeJson({ ok: result.exitCode === 0, action: 'list_versions', provider, package: packageName, raw: result.stdout.slice(0, 4000), summary: `GHCR versions listed for "${packageName}".` });
+                }
+
+                if (regAction === 'delete_version') {
+                    const versionId = num(payload['version_id'], 0);
+                    if (!versionId) return { ok: false, output: '', errorOutput: 'version_id required for delete_version' };
+                    const args   = buildGhcrDeleteVersionArgs({ owner, packageName, versionId, token });
+                    const result = await runCommand(args, workspaceDir, 15_000);
+                    return safeJson({ ok: result.exitCode === 0, action: 'delete_version', provider, package: packageName, version_id: versionId, exit_code: result.exitCode, summary: result.exitCode === 0 ? `GHCR version ${versionId} of "${packageName}" deleted.` : result.stderr.slice(0, 200) });
+                }
+            }
+
+            if (provider === 'gcr' || provider === 'gar') {
+                if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+
+                if (regAction === 'list_gcr') {
+                    if (!repository) return { ok: false, output: '', errorOutput: 'repository required' };
+                    const args   = buildGcloudImagesListArgs({ repository, project: str(payload['project']) || undefined });
+                    const result = await runCommand(args, workspaceDir, 30_000);
+                    return safeJson({ ok: result.exitCode === 0, action: 'list_gcr', provider, repository, raw: result.stdout.slice(0, 4000), summary: `GCR images listed for "${repository}".` });
+                }
+
+                if (regAction === 'delete_gcr') {
+                    const imageWithDigest = str(payload['image_with_digest']);
+                    if (!imageWithDigest) return { ok: false, output: '', errorOutput: 'image_with_digest required' };
+                    const args   = buildGcloudImagesDeleteArgs({ imageWithDigest, project: str(payload['project']) || undefined, force: payload['force'] === true });
+                    const result = await runCommand(args, workspaceDir, 30_000);
+                    return safeJson({ ok: result.exitCode === 0, action: 'delete_gcr', provider, image: imageWithDigest, exit_code: result.exitCode, summary: result.exitCode === 0 ? `GCR image deleted: ${imageWithDigest}` : result.stderr.slice(0, 200) });
+                }
+            }
+
+            if (provider === 'acr') {
+                if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+                const registry = str(payload['registry']);
+                if (!registry) return { ok: false, output: '', errorOutput: 'registry required for ACR' };
+
+                if (regAction === 'show_acr_tags') {
+                    const args   = buildAcrShowTagsArgs({ registry, repository: repository || str(payload['repo']), orderby: 'time_desc', top: num(payload['top'], 50) || undefined, subscription: str(payload['subscription']) || undefined });
+                    const result = await runCommand(args, workspaceDir, 30_000);
+                    return safeJson({ ok: result.exitCode === 0, action: 'show_acr_tags', provider, registry, repository, raw: result.stdout.slice(0, 4000), summary: `ACR tags listed for "${registry}/${repository}".` });
+                }
+
+                if (regAction === 'purge_acr') {
+                    const filter = str(payload['filter'], `${repository}:.*`);
+                    const ago    = str(payload['ago'], '30d');
+                    const args   = buildAcrPurgePolicyArgs({ registry, filter, ago, keepLatest: typeof payload['keep_latest'] === 'number' ? (payload['keep_latest'] as number) : undefined, dryRun: payload['dry_run'] === true, subscription: str(payload['subscription']) || undefined });
+                    const result = await runCommand(args, workspaceDir, 120_000);
+                    return safeJson({ ok: result.exitCode === 0, action: 'purge_acr', provider, registry, filter, ago, dry_run: payload['dry_run'] === true, exit_code: result.exitCode, raw: result.stdout.slice(0, 2000), summary: result.exitCode === 0 ? `ACR purge completed for "${registry}" (filter: ${filter}, ago: ${ago}).` : result.stderr.slice(0, 200) });
+                }
+            }
+
+            // Mirror / copy actions (provider-agnostic)
+            if (regAction === 'mirror_image') {
+                const sourceImage  = str(payload['source_image']);
+                const destRegistry = str(payload['dest_registry']);
+                const destRepo     = str(payload['dest_repo'], repository);
+                const tool         = str(payload['tool'], 'docker');
+                if (!sourceImage || !destRegistry || !destRepo) return { ok: false, output: '', errorOutput: 'source_image, dest_registry, and dest_repo required for mirror_image' };
+
+                if (tool === 'crane') {
+                    if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+                    const destTag   = str(payload['dest_tag']) || undefined;
+                    const destImage = `${destRegistry}/${destRepo}${destTag ? ':' + destTag : ''}`;
+                    const args      = buildCraneCopyArgs(sourceImage, destImage, str(payload['platform']) || undefined);
+                    const result    = await runCommand(args, workspaceDir, 300_000);
+                    return safeJson({ ok: result.exitCode === 0, action: 'mirror_image', tool: 'crane', source: sourceImage, dest: destImage, exit_code: result.exitCode, summary: result.exitCode === 0 ? `crane copy ${sourceImage} → ${destImage}` : result.stderr.slice(0, 200) });
+                }
+
+                if (tool === 'skopeo') {
+                    if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+                    const destTag   = str(payload['dest_tag']) || undefined;
+                    const destImage = `${destRegistry}/${destRepo}${destTag ? ':' + destTag : ''}`;
+                    const args      = buildSkopeoCopyArgs({ source: sourceImage, dest: destImage, srcCreds: str(payload['src_creds']) || undefined, destCreds: str(payload['dest_creds']) || undefined, all: payload['all'] === true });
+                    const result    = await runCommand(args, workspaceDir, 300_000);
+                    return safeJson({ ok: result.exitCode === 0, action: 'mirror_image', tool: 'skopeo', source: sourceImage, dest: destImage, exit_code: result.exitCode, summary: result.exitCode === 0 ? `skopeo copy ${sourceImage} → ${destImage}` : result.stderr.slice(0, 200) });
+                }
+
+                // Default: docker pull / tag / push
+                if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+                const { pull, tag, push } = buildDockerMirrorCommands({ sourceImage, destRegistry, destRepo, destTag: str(payload['dest_tag']) || undefined });
+                await runCommand(pull, workspaceDir, 300_000);
+                await runCommand(tag,  workspaceDir, 10_000);
+                const pushResult = await runCommand(push, workspaceDir, 300_000);
+                const destImage  = push[push.length - 1];
+                return safeJson({ ok: pushResult.exitCode === 0, action: 'mirror_image', tool: 'docker', source: sourceImage, dest: destImage, exit_code: pushResult.exitCode, summary: pushResult.exitCode === 0 ? `Docker mirror ${sourceImage} → ${destImage}` : pushResult.stderr.slice(0, 200) });
+            }
+
+            if (regAction === 'crane_copy') {
+                if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+                const source = str(payload['source']);
+                const dest   = str(payload['dest']);
+                if (!source || !dest) return { ok: false, output: '', errorOutput: 'source and dest required for crane_copy' };
+                const args   = buildCraneCopyArgs(source, dest, str(payload['platform']) || undefined);
+                const result = await runCommand(args, workspaceDir, 300_000);
+                return safeJson({ ok: result.exitCode === 0, action: 'crane_copy', source, dest, exit_code: result.exitCode, summary: result.exitCode === 0 ? `crane copy ${source} → ${dest}` : result.stderr.slice(0, 200) });
+            }
+
+            return { ok: false, output: '', errorOutput: `Unknown registry action: ${regAction} for provider: ${provider}` };
+        }
+
+        // ====================================================================
+        // workspace_devops_load_test
+        // payload: action (generate_k6|generate_gatling_script|run_k6|run_gatling|
+        //                   run_jmeter|compare),
+        //          [generate_k6] base_url (required), scenario_name?, vus?, duration?,
+        //                        endpoints? (array of {method,path,body?,headers?,expectedStatus?,name?}),
+        //                        thresholds? (array of {metric,condition}), description?
+        //          [run_k6] script_path (required), output_json?, env_vars?
+        //          [run_gatling] simulation_class (required), results_dir?, jvm_opts?, gatling_home?
+        //          [run_jmeter] jmx_path (required), results_path?, report_dir?,
+        //                        properties?, threads?, duration_seconds?
+        //          [compare] baseline (LoadTestResult), current (LoadTestResult),
+        //                    regression_threshold?
+        // ====================================================================
+        case 'workspace_devops_load_test': {
+            const ltAction = str(payload['action'], 'generate_k6');
+
+            if (ltAction === 'generate_k6') {
+                const baseUrl   = str(payload['base_url']) || str(payload['target_url'], 'http://localhost:8080');
+                const outputDir = str(payload['output_dir'], '.');
+
+                const scenarioName = str(payload['scenario_name'], 'load-test');
+                const vus          = typeof payload['vus']      === 'number' ? (payload['vus'] as number) : 10;
+                const duration     = str(payload['duration'], '5m');
+                const rampUpTime   = str(payload['ramp_up_time']) || undefined;
+
+                const rawEndpoints = Array.isArray(payload['endpoints'])
+                    ? (payload['endpoints'] as Array<{method?:string;path:string;body?:string;headers?:Record<string,string>;expectedStatus?:number;name?:string}>)
+                    : [{ method: str(payload['http_method'], 'GET'), path: str(payload['path'], '/'), body: str(payload['body']) || undefined, expectedStatus: typeof payload['expected_status'] === 'number' ? (payload['expected_status'] as number) : 200 }];
+
+                const endpoints = rawEndpoints.map((e) => ({
+                    method:         (e.method ?? 'GET').toUpperCase() as 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
+                    path:           e.path,
+                    body:           e.body,
+                    headers:        e.headers,
+                    expectedStatus: e.expectedStatus ?? 200,
+                    name:           e.name,
+                }));
+
+                const rawThresholds = Array.isArray(payload['thresholds'])
+                    ? (payload['thresholds'] as Array<{metric:string;condition:string}>)
+                    : undefined;
+
+                const scenario: LoadTestScenario = { name: scenarioName, baseUrl, endpoints, vus, duration, rampUpTime, thresholds: rawThresholds };
+
+                if (callLlm && str(payload['description'])) {
+                    const prompt = buildK6ScriptPrompt({ scenario, description: str(payload['description']), advanced: payload['advanced'] === true });
+                    const llmRaw = await callLlmSafe(callLlm, prompt, 'You are a performance testing expert. Return JSON only.');
+                    const files  = parseLoadTestScriptOutput(llmRaw);
+                    if (files.length) {
+                        const written: string[] = [];
+                        for (const f of files) {
+                            const fp = outputDir !== '.' ? `${outputDir}/${f.filename}` : f.filename;
+                            await executeAction('workspace_write_file', { file_path: fp, content: f.content });
+                            written.push(fp);
+                        }
+                        return safeJson({ ok: true, action: 'generate_k6', files_written: written, summary: `Generated ${written.length} k6 script file(s) via LLM.` });
+                    }
+                }
+
+                // Direct script generation
+                const script     = buildK6Script(scenario);
+                const scriptName = `${scenarioName}.js`;
+                const fp         = outputDir !== '.' ? `${outputDir}/${scriptName}` : scriptName;
+                await executeAction('workspace_write_file', { file_path: fp, content: script });
+                return safeJson({ ok: true, action: 'generate_k6', file_written: fp, summary: `k6 script written to ${fp}.` });
+            }
+
+            if (ltAction === 'generate_gatling_script') {
+                if (!callLlm) return { ok: false, output: '', errorOutput: 'LLM not available' };
+                const baseUrl   = str(payload['base_url']) || str(payload['target_url']);
+                const outputDir = str(payload['output_dir'], '.');
+                if (!baseUrl) return { ok: false, output: '', errorOutput: 'base_url required' };
+
+                const scenarioName = str(payload['scenario_name'], 'gatling-test');
+                const rawEndpoints = Array.isArray(payload['endpoints'])
+                    ? (payload['endpoints'] as Array<{method?:string;path:string;body?:string;headers?:Record<string,string>;expectedStatus?:number;name?:string}>)
+                    : [{ method: 'GET', path: '/' }];
+                const endpoints = rawEndpoints.map((e) => ({
+                    method: (e.method ?? 'GET').toUpperCase() as 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
+                    path: e.path, body: e.body, headers: e.headers, expectedStatus: e.expectedStatus ?? 200, name: e.name,
+                }));
+                const scenario: LoadTestScenario = {
+                    name: scenarioName, baseUrl, endpoints,
+                    vus:         typeof payload['vus'] === 'number' ? (payload['vus'] as number) : undefined,
+                    duration:    str(payload['duration']) || undefined,
+                    rampUpTime:  str(payload['ramp_up_time']) || undefined,
+                };
+                const prompt = buildGatlingScriptPrompt({ scenario, description: str(payload['description']) || 'Load test', packageName: str(payload['package_name']) || undefined });
+                const llmRaw = await callLlmSafe(callLlm, prompt, 'You are a Gatling expert. Return JSON only.');
+                const files  = parseLoadTestScriptOutput(llmRaw);
+                const written: string[] = [];
+                for (const f of files) {
+                    const fp = outputDir !== '.' ? `${outputDir}/${f.filename}` : f.filename;
+                    await executeAction('workspace_write_file', { file_path: fp, content: f.content });
+                    written.push(fp);
+                }
+                return safeJson({ ok: true, action: 'generate_gatling_script', files_written: written, summary: `Generated ${written.length} Gatling script file(s).` });
+            }
+
+            if (ltAction === 'run_k6') {
+                if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+                const scriptPath = str(payload['script_path']);
+                if (!scriptPath) return { ok: false, output: '', errorOutput: 'script_path required for run_k6' };
+                const outputJson = str(payload['output_json']) || undefined;
+                const envVars    = typeof payload['env_vars'] === 'object' && payload['env_vars'] !== null
+                    ? (payload['env_vars'] as Record<string, string>) : undefined;
+                const args   = buildK6RunArgs({ scriptPath, outputJson, envVars });
+                const result = await runCommand(args, workspaceDir, num(payload['timeout_minutes'], 30) * 60_000);
+                const scenarioName = str(payload['scenario_name'], 'k6-run');
+                const ltr    = parseK6Output(outputJson ? '' : result.stdout, scenarioName);
+                const report = formatLoadTestReport(ltr);
+                return safeJson({ ok: result.exitCode === 0, action: 'run_k6', script: scriptPath, exit_code: result.exitCode, result: ltr, report, summary: `k6 run: ${result.exitCode === 0 ? 'passed' : 'failed'} — p95=${(ltr.p95Ms ?? 0).toFixed(0)}ms errors=${((ltr.errorRate ?? 0) * 100).toFixed(2)}%` });
+            }
+
+            if (ltAction === 'run_gatling') {
+                if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+                const simulationClass = str(payload['simulation_class']);
+                if (!simulationClass) return { ok: false, output: '', errorOutput: 'simulation_class required for run_gatling' };
+                const args   = buildGatlingArgs({
+                    simulationClass,
+                    resultsDir:  str(payload['results_dir'])  || undefined,
+                    jvmOpts:     str(payload['jvm_opts'])     || undefined,
+                    gatlingHome: str(payload['gatling_home']) || undefined,
+                    envVars:     typeof payload['env_vars'] === 'object' && payload['env_vars'] !== null ? (payload['env_vars'] as Record<string, string>) : undefined,
+                });
+                const result = await runCommand(args, workspaceDir, num(payload['timeout_minutes'], 30) * 60_000);
+                return safeJson({ ok: result.exitCode === 0, action: 'run_gatling', simulation: simulationClass, exit_code: result.exitCode, output_tail: result.stdout.slice(-2000), summary: result.exitCode === 0 ? `Gatling simulation "${simulationClass}" completed.` : result.stderr.slice(0, 200) });
+            }
+
+            if (ltAction === 'run_jmeter') {
+                if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+                const jmxPath = str(payload['jmx_path']) || str(payload['plan_path']);
+                if (!jmxPath) return { ok: false, output: '', errorOutput: 'jmx_path required for run_jmeter' };
+                const properties = typeof payload['properties'] === 'object' && payload['properties'] !== null
+                    ? (payload['properties'] as Record<string, string>) : undefined;
+                const args   = buildJMeterArgs({
+                    jmxPath,
+                    resultsPath: str(payload['results_path']) || undefined,
+                    reportDir:   str(payload['report_dir'])   || undefined,
+                    properties,
+                    threads:     typeof payload['threads']           === 'number' ? (payload['threads'] as number)           : undefined,
+                    duration:    typeof payload['duration_seconds']  === 'number' ? (payload['duration_seconds'] as number)  : undefined,
+                    jmeterHome:  str(payload['jmeter_home'])         || undefined,
+                });
+                const result = await runCommand(args, workspaceDir, num(payload['timeout_minutes'], 60) * 60_000);
+                return safeJson({ ok: result.exitCode === 0, action: 'run_jmeter', jmx: jmxPath, exit_code: result.exitCode, output_tail: result.stdout.slice(-2000), summary: result.exitCode === 0 ? `JMeter plan "${jmxPath}" completed.` : result.stderr.slice(0, 200) });
+            }
+
+            if (ltAction === 'compare') {
+                const baseline = payload['baseline'] as Parameters<typeof compareBenchmarks>[0] | undefined;
+                const current  = payload['current']  as Parameters<typeof compareBenchmarks>[1] | undefined;
+                if (!baseline || !current) return { ok: false, output: '', errorOutput: 'baseline and current LoadTestResult objects required for compare' };
+                const threshold  = typeof payload['regression_threshold'] === 'number' ? (payload['regression_threshold'] as number) : undefined;
+                const comparison = compareBenchmarks(baseline, current, threshold);
+                return safeJson({ ok: true, action: 'compare', comparison, regression: comparison.regression, summary: `Load test comparison: ${comparison.regression ? 'REGRESSION DETECTED' : 'no regression'}. p99 change: ${comparison.deltaPercent.toFixed(1)}%` });
+            }
+
+            return { ok: false, output: '', errorOutput: `Unknown load_test action: ${ltAction}` };
         }
     }
 }

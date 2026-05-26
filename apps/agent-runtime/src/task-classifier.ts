@@ -16,6 +16,7 @@ import { DEVELOPER_BLOCKED_KEYWORDS } from './agents/developer/developer-role-pr
 import { CORPORATE_ASSISTANT_BLOCKED_KEYWORDS } from './agents/corporate-assistant/corporate-assistant-role-profile.js';
 import { TECHNICAL_WRITER_BLOCKED_KEYWORDS } from './agents/technical-writer/technical-writer-role-profile.js';
 import { CONTENT_WRITER_BLOCKED_KEYWORDS } from './agents/content-writer/content-writer-role-profile.js';
+import { MARKETING_SPECIALIST_BLOCKED_KEYWORDS } from './agents/marketing-specialist/marketing-specialist-role-profile.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -257,6 +258,47 @@ export function heuristicClassify(taskDescription: string, roleKey: string): Cla
             belongsToRole: true,
             confidence: 0.50,
             reason: 'No strong role signal for content_writer; defaulting to allow',
+            suggestedRole: null,
+        };
+    }
+
+    if (roleKey === 'marketing_specialist') {
+        const lower = taskDescription.toLowerCase();
+
+        const MS_POSITIVE_KEYWORDS = [
+            'campaign', 'ppc', 'google ads', 'meta ads', 'linkedin ads',
+            'email sequence', 'email nurture', 'email automation', 'mailchimp', 'hubspot',
+            'seo', 'keyword research', 'semrush', 'ahrefs',
+            'social media', 'social calendar', 'hootsuite', 'sprout social',
+            'a/b test', 'ab test', 'split test', 'conversion rate', 'cro',
+            'kpi report', 'campaign report', 'roas', 'cpa', 'ctr',
+            'market research', 'competitor analysis', 'brand awareness',
+            'audience segment', 'retargeting', 'lookalike audience',
+        ];
+        const positiveMatch = MS_POSITIVE_KEYWORDS.find(kw => lower.includes(kw));
+        if (positiveMatch) {
+            return {
+                belongsToRole: true,
+                confidence: 0.80,
+                reason: `Task contains marketing-specialist-role keyword: "${positiveMatch}"`,
+                suggestedRole: null,
+            };
+        }
+
+        const blockedMatch = MARKETING_SPECIALIST_BLOCKED_KEYWORDS.find(kw => lower.includes(kw));
+        if (blockedMatch) {
+            return {
+                belongsToRole: false,
+                confidence: 0.85,
+                reason: `Task contains non-marketing-specialist keyword: "${blockedMatch}"`,
+                suggestedRole: null,
+            };
+        }
+
+        return {
+            belongsToRole: true,
+            confidence: 0.50,
+            reason: 'No strong role signal for marketing_specialist; defaulting to allow',
             suggestedRole: null,
         };
     }

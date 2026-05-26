@@ -154,6 +154,14 @@ export const DEVOPS_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = [
     'workspace_devops_lb',
     // ── P2 Gap 10 — Service Mesh (Istio / Linkerd) ────────────────────────────
     'workspace_devops_service_mesh',
+    // ── P3 Gap 11 — SLO / Error Budgets ───────────────────────────────────────
+    'workspace_devops_slo',
+    // ── P3 Gap 12 — CIS Compliance Scanning ───────────────────────────────────
+    'workspace_devops_compliance_scan',
+    // ── P3 Gap 13 — Container Registry Hygiene ────────────────────────────────
+    'workspace_devops_registry',
+    // ── P3 Gap 14 — Load / Performance Testing ────────────────────────────────
+    'workspace_devops_load_test',
 ];
 
 // ---------------------------------------------------------------------------
