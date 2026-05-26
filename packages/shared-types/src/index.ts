@@ -153,7 +153,8 @@ export type RoleKey =
   | 'marketing_specialist'
   | 'corporate_assistant'
   | 'customer_support_executive'
-  | 'project_manager_product_owner_scrum_master';
+  | 'project_manager_product_owner_scrum_master'
+  | 'devops_engineer';
 
 export type RoleSubscriptionStatus = 'active' | 'expired' | 'suspended';
 

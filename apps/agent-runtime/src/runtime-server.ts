@@ -124,6 +124,7 @@ import {
     CORPORATE_ASSISTANT_ROLE_ALLOWED_LOCAL_ACTIONS,
     isCorporateAssistantRoleProfile,
 } from './agents/corporate-assistant/corporate-assistant-agent-profile.js';
+import { DEVOPS_ROLE_ALLOWED_LOCAL_ACTIONS } from './agents/devops/devops-agent-profile.js';
 import { getCorporateAssistantDefaultPersona } from './agents/corporate-assistant/corporate-assistant-persona-defaults.js';
 import { buildCorporateAssistantEpisodicPattern, buildCorporateAssistantEpisodicSummary } from './agents/corporate-assistant/corporate-assistant-episodic-hooks.js';
 import { getCorporateAssistantMcpClients } from './agents/corporate-assistant/corporate-assistant-mcp-provisioner.js';
@@ -604,6 +605,7 @@ const ROLE_KEYS: RoleKey[] = [
     'corporate_assistant',
     'customer_support_executive',
     'project_manager_product_owner_scrum_master',
+    'devops_engineer',
 ];
 const CONNECTOR_ACTION_TYPES = new Set([
     'read_task',
@@ -830,7 +832,7 @@ const buildEscalationWhatIfOptions = (input: {
 
 type RuntimeConnectorType =
     | 'jira' | 'teams' | 'github' | 'email'
-    | 'linear' | 'gitlab' | 'slack'
+    | 'linear' | 'gitlab' | 'slack' | 'azure_devops'
     | 'jenkins' | 'circleci'
     | 'selenium' | 'playwright' | 'cypress' | 'appium'
     | 'jmeter' | 'postman' | 'soapui'
@@ -872,6 +874,7 @@ const ROLE_CONNECTOR_POLICY: Record<RoleKey, RuntimeConnectorType[]> = {
     corporate_assistant: [...CORPORATE_ASSISTANT_ROLE_ALLOWED_CONNECTORS],
     customer_support_executive: ['jira', 'teams', 'email'],
     project_manager_product_owner_scrum_master: ['jira', 'linear', 'slack', 'teams', 'github', 'email'],
+    devops_engineer: ['github', 'gitlab', 'azure_devops', 'jira', 'linear', 'slack', 'teams', 'email'],
 };
 
 const CONNECTOR_ACTION_POLICY: Partial<Record<RuntimeConnectorType, RuntimeConnectorActionType[]>> = {
@@ -1150,6 +1153,7 @@ const LOCAL_WORKSPACE_ACTION_POLICY: Record<RoleKey, RuntimeLocalWorkspaceAction
     marketing_specialist: [],
     corporate_assistant: [...CORPORATE_ASSISTANT_ROLE_ALLOWED_LOCAL_ACTIONS],
     customer_support_executive: [],
+    devops_engineer: [...DEVOPS_ROLE_ALLOWED_LOCAL_ACTIONS],
     project_manager_product_owner_scrum_master: [
         'code_read',
         // PM / Scrum Master domain actions (Tier 44)
@@ -1296,6 +1300,12 @@ const roleKeyFromRoleProfile = (roleProfile: string): RoleKey | null => {
         project_manager: 'project_manager_product_owner_scrum_master',
         product_owner: 'project_manager_product_owner_scrum_master',
         scrum_master: 'project_manager_product_owner_scrum_master',
+        devops_engineer: 'devops_engineer',
+        devops: 'devops_engineer',
+        sre: 'devops_engineer',
+        site_reliability_engineer: 'devops_engineer',
+        platform_engineer: 'devops_engineer',
+        infrastructure_engineer: 'devops_engineer',
     };
     return aliases[normalized] ?? null;
 };

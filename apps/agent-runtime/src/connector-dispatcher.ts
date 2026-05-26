@@ -216,6 +216,31 @@ interface GitHubMergeResult {
     message: string;
 }
 
+interface WorkflowRun {
+    id: number;
+    name: string;
+    status: 'queued' | 'in_progress' | 'completed' | 'waiting' | null;
+    conclusion: 'success' | 'failure' | 'cancelled' | 'skipped' | 'neutral' | 'timed_out' | null;
+    html_url: string;
+    head_branch: string;
+    head_sha: string;
+    created_at: string;
+    updated_at: string;
+    run_number: number;
+}
+
+interface GitHubRelease {
+    id: number;
+    tag_name: string;
+    name: string;
+    html_url: string;
+    draft: boolean;
+    prerelease: boolean;
+    created_at: string;
+    published_at: string | null;
+    body: string;
+}
+
 export class GitHubConnector {
     private readonly base: string;
     private readonly creds: GitHubCredentials;
@@ -362,6 +387,98 @@ export class GitHubConnector {
                 method: 'POST',
                 headers: ghHeaders(token),
                 body: JSON.stringify({ body: params.body }),
+            },
+            this.fetchImpl,
+        );
+    }
+
+    /**
+     * Trigger a GitHub Actions workflow dispatch event (POST …/dispatches).
+     * GitHub returns 204 No Content on success — no JSON body.
+     */
+    async triggerWorkflow(params: {
+        workflowId: string;  // filename (e.g. "deploy.yml") or numeric id
+        ref: string;         // branch or tag to dispatch on
+        inputs?: Record<string, string>;
+    }): Promise<ConnectorDispatchResult> {
+        const { token, owner, repo } = this.creds;
+        try {
+            const response = await this.fetchImpl(
+                `${this.base}/repos/${owner}/${repo}/actions/workflows/${encodeURIComponent(params.workflowId)}/dispatches`,
+                {
+                    method: 'POST',
+                    headers: ghHeaders(token),
+                    body: JSON.stringify({ ref: params.ref, inputs: params.inputs ?? {} }),
+                    signal: AbortSignal.timeout(30_000),
+                },
+            );
+            if (response.status === 204 || response.ok) {
+                return { ok: true, data: { dispatched: true, workflow: params.workflowId, ref: params.ref } };
+            }
+            const text = await response.text().catch(() => '');
+            return { ok: false, error: `GitHub trigger_workflow HTTP ${response.status}: ${text.slice(0, 300)}` };
+        } catch (err) {
+            return { ok: false, error: String(err) };
+        }
+    }
+
+    /** List workflow runs for a specific workflow. */
+    async listWorkflowRuns(params: {
+        workflowId: string;
+        branch?: string;
+        status?: 'queued' | 'in_progress' | 'completed' | 'waiting';
+        perPage?: number;
+        /** ISO timestamp — filters to runs created at or after this time */
+        createdAfter?: string;
+    }): Promise<JsonResponse<{ workflow_runs: WorkflowRun[]; total_count: number }>> {
+        const { token, owner, repo } = this.creds;
+        const qs = new URLSearchParams();
+        if (params.branch)       qs.set('branch', params.branch);
+        if (params.status)       qs.set('status', params.status);
+        if (params.perPage)      qs.set('per_page', String(params.perPage));
+        if (params.createdAfter) qs.set('created', `>=${params.createdAfter}`);
+        const query = qs.toString() ? `?${qs}` : '';
+        return jsonFetch(
+            `${this.base}/repos/${owner}/${repo}/actions/workflows/${encodeURIComponent(params.workflowId)}/runs${query}`,
+            { method: 'GET', headers: ghHeaders(token) },
+            this.fetchImpl,
+        );
+    }
+
+    /** Get a single workflow run by its numeric run ID. */
+    async getWorkflowRun(runId: number): Promise<JsonResponse<WorkflowRun>> {
+        const { token, owner, repo } = this.creds;
+        return jsonFetch<WorkflowRun>(
+            `${this.base}/repos/${owner}/${repo}/actions/runs/${runId}`,
+            { method: 'GET', headers: ghHeaders(token) },
+            this.fetchImpl,
+        );
+    }
+
+    /** Create a GitHub release for a tag. */
+    async createRelease(params: {
+        tagName: string;
+        name?: string;
+        body?: string;
+        draft?: boolean;
+        prerelease?: boolean;
+        /** Branch or SHA for the release tag; defaults to the default branch. */
+        targetCommitish?: string;
+    }): Promise<JsonResponse<GitHubRelease>> {
+        const { token, owner, repo } = this.creds;
+        return jsonFetch<GitHubRelease>(
+            `${this.base}/repos/${owner}/${repo}/releases`,
+            {
+                method: 'POST',
+                headers: ghHeaders(token),
+                body: JSON.stringify({
+                    tag_name:         params.tagName,
+                    name:             params.name ?? params.tagName,
+                    body:             params.body ?? '',
+                    draft:            params.draft ?? false,
+                    prerelease:       params.prerelease ?? false,
+                    target_commitish: params.targetCommitish,
+                }),
             },
             this.fetchImpl,
         );
@@ -1687,6 +1804,47 @@ async function dispatchGitHub(
                 return { ok: false, error: 'GitHub reply_to_review_comment: body is required' };
             }
             return gh.replyToReviewComment({ pullNumber: prNumber, commentId, body });
+        }
+        case 'trigger_workflow': {
+            const workflowId = String(payload['workflow_id'] ?? payload['workflow'] ?? '');
+            const ref        = String(payload['ref'] ?? 'main');
+            if (!workflowId) return { ok: false, error: 'GitHub trigger_workflow: workflow_id is required' };
+            const inputs = typeof payload['inputs'] === 'object' && payload['inputs'] !== null
+                ? (payload['inputs'] as Record<string, string>)
+                : undefined;
+            return gh.triggerWorkflow({ workflowId, ref, inputs });
+        }
+        case 'list_workflow_runs': {
+            const workflowId = String(payload['workflow_id'] ?? payload['workflow'] ?? '');
+            if (!workflowId) return { ok: false, error: 'GitHub list_workflow_runs: workflow_id is required' };
+            const statusRaw  = payload['status'];
+            const status = (['queued', 'in_progress', 'completed', 'waiting'] as const).find((s) => s === statusRaw);
+            return gh.listWorkflowRuns({
+                workflowId,
+                branch:       typeof payload['branch']        === 'string' ? payload['branch']        : undefined,
+                status,
+                perPage:      typeof payload['per_page']      === 'number' ? payload['per_page']      : undefined,
+                createdAfter: typeof payload['created_after'] === 'string' ? payload['created_after'] : undefined,
+            });
+        }
+        case 'get_workflow_run': {
+            const runId = Number(payload['run_id']);
+            if (!Number.isInteger(runId) || runId <= 0) {
+                return { ok: false, error: 'GitHub get_workflow_run: run_id must be a positive integer' };
+            }
+            return gh.getWorkflowRun(runId);
+        }
+        case 'create_release': {
+            const tagName = String(payload['tag_name'] ?? payload['tag'] ?? '');
+            if (!tagName) return { ok: false, error: 'GitHub create_release: tag_name is required' };
+            return gh.createRelease({
+                tagName,
+                name:            typeof payload['name']             === 'string'  ? payload['name']             : undefined,
+                body:            typeof payload['body']             === 'string'  ? payload['body']             : undefined,
+                draft:           payload['draft']                   === true,
+                prerelease:      payload['prerelease']              === true,
+                targetCommitish: typeof payload['target_commitish'] === 'string'  ? payload['target_commitish'] : undefined,
+            });
         }
         default:
             return { ok: false, error: `GitHub connector does not support action "${actionType}"` };

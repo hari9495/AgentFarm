@@ -23,6 +23,10 @@ import {
     FSD_ROLE_ALLOWED_CONNECTORS,
     FSD_ROLE_ALLOWED_LOCAL_ACTIONS,
 } from '../agents/full-stack-developer/fsd-agent-profile.js';
+import {
+    DEVOPS_ROLE_ALLOWED_CONNECTORS,
+    DEVOPS_ROLE_ALLOWED_LOCAL_ACTIONS,
+} from '../agents/devops/devops-agent-profile.js';
 
 export interface RoleProfile {
     roleKey: RoleKey;
@@ -140,6 +144,14 @@ export const ROLE_PROFILES: Record<RoleKey, RoleProfile> = {
             'send_message', 'schedule_meeting', 'run_pipeline', 'create_pr',
         ],
         requiredConfig: ['issueTrackerProvider', 'documentProvider'],
+    },
+    devops_engineer: {
+        roleKey: 'devops_engineer',
+        displayName: 'DevOps / Infrastructure Engineer',
+        description: 'Handles CI/CD pipelines, Kubernetes deployments, Terraform IaC, Docker builds, incident triage, and DORA metrics',
+        allowedConnectorTools: [...DEVOPS_ROLE_ALLOWED_CONNECTORS],
+        allowedActions: [...DEVOPS_ROLE_ALLOWED_LOCAL_ACTIONS],
+        requiredConfig: ['codeRepoProvider'],
     },
 };
 

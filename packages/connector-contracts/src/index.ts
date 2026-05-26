@@ -32,7 +32,8 @@ export type AgentRoleKey =
   | 'marketing_specialist'
   | 'corporate_assistant'
   | 'customer_support_executive'
-  | 'project_manager_product_owner_scrum_master';
+  | 'project_manager_product_owner_scrum_master'
+  | 'devops_engineer';
 
 // ─── Normalized actions the agent always uses ────────────────────────────
 export type NormalizedActionType =
@@ -60,6 +61,11 @@ export type NormalizedActionType =
   | 'add_pr_comment'
   | 'merge_pr'
   | 'list_prs'
+  // GitHub Actions / CI/CD (DevOps role)
+  | 'trigger_workflow'
+  | 'list_workflow_runs'
+  | 'get_workflow_run'
+  | 'create_release'
   // email
   | 'list_emails'
   | 'read_email'
@@ -175,6 +181,7 @@ const ALL_ROLE_KEYS: AgentRoleKey[] = [
   'corporate_assistant',
   'customer_support_executive',
   'project_manager_product_owner_scrum_master',
+  'devops_engineer',
 ];
 
 const TASK_ORIENTED_ROLE_KEYS: AgentRoleKey[] = [
@@ -183,6 +190,7 @@ const TASK_ORIENTED_ROLE_KEYS: AgentRoleKey[] = [
   'tester',
   'business_analyst',
   'project_manager_product_owner_scrum_master',
+  'devops_engineer',
 ];
 
 const CODE_ORIENTED_ROLE_KEYS: AgentRoleKey[] = [
@@ -191,6 +199,7 @@ const CODE_ORIENTED_ROLE_KEYS: AgentRoleKey[] = [
   'tester',
   'technical_writer',
   'project_manager_product_owner_scrum_master',
+  'devops_engineer',
 ];
 
 // ─── Built-in connector registry ──────────────────────────────────────────
@@ -302,9 +311,10 @@ export const CONNECTOR_REGISTRY: ConnectorDefinition[] = [
     defaultActionPolicyByRole: {
       project_manager_product_owner_scrum_master: ['list_prs', 'add_pr_comment'],
       tester: ['list_prs', 'add_pr_comment', 'create_pr'],
+      devops_engineer: ['create_pr', 'add_pr_comment', 'merge_pr', 'list_prs', 'trigger_workflow', 'list_workflow_runs', 'get_workflow_run', 'create_release'],
     },
-    oauthScopes: ['repo', 'pull_requests', 'read:user'],
-    supportedActions: ['create_pr', 'add_pr_comment', 'merge_pr', 'list_prs'],
+    oauthScopes: ['repo', 'pull_requests', 'read:user', 'workflow'],
+    supportedActions: ['create_pr', 'add_pr_comment', 'merge_pr', 'list_prs', 'trigger_workflow', 'list_workflow_runs', 'get_workflow_run', 'create_release'],
     docsUrl: 'https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps',
   },
   {
