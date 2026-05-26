@@ -111,19 +111,12 @@ export default function Solution() {
                         transition={{ duration: 0.52, ease: [0.22, 1, 0.36, 1] }}
                         className="relative"
                     >
-                        {/* Subtle glow behind panel */}
-                        <div className="absolute -inset-6 rounded-3xl bg-[radial-gradient(ellipse_at_center,rgba(87,193,255,0.05),transparent_72%)] pointer-events-none" />
-
                         {/* Panel */}
-                        <div className="relative rounded-xl border border-[var(--hairline)] bg-[var(--surface)] overflow-hidden shadow-2xl shadow-black/20 dark:shadow-black/70">
-                            {/* Titlebar */}
-                            <div className="flex items-center gap-2 px-4 py-3 border-b border-[var(--hairline)] bg-[var(--surface-card)]">
-                                <div className="w-2.5 h-2.5 rounded-full bg-[#ff6161]" />
-                                <div className="w-2.5 h-2.5 rounded-full bg-[#ffc533]" />
-                                <div className="w-2.5 h-2.5 rounded-full bg-[#59d499]" />
-                                <span className="ml-2 text-[11px] font-mono text-[var(--ash)]">AgentFarm — Live Operations</span>
-                                <span className="ml-auto flex items-center gap-1.5 text-[11px] text-[#59d499] font-semibold">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-[#59d499] animate-pulse" />
+                        <div className="relative rounded-xl border border-[var(--hairline)] bg-[var(--surface)] overflow-hidden" style={{ boxShadow: "0 20px 48px -16px rgba(0,0,0,0.45)" }}>
+                            <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--hairline)] bg-[var(--surface-card)]">
+                                <span className="text-[11px] font-semibold text-[var(--ash)]">Live Operations</span>
+                                <span className="flex items-center gap-1.5 text-[11px] text-[var(--accent-green)] font-semibold">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-green)]" />
                                     4 agents active
                                 </span>
                             </div>

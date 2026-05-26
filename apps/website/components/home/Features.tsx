@@ -259,7 +259,7 @@ export default function Features() {
                     transition={{ duration: 0.5, ease }}
                     className="max-w-2xl mb-12"
                 >
-                    <span className="chip chip-accent text-xs mb-4">Platform</span>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--accent-green)] mb-4">Platform</p>
                     <h2 className="text-[clamp(2rem,4vw,3rem)] font-semibold text-[var(--ink)] tracking-[-0.03em] leading-tight">
                         One platform for every step
                         <span className="block text-[var(--mute)]">of AI-powered work.</span>
@@ -332,18 +332,10 @@ export default function Features() {
                         </div>
 
                         {/* Right â€” mock UI */}
-                        <div
-                            className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface-card)] overflow-hidden"
-                            style={{ boxShadow: `0 0 40px ${tab.color}12` }}
-                        >
-                            {/* Window chrome */}
-                            <div className="flex items-center gap-2 px-4 py-3 border-b border-[var(--hairline)] bg-white/[0.02]">
-                                <span className="w-2.5 h-2.5 rounded-full bg-[#ff5757]/60" />
-                                <span className="w-2.5 h-2.5 rounded-full bg-[#ffc533]/60" />
-                                <span className="w-2.5 h-2.5 rounded-full bg-[#59d499]/60" />
-                                <span className="ml-3 text-[10px] text-[var(--mute)] font-mono">
-                                    agentfarm.ai / {tab.id}
-                                </span>
+                        <div className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface-card)] overflow-hidden">
+                                <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--hairline)]">
+                                <span className="text-[11px] font-semibold text-[var(--ash)]">{tab.label}</span>
+                                <span className="text-[10px] text-[var(--mute)]">agentfarm.ai</span>
                             </div>
                             {panelMap[active]}
                         </div>
