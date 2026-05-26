@@ -47,6 +47,9 @@ importers:
       '@agentfarm/erp-adapters':
         specifier: workspace:*
         version: link:../../packages/erp-service
+      '@agentfarm/memory-service':
+        specifier: workspace:*
+        version: link:../../packages/memory-service
       '@agentfarm/notification-adapters':
         specifier: workspace:*
         version: link:../../packages/notification-service
@@ -110,7 +113,7 @@ importers:
         version: link:../../packages/crm-service
       '@agentfarm/memory-service':
         specifier: workspace:*
-        version: link:../../services/memory-service
+        version: link:../../packages/memory-service
       '@agentfarm/observability':
         specifier: workspace:*
         version: link:../../packages/observability
@@ -455,6 +458,22 @@ importers:
       vitest:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.19.17)(lightningcss@1.32.0)(terser@5.16.9)
+
+  packages/memory-service:
+    dependencies:
+      '@agentfarm/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
+      '@prisma/client':
+        specifier: ^6.0.1
+        version: 6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3)
+    devDependencies:
+      '@types/node':
+        specifier: '*'
+        version: 22.19.17
+      typescript:
+        specifier: '*'
+        version: 5.9.3
 
   packages/notification-service:
     dependencies:
