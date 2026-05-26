@@ -444,6 +444,13 @@ export type LocalWorkspaceActionType =
     | 'workspace_devops_alert_rule'
     | 'workspace_devops_blue_green'
     | 'workspace_devops_canary'
+    // Tier 31d (DevOps P2 gap actions — ArgoCD, Autoscaler, K8s Exec, DNS, LB, Service Mesh)
+    | 'workspace_devops_argocd'
+    | 'workspace_devops_k8s_autoscale'
+    | 'workspace_devops_k8s_exec'
+    | 'workspace_devops_dns'
+    | 'workspace_devops_lb'
+    | 'workspace_devops_service_mesh'
     // Tier 32 (Mobile / iOS + Android domain actions)
     | 'workspace_mob_ios_component'
     | 'workspace_mob_ios_build'
@@ -1144,6 +1151,13 @@ export const LOCAL_WORKSPACE_ACTION_TYPES = new Set<LocalWorkspaceActionType>([
     'workspace_devops_alert_rule',
     'workspace_devops_blue_green',
     'workspace_devops_canary',
+    // Tier 31d (DevOps P2 gap actions — ArgoCD, Autoscaler, K8s Exec, DNS, LB, Service Mesh)
+    'workspace_devops_argocd',
+    'workspace_devops_k8s_autoscale',
+    'workspace_devops_k8s_exec',
+    'workspace_devops_dns',
+    'workspace_devops_lb',
+    'workspace_devops_service_mesh',
     // Tier 32 (Mobile / iOS + Android domain actions)
     'workspace_mob_ios_component',
     'workspace_mob_ios_build',
@@ -13929,7 +13943,13 @@ export async function executeLocalWorkspaceAction(input: {
         case 'workspace_devops_grafana_dashboard':
         case 'workspace_devops_alert_rule':
         case 'workspace_devops_blue_green':
-        case 'workspace_devops_canary': {
+        case 'workspace_devops_canary':
+        case 'workspace_devops_argocd':
+        case 'workspace_devops_k8s_autoscale':
+        case 'workspace_devops_k8s_exec':
+        case 'workspace_devops_dns':
+        case 'workspace_devops_lb':
+        case 'workspace_devops_service_mesh': {
             if (!isDevopsActionType(actionType)) {
                 return { ok: false, output: '', errorOutput: `Unrecognised DevOps action: ${actionType}` };
             }

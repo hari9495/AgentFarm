@@ -143,6 +143,17 @@ export const DEVOPS_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = [
     // ── P1 Gap 5 — Deployment Strategy Builder ────────────────────────────────
     'workspace_devops_blue_green',
     'workspace_devops_canary',
+    // ── P2 Gap 6 — ArgoCD / GitOps ────────────────────────────────────────────
+    'workspace_devops_argocd',
+    // ── P2 Gap 7 — HPA / VPA / Autoscaler ─────────────────────────────────────
+    'workspace_devops_k8s_autoscale',
+    // ── P2 Gap 8 — Database / exec-into-pod ───────────────────────────────────
+    'workspace_devops_k8s_exec',
+    // ── P2 Gap 9 — DNS & Load Balancer ────────────────────────────────────────
+    'workspace_devops_dns',
+    'workspace_devops_lb',
+    // ── P2 Gap 10 — Service Mesh (Istio / Linkerd) ────────────────────────────
+    'workspace_devops_service_mesh',
 ];
 
 // ---------------------------------------------------------------------------
@@ -178,6 +189,12 @@ export const DEVOPS_ROLE_HIGH_RISK_ACTIONS: ReadonlyArray<string> = [
     // Blue/green and canary — affect production traffic routing
     'workspace_devops_blue_green',
     'workspace_devops_canary',
+    // ArgoCD sync — deploys to cluster
+    'workspace_devops_argocd',
+    // DNS record changes — affect external routing
+    'workspace_devops_dns',
+    // LB listener rule changes — affect traffic routing
+    'workspace_devops_lb',
     // Inherited developer high-risk
     'workspace_autonomous_plan_execute',
     'workspace_github_issue_fix',

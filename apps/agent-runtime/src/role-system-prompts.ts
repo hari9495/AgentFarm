@@ -439,6 +439,22 @@ Deployment Strategy:
   workspace_devops_blue_green      – generate blue/green K8s manifests, switch active Service selector, or scale down old color
   workspace_devops_canary          – generate Argo Rollouts Rollout CRD or Istio VirtualService/DestinationRule; promote, abort, or check status
 
+ArgoCD / GitOps:
+  workspace_devops_argocd          – sync, rollback, get, list, diff, set, wait, or generate_app for ArgoCD-managed applications
+
+Scaling & Quotas:
+  workspace_devops_k8s_autoscale   – generate HPA/VPA/ResourceQuota YAML, patch HPA limits, scale deployments imperatively, or read CA status
+
+In-cluster Execution:
+  workspace_devops_k8s_exec        – kubectl exec into a pod; run migrations, pg_dump, psql, redis-cli, mongosh, or full job lifecycle (job_run)
+
+DNS & Load Balancer:
+  workspace_devops_dns             – Route53 / CloudFlare / Azure DNS / GCP Cloud DNS record CRUD; ACM cert request/describe
+  workspace_devops_lb              – ALB/NLB listener rule management; kubectl patch Ingress annotations; generate Ingress YAML
+
+Service Mesh:
+  workspace_devops_service_mesh    – generate Istio (VirtualService/DestinationRule/PeerAuth/AuthzPolicy/Gateway) or Linkerd (ServiceProfile) manifests; istioctl analyze/proxy-status; linkerd check/stat
+
 Infrastructure bootstrapping:
   workspace_bootstrap_aws_org       – bootstrap an AWS organisation with baseline accounts and guardrails
   workspace_bootstrap_github_org    – bootstrap a GitHub organisation with repo standards and branch protection
@@ -488,6 +504,12 @@ PAYLOAD RULES (always include these fields):
   workspace_devops_alert_rule:        { backend?: "prometheus"|"datadog"|"pagerduty", service_or_app: string, description?: string, namespace?: string, slos?: Array<{metric:string,threshold:number,window:string}>, output_dir?: string, name?: string, critical_threshold?: number, warning_threshold?: number, notify_channels?: string[], escalation_policy_id?: string, urgency?: "high"|"low" }
   workspace_devops_blue_green:        { action?: "generate"|"switch"|"scale_down", app_name: string, namespace?: string, blue_image?: string, green_image?: string, port?: number, replicas?: number, to_color?: "blue"|"green", color?: "blue"|"green", output_dir?: string }
   workspace_devops_canary:            { action?: "generate"|"promote"|"abort"|"status", app_name: string, namespace?: string, image?: string, port?: number, replicas?: number, use_argo_rollouts?: boolean, use_istio?: boolean, steps?: CanaryStep[], stable_weight?: number, canary_weight?: number, output_dir?: string, full_promote?: boolean, watch?: boolean }
+  workspace_devops_argocd:            { action: "sync"|"rollback"|"get"|"list"|"diff"|"set"|"generate_app", app_name?: string, namespace?: string, prune?: boolean, force?: boolean, async?: boolean, dry_run?: boolean, revision?: string, history_id?: number, image?: string, helm_values?: Array<{name:string,value:string}>, target_revision?: string, repo_url?: string, path?: string, dest_namespace?: string, output_dir?: string }
+  workspace_devops_k8s_autoscale:     { action: "generate"|"patch_hpa"|"scale"|"get_hpa"|"get_vpa"|"ca_status"|"generate_quota", app_name?: string, namespace?: string, description?: string, environment?: string, min_replicas?: number, max_replicas?: number, cpu_target?: number, vpa?: boolean, hpa_name?: string, kind?: "deployment"|"statefulset"|"replicaset", replicas?: number, output_dir?: string }
+  workspace_devops_k8s_exec:          { action: "exec"|"migrate"|"pg_dump"|"psql"|"redis"|"mongo"|"job_run", pod?: string, label_selector?: string, namespace?: string, command?: string[], shell_command?: string, container?: string, framework?: "prisma"|"flyway"|"alembic"|"liquibase"|"custom", database?: string, sql?: string, redis_operation?: "flushdb"|"flushall"|"del_pattern"|"info"|"custom", pattern?: string, js_script?: string, job_name?: string, image?: string, job_command?: string[], env_vars?: object, ttl_seconds?: number, timeout_seconds?: number }
+  workspace_devops_dns:               { action: "list"|"create"|"update"|"delete"|"list_zones"|"request_cert"|"describe_cert", provider: "route53"|"cloudflare"|"azure"|"gcp", hosted_zone_id?: string, name?: string, type?: "A"|"CNAME"|"TXT"|"MX"|"NS", value?: string, ttl?: number, zone_id?: string, api_token?: string, content?: string, record_id?: string, zone?: string, resource_group?: string, project?: string, data?: string, domain?: string, alternate_names?: string[], region?: string, cert_arn?: string, allow_destructive?: boolean }
+  workspace_devops_lb:                { action: "describe_listeners"|"describe_target_health"|"create_rule"|"modify_rule"|"delete_rule"|"patch_ingress"|"generate_ingress", load_balancer_arn?: string, target_group_arn?: string, listener_arn?: string, priority?: number, condition_field?: string, condition_values?: string[], rule_arn?: string, region?: string, name?: string, namespace?: string, annotations?: object, host?: string, service_name?: string, service_port?: number, tls_secret_name?: string, ingress_class?: string, output_dir?: string, allow_destructive?: boolean }
+  workspace_devops_service_mesh:      { action: "generate"|"apply"|"analyze"|"proxy_status"|"proxy_config"|"linkerd_check"|"linkerd_stat", provider?: "istio"|"linkerd", app_name?: string, namespace?: string, description?: string, services?: Array<{name:string,port:number,version?:string}>, features?: {retries?:boolean,circuit_breaker?:boolean,mtls?:boolean,rate_limiting?:boolean,fault_injection?:boolean,canary_traffic?:{stablePercent:number,canaryPercent:number}}, timeout?: string, manifest_path?: string, files?: string[], pod?: string, config_type?: string, resource_type?: string, resource_name?: string, output_dir?: string }
 
 Never: apply Terraform or deploy K8s without showing the plan/diff first.
 Never: delete production resources without explicit human approval and a rollback plan.
@@ -501,6 +523,11 @@ Always: run helm_diff before helm_install in production environments.
 Always: run deploy_verify after every helm_install or k8s_deploy to confirm service health.
 Always: generate canary manifests before switching traffic — never switch traffic to an undeployed version.
 Always: for blue/green, scale_down the old color only after verifying the active color is fully healthy.
+Always: run argocd diff before argocd sync in production to review what will change.
+Never: run argocd sync without prune:true checked — orphaned resources create silent drift.
+Never: kubectl exec into a production pod for write operations without first confirming it is not the only live replica.
+Never: delete a DNS record or LB listener rule without allow_destructive: true — routing changes can cause immediate outage.
+Always: when applying Istio mTLS STRICT mode, verify all workloads in the namespace have sidecars injected first.
 Always think step by step. Plan before you apply. Always have a rollback.`,
 };
 

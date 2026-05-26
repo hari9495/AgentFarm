@@ -165,6 +165,98 @@ import {
 
 import type { CanaryStep } from './devops-deployment-strategy-builder.js';
 
+import {
+    buildArgoCdSyncArgs,
+    buildArgoCdRollbackArgs,
+    buildArgoCdHistoryArgs,
+    buildArgoCdGetArgs,
+    buildArgoCdListArgs,
+    buildArgoCdDiffArgs,
+    buildArgoCdSetArgs,
+    buildArgoCdWaitArgs,
+    buildArgoCdApplicationYaml,
+    parseArgoCdAppStatus,
+    parseArgoCdAppList,
+    summariseArgoCdApps,
+    buildArgoCdAppPrompt,
+} from './devops-argocd-builder.js';
+
+import {
+    buildHpaYaml,
+    buildVpaYaml,
+    buildResourceQuotaYaml,
+    buildKubectlGetHpaArgs,
+    buildKubectlScaleArgs,
+    buildKubectlPatchHpaArgs,
+    buildKubectlGetVpaArgs,
+    buildCaStatusArgs,
+    parseHpaStatus,
+    buildAutoscalerPrompt,
+    parseAutoscalerOutput,
+} from './devops-k8s-autoscaler-builder.js';
+
+import type { HpaSpec, VpaSpec, ResourceQuotaSpec } from './devops-k8s-autoscaler-builder.js';
+
+import {
+    buildKubectlExecArgs,
+    buildGetPodNameArgs,
+    buildDbMigrationExecArgs,
+    buildPgDumpExecArgs,
+    buildPsqlExecArgs,
+    buildRedisExecArgs,
+    buildMongoExecArgs,
+    buildK8sJobYaml,
+    buildKubectlCreateJobArgs,
+    buildKubectlWaitJobArgs,
+    buildKubectlLogsJobArgs,
+    buildKubectlDeleteJobArgs,
+    parseJobStatus,
+    buildMigrationJobPrompt,
+} from './devops-k8s-exec-builder.js';
+
+import type { K8sJobSpec } from './devops-k8s-exec-builder.js';
+
+import {
+    buildRoute53ChangeBatch,
+    buildRoute53ChangeArgs,
+    buildRoute53ListRecordsArgs,
+    buildRoute53ListZonesArgs,
+    buildCloudFlareDnsArgs,
+    buildAzDnsArgs,
+    buildGcloudDnsArgs,
+    buildAlbListenerRuleArgs,
+    buildAlbDescribeListenersArgs,
+    buildAlbDescribeTargetGroupHealthArgs,
+    buildKubectlPatchIngressArgs,
+    buildIngressYaml,
+    buildAcmRequestCertArgs,
+    buildAcmDescribeCertArgs,
+    parseRoute53Records,
+    parseCloudFlareDnsRecords,
+    parseAcmCertStatus,
+} from './devops-dns-lb-builder.js';
+
+import type { DnsProvider, DnsRecordType } from './devops-dns-lb-builder.js';
+
+import {
+    buildIstioVirtualServiceYaml,
+    buildIstioDestinationRuleYaml,
+    buildIstioPeerAuthYaml,
+    buildIstioAuthzPolicyYaml,
+    buildIstioGatewayYaml,
+    buildLinkerdServiceProfileYaml,
+    buildIstioCtlAnalyzeArgs,
+    buildIstioCtlProxyStatusArgs,
+    buildIstioCtlProxyConfigArgs,
+    buildLinkerdCheckArgs,
+    buildLinkerdInjectArgs,
+    buildLinkerdStatArgs,
+    buildServiceMeshPrompt,
+    parseServiceMeshOutput,
+} from './devops-service-mesh-builder.js';
+
+import type { MeshProvider, IstioRetryPolicy, IstioCircuitBreaker } from './devops-service-mesh-builder.js';
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -227,7 +319,18 @@ export type DevopsActionType =
     | 'workspace_devops_alert_rule'
     // ── P1 Gap 5 — Deployment Strategy Builder ───────────────────────────────
     | 'workspace_devops_blue_green'
-    | 'workspace_devops_canary';
+    | 'workspace_devops_canary'
+    // ── P2 Gap 6 — ArgoCD / GitOps ───────────────────────────────────────────
+    | 'workspace_devops_argocd'
+    // ── P2 Gap 7 — HPA / VPA / Autoscaler ────────────────────────────────────
+    | 'workspace_devops_k8s_autoscale'
+    // ── P2 Gap 8 — Database / exec-into-pod ──────────────────────────────────
+    | 'workspace_devops_k8s_exec'
+    // ── P2 Gap 9 — DNS & Load Balancer ───────────────────────────────────────
+    | 'workspace_devops_dns'
+    | 'workspace_devops_lb'
+    // ── P2 Gap 10 — Service Mesh (Istio / Linkerd) ───────────────────────────
+    | 'workspace_devops_service_mesh';
 
 export const DEVOPS_ACTION_TYPES = new Set<DevopsActionType>([
     'workspace_devops_tf_plan',
@@ -268,6 +371,12 @@ export const DEVOPS_ACTION_TYPES = new Set<DevopsActionType>([
     'workspace_devops_alert_rule',
     'workspace_devops_blue_green',
     'workspace_devops_canary',
+    'workspace_devops_argocd',
+    'workspace_devops_k8s_autoscale',
+    'workspace_devops_k8s_exec',
+    'workspace_devops_dns',
+    'workspace_devops_lb',
+    'workspace_devops_service_mesh',
 ]);
 
 export function isDevopsActionType(at: string): at is DevopsActionType {
@@ -1871,6 +1980,705 @@ export async function handleDevopsAction(params: DevopsActionParams): Promise<De
             }
 
             return { ok: false, output: '', errorOutput: `Unknown canary action: ${canaryAction}` };
+        }
+
+        // ====================================================================
+        // workspace_devops_argocd
+        // payload: action (sync|rollback|get|list|diff|set|wait|generate_app),
+        //          app_name (required for most), namespace?, prune?, force?,
+        //          async?, dry_run?, revision?, history_id?, output_dir?
+        //          [set] image?, helm_values?, target_revision?
+        //          [generate_app] repo_url, target_revision, path, dest_namespace
+        // ====================================================================
+        case 'workspace_devops_argocd': {
+            if (!runCommand && str(payload['action'], 'sync') !== 'generate_app') {
+                return { ok: false, output: '', errorOutput: 'runCommand not available' };
+            }
+            const argoAction = str(payload['action'], 'sync');
+            const appName    = str(payload['app_name']);
+            const namespace  = str(payload['namespace']) || undefined;
+
+            if (argoAction === 'sync') {
+                if (!appName) return { ok: false, output: '', errorOutput: 'app_name required for sync' };
+                const args   = buildArgoCdSyncArgs({
+                    appName, namespace,
+                    prune:    payload['prune']    === true,
+                    force:    payload['force']    === true,
+                    async:    payload['async']    === true,
+                    dryRun:   payload['dry_run']  === true,
+                    revision: str(payload['revision']) || undefined,
+                });
+                const result = await runCommand!(args, workspaceDir, 180_000);
+                const ok     = result.exitCode === 0;
+                // Optionally wait for healthy after sync
+                if (ok && !payload['async'] && !payload['dry_run']) {
+                    const waitArgs   = buildArgoCdWaitArgs({ appName, namespace, health: true, timeout: 120 });
+                    await runCommand!(waitArgs, workspaceDir, 130_000).catch(() => null);
+                }
+                return safeJson({ ok, action: 'sync', app_name: appName, exit_code: result.exitCode, output: result.stdout.slice(0, 2000), summary: ok ? `ArgoCD app "${appName}" synced successfully.` : result.stderr.slice(0, 200) });
+            }
+
+            if (argoAction === 'rollback') {
+                if (!appName) return { ok: false, output: '', errorOutput: 'app_name required for rollback' };
+                const historyId = num(payload['history_id'], 0);
+                if (!historyId) {
+                    // List history first so the caller knows available IDs
+                    const histArgs = buildArgoCdHistoryArgs(appName, namespace);
+                    const histRes  = await runCommand!(histArgs, workspaceDir, 30_000);
+                    return safeJson({ ok: histRes.exitCode === 0, action: 'history', app_name: appName, history: histRes.stdout, summary: `Provide history_id from the above history to rollback "${appName}".` });
+                }
+                const args   = buildArgoCdRollbackArgs({ appName, historyId, prune: payload['prune'] === true, namespace });
+                const result = await runCommand!(args, workspaceDir, 120_000);
+                return safeJson({ ok: result.exitCode === 0, action: 'rollback', app_name: appName, history_id: historyId, exit_code: result.exitCode, summary: result.exitCode === 0 ? `ArgoCD app "${appName}" rolled back to revision ${historyId}.` : result.stderr.slice(0, 200) });
+            }
+
+            if (argoAction === 'get') {
+                if (!appName) return { ok: false, output: '', errorOutput: 'app_name required for get' };
+                const args   = buildArgoCdGetArgs(appName, namespace, 'json');
+                const result = await runCommand!(args, workspaceDir, 30_000);
+                const appStatus = parseArgoCdAppStatus(result.stdout);
+                return safeJson({ ok: result.exitCode === 0, action: 'get', app: appStatus, raw: result.stdout.slice(0, 2000), summary: appStatus ? `App "${appName}": health=${appStatus.health}, sync=${appStatus.sync}` : 'Could not parse app status.' });
+            }
+
+            if (argoAction === 'list') {
+                const args   = buildArgoCdListArgs({ namespace, project: str(payload['project']) || undefined });
+                const result = await runCommand!(args, workspaceDir, 30_000);
+                const apps   = parseArgoCdAppList(result.stdout);
+                return safeJson({ ok: result.exitCode === 0, action: 'list', apps, app_count: apps.length, summary: summariseArgoCdApps(apps) });
+            }
+
+            if (argoAction === 'diff') {
+                if (!appName) return { ok: false, output: '', errorOutput: 'app_name required for diff' };
+                const args   = buildArgoCdDiffArgs(appName, { revision: str(payload['revision']) || undefined, namespace });
+                const result = await runCommand!(args, workspaceDir, 60_000);
+                const hasDiff = result.stdout.trim().length > 0;
+                return safeJson({ ok: result.exitCode === 0, action: 'diff', app_name: appName, has_diff: hasDiff, diff: result.stdout.slice(0, 3000), summary: hasDiff ? `App "${appName}" has pending changes.` : `App "${appName}" is in sync.` });
+            }
+
+            if (argoAction === 'set') {
+                if (!appName) return { ok: false, output: '', errorOutput: 'app_name required for set' };
+                const helmValues = Array.isArray(payload['helm_values']) ? (payload['helm_values'] as Array<{ name: string; value: string }>) : [];
+                const args   = buildArgoCdSetArgs({
+                    appName, namespace,
+                    image:            str(payload['image'])             || undefined,
+                    targetRevision:   str(payload['target_revision'])   || undefined,
+                    kustomizeImage:   str(payload['kustomize_image'])   || undefined,
+                    helmValues:       helmValues.length ? helmValues : undefined,
+                });
+                const result = await runCommand!(args, workspaceDir, 30_000);
+                return safeJson({ ok: result.exitCode === 0, action: 'set', app_name: appName, exit_code: result.exitCode, summary: result.exitCode === 0 ? `App "${appName}" parameters updated.` : result.stderr.slice(0, 200) });
+            }
+
+            if (argoAction === 'generate_app') {
+                const repoUrl        = str(payload['repo_url']);
+                const targetRevision = str(payload['target_revision'], 'main');
+                const path           = str(payload['path'], '.');
+                const destNamespace  = str(payload['dest_namespace'], 'default');
+                const outputDir      = str(payload['output_dir'], '.');
+                if (!repoUrl) return { ok: false, output: '', errorOutput: 'repo_url required for generate_app' };
+
+                const useArgoLlm = callLlm && str(payload['description']);
+                let files: Array<{ filename: string; content: string }> = [];
+
+                if (useArgoLlm) {
+                    const prompt = buildArgoCdAppPrompt({ appName: appName || 'my-app', description: str(payload['description']), repoUrl, targetRevision, destNamespace, syncPolicy: 'auto', helmChart: payload['helm_chart'] === true, kustomize: payload['kustomize'] === true });
+                    const llmRaw = await callLlmSafe(callLlm, prompt, 'You are a GitOps expert. Return JSON only.');
+                    try {
+                        const cleaned = llmRaw.replace(/^```(?:json)?\n?/m, '').replace(/\n?```$/m, '').trim();
+                        files = JSON.parse(cleaned) as Array<{ filename: string; content: string }>;
+                    } catch { /* fall through */ }
+                }
+
+                if (!files.length) {
+                    const yaml = buildArgoCdApplicationYaml({ appName: appName || 'my-app', repoUrl, targetRevision, path, destNamespace, syncPolicy: 'auto', prune: true, selfHeal: true, namespace: str(payload['argocd_namespace'], 'argocd') });
+                    files = [{ filename: `${appName || 'my-app'}-argocd-app.yaml`, content: yaml }];
+                }
+
+                const written: string[] = [];
+                for (const f of files) {
+                    const fp = outputDir !== '.' ? `${outputDir}/${f.filename}` : f.filename;
+                    await executeAction('workspace_write_file', { file_path: fp, content: f.content });
+                    written.push(fp);
+                }
+                return safeJson({ ok: true, action: 'generate_app', app_name: appName, files_written: written, summary: `Generated ArgoCD Application manifest(s): ${written.join(', ')}` });
+            }
+
+            return { ok: false, output: '', errorOutput: `Unknown argocd action: ${argoAction}` };
+        }
+
+        // ====================================================================
+        // workspace_devops_k8s_autoscale
+        // payload: action (generate|patch_hpa|scale|get_hpa|get_vpa|ca_status),
+        //          app_name (required for generate/scale), namespace,
+        //          [generate] description?, environment?, current_cpu?, current_memory?,
+        //          [patch_hpa] hpa_name, min_replicas?, max_replicas?,
+        //          [scale] kind?, replicas,
+        //          output_dir?
+        // ====================================================================
+        case 'workspace_devops_k8s_autoscale': {
+            const scaleAction = str(payload['action'], 'generate');
+            const appName     = str(payload['app_name']);
+            const namespace   = str(payload['namespace'], 'default');
+            const outputDir   = str(payload['output_dir'], '.');
+
+            if (scaleAction === 'generate') {
+                if (!appName) return { ok: false, output: '', errorOutput: 'app_name required for generate' };
+
+                let files: Array<{ filename: string; content: string }> = [];
+
+                if (callLlm && str(payload['description'])) {
+                    const prompt = buildAutoscalerPrompt({
+                        appName, namespace,
+                        description:    str(payload['description']),
+                        currentCpu:     str(payload['current_cpu'])    || undefined,
+                        currentMemory:  str(payload['current_memory']) || undefined,
+                        p99Latency:     str(payload['p99_latency'])    || undefined,
+                        errorRate:      str(payload['error_rate'])     || undefined,
+                        peakRps:        typeof payload['peak_rps'] === 'number' ? payload['peak_rps'] as number : undefined,
+                        environment:    (str(payload['environment'], 'production')) as 'production' | 'staging' | 'development',
+                    });
+                    const llmRaw = await callLlmSafe(callLlm, prompt, 'You are a Kubernetes capacity engineer. Return JSON only.');
+                    files = parseAutoscalerOutput(llmRaw);
+                }
+
+                if (!files.length) {
+                    // Direct YAML generation
+                    const hpaSpec: HpaSpec = {
+                        name: `${appName}-hpa`, namespace,
+                        targetKind: 'Deployment', targetName: appName,
+                        minReplicas: num(payload['min_replicas'], 2),
+                        maxReplicas: num(payload['max_replicas'], 10),
+                        metrics: [{ type: 'Resource', resourceName: 'cpu', averageUtilization: num(payload['cpu_target'], 70) }],
+                        scaleDownStabilizationWindowSeconds: 300,
+                    };
+                    const hpaYaml = buildHpaYaml(hpaSpec);
+                    files = [{ filename: `${appName}-hpa.yaml`, content: hpaYaml }];
+
+                    if (payload['vpa'] !== false) {
+                        const vpaSpec: VpaSpec = { name: `${appName}-vpa`, namespace, targetKind: 'Deployment', targetName: appName, updateMode: 'Off' };
+                        files.push({ filename: `${appName}-vpa.yaml`, content: buildVpaYaml(vpaSpec) });
+                    }
+                }
+
+                const written: string[] = [];
+                for (const f of files) {
+                    const fp = outputDir !== '.' ? `${outputDir}/${f.filename}` : f.filename;
+                    await executeAction('workspace_write_file', { file_path: fp, content: f.content });
+                    written.push(fp);
+                }
+                return safeJson({ ok: true, action: 'generate', app_name: appName, namespace, files_written: written, summary: `Generated ${written.length} autoscaling manifest(s) for "${appName}".` });
+            }
+
+            if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+
+            if (scaleAction === 'patch_hpa') {
+                const hpaName = str(payload['hpa_name'], `${appName}-hpa`);
+                const args    = buildKubectlPatchHpaArgs({ name: hpaName, namespace, minReplicas: typeof payload['min_replicas'] === 'number' ? payload['min_replicas'] as number : undefined, maxReplicas: typeof payload['max_replicas'] === 'number' ? payload['max_replicas'] as number : undefined });
+                const result  = await runCommand(args, workspaceDir, 15_000);
+                return safeJson({ ok: result.exitCode === 0, action: 'patch_hpa', hpa_name: hpaName, namespace, exit_code: result.exitCode, summary: result.exitCode === 0 ? `HPA "${hpaName}" patched.` : result.stderr.slice(0, 200) });
+            }
+
+            if (scaleAction === 'scale') {
+                if (!appName) return { ok: false, output: '', errorOutput: 'app_name required for scale' };
+                const replicas = num(payload['replicas'], 1);
+                const kind     = (str(payload['kind'], 'deployment')) as 'deployment' | 'statefulset' | 'replicaset';
+                const args     = buildKubectlScaleArgs({ kind, name: appName, namespace, replicas });
+                const result   = await runCommand(args, workspaceDir, 30_000);
+                return safeJson({ ok: result.exitCode === 0, action: 'scale', app_name: appName, namespace, replicas, exit_code: result.exitCode, summary: result.exitCode === 0 ? `${kind} "${appName}" scaled to ${replicas} replica(s).` : result.stderr.slice(0, 200) });
+            }
+
+            if (scaleAction === 'get_hpa') {
+                const args   = buildKubectlGetHpaArgs(namespace, str(payload['hpa_name']) || undefined);
+                const result = await runCommand(args, workspaceDir, 15_000);
+                const hpas   = parseHpaStatus(result.stdout);
+                return safeJson({ ok: result.exitCode === 0, action: 'get_hpa', namespace, hpas, count: hpas.length, summary: `${hpas.length} HPA(s) found in namespace "${namespace}".` });
+            }
+
+            if (scaleAction === 'get_vpa') {
+                const args   = buildKubectlGetVpaArgs(namespace, str(payload['vpa_name']) || undefined);
+                const result = await runCommand(args, workspaceDir, 15_000);
+                return safeJson({ ok: result.exitCode === 0, action: 'get_vpa', namespace, raw: result.stdout.slice(0, 2000), summary: `VPA status retrieved for namespace "${namespace}".` });
+            }
+
+            if (scaleAction === 'ca_status') {
+                const nsArg  = str(payload['ca_namespace'], 'kube-system');
+                const args   = buildCaStatusArgs(nsArg);
+                const result = await runCommand(args, workspaceDir, 15_000);
+                return safeJson({ ok: result.exitCode === 0, action: 'ca_status', output: result.stdout, summary: 'Cluster Autoscaler status retrieved.' });
+            }
+
+            if (scaleAction === 'generate_quota') {
+                if (!appName) return { ok: false, output: '', errorOutput: 'app_name required for generate_quota' };
+                const quotaSpec: ResourceQuotaSpec = {
+                    name: `${appName}-quota`, namespace,
+                    requests: { cpu: str(payload['requests_cpu'], '4'), memory: str(payload['requests_memory'], '8Gi') },
+                    limits:   { cpu: str(payload['limits_cpu'],   '8'), memory: str(payload['limits_memory'],   '16Gi') },
+                    pods: num(payload['max_pods'], 20),
+                };
+                const yaml = buildResourceQuotaYaml(quotaSpec);
+                const fp   = outputDir !== '.' ? `${outputDir}/${appName}-quota.yaml` : `${appName}-quota.yaml`;
+                await executeAction('workspace_write_file', { file_path: fp, content: yaml });
+                return safeJson({ ok: true, action: 'generate_quota', namespace, file_written: fp, summary: `ResourceQuota for "${namespace}" written to ${fp}.` });
+            }
+
+            return { ok: false, output: '', errorOutput: `Unknown k8s_autoscale action: ${scaleAction}` };
+        }
+
+        // ====================================================================
+        // workspace_devops_k8s_exec
+        // payload: action (exec|migrate|pg_dump|psql|redis|mongo|job_create|job_run),
+        //          pod (required for exec actions, OR label_selector),
+        //          namespace, command? (array), container?,
+        //          [migrate] framework?, custom_command?,
+        //          [pg_dump] database, user?, format?,
+        //          [psql] database, sql,
+        //          [redis] operation, pattern?,
+        //          [mongo] database, js_script,
+        //          [job_create/job_run] job_name, image, job_command (array)
+        // ====================================================================
+        case 'workspace_devops_k8s_exec': {
+            if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+            const execAction     = str(payload['action'], 'exec');
+            const namespace      = str(payload['namespace'], 'default');
+            const labelSelector  = str(payload['label_selector']);
+            let   pod            = str(payload['pod']);
+
+            // Resolve pod name from label selector if not given directly
+            if (!pod && labelSelector) {
+                const podNameResult = await runCommand(buildGetPodNameArgs(labelSelector, namespace), workspaceDir, 10_000);
+                pod = podNameResult.stdout.trim();
+                if (!pod) return { ok: false, output: '', errorOutput: `No pod found for selector "${labelSelector}" in namespace "${namespace}"` };
+            }
+
+            if (execAction === 'exec') {
+                if (!pod) return { ok: false, output: '', errorOutput: 'pod or label_selector required for exec' };
+                const command = Array.isArray(payload['command']) ? (payload['command'] as string[]) : ['sh', '-c', str(payload['shell_command'], 'echo hello')];
+                const args    = buildKubectlExecArgs({ pod, namespace, command, container: str(payload['container']) || undefined });
+                const result  = await runCommand(args, workspaceDir, num(payload['timeout_seconds'], 60) * 1000);
+                return safeJson({ ok: result.exitCode === 0, action: 'exec', pod, namespace, exit_code: result.exitCode, stdout: result.stdout.slice(0, 4000), stderr: result.stderr.slice(0, 1000), summary: result.exitCode === 0 ? `Command executed in pod "${pod}".` : result.stderr.slice(0, 200) });
+            }
+
+            if (execAction === 'migrate') {
+                if (!pod) return { ok: false, output: '', errorOutput: 'pod or label_selector required for migrate' };
+                const framework  = (str(payload['framework'], 'custom')) as 'prisma' | 'flyway' | 'alembic' | 'liquibase' | 'custom';
+                const customCmd  = Array.isArray(payload['custom_command']) ? (payload['custom_command'] as string[]) : undefined;
+                const args       = buildDbMigrationExecArgs({ pod, namespace, framework, customCommand: customCmd, container: str(payload['container']) || undefined });
+                const result     = await runCommand(args, workspaceDir, 300_000);
+                return safeJson({ ok: result.exitCode === 0, action: 'migrate', pod, namespace, framework, exit_code: result.exitCode, output: result.stdout.slice(0, 4000), summary: result.exitCode === 0 ? `Migration (${framework}) completed in pod "${pod}".` : result.stderr.slice(0, 200) });
+            }
+
+            if (execAction === 'pg_dump') {
+                if (!pod) return { ok: false, output: '', errorOutput: 'pod or label_selector required for pg_dump' };
+                const database = str(payload['database']);
+                if (!database) return { ok: false, output: '', errorOutput: 'database required for pg_dump' };
+                const args   = buildPgDumpExecArgs({ pod, namespace, database, user: str(payload['user']) || undefined, format: (str(payload['format'], 'plain')) as 'plain' | 'custom', outputPath: str(payload['output_path']) || undefined, container: str(payload['container']) || undefined, noOwner: payload['no_owner'] !== false, noAcl: payload['no_acl'] !== false });
+                const result = await runCommand(args, workspaceDir, 600_000);
+                return safeJson({ ok: result.exitCode === 0, action: 'pg_dump', pod, namespace, database, exit_code: result.exitCode, output_size: result.stdout.length, summary: result.exitCode === 0 ? `pg_dump of "${database}" completed (${result.stdout.length} bytes).` : result.stderr.slice(0, 200) });
+            }
+
+            if (execAction === 'psql') {
+                if (!pod) return { ok: false, output: '', errorOutput: 'pod or label_selector required for psql' };
+                const database = str(payload['database']);
+                const sql      = str(payload['sql']);
+                if (!database || !sql) return { ok: false, output: '', errorOutput: 'database and sql required for psql' };
+                const args   = buildPsqlExecArgs({ pod, namespace, database, sql, user: str(payload['user']) || undefined, container: str(payload['container']) || undefined });
+                const result = await runCommand(args, workspaceDir, 60_000);
+                return safeJson({ ok: result.exitCode === 0, action: 'psql', pod, namespace, database, exit_code: result.exitCode, output: result.stdout.slice(0, 4000), summary: result.exitCode === 0 ? 'SQL executed successfully.' : result.stderr.slice(0, 200) });
+            }
+
+            if (execAction === 'redis') {
+                if (!pod) return { ok: false, output: '', errorOutput: 'pod or label_selector required for redis' };
+                const operation = (str(payload['redis_operation'], 'info')) as 'flushdb' | 'flushall' | 'del_pattern' | 'info' | 'custom';
+                const args      = buildRedisExecArgs({ pod, namespace, operation, pattern: str(payload['pattern']) || undefined, customCommand: Array.isArray(payload['custom_command']) ? (payload['custom_command'] as string[]) : undefined, container: str(payload['container']) || undefined });
+                const result    = await runCommand(args, workspaceDir, 60_000);
+                return safeJson({ ok: result.exitCode === 0, action: 'redis', pod, namespace, operation, exit_code: result.exitCode, output: result.stdout.slice(0, 2000), summary: result.exitCode === 0 ? `Redis "${operation}" completed in pod "${pod}".` : result.stderr.slice(0, 200) });
+            }
+
+            if (execAction === 'mongo') {
+                if (!pod) return { ok: false, output: '', errorOutput: 'pod or label_selector required for mongo' };
+                const database  = str(payload['database']);
+                const jsScript  = str(payload['js_script']);
+                if (!database || !jsScript) return { ok: false, output: '', errorOutput: 'database and js_script required for mongo' };
+                const args   = buildMongoExecArgs({ pod, namespace, database, jsScript, container: str(payload['container']) || undefined });
+                const result = await runCommand(args, workspaceDir, 60_000);
+                return safeJson({ ok: result.exitCode === 0, action: 'mongo', pod, namespace, database, exit_code: result.exitCode, output: result.stdout.slice(0, 2000), summary: result.exitCode === 0 ? 'MongoDB script executed successfully.' : result.stderr.slice(0, 200) });
+            }
+
+            if (execAction === 'job_run') {
+                // Full lifecycle: generate YAML → apply → wait → logs → (optionally delete)
+                const jobName   = str(payload['job_name']);
+                const image     = str(payload['image']);
+                const jobCmd    = Array.isArray(payload['job_command']) ? (payload['job_command'] as string[]) : [];
+                if (!jobName || !image || !jobCmd.length) return { ok: false, output: '', errorOutput: 'job_name, image, and job_command required for job_run' };
+
+                const jobSpec: K8sJobSpec = {
+                    jobName, namespace, image,
+                    command: jobCmd,
+                    ttlSeconds:    num(payload['ttl_seconds'], 300),
+                    backoffLimit:  num(payload['backoff_limit'], 0),
+                    serviceAccount: str(payload['service_account']) || undefined,
+                    envVars:       typeof payload['env_vars'] === 'object' && payload['env_vars'] !== null ? (payload['env_vars'] as Record<string, string>) : undefined,
+                };
+                const jobYaml = buildK8sJobYaml(jobSpec);
+                const jobFile = `/tmp/${jobName}-job.yaml`;
+                await executeAction('workspace_write_file', { file_path: jobFile, content: jobYaml });
+
+                // Apply
+                const applyResult = await runCommand(buildKubectlCreateJobArgs(jobFile, namespace), workspaceDir, 15_000);
+                if (applyResult.exitCode !== 0) return safeJson({ ok: false, action: 'job_run', job_name: jobName, phase: 'apply', exit_code: applyResult.exitCode, summary: applyResult.stderr.slice(0, 200) });
+
+                // Wait for completion
+                const timeout    = num(payload['timeout_seconds'], 300);
+                const waitResult = await runCommand(buildKubectlWaitJobArgs(jobName, namespace, timeout), workspaceDir, (timeout + 10) * 1000);
+                const succeeded  = waitResult.exitCode === 0;
+
+                // Get logs
+                const logsResult = await runCommand(buildKubectlLogsJobArgs(jobName, namespace), workspaceDir, 15_000);
+
+                // Optionally delete job after run
+                if (payload['delete_after'] !== false) {
+                    await runCommand(buildKubectlDeleteJobArgs(jobName, namespace), workspaceDir, 10_000).catch(() => null);
+                }
+
+                return safeJson({ ok: succeeded, action: 'job_run', job_name: jobName, namespace, succeeded, logs: logsResult.stdout.slice(0, 4000), summary: succeeded ? `Job "${jobName}" completed successfully.` : `Job "${jobName}" failed or timed out.` });
+            }
+
+            return { ok: false, output: '', errorOutput: `Unknown k8s_exec action: ${execAction}` };
+        }
+
+        // ====================================================================
+        // workspace_devops_dns
+        // payload: action (list|create|update|delete|list_zones|request_cert|describe_cert),
+        //          provider (route53|cloudflare|azure|gcp, required),
+        //          [route53] hosted_zone_id, name, type, value, ttl?
+        //          [cloudflare] zone_id, api_token, name, type, content, record_id?
+        //          [azure] zone, resource_group, type, name?, value?, subscription?
+        //          [gcp] zone (managed zone name), name, type, data, project?
+        //          [request_cert] domain, alternate_names?, region?
+        //          allow_destructive? (required for delete)
+        // ====================================================================
+        case 'workspace_devops_dns': {
+            if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+            const dnsAction  = str(payload['action'], 'list');
+            const provider   = (str(payload['provider'], 'route53')) as DnsProvider;
+
+            if (dnsAction === 'delete' && payload['allow_destructive'] !== true) {
+                return { ok: false, output: '', errorOutput: 'DNS record deletion requires allow_destructive: true' };
+            }
+
+            if (provider === 'route53') {
+                const hostedZoneId = str(payload['hosted_zone_id']);
+                if (!hostedZoneId) return { ok: false, output: '', errorOutput: 'hosted_zone_id required for route53' };
+
+                if (dnsAction === 'list_zones') {
+                    const result = await runCommand(buildRoute53ListZonesArgs(), workspaceDir, 30_000);
+                    return safeJson({ ok: result.exitCode === 0, provider, action: 'list_zones', raw: result.stdout.slice(0, 4000), summary: 'Route53 hosted zones listed.' });
+                }
+                if (dnsAction === 'list') {
+                    const result  = await runCommand(buildRoute53ListRecordsArgs(hostedZoneId), workspaceDir, 30_000);
+                    const records = parseRoute53Records(result.stdout);
+                    return safeJson({ ok: result.exitCode === 0, provider, action: 'list', records, count: records.length, summary: `${records.length} record(s) in zone "${hostedZoneId}".` });
+                }
+
+                const name  = str(payload['name']);
+                const type  = (str(payload['type'], 'A')) as DnsRecordType;
+                const value = str(payload['value']);
+                const ttl   = num(payload['ttl'], 300);
+                const action53 = dnsAction === 'delete' ? 'DELETE' : 'UPSERT';
+                const batch  = buildRoute53ChangeBatch({ action: action53, name, type, value, ttl });
+                const batchJson = JSON.stringify(batch);
+                const args   = buildRoute53ChangeArgs(hostedZoneId, batchJson);
+                const result = await runCommand(args, workspaceDir, 30_000);
+                return safeJson({ ok: result.exitCode === 0, provider, action: dnsAction, name, type, value, exit_code: result.exitCode, summary: result.exitCode === 0 ? `Route53 record ${name} (${type}) ${dnsAction}d.` : result.stderr.slice(0, 200) });
+            }
+
+            if (provider === 'cloudflare') {
+                const zoneId    = str(payload['zone_id']);
+                const apiToken  = str(payload['api_token']);
+                if (!zoneId || !apiToken) return { ok: false, output: '', errorOutput: 'zone_id and api_token required for cloudflare' };
+                const args   = buildCloudFlareDnsArgs({ operation: dnsAction as 'create' | 'update' | 'delete' | 'list', zoneId, apiToken, name: str(payload['name']) || undefined, type: str(payload['type']) as DnsRecordType || undefined, content: str(payload['content']) || undefined, ttl: num(payload['ttl'], 1), proxied: payload['proxied'] === true, recordId: str(payload['record_id']) || undefined });
+                const result = await runCommand(args, workspaceDir, 30_000);
+                const records = dnsAction === 'list' ? parseCloudFlareDnsRecords(result.stdout) : undefined;
+                return safeJson({ ok: result.exitCode === 0, provider, action: dnsAction, records, exit_code: result.exitCode, raw: result.stdout.slice(0, 2000), summary: `Cloudflare DNS ${dnsAction} completed.` });
+            }
+
+            if (provider === 'azure') {
+                const zone          = str(payload['zone']);
+                const resourceGroup = str(payload['resource_group']);
+                if (!zone || !resourceGroup) return { ok: false, output: '', errorOutput: 'zone and resource_group required for azure' };
+                const args   = buildAzDnsArgs({ operation: dnsAction as 'create' | 'update' | 'delete' | 'list', zone, resourceGroup, type: (str(payload['type'], 'A')) as DnsRecordType, name: str(payload['name']) || undefined, ipv4Address: str(payload['ipv4_address']) || undefined, cname: str(payload['cname']) || undefined, txtValue: str(payload['txt_value']) || undefined, ttl: num(payload['ttl'], 300), subscription: str(payload['subscription']) || undefined });
+                const result = await runCommand(args, workspaceDir, 30_000);
+                return safeJson({ ok: result.exitCode === 0, provider, action: dnsAction, exit_code: result.exitCode, raw: result.stdout.slice(0, 2000), summary: `Azure DNS ${dnsAction} completed.` });
+            }
+
+            if (provider === 'gcp') {
+                const zone    = str(payload['zone']);
+                if (!zone) return { ok: false, output: '', errorOutput: 'zone (managed zone name) required for gcp' };
+                const args   = buildGcloudDnsArgs({ operation: dnsAction as 'add-record-set' | 'delete' | 'list', zone, name: str(payload['name']) || undefined, type: (str(payload['type'], 'A')) as DnsRecordType, ttl: num(payload['ttl'], 300), data: str(payload['data']) || undefined, project: str(payload['project']) || undefined });
+                const result = await runCommand(args, workspaceDir, 30_000);
+                return safeJson({ ok: result.exitCode === 0, provider, action: dnsAction, exit_code: result.exitCode, raw: result.stdout.slice(0, 2000), summary: `GCP Cloud DNS ${dnsAction} completed.` });
+            }
+
+            // ACM cert actions (provider-agnostic under dns action set)
+            if (dnsAction === 'request_cert') {
+                const domain = str(payload['domain']);
+                if (!domain) return { ok: false, output: '', errorOutput: 'domain required for request_cert' };
+                const alternateNames = Array.isArray(payload['alternate_names']) ? (payload['alternate_names'] as string[]) : undefined;
+                const args   = buildAcmRequestCertArgs({ domain, alternateNames, validationMethod: 'DNS', region: str(payload['region']) || undefined });
+                const result = await runCommand(args, workspaceDir, 30_000);
+                return safeJson({ ok: result.exitCode === 0, action: 'request_cert', domain, exit_code: result.exitCode, raw: result.stdout.slice(0, 1000), summary: result.exitCode === 0 ? `ACM cert requested for "${domain}".` : result.stderr.slice(0, 200) });
+            }
+            if (dnsAction === 'describe_cert') {
+                const certArn = str(payload['cert_arn']);
+                if (!certArn) return { ok: false, output: '', errorOutput: 'cert_arn required for describe_cert' };
+                const args   = buildAcmDescribeCertArgs(certArn, str(payload['region']) || undefined);
+                const result = await runCommand(args, workspaceDir, 30_000);
+                const certStatus = parseAcmCertStatus(result.stdout);
+                return safeJson({ ok: result.exitCode === 0, action: 'describe_cert', cert: certStatus, summary: certStatus ? `ACM cert "${certStatus.domainName}": ${certStatus.status}` : 'Could not parse cert status.' });
+            }
+
+            return { ok: false, output: '', errorOutput: `Unknown dns action: ${dnsAction}` };
+        }
+
+        // ====================================================================
+        // workspace_devops_lb
+        // payload: action (describe_listeners|describe_target_health|create_rule|
+        //                   modify_rule|delete_rule|patch_ingress|generate_ingress),
+        //          [alb] listener_arn, region?
+        //          [create_rule] priority, condition_field, condition_values, target_group_arn
+        //          [delete_rule] rule_arn — requires allow_destructive: true
+        //          [patch_ingress] name, namespace, annotations (object)
+        //          [generate_ingress] name, namespace, host, service_name, service_port,
+        //                              tls_secret_name?, annotations?, ingress_class?, output_dir?
+        // ====================================================================
+        case 'workspace_devops_lb': {
+            if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+            const lbAction = str(payload['action'], 'describe_listeners');
+
+            if (lbAction === 'delete_rule' && payload['allow_destructive'] !== true) {
+                return { ok: false, output: '', errorOutput: 'Listener rule deletion requires allow_destructive: true' };
+            }
+
+            if (lbAction === 'describe_listeners') {
+                const lbArn = str(payload['load_balancer_arn']);
+                if (!lbArn) return { ok: false, output: '', errorOutput: 'load_balancer_arn required for describe_listeners' };
+                const args   = buildAlbDescribeListenersArgs(lbArn, str(payload['region']) || undefined);
+                const result = await runCommand(args, workspaceDir, 30_000);
+                return safeJson({ ok: result.exitCode === 0, action: 'describe_listeners', raw: result.stdout.slice(0, 4000), summary: 'ALB/NLB listeners described.' });
+            }
+
+            if (lbAction === 'describe_target_health') {
+                const tgArn = str(payload['target_group_arn']);
+                if (!tgArn) return { ok: false, output: '', errorOutput: 'target_group_arn required' };
+                const args   = buildAlbDescribeTargetGroupHealthArgs(tgArn, str(payload['region']) || undefined);
+                const result = await runCommand(args, workspaceDir, 30_000);
+                return safeJson({ ok: result.exitCode === 0, action: 'describe_target_health', raw: result.stdout.slice(0, 2000), summary: 'Target group health described.' });
+            }
+
+            if (lbAction === 'create_rule' || lbAction === 'modify_rule') {
+                const listenerArn      = str(payload['listener_arn']);
+                if (!listenerArn) return { ok: false, output: '', errorOutput: 'listener_arn required' };
+                const conditionValues  = Array.isArray(payload['condition_values']) ? (payload['condition_values'] as string[]) : [];
+                const args   = buildAlbListenerRuleArgs({
+                    operation:       lbAction === 'create_rule' ? 'create' : 'modify',
+                    listenerArn,
+                    priority:        num(payload['priority'], 100),
+                    conditionField:  (str(payload['condition_field'], 'path-pattern')) as 'host-header' | 'path-pattern',
+                    conditionValues,
+                    targetGroupArn:  str(payload['target_group_arn']) || undefined,
+                    ruleArn:         str(payload['rule_arn']) || undefined,
+                    region:          str(payload['region']) || undefined,
+                });
+                const result = await runCommand(args, workspaceDir, 30_000);
+                return safeJson({ ok: result.exitCode === 0, action: lbAction, exit_code: result.exitCode, raw: result.stdout.slice(0, 1000), summary: result.exitCode === 0 ? `Listener rule ${lbAction}d.` : result.stderr.slice(0, 200) });
+            }
+
+            if (lbAction === 'delete_rule') {
+                const ruleArn = str(payload['rule_arn']);
+                if (!ruleArn) return { ok: false, output: '', errorOutput: 'rule_arn required for delete_rule' };
+                const args   = buildAlbListenerRuleArgs({ operation: 'delete', listenerArn: '', ruleArn, region: str(payload['region']) || undefined });
+                const result = await runCommand(args, workspaceDir, 30_000);
+                return safeJson({ ok: result.exitCode === 0, action: 'delete_rule', rule_arn: ruleArn, exit_code: result.exitCode, summary: result.exitCode === 0 ? `Listener rule deleted.` : result.stderr.slice(0, 200) });
+            }
+
+            if (lbAction === 'patch_ingress') {
+                const ingressName   = str(payload['name']);
+                const namespace     = str(payload['namespace'], 'default');
+                const annotations   = typeof payload['annotations'] === 'object' && payload['annotations'] !== null
+                    ? (payload['annotations'] as Record<string, string>) : {};
+                if (!ingressName) return { ok: false, output: '', errorOutput: 'name required for patch_ingress' };
+                const args   = buildKubectlPatchIngressArgs({ name: ingressName, namespace, annotations });
+                const result = await runCommand(args, workspaceDir, 15_000);
+                return safeJson({ ok: result.exitCode === 0, action: 'patch_ingress', ingress: ingressName, namespace, exit_code: result.exitCode, summary: result.exitCode === 0 ? `Ingress "${ingressName}" annotations updated.` : result.stderr.slice(0, 200) });
+            }
+
+            if (lbAction === 'generate_ingress') {
+                const name        = str(payload['name']);
+                const namespace   = str(payload['namespace'], 'default');
+                const host        = str(payload['host']);
+                const serviceName = str(payload['service_name']);
+                const servicePort = num(payload['service_port'], 80);
+                if (!name || !host || !serviceName) return { ok: false, output: '', errorOutput: 'name, host, and service_name required for generate_ingress' };
+                const annotations = typeof payload['annotations'] === 'object' && payload['annotations'] !== null ? (payload['annotations'] as Record<string, string>) : {};
+                const yaml = buildIngressYaml({ name, namespace, host, serviceName, servicePort, tlsSecretName: str(payload['tls_secret_name']) || undefined, annotations, ingressClass: str(payload['ingress_class']) || undefined, pathPrefix: str(payload['path_prefix']) || undefined });
+                const outputDir = str(payload['output_dir'], '.');
+                const fp = outputDir !== '.' ? `${outputDir}/${name}-ingress.yaml` : `${name}-ingress.yaml`;
+                await executeAction('workspace_write_file', { file_path: fp, content: yaml });
+                return safeJson({ ok: true, action: 'generate_ingress', name, namespace, file_written: fp, summary: `Ingress manifest for "${host}" written to ${fp}.` });
+            }
+
+            return { ok: false, output: '', errorOutput: `Unknown lb action: ${lbAction}` };
+        }
+
+        // ====================================================================
+        // workspace_devops_service_mesh
+        // payload: action (generate|apply|analyze|proxy_status|proxy_config|
+        //                   linkerd_check|linkerd_stat),
+        //          provider (istio|linkerd, default: istio),
+        //          app_name, namespace,
+        //          [generate] services (array), features (object), description?, output_dir?
+        //          [apply] manifest_path
+        //          [analyze] files? (array)
+        //          [proxy_status/proxy_config] pod, config_type?
+        //          [linkerd_stat] resource_type?, resource_name?
+        // ====================================================================
+        case 'workspace_devops_service_mesh': {
+            const meshAction = str(payload['action'], 'generate');
+            const provider   = (str(payload['provider'], 'istio')) as MeshProvider;
+            const appName    = str(payload['app_name']);
+            const namespace  = str(payload['namespace'], 'default');
+            const outputDir  = str(payload['output_dir'], '.');
+
+            if (meshAction === 'generate') {
+                if (!appName) return { ok: false, output: '', errorOutput: 'app_name required for generate' };
+
+                const services   = Array.isArray(payload['services'])
+                    ? (payload['services'] as Array<{ name: string; port: number; version?: string }>)
+                    : [{ name: appName, port: num(payload['port'], 8080) }];
+
+                const featuresRaw = typeof payload['features'] === 'object' && payload['features'] !== null
+                    ? (payload['features'] as Record<string, unknown>) : {};
+
+                let files: Array<{ filename: string; content: string }> = [];
+
+                if (callLlm && str(payload['description'])) {
+                    const prompt = buildServiceMeshPrompt({
+                        provider, appName, namespace,
+                        description: str(payload['description']),
+                        services,
+                        features: {
+                            retries:       featuresRaw['retries']        !== false,
+                            circuitBreaker: featuresRaw['circuit_breaker'] === true,
+                            mtls:          featuresRaw['mtls']           === true,
+                            rateLimiting:  featuresRaw['rate_limiting']  === true,
+                            faultInjection: featuresRaw['fault_injection'] === true,
+                            canaryTraffic: typeof featuresRaw['canary_traffic'] === 'object' && featuresRaw['canary_traffic'] !== null
+                                ? (featuresRaw['canary_traffic'] as { stablePercent: number; canaryPercent: number }) : undefined,
+                        },
+                    });
+                    const llmRaw = await callLlmSafe(callLlm, prompt, 'You are a service mesh expert. Return JSON only.');
+                    files = parseServiceMeshOutput(llmRaw);
+                }
+
+                if (!files.length && provider === 'istio') {
+                    // Direct YAML generation for common Istio patterns
+                    const retryPolicy: IstioRetryPolicy | undefined = featuresRaw['retries'] !== false
+                        ? { attempts: 3, perTryTimeout: '2s', retryOn: '5xx,gateway-error,reset' } : undefined;
+
+                    const cbSpec: IstioCircuitBreaker | undefined = featuresRaw['circuit_breaker'] === true
+                        ? { consecutiveGatewayErrors: 5, interval: '10s', baseEjectionTime: '30s', maxEjectionPercent: 10 } : undefined;
+
+                    for (const svc of services) {
+                        const vs = buildIstioVirtualServiceYaml({
+                            name: `${svc.name}-vs`, namespace,
+                            hosts: [svc.name],
+                            timeout: str(payload['timeout'], '30s') || undefined,
+                            retries: retryPolicy,
+                            routes: [{ destinations: [{ host: svc.name, port: svc.port }] }],
+                        });
+                        files.push({ filename: `${svc.name}-virtual-service.yaml`, content: vs });
+
+                        const dr = buildIstioDestinationRuleYaml({
+                            name: `${svc.name}-dr`, namespace, host: svc.name,
+                            loadBalancer: 'LEAST_CONN',
+                            circuitBreaker: cbSpec,
+                            mtls: featuresRaw['mtls'] === true ? 'STRICT' : undefined,
+                        });
+                        files.push({ filename: `${svc.name}-destination-rule.yaml`, content: dr });
+                    }
+
+                    if (featuresRaw['mtls'] === true) {
+                        const pa = buildIstioPeerAuthYaml({ name: `${namespace}-mtls`, namespace, mode: 'STRICT' });
+                        files.push({ filename: `${namespace}-peer-auth.yaml`, content: pa });
+                    }
+                }
+
+                if (!files.length && provider === 'linkerd') {
+                    for (const svc of services) {
+                        const sp = buildLinkerdServiceProfileYaml({
+                            name: `${svc.name}.${namespace}.svc.cluster.local`, namespace,
+                            routes: [{ name: 'all-routes', condition: { pathRegex: '.*' }, timeout: str(payload['timeout'], '10s'), isRetryable: featuresRaw['retries'] !== false }],
+                        });
+                        files.push({ filename: `${svc.name}-service-profile.yaml`, content: sp });
+                    }
+                }
+
+                const written: string[] = [];
+                for (const f of files) {
+                    const fp = outputDir !== '.' ? `${outputDir}/${f.filename}` : f.filename;
+                    await executeAction('workspace_write_file', { file_path: fp, content: f.content });
+                    written.push(fp);
+                }
+                return safeJson({ ok: true, action: 'generate', provider, app_name: appName, namespace, files_written: written, file_count: written.length, summary: `Generated ${written.length} ${provider} service mesh manifest(s) for "${appName}".` });
+            }
+
+            if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+
+            if (meshAction === 'apply') {
+                const manifestPath = str(payload['manifest_path']);
+                if (!manifestPath) return { ok: false, output: '', errorOutput: 'manifest_path required for apply' };
+                const args   = ['kubectl', 'apply', '-f', manifestPath, '-n', namespace];
+                const result = await runCommand(args, workspaceDir, 30_000);
+                return safeJson({ ok: result.exitCode === 0, action: 'apply', provider, namespace, exit_code: result.exitCode, summary: result.exitCode === 0 ? 'Service mesh manifests applied.' : result.stderr.slice(0, 200) });
+            }
+
+            if (meshAction === 'analyze' && provider === 'istio') {
+                const files  = Array.isArray(payload['files']) ? (payload['files'] as string[]) : undefined;
+                const args   = buildIstioCtlAnalyzeArgs(namespace, files);
+                const result = await runCommand(args, workspaceDir, 60_000);
+                return safeJson({ ok: result.exitCode === 0, action: 'analyze', provider, output: result.stdout.slice(0, 3000), summary: result.exitCode === 0 ? `Istio analysis: no issues found.` : `Istio analysis found issues.` });
+            }
+
+            if (meshAction === 'proxy_status' && provider === 'istio') {
+                const pod    = str(payload['pod']) || undefined;
+                const args   = buildIstioCtlProxyStatusArgs(pod, namespace);
+                const result = await runCommand(args, workspaceDir, 30_000);
+                return safeJson({ ok: result.exitCode === 0, action: 'proxy_status', provider, output: result.stdout.slice(0, 3000), summary: 'Istio proxy status retrieved.' });
+            }
+
+            if (meshAction === 'proxy_config' && provider === 'istio') {
+                const pod        = str(payload['pod']);
+                if (!pod) return { ok: false, output: '', errorOutput: 'pod required for proxy_config' };
+                const configType = (str(payload['config_type'], 'all')) as 'listener' | 'route' | 'cluster' | 'endpoint' | 'all';
+                const args       = buildIstioCtlProxyConfigArgs(pod, namespace, configType);
+                const result     = await runCommand(args, workspaceDir, 30_000);
+                return safeJson({ ok: result.exitCode === 0, action: 'proxy_config', provider, pod, config_type: configType, output: result.stdout.slice(0, 4000), summary: `Proxy config (${configType}) for "${pod}" retrieved.` });
+            }
+
+            if (meshAction === 'linkerd_check' && provider === 'linkerd') {
+                const args   = buildLinkerdCheckArgs(payload['pre_install'] === true);
+                const result = await runCommand(args, workspaceDir, 60_000);
+                return safeJson({ ok: result.exitCode === 0, action: 'linkerd_check', provider, output: result.stdout.slice(0, 3000), summary: result.exitCode === 0 ? 'Linkerd check passed.' : 'Linkerd check found issues.' });
+            }
+
+            if (meshAction === 'linkerd_stat' && provider === 'linkerd') {
+                const resourceType = (str(payload['resource_type'], 'deployment')) as 'deployment' | 'pod' | 'namespace' | 'daemonset';
+                const args         = buildLinkerdStatArgs(resourceType, namespace, str(payload['resource_name']) || undefined);
+                const result       = await runCommand(args, workspaceDir, 30_000);
+                return safeJson({ ok: result.exitCode === 0, action: 'linkerd_stat', provider, resource_type: resourceType, output: result.stdout.slice(0, 3000), summary: `Linkerd stat for ${resourceType} in "${namespace}" retrieved.` });
+            }
+
+            return { ok: false, output: '', errorOutput: `Unknown service_mesh action: ${meshAction}` };
         }
     }
 }
