@@ -1,0 +1,24 @@
+{
+    "name": "@agentfarm/memory-service",
+    "version": "1.0.0",
+    "private": true,
+    "type": "module",
+    "main": "./src/index.ts",
+    "exports": {
+        ".": {
+            "types": "./src/index.ts",
+            "default": "./src/index.ts"
+        }
+    },
+    "scripts": {
+        "typecheck": "tsc --noEmit"
+    },
+    "dependencies": {
+        "@prisma/client": "^6.0.1",
+        "@agentfarm/shared-types": "workspace:*"
+    },
+    "devDependencies": {
+        "@types/node": "*",
+        "typescript": "*"
+    }
+}

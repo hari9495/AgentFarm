@@ -218,6 +218,7 @@
         "@agentfarm/erp-adapters": "workspace:*",
         "@agentfarm/notification-adapters": "workspace:*",
         "@agentfarm/shared-types": "workspace:*",
+        "@agentfarm/memory-service": "workspace:*",
         "@prisma/client": "^6.19.3",
         "fastify": "^5.2.1",
         "nodemailer": "^6.9.16",
