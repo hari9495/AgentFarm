@@ -601,6 +601,268 @@ export class JiraConnector {
             this.fetchImpl,
         );
     }
+
+    // ── Sprint management (Jira Agile REST API) ──────────────────────────────
+
+    async createSprint(params: {
+        boardId: number;
+        name: string;
+        startDate?: string;
+        endDate?: string;
+        goal?: string;
+    }): Promise<JsonResponse<{ id: number; name: string; state: string; startDate?: string; endDate?: string }>> {
+        const body: Record<string, unknown> = {
+            name: params.name,
+            originBoardId: params.boardId,
+            ...(params.startDate ? { startDate: params.startDate } : {}),
+            ...(params.endDate ? { endDate: params.endDate } : {}),
+            ...(params.goal ? { goal: params.goal } : {}),
+        };
+        return jsonFetch(
+            `${this.base}/rest/agile/1.0/sprint`,
+            { method: 'POST', headers: this.headers(), body: JSON.stringify(body) },
+            this.fetchImpl,
+        );
+    }
+
+    async updateSprintStatus(params: {
+        sprintId: number;
+        state: 'active' | 'closed';
+    }): Promise<JsonResponse<{ id: number; state: string }>> {
+        return jsonFetch(
+            `${this.base}/rest/agile/1.0/sprint/${params.sprintId}`,
+            { method: 'POST', headers: this.headers(), body: JSON.stringify({ state: params.state }) },
+            this.fetchImpl,
+        );
+    }
+
+    async addIssueToSprint(params: {
+        sprintId: number;
+        issueKeys: string[];
+    }): Promise<JsonResponse<null>> {
+        return jsonFetch<null>(
+            `${this.base}/rest/agile/1.0/sprint/${params.sprintId}/issue`,
+            { method: 'POST', headers: this.headers(), body: JSON.stringify({ issues: params.issueKeys }) },
+            this.fetchImpl,
+        );
+    }
+
+    async listSprints(params: {
+        boardId: number;
+        state?: 'active' | 'future' | 'closed';
+        maxResults?: number;
+    }): Promise<JsonResponse<{ values: Array<{ id: number; name: string; state: string; startDate?: string; endDate?: string; goal?: string }> }>> {
+        const qs = new URLSearchParams({
+            maxResults: String(params.maxResults ?? 50),
+            ...(params.state ? { state: params.state } : {}),
+        });
+        return jsonFetch(
+            `${this.base}/rest/agile/1.0/board/${params.boardId}/sprint?${qs}`,
+            { method: 'GET', headers: this.headers() },
+            this.fetchImpl,
+        );
+    }
+}
+
+// ─── Linear connector ─────────────────────────────────────────────────────────
+
+interface LinearCredentials {
+    apiKey: string;
+    teamId?: string;
+}
+
+const LINEAR_GRAPHQL_URL = 'https://api.linear.app/graphql';
+
+function linearHeaders(apiKey: string): Record<string, string> {
+    return {
+        Authorization: apiKey,
+        'Content-Type': 'application/json',
+    };
+}
+
+async function linearGraphQL<T>(
+    apiKey: string,
+    query: string,
+    variables: Record<string, unknown>,
+    fetchImpl: typeof fetch,
+): Promise<JsonResponse<T>> {
+    const result = await jsonFetch<{ data?: T; errors?: Array<{ message: string }> }>(
+        LINEAR_GRAPHQL_URL,
+        {
+            method: 'POST',
+            headers: linearHeaders(apiKey),
+            body: JSON.stringify({ query, variables }),
+        },
+        fetchImpl,
+    );
+    if (!result.ok) return result as { ok: false; error: string };
+    if (result.data.errors?.length) {
+        return { ok: false, error: result.data.errors.map((e) => e.message).join('; ') };
+    }
+    return { ok: true, data: result.data.data as T };
+}
+
+function resolveLinearCreds(payload: Record<string, unknown>): LinearCredentials | null {
+    const creds = payload['credentials'] as Record<string, unknown> | undefined;
+    const apiKey =
+        (typeof creds?.['linear_api_key'] === 'string' ? creds['linear_api_key'] : null) ??
+        (typeof creds?.['api_key'] === 'string' ? creds['api_key'] : null) ??
+        process.env['LINEAR_API_KEY'] ??
+        null;
+    if (!apiKey) return null;
+    const teamId =
+        (typeof creds?.['team_id'] === 'string' ? creds['team_id'] : null) ??
+        (typeof payload['team_id'] === 'string' ? payload['team_id'] : null) ??
+        process.env['LINEAR_TEAM_ID'] ??
+        undefined;
+    return { apiKey, teamId };
+}
+
+async function dispatchLinear(
+    creds: LinearCredentials,
+    actionType: string,
+    payload: Record<string, unknown>,
+    fetchImpl: typeof fetch,
+): Promise<ConnectorDispatchResult> {
+    const { apiKey, teamId } = creds;
+    const resolvedTeamId = (typeof payload['team_id'] === 'string' ? payload['team_id'] : null) ?? teamId;
+
+    switch (actionType) {
+        case 'create_sprint': {
+            if (!resolvedTeamId) return { ok: false, error: 'Linear create_sprint: team_id is required' };
+            const name = String(payload['name'] ?? `Sprint ${new Date().toLocaleDateString()}`);
+            const mutation = `
+                mutation CycleCreate($input: CycleCreateInput!) {
+                    cycleCreate(input: $input) {
+                        success
+                        cycle { id number name startsAt endsAt }
+                    }
+                }`;
+            return linearGraphQL<{ cycleCreate: { success: boolean; cycle: { id: string; number: number; name: string } } }>(
+                apiKey, mutation,
+                {
+                    input: {
+                        teamId: resolvedTeamId,
+                        name,
+                        ...(typeof payload['start_date'] === 'string' ? { startsAt: payload['start_date'] } : {}),
+                        ...(typeof payload['end_date'] === 'string' ? { endsAt: payload['end_date'] } : {}),
+                    },
+                },
+                fetchImpl,
+            );
+        }
+        case 'update_sprint_status': {
+            const cycleId = String(payload['sprint_id'] ?? payload['cycle_id'] ?? '');
+            if (!cycleId) return { ok: false, error: 'Linear update_sprint_status: sprint_id is required' };
+            const completedAt = payload['state'] === 'closed' ? new Date().toISOString() : undefined;
+            const mutation = `
+                mutation CycleUpdate($id: String!, $input: CycleUpdateInput!) {
+                    cycleUpdate(id: $id, input: $input) {
+                        success
+                        cycle { id name }
+                    }
+                }`;
+            return linearGraphQL(apiKey, mutation, { id: cycleId, input: { ...(completedAt ? { completedAt } : {}) } }, fetchImpl);
+        }
+        case 'add_issue_to_sprint': {
+            const issueId = String(payload['issue_id'] ?? payload['issue_key'] ?? '');
+            const cycleId = String(payload['sprint_id'] ?? payload['cycle_id'] ?? '');
+            if (!issueId) return { ok: false, error: 'Linear add_issue_to_sprint: issue_id is required' };
+            if (!cycleId) return { ok: false, error: 'Linear add_issue_to_sprint: sprint_id is required' };
+            const mutation = `
+                mutation IssueUpdate($id: String!, $input: IssueUpdateInput!) {
+                    issueUpdate(id: $id, input: $input) {
+                        success
+                        issue { id identifier title }
+                    }
+                }`;
+            return linearGraphQL(apiKey, mutation, { id: issueId, input: { cycleId } }, fetchImpl);
+        }
+        case 'list_sprints': {
+            if (!resolvedTeamId) return { ok: false, error: 'Linear list_sprints: team_id is required' };
+            const query = `
+                query ListCycles($teamId: String!) {
+                    cycles(filter: { team: { id: { eq: $teamId } } }) {
+                        nodes { id number name startsAt endsAt completedAt }
+                    }
+                }`;
+            return linearGraphQL(apiKey, query, { teamId: resolvedTeamId }, fetchImpl);
+        }
+        case 'get_task': {
+            const issueId = String(payload['issue_id'] ?? payload['issue_key'] ?? '');
+            if (!issueId) return { ok: false, error: 'Linear get_task: issue_id is required' };
+            const query = `
+                query GetIssue($id: String!) {
+                    issue(id: $id) { id identifier title description state { name } assignee { name } priority createdAt updatedAt }
+                }`;
+            return linearGraphQL(apiKey, query, { id: issueId }, fetchImpl);
+        }
+        case 'create_task': {
+            if (!resolvedTeamId) return { ok: false, error: 'Linear create_task: team_id is required' };
+            const title = String(payload['title'] ?? payload['summary'] ?? '');
+            if (!title) return { ok: false, error: 'Linear create_task: title is required' };
+            const mutation = `
+                mutation IssueCreate($input: IssueCreateInput!) {
+                    issueCreate(input: $input) {
+                        success
+                        issue { id identifier title }
+                    }
+                }`;
+            return linearGraphQL(apiKey, mutation, {
+                input: {
+                    teamId: resolvedTeamId,
+                    title,
+                    ...(typeof payload['description'] === 'string' ? { description: payload['description'] } : {}),
+                    ...(typeof payload['assignee_id'] === 'string' ? { assigneeId: payload['assignee_id'] } : {}),
+                    ...(typeof payload['priority'] === 'number' ? { priority: payload['priority'] } : {}),
+                },
+            }, fetchImpl);
+        }
+        case 'update_task_status': {
+            const issueId = String(payload['issue_id'] ?? payload['issue_key'] ?? '');
+            const stateId = String(payload['state_id'] ?? payload['status_id'] ?? '');
+            if (!issueId) return { ok: false, error: 'Linear update_task_status: issue_id is required' };
+            if (!stateId) return { ok: false, error: 'Linear update_task_status: state_id is required' };
+            const mutation = `
+                mutation IssueUpdate($id: String!, $input: IssueUpdateInput!) {
+                    issueUpdate(id: $id, input: $input) { success issue { id identifier title } }
+                }`;
+            return linearGraphQL(apiKey, mutation, { id: issueId, input: { stateId } }, fetchImpl);
+        }
+        case 'add_comment': {
+            const issueId = String(payload['issue_id'] ?? payload['issue_key'] ?? '');
+            const body = String(payload['body'] ?? payload['comment'] ?? '');
+            if (!issueId) return { ok: false, error: 'Linear add_comment: issue_id is required' };
+            if (!body) return { ok: false, error: 'Linear add_comment: body is required' };
+            const mutation = `
+                mutation CommentCreate($input: CommentCreateInput!) {
+                    commentCreate(input: $input) { success comment { id body } }
+                }`;
+            return linearGraphQL(apiKey, mutation, { input: { issueId, body } }, fetchImpl);
+        }
+        case 'assign_task': {
+            const issueId = String(payload['issue_id'] ?? payload['issue_key'] ?? '');
+            const assigneeId = typeof payload['assignee_id'] === 'string' ? payload['assignee_id'] : null;
+            if (!issueId) return { ok: false, error: 'Linear assign_task: issue_id is required' };
+            const mutation = `
+                mutation IssueUpdate($id: String!, $input: IssueUpdateInput!) {
+                    issueUpdate(id: $id, input: $input) { success issue { id identifier } }
+                }`;
+            return linearGraphQL(apiKey, mutation, { id: issueId, input: { assigneeId } }, fetchImpl);
+        }
+        case 'list_tasks': {
+            if (!resolvedTeamId) return { ok: false, error: 'Linear list_tasks: team_id is required' };
+            const query = `
+                query ListIssues($teamId: String!, $first: Int) {
+                    issues(filter: { team: { id: { eq: $teamId } } }, first: $first) {
+                        nodes { id identifier title state { name } assignee { name } priority createdAt updatedAt }
+                    }
+                }`;
+            return linearGraphQL(apiKey, query, { teamId: resolvedTeamId, first: Number(payload['max_results'] ?? 50) }, fetchImpl);
+        }
+        default:
+            return { ok: false, error: `Linear connector does not support action "${actionType}"` };
+    }
 }
 
 // ─── Credential resolution ────────────────────────────────────────────────────
@@ -1280,6 +1542,17 @@ export async function dispatchConnectorAction(
         return dispatchZephyr(z, actionType, payload);
     }
 
+    if (connector === 'linear') {
+        const creds = resolveLinearCreds(payload);
+        if (!creds) {
+            return {
+                ok: false,
+                error: 'Linear: missing credentials. Set LINEAR_API_KEY or pass payload.credentials.',
+            };
+        }
+        return dispatchLinear(creds, actionType, payload, fetchImpl);
+    }
+
     return { ok: false, error: `dispatchConnectorAction: unsupported connector "${connector}"` };
 }
 
@@ -1445,6 +1718,53 @@ async function dispatchJira(
                 maxResults: typeof payload['max_results'] === 'number' ? payload['max_results'] : undefined,
                 startAt: typeof payload['start_at'] === 'number' ? payload['start_at'] : undefined,
                 fields: Array.isArray(payload['fields']) ? (payload['fields'] as string[]) : undefined,
+            });
+        }
+        case 'create_sprint': {
+            const boardId = Number(payload['board_id']);
+            if (!Number.isInteger(boardId) || boardId <= 0) {
+                return { ok: false, error: 'Jira create_sprint: board_id must be a positive integer' };
+            }
+            const name = String(payload['name'] ?? `Sprint ${new Date().toLocaleDateString()}`);
+            return jira.createSprint({
+                boardId,
+                name,
+                startDate: typeof payload['start_date'] === 'string' ? payload['start_date'] : undefined,
+                endDate: typeof payload['end_date'] === 'string' ? payload['end_date'] : undefined,
+                goal: typeof payload['goal'] === 'string' ? payload['goal'] : undefined,
+            });
+        }
+        case 'update_sprint_status': {
+            const sprintId = Number(payload['sprint_id']);
+            if (!Number.isInteger(sprintId) || sprintId <= 0) {
+                return { ok: false, error: 'Jira update_sprint_status: sprint_id must be a positive integer' };
+            }
+            const state = payload['state'] === 'closed' ? 'closed' : 'active';
+            return jira.updateSprintStatus({ sprintId, state });
+        }
+        case 'add_issue_to_sprint': {
+            const sprintId = Number(payload['sprint_id']);
+            if (!Number.isInteger(sprintId) || sprintId <= 0) {
+                return { ok: false, error: 'Jira add_issue_to_sprint: sprint_id must be a positive integer' };
+            }
+            const issueKeys = Array.isArray(payload['issue_keys'])
+                ? (payload['issue_keys'] as unknown[]).filter((k): k is string => typeof k === 'string')
+                : typeof payload['issue_key'] === 'string' ? [payload['issue_key']]
+                : [];
+            if (issueKeys.length === 0) return { ok: false, error: 'Jira add_issue_to_sprint: issue_keys is required' };
+            return jira.addIssueToSprint({ sprintId, issueKeys });
+        }
+        case 'list_sprints': {
+            const boardId = Number(payload['board_id']);
+            if (!Number.isInteger(boardId) || boardId <= 0) {
+                return { ok: false, error: 'Jira list_sprints: board_id must be a positive integer' };
+            }
+            const stateRaw = payload['state'];
+            const state = (['active', 'future', 'closed'] as const).find((s) => s === stateRaw);
+            return jira.listSprints({
+                boardId,
+                state,
+                maxResults: typeof payload['max_results'] === 'number' ? payload['max_results'] : undefined,
             });
         }
         default:

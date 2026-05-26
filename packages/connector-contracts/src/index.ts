@@ -43,6 +43,13 @@ export type NormalizedActionType =
   | 'add_comment'
   | 'assign_task'
   | 'list_tasks'
+  // sprint / cycle management (PM role)
+  | 'create_sprint'
+  | 'update_sprint_status'
+  | 'add_issue_to_sprint'
+  | 'list_sprints'
+  // scheduling (PM role)
+  | 'register_schedule'
   // messaging
   | 'send_message'
   | 'create_channel'
@@ -199,7 +206,7 @@ export const CONNECTOR_REGISTRY: ConnectorDefinition[] = [
       tester: ['get_task', 'list_tasks', 'add_comment', 'update_task_status', 'create_task'],
     },
     oauthScopes: ['read:jira-work', 'write:jira-work', 'read:jira-user'],
-    supportedActions: ['get_task', 'create_task', 'update_task_status', 'add_comment', 'assign_task', 'list_tasks'],
+    supportedActions: ['get_task', 'create_task', 'update_task_status', 'add_comment', 'assign_task', 'list_tasks', 'create_sprint', 'update_sprint_status', 'add_issue_to_sprint', 'list_sprints'],
     docsUrl: 'https://developer.atlassian.com/cloud/jira/platform/oauth-2-3lo-apps/',
   },
   {
@@ -210,7 +217,7 @@ export const CONNECTOR_REGISTRY: ConnectorDefinition[] = [
     authMethod: 'oauth2',
     allowedRoles: TASK_ORIENTED_ROLE_KEYS,
     oauthScopes: ['read', 'write'],
-    supportedActions: ['get_task', 'create_task', 'update_task_status', 'add_comment', 'assign_task', 'list_tasks'],
+    supportedActions: ['get_task', 'create_task', 'update_task_status', 'add_comment', 'assign_task', 'list_tasks', 'create_sprint', 'update_sprint_status', 'add_issue_to_sprint', 'list_sprints'],
     docsUrl: 'https://developers.linear.app/docs/oauth/authentication',
   },
   {

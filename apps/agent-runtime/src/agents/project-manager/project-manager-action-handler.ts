@@ -50,6 +50,8 @@ import { groomBacklog, type GroomingItem } from './backlog-groomer.js';
 import { buildCeremonyAgenda, type CeremonyInput } from './ceremony-facilitator.js';
 import { buildPmStandupSummary, buildPmSprintHealthSummary } from './project-manager-standup-builder.js';
 import { buildPmEpisodicPattern, buildPmEpisodicSummary } from './project-manager-episodic-hooks.js';
+import { registerPmStandupSchedule } from './pm-schedule-setup.js';
+import { createHandoff, listHandoffs, formatHandoffSummary, type HandoffRole } from './pm-handoff-coordinator.js';
 import type { TaskEnvelope, ProcessedTaskResult } from '../../execution-engine.js';
 
 // ---------------------------------------------------------------------------
@@ -75,7 +77,13 @@ export type PmActionType =
     | 'workspace_pm_ceremony_agenda'
     // Proactive
     | 'workspace_pm_proactive_blocker_scan'
-    | 'workspace_pm_proactive_scope_drift';
+    | 'workspace_pm_proactive_scope_drift'
+    // Scheduling
+    | 'workspace_pm_schedule_standup'
+    // Cross-agent orchestration
+    | 'workspace_pm_handoff_to_developer'
+    | 'workspace_pm_handoff_to_tester'
+    | 'workspace_pm_check_handoff_status';
 
 export const PM_ACTION_TYPES = new Set<PmActionType>([
     'workspace_pm_project_charter',
@@ -94,6 +102,10 @@ export const PM_ACTION_TYPES = new Set<PmActionType>([
     'workspace_pm_ceremony_agenda',
     'workspace_pm_proactive_blocker_scan',
     'workspace_pm_proactive_scope_drift',
+    'workspace_pm_schedule_standup',
+    'workspace_pm_handoff_to_developer',
+    'workspace_pm_handoff_to_tester',
+    'workspace_pm_check_handoff_status',
 ]);
 
 export function isPmActionType(at: string): at is PmActionType {
@@ -1084,6 +1096,171 @@ async function handleProactiveScopeDrift(params: PmActionParams): Promise<PmActi
 }
 
 // ---------------------------------------------------------------------------
+// GAP 2 — Scheduled standup registration
+// ---------------------------------------------------------------------------
+
+async function handleScheduleStandup(params: PmActionParams): Promise<PmActionResult> {
+    const { botId, tenantId, workspaceId, payload, gatewayBaseUrl, serviceToken } = params;
+
+    const teamName = str(payload['team_name'], 'Engineering');
+    const cronExpr = str(payload['cron_expr'], '0 9 * * 1-5');
+    const name = str(payload['schedule_name'], 'PM Daily Standup');
+
+    const result = await registerPmStandupSchedule({
+        botId,
+        tenantId,
+        name,
+        cronExpr,
+        teamName,
+        gatewayBaseUrl,
+        serviceToken,
+    });
+
+    const output = result.ok
+        ? result.alreadyExists
+            ? `✅ Standup schedule already registered (ID: ${result.scheduleId}).`
+            : `✅ Daily standup scheduled (ID: ${result.scheduleId}) — fires ${cronExpr} UTC.`
+        : `❌ Standup schedule registration failed: ${result.error}`;
+
+    if (result.ok) {
+        await writeEpisodicMemory({
+            tenantId,
+            workspaceId,
+            pattern: 'pm:schedule:standup_registered',
+            summary: `Standup schedule registered: ${name} (${cronExpr})`,
+            gatewayBaseUrl,
+            serviceToken,
+        });
+    }
+
+    return {
+        ok: result.ok,
+        output,
+        documentType: 'schedule_setup',
+        riskLevel: 'low',
+        approvalStatus: 'auto_approved',
+        structuredData: { scheduleId: result.scheduleId, cronExpr, alreadyExists: result.alreadyExists },
+        errorOutput: result.ok ? undefined : result.error,
+    };
+}
+
+// ---------------------------------------------------------------------------
+// GAP 3 — Cross-agent handoff actions
+// ---------------------------------------------------------------------------
+
+async function handleHandoffToRole(
+    params: PmActionParams,
+    toRole: HandoffRole,
+): Promise<PmActionResult> {
+    const { botId, tenantId, workspaceId, taskId, payload, gatewayBaseUrl, serviceToken } = params;
+
+    const orchestratorBaseUrl =
+        str(payload['orchestrator_url']) ||
+        process.env['ORCHESTRATOR_URL'] ||
+        process.env['ORCHESTRATOR_BASE_URL'] ||
+        'http://localhost:3003';
+
+    const toBotId = str(payload['to_bot_id']) || `${toRole}-agent`;
+    const reason = str(payload['reason'], `PM handoff: ${toRole} work required`);
+    const handoffContext = typeof payload['handoff_context'] === 'object' && payload['handoff_context'] !== null
+        ? payload['handoff_context'] as Record<string, unknown>
+        : { stories: payload['stories'], notes: payload['notes'] };
+
+    const escalateOnTimeoutMs = typeof payload['escalate_on_timeout_ms'] === 'number'
+        ? payload['escalate_on_timeout_ms']
+        : 4 * 60 * 60 * 1_000; // 4 hours
+
+    const result = await createHandoff({
+        tenantId,
+        workspaceId,
+        taskId,
+        fromBotId: botId,
+        toBotId,
+        toRole,
+        reason,
+        handoffContext,
+        escalateOnTimeoutMs,
+        orchestratorBaseUrl,
+        serviceToken,
+    });
+
+    const output = result.ok
+        ? `✅ Handoff created to ${toRole} (handoff ID: ${result.handoff?.id}). Status: ${result.handoff?.status}.`
+        : `❌ Handoff creation failed: ${result.error}`;
+
+    if (result.ok) {
+        await writeEpisodicMemory({
+            tenantId,
+            workspaceId,
+            pattern: `pm:handoff:to_${toRole}`,
+            summary: `Handoff to ${toRole}: ${reason.slice(0, 80)}`,
+            gatewayBaseUrl,
+            serviceToken,
+        });
+    }
+
+    return {
+        ok: result.ok,
+        output,
+        documentType: 'agent_handoff',
+        riskLevel: 'low',
+        approvalStatus: 'auto_approved',
+        structuredData: result.handoff ? { handoffId: result.handoff.id, status: result.handoff.status, toRole } : undefined,
+        errorOutput: result.ok ? undefined : result.error,
+    };
+}
+
+async function handleCheckHandoffStatus(params: PmActionParams): Promise<PmActionResult> {
+    const { tenantId, workspaceId, payload, gatewayBaseUrl, serviceToken } = params;
+
+    const orchestratorBaseUrl =
+        str(payload['orchestrator_url']) ||
+        process.env['ORCHESTRATOR_URL'] ||
+        process.env['ORCHESTRATOR_BASE_URL'] ||
+        'http://localhost:3003';
+
+    const statusFilter = str(payload['status']) as Parameters<typeof listHandoffs>[0]['status'] || undefined;
+
+    const result = await listHandoffs({
+        tenantId,
+        workspaceId,
+        status: statusFilter,
+        orchestratorBaseUrl,
+        serviceToken,
+    });
+
+    if (!result.ok) {
+        return {
+            ok: false,
+            output: `❌ Could not fetch handoff status: ${result.error}`,
+            documentType: 'handoff_status',
+            errorOutput: result.error,
+        };
+    }
+
+    const handoffs = result.handoffs ?? [];
+    const summary = formatHandoffSummary(handoffs);
+
+    await writeEpisodicMemory({
+        tenantId,
+        workspaceId,
+        pattern: 'pm:handoff:status_checked',
+        summary: `Handoff status check: ${handoffs.length} handoff(s) found`,
+        gatewayBaseUrl,
+        serviceToken,
+    });
+
+    return {
+        ok: true,
+        output: summary,
+        documentType: 'handoff_status',
+        riskLevel: 'low',
+        approvalStatus: 'auto_approved',
+        structuredData: { count: handoffs.length, handoffs: handoffs.slice(0, 10) },
+    };
+}
+
+// ---------------------------------------------------------------------------
 // LLM-based PM document generation (for charter, status report, risk, etc.)
 // ---------------------------------------------------------------------------
 
@@ -1216,6 +1393,16 @@ export async function handlePmAction(params: PmActionParams): Promise<PmActionRe
             return handleProactiveBlockerScan(params);
         case 'workspace_pm_proactive_scope_drift':
             return handleProactiveScopeDrift(params);
+        // Scheduling
+        case 'workspace_pm_schedule_standup':
+            return handleScheduleStandup(params);
+        // Cross-agent orchestration
+        case 'workspace_pm_handoff_to_developer':
+            return handleHandoffToRole(params, 'developer');
+        case 'workspace_pm_handoff_to_tester':
+            return handleHandoffToRole(params, 'tester');
+        case 'workspace_pm_check_handoff_status':
+            return handleCheckHandoffStatus(params);
         // PM document-generation actions (LLM + RAG + gate)
         case 'workspace_pm_project_charter':
         case 'workspace_pm_status_report':

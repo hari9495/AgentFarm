@@ -494,7 +494,12 @@ export type LocalWorkspaceActionType =
     | 'workspace_pm_impediment_log'
     | 'workspace_pm_ceremony_agenda'
     | 'workspace_pm_proactive_blocker_scan'
-    | 'workspace_pm_proactive_scope_drift';
+    | 'workspace_pm_proactive_scope_drift'
+    // Tier 44 ext (scheduling + cross-agent orchestration)
+    | 'workspace_pm_schedule_standup'
+    | 'workspace_pm_handoff_to_developer'
+    | 'workspace_pm_handoff_to_tester'
+    | 'workspace_pm_check_handoff_status';
 
 export type LocalWorkspaceResult = {
     ok: boolean;
@@ -1144,6 +1149,10 @@ export const LOCAL_WORKSPACE_ACTION_TYPES = new Set<LocalWorkspaceActionType>([
     'workspace_pm_ceremony_agenda',
     'workspace_pm_proactive_blocker_scan',
     'workspace_pm_proactive_scope_drift',
+    'workspace_pm_schedule_standup',
+    'workspace_pm_handoff_to_developer',
+    'workspace_pm_handoff_to_tester',
+    'workspace_pm_check_handoff_status',
 ]);
 
 // ---------------------------------------------------------------------------
@@ -14339,7 +14348,11 @@ export async function executeLocalWorkspaceAction(input: {
         case 'workspace_pm_impediment_log':
         case 'workspace_pm_ceremony_agenda':
         case 'workspace_pm_proactive_blocker_scan':
-        case 'workspace_pm_proactive_scope_drift': {
+        case 'workspace_pm_proactive_scope_drift':
+        case 'workspace_pm_schedule_standup':
+        case 'workspace_pm_handoff_to_developer':
+        case 'workspace_pm_handoff_to_tester':
+        case 'workspace_pm_check_handoff_status': {
             if (!isPmActionType(actionType)) {
                 return { ok: false, output: '', errorOutput: `Unrecognised PM/SM action: ${actionType}` };
             }
