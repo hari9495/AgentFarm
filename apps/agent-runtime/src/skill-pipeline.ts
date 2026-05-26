@@ -18,6 +18,7 @@ import { writeFile, readFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';
+import { getRedisClient } from '@agentfarm/redis-client';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -202,11 +203,17 @@ const BUILTIN_PIPELINES: PipelineDefinition[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// Persistence
+// Persistence — Redis-backed with tmpdir fallback
+//
+// Redis key:  af:pipeline:runs   (string, JSON array of last 50 runs)
+// TTL:        7 days
+// Fallback:   when REDIS_URL is unset, writes to tmpdir (single-instance only).
 // ---------------------------------------------------------------------------
 
-const PIPELINE_DIR = join(tmpdir(), 'agentfarm-skill-pipelines');
-const RUNS_FILE = join(PIPELINE_DIR, 'runs.json');
+const _PIPELINE_DIR = join(tmpdir(), 'agentfarm-skill-pipelines');
+const _RUNS_FILE = join(_PIPELINE_DIR, 'runs.json');
+const _RUNS_KEY = 'af:pipeline:runs';
+const _RUNS_TTL = 7 * 24 * 60 * 60; // 7 days in seconds
 
 // ---------------------------------------------------------------------------
 // SkillPipelineEngine
@@ -397,16 +404,29 @@ export class SkillPipelineEngine {
     // ── Persistence ────────────────────────────────────────────────────────
 
     private async persistRuns(): Promise<void> {
-        await mkdir(PIPELINE_DIR, { recursive: true });
-        await writeFile(RUNS_FILE, JSON.stringify(this.recentRuns.slice(0, 50), null, 2), 'utf8');
+        const payload = JSON.stringify(this.recentRuns.slice(0, 50));
+        const redis = getRedisClient();
+        if (redis) {
+            await redis.set(_RUNS_KEY, payload, 'EX', _RUNS_TTL);
+            return;
+        }
+        // Fallback: local tmpdir (single-instance only)
+        await mkdir(_PIPELINE_DIR, { recursive: true });
+        await writeFile(_RUNS_FILE, payload, 'utf8');
     }
 
     async loadRuns(): Promise<void> {
         try {
-            const raw = await readFile(RUNS_FILE, 'utf8');
-            this.recentRuns = JSON.parse(raw) as PipelineRunResult[];
+            const redis = getRedisClient();
+            let raw: string | null;
+            if (redis) {
+                raw = await redis.get(_RUNS_KEY);
+            } else {
+                raw = await readFile(_RUNS_FILE, 'utf8');
+            }
+            if (raw) this.recentRuns = JSON.parse(raw) as PipelineRunResult[];
         } catch {
-            // No persisted state
+            // No persisted state — start fresh
         }
     }
 }

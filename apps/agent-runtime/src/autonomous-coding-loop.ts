@@ -13,6 +13,7 @@
 import { writeFile, readFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { getRedisClient } from '@agentfarm/redis-client';
 import { getSkillHandler, analyzeIssueWithLLM, synthesizeCodeFixWithLLM, analyzeDiffWithLLM } from './skill-execution-engine.js';
 import { executeLocalWorkspaceAction } from './local-workspace-executor.js';
 import { signOutbound } from './outbound-signer.js';
@@ -87,26 +88,46 @@ export type AutonomousLoopResult = {
 };
 
 // ---------------------------------------------------------------------------
-// Checkpoint persistence
+// Checkpoint persistence — Redis-backed with tmpdir fallback
+//
+// Redis key:  af:loop:checkpoint:{loopId}   (string, JSON)
+// TTL:        7 days — long enough to resume after a weekend outage.
+// Fallback:   when REDIS_URL is unset, state is written to tmpdir (single
+//             instance only; not suitable for horizontal scaling).
 // ---------------------------------------------------------------------------
 
-const CHECKPOINT_DIR = join(tmpdir(), 'agentfarm-loop-checkpoints');
+const _CKPT_DIR = join(tmpdir(), 'agentfarm-loop-checkpoints');
+const _CKPT_TTL = 7 * 24 * 60 * 60; // 7 days in seconds
 
-async function ensureCheckpointDir(): Promise<void> {
-    await mkdir(CHECKPOINT_DIR, { recursive: true });
+function _ckKey(loopId: string): string {
+    return `af:loop:checkpoint:${loopId}`;
 }
 
 async function saveCheckpoint(loopId: string, steps: LoopStepRecord[]): Promise<string> {
-    await ensureCheckpointDir();
-    const file = join(CHECKPOINT_DIR, `${loopId}.json`);
-    await writeFile(file, JSON.stringify({ loopId, steps, saved_at: new Date().toISOString() }, null, 2), 'utf-8');
+    const payload = JSON.stringify({ loopId, steps, saved_at: new Date().toISOString() });
+    const redis = getRedisClient();
+    if (redis) {
+        const key = _ckKey(loopId);
+        await redis.set(key, payload, 'EX', _CKPT_TTL);
+        return key;
+    }
+    // Fallback: write to local tmpdir
+    await mkdir(_CKPT_DIR, { recursive: true });
+    const file = join(_CKPT_DIR, `${loopId}.json`);
+    await writeFile(file, payload, 'utf-8');
     return file;
 }
 
 async function loadCheckpoint(loopId: string): Promise<LoopStepRecord[] | null> {
     try {
-        const file = join(CHECKPOINT_DIR, `${loopId}.json`);
-        const raw = await readFile(file, 'utf-8');
+        const redis = getRedisClient();
+        let raw: string | null;
+        if (redis) {
+            raw = await redis.get(_ckKey(loopId));
+        } else {
+            raw = await readFile(join(_CKPT_DIR, `${loopId}.json`), 'utf-8');
+        }
+        if (!raw) return null;
         const parsed = JSON.parse(raw) as { steps: LoopStepRecord[] };
         return parsed.steps ?? null;
     } catch {

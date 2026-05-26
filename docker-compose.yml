@@ -96,6 +96,9 @@ services:
       BROWSER_AGENT_URL: ${BROWSER_AGENT_URL:-http://browser-agent:5002}
       DESKTOP_AGENT_URL: ${DESKTOP_AGENT_URL:-http://desktop-agent:5003}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3001}
+      # Workers run in the dedicated worker-runner service below.
+      # Setting this flag prevents duplicate worker execution in both processes.
+      AF_WORKERS_DISABLED: '1'
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -106,6 +109,29 @@ services:
       interval: 15s
       timeout: 5s
       retries: 5
+    networks:
+      - agentfarm
+    restart: unless-stopped
+
+  worker-runner:
+    build:
+      context: .
+      dockerfile: apps/api-gateway/Dockerfile
+    container_name: agentfarm-worker-runner
+    # Same image as api-gateway; different entrypoint runs workers only.
+    command: [ 'node', 'apps/api-gateway/dist/worker-main.js' ]
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-agentfarm}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-agentfarm}}
+      REDIS_URL: redis://redis:6379
+      OPA_BASE_URL: http://opa:8181
+      NODE_ENV: production
+      API_SESSION_SECRET: ${API_SESSION_SECRET}
+      AGENT_RUNTIME_URL: http://agent-runtime:4000
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - agentfarm
     restart: unless-stopped

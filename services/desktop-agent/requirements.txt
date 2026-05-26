@@ -11,3 +11,4 @@ numpy>=1.26
 websocket-client>=1.7
 edge-tts>=6.1
 faster-whisper>=1.0
+redis>=5.0

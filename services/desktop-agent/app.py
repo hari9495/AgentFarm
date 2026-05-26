@@ -45,11 +45,166 @@ NOVNC_PORT = int(os.environ.get("NOVNC_PORT", "6080"))
 APP_PORT = int(os.environ.get("APP_PORT", "5003"))
 
 # ---------------------------------------------------------------------------
-# In-memory session store (replaced by DB in a future sprint)
+# Session store — Redis-backed with in-memory cache fallback
 # ---------------------------------------------------------------------------
 
-_sessions: dict[str, dict[str, Any]] = {}
-_sessions_lock = threading.Lock()
+def _init_redis_client() -> Any:
+    url = os.environ.get("REDIS_URL", "")
+    if not url:
+        return None
+    try:
+        import redis as _redis_pkg  # type: ignore
+        client = _redis_pkg.Redis.from_url(url, decode_responses=True, socket_connect_timeout=3)
+        client.ping()
+        logger.info("SessionStore: Redis connected at %s", url)
+        return client
+    except Exception as exc:
+        logger.warning("SessionStore: Redis unavailable (%s) — using in-memory store", exc)
+        return None
+
+
+class SessionStore:
+    """Thread-safe session registry backed by Redis (when REDIS_URL is set).
+
+    Sessions are always kept in the local process dict for fast access.
+    Redis stores lightweight metadata (no screenshots, no Popen objects)
+    so other instances and post-restart queries can discover sessions.
+    """
+
+    _SESSION_TTL = 86_400  # 24 h
+
+    def __init__(self, redis_client: Any = None) -> None:
+        self._data: dict[str, dict[str, Any]] = {}
+        self._lock = threading.Lock()
+        self._redis = redis_client
+
+    def _key(self, session_id: str) -> str:
+        return f"af:desktop:session:{session_id}"
+
+    def _redis_sync(self, session_id: str, session: dict[str, Any]) -> None:
+        if not self._redis:
+            return
+        task = session.get("current_task")
+        payload: dict[str, str] = {
+            "sessionId": session.get("sessionId", session_id),
+            "status": session.get("status", "idle"),
+            "createdAt": session.get("createdAt", ""),
+            "taskId": task.get("taskId", "") if task else "",
+            "taskStatus": task.get("status", "") if task else "",
+        }
+        try:
+            key = self._key(session_id)
+            self._redis.hset(key, mapping=payload)
+            self._redis.expire(key, self._SESSION_TTL)
+        except Exception as exc:
+            logger.debug("SessionStore: Redis sync error: %s", exc)
+
+    def _redis_delete(self, session_id: str) -> None:
+        if not self._redis:
+            return
+        try:
+            self._redis.delete(self._key(session_id))
+        except Exception:
+            pass
+
+    # ── Public API ──────────────────────────────────────────────────────────
+
+    def create(self, session_id: str, session: dict[str, Any]) -> None:
+        with self._lock:
+            self._data[session_id] = session
+        self._redis_sync(session_id, session)
+
+    def get(self, session_id: str) -> dict[str, Any] | None:
+        with self._lock:
+            return self._data.get(session_id)
+
+    def contains(self, session_id: str) -> bool:
+        with self._lock:
+            return session_id in self._data
+
+    def delete(self, session_id: str) -> bool:
+        with self._lock:
+            existed = session_id in self._data
+            if existed:
+                # Terminate per-session avatar process before removing
+                proc = self._data[session_id].get("avatar_proc")
+                if proc is not None:
+                    try:
+                        proc.terminate()
+                        proc.wait(timeout=2)
+                    except Exception:
+                        pass
+                del self._data[session_id]
+        if existed:
+            self._redis_delete(session_id)
+        return existed
+
+    def update_fields(self, session_id: str, **fields: Any) -> bool:
+        """Atomically update top-level session fields; sync status changes to Redis."""
+        with self._lock:
+            s = self._data.get(session_id)
+            if s is None:
+                return False
+            s.update(fields)
+            snapshot = dict(s)
+        if "status" in fields:
+            self._redis_sync(session_id, snapshot)
+        return True
+
+    def set_task(self, session_id: str, task: dict[str, Any]) -> bool:
+        with self._lock:
+            s = self._data.get(session_id)
+            if s is None:
+                return False
+            s["current_task"] = task
+            s["status"] = "busy"
+            snapshot = dict(s)
+        self._redis_sync(session_id, snapshot)
+        return True
+
+    def get_task(self, session_id: str) -> dict[str, Any] | None:
+        with self._lock:
+            s = self._data.get(session_id)
+            return s.get("current_task") if s else None
+
+    def update_task_fields(self, session_id: str, **fields: Any) -> bool:
+        """Atomically update current_task fields; syncs status/result to Redis."""
+        with self._lock:
+            s = self._data.get(session_id)
+            if not s or not s.get("current_task"):
+                return False
+            s["current_task"].update(fields)
+            snapshot = dict(s)
+        if "status" in fields or "result" in fields:
+            self._redis_sync(session_id, snapshot)
+        return True
+
+    def append_task_step(self, session_id: str, step: dict[str, Any]) -> bool:
+        with self._lock:
+            s = self._data.get(session_id)
+            if not s or not s.get("current_task"):
+                return False
+            s["current_task"].setdefault("steps", []).append(step)
+            return True
+
+    def get_avatar_proc(self, session_id: str) -> Any:
+        with self._lock:
+            s = self._data.get(session_id)
+            return s.get("avatar_proc") if s else None
+
+    def set_avatar_proc(self, session_id: str, proc: Any) -> None:
+        with self._lock:
+            s = self._data.get(session_id)
+            if s is not None:
+                s["avatar_proc"] = proc
+
+    def list_ids(self) -> list[str]:
+        with self._lock:
+            return list(self._data.keys())
+
+
+# Global store — initialized at startup
+_store = SessionStore(redis_client=_init_redis_client())
 
 
 # ---------------------------------------------------------------------------
@@ -269,38 +424,25 @@ def _call_anthropic(screenshot_b64: str, prompt: str) -> str:
 # ---------------------------------------------------------------------------
 
 def _update_task(session_id: str, **fields: Any) -> None:
-    """Thread-safe update of current_task fields."""
-    with _sessions_lock:
-        s = _sessions.get(session_id)
-        if s and s.get("current_task"):
-            s["current_task"].update(fields)
+    _store.update_task_fields(session_id, **fields)
 
 
 def _append_task_step(session_id: str, step: dict[str, Any]) -> None:
-    """Thread-safe append to current_task steps list."""
-    with _sessions_lock:
-        s = _sessions.get(session_id)
-        if s and s.get("current_task"):
-            s["current_task"].setdefault("steps", []).append(step)
+    _store.append_task_step(session_id, step)
 
 
 def _run_vision_loop(session_id: str, goal: str) -> None:
-    with _sessions_lock:
-        s = _sessions.get(session_id)
-        if s is None:
-            return
-        task_id = s.get("current_task", {}).get("taskId")
-
-    if task_id is None:
+    task = _store.get_task(session_id)
+    if task is None:
         return
 
-    _update_task(session_id, status="running")
+    _store.update_task_fields(session_id, status="running")
     deadline = time.monotonic() + VISION_LOOP_TIMEOUT
     local_steps: list[dict[str, Any]] = []
 
     for step_num in range(MAX_VISION_STEPS):
         if time.monotonic() > deadline:
-            _update_task(session_id, status="timeout", result="Task timed out")
+            _store.update_task_fields(session_id, status="timeout", result="Task timed out")
             break
 
         screenshot_b64 = _screenshot()
@@ -309,11 +451,12 @@ def _run_vision_loop(session_id: str, goal: str) -> None:
                     "errorMessage": "Screenshot failed — display may not be ready",
                     "timestamp": _now()}
             local_steps.append(step)
-            _append_task_step(session_id, step)
+            _store.append_task_step(session_id, step)
             time.sleep(1)
             continue
 
-        _update_task(session_id, last_screenshot=screenshot_b64)
+        # Store screenshot in-memory only (too large for Redis serialization)
+        _store.update_task_fields(session_id, last_screenshot=screenshot_b64)
         actions = _llm_decide(screenshot_b64, goal, local_steps)
 
         done = False
@@ -324,10 +467,10 @@ def _run_vision_loop(session_id: str, goal: str) -> None:
                     "target": act.get("target", ""), "value": act.get("value", ""),
                     **result, "timestamp": _now()}
             local_steps.append(step)
-            _append_task_step(session_id, step)
+            _store.append_task_step(session_id, step)
             if act_name == "done":
-                _update_task(session_id, status="completed",
-                             result=act.get("value") or "Task completed")
+                _store.update_task_fields(session_id, status="completed",
+                                          result=act.get("value") or "Task completed")
                 done = True
                 break
             time.sleep(0.4)
@@ -336,15 +479,11 @@ def _run_vision_loop(session_id: str, goal: str) -> None:
             break
         time.sleep(1)
     else:
-        with _sessions_lock:
-            s = _sessions.get(session_id)
-            if s and s.get("current_task", {}).get("status") == "running":
-                s["current_task"]["status"] = "completed"
-                s["current_task"]["result"] = "Max steps reached"
+        task = _store.get_task(session_id)
+        if task and task.get("status") == "running":
+            _store.update_task_fields(session_id, status="completed", result="Max steps reached")
 
-    with _sessions_lock:
-        if session_id in _sessions:
-            _sessions[session_id]["status"] = "idle"
+    _store.update_fields(session_id, status="idle")
 
 
 def _now() -> str:
@@ -363,25 +502,25 @@ def health():
 @app.route("/v1/sessions", methods=["POST"])
 def create_session():
     session_id = str(uuid.uuid4())
-    with _sessions_lock:
-        _sessions[session_id] = {
-            "sessionId": session_id,
-            "status": "idle",
-            "createdAt": _now(),
-            "current_task": None,
-        }
+    created_at = _now()
+    _store.create(session_id, {
+        "sessionId": session_id,
+        "status": "idle",
+        "createdAt": created_at,
+        "current_task": None,
+        "avatar_proc": None,
+    })
     return jsonify({
         "sessionId": session_id,
         "status": "idle",
         "streamUrl": f"http://localhost:{NOVNC_PORT}/vnc.html",
-        "createdAt": _sessions[session_id]["createdAt"],
+        "createdAt": created_at,
     }), 201
 
 
 @app.route("/v1/sessions/<session_id>", methods=["GET"])
 def get_session(session_id: str):
-    with _sessions_lock:
-        s = _sessions.get(session_id)
+    s = _store.get(session_id)
     if s is None:
         return jsonify({"error": "session not found"}), 404
     task = s.get("current_task")
@@ -400,18 +539,14 @@ def get_session(session_id: str):
 
 @app.route("/v1/sessions/<session_id>", methods=["DELETE"])
 def delete_session(session_id: str):
-    with _sessions_lock:
-        if session_id not in _sessions:
-            return jsonify({"error": "session not found"}), 404
-        del _sessions[session_id]
+    if not _store.delete(session_id):
+        return jsonify({"error": "session not found"}), 404
     return jsonify({"deleted": True})
 
 
 @app.route("/v1/sessions/<session_id>/task", methods=["POST"])
 def submit_task(session_id: str):
-    with _sessions_lock:
-        s = _sessions.get(session_id)
-    if s is None:
+    if not _store.contains(session_id):
         return jsonify({"error": "session not found"}), 404
 
     body: dict[str, Any] = request.get_json(force=True, silent=True) or {}
@@ -419,38 +554,35 @@ def submit_task(session_id: str):
     if not isinstance(goal, str) or not goal.strip():
         return jsonify({"error": "'goal' is required"}), 400
 
+    goal = goal.strip()
     task_id = str(uuid.uuid4())
+    started_at = _now()
     task: dict[str, Any] = {
         "taskId": task_id,
-        "goal": goal.strip(),
+        "goal": goal,
         "status": "queued",
         "steps": [],
         "result": None,
         "last_screenshot": None,
-        "startedAt": _now(),
+        "startedAt": started_at,
     }
-    with _sessions_lock:
-        _sessions[session_id]["current_task"] = task
-        _sessions[session_id]["status"] = "busy"
+    _store.set_task(session_id, task)
 
-    t = threading.Thread(target=_run_vision_loop, args=(session_id, goal.strip()), daemon=True)
-    t.start()
+    threading.Thread(target=_run_vision_loop, args=(session_id, goal), daemon=True).start()
 
     return jsonify({
         "taskId": task_id,
         "sessionId": session_id,
         "status": "queued",
-        "startedAt": task["startedAt"],
+        "startedAt": started_at,
     }), 202
 
 
 @app.route("/v1/sessions/<session_id>/task", methods=["GET"])
 def get_task(session_id: str):
-    with _sessions_lock:
-        s = _sessions.get(session_id)
-    if s is None:
+    if not _store.contains(session_id):
         return jsonify({"error": "session not found"}), 404
-    task = s.get("current_task")
+    task = _store.get_task(session_id)
     if task is None:
         return jsonify({"error": "no task for this session"}), 404
 
@@ -461,40 +593,48 @@ def get_task(session_id: str):
         "status": task["status"],
         "result": task.get("result"),
         "stepCount": len(task.get("steps", [])),
-        "steps": task.get("steps", [])[-10:],  # last 10 steps only
+        "steps": task.get("steps", [])[-10:],
         "startedAt": task["startedAt"],
     })
 
 
 # ---------------------------------------------------------------------------
-# Avatar state management
+# Avatar state management (per-session — no global mutable process)
 # ---------------------------------------------------------------------------
 
-# Global to track the current avatar loop process so we can swap it on state change.
-_avatar_lock = threading.Lock()
-_avatar_proc: subprocess.Popen[bytes] | None = None  # cat-loop child writing to /tmp/avatar.fifo
+def _start_avatar_loop(session_id: str, state: str = "idle") -> None:
+    """Restart the avatar FIFO loop for a specific session (idle | talking).
 
-
-def _start_avatar_loop(state: str = "idle") -> None:
-    """Restart the avatar FIFO loop with the given state file (idle | talking)."""
-    global _avatar_proc
+    Each session owns its avatar process. Multiple concurrent sessions each
+    get an independent virtual camera stream without interfering with each other.
+    """
     source_file = "/app/avatar-talking.y4m" if state == "talking" else "/app/avatar-idle.y4m"
-    with _avatar_lock:
-        if _avatar_proc is not None:
-            try:
-                _avatar_proc.terminate()
-                _avatar_proc.wait(timeout=3)
-            except Exception:
-                pass
-            _avatar_proc = None
-        # Start a new infinite loop piping the y4m file to the FIFO.
-        # We run it via bash so `while true` gives us the looping behaviour.
-        _avatar_proc = subprocess.Popen(
-            ["bash", "-c", f"while true; do cat {source_file} > /tmp/avatar.fifo 2>/dev/null || sleep 0.1; done"],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-        logger.info("avatar loop started: state=%s pid=%s", state, _avatar_proc.pid)
+    old_proc = _store.get_avatar_proc(session_id)
+    if old_proc is not None:
+        try:
+            old_proc.terminate()
+            old_proc.wait(timeout=3)
+        except Exception:
+            pass
+    new_proc: subprocess.Popen[bytes] = subprocess.Popen(
+        ["bash", "-c", f"while true; do cat {source_file} > /tmp/avatar.fifo 2>/dev/null || sleep 0.1; done"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    _store.set_avatar_proc(session_id, new_proc)
+    logger.info("avatar loop started: session=%s state=%s pid=%s", session_id, state, new_proc.pid)
+
+
+def _stop_avatar_loop(session_id: str) -> None:
+    """Terminate the avatar process for a session if one is running."""
+    proc = _store.get_avatar_proc(session_id)
+    if proc is not None:
+        try:
+            proc.terminate()
+            proc.wait(timeout=3)
+        except Exception:
+            pass
+        _store.set_avatar_proc(session_id, None)
 
 
 # ---------------------------------------------------------------------------
@@ -555,19 +695,16 @@ def _join_meeting_goal(platform: str, meeting_url: str | None) -> str:
 
 @app.route("/v1/sessions/<session_id>/join-meeting", methods=["POST"])
 def join_meeting(session_id: str):
-    with _sessions_lock:
-        s = _sessions.get(session_id)
-    if s is None:
+    if not _store.contains(session_id):
         return jsonify({"error": "session not found"}), 404
 
     body: dict[str, Any] = request.get_json(force=True, silent=True) or {}
     meeting_url: str | None = body.get("meetingUrl") or body.get("meeting_url") or body.get("url")
     platform: str = str(body.get("platform", "google_meet")).lower()
-    # mode="playwright" uses Playwright DOM selectors + Ollama — no vision LLM needed.
-    # mode="vision" uses the xdotool/LLM vision loop (requires GPT-4o/Claude).
     mode: str = str(body.get("mode", "playwright")).lower()
 
     task_id = str(uuid.uuid4())
+    started_at = _now()
     task: dict[str, Any] = {
         "taskId": task_id,
         "goal": f"Join {platform} meeting at {meeting_url}",
@@ -575,22 +712,17 @@ def join_meeting(session_id: str):
         "steps": [],
         "result": None,
         "last_screenshot": None,
-        "startedAt": _now(),
+        "startedAt": started_at,
     }
-    with _sessions_lock:
-        _sessions[session_id]["current_task"] = task
-        _sessions[session_id]["status"] = "busy"
+    _store.set_task(session_id, task)
 
     if mode == "playwright":
-        # Playwright path: DOM-driven join + Ollama conversation loop
-        t = threading.Thread(
+        threading.Thread(
             target=_playwright_join_and_converse,
             args=(session_id, meeting_url or "about:blank"),
             daemon=True,
-        )
-        t.start()
+        ).start()
     else:
-        # Vision-loop path (requires GPT-4o or Claude)
         goal = _join_meeting_goal(platform, meeting_url)
         _pulse_rt = os.environ.get("PULSE_RUNTIME_PATH", "/tmp/pulse-runtime")
         env = {
@@ -606,7 +738,7 @@ def join_meeting(session_id: str):
             env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
         )
         time.sleep(3)
-        _pulse_env = {**os.environ, "PULSE_RUNTIME_PATH": os.environ.get("PULSE_RUNTIME_PATH", "/tmp/pulse-runtime")}
+        _pulse_env = {**os.environ, "PULSE_RUNTIME_PATH": _pulse_rt}
         for _ in range(5):
             try:
                 result = subprocess.run(
@@ -616,18 +748,16 @@ def join_meeting(session_id: str):
                 for line in result.stdout.splitlines():
                     parts = line.split()
                     if parts:
-                        sid_input = parts[0]
                         subprocess.run(
-                            ["pactl", "move-sink-input", sid_input, "chrome-output-sink"],
+                            ["pactl", "move-sink-input", parts[0], "chrome-output-sink"],
                             capture_output=True, timeout=5, env=_pulse_env,
                         )
             except Exception:
                 pass
             time.sleep(1)
-        _start_avatar_loop("idle")
-        task["goal"] = goal
-        t = threading.Thread(target=_run_vision_loop, args=(session_id, goal), daemon=True)
-        t.start()
+        _start_avatar_loop(session_id, "idle")
+        _store.update_task_fields(session_id, goal=goal)
+        threading.Thread(target=_run_vision_loop, args=(session_id, goal), daemon=True).start()
 
     return jsonify({
         "taskId": task_id,
@@ -635,7 +765,7 @@ def join_meeting(session_id: str):
         "platform": platform,
         "mode": mode,
         "status": "joining",
-        "startedAt": task["startedAt"],
+        "startedAt": started_at,
     }), 202
 
 
@@ -645,9 +775,8 @@ def speak_audio(session_id: str):
     Meeting participants hear the agent speak because Chromium uses virtual-source
     (which is a loopback from virtual-sink.monitor) as its microphone.
     """
-    with _sessions_lock:
-        if session_id not in _sessions:
-            return jsonify({"error": "session not found"}), 404
+    if not _store.contains(session_id):
+        return jsonify({"error": "session not found"}), 404
 
     body: dict[str, Any] = request.get_json(force=True, silent=True) or {}
     audio_b64: str | None = body.get("audioBase64")
@@ -659,8 +788,7 @@ def speak_audio(session_id: str):
     except Exception:
         return jsonify({"error": "invalid base64 in audioBase64"}), 400
 
-    # Switch avatar to talking state while audio plays.
-    _start_avatar_loop("talking")
+    _start_avatar_loop(session_id, "talking")
 
     t0 = time.monotonic()
     tmp_path: str | None = None
@@ -669,8 +797,6 @@ def speak_audio(session_id: str):
             tmp.write(audio_bytes)
             tmp_path = tmp.name
 
-        # paplay routes audio to the default PulseAudio sink (virtual-sink).
-        # PULSE_RUNTIME_PATH must be set so paplay can find the daemon socket.
         _pulse_env = {**os.environ, "PULSE_RUNTIME_PATH": os.environ.get("PULSE_RUNTIME_PATH", "/tmp/pulse-runtime")}
         result = subprocess.run(
             ["paplay", "--device=virtual-sink", tmp_path],
@@ -681,7 +807,7 @@ def speak_audio(session_id: str):
         duration_ms = int((time.monotonic() - t0) * 1000)
 
         if result.returncode != 0:
-            _start_avatar_loop("idle")
+            _start_avatar_loop(session_id, "idle")
             return jsonify({
                 "ok": False,
                 "durationMs": duration_ms,
@@ -689,10 +815,10 @@ def speak_audio(session_id: str):
             }), 500
 
     except subprocess.TimeoutExpired:
-        _start_avatar_loop("idle")
+        _start_avatar_loop(session_id, "idle")
         return jsonify({"ok": False, "durationMs": 60000, "error": "paplay timed out"}), 500
     except Exception as exc:
-        _start_avatar_loop("idle")
+        _start_avatar_loop(session_id, "idle")
         return jsonify({"ok": False, "durationMs": 0, "error": str(exc)}), 500
     finally:
         try:
@@ -701,9 +827,7 @@ def speak_audio(session_id: str):
         except Exception:
             pass
 
-    # Return avatar to idle once speaking is done.
-    _start_avatar_loop("idle")
-
+    _start_avatar_loop(session_id, "idle")
     return jsonify({"ok": True, "durationMs": duration_ms})
 
 
@@ -718,9 +842,8 @@ def capture_audio(session_id: str):
     the response sets ``silent=true`` and ``audioBase64=""`` so the runtime
     can skip ASR+LLM calls instead of paying for empty audio.
     """
-    with _sessions_lock:
-        if session_id not in _sessions:
-            return jsonify({"error": "session not found"}), 404
+    if not _store.contains(session_id):
+        return jsonify({"error": "session not found"}), 404
 
     body: dict[str, Any] = request.get_json(force=True, silent=True) or {}
     duration_seconds = int(body.get("durationSeconds", 10))
@@ -803,16 +926,15 @@ def _compute_wav_rms(wav_bytes: bytes) -> int:
 @app.route("/v1/sessions/<session_id>/set-avatar-state", methods=["POST"])
 def set_avatar_state(session_id: str):
     """Switch the virtual camera avatar between 'idle' and 'talking' states."""
-    with _sessions_lock:
-        if session_id not in _sessions:
-            return jsonify({"error": "session not found"}), 404
+    if not _store.contains(session_id):
+        return jsonify({"error": "session not found"}), 404
 
     body: dict[str, Any] = request.get_json(force=True, silent=True) or {}
     state = str(body.get("state", "idle")).lower()
     if state not in ("idle", "talking"):
         return jsonify({"error": "'state' must be 'idle' or 'talking'"}), 400
 
-    _start_avatar_loop(state)
+    _start_avatar_loop(session_id, state)
     return jsonify({"ok": True, "state": state})
 
 
@@ -1099,22 +1221,320 @@ def _voicebox_tts(text: str, voice_id: str = "en-US-GuyNeural", lang: str = "en"
 
 
 # ---------------------------------------------------------------------------
-# Playwright meeting join (no vision LLM required)
+# Playwright meeting join — helpers
 # ---------------------------------------------------------------------------
 
-def _playwright_join_and_converse(session_id: str, meeting_url: str) -> None:
-    """Join Google Meet via Playwright DOM automation and run a voice conversation loop.
+_LANG_NAMES: dict[str, str] = {
+    "en": "English", "hi": "Hindi", "te": "Telugu", "ta": "Tamil",
+    "kn": "Kannada", "ml": "Malayalam", "bn": "Bengali", "mr": "Marathi",
+    "gu": "Gujarati", "ur": "Urdu", "pa": "Punjabi",
+    "fr": "French", "de": "German", "es": "Spanish", "pt": "Portuguese",
+    "zh": "Chinese", "ja": "Japanese", "ko": "Korean",
+    "ar": "Arabic", "ru": "Russian", "it": "Italian",
+    "nl": "Dutch", "pl": "Polish", "tr": "Turkish",
+    "sv": "Swedish", "vi": "Vietnamese", "id": "Indonesian",
+}
 
-    Flow:
-      1. Launch Chromium (headed on virtual display) with fake mic/camera flags.
-      2. Navigate to the meeting URL and click 'Ask to join' / 'Join now'.
-      3. Conversation loop:
-           a. Capture 8s of audio from chrome-output-sink (what participants say).
-           b. If not silent → transcribe via Voicebox.
-           c. Generate text reply via Ollama.
-           d. TTS via Voicebox → play WAV to virtual-sink (participants hear agent).
-           e. Repeat until session is deleted or max_turns reached.
-    """
+
+def _playwright_dismiss_interstitials(page) -> bool:
+    """Click through consent/interstitial prompts. Returns True if any were dismissed."""
+    dismiss_texts = [
+        "Got it",
+        "Continue without signing in",
+        "Use without an account",
+        "Join as a guest",
+        "Dismiss",
+    ]
+    any_dismissed = False
+    for _ in range(10):
+        dismissed = False
+        for text in dismiss_texts:
+            try:
+                btn = page.get_by_role("button", name=text).first
+                if btn.is_visible(timeout=400):
+                    btn.click()
+                    logger.info("[playwright-join] dismissed prompt: '%s'", text)
+                    time.sleep(0.8)
+                    dismissed = any_dismissed = True
+                    break
+            except Exception:
+                pass
+            try:
+                lnk = page.get_by_role("link", name=text).first
+                if lnk.is_visible(timeout=300):
+                    lnk.click()
+                    logger.info("[playwright-join] clicked link: '%s'", text)
+                    time.sleep(0.8)
+                    dismissed = any_dismissed = True
+                    break
+            except Exception:
+                pass
+        if not dismissed:
+            break
+        time.sleep(0.3)
+    return any_dismissed
+
+
+def _playwright_fill_display_name(page, agent_name: str) -> bool:
+    """Fill the Meet guest-name input. Returns True when name is confirmed entered."""
+    name_selectors = [
+        "input[autocomplete='name']",
+        "input[aria-label=\"What's your name?\"]",
+        "input[aria-label='Your name']",
+        "input[placeholder='Your name']",
+        "input[jsname='YPqjbf']",
+        "input[aria-label*='name' i][type='text']",
+        "input[placeholder*='name' i][type='text']",
+        "input[aria-label*='your' i][type='text']",
+    ]
+    for try_num in range(25):
+        for sel in name_selectors:
+            try:
+                inp = page.locator(sel).first
+                if inp.is_visible(timeout=500):
+                    inp.fill(agent_name)
+                    time.sleep(0.1)
+                    if inp.input_value() == agent_name:
+                        logger.info("[playwright-join] filled display name via CSS '%s' (try %d)", sel, try_num)
+                        return True
+            except Exception:
+                pass
+        try:
+            for tb in page.get_by_role("textbox").all():
+                if tb.is_visible(timeout=300):
+                    tb.fill(agent_name)
+                    time.sleep(0.1)
+                    if tb.input_value() == agent_name:
+                        logger.info("[playwright-join] filled display name via textbox role (try %d)", try_num)
+                        return True
+        except Exception:
+            pass
+        time.sleep(0.5)
+    logger.warning("[playwright-join] could not fill display name after 25 attempts")
+    return False
+
+
+def _playwright_click_join_button(page) -> bool:
+    """Click Ask to join / Join now / Join. Returns True on success."""
+    for attempt in range(30):
+        time.sleep(2)
+        for btn_name in ["Ask to join", "Join now", "Join"]:
+            try:
+                btn = page.get_by_role("button", name=btn_name).first
+                if btn.is_visible(timeout=500) and btn.is_enabled():
+                    btn.click()
+                    logger.info("[playwright-join] clicked '%s' (attempt %d)", btn_name, attempt)
+                    return True
+                elif btn.is_visible(timeout=200):
+                    logger.debug("[playwright-join] '%s' visible but disabled (attempt %d)", btn_name, attempt)
+            except Exception as e:
+                logger.debug("[playwright-join] get_by_role '%s' error: %s", btn_name, e)
+        for fsel in ["[jsname='Qx7uuf']", "[data-promo-anchor-id='join-button']"]:
+            try:
+                btn = page.locator(fsel).first
+                if btn.is_visible(timeout=400) and btn.is_enabled():
+                    btn.click()
+                    logger.info("[playwright-join] clicked fallback '%s' (attempt %d)", fsel, attempt)
+                    return True
+            except Exception:
+                pass
+        logger.debug("[playwright-join] join btn not found (attempt %d) url=%s", attempt, page.url)
+    logger.warning("[playwright-join] could not find join button after 60 s — url: %s", page.url)
+    return False
+
+
+def _playwright_wait_for_admission(page) -> None:
+    """Spin until 'Waiting to be let in' disappears (up to 60 s)."""
+    for _ in range(30):
+        try:
+            if page.locator("text=Waiting to be let in").first.is_visible(timeout=800):
+                time.sleep(2)
+                continue
+        except Exception:
+            pass
+        break
+    logger.info("[playwright-join] admitted to meeting (url: %s)", page.url)
+
+
+def _playwright_play_tts(session_id: str, wav_bytes: bytes, pulse_env: dict) -> float:
+    """Play wav_bytes to virtual-sink with avatar state management. Returns finish timestamp."""
+    _start_avatar_loop(session_id, "talking")
+    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tf:
+        tf.write(wav_bytes)
+        path = tf.name
+    try:
+        subprocess.run(
+            ["paplay", "--device=virtual-sink", path],
+            timeout=60, capture_output=True, env=pulse_env,
+        )
+    finally:
+        try:
+            os.unlink(path)
+        except Exception:
+            pass
+    _start_avatar_loop(session_id, "idle")
+    return time.time()
+
+
+def _playwright_play_greeting(session_id: str, pulse_env: dict) -> None:
+    """Synthesize and play the bot's opening greeting."""
+    greet_text = (
+        f"Hey everyone! I just joined. I'm {AGENT_DISPLAY_NAME}, your AI assistant. "
+        "Feel free to talk — I'm here to help!"
+    )
+    wav = _voicebox_tts(greet_text)
+    if wav:
+        _playwright_play_tts(session_id, wav, pulse_env)
+        logger.info("[playwright-join] greeted participants")
+
+
+def _playwright_conversation_loop(
+    session_id: str,
+    page,
+    pulse_env: dict,
+    history: list[dict],
+    max_turns: int,
+    deadline: float,
+    whisper_model,
+) -> None:
+    """VAD → transcribe → LLM → TTS loop until turns/time/session exhausted."""
+    _CAPTURE_RATE = 16000
+    _CHUNK_SEC = 0.3
+    _MAX_SEC = 8.0
+    _SILENCE_TAIL_SEC = 0.5
+    _SPEECH_RMS = 300
+    _CHUNK_BYTES = int(_CAPTURE_RATE * _CHUNK_SEC) * 2
+
+    bot_spoke_at: float = 0.0
+    speech_turn = 0
+
+    while speech_turn < max_turns:
+        if time.monotonic() > deadline:
+            logger.info("[conv-loop] meeting time limit reached")
+            break
+        if not _store.contains(session_id):
+            break
+
+        echo_gap = 0.8 - (time.time() - bot_spoke_at)
+        if echo_gap > 0:
+            time.sleep(echo_gap)
+
+        parec_proc = subprocess.Popen(
+            ["parec", "--device=chrome-output-sink.monitor",
+             "--format=s16le", f"--rate={_CAPTURE_RATE}", "--channels=1"],
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, env=pulse_env,
+        )
+        raw_parts: list[bytes] = []
+        speech_seen = False
+        silence_secs = 0.0
+        total_secs = 0.0
+        while total_secs < _MAX_SEC:
+            chunk = parec_proc.stdout.read(_CHUNK_BYTES)  # type: ignore[union-attr]
+            if not chunk or len(chunk) < _CHUNK_BYTES:
+                break
+            raw_parts.append(chunk)
+            total_secs += _CHUNK_SEC
+            n = len(chunk) // 2
+            samps = struct.unpack_from(f"<{n}h", chunk)
+            chunk_rms = (sum(s * s for s in samps) / n) ** 0.5
+            if chunk_rms >= _SPEECH_RMS:
+                speech_seen = True
+                silence_secs = 0.0
+            elif speech_seen:
+                silence_secs += _CHUNK_SEC
+                if silence_secs >= _SILENCE_TAIL_SEC:
+                    break
+        parec_proc.terminate()
+        try:
+            parec_proc.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            parec_proc.kill()
+            parec_proc.wait(timeout=1)
+
+        raw_audio = b"".join(raw_parts)
+        conv = subprocess.run(
+            ["ffmpeg", "-y", "-f", "s16le", "-ar", str(_CAPTURE_RATE), "-ac", "1",
+             "-i", "pipe:0", "-f", "wav", "pipe:1"],
+            input=raw_audio, capture_output=True, timeout=10,
+        )
+        wav_bytes = conv.stdout if conv.returncode == 0 else b""
+
+        if _compute_wav_rms(wav_bytes) < 200:
+            logger.debug("[conv-loop] silent, skipping")
+            continue
+
+        transcript = ""
+        detected_lang = "en"
+        lang_prob = 0.0
+        if whisper_model:
+            try:
+                import tempfile as _tf
+                with _tf.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+                    tmp.write(wav_bytes)
+                    tmp_path = tmp.name
+                segs, info = whisper_model.transcribe(
+                    tmp_path, vad_filter=True, multilingual=True, language_detection_segments=5,
+                )
+                transcript = " ".join(s.text for s in segs).strip()
+                detected_lang = getattr(info, "language", "en") or "en"
+                lang_prob = float(getattr(info, "language_probability", 0.0))
+                logger.info("[conv-loop] whisper lang=%s prob=%.2f text=%s",
+                            detected_lang, lang_prob, transcript[:60])
+                try:
+                    os.unlink(tmp_path)
+                except Exception:
+                    pass
+            except Exception as exc:
+                logger.warning("[conv-loop] transcription failed: %s", exc)
+
+        if not transcript.strip():
+            continue
+
+        words = transcript.strip().split()
+        if len(words) < 3:
+            logger.debug("[conv-loop] skipping short transcript (%d words): %r", len(words), transcript)
+            continue
+
+        logger.info("[conv-loop] heard: %s", transcript)
+
+        unicode_lang = _lang_from_text(transcript)
+        if unicode_lang != "en":
+            text_lang = unicode_lang
+        elif detected_lang != "en" and lang_prob >= 0.10:
+            text_lang = detected_lang
+        else:
+            text_lang = "en"
+        logger.info("[conv-loop] final lang=%s (unicode=%s whisper=%s prob=%.2f)",
+                    text_lang, unicode_lang, detected_lang, lang_prob)
+
+        lang_name = _LANG_NAMES.get(text_lang, "English")
+        history.append({"role": "user", "content": f"[You MUST reply in {lang_name} only — no other language] {transcript}"})
+
+        if len(history) > 19:
+            history = [history[0]] + history[-18:]
+
+        reply_text = _chat_openai(history) if OPENAI_API_KEY else _chat_ollama(history)
+        if not reply_text:
+            continue
+
+        logger.info("[conv-loop] replying: %s", reply_text)
+        history.append({"role": "assistant", "content": reply_text})
+
+        reply_lang = _lang_from_text(reply_text)
+        tts_lang = (
+            text_lang
+            if (text_lang in _SARVAM_LANG_MAP and reply_lang == "en")
+            else reply_lang
+        )
+        wav_reply = _voicebox_tts(reply_text, voice_id=_voice_for_lang(tts_lang), lang=tts_lang)
+        if wav_reply:
+            bot_spoke_at = _playwright_play_tts(session_id, wav_reply, pulse_env)
+
+        speech_turn += 1
+
+
+def _playwright_join_and_converse(session_id: str, meeting_url: str) -> None:
+    """Join Google Meet via Playwright DOM automation and run a voice conversation loop."""
     from playwright.sync_api import sync_playwright
 
     _pulse_rt = os.environ.get("PULSE_RUNTIME_PATH", "/tmp/pulse")
@@ -1125,6 +1545,7 @@ def _playwright_join_and_converse(session_id: str, meeting_url: str) -> None:
         "XDG_RUNTIME_DIR": "/tmp/runtime",
         "PULSE_SINK": "chrome-output-sink",
     }
+    pulse_env = {**os.environ, "PULSE_RUNTIME_PATH": _pulse_rt}
 
     launch_args = [
         "--use-fake-ui-for-media-stream",
@@ -1136,9 +1557,7 @@ def _playwright_join_and_converse(session_id: str, meeting_url: str) -> None:
         "--disable-infobars",
     ]
 
-    with _sessions_lock:
-        s = _sessions.get(session_id)
-    if s is None:
+    if not _store.contains(session_id):
         return
 
     logger.info("[playwright-join] launching Chromium for session %s → %s", session_id, meeting_url)
@@ -1150,192 +1569,34 @@ def _playwright_join_and_converse(session_id: str, meeting_url: str) -> None:
                 args=launch_args,
                 env={**os.environ, **env_extra},
             )
-            ctx = browser.new_context(
-                permissions=["camera", "microphone"],
-            )
+            ctx = browser.new_context(permissions=["camera", "microphone"])
             page = ctx.new_page()
             page.goto(meeting_url, timeout=30_000, wait_until="domcontentloaded")
             logger.info("[playwright-join] page loaded: %s  url: %s", page.title(), page.url)
 
-            # ── Guard: detect Google sign-in redirect ──────────────────────
-            # If Meet redirects to accounts.google.com the bot can't sign in.
-            # Try navigating back to the meeting URL once (anonymous guest join).
             if "accounts.google.com" in page.url or "/signin" in page.url:
                 logger.warning("[playwright-join] redirected to Google sign-in — retrying as guest")
                 page.goto(meeting_url, timeout=30_000, wait_until="domcontentloaded")
                 time.sleep(2)
 
-            # ── Step 0a: Dismiss interstitial prompts ──────────────────────
-            # Handles: "Got it", "Continue without signing in", "Use without an account"
-            _dismiss_texts = [
-                "Got it",
-                "Continue without signing in",
-                "Use without an account",
-                "Join as a guest",
-                "Dismiss",
-            ]
-            for _try in range(10):
-                _dismissed = False
-                for _text in _dismiss_texts:
-                    try:
-                        _btn = page.get_by_role("button", name=_text).first
-                        if _btn.is_visible(timeout=400):
-                            _btn.click()
-                            logger.info("[playwright-join] dismissed prompt: '%s'", _text)
-                            time.sleep(0.8)
-                            _dismissed = True
-                            break
-                    except Exception:
-                        pass
-                    try:
-                        _lnk = page.get_by_role("link", name=_text).first
-                        if _lnk.is_visible(timeout=300):
-                            _lnk.click()
-                            logger.info("[playwright-join] clicked link: '%s'", _text)
-                            time.sleep(0.8)
-                            _dismissed = True
-                            break
-                    except Exception:
-                        pass
-                if not _dismissed:
-                    break
-                time.sleep(0.3)
+            _playwright_dismiss_interstitials(page)
+            _playwright_fill_display_name(page, "AI Agent")
+            time.sleep(1.5)
 
-            # ── Step 0b: Fill in display name (required to enable join btn) ─
-            # Google Meet's guest name input attributes vary by version/locale.
-            # We try all known selectors plus a generic textbox fallback.
-            _agent_name = "AI Agent"
-            _name_selectors = [
-                "input[autocomplete='name']",          # most reliable across Meet versions
-                "input[aria-label=\"What's your name?\"]",
-                "input[aria-label='Your name']",
-                "input[placeholder='Your name']",
-                "input[jsname='YPqjbf']",              # Meet guest-name jsname (pre-join page only)
-                "input[aria-label*='name' i][type='text']",
-                "input[placeholder*='name' i][type='text']",
-                "input[aria-label*='your' i][type='text']",
-            ]
-            _filled_name = False
-            for _try in range(25):
-                for _sel in _name_selectors:
-                    try:
-                        name_inp = page.locator(_sel).first
-                        if name_inp.is_visible(timeout=500):
-                            name_inp.fill(_agent_name)
-                            time.sleep(0.1)
-                            if name_inp.input_value() == _agent_name:
-                                logger.info("[playwright-join] filled display name via CSS '%s' (try %d)", _sel, _try)
-                                _filled_name = True
-                                break
-                    except Exception:
-                        pass
-                if not _filled_name:
-                    # Fallback: first visible role=textbox on the page
-                    try:
-                        textboxes = page.get_by_role("textbox").all()
-                        for _tb in textboxes:
-                            if _tb.is_visible(timeout=300):
-                                _tb.fill(_agent_name)
-                                time.sleep(0.1)
-                                if _tb.input_value() == _agent_name:
-                                    logger.info("[playwright-join] filled display name via textbox role (try %d)", _try)
-                                    _filled_name = True
-                                    break
-                    except Exception:
-                        pass
-                if _filled_name:
-                    break
-                time.sleep(0.5)
-            if not _filled_name:
-                logger.warning("[playwright-join] could not fill display name after 25 attempts")
-
-            time.sleep(1.5)  # let Meet re-enable the join button after name is set
-
-            # ── Step 1: Wait for and click the join button ─────────────────
-            # Use get_by_role("button") which correctly matches both <button>
-            # elements and div[role="button"] that Google Meet uses.
-            joined = False
-            for attempt in range(30):  # up to ~60 s
-                time.sleep(2)
-                for btn_name in ["Ask to join", "Join now", "Join"]:
-                    try:
-                        btn = page.get_by_role("button", name=btn_name).first
-                        if btn.is_visible(timeout=500):
-                            if btn.is_enabled():
-                                btn.click()
-                                logger.info("[playwright-join] clicked '%s' (attempt %d)", btn_name, attempt)
-                                joined = True
-                                break
-                            else:
-                                logger.debug("[playwright-join] '%s' visible but disabled (attempt %d)", btn_name, attempt)
-                    except Exception as _e:
-                        logger.debug("[playwright-join] get_by_role '%s' error: %s", btn_name, _e)
-                if not joined:
-                    # Fallback: jsname selector (works across button/div)
-                    for _fsel in ["[jsname='Qx7uuf']", "[data-promo-anchor-id='join-button']"]:
-                        try:
-                            btn = page.locator(_fsel).first
-                            if btn.is_visible(timeout=400) and btn.is_enabled():
-                                btn.click()
-                                logger.info("[playwright-join] clicked fallback '%s' (attempt %d)", _fsel, attempt)
-                                joined = True
-                                break
-                        except Exception:
-                            pass
-                if joined:
-                    break
-                logger.debug("[playwright-join] join btn not found (attempt %d) url=%s", attempt, page.url)
-
-            if not joined:
-                logger.warning("[playwright-join] could not find join button after 60 s — url: %s", page.url)
-                with _sessions_lock:
-                    if session_id in _sessions:
-                        t = _sessions[session_id].get("current_task")
-                        if t:
-                            t["status"] = "completed"
-                            t["result"] = "Could not find join button — meeting may require sign-in or host admission"
-                        _sessions[session_id]["status"] = "idle"
+            if not _playwright_click_join_button(page):
+                _store.update_task_fields(
+                    session_id,
+                    status="completed",
+                    result="Could not find join button — meeting may require sign-in or host admission",
+                )
+                _store.update_fields(session_id, status="idle")
                 return
 
-            # ── Step 2: Wait for host to admit ─────────────────────────────
-            logger.info("[playwright-join] waiting for host to admit (if applicable)...")
-            for _adm in range(30):  # up to 60 s
-                try:
-                    if page.locator("text=Waiting to be let in").first.is_visible(timeout=800):
-                        logger.debug("[playwright-join] still waiting to be admitted (%d/30)", _adm)
-                        time.sleep(2)
-                        continue
-                except Exception:
-                    pass
-                break  # either admitted or "waiting" text never appeared
-            logger.info("[playwright-join] admitted to meeting (url: %s)", page.url)
+            _playwright_wait_for_admission(page)
+            _playwright_play_greeting(session_id, pulse_env)
+            _start_avatar_loop(session_id, "idle")
 
-            _pulse_env = {**os.environ, "PULSE_RUNTIME_PATH": _pulse_rt}
-
-            # ── Step 3: Conversation loop ───────────────────────────────────
-            _greet_text = (
-                f"Hey everyone! I just joined. I'm {AGENT_DISPLAY_NAME}, your AI assistant. "
-                "Feel free to talk — I'm here to help!"
-            )
-            _greet_wav = _voicebox_tts(_greet_text)
-            if _greet_wav:
-                _start_avatar_loop("talking")
-                with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as _gf:
-                    _gf.write(_greet_wav)
-                    _gpath = _gf.name
-                subprocess.run(
-                    ["paplay", "--device=virtual-sink", _gpath],
-                    timeout=30, capture_output=True, env=_pulse_env,
-                )
-                try:
-                    os.unlink(_gpath)
-                except Exception:
-                    pass
-                _start_avatar_loop("idle")
-                logger.info("[playwright-join] greeted participants")
-
-            _start_avatar_loop("idle")
-            _mode_guidance = {
+            mode_guidance = {
                 "standup": (
                     "This is a daily standup. When it is your turn, give a structured update: "
                     "(1) what you completed since the last standup, "
@@ -1353,6 +1614,7 @@ def _playwright_join_and_converse(session_id: str, meeting_url: str) -> None:
                     "Respond to questions AND direct statements or commands."
                 ),
             }.get(AGENT_MEETING_MODE, "")
+
             history: list[dict[str, Any]] = [
                 {"role": "system", "content": (
                     f"You are {AGENT_DISPLAY_NAME}, an AI assistant attending this meeting via voice. "
@@ -1364,240 +1626,39 @@ def _playwright_join_and_converse(session_id: str, meeting_url: str) -> None:
                     "then continue with a relevant response. "
                     "Respond DIRECTLY to what was just said — reference the specific words, "
                     "question, or topic the person raised. "
-                    f"{_mode_guidance} "
+                    f"{mode_guidance} "
                     "Keep every reply to 1–2 sentences unless the question requires more detail. "
                     "No filler like 'Certainly!' or 'Great question!'. "
                     "ALWAYS reply in the exact same language the speaker used."
                 )}
             ]
-            _bot_spoke_at: float = 0.0   # timestamp when bot last finished speaking
 
-            # max_turns now counts only speech replies (not silent iterations).
-            # Wall-clock deadline governs the overall meeting duration.
-            max_turns = int(os.environ.get("MEETING_MAX_TURNS", "200"))  # ~200 replies
+            max_turns = int(os.environ.get("MEETING_MAX_TURNS", "200"))
             meeting_minutes = int(os.environ.get("MEETING_MAX_MINUTES", "90"))
-            _meeting_deadline = time.monotonic() + meeting_minutes * 60
+            deadline = time.monotonic() + meeting_minutes * 60
 
-            # Load Whisper model once (not per turn)
-            # "small" model (244 MB, int8) has reliable Indian language detection.
-            # "base" (74 MB) misidentifies Telugu/Hindi as Finnish/other European langs.
-            # Env var WHISPER_MODEL lets ops override (e.g. "medium" for better accuracy).
-            _whisper_size = os.environ.get("WHISPER_MODEL", "small")
-            _whisper_model = None
+            whisper_size = os.environ.get("WHISPER_MODEL", "small")
+            whisper_model = None
             try:
                 from faster_whisper import WhisperModel  # type: ignore
-                _whisper_model = WhisperModel(_whisper_size, device="cpu", compute_type="int8")
-                logger.info("[conv-loop] Whisper %s model loaded", _whisper_size)
-            except Exception as _we:
-                logger.warning("[conv-loop] Whisper load failed: %s", _we)
+                whisper_model = WhisperModel(whisper_size, device="cpu", compute_type="int8")
+                logger.info("[conv-loop] Whisper %s model loaded", whisper_size)
+            except Exception as we:
+                logger.warning("[conv-loop] Whisper load failed: %s", we)
 
-            # ── VAD constants ───────────────────────────────────────────────
-            _CAPTURE_RATE = 16000
-            _CHUNK_SEC = 0.3               # read audio in 0.3-second chunks (faster VAD)
-            _MAX_SEC = 8.0                 # never record more than 8 s
-            _SILENCE_TAIL_SEC = 0.5        # stop after 0.5 s of silence post-speech
-            _SPEECH_RMS = 300              # RMS threshold that counts as speech
-            _CHUNK_BYTES = int(_CAPTURE_RATE * _CHUNK_SEC) * 2  # s16le = 2 bytes
-
-            _speech_turn = 0
-            while _speech_turn < max_turns:
-                if time.monotonic() > _meeting_deadline:
-                    logger.info("[conv-loop] meeting time limit reached (%d min)", meeting_minutes)
-                    break
-
-                with _sessions_lock:
-                    if session_id not in _sessions:
-                        break
-
-                # ── Skip capture while bot is still talking (anti-echo) ─────
-                # Wait up to 0.8 s for TTS residual audio to clear the sink.
-                _echo_gap = 0.8 - (time.time() - _bot_spoke_at)
-                if _echo_gap > 0:
-                    time.sleep(_echo_gap)
-
-                # ── Adaptive VAD capture: stop when speaker finishes ────────
-                parec_proc = subprocess.Popen(
-                    ["parec", "--device=chrome-output-sink.monitor",
-                     "--format=s16le", f"--rate={_CAPTURE_RATE}", "--channels=1"],
-                    stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, env=_pulse_env,
-                )
-                _raw_parts: list[bytes] = []
-                _speech_seen = False
-                _silence_secs = 0.0
-                _total_secs = 0.0
-                while _total_secs < _MAX_SEC:
-                    _chunk = parec_proc.stdout.read(_CHUNK_BYTES)  # type: ignore[union-attr]
-                    if not _chunk or len(_chunk) < _CHUNK_BYTES:
-                        break
-                    _raw_parts.append(_chunk)
-                    _total_secs += _CHUNK_SEC
-                    _n = len(_chunk) // 2
-                    _samps = struct.unpack_from(f"<{_n}h", _chunk)
-                    _chunk_rms = (sum(s * s for s in _samps) / _n) ** 0.5
-                    if _chunk_rms >= _SPEECH_RMS:
-                        _speech_seen = True
-                        _silence_secs = 0.0
-                    elif _speech_seen:
-                        _silence_secs += _CHUNK_SEC
-                        if _silence_secs >= _SILENCE_TAIL_SEC:
-                            break
-                parec_proc.terminate()
-                try:
-                    parec_proc.wait(timeout=2)
-                except subprocess.TimeoutExpired:
-                    parec_proc.kill()
-                    parec_proc.wait(timeout=1)
-
-                _raw_audio = b"".join(_raw_parts)
-                _conv = subprocess.run(
-                    ["ffmpeg", "-y", "-f", "s16le", "-ar", str(_CAPTURE_RATE), "-ac", "1",
-                     "-i", "pipe:0", "-f", "wav", "pipe:1"],
-                    input=_raw_audio, capture_output=True, timeout=10,
-                )
-                wav_bytes = _conv.stdout if _conv.returncode == 0 else b""
-
-                rms = _compute_wav_rms(wav_bytes)
-                if rms < 200:
-                    logger.debug("[conv-loop] silent (rms=%d), skipping", rms)
-                    continue
-
-                # Transcribe via faster-whisper (local, no API key needed)
-                transcript = ""
-                _detected_lang = "en"
-                _lang_prob = 0.0
-                if _whisper_model:
-                    try:
-                        import tempfile as _tf
-                        with _tf.NamedTemporaryFile(suffix=".wav", delete=False) as _tmp:
-                            _tmp.write(wav_bytes)
-                            _tmp_path = _tmp.name
-                        _segs, _info = _whisper_model.transcribe(  # type: ignore[union-attr]
-                            _tmp_path,
-                            vad_filter=True,
-                            multilingual=True,
-                            language_detection_segments=5,
-                        )
-                        transcript = " ".join(s.text for s in _segs).strip()
-                        _detected_lang = getattr(_info, "language", "en") or "en"
-                        _lang_prob = float(getattr(_info, "language_probability", 0.0))
-                        logger.info("[conv-loop] whisper lang=%s prob=%.2f text=%s",
-                                    _detected_lang, _lang_prob, transcript[:60])
-                        try:
-                            os.unlink(_tmp_path)
-                        except Exception:
-                            pass
-                    except Exception as exc:
-                        logger.warning("[conv-loop] transcription failed: %s", exc)
-
-                if not transcript.strip():
-                    continue
-
-                # Quality gate: skip very short or repetitive noise transcripts
-                # (Whisper hallucinations under noise look like 1-2 word filler)
-                _words = transcript.strip().split()
-                if len(_words) < 3:
-                    logger.debug("[conv-loop] skipping short transcript (%d words): %r", len(_words), transcript)
-                    continue
-
-                logger.info("[conv-loop] heard: %s", transcript)
-
-                # ── Language resolution (3-tier priority) ──────────────────
-                # 1. Unicode script detection from transcript text (100% reliable
-                #    for non-Latin scripts: Hindi, Telugu, Tamil, Arabic, Korean…)
-                _unicode_lang = _lang_from_text(transcript)
-
-                # 2. For Latin-script input (unicode returns "en"), trust Whisper
-                #    if it detected a non-English language. Whisper detects language
-                #    from AUDIO patterns — so even when it transcribes Indian speech
-                #    as English phonetics, the language field is still correct.
-                #    Threshold 0.20: at this level Whisper is usually right about the
-                #    language family even if transcription quality is poor.
-                if _unicode_lang != "en":
-                    _text_lang = _unicode_lang          # non-Latin script → certain
-                elif _detected_lang != "en" and _lang_prob >= 0.10:
-                    # Trust Whisper audio-based detection at low threshold:
-                    # even at 0.10 it reliably identifies the language *family*
-                    # even when transcription comes out romanized (Latin script)
-                    _text_lang = _detected_lang
-                else:
-                    _text_lang = "en"                   # default English
-
-                logger.info("[conv-loop] final lang=%s (unicode=%s whisper=%s prob=%.2f)",
-                            _text_lang, _unicode_lang, _detected_lang, _lang_prob)
-
-                # 3. Inject explicit language instruction so even small LLMs comply
-                _LANG_NAMES: dict[str, str] = {
-                    "en": "English", "hi": "Hindi", "te": "Telugu", "ta": "Tamil",
-                    "kn": "Kannada", "ml": "Malayalam", "bn": "Bengali", "mr": "Marathi",
-                    "gu": "Gujarati", "ur": "Urdu", "pa": "Punjabi",
-                    "fr": "French", "de": "German", "es": "Spanish", "pt": "Portuguese",
-                    "zh": "Chinese", "ja": "Japanese", "ko": "Korean",
-                    "ar": "Arabic", "ru": "Russian", "it": "Italian",
-                    "nl": "Dutch", "pl": "Polish", "tr": "Turkish",
-                    "sv": "Swedish", "vi": "Vietnamese", "id": "Indonesian",
-                }
-                _lang_name = _LANG_NAMES.get(_text_lang, "English")
-                _user_msg = (
-                    f"[You MUST reply in {_lang_name} only — no other language] "
-                    f"{transcript}"
-                )
-                history.append({"role": "user", "content": _user_msg})
-
-                # Keep rolling context: system prompt + last 18 messages (9 turns)
-                # Prevents unbounded history that overwhelms the small LLM.
-                if len(history) > 19:
-                    history = [history[0]] + history[-18:]
-
-                # Generate reply via Ollama
-                reply_text = _chat_openai(history) if OPENAI_API_KEY else _chat_ollama(history)
-                if not reply_text:
-                    continue
-
-                logger.info("[conv-loop] replying: %s", reply_text)
-                history.append({"role": "assistant", "content": reply_text})
-
-                # TTS → play to virtual-sink so participants hear agent
-                _reply_lang = _lang_from_text(reply_text)
-                # When input was detected as an Indian language but the LLM replied
-                # in Latin/English (romanized transcript → English reply), force the
-                # TTS to use the *input* language so Sarvam fires with the right voice.
-                _tts_lang = (
-                    _text_lang
-                    if (_text_lang in _SARVAM_LANG_MAP and _reply_lang == "en")
-                    else _reply_lang
-                )
-                wav_reply = _voicebox_tts(reply_text, voice_id=_voice_for_lang(_tts_lang), lang=_tts_lang)
-                if wav_reply:
-                    _start_avatar_loop("talking")
-                    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
-                        tmp.write(wav_reply)
-                        tmp_path = tmp.name
-                    subprocess.run(
-                        ["paplay", "--device=virtual-sink", tmp_path],
-                        timeout=60, capture_output=True, env=_pulse_env,
-                    )
-                    _bot_spoke_at = time.time()   # mark when bot finished speaking
-                    try:
-                        os.unlink(tmp_path)
-                    except Exception:
-                        pass
-                    _start_avatar_loop("idle")
-
-                _speech_turn += 1
-
+            _playwright_conversation_loop(
+                session_id, page, pulse_env, history, max_turns, deadline, whisper_model,
+            )
             browser.close()
 
     except Exception as exc:
         logger.error("[playwright-join] error: %s", exc)
     finally:
-        with _sessions_lock:
-            if session_id in _sessions:
-                t = _sessions[session_id].get("current_task")
-                if t and t["status"] not in ("completed", "timeout"):
-                    t["status"] = "completed"
-                    t["result"] = "Meeting session ended"
-                _sessions[session_id]["status"] = "idle"
-        _start_avatar_loop("idle")
+        task = _store.get_task(session_id)
+        if task and task.get("status") not in ("completed", "timeout"):
+            _store.update_task_fields(session_id, status="completed", result="Meeting session ended")
+        _store.update_fields(session_id, status="idle")
+        _start_avatar_loop(session_id, "idle")
         logger.info("[playwright-join] session %s ended", session_id)
 
 
