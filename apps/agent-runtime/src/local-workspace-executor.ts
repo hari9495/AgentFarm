@@ -434,6 +434,16 @@ export type LocalWorkspaceActionType =
     | 'workspace_devops_drift_check'
     | 'workspace_devops_secret_rotate'
     | 'workspace_devops_cert_renew'
+    // Tier 31c (DevOps P1 gap actions — Cloud CLI, TF State, RBAC, Observability, Deployment Strategy)
+    | 'workspace_devops_aws_cli'
+    | 'workspace_devops_az_cli'
+    | 'workspace_devops_gcloud_cli'
+    | 'workspace_devops_tf_state'
+    | 'workspace_devops_k8s_rbac'
+    | 'workspace_devops_grafana_dashboard'
+    | 'workspace_devops_alert_rule'
+    | 'workspace_devops_blue_green'
+    | 'workspace_devops_canary'
     // Tier 32 (Mobile / iOS + Android domain actions)
     | 'workspace_mob_ios_component'
     | 'workspace_mob_ios_build'
@@ -1124,6 +1134,16 @@ export const LOCAL_WORKSPACE_ACTION_TYPES = new Set<LocalWorkspaceActionType>([
     'workspace_devops_drift_check',
     'workspace_devops_secret_rotate',
     'workspace_devops_cert_renew',
+    // Tier 31c (DevOps P1 gap actions — Cloud CLI, TF State, RBAC, Observability, Deployment Strategy)
+    'workspace_devops_aws_cli',
+    'workspace_devops_az_cli',
+    'workspace_devops_gcloud_cli',
+    'workspace_devops_tf_state',
+    'workspace_devops_k8s_rbac',
+    'workspace_devops_grafana_dashboard',
+    'workspace_devops_alert_rule',
+    'workspace_devops_blue_green',
+    'workspace_devops_canary',
     // Tier 32 (Mobile / iOS + Android domain actions)
     'workspace_mob_ios_component',
     'workspace_mob_ios_build',
@@ -13900,7 +13920,16 @@ export async function executeLocalWorkspaceAction(input: {
         case 'workspace_devops_cost_estimate':
         case 'workspace_devops_drift_check':
         case 'workspace_devops_secret_rotate':
-        case 'workspace_devops_cert_renew': {
+        case 'workspace_devops_cert_renew':
+        case 'workspace_devops_aws_cli':
+        case 'workspace_devops_az_cli':
+        case 'workspace_devops_gcloud_cli':
+        case 'workspace_devops_tf_state':
+        case 'workspace_devops_k8s_rbac':
+        case 'workspace_devops_grafana_dashboard':
+        case 'workspace_devops_alert_rule':
+        case 'workspace_devops_blue_green':
+        case 'workspace_devops_canary': {
             if (!isDevopsActionType(actionType)) {
                 return { ok: false, output: '', errorOutput: `Unrecognised DevOps action: ${actionType}` };
             }

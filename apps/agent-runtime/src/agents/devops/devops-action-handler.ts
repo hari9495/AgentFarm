@@ -97,6 +97,74 @@ import {
 
 import type { SecretRotationResult, CertRenewalResult } from './devops-secret-manager.js';
 
+import {
+    buildAwsCliArgs,
+    buildAzCliArgs,
+    buildGcloudArgs,
+    parseCloudCliOutput,
+    summariseCloudResult,
+    isDestructiveAws,
+    isDestructiveAz,
+    isDestructiveGcloud,
+} from './devops-cloud-cli-builder.js';
+
+import {
+    buildTfStateMvArgs,
+    buildTfStateRmArgs,
+    buildTfImportArgs,
+    buildTfStatePullArgs,
+    buildTfStatePushArgs,
+    buildTfStateUnlockArgs,
+    buildTfStateListArgs,
+    buildTfStateShowArgs,
+    parseTfStateList,
+    parseTfStatePull,
+    extractLockId,
+    buildTfStateOpPrompt,
+    parseTfStateOpPlan,
+} from './devops-tf-state-builder.js';
+
+import {
+    buildRoleYaml,
+    buildClusterRoleYaml,
+    buildRoleBindingYaml,
+    buildClusterRoleBindingYaml,
+    buildServiceAccountYaml,
+    buildKubectlApplyArgs,
+    buildKubectlCanIArgs,
+    buildRbacGeneratePrompt,
+    parseRbacManifests,
+    buildRbacAuditChecks,
+} from './devops-k8s-rbac-builder.js';
+
+import {
+    buildGrafanaDashboardPrompt,
+    parseGrafanaDashboard,
+    buildGrafanaDashboardApiPayload,
+    buildAlertRulePrompt,
+    parseAlertRuleOutput,
+    buildPrometheusRuleCrd,
+    buildDatadogMonitorPayload,
+    buildPagerDutyServicePayload,
+} from './devops-observability-builder.js';
+
+import type { GrafanaPanel, PrometheusAlertRule } from './devops-observability-builder.js';
+
+import {
+    buildBlueGreenManifests,
+    buildBlueGreenSwitchArgs,
+    buildScaleDownArgs,
+    buildArgoRolloutsManifest,
+    buildArgoRolloutsPromoteArgs,
+    buildArgoRolloutsAbortArgs,
+    buildArgoRolloutsStatusArgs,
+    buildIstioTrafficSplitManifests,
+    buildDeploymentStrategyPrompt,
+    parseDeploymentStrategyOutput,
+} from './devops-deployment-strategy-builder.js';
+
+import type { CanaryStep } from './devops-deployment-strategy-builder.js';
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -145,7 +213,21 @@ export type DevopsActionType =
     | 'workspace_devops_drift_check'
     // ── Secret Rotation & Cert Renewal (Gap 10) ───────────────────────────────
     | 'workspace_devops_secret_rotate'
-    | 'workspace_devops_cert_renew';
+    | 'workspace_devops_cert_renew'
+    // ── P1 Gap 1 — Cloud CLI ─────────────────────────────────────────────────
+    | 'workspace_devops_aws_cli'
+    | 'workspace_devops_az_cli'
+    | 'workspace_devops_gcloud_cli'
+    // ── P1 Gap 2 — Terraform State Management ────────────────────────────────
+    | 'workspace_devops_tf_state'
+    // ── P1 Gap 3 — Kubernetes RBAC ───────────────────────────────────────────
+    | 'workspace_devops_k8s_rbac'
+    // ── P1 Gap 4 — Observability Management ──────────────────────────────────
+    | 'workspace_devops_grafana_dashboard'
+    | 'workspace_devops_alert_rule'
+    // ── P1 Gap 5 — Deployment Strategy Builder ───────────────────────────────
+    | 'workspace_devops_blue_green'
+    | 'workspace_devops_canary';
 
 export const DEVOPS_ACTION_TYPES = new Set<DevopsActionType>([
     'workspace_devops_tf_plan',
@@ -177,6 +259,15 @@ export const DEVOPS_ACTION_TYPES = new Set<DevopsActionType>([
     'workspace_devops_drift_check',
     'workspace_devops_secret_rotate',
     'workspace_devops_cert_renew',
+    'workspace_devops_aws_cli',
+    'workspace_devops_az_cli',
+    'workspace_devops_gcloud_cli',
+    'workspace_devops_tf_state',
+    'workspace_devops_k8s_rbac',
+    'workspace_devops_grafana_dashboard',
+    'workspace_devops_alert_rule',
+    'workspace_devops_blue_green',
+    'workspace_devops_canary',
 ]);
 
 export function isDevopsActionType(at: string): at is DevopsActionType {
@@ -1222,6 +1313,564 @@ export async function handleDevopsAction(params: DevopsActionParams): Promise<De
                 report,
                 summary: latestInfo.summary,
             });
+        }
+
+        // ====================================================================
+        // workspace_devops_aws_cli
+        // payload: service (required), operation (required), flags?, region?,
+        //          profile?, allow_destructive? (default: false)
+        // ====================================================================
+        case 'workspace_devops_aws_cli': {
+            if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+            const service   = str(payload['service']);
+            const operation = str(payload['operation']);
+            if (!service)   return { ok: false, output: '', errorOutput: 'service is required' };
+            if (!operation) return { ok: false, output: '', errorOutput: 'operation is required' };
+
+            if (isDestructiveAws(operation) && payload['allow_destructive'] !== true) {
+                return { ok: false, output: '', errorOutput: `Operation "${operation}" is destructive. Set allow_destructive: true to proceed.` };
+            }
+
+            const flags  = typeof payload['flags'] === 'object' && payload['flags'] !== null
+                ? (payload['flags'] as Record<string, string>) : {};
+            const args   = buildAwsCliArgs({
+                service, operation,
+                flags,
+                region:  str(payload['region']) || undefined,
+                profile: str(payload['profile']) || undefined,
+            });
+            const result = await runCommand(args, workspaceDir, 60_000);
+            const parsed = parseCloudCliOutput(result.stdout, 'aws', service, operation);
+            return safeJson({
+                ok:        result.exitCode === 0,
+                provider:  'aws', service, operation,
+                parsed:    parsed.parsed,
+                raw:       result.stdout.slice(0, 4000),
+                exit_code: result.exitCode,
+                summary:   summariseCloudResult({ ...parsed, ok: result.exitCode === 0 }),
+            });
+        }
+
+        // ====================================================================
+        // workspace_devops_az_cli
+        // payload: group (required), subcommand (required), flags?,
+        //          subscription?, allow_destructive? (default: false)
+        // ====================================================================
+        case 'workspace_devops_az_cli': {
+            if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+            const group      = str(payload['group']);
+            const subcommand = str(payload['subcommand']);
+            if (!group)      return { ok: false, output: '', errorOutput: 'group is required' };
+            if (!subcommand) return { ok: false, output: '', errorOutput: 'subcommand is required' };
+
+            if (isDestructiveAz(subcommand) && payload['allow_destructive'] !== true) {
+                return { ok: false, output: '', errorOutput: `Subcommand "${subcommand}" is destructive. Set allow_destructive: true to proceed.` };
+            }
+
+            const flags = typeof payload['flags'] === 'object' && payload['flags'] !== null
+                ? (payload['flags'] as Record<string, string>) : {};
+            const args  = buildAzCliArgs({
+                group, subcommand, flags,
+                subscription: str(payload['subscription']) || undefined,
+            });
+            const result = await runCommand(args, workspaceDir, 60_000);
+            const parsed = parseCloudCliOutput(result.stdout, 'azure', group, subcommand);
+            return safeJson({
+                ok:        result.exitCode === 0,
+                provider:  'azure', group, subcommand,
+                parsed:    parsed.parsed,
+                raw:       result.stdout.slice(0, 4000),
+                exit_code: result.exitCode,
+                summary:   summariseCloudResult({ ...parsed, ok: result.exitCode === 0 }),
+            });
+        }
+
+        // ====================================================================
+        // workspace_devops_gcloud_cli
+        // payload: component (required), subcommand (required), flags?,
+        //          project?, zone?, region?, allow_destructive? (default: false)
+        // ====================================================================
+        case 'workspace_devops_gcloud_cli': {
+            if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+            const component  = str(payload['component']);
+            const subcommand = str(payload['subcommand']);
+            if (!component)  return { ok: false, output: '', errorOutput: 'component is required' };
+            if (!subcommand) return { ok: false, output: '', errorOutput: 'subcommand is required' };
+
+            // subcommand may be "instances list" — check first word
+            const firstWord = subcommand.split(' ')[0] ?? subcommand;
+            if (isDestructiveGcloud(firstWord) && payload['allow_destructive'] !== true) {
+                return { ok: false, output: '', errorOutput: `Subcommand "${subcommand}" is destructive. Set allow_destructive: true to proceed.` };
+            }
+
+            const flags = typeof payload['flags'] === 'object' && payload['flags'] !== null
+                ? (payload['flags'] as Record<string, string>) : {};
+            const args  = buildGcloudArgs({
+                component, subcommand, flags,
+                project: str(payload['project']) || undefined,
+                zone:    str(payload['zone'])    || undefined,
+                region:  str(payload['region'])  || undefined,
+            });
+            const result = await runCommand(args, workspaceDir, 60_000);
+            const parsed = parseCloudCliOutput(result.stdout, 'gcp', component, subcommand);
+            return safeJson({
+                ok:        result.exitCode === 0,
+                provider:  'gcp', component, subcommand,
+                parsed:    parsed.parsed,
+                raw:       result.stdout.slice(0, 4000),
+                exit_code: result.exitCode,
+                summary:   summariseCloudResult({ ...parsed, ok: result.exitCode === 0 }),
+            });
+        }
+
+        // ====================================================================
+        // workspace_devops_tf_state
+        // payload: operation (required: mv|rm|import|pull|list|show|unlock|push),
+        //          source?, destination?, address?, id?, lock_id?,
+        //          local_state_path?, working_dir?, dry_run?
+        // ====================================================================
+        case 'workspace_devops_tf_state': {
+            if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+            const operation = str(payload['operation']);
+            const tfDir     = str(payload['working_dir'], workspaceDir);
+            if (!operation) return { ok: false, output: '', errorOutput: 'operation is required (mv|rm|import|pull|list|show|unlock|push)' };
+
+            switch (operation) {
+                case 'mv': {
+                    const source = str(payload['source']);
+                    const dest   = str(payload['destination']);
+                    if (!source || !dest) return { ok: false, output: '', errorOutput: 'source and destination required for mv' };
+                    const args   = buildTfStateMvArgs({ source, destination: dest });
+                    const result = await runCommand(args, tfDir, 60_000);
+                    return safeJson({ ok: result.exitCode === 0, operation: 'mv', source, destination: dest, exit_code: result.exitCode, output: result.stdout, summary: result.exitCode === 0 ? `Moved "${source}" → "${dest}"` : result.stderr.slice(0, 200) });
+                }
+                case 'rm': {
+                    const address = str(payload['address']);
+                    if (!address) return { ok: false, output: '', errorOutput: 'address required for rm' };
+                    const dryRun  = payload['dry_run'] === true;
+                    const args    = buildTfStateRmArgs({ address, dryRun });
+                    const result  = await runCommand(args, tfDir, 60_000);
+                    return safeJson({ ok: result.exitCode === 0, operation: 'rm', address, dry_run: dryRun, exit_code: result.exitCode, output: result.stdout, summary: result.exitCode === 0 ? `Removed "${address}" from state${dryRun ? ' (dry-run)' : ''}.` : result.stderr.slice(0, 200) });
+                }
+                case 'import': {
+                    const address = str(payload['address']);
+                    const id      = str(payload['id']);
+                    if (!address || !id) return { ok: false, output: '', errorOutput: 'address and id required for import' };
+                    const args    = buildTfImportArgs({ address, id });
+                    const result  = await runCommand(args, tfDir, 120_000);
+                    return safeJson({ ok: result.exitCode === 0, operation: 'import', address, id, exit_code: result.exitCode, output: result.stdout, summary: result.exitCode === 0 ? `Imported "${id}" as "${address}".` : result.stderr.slice(0, 200) });
+                }
+                case 'pull': {
+                    const args   = buildTfStatePullArgs();
+                    const result = await runCommand(args, tfDir, 30_000);
+                    const parsed = parseTfStatePull(result.stdout);
+                    return safeJson({ ok: result.exitCode === 0, operation: 'pull', resource_count: parsed?.resources.length ?? 0, state: parsed, summary: parsed ? `State pulled: ${parsed.resources.length} resource(s).` : 'Failed to parse state.' });
+                }
+                case 'list': {
+                    const address = str(payload['address']) || undefined;
+                    const args    = buildTfStateListArgs(address);
+                    const result  = await runCommand(args, tfDir, 30_000);
+                    const items   = parseTfStateList(result.stdout);
+                    return safeJson({ ok: result.exitCode === 0, operation: 'list', resources: items, count: items.length, summary: `${items.length} resource(s) in state.` });
+                }
+                case 'show': {
+                    const address = str(payload['address']);
+                    if (!address) return { ok: false, output: '', errorOutput: 'address required for show' };
+                    const args    = buildTfStateShowArgs(address);
+                    const result  = await runCommand(args, tfDir, 30_000);
+                    return safeJson({ ok: result.exitCode === 0, operation: 'show', address, output: result.stdout, summary: result.exitCode === 0 ? `Shown state for "${address}".` : result.stderr.slice(0, 200) });
+                }
+                case 'unlock': {
+                    const lockId = str(payload['lock_id']);
+                    if (!lockId) return { ok: false, output: '', errorOutput: 'lock_id required for unlock' };
+                    const args   = buildTfStateUnlockArgs(lockId);
+                    const result = await runCommand(args, tfDir, 30_000);
+                    return safeJson({ ok: result.exitCode === 0, operation: 'unlock', lock_id: lockId, exit_code: result.exitCode, summary: result.exitCode === 0 ? `Lock ${lockId} released.` : result.stderr.slice(0, 200) });
+                }
+                case 'push': {
+                    const localPath = str(payload['local_state_path']);
+                    if (!localPath) return { ok: false, output: '', errorOutput: 'local_state_path required for push' };
+                    const force  = payload['force'] === true;
+                    const args   = buildTfStatePushArgs(localPath, force);
+                    const result = await runCommand(args, tfDir, 60_000);
+                    return safeJson({ ok: result.exitCode === 0, operation: 'push', local_state_path: localPath, force, exit_code: result.exitCode, summary: result.exitCode === 0 ? 'State pushed successfully.' : result.stderr.slice(0, 200) });
+                }
+                case 'llm_plan': {
+                    // Use LLM to determine the right state operations from natural language
+                    const userIntent = str(payload['intent']);
+                    if (!userIntent) return { ok: false, output: '', errorOutput: 'intent required for llm_plan' };
+                    const listResult = await runCommand(buildTfStateListArgs(), tfDir, 30_000);
+                    const stateList  = parseTfStateList(listResult.stdout);
+                    const prompt     = buildTfStateOpPrompt({ userIntent, stateList, operation: (str(payload['op_type'], 'mv')) as 'mv' | 'rm' | 'import' });
+                    const llmRaw     = await callLlmSafe(callLlm, prompt, 'You are a Terraform state expert. Return JSON only.');
+                    const plan       = parseTfStateOpPlan(llmRaw);
+                    return safeJson({ ok: true, operation: 'llm_plan', operations: plan.operations, explanation: plan.explanation, summary: plan.explanation });
+                }
+                default:
+                    return { ok: false, output: '', errorOutput: `Unknown tf_state operation: ${operation}` };
+            }
+        }
+
+        // ====================================================================
+        // workspace_devops_k8s_rbac
+        // payload: action (generate|apply|audit), service_name (required for generate),
+        //          namespace (required), description? (for LLM generate),
+        //          aws_role_arn? (IRSA), cluster_wide?, output_dir?
+        // ====================================================================
+        case 'workspace_devops_k8s_rbac': {
+            const rbacAction  = str(payload['action'], 'generate');
+            const namespace   = str(payload['namespace'], 'default');
+            const serviceName = str(payload['service_name']);
+            const outputDir   = str(payload['output_dir'], '.');
+
+            if (rbacAction === 'generate') {
+                if (!serviceName) return { ok: false, output: '', errorOutput: 'service_name required for generate' };
+
+                let files: Array<{ filename: string; content: string }> = [];
+
+                if (callLlm && str(payload['description'])) {
+                    // LLM-driven generation from description
+                    const prompt  = buildRbacGeneratePrompt({
+                        serviceName,
+                        namespace,
+                        description:  str(payload['description']),
+                        awsRoleArn:   str(payload['aws_role_arn']) || undefined,
+                        clusterWide:  payload['cluster_wide'] === true,
+                    });
+                    const llmRaw  = await callLlmSafe(callLlm, prompt, 'You are a Kubernetes security engineer. Return JSON only.');
+                    files = parseRbacManifests(llmRaw);
+                } else {
+                    // Direct YAML generation without LLM
+                    const awsRoleArn = str(payload['aws_role_arn']) || undefined;
+                    const sa   = buildServiceAccountYaml({ name: serviceName, namespace, awsRoleArn });
+                    const role = payload['cluster_wide'] === true
+                        ? buildClusterRoleYaml({ name: `${serviceName}-role`, rules: [{ apiGroups: [''], resources: ['pods', 'configmaps'], verbs: ['get', 'list', 'watch'] }] })
+                        : buildRoleYaml({ name: `${serviceName}-role`, namespace, rules: [{ apiGroups: [''], resources: ['pods', 'configmaps'], verbs: ['get', 'list', 'watch'] }] });
+                    const binding = payload['cluster_wide'] === true
+                        ? buildClusterRoleBindingYaml({ name: `${serviceName}-rolebinding`, clusterRole: `${serviceName}-role`, subjects: [{ kind: 'ServiceAccount', name: serviceName, namespace }] })
+                        : buildRoleBindingYaml({ name: `${serviceName}-rolebinding`, namespace, roleName: `${serviceName}-role`, subjects: [{ kind: 'ServiceAccount', name: serviceName }] });
+                    files = [
+                        { filename: `${serviceName}-serviceaccount.yaml`, content: sa },
+                        { filename: `${serviceName}-role.yaml`,           content: role },
+                        { filename: `${serviceName}-rolebinding.yaml`,    content: binding },
+                    ];
+                }
+
+                const written: string[] = [];
+                for (const f of files) {
+                    const fp = outputDir !== '.' ? `${outputDir}/${f.filename}` : f.filename;
+                    await executeAction('workspace_write_file', { file_path: fp, content: f.content });
+                    written.push(fp);
+                }
+                return safeJson({ ok: true, action: 'generate', service_name: serviceName, namespace, files_written: written, file_count: written.length, summary: `Generated ${written.length} RBAC manifest(s) for "${serviceName}".` });
+            }
+
+            if (rbacAction === 'apply') {
+                if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+                const manifestPath = str(payload['manifest_path']);
+                if (!manifestPath) return { ok: false, output: '', errorOutput: 'manifest_path required for apply' };
+                const args   = buildKubectlApplyArgs(manifestPath, namespace);
+                const result = await runCommand(args, workspaceDir, 30_000);
+                return safeJson({ ok: result.exitCode === 0, action: 'apply', namespace, exit_code: result.exitCode, output: result.stdout, summary: result.exitCode === 0 ? `RBAC manifests applied.` : result.stderr.slice(0, 200) });
+            }
+
+            if (rbacAction === 'audit') {
+                if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+                const checks  = buildRbacAuditChecks(serviceName, namespace);
+                const results: Array<{ verb: string; resource: string; allowed: boolean }> = [];
+                for (const c of checks) {
+                    const r = await runCommand(c.args, workspaceDir, 10_000);
+                    results.push({ verb: c.verb, resource: c.resource, allowed: r.stdout.trim() === 'yes' });
+                }
+                const allowed = results.filter((r) => r.allowed).length;
+                return safeJson({ ok: true, action: 'audit', service_account: serviceName, namespace, checks: results, allowed_count: allowed, total_count: results.length, summary: `${serviceName}: ${allowed}/${results.length} permission checks passed.` });
+            }
+
+            return { ok: false, output: '', errorOutput: `Unknown rbac action: ${rbacAction}` };
+        }
+
+        // ====================================================================
+        // workspace_devops_grafana_dashboard
+        // payload: action (generate|push), service_or_app (required),
+        //          description?, metrics? (array), namespace?, datasource?,
+        //          grafana_url?, grafana_api_key?, folder_id?, output_file?
+        // ====================================================================
+        case 'workspace_devops_grafana_dashboard': {
+            const dashAction   = str(payload['action'], 'generate');
+            const serviceOrApp = str(payload['service_or_app']);
+            if (!serviceOrApp) return { ok: false, output: '', errorOutput: 'service_or_app is required' };
+
+            const metrics = Array.isArray(payload['metrics'])
+                ? (payload['metrics'] as string[]) : [`${serviceOrApp}_requests_total`, `${serviceOrApp}_request_duration_seconds`];
+
+            const panels = Array.isArray(payload['panels'])
+                ? (payload['panels'] as GrafanaPanel[]) : undefined;
+
+            const prompt = buildGrafanaDashboardPrompt({
+                serviceOrApp,
+                description:  str(payload['description'], `Dashboard for ${serviceOrApp}`),
+                metrics,
+                namespace:    str(payload['namespace']) || undefined,
+                datasource:   str(payload['datasource']) || undefined,
+                panels,
+            });
+
+            const llmRaw  = await callLlmSafe(callLlm, prompt, 'You are a Grafana dashboard expert. Return valid Grafana dashboard JSON only.');
+            const dashboard = parseGrafanaDashboard(llmRaw);
+
+            if (!dashboard) {
+                return safeJson({ ok: false, action: dashAction, service_or_app: serviceOrApp, summary: 'Failed to generate Grafana dashboard JSON from LLM output.' });
+            }
+
+            const outFile = str(payload['output_file'], `${serviceOrApp}-dashboard.json`);
+            await executeAction('workspace_write_file', { file_path: outFile, content: JSON.stringify(dashboard, null, 2) });
+
+            // Optionally push to Grafana API
+            if (dashAction === 'push') {
+                const grafanaUrl    = str(payload['grafana_url']);
+                const grafanaApiKey = str(payload['grafana_api_key']);
+                const folderId      = num(payload['folder_id'], 0);
+                if (!grafanaUrl || !grafanaApiKey) {
+                    return safeJson({ ok: false, action: 'push', service_or_app: serviceOrApp, summary: 'grafana_url and grafana_api_key required for push.' });
+                }
+                const apiPayload = buildGrafanaDashboardApiPayload(dashboard, folderId);
+                if (runCommand) {
+                    const curlArgs = ['curl', '-s', '-X', 'POST', `${grafanaUrl}/api/dashboards/db`,
+                        '-H', 'Content-Type: application/json',
+                        '-H', `Authorization: Bearer ${grafanaApiKey}`,
+                        '-d', JSON.stringify(apiPayload)];
+                    const result = await runCommand(curlArgs, workspaceDir, 30_000);
+                    return safeJson({ ok: result.exitCode === 0, action: 'push', service_or_app: serviceOrApp, response: result.stdout.slice(0, 500), file_written: outFile, summary: result.exitCode === 0 ? `Dashboard pushed to Grafana for "${serviceOrApp}".` : result.stderr.slice(0, 200) });
+                }
+            }
+
+            return safeJson({ ok: true, action: 'generate', service_or_app: serviceOrApp, file_written: outFile, panel_count: Array.isArray(dashboard['panels']) ? (dashboard['panels'] as unknown[]).length : 0, summary: `Grafana dashboard generated for "${serviceOrApp}" → ${outFile}` });
+        }
+
+        // ====================================================================
+        // workspace_devops_alert_rule
+        // payload: backend (prometheus|datadog|pagerduty, default: prometheus),
+        //          service_or_app (required), description?, namespace?,
+        //          slos? (array), output_dir?, name?
+        //          [datadog] critical_threshold?, warning_threshold?, notify_channels?
+        //          [pagerduty] escalation_policy_id?, urgency?
+        // ====================================================================
+        case 'workspace_devops_alert_rule': {
+            const backend      = str(payload['backend'], 'prometheus') as 'prometheus' | 'datadog' | 'pagerduty';
+            const serviceOrApp = str(payload['service_or_app']);
+            if (!serviceOrApp) return { ok: false, output: '', errorOutput: 'service_or_app is required' };
+            const outputDir    = str(payload['output_dir'], '.');
+
+            if (backend === 'prometheus') {
+                // Check if direct rules were provided, otherwise use LLM
+                const directGroups = Array.isArray(payload['groups']) ? (payload['groups'] as Array<{ name: string; rules: PrometheusAlertRule[] }>) : null;
+
+                let files: Array<{ filename: string; content: string }>;
+                if (directGroups) {
+                    const ruleName = str(payload['name'], `${serviceOrApp}-alert-rules`);
+                    const namespace = str(payload['namespace'], 'default');
+                    const crd = buildPrometheusRuleCrd({ name: ruleName, namespace, groups: directGroups });
+                    files = [{ filename: `${ruleName}.yaml`, content: crd }];
+                } else {
+                    const slos = Array.isArray(payload['slos']) ? (payload['slos'] as Array<{ metric: string; threshold: number; window: string }>) : undefined;
+                    const prompt  = buildAlertRulePrompt({ serviceOrApp, description: str(payload['description'], `Alerting rules for ${serviceOrApp}`), namespace: str(payload['namespace']) || undefined, slos });
+                    const llmRaw  = await callLlmSafe(callLlm, prompt, 'You are a Prometheus alerting expert. Return JSON only.');
+                    files = parseAlertRuleOutput(llmRaw);
+                }
+
+                const written: string[] = [];
+                for (const f of files) {
+                    const fp = outputDir !== '.' ? `${outputDir}/${f.filename}` : f.filename;
+                    await executeAction('workspace_write_file', { file_path: fp, content: f.content });
+                    written.push(fp);
+                }
+                return safeJson({ ok: true, backend, service: serviceOrApp, files_written: written, file_count: written.length, summary: `Generated ${written.length} Prometheus alert rule file(s) for "${serviceOrApp}".` });
+            }
+
+            if (backend === 'datadog') {
+                const notifyChannels = Array.isArray(payload['notify_channels']) ? (payload['notify_channels'] as string[]) : undefined;
+                const monitor = buildDatadogMonitorPayload({
+                    name:               str(payload['name'], `${serviceOrApp} error rate`),
+                    service:            serviceOrApp,
+                    description:        str(payload['description'], `Monitor for ${serviceOrApp}`),
+                    criticalThreshold:  typeof payload['critical_threshold'] === 'number' ? payload['critical_threshold'] as number : undefined,
+                    warningThreshold:   typeof payload['warning_threshold']  === 'number' ? payload['warning_threshold']  as number : undefined,
+                    notifyChannels,
+                });
+                const outFile = str(payload['output_file'], `${serviceOrApp}-datadog-monitor.json`);
+                await executeAction('workspace_write_file', { file_path: outFile, content: JSON.stringify(monitor, null, 2) });
+                return safeJson({ ok: true, backend, service: serviceOrApp, monitor, file_written: outFile, summary: `Datadog monitor payload generated for "${serviceOrApp}".` });
+            }
+
+            if (backend === 'pagerduty') {
+                const escalationPolicyId = str(payload['escalation_policy_id']);
+                if (!escalationPolicyId) return { ok: false, output: '', errorOutput: 'escalation_policy_id required for pagerduty backend' };
+                const service = buildPagerDutyServicePayload({
+                    name:               str(payload['name'], serviceOrApp),
+                    description:        str(payload['description'], `PagerDuty service for ${serviceOrApp}`),
+                    escalationPolicyId,
+                    urgency:            (str(payload['urgency'], 'high')) as 'high' | 'low',
+                });
+                const outFile = str(payload['output_file'], `${serviceOrApp}-pagerduty-service.json`);
+                await executeAction('workspace_write_file', { file_path: outFile, content: JSON.stringify(service, null, 2) });
+                return safeJson({ ok: true, backend, service: serviceOrApp, pd_service: service, file_written: outFile, summary: `PagerDuty service payload generated for "${serviceOrApp}".` });
+            }
+
+            return { ok: false, output: '', errorOutput: `Unknown alert_rule backend: ${backend}` };
+        }
+
+        // ====================================================================
+        // workspace_devops_blue_green
+        // payload: action (generate|switch|scale_down),
+        //          app_name (required), namespace, blue_image, green_image,
+        //          port, replicas?, to_color? (for switch), output_dir?
+        // ====================================================================
+        case 'workspace_devops_blue_green': {
+            const bgAction  = str(payload['action'], 'generate');
+            const appName   = str(payload['app_name']);
+            const namespace = str(payload['namespace'], 'default');
+            if (!appName)   return { ok: false, output: '', errorOutput: 'app_name is required' };
+
+            if (bgAction === 'generate') {
+                const blueImage  = str(payload['blue_image']);
+                const greenImage = str(payload['green_image']);
+                const port       = num(payload['port'], 8080);
+                const outputDir  = str(payload['output_dir'], '.');
+                if (!blueImage || !greenImage) {
+                    // Fall back to LLM-based generation
+                    const prompt = buildDeploymentStrategyPrompt({
+                        appName,
+                        description:  str(payload['description'], `Blue/green deployment for ${appName}`),
+                        strategy:     'blue_green',
+                        image:        greenImage || blueImage || `${appName}:latest`,
+                        port:         port || 8080,
+                        namespace,
+                        currentImage: blueImage || undefined,
+                        replicas:     num(payload['replicas'], 2),
+                    });
+                    const llmRaw = await callLlmSafe(callLlm, prompt, 'You are a Kubernetes deployment expert. Return JSON only.');
+                    const parsed = parseDeploymentStrategyOutput(llmRaw);
+                    const written: string[] = [];
+                    for (const f of parsed) {
+                        const fp = outputDir !== '.' ? `${outputDir}/${f.filename}` : f.filename;
+                        await executeAction('workspace_write_file', { file_path: fp, content: f.content });
+                        written.push(fp);
+                    }
+                    return safeJson({ ok: true, action: 'generate', strategy: 'blue_green', app_name: appName, files_written: written, summary: `Generated ${written.length} blue/green manifest(s) for "${appName}" via LLM.` });
+                }
+
+                const manifests = buildBlueGreenManifests({
+                    appName, namespace, blueImage, greenImage, port,
+                    replicas: num(payload['replicas'], 2),
+                    resources: payload['resources'] ? (payload['resources'] as { cpu: string; memory: string }) : undefined,
+                });
+                const written: string[] = [];
+                for (const f of manifests) {
+                    const fp = outputDir !== '.' ? `${outputDir}/${f.filename}` : f.filename;
+                    await executeAction('workspace_write_file', { file_path: fp, content: f.content });
+                    written.push(fp);
+                }
+                return safeJson({ ok: true, action: 'generate', strategy: 'blue_green', app_name: appName, files_written: written, file_count: written.length, summary: `Generated ${written.length} blue/green manifests for "${appName}".` });
+            }
+
+            if (bgAction === 'switch') {
+                if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+                const toColor = (str(payload['to_color'], 'green')) as 'blue' | 'green';
+                const args    = buildBlueGreenSwitchArgs({ appName, namespace, toColor });
+                const result  = await runCommand(args, workspaceDir, 15_000);
+                return safeJson({ ok: result.exitCode === 0, action: 'switch', app_name: appName, to_color: toColor, exit_code: result.exitCode, output: result.stdout, summary: result.exitCode === 0 ? `Active service for "${appName}" switched to ${toColor}.` : result.stderr.slice(0, 200) });
+            }
+
+            if (bgAction === 'scale_down') {
+                if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+                const color  = (str(payload['color'], 'blue')) as 'blue' | 'green';
+                const args   = buildScaleDownArgs(appName, color, namespace);
+                const result = await runCommand(args, workspaceDir, 15_000);
+                return safeJson({ ok: result.exitCode === 0, action: 'scale_down', app_name: appName, color, exit_code: result.exitCode, output: result.stdout, summary: result.exitCode === 0 ? `Scaled down "${appName}-${color}" to 0 replicas.` : result.stderr.slice(0, 200) });
+            }
+
+            return { ok: false, output: '', errorOutput: `Unknown blue_green action: ${bgAction}` };
+        }
+
+        // ====================================================================
+        // workspace_devops_canary
+        // payload: action (generate|promote|abort|status),
+        //          app_name (required), namespace, image, port, replicas?,
+        //          use_argo_rollouts? (default: true), use_istio?,
+        //          steps? (CanaryStep array), stable_weight?, canary_weight?,
+        //          output_dir?, watch? (for status)
+        // ====================================================================
+        case 'workspace_devops_canary': {
+            const canaryAction = str(payload['action'], 'generate');
+            const appName      = str(payload['app_name']);
+            const namespace    = str(payload['namespace'], 'default');
+            if (!appName)      return { ok: false, output: '', errorOutput: 'app_name is required' };
+
+            if (canaryAction === 'generate') {
+                const image    = str(payload['image'], `${appName}:latest`);
+                const port     = num(payload['port'], 8080);
+                const outputDir = str(payload['output_dir'], '.');
+                const useArgo  = payload['use_argo_rollouts'] !== false;
+                const useIstio = payload['use_istio'] === true;
+                const steps    = Array.isArray(payload['steps']) ? (payload['steps'] as CanaryStep[]) : undefined;
+
+                if (useIstio) {
+                    const stableWeight = num(payload['stable_weight'], 90);
+                    const canaryWeight = num(payload['canary_weight'], 10);
+                    const manifests = buildIstioTrafficSplitManifests({ appName, namespace, stableWeight, canaryWeight, port });
+                    const written: string[] = [];
+                    for (const f of manifests) {
+                        const fp = outputDir !== '.' ? `${outputDir}/${f.filename}` : f.filename;
+                        await executeAction('workspace_write_file', { file_path: fp, content: f.content });
+                        written.push(fp);
+                    }
+                    return safeJson({ ok: true, action: 'generate', strategy: 'canary_istio', app_name: appName, stable_weight: stableWeight, canary_weight: canaryWeight, files_written: written, summary: `Generated Istio canary traffic split for "${appName}" (${stableWeight}/${canaryWeight}).` });
+                }
+
+                if (useArgo) {
+                    const manifest = buildArgoRolloutsManifest({ appName, namespace, image, port, replicas: num(payload['replicas'], 3), steps });
+                    const fileName = `${appName}-rollout.yaml`;
+                    const fp       = outputDir !== '.' ? `${outputDir}/${fileName}` : fileName;
+                    await executeAction('workspace_write_file', { file_path: fp, content: manifest });
+                    return safeJson({ ok: true, action: 'generate', strategy: 'canary_argo', app_name: appName, file_written: fp, step_count: steps?.length ?? 9, summary: `Generated Argo Rollouts canary manifest for "${appName}" → ${fp}` });
+                }
+
+                // LLM-driven fallback
+                const prompt = buildDeploymentStrategyPrompt({ appName, description: str(payload['description'], `Canary deployment for ${appName}`), strategy: 'canary', image, port, namespace, replicas: num(payload['replicas'], 3), useArgoRollouts: useArgo, useIstio });
+                const llmRaw = await callLlmSafe(callLlm, prompt, 'You are a Kubernetes deployment expert. Return JSON only.');
+                const parsed = parseDeploymentStrategyOutput(llmRaw);
+                const written: string[] = [];
+                for (const f of parsed) {
+                    const fp = outputDir !== '.' ? `${outputDir}/${f.filename}` : f.filename;
+                    await executeAction('workspace_write_file', { file_path: fp, content: f.content });
+                    written.push(fp);
+                }
+                return safeJson({ ok: true, action: 'generate', strategy: 'canary', app_name: appName, files_written: written, summary: `Generated ${written.length} canary manifest(s) for "${appName}" via LLM.` });
+            }
+
+            if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+
+            if (canaryAction === 'promote') {
+                const fullPromote = payload['full_promote'] === true;
+                const args        = buildArgoRolloutsPromoteArgs(appName, namespace, fullPromote);
+                const result      = await runCommand(args, workspaceDir, 30_000);
+                return safeJson({ ok: result.exitCode === 0, action: 'promote', app_name: appName, full_promote: fullPromote, exit_code: result.exitCode, summary: result.exitCode === 0 ? `Canary rollout "${appName}" promoted${fullPromote ? ' (full)' : ''}.` : result.stderr.slice(0, 200) });
+            }
+
+            if (canaryAction === 'abort') {
+                const args   = buildArgoRolloutsAbortArgs(appName, namespace);
+                const result = await runCommand(args, workspaceDir, 30_000);
+                return safeJson({ ok: result.exitCode === 0, action: 'abort', app_name: appName, exit_code: result.exitCode, summary: result.exitCode === 0 ? `Canary rollout "${appName}" aborted and rolled back.` : result.stderr.slice(0, 200) });
+            }
+
+            if (canaryAction === 'status') {
+                const watch  = payload['watch'] === true;
+                const args   = buildArgoRolloutsStatusArgs(appName, namespace, watch);
+                const result = await runCommand(args, workspaceDir, watch ? 120_000 : 30_000);
+                return safeJson({ ok: result.exitCode === 0, action: 'status', app_name: appName, output: result.stdout, summary: result.exitCode === 0 ? `Rollout status for "${appName}" retrieved.` : result.stderr.slice(0, 200) });
+            }
+
+            return { ok: false, output: '', errorOutput: `Unknown canary action: ${canaryAction}` };
         }
     }
 }

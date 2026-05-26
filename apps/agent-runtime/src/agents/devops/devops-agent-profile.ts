@@ -129,6 +129,20 @@ export const DEVOPS_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = [
     // ── Gap 10 — Secret Rotation & Cert Renewal ───────────────────────────────
     'workspace_devops_secret_rotate',
     'workspace_devops_cert_renew',
+    // ── P1 Gap 1 — Cloud CLI (AWS / Azure / GCP) ──────────────────────────────
+    'workspace_devops_aws_cli',
+    'workspace_devops_az_cli',
+    'workspace_devops_gcloud_cli',
+    // ── P1 Gap 2 — Terraform State Management ─────────────────────────────────
+    'workspace_devops_tf_state',
+    // ── P1 Gap 3 — Kubernetes RBAC ────────────────────────────────────────────
+    'workspace_devops_k8s_rbac',
+    // ── P1 Gap 4 — Observability Management ───────────────────────────────────
+    'workspace_devops_grafana_dashboard',
+    'workspace_devops_alert_rule',
+    // ── P1 Gap 5 — Deployment Strategy Builder ────────────────────────────────
+    'workspace_devops_blue_green',
+    'workspace_devops_canary',
 ];
 
 // ---------------------------------------------------------------------------
@@ -161,6 +175,9 @@ export const DEVOPS_ROLE_HIGH_RISK_ACTIONS: ReadonlyArray<string> = [
     'workspace_devops_pipeline_trigger',
     // Secret rotation (may break dependents)
     'workspace_devops_secret_rotate',
+    // Blue/green and canary — affect production traffic routing
+    'workspace_devops_blue_green',
+    'workspace_devops_canary',
     // Inherited developer high-risk
     'workspace_autonomous_plan_execute',
     'workspace_github_issue_fix',
