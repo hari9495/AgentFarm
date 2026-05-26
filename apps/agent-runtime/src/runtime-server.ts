@@ -871,7 +871,7 @@ const ROLE_CONNECTOR_POLICY: Record<RoleKey, RuntimeConnectorType[]> = {
     marketing_specialist: ['teams', 'email'],
     corporate_assistant: [...CORPORATE_ASSISTANT_ROLE_ALLOWED_CONNECTORS],
     customer_support_executive: ['jira', 'teams', 'email'],
-    project_manager_product_owner_scrum_master: ['jira', 'teams', 'github', 'email'],
+    project_manager_product_owner_scrum_master: ['jira', 'linear', 'slack', 'teams', 'github', 'email'],
 };
 
 const CONNECTOR_ACTION_POLICY: Partial<Record<RuntimeConnectorType, RuntimeConnectorActionType[]>> = {
@@ -1124,14 +1124,57 @@ const LOCAL_WORKSPACE_ACTION_POLICY: Record<RoleKey, RuntimeLocalWorkspaceAction
         'workspace_pr_review_poll',
     ],
     tester: [...TESTER_ROLE_ALLOWED_LOCAL_ACTIONS],
-    business_analyst: [],
+    business_analyst: [
+        'code_read',
+        // BA domain actions (Tier 45)
+        'workspace_ba_draft_brd',
+        'workspace_ba_draft_user_story',
+        'workspace_ba_finalize_brd',
+        'workspace_ba_finalize_acceptance_criteria',
+        'workspace_ba_process_map',
+        'workspace_ba_gap_analysis',
+        'workspace_ba_impact_analysis',
+        'workspace_ba_solution_eval',
+        'workspace_ba_stakeholder_update',
+        'workspace_ba_uat_checklist',
+        'workspace_ba_elicit_requirements',
+        'share_spec_external',
+        'workspace_ba_proactive_ac_check',
+        'workspace_ba_proactive_epic_check',
+        'workspace_ba_proactive_conflict_scan',
+        'workspace_ba_rtm_generate',
+    ],
     technical_writer: [...TECHNICAL_WRITER_ROLE_ALLOWED_LOCAL_ACTIONS],
     content_writer: [...CONTENT_WRITER_ROLE_ALLOWED_LOCAL_ACTIONS],
     sales_rep: [...SALES_REP_ROLE_ALLOWED_LOCAL_ACTIONS],
     marketing_specialist: [],
     corporate_assistant: [...CORPORATE_ASSISTANT_ROLE_ALLOWED_LOCAL_ACTIONS],
     customer_support_executive: [],
-    project_manager_product_owner_scrum_master: ['code_read'],
+    project_manager_product_owner_scrum_master: [
+        'code_read',
+        // PM / Scrum Master domain actions (Tier 44)
+        'workspace_pm_project_charter',
+        'workspace_pm_status_report',
+        'workspace_pm_risk_register',
+        'workspace_pm_dependency_map',
+        'workspace_pm_change_request',
+        'workspace_pm_milestone_plan',
+        'workspace_pm_budget_forecast',
+        'workspace_pm_sprint_plan',
+        'workspace_pm_backlog_groom',
+        'workspace_pm_velocity_report',
+        'workspace_pm_standup_summary',
+        'workspace_pm_retrospective',
+        'workspace_pm_impediment_log',
+        'workspace_pm_ceremony_agenda',
+        'workspace_pm_proactive_blocker_scan',
+        'workspace_pm_proactive_scope_drift',
+        // Scheduling + cross-agent orchestration (Tier 44 ext)
+        'workspace_pm_schedule_standup',
+        'workspace_pm_handoff_to_developer',
+        'workspace_pm_handoff_to_tester',
+        'workspace_pm_check_handoff_status',
+    ],
 };
 
 const getAllowedActionsForRole = (roleKey: RoleKey): string[] => {
@@ -6152,6 +6195,87 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         emitRuntimeEvent('runtime.task_intake_queued', configCache, {
             task_id: taskId,
             queue_depth: workerLoop.queuedTasks.length,
+        });
+
+        return reply.code(202).send({
+            status: 'queued',
+            task_id: taskId,
+            queue_depth: workerLoop.queuedTasks.length,
+        });
+    });
+
+    // -------------------------------------------------------------------------
+    // POST /run-task  — schedule-sweep compatibility alias
+    //
+    // The trigger-service schedule-sweep posts here with:
+    //   { tenantId, goal (JSON string), agentId, triggeredBy, scheduleId }
+    //
+    // We parse `goal`, merge its fields into a payload, then push directly onto
+    // workerLoop.queuedTasks — no pre-registered task_id required.
+    // -------------------------------------------------------------------------
+    app.post<{
+        Body: {
+            tenantId?: string;
+            goal?: string;
+            agentId?: string;
+            triggeredBy?: string;
+            scheduleId?: string;
+        };
+    }>('/run-task', async (request, reply) => {
+        if (!startupCompleted || (runtimeState !== 'active' && runtimeState !== 'degraded')) {
+            return reply.code(409).send({ error: 'runtime_not_ready', state: runtimeState });
+        }
+
+        const { tenantId, goal, agentId, triggeredBy = 'schedule', scheduleId } = request.body ?? {};
+
+        if (!goal) {
+            return reply.code(400).send({ error: 'goal is required' });
+        }
+
+        let goalFields: Record<string, unknown> = {};
+        try {
+            goalFields = JSON.parse(goal) as Record<string, unknown>;
+        } catch {
+            return reply.code(400).send({ error: 'goal must be a valid JSON string' });
+        }
+
+        // Log a warning when the agentId doesn't match this runtime's configured bot,
+        // but still accept the task — the runtime may be running in multi-tenant mode.
+        if (agentId && configCache?.botId && agentId !== configCache.botId) {
+            emitRuntimeEvent('runtime.run_task_agent_mismatch', configCache, {
+                expected: configCache.botId,
+                received: agentId,
+                scheduleId: scheduleId ?? '',
+            });
+        }
+
+        const taskId = createHash('sha1')
+            .update(`${scheduleId ?? 'sched'}:${now()}`)
+            .digest('hex')
+            .slice(0, 24);
+
+        const payload: Record<string, unknown> = {
+            ...goalFields,
+            tenantId: tenantId ?? goalFields['tenantId'],
+            triggeredBy,
+        };
+        if (scheduleId) payload['scheduleId'] = scheduleId;
+        if (agentId) payload['agentId'] = agentId;
+
+        const scopeCheck = advancedFeatures.validateTaskScope(payload);
+        if (!scopeCheck.allowed) {
+            return reply.code(403).send({
+                error: 'scope_constraint_blocked',
+                out_of_scope_paths: scopeCheck.outOfScopePaths,
+            });
+        }
+
+        workerLoop.queuedTasks.push({ taskId, payload, enqueuedAt: now() });
+
+        emitRuntimeEvent('runtime.task_intake_queued', configCache, {
+            task_id: taskId,
+            queue_depth: workerLoop.queuedTasks.length,
+            source: 'schedule_sweep',
         });
 
         return reply.code(202).send({

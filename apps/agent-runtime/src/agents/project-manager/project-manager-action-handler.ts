@@ -980,7 +980,7 @@ async function handleRetrospective(params: PmActionParams): Promise<PmActionResu
 }
 
 async function handleImpedimentLog(params: PmActionParams): Promise<PmActionResult> {
-    const { tenantId, workspaceId, payload, gatewayBaseUrl, serviceToken, executeAction } = params;
+    const { tenantId, workspaceId, payload, gatewayBaseUrl, serviceToken, connectorClient } = params;
 
     const blockerId = str(payload['blocker_id'], `IMP-${Date.now()}`);
     const description = str(payload['description'], 'Blocker description not provided.');
@@ -1016,19 +1016,23 @@ async function handleImpedimentLog(params: PmActionParams): Promise<PmActionResu
         `_Logged by AgentFarm Scrum Master — ${new Date().toISOString().split('T')[0]}_`,
     ].join('\n');
 
-    // If executeAction is provided and Jira/Linear integration is configured, create a ticket
-    if (executeAction) {
+    // If connectorClient is provided and Jira/Linear integration is configured, create a ticket
+    if (connectorClient) {
         const ticketPlatform = str(payload['ticket_platform']);
         const projectKey = str(payload['project_key']);
         if (ticketPlatform && projectKey) {
             try {
-                await executeAction('create_task', {
-                    title: `[BLOCKER ${severity.toUpperCase()}] ${description.slice(0, 80)}`,
-                    description: `${description}\n\nImpact: ${impact}`,
-                    type: 'task',
-                    priority: severity === 'critical' ? 'high' : severity === 'major' ? 'medium' : 'low',
-                    labels: ['blocker', 'impediment'],
-                    project_key: projectKey,
+                await connectorClient({
+                    connectorType: ticketPlatform,
+                    actionType: 'create_task',
+                    payload: {
+                        title: `[BLOCKER ${severity.toUpperCase()}] ${description.slice(0, 80)}`,
+                        description: `${description}\n\nImpact: ${impact}`,
+                        type: 'task',
+                        priority: severity === 'critical' ? 'high' : severity === 'major' ? 'medium' : 'low',
+                        labels: ['blocker', 'impediment'],
+                        project_key: projectKey,
+                    },
                 });
             } catch {
                 // Non-fatal — ticket creation failure doesn't block impediment log

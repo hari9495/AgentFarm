@@ -60,6 +60,7 @@ import { handleArchResearchAction, isArchResearchActionType, type ArchResearchAc
 import { handleDesignScoreAction, isDesignScoreActionType, type DesignScoreActionType } from './agents/full-stack-developer/design-score-action-handler.js';
 import { handleContextSweepAction, isContextSweepActionType, type ContextSweepActionType } from './agents/developer/context-sweep-action-handler.js';
 import { handlePmAction, isPmActionType, type PmActionType } from './agents/project-manager/project-manager-action-handler.js';
+import { handleBaAction, isBaActionType, type BaActionType } from './agents/business-analyst/business-analyst-action-handler.js';
 import type { ProseCallerFn } from './agents/content-writer/llm-prose-writer.js';
 import { streamLLM } from './llm-decision-adapter.js';
 import { globalEpisodicMemory } from './episodic-memory.js';
@@ -499,7 +500,24 @@ export type LocalWorkspaceActionType =
     | 'workspace_pm_schedule_standup'
     | 'workspace_pm_handoff_to_developer'
     | 'workspace_pm_handoff_to_tester'
-    | 'workspace_pm_check_handoff_status';
+    | 'workspace_pm_check_handoff_status'
+    // Tier 45 (Business Analyst domain actions)
+    | 'workspace_ba_draft_brd'
+    | 'workspace_ba_draft_user_story'
+    | 'workspace_ba_finalize_brd'
+    | 'workspace_ba_finalize_acceptance_criteria'
+    | 'workspace_ba_process_map'
+    | 'workspace_ba_gap_analysis'
+    | 'workspace_ba_impact_analysis'
+    | 'workspace_ba_solution_eval'
+    | 'workspace_ba_stakeholder_update'
+    | 'workspace_ba_uat_checklist'
+    | 'workspace_ba_elicit_requirements'
+    | 'share_spec_external'
+    | 'workspace_ba_proactive_ac_check'
+    | 'workspace_ba_proactive_epic_check'
+    | 'workspace_ba_proactive_conflict_scan'
+    | 'workspace_ba_rtm_generate';
 
 export type LocalWorkspaceResult = {
     ok: boolean;
@@ -1153,6 +1171,23 @@ export const LOCAL_WORKSPACE_ACTION_TYPES = new Set<LocalWorkspaceActionType>([
     'workspace_pm_handoff_to_developer',
     'workspace_pm_handoff_to_tester',
     'workspace_pm_check_handoff_status',
+    // Tier 45 (Business Analyst domain actions)
+    'workspace_ba_draft_brd',
+    'workspace_ba_draft_user_story',
+    'workspace_ba_finalize_brd',
+    'workspace_ba_finalize_acceptance_criteria',
+    'workspace_ba_process_map',
+    'workspace_ba_gap_analysis',
+    'workspace_ba_impact_analysis',
+    'workspace_ba_solution_eval',
+    'workspace_ba_stakeholder_update',
+    'workspace_ba_uat_checklist',
+    'workspace_ba_elicit_requirements',
+    'share_spec_external',
+    'workspace_ba_proactive_ac_check',
+    'workspace_ba_proactive_epic_check',
+    'workspace_ba_proactive_conflict_scan',
+    'workspace_ba_rtm_generate',
 ]);
 
 // ---------------------------------------------------------------------------
@@ -14397,6 +14432,67 @@ export async function executeLocalWorkspaceAction(input: {
                 errorMessage: pmResult.errorOutput ? pmResult.errorOutput.slice(0, 200) : undefined,
             });
             return pmResult;
+        }
+
+        // Tier 45 — Business Analyst domain actions
+        case 'workspace_ba_draft_brd':
+        case 'workspace_ba_draft_user_story':
+        case 'workspace_ba_finalize_brd':
+        case 'workspace_ba_finalize_acceptance_criteria':
+        case 'workspace_ba_process_map':
+        case 'workspace_ba_gap_analysis':
+        case 'workspace_ba_impact_analysis':
+        case 'workspace_ba_solution_eval':
+        case 'workspace_ba_stakeholder_update':
+        case 'workspace_ba_uat_checklist':
+        case 'workspace_ba_elicit_requirements':
+        case 'share_spec_external':
+        case 'workspace_ba_proactive_ac_check':
+        case 'workspace_ba_proactive_epic_check':
+        case 'workspace_ba_proactive_conflict_scan':
+        case 'workspace_ba_rtm_generate': {
+            if (!isBaActionType(actionType)) {
+                return { ok: false, output: '', errorOutput: `Unrecognised BA action: ${actionType}` };
+            }
+            const baResult = await handleBaAction({
+                actionType: actionType as BaActionType,
+                tenantId,
+                botId,
+                taskId,
+                workspaceId: workspaceDir ?? taskId,
+                payload,
+                gatewayBaseUrl: typeof payload['gateway_base_url'] === 'string'
+                    ? payload['gateway_base_url']
+                    : process.env['GATEWAY_BASE_URL'] ?? 'http://localhost:3000',
+                serviceToken: typeof payload['service_token'] === 'string'
+                    ? payload['service_token']
+                    : process.env['SERVICE_TOKEN'] ?? '',
+                workspaceDir,
+                callLlm: buildTwLlmCallerFn(),
+                executeAction: (aType, aPayload) =>
+                    executeLocalWorkspaceAction({
+                        tenantId,
+                        botId,
+                        taskId,
+                        actionType: aType as LocalWorkspaceActionType,
+                        payload: aPayload,
+                        connectorActionExecuteClient,
+                    }),
+            });
+            const baTitle =
+                typeof payload['title'] === 'string' ? payload['title'] :
+                typeof payload['epic_title'] === 'string' ? payload['epic_title'] : actionType;
+            void globalEpisodicMemory.record({
+                taskId,
+                workspaceId: workspaceDir,
+                botId,
+                actionType,
+                promptSummary: baTitle.slice(0, 200),
+                outcome: baResult.ok ? 'success' : 'failed',
+                timestamp: Date.now(),
+                errorMessage: baResult.errorOutput ? baResult.errorOutput.slice(0, 200) : undefined,
+            });
+            return baResult;
         }
 
         default: {

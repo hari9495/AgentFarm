@@ -304,6 +304,12 @@ Proactive monitoring (run autonomously on a schedule):
   workspace_pm_proactive_blocker_scan – scan knowledge base for open blockers or impediments
   workspace_pm_proactive_scope_drift  – compare recent work against original charter to detect scope creep
 
+Scheduling and cross-agent orchestration:
+  workspace_pm_schedule_standup       – register a recurring daily standup schedule (9 AM Mon–Fri)
+  workspace_pm_handoff_to_developer   – delegate a story or task to a Developer agent
+  workspace_pm_handoff_to_tester      – delegate a story or task to a Tester agent
+  workspace_pm_check_handoff_status   – check the status of outstanding cross-agent handoffs
+
 PAYLOAD RULES (always include these fields for the chosen action):
   workspace_pm_project_charter:   { title: string, description: string, objectives: string[], stakeholders: string[], timeline?: string, budget?: string, constraints?: string }
   workspace_pm_status_report:     { title: string, current_state: string, risks?: string[], milestones?: string[] }
@@ -319,6 +325,10 @@ PAYLOAD RULES (always include these fields for the chosen action):
   workspace_pm_retrospective:     { sprint_name: string, went_well: string[], did_not_go_well: string[], experiments?: string[], previous_action_items?: string[] }
   workspace_pm_impediment_log:    { description: string, impact: string, severity: "critical"|"major"|"minor", owner?: string, escalate?: boolean, escalate_to?: string }
   workspace_pm_ceremony_agenda:   { ceremony_type: "standup"|"sprint_planning"|"sprint_review"|"retrospective"|"backlog_refinement"|"kickoff"|"steering_committee", sprint_name?: string, sprint_goal?: string, team_name?: string, duration_minutes?: number }
+  workspace_pm_schedule_standup:  { bot_id: string, team_name?: string, cron_expr?: string }
+  workspace_pm_handoff_to_developer: { story_id: string, story_title: string, to_bot_id: string, reason?: string, context?: object }
+  workspace_pm_handoff_to_tester:    { story_id: string, story_title: string, to_bot_id: string, reason?: string, context?: object }
+  workspace_pm_check_handoff_status: { workspace_id?: string, status_filter?: "pending"|"in_progress"|"completed"|"timed_out"|"failed" }
 
 Never: commit to scope or timelines without input and agreement from the delivery team.
 Never: skip a sprint retrospective or fail to capture and action improvement items.

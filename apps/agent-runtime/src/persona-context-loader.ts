@@ -89,6 +89,7 @@ import { getTesterDefaultPersona } from './agents/tester/tester-persona-defaults
 import { getTechnicalWriterDefaultPersona } from './agents/technical-writer/technical-writer-persona-defaults.js';
 import { getContentWriterDefaultPersona } from './agents/content-writer/content-writer-persona-defaults.js';
 import { getBusinessAnalystDefaultPersona } from './agents/business-analyst/business-analyst-persona-defaults.js';
+import { getProjectManagerDefaultPersona } from './agents/project-manager/project-manager-persona-defaults.js';
 
 /**
  * Load the persona for a bot, falling back to role-specific defaults when the
@@ -117,6 +118,9 @@ export async function loadPersonaForBotWithFallback(
     }
     if (role === 'business_analyst') {
         return getBusinessAnalystDefaultPersona(botId, tenantId);
+    }
+    if (role === 'project_manager_product_owner_scrum_master') {
+        return getProjectManagerDefaultPersona(botId, tenantId);
     }
 
     return null;
