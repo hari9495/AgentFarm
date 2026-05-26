@@ -1069,118 +1069,126 @@ _SARVAM_LANG_MAP: dict[str, str] = {
 }
 
 
-def _voicebox_tts(text: str, voice_id: str = "en-US-GuyNeural", lang: str = "en") -> bytes | None:
-    """Convert text to speech.
-    Priority:
-      Indian lang + SARVAM_API_KEY  → Sarvam AI  (best Indian quality, ~200ms)
-      ELEVENLABS_API_KEY             → ElevenLabs Flash v2.5 (~75ms, fastest)
-      OPENAI_API_KEY                 → OpenAI tts-1 (~400ms, reliable)
-      edge-tts                       → free fallback
-      espeak-ng                      → last resort
-    Returns WAV bytes or None on failure.
-    """
-    import asyncio, tempfile, io, base64
+# ---------------------------------------------------------------------------
+# TTS provider chain
+#
+# Each provider is an independently-testable function:
+#   (text, voice_id, lang) -> bytes | None
+#
+# _voicebox_tts() walks _TTS_PROVIDERS in order and returns the first
+# non-None result.  Adding a new provider = append one entry to the list.
+# ---------------------------------------------------------------------------
 
-    # ── Sarvam AI (Indian languages — best quality) ────────────────────────
-    _sarvam_code = _SARVAM_LANG_MAP.get(lang)
-    if SARVAM_API_KEY and _sarvam_code:
-        try:
-            import urllib.request as _ur, json as _js
-            # Sarvam has a 500-char input limit; truncate to avoid 400 errors
-            _sarvam_text = text[:500]
-            _payload = _js.dumps({
-                "inputs": [_sarvam_text],
-                "target_language_code": _sarvam_code,
-                "speaker": SARVAM_SPEAKER,
-                "model": "bulbul:v1",
-                "speech_sample_rate": 22050,
-                "enable_preprocessing": True,
-            }).encode()
-            _req = _ur.Request(
-                "https://api.sarvam.ai/text-to-speech",
-                data=_payload,
-                headers={"API-Subscription-Key": SARVAM_API_KEY, "Content-Type": "application/json"},
-                method="POST",
-            )
-            with _ur.urlopen(_req, timeout=10) as _resp:
-                _body = _js.loads(_resp.read())
-            _b64 = (_body.get("audios") or [None])[0] or _body.get("audio", "")
-            if _b64:
-                _wav = base64.b64decode(_b64)
-                logger.info("[tts] Sarvam ok (%s), %d bytes", _sarvam_code, len(_wav))
-                return _wav
-        except Exception as _exc:
-            import urllib.error as _ue
-            if isinstance(_exc, _ue.HTTPError):
-                try:
-                    _err_body = _exc.read().decode(errors="replace")
-                    logger.warning("[tts] Sarvam failed (%s) body=%s, trying next", _exc, _err_body[:200])
-                except Exception:
-                    pass
-            else:
-                logger.warning("[tts] Sarvam failed (%s), trying next", _exc)
+def _mp3_to_wav(mp3_bytes: bytes, timeout: int = 30) -> bytes | None:
+    """Convert MP3 bytes → WAV via ffmpeg. Returns None on failure."""
+    proc = subprocess.run(
+        ["ffmpeg", "-y", "-i", "pipe:0", "-f", "wav", "pipe:1"],
+        input=mp3_bytes, capture_output=True, timeout=timeout,
+    )
+    return proc.stdout if proc.returncode == 0 else None
 
-    # ── ElevenLabs Flash (fastest for non-Indian / fallback) ──────────────
-    if ELEVENLABS_API_KEY:
-        try:
-            import urllib.request as _ur, json as _js
-            _payload = _js.dumps({
-                "text": text,
-                "model_id": "eleven_flash_v2_5",
-                "voice_settings": {"stability": 0.5, "similarity_boost": 0.75},
-            }).encode()
-            _req = _ur.Request(
-                f"https://api.elevenlabs.io/v1/text-to-speech/{ELEVENLABS_VOICE_ID}",
-                data=_payload,
-                headers={"xi-api-key": ELEVENLABS_API_KEY, "Content-Type": "application/json", "Accept": "audio/mpeg"},
-                method="POST",
-            )
-            with _ur.urlopen(_req, timeout=10) as _resp:
-                _mp3 = _resp.read()
-            if _mp3:
-                _proc = subprocess.run(
-                    ["ffmpeg", "-y", "-i", "pipe:0", "-f", "wav", "pipe:1"],
-                    input=_mp3, capture_output=True, timeout=20,
-                )
-                if _proc.returncode == 0:
-                    logger.info("[tts] ElevenLabs ok, %d bytes", len(_proc.stdout))
-                    return _proc.stdout
-        except Exception as _exc:
-            logger.warning("[tts] ElevenLabs failed (%s), trying OpenAI", _exc)
 
-    # ── OpenAI tts-1 (reliable fallback) ──────────────────────────────────
-    if OPENAI_API_KEY:
-        try:
-            import urllib.request as _ur, json as _js
-            _payload = _js.dumps({
-                "model": "tts-1",
-                "input": text,
-                "voice": OPENAI_TTS_VOICE,
-                "response_format": "mp3",
-            }).encode()
-            _req = _ur.Request(
-                "https://api.openai.com/v1/audio/speech",
-                data=_payload,
-                headers={"Authorization": f"Bearer {OPENAI_API_KEY}", "Content-Type": "application/json"},
-                method="POST",
-            )
-            with _ur.urlopen(_req, timeout=15) as _resp:
-                _mp3 = _resp.read()
-            if _mp3:
-                _proc = subprocess.run(
-                    ["ffmpeg", "-y", "-i", "pipe:0", "-f", "wav", "pipe:1"],
-                    input=_mp3, capture_output=True, timeout=30,
-                )
-                if _proc.returncode == 0:
-                    logger.info("[tts] OpenAI ok, %d bytes", len(_proc.stdout))
-                    return _proc.stdout
-        except Exception as _exc:
-            logger.warning("[tts] OpenAI TTS failed (%s), trying edge-tts", _exc)
+def _tts_sarvam(text: str, voice_id: str, lang: str) -> bytes | None:
+    """Sarvam AI — best quality for Indian languages (~200 ms)."""
+    import urllib.request as _ur, urllib.error as _ue, json as _js
+    sarvam_code = _SARVAM_LANG_MAP.get(lang)
+    if not (SARVAM_API_KEY and sarvam_code):
+        return None
+    try:
+        payload = _js.dumps({
+            "inputs": [text[:500]],   # Sarvam has a 500-char limit
+            "target_language_code": sarvam_code,
+            "speaker": SARVAM_SPEAKER,
+            "model": "bulbul:v1",
+            "speech_sample_rate": 22050,
+            "enable_preprocessing": True,
+        }).encode()
+        req = _ur.Request(
+            "https://api.sarvam.ai/text-to-speech",
+            data=payload,
+            headers={"API-Subscription-Key": SARVAM_API_KEY, "Content-Type": "application/json"},
+            method="POST",
+        )
+        with _ur.urlopen(req, timeout=10) as resp:
+            body = _js.loads(resp.read())
+        b64 = (body.get("audios") or [None])[0] or body.get("audio", "")
+        if b64:
+            wav = base64.b64decode(b64)
+            logger.info("[tts] Sarvam ok (%s), %d bytes", sarvam_code, len(wav))
+            return wav
+    except Exception as exc:
+        detail = ""
+        if isinstance(exc, _ue.HTTPError):
+            try:
+                detail = f" body={exc.read().decode(errors='replace')[:200]}"
+            except Exception:
+                pass
+        logger.warning("[tts] Sarvam failed (%s)%s, trying next", exc, detail)
+    return None
 
-    # ── edge-tts (fallback) ────────────────────────────────────────────────
+
+def _tts_elevenlabs(text: str, voice_id: str, lang: str) -> bytes | None:
+    """ElevenLabs Flash v2.5 — fastest non-Indian voice (~75 ms)."""
+    import urllib.request as _ur, json as _js
+    if not ELEVENLABS_API_KEY:
+        return None
+    try:
+        payload = _js.dumps({
+            "text": text,
+            "model_id": "eleven_flash_v2_5",
+            "voice_settings": {"stability": 0.5, "similarity_boost": 0.75},
+        }).encode()
+        req = _ur.Request(
+            f"https://api.elevenlabs.io/v1/text-to-speech/{ELEVENLABS_VOICE_ID}",
+            data=payload,
+            headers={"xi-api-key": ELEVENLABS_API_KEY, "Content-Type": "application/json", "Accept": "audio/mpeg"},
+            method="POST",
+        )
+        with _ur.urlopen(req, timeout=10) as resp:
+            mp3 = resp.read()
+        wav = _mp3_to_wav(mp3, timeout=20) if mp3 else None
+        if wav:
+            logger.info("[tts] ElevenLabs ok, %d bytes", len(wav))
+            return wav
+    except Exception as exc:
+        logger.warning("[tts] ElevenLabs failed (%s), trying next", exc)
+    return None
+
+
+def _tts_openai(text: str, voice_id: str, lang: str) -> bytes | None:
+    """OpenAI tts-1 — reliable paid fallback (~400 ms)."""
+    import urllib.request as _ur, json as _js
+    if not OPENAI_API_KEY:
+        return None
+    try:
+        payload = _js.dumps({
+            "model": "tts-1",
+            "input": text,
+            "voice": OPENAI_TTS_VOICE,
+            "response_format": "mp3",
+        }).encode()
+        req = _ur.Request(
+            "https://api.openai.com/v1/audio/speech",
+            data=payload,
+            headers={"Authorization": f"Bearer {OPENAI_API_KEY}", "Content-Type": "application/json"},
+            method="POST",
+        )
+        with _ur.urlopen(req, timeout=15) as resp:
+            mp3 = resp.read()
+        wav = _mp3_to_wav(mp3, timeout=30) if mp3 else None
+        if wav:
+            logger.info("[tts] OpenAI ok, %d bytes", len(wav))
+            return wav
+    except Exception as exc:
+        logger.warning("[tts] OpenAI TTS failed (%s), trying next", exc)
+    return None
+
+
+def _tts_edge(text: str, voice_id: str, lang: str) -> bytes | None:
+    """edge-tts — free cloud fallback (no API key required)."""
+    import asyncio, io
     try:
         import edge_tts  # type: ignore
-
         import concurrent.futures as _cf
 
         async def _synth() -> bytes:
@@ -1191,21 +1199,18 @@ def _voicebox_tts(text: str, voice_id: str = "en-US-GuyNeural", lang: str = "en"
                     buf.write(chunk["data"])
             return buf.getvalue()
 
-        # Run in a worker thread that has no existing event loop
-        with _cf.ThreadPoolExecutor(max_workers=1) as _ex:
-            mp3_bytes = _ex.submit(asyncio.run, _synth()).result(timeout=30)
-        if mp3_bytes:
-            # convert MP3→WAV via ffmpeg
-            proc = subprocess.run(
-                ["ffmpeg", "-y", "-i", "pipe:0", "-f", "wav", "pipe:1"],
-                input=mp3_bytes, capture_output=True, timeout=30,
-            )
-            if proc.returncode == 0:
-                return proc.stdout
+        with _cf.ThreadPoolExecutor(max_workers=1) as ex:
+            mp3_bytes = ex.submit(asyncio.run, _synth()).result(timeout=30)
+        wav = _mp3_to_wav(mp3_bytes, timeout=30) if mp3_bytes else None
+        if wav:
+            return wav
     except Exception as exc:
-        logger.warning("edge-tts failed (%s), trying espeak-ng fallback", exc)
+        logger.warning("[tts] edge-tts failed (%s), trying espeak-ng", exc)
+    return None
 
-    # ── espeak-ng (fallback) ───────────────────────────────────────────────
+
+def _tts_espeak(text: str, voice_id: str, lang: str) -> bytes | None:
+    """espeak-ng — last resort; always present on the container image."""
     try:
         with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
             tmp_path = tmp.name
@@ -1216,8 +1221,26 @@ def _voicebox_tts(text: str, voice_id: str = "en-US-GuyNeural", lang: str = "en"
         with open(tmp_path, "rb") as f:
             return f.read()
     except Exception as exc:
-        logger.warning("espeak-ng TTS failed: %s", exc)
-        return None
+        logger.warning("[tts] espeak-ng failed: %s", exc)
+    return None
+
+
+# Ordered provider chain. To add a new provider, append to this list.
+_TTS_PROVIDERS = [_tts_sarvam, _tts_elevenlabs, _tts_openai, _tts_edge, _tts_espeak]
+
+
+def _voicebox_tts(text: str, voice_id: str = "en-US-GuyNeural", lang: str = "en") -> bytes | None:
+    """Try each TTS provider in priority order; return the first successful WAV.
+
+    Priority: Sarvam (Indian langs) → ElevenLabs → OpenAI → edge-tts → espeak-ng
+    Returns WAV bytes, or None if all providers fail.
+    """
+    for provider in _TTS_PROVIDERS:
+        result = provider(text, voice_id, lang)
+        if result:
+            return result
+    logger.error("[tts] all providers failed for text: %r", text[:60])
+    return None
 
 
 # ---------------------------------------------------------------------------
