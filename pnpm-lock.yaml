@@ -47,15 +47,15 @@ importers:
       '@agentfarm/erp-adapters':
         specifier: workspace:*
         version: link:../../packages/erp-service
-      '@agentfarm/memory-service':
-        specifier: workspace:*
-        version: link:../../services/memory-service
       '@agentfarm/notification-adapters':
         specifier: workspace:*
         version: link:../../packages/notification-service
       '@agentfarm/observability':
         specifier: workspace:*
         version: link:../../packages/observability
+      '@agentfarm/redis-client':
+        specifier: workspace:*
+        version: link:../../packages/redis-client
       '@agentfarm/shared-types':
         specifier: workspace:*
         version: link:../../packages/shared-types
@@ -625,6 +625,8 @@ importers:
         specifier: ^5.7.2
         version: 5.9.3
 
+  services/browser-agent: {}
+
   services/compliance-export:
     dependencies:
       '@agentfarm/shared-types':
@@ -671,6 +673,8 @@ importers:
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
+
+  services/desktop-agent: {}
 
   services/evidence-service:
     dependencies:
