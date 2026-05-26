@@ -74,6 +74,20 @@ import {
     detectRequirementConflicts,
     formatConflictsForNotification,
 } from './business-analyst-conflict-detector.js';
+import {
+    checkDocumentReadiness,
+} from './business-analyst-dor-checker.js';
+import {
+    extractRequirementsFromBrd,
+    linkStoriesToRequirements,
+    linkTestCasesToStories,
+    generateRtmDocument,
+    getRtmCoverage,
+} from './business-analyst-rtm.js';
+import {
+    recordSignoff,
+    type SignoffDecision,
+} from './business-analyst-signoff-ledger.js';
 import type { TaskEnvelope, ProcessedTaskResult } from '../../execution-engine.js';
 
 // ---------------------------------------------------------------------------
@@ -95,7 +109,8 @@ export type BaActionType =
     | 'share_spec_external'
     | 'workspace_ba_proactive_ac_check'
     | 'workspace_ba_proactive_epic_check'
-    | 'workspace_ba_proactive_conflict_scan';
+    | 'workspace_ba_proactive_conflict_scan'
+    | 'workspace_ba_rtm_generate';
 
 export const BA_ACTION_TYPES = new Set<BaActionType>([
     'workspace_ba_draft_brd',
@@ -113,6 +128,7 @@ export const BA_ACTION_TYPES = new Set<BaActionType>([
     'workspace_ba_proactive_ac_check',
     'workspace_ba_proactive_epic_check',
     'workspace_ba_proactive_conflict_scan',
+    'workspace_ba_rtm_generate',
 ]);
 
 export function isBaActionType(at: string): at is BaActionType {
@@ -511,6 +527,25 @@ async function fetchKbDocuments(params: {
     }
 }
 
+async function handleRtmGenerate(params: BaActionParams): Promise<BaActionResult> {
+    const { workspaceId, gatewayBaseUrl, serviceToken } = params;
+
+    const [rtmDoc, coverage] = await Promise.all([
+        generateRtmDocument(workspaceId, gatewayBaseUrl, serviceToken),
+        getRtmCoverage(workspaceId, gatewayBaseUrl, serviceToken),
+    ]);
+
+    return {
+        ok: true,
+        output: rtmDoc,
+        documentType: 'rtm',
+        ragContextUsed: coverage.totalRequirements > 0,
+        totalRequirements: coverage.totalRequirements,
+        coveragePercent: coverage.coveragePercent,
+        uncoveredRequirements: coverage.uncoveredRequirements,
+    };
+}
+
 async function handleProactiveConflictScan(params: BaActionParams): Promise<BaActionResult> {
     const { tenantId, botId, workspaceId, gatewayBaseUrl, serviceToken, callLlm, payload } = params;
 
@@ -735,6 +770,9 @@ async function _handleBaActionCore(params: BaActionParams): Promise<BaActionResu
     if (actionType === 'workspace_ba_proactive_conflict_scan') {
         return handleProactiveConflictScan(params);
     }
+    if (actionType === 'workspace_ba_rtm_generate') {
+        return handleRtmGenerate(params);
+    }
     if (actionType === 'workspace_ba_proactive_ac_check') {
         return handleProactiveAcCheck(params);
     }
@@ -825,6 +863,36 @@ async function _handleBaActionCore(params: BaActionParams): Promise<BaActionResu
     }
 
     // -------------------------------------------------------------------------
+    // 4b. Definition of Ready check (user story and AC types only)
+    // -------------------------------------------------------------------------
+    let dorReady: boolean | undefined;
+    let dorBlockers: string[] = [];
+    let dorWarnings: string[] = [];
+
+    if (
+        (actionType === 'workspace_ba_draft_user_story' ||
+            actionType === 'workspace_ba_finalize_acceptance_criteria') &&
+        generatedContent
+    ) {
+        try {
+            const baCallerFn = callLlm ? toBaProseCallerFn(callLlm) : undefined;
+            const docReadiness = await checkDocumentReadiness(generatedContent, baCallerFn);
+            dorReady = docReadiness.overallReady;
+            dorBlockers = docReadiness.storyResults.flatMap((r) => r.blockers);
+            dorWarnings = docReadiness.storyResults.flatMap((r) => r.warnings);
+
+            // DoR blockers reduce completeness score so the story can't auto-approve
+            if (!dorReady && dorBlockers.length > 0) {
+                const penalty = Math.min(0.4, dorBlockers.length * 0.1);
+                completenessScore = Math.max(0, completenessScore - penalty);
+                gaps = [...gaps, ...dorBlockers];
+            }
+        } catch {
+            // Non-fatal — skip DoR check on error
+        }
+    }
+
+    // -------------------------------------------------------------------------
     // 5. Risk gate classification
     // -------------------------------------------------------------------------
     const gateResult = classifyBaActionRisk({
@@ -879,6 +947,37 @@ async function _handleBaActionCore(params: BaActionParams): Promise<BaActionResu
                 gatewayBaseUrl,
                 serviceToken,
             });
+        }
+
+        // RTM auto-update — fire-and-forget, never blocks the response
+        if (versionedContent) {
+            if (actionType === 'workspace_ba_draft_brd' || actionType === 'workspace_ba_finalize_brd') {
+                extractRequirementsFromBrd({
+                    brdContent: versionedContent,
+                    sourceDocumentId: resolvedDocumentId,
+                    workspaceId,
+                    gatewayBaseUrl,
+                    serviceToken,
+                }).catch((e) => console.warn('[ba-action-handler] RTM extract failed:', e));
+            } else if (
+                actionType === 'workspace_ba_draft_user_story' ||
+                actionType === 'workspace_ba_finalize_acceptance_criteria'
+            ) {
+                linkStoriesToRequirements({
+                    storyContent: versionedContent,
+                    workspaceId,
+                    gatewayBaseUrl,
+                    serviceToken,
+                    callLlm: callLlm ? toBaProseCallerFn(callLlm) : undefined,
+                }).catch((e) => console.warn('[ba-action-handler] RTM link stories failed:', e));
+            } else if (actionType === 'workspace_ba_uat_checklist') {
+                linkTestCasesToStories({
+                    uatContent: versionedContent,
+                    workspaceId,
+                    gatewayBaseUrl,
+                    serviceToken,
+                }).catch((e) => console.warn('[ba-action-handler] RTM link tests failed:', e));
+            }
         }
 
         // Persist to durable storage (FS / Confluence / Notion)
@@ -974,6 +1073,7 @@ async function _handleBaActionCore(params: BaActionParams): Promise<BaActionResu
             gaps,
             approvalStatus: 'auto_approved',
             ragContextUsed: !!ragResult.contextBlock,
+            ...(dorReady !== undefined ? { dorReady, dorBlockers, dorWarnings } : {}),
         };
     }
 
@@ -1144,12 +1244,20 @@ export async function onBaDocumentApproved(params: {
     workspaceId: string;
     taskId: string;
     actionType: BaActionType;
+    documentId?: string;
     documentTitle: string;
     documentContent: string;
+    documentVersion?: number;
     domain?: string;
     complianceFrameworks?: string[];
     gatewayBaseUrl: string;
     serviceToken: string;
+    /** Stakeholder who approved — recorded in the sign-off ledger. */
+    stakeholderId?: string;
+    stakeholderName?: string;
+    stakeholderRole?: string;
+    /** Comments or conditions attached to this approval. */
+    approvalComments?: string;
     /** Connector for document persistence and ticket write-back. */
     executeAction?: ExecuteActionFn;
     /** Local workspace directory for file-system persistence. */
@@ -1163,12 +1271,36 @@ export async function onBaDocumentApproved(params: {
 }): Promise<void> {
     const {
         tenantId, botId, workspaceId, taskId, actionType,
-        documentTitle, documentContent, domain, complianceFrameworks,
-        gatewayBaseUrl, serviceToken, executeAction, workspaceDir,
+        documentId, documentTitle, documentContent, documentVersion = 1,
+        domain, complianceFrameworks,
+        gatewayBaseUrl, serviceToken,
+        stakeholderId, stakeholderName, stakeholderRole, approvalComments,
+        executeAction, workspaceDir,
         ticketPlatform, ticketProjectKey, ticketEpicId,
     } = params;
 
     const documentType = ACTION_TYPE_TO_DOC_TYPE[actionType] ?? 'draft_brd';
+    const resolvedDocumentId = documentId ?? `${taskId}-${documentType}`;
+
+    // Sign-off ledger — record the approval decision
+    if (stakeholderId && stakeholderName) {
+        recordSignoff(
+            {
+                documentId: resolvedDocumentId,
+                documentTitle,
+                documentVersion,
+                documentType,
+                stakeholderId,
+                stakeholderName,
+                stakeholderRole,
+                decision: 'approved',
+                comments: approvalComments,
+                workspaceId,
+            },
+            gatewayBaseUrl,
+            serviceToken,
+        ).catch((e) => console.warn('[ba-action-handler] signoff record failed:', e));
+    }
 
     await ingestApprovedDocument({
         tenantId,
@@ -1254,15 +1386,42 @@ export async function onBaDocumentRejected(params: {
     taskId: string;
     actionType: BaActionType;
     documentId: string;
+    documentTitle?: string;
+    documentVersion?: number;
     rejectionReasons: string[];
+    /** Stakeholder who rejected — recorded in the sign-off ledger. */
     rejectionAuthor?: string;
+    rejectionAuthorId?: string;
+    rejectionAuthorRole?: string;
     gatewayBaseUrl: string;
     serviceToken: string;
 }): Promise<void> {
     const {
         tenantId, workspaceId, taskId, actionType, documentId,
-        rejectionReasons, rejectionAuthor, gatewayBaseUrl, serviceToken,
+        documentTitle, documentVersion = 1,
+        rejectionReasons, rejectionAuthor, rejectionAuthorId, rejectionAuthorRole,
+        gatewayBaseUrl, serviceToken,
     } = params;
+
+    // Sign-off ledger — record the rejection decision
+    if (rejectionAuthorId && rejectionAuthor) {
+        recordSignoff(
+            {
+                documentId,
+                documentTitle: documentTitle ?? documentId,
+                documentVersion,
+                documentType: ACTION_TYPE_TO_DOC_TYPE[actionType] ?? 'draft_brd',
+                stakeholderId: rejectionAuthorId,
+                stakeholderName: rejectionAuthor,
+                stakeholderRole: rejectionAuthorRole,
+                decision: 'rejected',
+                comments: rejectionReasons.join('; ').slice(0, 400),
+                workspaceId,
+            },
+            gatewayBaseUrl,
+            serviceToken,
+        ).catch((e) => console.warn('[ba-action-handler] signoff record failed:', e));
+    }
 
     // Map the RAG doc type to the BaDocumentTypeFilter subset understood by the lesson pipeline
     const ragDocType = actionToRagDocType(actionType);
