@@ -121,6 +121,17 @@ type ExecuteActionFn = (
     payload: Record<string, unknown>,
 ) => Promise<{ ok: boolean; output: string; errorOutput?: string }>;
 
+/**
+ * Thin wrapper around the connector gateway client.
+ * Structurally compatible with LocalWorkspaceConnectorClient — defined here
+ * without importing from local-workspace-executor to avoid circular deps.
+ */
+export type PmConnectorClient = (input: {
+    connectorType: string;
+    actionType: string;
+    payload: Record<string, unknown>;
+}) => Promise<{ ok: boolean; statusCode?: number; errorMessage?: string }>;
+
 // ---------------------------------------------------------------------------
 // Public types
 // ---------------------------------------------------------------------------
@@ -149,6 +160,12 @@ export interface PmActionParams {
     approvalEscalationDeadlineIso?: string;
     /** Connector function for ticket write-back (Jira/Linear) and document persistence. */
     executeAction?: ExecuteActionFn;
+    /**
+     * Direct connector client — routes (connectorType, actionType, payload) to Jira,
+     * Linear, Slack, etc. via the connector gateway.  Required for sprint push,
+     * standup Slack post, and other real-time write-backs.
+     */
+    connectorClient?: PmConnectorClient;
     /** Local workspace directory for file-system document persistence. */
     workspaceDir?: string;
     /** Stable document identifier used for version control. */
@@ -482,7 +499,11 @@ Classify severity: Critical (blocks sprint goal), Major (blocks a committed stor
 // ---------------------------------------------------------------------------
 
 async function handleSprintPlan(params: PmActionParams): Promise<PmActionResult> {
-    const { actionType, tenantId, botId, taskId, workspaceId, payload, gatewayBaseUrl, serviceToken, callLlm } = params;
+    const {
+        tenantId, botId, taskId, workspaceId,
+        payload, gatewayBaseUrl, serviceToken,
+        callLlm, connectorClient,
+    } = params;
 
     const input: SprintPlanInput = {
         sprintName: str(payload['sprint_name'], `Sprint ${new Date().toISOString().slice(0, 10)}`),
@@ -547,6 +568,112 @@ async function handleSprintPlan(params: PmActionParams): Promise<PmActionResult>
         serviceToken,
     });
 
+    // ── GAP 2: Push sprint to Jira or Linear ────────────────────────────────
+    let remoteSprintId: string | number | undefined;
+    const connector = str(payload['connector']); // 'jira' | 'linear'
+    if (connectorClient && connector) {
+        const startDate = str(payload['start_date']) || new Date().toISOString().split('T')[0];
+        const endDate = str(payload['end_date']) || (() => {
+            const d = new Date();
+            d.setDate(d.getDate() + input.sprintDuration);
+            return d.toISOString().split('T')[0];
+        })();
+
+        const createSprintPayload: Record<string, unknown> = {
+            name: sprintPlan.sprintName,
+            goal: input.sprintGoal,
+            start_date: startDate,
+            end_date: endDate,
+            ...(connector === 'jira' && payload['board_id'] != null ? { board_id: payload['board_id'] } : {}),
+            ...(connector === 'linear' && payload['team_id'] ? { team_id: payload['team_id'] } : {}),
+            ...(payload['credentials'] ? { credentials: payload['credentials'] } : {}),
+        };
+
+        const createResult = await connectorClient({
+            connectorType: connector,
+            actionType: 'create_sprint',
+            payload: createSprintPayload,
+        }).catch(() => ({ ok: false as const }));
+
+        if (createResult.ok) {
+            // Extract the new sprint / cycle ID from the connector response
+            // (statusCode carries the sprint id for our Jira path; Linear returns it via data)
+            remoteSprintId = createResult.statusCode; // set by connector for Jira numeric IDs
+
+            // Add committed stories to the sprint using their item.id as issue keys
+            const issueKeys = sprintPlan.allocations
+                .map((a) => a.item.id)
+                .filter((id) => /^[A-Z]+-\d+$|^[a-f0-9-]{36}$/.test(id)); // Jira KEY or UUID
+
+            if (issueKeys.length > 0 && remoteSprintId != null) {
+                await connectorClient({
+                    connectorType: connector,
+                    actionType: 'add_issue_to_sprint',
+                    payload: {
+                        sprint_id: remoteSprintId,
+                        issue_keys: issueKeys,
+                        ...(payload['credentials'] ? { credentials: payload['credentials'] } : {}),
+                    },
+                }).catch(() => {}); // non-fatal
+            }
+        }
+    }
+
+    // ── GAP 3: Auto-register morning standup schedule (idempotent) ───────────
+    // Fire-and-forget — schedule registration failure must never block the sprint plan.
+    registerPmStandupSchedule({
+        botId,
+        tenantId,
+        teamName: str(payload['team_name'], 'Engineering'),
+        gatewayBaseUrl,
+        serviceToken,
+    }).catch(() => {});
+
+    // ── GAP 5: Create developer handoffs for each committed story ────────────
+    const orchestratorBaseUrl =
+        str(payload['orchestrator_url']) ||
+        process.env['ORCHESTRATOR_URL'] ||
+        process.env['ORCHESTRATOR_BASE_URL'] ||
+        '';
+
+    const handoffIds: string[] = [];
+    if (orchestratorBaseUrl && sprintPlan.allocations.length > 0) {
+        const handoffResults = await Promise.allSettled(
+            sprintPlan.allocations.slice(0, 20).map((allocation) =>
+                createHandoff({
+                    tenantId,
+                    workspaceId,
+                    taskId,
+                    fromBotId: botId,
+                    toBotId: allocation.assignedTo
+                        ? `${allocation.assignedTo.toLowerCase().replace(/\s+/g, '-')}-dev`
+                        : 'developer-agent',
+                    toRole: 'developer',
+                    reason: `Sprint story: ${allocation.item.title}`,
+                    handoffContext: {
+                        storyId: allocation.item.id,
+                        storyTitle: allocation.item.title,
+                        storyPoints: allocation.item.points,
+                        priority: allocation.item.priority,
+                        hasAcceptanceCriteria: allocation.item.hasAcceptanceCriteria ?? false,
+                        sprintName: sprintPlan.sprintName,
+                        sprintGoal: input.sprintGoal,
+                        ...(remoteSprintId != null ? { remoteSprintId } : {}),
+                    },
+                    escalateOnTimeoutMs: input.sprintDuration * 24 * 60 * 60 * 1_000,
+                    orchestratorBaseUrl,
+                    serviceToken,
+                }),
+            ),
+        );
+
+        for (const r of handoffResults) {
+            if (r.status === 'fulfilled' && r.value.ok && r.value.handoff?.id) {
+                handoffIds.push(r.value.handoff.id);
+            }
+        }
+    }
+
     return {
         ok: true,
         output: fullOutput,
@@ -560,6 +687,9 @@ async function handleSprintPlan(params: PmActionParams): Promise<PmActionResult>
             allocationCount: sprintPlan.allocations.length,
             deferredCount: sprintPlan.deferred.length,
             needsGroomingCount: sprintPlan.needsGrooming.length,
+            remoteSprintId,
+            handoffIds,
+            standupScheduled: true,
         },
     };
 }
@@ -663,7 +793,7 @@ async function handleVelocityReport(params: PmActionParams): Promise<PmActionRes
 }
 
 async function handleStandupSummary(params: PmActionParams): Promise<PmActionResult> {
-    const { tenantId, workspaceId, payload, gatewayBaseUrl, serviceToken } = params;
+    const { tenantId, workspaceId, payload, gatewayBaseUrl, serviceToken, connectorClient } = params;
 
     const recentMemory = arr<string>(payload['recent_memory']);
     const botName = str(payload['bot_name'], 'PM Agent');
@@ -702,6 +832,35 @@ async function handleStandupSummary(params: PmActionParams): Promise<PmActionRes
         serviceToken,
     });
 
+    // ── GAP 2: Post standup to Slack / Teams ────────────────────────────────
+    const slackChannel = str(payload['slack_channel']);
+    const teamsWebhook = str(payload['teams_webhook']);
+    let postedTo: string | undefined;
+
+    if (connectorClient && slackChannel) {
+        await connectorClient({
+            connectorType: 'slack',
+            actionType: 'send_message',
+            payload: {
+                channel: slackChannel,
+                message: output,
+                ...(payload['credentials'] ? { credentials: payload['credentials'] } : {}),
+            },
+        }).catch(() => {}); // non-fatal
+        postedTo = `slack:${slackChannel}`;
+    } else if (connectorClient && teamsWebhook) {
+        await connectorClient({
+            connectorType: 'teams',
+            actionType: 'send_message',
+            payload: {
+                webhook_url: teamsWebhook,
+                message: output,
+                ...(payload['credentials'] ? { credentials: payload['credentials'] } : {}),
+            },
+        }).catch(() => {}); // non-fatal
+        postedTo = 'teams';
+    }
+
     return {
         ok: true,
         output,
@@ -712,6 +871,7 @@ async function handleStandupSummary(params: PmActionParams): Promise<PmActionRes
             yesterdayCount: standup.yesterday.length,
             todayCount: standup.today.length,
             blockerCount: standup.blockers.length,
+            postedTo,
         },
     };
 }

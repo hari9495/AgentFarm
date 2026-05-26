@@ -14370,6 +14370,7 @@ export async function executeLocalWorkspaceAction(input: {
                     ? payload['service_token']
                     : process.env['SERVICE_TOKEN'] ?? '',
                 workspaceDir,
+                connectorClient: connectorActionExecuteClient,
                 executeAction: (aType, aPayload) =>
                     executeLocalWorkspaceAction({
                         tenantId,
