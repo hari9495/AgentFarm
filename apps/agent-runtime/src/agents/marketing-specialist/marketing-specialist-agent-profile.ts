@@ -40,6 +40,18 @@ export const MARKETING_SPECIALIST_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActi
     'git_log',
     // File write — produce campaign plans and reports on disk
     'workspace_write_file',
+    // Browser actions — log into ad dashboards, CMS, analytics UIs when API not available
+    'workspace_web_login',
+    'workspace_web_navigate',
+    'workspace_web_read_page',
+    'workspace_web_fill_form',
+    'workspace_web_click',
+    'workspace_web_extract_data',
+    // Web research — market research, competitor intel, trend scanning
+    'workspace_web_search',
+    // Meeting — join stakeholder calls, present campaign results
+    'workspace_meeting_join',
+    'workspace_meeting_speak',
     // Tier 46 — Marketing Specialist domain actions
     'workspace_ms_plan_campaign',
     'workspace_ms_monitor_campaign',
