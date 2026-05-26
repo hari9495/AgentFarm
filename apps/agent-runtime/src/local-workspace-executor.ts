@@ -59,6 +59,7 @@ import { handleDeepDebugAction, isDeepDebugActionType, type DeepDebugActionType 
 import { handleArchResearchAction, isArchResearchActionType, type ArchResearchActionType } from './agents/developer/arch-research-action-handler.js';
 import { handleDesignScoreAction, isDesignScoreActionType, type DesignScoreActionType } from './agents/full-stack-developer/design-score-action-handler.js';
 import { handleContextSweepAction, isContextSweepActionType, type ContextSweepActionType } from './agents/developer/context-sweep-action-handler.js';
+import { handlePmAction, isPmActionType, type PmActionType } from './agents/project-manager/project-manager-action-handler.js';
 import type { ProseCallerFn } from './agents/content-writer/llm-prose-writer.js';
 import { streamLLM } from './llm-decision-adapter.js';
 import { globalEpisodicMemory } from './episodic-memory.js';
@@ -476,7 +477,24 @@ export type LocalWorkspaceActionType =
     | 'workspace_fsd_design_reference'
     // Tier 43 (Team context sweep & meeting digest — Gap 5e)
     | 'workspace_dev_context_sweep'
-    | 'workspace_dev_meeting_digest';
+    | 'workspace_dev_meeting_digest'
+    // Tier 44 (Project Manager / Scrum Master domain actions)
+    | 'workspace_pm_project_charter'
+    | 'workspace_pm_status_report'
+    | 'workspace_pm_risk_register'
+    | 'workspace_pm_dependency_map'
+    | 'workspace_pm_change_request'
+    | 'workspace_pm_milestone_plan'
+    | 'workspace_pm_budget_forecast'
+    | 'workspace_pm_sprint_plan'
+    | 'workspace_pm_backlog_groom'
+    | 'workspace_pm_velocity_report'
+    | 'workspace_pm_standup_summary'
+    | 'workspace_pm_retrospective'
+    | 'workspace_pm_impediment_log'
+    | 'workspace_pm_ceremony_agenda'
+    | 'workspace_pm_proactive_blocker_scan'
+    | 'workspace_pm_proactive_scope_drift';
 
 export type LocalWorkspaceResult = {
     ok: boolean;
@@ -1109,6 +1127,23 @@ export const LOCAL_WORKSPACE_ACTION_TYPES = new Set<LocalWorkspaceActionType>([
     // Tier 43 (Team context sweep & meeting digest — Gap 5e)
     'workspace_dev_context_sweep',
     'workspace_dev_meeting_digest',
+    // Tier 44 (Project Manager / Scrum Master domain actions)
+    'workspace_pm_project_charter',
+    'workspace_pm_status_report',
+    'workspace_pm_risk_register',
+    'workspace_pm_dependency_map',
+    'workspace_pm_change_request',
+    'workspace_pm_milestone_plan',
+    'workspace_pm_budget_forecast',
+    'workspace_pm_sprint_plan',
+    'workspace_pm_backlog_groom',
+    'workspace_pm_velocity_report',
+    'workspace_pm_standup_summary',
+    'workspace_pm_retrospective',
+    'workspace_pm_impediment_log',
+    'workspace_pm_ceremony_agenda',
+    'workspace_pm_proactive_blocker_scan',
+    'workspace_pm_proactive_scope_drift',
 ]);
 
 // ---------------------------------------------------------------------------
@@ -14284,6 +14319,70 @@ export async function executeLocalWorkspaceAction(input: {
                 errorMessage:  sweepResult.errorOutput ? sweepResult.errorOutput.slice(0, 200) : undefined,
             });
             return sweepResult;
+        }
+
+        // ====================================================================
+        // TIER 44: PROJECT MANAGER / SCRUM MASTER DOMAIN ACTIONS
+        // ====================================================================
+        case 'workspace_pm_project_charter':
+        case 'workspace_pm_status_report':
+        case 'workspace_pm_risk_register':
+        case 'workspace_pm_dependency_map':
+        case 'workspace_pm_change_request':
+        case 'workspace_pm_milestone_plan':
+        case 'workspace_pm_budget_forecast':
+        case 'workspace_pm_sprint_plan':
+        case 'workspace_pm_backlog_groom':
+        case 'workspace_pm_velocity_report':
+        case 'workspace_pm_standup_summary':
+        case 'workspace_pm_retrospective':
+        case 'workspace_pm_impediment_log':
+        case 'workspace_pm_ceremony_agenda':
+        case 'workspace_pm_proactive_blocker_scan':
+        case 'workspace_pm_proactive_scope_drift': {
+            if (!isPmActionType(actionType)) {
+                return { ok: false, output: '', errorOutput: `Unrecognised PM/SM action: ${actionType}` };
+            }
+            const pmResult = await handlePmAction({
+                actionType: actionType as PmActionType,
+                tenantId,
+                botId,
+                taskId,
+                workspaceId: workspaceDir ?? taskId,
+                payload,
+                gatewayBaseUrl: typeof payload['gateway_base_url'] === 'string'
+                    ? payload['gateway_base_url']
+                    : process.env['GATEWAY_BASE_URL'] ?? 'http://localhost:3000',
+                serviceToken: typeof payload['service_token'] === 'string'
+                    ? payload['service_token']
+                    : process.env['SERVICE_TOKEN'] ?? '',
+                workspaceDir,
+                executeAction: (aType, aPayload) =>
+                    executeLocalWorkspaceAction({
+                        tenantId,
+                        botId,
+                        taskId,
+                        actionType: aType as LocalWorkspaceActionType,
+                        payload: aPayload,
+                        connectorActionExecuteClient,
+                    }),
+                callLlm: buildTwLlmCallerFn(),
+            });
+            const pmTitle =
+                typeof payload['title'] === 'string' ? payload['title'] :
+                typeof payload['sprint_name'] === 'string' ? payload['sprint_name'] :
+                typeof payload['project_name'] === 'string' ? payload['project_name'] : actionType;
+            void globalEpisodicMemory.record({
+                taskId,
+                workspaceId: workspaceDir,
+                botId,
+                actionType,
+                promptSummary: pmTitle.slice(0, 200),
+                outcome: pmResult.ok ? 'success' : 'failed',
+                timestamp: Date.now(),
+                errorMessage: pmResult.errorOutput ? pmResult.errorOutput.slice(0, 200) : undefined,
+            });
+            return pmResult;
         }
 
         default: {
