@@ -419,6 +419,21 @@ export type LocalWorkspaceActionType =
     | 'workspace_devops_pipeline_status'
     | 'workspace_devops_incident_triage'
     | 'workspace_devops_standup_report'
+    // Tier 31b (DevOps extended actions — Gaps 1–10)
+    | 'workspace_devops_helm_install'
+    | 'workspace_devops_helm_rollback'
+    | 'workspace_devops_helm_diff'
+    | 'workspace_devops_helm_generate'
+    | 'workspace_devops_dora_metrics'
+    | 'workspace_devops_deploy_verify'
+    | 'workspace_devops_env_promote'
+    | 'workspace_devops_release_notes'
+    | 'workspace_devops_image_scan'
+    | 'workspace_devops_pipeline_generate'
+    | 'workspace_devops_cost_estimate'
+    | 'workspace_devops_drift_check'
+    | 'workspace_devops_secret_rotate'
+    | 'workspace_devops_cert_renew'
     // Tier 32 (Mobile / iOS + Android domain actions)
     | 'workspace_mob_ios_component'
     | 'workspace_mob_ios_build'
@@ -1094,6 +1109,21 @@ export const LOCAL_WORKSPACE_ACTION_TYPES = new Set<LocalWorkspaceActionType>([
     'workspace_devops_pipeline_status',
     'workspace_devops_incident_triage',
     'workspace_devops_standup_report',
+    // Tier 31b (DevOps extended — Gaps 1–10)
+    'workspace_devops_helm_install',
+    'workspace_devops_helm_rollback',
+    'workspace_devops_helm_diff',
+    'workspace_devops_helm_generate',
+    'workspace_devops_dora_metrics',
+    'workspace_devops_deploy_verify',
+    'workspace_devops_env_promote',
+    'workspace_devops_release_notes',
+    'workspace_devops_image_scan',
+    'workspace_devops_pipeline_generate',
+    'workspace_devops_cost_estimate',
+    'workspace_devops_drift_check',
+    'workspace_devops_secret_rotate',
+    'workspace_devops_cert_renew',
     // Tier 32 (Mobile / iOS + Android domain actions)
     'workspace_mob_ios_component',
     'workspace_mob_ios_build',
@@ -13856,7 +13886,21 @@ export async function executeLocalWorkspaceAction(input: {
         case 'workspace_devops_pipeline_trigger':
         case 'workspace_devops_pipeline_status':
         case 'workspace_devops_incident_triage':
-        case 'workspace_devops_standup_report': {
+        case 'workspace_devops_standup_report':
+        case 'workspace_devops_helm_install':
+        case 'workspace_devops_helm_rollback':
+        case 'workspace_devops_helm_diff':
+        case 'workspace_devops_helm_generate':
+        case 'workspace_devops_dora_metrics':
+        case 'workspace_devops_deploy_verify':
+        case 'workspace_devops_env_promote':
+        case 'workspace_devops_release_notes':
+        case 'workspace_devops_image_scan':
+        case 'workspace_devops_pipeline_generate':
+        case 'workspace_devops_cost_estimate':
+        case 'workspace_devops_drift_check':
+        case 'workspace_devops_secret_rotate':
+        case 'workspace_devops_cert_renew': {
             if (!isDevopsActionType(actionType)) {
                 return { ok: false, output: '', errorOutput: `Unrecognised DevOps action: ${actionType}` };
             }

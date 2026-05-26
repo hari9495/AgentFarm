@@ -105,6 +105,30 @@ export const DEVOPS_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = [
     'workspace_infra_ipmi_console',
     'workspace_infra_netconf_query',
     'workspace_infra_remote_diag',
+    // ── Gap 1 — Helm ─────────────────────────────────────────────────────────
+    'workspace_devops_helm_install',
+    'workspace_devops_helm_rollback',
+    'workspace_devops_helm_diff',
+    'workspace_devops_helm_generate',
+    // ── Gap 2 — DORA Metrics ─────────────────────────────────────────────────
+    'workspace_devops_dora_metrics',
+    // ── Gap 3 — Post-Deploy Verification ─────────────────────────────────────
+    'workspace_devops_deploy_verify',
+    // ── Gap 4 — Environment Promotion ────────────────────────────────────────
+    'workspace_devops_env_promote',
+    // ── Gap 5 — Release Notes ────────────────────────────────────────────────
+    'workspace_devops_release_notes',
+    // ── Gap 6 — Container Security Scanning ──────────────────────────────────
+    'workspace_devops_image_scan',
+    // ── Gap 7 — Pipeline Config Generation ───────────────────────────────────
+    'workspace_devops_pipeline_generate',
+    // ── Gap 8 — Cost Estimation ───────────────────────────────────────────────
+    'workspace_devops_cost_estimate',
+    // ── Gap 9 — Drift Detection ───────────────────────────────────────────────
+    'workspace_devops_drift_check',
+    // ── Gap 10 — Secret Rotation & Cert Renewal ───────────────────────────────
+    'workspace_devops_secret_rotate',
+    'workspace_devops_cert_renew',
 ];
 
 // ---------------------------------------------------------------------------
@@ -130,8 +154,13 @@ export const DEVOPS_ROLE_HIGH_RISK_ACTIONS: ReadonlyArray<string> = [
     // Kubernetes mutations (may affect running services)
     'workspace_devops_k8s_deploy',
     'workspace_devops_k8s_rollback',
+    // Helm mutations (may affect running services)
+    'workspace_devops_helm_install',
+    'workspace_devops_helm_rollback',
     // Pipeline triggers (may deploy to production)
     'workspace_devops_pipeline_trigger',
+    // Secret rotation (may break dependents)
+    'workspace_devops_secret_rotate',
     // Inherited developer high-risk
     'workspace_autonomous_plan_execute',
     'workspace_github_issue_fix',
