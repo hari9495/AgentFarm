@@ -1174,6 +1174,10 @@ const LOCAL_WORKSPACE_ACTION_POLICY: Record<RoleKey, RuntimeLocalWorkspaceAction
         'workspace_pm_handoff_to_developer',
         'workspace_pm_handoff_to_tester',
         'workspace_pm_check_handoff_status',
+        // Human-PM parity: live board, delivery forecast, sprint health (Tier 44 ext2)
+        'workspace_pm_delivery_forecast',
+        'workspace_pm_sprint_health_check',
+        'workspace_pm_board_sync',
     ],
 };
 

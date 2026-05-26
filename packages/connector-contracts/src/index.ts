@@ -48,6 +48,7 @@ export type NormalizedActionType =
   | 'update_sprint_status'
   | 'add_issue_to_sprint'
   | 'list_sprints'
+  | 'get_sprint_issues'
   // scheduling (PM role)
   | 'register_schedule'
   // messaging

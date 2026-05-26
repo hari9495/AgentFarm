@@ -501,6 +501,10 @@ export type LocalWorkspaceActionType =
     | 'workspace_pm_handoff_to_developer'
     | 'workspace_pm_handoff_to_tester'
     | 'workspace_pm_check_handoff_status'
+    // Tier 44 ext2 (human-PM parity: live board, forecast, health)
+    | 'workspace_pm_delivery_forecast'
+    | 'workspace_pm_sprint_health_check'
+    | 'workspace_pm_board_sync'
     // Tier 45 (Business Analyst domain actions)
     | 'workspace_ba_draft_brd'
     | 'workspace_ba_draft_user_story'
@@ -1171,6 +1175,9 @@ export const LOCAL_WORKSPACE_ACTION_TYPES = new Set<LocalWorkspaceActionType>([
     'workspace_pm_handoff_to_developer',
     'workspace_pm_handoff_to_tester',
     'workspace_pm_check_handoff_status',
+    'workspace_pm_delivery_forecast',
+    'workspace_pm_sprint_health_check',
+    'workspace_pm_board_sync',
     // Tier 45 (Business Analyst domain actions)
     'workspace_ba_draft_brd',
     'workspace_ba_draft_user_story',
@@ -14387,6 +14394,9 @@ export async function executeLocalWorkspaceAction(input: {
         case 'workspace_pm_schedule_standup':
         case 'workspace_pm_handoff_to_developer':
         case 'workspace_pm_handoff_to_tester':
+        case 'workspace_pm_delivery_forecast':
+        case 'workspace_pm_sprint_health_check':
+        case 'workspace_pm_board_sync':
         case 'workspace_pm_check_handoff_status': {
             if (!isPmActionType(actionType)) {
                 return { ok: false, output: '', errorOutput: `Unrecognised PM/SM action: ${actionType}` };

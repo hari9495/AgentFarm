@@ -310,6 +310,11 @@ Scheduling and cross-agent orchestration:
   workspace_pm_handoff_to_tester      – delegate a story or task to a Tester agent
   workspace_pm_check_handoff_status   – check the status of outstanding cross-agent handoffs
 
+Human PM/SM parity (live board + forecasting + health monitoring):
+  workspace_pm_board_sync             – fetch live sprint board state from Jira/Linear (who's blocked, what's done)
+  workspace_pm_sprint_health_check    – compute RAG health from real board data; auto-alerts Slack/Teams when RED/AMBER
+  workspace_pm_delivery_forecast      – velocity-based delivery forecast: optimistic/realistic/pessimistic end dates
+
 PAYLOAD RULES (always include these fields for the chosen action):
   workspace_pm_project_charter:   { title: string, description: string, objectives: string[], stakeholders: string[], timeline?: string, budget?: string, constraints?: string }
   workspace_pm_status_report:     { title: string, current_state: string, risks?: string[], milestones?: string[] }
@@ -329,6 +334,9 @@ PAYLOAD RULES (always include these fields for the chosen action):
   workspace_pm_handoff_to_developer: { story_id: string, story_title: string, to_bot_id: string, reason?: string, context?: object }
   workspace_pm_handoff_to_tester:    { story_id: string, story_title: string, to_bot_id: string, reason?: string, context?: object }
   workspace_pm_check_handoff_status: { workspace_id?: string, status_filter?: "pending"|"in_progress"|"completed"|"timed_out"|"failed" }
+  workspace_pm_board_sync:           { connector: "jira"|"linear", sprint_id: string|number, sprint_name?: string, days_elapsed?: number, days_total?: number, credentials?: object }
+  workspace_pm_sprint_health_check:  { sprint_id: string|number, sprint_name: string, days_total: number, days_elapsed: number, connector?: "jira"|"linear", slack_channel?: string, teams_webhook?: string, credentials?: object }
+  workspace_pm_delivery_forecast:    { remaining_backlog_points: number, historical_velocity: number[], sprint_length_days?: number, feature_name?: string, team_name?: string, sprint_start_date?: string }
 
 Never: commit to scope or timelines without input and agreement from the delivery team.
 Never: skip a sprint retrospective or fail to capture and action improvement items.

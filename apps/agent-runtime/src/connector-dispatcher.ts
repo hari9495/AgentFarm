@@ -647,6 +647,22 @@ export class JiraConnector {
         );
     }
 
+    async getSprintIssues(params: {
+        sprintId: number;
+        maxResults?: number;
+        startAt?: number;
+    }): Promise<JsonResponse<{ issues: Array<Record<string, unknown>>; total: number }>> {
+        const qs = new URLSearchParams({
+            maxResults: String(params.maxResults ?? 100),
+            ...(params.startAt ? { startAt: String(params.startAt) } : {}),
+        });
+        return jsonFetch(
+            `${this.base}/rest/agile/1.0/sprint/${params.sprintId}/issue?${qs}`,
+            { method: 'GET', headers: this.headers() },
+            this.fetchImpl,
+        );
+    }
+
     async listSprints(params: {
         boardId: number;
         state?: 'active' | 'future' | 'closed';
@@ -787,6 +803,28 @@ async function dispatchLinear(
                     }
                 }`;
             return linearGraphQL(apiKey, query, { teamId: resolvedTeamId }, fetchImpl);
+        }
+        case 'get_sprint_issues': {
+            const cycleId = String(payload['sprint_id'] ?? payload['cycle_id'] ?? '');
+            if (!cycleId) return { ok: false, error: 'Linear get_sprint_issues: sprint_id (cycle_id) is required' };
+            const query = `
+                query GetCycleIssues($cycleId: String!) {
+                    cycle(id: $cycleId) {
+                        id number name
+                        issues {
+                            nodes {
+                                id
+                                identifier
+                                title
+                                state { name type }
+                                assignee { name }
+                                estimate
+                                labels { nodes { name } }
+                            }
+                        }
+                    }
+                }`;
+            return linearGraphQL(apiKey, query, { cycleId }, fetchImpl);
         }
         case 'get_task': {
             const issueId = String(payload['issue_id'] ?? payload['issue_key'] ?? '');
@@ -1765,6 +1803,17 @@ async function dispatchJira(
                 boardId,
                 state,
                 maxResults: typeof payload['max_results'] === 'number' ? payload['max_results'] : undefined,
+            });
+        }
+        case 'get_sprint_issues': {
+            const sprintId = Number(payload['sprint_id'] ?? payload['sprintId']);
+            if (!Number.isInteger(sprintId) || sprintId <= 0) {
+                return { ok: false, error: 'Jira get_sprint_issues: sprint_id must be a positive integer' };
+            }
+            return jira.getSprintIssues({
+                sprintId,
+                maxResults: typeof payload['max_results'] === 'number' ? payload['max_results'] : undefined,
+                startAt:    typeof payload['start_at']    === 'number' ? payload['start_at']    : undefined,
             });
         }
         default:

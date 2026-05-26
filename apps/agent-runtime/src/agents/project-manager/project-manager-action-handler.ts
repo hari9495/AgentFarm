@@ -52,6 +52,10 @@ import { buildPmStandupSummary, buildPmSprintHealthSummary } from './project-man
 import { buildPmEpisodicPattern, buildPmEpisodicSummary } from './project-manager-episodic-hooks.js';
 import { registerPmStandupSchedule } from './pm-schedule-setup.js';
 import { createHandoff, listHandoffs, formatHandoffSummary, type HandoffRole } from './pm-handoff-coordinator.js';
+import { fetchSprintBoardState, formatBoardStateForStandup } from './pm-board-sync.js';
+import { runEscalationChain } from './pm-escalation-chain.js';
+import { computeDeliveryForecast } from './pm-delivery-forecast.js';
+import { runSprintHealthCheck, computeSprintHealth } from './pm-sprint-health-monitor.js';
 import type { TaskEnvelope, ProcessedTaskResult } from '../../execution-engine.js';
 
 // ---------------------------------------------------------------------------
@@ -83,7 +87,11 @@ export type PmActionType =
     // Cross-agent orchestration
     | 'workspace_pm_handoff_to_developer'
     | 'workspace_pm_handoff_to_tester'
-    | 'workspace_pm_check_handoff_status';
+    | 'workspace_pm_check_handoff_status'
+    // Human-PM parity: live board + forecasting + health monitoring
+    | 'workspace_pm_delivery_forecast'
+    | 'workspace_pm_sprint_health_check'
+    | 'workspace_pm_board_sync';
 
 export const PM_ACTION_TYPES = new Set<PmActionType>([
     'workspace_pm_project_charter',
@@ -106,6 +114,9 @@ export const PM_ACTION_TYPES = new Set<PmActionType>([
     'workspace_pm_handoff_to_developer',
     'workspace_pm_handoff_to_tester',
     'workspace_pm_check_handoff_status',
+    'workspace_pm_delivery_forecast',
+    'workspace_pm_sprint_health_check',
+    'workspace_pm_board_sync',
 ]);
 
 export function isPmActionType(at: string): at is PmActionType {
@@ -796,13 +807,38 @@ async function handleStandupSummary(params: PmActionParams): Promise<PmActionRes
     const { tenantId, workspaceId, payload, gatewayBaseUrl, serviceToken, connectorClient } = params;
 
     const recentMemory = arr<string>(payload['recent_memory']);
-    const botName = str(payload['bot_name'], 'PM Agent');
-    const teamName = str(payload['team_name'], 'the team');
+    const botName      = str(payload['bot_name'], 'PM Agent');
+    const teamName     = str(payload['team_name'], 'the team');
     const sprintNumber = typeof payload['sprint_number'] === 'number' ? payload['sprint_number'] : undefined;
-    const sprintGoal = str(payload['sprint_goal']) || undefined;
-    const daysRemaining = typeof payload['days_remaining'] === 'number' ? payload['days_remaining'] : undefined;
+    const sprintGoal   = str(payload['sprint_goal']) || undefined;
+    const daysRemaining  = typeof payload['days_remaining']  === 'number' ? payload['days_remaining']  : undefined;
+    const daysTotal      = typeof payload['days_total']      === 'number' ? payload['days_total']      : undefined;
+    const daysElapsed    = typeof payload['days_elapsed']    === 'number' ? payload['days_elapsed']    : undefined;
     const completedPoints = typeof payload['completed_points'] === 'number' ? payload['completed_points'] : undefined;
     const committedPoints = typeof payload['committed_points'] === 'number' ? payload['committed_points'] : undefined;
+
+    // ── Live board sync (human PM always looks at the board before standup) ───
+    const sprintId   = payload['sprint_id'] ?? payload['sprintId'];
+    const connector  = str(payload['connector']) as 'jira' | 'linear' | '';
+    const credentials = typeof payload['credentials'] === 'object' ? payload['credentials'] as Record<string, unknown> : undefined;
+    const sprintName = str(payload['sprint_name']) || `Sprint ${sprintNumber ?? ''}`;
+
+    let boardSection = '';
+    if (connectorClient && connector && sprintId) {
+        const boardState = await fetchSprintBoardState(
+            connectorClient,
+            connector as 'jira' | 'linear',
+            { sprintId: sprintId as string | number, sprintName, credentials },
+        ).catch(() => null);
+
+        if (boardState) {
+            boardSection = formatBoardStateForStandup(boardState, daysElapsed, daysTotal);
+
+            // Override payload values with live board data for accuracy
+            (payload as Record<string, unknown>)['completed_points'] = boardState.completedPoints;
+            (payload as Record<string, unknown>)['committed_points'] = boardState.committedPoints;
+        }
+    }
 
     const standup = buildPmStandupSummary(recentMemory, {
         botName,
@@ -811,8 +847,10 @@ async function handleStandupSummary(params: PmActionParams): Promise<PmActionRes
     });
 
     const output = [
-        `**${botName} — Daily Standup Update**`,
+        `**${botName} — Daily Standup Update** | ${new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' })}`,
         '',
+        boardSection || '',
+        boardSection ? '---' : '',
         standup.blockers.length > 0
             ? `🚨 **Blockers:** ${standup.blockers.join(' | ')}`
             : '',
@@ -1016,29 +1054,61 @@ async function handleImpedimentLog(params: PmActionParams): Promise<PmActionResu
         `_Logged by AgentFarm Scrum Master — ${new Date().toISOString().split('T')[0]}_`,
     ].join('\n');
 
-    // If connectorClient is provided and Jira/Linear integration is configured, create a ticket
-    if (connectorClient) {
+    // ── Full escalation chain for critical/major blockers ────────────────────
+    // A human SM doesn't just log a critical blocker — they create the ticket,
+    // notify the team, email the escalation owner, and update the risk register
+    // all in one coordinated sequence.
+    let escalationReport: string | undefined;
+    let ticketKey: string | undefined;
+
+    if (needsEscalation || severity === 'major') {
+        const chainResult = await runEscalationChain({
+            blockerId,
+            description,
+            impact,
+            severity,
+            owner,
+            escalateTo,
+            projectKey: str(payload['project_key']) || undefined,
+            ticketPlatform: str(payload['ticket_platform']) || undefined,
+            slackChannel: str(payload['slack_channel']) || undefined,
+            teamsWebhook: str(payload['teams_webhook']) || undefined,
+            tenantId,
+            workspaceId,
+            botId: params.botId,
+            connectorClient,
+            gatewayBaseUrl,
+            serviceToken,
+        }).catch(() => null);
+
+        if (chainResult) {
+            escalationReport = chainResult.report;
+            ticketKey        = chainResult.ticketKey;
+        }
+    } else if (connectorClient) {
+        // For minor blockers: just create the ticket, no full chain
         const ticketPlatform = str(payload['ticket_platform']);
-        const projectKey = str(payload['project_key']);
+        const projectKey     = str(payload['project_key']);
         if (ticketPlatform && projectKey) {
-            try {
-                await connectorClient({
-                    connectorType: ticketPlatform,
-                    actionType: 'create_task',
-                    payload: {
-                        title: `[BLOCKER ${severity.toUpperCase()}] ${description.slice(0, 80)}`,
-                        description: `${description}\n\nImpact: ${impact}`,
-                        type: 'task',
-                        priority: severity === 'critical' ? 'high' : severity === 'major' ? 'medium' : 'low',
-                        labels: ['blocker', 'impediment'],
-                        project_key: projectKey,
-                    },
-                });
-            } catch {
-                // Non-fatal — ticket creation failure doesn't block impediment log
-            }
+            await connectorClient({
+                connectorType: ticketPlatform,
+                actionType:    'create_task',
+                payload: {
+                    title:       `[BLOCKER MINOR] ${description.slice(0, 80)}`,
+                    description: `${description}\n\nImpact: ${impact}`,
+                    type:        'task',
+                    priority:    'low',
+                    labels:      ['blocker', 'impediment', 'minor'],
+                    project_key: projectKey,
+                },
+            }).catch(() => { /* non-fatal */ });
         }
     }
+
+    // Append escalation chain report to output
+    const finalOutput = escalationReport
+        ? [output, '', '---', '', escalationReport].join('\n')
+        : output;
 
     await writeEpisodicMemory({
         tenantId,
@@ -1051,12 +1121,12 @@ async function handleImpedimentLog(params: PmActionParams): Promise<PmActionResu
 
     return {
         ok: true,
-        output,
+        output: finalOutput,
         documentType: 'impediment_log',
         riskLevel: severity === 'critical' ? 'high' : 'low',
         approvalStatus: 'auto_approved',
         escalated: needsEscalation,
-        structuredData: { blockerId, severity, escalated: needsEscalation },
+        structuredData: { blockerId, severity, escalated: needsEscalation, ticketKey },
     };
 }
 
@@ -1425,6 +1495,192 @@ async function handleCheckHandoffStatus(params: PmActionParams): Promise<PmActio
 }
 
 // ---------------------------------------------------------------------------
+// Delivery forecast
+// ---------------------------------------------------------------------------
+
+async function handleDeliveryForecast(params: PmActionParams): Promise<PmActionResult> {
+    const { tenantId, workspaceId, payload, gatewayBaseUrl, serviceToken } = params;
+
+    const velocityHistory = (() => {
+        const raw = payload['historical_velocity'] ?? payload['velocity_history'];
+        if (Array.isArray(raw)) return raw.filter((v): v is number => typeof v === 'number');
+        if (typeof raw === 'number') return [raw];
+        return [];
+    })();
+
+    const remainingPoints   = num(payload['remaining_backlog_points'] ?? payload['remaining_points'], 0);
+    const sprintLengthDays  = num(payload['sprint_length_days'] ?? payload['sprint_duration_days'], 14);
+    const daysElapsed       = num(payload['days_elapsed'], 0);
+    const featureName       = str(payload['feature_name'] ?? payload['title'], 'Backlog');
+    const teamName          = str(payload['team_name'], 'Team');
+
+    const forecast = computeDeliveryForecast({
+        velocityHistory,
+        remainingPoints,
+        sprintLengthDays,
+        currentSprintDaysElapsed: daysElapsed,
+        currentSprintStartDate: str(payload['sprint_start_date']) || undefined,
+        featureName,
+        teamName,
+    });
+
+    await writeEpisodicMemory({
+        tenantId,
+        workspaceId,
+        pattern: 'pm:delivery_forecast:generated',
+        summary: `Delivery forecast: ${featureName} — realistic end ${forecast.realistic.estimatedEndDate}`,
+        gatewayBaseUrl,
+        serviceToken,
+    });
+
+    return {
+        ok: true,
+        output: forecast.formattedReport,
+        documentType: 'delivery_forecast',
+        riskLevel: 'low',
+        approvalStatus: 'auto_approved',
+        structuredData: {
+            optimistic:  forecast.optimistic.estimatedEndDate,
+            realistic:   forecast.realistic.estimatedEndDate,
+            pessimistic: forecast.pessimistic.estimatedEndDate,
+            confidence:  forecast.confidenceLevel,
+            avgVelocity: forecast.avgVelocity,
+        },
+    };
+}
+
+// ---------------------------------------------------------------------------
+// Sprint health check (live burndown monitoring + automatic alert)
+// ---------------------------------------------------------------------------
+
+async function handleSprintHealthCheck(params: PmActionParams): Promise<PmActionResult> {
+    const { tenantId, workspaceId, payload, gatewayBaseUrl, serviceToken, connectorClient } = params;
+
+    const sprintId     = payload['sprint_id'] ?? payload['sprintId'];
+    const sprintName   = str(payload['sprint_name'], 'Current Sprint');
+    const daysTotal    = num(payload['days_total']   ?? payload['sprint_duration_days'], 14);
+    const daysElapsed  = num(payload['days_elapsed'] ?? payload['sprint_days_elapsed'], 0);
+    const connector    = str(payload['connector']) as 'jira' | 'linear' | '';
+    const slackChannel = str(payload['slack_channel']) || undefined;
+    const teamsWebhook = str(payload['teams_webhook']) || undefined;
+    const credentials  = typeof payload['credentials'] === 'object' ? payload['credentials'] as Record<string, unknown> : undefined;
+
+    let health;
+
+    if (connectorClient && connector && sprintId) {
+        // Full live check — fetches board + computes health + fires alert
+        health = await runSprintHealthCheck({
+            sprintId: sprintId as string | number,
+            sprintName,
+            sprintDaysTotal:   daysTotal,
+            sprintDaysElapsed: daysElapsed,
+            connector: connector as 'jira' | 'linear',
+            connectorClient,
+            slackChannel,
+            teamsWebhook,
+            credentials,
+        });
+    } else {
+        // Offline check from payload data
+        health = computeSprintHealth({
+            sprintName,
+            sprintDaysTotal:   daysTotal,
+            sprintDaysElapsed: daysElapsed,
+            committedPoints:  num(payload['committed_points'], 0),
+            completedPoints:  num(payload['completed_points'], 0),
+            inProgressPoints: num(payload['in_progress_points'], 0),
+            blockedCount:     num(payload['blocked_count'], 0),
+            atRiskStories:    Array.isArray(payload['at_risk_stories'])
+                ? (payload['at_risk_stories'] as string[])
+                : [],
+        });
+    }
+
+    await writeEpisodicMemory({
+        tenantId,
+        workspaceId,
+        pattern: `pm:sprint_health:${health.ragStatus}`,
+        summary: `Sprint health check: ${sprintName} → ${health.ragStatus.toUpperCase()} (${health.completionPct}% complete, ${health.blockedCount} blocked)`,
+        gatewayBaseUrl,
+        serviceToken,
+    });
+
+    return {
+        ok: true,
+        output: health.formattedReport,
+        documentType: 'sprint_health',
+        riskLevel: health.ragStatus === 'red' ? 'high' : health.ragStatus === 'amber' ? 'medium' : 'low',
+        approvalStatus: 'auto_approved',
+        structuredData: {
+            ragStatus:           health.ragStatus,
+            completionPct:       health.completionPct,
+            expectedCompletionPct: health.expectedCompletionPct,
+            variance:            health.variance,
+            blockedCount:        health.blockedCount,
+            alertFired:          health.alertRequired,
+        },
+    };
+}
+
+// ---------------------------------------------------------------------------
+// Board sync (standalone — read current sprint state and return it)
+// ---------------------------------------------------------------------------
+
+async function handleBoardSync(params: PmActionParams): Promise<PmActionResult> {
+    const { payload, connectorClient } = params;
+
+    const sprintId   = payload['sprint_id'] ?? payload['sprintId'];
+    const sprintName = str(payload['sprint_name'], 'Current Sprint');
+    const connector  = str(payload['connector']) as 'jira' | 'linear' | '';
+    const daysElapsed = num(payload['days_elapsed'], 0);
+    const daysTotal   = num(payload['days_total'], 14);
+    const credentials = typeof payload['credentials'] === 'object' ? payload['credentials'] as Record<string, unknown> : undefined;
+
+    if (!connectorClient || !connector || !sprintId) {
+        return {
+            ok: false,
+            output: '⚠️ Board sync requires connector, sprint_id, and connectorClient to be configured.',
+            documentType: 'board_sync',
+            errorOutput: 'Missing connector or sprint_id',
+        };
+    }
+
+    const boardState = await fetchSprintBoardState(
+        connectorClient,
+        connector as 'jira' | 'linear',
+        { sprintId: sprintId as string | number, sprintName, credentials },
+    );
+
+    if (!boardState) {
+        return {
+            ok: false,
+            output: '❌ Could not fetch board state. Check connector credentials and sprint_id.',
+            documentType: 'board_sync',
+            errorOutput: 'fetchSprintBoardState returned null',
+        };
+    }
+
+    const formatted = formatBoardStateForStandup(boardState, daysElapsed, daysTotal);
+
+    return {
+        ok: true,
+        output: formatted,
+        documentType: 'board_sync',
+        riskLevel: 'low',
+        approvalStatus: 'auto_approved',
+        structuredData: {
+            sprintName:      boardState.sprintName,
+            committedPoints: boardState.committedPoints,
+            completedPoints: boardState.completedPoints,
+            inProgressPoints: boardState.inProgressPoints,
+            blockedCount:    boardState.blockedCount,
+            completionPct:   boardState.completionPct,
+            issueCount:      boardState.issues.length,
+        },
+    };
+}
+
+// ---------------------------------------------------------------------------
 // LLM-based PM document generation (for charter, status report, risk, etc.)
 // ---------------------------------------------------------------------------
 
@@ -1567,6 +1823,13 @@ export async function handlePmAction(params: PmActionParams): Promise<PmActionRe
             return handleHandoffToRole(params, 'tester');
         case 'workspace_pm_check_handoff_status':
             return handleCheckHandoffStatus(params);
+        // Human-PM parity: live board + forecasting + health monitoring
+        case 'workspace_pm_delivery_forecast':
+            return handleDeliveryForecast(params);
+        case 'workspace_pm_sprint_health_check':
+            return handleSprintHealthCheck(params);
+        case 'workspace_pm_board_sync':
+            return handleBoardSync(params);
         // PM document-generation actions (LLM + RAG + gate)
         case 'workspace_pm_project_charter':
         case 'workspace_pm_status_report':
