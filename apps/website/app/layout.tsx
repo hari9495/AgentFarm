@@ -9,6 +9,7 @@ import { Analytics } from "@vercel/analytics/react";
 import CartProvider from "@/components/shared/CartProvider";
 import MotionProvider from "@/components/shared/MotionProvider";
 import MarketingShell from "@/components/layout/MarketingShell";
+import { siteMarketingMetadata } from "@/lib/marketing-content";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -30,13 +31,11 @@ export const metadata: Metadata = {
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL ?? "https://agentfarm.ai"
   ),
-  title: "AgentFarm — AI Workers for Every Department",
-  description:
-    "Hire AI workers across 12 roles — Developer, Sales Rep, Customer Support, and more. Approval gates, full audit trail, tenant-isolated execution on Azure.",
+  title: siteMarketingMetadata.siteTitle,
+  description: siteMarketingMetadata.siteDescription,
   openGraph: {
-    title: "AgentFarm — AI Workers for Every Department",
-    description:
-      "Hire AI workers across 12 roles — Developer, Sales Rep, Customer Support, and more. Approval gates, full audit trail, tenant-isolated execution on Azure.",
+    title: siteMarketingMetadata.siteTitle,
+    description: siteMarketingMetadata.siteDescription,
     type: "website",
   },
 };
@@ -47,8 +46,7 @@ const jsonLd = {
   name: "AgentFarm",
   applicationCategory: "BusinessApplication",
   operatingSystem: "Web",
-  description:
-    "AI staffing platform with 12 worker roles for every department. Approval gates, full audit trail, and tenant-isolated execution on Azure.",
+  description: siteMarketingMetadata.siteDescription,
   url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://agentfarm.ai",
   offers: {
     "@type": "Offer",
@@ -95,5 +93,4 @@ export default function RootLayout({
     </html>
   );
 }
-
 

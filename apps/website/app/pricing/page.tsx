@@ -1,39 +1,19 @@
 import type { Metadata } from "next";
-import { CheckCircle2, ArrowRight } from "lucide-react";
+import { ArrowRight, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import PricingCalculator from "@/components/pricing/PricingCalculator";
 import { marketplaceBots, type Bot } from "@/lib/bots";
+import { pricingPageContent } from "@/lib/marketing-content";
 
 export const metadata: Metadata = {
-    title: "Pricing — AgentFarm",
-    description: "Simple, predictable pricing for every team size. Start free.",
+    title: pricingPageContent.metadata.title,
+    description: pricingPageContent.metadata.description,
 };
 
 type PlanTier = Bot["plan"];
 
 const PLAN_ORDER: PlanTier[] = ["Starter+", "Pro+", "Enterprise"];
-
-const PLAN_CONFIG: Record<PlanTier, { cta: string; ctaHref: string; highlighted: boolean; summary: string }> = {
-    "Starter+": {
-        cta: "Start Free Trial",
-        ctaHref: "/get-started",
-        highlighted: false,
-        summary: "Best for teams launching their first specialist workflows quickly.",
-    },
-    "Pro+": {
-        cta: "Start Free Trial",
-        ctaHref: "/get-started",
-        highlighted: true,
-        summary: "Built for scaling multiple specialists across engineering and GTM operations.",
-    },
-    Enterprise: {
-        cta: "Contact Sales",
-        ctaHref: "/contact",
-        highlighted: false,
-        summary: "For compliance-heavy teams requiring custom controls, governance, and support.",
-    },
-};
-
+const PLAN_CONFIG = pricingPageContent.planConfig;
 const availableMarketplaceBots = marketplaceBots.filter((bot) => bot.available);
 
 const plans = PLAN_ORDER.map((tier) => {
@@ -50,10 +30,12 @@ const plans = PLAN_ORDER.map((tier) => {
         period: tier === "Enterprise" ? "" : "/ month",
         description: PLAN_CONFIG[tier].summary,
         features: [
-            `${liveTierBots.length} live roles (${tierBots.length} total)`,
-            `${deptCount} departments covered`,
-            rolePreview ? `Top roles: ${rolePreview}` : "Role lineup tailored to your team",
-            tier === "Enterprise" ? "Custom SLA and governance controls" : "14-day free trial included",
+            `${liveTierBots.length} ${pricingPageContent.planFeatures.liveRolesLabel} (${tierBots.length} ${pricingPageContent.planFeatures.totalRolesLabel})`,
+            `${deptCount} ${pricingPageContent.planFeatures.departmentsLabel}`,
+            rolePreview
+                ? `${pricingPageContent.planFeatures.topRolesPrefix} ${rolePreview}`
+                : pricingPageContent.planFeatures.fallbackRoleSummary,
+            tier === "Enterprise" ? pricingPageContent.planFeatures.enterpriseNote : pricingPageContent.planFeatures.trialNote,
         ],
         cta: PLAN_CONFIG[tier].cta,
         ctaHref: PLAN_CONFIG[tier].ctaHref,
@@ -61,41 +43,31 @@ const plans = PLAN_ORDER.map((tier) => {
     };
 });
 
-const starterPlanPrice = plans.find((p) => p.name === "Starter+")?.price ?? "$299";
-const proPlanPrice = plans.find((p) => p.name === "Pro+")?.price ?? "$599";
+const starterPlanPrice = plans.find((plan) => plan.name === "Starter+")?.price ?? "$299";
+const proPlanPrice = plans.find((plan) => plan.name === "Pro+")?.price ?? "$599";
 
-const faqs = [
+const decisionCards = [
     {
-        q: "Is there a free trial?",
-        a: "Yes — join the waitlist and you'll get early access with a 14-day free trial on the Starter plan. No credit card required.",
+        chip: pricingPageContent.decisionCards[0].chip,
+        price: `${pricingPageContent.decisionCards[0].pricePrefix} ${starterPlanPrice}/month`,
+        desc: pricingPageContent.decisionCards[0].description,
     },
     {
-        q: "What counts as a task execution?",
-        a: "A task execution is any unit of work an AI worker picks up — writing a function, sending a follow-up email, drafting a report, processing a support ticket, running a CI check, or scheduling a meeting.",
+        chip: pricingPageContent.decisionCards[1].chip,
+        price: `${pricingPageContent.decisionCards[1].pricePrefix} ${proPlanPrice}/month`,
+        desc: pricingPageContent.decisionCards[1].description,
     },
     {
-        q: "Can I change plans?",
-        a: "Absolutely. You can upgrade or downgrade at any time. Changes take effect at the next billing cycle.",
-    },
-    {
-        q: "What integrations are supported?",
-        a: "GitHub, Jira, Slack, HubSpot, Salesforce, Gmail, Google Calendar, Microsoft Teams, Notion, and 100+ more via MCP connectors. Bring your own MCP server for internal tools. New connectors added continuously.",
-    },
-    {
-        q: "Is my data safe?",
-        a: "Every AI worker runs in a tenant-isolated Azure VM with least-privilege access. Your data never leaves your own connected tools and AgentFarm never stores credentials in plaintext.",
-    },
-    {
-        q: "Do you support on-premises deployment?",
-        a: "Yes — the Enterprise plan includes an on-premises option for teams with strict data residency requirements.",
+        chip: pricingPageContent.decisionCards[2].chip,
+        price: pricingPageContent.decisionCards[2].pricePrefix,
+        desc: pricingPageContent.decisionCards[2].description,
     },
 ];
 
 export default function PricingPage() {
     return (
         <div className="bg-[var(--canvas)]">
-            {/* Hero */}
-            <section className="relative border-b border-[var(--hairline)] py-24 text-center overflow-hidden">
+            <section className="relative overflow-hidden border-b border-[var(--hairline)] py-24 text-center">
                 <div
                     aria-hidden
                     className="pointer-events-none absolute inset-x-0 top-0 h-[400px]"
@@ -103,74 +75,67 @@ export default function PricingPage() {
                         background: "radial-gradient(ellipse 70% 40% at 50% -5%, rgba(89,212,153,0.06) 0%, transparent 70%)",
                     }}
                 />
-                <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--accent-green)] mb-5">
-                        Pricing
+                <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                    <p className="mb-5 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--accent-green)]">
+                        {pricingPageContent.hero.eyebrow}
                     </p>
-                    <h1 className="text-[clamp(2.4rem,5.5vw,4rem)] font-black text-[var(--ink)] tracking-[-0.04em]">
-                        Simple, predictable pricing
+                    <h1 className="text-[clamp(2.4rem,5.5vw,4rem)] font-black tracking-[-0.04em] text-[var(--ink)]">
+                        {pricingPageContent.hero.title}
                     </h1>
-                    <p className="mt-5 text-lg text-[var(--body-color)] max-w-xl mx-auto leading-relaxed">
-                        Marketplace-aligned pricing across {availableMarketplaceBots.length} live AI roles.
-                        Start free and scale by role.
+                    <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-[var(--body-color)]">
+                        {pricingPageContent.hero.description}
                     </p>
                     <p className="mt-4 text-sm text-[var(--ash)]">
-                        {availableMarketplaceBots.length} live roles · 14-day free trial · No card required
+                        {pricingPageContent.hero.footnoteTemplate.replace("{count}", String(availableMarketplaceBots.length))}
                     </p>
                 </div>
             </section>
 
             <PricingCalculator />
 
-            {/* Decision cards */}
-            <section className="py-10 sm:py-12 border-b border-[var(--hairline)]">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <section className="border-b border-[var(--hairline)] py-10 sm:py-12">
+                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                     <div className="grid gap-4 md:grid-cols-3">
-                        {[
-                            { chip: "Getting started", price: `From ${starterPlanPrice}/month`, desc: "Best when you are proving AI teammate workflows with one to two core roles." },
-                            { chip: "Most popular", price: `Most teams pick Pro+ at ${proPlanPrice}/month`, desc: "Adds coverage breadth across departments with better rollout economics." },
-                            { chip: "Enterprise", price: "For regulated environments", desc: "Custom controls, support, and deployment posture for strict compliance teams." },
-                        ].map((card) => (
+                        {decisionCards.map((card) => (
                             <article
                                 key={card.chip}
-                                className="bg-[var(--surface-card)] border border-[var(--hairline)] rounded-xl p-6"
+                                className="rounded-xl border border-[var(--hairline)] bg-[var(--surface-card)] p-6"
                             >
-                                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--accent-green)] mb-3">{card.chip}</p>
+                                <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--accent-green)]">
+                                    {card.chip}
+                                </p>
                                 <p className="text-base font-bold text-[var(--ink)]">{card.price}</p>
-                                <p className="mt-1 text-sm text-[var(--mute)] leading-relaxed">{card.desc}</p>
+                                <p className="mt-1 text-sm leading-relaxed text-[var(--mute)]">{card.desc}</p>
                             </article>
                         ))}
                     </div>
                 </div>
             </section>
 
-            {/* Plans */}
             <section className="py-24">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-5xl mx-auto items-stretch">
+                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                    <div className="mx-auto grid max-w-5xl grid-cols-1 items-stretch gap-5 md:grid-cols-3">
                         {plans.map((plan) => (
                             <div
                                 key={plan.name}
-                                className={`flex flex-col p-7 rounded-xl border bg-[var(--surface-card)] ${plan.highlighted ? "border-[var(--accent-green)]" : "border-[var(--hairline)]"}`}
+                                className={`flex flex-col rounded-xl border bg-[var(--surface-card)] p-7 ${plan.highlighted ? "border-[var(--accent-green)]" : "border-[var(--hairline)]"}`}
                             >
                                 {plan.highlighted && (
-                                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--accent-green)] mb-4">
-                                        Most Popular
+                                    <p className="mb-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--accent-green)]">
+                                        Most popular
                                     </p>
                                 )}
-                                <p className="text-xs font-semibold uppercase tracking-widest text-[var(--ash)] mb-2">{plan.name}</p>
-                                <div className="flex items-end gap-1 mt-1">
+                                <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-[var(--ash)]">{plan.name}</p>
+                                <div className="mt-1 flex items-end gap-1">
                                     <span className="text-4xl font-black tracking-tight text-[var(--ink)]">{plan.price}</span>
-                                    {plan.period && (
-                                        <span className="text-sm text-[var(--ash)] mb-1.5">{plan.period}</span>
-                                    )}
+                                    {plan.period ? <span className="mb-1.5 text-sm text-[var(--ash)]">{plan.period}</span> : null}
                                 </div>
-                                <p className="mt-3 text-sm text-[var(--mute)] leading-relaxed">{plan.description}</p>
-                                <ul className="mt-6 space-y-2.5 flex-1">
-                                    {plan.features.map((f) => (
-                                        <li key={f} className="flex items-start gap-2.5 text-sm text-[var(--body-color)]">
-                                            <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-[var(--accent-green)]" />
-                                            {f}
+                                <p className="mt-3 text-sm leading-relaxed text-[var(--mute)]">{plan.description}</p>
+                                <ul className="mt-6 flex-1 space-y-2.5">
+                                    {plan.features.map((feature) => (
+                                        <li key={feature} className="flex items-start gap-2.5 text-sm text-[var(--body-color)]">
+                                            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[var(--accent-green)]" />
+                                            {feature}
                                         </li>
                                     ))}
                                 </ul>
@@ -180,30 +145,29 @@ export default function PricingPage() {
                                         className={`${plan.highlighted ? "btn-primary" : "btn-secondary"} w-full justify-center`}
                                     >
                                         {plan.cta}
-                                        {plan.highlighted && <ArrowRight className="w-4 h-4" />}
+                                        {plan.highlighted ? <ArrowRight className="h-4 w-4" /> : null}
                                     </Link>
                                 </div>
                             </div>
                         ))}
                     </div>
-                    <p className="text-center text-sm text-[var(--ash)] mt-8">
-                        Marketplace pricing updates with role availability · 14-day free trial, no credit card required.
+                    <p className="mt-8 text-center text-sm text-[var(--ash)]">
+                        {pricingPageContent.pageFooterNote}
                     </p>
                 </div>
             </section>
 
-            {/* FAQ */}
-            <section className="py-24 border-t border-[var(--hairline)]">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="max-w-3xl mx-auto">
-                        <h2 className="text-2xl font-black text-[var(--ink)] tracking-[-0.03em] mb-10 text-center">
+            <section className="border-t border-[var(--hairline)] py-24">
+                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                    <div className="mx-auto max-w-3xl">
+                        <h2 className="mb-10 text-center text-2xl font-black text-[var(--ink)] tracking-[-0.03em]">
                             Frequently asked questions
                         </h2>
-                        <div className="bg-[var(--surface-card)] border border-[var(--hairline)] rounded-xl divide-y divide-[var(--hairline)] overflow-hidden">
-                            {faqs.map(({ q, a }) => (
-                                <div key={q} className="p-6 hover:bg-[var(--surface-elevated)] transition-colors">
-                                    <h3 className="font-semibold text-[var(--ink)] mb-2">{q}</h3>
-                                    <p className="text-sm text-[var(--mute)] leading-relaxed">{a}</p>
+                        <div className="overflow-hidden rounded-xl border border-[var(--hairline)] bg-[var(--surface-card)] divide-y divide-[var(--hairline)]">
+                            {pricingPageContent.faqs.map(({ q, a }) => (
+                                <div key={q} className="p-6 transition-colors hover:bg-[var(--surface-elevated)]">
+                                    <h3 className="mb-2 font-semibold text-[var(--ink)]">{q}</h3>
+                                    <p className="text-sm leading-relaxed text-[var(--mute)]">{a}</p>
                                 </div>
                             ))}
                         </div>

@@ -5,6 +5,7 @@ import LogosStrip from "@/components/home/LogosStrip";
 import Problem from "@/components/home/Problem";
 import Solution from "@/components/home/Solution";
 import Features from "@/components/home/Features";
+import { siteMarketingMetadata } from "@/lib/marketing-content";
 
 const Testimonials = dynamic(() => import("@/components/home/Testimonials"));
 const PricingSection = dynamic(() => import("@/components/home/PricingSection"));
@@ -12,9 +13,8 @@ const FAQ = dynamic(() => import("@/components/home/FAQ"));
 const CallToAction = dynamic(() => import("@/components/home/CallToAction"));
 
 export const metadata: Metadata = {
-  title: "AgentFarm — AI Workers for Engineering Teams",
-  description:
-    "Give every department a dedicated AI worker with real tool access, role-scoped skills, and human oversight on every decision that matters.",
+  title: siteMarketingMetadata.homeTitle,
+  description: siteMarketingMetadata.homeDescription,
 };
 
 export default function Home() {
