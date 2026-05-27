@@ -93,20 +93,112 @@ function extractYearsExperience(resumeText: string): number {
     return Math.round(totalMonths / 12);
 }
 
+// ---------------------------------------------------------------------------
+// Qualification synonym map — broadens keyword matching to catch equivalent terms
+// ---------------------------------------------------------------------------
+
+const QUALIFICATION_SYNONYMS: Record<string, string[]> = {
+    // ── Office / Business tools ───────────────────────────────────────────────
+    excel:          ['spreadsheet', 'vba', 'pivot table', 'pivot tables', 'power query', 'xlookup', 'vlookup'],
+    powerpoint:     ['presentation', 'slides', 'keynote', 'slide deck'],
+    word:           ['microsoft word', 'document editing', 'ms word'],
+    // ── Programming / Data ───────────────────────────────────────────────────
+    python:         ['numpy', 'pandas', 'scikit', 'django', 'flask', 'fastapi', 'pytorch', 'tensorflow'],
+    sql:            ['mysql', 'postgresql', 'postgres', 'oracle', 'tsql', 't-sql', 'database query', 'redshift', 'bigquery', 'snowflake'],
+    javascript:     ['typescript', 'react', 'vue', 'angular', 'node.js', 'nodejs', 'next.js', 'express'],
+    java:           ['spring', 'spring boot', 'j2ee', 'jakarta', 'hibernate', 'maven', 'gradle'],
+    cloud:          ['aws', 'azure', 'gcp', 'google cloud', 'amazon web services', 'microsoft azure'],
+    aws:            ['amazon web services', 'ec2', 's3', 'lambda', 'cloudformation', 'terraform', 'eks', 'ecs'],
+    'machine learning': ['ml', 'deep learning', 'neural network', 'nlp', 'llm', 'ai model', 'artificial intelligence', 'scikit-learn'],
+    'data analysis': ['data analytics', 'statistical analysis', 'data visualization', 'tableau', 'power bi', 'looker', 'jupyter'],
+    devops:         ['ci/cd', 'cicd', 'kubernetes', 'docker', 'jenkins', 'github actions', 'gitlab ci', 'terraform'],
+    // ── Healthcare / Clinical ─────────────────────────────────────────────────
+    emr:            ['epic', 'cerner', 'allscripts', 'meditech', 'eclinicalworks', 'ehr', 'electronic health record', 'electronic medical record'],
+    'medication administration': ['med admin', 'medication pass', 'mar', 'medication administration record'],
+    'wound care':   ['wound management', 'dressing change', 'wound assessment', 'wound healing'],
+    triage:         ['patient triage', 'emergency triage', 'esi', 'triage assessment'],
+    phlebotomy:     ['venipuncture', 'blood draw', 'iv insertion', 'specimen collection'],
+    'patient care': ['direct care', 'bedside nursing', 'clinical care', 'care coordination', 'patient management'],
+    // ── Legal / Compliance ───────────────────────────────────────────────────
+    litigation:     ['trial', 'deposition', 'discovery', 'pleadings', 'brief writing', 'motion practice'],
+    'contract review': ['contract analysis', 'contract drafting', 'agreement review', 'legal review', 'redlining'],
+    compliance:     ['regulatory compliance', 'risk & compliance', 'gdpr', 'hipaa', 'sox', 'regulatory affairs'],
+    research:       ['legal research', 'westlaw', 'lexisnexis', 'case research', 'statutory research'],
+    // ── Finance / Accounting ─────────────────────────────────────────────────
+    accounting:     ['bookkeeping', 'general ledger', 'accounts payable', 'accounts receivable', 'financial reporting', 'gaap', 'ifrs'],
+    forecasting:    ['financial forecast', 'budgeting', 'budget planning', 'variance analysis', 'financial planning'],
+    'financial modeling': ['excel model', 'dcf', 'discounted cash flow', 'lbo', 'three-statement model', 'financial analysis'],
+    auditing:       ['audit', 'internal audit', 'external audit', 'sox compliance', 'risk assessment'],
+    // ── Operations / Project Management ─────────────────────────────────────
+    'project management': ['pmp', 'agile', 'scrum', 'kanban', 'waterfall', 'stakeholder management', 'project coordination'],
+    agile:          ['scrum', 'kanban', 'sprint', 'retrospective', 'jira', 'confluence', 'backlog', 'product owner'],
+    'process improvement': ['lean', 'six sigma', 'kaizen', 'continuous improvement', 'bpr', 'process optimization'],
+    // ── Marketing / Communications ───────────────────────────────────────────
+    'digital marketing': ['seo', 'sem', 'ppc', 'google ads', 'facebook ads', 'content marketing', 'email marketing', 'hubspot'],
+    'social media': ['instagram', 'linkedin marketing', 'twitter', 'tiktok', 'facebook', 'content creation', 'community management'],
+    crm:            ['salesforce', 'hubspot', 'dynamics', 'zoho', 'customer relationship', 'pipeline management'],
+    // ── Supply Chain / Logistics ─────────────────────────────────────────────
+    'supply chain': ['procurement', 'vendor management', 'sourcing', 'logistics', 'inventory management', 'demand planning'],
+    'warehouse management': ['wms', 'warehouse operations', 'inventory control', 'pick and pack', 'fulfillment'],
+    // ── Soft skills / Leadership ──────────────────────────────────────────────
+    leadership:     ['team management', 'people management', 'mentoring', 'coaching', 'managing a team', 'team lead'],
+    communication:  ['written communication', 'verbal communication', 'stakeholder communication', 'public speaking', 'presentation'],
+    'cross-functional': ['cross functional', 'collaboration', 'matrix environment', 'working across teams'],
+};
+
 function checkQualification(qual: string, resumeText: string): QualificationMatch {
     const lower = resumeText.toLowerCase();
     const words = qual.toLowerCase().split(/\s+/);
+    const stopWords = new Set(['with', 'and', 'the', 'for', 'in', 'of', 'or', 'to', 'a', 'an', 'at', 'by']);
     // Keyword matching — a qual is "met" if majority of its distinct keywords appear in resume
-    const significantWords = words.filter(w => w.length > 3 && !['with', 'and', 'the', 'for', 'in', 'of', 'or', 'to'].includes(w));
+    const significantWords = words.filter(w => w.length > 3 && !stopWords.has(w));
     if (significantWords.length === 0) {
         return { qualification: qual, met: false, evidence: 'No significant keywords to match' };
     }
-    const matched = significantWords.filter(w => lower.includes(w));
+
+    // For each significant word, check: (1) exact substring, or (2) any synonym
+    const matched: string[] = [];
+    const missing: string[] = [];
+
+    for (const w of significantWords) {
+        const directMatch = lower.includes(w);
+        if (directMatch) {
+            matched.push(w);
+            continue;
+        }
+        // Check synonyms for this word
+        const synonymEntry = QUALIFICATION_SYNONYMS[w];
+        if (synonymEntry) {
+            const synonymMatch = synonymEntry.find(syn => lower.includes(syn));
+            if (synonymMatch) {
+                matched.push(`${w} (via "${synonymMatch}")`);
+                continue;
+            }
+        }
+        // Check if this word appears as part of a multi-word synonym key
+        let foundViaSynonymKey = false;
+        for (const [key, synonyms] of Object.entries(QUALIFICATION_SYNONYMS)) {
+            if (key.includes(w) && lower.includes(key)) {
+                matched.push(`${w} (via "${key}")`);
+                foundViaSynonymKey = true;
+                break;
+            }
+            if (synonyms.some(syn => syn.includes(w) && lower.includes(syn))) {
+                matched.push(`${w} (via synonym)`);
+                foundViaSynonymKey = true;
+                break;
+            }
+        }
+        if (!foundViaSynonymKey) {
+            missing.push(w);
+        }
+    }
+
     const pct = matched.length / significantWords.length;
     const met = pct >= 0.6;
     const evidence = met
         ? `Found: ${matched.join(', ')}`
-        : `Missing: ${significantWords.filter(w => !lower.includes(w)).join(', ')}`;
+        : `Missing: ${missing.join(', ')}`;
     return { qualification: qual, met, evidence };
 }
 

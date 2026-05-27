@@ -18,7 +18,10 @@
 
 export type HiringCountry =
     | 'us' | 'uk' | 'ireland' | 'germany' | 'france' | 'netherlands'
-    | 'spain' | 'sweden' | 'australia' | 'canada' | 'singapore' | 'india' | 'other';
+    | 'spain' | 'sweden' | 'australia' | 'canada' | 'singapore' | 'india'
+    | 'uae' | 'saudi_arabia' | 'japan' | 'south_korea' | 'brazil' | 'mexico'
+    | 'switzerland' | 'italy' | 'poland' | 'new_zealand' | 'israel'
+    | 'other';
 
 export type EngagementType = 'permanent' | 'fixed_term' | 'contractor' | 'consultant' | 'intern';
 
@@ -308,6 +311,97 @@ const SPONSORED_VISA_OPTIONS: Partial<Record<HiringCountry, SponsorshipOption[]>
             ],
         },
     ],
+    uae: [
+        {
+            visaType: 'UAE Work Permit / Employment Visa',
+            country: 'uae',
+            description: 'Employer-sponsored work permit issued through the Ministry of Human Resources & Emiratisation (MOHRE)',
+            typicalProcessingWeeks: '2–4 weeks',
+            employerCostEstimate: 'AED 5,000–15,000 in government fees + medical testing',
+            requirements: [
+                'Employer must have a valid trade licence in the UAE',
+                'Candidate\'s qualifications must be attested (UAE embassy + Ministry of Foreign Affairs)',
+                'Medical fitness test required in-country',
+                'Emiratisation quotas apply in private sector (Nafis programme) — check if role qualifies',
+                'UAE Golden Visa available for highly skilled professionals (no employer sponsor required)',
+            ],
+        },
+    ],
+    japan: [
+        {
+            visaType: 'Engineer/Specialist in Humanities/International Services Visa',
+            country: 'japan',
+            description: 'Most common work visa for professional roles in Japan',
+            typicalProcessingWeeks: '4–12 weeks',
+            employerCostEstimate: '¥4,000 in government fees; legal costs vary',
+            requirements: [
+                'Employer must be a legal entity in Japan (or a branch)',
+                'Role must match the visa category (engineering, humanities, international services)',
+                'Candidate must have a relevant bachelor\'s degree or 10 years of professional experience',
+                'Certificate of Eligibility issued by Immigration Services Agency — employer applies on behalf of candidate',
+                'Japan has strict labour laws; permanent employment is assumed — fixed-term contracts have restrictions',
+            ],
+        },
+    ],
+    brazil: [
+        {
+            visaType: 'VITEM V Work Visa (Temporary Work)',
+            country: 'brazil',
+            description: 'Temporary work authorisation issued by Brazil\'s Ministry of Labour (MTE)',
+            typicalProcessingWeeks: '6–12 weeks',
+            employerCostEstimate: 'BRL 2,000–5,000 in fees; legal costs vary',
+            requirements: [
+                'Brazilian employer must file a request with the Ministry of Labour (MTE)',
+                'Two-thirds rule: most companies must maintain at least 2/3 Brazilian nationals in their workforce',
+                'Candidate must have minimum 2 years of professional experience',
+                'Salary must be competitive with market rates (reviewed by MTE)',
+            ],
+        },
+    ],
+    mexico: [
+        {
+            visaType: 'FM3 / Temporal Residency with Work Rights',
+            country: 'mexico',
+            description: 'Temporary residency with permission to work in Mexico',
+            typicalProcessingWeeks: '4–8 weeks',
+            employerCostEstimate: 'MXN 5,000–15,000 in fees + legal costs',
+            requirements: [
+                'Mexican employer must obtain a work permit from INM (National Immigration Institute)',
+                'Candidate must apply for residency visa at Mexican consulate in their home country',
+                'Proportionality rule: companies must have a ratio of 90% Mexican workers to 10% foreign workers (some exceptions apply)',
+            ],
+        },
+    ],
+    switzerland: [
+        {
+            visaType: 'Swiss Work Permit (B/L Permit)',
+            country: 'switzerland',
+            description: 'EU/EFTA nationals have priority; non-EU/EFTA nationals subject to annual quota',
+            typicalProcessingWeeks: '4–10 weeks',
+            employerCostEstimate: 'CHF 1,000–3,000 in cantonal fees',
+            requirements: [
+                'EU/EFTA nationals: simplified process under Freedom of Movement Agreement',
+                'Non-EU/EFTA: annual quota applies — only senior specialists and managers typically qualify',
+                'Employer must demonstrate no qualified EU/EFTA candidate was available (labour market test)',
+                'Salary must be in line with Swiss market rates (significant — Switzerland has one of the highest cost-of-living adjustments globally)',
+            ],
+        },
+    ],
+    new_zealand: [
+        {
+            visaType: 'Accredited Employer Work Visa (AEWV)',
+            country: 'new_zealand',
+            description: 'Standard employer-sponsored work visa for skilled workers',
+            typicalProcessingWeeks: '4–10 weeks',
+            employerCostEstimate: 'NZD $700–$2,500 in government fees',
+            requirements: [
+                'Employer must be accredited with Immigration New Zealand',
+                'Job check must be approved — confirms role pays at or above median wage (NZD $29.66/hr in 2024) or meets sector-specific criteria',
+                'Evidence of advertising the role (labour market test) unless exempt',
+                'Candidate must meet English language requirements and health/character criteria',
+            ],
+        },
+    ],
 };
 
 const RTW_DOCUMENTS: Partial<Record<HiringCountry, Record<CandidateStatus, string[]>>> = {
@@ -568,9 +662,34 @@ export function assessIr35Status(input: Ir35Input): Ir35Result {
 // GDPR candidate data handling
 // ---------------------------------------------------------------------------
 
+/** Countries / regions with data privacy laws and their framework name */
+const DATA_PRIVACY_FRAMEWORKS: Partial<Record<HiringCountry, string>> = {
+    uk:          'UK GDPR (retained EU law post-Brexit) / DPA 2018',
+    germany:     'GDPR (EU) 2016/679 + BDSG (Bundesdatenschutzgesetz)',
+    france:      'GDPR (EU) 2016/679 + Loi Informatique et Libertés',
+    netherlands: 'GDPR (EU) 2016/679 + UAVG',
+    spain:       'GDPR (EU) 2016/679 + LOPDGDD',
+    sweden:      'GDPR (EU) 2016/679 + Dataskyddslagen',
+    ireland:     'GDPR (EU) 2016/679 + Data Protection Acts 1988–2018',
+    canada:      'PIPEDA (federal) + provincial laws (PIPA AB/BC, Law 25 QC)',
+    australia:   'Privacy Act 1988 (Cth) + Australian Privacy Principles (APPs)',
+    brazil:      'LGPD — Lei Geral de Proteção de Dados (Law 13.709/2018)',
+    india:       'Digital Personal Data Protection Act 2023 (DPDPA)',
+    singapore:   'Personal Data Protection Act 2012 (PDPA)',
+    south_korea: 'Personal Information Protection Act (PIPA)',
+    japan:       'Act on Protection of Personal Information (APPI)',
+    israel:      'Protection of Privacy Law 1981 + Regulations 2017',
+    new_zealand: 'Privacy Act 2020',
+    uae:         'UAE Personal Data Protection Law (PDPL, Federal Decree-Law No. 45 of 2021)',
+};
+
+const EU_GDPR_COUNTRIES: HiringCountry[] = ['uk', 'germany', 'france', 'netherlands', 'spain', 'sweden', 'ireland'];
+
 export function buildGdprRecruitmentWorkflow(input: GdprRecruitmentInput): GdprRecruitmentResult {
-    const isSubjectToGdpr = ['uk', 'germany', 'france', 'netherlands', 'spain', 'sweden', 'ireland'].includes(input.companyCountry)
-        || ['uk', 'germany', 'france', 'netherlands', 'spain', 'sweden', 'ireland'].includes(input.candidateCountry);
+    const isSubjectToGdpr = EU_GDPR_COUNTRIES.includes(input.companyCountry)
+        || EU_GDPR_COUNTRIES.includes(input.candidateCountry);
+    const candidateFramework = DATA_PRIVACY_FRAMEWORKS[input.candidateCountry];
+    const companyFramework = DATA_PRIVACY_FRAMEWORKS[input.companyCountry];
 
     const defaultRetention = input.processingPurpose === 'active_application' ? 6 :
                              input.processingPurpose === 'talent_pool'        ? 24 : 12;
@@ -646,6 +765,13 @@ export function buildGdprRecruitmentWorkflow(input: GdprRecruitmentInput): GdprR
         isSubjectToGdpr ? 'Review ATS and background check vendor for GDPR compliance and cross-border transfer mechanisms' : null,
         'Train all recruiters on data subject rights response process (30-day deadline for access/erasure requests)',
         'Document your Transfer Impact Assessment if sending data outside UK/EEA',
+        // Non-EU data privacy law reminders
+        candidateFramework && !isSubjectToGdpr ? `⚠️ Candidate data is subject to ${candidateFramework} — ensure consent and retention policies comply.` : null,
+        companyFramework && !isSubjectToGdpr && companyFramework !== candidateFramework ? `⚠️ Your company operations are subject to ${companyFramework} — ensure recruitment data handling is compliant.` : null,
+        input.candidateCountry === 'brazil' ? 'LGPD (Brazil): obtain valid consent or legitimate interest basis before processing; data subject rights apply — erasure, access, portability.' : null,
+        input.candidateCountry === 'india' ? 'DPDPA (India): obtain explicit consent; appoint Data Fiduciary; provide privacy notice in candidate\'s language if reasonably possible.' : null,
+        input.candidateCountry === 'canada' ? 'PIPEDA (Canada): meaningful consent required; Quebec Law 25 adds stricter requirements — privacy impact assessment may be needed for new tech use.' : null,
+        input.candidateCountry === 'australia' ? 'Australian Privacy Act: ensure APPs compliance; candidates have right of access and correction; cross-border disclosure rules apply.' : null,
     ].filter(Boolean) as string[];
 
     return {
@@ -797,6 +923,127 @@ const MARKET_ADAPTATIONS: Record<HiringCountry, Omit<MarketAdaptation, 'country'
         publicHolidayNote: '3 national holidays (Republic Day, Independence Day, Gandhi Jayanti) + 5–10 state/regional holidays. Many employers offer a floating holiday allowance.',
         probationPeriodNote: 'Typically 3–6 months. Notice during probation is usually as per contract (often 30 days). Termination rules vary by state.',
         noticePeriodNorm: 'Market norm: 30–90 days. Senior roles and tech companies often have 60–90 day notice periods. "Garden leave" is uncommon.',
+    },
+    uae: {
+        localCurrency: 'AED',
+        salaryTerminology: 'Monthly gross salary (AED). UAE has no income tax — this is a major selling point. Include housing allowance separately if applicable.',
+        dateFormat: 'DD/MM/YYYY',
+        localJobBoardRecommendations: ['LinkedIn', 'Bayt.com', 'GulfTalent', 'Naukrigulf', 'Indeed'],
+        localTerminologyNotes: ['No income tax is a key recruitment incentive — emphasise it', 'Housing allowance is a standard component of UAE packages', 'Medical insurance for employee is mandatory', 'Emiratisation (Nafis) quotas may apply to certain roles in private sector'],
+        mandatoryBenefitNotes: ['Medical insurance: mandatory for all employees in most Emirates', 'End-of-Service Gratuity: 21 days\' basic salary per year of service for first 5 years, then 30 days per year', 'Annual leave: 30 calendar days after 1 year of service', 'Minimum wage: no statutory minimum, but immigration requires "adequate" salary'],
+        publicHolidayNote: '~14 public holidays per year (Islamic calendar holidays vary annually based on moon sighting).',
+        probationPeriodNote: 'Max 6 months. Employee can be terminated with 14 days\' notice during probation.',
+        noticePeriodNorm: 'Minimum 30 days (up to 90 days for some roles) as per UAE Labour Law. Must be specified in contract.',
+    },
+    saudi_arabia: {
+        localCurrency: 'SAR',
+        salaryTerminology: 'Monthly gross salary (SAR). No personal income tax in Saudi Arabia. Housing and transport allowances are common.',
+        dateFormat: 'DD/MM/YYYY',
+        localJobBoardRecommendations: ['LinkedIn', 'Bayt.com', 'GulfTalent', 'Naukrigulf', 'Taqat (government portal)'],
+        localTerminologyNotes: ['Saudisation (Nitaqat) quotas are strictly enforced — verify headcount eligibility before hiring expat', 'No income tax for employees — major incentive', 'Iqama (residency permit) tied to employer', 'GOSI (social insurance) is mandatory for Saudi nationals'],
+        mandatoryBenefitNotes: ['End-of-Service Gratuity: 0.5 months\' salary per year for first 5 years; 1 month per year thereafter', 'Annual leave: 21 days (< 5 years); 30 days (5+ years)', 'Medical insurance: mandatory for all employees', 'Annual flight home: standard market benefit for expats'],
+        publicHolidayNote: '~12 public holidays (Islamic calendar; varies annually). Eid al-Fitr and Eid al-Adha are major breaks.',
+        probationPeriodNote: 'Max 90 days. May be extended to 180 days by mutual agreement.',
+        noticePeriodNorm: 'Minimum 30 days for unlimited contracts. Notice obligations governed by Saudi Labour Law Article 75.',
+    },
+    japan: {
+        localCurrency: 'JPY',
+        salaryTerminology: 'Annual salary (nenshu) in JPY. Monthly breakdown common. Bonus (sōbu) paid twice yearly (June and December) is standard — up to 4–6 months of base salary.',
+        dateFormat: 'YYYY/MM/DD',
+        localJobBoardRecommendations: ['LinkedIn', 'Daijob (bilingual)', 'Indeed Japan', 'GaijinPot Jobs (English-speaking)', 'Wantedly (startup-friendly)'],
+        localTerminologyNotes: ['Lifetime employment culture is changing but still influences candidate expectations', '"Sōbu" (bonus) is a key factor — always specify', 'Japanese candidates value stability — emphasise company longevity and benefits', 'English-language JD is acceptable for international roles; Japanese preferred for local market'],
+        mandatoryBenefitNotes: ['Social insurance (shakai hoken): health + pension + employment insurance — ~15% employer contribution', 'Paid leave: 10 days after 6 months, increasing to 20 days after 6.5 years', 'Annual bonus is market standard (not statutory but expected)', 'Commuting allowance (kōtsūhi) is standard and tax-exempt up to certain limit'],
+        publicHolidayNote: '16 national holidays per year (including Golden Week in late April/early May — significant hiring slowdown).',
+        probationPeriodNote: 'Typically 3–6 months (shiyō-kikan). Termination during probation still requires valid reason under Japanese labour law.',
+        noticePeriodNorm: 'Civil Code: 2 weeks minimum. Market norm: 1–3 months. Senior roles often 3 months. Japanese employees rarely leave without serving full notice.',
+    },
+    south_korea: {
+        localCurrency: 'KRW',
+        salaryTerminology: 'Annual salary (yŏnbong) in KRW. Year-end bonus (performance pay) is standard.',
+        dateFormat: 'YYYY-MM-DD',
+        localJobBoardRecommendations: ['LinkedIn', 'JobKorea', 'Saramin', 'Wanted (startup-focused)', 'Indeed Korea'],
+        localTerminologyNotes: ['Chaebol (Samsung, LG, Hyundai etc.) dominate and set market salary benchmarks', 'Hierarchical culture — job title and seniority are very important', 'English proficiency (TOEIC/OPIC) often required for international roles', 'Hagwon (private tutoring) experience relevant for education-sector roles'],
+        mandatoryBenefitNotes: ['4 major insurances: national pension, health insurance, employment insurance, industrial accident insurance (mandatory employer contributions)', 'Annual leave: 15 days after 1 year, increasing with tenure', 'Severance pay: mandatory 1 month per year of service (for 1+ year employees)', 'Retirement pension plan: required — choose between DB/DC plan'],
+        publicHolidayNote: '15 national holidays. Chuseok and Seollal (Lunar New Year) are major multi-day holidays affecting hiring.',
+        probationPeriodNote: 'Typically 3–6 months. Labour Standards Act applies — termination requires just cause even during probation.',
+        noticePeriodNorm: '1 month statutory; market norm 1–3 months. Many Korean employees give longer notice in practice.',
+    },
+    brazil: {
+        localCurrency: 'BRL',
+        salaryTerminology: 'Monthly gross salary (salário bruto) in BRL. CLT (Brazilian Labour Law) governs most formal employment. 13th salary (décimo terceiro) is mandatory.',
+        dateFormat: 'DD/MM/YYYY',
+        localJobBoardRecommendations: ['LinkedIn', 'Catho', 'InfoJobs Brasil', 'Vagas.com.br', 'Empregos.com.br'],
+        localTerminologyNotes: ['CLT (Consolidação das Leis do Trabalho) governs employment — very employee-protective', '"PJ" (Pessoa Jurídica) contracting is common for flexibility but subject to enforcement risks', '13th salary is mandatory — include in total package calculation', 'LGPD (Lei Geral de Proteção de Dados) is Brazil\'s GDPR equivalent — applies to candidate data'],
+        mandatoryBenefitNotes: ['13th salary: mandatory additional monthly salary paid in December (or split June/November)', 'FGTS: 8% of monthly salary deposited by employer (severance fund)', 'Transportation voucher (Vale-Transporte): employer must provide or reimburse commuting costs', 'Meal/food voucher (Vale-Refeição): market norm; PAT programme gives tax benefits', 'INSS social security: ~20–22% employer contribution', 'Annual leave: 30 calendar days after 12 months + paid 1/3 additional vacation bonus'],
+        publicHolidayNote: '12–15 national + municipal public holidays. Carnival (variable dates) significantly affects business activity.',
+        probationPeriodNote: 'Max 90 days (prorated: typically 45 + 45 days). During probation, termination requires only "aviso prévio" (notice) — no severance.',
+        noticePeriodNorm: '30 days statutory; increases by 3 days per year of service up to 90 days.',
+    },
+    mexico: {
+        localCurrency: 'MXN',
+        salaryTerminology: 'Monthly gross salary (salario bruto) in MXN. Christmas bonus (aguinaldo — 15 days minimum) and vacation premium are statutory.',
+        dateFormat: 'DD/MM/YYYY',
+        localJobBoardRecommendations: ['LinkedIn', 'OCC Mundial', 'Indeed México', 'Computrabajo', 'Glassdoor'],
+        localTerminologyNotes: ['Aguinaldo (Christmas bonus) is mandatory — at least 15 days\' salary', 'PTU (profit sharing) is mandatory for companies with profit — typically 10% of profits distributed to employees', 'IMSS (social security) and INFONAVIT (housing fund) employer contributions are mandatory', 'Nearshore boom has driven up salaries for tech roles significantly'],
+        mandatoryBenefitNotes: ['Aguinaldo: 15 days\' salary (paid by 20 December)', 'PTU (Participación de los Trabajadores en las Utilidades): profit-sharing — typically 10% of pre-tax profits', 'Vacation: 12 days after first year, increasing by 2 days per year up to 20', 'Vacation premium: 25% of vacation salary (prima vacacional)', 'IMSS: ~20–25% employer contribution', 'INFONAVIT: 5% of salary for housing fund'],
+        publicHolidayNote: '7 mandatory public holidays + 2 optional (Decree holidays). Day of the Dead (Nov 2) affects operations in some regions.',
+        probationPeriodNote: 'Max 30 days (180 days for management roles). Must be specified in writing.',
+        noticePeriodNorm: 'Mexico Federal Labour Law provides for "justificable termination" only. Notice periods are contractual; 30 days is market standard.',
+    },
+    switzerland: {
+        localCurrency: 'CHF',
+        salaryTerminology: 'Annual gross salary (Jahresgehalt / salaire annuel brut) in CHF. Switzerland has some of the highest salaries globally — validate against market data carefully.',
+        dateFormat: 'DD.MM.YYYY',
+        localJobBoardRecommendations: ['LinkedIn', 'Jobs.ch', 'Indeed Switzerland', 'Jobscout24', 'Glassdoor'],
+        localTerminologyNotes: ['No statutory minimum wage (nationally) — some cantonal minimums exist (Geneva highest at CHF 24.32/hr in 2024)', 'AHV/IV/ALV (social insurance) mandatory contributions ~11% employer', 'Work permit quotas for non-EU/EFTA nationals are very restrictive', 'Four official languages (German, French, Italian, Romansh) — match JD language to region'],
+        mandatoryBenefitNotes: ['AHV (old age insurance): ~5.3% employer contribution', 'BVG (occupational pension): mandatory 2nd pillar — contribution varies by age and salary', 'Minimum 4 weeks annual leave; 5 weeks for under-20s', 'Accident insurance (UVG/SUVA): mandatory', 'No statutory sick pay period but insurance (Taggeldversicherung) is market standard'],
+        publicHolidayNote: '8 national public holidays + cantonal holidays (Zurich has 5 extra; Ticino up to 15 extra). Verify cantonal holidays for office location.',
+        probationPeriodNote: 'Typically 1–3 months (Code of Obligations Art. 335b). During probation: 7-day notice. After probation: 1–3 months (depending on years of service).',
+        noticePeriodNorm: 'Statutory: 1 month (year 1), 2 months (years 2–9), 3 months (10+ years). Senior roles often contractually specify 3–6 months.',
+    },
+    italy: {
+        localCurrency: 'EUR',
+        salaryTerminology: 'RAL (Reddito Annuo Lordo — annual gross salary) in EUR. 13th month salary (tredicesima) is standard and often mandatory via collective agreement.',
+        dateFormat: 'DD/MM/YYYY',
+        localJobBoardRecommendations: ['LinkedIn', 'Indeed Italy', 'Infojobs.it', 'Monster Italy', 'Glassdoor'],
+        localTerminologyNotes: ['National Collective Labour Agreements (CCNL) govern most employment terms by sector', 'Tredicesima (13th month) is effectively mandatory', '"RAL" is the standard salary term — use it', 'Works council (RSU/RSA) must be consulted for significant workforce changes'],
+        mandatoryBenefitNotes: ['Tredicesima (13th salary) and often quattordicesima (14th) per CCNL', 'Minimum 4 weeks annual leave + 12 public holidays', 'TFR (Trattamento di Fine Rapporto): 6.91% of gross annual salary accrued as a severance fund', 'INPS social security: ~23–33% employer contribution', 'Maternity: 5 months paid at 80% (INPS-funded)'],
+        publicHolidayNote: '12 national public holidays + local patron saint day (varies by city).',
+        probationPeriodNote: 'Duration set by CCNL — typically 3–6 months. Must be in writing. Termination during probation is simplified.',
+        noticePeriodNorm: 'Set by applicable CCNL — typically 1–3 months for professionals. Longer for senior/management roles.',
+    },
+    poland: {
+        localCurrency: 'PLN',
+        salaryTerminology: 'Monthly gross salary (brutto) in PLN. Growing tech hub — Warsaw, Kraków, Wrocław, Poznań have strong talent pools.',
+        dateFormat: 'DD.MM.YYYY',
+        localJobBoardRecommendations: ['LinkedIn', 'Pracuj.pl (dominant)', 'Indeed Poland', 'Nofluffjobs.com (tech)', 'Glassdoor'],
+        localTerminologyNotes: ['"Brutto" vs "netto" distinction is crucial — Polish candidates discuss salaries in netto terms; always clarify brutto', 'B2B (self-employment via sole proprietorship) is very common in tech — many candidates prefer it for tax efficiency', 'ZUS social security contributions: ~21% employer; detail in offer', 'GDPR strictly enforced in Poland — ensure candidate data handling is compliant'],
+        mandatoryBenefitNotes: ['20 days annual leave (< 10 years service); 26 days (10+ years)', 'ZUS (social security): ~21% employer contribution', 'PPK (Employee Capital Plan): employer contributes 1.5% of gross salary', 'Sick pay: employer pays first 33 days/year; ZUS pays thereafter', 'Minimum wage: PLN 4,242/month (2024)'],
+        publicHolidayNote: '13 public holidays. All Saints\' Day (1 Nov) and Independence Day (11 Nov) affect late-year hiring.',
+        probationPeriodNote: 'Max 3 months. Fixed-term contracts capped at 3 contracts or 33 months total before permanent status required.',
+        noticePeriodNorm: 'Statutory: 2 weeks (< 6 months), 1 month (6 months–3 years), 3 months (3+ years). B2B contracts vary.',
+    },
+    new_zealand: {
+        localCurrency: 'NZD',
+        salaryTerminology: 'Annual salary in NZD. Includes KiwiSaver employer contribution (3% minimum). Quote base salary separately.',
+        dateFormat: 'DD/MM/YYYY',
+        localJobBoardRecommendations: ['LinkedIn', 'Seek NZ (dominant)', 'Trade Me Jobs', 'Indeed NZ', 'Glassdoor'],
+        localTerminologyNotes: ['KiwiSaver: 3% mandatory employer contribution to retirement savings scheme', 'Employment Relations Act 2000 governs — highly employee-protective', 'Annual leave is "4 weeks" per statute — emphasise this vs fewer-weeks markets', 'Work-life balance is highly valued in NZ — emphasise flexibility'],
+        mandatoryBenefitNotes: ['KiwiSaver: 3% employer contribution (mandatory where employee is enrolled)', '4 weeks annual leave (Holidays Act 2003)', '10 sick days per year after 6 months', 'Bereavement leave: 3 days for close family; 1 day for others', 'Parental leave: up to 26 weeks government-funded; plus employer top-up as a differentiator', 'Minimum wage: NZD $22.70/hr (2024)'],
+        publicHolidayNote: '12 public holidays. Auckland Anniversary Day (late January) is regional. Waitangi Day (6 Feb) and ANZAC Day (25 Apr) are key.',
+        probationPeriodNote: 'No statutory probation period under the Employment Relations Act; any trial period must be agreed in writing and is limited to 90 days. Specific rules apply.',
+        noticePeriodNorm: 'No statutory minimum; must be specified in employment agreement. Market norm: 2–4 weeks for junior/mid; 4–12 weeks for senior.',
+    },
+    israel: {
+        localCurrency: 'ILS',
+        salaryTerminology: 'Monthly gross salary (ILS). Strong tech ecosystem (Start-Up Nation) — equity (options in startups) is a key part of total comp.',
+        dateFormat: 'DD/MM/YYYY',
+        localJobBoardRecommendations: ['LinkedIn', 'Drushim', 'AllJobs', 'Jobmaster', 'Start-Up Nation Central (for startups)'],
+        localTerminologyNotes: ['Equity/options are expected in tech roles — specify vesting schedule', 'Severance pay (Pitzuyim) is mandatory', 'Pension fund (Kupat Gemel) is mandatory for employees', 'Shabbat and Jewish holidays significantly affect scheduling — be culturally aware'],
+        mandatoryBenefitNotes: ['Pension: mandatory employer contribution of 6.5% + 6% disability (totalling 12.5%)', 'Severance pay: 1 month per year of service (often via Pikudei Pitzuyim arrangement funded through pension)', 'Annual leave: 12 days (first 5 years); increasing to 20 days', 'Recuperation pay (Dmei Havra\'ah): 379 ILS/day for 5–10 days per year', 'Sick leave: 18 days/year (paid from day 2)'],
+        publicHolidayNote: '~16 public holidays (Jewish calendar — dates vary annually). High Holiday season (Rosh Hashana, Yom Kippur, Sukkot) in Sept–Oct significantly affects business.',
+        probationPeriodNote: 'Typically 6–12 months. Severance obligations begin accruing from day one.',
+        noticePeriodNorm: 'Statutory: 1 day per month for first year; 14.5 days for year 2; 21.67 days for year 3; 1 month from year 4+. Market norm: 1–3 months.',
     },
     other: {
         localCurrency: '[Local Currency]',

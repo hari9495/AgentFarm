@@ -32,7 +32,13 @@ export type Industry =
     | 'sales_bizdev'
     | 'logistics_supply_chain'
     | 'real_estate'
-    | 'pharmaceutical_biotech';
+    | 'pharmaceutical_biotech'
+    | 'agriculture'
+    | 'aviation'
+    | 'utilities_energy'
+    | 'telecommunications'
+    | 'insurance'
+    | 'mining_extractive';
 
 export type SeniorityBand =
     | 'entry'
@@ -252,6 +258,72 @@ const BANDS: Record<Industry, Record<SeniorityBand, SalaryRange & { exampleRoles
         vp:        { p25: 280_000, p50: 370_000, p75: 480_000, p90: 618_000, exampleRoles: ['VP R&D', 'VP Clinical Affairs', 'VP Medical Affairs'], notes: '' },
         c_level:   { p25: 410_000, p50: 600_000, p75: 840_000, p90: 1_200_000, exampleRoles: ['CSO', 'CMO', 'CEO (Biotech)'], notes: 'Significant equity in pre-IPO biotechs' },
     },
+
+    agriculture: {
+        entry:     { p25: 32_000,  p50: 40_000,  p75: 48_000,  p90: 58_000,  exampleRoles: ['Farm Worker', 'Agricultural Technician', 'Crop Scout'], notes: 'Seasonal work common; H-2A visa programme for migrant workers' },
+        mid:       { p25: 48_000,  p50: 60_000,  p75: 74_000,  p90: 90_000,  exampleRoles: ['Agronomist', 'Farm Manager', 'Agricultural Sales Rep', 'Animal Scientist'], notes: 'B.Sc in agronomy, animal science, or horticulture typical' },
+        senior:    { p25: 68_000,  p50: 85_000,  p75: 105_000, p90: 130_000, exampleRoles: ['Senior Agronomist', 'Regional Farm Manager', 'Agricultural Engineer'], notes: '' },
+        lead:      { p25: 88_000,  p50: 110_000, p75: 138_000, p90: 170_000, exampleRoles: ['Director of Agronomy', 'Operations Manager (Ag)', 'Lead Agricultural Scientist'], notes: '' },
+        principal: { p25: 110_000, p50: 140_000, p75: 175_000, p90: 215_000, exampleRoles: ['Principal Scientist (Seeds/Biotech)', 'VP Agronomy', 'Chief Agronomist'], notes: '' },
+        director:  { p25: 130_000, p50: 168_000, p75: 210_000, p90: 260_000, exampleRoles: ['Director of Operations (Ag)', 'Director of Research (Crop Science)'], notes: '' },
+        vp:        { p25: 165_000, p50: 215_000, p75: 272_000, p90: 345_000, exampleRoles: ['VP Agricultural Operations', 'VP R&D (Seed Company)', 'VP Supply Chain (Ag)'], notes: '' },
+        c_level:   { p25: 250_000, p50: 360_000, p75: 510_000, p90: 720_000, exampleRoles: ['CEO (Ag Cooperative)', 'COO (Large Farming Enterprise)', 'CSO (Ag Biotech)'], notes: '' },
+    },
+
+    aviation: {
+        entry:     { p25: 45_000,  p50: 58_000,  p75: 72_000,  p90: 88_000,  exampleRoles: ['First Officer (Regional)', 'Flight Dispatcher', 'Ramp Agent', 'A&P Mechanic I'], notes: 'Regional FOs start near ATP minimums (1,500 hours); salary increases sharply with seniority' },
+        mid:       { p25: 90_000,  p50: 115_000, p75: 145_000, p90: 180_000, exampleRoles: ['Captain (Regional)', 'A&P Lead Mechanic', 'Flight Operations Manager', 'Avionics Technician'], notes: 'FAA A&P licence required for mechanics' },
+        senior:    { p25: 155_000, p50: 200_000, p75: 250_000, p90: 310_000, exampleRoles: ['Captain (Mainline)', 'Senior A&P Inspector', 'Director of Maintenance'], notes: 'Major airline captains routinely exceed $300k total comp' },
+        lead:      { p25: 185_000, p50: 240_000, p75: 305_000, p90: 385_000, exampleRoles: ['Check Airman / Line Check Airman', 'Chief Inspector', 'Flight Standards Manager'], notes: '' },
+        principal: { p25: 215_000, p50: 278_000, p75: 355_000, p90: 450_000, exampleRoles: ['Chief Pilot', 'VP Flight Operations (charter)', 'Principal Engineer (Aircraft)'], notes: '' },
+        director:  { p25: 175_000, p50: 230_000, p75: 295_000, p90: 380_000, exampleRoles: ['Director of Operations (AOC)', 'Director of Maintenance', 'Director of Safety'], notes: '' },
+        vp:        { p25: 220_000, p50: 295_000, p75: 390_000, p90: 510_000, exampleRoles: ['VP Flight Operations', 'VP Technical Operations', 'VP Safety'], notes: '' },
+        c_level:   { p25: 350_000, p50: 520_000, p75: 750_000, p90: 1_100_000, exampleRoles: ['CEO (Regional Airline)', 'COO (Major Carrier)', 'CFO (Aviation Group)'], notes: '' },
+    },
+
+    utilities_energy: {
+        entry:     { p25: 45_000,  p50: 56_000,  p75: 68_000,  p90: 82_000,  exampleRoles: ['Field Technician', 'Meter Reader', 'Energy Analyst I', 'Plant Operator Trainee'], notes: 'OSHA safety training universally required' },
+        mid:       { p25: 68_000,  p50: 85_000,  p75: 105_000, p90: 128_000, exampleRoles: ['Power Plant Operator', 'Electrical Engineer (Utilities)', 'Energy Trader', 'Substation Technician'], notes: 'NRC licences required for nuclear plant operators' },
+        senior:    { p25: 95_000,  p50: 122_000, p75: 152_000, p90: 188_000, exampleRoles: ['Senior Grid Engineer', 'Senior Energy Analyst', 'Senior Petroleum Engineer', 'Plant Superintendent'], notes: '' },
+        lead:      { p25: 120_000, p50: 155_000, p75: 195_000, p90: 242_000, exampleRoles: ['Lead Power Systems Engineer', 'Operations Manager (Utility)', 'Senior Trader (Energy)'], notes: '' },
+        principal: { p25: 148_000, p50: 192_000, p75: 242_000, p90: 305_000, exampleRoles: ['Principal Engineer (Renewables)', 'VP Engineering (Utility)', 'Chief Petroleum Engineer'], notes: '' },
+        director:  { p25: 170_000, p50: 220_000, p75: 280_000, p90: 358_000, exampleRoles: ['Director of Operations (Power)', 'Director of Renewable Development', 'Director Grid Modernisation'], notes: '' },
+        vp:        { p25: 215_000, p50: 282_000, p75: 365_000, p90: 475_000, exampleRoles: ['VP Power Generation', 'VP Transmission', 'VP Upstream (Oil & Gas)'], notes: '' },
+        c_level:   { p25: 320_000, p50: 480_000, p75: 690_000, p90: 1_000_000, exampleRoles: ['CEO (Utility)', 'COO (Pipeline)', 'CTO (Renewables Developer)'], notes: 'Total comp includes long-term incentives tied to regulated returns' },
+    },
+
+    telecommunications: {
+        entry:     { p25: 42_000,  p50: 52_000,  p75: 63_000,  p90: 76_000,  exampleRoles: ['Network Technician I', 'Telecom Field Tech', 'Customer Support Rep', 'RF Technician'], notes: '' },
+        mid:       { p25: 68_000,  p50: 85_000,  p75: 105_000, p90: 128_000, exampleRoles: ['Network Engineer', 'RF Engineer', 'Telecom Project Manager', 'Network Operations Engineer'], notes: 'Cisco CCNA/CCNP valued; FCC licensing for some roles' },
+        senior:    { p25: 95_000,  p50: 122_000, p75: 152_000, p90: 188_000, exampleRoles: ['Senior Network Architect', 'Senior RF Engineer', 'Senior Systems Engineer (Telecom)'], notes: '' },
+        lead:      { p25: 120_000, p50: 155_000, p75: 195_000, p90: 245_000, exampleRoles: ['Lead Network Architect', 'Technical Program Manager (Telecom)', '5G Solutions Lead'], notes: '' },
+        principal: { p25: 148_000, p50: 192_000, p75: 242_000, p90: 310_000, exampleRoles: ['Principal Network Architect', 'Distinguished Engineer (Telco)', 'Principal 5G Engineer'], notes: '' },
+        director:  { p25: 168_000, p50: 218_000, p75: 278_000, p90: 358_000, exampleRoles: ['Director of Network Engineering', 'Director of RAN', 'Director Network Operations'], notes: '' },
+        vp:        { p25: 215_000, p50: 285_000, p75: 372_000, p90: 490_000, exampleRoles: ['VP Network Engineering', 'VP of Technology', 'VP Network Operations (NOC)'], notes: '' },
+        c_level:   { p25: 320_000, p50: 480_000, p75: 690_000, p90: 1_000_000, exampleRoles: ['CTO (Carrier)', 'CIO (Telecom)', 'CEO (MVNO)'], notes: '' },
+    },
+
+    insurance: {
+        entry:     { p25: 40_000,  p50: 50_000,  p75: 62_000,  p90: 76_000,  exampleRoles: ['Insurance Agent (Licensed)', 'Claims Adjuster I', 'Underwriting Assistant', 'Customer Service Rep'], notes: 'State P&C or L&H licence required for agent/broker roles' },
+        mid:       { p25: 62_000,  p50: 78_000,  p75: 98_000,  p90: 122_000, exampleRoles: ['Senior Claims Adjuster', 'Underwriter', 'Risk Analyst', 'Benefits Specialist'], notes: 'CPCU or CIC designation valued' },
+        senior:    { p25: 88_000,  p50: 112_000, p75: 142_000, p90: 178_000, exampleRoles: ['Senior Underwriter', 'Senior Actuary', 'Claims Manager', 'Senior Risk Manager'], notes: 'ASA/FSA required for actuarial track' },
+        lead:      { p25: 112_000, p50: 145_000, p75: 185_000, p90: 232_000, exampleRoles: ['Actuarial Manager', 'Underwriting Manager', 'VP Claims (mid-size)'], notes: '' },
+        principal: { p25: 145_000, p50: 190_000, p75: 245_000, p90: 315_000, exampleRoles: ['Fellow of the Casualty Actuarial Society (FCAS)', 'Principal Actuary', 'Senior VP Underwriting'], notes: '' },
+        director:  { p25: 168_000, p50: 220_000, p75: 285_000, p90: 368_000, exampleRoles: ['Director of Underwriting', 'Director of Claims', 'Chief Actuary (Regional)'], notes: '' },
+        vp:        { p25: 210_000, p50: 278_000, p75: 365_000, p90: 480_000, exampleRoles: ['VP Underwriting', 'VP Claims', 'VP Actuarial'], notes: '' },
+        c_level:   { p25: 325_000, p50: 490_000, p75: 710_000, p90: 1_050_000, exampleRoles: ['CRO (Insurer)', 'CUO (Chief Underwriting Officer)', 'CEO (Insurance Carrier)'], notes: '' },
+    },
+
+    mining_extractive: {
+        entry:     { p25: 45_000,  p50: 56_000,  p75: 68_000,  p90: 82_000,  exampleRoles: ['Mine Helper', 'Lab Technician (Assay)', 'Geologist I', 'Drill Operator'], notes: 'MSHA safety training mandatory; remote-site premiums common' },
+        mid:       { p25: 70_000,  p50: 88_000,  p75: 108_000, p90: 132_000, exampleRoles: ['Mining Engineer', 'Geologist', 'Mine Foreman', 'Environmental Technician'], notes: 'PE licence valued for senior engineering roles' },
+        senior:    { p25: 98_000,  p50: 125_000, p75: 158_000, p90: 198_000, exampleRoles: ['Senior Mining Engineer', 'Senior Geologist', 'Mine Manager', 'Environmental Manager'], notes: '' },
+        lead:      { p25: 125_000, p50: 162_000, p75: 205_000, p90: 258_000, exampleRoles: ['Mine Superintendent', 'Chief Geologist', 'Lead Mining Engineer'], notes: '' },
+        principal: { p25: 155_000, p50: 202_000, p75: 258_000, p90: 330_000, exampleRoles: ['Principal Mining Engineer', 'Chief Metallurgist', 'VP Operations (Small Mine)'], notes: '' },
+        director:  { p25: 178_000, p50: 232_000, p75: 300_000, p90: 385_000, exampleRoles: ['Director of Mining Operations', 'Director of Exploration', 'Director of Metallurgy'], notes: '' },
+        vp:        { p25: 225_000, p50: 300_000, p75: 395_000, p90: 520_000, exampleRoles: ['VP Mining Operations', 'VP Exploration', 'VP Sustainability (Mining)'], notes: '' },
+        c_level:   { p25: 340_000, p50: 510_000, p75: 740_000, p90: 1_080_000, exampleRoles: ['CEO (Mining Company)', 'COO', 'CFO (Resource Company)'], notes: 'Compensation tied to commodity cycles; significant LTI component' },
+    },
 };
 
 // ---------------------------------------------------------------------------
@@ -380,6 +452,12 @@ export function detectIndustryFromJobTitle(jobTitle: string): Industry {
     if (/supply chain|procurement|logistics|warehouse|distribution|inventory|sourcing|demand planning/.test(lower)) return 'logistics_supply_chain';
     if (/real estate|property manager|leasing|acquisitions|asset manager|reit|developer/.test(lower)) return 'real_estate';
     if (/scientist|researcher|biotech|pharma|clinical trial|regulatory affairs|drug|genomic|bioinformatics/.test(lower)) return 'pharmaceutical_biotech';
+    if (/agronomist|farm manager|crop|agricultural|agronomy|horticulture|livestock|animal scientist/.test(lower)) return 'agriculture';
+    if (/pilot|captain|first officer|flight dispatcher|aviation mechanic|a&p mechanic|airframe.*powerplant|airline/.test(lower)) return 'aviation';
+    if (/power plant|grid engineer|energy trader|petroleum engineer|utility|substation|renewable|upstream oil|downstream/.test(lower)) return 'utilities_energy';
+    if (/network engineer|rf engineer|telecom|5g|network architect|network operations|carrier|noc engineer/.test(lower)) return 'telecommunications';
+    if (/underwriter|actuary|claims adjuster|insurance agent|insurance broker|insurance manager/.test(lower)) return 'insurance';
+    if (/mining engineer|mine manager|geologist|metallurgist|mine foreman|msha|drill operator/.test(lower)) return 'mining_extractive';
     // Default: technology
     return 'technology';
 }

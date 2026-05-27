@@ -48,6 +48,7 @@ export interface PipelineReportInput {
     openSince?: string;
     candidates: PipelineCandidate[];
     currency?: string;
+    industry?: string;               // Used to auto-select SLA presets
     slaDaysPerStage?: Partial<Record<PipelineStage, number>>;
 }
 
@@ -106,6 +107,129 @@ const DEFAULT_SLA: Record<PipelineStage, number> = {
     rejected: 0,
     withdrawn: 0,
 };
+
+/**
+ * Industry-calibrated SLA presets (overrides DEFAULT_SLA for relevant stages).
+ * Based on industry hiring norms — always merge with DEFAULT_SLA.
+ */
+const INDUSTRY_SLA_PRESETS: Record<string, Partial<Record<PipelineStage, number>>> = {
+    // Technology — default speed (mirrors DEFAULT_SLA)
+    technology: {},
+
+    // Healthcare (clinical) — faster at phone screen; credentialing can delay final
+    healthcare_clinical: {
+        screening: 1,
+        phone_screen: 2,
+        hiring_manager_review: 2,
+        technical_round: 3,       // Clinical skills assessment
+        final_panel: 3,
+        offer_extended: 3,
+    },
+
+    // Government — significantly slower due to clearance and bureaucratic approval
+    government: {
+        screening: 10,
+        phone_screen: 14,
+        hiring_manager_review: 10,
+        technical_round: 21,      // Written tests, structured panels
+        final_panel: 14,
+        offer_extended: 21,       // Budget / headcount approval takes weeks
+    },
+
+    // Academia — extremely slow; committee-based decisions
+    academic: {
+        sourced: 10,
+        outreached: 14,
+        screening: 14,
+        phone_screen: 14,
+        hiring_manager_review: 21,
+        technical_round: 60,      // Job talk + multi-day campus visit
+        final_panel: 30,
+        offer_extended: 30,
+    },
+
+    // Legal (law firms) — moderately structured, partnership decisions slow
+    legal: {
+        screening: 5,
+        phone_screen: 7,
+        hiring_manager_review: 7,
+        technical_round: 10,      // Writing sample review + callback interviews
+        final_panel: 10,
+        offer_extended: 7,
+    },
+
+    // Finance (investment banking / PE) — intense but faster cycle
+    finance: {
+        screening: 2,
+        phone_screen: 3,
+        hiring_manager_review: 3,
+        technical_round: 5,       // Modelling tests, case studies
+        final_panel: 4,
+        offer_extended: 3,
+    },
+
+    // Retail & Hospitality — very fast, high volume
+    retail_hospitality: {
+        sourced: 1,
+        outreached: 2,
+        applied: 1,
+        screening: 1,
+        phone_screen: 2,
+        hiring_manager_review: 2,
+        technical_round: 2,
+        final_panel: 2,
+        offer_extended: 2,
+    },
+
+    // Manufacturing / Engineering — mid-pace, credential verification adds time
+    manufacturing: {
+        screening: 3,
+        phone_screen: 5,
+        hiring_manager_review: 5,
+        technical_round: 7,
+        final_panel: 5,
+        offer_extended: 7,        // Background / drug screen standard
+    },
+
+    // Pharmaceutical / Biotech — regulated, thorough reference/background checks
+    pharmaceutical: {
+        screening: 4,
+        phone_screen: 5,
+        hiring_manager_review: 5,
+        technical_round: 10,
+        final_panel: 7,
+        offer_extended: 10,
+    },
+
+    // Startups / Scaleups — fastest cycle to close competitive candidates
+    startup: {
+        sourced: 1,
+        outreached: 2,
+        applied: 1,
+        screening: 1,
+        phone_screen: 3,
+        hiring_manager_review: 2,
+        technical_round: 4,
+        final_panel: 3,
+        offer_extended: 2,
+    },
+};
+
+/** Map an industry string to the best SLA preset key. */
+function detectSlaPreset(industry?: string): string {
+    if (!industry) return 'technology';
+    const lower = industry.toLowerCase();
+    if (/healthcare|hospital|clinical|nursing|medical/.test(lower)) return 'healthcare_clinical';
+    if (/government|federal|public sector|defence|defense|military/.test(lower)) return 'government';
+    if (/universit|academia|college|research institute/.test(lower)) return 'academic';
+    if (/law firm|legal services|attorney|litigation/.test(lower)) return 'legal';
+    if (/investment bank|private equity|hedge fund|asset management/.test(lower)) return 'finance';
+    if (/retail|hospitality|restaurant|hotel|food service/.test(lower)) return 'retail_hospitality';
+    if (/manufacturing|industrial|automotive|aerospace/.test(lower)) return 'manufacturing';
+    if (/pharma|biotech|pharmaceutical/.test(lower)) return 'pharmaceutical';
+    if (/startup|seed stage|series a|scaleup/.test(lower)) return 'startup';
+    return 'technology'; // safe default
+}
 
 const STAGE_LABEL: Record<PipelineStage, string> = {
     sourced: 'Sourced',
@@ -182,7 +306,10 @@ function detectBottlenecks(stageSummary: StageCount[], slaWarnings: SlaWarning[]
 // ---------------------------------------------------------------------------
 
 export function buildPipelineReport(input: PipelineReportInput): PipelineReport {
-    const slaDays = { ...DEFAULT_SLA, ...(input.slaDaysPerStage ?? {}) };
+    // Apply industry preset first, then allow caller-supplied overrides to win
+    const presetKey = detectSlaPreset(input.industry);
+    const industryPreset = INDUSTRY_SLA_PRESETS[presetKey] ?? {};
+    const slaDays = { ...DEFAULT_SLA, ...industryPreset, ...(input.slaDaysPerStage ?? {}) };
     const today = new Date().toISOString().split('T')[0] ?? '';
     const currency = input.currency ?? 'USD';
 

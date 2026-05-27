@@ -142,6 +142,64 @@ const CREDENTIAL_REGISTRY: CredentialDefinition[] = [
     { id: 'phd', name: 'PhD / Doctorate', aliases: ['phd', 'ph.d.', 'doctorate', 'doctor of philosophy', 'd.phil', 'doctoral degree'], category: 'general_professional', industries: ['technology', 'healthcare', 'pharmaceutical_biotech', 'education'], isLicenseRequired: false },
     { id: 'shrm', name: 'SHRM Certification', aliases: ['shrm-cp', 'shrm-scp', 'shrm cp', 'shrm scp', 'phr', 'sphr', 'hrci certified'], category: 'general_professional', industries: ['technology', 'manufacturing'], isLicenseRequired: false, issuer: 'SHRM / HRCI' },
     { id: 'apics', name: 'APICS Certification', aliases: ['apics', 'cpim', 'cscp', 'cltd', 'supply chain certification'], category: 'general_professional', industries: ['logistics_supply_chain', 'manufacturing'], isLicenseRequired: false },
+
+    // ── Transportation / Logistics ───────────────────────────────────────────
+    { id: 'cdl_a', name: 'CDL Class A', aliases: ['cdl a', 'cdl-a', 'class a cdl', 'commercial driver license class a', 'class a commercial driver'], category: 'trades_certification', industries: ['logistics_supply_chain', 'manufacturing'], isLicenseRequired: true, issuer: 'State DMV / FMCSA', renewalRequired: true, notes: 'Required for tractor-trailer / 18-wheel operation' },
+    { id: 'cdl_b', name: 'CDL Class B', aliases: ['cdl b', 'cdl-b', 'class b cdl', 'commercial driver license class b', 'class b commercial driver'], category: 'trades_certification', industries: ['logistics_supply_chain'], isLicenseRequired: true, issuer: 'State DMV / FMCSA', renewalRequired: true, notes: 'Required for straight trucks, city buses, school buses' },
+    { id: 'cdl_c', name: 'CDL Class C', aliases: ['cdl c', 'cdl-c', 'class c cdl', 'commercial driver license class c', 'hazmat cdl', 'passenger endorsement'], category: 'trades_certification', industries: ['logistics_supply_chain'], isLicenseRequired: true, issuer: 'State DMV / FMCSA', renewalRequired: true },
+    { id: 'twic', name: 'TWIC Card', aliases: ['twic', 'transportation worker identification credential', 'twic card'], category: 'security_clearance', industries: ['logistics_supply_chain'], isLicenseRequired: true, issuer: 'TSA / USCG', renewalRequired: true, notes: 'Required for unescorted access to secure maritime facilities' },
+    { id: 'uscg_mmc', name: 'USCG Merchant Mariner Credential', aliases: ['mmc', 'merchant mariner credential', 'merchant mariner', 'uscg license', 'uscg mmc', 'mariner license'], category: 'trades_certification', industries: ['logistics_supply_chain'], isLicenseRequired: true, issuer: 'US Coast Guard', renewalRequired: true },
+
+    // ── Real Estate ──────────────────────────────────────────────────────────
+    { id: 're_broker', name: 'Real Estate Broker License', aliases: ['real estate broker', 'broker license', 'licensed broker', 'real estate broker license', 'managing broker', 'responsible broker'], category: 'trades_certification', industries: ['real_estate'], isLicenseRequired: true, issuer: 'State Real Estate Commission', renewalRequired: true },
+    { id: 're_agent', name: 'Real Estate Agent / Salesperson License', aliases: ['real estate agent', 'real estate license', 'real estate salesperson', 'licensed realtor', 'realtor', 'real estate salesperson license', 're license', 'licensed real estate agent'], category: 'trades_certification', industries: ['real_estate'], isLicenseRequired: true, issuer: 'State Real Estate Commission', renewalRequired: true },
+    { id: 'nmls', name: 'NMLS License (Mortgage)', aliases: ['nmls', 'safe act license', 'mortgage loan originator', 'mlo license', 'nmls license', 'licensed mortgage originator'], category: 'finance_certification', industries: ['real_estate', 'finance'], isLicenseRequired: true, issuer: 'NMLS / State', renewalRequired: true, notes: 'Required for mortgage loan origination under the SAFE Act' },
+
+    // ── Veterinary / Animal Health ───────────────────────────────────────────
+    { id: 'dvm', name: 'Doctor of Veterinary Medicine', aliases: ['dvm', 'd.v.m.', 'vmd', 'v.m.d.', 'veterinarian', 'vet license', 'licensed veterinarian', 'doctor of veterinary medicine'], category: 'healthcare_license', industries: ['healthcare'], isLicenseRequired: true, issuer: 'State Veterinary Board', renewalRequired: true },
+
+    // ── Dental ───────────────────────────────────────────────────────────────
+    { id: 'dds', name: 'Doctor of Dental Surgery / Dental Medicine', aliases: ['dds', 'd.d.s.', 'dmd', 'd.m.d.', 'dentist', 'dental license', 'licensed dentist', 'doctor of dental surgery', 'doctor of dental medicine'], category: 'healthcare_license', industries: ['healthcare'], isLicenseRequired: true, issuer: 'State Dental Board', renewalRequired: true },
+    { id: 'rdh', name: 'Registered Dental Hygienist', aliases: ['rdh', 'registered dental hygienist', 'dental hygienist', 'dental hygiene license'], category: 'healthcare_license', industries: ['healthcare'], isLicenseRequired: true, issuer: 'State Dental Board', renewalRequired: true },
+
+    // ── Optometry ────────────────────────────────────────────────────────────
+    { id: 'od', name: 'Doctor of Optometry', aliases: ['od', 'o.d.', 'optometrist', 'optometry license', 'doctor of optometry', 'licensed optometrist'], category: 'healthcare_license', industries: ['healthcare'], isLicenseRequired: true, issuer: 'State Board of Optometry', renewalRequired: true },
+
+    // ── Architecture ─────────────────────────────────────────────────────────
+    { id: 'ra_aia', name: 'Registered Architect (RA/AIA)', aliases: ['ra', 'r.a.', 'registered architect', 'licensed architect', 'aia', 'american institute of architects', 'ncarb', 'are exam', 'architect license'], category: 'engineering_license', industries: ['engineering_non_software'], isLicenseRequired: true, issuer: 'State Architecture Board / NCARB', renewalRequired: true },
+
+    // ── Aviation ─────────────────────────────────────────────────────────────
+    { id: 'faa_atp', name: 'FAA Airline Transport Pilot Certificate', aliases: ['atp', 'airline transport pilot', 'faa atp', 'atp certificate', 'part 121 captain', 'atp rating'], category: 'trades_certification', industries: ['logistics_supply_chain'], isLicenseRequired: true, issuer: 'FAA', renewalRequired: true },
+    { id: 'faa_commercial', name: 'FAA Commercial Pilot Certificate', aliases: ['commercial pilot', 'commercial pilot license', 'cpl', 'commercial pilot certificate', 'faa commercial'], category: 'trades_certification', industries: ['logistics_supply_chain'], isLicenseRequired: true, issuer: 'FAA', renewalRequired: true },
+    { id: 'faa_ap', name: 'FAA Airframe & Powerplant (A&P) Certificate', aliases: ['a&p', 'a&p mechanic', 'airframe and powerplant', 'faa a&p', 'ap mechanic', 'aviation mechanic', 'a&p certificate'], category: 'trades_certification', industries: ['manufacturing', 'logistics_supply_chain'], isLicenseRequired: true, issuer: 'FAA', renewalRequired: false },
+
+    // ── Mental Health / Counseling ───────────────────────────────────────────
+    { id: 'lmft', name: 'Licensed Marriage & Family Therapist', aliases: ['lmft', 'licensed marriage and family therapist', 'marriage and family therapist', 'mft', 'licensed mft'], category: 'healthcare_license', industries: ['healthcare'], isLicenseRequired: true, issuer: 'State Board of Behavioral Sciences', renewalRequired: true },
+    { id: 'lpc', name: 'Licensed Professional Counselor', aliases: ['lpc', 'lpcc', 'lcpc', 'licensed professional counselor', 'licensed clinical professional counselor', 'professional counselor', 'licensed counselor'], category: 'healthcare_license', industries: ['healthcare'], isLicenseRequired: true, issuer: 'State Counseling Board', renewalRequired: true },
+    { id: 'ladc', name: 'Licensed Alcohol & Drug Counselor', aliases: ['ladc', 'cadc', 'cdac', 'substance abuse counselor', 'addiction counselor', 'licensed alcohol drug counselor', 'certified substance abuse'], category: 'healthcare_license', industries: ['healthcare'], isLicenseRequired: true, issuer: 'State Substance Abuse Agency', renewalRequired: true },
+
+    // ── Speech-Language Pathology ─────────────────────────────────────────────
+    { id: 'ccc_slp', name: 'Certificate of Clinical Competence — SLP', aliases: ['ccc-slp', 'ccc slp', 'slp', 'speech-language pathologist', 'speech language pathologist', 'speech therapist', 'slp-ccc', 'asha ccc'], category: 'healthcare_license', industries: ['healthcare', 'education'], isLicenseRequired: true, issuer: 'ASHA', renewalRequired: true },
+
+    // ── Emergency Medicine / Paramedicine ────────────────────────────────────
+    { id: 'emt', name: 'Emergency Medical Technician (EMT)', aliases: ['emt', 'emt-b', 'emt basic', 'emergency medical technician', 'nremt', 'national registry emt'], category: 'healthcare_license', industries: ['healthcare'], isLicenseRequired: true, issuer: 'NREMT / State EMS Agency', renewalRequired: true },
+    { id: 'paramedic', name: 'Paramedic License', aliases: ['paramedic', 'emt-p', 'nremt-p', 'licensed paramedic', 'advanced life support', 'als provider'], category: 'healthcare_license', industries: ['healthcare'], isLicenseRequired: true, issuer: 'NREMT / State EMS Agency', renewalRequired: true },
+    { id: 'nrp', name: 'Neonatal Resuscitation Program', aliases: ['nrp', 'neonatal resuscitation', 'nrp certified'], category: 'healthcare_license', industries: ['healthcare'], isLicenseRequired: false, renewalRequired: true },
+
+    // ── Care Management / Behavioral Health ──────────────────────────────────
+    { id: 'ccm', name: 'Certified Case Manager', aliases: ['ccm', 'certified case manager', 'case management certification', 'cmsa', 'ancc case management'], category: 'general_professional', industries: ['healthcare'], isLicenseRequired: false, issuer: 'CCMC', renewalRequired: true },
+    { id: 'bcba', name: 'Board Certified Behavior Analyst', aliases: ['bcba', 'board certified behavior analyst', 'applied behavior analysis', 'aba therapist', 'bcba certified', 'bcba-d'], category: 'healthcare_license', industries: ['healthcare', 'education'], isLicenseRequired: true, issuer: 'BACB', renewalRequired: true },
+
+    // ── Insurance ────────────────────────────────────────────────────────────
+    { id: 'pc_license', name: 'Property & Casualty Insurance License', aliases: ['p&c license', 'property casualty license', 'p&c agent', 'property and casualty', 'insurance license', 'licensed insurance agent'], category: 'finance_certification', industries: ['finance'], isLicenseRequired: true, issuer: 'State Department of Insurance', renewalRequired: true },
+    { id: 'lh_license', name: 'Life & Health Insurance License', aliases: ['life and health license', 'l&h license', 'life health insurance', 'health insurance license', 'life insurance license'], category: 'finance_certification', industries: ['finance'], isLicenseRequired: true, issuer: 'State Department of Insurance', renewalRequired: true },
+
+    // ── IT Infrastructure & Service Management ───────────────────────────────
+    { id: 'itil', name: 'ITIL Certification', aliases: ['itil', 'itil v4', 'itil 4', 'itil foundation', 'itil practitioner', 'itil expert'], category: 'technology_certification', industries: ['technology', 'consulting'], isLicenseRequired: false, issuer: 'Axelos', renewalRequired: false },
+    { id: 'salesforce_admin', name: 'Salesforce Administrator', aliases: ['salesforce administrator', 'salesforce admin', 'salesforce certified administrator', 'sfdc admin', 'salesforce cert'], category: 'technology_certification', industries: ['technology', 'sales_bizdev'], isLicenseRequired: false, issuer: 'Salesforce', renewalRequired: true },
+    { id: 'comptia_aplus', name: 'CompTIA A+', aliases: ['comptia a+', 'a+ certification', 'comptia a plus', 'a+ certified'], category: 'technology_certification', industries: ['technology'], isLicenseRequired: false, issuer: 'CompTIA', renewalRequired: true },
+    { id: 'comptia_net', name: 'CompTIA Network+', aliases: ['network+', 'comptia network+', 'network plus', 'comptia network plus'], category: 'technology_certification', industries: ['technology'], isLicenseRequired: false, issuer: 'CompTIA', renewalRequired: true },
+    { id: 'notary', name: 'Notary Public Commission', aliases: ['notary public', 'notary', 'commissioned notary', 'notary commission'], category: 'general_professional', industries: ['legal', 'real_estate', 'finance'], isLicenseRequired: false, issuer: 'State Secretary of State', renewalRequired: true },
 ];
 
 // ---------------------------------------------------------------------------
@@ -273,10 +331,10 @@ export function detectRequiredCredentials(
     const lower = jobTitle.toLowerCase();
     const required: string[] = [];
 
-    // Healthcare
+    // Healthcare — clinical
     if (/\brn\b|registered nurse/.test(lower)) required.push('rn', 'bls');
     if (/\bnp\b|nurse practitioner/.test(lower)) required.push('np', 'bls');
-    if (/\blpn\b|licensed practical nurse/.test(lower)) required.push('lpn', 'bls');
+    if (/\blpn\b|\blvn\b|licensed practical nurse|licensed vocational nurse/.test(lower)) required.push('lpn', 'bls');
     if (/\bpa[-\s]?c\b|physician assistant/.test(lower)) required.push('pa_c', 'bls');
     if (/physician|doctor|surgeon|\bmd\b|\bdo\b/.test(lower)) required.push('md', 'bls');
     if (/pharmacist|\bpharmd\b/.test(lower)) required.push('pharmd');
@@ -285,6 +343,26 @@ export function detectRequiredCredentials(
     if (/respiratory therapist/.test(lower)) required.push('rt');
     if (/\bcna\b|nursing assistant/.test(lower)) required.push('cna', 'bls');
     if (/social worker/.test(lower)) required.push('lcsw');
+    // Healthcare — dental
+    if (/dentist|\bdds\b|\bdmd\b/.test(lower)) required.push('dds');
+    if (/dental hygienist/.test(lower)) required.push('rdh');
+    // Healthcare — optometry
+    if (/optometrist|\bod\b|optometry/.test(lower)) required.push('od');
+    // Healthcare — veterinary
+    if (/veterinarian|\bdvm\b|\bvmd\b|vet doctor/.test(lower)) required.push('dvm');
+    // Healthcare — mental health / counseling
+    if (/marriage.*family.*therapist|\blmft\b/.test(lower)) required.push('lmft');
+    if (/\blpc\b|\blpcc\b|\blcpc\b|licensed.*counselor|professional counselor/.test(lower)) required.push('lpc');
+    if (/substance abuse counselor|addiction counselor|\bladc\b|\bcadc\b/.test(lower)) required.push('ladc');
+    // Healthcare — SLP
+    if (/speech.language pathologist|\bslp\b|speech therapist/.test(lower)) required.push('ccc_slp');
+    // Healthcare — emergency
+    if (/\bemt\b|emergency medical technician/.test(lower) && !/paramedic/.test(lower)) required.push('emt');
+    if (/paramedic|\bemt-p\b/.test(lower)) required.push('paramedic', 'emt');
+    // Healthcare — behavioral
+    if (/\bbcba\b|behavior analyst|applied behavior analysis/.test(lower)) required.push('bcba');
+    // Healthcare — case management
+    if (/case manager|care manager/.test(lower) && /healthcare|clinical|medical/.test(lower + ' ' + industry)) required.push('ccm');
 
     // Legal
     if (/attorney|lawyer|counsel|associate/.test(lower) && industry === 'legal') required.push('jd', 'bar');
@@ -295,14 +373,38 @@ export function detectRequiredCredentials(
     if (/accountant|cpa/.test(lower)) required.push('cpa');
     if (/risk manager|risk analyst/.test(lower)) required.push('frm');
     if (/internal auditor/.test(lower)) required.push('cia');
+    if (/mortgage.*originator|loan originator|\bnmls\b/.test(lower)) required.push('nmls');
+    if (/insurance agent|insurance broker|insurance.*license/.test(lower)) {
+        if (/life|health/.test(lower)) required.push('lh_license');
+        else if (/property|casualty|p&c/.test(lower)) required.push('pc_license');
+        else required.push('pc_license', 'lh_license'); // require both if ambiguous
+    }
 
     // Education
     if (/teacher|educator|instructor/.test(lower) && !/corporate|corporate trainer/.test(lower)) required.push('teaching_license');
+    if (/speech.*language.*school|slp.*school|school.*slp/.test(lower)) required.push('ccc_slp', 'teaching_license');
 
     // Engineering
     if (/\bpe\b|professional engineer|civil engineer|structural engineer/.test(lower)) required.push('pe');
+    // Architecture
+    if (/\barchitect\b|\bra\b|licensed architect/.test(lower) && !/software architect|solution architect|enterprise architect|cloud architect|data architect|it architect/.test(lower)) required.push('ra_aia');
 
-    // Government
+    // Aviation
+    if (/airline.*pilot|atp.*pilot|\bpilot\b.*captain|commercial.*pilot/.test(lower)) required.push('faa_atp');
+    if (/commercial pilot/.test(lower) && !/airline/.test(lower)) required.push('faa_commercial');
+    if (/a&p mechanic|airframe.*powerplant|aviation mechanic/.test(lower)) required.push('faa_ap');
+
+    // Transportation / Logistics
+    if (/\btruck driver\b|cdl.*driver|commercial.*driver|semi.*driver|tractor.*trailer|18.wheel/.test(lower)) required.push('cdl_a');
+    if (/bus driver|delivery driver.*\bcdl\b|straight truck/.test(lower)) required.push('cdl_b');
+    if (/maritime|port.*access|marine.*terminal|\btwic\b/.test(lower)) required.push('twic');
+    if (/merchant marine|marine officer|uscg.*mariner|maritime.*officer/.test(lower)) required.push('uscg_mmc');
+
+    // Real Estate
+    if (/real estate broker|managing broker/.test(lower)) required.push('re_broker');
+    if (/real estate agent|leasing agent|realtor|real estate salesperson/.test(lower)) required.push('re_agent');
+
+    // Government / Security
     if (/ts\/sci|top secret|intelligence analyst/.test(lower)) required.push('ts_sci');
     if (/secret clearance/.test(lower)) required.push('secret');
 

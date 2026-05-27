@@ -6,6 +6,11 @@
  * Returns a ranked list of profiles with contact hints and match rationale.
  */
 
+import {
+    buildSourcingSetupRequests,
+    type DashboardRequestResult,
+} from './dashboard-requests.js';
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -52,6 +57,8 @@ export interface SourcingResult {
     searchStrategy: string[];
     nextSteps: string[];
     errorMessage?: string;
+    dashboardRequest?: DashboardRequestResult;  // Populated when API keys are missing
+    isHeuristic: boolean;                        // True when results are illustrative only
 }
 
 // Injected fetch function for testing / connector integration
@@ -116,6 +123,61 @@ function scoreCandidate(
     return { score: Math.min(score, 100), rationale };
 }
 
+// ---------------------------------------------------------------------------
+// Industry-aware company pools
+// ---------------------------------------------------------------------------
+
+const INDUSTRY_COMPANIES: Record<string, string[]> = {
+    technology:          ['Stripe', 'Shopify', 'Figma', 'Notion', 'Vercel', 'Databricks', 'Twilio', 'HashiCorp'],
+    healthcare:          ['HCA Healthcare', 'CommonSpirit Health', 'Kaiser Permanente', 'Ascension', 'Mayo Clinic', 'Cleveland Clinic', 'Tenet Healthcare', 'Dignity Health'],
+    finance:             ['JPMorgan Chase', 'Goldman Sachs', 'BlackRock', 'Fidelity Investments', 'Vanguard', 'Citadel', 'Bridgewater Associates', 'Wells Fargo'],
+    legal:               ['Skadden', 'Latham & Watkins', 'Baker McKenzie', 'Jones Day', 'Kirkland & Ellis', 'Sidley Austin', 'Cooley', 'WilmerHale'],
+    manufacturing:       ['GE', 'Honeywell', '3M', 'Caterpillar', 'Parker Hannifin', 'Emerson Electric', 'Rockwell Automation', 'Illinois Tool Works'],
+    engineering_non_software: ['AECOM', 'Jacobs', 'Parsons', 'Bechtel', 'Fluor', 'Stantec', 'WSP', 'Gannett Fleming'],
+    retail:              ['Walmart', 'Target', 'Home Depot', 'Costco', 'Nordstrom', 'TJX Companies', 'Dollar General', 'Kroger'],
+    hospitality:         ['Marriott International', 'Hilton', 'Hyatt Hotels', 'IHG', 'Wyndham Hotels', 'Four Seasons', 'Accor', 'MGM Resorts'],
+    education:           ['KIPP Foundation', 'Teach For America', 'Khan Academy', 'Coursera', 'Chegg', 'Grand Canyon University', 'Naviance', '2U Inc.'],
+    government:          ['Booz Allen Hamilton', 'Leidos', 'SAIC', 'ManTech International', 'General Dynamics IT', 'Peraton', 'CACI International', 'Maximus'],
+    nonprofit:           ['American Red Cross', 'United Way', 'Feeding America', 'Habitat for Humanity', 'CARE', 'Save the Children', 'WWF', 'The Nature Conservancy'],
+    creative_media:      ['Wieden+Kennedy', 'BBDO', 'Ogilvy', 'R/GA', 'Pentagram', 'Droga5', 'Grey Group', 'DDB Worldwide'],
+    consulting:          ['McKinsey & Company', 'Boston Consulting Group', 'Bain & Company', 'Deloitte Consulting', 'Accenture', 'Oliver Wyman', 'PwC', 'Kearney'],
+    sales_bizdev:        ['Salesforce', 'HubSpot', 'Gartner', 'ZoomInfo', 'Qualtrics', 'Veeva Systems', 'Outreach', 'Seismic'],
+    logistics_supply_chain: ['FedEx', 'UPS', 'XPO Logistics', 'J.B. Hunt', 'Schneider National', 'Werner Enterprises', 'CH Robinson', 'Coyote Logistics'],
+    real_estate:         ['CBRE', 'JLL', 'Cushman & Wakefield', 'Brookfield Asset Management', 'Prologis', 'Equity Residential', 'AvalonBay Communities', 'Blackstone Real Estate'],
+    pharmaceutical_biotech: ['Pfizer', 'Johnson & Johnson', 'Merck', 'AbbVie', 'Moderna', 'Amgen', 'Genentech', 'Bristol Myers Squibb'],
+    agriculture:         ['Cargill', 'Archer Daniels Midland', 'Bunge', 'John Deere', 'AGCO', 'Corteva Agriscience', 'Syngenta', 'Nutrien'],
+    aviation:            ['American Airlines', 'United Airlines', 'Delta Air Lines', 'Southwest Airlines', 'Boeing', 'Airbus Americas', 'NetJets', 'Flexjet'],
+    utilities_energy:    ['NextEra Energy', 'Duke Energy', 'Dominion Energy', 'ExxonMobil', 'Chevron', 'Schlumberger', 'Halliburton', 'Baker Hughes'],
+    telecommunications:  ['AT&T', 'Verizon', 'T-Mobile', 'Comcast', 'Charter Communications', 'Lumen Technologies', 'Crown Castle', 'American Tower'],
+    insurance:           ['Berkshire Hathaway', 'State Farm', 'Allstate', 'Progressive', 'Prudential', 'MetLife', 'Aetna', 'Cigna'],
+    mining_extractive:   ['Freeport-McMoRan', 'Barrick Gold', 'Mosaic Company', 'Nucor', 'Alpha Natural Resources', 'Walter Energy', 'CONSOL Energy', 'Arch Coal'],
+};
+
+// Industry-specific job board recommendations
+const INDUSTRY_JOB_BOARDS: Record<string, string[]> = {
+    technology:          ['LinkedIn', 'Greenhouse/Lever integrations', 'HackerNews Who\'s Hiring', 'Stack Overflow Jobs'],
+    healthcare:          ['Health eCareers', 'Doximity Talent Finder', 'NurseFly', 'PracticeLink', 'CompHealth'],
+    legal:               ['LawCrossing', 'LegalJobs.io', 'BCG Attorney Search', 'Leopard Solutions'],
+    finance:             ['eFinancialCareers', 'LinkedIn', 'Wall Street Oasis', 'Selby Jennings'],
+    education:           ['K12JobSpot', 'Teach.com', 'HigherEdJobs', 'Chronicle Vitae', 'SchoolSpring'],
+    government:          ['USAJOBS', 'ClearanceJobs', 'GovernmentJobs.com', 'LinkedIn'],
+    logistics_supply_chain: ['DAT Freight & Analytics', 'Trucker Path', 'Indeed', 'LinkedIn'],
+    real_estate:         ['CoStar', 'CREW Network', 'LinkedIn', 'BuildOut'],
+    pharmaceutical_biotech: ['BioSpace', 'MedReps', 'ClinicalTrials Jobs', 'EuroSciCon'],
+    manufacturing:       ['GlobalSpec', 'EngineeringJobs.com', 'Indeed', 'LinkedIn'],
+    hospitality:         ['Hcareers', 'Culinary Agents', 'Hospitality Online', 'TalentAcquisition.com'],
+    nonprofit:           ['Idealist', 'NonProfit Jobs', 'Commongood Careers', 'LinkedIn'],
+    creative_media:      ['Behance Jobs', 'Dribbble Jobs', 'Vitamin T', 'Creative Circle'],
+};
+
+function getIndustryCompanies(industries: string[]): string[] {
+    for (const ind of industries) {
+        const pool = INDUSTRY_COMPANIES[ind];
+        if (pool && pool.length > 0) return pool;
+    }
+    return INDUSTRY_COMPANIES['technology']!;
+}
+
 function buildHeuristicCandidates(criteria: SourcingCriteria): CandidateProfile[] {
     const limit = criteria.limit ?? 10;
     const titles = [
@@ -125,7 +187,7 @@ function buildHeuristicCandidates(criteria: SourcingCriteria): CandidateProfile[
         `${criteria.jobTitle} II`,
         `Principal ${criteria.jobTitle}`,
     ];
-    const companies = ['Stripe', 'Airbnb', 'Shopify', 'Figma', 'Notion', 'Linear', 'Vercel', 'Databricks'];
+    const companies = getIndustryCompanies(criteria.industries ?? []);
     const locations = criteria.location
         ? [criteria.location, `${criteria.location} Area`, 'Remote']
         : ['San Francisco, CA', 'New York, NY', 'London, UK', 'Remote'];
@@ -175,6 +237,7 @@ export async function sourceCandidates(
 
     let candidates: CandidateProfile[] = [];
     let usedLive = false;
+    let dashboardRequest: DashboardRequestResult | undefined;
 
     // Apollo integration
     if (criteria.apolloApiKey && fetchFn) {
@@ -191,16 +254,48 @@ export async function sourceCandidates(
         }
     }
 
-    // Fallback: heuristic profiles (representative for agent planning)
+    // LinkedIn integration
+    if (!usedLive && criteria.linkedInAccessToken && fetchFn) {
+        const res = await fetchFn('linkedin_people_search', {
+            title: criteria.jobTitle,
+            skills: criteria.requiredSkills,
+            location: criteria.location,
+            limit,
+            accessToken: criteria.linkedInAccessToken,
+        });
+        if (res.ok && Array.isArray(res.data)) {
+            candidates = (res.data as CandidateProfile[]).slice(0, limit);
+            usedLive = true;
+        }
+    }
+
+    // Fallback: heuristic profiles (illustrative — real sourcing requires API keys)
     if (!usedLive) {
         candidates = buildHeuristicCandidates(criteria);
+        // Surface a dashboard request so the customer knows to configure credentials
+        dashboardRequest = buildSourcingSetupRequests();
+    }
+
+    // Add industry-specific job boards to search strategy
+    const targetIndustries = criteria.industries ?? [];
+    const boards: string[] = [];
+    for (const ind of targetIndustries) {
+        const b = INDUSTRY_JOB_BOARDS[ind];
+        if (b) boards.push(...b);
+    }
+    if (boards.length > 0) {
+        const unique = [...new Set(boards)];
+        searchStrategy.push(`Recommended job boards for ${targetIndustries.join('/')} roles: ${unique.slice(0, 4).join(', ')}`);
     }
 
     const nextSteps = [
-        `Review the ${candidates.length} shortlisted profiles and mark top picks in your ATS`,
+        usedLive
+            ? `Review the ${candidates.length} live profiles and mark top picks in your ATS`
+            : `⚠️ Results are ILLUSTRATIVE ONLY (no API keys configured). Configure credentials via the dashboard to get real candidates.`,
         'Craft personalised outreach using workspace_rec_send_outreach for each top candidate',
         'For passive candidates: lead with value proposition, not the job description',
         `Set a follow-up reminder if no reply within 5 business days`,
+        ...(dashboardRequest ? ['Action the dashboard API setup requests to enable live candidate sourcing'] : []),
     ];
 
     return {
@@ -210,5 +305,7 @@ export async function sourceCandidates(
         candidates,
         searchStrategy,
         nextSteps,
+        dashboardRequest,
+        isHeuristic: !usedLive,
     };
 }

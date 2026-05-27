@@ -28,6 +28,7 @@
  *   workspace_rec_advise_jd_compliance  — industry-specific regulatory JD disclosures
  *   workspace_rec_international         — right-to-work, IR35, GDPR, market adaptation
  *   workspace_rec_campus_recruiting     — career fair, bulk screen, intern tracker, seasonal batch
+ *   workspace_rec_dashboard_request     — emit structured requests to dashboard (API config, doc upload, approval)
  */
 
 import type { LocalWorkspaceResult } from '../../local-workspace-executor.js';
@@ -177,6 +178,22 @@ import type {
     SeasonalRole,
 } from './campus-recruiting.js';
 
+import {
+    buildDashboardRequestResult,
+    buildApiConfigRequest,
+    buildDocumentUploadRequest,
+    buildCredentialVerifyRequest,
+    buildDataCollectionRequest,
+    buildHumanApprovalRequest,
+    buildSourcingSetupRequests,
+    buildAtsSetupRequests,
+    buildFullRecruiterSetupRequests,
+    buildResumeUploadRequest,
+    buildBgcAuthorisationRequest,
+    buildCredentialVerificationRequests,
+} from './dashboard-requests.js';
+import type { DashboardRequest } from './dashboard-requests.js';
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -206,7 +223,8 @@ export type RecruiterActionType =
     | 'workspace_rec_run_assessment'
     | 'workspace_rec_advise_jd_compliance'
     | 'workspace_rec_international'
-    | 'workspace_rec_campus_recruiting';
+    | 'workspace_rec_campus_recruiting'
+    | 'workspace_rec_dashboard_request';
 
 export function isRecruiterActionType(t: string): t is RecruiterActionType {
     return (
@@ -234,7 +252,8 @@ export function isRecruiterActionType(t: string): t is RecruiterActionType {
         t === 'workspace_rec_run_assessment' ||
         t === 'workspace_rec_advise_jd_compliance' ||
         t === 'workspace_rec_international' ||
-        t === 'workspace_rec_campus_recruiting'
+        t === 'workspace_rec_campus_recruiting' ||
+        t === 'workspace_rec_dashboard_request'
     );
 }
 
@@ -1556,6 +1575,86 @@ export async function handleRecruiterAction(
                 };
                 return jsonOut(buildSeasonalBatchPlan(seasonalInput));
             }
+        }
+
+        // ── Dashboard Request ──────────────────────────────────────────────
+        case 'workspace_rec_dashboard_request': {
+            const mode = str(payload['mode'], 'full_setup');
+
+            if (mode === 'sourcing_setup') {
+                return jsonOut(buildSourcingSetupRequests());
+            }
+
+            if (mode === 'ats_setup') {
+                return jsonOut(buildAtsSetupRequests());
+            }
+
+            if (mode === 'resume_upload') {
+                const candidateName = typeof payload['candidateName'] === 'string' ? payload['candidateName'] : undefined;
+                return jsonOut(buildResumeUploadRequest(candidateName));
+            }
+
+            if (mode === 'bgc_authorisation') {
+                const candidateName = str(payload['candidateName']);
+                if (!candidateName) return fail('payload.candidateName is required for bgc_authorisation mode');
+                return jsonOut(buildBgcAuthorisationRequest(candidateName));
+            }
+
+            if (mode === 'credential_verify') {
+                const candidateName = str(payload['candidateName']);
+                if (!candidateName) return fail('payload.candidateName is required for credential_verify mode');
+                const credentialsRaw = payload['credentials'];
+                if (!Array.isArray(credentialsRaw) || credentialsRaw.length === 0) {
+                    return fail('payload.credentials array is required for credential_verify mode');
+                }
+                const credentials = (credentialsRaw as Record<string, unknown>[]).map(c => ({
+                    id: str(c['id'], 'unknown'),
+                    name: str(c['name'], 'Unknown Credential'),
+                }));
+                return jsonOut(buildCredentialVerificationRequests(candidateName, credentials));
+            }
+
+            if (mode === 'api_config') {
+                const serviceIds = Array.isArray(payload['serviceIds'])
+                    ? strArr(payload['serviceIds'])
+                    : typeof payload['serviceId'] === 'string' ? [payload['serviceId'] as string] : [];
+                if (serviceIds.length === 0) return fail('payload.serviceIds (array) or payload.serviceId is required for api_config mode');
+                const requests: DashboardRequest[] = serviceIds
+                    .map(id => buildApiConfigRequest(id))
+                    .filter((r): r is NonNullable<typeof r> => r !== null);
+                if (requests.length === 0) return fail(`No API config preset found for service(s): ${serviceIds.join(', ')}`);
+                const agentNextStep = str(payload['agentNextStep'], 'Configure the API credentials via the dashboard, then re-run the original action.');
+                return jsonOut(buildDashboardRequestResult(requests, agentNextStep));
+            }
+
+            if (mode === 'document_upload') {
+                const documentTypes = Array.isArray(payload['documentTypes'])
+                    ? strArr(payload['documentTypes'])
+                    : typeof payload['documentType'] === 'string' ? [payload['documentType'] as string] : [];
+                if (documentTypes.length === 0) return fail('payload.documentTypes (array) or payload.documentType is required for document_upload mode');
+                const requests: DashboardRequest[] = documentTypes
+                    .map(t => buildDocumentUploadRequest(t))
+                    .filter((r): r is NonNullable<typeof r> => r !== null);
+                if (requests.length === 0) return fail(`No document upload preset found for type(s): ${documentTypes.join(', ')}`);
+                const agentNextStep = str(payload['agentNextStep'], 'Upload the required documents via the dashboard, then re-run the original action.');
+                return jsonOut(buildDashboardRequestResult(requests, agentNextStep));
+            }
+
+            if (mode === 'human_approval') {
+                const actionType2 = str(payload['approvalActionType'], 'recruiter_action');
+                const summary = str(payload['summary']);
+                const details = str(payload['details']);
+                if (!summary) return fail('payload.summary is required for human_approval mode');
+                const riskLevel = (str(payload['riskLevel'], 'high') as 'high' | 'medium' | 'low');
+                const requiredApprover = typeof payload['requiredApprover'] === 'string' ? payload['requiredApprover'] : undefined;
+                const expiresAt = typeof payload['expiresAt'] === 'string' ? payload['expiresAt'] : undefined;
+                const approval = buildHumanApprovalRequest(actionType2, summary, details, riskLevel, requiredApprover, 'high', expiresAt);
+                const agentNextStep = str(payload['agentNextStep'], 'Wait for approval via the dashboard before proceeding with the action.');
+                return jsonOut(buildDashboardRequestResult([approval], agentNextStep));
+            }
+
+            // Default: full_setup
+            return jsonOut(buildFullRecruiterSetupRequests());
         }
 
         default: {
