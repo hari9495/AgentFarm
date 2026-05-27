@@ -71,7 +71,7 @@ export const RECRUITER_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = 
     'workspace_policy_preflight',
     // ── Connector health ─────────────────────────────────────────────────
     'workspace_connector_test',
-    // ── Tier 47 — Recruiter domain actions ───────────────────────────────
+    // ── Tier 47 — Recruiter domain actions (12 original) ─────────────────
     'workspace_rec_build_jd',
     'workspace_rec_post_job',
     'workspace_rec_source_candidates',
@@ -84,6 +84,16 @@ export const RECRUITER_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = 
     'workspace_rec_generate_offer',
     'workspace_rec_market_intelligence',
     'workspace_rec_request_human_gate',
+    // ── Tier 47 — Recruiter domain actions (9 gap-remediation additions) ──
+    'workspace_rec_check_bgc',           // FCRA-compliant background check initiation
+    'workspace_rec_compose_rejection',   // EEOC-safe rejection email by pipeline stage
+    'workspace_rec_negotiate_offer',     // Counter-offer evaluation and verbal scripts
+    'workspace_rec_scan_jd_bias',        // DEI / inclusive language scan on job description
+    'workspace_rec_validate_credentials',// Domain credential checker (RN, JD, CPA, PE, etc.)
+    'workspace_rec_run_reference_check', // Reference questionnaire and debrief summary
+    'workspace_rec_manage_talent_pool',  // Silver-medal CRM, nurture sequences, re-engagement
+    'workspace_rec_approve_requisition', // Multi-level headcount / budget approval workflow
+    'workspace_rec_onboarding_handoff',  // Post-offer Day-1 checklist and welcome sequence
 ];
 
 export const RECRUITER_ROLE_BLOCKED_ACTIONS = [
@@ -120,6 +130,8 @@ export const RECRUITER_ROLE_HIGH_RISK_ACTIONS = [
     'workspace_rec_post_job',               // public job posting
     'workspace_meeting_interview_live',     // live interview with candidate
     'workspace_web_fill_form',              // form submission on external ATS/board
+    'workspace_rec_check_bgc',             // background check — FCRA-regulated action
+    'workspace_rec_approve_requisition',   // triggers multi-level spend approval
 ] as const;
 
 export const RECRUITER_ROLE_PROFILE_ALIASES = new Set([

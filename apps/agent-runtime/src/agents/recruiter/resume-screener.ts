@@ -4,8 +4,18 @@
  * Parses a resume text/URL and scores it against a job description's
  * required qualifications. Produces a structured screening verdict with
  * strengths, gaps, and a recommended next step.
+ *
+ * Integrates credential-validator.ts for domain-aware credential checking:
+ * clinical licenses (RN, MD, NP), legal credentials (JD, Bar), finance
+ * licences (Series 7, CPA, CFA), engineering (PE), and 40+ others.
  * Pure logic — no external API calls.
  */
+
+import {
+    validateCredentials,
+    detectRequiredCredentials,
+    type CredentialValidationResult,
+} from './credential-validator.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -17,12 +27,14 @@ export interface ResumeScreenInput {
     candidateName: string;
     resumeText: string;
     jobTitle: string;
+    industry?: string;                // Optional: auto-detected if not provided
     requiredQualifications: string[];
     niceToHaveQualifications?: string[];
     minYearsExperience?: number;
     salaryExpectation?: number;
     salaryBudgetMax?: number;
     dealBreakerKeywords?: string[];   // e.g. ['no right to work', 'requires visa sponsorship']
+    bonusCredentialIds?: string[];    // Extra credential IDs to check as nice-to-haves
 }
 
 export interface QualificationMatch {
@@ -38,8 +50,10 @@ export interface ResumeScreenResult {
     verdict: ScreeningVerdict;
     requiredMatches: QualificationMatch[];
     niceToHaveMatches: QualificationMatch[];
+    credentialValidation: CredentialValidationResult;
     strengths: string[];
     gaps: string[];
+    credentialGaps: string[];       // Missing required licenses/certifications
     salaryFit: 'within_budget' | 'over_budget' | 'unknown';
     recommendedAction: string;
     phoneScreenQuestions: string[];
@@ -117,6 +131,19 @@ export function screenResume(input: ResumeScreenInput): ResumeScreenResult {
     const hitDealBreaker = (input.dealBreakerKeywords ?? []).find(kw =>
         resumeLower.includes(kw.toLowerCase()),
     );
+
+    // ── Credential validation (domain-aware) ────────────────────────────────
+    // Auto-detect required credentials for this role/industry
+    const requiredCredentialIds = detectRequiredCredentials(
+        input.jobTitle,
+        input.industry ?? '',
+    );
+    const credentialValidation = validateCredentials(
+        input.resumeText,
+        requiredCredentialIds,
+        input.bonusCredentialIds,
+    );
+
     if (hitDealBreaker) {
         return {
             candidateName: input.candidateName,
@@ -125,8 +152,10 @@ export function screenResume(input: ResumeScreenInput): ResumeScreenResult {
             verdict: 'hard_no',
             requiredMatches: [],
             niceToHaveMatches: [],
+            credentialValidation,
             strengths: [],
             gaps: [`Deal-breaker detected: "${hitDealBreaker}"`],
+            credentialGaps: credentialValidation.missingRequired.map(c => c.credentialName),
             salaryFit: 'unknown',
             recommendedAction: `Do not advance. Deal-breaker criterion met: "${hitDealBreaker}".`,
             phoneScreenQuestions: [],
@@ -134,13 +163,20 @@ export function screenResume(input: ResumeScreenInput): ResumeScreenResult {
         };
     }
 
-    // Required qualifications
+    // ── Required qualifications (keyword matching) ───────────────────────────
     const requiredMatches = input.requiredQualifications.map(q => checkQualification(q, input.resumeText));
     const reqMet = requiredMatches.filter(m => m.met).length;
     const reqTotal = requiredMatches.length;
-    const reqScore = reqTotal > 0 ? Math.round((reqMet / reqTotal) * 70) : 70;
 
-    // Nice-to-have qualifications
+    // Score breakdown (total 100):
+    //   - Required quals: 60 pts (was 70; credentails take 10)
+    //   - Credentials:    10 pts
+    //   - Nice-to-haves:  20 pts
+    //   - Experience:     10 pts
+    const reqScore = reqTotal > 0 ? Math.round((reqMet / reqTotal) * 60) : 60;
+    const credScore = Math.round(credentialValidation.credentialScore / 10); // 0–10
+
+    // ── Nice-to-have qualifications ──────────────────────────────────────────
     const niceToHaveMatches = (input.niceToHaveQualifications ?? []).map(q =>
         checkQualification(q, input.resumeText),
     );
@@ -149,18 +185,27 @@ export function screenResume(input: ResumeScreenInput): ResumeScreenResult {
         ? Math.round((niceMet / niceToHaveMatches.length) * 20)
         : 10;
 
-    // Experience score (up to 10 pts)
+    // ── Experience score (up to 10 pts) ──────────────────────────────────────
     const yearsFound = extractYearsExperience(input.resumeText);
     const minYears = input.minYearsExperience ?? 0;
     const expScore = yearsFound >= minYears ? 10 : Math.round((yearsFound / Math.max(minYears, 1)) * 10);
 
-    const overallScore = Math.min(reqScore + niceScore + expScore, 100);
+    let overallScore = Math.min(reqScore + credScore + niceScore + expScore, 100);
+
+    // Hard block: if a legally-required credential is missing, cap at 'no'
+    if (credentialValidation.hardBlock) {
+        overallScore = Math.min(overallScore, 29); // Forces 'no' or 'hard_no'
+    }
+
     const verdict = verdictFromScore(overallScore);
 
     const strengths = requiredMatches.filter(m => m.met).map(m => m.qualification);
     const gaps = requiredMatches.filter(m => !m.met).map(m => m.qualification);
+    const credentialGaps = credentialValidation.missingRequired.map(c =>
+        `${c.credentialName}${c.notes ? ` (${c.notes})` : ''}`,
+    );
 
-    // Salary fit
+    // ── Salary fit ───────────────────────────────────────────────────────────
     let salaryFit: ResumeScreenResult['salaryFit'] = 'unknown';
     if (input.salaryExpectation && input.salaryBudgetMax) {
         salaryFit = input.salaryExpectation <= input.salaryBudgetMax ? 'within_budget' : 'over_budget';
@@ -170,14 +215,22 @@ export function screenResume(input: ResumeScreenInput): ResumeScreenResult {
         strong_yes: 'Advance immediately — schedule phone screen within 24 hours.',
         yes: 'Advance — schedule phone screen this week.',
         maybe: 'Review with hiring manager before deciding; may need clarifying questions.',
-        no: 'Do not advance. Send polite rejection after pipeline closes.',
+        no: credentialValidation.hardBlock
+            ? `Do not advance. Missing required credential(s): ${credentialGaps.join('; ')}.`
+            : 'Do not advance. Send polite rejection after pipeline closes.',
         hard_no: 'Do not advance. Archive candidate profile.',
     };
 
     const screenerNotes = [
-        `Score: ${overallScore}/100 (Req: ${reqMet}/${reqTotal}, Nice: ${niceMet}/${niceToHaveMatches.length}, Exp: ${yearsFound} yrs)`,
+        `Score: ${overallScore}/100 (Req: ${reqMet}/${reqTotal}, Cred: ${credentialValidation.totalFound}/${credentialValidation.totalRequired}, Nice: ${niceMet}/${niceToHaveMatches.length}, Exp: ${yearsFound} yrs)`,
+        credentialValidation.hardBlock ? `⛔ CREDENTIAL BLOCK: ${credentialGaps.join('; ')}` : '',
+        credentialValidation.presentCredentials.length > 0
+            ? `✓ Credentials: ${credentialValidation.presentCredentials.map(c => c.credentialName).join(', ')}`
+            : '',
         salaryFit !== 'unknown' ? `Salary: ${salaryFit === 'within_budget' ? '✓ within budget' : '✗ over budget'}` : '',
     ].filter(Boolean).join(' | ');
+
+    const allGaps = [...gaps, ...credentialGaps];
 
     return {
         candidateName: input.candidateName,
@@ -186,11 +239,13 @@ export function screenResume(input: ResumeScreenInput): ResumeScreenResult {
         verdict,
         requiredMatches,
         niceToHaveMatches,
+        credentialValidation,
         strengths,
         gaps,
+        credentialGaps,
         salaryFit,
         recommendedAction: actionMap[verdict],
-        phoneScreenQuestions: buildPhoneScreenQuestions(gaps, input.jobTitle),
+        phoneScreenQuestions: buildPhoneScreenQuestions(allGaps, input.jobTitle),
         screenerNotes,
     };
 }
