@@ -137,7 +137,7 @@ ${selectorYaml}${params.containerName ? `\n  containerName: "${params.containerN
 
 export function buildNetworkChaosYaml(params: {
     spec:    ChaosExperimentSpec;
-    action:  'delay' | 'loss' | 'duplicate' | 'corrupt' | 'partition';
+    action:  'delay' | 'loss' | 'duplicate' | 'corrupt' | 'partition' | 'bandwidth';
     network: NetworkChaosParams;
 }): string {
     const mode     = params.spec.mode     ?? 'all';

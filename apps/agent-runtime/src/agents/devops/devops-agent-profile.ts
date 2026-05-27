@@ -178,6 +178,10 @@ export const DEVOPS_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = [
     'workspace_devops_mlops',
     // ── P5 Gap 22 — Incident Containment ──────────────────────────────────────
     'workspace_devops_incident_contain',
+    // ── Bucket 2 Gap 1 — Interactive Debug Session ─────────────────────────
+    'workspace_devops_debug_session',
+    // ── Bucket 2 Gap 5 — Runbook Executor ──────────────────────────────────
+    'workspace_devops_runbook_execute',
 ];
 
 // ---------------------------------------------------------------------------

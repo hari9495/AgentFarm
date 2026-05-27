@@ -536,6 +536,23 @@ import {
     formatIncidentReport,
 } from './devops-incident-contain-builder.js';
 
+import {
+    resolveCommandArgv,
+    parseCommandsInput,
+    buildDebugSessionAnalysisPrompt,
+    parseDebugSessionAnalysis,
+    formatDebugSessionReport,
+} from './devops-debug-session-builder.js';
+
+import type { DebugCommand, DebugCommandResult, DebugSessionResult } from './devops-debug-session-builder.js';
+
+import {
+    parseRunbookDefinition,
+    executeRunbook,
+    buildRunbookGenerationPrompt,
+    parseRunbookGenerationOutput,
+} from './devops-runbook-builder.js';
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -633,7 +650,11 @@ export type DevopsActionType =
     // ── P5 Gap 21 — MLOps Pipeline Management ────────────────────────────────
     | 'workspace_devops_mlops'
     // ── P5 Gap 22 — Incident Containment ─────────────────────────────────────
-    | 'workspace_devops_incident_contain';
+    | 'workspace_devops_incident_contain'
+    // ── Bucket 2 Gap 1 — Interactive Debug Session ────────────────────────
+    | 'workspace_devops_debug_session'
+    // ── Bucket 2 Gap 5 — Runbook Executor ────────────────────────────────
+    | 'workspace_devops_runbook_execute';
 
 export const DEVOPS_ACTION_TYPES = new Set<DevopsActionType>([
     'workspace_devops_tf_plan',
@@ -692,6 +713,8 @@ export const DEVOPS_ACTION_TYPES = new Set<DevopsActionType>([
     'workspace_devops_chaos',
     'workspace_devops_mlops',
     'workspace_devops_incident_contain',
+    'workspace_devops_debug_session',
+    'workspace_devops_runbook_execute',
 ]);
 
 export function isDevopsActionType(at: string): at is DevopsActionType {
@@ -3969,7 +3992,7 @@ export async function handleDevopsAction(params: DevopsActionParams): Promise<De
                     name:       str(payload['name'])      || undefined,
                     namespace:  str(payload['namespace']) || undefined,
                     inCluster:  payload['in_cluster'] === true,
-                    upsert:     bool(payload['upsert'])     ?? false,
+                    upsert:     payload['upsert'] === true,
                 });
                 const result = await runCommand(args, workspaceDir);
                 return safeJson({ ok: result.exitCode === 0, action: 'cluster_add', output: result.stdout.slice(0, 500) });
@@ -4090,7 +4113,7 @@ export async function handleDevopsAction(params: DevopsActionParams): Promise<De
             const winTarget: WinRmTarget | undefined = payload['host'] ? {
                 host:        str(payload['host'],     ''),
                 port:        typeof payload['port']   === 'number' ? (payload['port']   as number) : undefined,
-                https:       bool(payload['https'])   ?? false,
+                https:       payload['https'] === true,
                 username:    str(payload['username']) || undefined,
                 password:    str(payload['password']) || undefined,
                 skipCaCheck: payload['skip_ca_check'] === true,
@@ -4121,8 +4144,8 @@ export async function handleDevopsAction(params: DevopsActionParams): Promise<De
                 const args = buildDscApplyArgs({
                     name:      str(payload['name'],     ''),
                     mofPath:   str(payload['mof_path'], ''),
-                    wait:      bool(payload['wait'])    ?? true,
-                    force:     bool(payload['force'])   ?? false,
+                    wait:      payload['wait'] !== false,
+                    force:     payload['force'] === true,
                     verbose:   payload['verbose'] === true,
                 });
                 const result = await runCommand(args, workspaceDir);
@@ -4465,7 +4488,7 @@ export async function handleDevopsAction(params: DevopsActionParams): Promise<De
                 const args = buildAirflowPauseDagArgs({
                     baseUrl:  str(payload['airflow_url'], ''),
                     dagId:    str(payload['dag_id'],      ''),
-                    pause:    bool(payload['pause'])      ?? true,
+                    pause:    payload['pause'] !== false,
                     username: str(payload['username'])    || undefined,
                     password: str(payload['password'])    || undefined,
                 });
@@ -4649,7 +4672,7 @@ export async function handleDevopsAction(params: DevopsActionParams): Promise<De
                     nodeName:           str(payload['node_name'],    ''),
                     ignoreDaemonSets:   payload['ignore_daemonsets'] !== false,
                     deleteEmptyDirData: payload['delete_emptydir_data'] === true,
-                    force:              bool(payload['force'])        ?? false,
+                    force:              payload['force'] === true,
                     gracePeriodSec:     typeof payload['grace_period_sec'] === 'number' ? (payload['grace_period_sec'] as number) : undefined,
                 });
                 const result = await runCommand(args, workspaceDir);
@@ -4663,7 +4686,7 @@ export async function handleDevopsAction(params: DevopsActionParams): Promise<De
                     key:      str(payload['taint_key'],    'incident'),
                     value:    str(payload['taint_value'])  || undefined,
                     effect:   str(payload['taint_effect'], 'NoSchedule') as 'NoSchedule' | 'PreferNoSchedule' | 'NoExecute',
-                    remove:   bool(payload['remove'])      ?? false,
+                    remove:   payload['remove'] === true,
                 });
                 const result = await runCommand(args, workspaceDir);
                 return safeJson({ ok: result.exitCode === 0, action: 'taint' });
@@ -4801,6 +4824,147 @@ export async function handleDevopsAction(params: DevopsActionParams): Promise<De
             }
 
             return { ok: false, output: '', errorOutput: `Unknown incident_contain action: ${icAction}` };
+        }
+
+        // ====================================================================
+        // workspace_devops_debug_session
+        // payload:
+        //   commands        — array of DebugCommand objects or shell strings
+        //   abort_on_failure? (default true)
+        //   analyze?          (default false) — run LLM synthesis at end
+        //   context?          — incident context string for LLM prompt
+        //   max_output_chars? (default 4000) — per-command stdout cap
+        // ====================================================================
+        case 'workspace_devops_debug_session': {
+            if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+
+            const rawCmds        = payload['commands'];
+            const commands       = parseCommandsInput(rawCmds);
+            if (commands.length === 0) {
+                return { ok: false, output: '', errorOutput: 'workspace_devops_debug_session: no commands provided' };
+            }
+
+            const abortOnFailure  = payload['abort_on_failure'] !== false; // default true
+            const analyze         = payload['analyze'] === true;
+            const context         = str(payload['context']) || undefined;
+            const maxOutputChars  = num(payload['max_output_chars'], 4000);
+
+            const results:   DebugCommandResult[] = [];
+            let   executed   = 0;
+            let   succeeded  = 0;
+            let   failed     = 0;
+            let   abortedAt: string | undefined;
+
+            for (const cmd of commands) {
+                const argv = resolveCommandArgv(cmd as DebugCommand);
+                if (argv.length === 0) continue;
+
+                const timeoutMs = typeof (cmd as DebugCommand).timeout_ms === 'number'
+                    ? (cmd as DebugCommand).timeout_ms!
+                    : 30_000;
+
+                const start = Date.now();
+                const res   = await runCommand(argv, workspaceDir, timeoutMs);
+                const durationMs = Date.now() - start;
+
+                const stdout    = res.stdout.slice(0, maxOutputChars);
+                const truncated = res.stdout.length > maxOutputChars;
+
+                executed++;
+                const ok = res.exitCode === 0;
+                if (ok) { succeeded++; } else { failed++; }
+
+                results.push({
+                    id:         (cmd as DebugCommand).id,
+                    label:      (cmd as DebugCommand).label,
+                    argv,
+                    exitCode:   res.exitCode,
+                    stdout,
+                    stderr:     res.stderr.slice(0, 1000),
+                    durationMs,
+                    ok,
+                    truncated,
+                });
+
+                if (!ok && abortOnFailure) {
+                    abortedAt = (cmd as DebugCommand).id ?? argv.join(' ').slice(0, 60);
+                    break;
+                }
+            }
+
+            let summary: string | undefined;
+            if (analyze && results.length > 0) {
+                const prompt = buildDebugSessionAnalysisPrompt(results, context);
+                const llmOut = await callLlmSafe(callLlm, prompt);
+                if (llmOut) {
+                    const analysis = parseDebugSessionAnalysis(llmOut);
+                    summary = `Root cause: ${analysis.rootCause}\nNext steps:\n${analysis.nextSteps.map((s) => `- ${s}`).join('\n')}\nConfidence: ${analysis.confidence}`;
+                }
+            }
+
+            const session: DebugSessionResult = {
+                totalCommands: commands.length,
+                executed,
+                succeeded,
+                failed,
+                abortedAt,
+                results,
+                summary,
+            };
+
+            const report = formatDebugSessionReport(session);
+            return safeJson({ ok: !abortedAt && failed === 0, ...session, report });
+        }
+
+        // ====================================================================
+        // workspace_devops_runbook_execute
+        // payload:
+        //   runbook         — RunbookDefinition as JSON string or object
+        //   generate?       — if true, use LLM to generate runbook from
+        //                     objective string instead of parsing runbook
+        //   objective?      — objective string when generate=true
+        //   max_steps?      — safety limit (default 50)
+        // ====================================================================
+        case 'workspace_devops_runbook_execute': {
+            const maxSteps  = num(payload['max_steps'], 50);
+            const generate  = payload['generate'] === true;
+
+            let runbookDef;
+            if (generate) {
+                const objective   = str(payload['objective'], '');
+                if (!objective) {
+                    return { ok: false, output: '', errorOutput: 'workspace_devops_runbook_execute: objective required when generate=true' };
+                }
+                const prompt = buildRunbookGenerationPrompt(
+                    objective,
+                    undefined,
+                    str(payload['context']) || undefined,
+                );
+                const llmOut = await callLlmSafe(callLlm, prompt);
+                runbookDef   = parseRunbookGenerationOutput(llmOut);
+                if (!runbookDef) {
+                    return { ok: false, output: '', errorOutput: 'workspace_devops_runbook_execute: LLM did not return a valid runbook definition' };
+                }
+            } else {
+                try {
+                    runbookDef = parseRunbookDefinition(payload['runbook']);
+                } catch (e) {
+                    return { ok: false, output: '', errorOutput: `workspace_devops_runbook_execute: ${(e as Error).message}` };
+                }
+            }
+
+            const result = await executeRunbook(runbookDef, executeAction, maxSteps);
+            return safeJson({
+                ok:             result.ok,
+                name:           result.name,
+                steps_total:    result.stepsTotal,
+                steps_executed: result.stepsExecuted,
+                succeeded:      result.stepsSucceeded,
+                failed:         result.stepsFailed,
+                aborted_at:     result.abortedAt,
+                results:        result.results,
+                report:         result.report,
+            });
         }
     }
 }

@@ -239,11 +239,11 @@ export function buildMlflowTransitionModelStageArgs(params: {
 export function buildMlflowDeleteRunArgs(trackingUri: string, runId: string, token?: string): string[] {
     const body = JSON.stringify({ run_id: runId });
     const args = ['curl', '-s', '-X', 'POST',
-        `${params.trackingUri}/api/2.0/mlflow/runs/delete`,
+        `${trackingUri}/api/2.0/mlflow/runs/delete`,
         '-H', 'Content-Type: application/json',
         '-d', body];
     if (token) args.push('-H', `Authorization: Bearer ${token}`);
-    return args.map((a) => a.replace('params.trackingUri', trackingUri));
+    return args;
 }
 
 // ---------------------------------------------------------------------------
