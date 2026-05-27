@@ -20,6 +20,10 @@ import {
     MARKETING_SPECIALIST_ROLE_ALLOWED_LOCAL_ACTIONS,
 } from '../agents/marketing-specialist/marketing-specialist-agent-profile.js';
 import {
+    RECRUITER_ROLE_ALLOWED_CONNECTORS,
+    RECRUITER_ROLE_ALLOWED_LOCAL_ACTIONS,
+} from '../agents/recruiter/recruiter-agent-profile.js';
+import {
     DEVELOPER_ROLE_ALLOWED_CONNECTORS,
     DEVELOPER_ROLE_ALLOWED_LOCAL_ACTIONS,
 } from '../agents/developer/developer-agent-profile.js';
@@ -45,9 +49,9 @@ export const ROLE_PROFILES: Record<RoleKey, RoleProfile> = {
     recruiter: {
         roleKey: 'recruiter',
         displayName: 'Recruiter',
-        description: 'Handles end-to-end recruitment — sourcing, screening, scheduling, and offer management',
-        allowedConnectorTools: ['linkedin', 'gmail', 'outlook', 'google_calendar', 'slack'],
-        allowedActions: ['send_email', 'schedule_meeting', 'search_candidates', 'post_job', 'send_message'],
+        description: 'Handles the full talent-acquisition lifecycle — job description creation, multi-platform sourcing, resume screening, personalised candidate outreach, interview scheduling, panel debrief, offer generation, pipeline tracking, and market intelligence',
+        allowedConnectorTools: [...RECRUITER_ROLE_ALLOWED_CONNECTORS],
+        allowedActions: [...RECRUITER_ROLE_ALLOWED_LOCAL_ACTIONS],
         requiredConfig: ['emailProvider', 'calendarProvider'],
     },
     developer: {

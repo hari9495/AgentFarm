@@ -62,6 +62,7 @@ import { handleContextSweepAction, isContextSweepActionType, type ContextSweepAc
 import { handlePmAction, isPmActionType, type PmActionType } from './agents/project-manager/project-manager-action-handler.js';
 import { handleBaAction, isBaActionType, type BaActionType } from './agents/business-analyst/business-analyst-action-handler.js';
 import { handleMarketingSpecialistAction, isMarketingSpecialistActionType, type MarketingSpecialistActionType } from './agents/marketing-specialist/marketing-specialist-action-handler.js';
+import { handleRecruiterAction, isRecruiterActionType, type RecruiterActionType } from './agents/recruiter/recruiter-action-handler.js';
 import type { ProseCallerFn } from './agents/content-writer/llm-prose-writer.js';
 import { streamLLM } from './llm-decision-adapter.js';
 import { globalEpisodicMemory } from './episodic-memory.js';
@@ -585,7 +586,20 @@ export type LocalWorkspaceActionType =
     | 'workspace_ms_coordinate_assets'
     | 'workspace_ms_align_cross_team'
     | 'workspace_ms_run_campaign_workflow'
-    | 'workspace_ms_request_human_gate';
+    | 'workspace_ms_request_human_gate'
+    // Tier 47 (Recruiter domain actions)
+    | 'workspace_rec_build_jd'
+    | 'workspace_rec_post_job'
+    | 'workspace_rec_source_candidates'
+    | 'workspace_rec_screen_resume'
+    | 'workspace_rec_send_outreach'
+    | 'workspace_rec_schedule_interview'
+    | 'workspace_rec_conduct_phone_screen'
+    | 'workspace_rec_gather_feedback'
+    | 'workspace_rec_manage_pipeline'
+    | 'workspace_rec_generate_offer'
+    | 'workspace_rec_market_intelligence'
+    | 'workspace_rec_request_human_gate';
 
 export type LocalWorkspaceResult = {
     ok: boolean;
@@ -14716,6 +14730,46 @@ export async function executeLocalWorkspaceAction(input: {
                 errorMessage: msResult.errorOutput ? msResult.errorOutput.slice(0, 200) : undefined,
             });
             return msResult;
+        }
+
+        case 'workspace_rec_build_jd':
+        case 'workspace_rec_post_job':
+        case 'workspace_rec_source_candidates':
+        case 'workspace_rec_screen_resume':
+        case 'workspace_rec_send_outreach':
+        case 'workspace_rec_schedule_interview':
+        case 'workspace_rec_conduct_phone_screen':
+        case 'workspace_rec_gather_feedback':
+        case 'workspace_rec_manage_pipeline':
+        case 'workspace_rec_generate_offer':
+        case 'workspace_rec_market_intelligence':
+        case 'workspace_rec_request_human_gate': {
+            if (!isRecruiterActionType(actionType)) {
+                return { ok: false, output: '', errorOutput: `Unrecognised Recruiter action: ${actionType}` };
+            }
+            const recResult = await handleRecruiterAction({
+                actionType: actionType as RecruiterActionType,
+                tenantId,
+                botId,
+                taskId,
+                workspaceDir: workspaceDir ?? taskId,
+                payload,
+            });
+            const recTitle =
+                typeof payload['candidateName'] === 'string' ? payload['candidateName'] :
+                typeof payload['jobTitle'] === 'string' ? payload['jobTitle'] :
+                typeof payload['title'] === 'string' ? payload['title'] : actionType;
+            void globalEpisodicMemory.record({
+                taskId,
+                workspaceId: workspaceDir,
+                botId,
+                actionType,
+                promptSummary: recTitle.slice(0, 200),
+                outcome: recResult.ok ? 'success' : 'failed',
+                timestamp: Date.now(),
+                errorMessage: recResult.errorOutput ? recResult.errorOutput.slice(0, 200) : undefined,
+            });
+            return recResult;
         }
 
         default: {
