@@ -35,6 +35,7 @@ export interface ResumeScreenInput {
     salaryBudgetMax?: number;
     dealBreakerKeywords?: string[];   // e.g. ['no right to work', 'requires visa sponsorship']
     bonusCredentialIds?: string[];    // Extra credential IDs to check as nice-to-haves
+    blindScreen?: boolean;            // Strip PII before scoring to reduce unconscious bias
 }
 
 export interface QualificationMatch {
@@ -58,6 +59,7 @@ export interface ResumeScreenResult {
     recommendedAction: string;
     phoneScreenQuestions: string[];
     screenerNotes: string;
+    wasAnonymized: boolean;         // True when blindScreen mode was used
 }
 
 // ---------------------------------------------------------------------------
@@ -108,6 +110,72 @@ function checkQualification(qual: string, resumeText: string): QualificationMatc
     return { qualification: qual, met, evidence };
 }
 
+/**
+ * Blind screening — strips PII from a resume before it reaches the scorer.
+ * Removes: name/email/phone, physical address, social profile URLs, graduation
+ * years (age proxy), gendered pronouns, and photo references.
+ * Skills, qualifications, and employment history are preserved intact.
+ */
+export function anonymizeResume(text: string, candidateName?: string): string {
+    let anon = text;
+
+    // Candidate name (if known)
+    if (candidateName && candidateName.trim()) {
+        const escaped = candidateName.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        anon = anon.replace(new RegExp(escaped, 'gi'), '[CANDIDATE]');
+        // Also strip individual parts (first / last)
+        const parts = candidateName.trim().split(/\s+/).filter(p => p.length > 2);
+        for (const part of parts) {
+            const ep = part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            anon = anon.replace(new RegExp(`\\b${ep}\\b`, 'gi'), '[CANDIDATE]');
+        }
+    }
+
+    // Email addresses
+    anon = anon.replace(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g, '[EMAIL REDACTED]');
+
+    // Phone numbers (US, UK, international formats)
+    anon = anon.replace(
+        /(\+?[\d\s\-().]{7,}(?:\s?(?:ext|x)\.?\s?\d{1,5})?)/g,
+        (m) => /\d{6,}/.test(m.replace(/\D/g, '')) ? '[PHONE REDACTED]' : m,
+    );
+
+    // Physical address lines (number + street name pattern)
+    anon = anon.replace(/\b\d{1,5}\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\s+(?:Street|St|Avenue|Ave|Road|Rd|Lane|Ln|Drive|Dr|Boulevard|Blvd|Court|Ct|Place|Pl|Way|Close|Terrace|Ter)\b[.,]?/gi, '[ADDRESS REDACTED]');
+
+    // LinkedIn profile URLs
+    anon = anon.replace(/https?:\/\/(?:www\.)?linkedin\.com\/in\/[^\s/]+\/?/gi, '[LINKEDIN PROFILE]');
+
+    // GitHub profile URLs
+    anon = anon.replace(/https?:\/\/(?:www\.)?github\.com\/[^\s/]+\/?/gi, '[GITHUB PROFILE]');
+
+    // Twitter / X profile URLs
+    anon = anon.replace(/https?:\/\/(?:www\.)?(?:twitter|x)\.com\/[^\s/]+\/?/gi, '[SOCIAL PROFILE]');
+
+    // Personal website / portfolio (generic URL — keep domain but strip path for context)
+    anon = anon.replace(/https?:\/\/(?!www\.(?:linkedin|github|twitter|x)\.com)[a-zA-Z0-9\-]+\.[a-zA-Z]{2,}(?:\/[^\s]*)?\b/gi, '[PORTFOLIO URL]');
+
+    // "Class of YYYY" / "Graduated YYYY" — age proxy
+    anon = anon.replace(/\b(?:class\s+of|graduated\s+(?:in\s+)?)\s*(?:19|20)\d{2}\b/gi, '[GRADUATION YEAR]');
+
+    // Gendered pronouns — replace with neutral equivalents
+    anon = anon
+        .replace(/\bhe\/she\b/gi, 'they')
+        .replace(/\bshe\/he\b/gi, 'they')
+        .replace(/\bhim\/her\b/gi, 'them')
+        .replace(/\bher\/him\b/gi, 'them')
+        .replace(/\bhis\/her\b/gi, 'their')
+        .replace(/\bher\/his\b/gi, 'their')
+        .replace(/\b(he|she)\b/g, 'they')
+        .replace(/\b(him|her)\b/g, 'them')
+        .replace(/\b(his|hers)\b/g, 'their');
+
+    // Photo / headshot references
+    anon = anon.replace(/\b(?:photo|headshot|portrait|image|picture)\s*(?:attached|enclosed|included|available)?\b/gi, '[PHOTO REMOVED]');
+
+    return anon;
+}
+
 function buildPhoneScreenQuestions(gaps: string[], jobTitle: string): string[] {
     const base = [
         `Walk me through your experience most relevant to a ${jobTitle} role.`,
@@ -125,7 +193,14 @@ function buildPhoneScreenQuestions(gaps: string[], jobTitle: string): string[] {
 // ---------------------------------------------------------------------------
 
 export function screenResume(input: ResumeScreenInput): ResumeScreenResult {
-    const resumeLower = input.resumeText.toLowerCase();
+    // Blind screening: anonymize PII before any scoring so evaluators see only
+    // skills and experience — not name, contact details, or identity signals.
+    const wasAnonymized = input.blindScreen === true;
+    const resumeText = wasAnonymized
+        ? anonymizeResume(input.resumeText, input.candidateName)
+        : input.resumeText;
+
+    const resumeLower = resumeText.toLowerCase();
 
     // Deal-breaker check
     const hitDealBreaker = (input.dealBreakerKeywords ?? []).find(kw =>
@@ -139,7 +214,7 @@ export function screenResume(input: ResumeScreenInput): ResumeScreenResult {
         input.industry ?? '',
     );
     const credentialValidation = validateCredentials(
-        input.resumeText,
+        resumeText,
         requiredCredentialIds,
         input.bonusCredentialIds,
     );
@@ -160,11 +235,12 @@ export function screenResume(input: ResumeScreenInput): ResumeScreenResult {
             recommendedAction: `Do not advance. Deal-breaker criterion met: "${hitDealBreaker}".`,
             phoneScreenQuestions: [],
             screenerNotes: `Auto-rejected: deal-breaker keyword "${hitDealBreaker}" found in resume.`,
+            wasAnonymized,
         };
     }
 
     // ── Required qualifications (keyword matching) ───────────────────────────
-    const requiredMatches = input.requiredQualifications.map(q => checkQualification(q, input.resumeText));
+    const requiredMatches = input.requiredQualifications.map(q => checkQualification(q, resumeText));
     const reqMet = requiredMatches.filter(m => m.met).length;
     const reqTotal = requiredMatches.length;
 
@@ -178,7 +254,7 @@ export function screenResume(input: ResumeScreenInput): ResumeScreenResult {
 
     // ── Nice-to-have qualifications ──────────────────────────────────────────
     const niceToHaveMatches = (input.niceToHaveQualifications ?? []).map(q =>
-        checkQualification(q, input.resumeText),
+        checkQualification(q, resumeText),
     );
     const niceMet = niceToHaveMatches.filter(m => m.met).length;
     const niceScore = niceToHaveMatches.length > 0
@@ -228,6 +304,7 @@ export function screenResume(input: ResumeScreenInput): ResumeScreenResult {
             ? `✓ Credentials: ${credentialValidation.presentCredentials.map(c => c.credentialName).join(', ')}`
             : '',
         salaryFit !== 'unknown' ? `Salary: ${salaryFit === 'within_budget' ? '✓ within budget' : '✗ over budget'}` : '',
+        wasAnonymized ? '🫥 Blind screen — PII redacted before scoring' : '',
     ].filter(Boolean).join(' | ');
 
     const allGaps = [...gaps, ...credentialGaps];
@@ -247,5 +324,6 @@ export function screenResume(input: ResumeScreenInput): ResumeScreenResult {
         recommendedAction: actionMap[verdict],
         phoneScreenQuestions: buildPhoneScreenQuestions(allGaps, input.jobTitle),
         screenerNotes,
+        wasAnonymized,
     };
 }

@@ -611,7 +611,10 @@ export type LocalWorkspaceActionType =
     | 'workspace_rec_run_reference_check'
     | 'workspace_rec_manage_talent_pool'
     | 'workspace_rec_approve_requisition'
-    | 'workspace_rec_onboarding_handoff';
+    | 'workspace_rec_onboarding_handoff'
+    | 'workspace_rec_run_assessment'
+    | 'workspace_rec_advise_jd_compliance'
+    | 'workspace_rec_international';
 
 export type LocalWorkspaceResult = {
     ok: boolean;
@@ -14768,7 +14771,10 @@ export async function executeLocalWorkspaceAction(input: {
         case 'workspace_rec_run_reference_check':
         case 'workspace_rec_manage_talent_pool':
         case 'workspace_rec_approve_requisition':
-        case 'workspace_rec_onboarding_handoff': {
+        case 'workspace_rec_onboarding_handoff':
+        case 'workspace_rec_run_assessment':
+        case 'workspace_rec_advise_jd_compliance':
+        case 'workspace_rec_international': {
             if (!isRecruiterActionType(actionType)) {
                 return { ok: false, output: '', errorOutput: `Unrecognised Recruiter action: ${actionType}` };
             }

@@ -24,6 +24,9 @@
  *   workspace_rec_manage_talent_pool    — silver-medal CRM, nurture sequences, re-engagement
  *   workspace_rec_approve_requisition   — multi-level headcount / budget approval workflow
  *   workspace_rec_onboarding_handoff    — post-offer Day-1 checklist and welcome sequence
+ *   workspace_rec_run_assessment        — take-home brief + scoring rubric for any domain
+ *   workspace_rec_advise_jd_compliance  — industry-specific regulatory JD disclosures
+ *   workspace_rec_international         — right-to-work, IR35, GDPR, market adaptation
  */
 
 import type { LocalWorkspaceResult } from '../../local-workspace-executor.js';
@@ -128,6 +131,28 @@ import type { RequisitionInput, RequisitionType } from './requisition-approver.j
 import { buildOnboardingHandoff } from './onboarding-handoff.js';
 import type { NewHireInput, Department } from './onboarding-handoff.js';
 
+import { buildAssessmentBrief } from './candidate-assessment.js';
+import type { AssessmentBriefInput, AssessmentType, AssessmentDomain } from './candidate-assessment.js';
+
+import { buildJdComplianceBlock } from './jd-compliance-advisor.js';
+import type { ComplianceAdvisoryInput, ComplianceIndustry, ComplianceRegion } from './jd-compliance-advisor.js';
+
+import {
+    assessRightToWork,
+    assessIr35Status,
+    buildGdprRecruitmentWorkflow,
+    getMarketAdaptation,
+} from './international-recruiting.js';
+import type {
+    RightToWorkInput,
+    Ir35Input,
+    GdprRecruitmentInput,
+    MarketAdaptationInput,
+    HiringCountry,
+    CandidateStatus as IntlCandidateStatus,
+    EngagementType,
+} from './international-recruiting.js';
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -153,7 +178,10 @@ export type RecruiterActionType =
     | 'workspace_rec_run_reference_check'
     | 'workspace_rec_manage_talent_pool'
     | 'workspace_rec_approve_requisition'
-    | 'workspace_rec_onboarding_handoff';
+    | 'workspace_rec_onboarding_handoff'
+    | 'workspace_rec_run_assessment'
+    | 'workspace_rec_advise_jd_compliance'
+    | 'workspace_rec_international';
 
 export function isRecruiterActionType(t: string): t is RecruiterActionType {
     return (
@@ -177,7 +205,10 @@ export function isRecruiterActionType(t: string): t is RecruiterActionType {
         t === 'workspace_rec_run_reference_check' ||
         t === 'workspace_rec_manage_talent_pool' ||
         t === 'workspace_rec_approve_requisition' ||
-        t === 'workspace_rec_onboarding_handoff'
+        t === 'workspace_rec_onboarding_handoff' ||
+        t === 'workspace_rec_run_assessment' ||
+        t === 'workspace_rec_advise_jd_compliance' ||
+        t === 'workspace_rec_international'
     );
 }
 
@@ -1175,6 +1206,146 @@ export async function handleRecruiterAction(
             };
 
             return jsonOut(buildOnboardingHandoff(onboardInput));
+        }
+
+        // ----------------------------------------------------------------
+        // workspace_rec_run_assessment
+        // payload: AssessmentBriefInput fields
+        // ----------------------------------------------------------------
+        case 'workspace_rec_run_assessment': {
+            const candidateName  = str(payload['candidateName']);
+            const candidateEmail = str(payload['candidateEmail']);
+            const jobTitle       = str(payload['jobTitle']);
+            const companyName    = str(payload['companyName']);
+            const recruiterName  = str(payload['recruiterName']);
+            const recruiterEmail = str(payload['recruiterEmail']);
+
+            if (!candidateName)  return fail('payload.candidateName is required');
+            if (!candidateEmail) return fail('payload.candidateEmail is required');
+            if (!jobTitle)       return fail('payload.jobTitle is required');
+            if (!companyName)    return fail('payload.companyName is required');
+
+            const assessInput: AssessmentBriefInput = {
+                candidateName,
+                candidateEmail,
+                jobTitle,
+                companyName,
+                recruiterName: recruiterName ?? 'the recruiter',
+                recruiterEmail: recruiterEmail ?? '',
+                domain:         str(payload['domain'], 'general') as AssessmentDomain,
+                assessmentType: str(payload['assessmentType'], 'take_home_case_study') as AssessmentType,
+                durationHours:         num(payload['durationHours'], 3),
+                submissionDeadlineDays: num(payload['submissionDeadlineDays'], 5),
+                platformLink:    typeof payload['platformLink']    === 'string' ? payload['platformLink']    : undefined,
+                problemStatement: typeof payload['problemStatement'] === 'string' ? payload['problemStatement'] : undefined,
+                evaluators:      Array.isArray(payload['evaluators']) ? (payload['evaluators'] as string[]) : undefined,
+                compensated:     typeof payload['compensated']    === 'boolean' ? payload['compensated']    : undefined,
+                nda:             typeof payload['nda']            === 'boolean' ? payload['nda']            : undefined,
+            };
+
+            return jsonOut(buildAssessmentBrief(assessInput));
+        }
+
+        // ----------------------------------------------------------------
+        // workspace_rec_advise_jd_compliance
+        // payload: ComplianceAdvisoryInput fields
+        // ----------------------------------------------------------------
+        case 'workspace_rec_advise_jd_compliance': {
+            const jobTitle = str(payload['jobTitle']);
+            if (!jobTitle) return fail('payload.jobTitle is required');
+
+            const compInput: ComplianceAdvisoryInput = {
+                jobTitle,
+                industry:  str(payload['industry'], 'general') as ComplianceIndustry,
+                region:    str(payload['region'], 'us') as ComplianceRegion,
+                employmentClassification: typeof payload['employmentClassification'] === 'string'
+                    ? payload['employmentClassification'] as ComplianceAdvisoryInput['employmentClassification']
+                    : undefined,
+                requiresSecurityClearance:           typeof payload['requiresSecurityClearance'] === 'boolean' ? payload['requiresSecurityClearance'] : undefined,
+                clearanceLevel:                      typeof payload['clearanceLevel'] === 'string' ? payload['clearanceLevel'] as ComplianceAdvisoryInput['clearanceLevel'] : undefined,
+                requiresChildOrVulnerableAdultContact: typeof payload['requiresChildOrVulnerableAdultContact'] === 'boolean' ? payload['requiresChildOrVulnerableAdultContact'] : undefined,
+                requiresFinancialFiduciary:          typeof payload['requiresFinancialFiduciary'] === 'boolean' ? payload['requiresFinancialFiduciary'] : undefined,
+                finraRegistrations:                  Array.isArray(payload['finraRegistrations']) ? (payload['finraRegistrations'] as string[]) : undefined,
+                requiresDriving:                     typeof payload['requiresDriving'] === 'boolean' ? payload['requiresDriving'] : undefined,
+                requiresPhysicalDemands:             typeof payload['requiresPhysicalDemands'] === 'boolean' ? payload['requiresPhysicalDemands'] : undefined,
+                requiresGmpEnvironment:              typeof payload['requiresGmpEnvironment'] === 'boolean' ? payload['requiresGmpEnvironment'] : undefined,
+                requiresExportControlledWork:        typeof payload['requiresExportControlledWork'] === 'boolean' ? payload['requiresExportControlledWork'] : undefined,
+                requiresLicensedPractitioner:        typeof payload['requiresLicensedPractitioner'] === 'boolean' ? payload['requiresLicensedPractitioner'] : undefined,
+                stateOrCountry:                      typeof payload['stateOrCountry'] === 'string' ? payload['stateOrCountry'] : undefined,
+            };
+
+            return jsonOut(buildJdComplianceBlock(compInput));
+        }
+
+        // ----------------------------------------------------------------
+        // workspace_rec_international
+        // payload: { mode: 'rtw'|'ir35'|'gdpr'|'market', ...fields }
+        // ----------------------------------------------------------------
+        case 'workspace_rec_international': {
+            const mode = str(payload['mode'], 'rtw');
+
+            if (mode === 'ir35') {
+                const roleTitle = str(payload['roleTitle']);
+                if (!roleTitle) return fail('payload.roleTitle is required for IR35 mode');
+
+                const ir35Input: Ir35Input = {
+                    roleTitle,
+                    engagerName:                 typeof payload['engagerName'] === 'string' ? payload['engagerName'] : undefined,
+                    workerControlledByEngager:   typeof payload['workerControlledByEngager'] === 'boolean'   ? payload['workerControlledByEngager']   : null,
+                    substitutionAllowed:         typeof payload['substitutionAllowed'] === 'boolean'         ? payload['substitutionAllowed']         : null,
+                    mutualityOfObligation:       typeof payload['mutualityOfObligation'] === 'boolean'       ? payload['mutualityOfObligation']       : null,
+                    workerProvidesOwnEquipment:  typeof payload['workerProvidesOwnEquipment'] === 'boolean'  ? payload['workerProvidesOwnEquipment']  : null,
+                    workerBearesFinancialRisk:   typeof payload['workerBearesFinancialRisk'] === 'boolean'   ? payload['workerBearesFinancialRisk']   : null,
+                    workerHasMultipleClients:    typeof payload['workerHasMultipleClients'] === 'boolean'    ? payload['workerHasMultipleClients']    : null,
+                    integrationIntoOrganisation: typeof payload['integrationIntoOrganisation'] === 'boolean' ? payload['integrationIntoOrganisation'] : null,
+                    engagementLengthMonths:      num(payload['engagementLengthMonths'], 6),
+                    hasPscOrLimitedCompany:      typeof payload['hasPscOrLimitedCompany'] === 'boolean' ? payload['hasPscOrLimitedCompany'] : true,
+                };
+                return jsonOut(assessIr35Status(ir35Input));
+            }
+
+            if (mode === 'gdpr') {
+                const companyName = str(payload['companyName']);
+                if (!companyName) return fail('payload.companyName is required for GDPR mode');
+
+                const gdprInput: GdprRecruitmentInput = {
+                    companyName,
+                    companyCountry:    str(payload['companyCountry'], 'us') as HiringCountry,
+                    candidateCountry:  str(payload['candidateCountry'], 'us') as HiringCountry,
+                    processingPurpose: str(payload['processingPurpose'], 'active_application') as GdprRecruitmentInput['processingPurpose'],
+                    thirdPartySharing: Array.isArray(payload['thirdPartySharing']) ? (payload['thirdPartySharing'] as string[]) : undefined,
+                    retentionMonths:   typeof payload['retentionMonths'] === 'number' ? payload['retentionMonths'] : undefined,
+                };
+                return jsonOut(buildGdprRecruitmentWorkflow(gdprInput));
+            }
+
+            if (mode === 'market') {
+                const country = str(payload['country'], 'us') as HiringCountry;
+                const marketInput: MarketAdaptationInput = {
+                    country,
+                    jobTitle:       typeof payload['jobTitle'] === 'string' ? payload['jobTitle'] : undefined,
+                    salaryMin:      typeof payload['salaryMin'] === 'number' ? payload['salaryMin'] : undefined,
+                    salaryMax:      typeof payload['salaryMax'] === 'number' ? payload['salaryMax'] : undefined,
+                    sourceCurrency: typeof payload['sourceCurrency'] === 'string' ? payload['sourceCurrency'] : undefined,
+                };
+                return jsonOut(getMarketAdaptation(marketInput));
+            }
+
+            // Default: right-to-work
+            const country         = str(payload['country'], 'us') as HiringCountry;
+            const candidateStatus = str(payload['candidateStatus'], 'unknown') as IntlCandidateStatus;
+
+            const rtwInput: RightToWorkInput = {
+                country,
+                candidateStatus,
+                visaType:             typeof payload['visaType'] === 'string' ? payload['visaType'] : undefined,
+                visaExpiryDate:       typeof payload['visaExpiryDate'] === 'string' ? payload['visaExpiryDate'] : undefined,
+                sponsorshipAvailable: typeof payload['sponsorshipAvailable'] === 'boolean' ? payload['sponsorshipAvailable'] : undefined,
+                engagementType:       typeof payload['engagementType'] === 'string' ? payload['engagementType'] as EngagementType : undefined,
+                roleIsSpecialty:      typeof payload['roleIsSpecialty'] === 'boolean' ? payload['roleIsSpecialty'] : undefined,
+                salaryAboveThreshold: typeof payload['salaryAboveThreshold'] === 'boolean' ? payload['salaryAboveThreshold'] : undefined,
+            };
+            return jsonOut(assessRightToWork(rtwInput));
         }
 
         default: {
