@@ -155,16 +155,32 @@ export function addToTalentPool(
     const id = `tp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const addedDate = new Date().toISOString().split('T')[0]!;
 
-    // Default next contact to 30 days out for nurture cadence
-    const nextContactDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-        .toISOString().split('T')[0]!;
+    // ── GDPR / CCPA enforcement ───────────────────────────────────────────────
+    // A candidate MUST give explicit consent before they can be stored and
+    // subsequently contacted. Without consent:
+    //   • status is forced to 'do_not_contact' — searchTalentPool() will skip them
+    //   • nextContactDate is left undefined — no nurture cadence is scheduled
+    //   • gdprConsent is stored as false so analytics surfaces the compliance risk
+    //
+    // Callers must obtain consent (opt-in form, email confirmation, or verbal
+    // consent documented in recruiterNotes) before setting gdprConsent: true.
+    // See GDPR Art. 6(1)(a) and CCPA Cal. Civ. Code § 1798.100.
+    const hasConsent = candidate.gdprConsent === true;
+    const effectiveStatus: TalentPoolStatus = !hasConsent ? 'do_not_contact' : (candidate.status ?? 'active');
+
+    // Default next contact to 30 days out for nurture cadence (only when consented)
+    const nextContactDate = hasConsent
+        ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]!
+        : undefined;
 
     return {
+        ...candidate,
         id,
         addedDate,
-        status: candidate.status ?? 'active',
+        status: effectiveStatus,
         nextContactDate,
-        ...candidate,
+        gdprConsent: hasConsent,
+        gdprConsentDate: hasConsent ? (candidate.gdprConsentDate ?? addedDate) : undefined,
     };
 }
 

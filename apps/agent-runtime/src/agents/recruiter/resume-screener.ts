@@ -144,6 +144,65 @@ const QUALIFICATION_SYNONYMS: Record<string, string[]> = {
     leadership:     ['team management', 'people management', 'mentoring', 'coaching', 'managing a team', 'team lead'],
     communication:  ['written communication', 'verbal communication', 'stakeholder communication', 'public speaking', 'presentation'],
     'cross-functional': ['cross functional', 'collaboration', 'matrix environment', 'working across teams'],
+    // ── Aviation ─────────────────────────────────────────────────────────────
+    faa:            ['federal aviation administration', 'faa certification', 'faa part 135', 'airworthiness directive'],
+    atp:            ['airline transport pilot', 'atp certificate', 'type rating', 'instrument rating'],
+    'aircraft maintenance': ['airframe and powerplant', 'a&p mechanic', 'amt', 'avionics technician', 'airworthiness'],
+    'flight operations': ['flight dispatch', 'air traffic control', 'atc', 'ground operations', 'ramp operations'],
+    avionics:       ['cockpit systems', 'navigation systems', 'fms', 'flight management system', 'efis'],
+    // ── Utilities / Energy ───────────────────────────────────────────────────
+    nerc:           ['reliability coordinator', 'power systems operator', 'grid operations', 'bulk electric system'],
+    substation:     ['switchgear', 'transformer', 'transmission lines', 'distribution', 'high voltage', 'hv equipment'],
+    scada:          ['dcs', 'distributed control system', 'energy management system', 'ems', 'historian'],
+    'natural gas':  ['pipeline operations', 'compressor station', 'gas metering', 'lng', 'liquefied natural gas'],
+    'renewable energy': ['solar pv', 'photovoltaic', 'wind turbine', 'wind farm', 'inverter', 'battery storage', 'bess'],
+    // ── Telecommunications ───────────────────────────────────────────────────
+    rf:             ['radio frequency', 'antenna design', 'spectrum management', 'microwave', 'signal propagation'],
+    'fiber optic':  ['optical transport', 'dwdm', 'sonet', 'otn', 'fiber installation', 'fiber splicing'],
+    voip:           ['sip', 'unified communications', 'voice over ip', 'telephony', 'pbx', 'pstn'],
+    '5g':           ['5g nr', 'mmwave', 'small cell', 'ran', 'core network', 'nsa architecture', 'o-ran'],
+    'network operations': ['noc', 'network operations center', 'network monitoring', 'bandwidth management', 'incident management'],
+    // ── Insurance ────────────────────────────────────────────────────────────
+    underwriting:   ['risk assessment', 'policy rating', 'risk selection', 'underwriting guidelines', 'risk appetite'],
+    'claims adjuster': ['claims processing', 'loss assessment', 'subrogation', 'liability claims', 'property claims'],
+    actuarial:      ['reserving', 'loss development', 'ibnr', 'pricing model', 'mortality tables', 'aso', 'fellow of the soa'],
+    reinsurance:    ['ceded business', 'treaty reinsurance', 'facultative', 'retrocession', 'cat modeling'],
+    // ── Mining / Extractive ──────────────────────────────────────────────────
+    mining:         ['open pit mining', 'underground mining', 'blast design', 'drillhole', 'ore body modelling'],
+    metallurgy:     ['smelting', 'refining', 'flotation', 'heap leaching', 'hydrometallurgy', 'pyrometallurgy'],
+    geology:        ['resource estimation', 'drilling program', 'core logging', 'stratigraphy', 'mineralogy'],
+    msha:           ['mine safety', 'mining safety', 'mine safety and health administration', 'part 46 training'],
+    'processing plant': ['mill operations', 'crusher', 'concentrator', 'tailings management', 'recovery rate'],
+    // ── Agriculture ──────────────────────────────────────────────────────────
+    agronomy:       ['crop science', 'soil science', 'agronomist', 'crop management', 'fertility management', 'crop advisor'],
+    'precision agriculture': ['gps guidance', 'variable rate application', 'yield mapping', 'drone scouting', 'remote sensing'],
+    'crop protection': ['pesticide application', 'herbicide', 'fungicide', 'ipm', 'integrated pest management'],
+    'food safety':  ['haccp', 'gmp', 'good agricultural practices', 'gap', 'sqa', 'food safety audit', 'fsma'],
+    livestock:      ['animal husbandry', 'herd management', 'feeding programs', 'biosecurity', 'veterinary protocols'],
+    // ── Education ────────────────────────────────────────────────────────────
+    curriculum:     ['lesson planning', 'iep', 'learning objectives', 'instructional design', 'course development', 'standards alignment'],
+    pedagogy:       ['teaching strategies', 'differentiated instruction', 'student engagement', 'formative assessment', 'scaffolding'],
+    'classroom management': ['behavior management', 'positive reinforcement', 'sel', 'social emotional learning', 'restorative practices'],
+    lms:            ['canvas', 'blackboard', 'moodle', 'google classroom', 'schoology', 'learning management system'],
+    accreditation:  ['sacs', 'hlc', 'caep', 'accreditation standards', 'program review', 'academic quality assurance'],
+    // ── Government / Public Sector ───────────────────────────────────────────
+    'security clearance': ['secret clearance', 'top secret', 'ts/sci', 'clearance eligible', 'sci access', 'poly'],
+    'federal contracting': ['far', 'dfars', 'contracting officer', 'idiq', 'pwsc', 'government contracting', 'cost reimbursement'],
+    'grants management': ['grant writing', 'federal grants', 'cfda', 'omb circular', 'grant administration', '2 cfr 200'],
+    'policy analysis': ['regulatory analysis', 'policy brief', 'legislative analysis', 'rulemaking', 'regulatory impact'],
+    // ── Real Estate ──────────────────────────────────────────────────────────
+    'property management': ['tenant relations', 'lease administration', 'maintenance coordination', 'rent collection', 'yardi'],
+    'commercial real estate': ['cre', 'nnn lease', 'cap rate', 'noi', 'dscr', 'commercial leasing', 'tenant improvement'],
+    appraisal:      ['property valuation', 'comparable sales', 'income approach', 'mai designation', 'uspap'],
+    mls:            ['multiple listing service', 'listing agent', 'buyer agent', 'real estate agent', 'realtor'],
+    argus:          ['argus enterprise', 'financial modeling', 'pro forma', 'cash flow model', 'dcf analysis'],
+    // ── Creative / Media ─────────────────────────────────────────────────────
+    copywriting:    ['content writing', 'brand voice', 'advertising copy', 'creative brief', 'headline writing', 'long-form content'],
+    ux:             ['user experience', 'usability testing', 'information architecture', 'wireframe', 'prototype', 'user research', 'ux research'],
+    'adobe photoshop': ['photo editing', 'image retouching', 'compositing', 'adobe creative cloud', 'image manipulation'],
+    'video production': ['post-production', 'video editing', 'premiere pro', 'final cut pro', 'color grading', 'motion graphics', 'after effects'],
+    'brand strategy': ['brand identity', 'visual identity', 'brand guidelines', 'brand positioning', 'brand management'],
+    'art direction': ['creative direction', 'visual design', 'layout design', 'typography', 'color theory', 'design systems'],
 };
 
 function checkQualification(qual: string, resumeText: string): QualificationMatch {
@@ -268,6 +327,42 @@ export function anonymizeResume(text: string, candidateName?: string): string {
     return anon;
 }
 
+/**
+ * Detects credentials explicitly marked as expired, lapsed, revoked, or suspended
+ * in the resume text. Returns a list of human-readable descriptions of the expired
+ * credential findings.  A match is a hard block — an expired licence is as bad as
+ * a missing one for regulated roles.
+ *
+ * Examples caught:
+ *   "RN (expired 2022)"
+ *   "PMP certification — expired"
+ *   "California medical license (lapsed)"
+ *   "CPA license revoked 2021"
+ */
+function detectExpiredCredentials(resumeText: string): string[] {
+    const expired: string[] = [];
+    const lower = resumeText.toLowerCase();
+
+    // Pattern A: "ACRONYM/title (expired YYYY?)" or "ACRONYM/title (lapsed/revoked/suspended)"
+    const parenPattern = /([a-z][a-z0-9 .&/-]{1,60}?)\s*\(\s*(?:expired?|lapsed?|revoked?|suspended?)(?:\s+(?:19|20)\d{2})?\s*\)/gi;
+    for (const m of lower.matchAll(parenPattern)) {
+        expired.push(`"${m[0].trim()}" — credential appears expired/invalid`);
+    }
+
+    // Pattern B: "ACRONYM/title ... expired/lapsed/revoked/suspended [YYYY?]"
+    //            where the status word follows within ~6 tokens
+    const statusPattern = /([a-z][a-z0-9 .&/-]{1,50}?)\s+(?:license|licence|certification?|cert|credential|registration)?\s*(?:was\s+|is\s+|—\s*)?(?:expired?|lapsed?|revoked?|suspended?)(?:\s+(?:19|20)\d{2})?/gi;
+    for (const m of lower.matchAll(statusPattern)) {
+        const desc = m[0].trim();
+        // Avoid duplicate if already captured by parenPattern
+        if (!expired.some(e => e.includes(desc.slice(0, 20)))) {
+            expired.push(`"${desc}" — credential appears expired/invalid`);
+        }
+    }
+
+    return expired;
+}
+
 function buildPhoneScreenQuestions(gaps: string[], jobTitle: string): string[] {
     const base = [
         `Walk me through your experience most relevant to a ${jobTitle} role.`,
@@ -311,6 +406,12 @@ export function screenResume(input: ResumeScreenInput): ResumeScreenResult {
         input.bonusCredentialIds,
     );
 
+    // ── Expired credential detection ─────────────────────────────────────────
+    // Scans for explicit expiry markers before any scoring — an expired licence
+    // is treated as a hard block for regulated roles regardless of other scores.
+    const expiredCredentialFindings = detectExpiredCredentials(resumeText);
+    const hasExpiredCredentials = expiredCredentialFindings.length > 0;
+
     if (hitDealBreaker) {
         return {
             candidateName: input.candidateName,
@@ -322,7 +423,10 @@ export function screenResume(input: ResumeScreenInput): ResumeScreenResult {
             credentialValidation,
             strengths: [],
             gaps: [`Deal-breaker detected: "${hitDealBreaker}"`],
-            credentialGaps: credentialValidation.missingRequired.map(c => c.credentialName),
+            credentialGaps: [
+                ...credentialValidation.missingRequired.map(c => c.credentialName),
+                ...expiredCredentialFindings,
+            ],
             salaryFit: 'unknown',
             recommendedAction: `Do not advance. Deal-breaker criterion met: "${hitDealBreaker}".`,
             phoneScreenQuestions: [],
@@ -360,8 +464,8 @@ export function screenResume(input: ResumeScreenInput): ResumeScreenResult {
 
     let overallScore = Math.min(reqScore + credScore + niceScore + expScore, 100);
 
-    // Hard block: if a legally-required credential is missing, cap at 'no'
-    if (credentialValidation.hardBlock) {
+    // Hard block: missing required credential OR explicitly expired credential
+    if (credentialValidation.hardBlock || hasExpiredCredentials) {
         overallScore = Math.min(overallScore, 29); // Forces 'no' or 'hard_no'
     }
 
@@ -369,9 +473,13 @@ export function screenResume(input: ResumeScreenInput): ResumeScreenResult {
 
     const strengths = requiredMatches.filter(m => m.met).map(m => m.qualification);
     const gaps = requiredMatches.filter(m => !m.met).map(m => m.qualification);
-    const credentialGaps = credentialValidation.missingRequired.map(c =>
-        `${c.credentialName}${c.notes ? ` (${c.notes})` : ''}`,
-    );
+    const credentialGaps = [
+        ...credentialValidation.missingRequired.map(c =>
+            `${c.credentialName}${c.notes ? ` (${c.notes})` : ''}`,
+        ),
+        // Expired credentials are surfaced as gaps — same severity as missing
+        ...expiredCredentialFindings,
+    ];
 
     // ── Salary fit ───────────────────────────────────────────────────────────
     let salaryFit: ResumeScreenResult['salaryFit'] = 'unknown';
@@ -383,15 +491,15 @@ export function screenResume(input: ResumeScreenInput): ResumeScreenResult {
         strong_yes: 'Advance immediately — schedule phone screen within 24 hours.',
         yes: 'Advance — schedule phone screen this week.',
         maybe: 'Review with hiring manager before deciding; may need clarifying questions.',
-        no: credentialValidation.hardBlock
-            ? `Do not advance. Missing required credential(s): ${credentialGaps.join('; ')}.`
+        no: (credentialValidation.hardBlock || hasExpiredCredentials)
+            ? `Do not advance. Missing or expired required credential(s): ${credentialGaps.join('; ')}.`
             : 'Do not advance. Send polite rejection after pipeline closes.',
         hard_no: 'Do not advance. Archive candidate profile.',
     };
 
     const screenerNotes = [
         `Score: ${overallScore}/100 (Req: ${reqMet}/${reqTotal}, Cred: ${credentialValidation.totalFound}/${credentialValidation.totalRequired}, Nice: ${niceMet}/${niceToHaveMatches.length}, Exp: ${yearsFound} yrs)`,
-        credentialValidation.hardBlock ? `⛔ CREDENTIAL BLOCK: ${credentialGaps.join('; ')}` : '',
+        (credentialValidation.hardBlock || hasExpiredCredentials) ? `⛔ CREDENTIAL BLOCK: ${credentialGaps.join('; ')}` : '',
         credentialValidation.presentCredentials.length > 0
             ? `✓ Credentials: ${credentialValidation.presentCredentials.map(c => c.credentialName).join(', ')}`
             : '',

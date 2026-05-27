@@ -148,6 +148,35 @@ function buildInitialLinkedIn(spec: OutreachSpec): OutreachMessage {
     };
 }
 
+/**
+ * SMS outreach — hard character budget (160 chars per segment).
+ * No subject, no markdown, no long-form paragraphs.
+ * Always ends with opt-out instruction per TCPA / GDPR requirements.
+ */
+function buildInitialSms(spec: OutreachSpec): OutreachMessage {
+    const calendarHint = spec.calendarLink
+        ? ` Book here: ${spec.calendarLink}`
+        : ' Reply YES to connect.';
+
+    // Keep under 160 chars (1 SMS segment) where possible
+    const body = `Hi ${spec.candidateName}, I'm ${spec.recruiterName} from ${spec.companyName}. We have a ${spec.roleTitle} role that matches your background at ${spec.candidateCurrentCompany}.${calendarHint} Reply STOP to opt out.`;
+
+    return {
+        body,
+        channel: 'sms',
+        tone: 'conversational',
+        wordCount: body.split(/\s+/).length,
+        followUpStep: 0,
+        tips: [
+            'SMS requires prior express written consent (TCPA in US, GDPR in EU) — confirm opt-in before sending',
+            'Keep initial SMS under 160 chars; longer messages split into segments which look unprofessional',
+            'Always include STOP opt-out — required by law in most jurisdictions',
+            'Best response rates: weekdays 12–1 pm or 5–6 pm recipient local time',
+            'Limit to 1 follow-up SMS only — aggressive SMS is a legal and reputational risk',
+        ],
+    };
+}
+
 function buildFollowUp(spec: OutreachSpec, step: FollowUpStep): OutreachMessage {
     const stepContent: Record<FollowUpStep, { subject: string; body: string; tips: string[] }> = {
         1: {
@@ -240,6 +269,10 @@ export function composeOutreach(spec: OutreachSpec): OutreachMessage {
 
     if (spec.channel === 'linkedin_inmail') {
         return buildInitialLinkedIn(spec);
+    }
+
+    if (spec.channel === 'sms') {
+        return buildInitialSms(spec);
     }
 
     return buildInitialEmail(spec);

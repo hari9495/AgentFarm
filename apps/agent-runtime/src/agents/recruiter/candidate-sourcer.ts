@@ -168,6 +168,17 @@ const INDUSTRY_JOB_BOARDS: Record<string, string[]> = {
     hospitality:         ['Hcareers', 'Culinary Agents', 'Hospitality Online', 'TalentAcquisition.com'],
     nonprofit:           ['Idealist', 'NonProfit Jobs', 'Commongood Careers', 'LinkedIn'],
     creative_media:      ['Behance Jobs', 'Dribbble Jobs', 'Vitamin T', 'Creative Circle'],
+    // Previously missing industries — now covered
+    engineering_non_software: ['GlobalSpec', 'ASCE Career Connections', 'ASME Career Center', 'LinkedIn'],
+    retail:              ['RetailCrossing', 'AllRetailJobs.com', 'LinkedIn', 'Indeed'],
+    agriculture:         ['AgCareers.com', 'CropLife Jobs', 'Farm Bureau Jobs', 'Indeed'],
+    aviation:            ['AviationCrossing', 'NBAA Career Center', 'Avjobs.com', 'LinkedIn'],
+    utilities_energy:    ['Energy Jobline', 'Rigzone', 'OilCareers.com', 'LinkedIn'],
+    telecommunications:  ['TelecomCareers.net', 'IEEE Job Site', 'LinkedIn', 'Indeed'],
+    insurance:           ['InsuranceJobs.com', 'Insurance Journal Jobs', 'LinkedIn', 'Indeed'],
+    mining_extractive:   ['MineListings', 'Mining Job Search', 'LinkedIn', 'Indeed'],
+    sales_bizdev:        ['LinkedIn', 'RepVue', 'Sales Hacker Jobs', 'Indeed'],
+    consulting:          ['Management Consulted', 'Vault.com', 'LinkedIn', 'Indeed'],
 };
 
 function getIndustryCompanies(industries: string[]): string[] {
@@ -192,7 +203,26 @@ function buildHeuristicCandidates(criteria: SourcingCriteria): CandidateProfile[
         ? [criteria.location, `${criteria.location} Area`, 'Remote']
         : ['San Francisco, CA', 'New York, NY', 'London, UK', 'Remote'];
 
+    // Skill pools used to vary coverage across candidates so scoreCandidate()
+    // produces genuinely differentiated match scores (not a uniform 100%).
+    const required = criteria.requiredSkills;
+    const optional = criteria.niceToHaveSkills ?? [];
+
     return Array.from({ length: Math.min(limit, 8) }, (_, i) => {
+        // Vary how many required/optional skills each heuristic candidate has:
+        //   i=0: all req + 2 optional  → strongest fit (~90–100)
+        //   i=1: 75% req + 1 optional  → good fit    (~65–80)
+        //   i=2: 50% req + 0 optional  → partial fit (~40–60)
+        //   i=3: 100% req + 0 optional → solid but no bonuses (~70–80)
+        //   i=4: 25% req + 1 optional  → weak fit    (~20–40)
+        //   etc.
+        const reqCoverage  = Math.max(1, required.length - Math.floor(i * required.length / 5));
+        const niceCoverage = i % 3 === 0
+            ? Math.min(2, optional.length)
+            : i % 3 === 1
+                ? Math.min(1, optional.length)
+                : 0;
+
         const base: Omit<CandidateProfile, 'matchScore' | 'matchRationale'> = {
             id: `heuristic-${i + 1}`,
             fullName: `Candidate ${String.fromCharCode(65 + i)}. [Sourced via ${criteria.jobTitle} search]`,
@@ -201,8 +231,8 @@ function buildHeuristicCandidates(criteria: SourcingCriteria): CandidateProfile[
             location: locations[i % locations.length] ?? 'Unknown',
             yearsExperience: 2 + (i * 2),
             skills: [
-                ...criteria.requiredSkills.slice(0, 4),
-                ...(criteria.niceToHaveSkills ?? []).slice(0, 2),
+                ...required.slice(0, reqCoverage),
+                ...optional.slice(0, niceCoverage),
             ],
             linkedInUrl: `https://linkedin.com/in/candidate-${i + 1}-placeholder`,
             source: 'heuristic',

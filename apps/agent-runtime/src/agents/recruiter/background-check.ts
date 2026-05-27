@@ -39,6 +39,8 @@ export interface BgcInitiateInput {
     bgcProvider?: BgcProvider;
     stateOfHire?: string;               // US state (affects FCRA requirements)
     countryOfHire?: string;             // 'US', 'UK', 'DE', etc.
+    /** UK only — DBS check level; auto-inferred from bgcPackage if not set. */
+    dbsLevel?: DbsLevel;
     additionalChecks?: string[];        // e.g. ['driving_record', 'drug_screen"]
 }
 
@@ -71,7 +73,10 @@ export interface BgcInitiationResult {
     recruiterChecklistEmail: string;
     packageDetails: BgcPackage_;
     complianceNotes: string[];
+    /** Populated for non-US hires — country-specific guidance replaces FCRA workflow. */
     internationalNotes?: string;
+    /** Populated for UK hires — DBS check level guidance. */
+    ukDbsGuidance?: string;
 }
 
 export interface AdverseActionResult {
@@ -81,6 +86,114 @@ export interface AdverseActionResult {
     deliveryMethod: string;
     complianceDeadline: string;
     nextSteps: string[];
+}
+
+// ---------------------------------------------------------------------------
+// UK DBS check framework
+// ---------------------------------------------------------------------------
+
+/**
+ * UK Disclosure and Barring Service (DBS) check levels.
+ * Required for most UK hires in regulated industries (healthcare, education, law).
+ * Regulated by the Police Act 1997 and the Safeguarding Vulnerable Groups Act 2006.
+ */
+export type DbsLevel = 'basic' | 'standard' | 'enhanced' | 'enhanced_barred_list';
+
+const UK_DBS_LEVELS: Record<DbsLevel, {
+    description: string;
+    typicalRoles: string;
+    turnaround: string;
+    processingBody: string;
+    notes: string;
+}> = {
+    basic: {
+        description: 'Shows unspent convictions and conditional cautions only.',
+        typicalRoles: 'Most office and professional roles not involving vulnerable groups.',
+        turnaround: '5–14 business days',
+        processingBody: 'Applicant applies directly at gov.uk/request-copy-criminal-record',
+        notes: 'The only level a candidate can apply for themselves. Employer may require the certificate to be presented on Day 1.',
+    },
+    standard: {
+        description: 'Shows spent and unspent convictions, cautions, reprimands, and final warnings.',
+        typicalRoles: 'Roles in law, financial services, pharmacy, and other regulated professions.',
+        turnaround: '5–14 business days',
+        processingBody: 'Employer submits via a registered Umbrella Body (e.g. uCheck, Sterling)',
+        notes: 'Employer must be in a legally-permitted occupation to request Standard level. Candidate countersigns.',
+    },
+    enhanced: {
+        description: 'Standard disclosure plus relevant police information held locally.',
+        typicalRoles: 'Roles working with children or vulnerable adults in a supervised capacity.',
+        turnaround: '5–14 business days (up to 60 days if police information is flagged)',
+        processingBody: 'Employer submits via a registered Umbrella Body',
+        notes: 'Most common level for NHS, social care, and teaching roles. Police forces may add "soft intelligence" not on the PNC.',
+    },
+    enhanced_barred_list: {
+        description: 'Enhanced check plus check against the DBS Children\'s and/or Adults\' Barred Lists.',
+        typicalRoles: 'Regulated activity with children or vulnerable adults (unsupervised, regular contact).',
+        turnaround: '5–14 business days (up to 60 days if barred list or police information flagged)',
+        processingBody: 'Employer submits via a registered Umbrella Body. Must confirm post is regulated activity.',
+        notes: 'Legally required before placing anyone in regulated activity. Placing a barred person in regulated activity is a criminal offence (SVG Act 2006).',
+    },
+};
+
+/**
+ * EU / international criminal record check equivalents by country.
+ * Each country has its own process; no single EU-wide criminal record check exists.
+ */
+const EU_INTERNATIONAL_BGC: Record<string, { name: string; issuingBody: string; notes: string }> = {
+    DE: { name: 'Führungszeugnis', issuingBody: 'Federal Central Register (Bundeszentralregister) via Bürgeramt', notes: 'Two types: private (simple conviction record) and public (for professional licensing). Issued within 2–4 weeks. GDPR consent required.' },
+    FR: { name: 'Bulletin no. 3 (Casier judiciaire)', issuingBody: 'Casier judiciaire national (Ministry of Justice)', notes: 'Bulletin no. 3 is the only level available to individuals / employers. Contains unspent convictions. Available online via justice.fr.' },
+    NL: { name: 'Verklaring Omtrent Gedrag (VOG)', issuingBody: 'Dienst Justis (Ministry of Security and Justice)', notes: 'Role-specific assessment. Applied via Justis or municipality. Required for many care, education, and security roles. Takes 1–4 weeks.' },
+    ES: { name: 'Certificado de Antecedentes Penales', issuingBody: 'Registro Central de Penados (Ministry of Justice)', notes: 'Available online via justicia.gob.es. Contains serious convictions. Candidate must apply; employer cannot request directly.' },
+    SE: { name: 'Utdrag ur belastningsregistret', issuingBody: 'Swedish Police Authority (Polismyndigheten)', notes: 'Candidate requests their own record. For roles with children, use Form 442.3. Processing time 1–4 weeks.' },
+    PL: { name: 'Zaświadczenie o niekaralności (KRK)', issuingBody: 'Krajowy Rejestr Karny (National Criminal Register)', notes: 'Available online via Portal Informacyjny Ministerstwa Sprawiedliwości. Covers convictions in Poland.' },
+    AU: { name: 'National Police Certificate (NPC)', issuingBody: 'Australian Federal Police (AFP) or state police', notes: 'Most roles use state/territory police check (faster). AFP NPC for federal government and international use. Working With Children Check (WWCC) required separately for child-related roles.' },
+    SG: { name: 'Certificate of Clearance (CoC)', issuingBody: 'Singapore Police Force (SPF)', notes: 'Candidates apply at SPF HQ or online. Required for many regulated roles and financial sector positions. PDPA consent required.' },
+    IN: { name: 'Police Verification Certificate', issuingBody: 'Local police station of permanent residence', notes: 'Process varies by state. For corporate roles, many employers use third-party verifiers (Authbridge, KPMG BGCS). Can take 2–8 weeks.' },
+    AE: { name: 'Good Conduct Certificate (شهادة حسن السيرة والسلوك)', issuingBody: 'UAE Ministry of Interior (Abu Dhabi Police / Dubai Police)', notes: 'Required for most UAE employment visas. Apply online via MOI or Amer centres. Apostille may be required for international use.' },
+    CA: { name: 'RCMP Criminal Record Check', issuingBody: 'Royal Canadian Mounted Police (RCMP) or accredited service', notes: 'Standard criminal record check for employment. Vulnerable Sector Check (VSC) required for roles with vulnerable populations. Provincial equivalents exist.' },
+    NZ: { name: 'Criminal Record Check', issuingBody: 'Ministry of Justice NZ', notes: 'Available online via Criminal Records (Clean Slate) Act 2004. Police Vetting (for specified organisations) is more comprehensive.' },
+};
+
+function buildUkDbsGuidance(dbsLevel: DbsLevel, jobTitle: string, companyName: string): string {
+    const dbs = UK_DBS_LEVELS[dbsLevel];
+    return [
+        `# UK DBS Check Guidance — ${jobTitle} at ${companyName}`,
+        `**Check Level:** ${dbsLevel.replace(/_/g, ' ').toUpperCase()} | **Turnaround:** ${dbs.turnaround}`,
+        `**Processing:** ${dbs.processingBody}`,
+        '',
+        `## What This Check Covers`,
+        dbs.description,
+        '',
+        `## Typical Roles for This Level`,
+        dbs.typicalRoles,
+        '',
+        `## Key Compliance Requirements`,
+        `- [ ] Candidate must provide written consent before DBS check is initiated (Data Protection Act 2018)`,
+        `- [ ] Retain a copy of the DBS certificate securely; do not retain for longer than 6 months`,
+        `- [ ] Register with the DBS Update Service to enable portability and real-time status (optional but recommended)`,
+        `- [ ] If adverse result, follow fair-hiring guidance — consider role relevance, time elapsed, and rehabilitation`,
+        '',
+        `## Notes`,
+        dbs.notes,
+        '',
+        `*The DBS has replaced the former CRB (Criminal Records Bureau) and ISA (Independent Safeguarding Authority).*`,
+    ].join('\n');
+}
+
+function buildInternationalBgcNote(countryCode: string): string {
+    const upperCode = countryCode.toUpperCase();
+    const info = EU_INTERNATIONAL_BGC[upperCode];
+    if (!info) {
+        return `International BGC for ${countryCode}: No specific guidance available. Consult local legal counsel and use a vetted international BGC provider (e.g. Sterling International, HireRight International). Ensure compliance with local data protection law and obtain candidate consent per local regulations.`;
+    }
+    return [
+        `**Criminal Record Check for ${upperCode}: ${info.name}**`,
+        `**Issuing Body:** ${info.issuingBody}`,
+        `**Notes:** ${info.notes}`,
+        ``,
+        `⚠️ Data protection requirements apply: candidate consent must be obtained per local law (GDPR where applicable).`,
+    ].join('\n');
 }
 
 // ---------------------------------------------------------------------------
@@ -367,6 +480,29 @@ function buildAdverseActionLetter(input: AdverseActionInput): string {
 // ---------------------------------------------------------------------------
 
 export function initiateBgcWorkflow(input: BgcInitiateInput): BgcInitiationResult {
+    const countryUpper = (input.countryOfHire ?? 'US').toUpperCase();
+    const isUk = countryUpper === 'UK' || countryUpper === 'GB';
+    const isUs = countryUpper === 'US';
+
+    // Infer DBS level from package if not explicitly set (UK only)
+    let dbsLevel: DbsLevel | undefined = input.dbsLevel;
+    if (isUk && !dbsLevel) {
+        if (input.bgcPackage === 'clinical' || input.bgcPackage === 'federal_government') {
+            dbsLevel = 'enhanced_barred_list';
+        } else if (input.bgcPackage === 'enhanced' || input.bgcPackage === 'executive') {
+            dbsLevel = 'enhanced';
+        } else if (input.bgcPackage === 'financial') {
+            dbsLevel = 'standard';
+        } else {
+            dbsLevel = 'basic';
+        }
+    }
+
+    // Build international BGC note for non-US countries
+    const internationalNotes = !isUs
+        ? buildInternationalBgcNote(countryUpper)
+        : undefined;
+
     return {
         candidateName: input.candidateName,
         jobTitle: input.jobTitle,
@@ -377,9 +513,8 @@ export function initiateBgcWorkflow(input: BgcInitiateInput): BgcInitiationResul
         recruiterChecklistEmail: buildRecruiterChecklist(input),
         packageDetails: BGC_PACKAGES[input.bgcPackage]!,
         complianceNotes: buildComplianceNotes(input),
-        internationalNotes: input.countryOfHire && input.countryOfHire !== 'US'
-            ? `Non-US check for ${input.countryOfHire}: use international package, comply with local data protection laws, obtain country-specific consent form.`
-            : undefined,
+        internationalNotes,
+        ukDbsGuidance: isUk && dbsLevel ? buildUkDbsGuidance(dbsLevel, input.jobTitle, input.companyName) : undefined,
     };
 }
 
