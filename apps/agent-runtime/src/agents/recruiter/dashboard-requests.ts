@@ -7,12 +7,24 @@
  * platform routes to the appropriate dashboard panel for the customer to action.
  *
  * Three categories of requests:
- *   1. API Config  — service credentials the agent needs to call live APIs
+ *   1. API / Connector Config — category-first: customer picks a CATEGORY
+ *      ("Applicant Tracking"), then a PROVIDER within it ("Greenhouse").
+ *      This is intentionally generic — we cannot predict which tool the customer
+ *      uses, and forcing a specific tool leads to dead-ends.
  *   2. Document Upload — files the agent needs (resumes, templates, certs)
  *   3. Data Collection — structured answers only the customer can provide
  *
  * Pure logic — no external API calls.
  */
+
+import type { ConnectorCategory, ConnectorCredentialField, ConnectorProvider } from '../../platform/connector-registry.js';
+import { getCategory, buildConnectorSetupPayload } from '../../platform/connector-registry.js';
+
+// ---------------------------------------------------------------------------
+// Re-export connector types needed by callers
+// ---------------------------------------------------------------------------
+
+export type { ConnectorCategory, ConnectorCredentialField };
 
 // ---------------------------------------------------------------------------
 // Types
@@ -29,24 +41,48 @@ export type DashboardRequestPriority = 'blocking' | 'high' | 'medium' | 'low';
 
 export type DashboardRequestStatus = 'pending' | 'actioned' | 'skipped';
 
+/**
+ * Connector / API configuration request.
+ *
+ * Category-first design: the agent requests a CATEGORY of integration
+ * (e.g. 'applicant_tracking'), not a specific tool. The customer selects
+ * which provider they use from the picker in the dashboard.
+ *
+ * When the customer has already selected a provider (selectedProviderId is set),
+ * `requiredFields` contains that provider's specific credential fields.
+ * When no provider is pre-selected, `requiredFields` is empty — the dashboard
+ * renders a provider picker first.
+ */
 export interface ApiConfigRequest {
     category: 'api_config';
-    serviceId: string;
-    serviceName: string;
-    description: string;
-    requiredFields: ApiConfigField[];
+    /** Which connector category is needed (e.g. 'applicant_tracking'). */
+    connectorCategory: ConnectorCategory;
+    /** Human-readable category label (e.g. "Applicant Tracking System"). */
+    categoryLabel: string;
+    /** What this category enables the agent to do. */
+    categoryDescription: string;
+    /** All providers available in this category, for the picker UI. */
+    availableProviders: Array<{
+        id: string;
+        name: string;
+        tagline: string;
+        enterpriseOnly?: boolean;
+        freeTrialAvailable?: boolean;
+    }>;
+    /** Set when a specific provider has already been chosen. */
+    selectedProviderId?: string;
+    /** Display name for the selected provider. */
+    selectedProviderName?: string;
+    /**
+     * Credential fields to display when a provider is selected.
+     * Empty when no provider is pre-selected (picker mode).
+     */
+    requiredFields: ConnectorCredentialField[];
+    /** If false, the agent cannot proceed without this connector. */
     optional: boolean;
+    /** Root docs URL for the selected provider (if known). */
     docsUrl?: string;
     dashboardSection: 'api_settings';
-}
-
-export interface ApiConfigField {
-    fieldName: string;
-    label: string;
-    type: 'api_key' | 'access_token' | 'client_id' | 'client_secret' | 'webhook_url' | 'base_url';
-    description: string;
-    placeholder?: string;
-    isSensitive: boolean;
 }
 
 export interface DocumentUploadRequest {
@@ -123,231 +159,77 @@ export interface DashboardRequestResult {
 }
 
 // ---------------------------------------------------------------------------
-// API Config presets — 16 services
+// Connector category request builders (replaces API_CONFIG_PRESETS)
 // ---------------------------------------------------------------------------
 
-export const API_CONFIG_PRESETS: Record<string, ApiConfigRequest> = {
-
-    linkedin: {
+/**
+ * Build a category-level connector request (picker mode).
+ *
+ * The customer sees the category label + description, then picks whichever
+ * provider they use. No specific tool is assumed.
+ *
+ * Returns null if the category is not found in the registry.
+ */
+export function buildConnectorCategoryRequest(
+    connectorCategory: ConnectorCategory,
+    optional = true,
+): ApiConfigRequest | null {
+    const cat = getCategory(connectorCategory);
+    if (!cat) return null;
+    return {
         category: 'api_config',
-        serviceId: 'linkedin',
-        serviceName: 'LinkedIn',
-        description: 'Enables live candidate search, InMail outreach, and profile enrichment via the LinkedIn Recruiter or Talent Hub API.',
-        requiredFields: [
-            { fieldName: 'linkedInAccessToken', label: 'LinkedIn Access Token', type: 'access_token', description: 'OAuth 2.0 access token from your LinkedIn Developer App.', placeholder: 'AQV...', isSensitive: true },
-            { fieldName: 'linkedInClientId', label: 'Client ID', type: 'client_id', description: 'Your LinkedIn Developer Application Client ID.', isSensitive: false },
-        ],
-        optional: false,
-        docsUrl: 'https://developer.linkedin.com/docs/guide/v2/authentication',
+        connectorCategory,
+        categoryLabel: cat.label,
+        categoryDescription: cat.description,
+        availableProviders: cat.providers.map(p => ({
+            id: p.id,
+            name: p.name,
+            tagline: p.tagline,
+            enterpriseOnly: p.enterpriseOnly,
+            freeTrialAvailable: p.freeTrialAvailable,
+        })),
+        requiredFields: [],   // picker mode — no fields until provider is chosen
+        optional,
         dashboardSection: 'api_settings',
-    },
+    };
+}
 
-    apollo: {
+/**
+ * Build a provider-specific connector request (credential entry mode).
+ *
+ * Used when the customer has already selected a provider and we need them
+ * to fill in the specific credential fields for that tool.
+ *
+ * Returns null if the category or provider is not found in the registry.
+ */
+export function buildConnectorSetupRequest(
+    connectorCategory: ConnectorCategory,
+    providerId: string,
+    optional = true,
+): ApiConfigRequest | null {
+    const payload = buildConnectorSetupPayload(connectorCategory, providerId);
+    if (!payload?.selectedProvider) return null;
+    const provider: ConnectorProvider = payload.selectedProvider;
+    return {
         category: 'api_config',
-        serviceId: 'apollo',
-        serviceName: 'Apollo.io',
-        description: 'Unlocks live people search for candidate sourcing and contact enrichment (email, phone) across 275M+ professional profiles.',
-        requiredFields: [
-            { fieldName: 'apolloApiKey', label: 'Apollo API Key', type: 'api_key', description: 'Found in Apollo Settings → Integrations → API Keys.', placeholder: 'ap_...', isSensitive: true },
-        ],
-        optional: false,
-        docsUrl: 'https://apolloio.github.io/apollo-api-docs/',
+        connectorCategory,
+        categoryLabel: payload.category.label,
+        categoryDescription: payload.category.description,
+        availableProviders: payload.allProviders.map(p => ({
+            id: p.id,
+            name: p.name,
+            tagline: p.tagline,
+            enterpriseOnly: p.enterpriseOnly,
+            freeTrialAvailable: p.freeTrialAvailable,
+        })),
+        selectedProviderId: provider.id,
+        selectedProviderName: provider.name,
+        requiredFields: provider.credentials,
+        optional,
+        docsUrl: provider.docsUrl,
         dashboardSection: 'api_settings',
-    },
-
-    greenhouse: {
-        category: 'api_config',
-        serviceId: 'greenhouse',
-        serviceName: 'Greenhouse ATS',
-        description: 'Connects the agent to your Greenhouse account to read/write jobs, applications, and pipeline stages directly.',
-        requiredFields: [
-            { fieldName: 'greenhouseApiKey', label: 'Greenhouse Harvest API Key', type: 'api_key', description: 'Generated in Greenhouse → Configure → Dev Center → API Credential Management.', isSensitive: true },
-            { fieldName: 'greenhouseOrgId', label: 'Organisation ID', type: 'base_url', description: 'Your Greenhouse organisation subdomain (e.g., "acme").', isSensitive: false },
-        ],
-        optional: true,
-        docsUrl: 'https://developers.greenhouse.io/harvest.html',
-        dashboardSection: 'api_settings',
-    },
-
-    lever: {
-        category: 'api_config',
-        serviceId: 'lever',
-        serviceName: 'Lever ATS',
-        description: 'Allows the agent to manage requisitions, candidates, and feedback in your Lever account.',
-        requiredFields: [
-            { fieldName: 'leverApiKey', label: 'Lever API Key', type: 'api_key', description: 'Found in Lever → Settings → Integrations → API Credentials.', isSensitive: true },
-        ],
-        optional: true,
-        docsUrl: 'https://hire.lever.co/developer/documentation',
-        dashboardSection: 'api_settings',
-    },
-
-    workday: {
-        category: 'api_config',
-        serviceId: 'workday',
-        serviceName: 'Workday HCM',
-        description: 'Integrates with Workday Recruiting to manage requisitions, headcount approvals, and offer workflows.',
-        requiredFields: [
-            { fieldName: 'workdayTenantUrl', label: 'Tenant URL', type: 'base_url', description: 'Your Workday tenant URL (e.g., https://wd5.myworkday.com/your_company).', isSensitive: false },
-            { fieldName: 'workdayClientId', label: 'Client ID', type: 'client_id', description: 'OAuth 2.0 Client ID from Workday API Client setup.', isSensitive: false },
-            { fieldName: 'workdayClientSecret', label: 'Client Secret', type: 'client_secret', description: 'OAuth 2.0 Client Secret.', isSensitive: true },
-        ],
-        optional: true,
-        docsUrl: 'https://community.workday.com/sites/default/files/file-hosting/restapi/',
-        dashboardSection: 'api_settings',
-    },
-
-    ashby: {
-        category: 'api_config',
-        serviceId: 'ashby',
-        serviceName: 'Ashby ATS',
-        description: 'Connects to Ashby to manage jobs, applications, and analytics.',
-        requiredFields: [
-            { fieldName: 'ashbyApiKey', label: 'Ashby API Key', type: 'api_key', description: 'Generated in Ashby → Settings → Integrations → API Keys.', isSensitive: true },
-        ],
-        optional: true,
-        docsUrl: 'https://developers.ashbyhq.com/',
-        dashboardSection: 'api_settings',
-    },
-
-    icims: {
-        category: 'api_config',
-        serviceId: 'icims',
-        serviceName: 'iCIMS Talent Cloud',
-        description: 'Integrates with iCIMS for enterprise ATS pipeline management.',
-        requiredFields: [
-            { fieldName: 'icimsApiKey', label: 'iCIMS API Key', type: 'api_key', description: 'iCIMS REST API Key from your platform admin.', isSensitive: true },
-            { fieldName: 'icimsCustomerId', label: 'Customer ID', type: 'client_id', description: 'Your iCIMS Customer ID (numeric).', isSensitive: false },
-        ],
-        optional: true,
-        docsUrl: 'https://developer.icims.com/',
-        dashboardSection: 'api_settings',
-    },
-
-    hunter: {
-        category: 'api_config',
-        serviceId: 'hunter',
-        serviceName: 'Hunter.io',
-        description: 'Finds and verifies professional email addresses for candidate outreach.',
-        requiredFields: [
-            { fieldName: 'hunterApiKey', label: 'Hunter API Key', type: 'api_key', description: 'Found in Hunter.io → Settings → API.', placeholder: 'hunter_...', isSensitive: true },
-        ],
-        optional: true,
-        docsUrl: 'https://hunter.io/api-documentation',
-        dashboardSection: 'api_settings',
-    },
-
-    calendly: {
-        category: 'api_config',
-        serviceId: 'calendly',
-        serviceName: 'Calendly',
-        description: 'Automates interview scheduling by creating and managing Calendly links for candidates.',
-        requiredFields: [
-            { fieldName: 'calendlyAccessToken', label: 'Calendly Personal Access Token', type: 'access_token', description: 'Generated in Calendly → Integrations → API & Webhooks.', isSensitive: true },
-        ],
-        optional: true,
-        docsUrl: 'https://developer.calendly.com/',
-        dashboardSection: 'api_settings',
-    },
-
-    docusign: {
-        category: 'api_config',
-        serviceId: 'docusign',
-        serviceName: 'DocuSign',
-        description: 'Sends offer letters and NDAs for e-signature via DocuSign.',
-        requiredFields: [
-            { fieldName: 'docusignIntegrationKey', label: 'DocuSign Integration Key', type: 'client_id', description: 'OAuth 2.0 integration key from DocuSign Developer Console.', isSensitive: false },
-            { fieldName: 'docusignAccountId', label: 'Account ID', type: 'client_id', description: 'Your DocuSign Account ID (GUID format).', isSensitive: false },
-            { fieldName: 'docusignPrivateKey', label: 'RSA Private Key', type: 'client_secret', description: 'RSA private key for JWT authentication.', isSensitive: true },
-        ],
-        optional: true,
-        docsUrl: 'https://developers.docusign.com/',
-        dashboardSection: 'api_settings',
-    },
-
-    sterling: {
-        category: 'api_config',
-        serviceId: 'sterling',
-        serviceName: 'Sterling Background Checks',
-        description: 'Initiates FCRA-compliant background checks via Sterling Talent Solutions.',
-        requiredFields: [
-            { fieldName: 'sterlingApiKey', label: 'Sterling API Key', type: 'api_key', description: 'API key from Sterling developer portal.', isSensitive: true },
-            { fieldName: 'sterlingAccountId', label: 'Account ID', type: 'client_id', description: 'Your Sterling account identifier.', isSensitive: false },
-        ],
-        optional: true,
-        docsUrl: 'https://developer.sterlingcheck.com/',
-        dashboardSection: 'api_settings',
-    },
-
-    checkr: {
-        category: 'api_config',
-        serviceId: 'checkr',
-        serviceName: 'Checkr Background Checks',
-        description: 'Initiates FCRA-compliant background checks via Checkr.',
-        requiredFields: [
-            { fieldName: 'checkrApiKey', label: 'Checkr API Key', type: 'api_key', description: 'Found in Checkr Dashboard → Developer → API Keys.', isSensitive: true },
-        ],
-        optional: true,
-        docsUrl: 'https://docs.checkr.com/',
-        dashboardSection: 'api_settings',
-    },
-
-    slack: {
-        category: 'api_config',
-        serviceId: 'slack',
-        serviceName: 'Slack',
-        description: 'Posts hiring updates, interview reminders, and approval requests to your Slack workspace.',
-        requiredFields: [
-            { fieldName: 'slackBotToken', label: 'Slack Bot Token', type: 'access_token', description: 'xoxb- prefixed Bot User OAuth Token from your Slack App settings.', placeholder: 'xoxb-...', isSensitive: true },
-        ],
-        optional: true,
-        docsUrl: 'https://api.slack.com/authentication/token-types#bot',
-        dashboardSection: 'api_settings',
-    },
-
-    google_calendar: {
-        category: 'api_config',
-        serviceId: 'google_calendar',
-        serviceName: 'Google Calendar',
-        description: 'Schedules interviews and creates calendar invites for candidates and interviewers.',
-        requiredFields: [
-            { fieldName: 'googleCalendarClientId', label: 'Google OAuth Client ID', type: 'client_id', description: 'From Google Cloud Console → APIs & Services → Credentials.', isSensitive: false },
-            { fieldName: 'googleCalendarClientSecret', label: 'OAuth Client Secret', type: 'client_secret', description: 'Paired secret for the OAuth client.', isSensitive: true },
-            { fieldName: 'googleCalendarRefreshToken', label: 'Refresh Token', type: 'access_token', description: 'Long-lived refresh token obtained via OAuth flow.', isSensitive: true },
-        ],
-        optional: true,
-        docsUrl: 'https://developers.google.com/calendar/api/guides/auth',
-        dashboardSection: 'api_settings',
-    },
-
-    doximity: {
-        category: 'api_config',
-        serviceId: 'doximity',
-        serviceName: 'Doximity',
-        description: 'Sources and outreaches to physicians, NPs, PAs, and allied health professionals via Doximity Talent Finder.',
-        requiredFields: [
-            { fieldName: 'doximityApiKey', label: 'Doximity API Key', type: 'api_key', description: 'From your Doximity Talent Finder account settings.', isSensitive: true },
-        ],
-        optional: true,
-        docsUrl: 'https://www.doximity.com/talent',
-        dashboardSection: 'api_settings',
-    },
-
-    bullhorn: {
-        category: 'api_config',
-        serviceId: 'bullhorn',
-        serviceName: 'Bullhorn ATS/CRM',
-        description: 'Staffing and recruitment CRM — manages candidates, placements, and client relationships.',
-        requiredFields: [
-            { fieldName: 'bullhornClientId', label: 'Bullhorn Client ID', type: 'client_id', description: 'OAuth Client ID from Bullhorn Developer portal.', isSensitive: false },
-            { fieldName: 'bullhornClientSecret', label: 'Client Secret', type: 'client_secret', description: 'OAuth Client Secret.', isSensitive: true },
-            { fieldName: 'bullhornUsername', label: 'API Username', type: 'client_id', description: 'Your Bullhorn API username.', isSensitive: false },
-        ],
-        optional: true,
-        docsUrl: 'https://bullhorn.github.io/rest-api-docs/',
-        dashboardSection: 'api_settings',
-    },
-};
+    };
+}
 
 // ---------------------------------------------------------------------------
 // Document upload presets — 10 document types
@@ -479,11 +361,6 @@ function nextRequestId(): string {
     return `dreq-${Date.now()}-${++_requestCounter}`;
 }
 
-/** Build a request for an API service credential. */
-export function buildApiConfigRequest(serviceId: string): ApiConfigRequest | null {
-    return API_CONFIG_PRESETS[serviceId] ?? null;
-}
-
 /** Build a request for a document upload. */
 export function buildDocumentUploadRequest(documentType: string): DocumentUploadRequest | null {
     return DOCUMENT_PRESETS[documentType] ?? null;
@@ -573,11 +450,18 @@ export function buildDashboardRequestResult(
 
     const categoryLabels = requests.map(r => {
         switch (r.category) {
-            case 'api_config': return `API: ${(r as ApiConfigRequest).serviceName}`;
-            case 'document_upload': return `Doc: ${(r as DocumentUploadRequest).label}`;
-            case 'credential_verify': return `Credential: ${(r as CredentialVerifyRequest).credentialName}`;
-            case 'data_collection': return `Data: ${(r as DataCollectionRequest).label}`;
-            case 'human_approval': return `Approval: ${(r as HumanApprovalRequest).summary}`;
+            case 'api_config': {
+                const req = r as ApiConfigRequest;
+                return `API: ${req.selectedProviderName ?? req.categoryLabel}`;
+            }
+            case 'document_upload':
+                return `Doc: ${(r as DocumentUploadRequest).label}`;
+            case 'credential_verify':
+                return `Credential: ${(r as CredentialVerifyRequest).credentialName}`;
+            case 'data_collection':
+                return `Data: ${(r as DataCollectionRequest).label}`;
+            case 'human_approval':
+                return `Approval: ${(r as HumanApprovalRequest).summary}`;
         }
     });
 
@@ -596,79 +480,84 @@ export function buildDashboardRequestResult(
 }
 
 // ---------------------------------------------------------------------------
-// Request bundles — common multi-service setups
+// Request bundles — common multi-category setups
 // ---------------------------------------------------------------------------
 
-/** Requests needed to enable live candidate sourcing. */
+/**
+ * Requests needed to enable live candidate sourcing.
+ * Category-first: customer picks their preferred sourcing tool (Apollo, LinkedIn,
+ * Hunter, Doximity, Indeed) rather than having a tool assumed for them.
+ */
 export function buildSourcingSetupRequests(): DashboardRequestResult {
-    const requests: DashboardRequest[] = [
-        API_CONFIG_PRESETS['apollo']!,
-        API_CONFIG_PRESETS['linkedin']!,
-        API_CONFIG_PRESETS['hunter']!,
-    ];
+    const req = buildConnectorCategoryRequest('candidate_sourcing', false);
+    const requests: DashboardRequest[] = req ? [req] : [];
     return buildDashboardRequestResult(
         requests,
-        'Once Apollo and/or LinkedIn credentials are configured, re-run workspace_rec_source_candidates for live results.',
+        'Once a candidate sourcing connector is configured, re-run workspace_rec_source_candidates for live results.',
     );
 }
 
-/** Requests needed to connect an ATS. */
+/**
+ * Requests needed to connect an ATS.
+ * Customer picks their ATS (Greenhouse, Lever, Ashby, Workday, iCIMS, Bullhorn).
+ */
 export function buildAtsSetupRequests(): DashboardRequestResult {
-    const requests: DashboardRequest[] = [
-        API_CONFIG_PRESETS['greenhouse']!,
-        API_CONFIG_PRESETS['lever']!,
-        API_CONFIG_PRESETS['ashby']!,
-        API_CONFIG_PRESETS['workday']!,
-        API_CONFIG_PRESETS['icims']!,
-    ];
+    const req = buildConnectorCategoryRequest('applicant_tracking', false);
+    const requests: DashboardRequest[] = req ? [req] : [];
     return buildDashboardRequestResult(
         requests,
-        'Configure at least one ATS to enable automated pipeline management and candidate tracking.',
+        'Configure your ATS to enable automated pipeline management and candidate tracking.',
     );
 }
 
-/** Full recruiter setup — all recommended APIs + key documents. */
+/**
+ * Full recruiter setup — all recommended connector categories + key documents.
+ *
+ * Emits one request per capability category. The customer picks which specific
+ * tool they use within each category — no tools are pre-assumed.
+ */
 export function buildFullRecruiterSetupRequests(): DashboardRequestResult {
-    const requests: DashboardRequest[] = [
-        // Core sourcing
-        API_CONFIG_PRESETS['apollo']!,
-        API_CONFIG_PRESETS['linkedin']!,
-        API_CONFIG_PRESETS['hunter']!,
-        // ATS (pick one — we surface all options)
-        API_CONFIG_PRESETS['greenhouse']!,
-        API_CONFIG_PRESETS['lever']!,
-        // Scheduling & signing
-        API_CONFIG_PRESETS['calendly']!,
-        API_CONFIG_PRESETS['docusign']!,
-        // Background checks
-        API_CONFIG_PRESETS['checkr']!,
-        // Comms
-        API_CONFIG_PRESETS['slack']!,
-        // Documents
+    const categoryRequests: ConnectorCategory[] = [
+        'candidate_sourcing',      // Apollo / LinkedIn / Hunter / Doximity / Indeed
+        'applicant_tracking',      // Greenhouse / Lever / Ashby / Workday / iCIMS / Bullhorn
+        'interview_scheduling',    // Calendly / Google Calendar / Outlook / Cal.com
+        'e_signature',             // DocuSign / Zoho Sign / Adobe Sign / HelloSign
+        'background_check',        // Checkr / Sterling / HireRight
+        'messaging',               // Slack / Microsoft Teams
+        'email',                   // Google Workspace / Microsoft 365
+    ];
+
+    const connectorRequests: DashboardRequest[] = categoryRequests
+        .map(cat => buildConnectorCategoryRequest(cat, cat !== 'candidate_sourcing'))
+        .filter((r): r is ApiConfigRequest => r !== null);
+
+    const docRequests: DashboardRequest[] = [
         DOCUMENT_PRESETS['offer_letter_template']!,
         DOCUMENT_PRESETS['company_letterhead']!,
         DOCUMENT_PRESETS['benefits_guide']!,
         DOCUMENT_PRESETS['interview_rubric']!,
-        // Company settings
-        buildDataCollectionRequest(
-            'company_defaults',
-            'Company Recruiting Defaults',
-            'Core defaults that allow the agent to work autonomously without asking for them each time.',
-            [
-                { fieldName: 'defaultCurrency', label: 'Default Currency', type: 'select', options: ['USD', 'GBP', 'EUR', 'AUD', 'CAD', 'SGD', 'INR'], required: true, hint: 'Used for salary benchmarks and offer letters.' },
-                { fieldName: 'defaultCountry', label: 'Primary Hiring Country', type: 'select', options: ['us', 'uk', 'canada', 'australia', 'germany', 'france', 'netherlands', 'singapore', 'india', 'other'], required: true },
-                { fieldName: 'defaultTimezone', label: 'Time Zone', type: 'text', placeholder: 'e.g. America/New_York', required: false },
-                { fieldName: 'hiringManagerEmail', label: 'Default Hiring Manager Email', type: 'text', placeholder: 'manager@company.com', required: false },
-                { fieldName: 'hrSignatoryName', label: 'HR Signatory Name', type: 'text', placeholder: 'Full name for offer letters', required: false },
-                { fieldName: 'hrSignatoryTitle', label: 'HR Signatory Title', type: 'text', placeholder: 'e.g. Head of People & Talent', required: false },
-            ],
-            'high',
-            'company_settings',
-        ),
     ];
+
+    const dataRequest = buildDataCollectionRequest(
+        'company_defaults',
+        'Company Recruiting Defaults',
+        'Core defaults that allow the agent to work autonomously without asking for them each time.',
+        [
+            { fieldName: 'defaultCurrency', label: 'Default Currency', type: 'select', options: ['USD', 'GBP', 'EUR', 'AUD', 'CAD', 'SGD', 'INR'], required: true, hint: 'Used for salary benchmarks and offer letters.' },
+            { fieldName: 'defaultCountry', label: 'Primary Hiring Country', type: 'select', options: ['us', 'uk', 'canada', 'australia', 'germany', 'france', 'netherlands', 'singapore', 'india', 'other'], required: true },
+            { fieldName: 'defaultTimezone', label: 'Time Zone', type: 'text', placeholder: 'e.g. America/New_York', required: false },
+            { fieldName: 'hiringManagerEmail', label: 'Default Hiring Manager Email', type: 'text', placeholder: 'manager@company.com', required: false },
+            { fieldName: 'hrSignatoryName', label: 'HR Signatory Name', type: 'text', placeholder: 'Full name for offer letters', required: false },
+            { fieldName: 'hrSignatoryTitle', label: 'HR Signatory Title', type: 'text', placeholder: 'e.g. Head of People & Talent', required: false },
+        ],
+        'high',
+        'company_settings',
+    );
+
+    const requests: DashboardRequest[] = [...connectorRequests, ...docRequests, dataRequest];
     return buildDashboardRequestResult(
         requests,
-        'Complete dashboard setup to enable the full recruiter agent workflow. The agent will operate in heuristic/advisory mode until credentials are configured.',
+        'Complete dashboard setup to enable the full recruiter agent workflow. The agent will operate in heuristic/advisory mode until connectors are configured.',
     );
 }
 

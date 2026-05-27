@@ -180,7 +180,8 @@ import type {
 
 import {
     buildDashboardRequestResult,
-    buildApiConfigRequest,
+    buildConnectorCategoryRequest,
+    buildConnectorSetupRequest,
     buildDocumentUploadRequest,
     buildCredentialVerifyRequest,
     buildDataCollectionRequest,
@@ -192,7 +193,7 @@ import {
     buildBgcAuthorisationRequest,
     buildCredentialVerificationRequests,
 } from './dashboard-requests.js';
-import type { DashboardRequest } from './dashboard-requests.js';
+import type { DashboardRequest, ConnectorCategory } from './dashboard-requests.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -1615,15 +1616,32 @@ export async function handleRecruiterAction(
             }
 
             if (mode === 'api_config') {
-                const serviceIds = Array.isArray(payload['serviceIds'])
-                    ? strArr(payload['serviceIds'])
-                    : typeof payload['serviceId'] === 'string' ? [payload['serviceId'] as string] : [];
-                if (serviceIds.length === 0) return fail('payload.serviceIds (array) or payload.serviceId is required for api_config mode');
-                const requests: DashboardRequest[] = serviceIds
-                    .map(id => buildApiConfigRequest(id))
+                // Category-first: agent requests a connector CATEGORY, not a specific tool.
+                // The customer picks whichever provider they already use from within that category.
+                // Optionally, if the customer has already chosen a provider, pass providerId.
+                const categories: ConnectorCategory[] = Array.isArray(payload['categories'])
+                    ? strArr(payload['categories']) as ConnectorCategory[]
+                    : typeof payload['category'] === 'string'
+                        ? [payload['category'] as ConnectorCategory]
+                        : [];
+                if (categories.length === 0) {
+                    return fail('payload.categories (array) or payload.category is required for api_config mode. ' +
+                        'Use connector categories (e.g. "applicant_tracking", "candidate_sourcing") not specific tool names.');
+                }
+                const providerId = typeof payload['providerId'] === 'string' ? payload['providerId'] as string : undefined;
+                const optional = typeof payload['optional'] === 'boolean' ? payload['optional'] as boolean : true;
+                const requests: DashboardRequest[] = categories
+                    .map(cat =>
+                        providerId && categories.length === 1
+                            ? buildConnectorSetupRequest(cat, providerId, optional)
+                            : buildConnectorCategoryRequest(cat, optional),
+                    )
                     .filter((r): r is NonNullable<typeof r> => r !== null);
-                if (requests.length === 0) return fail(`No API config preset found for service(s): ${serviceIds.join(', ')}`);
-                const agentNextStep = str(payload['agentNextStep'], 'Configure the API credentials via the dashboard, then re-run the original action.');
+                if (requests.length === 0) {
+                    return fail(`No connector category found for: ${categories.join(', ')}. ` +
+                        'Check platform/connector-registry.ts for valid categories.');
+                }
+                const agentNextStep = str(payload['agentNextStep'], 'Configure the connector via the dashboard, then re-run the original action.');
                 return jsonOut(buildDashboardRequestResult(requests, agentNextStep));
             }
 
