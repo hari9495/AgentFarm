@@ -457,6 +457,15 @@ export type LocalWorkspaceActionType =
     | 'workspace_devops_compliance_scan'
     | 'workspace_devops_registry'
     | 'workspace_devops_load_test'
+    // Tier 31f (DevOps P4/P5 gap actions — Metrics, DBA, FinOps, Fleet, Windows, Chaos, MLOps, Incident)
+    | 'workspace_devops_metrics_query'
+    | 'workspace_devops_db_admin'
+    | 'workspace_devops_finops'
+    | 'workspace_devops_fleet'
+    | 'workspace_devops_windows'
+    | 'workspace_devops_chaos'
+    | 'workspace_devops_mlops'
+    | 'workspace_devops_incident_contain'
     // Tier 32 (Mobile / iOS + Android domain actions)
     | 'workspace_mob_ios_component'
     | 'workspace_mob_ios_build'
@@ -1186,6 +1195,15 @@ export const LOCAL_WORKSPACE_ACTION_TYPES = new Set<LocalWorkspaceActionType>([
     'workspace_devops_compliance_scan',
     'workspace_devops_registry',
     'workspace_devops_load_test',
+    // Tier 31f (DevOps P4/P5 gap actions — Metrics, DBA, FinOps, Fleet, Windows, Chaos, MLOps, Incident)
+    'workspace_devops_metrics_query',
+    'workspace_devops_db_admin',
+    'workspace_devops_finops',
+    'workspace_devops_fleet',
+    'workspace_devops_windows',
+    'workspace_devops_chaos',
+    'workspace_devops_mlops',
+    'workspace_devops_incident_contain',
     // Tier 32 (Mobile / iOS + Android domain actions)
     'workspace_mob_ios_component',
     'workspace_mob_ios_build',
@@ -13998,7 +14016,15 @@ export async function executeLocalWorkspaceAction(input: {
         case 'workspace_devops_slo':
         case 'workspace_devops_compliance_scan':
         case 'workspace_devops_registry':
-        case 'workspace_devops_load_test': {
+        case 'workspace_devops_load_test':
+        case 'workspace_devops_metrics_query':
+        case 'workspace_devops_db_admin':
+        case 'workspace_devops_finops':
+        case 'workspace_devops_fleet':
+        case 'workspace_devops_windows':
+        case 'workspace_devops_chaos':
+        case 'workspace_devops_mlops':
+        case 'workspace_devops_incident_contain': {
             if (!isDevopsActionType(actionType)) {
                 return { ok: false, output: '', errorOutput: `Unrecognised DevOps action: ${actionType}` };
             }

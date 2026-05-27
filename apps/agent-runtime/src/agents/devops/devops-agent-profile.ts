@@ -162,6 +162,22 @@ export const DEVOPS_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = [
     'workspace_devops_registry',
     // ── P3 Gap 14 — Load / Performance Testing ────────────────────────────────
     'workspace_devops_load_test',
+    // ── P4 Gap 15 — Live Metrics Querying ─────────────────────────────────────
+    'workspace_devops_metrics_query',
+    // ── P4 Gap 16 — Database Administration ───────────────────────────────────
+    'workspace_devops_db_admin',
+    // ── P4 Gap 17 — FinOps / Cost Optimization ────────────────────────────────
+    'workspace_devops_finops',
+    // ── P4 Gap 18 — Fleet / Multi-Cluster Management ──────────────────────────
+    'workspace_devops_fleet',
+    // ── P5 Gap 19 — Windows Server Administration ─────────────────────────────
+    'workspace_devops_windows',
+    // ── P5 Gap 20 — Chaos Engineering ─────────────────────────────────────────
+    'workspace_devops_chaos',
+    // ── P5 Gap 21 — MLOps Pipeline Management ─────────────────────────────────
+    'workspace_devops_mlops',
+    // ── P5 Gap 22 — Incident Containment ──────────────────────────────────────
+    'workspace_devops_incident_contain',
 ];
 
 // ---------------------------------------------------------------------------

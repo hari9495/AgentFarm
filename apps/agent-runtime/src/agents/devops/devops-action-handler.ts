@@ -1,4 +1,4 @@
-// ============================================================================
+﻿// ============================================================================
 // DEVOPS ACTION HANDLER
 // Handles all workspace_devops_* action types.
 // ============================================================================
@@ -326,6 +326,216 @@ import {
 
 import type { LoadTestScenario } from './devops-load-test-builder.js';
 
+import {
+    buildPrometheusInstantQueryArgs,
+    buildPrometheusRangeQueryArgs,
+    buildLokiRangeQueryArgs,
+    buildElasticsearchSearchArgs,
+    buildElasticsearchQueryDsl,
+    buildDatadogMetricQueryArgs,
+    buildDatadogLogsQueryArgs,
+    buildCloudWatchGetMetricArgs,
+    buildCloudWatchLogsInsightsStartArgs,
+    buildCloudWatchLogsInsightsResultArgs,
+    parsePrometheusResult,
+    parseLokiResult,
+    parseCloudWatchResult,
+    parseMetricsAnalysis,
+    buildMetricsAnalysisPrompt,
+    formatMetricsReport,
+} from './devops-metrics-query-builder.js';
+
+import {
+    buildExplainAnalyzeArgs,
+    buildIndexAdvisorArgs,
+    buildVacuumAnalyzeArgs,
+    buildShowLocksArgs,
+    buildKillBackendArgs,
+    buildTableBloatArgs,
+    buildPatroniStatusArgs,
+    buildPatroniSwitchoverArgs,
+    buildPatroniFailoverArgs,
+    buildPatroniPauseResumeArgs,
+    buildReplicationLagArgs,
+    buildSlowQueryArgs,
+    buildExplainAnalysisPrompt,
+    buildIndexAdvisorPrompt,
+    parseExplainOutput,
+    parsePatroniStatus,
+    formatDbAdminReport,
+} from './devops-db-admin-builder.js';
+
+import {
+    buildAwsRiUtilizationArgs,
+    buildAwsSavingsPlanCoverageArgs,
+    buildAwsRightsizingArgs,
+    buildAwsCostForecastArgs,
+    buildAwsCostBreakdownArgs,
+    buildTrustedAdvisorArgs,
+    buildTrustedAdvisorRefreshArgs,
+    buildSpotPriceHistoryArgs,
+    buildAzureCostUsageArgs,
+    buildAzureAdvisorRecommendationsArgs,
+    buildAzureReservationUtilizationArgs,
+    buildGcpBillingAccountListArgs,
+    buildGcpRecommenderListArgs,
+    buildGcpUnusedIpListArgs,
+    buildGcpIdleDisksArgs,
+    buildFinOpsPrompt,
+    parseAwsRiUtilization,
+    parseAwsRightsizing,
+    parseFinOpsOutput,
+    formatFinOpsReport,
+    TRUSTED_ADVISOR_COST_CHECKS,
+} from './devops-finops-builder.js';
+
+import {
+    buildArgoCdClusterListArgs,
+    buildArgoCdClusterAddArgs,
+    buildArgoCdClusterRemoveArgs,
+    buildArgoCdClusterGetArgs,
+    buildKubectlMultiContextArgs,
+    buildKubectlGetContextsArgs,
+    buildKubectlClusterInfoArgs,
+    buildApplicationSetYaml,
+    buildAppOfAppsYaml,
+    buildCapiClusterYaml,
+    buildFleetGitRepoYaml,
+    buildFleetStatusArgs,
+    parseArgoCdClusterList,
+    formatFleetStatus,
+    buildFleetPrompt,
+    parseFleetOutput,
+} from './devops-fleet-builder.js';
+
+import type { ApplicationSetSpec, AppOfAppsSpec } from './devops-fleet-builder.js';
+
+import {
+    buildWinrsArgs,
+    buildInvokeCommandArgs,
+    buildTestWsManArgs,
+    buildDscApplyArgs,
+    buildDscTestArgs,
+    buildDscGetArgs,
+    buildDscStatusArgs,
+    buildAdGetUserArgs,
+    buildAdNewUserArgs,
+    buildAdDisableUserArgs,
+    buildAdResetPasswordArgs,
+    buildAdRemoveUserArgs,
+    buildAdGetGroupMembersArgs,
+    buildAdAddGroupMemberArgs,
+    buildIisListSitesArgs,
+    buildIisStartSiteArgs,
+    buildIisStopSiteArgs,
+    buildIisRestartAppPoolArgs,
+    buildIisGetAppPoolsArgs,
+    buildGetWinEventArgs,
+    buildGetWindowsUpdateArgs,
+    buildInstallWindowsUpdateArgs,
+    buildCheckPendingRebootArgs,
+    buildGetServiceArgs,
+    buildRestartServiceArgs,
+    buildStopServiceArgs,
+    parseWindowsUpdateList,
+    parseIisSites,
+    buildWindowsAnalysisPrompt,
+    parseWindowsAnalysisOutput,
+    formatWindowsReport,
+} from './devops-windows-builder.js';
+
+import type { WinRmTarget, EventLogQuery } from './devops-windows-builder.js';
+
+import {
+    buildPodChaosYaml,
+    buildNetworkChaosYaml,
+    buildStressChaosYaml,
+    buildDnsChaosYaml,
+    buildChaosMeshListArgs,
+    buildChaosMeshDeleteArgs,
+    buildChaosMeshPauseArgs,
+    buildChaosMeshResumeArgs,
+    buildFisCreateTemplateArgs,
+    buildFisStartExperimentArgs,
+    buildFisStopExperimentArgs,
+    buildFisGetExperimentArgs,
+    buildFisListExperimentsArgs,
+    buildFisEc2StopTemplateJson,
+    buildLitmusChaosEngineYaml,
+    buildLitmusResultArgs,
+    buildLitmusStopArgs,
+    parseChaosMeshResults,
+    parseFisExperiment,
+    buildChaosPrompt,
+    parseChaosDesign,
+    formatChaosReport,
+} from './devops-chaos-builder.js';
+
+import type { ChaosExperimentSpec, NetworkChaosParams, StressChaosParams } from './devops-chaos-builder.js';
+
+import {
+    buildAirflowTriggerDagArgs,
+    buildAirflowGetDagRunArgs,
+    buildAirflowListDagRunsArgs,
+    buildAirflowGetTaskLogsArgs,
+    buildAirflowPauseDagArgs,
+    buildAirflowListDagsArgs,
+    buildMlflowListExperimentsArgs,
+    buildMlflowSearchRunsArgs,
+    buildMlflowGetRunArgs,
+    buildMlflowRegisterModelArgs,
+    buildMlflowTransitionModelStageArgs,
+    buildMlflowCliRunsListArgs,
+    buildMlflowCliArtifactListArgs,
+    buildSageMakerListEndpointsArgs,
+    buildSageMakerDescribeEndpointArgs,
+    buildSageMakerUpdateEndpointArgs,
+    buildSageMakerDeleteEndpointArgs,
+    buildSageMakerListTrainingJobsArgs,
+    buildSageMakerDescribeTrainingJobArgs,
+    buildSageMakerStopTrainingJobArgs,
+    buildDbtRunArgs,
+    buildDbtTestArgs,
+    buildDbtSourceFreshnessArgs,
+    buildDbtDocsGenerateArgs,
+    buildKfpListPipelinesArgs,
+    buildKfpRunPipelineArgs,
+    buildKfpGetRunArgs,
+    buildKfpStopRunArgs,
+    parseAirflowDagRun,
+    parseMlflowRuns,
+    parseSageMakerEndpoints,
+    parseDbtRunResults,
+    buildMlopsAnalysisPrompt,
+    formatMlopsReport,
+} from './devops-mlops-builder.js';
+
+import {
+    buildKubectlCordonArgs,
+    buildKubectlUncordonArgs,
+    buildKubectlDrainArgs,
+    buildKubectlTaintNodeArgs,
+    buildKubectlGetNodeArgs,
+    buildKubectlQuarantineLabelArgs,
+    buildQuarantineNetworkPolicyYaml,
+    buildKubectlDeletePodArgs,
+    buildKubectlDeletePodsByLabelArgs,
+    buildKubectlDescribePodArgs,
+    buildKubectlLogsArgs as buildIncidentLogsArgs,
+    buildKubectlExecEnvArgs,
+    buildKubectlGetEventsArgs,
+    buildJstackCaptureArgs,
+    buildProcNetTcpArgs,
+    buildElasticSiemQueryArgs,
+    buildSplunkSearchArgs,
+    buildFalcoLogsArgs as buildIncidentFalcoLogsArgs,
+    parseFalcoAlerts as parseIncidentFalcoAlerts,
+    parseElasticSiemResults,
+    buildIncidentContainmentPrompt,
+    parseIncidentContainmentPlan,
+    formatIncidentReport,
+} from './devops-incident-contain-builder.js';
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -407,7 +617,23 @@ export type DevopsActionType =
     // ── P3 Gap 13 — Container Registry Hygiene ───────────────────────────────
     | 'workspace_devops_registry'
     // ── P3 Gap 14 — Load / Performance Testing ───────────────────────────────
-    | 'workspace_devops_load_test';
+    | 'workspace_devops_load_test'
+    // ── P4 Gap 15 — Live Metrics Querying ────────────────────────────────────
+    | 'workspace_devops_metrics_query'
+    // ── P4 Gap 16 — Database Administration ──────────────────────────────────
+    | 'workspace_devops_db_admin'
+    // ── P4 Gap 17 — FinOps / Cost Optimization ───────────────────────────────
+    | 'workspace_devops_finops'
+    // ── P4 Gap 18 — Fleet / Multi-Cluster Management ─────────────────────────
+    | 'workspace_devops_fleet'
+    // ── P5 Gap 19 — Windows Server Administration ─────────────────────────────
+    | 'workspace_devops_windows'
+    // ── P5 Gap 20 — Chaos Engineering ────────────────────────────────────────
+    | 'workspace_devops_chaos'
+    // ── P5 Gap 21 — MLOps Pipeline Management ────────────────────────────────
+    | 'workspace_devops_mlops'
+    // ── P5 Gap 22 — Incident Containment ─────────────────────────────────────
+    | 'workspace_devops_incident_contain';
 
 export const DEVOPS_ACTION_TYPES = new Set<DevopsActionType>([
     'workspace_devops_tf_plan',
@@ -458,6 +684,14 @@ export const DEVOPS_ACTION_TYPES = new Set<DevopsActionType>([
     'workspace_devops_compliance_scan',
     'workspace_devops_registry',
     'workspace_devops_load_test',
+    'workspace_devops_metrics_query',
+    'workspace_devops_db_admin',
+    'workspace_devops_finops',
+    'workspace_devops_fleet',
+    'workspace_devops_windows',
+    'workspace_devops_chaos',
+    'workspace_devops_mlops',
+    'workspace_devops_incident_contain',
 ]);
 
 export function isDevopsActionType(at: string): at is DevopsActionType {
@@ -3346,6 +3580,1227 @@ export async function handleDevopsAction(params: DevopsActionParams): Promise<De
             }
 
             return { ok: false, output: '', errorOutput: `Unknown load_test action: ${ltAction}` };
+        }
+
+        // ====================================================================
+        // workspace_devops_metrics_query
+        // payload: provider (prometheus|loki|elasticsearch|datadog|cloudwatch),
+        //          action  (instant|range|logs|label_values|logs_insights_start|
+        //                   logs_insights_result|analyze),
+        //          url/prometheus_url/loki_url/es_url (backend URL),
+        //          query, start?, end?, step?,
+        //          bearer_token?, api_key?, app_key?, basic_auth?,
+        //          query_id? (for logs_insights_result)
+        // ====================================================================
+        case 'workspace_devops_metrics_query': {
+            if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+            const mqProvider = str(payload['provider'], 'prometheus');
+            const mqAction   = str(payload['action'],   'instant');
+
+            if (mqProvider === 'prometheus') {
+                if (mqAction === 'instant') {
+                    const args = buildPrometheusInstantQueryArgs({
+                        prometheusUrl: str(payload['url'] ?? payload['prometheus_url'], ''),
+                        query:         str(payload['query'], ''),
+                        time:          str(payload['time'])       || undefined,
+                        bearerToken:   str(payload['bearer_token']) || undefined,
+                    });
+                    const result = await runCommand(args, workspaceDir);
+                    const parsed = parsePrometheusResult(result.stdout, str(payload['query'], ''));
+                    return safeJson({ ok: result.exitCode === 0, provider: 'prometheus', action: 'instant', result: parsed, summary: `Prometheus instant query returned ${parsed.dataPoints.length} data point(s).` });
+                }
+                if (mqAction === 'range') {
+                    const args = buildPrometheusRangeQueryArgs({
+                        prometheusUrl: str(payload['url'] ?? payload['prometheus_url'], ''),
+                        query:         str(payload['query'], ''),
+                        start:         str(payload['start'], ''),
+                        end:           str(payload['end'],   ''),
+                        step:          str(payload['step'],  '60s'),
+                        bearerToken:   str(payload['bearer_token']) || undefined,
+                    });
+                    const result = await runCommand(args, workspaceDir);
+                    const parsed = parsePrometheusResult(result.stdout, str(payload['query'], ''));
+                    return safeJson({ ok: result.exitCode === 0, provider: 'prometheus', action: 'range', result: parsed, summary: `Prometheus range query returned ${parsed.dataPoints.length} data point(s).` });
+                }
+                if (mqAction === 'analyze') {
+                    const parsed = parsePrometheusResult(str(payload['raw_data'], ''), str(payload['query'], ''));
+                    const prompt = buildMetricsAnalysisPrompt({
+                        query:   str(payload['query'],   ''),
+                        result:  parsed,
+                        context: str(payload['context'], ''),
+                        service: str(payload['service']) || undefined,
+                    });
+                    const llmOut  = await callLlmSafe(callLlm, prompt);
+                    const analysis = parseMetricsAnalysis(llmOut);
+                    return safeJson({ ok: true, analysis, report: formatMetricsReport(parsed, analysis) });
+                }
+            }
+
+            if (mqProvider === 'loki') {
+                const args = buildLokiRangeQueryArgs({
+                    lokiUrl:     str(payload['url'] ?? payload['loki_url'], ''),
+                    query:       str(payload['query'], ''),
+                    start:       str(payload['start'])      || undefined,
+                    end:         str(payload['end'])        || undefined,
+                    limit:       typeof payload['limit'] === 'number' ? (payload['limit'] as number) : undefined,
+                    bearerToken: str(payload['bearer_token']) || undefined,
+                });
+                const result = await runCommand(args, workspaceDir);
+                const parsed = parseLokiResult(result.stdout, str(payload['query'], ''));
+                return safeJson({ ok: result.exitCode === 0, provider: 'loki', result: parsed, summary: `Loki query returned ${parsed.dataPoints.length} log line(s).` });
+            }
+
+            if (mqProvider === 'elasticsearch') {
+                const dslBody = str(payload['body']) || buildElasticsearchQueryDsl({
+                    message:  str(payload['message'])  || undefined,
+                    level:    str(payload['level'])    as ('ERROR' | 'WARN' | 'INFO' | 'DEBUG') || undefined,
+                    service:  str(payload['service'])  || undefined,
+                    traceId:  str(payload['trace_id']) || undefined,
+                    from:     str(payload['start'])    || undefined,
+                    to:       str(payload['end'])      || undefined,
+                    size:     typeof payload['size'] === 'number' ? (payload['size'] as number) : undefined,
+                });
+                const args = buildElasticsearchSearchArgs({
+                    url:       str(payload['url'] ?? payload['es_url'], ''),
+                    index:     str(payload['index'], '_all'),
+                    body:      dslBody,
+                    apiKey:    str(payload['api_key'])   || undefined,
+                    basicAuth: str(payload['basic_auth']) || undefined,
+                });
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, provider: 'elasticsearch', raw: result.stdout.slice(0, 3000) });
+            }
+
+            if (mqProvider === 'datadog') {
+                if (mqAction === 'logs') {
+                    const args = buildDatadogLogsQueryArgs({
+                        apiKey:  str(payload['api_key'],  ''),
+                        appKey:  str(payload['app_key'],  ''),
+                        query:   str(payload['query'],    ''),
+                        from:    str(payload['start'],    ''),
+                        to:      str(payload['end'],      ''),
+                        limit:   typeof payload['limit'] === 'number' ? (payload['limit'] as number) : undefined,
+                        site:    str(payload['site'])    || undefined,
+                    });
+                    const result = await runCommand(args, workspaceDir);
+                    return safeJson({ ok: result.exitCode === 0, provider: 'datadog', action: 'logs', raw: result.stdout.slice(0, 3000) });
+                }
+                const args = buildDatadogMetricQueryArgs({
+                    apiKey:   str(payload['api_key'],  ''),
+                    appKey:   str(payload['app_key'],  ''),
+                    query:    str(payload['query'],    ''),
+                    fromUnix: num(payload['from_unix'], Math.floor(Date.now() / 1000) - 3600),
+                    toUnix:   num(payload['to_unix'],   Math.floor(Date.now() / 1000)),
+                    site:     str(payload['site'])     || undefined,
+                });
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, provider: 'datadog', action: 'metrics', raw: result.stdout.slice(0, 3000) });
+            }
+
+            if (mqProvider === 'cloudwatch') {
+                if (mqAction === 'logs_insights_start') {
+                    const args = buildCloudWatchLogsInsightsStartArgs({
+                        logGroup:  str(payload['log_group'],  ''),
+                        query:     str(payload['query'],      ''),
+                        startTime: num(payload['start_time'], Math.floor(Date.now() / 1000) - 3600),
+                        endTime:   num(payload['end_time'],   Math.floor(Date.now() / 1000)),
+                        region:    str(payload['region'])     || undefined,
+                    });
+                    const result = await runCommand(args, workspaceDir);
+                    let queryId = '';
+                    try { queryId = (JSON.parse(result.stdout) as { queryId?: string })['queryId'] ?? ''; } catch { /* ignore */ }
+                    return safeJson({ ok: result.exitCode === 0, action: 'logs_insights_start', query_id: queryId });
+                }
+                if (mqAction === 'logs_insights_result') {
+                    const args = buildCloudWatchLogsInsightsResultArgs(
+                        str(payload['query_id'], ''),
+                        str(payload['region'])  || undefined,
+                    );
+                    const result = await runCommand(args, workspaceDir);
+                    return safeJson({ ok: result.exitCode === 0, action: 'logs_insights_result', raw: result.stdout.slice(0, 3000) });
+                }
+                const args = buildCloudWatchGetMetricArgs({
+                    namespace:   str(payload['namespace'],   'AWS/EC2'),
+                    metricName:  str(payload['metric_name'], 'CPUUtilization'),
+                    dimensions:  typeof payload['dimensions'] === 'object' && payload['dimensions'] !== null ? (payload['dimensions'] as Record<string, string>) : {},
+                    period:      num(payload['period'],       60),
+                    stat:        str(payload['stat'],         'Average'),
+                    startTime:   str(payload['start_time'],   new Date(Date.now() - 3600_000).toISOString()),
+                    endTime:     str(payload['end_time'],     new Date().toISOString()),
+                    region:      str(payload['region'])       || undefined,
+                });
+                const result = await runCommand(args, workspaceDir);
+                const parsed = parseCloudWatchResult(result.stdout);
+                return safeJson({ ok: result.exitCode === 0, provider: 'cloudwatch', result: parsed, summary: `CloudWatch returned ${parsed.dataPoints.length} data point(s).` });
+            }
+
+            return { ok: false, output: '', errorOutput: `Unknown metrics_query provider: ${mqProvider}` };
+        }
+
+        // ====================================================================
+        // workspace_devops_db_admin
+        // payload: action (explain|index_advice|vacuum|show_locks|kill_backend|
+        //                   table_bloat|slow_queries|replication_lag|
+        //                   patroni_status|patroni_switchover|patroni_failover|
+        //                   patroni_pause|patroni_resume),
+        //          pod (required), namespace, container?, db_name?,
+        //          query? (for explain), pid? (for kill_backend),
+        //          patroni_config_path?, leader?, candidate?
+        // ====================================================================
+        case 'workspace_devops_db_admin': {
+            if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+            const dbAction   = str(payload['action'],    'show_locks');
+            const dbPod      = str(payload['pod'],       '');
+            const dbNs       = str(payload['namespace'], 'default');
+            const dbDatabase = str(payload['db_name'],   'postgres');
+            const dbCont     = str(payload['container']) || undefined;
+            const dbCluster  = str(payload['cluster'])   || dbPod;
+
+            if (!dbPod) return { ok: false, output: '', errorOutput: 'pod is required for db_admin' };
+
+            if (dbAction === 'explain') {
+                const query = str(payload['query'], '');
+                if (!query) return { ok: false, output: '', errorOutput: 'query is required for explain' };
+                const args   = buildExplainAnalyzeArgs({ pod: dbPod, namespace: dbNs, database: dbDatabase, query, container: dbCont });
+                const result = await runCommand(args, workspaceDir);
+                const plan   = parseExplainOutput(result.stdout);
+                if (plan && payload['llm_analyze'] === true) {
+                    const prompt = buildExplainAnalysisPrompt({ query, explainJson: result.stdout, database: dbDatabase });
+                    const llmOut = await callLlmSafe(callLlm, prompt);
+                    return safeJson({ ok: result.exitCode === 0, action: 'explain', plan, llm_analysis: llmOut });
+                }
+                return safeJson({ ok: result.exitCode === 0, action: 'explain', plan, raw: result.stdout.slice(0, 2000) });
+            }
+
+            if (dbAction === 'index_advice') {
+                const args   = buildIndexAdvisorArgs({ pod: dbPod, namespace: dbNs, database: dbDatabase, container: dbCont });
+                const result = await runCommand(args, workspaceDir);
+                const prompt = buildIndexAdvisorPrompt({ database: dbDatabase, tableStats: result.stdout });
+                const llmOut = await callLlmSafe(callLlm, prompt);
+                return safeJson({ ok: result.exitCode === 0, action: 'index_advice', llm_analysis: llmOut, raw: result.stdout.slice(0, 1000) });
+            }
+
+            if (dbAction === 'vacuum') {
+                if (payload['allow_destructive'] !== true) return { ok: false, output: '', errorOutput: 'allow_destructive: true required for vacuum' };
+                const args   = buildVacuumAnalyzeArgs({
+                    pod: dbPod, namespace: dbNs, database: dbDatabase, container: dbCont,
+                    table:   str(payload['table'])   || undefined,
+                    verbose: payload['verbose'] === true,
+                    full:    payload['full']    === true,
+                });
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, action: 'vacuum', output: result.stdout.slice(0, 1000) });
+            }
+
+            if (dbAction === 'show_locks') {
+                const args   = buildShowLocksArgs({ pod: dbPod, namespace: dbNs, database: dbDatabase, container: dbCont });
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, action: 'show_locks', raw: result.stdout.slice(0, 3000) });
+            }
+
+            if (dbAction === 'kill_backend') {
+                if (payload['allow_destructive'] !== true) return { ok: false, output: '', errorOutput: 'allow_destructive: true required for kill_backend' };
+                const pid  = num(payload['pid'], 0);
+                if (!pid) return { ok: false, output: '', errorOutput: 'pid is required for kill_backend' };
+                const args   = buildKillBackendArgs({ pod: dbPod, namespace: dbNs, database: dbDatabase, pid, force: payload['terminate'] === true, container: dbCont });
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, action: 'kill_backend', pid });
+            }
+
+            if (dbAction === 'table_bloat') {
+                const args   = buildTableBloatArgs({ pod: dbPod, namespace: dbNs, database: dbDatabase, container: dbCont });
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, action: 'table_bloat', raw: result.stdout.slice(0, 3000) });
+            }
+
+            if (dbAction === 'slow_queries') {
+                const args   = buildSlowQueryArgs({ pod: dbPod, namespace: dbNs, database: dbDatabase, container: dbCont });
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, action: 'slow_queries', raw: result.stdout.slice(0, 3000) });
+            }
+
+            if (dbAction === 'replication_lag') {
+                const args   = buildReplicationLagArgs({ pod: dbPod, namespace: dbNs, database: dbDatabase, container: dbCont });
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, action: 'replication_lag', raw: result.stdout.slice(0, 2000) });
+            }
+
+            if (dbAction === 'patroni_status') {
+                const args   = buildPatroniStatusArgs({ pod: dbPod, namespace: dbNs, container: dbCont, configFile: str(payload['patroni_config_path']) || undefined });
+                const result = await runCommand(args, workspaceDir);
+                const status = parsePatroniStatus(result.stdout);
+                return safeJson({ ok: result.exitCode === 0, action: 'patroni_status', status, summary: formatDbAdminReport({ action: 'patroni_status', patroni: status }) });
+            }
+
+            if (dbAction === 'patroni_switchover') {
+                if (payload['allow_destructive'] !== true) return { ok: false, output: '', errorOutput: 'allow_destructive: true required for patroni_switchover' };
+                const leader = str(payload['leader'], '');
+                if (!leader) return { ok: false, output: '', errorOutput: 'leader is required for patroni_switchover' };
+                const args   = buildPatroniSwitchoverArgs({ pod: dbPod, namespace: dbNs, cluster: dbCluster, leader, candidate: str(payload['candidate']) || undefined, container: dbCont });
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, action: 'patroni_switchover', output: result.stdout.slice(0, 500) });
+            }
+
+            if (dbAction === 'patroni_failover') {
+                if (payload['allow_destructive'] !== true) return { ok: false, output: '', errorOutput: 'allow_destructive: true required for patroni_failover' };
+                const args   = buildPatroniFailoverArgs({ pod: dbPod, namespace: dbNs, cluster: dbCluster, candidate: str(payload['candidate']) || undefined, container: dbCont });
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, action: 'patroni_failover', output: result.stdout.slice(0, 500) });
+            }
+
+            if (dbAction === 'patroni_pause' || dbAction === 'patroni_resume') {
+                const action = dbAction === 'patroni_pause' ? 'pause' : 'resume';
+                const args   = buildPatroniPauseResumeArgs({ pod: dbPod, namespace: dbNs, cluster: dbCluster, action, container: dbCont });
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, action: dbAction });
+            }
+
+            return { ok: false, output: '', errorOutput: `Unknown db_admin action: ${dbAction}` };
+        }
+
+        // ====================================================================
+        // workspace_devops_finops
+        // payload: provider (aws|azure|gcp),
+        //          action  (ri_utilization|savings_plan_coverage|rightsizing|
+        //                   cost_forecast|cost_breakdown|trusted_advisor|
+        //                   spot_prices|advisor_recommendations|ri_utilization_azure|
+        //                   billing_accounts|recommender|unused_ips|idle_disks|analyze),
+        //          start_date?, end_date?, region?, granularity?,
+        //          group_by?, instance_types?, check_id?, budget?,
+        //          project?, subscription?, scope?
+        // ====================================================================
+        case 'workspace_devops_finops': {
+            if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+            const foProvider = str(payload['provider'], 'aws') as 'aws' | 'azure' | 'gcp';
+            const foAction   = str(payload['action'],   'cost_breakdown');
+            const foRegion   = str(payload['region'])  || undefined;
+            const foStart    = str(payload['start_date'], new Date(Date.now() - 30 * 86400_000).toISOString().slice(0, 10));
+            const foEnd      = str(payload['end_date'],   new Date().toISOString().slice(0, 10));
+
+            if (foAction === 'analyze') {
+                const prompt = buildFinOpsPrompt({
+                    provider:          foProvider,
+                    riData:            str(payload['ri_data'])           || undefined,
+                    rightsizingData:   str(payload['rightsizing_data'])   || undefined,
+                    advisorData:       str(payload['advisor_data'])       || undefined,
+                    costBreakdown:     str(payload['cost_breakdown'])     || undefined,
+                    forecastData:      str(payload['forecast_data'])      || undefined,
+                    budget:            typeof payload['budget'] === 'number' ? (payload['budget'] as number) : undefined,
+                });
+                const llmOut  = await callLlmSafe(callLlm, prompt);
+                const findings = parseFinOpsOutput(llmOut);
+                return safeJson({ ok: true, action: 'analyze', findings, report: formatFinOpsReport(findings) });
+            }
+
+            let foArgs: string[];
+            if (foProvider === 'aws') {
+                if (foAction === 'ri_utilization') {
+                    foArgs = buildAwsRiUtilizationArgs({ startDate: foStart, endDate: foEnd, region: foRegion });
+                } else if (foAction === 'savings_plan_coverage') {
+                    foArgs = buildAwsSavingsPlanCoverageArgs({ startDate: foStart, endDate: foEnd, region: foRegion });
+                } else if (foAction === 'rightsizing') {
+                    foArgs = buildAwsRightsizingArgs({ region: foRegion });
+                } else if (foAction === 'cost_forecast') {
+                    foArgs = buildAwsCostForecastArgs({ startDate: foStart, endDate: foEnd, region: foRegion });
+                } else if (foAction === 'cost_breakdown') {
+                    foArgs = buildAwsCostBreakdownArgs({ startDate: foStart, endDate: foEnd, groupBy: str(payload['group_by']) as ('SERVICE') || undefined, region: foRegion });
+                } else if (foAction === 'trusted_advisor') {
+                    const checkId = str(payload['check_id']) || TRUSTED_ADVISOR_COST_CHECKS.UNDERUTILIZED_EC2;
+                    // Refresh first
+                    await runCommand(buildTrustedAdvisorRefreshArgs(checkId, foRegion ?? 'us-east-1'), workspaceDir);
+                    foArgs = buildTrustedAdvisorArgs(checkId, foRegion ?? 'us-east-1');
+                } else if (foAction === 'spot_prices') {
+                    const instanceTypes = Array.isArray(payload['instance_types']) ? (payload['instance_types'] as string[]) : ['m5.large'];
+                    foArgs = buildSpotPriceHistoryArgs({ instanceTypes, region: foRegion });
+                } else {
+                    return { ok: false, output: '', errorOutput: `Unknown AWS finops action: ${foAction}` };
+                }
+            } else if (foProvider === 'azure') {
+                if (foAction === 'cost_breakdown') {
+                    foArgs = buildAzureCostUsageArgs({ scope: str(payload['scope'], ''), startDate: foStart, endDate: foEnd, subscription: str(payload['subscription']) || undefined });
+                } else if (foAction === 'advisor_recommendations') {
+                    foArgs = buildAzureAdvisorRecommendationsArgs({ subscription: str(payload['subscription']) || undefined });
+                } else if (foAction === 'ri_utilization_azure') {
+                    foArgs = buildAzureReservationUtilizationArgs({ reservationOrderId: str(payload['reservation_order_id'], ''), startDate: foStart, endDate: foEnd, subscription: str(payload['subscription']) || undefined });
+                } else {
+                    return { ok: false, output: '', errorOutput: `Unknown Azure finops action: ${foAction}` };
+                }
+            } else {
+                if (foAction === 'billing_accounts') {
+                    foArgs = buildGcpBillingAccountListArgs();
+                } else if (foAction === 'recommender') {
+                    foArgs = buildGcpRecommenderListArgs({ project: str(payload['project'], ''), location: str(payload['location']) || undefined });
+                } else if (foAction === 'unused_ips') {
+                    foArgs = buildGcpUnusedIpListArgs(str(payload['project'], ''));
+                } else if (foAction === 'idle_disks') {
+                    foArgs = buildGcpIdleDisksArgs(str(payload['project'], ''));
+                } else {
+                    return { ok: false, output: '', errorOutput: `Unknown GCP finops action: ${foAction}` };
+                }
+            }
+
+            const foResult = await runCommand(foArgs, workspaceDir);
+            const foOut    = foResult.stdout.slice(0, 3000);
+            return safeJson({ ok: foResult.exitCode === 0, provider: foProvider, action: foAction, raw: foOut });
+        }
+
+        // ====================================================================
+        // workspace_devops_fleet
+        // payload: action (cluster_list|cluster_add|cluster_remove|cluster_get|
+        //                   applicationset_yaml|app_of_apps_yaml|capi_yaml|
+        //                   fleet_gitrepo_yaml|fleet_status|kubectl_multi|
+        //                   get_contexts|cluster_info|generate),
+        //          Various params per action type (see builder for details)
+        // ====================================================================
+        case 'workspace_devops_fleet': {
+            if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+            const flAction = str(payload['action'], 'cluster_list');
+
+            if (flAction === 'cluster_list') {
+                const args   = buildArgoCdClusterListArgs(str(payload['namespace']) || undefined);
+                const result = await runCommand(args, workspaceDir);
+                const clusters = parseArgoCdClusterList(result.stdout);
+                return safeJson({ ok: result.exitCode === 0, clusters, summary: formatFleetStatus(clusters) });
+            }
+
+            if (flAction === 'cluster_add') {
+                const args = buildArgoCdClusterAddArgs({
+                    context:    str(payload['context'],   ''),
+                    name:       str(payload['name'])      || undefined,
+                    namespace:  str(payload['namespace']) || undefined,
+                    inCluster:  payload['in_cluster'] === true,
+                    upsert:     bool(payload['upsert'])     ?? false,
+                });
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, action: 'cluster_add', output: result.stdout.slice(0, 500) });
+            }
+
+            if (flAction === 'cluster_remove') {
+                if (payload['allow_destructive'] !== true) return { ok: false, output: '', errorOutput: 'allow_destructive: true required for cluster_remove' };
+                const args   = buildArgoCdClusterRemoveArgs(str(payload['cluster_name'], ''), str(payload['namespace']) || undefined);
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, action: 'cluster_remove', output: result.stdout.slice(0, 500) });
+            }
+
+            if (flAction === 'cluster_get') {
+                const args   = buildArgoCdClusterGetArgs(str(payload['cluster_name'], ''));
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, action: 'cluster_get', raw: result.stdout.slice(0, 2000) });
+            }
+
+            if (flAction === 'applicationset_yaml') {
+                const spec = payload['spec'] as ApplicationSetSpec | undefined;
+                if (!spec) return { ok: false, output: '', errorOutput: 'spec (ApplicationSetSpec) required' };
+                const yaml = buildApplicationSetYaml(spec);
+                return safeJson({ ok: true, action: 'applicationset_yaml', yaml });
+            }
+
+            if (flAction === 'app_of_apps_yaml') {
+                const spec = payload['spec'] as AppOfAppsSpec | undefined;
+                if (!spec) return { ok: false, output: '', errorOutput: 'spec (AppOfAppsSpec) required' };
+                const yaml = buildAppOfAppsYaml(spec);
+                return safeJson({ ok: true, action: 'app_of_apps_yaml', yaml });
+            }
+
+            if (flAction === 'capi_yaml') {
+                const yaml = buildCapiClusterYaml({
+                    name:              str(payload['name'],         ''),
+                    namespace:         str(payload['namespace'],    'default'),
+                    k8sVersion:        str(payload['k8s_version'],  'v1.29.2'),
+                    controlPlaneCount: typeof payload['control_plane_count'] === 'number' ? (payload['control_plane_count'] as number) : undefined,
+                    workerCount:       typeof payload['worker_count']        === 'number' ? (payload['worker_count']        as number) : undefined,
+                    provider:          str(payload['provider']) as ('aws' | 'azure' | 'gcp') || undefined,
+                });
+                return safeJson({ ok: true, action: 'capi_yaml', yaml });
+            }
+
+            if (flAction === 'fleet_gitrepo_yaml') {
+                const yaml = buildFleetGitRepoYaml({
+                    name:      str(payload['name'],      ''),
+                    namespace: str(payload['namespace'], 'fleet-default'),
+                    repoUrl:   str(payload['repo_url'],  ''),
+                    revision:  str(payload['revision'],  'main'),
+                    paths:     Array.isArray(payload['paths']) ? (payload['paths'] as string[]) : undefined,
+                    targets:   Array.isArray(payload['targets']) ? (payload['targets'] as Array<{ name?: string; clusterSelector?: Record<string, string> }>) : undefined,
+                });
+                return safeJson({ ok: true, action: 'fleet_gitrepo_yaml', yaml });
+            }
+
+            if (flAction === 'fleet_status') {
+                const args   = buildFleetStatusArgs(str(payload['namespace']) || undefined);
+                const result = await runCommand(args, workspaceDir);
+                const clusters = parseArgoCdClusterList(result.stdout);
+                return safeJson({ ok: result.exitCode === 0, clusters, summary: formatFleetStatus(clusters) });
+            }
+
+            if (flAction === 'kubectl_multi') {
+                const ctxArgs = Array.isArray(payload['kubectl_args']) ? (payload['kubectl_args'] as string[]) : [];
+                const args    = buildKubectlMultiContextArgs({
+                    context:    str(payload['context'],    ''),
+                    args:       ctxArgs,
+                    kubeconfig: str(payload['kubeconfig']) || undefined,
+                });
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, action: 'kubectl_multi', output: result.stdout.slice(0, 3000) });
+            }
+
+            if (flAction === 'get_contexts') {
+                const args   = buildKubectlGetContextsArgs(str(payload['kubeconfig']) || undefined);
+                const result = await runCommand(args, workspaceDir);
+                const contexts = result.stdout.split('\n').map((l) => l.trim()).filter(Boolean);
+                return safeJson({ ok: result.exitCode === 0, contexts });
+            }
+
+            if (flAction === 'cluster_info') {
+                const args   = buildKubectlClusterInfoArgs(str(payload['context'], ''), str(payload['kubeconfig']) || undefined);
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, output: result.stdout.slice(0, 1000) });
+            }
+
+            if (flAction === 'generate') {
+                const prompt  = buildFleetPrompt({
+                    description:  str(payload['description'],   ''),
+                    clusters:     Array.isArray(payload['clusters']) ? (payload['clusters'] as Array<{ name: string; environment: string; region?: string }>) : [],
+                    repoUrl:      str(payload['repo_url'],      ''),
+                    appsBasePath: str(payload['apps_base_path']) || undefined,
+                });
+                const llmOut = await callLlmSafe(callLlm, prompt);
+                const files  = parseFleetOutput(llmOut);
+                return safeJson({ ok: true, action: 'generate', files, count: files.length });
+            }
+
+            return { ok: false, output: '', errorOutput: `Unknown fleet action: ${flAction}` };
+        }
+
+        // ====================================================================
+        // workspace_devops_windows
+        // payload: action (winrs|invoke_command|test_wsm|dsc_apply|dsc_test|
+        //                   dsc_get|dsc_status|ad_get_user|ad_new_user|
+        //                   ad_disable|ad_reset_password|ad_remove|
+        //                   ad_group_members|ad_add_group_member|
+        //                   iis_list|iis_start|iis_stop|iis_restart_pool|
+        //                   iis_get_pools|get_events|get_updates|
+        //                   install_updates|check_reboot|
+        //                   get_service|restart_service|stop_service|analyze),
+        //          host?, username?, password?, https?
+        // ====================================================================
+        case 'workspace_devops_windows': {
+            if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+            const winAction = str(payload['action'], 'get_events');
+            const winTarget: WinRmTarget | undefined = payload['host'] ? {
+                host:        str(payload['host'],     ''),
+                port:        typeof payload['port']   === 'number' ? (payload['port']   as number) : undefined,
+                https:       bool(payload['https'])   ?? false,
+                username:    str(payload['username']) || undefined,
+                password:    str(payload['password']) || undefined,
+                skipCaCheck: payload['skip_ca_check'] === true,
+            } : undefined;
+
+            if (winAction === 'winrs') {
+                if (!winTarget) return { ok: false, output: '', errorOutput: 'host required for winrs' };
+                const args   = buildWinrsArgs({ target: winTarget, command: str(payload['command'], '') });
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, output: result.stdout.slice(0, 3000) });
+            }
+
+            if (winAction === 'invoke_command') {
+                if (!winTarget) return { ok: false, output: '', errorOutput: 'host required for invoke_command' };
+                const args   = buildInvokeCommandArgs({ target: winTarget, scriptBlock: str(payload['script_block'], '') });
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, output: result.stdout.slice(0, 3000) });
+            }
+
+            if (winAction === 'test_wsm') {
+                if (!winTarget) return { ok: false, output: '', errorOutput: 'host required for test_wsm' };
+                const args   = buildTestWsManArgs(winTarget);
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, reachable: result.exitCode === 0 });
+            }
+
+            if (winAction === 'dsc_apply') {
+                const args = buildDscApplyArgs({
+                    name:      str(payload['name'],     ''),
+                    mofPath:   str(payload['mof_path'], ''),
+                    wait:      bool(payload['wait'])    ?? true,
+                    force:     bool(payload['force'])   ?? false,
+                    verbose:   payload['verbose'] === true,
+                });
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, action: 'dsc_apply', output: result.stdout.slice(0, 1000) });
+            }
+
+            if (winAction === 'dsc_test') {
+                const args   = buildDscTestArgs({ name: str(payload['name'], ''), mofPath: '' });
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, action: 'dsc_test', raw: result.stdout.slice(0, 2000) });
+            }
+
+            if (winAction === 'get_events') {
+                const evQuery: EventLogQuery = {
+                    logName:   str(payload['log_name'],  'System'),
+                    level:     typeof payload['level'] === 'number' ? (payload['level'] as EventLogQuery['level']) : undefined,
+                    source:    str(payload['source'])    || undefined,
+                    startTime: str(payload['start_time']) || undefined,
+                    endTime:   str(payload['end_time'])   || undefined,
+                    maxEvents: typeof payload['max_events'] === 'number' ? (payload['max_events'] as number) : 50,
+                };
+                const args   = buildGetWinEventArgs(evQuery);
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, action: 'get_events', raw: result.stdout.slice(0, 3000) });
+            }
+
+            if (winAction === 'get_updates') {
+                const args   = buildGetWindowsUpdateArgs(winTarget);
+                const result = await runCommand(args, workspaceDir);
+                const updates = parseWindowsUpdateList(result.stdout);
+                return safeJson({ ok: result.exitCode === 0, updates, count: updates.length, reboot_required: updates.some((u) => u.rebootRequired) });
+            }
+
+            if (winAction === 'install_updates') {
+                if (payload['allow_destructive'] !== true) return { ok: false, output: '', errorOutput: 'allow_destructive: true required for install_updates' };
+                const args = buildInstallWindowsUpdateArgs({ target: winTarget, kbArticleId: str(payload['kb']) || undefined, autoReboot: payload['auto_reboot'] === true });
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, action: 'install_updates', output: result.stdout.slice(0, 1000) });
+            }
+
+            if (winAction === 'check_reboot') {
+                const args   = buildCheckPendingRebootArgs(winTarget);
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, raw: result.stdout.slice(0, 500) });
+            }
+
+            if (winAction === 'iis_list') {
+                const args   = buildIisListSitesArgs(winTarget);
+                const result = await runCommand(args, workspaceDir);
+                const sites  = parseIisSites(result.stdout);
+                return safeJson({ ok: result.exitCode === 0, sites });
+            }
+
+            if (winAction === 'iis_start') {
+                const args = buildIisStartSiteArgs(str(payload['site_name'], ''), winTarget);
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, action: 'iis_start' });
+            }
+
+            if (winAction === 'iis_stop') {
+                if (payload['allow_destructive'] !== true) return { ok: false, output: '', errorOutput: 'allow_destructive: true required for iis_stop' };
+                const args = buildIisStopSiteArgs(str(payload['site_name'], ''), winTarget);
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, action: 'iis_stop' });
+            }
+
+            if (winAction === 'iis_restart_pool') {
+                const args = buildIisRestartAppPoolArgs(str(payload['app_pool_name'], ''), winTarget);
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, action: 'iis_restart_pool' });
+            }
+
+            if (winAction === 'get_service') {
+                const args = buildGetServiceArgs(str(payload['service_name'], ''), winTarget);
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, raw: result.stdout.slice(0, 1000) });
+            }
+
+            if (winAction === 'restart_service') {
+                const args = buildRestartServiceArgs(str(payload['service_name'], ''), winTarget);
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, action: 'restart_service' });
+            }
+
+            if (winAction === 'ad_get_user') {
+                const args = buildAdGetUserArgs(str(payload['sam_account_name'], ''));
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, raw: result.stdout.slice(0, 2000) });
+            }
+
+            if (winAction === 'ad_disable') {
+                if (payload['allow_destructive'] !== true) return { ok: false, output: '', errorOutput: 'allow_destructive: true required for ad_disable' };
+                const args = buildAdDisableUserArgs(str(payload['sam_account_name'], ''));
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, action: 'ad_disable' });
+            }
+
+            if (winAction === 'analyze') {
+                const prompt = buildWindowsAnalysisPrompt({
+                    task:      str(payload['task'], 'diagnose and resolve the issue'),
+                    eventLogs: str(payload['event_logs'])  || undefined,
+                    dscStatus: str(payload['dsc_status'])  || undefined,
+                    iisInfo:   str(payload['iis_info'])    || undefined,
+                    services:  str(payload['services'])    || undefined,
+                    updates:   str(payload['updates'])     || undefined,
+                });
+                const llmOut = await callLlmSafe(callLlm, prompt);
+                const analysis = parseWindowsAnalysisOutput(llmOut);
+                return safeJson({ ok: true, action: 'analyze', analysis, report: formatWindowsReport({ host: str(payload['host'], 'unknown'), ...analysis ?? {} }) });
+            }
+
+            return { ok: false, output: '', errorOutput: `Unknown windows action: ${winAction}` };
+        }
+
+        // ====================================================================
+        // workspace_devops_chaos
+        // payload: action (pod_chaos|network_chaos|stress_chaos|dns_chaos|
+        //                   list|delete|pause|resume|
+        //                   fis_start|fis_stop|fis_get|fis_list|fis_template|
+        //                   litmus_engine|litmus_result|litmus_stop|
+        //                   generate),
+        //          namespace, spec?, network?, stress?, provider?
+        // ====================================================================
+        case 'workspace_devops_chaos': {
+            if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+            const chaosAction = str(payload['action'], 'list');
+            const chaosNs     = str(payload['namespace'], 'default');
+
+            if (chaosAction === 'list') {
+                const args   = buildChaosMeshListArgs(chaosNs);
+                const result = await runCommand(args, workspaceDir);
+                const results = parseChaosMeshResults(result.stdout);
+                return safeJson({ ok: result.exitCode === 0, experiments: results, count: results.length });
+            }
+
+            if (chaosAction === 'delete') {
+                if (payload['allow_destructive'] !== true) return { ok: false, output: '', errorOutput: 'allow_destructive: true required for chaos delete' };
+                const args   = buildChaosMeshDeleteArgs({
+                    name:      str(payload['name'],      ''),
+                    namespace: chaosNs,
+                    kind:      str(payload['kind'],      'PodChaos') as ChaosExperimentSpec['kind'],
+                });
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, action: 'chaos_delete' });
+            }
+
+            if (chaosAction === 'pause') {
+                const args   = buildChaosMeshPauseArgs({ name: str(payload['name'], ''), namespace: chaosNs, kind: str(payload['kind'], 'PodChaos') as ChaosExperimentSpec['kind'] });
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, action: 'chaos_pause' });
+            }
+
+            if (chaosAction === 'resume') {
+                const args   = buildChaosMeshResumeArgs({ name: str(payload['name'], ''), namespace: chaosNs, kind: str(payload['kind'], 'PodChaos') as ChaosExperimentSpec['kind'] });
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, action: 'chaos_resume' });
+            }
+
+            if (chaosAction === 'pod_chaos') {
+                if (payload['allow_destructive'] !== true) return { ok: false, output: '', errorOutput: 'allow_destructive: true required for pod_chaos injection' };
+                const chaosSpec = payload['spec'] as ChaosExperimentSpec | undefined;
+                if (!chaosSpec) return { ok: false, output: '', errorOutput: 'spec required for pod_chaos' };
+                const yaml = buildPodChaosYaml({
+                    spec:          chaosSpec,
+                    action:        str(payload['pod_action'], 'pod-kill') as 'pod-kill' | 'pod-failure' | 'container-kill',
+                    containerName: str(payload['container_name']) || undefined,
+                });
+                return safeJson({ ok: true, action: 'pod_chaos', yaml });
+            }
+
+            if (chaosAction === 'network_chaos') {
+                if (payload['allow_destructive'] !== true) return { ok: false, output: '', errorOutput: 'allow_destructive: true required for network_chaos injection' };
+                const chaosSpec = payload['spec'] as ChaosExperimentSpec | undefined;
+                if (!chaosSpec) return { ok: false, output: '', errorOutput: 'spec required for network_chaos' };
+                const network = (payload['network'] ?? {}) as NetworkChaosParams;
+                const yaml = buildNetworkChaosYaml({
+                    spec:    chaosSpec,
+                    action:  str(payload['network_action'], 'delay') as 'delay' | 'loss' | 'duplicate' | 'corrupt' | 'partition',
+                    network,
+                });
+                return safeJson({ ok: true, action: 'network_chaos', yaml });
+            }
+
+            if (chaosAction === 'stress_chaos') {
+                if (payload['allow_destructive'] !== true) return { ok: false, output: '', errorOutput: 'allow_destructive: true required for stress_chaos injection' };
+                const chaosSpec = payload['spec'] as ChaosExperimentSpec | undefined;
+                if (!chaosSpec) return { ok: false, output: '', errorOutput: 'spec required for stress_chaos' };
+                const stress = (payload['stress'] ?? {}) as StressChaosParams;
+                const yaml = buildStressChaosYaml({ spec: chaosSpec, stress });
+                return safeJson({ ok: true, action: 'stress_chaos', yaml });
+            }
+
+            if (chaosAction === 'dns_chaos') {
+                if (payload['allow_destructive'] !== true) return { ok: false, output: '', errorOutput: 'allow_destructive: true required for dns_chaos injection' };
+                const chaosSpec = payload['spec'] as ChaosExperimentSpec | undefined;
+                if (!chaosSpec) return { ok: false, output: '', errorOutput: 'spec required for dns_chaos' };
+                const yaml = buildDnsChaosYaml({
+                    spec:     chaosSpec,
+                    action:   str(payload['dns_action'], 'error') as 'error' | 'random',
+                    patterns: Array.isArray(payload['patterns']) ? (payload['patterns'] as string[]) : undefined,
+                });
+                return safeJson({ ok: true, action: 'dns_chaos', yaml });
+            }
+
+            if (chaosAction === 'fis_start') {
+                if (payload['allow_destructive'] !== true) return { ok: false, output: '', errorOutput: 'allow_destructive: true required for fis_start' };
+                const args   = buildFisStartExperimentArgs({ templateId: str(payload['template_id'], ''), region: str(payload['region']) || undefined });
+                const result = await runCommand(args, workspaceDir);
+                const exp    = parseFisExperiment(result.stdout);
+                return safeJson({ ok: result.exitCode === 0, action: 'fis_start', experiment: exp });
+            }
+
+            if (chaosAction === 'fis_stop') {
+                const args   = buildFisStopExperimentArgs(str(payload['experiment_id'], ''), str(payload['region']) || undefined);
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, action: 'fis_stop', raw: result.stdout.slice(0, 500) });
+            }
+
+            if (chaosAction === 'fis_get') {
+                const args   = buildFisGetExperimentArgs(str(payload['experiment_id'], ''), str(payload['region']) || undefined);
+                const result = await runCommand(args, workspaceDir);
+                const exp    = parseFisExperiment(result.stdout);
+                return safeJson({ ok: result.exitCode === 0, experiment: exp });
+            }
+
+            if (chaosAction === 'fis_list') {
+                const args   = buildFisListExperimentsArgs(str(payload['region']) || undefined);
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, raw: result.stdout.slice(0, 3000) });
+            }
+
+            if (chaosAction === 'fis_template') {
+                const templateJson = buildFisEc2StopTemplateJson({
+                    name:        str(payload['name'],    'chaos-ec2-stop'),
+                    roleArn:     str(payload['role_arn'], ''),
+                    instanceIds: Array.isArray(payload['instance_ids']) ? (payload['instance_ids'] as string[]) : [],
+                    durationSec: typeof payload['duration_sec'] === 'number' ? (payload['duration_sec'] as number) : undefined,
+                });
+                return safeJson({ ok: true, action: 'fis_template', template_json: templateJson });
+            }
+
+            if (chaosAction === 'litmus_engine') {
+                if (payload['allow_destructive'] !== true) return { ok: false, output: '', errorOutput: 'allow_destructive: true required for litmus experiments' };
+                const yaml = buildLitmusChaosEngineYaml({
+                    name:         str(payload['name'],          ''),
+                    namespace:    chaosNs,
+                    appLabel:     str(payload['app_label'],     'app=myapp'),
+                    appNs:        str(payload['app_namespace'], 'default'),
+                    appKind:      str(payload['app_kind'],      'Deployment'),
+                    experiments:  Array.isArray(payload['experiments']) ? (payload['experiments'] as string[]) : ['pod-delete'],
+                    serviceAccount: str(payload['service_account']) || undefined,
+                });
+                return safeJson({ ok: true, action: 'litmus_engine', yaml });
+            }
+
+            if (chaosAction === 'generate') {
+                const prompt  = buildChaosPrompt({
+                    description: str(payload['description'], ''),
+                    target:      str(payload['target'],      ''),
+                    hypothesis:  str(payload['hypothesis'],  ''),
+                    currentState: str(payload['current_state']) || undefined,
+                    provider:    str(payload['provider']) as ('chaos-mesh' | 'fis' | 'litmus') || undefined,
+                });
+                const llmOut = await callLlmSafe(callLlm, prompt);
+                const design = parseChaosDesign(llmOut);
+                return safeJson({ ok: true, action: 'generate', design, report: formatChaosReport({ experiment: str(payload['target'], 'experiment'), phase: 'design', design }) });
+            }
+
+            return { ok: false, output: '', errorOutput: `Unknown chaos action: ${chaosAction}` };
+        }
+
+        // ====================================================================
+        // workspace_devops_mlops
+        // payload: action (airflow_trigger|airflow_get_run|airflow_list_runs|
+        //                   airflow_logs|airflow_pause|airflow_list_dags|
+        //                   mlflow_experiments|mlflow_runs|mlflow_get_run|
+        //                   mlflow_register|mlflow_transition|
+        //                   sagemaker_list_endpoints|sagemaker_describe_endpoint|
+        //                   sagemaker_update_endpoint|sagemaker_delete_endpoint|
+        //                   sagemaker_training_jobs|sagemaker_stop_training|
+        //                   dbt_run|dbt_test|dbt_freshness|dbt_docs|
+        //                   kfp_pipelines|kfp_run|kfp_get_run|kfp_stop|analyze),
+        //          airflow_url?, tracking_uri?, host (for kfp)?
+        // ====================================================================
+        case 'workspace_devops_mlops': {
+            if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+            const mlAction = str(payload['action'], 'airflow_list_dags');
+
+            if (mlAction === 'airflow_trigger') {
+                const args = buildAirflowTriggerDagArgs({
+                    baseUrl:  str(payload['airflow_url'], ''),
+                    dagId:    str(payload['dag_id'],      ''),
+                    conf:     typeof payload['conf'] === 'object' && payload['conf'] !== null ? (payload['conf'] as Record<string, unknown>) : undefined,
+                    username: str(payload['username']) || undefined,
+                    password: str(payload['password']) || undefined,
+                });
+                const result = await runCommand(args, workspaceDir);
+                const dagRun = parseAirflowDagRun(result.stdout);
+                return safeJson({ ok: result.exitCode === 0, dag_run: dagRun });
+            }
+
+            if (mlAction === 'airflow_get_run') {
+                const args = buildAirflowGetDagRunArgs({
+                    baseUrl:  str(payload['airflow_url'], ''),
+                    dagId:    str(payload['dag_id'],      ''),
+                    dagRunId: str(payload['dag_run_id'],  ''),
+                    username: str(payload['username'])    || undefined,
+                    password: str(payload['password'])    || undefined,
+                });
+                const result = await runCommand(args, workspaceDir);
+                const dagRun = parseAirflowDagRun(result.stdout);
+                return safeJson({ ok: result.exitCode === 0, dag_run: dagRun });
+            }
+
+            if (mlAction === 'airflow_logs') {
+                const args = buildAirflowGetTaskLogsArgs({
+                    baseUrl:       str(payload['airflow_url'], ''),
+                    dagId:         str(payload['dag_id'],      ''),
+                    dagRunId:      str(payload['dag_run_id'],  ''),
+                    taskId:        str(payload['task_id'],     ''),
+                    taskTryNumber: typeof payload['try_number'] === 'number' ? (payload['try_number'] as number) : undefined,
+                    username:      str(payload['username'])    || undefined,
+                    password:      str(payload['password'])    || undefined,
+                });
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, logs: result.stdout.slice(0, 3000) });
+            }
+
+            if (mlAction === 'airflow_list_dags') {
+                const args = buildAirflowListDagsArgs({
+                    baseUrl:    str(payload['airflow_url'], ''),
+                    username:   str(payload['username']) || undefined,
+                    password:   str(payload['password']) || undefined,
+                });
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, raw: result.stdout.slice(0, 3000) });
+            }
+
+            if (mlAction === 'airflow_pause') {
+                const args = buildAirflowPauseDagArgs({
+                    baseUrl:  str(payload['airflow_url'], ''),
+                    dagId:    str(payload['dag_id'],      ''),
+                    pause:    bool(payload['pause'])      ?? true,
+                    username: str(payload['username'])    || undefined,
+                    password: str(payload['password'])    || undefined,
+                });
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, action: 'airflow_pause' });
+            }
+
+            if (mlAction === 'mlflow_experiments') {
+                const args = buildMlflowListExperimentsArgs(str(payload['tracking_uri'], ''), str(payload['token']) || undefined);
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, raw: result.stdout.slice(0, 3000) });
+            }
+
+            if (mlAction === 'mlflow_runs') {
+                const args = buildMlflowSearchRunsArgs({
+                    trackingUri:    str(payload['tracking_uri'], ''),
+                    experimentIds:  Array.isArray(payload['experiment_ids']) ? (payload['experiment_ids'] as string[]) : [],
+                    filter:         str(payload['filter'])   || undefined,
+                    maxResults:     typeof payload['max_results'] === 'number' ? (payload['max_results'] as number) : undefined,
+                    token:          str(payload['token'])    || undefined,
+                });
+                const result = await runCommand(args, workspaceDir);
+                const runs   = parseMlflowRuns(result.stdout);
+                return safeJson({ ok: result.exitCode === 0, runs, count: runs.length });
+            }
+
+            if (mlAction === 'mlflow_get_run') {
+                const args = buildMlflowGetRunArgs(str(payload['tracking_uri'], ''), str(payload['run_id'], ''), str(payload['token']) || undefined);
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, raw: result.stdout.slice(0, 3000) });
+            }
+
+            if (mlAction === 'mlflow_transition') {
+                const args = buildMlflowTransitionModelStageArgs({
+                    trackingUri: str(payload['tracking_uri'], ''),
+                    name:        str(payload['model_name'],  ''),
+                    version:     str(payload['version'],     ''),
+                    stage:       str(payload['stage'], 'Staging') as 'Staging' | 'Production' | 'Archived',
+                    token:       str(payload['token']) || undefined,
+                });
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, action: 'mlflow_transition', raw: result.stdout.slice(0, 500) });
+            }
+
+            if (mlAction === 'sagemaker_list_endpoints') {
+                const args = buildSageMakerListEndpointsArgs({
+                    region:        str(payload['region'])        || undefined,
+                    statusEquals:  str(payload['status_equals']) as ('InService') || undefined,
+                    nameContains:  str(payload['name_contains']) || undefined,
+                });
+                const result = await runCommand(args, workspaceDir);
+                const endpoints = parseSageMakerEndpoints(result.stdout);
+                return safeJson({ ok: result.exitCode === 0, endpoints, count: endpoints.length });
+            }
+
+            if (mlAction === 'sagemaker_describe_endpoint') {
+                const args   = buildSageMakerDescribeEndpointArgs(str(payload['endpoint_name'], ''), str(payload['region']) || undefined);
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, raw: result.stdout.slice(0, 2000) });
+            }
+
+            if (mlAction === 'sagemaker_delete_endpoint') {
+                if (payload['allow_destructive'] !== true) return { ok: false, output: '', errorOutput: 'allow_destructive: true required for sagemaker_delete_endpoint' };
+                const args   = buildSageMakerDeleteEndpointArgs(str(payload['endpoint_name'], ''), str(payload['region']) || undefined);
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, action: 'sagemaker_delete_endpoint' });
+            }
+
+            if (mlAction === 'sagemaker_training_jobs') {
+                const args   = buildSageMakerListTrainingJobsArgs({ region: str(payload['region']) || undefined, statusEquals: str(payload['status_equals']) as ('InProgress') || undefined });
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, raw: result.stdout.slice(0, 3000) });
+            }
+
+            if (mlAction === 'sagemaker_stop_training') {
+                const args   = buildSageMakerStopTrainingJobArgs(str(payload['job_name'], ''), str(payload['region']) || undefined);
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, action: 'sagemaker_stop_training' });
+            }
+
+            if (mlAction === 'dbt_run') {
+                const args = buildDbtRunArgs({
+                    projectDir:  str(payload['project_dir'])  || undefined,
+                    target:      str(payload['target'])       || undefined,
+                    models:      Array.isArray(payload['models'])  ? (payload['models']  as string[]) : undefined,
+                    exclude:     Array.isArray(payload['exclude']) ? (payload['exclude'] as string[]) : undefined,
+                    fullRefresh: payload['full_refresh'] === true,
+                    threads:     typeof payload['threads'] === 'number' ? (payload['threads'] as number) : undefined,
+                });
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, action: 'dbt_run', output: result.stdout.slice(0, 2000) });
+            }
+
+            if (mlAction === 'dbt_test') {
+                const args = buildDbtTestArgs({
+                    projectDir: str(payload['project_dir']) || undefined,
+                    target:     str(payload['target'])      || undefined,
+                    models:     Array.isArray(payload['models']) ? (payload['models'] as string[]) : undefined,
+                });
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, action: 'dbt_test', output: result.stdout.slice(0, 2000) });
+            }
+
+            if (mlAction === 'dbt_freshness') {
+                const args   = buildDbtSourceFreshnessArgs({ projectDir: str(payload['project_dir']) || undefined, target: str(payload['target']) || undefined });
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, action: 'dbt_freshness', output: result.stdout.slice(0, 2000) });
+            }
+
+            if (mlAction === 'kfp_pipelines') {
+                const args   = buildKfpListPipelinesArgs({ host: str(payload['host'], ''), token: str(payload['token']) || undefined });
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, raw: result.stdout.slice(0, 3000) });
+            }
+
+            if (mlAction === 'kfp_run') {
+                const args = buildKfpRunPipelineArgs({
+                    host:          str(payload['host'],        ''),
+                    pipelineId:    str(payload['pipeline_id'], ''),
+                    name:          str(payload['run_name'],    'agent-run'),
+                    params:        typeof payload['params'] === 'object' && payload['params'] !== null ? (payload['params'] as Record<string, string>) : undefined,
+                    experimentId:  str(payload['experiment_id']) || undefined,
+                    token:         str(payload['token'])         || undefined,
+                });
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, action: 'kfp_run', raw: result.stdout.slice(0, 1000) });
+            }
+
+            if (mlAction === 'kfp_stop') {
+                const args   = buildKfpStopRunArgs(str(payload['host'], ''), str(payload['run_id'], ''), str(payload['token']) || undefined);
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, action: 'kfp_stop' });
+            }
+
+            if (mlAction === 'analyze') {
+                const prompt = buildMlopsAnalysisPrompt({
+                    task:           str(payload['task'],          'diagnose the MLOps issue'),
+                    airflowData:    str(payload['airflow_data'])  || undefined,
+                    mlflowData:     str(payload['mlflow_data'])   || undefined,
+                    sagemakerData:  str(payload['sagemaker_data']) || undefined,
+                    dbtData:        str(payload['dbt_data'])      || undefined,
+                    context:        str(payload['context'])       || undefined,
+                });
+                const llmOut = await callLlmSafe(callLlm, prompt);
+                return safeJson({ ok: true, action: 'analyze', llm_analysis: llmOut });
+            }
+
+            return { ok: false, output: '', errorOutput: `Unknown mlops action: ${mlAction}` };
+        }
+
+        // ====================================================================
+        // workspace_devops_incident_contain
+        // payload: action (cordon|uncordon|drain|taint|get_node|
+        //                   quarantine_pod|deny_all_policy|delete_pod|
+        //                   describe_pod|pod_logs|pod_env|pod_events|
+        //                   jstack|elastic_siem|splunk|falco_logs|analyze),
+        //          node_name?, pod_name?, namespace?,
+        //          label_selector?, quarantine?, allow_destructive?
+        // ====================================================================
+        case 'workspace_devops_incident_contain': {
+            if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+            const icAction = str(payload['action'], 'describe_pod');
+            const icNs     = str(payload['namespace'], 'default');
+
+            if (icAction === 'cordon') {
+                if (payload['allow_destructive'] !== true) return { ok: false, output: '', errorOutput: 'allow_destructive: true required for cordon' };
+                const args   = buildKubectlCordonArgs(str(payload['node_name'], ''));
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, action: 'cordon', node: str(payload['node_name'], ''), rollback: `kubectl uncordon ${str(payload['node_name'], '')}` });
+            }
+
+            if (icAction === 'uncordon') {
+                const args   = buildKubectlUncordonArgs(str(payload['node_name'], ''));
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, action: 'uncordon' });
+            }
+
+            if (icAction === 'drain') {
+                if (payload['allow_destructive'] !== true) return { ok: false, output: '', errorOutput: 'allow_destructive: true required for drain' };
+                const args = buildKubectlDrainArgs({
+                    nodeName:           str(payload['node_name'],    ''),
+                    ignoreDaemonSets:   payload['ignore_daemonsets'] !== false,
+                    deleteEmptyDirData: payload['delete_emptydir_data'] === true,
+                    force:              bool(payload['force'])        ?? false,
+                    gracePeriodSec:     typeof payload['grace_period_sec'] === 'number' ? (payload['grace_period_sec'] as number) : undefined,
+                });
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, action: 'drain', node: str(payload['node_name'], ''), rollback: `kubectl uncordon ${str(payload['node_name'], '')}` });
+            }
+
+            if (icAction === 'taint') {
+                if (payload['allow_destructive'] !== true) return { ok: false, output: '', errorOutput: 'allow_destructive: true required for taint' };
+                const args   = buildKubectlTaintNodeArgs({
+                    nodeName: str(payload['node_name'], ''),
+                    key:      str(payload['taint_key'],    'incident'),
+                    value:    str(payload['taint_value'])  || undefined,
+                    effect:   str(payload['taint_effect'], 'NoSchedule') as 'NoSchedule' | 'PreferNoSchedule' | 'NoExecute',
+                    remove:   bool(payload['remove'])      ?? false,
+                });
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, action: 'taint' });
+            }
+
+            if (icAction === 'get_node') {
+                const args   = buildKubectlGetNodeArgs(str(payload['node_name']) || undefined);
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, raw: result.stdout.slice(0, 3000) });
+            }
+
+            if (icAction === 'quarantine_pod') {
+                if (payload['allow_destructive'] !== true) return { ok: false, output: '', errorOutput: 'allow_destructive: true required for quarantine_pod' };
+                const args   = buildKubectlQuarantineLabelArgs({ podName: str(payload['pod_name'], ''), namespace: icNs, quarantine: payload['quarantine'] !== false });
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, action: 'quarantine_pod', rollback: `kubectl label pod ${str(payload['pod_name'], '')} -n ${icNs} quarantine-` });
+            }
+
+            if (icAction === 'deny_all_policy') {
+                const yaml = buildQuarantineNetworkPolicyYaml(icNs);
+                return safeJson({ ok: true, action: 'deny_all_policy', yaml, note: 'Apply this NetworkPolicy before labelling pods with quarantine=true' });
+            }
+
+            if (icAction === 'delete_pod') {
+                if (payload['allow_destructive'] !== true) return { ok: false, output: '', errorOutput: 'allow_destructive: true required for delete_pod' };
+                let args: string[];
+                if (payload['label_selector']) {
+                    args = buildKubectlDeletePodsByLabelArgs({ namespace: icNs, labelSelector: str(payload['label_selector'], ''), gracePeriod: typeof payload['grace_period'] === 'number' ? (payload['grace_period'] as number) : undefined });
+                } else {
+                    args = buildKubectlDeletePodArgs({ podName: str(payload['pod_name'], ''), namespace: icNs, gracePeriod: typeof payload['grace_period'] === 'number' ? (payload['grace_period'] as number) : undefined, force: payload['force'] === true });
+                }
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, action: 'delete_pod' });
+            }
+
+            if (icAction === 'describe_pod') {
+                const args   = buildKubectlDescribePodArgs(str(payload['pod_name'], ''), icNs);
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, describe: result.stdout.slice(0, 4000) });
+            }
+
+            if (icAction === 'pod_logs') {
+                const args = buildIncidentLogsArgs({
+                    podName:    str(payload['pod_name'],  ''),
+                    namespace:  icNs,
+                    container:  str(payload['container']) || undefined,
+                    previous:   payload['previous'] === true,
+                    tailLines:  typeof payload['tail_lines'] === 'number' ? (payload['tail_lines'] as number) : 200,
+                    sinceTime:  str(payload['since_time'])  || undefined,
+                    timestamps: true,
+                });
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, logs: result.stdout.slice(0, 4000) });
+            }
+
+            if (icAction === 'pod_env') {
+                const args   = buildKubectlExecEnvArgs(str(payload['pod_name'], ''), icNs, str(payload['container']) || undefined);
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, env: result.stdout.slice(0, 2000) });
+            }
+
+            if (icAction === 'pod_events') {
+                const args   = buildKubectlGetEventsArgs({ namespace: icNs, involvedObject: str(payload['pod_name']) || undefined });
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, raw: result.stdout.slice(0, 3000) });
+            }
+
+            if (icAction === 'jstack') {
+                const args   = buildJstackCaptureArgs({ podName: str(payload['pod_name'], ''), namespace: icNs, container: str(payload['container']) || undefined });
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, thread_dump: result.stdout.slice(0, 4000) });
+            }
+
+            if (icAction === 'elastic_siem') {
+                const args = buildElasticSiemQueryArgs({
+                    url:       str(payload['url'],   ''),
+                    index:     str(payload['index'], 'logs-*'),
+                    query:     str(payload['query'], ''),
+                    from:      str(payload['from'])   || undefined,
+                    to:        str(payload['to'])     || undefined,
+                    size:      typeof payload['size'] === 'number' ? (payload['size'] as number) : undefined,
+                    apiKey:    str(payload['api_key'])   || undefined,
+                    basicAuth: str(payload['basic_auth']) || undefined,
+                });
+                const result = await runCommand(args, workspaceDir);
+                const events  = parseElasticSiemResults(result.stdout);
+                return safeJson({ ok: result.exitCode === 0, events, count: events.length });
+            }
+
+            if (icAction === 'splunk') {
+                const args = buildSplunkSearchArgs({
+                    splunkUrl:    str(payload['splunk_url'],  ''),
+                    search:       str(payload['search'],      ''),
+                    username:     str(payload['username'],    ''),
+                    password:     str(payload['password'],    ''),
+                    earliestTime: str(payload['earliest_time']) || undefined,
+                    latestTime:   str(payload['latest_time'])   || undefined,
+                });
+                const result = await runCommand(args, workspaceDir);
+                return safeJson({ ok: result.exitCode === 0, raw: result.stdout.slice(0, 3000) });
+            }
+
+            if (icAction === 'falco_logs') {
+                const args = buildIncidentFalcoLogsArgs({
+                    podName:   str(payload['pod_name'],  ''),
+                    namespace: str(payload['namespace']) || undefined,
+                    tailLines: typeof payload['tail_lines'] === 'number' ? (payload['tail_lines'] as number) : undefined,
+                    sinceTime: str(payload['since_time'])  || undefined,
+                });
+                const result = await runCommand(args, workspaceDir);
+                const alerts  = parseIncidentFalcoAlerts(result.stdout);
+                const critical = alerts.filter((a) => ['Emergency', 'Alert', 'Critical', 'Error'].includes(a.priority));
+                return safeJson({ ok: result.exitCode === 0, alerts: alerts.slice(0, 50), critical_count: critical.length });
+            }
+
+            if (icAction === 'analyze') {
+                const falcoRaw     = str(payload['falco_logs'])   || '';
+                const falcoAlerts  = falcoRaw ? parseIncidentFalcoAlerts(falcoRaw) : [];
+                const siemRaw      = str(payload['siem_events'])  || '';
+                const siemEvents   = siemRaw  ? parseElasticSiemResults(siemRaw)  : [];
+                const prompt = buildIncidentContainmentPrompt({
+                    description:    str(payload['description'],     ''),
+                    affectedPods:   Array.isArray(payload['affected_pods'])  ? (payload['affected_pods']  as string[]) : undefined,
+                    affectedNodes:  Array.isArray(payload['affected_nodes']) ? (payload['affected_nodes'] as string[]) : undefined,
+                    falcoAlerts:    falcoAlerts.length ? falcoAlerts : undefined,
+                    siemEvents:     siemEvents.length  ? siemEvents  : undefined,
+                    podDescribe:    str(payload['pod_describe']) || undefined,
+                    podLogs:        str(payload['pod_logs'])     || undefined,
+                    k8sEvents:      str(payload['k8s_events'])   || undefined,
+                    severity:       str(payload['severity']) as ('p1' | 'p2' | 'p3') || undefined,
+                });
+                const llmOut = await callLlmSafe(callLlm, prompt);
+                const plan   = parseIncidentContainmentPlan(llmOut);
+                return safeJson({ ok: true, action: 'analyze', plan, report: formatIncidentReport({ description: str(payload['description'], ''), plan, falcoAlerts: falcoAlerts.length ? falcoAlerts : undefined }) });
+            }
+
+            return { ok: false, output: '', errorOutput: `Unknown incident_contain action: ${icAction}` };
         }
     }
 }
