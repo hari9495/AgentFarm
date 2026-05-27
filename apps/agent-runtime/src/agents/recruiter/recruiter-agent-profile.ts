@@ -98,6 +98,7 @@ export const RECRUITER_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = 
     'workspace_rec_run_assessment',      // Take-home briefs, coding challenges, scoring rubrics
     'workspace_rec_advise_jd_compliance',// Industry-specific regulatory JD disclosures
     'workspace_rec_international',       // Right-to-work, IR35, GDPR, market adaptation
+    'workspace_rec_campus_recruiting',   // Career fair, bulk screen, intern tracker, seasonal batch
 ];
 
 export const RECRUITER_ROLE_BLOCKED_ACTIONS = [

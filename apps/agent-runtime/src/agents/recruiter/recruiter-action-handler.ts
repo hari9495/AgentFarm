@@ -27,6 +27,7 @@
  *   workspace_rec_run_assessment        — take-home brief + scoring rubric for any domain
  *   workspace_rec_advise_jd_compliance  — industry-specific regulatory JD disclosures
  *   workspace_rec_international         — right-to-work, IR35, GDPR, market adaptation
+ *   workspace_rec_campus_recruiting     — career fair, bulk screen, intern tracker, seasonal batch
  */
 
 import type { LocalWorkspaceResult } from '../../local-workspace-executor.js';
@@ -153,6 +154,29 @@ import type {
     EngagementType,
 } from './international-recruiting.js';
 
+import {
+    buildCareerFairPackage,
+    bulkScreenCandidates,
+    buildInternCohortReport,
+    buildSeasonalBatchPlan,
+    buildDefaultInternMilestones,
+} from './campus-recruiting.js';
+import type {
+    CareerFairInput,
+    FairType,
+    InternOrFullTime,
+    BulkCandidateInput,
+    BulkScreenInput,
+    InternCohortInput,
+    InternSeason,
+    Intern,
+    InternMilestone,
+    SeasonalBatchInput,
+    HiringSeason,
+    SeasonalIndustry,
+    SeasonalRole,
+} from './campus-recruiting.js';
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -181,7 +205,8 @@ export type RecruiterActionType =
     | 'workspace_rec_onboarding_handoff'
     | 'workspace_rec_run_assessment'
     | 'workspace_rec_advise_jd_compliance'
-    | 'workspace_rec_international';
+    | 'workspace_rec_international'
+    | 'workspace_rec_campus_recruiting';
 
 export function isRecruiterActionType(t: string): t is RecruiterActionType {
     return (
@@ -208,7 +233,8 @@ export function isRecruiterActionType(t: string): t is RecruiterActionType {
         t === 'workspace_rec_onboarding_handoff' ||
         t === 'workspace_rec_run_assessment' ||
         t === 'workspace_rec_advise_jd_compliance' ||
-        t === 'workspace_rec_international'
+        t === 'workspace_rec_international' ||
+        t === 'workspace_rec_campus_recruiting'
     );
 }
 
@@ -1346,6 +1372,190 @@ export async function handleRecruiterAction(
                 salaryAboveThreshold: typeof payload['salaryAboveThreshold'] === 'boolean' ? payload['salaryAboveThreshold'] : undefined,
             };
             return jsonOut(assessRightToWork(rtwInput));
+        }
+
+        // ----------------------------------------------------------------
+        // workspace_rec_campus_recruiting
+        // payload: { mode: 'career_fair'|'bulk_screen'|'intern_tracker'|'seasonal_batch', ...fields }
+        // ----------------------------------------------------------------
+        case 'workspace_rec_campus_recruiting': {
+            const mode = str(payload['mode'], 'career_fair');
+
+            // ── Career Fair ──────────────────────────────────────────────
+            if (mode === 'career_fair') {
+                const fairName = str(payload['fairName']);
+                const organizer = str(payload['organizer']);
+                const targetRoles = strArr(payload['targetRoles']);
+                const attendees = strArr(payload['attendees']);
+                const companyName = str(payload['companyName']);
+                const recruiterName = str(payload['recruiterName']);
+                const recruiterEmail = str(payload['recruiterEmail']);
+                const headcountTarget = num(payload['headcountTarget'], 1);
+                const date = str(payload['date']);
+
+                if (!fairName) return fail('payload.fairName is required');
+                if (!organizer) return fail('payload.organizer is required');
+                if (!date) return fail('payload.date is required (ISO date)');
+                if (targetRoles.length === 0) return fail('payload.targetRoles array is required');
+                if (attendees.length === 0) return fail('payload.attendees array is required');
+                if (!companyName) return fail('payload.companyName is required');
+                if (!recruiterName) return fail('payload.recruiterName is required');
+                if (!recruiterEmail) return fail('payload.recruiterEmail is required');
+
+                const fairInput: CareerFairInput = {
+                    fairName,
+                    organizer,
+                    fairType: str(payload['fairType'], 'university') as FairType,
+                    date,
+                    location: typeof payload['location'] === 'string' ? payload['location'] : undefined,
+                    virtualPlatform: typeof payload['virtualPlatform'] === 'string' ? payload['virtualPlatform'] : undefined,
+                    targetRoles,
+                    targetDisciplines: Array.isArray(payload['targetDisciplines']) ? strArr(payload['targetDisciplines']) : undefined,
+                    attendees,
+                    boothNumber: typeof payload['boothNumber'] === 'string' ? payload['boothNumber'] : undefined,
+                    headcountTarget,
+                    companyName,
+                    recruiterName,
+                    recruiterEmail,
+                    internOrFullTime: str(payload['internOrFullTime'], 'both') as InternOrFullTime,
+                    targetStartDate: typeof payload['targetStartDate'] === 'string' ? payload['targetStartDate'] : undefined,
+                    swag: Array.isArray(payload['swag']) ? strArr(payload['swag']) : undefined,
+                };
+                return jsonOut(buildCareerFairPackage(fairInput));
+            }
+
+            // ── Bulk Screen ──────────────────────────────────────────────
+            if (mode === 'bulk_screen') {
+                const jobTitle = str(payload['jobTitle']);
+                const requiredQualifications = strArr(payload['requiredQualifications']);
+                const candidatesRaw = payload['candidates'];
+
+                if (!jobTitle) return fail('payload.jobTitle is required');
+                if (requiredQualifications.length === 0) return fail('payload.requiredQualifications array is required');
+                if (!Array.isArray(candidatesRaw) || candidatesRaw.length === 0) return fail('payload.candidates array is required');
+
+                const candidates: BulkCandidateInput[] = (candidatesRaw as Record<string, unknown>[]).map((c, idx) => ({
+                    id:           typeof c['id'] === 'string' ? c['id'] : undefined,
+                    name:         str(c['name'] ?? c['candidateName'], `Candidate ${idx + 1}`),
+                    email:        str(c['email'], `candidate${idx + 1}@unknown.invalid`),
+                    resumeText:   str(c['resumeText'], ''),
+                    source:       typeof c['source'] === 'string' ? c['source'] : undefined,
+                    university:   typeof c['university'] === 'string' ? c['university'] : undefined,
+                    gpa:          typeof c['gpa'] === 'number' ? c['gpa'] : undefined,
+                    graduationDate: typeof c['graduationDate'] === 'string' ? c['graduationDate'] : undefined,
+                    salaryExpectation: typeof c['salaryExpectation'] === 'number' ? c['salaryExpectation'] : undefined,
+                }));
+
+                const bulkInput: BulkScreenInput = {
+                    jobTitle,
+                    requiredQualifications,
+                    candidates,
+                    industry: typeof payload['industry'] === 'string' ? payload['industry'] : undefined,
+                    niceToHaveQualifications: Array.isArray(payload['niceToHaveQualifications']) ? strArr(payload['niceToHaveQualifications']) : undefined,
+                    minYearsExperience: typeof payload['minYearsExperience'] === 'number' ? payload['minYearsExperience'] : undefined,
+                    salaryBudgetMax: typeof payload['salaryBudgetMax'] === 'number' ? payload['salaryBudgetMax'] : undefined,
+                    dealBreakerKeywords: Array.isArray(payload['dealBreakerKeywords']) ? strArr(payload['dealBreakerKeywords']) : undefined,
+                    autoRejectThreshold: typeof payload['autoRejectThreshold'] === 'number' ? payload['autoRejectThreshold'] : undefined,
+                    maxShortlist: typeof payload['maxShortlist'] === 'number' ? payload['maxShortlist'] : undefined,
+                    blindScreen: typeof payload['blindScreen'] === 'boolean' ? payload['blindScreen'] : undefined,
+                };
+                return jsonOut(bulkScreenCandidates(bulkInput));
+            }
+
+            // ── Intern Tracker ───────────────────────────────────────────
+            if (mode === 'intern_tracker') {
+                const companyName = str(payload['companyName']);
+                const internsRaw = payload['interns'];
+
+                if (!companyName) return fail('payload.companyName is required');
+                if (!Array.isArray(internsRaw)) return fail('payload.interns array is required');
+
+                const todayIso = new Date().toISOString().split('T')[0]!;
+                const interns: Intern[] = (internsRaw as Record<string, unknown>[]).map((i, idx) => {
+                    const startDate = str(i['startDate'], todayIso);
+                    return {
+                        id:             str(i['id'], `intern-${idx + 1}`),
+                        name:           str(i['name'], `Intern ${idx + 1}`),
+                        email:          str(i['email'], `intern${idx + 1}@unknown.invalid`),
+                        university:     str(i['university'], 'Unknown University'),
+                        major:          str(i['major'], 'Undeclared'),
+                        graduationYear: num(i['graduationYear'] ?? i['gradYear'], new Date().getFullYear() + 1),
+                        team:           str(i['team'], 'General'),
+                        managerName:    str(i['managerName'] ?? i['manager'], 'Manager TBD'),
+                        status:         str(i['status'], 'active') as Intern['status'],
+                        startDate,
+                        endDate:        str(i['endDate'], ''),
+                        milestones:     Array.isArray(i['milestones'])
+                            ? i['milestones'] as InternMilestone[]
+                            : buildDefaultInternMilestones(startDate),
+                        midtermRating:       typeof i['midtermRating'] === 'number' ? i['midtermRating'] : undefined,
+                        finalRating:         typeof i['finalRating'] === 'number' ? i['finalRating'] : undefined,
+                        returnOfferExtended: typeof i['returnOfferExtended'] === 'boolean' ? i['returnOfferExtended'] : undefined,
+                        returnOfferAccepted: typeof i['returnOfferAccepted'] === 'boolean' ? i['returnOfferAccepted'] : undefined,
+                        returnOfferRole:     typeof i['returnOfferRole'] === 'string' ? i['returnOfferRole'] : undefined,
+                        returnOfferStartDate: typeof i['returnOfferStartDate'] === 'string' ? i['returnOfferStartDate'] : undefined,
+                        notes:               typeof i['notes'] === 'string' ? i['notes'] : undefined,
+                    };
+                });
+
+                const cohortInput: InternCohortInput = {
+                    companyName,
+                    season: str(payload['season'], 'summer') as InternSeason,
+                    year: num(payload['year'], new Date().getFullYear()),
+                    programName: typeof payload['programName'] === 'string' ? payload['programName'] : undefined,
+                    programmeManagerName: typeof payload['programmeManagerName'] === 'string' ? payload['programmeManagerName'] : undefined,
+                    interns,
+                    returnOfferTargetPct: typeof payload['returnOfferTargetPct'] === 'number' ? payload['returnOfferTargetPct'] : undefined,
+                    currentDate: typeof payload['currentDate'] === 'string' ? payload['currentDate'] : undefined,
+                };
+                return jsonOut(buildInternCohortReport(cohortInput));
+            }
+
+            // ── Seasonal Batch ───────────────────────────────────────────
+            {
+                const companyName     = str(payload['companyName']);
+                const hiringManagerName = str(payload['hiringManagerName']);
+                const recruiterName   = str(payload['recruiterName']);
+                const recruiterEmail  = str(payload['recruiterEmail']);
+                const targetStartDate = str(payload['targetStartDate'] ?? payload['startDate']);
+                const rolesRaw = payload['rolesToFill'] ?? payload['roles'];
+
+                if (!companyName) return fail('payload.companyName is required');
+                if (!targetStartDate) return fail('payload.targetStartDate is required (ISO date)');
+                if (!hiringManagerName) return fail('payload.hiringManagerName is required');
+                if (!recruiterName) return fail('payload.recruiterName is required');
+                if (!recruiterEmail) return fail('payload.recruiterEmail is required');
+                if (!Array.isArray(rolesRaw) || rolesRaw.length === 0) return fail('payload.rolesToFill array is required');
+
+                const rolesToFill: SeasonalRole[] = (rolesRaw as Record<string, unknown>[]).map(r => ({
+                    title:          str(r['title'], 'Seasonal Associate'),
+                    headcount:      num(r['headcount'], 1),
+                    location:       str(r['location'], 'TBC'),
+                    minAge:         typeof r['minAge'] === 'number' ? r['minAge'] : undefined,
+                    payRate:        typeof r['payRate'] === 'number' ? r['payRate'] : undefined,
+                    payCurrency:    typeof r['payCurrency'] === 'string' ? r['payCurrency'] : undefined,
+                    payFrequency:   typeof r['payFrequency'] === 'string' ? r['payFrequency'] as SeasonalRole['payFrequency'] : undefined,
+                    shiftPattern:   typeof r['shiftPattern'] === 'string' ? r['shiftPattern'] : undefined,
+                    fixedTermWeeks: typeof r['fixedTermWeeks'] === 'number' ? r['fixedTermWeeks'] : undefined,
+                }));
+
+                const seasonalInput: SeasonalBatchInput = {
+                    companyName,
+                    season:           str(payload['season'], 'holiday') as HiringSeason,
+                    industry:         str(payload['industry'], 'retail') as SeasonalIndustry,
+                    rolesToFill,
+                    targetStartDate,
+                    targetEndDate:        typeof payload['targetEndDate'] === 'string' ? payload['targetEndDate'] : undefined,
+                    hiringManagerName,
+                    recruiterName,
+                    recruiterEmail,
+                    screeningCriteria:    Array.isArray(payload['screeningCriteria']) ? strArr(payload['screeningCriteria']) : undefined,
+                    prevYearHireCount:    typeof payload['prevYearHireCount'] === 'number' ? payload['prevYearHireCount'] : undefined,
+                    prevYearAttrition:    typeof payload['prevYearAttrition'] === 'number' ? payload['prevYearAttrition'] : undefined,
+                    useAgencyStaffing:    typeof payload['useAgencyStaffing'] === 'boolean' ? payload['useAgencyStaffing'] : undefined,
+                };
+                return jsonOut(buildSeasonalBatchPlan(seasonalInput));
+            }
         }
 
         default: {
