@@ -1249,6 +1249,7 @@ export async function handleRecruiterAction(
                 onboardingPortalUrl: typeof payload['onboardingPortalUrl'] === 'string' ? payload['onboardingPortalUrl'] : undefined,
                 hrisUrl: typeof payload['hrisUrl'] === 'string' ? payload['hrisUrl'] : undefined,
                 itTicketSystemUrl: typeof payload['itTicketSystemUrl'] === 'string' ? payload['itTicketSystemUrl'] : undefined,
+                countryOfHire: typeof payload['countryOfHire'] === 'string' ? payload['countryOfHire'] : undefined,
             };
 
             return jsonOut(buildOnboardingHandoff(onboardInput));

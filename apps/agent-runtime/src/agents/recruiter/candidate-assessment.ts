@@ -40,6 +40,11 @@ export type AssessmentDomain =
     | 'healthcare_clinical'
     | 'operations'
     | 'hr_people'
+    | 'education'
+    | 'government_public_sector'
+    | 'construction_trades'
+    | 'aviation'
+    | 'creative_media'
     | 'general';
 
 export interface AssessmentBriefInput {
@@ -180,6 +185,41 @@ const DOMAIN_RUBRICS: RubricMap = {
         { name: 'Process design', description: 'Proposes scalable, fair processes that minimise bias.', weight: 15, levels: RUBRIC_LEVELS },
         { name: 'Data & metrics', description: 'Uses people data to support decisions; tracks meaningful HR KPIs.', weight: 10, levels: RUBRIC_LEVELS },
     ],
+    education: [
+        { name: 'Pedagogical knowledge', description: 'Demonstrates understanding of evidence-based teaching strategies and curriculum design.', weight: 25, levels: RUBRIC_LEVELS },
+        { name: 'Lesson planning & differentiation', description: 'Ability to design inclusive lessons that address diverse learning needs and ability levels.', weight: 25, levels: RUBRIC_LEVELS },
+        { name: 'Safeguarding awareness', description: 'Clear understanding of child/vulnerable-adult protection duties, reporting thresholds, and DBS/clearance requirements.', weight: 25, levels: RUBRIC_LEVELS },
+        { name: 'Classroom communication', description: 'Written and verbal communication is appropriate for the student audience; feedback is constructive and clear.', weight: 15, levels: RUBRIC_LEVELS },
+        { name: 'Professional standards & ethics', description: 'Demonstrates commitment to professional codes of conduct (e.g. Teachers\' Standards, NAEYC, state licensure requirements).', weight: 10, levels: RUBRIC_LEVELS },
+    ],
+    government_public_sector: [
+        { name: 'Policy analysis & interpretation', description: 'Accurately interprets legislation, regulations, and policy briefs; identifies implications for stakeholders.', weight: 25, levels: RUBRIC_LEVELS },
+        { name: 'Compliance & regulatory awareness', description: 'Demonstrates understanding of applicable laws, FOI obligations, ethics rules, and conflict-of-interest requirements.', weight: 25, levels: RUBRIC_LEVELS },
+        { name: 'Stakeholder communication', description: 'Communicates clearly to both technical and non-technical audiences; reports are concise and decision-ready.', weight: 20, levels: RUBRIC_LEVELS },
+        { name: 'Security & confidentiality', description: 'Handles sensitive information appropriately; understands classification levels and handling caveats.', weight: 20, levels: RUBRIC_LEVELS },
+        { name: 'Budget & resource stewardship', description: 'Demonstrates responsible use of public funds; identifies cost-efficiency without compromising service quality.', weight: 10, levels: RUBRIC_LEVELS },
+    ],
+    construction_trades: [
+        { name: 'Technical / trade knowledge', description: 'Demonstrates depth of knowledge relevant to the specific trade (electrical, plumbing, HVAC, civil, structural, etc.).', weight: 30, levels: RUBRIC_LEVELS },
+        { name: 'Safety & compliance', description: 'Applies OSHA / HSE / local safety standards correctly; identifies hazards proactively; PPE usage is appropriate.', weight: 30, levels: RUBRIC_LEVELS },
+        { name: 'Blueprint / spec reading', description: 'Accurately interprets construction drawings, specifications, and schedules.', weight: 15, levels: RUBRIC_LEVELS },
+        { name: 'Quality & attention to detail', description: 'Work meets code requirements and quality standards; defects are identified and corrected proactively.', weight: 15, levels: RUBRIC_LEVELS },
+        { name: 'Teamwork & site communication', description: 'Collaborates with foremen, subcontractors, and inspectors; communicates delays or issues promptly.', weight: 10, levels: RUBRIC_LEVELS },
+    ],
+    aviation: [
+        { name: 'Regulatory & licence knowledge', description: 'Demonstrates accurate knowledge of applicable FAA / EASA / ICAO / CASA regulations; licence currency and limitations are understood.', weight: 30, levels: RUBRIC_LEVELS },
+        { name: 'Safety management & SMS', description: 'Applies Safety Management System principles; hazard identification and risk mitigation are systematic.', weight: 25, levels: RUBRIC_LEVELS },
+        { name: 'Technical aircraft knowledge', description: 'Demonstrates understanding of aircraft systems, maintenance / operating procedures, and airworthiness standards relevant to the role.', weight: 20, levels: RUBRIC_LEVELS },
+        { name: 'Crew resource management (CRM)', description: 'Communicates clearly under pressure; demonstrates assertiveness, situational awareness, and decision-making in simulated scenarios.', weight: 15, levels: RUBRIC_LEVELS },
+        { name: 'Documentation & record-keeping', description: 'Maintenance logs, journey logs, or technical records are accurate, complete, and compliant.', weight: 10, levels: RUBRIC_LEVELS },
+    ],
+    creative_media: [
+        { name: 'Portfolio quality & craft', description: 'Work demonstrates technical proficiency, originality, and attention to the medium (copywriting, design, video, photography, etc.).', weight: 30, levels: RUBRIC_LEVELS },
+        { name: 'Brief interpretation', description: 'Work clearly responds to the brief; creative choices are purposeful and audience-appropriate.', weight: 25, levels: RUBRIC_LEVELS },
+        { name: 'Brand & tone consistency', description: 'Output aligns with specified brand voice, visual identity, or editorial style guidelines.', weight: 20, levels: RUBRIC_LEVELS },
+        { name: 'Feedback receptiveness & iteration', description: 'Demonstrates ability to incorporate stakeholder feedback constructively without losing creative integrity.', weight: 15, levels: RUBRIC_LEVELS },
+        { name: 'Deadline & project management', description: 'Delivers quality work within stated time constraints; communicates scope changes proactively.', weight: 10, levels: RUBRIC_LEVELS },
+    ],
     general: [
         { name: 'Communication clarity', description: 'Written / verbal output is clear, concise, and well-structured.', weight: 25, levels: RUBRIC_LEVELS },
         { name: 'Problem-solving approach', description: 'Breaks down ambiguous problems systematically.', weight: 25, levels: RUBRIC_LEVELS },
@@ -245,6 +285,16 @@ function defaultProblemStatement(domain: AssessmentDomain, type: AssessmentType,
             `Review the following patient scenario and provide: (1) your differential diagnosis, (2) your initial management plan, (3) key documentation you would complete, and (4) any escalation triggers you would set.`,
         operations:
             `Our customer onboarding process takes an average of 34 days. Using the attached process map and data, identify the top 3 bottlenecks and propose a redesigned process that targets a 15-day average. Include an implementation roadmap.`,
+        education:
+            `Design a 45-minute lesson plan for [SUBJECT / GRADE LEVEL]. Include learning objectives, a warm-up activity, core instruction strategy, an independent practice task, an assessment checkpoint, and an extension activity for advanced learners. Note how you would adapt the lesson for students with an IEP/504 or English Language Learner needs.`,
+        government_public_sector:
+            `A new regulation requires your department to reduce processing time for [PERMIT/APPLICATION TYPE] by 30% within 6 months. Write a policy brief (max 2 pages) that: (1) analyses the root cause of current delays, (2) proposes three evidence-based process improvements, (3) identifies stakeholders who must be consulted, and (4) outlines risks and mitigation steps. Assume a public-sector budget constraint.`,
+        construction_trades:
+            `Using the attached structural drawing, identify: (1) any code non-compliance or constructability issues, (2) your proposed resolution for each issue, and (3) the sequence of work for the affected phase. Include reference to the applicable code section (IBC, NEC, or your jurisdiction's equivalent). Limit your response to a one-page site note / RFI format.`,
+        aviation:
+            `You are a [ROLE: A&P Mechanic / Commercial Pilot / Operations Dispatcher] at [AIRLINE / MRO]. Review the attached MEL (Minimum Equipment List) entry and scenario. Provide: (1) your go / no-go determination with regulatory citation, (2) any required deferral or placard actions, (3) communication you would initiate with crew / ATC / operations, and (4) any safety risk items you would flag before departure.`,
+        creative_media:
+            `[BRAND BRIEF ATTACHED]. Create a [format: campaign concept / article outline / social media series / video storyboard] for the attached brief. Your submission should include: a headline concept, three key messages, a sample [headline / caption / shot list] per deliverable, and a 1-paragraph rationale explaining how your approach meets the brief's objectives and speaks to the target audience. Limit total submission to [2 pages / 500 words / 10 frames].`,
     };
 
     return PROMPTS[domain] ?? `Complete a work sample exercise relevant to the ${jobTitle} role. Details will be provided in the assessment brief.`;

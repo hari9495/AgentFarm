@@ -1192,7 +1192,7 @@ export function buildSeasonalBatchPlan(input: SeasonalBatchInput): SeasonalBatch
         'Cover in Day-1 session: Health & Safety, Fire evacuation, Code of conduct, Role overview, System login, First-day buddy introduction',
         `Assign one team leader / buddy per ${Math.ceil(totalHeadcount / 5)} new starters`,
         'Provide a printed or digital first-week schedule to every starter',
-        'Complete right-to-work document verification on Day 1 (I-9 Section 2 / UK RTW check)',
+        'Complete right-to-work / employment eligibility verification on Day 1 (US: I-9 Section 2; UK: RTW document check; AU: VEVO; CA: SIN + work permit; other jurisdictions: follow local employment law)',
         'Run a Day-3 pulse check: flag anyone who looks at risk of leaving early',
         'Log all start data in the ATS / HRIS within 24 hours of start date',
     ];

@@ -52,6 +52,10 @@ export interface NewHireInput {
     onboardingPortalUrl?: string;
     hrisUrl?: string;
     itTicketSystemUrl?: string;
+    /** ISO country code / plain country name — drives right-to-work form references in email templates.
+     *  Supported values: 'us' | 'uk' | 'gb' | 'au' | 'ca' | 'de' | 'fr' | 'nl' | 'sg' | 'in' | 'ae'
+     *  Defaults to 'us' when omitted. */
+    countryOfHire?: string;
 }
 
 export interface ChecklistItem {
@@ -120,10 +124,112 @@ export interface OnboardingHandoffPackage {
 }
 
 // ---------------------------------------------------------------------------
+// Country-aware right-to-work form references
+// ---------------------------------------------------------------------------
+
+interface RtwLabels {
+    /** e.g. "I-9 Section 1" | "Right to Work check" */
+    section1Label: string;
+    /** e.g. "I-9 Section 2 (complete on Day 1)" | "Right to Work document verification (Day 1)" */
+    section2Label: string;
+    /** Instruction for the new hire: what to bring / complete on Day 1 */
+    dayOneNote: string;
+    /** HR task label used in the checklist */
+    hrChecklistLabel: string;
+    /** Pre-start paperwork note for the HR email */
+    preStartFormNote: string;
+}
+
+function getRtwLabels(country?: string): RtwLabels {
+    const c = (country ?? 'us').toLowerCase().replace(/[-_ ]/g, '');
+
+    if (c === 'uk' || c === 'gb') {
+        return {
+            section1Label: 'Right to Work self-declaration (online or paper)',
+            section2Label: 'Right to Work document check on Day 1 (share code, passport, or biometric card)',
+            dayOneNote: 'Please bring original Right to Work documents (passport, biometric residence permit, or share code confirmation email)',
+            hrChecklistLabel: 'Conduct Right to Work check (UK: online share-code check or original document inspection) — must be completed on or before Day 1',
+            preStartFormNote: 'UK Right to Work: you will be asked to present original documents or provide a share code on your first day — no form to complete in advance',
+        };
+    }
+    if (c === 'au' || c === 'australia') {
+        return {
+            section1Label: 'VEVO right-to-work check consent',
+            section2Label: 'VEVO verification on Day 1 (passport or ImmiCard)',
+            dayOneNote: 'Please bring your passport or ImmiCard for VEVO right-to-work verification on Day 1',
+            hrChecklistLabel: 'Complete VEVO right-to-work check on or before Day 1 (Australian law requires verification before work commences)',
+            preStartFormNote: 'Australia Right to Work: bring your passport or ImmiCard on Day 1 for VEVO verification',
+        };
+    }
+    if (c === 'ca' || c === 'canada') {
+        return {
+            section1Label: 'Work authorisation confirmation',
+            section2Label: 'Work permit / SIN documentation check on Day 1',
+            dayOneNote: 'Please bring your Social Insurance Number (SIN) card and any applicable work permit documentation',
+            hrChecklistLabel: 'Verify work authorisation (Canadian citizen / PR card / open work permit / employer-specific work permit) on or before Day 1',
+            preStartFormNote: 'Canada Work Authorisation: bring your SIN card and work permit (if applicable) on Day 1',
+        };
+    }
+    if (['de', 'germany', 'fr', 'france', 'nl', 'netherlands', 'es', 'spain', 'it', 'italy', 'se', 'sweden', 'pl', 'poland', 'ie', 'ireland'].includes(c)) {
+        const countryName = c === 'de' || c === 'germany' ? 'Germany' :
+            c === 'fr' || c === 'france' ? 'France' :
+            c === 'nl' || c === 'netherlands' ? 'the Netherlands' :
+            c === 'es' || c === 'spain' ? 'Spain' :
+            c === 'it' || c === 'italy' ? 'Italy' :
+            c === 'se' || c === 'sweden' ? 'Sweden' :
+            c === 'pl' || c === 'poland' ? 'Poland' : 'the EU';
+        return {
+            section1Label: 'Work authorisation self-declaration',
+            section2Label: `Right to work document verification on Day 1 (passport / EU ID card / residence permit for ${countryName})`,
+            dayOneNote: `Please bring your passport or national ID card and any relevant residence/work permit for right-to-work verification`,
+            hrChecklistLabel: `Verify EU right-to-work documents (passport / national ID card / residence permit) before or on Day 1`,
+            preStartFormNote: `EU Right to Work: bring your passport or national ID card on Day 1 for verification`,
+        };
+    }
+    if (c === 'sg' || c === 'singapore') {
+        return {
+            section1Label: 'MOM work pass / employment pass consent',
+            section2Label: 'Employment Pass / S-Pass / Work Permit check on Day 1',
+            dayOneNote: 'Please bring your Employment Pass, S-Pass, or Work Permit card and your passport',
+            hrChecklistLabel: 'Verify MOM-issued work pass (EP / S-Pass / Work Permit) — check validity and conditions on or before Day 1',
+            preStartFormNote: 'Singapore Right to Work: bring your Employment Pass / S-Pass / Work Permit on Day 1',
+        };
+    }
+    if (c === 'ae' || c === 'uae') {
+        return {
+            section1Label: 'UAE work permit / residency visa consent',
+            section2Label: 'Work permit and Emirates ID check on Day 1',
+            dayOneNote: 'Please bring your valid Emirates ID, work permit, and residency visa for verification',
+            hrChecklistLabel: 'Verify UAE work permit and residency visa validity before or on Day 1 — ensure MOHRE registration is in place',
+            preStartFormNote: 'UAE Right to Work: bring your Emirates ID and work permit on Day 1',
+        };
+    }
+    if (c === 'in' || c === 'india') {
+        return {
+            section1Label: 'Work eligibility declaration (Indian nationals do not need a work permit to work in India)',
+            section2Label: 'Identity and address proof verification on Day 1 (Aadhaar / PAN / passport)',
+            dayOneNote: 'Please bring government-issued ID (Aadhaar card, PAN card, or passport) and address proof for background verification',
+            hrChecklistLabel: 'Complete identity and address verification (Aadhaar / PAN / passport) on Day 1 per company BGV policy',
+            preStartFormNote: 'India Background Verification: bring Aadhaar card, PAN card, and address proof on Day 1',
+        };
+    }
+
+    // Default: US
+    return {
+        section1Label: 'I-9 Section 1 (Employment Eligibility Verification — candidate completes before or on Day 1)',
+        section2Label: 'I-9 Section 2 (employer completes on Day 1 with original ID documents)',
+        dayOneNote: 'Please bring a valid government-issued photo ID for I-9 Section 2 verification on Day 1 (passport, or driver\'s licence + Social Security card)',
+        hrChecklistLabel: 'Confirm I-9 / right-to-work verification complete (US: employer must complete Section 2 within 3 business days of start)',
+        preStartFormNote: 'I-9 Section 1 (Employment Eligibility Verification) — you will complete Section 2 on your first day',
+    };
+}
+
+// ---------------------------------------------------------------------------
 // Day-1 readiness checklist
 // ---------------------------------------------------------------------------
 
 function buildChecklist(input: NewHireInput): OnboardingChecklist {
+    const rtw = getRtwLabels(input.countryOfHire);
     const items: ChecklistItem[] = [
 
         // --- Recruiter tasks ---
@@ -142,7 +248,7 @@ function buildChecklist(input: NewHireInput): OnboardingChecklist {
         { id: 'hr_2', owner: 'payroll', dueRelativeToStart: '-7d', task: 'Add to payroll system — confirm bank details, tax forms, and payroll start date', critical: true, dependsOn: 'hr_1' },
         { id: 'hr_3', owner: 'hr_ops', dueRelativeToStart: '-7d', task: 'Enroll in benefits (health, dental, 401k) — send enrollment instructions with deadlines', critical: false },
         { id: 'hr_4', owner: 'hr_ops', dueRelativeToStart: '0d', task: 'Issue employee ID / badge', critical: input.workArrangement !== 'remote' },
-        { id: 'hr_5', owner: 'hr_ops', dueRelativeToStart: '+3d', task: 'Confirm I-9 / right-to-work verification complete (US: within 3 days of start)', critical: true },
+        { id: 'hr_5', owner: 'hr_ops', dueRelativeToStart: '+3d', task: rtw.hrChecklistLabel, critical: true },
         { id: 'hr_6', owner: 'hr_ops', dueRelativeToStart: '+7d', task: 'Confirm new hire has completed mandatory compliance training (harassment, data privacy, safety)', critical: false },
 
         // --- IT tasks ---
@@ -175,9 +281,9 @@ function buildChecklist(input: NewHireInput): OnboardingChecklist {
 
         // --- New hire tasks ---
         { id: 'nh_1', owner: 'new_hire', dueRelativeToStart: '-14d', task: 'Return signed offer letter / employment contract', critical: true },
-        { id: 'nh_2', owner: 'new_hire', dueRelativeToStart: '-7d', task: 'Complete pre-hire paperwork (tax forms, bank details, emergency contact, I-9 section 1)', critical: true },
+        { id: 'nh_2', owner: 'new_hire', dueRelativeToStart: '-7d', task: `Complete pre-hire paperwork (tax forms, bank details, emergency contact, ${rtw.section1Label})`, critical: true },
         { id: 'nh_3', owner: 'new_hire', dueRelativeToStart: '-7d', task: 'Complete background check consent / provide references (if not already done)', critical: input.requiresBackgroundCheckCompletion ?? false },
-        { id: 'nh_4', owner: 'new_hire', dueRelativeToStart: '0d', task: 'Bring government-issued ID for I-9 verification on Day 1', critical: true },
+        { id: 'nh_4', owner: 'new_hire', dueRelativeToStart: '0d', task: rtw.dayOneNote, critical: true },
         { id: 'nh_5', owner: 'new_hire', dueRelativeToStart: '+7d', task: 'Complete mandatory compliance training by end of Week 1', critical: false },
         { id: 'nh_6', owner: 'new_hire', dueRelativeToStart: '+14d', task: 'Complete benefits enrollment (deadline: typically 30 days from start)', critical: false },
 
@@ -211,6 +317,7 @@ function buildChecklist(input: NewHireInput): OnboardingChecklist {
 // ---------------------------------------------------------------------------
 
 function buildWelcomeSequence(input: NewHireInput): WelcomeEmailSequence {
+    const rtw = getRtwLabels(input.countryOfHire);
     return {
         emails: [
             {
@@ -252,7 +359,7 @@ function buildWelcomeSequence(input: NewHireInput): WelcomeEmailSequence {
                     `1. Tax withholding forms (W-4 / local equivalent)`,
                     `2. Direct deposit / bank details for payroll`,
                     `3. Emergency contact information`,
-                    `4. I-9 Section 1 (Employment Eligibility Verification) — you'll complete Section 2 on your first day`,
+                    `4. ${rtw.preStartFormNote}`,
                     input.requiresBackgroundCheckCompletion ? `5. Background check consent form (link sent separately by ${input.recruiterName})` : '',
                     ``,
                     input.hrisUrl ? `You can complete these tasks in our HR portal here: **${input.hrisUrl}**` : `Please reply to this email for instructions on submitting these documents securely.`,
@@ -305,11 +412,11 @@ function buildWelcomeSequence(input: NewHireInput): WelcomeEmailSequence {
                         `📍 Location: ${input.officeLocation ?? '[office address]'}`,
                         `🕘 Arrival time: [START_TIME]`,
                         `🚗 Parking: [PARKING_DETAILS]`,
-                        `🪪 Please bring a valid government-issued photo ID for your I-9 verification`,
+                        `🪪 ${rtw.dayOneNote}`,
                     ] : [
                         `💻 Log in at [START_TIME] using the credentials IT sent you`,
                         `📞 Your first call: [MEETING_LINK]`,
-                        `🪪 Have your government-issued ID handy for I-9 Section 2`,
+                        `🪪 ${rtw.dayOneNote}`,
                     ]),
                     ``,
                     `Your first point of contact is **${input.hiringManagerName}** (${input.hiringManagerEmail}).`,
@@ -444,6 +551,7 @@ function buildBuddyBriefing(input: NewHireInput): BuddyBriefing | undefined {
 // ---------------------------------------------------------------------------
 
 function buildHiringManagerBrief(input: NewHireInput): HiringManagerHandoffBrief {
+    const rtw = getRtwLabels(input.countryOfHire);
     const seniorityIsLead = ['manager', 'director', 'vp', 'c_suite', 'lead', 'staff', 'principal'].includes(input.seniorityLevel);
 
     const firstWeekGoals = [
@@ -478,7 +586,7 @@ function buildHiringManagerBrief(input: NewHireInput): HiringManagerHandoffBrief
             `| [+1.5h] | 1:1 with hiring manager: role expectations + 30-day plan |`,
             `| Lunch | Team lunch / virtual social (if arranged) |`,
             `| Afternoon | Async review: company handbook, team wiki, active projects |`,
-            `| End of day | I-9 verification (if applicable), benefits enrollment instructions |`,
+            `| End of day | ${rtw.section2Label}, benefits enrollment instructions |`,
         ].join('\n'),
         firstWeekGoals,
         probationMilestones,
