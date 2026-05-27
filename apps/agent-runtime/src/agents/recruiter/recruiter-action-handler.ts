@@ -329,6 +329,7 @@ export async function handleRecruiterAction(
                 salaryCurrency: typeof payload['salaryCurrency'] === 'string' ? payload['salaryCurrency'] : undefined,
                 benefits: Array.isArray(payload['benefits']) ? strArr(payload['benefits']) : undefined,
                 includeEeoStatement: typeof payload['includeEeoStatement'] === 'boolean' ? payload['includeEeoStatement'] : true,
+                country: typeof payload['country'] === 'string' ? payload['country'] : undefined,
             };
 
             return jsonOut(buildJobDescription(brief));
