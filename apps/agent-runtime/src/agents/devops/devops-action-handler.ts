@@ -547,6 +547,39 @@ import {
 import type { DebugCommand, DebugCommandResult, DebugSessionResult } from './devops-debug-session-builder.js';
 
 import {
+    buildPingArgs,
+    buildTracerouteArgs,
+    buildDnsLookupArgs,
+    buildNslookupArgs,
+    buildPortCheckArgs,
+    buildNmapPortCheckArgs,
+    buildHttpCheckArgs,
+    buildHttpCheckWithBodyArgs,
+    buildMtrArgs,
+    buildArpTableArgs,
+    buildRouteTableArgs,
+    buildSslCheckArgs,
+    buildIperf3Args,
+    parsePingOutput,
+    parseTracerouteOutput,
+    parseDnsOutput,
+    parseHttpCheckOutput,
+    parseSslCertOutput,
+    formatNetDiagReport,
+} from './devops-net-diag-builder.js';
+
+import {
+    buildDashboardTask,
+    buildHandoffSummaryPrompt,
+    parseHandoffSummaryOutput,
+    getEscalationDefaults,
+    formatHandoffReport,
+    formatSlackHandoffNotification,
+} from './devops-human-handoff-builder.js';
+
+import type { EscalationType, HandoffSeverity, DashboardTask } from './devops-human-handoff-builder.js';
+
+import {
     parseRunbookDefinition,
     executeRunbook,
     buildRunbookGenerationPrompt,
@@ -654,7 +687,11 @@ export type DevopsActionType =
     // ── Bucket 2 Gap 1 — Interactive Debug Session ────────────────────────
     | 'workspace_devops_debug_session'
     // ── Bucket 2 Gap 5 — Runbook Executor ────────────────────────────────
-    | 'workspace_devops_runbook_execute';
+    | 'workspace_devops_runbook_execute'
+    // ── Bucket 3 — Network Diagnostics ───────────────────────────────────
+    | 'workspace_devops_net_diag'
+    // ── Bucket 3 — Human Handoff / Dashboard Escalation ──────────────────
+    | 'workspace_devops_human_handoff';
 
 export const DEVOPS_ACTION_TYPES = new Set<DevopsActionType>([
     'workspace_devops_tf_plan',
@@ -715,6 +752,8 @@ export const DEVOPS_ACTION_TYPES = new Set<DevopsActionType>([
     'workspace_devops_incident_contain',
     'workspace_devops_debug_session',
     'workspace_devops_runbook_execute',
+    'workspace_devops_net_diag',
+    'workspace_devops_human_handoff',
 ]);
 
 export function isDevopsActionType(at: string): at is DevopsActionType {
@@ -4964,6 +5003,258 @@ export async function handleDevopsAction(params: DevopsActionParams): Promise<De
                 aborted_at:     result.abortedAt,
                 results:        result.results,
                 report:         result.report,
+            });
+        }
+
+        // ====================================================================
+        // workspace_devops_net_diag
+        // payload:
+        //   action          — ping | traceroute | dns_lookup | port_check |
+        //                     http_check | mtr | arp_table | route_table |
+        //                     ssl_check | bandwidth_test
+        //   host            — target host / URL
+        //   count?          — ping packet count
+        //   record_type?    — DNS record type (A, MX, TXT, ...)
+        //   port?           — port number for port_check / ssl_check
+        //   method?         — HTTP method for http_check
+        //   timeout?        — per-command timeout seconds
+        //   duration?       — iperf3 test duration seconds
+        //   max_hops?       — traceroute/mtr max hops
+        //   server?         — DNS resolver for dns_lookup
+        //   ipv6?           — use IPv6 ping
+        //   use_tcp?        — traceroute TCP mode
+        //   insecure?       — curl -k
+        //   follow_redirects? — curl -L
+        //   report_cycles?  — MTR report cycles
+        //   no_dns?         — MTR no DNS resolution
+        // ====================================================================
+        case 'workspace_devops_net_diag': {
+            if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+            const diagAction = str(payload['action'], 'ping');
+            const host       = str(payload['host']);
+            if (!host) return { ok: false, output: '', errorOutput: 'workspace_devops_net_diag: host is required' };
+
+            if (diagAction === 'ping') {
+                const args = buildPingArgs({
+                    host,
+                    count:    typeof payload['count']    === 'number' ? payload['count']    as number : undefined,
+                    deadline: typeof payload['deadline'] === 'number' ? payload['deadline'] as number : undefined,
+                    interval: typeof payload['interval'] === 'number' ? payload['interval'] as number : undefined,
+                    ipv6:     payload['ipv6'] === true,
+                });
+                const result = await runCommand(args, workspaceDir, 30_000);
+                const ping   = parsePingOutput(result.stdout, host);
+                return safeJson({ ok: result.exitCode === 0, action: 'ping', ...ping,
+                    report: formatNetDiagReport({ action: 'ping', host, results: ping }) });
+            }
+
+            if (diagAction === 'traceroute') {
+                const args = buildTracerouteArgs({
+                    host,
+                    max_hops: typeof payload['max_hops'] === 'number' ? payload['max_hops'] as number : undefined,
+                    timeout:  typeof payload['timeout']  === 'number' ? payload['timeout']  as number : undefined,
+                    use_tcp:  payload['use_tcp'] === true,
+                });
+                const result = await runCommand(args, workspaceDir, 60_000);
+                const hops   = parseTracerouteOutput(result.stdout);
+                return safeJson({ ok: result.exitCode === 0, action: 'traceroute', host, hops, hop_count: hops.length,
+                    report: formatNetDiagReport({ action: 'traceroute', host, results: hops }) });
+            }
+
+            if (diagAction === 'dns_lookup') {
+                const args = buildDnsLookupArgs({
+                    host,
+                    record_type: str(payload['record_type']) || undefined,
+                    server:      str(payload['server'])      || undefined,
+                    short:       payload['short'] === true,
+                    timeout:     typeof payload['timeout'] === 'number' ? payload['timeout'] as number : undefined,
+                });
+                const result  = await runCommand(args, workspaceDir, 20_000);
+                const records = parseDnsOutput(result.stdout);
+                return safeJson({ ok: result.exitCode === 0, action: 'dns_lookup', host, records, record_count: records.length,
+                    raw: result.stdout.slice(0, 2000) });
+            }
+
+            if (diagAction === 'port_check') {
+                const port = typeof payload['port'] === 'number' ? payload['port'] as number : 80;
+                const args = buildPortCheckArgs({
+                    host, port,
+                    timeout: typeof payload['timeout'] === 'number' ? payload['timeout'] as number : undefined,
+                    udp:     payload['udp'] === true,
+                });
+                const result = await runCommand(args, workspaceDir, 15_000);
+                const open   = result.exitCode === 0;
+                return safeJson({ ok: true, action: 'port_check', host, port, open,
+                    proto: payload['udp'] === true ? 'udp' : 'tcp',
+                    summary: `${host}:${port} is ${open ? 'OPEN' : 'CLOSED'}` });
+            }
+
+            if (diagAction === 'http_check') {
+                const url  = host.startsWith('http') ? host : `https://${host}`;
+                const args = buildHttpCheckArgs({
+                    url,
+                    method:           str(payload['method']) || undefined,
+                    timeout:          typeof payload['timeout'] === 'number' ? payload['timeout'] as number : undefined,
+                    follow_redirects: payload['follow_redirects'] !== false,
+                    insecure:         payload['insecure'] === true,
+                });
+                const result = await runCommand(args, workspaceDir, 30_000);
+                const check  = parseHttpCheckOutput(result.stdout, url);
+                return safeJson({ action: 'http_check', ...check });
+            }
+
+            if (diagAction === 'mtr') {
+                const args = buildMtrArgs({
+                    host,
+                    report_cycles: typeof payload['report_cycles'] === 'number' ? payload['report_cycles'] as number : undefined,
+                    max_hops:      typeof payload['max_hops'] === 'number' ? payload['max_hops'] as number : undefined,
+                    no_dns:        payload['no_dns'] === true,
+                });
+                const result = await runCommand(args, workspaceDir, 120_000);
+                return safeJson({ ok: result.exitCode === 0, action: 'mtr', host, raw: result.stdout.slice(0, 3000) });
+            }
+
+            if (diagAction === 'arp_table') {
+                const result = await runCommand(buildArpTableArgs(), workspaceDir, 10_000);
+                return safeJson({ ok: result.exitCode === 0, action: 'arp_table', raw: result.stdout.slice(0, 2000) });
+            }
+
+            if (diagAction === 'route_table') {
+                const result = await runCommand(buildRouteTableArgs({ ipv6: payload['ipv6'] === true }), workspaceDir, 10_000);
+                return safeJson({ ok: result.exitCode === 0, action: 'route_table', raw: result.stdout.slice(0, 2000) });
+            }
+
+            if (diagAction === 'ssl_check') {
+                const port = typeof payload['port'] === 'number' ? payload['port'] as number : 443;
+                const args = buildSslCheckArgs({ host, port, sni: str(payload['sni']) || undefined });
+                // openssl s_client reads from stdin; pass /dev/null to terminate immediately
+                const full_args = [...args, '</dev/null'];
+                // run as a shell one-liner via sh -c to handle the stdin redirect
+                const shArgs  = ['sh', '-c', `echo "" | openssl s_client -connect ${host}:${port} -servername ${str(payload['sni']) || host} -showcerts 2>&1`];
+                const result  = await runCommand(shArgs, workspaceDir, 15_000);
+                const cert    = parseSslCertOutput(result.stdout + result.stderr);
+                return safeJson({ ok: result.exitCode === 0 && cert !== null, action: 'ssl_check', host, port, cert,
+                    expired: cert?.expired ?? null, days_until_expiry: cert?.days_until_expiry ?? null });
+            }
+
+            if (diagAction === 'bandwidth_test') {
+                const args = buildIperf3Args({
+                    host,
+                    port:     typeof payload['port']     === 'number' ? payload['port']     as number : undefined,
+                    duration: typeof payload['duration'] === 'number' ? payload['duration'] as number : undefined,
+                    parallel: typeof payload['parallel'] === 'number' ? payload['parallel'] as number : undefined,
+                    reverse:  payload['reverse'] === true,
+                    udp:      payload['udp'] === true,
+                });
+                const result = await runCommand(args, workspaceDir, 120_000);
+                let parsed: unknown = result.stdout.slice(0, 3000);
+                try { parsed = JSON.parse(result.stdout); } catch { /* use raw */ }
+                return safeJson({ ok: result.exitCode === 0, action: 'bandwidth_test', host, result: parsed });
+            }
+
+            return { ok: false, output: '', errorOutput: `Unknown net_diag action: ${diagAction}` };
+        }
+
+        // ====================================================================
+        // workspace_devops_human_handoff
+        // Escalates to the customer dashboard when the agent cannot proceed.
+        //
+        // payload:
+        //   escalation_type — approval_required | interactive_session |
+        //                     hardware_access | vendor_escalation |
+        //                     customer_communication | novel_incident |
+        //                     multi_team_coordination | persistent_monitoring |
+        //                     budget_decision | context_required |
+        //                     security_breach | regulatory_compliance
+        //   severity        — p1 | p2 | p3 | p4 (default: p3)
+        //   title           — short dashboard task title (required)
+        //   summary?        — 2-4 sentence explanation; LLM-generated if omitted
+        //   situation?      — raw description used for LLM summary generation
+        //   context_gathered? — what the agent already knows
+        //   required_actions? — string[] of things the human must do
+        //   recommended_steps? — string[] of recommended next steps
+        //   artifacts?      — Record<string,string> key-value pairs (logs, plans, etc.)
+        //   agent_context?  — arbitrary key-value for continuity
+        //   resume_action?  — { action_type, payload } to resume automation after resolution
+        // ====================================================================
+        case 'workspace_devops_human_handoff': {
+            const escalationType = str(payload['escalation_type'], 'approval_required') as EscalationType;
+            const severity       = str(payload['severity'], 'p3') as HandoffSeverity;
+            const title          = str(payload['title']) || `Human input required — ${escalationType.replace(/_/g, ' ')}`;
+            const rawSituation   = str(payload['situation']) || str(payload['summary']);
+            const contextGathered = str(payload['context_gathered']) || undefined;
+
+            // Required/recommended actions — use payload values, or LLM, or defaults
+            let summary          = str(payload['summary']) || '';
+            let required_actions: string[]  = Array.isArray(payload['required_actions'])
+                ? (payload['required_actions'] as string[]) : [];
+            let recommended_steps: string[] = Array.isArray(payload['recommended_steps'])
+                ? (payload['recommended_steps'] as string[]) : [];
+
+            // If summary or actions are missing, try LLM first, then fall back to defaults
+            if (!summary || required_actions.length === 0) {
+                if (rawSituation) {
+                    const prompt  = buildHandoffSummaryPrompt({ escalation_type: escalationType, situation: rawSituation, context_gathered: contextGathered });
+                    const llmOut  = await callLlmSafe(callLlm, prompt);
+                    if (llmOut) {
+                        const parsed = parseHandoffSummaryOutput(llmOut);
+                        if (!summary && parsed.summary) { summary = parsed.summary; }
+                        if (required_actions.length === 0 && parsed.required_actions.length > 0) {
+                            required_actions = parsed.required_actions;
+                        }
+                        if (recommended_steps.length === 0 && parsed.recommended_steps.length > 0) {
+                            recommended_steps = parsed.recommended_steps;
+                        }
+                    }
+                }
+                if (!summary) { summary = rawSituation || title; }
+                if (required_actions.length === 0) {
+                    const defaults = getEscalationDefaults(escalationType);
+                    required_actions  = defaults.required_actions;
+                    if (recommended_steps.length === 0) { recommended_steps = defaults.recommended_steps; }
+                }
+            }
+
+            const artifacts: Record<string, string> = {};
+            if (payload['artifacts'] && typeof payload['artifacts'] === 'object' && !Array.isArray(payload['artifacts'])) {
+                for (const [k, v] of Object.entries(payload['artifacts'] as Record<string, unknown>)) {
+                    artifacts[k] = String(v);
+                }
+            }
+
+            const agentContext: Record<string, unknown> = {};
+            if (payload['agent_context'] && typeof payload['agent_context'] === 'object') {
+                Object.assign(agentContext, payload['agent_context']);
+            }
+
+            const resumeRaw = payload['resume_action'];
+            const resumeAction = resumeRaw && typeof resumeRaw === 'object' && !Array.isArray(resumeRaw)
+                ? resumeRaw as { action_type: string; payload: Record<string, unknown> }
+                : undefined;
+
+            const task: DashboardTask = buildDashboardTask({
+                title,
+                escalation_type:  escalationType,
+                severity,
+                summary,
+                context_gathered: contextGathered,
+                required_actions,
+                recommended_steps,
+                artifacts,
+                agent_context:    agentContext,
+                resume_action:    resumeAction,
+            });
+
+            const report = formatHandoffReport(task);
+            const slackNotification = formatSlackHandoffNotification(task);
+
+            return safeJson({
+                ok:                true,
+                action:            'human_handoff',
+                dashboard_task:    task,
+                report,
+                slack_notification: slackNotification,
+                message:           `Dashboard task created: "${task.title}" [${task.id}] — severity ${task.severity}, type ${task.escalation_type}`,
             });
         }
     }

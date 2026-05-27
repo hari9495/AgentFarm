@@ -470,6 +470,9 @@ export type LocalWorkspaceActionType =
     // Tier 32b (Bucket 2 — debug session & runbook executor)
     | 'workspace_devops_debug_session'
     | 'workspace_devops_runbook_execute'
+    // Tier 32c (Bucket 3 — net diag & human handoff)
+    | 'workspace_devops_net_diag'
+    | 'workspace_devops_human_handoff'
     // Tier 32 (Mobile / iOS + Android domain actions)
     | 'workspace_mob_ios_component'
     | 'workspace_mob_ios_build'
@@ -1237,6 +1240,8 @@ export const LOCAL_WORKSPACE_ACTION_TYPES = new Set<LocalWorkspaceActionType>([
     'workspace_devops_incident_contain',
     'workspace_devops_debug_session',
     'workspace_devops_runbook_execute',
+    'workspace_devops_net_diag',
+    'workspace_devops_human_handoff',
     // Tier 32 (Mobile / iOS + Android domain actions)
     'workspace_mob_ios_component',
     'workspace_mob_ios_build',
@@ -14059,7 +14064,9 @@ export async function executeLocalWorkspaceAction(input: {
         case 'workspace_devops_mlops':
         case 'workspace_devops_incident_contain':
         case 'workspace_devops_debug_session':
-        case 'workspace_devops_runbook_execute': {
+        case 'workspace_devops_runbook_execute':
+        case 'workspace_devops_net_diag':
+        case 'workspace_devops_human_handoff': {
             if (!isDevopsActionType(actionType)) {
                 return { ok: false, output: '', errorOutput: `Unrecognised DevOps action: ${actionType}` };
             }

@@ -182,6 +182,10 @@ export const DEVOPS_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = [
     'workspace_devops_debug_session',
     // ── Bucket 2 Gap 5 — Runbook Executor ──────────────────────────────────
     'workspace_devops_runbook_execute',
+    // ── Bucket 3 — Network Diagnostics ─────────────────────────────────────
+    'workspace_devops_net_diag',
+    // ── Bucket 3 — Human Handoff / Dashboard Escalation ────────────────────
+    'workspace_devops_human_handoff',
 ];
 
 // ---------------------------------------------------------------------------
