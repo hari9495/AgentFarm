@@ -94,6 +94,10 @@ export const RECRUITER_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = 
     'workspace_rec_manage_talent_pool',  // Silver-medal CRM, nurture sequences, re-engagement
     'workspace_rec_approve_requisition', // Multi-level headcount / budget approval workflow
     'workspace_rec_onboarding_handoff',  // Post-offer Day-1 checklist and welcome sequence
+    // ── Tier 47 — Phase 3 additions ──────────────────────────────────────────
+    'workspace_rec_run_assessment',      // Take-home briefs, coding challenges, scoring rubrics
+    'workspace_rec_advise_jd_compliance',// Industry-specific regulatory JD disclosures
+    'workspace_rec_international',       // Right-to-work, IR35, GDPR, market adaptation
 ];
 
 export const RECRUITER_ROLE_BLOCKED_ACTIONS = [
