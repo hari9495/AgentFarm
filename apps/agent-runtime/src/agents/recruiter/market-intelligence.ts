@@ -5,7 +5,17 @@
  * hiring trend analysis, and competitor intelligence to advise
  * hiring managers on competitive compensation and search strategy.
  * Pure logic — uses heuristic models when live API data is unavailable.
+ *
+ * Salary benchmarks are industry-aware and use the cross-industry
+ * salary band data from industry-salary-bands.ts (17 industries ×
+ * 8 seniority levels, with location and company-size modifiers).
  */
+
+import {
+    getSalaryBenchmark,
+    detectIndustryFromJobTitle,
+    type Industry,
+} from './industry-salary-bands.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -67,67 +77,6 @@ export interface MarketIntelReport {
 // ---------------------------------------------------------------------------
 // Heuristic models
 // ---------------------------------------------------------------------------
-
-// Base salary ranges (USD, mid band) by seniority
-const BASE_SALARY_BY_SENIORITY: Record<SeniorityBand, { p25: number; p50: number; p75: number; p90: number }> = {
-    entry:     { p25: 55_000,  p50: 70_000,  p75: 85_000,  p90: 100_000 },
-    mid:       { p25: 85_000,  p50: 105_000, p75: 125_000, p90: 145_000 },
-    senior:    { p25: 120_000, p50: 150_000, p75: 180_000, p90: 210_000 },
-    lead:      { p25: 145_000, p50: 180_000, p75: 220_000, p90: 260_000 },
-    principal: { p25: 170_000, p50: 210_000, p75: 255_000, p90: 300_000 },
-    director:  { p25: 175_000, p50: 220_000, p75: 270_000, p90: 320_000 },
-    vp:        { p25: 210_000, p50: 270_000, p75: 330_000, p90: 400_000 },
-    c_level:   { p25: 280_000, p50: 380_000, p75: 480_000, p90: 600_000 },
-};
-
-// Location cost-of-living multipliers relative to US national average
-const LOCATION_MULTIPLIER: Record<string, number> = {
-    'san francisco': 1.45,
-    'new york': 1.35,
-    'seattle': 1.25,
-    'boston': 1.20,
-    'los angeles': 1.25,
-    'austin': 1.05,
-    'denver': 1.05,
-    'chicago': 1.10,
-    'remote': 1.00,
-    'london': 1.20,
-    'berlin': 0.85,
-    'amsterdam': 0.90,
-    'toronto': 0.90,
-    'singapore': 1.10,
-    'sydney': 1.05,
-};
-
-function getLocationMultiplier(location: string): number {
-    const key = location.toLowerCase();
-    for (const [city, mult] of Object.entries(LOCATION_MULTIPLIER)) {
-        if (key.includes(city)) return mult;
-    }
-    return 1.0;
-}
-
-// Company size premium
-const SIZE_PREMIUM: Record<string, number> = {
-    startup: 0.85,
-    scaleup: 0.95,
-    mid_market: 1.00,
-    enterprise: 1.12,
-};
-
-function applyMultipliers(
-    base: { p25: number; p50: number; p75: number; p90: number },
-    locMult: number,
-    sizeMult: number,
-): { p25: number; p50: number; p75: number; p90: number } {
-    const m = locMult * sizeMult;
-    return {
-        p25: Math.round(base.p25 * m / 1000) * 1000,
-        p50: Math.round(base.p50 * m / 1000) * 1000,
-        p75: Math.round(base.p75 * m / 1000) * 1000,
-        p90: Math.round(base.p90 * m / 1000) * 1000,
-    };
-}
 
 function estimateTalentAvailability(input: MarketIntelInput): TalentAvailability {
     const techRoles = ['engineer', 'developer', 'scientist', 'architect', 'sre', 'devops', 'ml', 'ai'];
@@ -206,15 +155,26 @@ function buildHiringTrends(input: MarketIntelInput): HiringTrend[] {
 
 export function generateMarketIntelReport(input: MarketIntelInput): MarketIntelReport {
     const currency = input.currency ?? 'USD';
-    const locMult = getLocationMultiplier(input.location);
-    const sizeMult = SIZE_PREMIUM[input.companySize ?? 'mid_market'] ?? 1.0;
-    const baseRange = BASE_SALARY_BY_SENIORITY[input.seniorityBand];
-    const range = applyMultipliers(baseRange, locMult, sizeMult);
+
+    // Resolve industry: use explicit input if provided, otherwise auto-detect from job title
+    const resolvedIndustry: Industry = (input.industry as Industry | undefined) ??
+        detectIndustryFromJobTitle(input.jobTitle);
+
+    // Get industry-aware, location-adjusted, company-size-adjusted salary bands
+    const bandResult = getSalaryBenchmark(
+        resolvedIndustry,
+        input.seniorityBand,
+        input.location,
+        input.companySize,
+        currency,
+    );
+
+    const range = { p25: bandResult.p25, p50: bandResult.p50, p75: bandResult.p75, p90: bandResult.p90 };
 
     const salaryBenchmark: SalaryBenchmark = {
         ...range,
         currency,
-        note: `Heuristic estimates for ${input.seniorityBand} ${input.jobTitle} in ${input.location}. Validate against Levels.fyi, Glassdoor, and Radford for precision.`,
+        note: `${bandResult.notes} Industry: ${resolvedIndustry.replace(/_/g, ' ')}. Location modifier: ${bandResult.locationModifier.toFixed(2)}×. ${bandResult.validationNote}`,
     };
 
     const talentAvailability = estimateTalentAvailability(input);
@@ -224,14 +184,29 @@ export function generateMarketIntelReport(input: MarketIntelInput): MarketIntelR
         `${company}: likely competing for the same ${input.seniorityBand} ${input.jobTitle} profiles — monitor their job postings and Glassdoor reviews`,
     );
 
+    const industryJobBoards: Partial<Record<Industry, string>> = {
+        technology: "HN Who's Hiring, Stack Overflow Jobs, Wellfound",
+        healthcare: "Health eCareers, NurseZone, PracticeLink, Doximity",
+        finance: "eFinancialCareers, CFA Institute Job Board",
+        legal: "Law Crossing, BCG Attorney Search",
+        education: "HigherEdJobs, SchoolSpring, EdJoin",
+        government: "USAJOBS, ClearanceJobs, GovernmentJobs.com",
+        creative_media: "Behance, Dribbble Jobs, Mediabistro",
+        manufacturing: "ManufacturingJobs.com, IME Jobs",
+        consulting: "Management Consulted, Vault",
+        pharmaceutical_biotech: "BioPharma Dive Jobs, Science Careers",
+    };
+    const jobBoardSuggestion = industryJobBoards[resolvedIndustry] ?? 'relevant industry-specific job boards';
+
     const sourcingRecommendations = [
         `Target ${input.remoteOk ? 'global' : input.location} ${input.seniorityBand} profiles on LinkedIn with skills: ${(input.skills ?? []).slice(0, 3).join(', ')}`,
         `Use Apollo.io or Hunter.io to find emails for warm outreach to passive candidates`,
-        `Post on niche job boards (e.g. ${input.department === 'Engineering' ? 'HN Who’s Hiring, Stack Overflow Jobs' : 'relevant industry boards'})`,
+        `Post on niche job boards (e.g. ${jobBoardSuggestion})`,
         `Activate employee referral programme — referral hires fill 2× faster`,
         talentAvailability.supplyLevel === 'scarce'
-            ? 'Consider recruiting bootcamp graduates or adjacent-role professionals for entry paths'
+            ? 'Consider adjacent-role professionals, apprenticeships, or bootcamp graduates for entry paths given scarce supply'
             : 'Inbound applicants from job board posts should be sufficient; supplement with targeted sourcing',
+        `Industry detected: ${resolvedIndustry.replace(/_/g, ' ')} — salary benchmarks calibrated to this sector`,
     ];
 
     const compensationRecommendation = `To be competitive at ${input.location} for a ${input.seniorityBand} ${input.jobTitle}:\n` +

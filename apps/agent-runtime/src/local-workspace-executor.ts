@@ -602,7 +602,16 @@ export type LocalWorkspaceActionType =
     | 'workspace_rec_manage_pipeline'
     | 'workspace_rec_generate_offer'
     | 'workspace_rec_market_intelligence'
-    | 'workspace_rec_request_human_gate';
+    | 'workspace_rec_request_human_gate'
+    | 'workspace_rec_check_bgc'
+    | 'workspace_rec_compose_rejection'
+    | 'workspace_rec_negotiate_offer'
+    | 'workspace_rec_scan_jd_bias'
+    | 'workspace_rec_validate_credentials'
+    | 'workspace_rec_run_reference_check'
+    | 'workspace_rec_manage_talent_pool'
+    | 'workspace_rec_approve_requisition'
+    | 'workspace_rec_onboarding_handoff';
 
 export type LocalWorkspaceResult = {
     ok: boolean;
@@ -14750,7 +14759,16 @@ export async function executeLocalWorkspaceAction(input: {
         case 'workspace_rec_manage_pipeline':
         case 'workspace_rec_generate_offer':
         case 'workspace_rec_market_intelligence':
-        case 'workspace_rec_request_human_gate': {
+        case 'workspace_rec_request_human_gate':
+        case 'workspace_rec_check_bgc':
+        case 'workspace_rec_compose_rejection':
+        case 'workspace_rec_negotiate_offer':
+        case 'workspace_rec_scan_jd_bias':
+        case 'workspace_rec_validate_credentials':
+        case 'workspace_rec_run_reference_check':
+        case 'workspace_rec_manage_talent_pool':
+        case 'workspace_rec_approve_requisition':
+        case 'workspace_rec_onboarding_handoff': {
             if (!isRecruiterActionType(actionType)) {
                 return { ok: false, output: '', errorOutput: `Unrecognised Recruiter action: ${actionType}` };
             }

@@ -6,15 +6,24 @@
  *   workspace_rec_build_jd              — craft a branded job description from a role brief
  *   workspace_rec_post_job              — gate + generate job-board posting payload
  *   workspace_rec_source_candidates     — search LinkedIn / Apollo / boards for talent
- *   workspace_rec_screen_resume         — parse + score a resume against a JD
+ *   workspace_rec_screen_resume         — parse + score a resume against a JD (credential-aware)
  *   workspace_rec_send_outreach         — compose personalised candidate outreach / sequence
  *   workspace_rec_schedule_interview    — coordinate calendars, produce invites & prep packs
  *   workspace_rec_conduct_phone_screen  — generate a structured phone-screen script + scorecard
  *   workspace_rec_gather_feedback       — aggregate interviewer feedback into a debrief report
  *   workspace_rec_manage_pipeline       — build an ATS pipeline status report with SLA warnings
  *   workspace_rec_generate_offer        — draft an employment offer letter with budget validation
- *   workspace_rec_market_intelligence   — salary benchmarking, talent availability, hiring trends
+ *   workspace_rec_market_intelligence   — industry-aware salary benchmarking, talent availability
  *   workspace_rec_request_human_gate    — route high-risk action to human approval
+ *   workspace_rec_check_bgc             — FCRA-compliant background check initiation workflow
+ *   workspace_rec_compose_rejection     — EEOC-safe rejection email for any pipeline stage
+ *   workspace_rec_negotiate_offer       — counter-offer evaluation, verbal scripts, decline saves
+ *   workspace_rec_scan_jd_bias          — DEI / inclusive language scan on job description text
+ *   workspace_rec_validate_credentials  — domain credential checker (RN, JD, CPA, PE, etc.)
+ *   workspace_rec_run_reference_check   — reference questionnaire, debrief capture and summary
+ *   workspace_rec_manage_talent_pool    — silver-medal CRM, nurture sequences, re-engagement
+ *   workspace_rec_approve_requisition   — multi-level headcount / budget approval workflow
+ *   workspace_rec_onboarding_handoff    — post-offer Day-1 checklist and welcome sequence
  */
 
 import type { LocalWorkspaceResult } from '../../local-workspace-executor.js';
@@ -64,6 +73,61 @@ import {
 } from './human-gate-requests.js';
 import type { RecruiterGateInput } from './human-gate-requests.js';
 
+import { initiateBgcWorkflow, buildAdverseAction } from './background-check.js';
+import type { BgcInitiateInput, AdverseActionInput, BgcPackage, BgcProvider } from './background-check.js';
+
+import { composeRejection } from './rejection-composer.js';
+import type { RejectionInput, RejectionStage, RejectionTone } from './rejection-composer.js';
+
+import {
+    buildVerbalOfferScript,
+    modelTotalComp,
+    evaluateCounterOffer,
+    buildDeclineSaveScript,
+} from './offer-negotiation.js';
+import type { VerbalOfferInput, CounterOfferInput, TotalCompInput } from './offer-negotiation.js';
+
+import { scanJobDescriptionForBias, buildDeiFunnelReport } from './jd-bias-scanner.js';
+import type { JdBiasScanInput, DeiFunnelInput } from './jd-bias-scanner.js';
+
+import { validateCredentials, detectRequiredCredentials } from './credential-validator.js';
+
+import {
+    buildReferenceCheckPackage,
+    buildReferenceQuestionnaire,
+    summariseReferenceDebriefs,
+} from './reference-check.js';
+import type {
+    ReferenceRequestInput,
+    ReferenceQuestionnaireInput,
+    ReferenceSummaryInput,
+    ReferenceDebriefInput,
+    ReferenceProvider,
+    JobDomain,
+} from './reference-check.js';
+
+import {
+    addToTalentPool,
+    searchTalentPool,
+    buildNurtureSequence,
+    buildTalentPoolAnalytics,
+} from './talent-pool.js';
+import type {
+    TalentPoolCandidate,
+    TalentPoolSearchCriteria,
+    NurtureSequenceInput,
+    TalentPoolAnalyticsInput,
+    TalentPoolSource,
+    TalentPoolStatus,
+    ReEngagementTrigger,
+} from './talent-pool.js';
+
+import { buildRequisitionSummary } from './requisition-approver.js';
+import type { RequisitionInput, RequisitionType } from './requisition-approver.js';
+
+import { buildOnboardingHandoff } from './onboarding-handoff.js';
+import type { NewHireInput, Department } from './onboarding-handoff.js';
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -80,7 +144,16 @@ export type RecruiterActionType =
     | 'workspace_rec_manage_pipeline'
     | 'workspace_rec_generate_offer'
     | 'workspace_rec_market_intelligence'
-    | 'workspace_rec_request_human_gate';
+    | 'workspace_rec_request_human_gate'
+    | 'workspace_rec_check_bgc'
+    | 'workspace_rec_compose_rejection'
+    | 'workspace_rec_negotiate_offer'
+    | 'workspace_rec_scan_jd_bias'
+    | 'workspace_rec_validate_credentials'
+    | 'workspace_rec_run_reference_check'
+    | 'workspace_rec_manage_talent_pool'
+    | 'workspace_rec_approve_requisition'
+    | 'workspace_rec_onboarding_handoff';
 
 export function isRecruiterActionType(t: string): t is RecruiterActionType {
     return (
@@ -95,7 +168,16 @@ export function isRecruiterActionType(t: string): t is RecruiterActionType {
         t === 'workspace_rec_manage_pipeline' ||
         t === 'workspace_rec_generate_offer' ||
         t === 'workspace_rec_market_intelligence' ||
-        t === 'workspace_rec_request_human_gate'
+        t === 'workspace_rec_request_human_gate' ||
+        t === 'workspace_rec_check_bgc' ||
+        t === 'workspace_rec_compose_rejection' ||
+        t === 'workspace_rec_negotiate_offer' ||
+        t === 'workspace_rec_scan_jd_bias' ||
+        t === 'workspace_rec_validate_credentials' ||
+        t === 'workspace_rec_run_reference_check' ||
+        t === 'workspace_rec_manage_talent_pool' ||
+        t === 'workspace_rec_approve_requisition' ||
+        t === 'workspace_rec_onboarding_handoff'
     );
 }
 
@@ -609,6 +691,490 @@ export async function handleRecruiterAction(
                 impacted_scope: buildRecruiterGateImpactScope(gate),
                 risk_reason: buildRecruiterGateRiskReason(gate),
             });
+        }
+
+        // ----------------------------------------------------------------
+        // workspace_rec_check_bgc
+        // HIGH-RISK — FCRA-regulated action
+        // payload: BgcWorkflowInput fields | { mode: 'adverse_action', ... }
+        // ----------------------------------------------------------------
+        case 'workspace_rec_check_bgc': {
+            const mode = str(payload['mode'], 'initiate');
+
+            if (mode === 'adverse_action') {
+                const candidateName = str(payload['candidateName']);
+                const jobTitle = str(payload['jobTitle']);
+                const companyName = str(payload['companyName']);
+                const recruiterName = str(payload['recruiterName']);
+                const recruiterEmail = str(payload['recruiterEmail']);
+                const adverseFindings = strArr(payload['adverseFindings']);
+
+                if (!candidateName) return fail('payload.candidateName is required');
+                if (!jobTitle) return fail('payload.jobTitle is required');
+                if (!companyName) return fail('payload.companyName is required');
+                if (adverseFindings.length === 0) return fail('payload.adverseFindings array is required');
+
+                const aaInput: AdverseActionInput = {
+                    candidateName,
+                    jobTitle,
+                    companyName,
+                    candidateAddress: typeof payload['candidateAddress'] === 'string' ? payload['candidateAddress'] : undefined,
+                    hrSignatoryName: typeof payload['hrSignatoryName'] === 'string' ? payload['hrSignatoryName'] : undefined,
+                    adverseFindings,
+                    actionType: str(payload['actionType'], 'pre_adverse') as AdverseActionInput['actionType'],
+                    bgcProviderName: str(payload['bgcProviderName'], '[BGC Provider Name]'),
+                    bgcProviderContact: str(payload['bgcProviderContact'], '[BGC Provider Contact]'),
+                    preAdverseDate: typeof payload['preAdverseDate'] === 'string' ? payload['preAdverseDate'] : undefined,
+                };
+                return jsonOut(buildAdverseAction(aaInput));
+            }
+
+            // Default: initiate BGC workflow
+            const candidateName = str(payload['candidateName']);
+            const candidateEmail = str(payload['candidateEmail']);
+            const jobTitle = str(payload['jobTitle']);
+            const companyName = str(payload['companyName']);
+            const recruiterName = str(payload['recruiterName']);
+            const recruiterEmail = str(payload['recruiterEmail']);
+
+            if (!candidateName) return fail('payload.candidateName is required');
+            if (!candidateEmail) return fail('payload.candidateEmail is required');
+            if (!jobTitle) return fail('payload.jobTitle is required');
+            if (!companyName) return fail('payload.companyName is required');
+
+            const bgcInput: BgcInitiateInput = {
+                candidateName,
+                candidateEmail,
+                jobTitle,
+                companyName,
+                recruiterName: recruiterName ?? '',
+                recruiterEmail: recruiterEmail ?? '',
+                bgcPackage: str(payload['bgcPackage'] ?? payload['packageId'], 'standard') as BgcPackage,
+                bgcProvider: typeof payload['bgcProvider'] === 'string' ? payload['bgcProvider'] as BgcProvider : undefined,
+                stateOfHire: typeof payload['stateOfHire'] === 'string' ? payload['stateOfHire'] : undefined,
+                countryOfHire: typeof payload['countryOfHire'] === 'string' ? payload['countryOfHire'] : undefined,
+            };
+            return jsonOut(initiateBgcWorkflow(bgcInput));
+        }
+
+        // ----------------------------------------------------------------
+        // workspace_rec_compose_rejection
+        // payload: RejectionInput fields
+        // ----------------------------------------------------------------
+        case 'workspace_rec_compose_rejection': {
+            const candidateName = str(payload['candidateName']);
+            const jobTitle = str(payload['jobTitle']);
+            const companyName = str(payload['companyName']);
+            const recruiterName = str(payload['recruiterName']);
+            const stage = str(payload['stage']) as RejectionStage;
+
+            if (!candidateName) return fail('payload.candidateName is required');
+            if (!jobTitle) return fail('payload.jobTitle is required');
+            if (!companyName) return fail('payload.companyName is required');
+            if (!recruiterName) return fail('payload.recruiterName is required');
+            if (!stage) return fail('payload.stage is required (application_ack | post_screen_reject | post_interview_reject | final_round_reject | offer_declined_response | talent_pool_add)');
+
+            const rejInput: RejectionInput = {
+                candidateName,
+                jobTitle,
+                companyName,
+                recruiterName,
+                stage,
+                recruiterEmail: typeof payload['recruiterEmail'] === 'string' ? payload['recruiterEmail'] : undefined,
+                tone: typeof payload['tone'] === 'string' ? payload['tone'] as RejectionTone : undefined,
+                specificFeedback: typeof payload['specificFeedback'] === 'string' ? payload['specificFeedback'] : undefined,
+                talentPoolInvite: typeof payload['talentPoolInvite'] === 'boolean' ? payload['talentPoolInvite'] : undefined,
+                futureRoleHint: typeof payload['futureRoleHint'] === 'string' ? payload['futureRoleHint'] : undefined,
+                interviewerNames: Array.isArray(payload['interviewerNames']) ? strArr(payload['interviewerNames']) : undefined,
+                alternativeRoleUrl: typeof payload['alternativeRoleUrl'] === 'string' ? payload['alternativeRoleUrl'] : undefined,
+                companyCareerPageUrl: typeof payload['companyCareerPageUrl'] === 'string' ? payload['companyCareerPageUrl'] : undefined,
+            };
+
+            return jsonOut(composeRejection(rejInput));
+        }
+
+        // ----------------------------------------------------------------
+        // workspace_rec_negotiate_offer
+        // payload: { mode: 'verbal_script'|'total_comp'|'counter_eval'|'decline_save', ...fields }
+        // ----------------------------------------------------------------
+        case 'workspace_rec_negotiate_offer': {
+            const mode = str(payload['mode'], 'counter_eval');
+
+            if (mode === 'verbal_script') {
+                const candidateName = str(payload['candidateName']);
+                const jobTitle = str(payload['jobTitle']);
+                const companyName = str(payload['companyName']);
+                const recruiterName = str(payload['recruiterName']);
+                const baseSalary = num(payload['baseSalary'], 0);
+                const currency = str(payload['currency'], 'USD');
+                const startDate = str(payload['startDate']);
+
+                if (!candidateName) return fail('payload.candidateName is required');
+                if (!baseSalary) return fail('payload.baseSalary is required');
+                if (!startDate) return fail('payload.startDate is required');
+
+                const voInput: VerbalOfferInput = {
+                    candidateName,
+                    jobTitle: jobTitle || 'the role',
+                    companyName: companyName || 'the company',
+                    recruiterName: recruiterName || 'the recruiter',
+                    baseSalary,
+                    currency,
+                    startDate,
+                    workArrangement: str(payload['workArrangement'], 'hybrid') as VerbalOfferInput['workArrangement'],
+                    targetBonus: typeof payload['targetBonus'] === 'number' ? payload['targetBonus'] : undefined,
+                    signingBonus: typeof payload['signingBonus'] === 'number' ? payload['signingBonus'] : undefined,
+                    equitySummary: typeof payload['equitySummary'] === 'string' ? payload['equitySummary'] : undefined,
+                    offerExpiryDate: typeof payload['offerExpiryDate'] === 'string' ? payload['offerExpiryDate'] : undefined,
+                    keyBenefits: Array.isArray(payload['keyBenefits']) ? strArr(payload['keyBenefits']) : undefined,
+                };
+                return ok(buildVerbalOfferScript(voInput));
+            }
+
+            if (mode === 'total_comp') {
+                const baseSalary = num(payload['baseSalary'], 0);
+                if (!baseSalary) return fail('payload.baseSalary is required');
+                const tcInput: TotalCompInput = {
+                    baseSalary,
+                    currency: str(payload['currency'], 'USD'),
+                    employerLabel: str(payload['employerLabel'], 'Company'),
+                    targetBonusPct: typeof payload['targetBonusPct'] === 'number' ? payload['targetBonusPct'] : undefined,
+                    signingBonus: typeof payload['signingBonus'] === 'number' ? payload['signingBonus'] : undefined,
+                    equityValue: typeof payload['equityValue'] === 'number' ? payload['equityValue'] : undefined,
+                    equityVestingYears: typeof payload['equityVestingYears'] === 'number' ? payload['equityVestingYears'] : undefined,
+                    annualBenefitsValue: typeof payload['annualBenefitsValue'] === 'number' ? payload['annualBenefitsValue'] : undefined,
+                    ptoWeeks: typeof payload['ptoWeeks'] === 'number' ? payload['ptoWeeks'] : undefined,
+                };
+                return jsonOut(modelTotalComp(tcInput));
+            }
+
+            if (mode === 'decline_save') {
+                const candidateName = str(payload['candidateName']);
+                const jobTitle = str(payload['jobTitle']);
+                if (!candidateName) return fail('payload.candidateName is required');
+                return ok(buildDeclineSaveScript(
+                    candidateName,
+                    jobTitle || 'the role',
+                    typeof payload['declineReason'] === 'string' ? payload['declineReason'] : undefined,
+                ));
+            }
+
+            // Default: counter_eval
+            const candidateName = str(payload['candidateName']);
+            const currentOfferBase = num(payload['currentOfferBase'], 0);
+            const candidateCounterBase = num(payload['candidateCounterBase'], 0);
+            const approvedBudgetMax = num(payload['approvedBudgetMax'], 0);
+            const currentBandMax = num(payload['currentBandMax'], 0);
+
+            if (!candidateName) return fail('payload.candidateName is required');
+            if (!currentOfferBase) return fail('payload.currentOfferBase is required');
+            if (!candidateCounterBase) return fail('payload.candidateCounterBase is required');
+            if (!approvedBudgetMax) return fail('payload.approvedBudgetMax is required');
+            if (!currentBandMax) return fail('payload.currentBandMax is required');
+
+            const coInput: CounterOfferInput = {
+                candidateName,
+                jobTitle: str(payload['jobTitle'], 'the role'),
+                companyName: str(payload['companyName'], 'the company'),
+                currentOfferBase,
+                candidateCounterBase,
+                currency: str(payload['currency'], 'USD'),
+                approvedBudgetMax,
+                currentBandMax,
+                peersAtSameLevel: typeof payload['peersAtSameLevel'] === 'number' ? payload['peersAtSameLevel'] : undefined,
+                currentBonusTarget: typeof payload['currentBonusTarget'] === 'number' ? payload['currentBonusTarget'] : undefined,
+                currentSigningBonus: typeof payload['currentSigningBonus'] === 'number' ? payload['currentSigningBonus'] : undefined,
+                canIncreaseSigningBonus: typeof payload['canIncreaseSigningBonus'] === 'boolean' ? payload['canIncreaseSigningBonus'] : undefined,
+                signingBonusHeadroom: typeof payload['signingBonusHeadroom'] === 'number' ? payload['signingBonusHeadroom'] : undefined,
+                canIncreaseBonus: typeof payload['canIncreaseBonus'] === 'boolean' ? payload['canIncreaseBonus'] : undefined,
+                bonusTargetHeadroom: typeof payload['bonusTargetHeadroom'] === 'number' ? payload['bonusTargetHeadroom'] : undefined,
+            };
+            return jsonOut(evaluateCounterOffer(coInput));
+        }
+
+        // ----------------------------------------------------------------
+        // workspace_rec_scan_jd_bias
+        // payload: { mode: 'scan'|'funnel', jdText?, ...JdBiasScanInput|DeiFunnelInput }
+        // ----------------------------------------------------------------
+        case 'workspace_rec_scan_jd_bias': {
+            const mode = str(payload['mode'], 'scan');
+
+            if (mode === 'funnel') {
+                const jobTitle = str(payload['jobTitle']);
+                const stagesRaw = payload['stages'];
+                if (!Array.isArray(stagesRaw) || stagesRaw.length === 0) {
+                    return fail('payload.stages array is required for funnel mode (each with stageName and candidateCount)');
+                }
+                const funnelInput: DeiFunnelInput = {
+                    jobTitle: jobTitle || 'the role',
+                    stages: stagesRaw.map((s: Record<string, unknown>) => ({
+                        stageName: str(s['stageName'], 'Stage'),
+                        totalCandidates: num(s['totalCandidates'] ?? s['candidateCount'], 0),
+                        diversityCandidates: num(
+                            s['diversityCandidates'] ?? s['femaleCount'] ?? s['nonWhiteCount'] ?? s['underrepresentedCount'],
+                            0,
+                        ),
+                        diversityCategory: typeof s['diversityCategory'] === 'string' ? s['diversityCategory']
+                            : s['femaleCount'] != null ? 'women'
+                            : s['nonWhiteCount'] != null ? 'non-white'
+                            : s['underrepresentedCount'] != null ? 'underrepresented'
+                            : undefined,
+                    })),
+                    industryBenchmark: typeof payload['industryBenchmark'] === 'object' && payload['industryBenchmark'] !== null
+                        ? payload['industryBenchmark'] as Record<string, number>
+                        : undefined,
+                };
+                return jsonOut(buildDeiFunnelReport(funnelInput));
+            }
+
+            // Default: JD bias scan
+            const jdText = str(payload['jdText'] ?? payload['jobDescriptionText']);
+            if (!jdText) return fail('payload.jdText (job description text) is required');
+
+            const scanInput: JdBiasScanInput = {
+                jobDescriptionText: jdText,
+                jobTitle: typeof payload['jobTitle'] === 'string' ? payload['jobTitle'] : undefined,
+                targetInclusionScore: typeof payload['targetInclusionScore'] === 'number' ? payload['targetInclusionScore'] : undefined,
+            };
+            return jsonOut(scanJobDescriptionForBias(scanInput));
+        }
+
+        // ----------------------------------------------------------------
+        // workspace_rec_validate_credentials
+        // payload: { resumeText, jobTitle, industry?, bonusCredentialIds? }
+        // ----------------------------------------------------------------
+        case 'workspace_rec_validate_credentials': {
+            const resumeText = str(payload['resumeText']);
+            const jobTitle = str(payload['jobTitle']);
+            if (!resumeText) return fail('payload.resumeText is required');
+            if (!jobTitle) return fail('payload.jobTitle is required');
+
+            const industry = str(payload['industry'], '');
+            const requiredIds = detectRequiredCredentials(jobTitle, industry);
+            const bonusIds = Array.isArray(payload['bonusCredentialIds']) ? strArr(payload['bonusCredentialIds']) : undefined;
+            const result = validateCredentials(resumeText, requiredIds, bonusIds);
+            return jsonOut({ detectedRequiredIds: requiredIds, ...result });
+        }
+
+        // ----------------------------------------------------------------
+        // workspace_rec_run_reference_check
+        // payload: { mode: 'package'|'questionnaire'|'summary', ...fields }
+        // ----------------------------------------------------------------
+        case 'workspace_rec_run_reference_check': {
+            const mode = str(payload['mode'], 'package');
+
+            if (mode === 'questionnaire') {
+                const candidateName = str(payload['candidateName']);
+                const jobTitle = str(payload['jobTitle']);
+                if (!candidateName) return fail('payload.candidateName is required');
+                if (!jobTitle) return fail('payload.jobTitle is required');
+
+                const refProvider = payload['referenceProvider'] as ReferenceProvider | undefined;
+                if (!refProvider) return fail('payload.referenceProvider is required');
+
+                const qInput: ReferenceQuestionnaireInput = {
+                    candidateName,
+                    jobTitle,
+                    companyName: str(payload['companyName'], 'the company'),
+                    jobDomain: str(payload['jobDomain'], 'general') as JobDomain,
+                    referenceProvider: refProvider,
+                    specificAreasToProbe: Array.isArray(payload['specificAreasToProbe']) ? strArr(payload['specificAreasToProbe']) : undefined,
+                };
+                return jsonOut(buildReferenceQuestionnaire(qInput));
+            }
+
+            if (mode === 'summary') {
+                const candidateName = str(payload['candidateName']);
+                const jobTitle = str(payload['jobTitle']);
+                const debriefs = payload['debriefs'] as ReferenceDebriefInput[] | undefined;
+                if (!candidateName) return fail('payload.candidateName is required');
+                if (!debriefs || debriefs.length === 0) return fail('payload.debriefs array is required');
+
+                const sumInput: ReferenceSummaryInput = { candidateName, jobTitle, debriefs };
+                return ok(summariseReferenceDebriefs(sumInput));
+            }
+
+            // Default: full reference package
+            const candidateName = str(payload['candidateName']);
+            const jobTitle = str(payload['jobTitle']);
+            const companyName = str(payload['companyName']);
+            const recruiterName = str(payload['recruiterName']);
+            const recruiterEmail = str(payload['recruiterEmail']);
+            const references = payload['references'] as ReferenceProvider[] | undefined;
+
+            if (!candidateName) return fail('payload.candidateName is required');
+            if (!companyName) return fail('payload.companyName is required');
+            if (!recruiterEmail) return fail('payload.recruiterEmail is required');
+            if (!references || references.length === 0) return fail('payload.references array is required');
+
+            const refInput: ReferenceRequestInput = {
+                candidateName,
+                jobTitle: jobTitle || 'the role',
+                companyName,
+                recruiterName: recruiterName || 'the recruiter',
+                recruiterEmail,
+                references,
+                referenceDeadline: typeof payload['referenceDeadline'] === 'string' ? payload['referenceDeadline'] : undefined,
+                calendarLink: typeof payload['calendarLink'] === 'string' ? payload['calendarLink'] : undefined,
+            };
+            return jsonOut(buildReferenceCheckPackage(refInput));
+        }
+
+        // ----------------------------------------------------------------
+        // workspace_rec_manage_talent_pool
+        // payload: { mode: 'add'|'search'|'nurture'|'analytics', ...fields }
+        // ----------------------------------------------------------------
+        case 'workspace_rec_manage_talent_pool': {
+            const mode = str(payload['mode'], 'search');
+
+            if (mode === 'add') {
+                const candidate = payload['candidate'] as Omit<TalentPoolCandidate, 'id' | 'addedDate'> | undefined;
+                if (!candidate) return fail('payload.candidate object is required');
+                return jsonOut(addToTalentPool(candidate));
+            }
+
+            if (mode === 'nurture') {
+                const candidate = payload['candidate'] as TalentPoolCandidate | undefined;
+                if (!candidate) return fail('payload.candidate object is required');
+                const nInput: NurtureSequenceInput = {
+                    candidate,
+                    recruiterName: str(payload['recruiterName'], 'the recruiter'),
+                    companyName: str(payload['companyName'], 'the company'),
+                    triggerType: str(payload['triggerType'], 'scheduled_nurture') as ReEngagementTrigger,
+                    openRoleTitle: typeof payload['openRoleTitle'] === 'string' ? payload['openRoleTitle'] : undefined,
+                    openRoleUrl: typeof payload['openRoleUrl'] === 'string' ? payload['openRoleUrl'] : undefined,
+                    contentShareUrl: typeof payload['contentShareUrl'] === 'string' ? payload['contentShareUrl'] : undefined,
+                    contentShareTitle: typeof payload['contentShareTitle'] === 'string' ? payload['contentShareTitle'] : undefined,
+                    referralRoleTitle: typeof payload['referralRoleTitle'] === 'string' ? payload['referralRoleTitle'] : undefined,
+                    marketEventContext: typeof payload['marketEventContext'] === 'string' ? payload['marketEventContext'] : undefined,
+                };
+                return jsonOut(buildNurtureSequence(nInput));
+            }
+
+            if (mode === 'analytics') {
+                const pool = payload['pool'] as TalentPoolCandidate[] | undefined;
+                if (!pool) return fail('payload.pool array is required');
+                const analyticsInput: TalentPoolAnalyticsInput = {
+                    pool,
+                    companyName: str(payload['companyName'], 'the company'),
+                    openRequisitionCount: typeof payload['openRequisitionCount'] === 'number' ? payload['openRequisitionCount'] : undefined,
+                };
+                return jsonOut(buildTalentPoolAnalytics(analyticsInput));
+            }
+
+            // Default: search
+            const pool = payload['pool'] as TalentPoolCandidate[] | undefined;
+            const criteria = payload['criteria'] as TalentPoolSearchCriteria | undefined;
+            if (!pool) return fail('payload.pool array is required');
+            if (!criteria) return fail('payload.criteria object is required');
+            return jsonOut(searchTalentPool(pool, criteria));
+        }
+
+        // ----------------------------------------------------------------
+        // workspace_rec_approve_requisition
+        // HIGH-RISK — triggers multi-level spend approval
+        // payload: RequisitionInput fields
+        // ----------------------------------------------------------------
+        case 'workspace_rec_approve_requisition': {
+            const jobTitle = str(payload['jobTitle']);
+            const department = str(payload['department']);
+            const hiringManagerName = str(payload['hiringManagerName']);
+            const hiringManagerEmail = str(payload['hiringManagerEmail']);
+            const baseSalaryBudget = num(payload['baseSalaryBudget'], 0);
+            const businessJustification = str(payload['businessJustification']);
+
+            if (!jobTitle) return fail('payload.jobTitle is required');
+            if (!department) return fail('payload.department is required');
+            if (!hiringManagerName) return fail('payload.hiringManagerName is required');
+            if (!hiringManagerEmail) return fail('payload.hiringManagerEmail is required');
+            if (!baseSalaryBudget) return fail('payload.baseSalaryBudget is required');
+            if (!businessJustification) return fail('payload.businessJustification is required (min 20 chars)');
+
+            const reqInput: RequisitionInput = {
+                jobTitle,
+                department,
+                hiringManagerName,
+                hiringManagerEmail,
+                baseSalaryBudget,
+                businessJustification,
+                requisitionType: str(payload['requisitionType'], 'new_headcount') as RequisitionType,
+                headcountPlanApproved: typeof payload['headcountPlanApproved'] === 'boolean' ? payload['headcountPlanApproved'] : false,
+                targetStartDate: str(payload['targetStartDate'], new Date(Date.now() + 90 * 86400000).toISOString().split('T')[0]!),
+                employmentType: str(payload['employmentType'], 'full_time') as RequisitionInput['employmentType'],
+                workArrangement: str(payload['workArrangement'], 'hybrid') as RequisitionInput['workArrangement'],
+                seniorityLevel: str(payload['seniorityLevel'], 'mid') as RequisitionInput['seniorityLevel'],
+                currency: str(payload['currency'], 'USD'),
+                headcount: num(payload['headcount'], 1),
+                urgencyLevel: str(payload['urgencyLevel'], 'standard') as RequisitionInput['urgencyLevel'],
+                companyName: str(payload['companyName'], 'the company'),
+                recruiterName: str(payload['recruiterName'], 'the recruiter'),
+                recruiterEmail: str(payload['recruiterEmail'], ''),
+                totalCompBudget: typeof payload['totalCompBudget'] === 'number' ? payload['totalCompBudget'] : undefined,
+                backfillForEmployee: typeof payload['backfillForEmployee'] === 'string' ? payload['backfillForEmployee'] : undefined,
+                hrBpName: typeof payload['hrBpName'] === 'string' ? payload['hrBpName'] : undefined,
+                financeBpName: typeof payload['financeBpName'] === 'string' ? payload['financeBpName'] : undefined,
+                chroName: typeof payload['chroName'] === 'string' ? payload['chroName'] : undefined,
+                ceoName: typeof payload['ceoName'] === 'string' ? payload['ceoName'] : undefined,
+            };
+
+            return jsonOut(buildRequisitionSummary(reqInput));
+        }
+
+        // ----------------------------------------------------------------
+        // workspace_rec_onboarding_handoff
+        // payload: NewHireInput fields
+        // ----------------------------------------------------------------
+        case 'workspace_rec_onboarding_handoff': {
+            const candidateName = str(payload['candidateName']);
+            const candidateEmail = str(payload['candidateEmail']);
+            const jobTitle = str(payload['jobTitle']);
+            const hiringManagerName = str(payload['hiringManagerName']);
+            const hiringManagerEmail = str(payload['hiringManagerEmail']);
+            const startDate = str(payload['startDate']);
+            const companyName = str(payload['companyName']);
+            const recruiterName = str(payload['recruiterName']);
+            const recruiterEmail = str(payload['recruiterEmail']);
+
+            if (!candidateName) return fail('payload.candidateName is required');
+            if (!candidateEmail) return fail('payload.candidateEmail is required');
+            if (!jobTitle) return fail('payload.jobTitle is required');
+            if (!hiringManagerName) return fail('payload.hiringManagerName is required');
+            if (!hiringManagerEmail) return fail('payload.hiringManagerEmail is required');
+            if (!startDate) return fail('payload.startDate is required (YYYY-MM-DD)');
+            if (!companyName) return fail('payload.companyName is required');
+
+            const onboardInput: NewHireInput = {
+                candidateName,
+                candidateEmail,
+                jobTitle,
+                hiringManagerName,
+                hiringManagerEmail,
+                startDate,
+                companyName,
+                recruiterName: recruiterName || 'the recruiter',
+                recruiterEmail: recruiterEmail || '',
+                department: str(payload['department'], 'other') as Department,
+                workArrangement: str(payload['workArrangement'], 'hybrid') as NewHireInput['workArrangement'],
+                employmentType: str(payload['employmentType'], 'full_time') as NewHireInput['employmentType'],
+                seniorityLevel: str(payload['seniorityLevel'], 'mid') as NewHireInput['seniorityLevel'],
+                officeLocation: typeof payload['officeLocation'] === 'string' ? payload['officeLocation'] : undefined,
+                hrOpsName: typeof payload['hrOpsName'] === 'string' ? payload['hrOpsName'] : undefined,
+                hrOpsEmail: typeof payload['hrOpsEmail'] === 'string' ? payload['hrOpsEmail'] : undefined,
+                buddyName: typeof payload['buddyName'] === 'string' ? payload['buddyName'] : undefined,
+                buddyTitle: typeof payload['buddyTitle'] === 'string' ? payload['buddyTitle'] : undefined,
+                probationPeriodWeeks: typeof payload['probationPeriodWeeks'] === 'number' ? payload['probationPeriodWeeks'] : undefined,
+                requiresSecurityClearance: typeof payload['requiresSecurityClearance'] === 'boolean' ? payload['requiresSecurityClearance'] : undefined,
+                requiresLicenseVerification: typeof payload['requiresLicenseVerification'] === 'boolean' ? payload['requiresLicenseVerification'] : undefined,
+                requiresBackgroundCheckCompletion: typeof payload['requiresBackgroundCheckCompletion'] === 'boolean' ? payload['requiresBackgroundCheckCompletion'] : undefined,
+                laptopShipmentAddress: typeof payload['laptopShipmentAddress'] === 'string' ? payload['laptopShipmentAddress'] : undefined,
+                specialEquipmentNeeded: typeof payload['specialEquipmentNeeded'] === 'string' ? payload['specialEquipmentNeeded'] : undefined,
+                teamSlackChannel: typeof payload['teamSlackChannel'] === 'string' ? payload['teamSlackChannel'] : undefined,
+                onboardingPortalUrl: typeof payload['onboardingPortalUrl'] === 'string' ? payload['onboardingPortalUrl'] : undefined,
+                hrisUrl: typeof payload['hrisUrl'] === 'string' ? payload['hrisUrl'] : undefined,
+                itTicketSystemUrl: typeof payload['itTicketSystemUrl'] === 'string' ? payload['itTicketSystemUrl'] : undefined,
+            };
+
+            return jsonOut(buildOnboardingHandoff(onboardInput));
         }
 
         default: {
