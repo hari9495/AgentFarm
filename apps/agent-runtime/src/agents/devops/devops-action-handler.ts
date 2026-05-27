@@ -586,6 +586,168 @@ import {
     parseRunbookGenerationOutput,
 } from './devops-runbook-builder.js';
 
+import {
+    buildKubectlPortForwardPodArgs,
+    buildKubectlPortForwardServiceArgs,
+    buildKubectlPortForwardDeploymentArgs,
+    buildSshLocalTunnelArgs,
+    buildSshRemoteTunnelArgs,
+    buildSshDynamicTunnelArgs,
+    buildSshProxyJumpArgs,
+    buildListPortForwardsArgs,
+    buildKillPortForwardByPidArgs,
+    buildFindPortPidArgs,
+    parseActiveTunnels,
+    formatTunnelReport,
+} from './devops-tunnel-builder.js';
+
+import {
+    buildPrometheusReloadArgs,
+    buildPrometheusQuitArgs,
+    buildPrometheusHealthyArgs,
+    buildPrometheusReadyArgs,
+    buildPrometheusTargetsArgs,
+    buildPrometheusRulesApiArgs,
+    buildPrometheusAlertsApiArgs,
+    buildPrometheusConfigApiArgs,
+    buildPrometheusRuntimeApiArgs,
+    buildPrometheusTsdbArgs,
+    buildPrometheusFlagsApiArgs,
+    buildPrometheusDeleteSeriesArgs,
+    buildPrometheusCleanTombstonesArgs,
+    buildPrometheusSnapshotArgs,
+    parsePrometheusTargets,
+    parsePrometheusRulesApi,
+    parsePrometheusAlerts,
+    formatPrometheusTargetReport,
+    formatPrometheusAlertReport,
+} from './devops-prometheus-mgmt-builder.js';
+
+import {
+    buildVaultLeaseRenewArgs,
+    buildVaultLeaseRevokeArgs,
+    buildVaultLeaseLookupArgs,
+    buildVaultLeaseRevokeByPrefixArgs,
+    buildVaultLeaseListArgs,
+    buildVaultDynamicReadArgs,
+    buildVaultAwsCredsArgs,
+    buildVaultDbCredsArgs,
+    buildVaultPkiIssueArgs,
+    buildVaultSshSignArgs,
+    buildVaultKvMetadataArgs,
+    buildVaultTokenCreateArgs,
+    buildVaultTokenRenewArgs,
+    buildVaultTokenRevokeArgs,
+    buildVaultTokenLookupArgs,
+    buildVaultTokenCapabilitiesArgs,
+    parseVaultLease,
+    parseVaultDynamicCreds,
+    parseVaultTokenInfo,
+    parseVaultPkiCert,
+    formatVaultLeaseReport,
+} from './devops-vault-dynamic-builder.js';
+
+import {
+    buildArgoSubmitArgs,
+    buildArgoGetArgs,
+    buildArgoListArgs,
+    buildArgoLogsArgs,
+    buildArgoRetryArgs,
+    buildArgoResubmitArgs,
+    buildArgoTerminateArgs,
+    buildArgoStopArgs,
+    buildArgoDeleteArgs,
+    buildArgoWatchArgs,
+    buildArgoLintArgs,
+    buildArgoTemplateListArgs,
+    buildArgoTemplateGetArgs,
+    buildArgoTemplateCreateArgs,
+    buildArgoTemplateDeleteArgs,
+    buildArgoCronListArgs,
+    buildArgoCronCreateArgs,
+    buildArgoCronSuspendArgs,
+    buildArgoCronResumeArgs,
+    buildArgoCronDeleteArgs,
+    buildWorkflowYaml,
+    buildArgoWorkflowGeneratePrompt,
+    parseArgoWorkflowStatus,
+    parseArgoWorkflowList,
+    formatArgoWorkflowReport,
+} from './devops-argo-workflow-builder.js';
+
+import {
+    buildBackstageEntityGetArgs,
+    buildBackstageEntityListArgs,
+    buildBackstageEntitySearchArgs,
+    buildBackstageEntityRefArgs,
+    buildBackstageComponentInfoArgs,
+    buildBackstageOwnerComponentsArgs,
+    buildBackstageApiListArgs,
+    buildBackstageResourceListArgs,
+    buildBackstageSystemListArgs,
+    buildBackstageTechDocsArgs,
+    buildBackstageHealthArgs,
+    parseBackstageEntity,
+    parseBackstageEntityList,
+    formatBackstageEntityReport,
+    formatBackstageEntityListReport,
+} from './devops-backstage-builder.js';
+
+import {
+    buildSlackChannelCreateArgs,
+    buildSlackChannelInviteArgs,
+    buildSlackChannelTopicArgs,
+    buildSlackChannelArchiveArgs,
+    buildSlackChannelInfoArgs,
+    buildSlackChannelListArgs,
+    buildSlackMessagePostArgs,
+    buildSlackMessageUpdateArgs,
+    buildSlackPinAddArgs,
+    buildSlackPinRemoveArgs,
+    buildSlackUserLookupArgs,
+    buildIncidentChannelName,
+    buildWarRoomWelcomeMessage,
+    buildIncidentStatusUpdateBlocks,
+    buildIncidentResolutionMessage,
+    parseSlackChannel,
+    parseSlackChannelList,
+    parseSlackMessage,
+    parseSlackUserId,
+    formatSlackIncidentChannelReport,
+    formatWarRoomCreatedReport,
+} from './devops-slack-incident-builder.js';
+
+import type { IncidentWarRoomSpec } from './devops-slack-incident-builder.js';
+
+import {
+    buildMetricWatchSpec,
+    buildLogWatchSpec,
+    buildEndpointWatchSpec,
+    buildPrometheusInstantQueryArgs as buildMonitorPrometheusQueryArgs,
+    buildLogWatchArgs,
+    buildEndpointCheckArgs,
+    buildEndpointBodyCheckArgs,
+    evaluateMetricResult,
+    evaluateLogResult,
+    evaluateEndpointResult,
+    buildMonitorReport,
+    formatMonitorReport,
+    buildMonitorAlertMessage,
+} from './devops-scheduled-monitor-builder.js';
+
+import type { MonitorSpec, MonitorCheckResult } from './devops-scheduled-monitor-builder.js';
+
+import {
+    assembleIncidentContext,
+    buildIncidentTriagePrompt,
+    parseTriageSuggestion,
+    buildEnrichedAlertSummary,
+    selectRelevantPastIncidents,
+    computeNoiseScore,
+} from './devops-incident-context-builder.js';
+
+import type { RawAlert, PastIncident, ServiceContext, IncidentContext } from './devops-incident-context-builder.js';
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -691,7 +853,23 @@ export type DevopsActionType =
     // ── Bucket 3 — Network Diagnostics ───────────────────────────────────
     | 'workspace_devops_net_diag'
     // ── Bucket 3 — Human Handoff / Dashboard Escalation ──────────────────
-    | 'workspace_devops_human_handoff';
+    | 'workspace_devops_human_handoff'
+    // ── Wave 1 Gap 1 — Port-forward / SSH Tunnel ─────────────────────────
+    | 'workspace_devops_tunnel'
+    // ── Wave 1 Gap 2 — Prometheus Management API ─────────────────────────
+    | 'workspace_devops_prometheus_mgmt'
+    // ── Wave 1 Gap 3 — Vault Dynamic Secrets ─────────────────────────────
+    | 'workspace_devops_vault_dynamic'
+    // ── Wave 1 Gap 4 — Argo Workflows ────────────────────────────────────
+    | 'workspace_devops_argo_workflow'
+    // ── Wave 1 Gap 5 — Backstage Catalog ─────────────────────────────────
+    | 'workspace_devops_backstage'
+    // ── Wave 1 Gap 6 — Slack Incident Channel ────────────────────────────
+    | 'workspace_devops_slack_incident'
+    // ── Wave 2 Gap 1 — Scheduled Monitor ─────────────────────────────────
+    | 'workspace_devops_scheduled_monitor'
+    // ── Wave 2 Gap 2 — Incident Context / Noise Filter ───────────────────
+    | 'workspace_devops_incident_context';
 
 export const DEVOPS_ACTION_TYPES = new Set<DevopsActionType>([
     'workspace_devops_tf_plan',
@@ -754,6 +932,14 @@ export const DEVOPS_ACTION_TYPES = new Set<DevopsActionType>([
     'workspace_devops_runbook_execute',
     'workspace_devops_net_diag',
     'workspace_devops_human_handoff',
+    'workspace_devops_tunnel',
+    'workspace_devops_prometheus_mgmt',
+    'workspace_devops_vault_dynamic',
+    'workspace_devops_argo_workflow',
+    'workspace_devops_backstage',
+    'workspace_devops_slack_incident',
+    'workspace_devops_scheduled_monitor',
+    'workspace_devops_incident_context',
 ]);
 
 export function isDevopsActionType(at: string): at is DevopsActionType {
@@ -5256,6 +5442,744 @@ export async function handleDevopsAction(params: DevopsActionParams): Promise<De
                 slack_notification: slackNotification,
                 message:           `Dashboard task created: "${task.title}" [${task.id}] — severity ${task.severity}, type ${task.escalation_type}`,
             });
+        }
+
+        // ── workspace_devops_tunnel ──────────────────────────────────────────────
+        case 'workspace_devops_tunnel': {
+            if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+            const sub   = str(payload['sub_action'], 'list_forwards');
+            const ns    = str(payload['namespace']);
+
+            if (sub === 'list_forwards') {
+                const r = await runCommand(buildListPortForwardsArgs(), workspaceDir);
+                const tunnels = parseActiveTunnels(r.stdout);
+                return safeJson({ ok: r.exitCode === 0, action: 'list_forwards', tunnels, report: formatTunnelReport(tunnels), output: r.stdout });
+            }
+
+            if (sub === 'kill_forward') {
+                const pid = num(payload['pid'], 0);
+                if (!pid) return { ok: false, output: '', errorOutput: 'pid required for kill_forward' };
+                const r = await runCommand(buildKillPortForwardByPidArgs(pid), workspaceDir);
+                return safeJson({ ok: r.exitCode === 0, action: 'kill_forward', pid, output: r.stdout, errorOutput: r.stderr });
+            }
+
+            if (sub === 'find_port') {
+                const port = num(payload['local_port'], 0);
+                if (!port) return { ok: false, output: '', errorOutput: 'local_port required for find_port' };
+                const r = await runCommand(buildFindPortPidArgs(port), workspaceDir);
+                return safeJson({ ok: r.exitCode === 0, action: 'find_port', port, output: r.stdout });
+            }
+
+            if (sub === 'kubectl_forward') {
+                const resourceType = str(payload['resource_type'], 'pod');
+                const name = str(payload['name'], '');
+                const ports = Array.isArray(payload['ports'])
+                    ? (payload['ports'] as Array<{ local: number; remote: number }>)
+                    : [{ local: num(payload['local_port'], 8080), remote: num(payload['remote_port'], 80) }];
+                const address = str(payload['address']);
+                let args: string[];
+                if (resourceType === 'service' || resourceType === 'svc') {
+                    args = buildKubectlPortForwardServiceArgs({ service: name, namespace: ns || undefined, ports, address: address || undefined });
+                } else if (resourceType === 'deployment' || resourceType === 'deploy') {
+                    args = buildKubectlPortForwardDeploymentArgs({ deployment: name, namespace: ns || undefined, ports, address: address || undefined });
+                } else {
+                    args = buildKubectlPortForwardPodArgs({ pod: name, namespace: ns || undefined, ports, address: address || undefined });
+                }
+                const r = await runCommand(args, workspaceDir);
+                return safeJson({ ok: r.exitCode === 0, action: 'kubectl_forward', output: r.stdout, errorOutput: r.stderr });
+            }
+
+            if (sub === 'ssh_local') {
+                const args = buildSshLocalTunnelArgs({
+                    localPort:  num(payload['local_port'],  8080),
+                    remoteHost: str(payload['remote_host'], 'localhost'),
+                    remotePort: num(payload['remote_port'], 80),
+                    sshHost:    str(payload['ssh_host'],    'localhost'),
+                    sshUser:    str(payload['ssh_user'],    'root'),
+                    sshPort:    payload['ssh_port'] ? num(payload['ssh_port'], 22) : undefined,
+                    keyFile:    str(payload['key_file']) || undefined,
+                    background: payload['background'] === true,
+                });
+                const r = await runCommand(args, workspaceDir);
+                return safeJson({ ok: r.exitCode === 0, action: 'ssh_local', output: r.stdout, errorOutput: r.stderr });
+            }
+
+            if (sub === 'ssh_remote') {
+                const args = buildSshRemoteTunnelArgs({
+                    remotePort: num(payload['remote_port'], 80),
+                    localHost:  str(payload['local_host'],  'localhost'),
+                    localPort:  num(payload['local_port'],  8080),
+                    sshHost:    str(payload['ssh_host'],    'localhost'),
+                    sshUser:    str(payload['ssh_user'],    'root'),
+                    sshPort:    payload['ssh_port'] ? num(payload['ssh_port'], 22) : undefined,
+                    keyFile:    str(payload['key_file']) || undefined,
+                    background: payload['background'] === true,
+                });
+                const r = await runCommand(args, workspaceDir);
+                return safeJson({ ok: r.exitCode === 0, action: 'ssh_remote', output: r.stdout, errorOutput: r.stderr });
+            }
+
+            if (sub === 'ssh_dynamic') {
+                const args = buildSshDynamicTunnelArgs({
+                    localPort: num(payload['local_port'], 1080),
+                    sshHost:   str(payload['ssh_host'],   'localhost'),
+                    sshUser:   str(payload['ssh_user'],   'root'),
+                    sshPort:   payload['ssh_port'] ? num(payload['ssh_port'], 22) : undefined,
+                    keyFile:   str(payload['key_file']) || undefined,
+                    background: payload['background'] === true,
+                });
+                const r = await runCommand(args, workspaceDir);
+                return safeJson({ ok: r.exitCode === 0, action: 'ssh_dynamic', output: r.stdout, errorOutput: r.stderr });
+            }
+
+            if (sub === 'ssh_proxy_jump') {
+                const args = buildSshProxyJumpArgs({
+                    targetHost: str(payload['target_host'], ''),
+                    targetUser: str(payload['target_user'], 'root'),
+                    jumpHost:   str(payload['jump_host'],   ''),
+                    jumpUser:   str(payload['jump_user'],   'root'),
+                    targetPort: payload['target_port'] ? num(payload['target_port'], 22) : undefined,
+                    jumpPort:   payload['jump_port']   ? num(payload['jump_port'],   22) : undefined,
+                    keyFile:    str(payload['key_file']) || undefined,
+                    remoteCmd:  str(payload['remote_cmd']) || undefined,
+                });
+                const r = await runCommand(args, workspaceDir);
+                return safeJson({ ok: r.exitCode === 0, action: 'ssh_proxy_jump', output: r.stdout, errorOutput: r.stderr });
+            }
+
+            return { ok: false, output: '', errorOutput: `Unknown tunnel sub_action: ${sub}` };
+        }
+
+        // ── workspace_devops_prometheus_mgmt ─────────────────────────────────────
+        case 'workspace_devops_prometheus_mgmt': {
+            if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+            const sub   = str(payload['sub_action'], 'healthy');
+            const url   = str(payload['url'], 'http://localhost:9090');
+            const token = str(payload['token']) || undefined;
+
+            const simpleGets: Record<string, () => string[]> = {
+                healthy:  () => buildPrometheusHealthyArgs({ url }),
+                ready:    () => buildPrometheusReadyArgs({ url }),
+                config:   () => buildPrometheusConfigApiArgs({ url, token }),
+                runtime:  () => buildPrometheusRuntimeApiArgs({ url, token }),
+                tsdb:     () => buildPrometheusTsdbArgs({ url, token }),
+                flags:    () => buildPrometheusFlagsApiArgs({ url, token }),
+            };
+
+            if (simpleGets[sub]) {
+                const r = await runCommand(simpleGets[sub]!(), workspaceDir);
+                return safeJson({ ok: r.exitCode === 0, action: sub, output: r.stdout });
+            }
+
+            if (sub === 'reload') {
+                const r = await runCommand(buildPrometheusReloadArgs({ url, token }), workspaceDir);
+                return safeJson({ ok: r.exitCode === 0, action: 'reload', output: r.stdout });
+            }
+
+            if (sub === 'quit') {
+                const r = await runCommand(buildPrometheusQuitArgs({ url, token }), workspaceDir);
+                return safeJson({ ok: r.exitCode === 0, action: 'quit', output: r.stdout });
+            }
+
+            if (sub === 'targets') {
+                const state = str(payload['state']) as 'active' | 'dropped' | 'any' | undefined;
+                const r = await runCommand(buildPrometheusTargetsArgs({ url, token, state: state || undefined }), workspaceDir);
+                const parsed = parsePrometheusTargets(r.stdout);
+                return safeJson({ ok: r.exitCode === 0, action: 'targets', ...parsed, report: formatPrometheusTargetReport(parsed.active) });
+            }
+
+            if (sub === 'rules') {
+                const type = str(payload['type']) as 'alert' | 'record' | undefined;
+                const r = await runCommand(buildPrometheusRulesApiArgs({ url, token, type: type || undefined }), workspaceDir);
+                const groups = parsePrometheusRulesApi(r.stdout);
+                return safeJson({ ok: r.exitCode === 0, action: 'rules', groups, output: r.stdout });
+            }
+
+            if (sub === 'alerts') {
+                const r = await runCommand(buildPrometheusAlertsApiArgs({ url, token }), workspaceDir);
+                const alerts = parsePrometheusAlerts(r.stdout);
+                return safeJson({ ok: r.exitCode === 0, action: 'alerts', alerts, report: formatPrometheusAlertReport(alerts) });
+            }
+
+            if (sub === 'delete_series') {
+                const matchers = Array.isArray(payload['matchers'])
+                    ? (payload['matchers'] as string[])
+                    : [str(payload['matcher'], '')].filter(Boolean);
+                const r = await runCommand(buildPrometheusDeleteSeriesArgs({
+                    url, token,
+                    matchers,
+                    start: str(payload['start']) || undefined,
+                    end:   str(payload['end'])   || undefined,
+                }), workspaceDir);
+                return safeJson({ ok: r.exitCode === 0, action: 'delete_series', output: r.stdout });
+            }
+
+            if (sub === 'clean_tombstones') {
+                const r = await runCommand(buildPrometheusCleanTombstonesArgs({ url, token }), workspaceDir);
+                return safeJson({ ok: r.exitCode === 0, action: 'clean_tombstones', output: r.stdout });
+            }
+
+            if (sub === 'snapshot') {
+                const r = await runCommand(buildPrometheusSnapshotArgs({ url, token, skipHead: payload['skip_head'] === true }), workspaceDir);
+                return safeJson({ ok: r.exitCode === 0, action: 'snapshot', output: r.stdout });
+            }
+
+            return { ok: false, output: '', errorOutput: `Unknown prometheus_mgmt sub_action: ${sub}` };
+        }
+
+        // ── workspace_devops_vault_dynamic ───────────────────────────────────────
+        case 'workspace_devops_vault_dynamic': {
+            if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+            const sub   = str(payload['sub_action'], 'token_lookup');
+            const token = str(payload['token']) || undefined;
+            const addr  = str(payload['addr'])  || undefined;
+
+            if (sub === 'lease_renew') {
+                const r = await runCommand(buildVaultLeaseRenewArgs({ leaseId: str(payload['lease_id'], ''), increment: payload['increment'] ? num(payload['increment'], 3600) : undefined, token, addr }), workspaceDir);
+                const lease = parseVaultLease(r.stdout);
+                return safeJson({ ok: r.exitCode === 0, action: 'lease_renew', lease, report: lease ? formatVaultLeaseReport(lease) : undefined, output: r.stdout });
+            }
+
+            if (sub === 'lease_revoke') {
+                const r = await runCommand(buildVaultLeaseRevokeArgs({ leaseId: str(payload['lease_id'], ''), force: payload['force'] === true, token, addr }), workspaceDir);
+                return safeJson({ ok: r.exitCode === 0, action: 'lease_revoke', output: r.stdout });
+            }
+
+            if (sub === 'lease_lookup') {
+                const r = await runCommand(buildVaultLeaseLookupArgs({ leaseId: str(payload['lease_id'], ''), token, addr }), workspaceDir);
+                const lease = parseVaultLease(r.stdout);
+                return safeJson({ ok: r.exitCode === 0, action: 'lease_lookup', lease, output: r.stdout });
+            }
+
+            if (sub === 'lease_revoke_prefix') {
+                const r = await runCommand(buildVaultLeaseRevokeByPrefixArgs({ prefix: str(payload['prefix'], ''), force: payload['force'] === true, token, addr }), workspaceDir);
+                return safeJson({ ok: r.exitCode === 0, action: 'lease_revoke_prefix', output: r.stdout });
+            }
+
+            if (sub === 'lease_list') {
+                const r = await runCommand(buildVaultLeaseListArgs({ prefix: str(payload['prefix'], ''), token, addr }), workspaceDir);
+                return safeJson({ ok: r.exitCode === 0, action: 'lease_list', output: r.stdout });
+            }
+
+            if (sub === 'read_dynamic') {
+                const r = await runCommand(buildVaultDynamicReadArgs({ path: str(payload['path'], ''), token, addr, format: 'json' }), workspaceDir);
+                const creds = parseVaultDynamicCreds(r.stdout);
+                return safeJson({ ok: r.exitCode === 0, action: 'read_dynamic', creds, output: r.stdout });
+            }
+
+            if (sub === 'aws_creds') {
+                const r = await runCommand(buildVaultAwsCredsArgs({ role: str(payload['role'], ''), mount: str(payload['mount']) || undefined, token, addr, ttl: str(payload['ttl']) || undefined }), workspaceDir);
+                const creds = parseVaultDynamicCreds(r.stdout);
+                return safeJson({ ok: r.exitCode === 0, action: 'aws_creds', creds, output: r.stdout });
+            }
+
+            if (sub === 'db_creds') {
+                const r = await runCommand(buildVaultDbCredsArgs({ role: str(payload['role'], ''), mount: str(payload['mount']) || undefined, token, addr }), workspaceDir);
+                const creds = parseVaultDynamicCreds(r.stdout);
+                return safeJson({ ok: r.exitCode === 0, action: 'db_creds', creds, output: r.stdout });
+            }
+
+            if (sub === 'pki_issue') {
+                const r = await runCommand(buildVaultPkiIssueArgs({
+                    role:       str(payload['role'],        ''),
+                    commonName: str(payload['common_name'], ''),
+                    mount:      str(payload['mount'])  || undefined,
+                    ttl:        str(payload['ttl'])    || undefined,
+                    altNames:   Array.isArray(payload['alt_names'])  ? payload['alt_names'] as string[]  : undefined,
+                    ipSans:     Array.isArray(payload['ip_sans'])    ? payload['ip_sans']   as string[]  : undefined,
+                    token, addr,
+                }), workspaceDir);
+                const cert = parseVaultPkiCert(r.stdout);
+                return safeJson({ ok: r.exitCode === 0, action: 'pki_issue', cert, output: r.stdout });
+            }
+
+            if (sub === 'ssh_sign') {
+                const r = await runCommand(buildVaultSshSignArgs({
+                    role:           str(payload['role'],            ''),
+                    publicKeyPath:  str(payload['public_key_path'], ''),
+                    mount:          str(payload['mount']) || undefined,
+                    validPrincipals: Array.isArray(payload['valid_principals']) ? payload['valid_principals'] as string[] : undefined,
+                    ttl:            str(payload['ttl']) || undefined,
+                    token, addr,
+                }), workspaceDir);
+                return safeJson({ ok: r.exitCode === 0, action: 'ssh_sign', output: r.stdout });
+            }
+
+            if (sub === 'kv_metadata') {
+                const r = await runCommand(buildVaultKvMetadataArgs({ path: str(payload['path'], ''), mount: str(payload['mount']) || undefined, token, addr }), workspaceDir);
+                return safeJson({ ok: r.exitCode === 0, action: 'kv_metadata', output: r.stdout });
+            }
+
+            if (sub === 'token_create') {
+                const r = await runCommand(buildVaultTokenCreateArgs({
+                    policies:    Array.isArray(payload['policies']) ? payload['policies'] as string[] : undefined,
+                    ttl:         str(payload['ttl'])          || undefined,
+                    displayName: str(payload['display_name']) || undefined,
+                    numUses:     payload['num_uses'] ? num(payload['num_uses'], 0) : undefined,
+                    renewable:   payload['renewable'] !== false,
+                    noParent:    payload['no_parent'] === true,
+                    token, addr,
+                }), workspaceDir);
+                const info = parseVaultTokenInfo(r.stdout);
+                return safeJson({ ok: r.exitCode === 0, action: 'token_create', token_info: info, output: r.stdout });
+            }
+
+            if (sub === 'token_renew') {
+                const r = await runCommand(buildVaultTokenRenewArgs({ token, increment: str(payload['increment']) || undefined, self: payload['self'] === true, addr }), workspaceDir);
+                return safeJson({ ok: r.exitCode === 0, action: 'token_renew', output: r.stdout });
+            }
+
+            if (sub === 'token_revoke') {
+                const revokeToken = str(payload['revoke_token']) || token || '';
+                const r = await runCommand(buildVaultTokenRevokeArgs({ token: revokeToken, self: payload['self'] === true, addr }), workspaceDir);
+                return safeJson({ ok: r.exitCode === 0, action: 'token_revoke', output: r.stdout });
+            }
+
+            if (sub === 'token_lookup') {
+                const r = await runCommand(buildVaultTokenLookupArgs({ token, self: payload['self'] === true, addr }), workspaceDir);
+                const info = parseVaultTokenInfo(r.stdout);
+                return safeJson({ ok: r.exitCode === 0, action: 'token_lookup', token_info: info, output: r.stdout });
+            }
+
+            if (sub === 'token_capabilities') {
+                const r = await runCommand(buildVaultTokenCapabilitiesArgs({ path: str(payload['path'], ''), token, addr }), workspaceDir);
+                return safeJson({ ok: r.exitCode === 0, action: 'token_capabilities', output: r.stdout });
+            }
+
+            return { ok: false, output: '', errorOutput: `Unknown vault_dynamic sub_action: ${sub}` };
+        }
+
+        // ── workspace_devops_argo_workflow ───────────────────────────────────────
+        case 'workspace_devops_argo_workflow': {
+            if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+            const sub = str(payload['sub_action'], 'list');
+            const ns  = str(payload['namespace']) || undefined;
+
+            if (sub === 'list') {
+                const r = await runCommand(buildArgoListArgs({ namespace: ns, status: str(payload['status']) as any || undefined, output: 'json' }), workspaceDir);
+                const workflows = parseArgoWorkflowList(r.stdout);
+                return safeJson({ ok: r.exitCode === 0, action: 'list', workflows, report: formatArgoWorkflowReport(workflows) });
+            }
+
+            if (sub === 'get') {
+                const r = await runCommand(buildArgoGetArgs({ name: str(payload['name'], ''), namespace: ns, output: 'json' }), workspaceDir);
+                const wf = parseArgoWorkflowStatus(r.stdout);
+                return safeJson({ ok: r.exitCode === 0, action: 'get', workflow: wf, output: r.stdout });
+            }
+
+            if (sub === 'logs') {
+                const r = await runCommand(buildArgoLogsArgs({
+                    name:       str(payload['name'], ''),
+                    namespace:  ns,
+                    tailLines:  payload['tail_lines'] ? num(payload['tail_lines'], 100) : undefined,
+                    container:  str(payload['container']) || undefined,
+                    since:      str(payload['since'])     || undefined,
+                }), workspaceDir);
+                return safeJson({ ok: r.exitCode === 0, action: 'logs', output: r.stdout });
+            }
+
+            if (sub === 'submit') {
+                const yamlContent = str(payload['yaml']) || str(payload['workflow_yaml']);
+                const args = buildArgoSubmitArgs({
+                    file:           yamlContent ? undefined : str(payload['file']) || undefined,
+                    namespace:      ns,
+                    entrypoint:     str(payload['entrypoint']) || undefined,
+                    parameters:     typeof payload['parameters'] === 'object' && !Array.isArray(payload['parameters'])
+                                        ? payload['parameters'] as Record<string, string> : undefined,
+                    wait:           payload['wait'] === true,
+                    log:            payload['log']  === true,
+                    serviceAccount: str(payload['service_account']) || undefined,
+                });
+                const r = await runCommand(args, workspaceDir, yamlContent ? undefined : undefined);
+                return safeJson({ ok: r.exitCode === 0, action: 'submit', output: r.stdout, errorOutput: r.stderr });
+            }
+
+            if (sub === 'retry') {
+                const r = await runCommand(buildArgoRetryArgs({ name: str(payload['name'], ''), namespace: ns, restartSuccessful: payload['restart_successful'] === true }), workspaceDir);
+                return safeJson({ ok: r.exitCode === 0, action: 'retry', output: r.stdout });
+            }
+
+            if (sub === 'resubmit') {
+                const r = await runCommand(buildArgoResubmitArgs({ name: str(payload['name'], ''), namespace: ns, memoized: payload['memoized'] === true }), workspaceDir);
+                return safeJson({ ok: r.exitCode === 0, action: 'resubmit', output: r.stdout });
+            }
+
+            if (sub === 'terminate') {
+                const r = await runCommand(buildArgoTerminateArgs({ name: str(payload['name'], ''), namespace: ns }), workspaceDir);
+                return safeJson({ ok: r.exitCode === 0, action: 'terminate', output: r.stdout });
+            }
+
+            if (sub === 'stop') {
+                const r = await runCommand(buildArgoStopArgs({ name: str(payload['name'], ''), namespace: ns, message: str(payload['message']) || undefined, nodeField: str(payload['node_field']) || undefined }), workspaceDir);
+                return safeJson({ ok: r.exitCode === 0, action: 'stop', output: r.stdout });
+            }
+
+            if (sub === 'delete') {
+                const r = await runCommand(buildArgoDeleteArgs({ name: str(payload['name']) || undefined, namespace: ns, completed: payload['completed'] === true, resubmitted: payload['resubmitted'] === true }), workspaceDir);
+                return safeJson({ ok: r.exitCode === 0, action: 'delete', output: r.stdout });
+            }
+
+            if (sub === 'watch') {
+                const r = await runCommand(buildArgoWatchArgs({ name: str(payload['name'], ''), namespace: ns, deadline: str(payload['deadline']) || undefined }), workspaceDir);
+                return safeJson({ ok: r.exitCode === 0, action: 'watch', output: r.stdout });
+            }
+
+            if (sub === 'lint') {
+                const r = await runCommand(buildArgoLintArgs({ file: str(payload['file'], '-'), strict: payload['strict'] === true }), workspaceDir);
+                return safeJson({ ok: r.exitCode === 0, action: 'lint', output: r.stdout, errorOutput: r.stderr });
+            }
+
+            if (sub === 'template_list') {
+                const r = await runCommand(buildArgoTemplateListArgs({ namespace: ns, output: 'json' }), workspaceDir);
+                return safeJson({ ok: r.exitCode === 0, action: 'template_list', output: r.stdout });
+            }
+
+            if (sub === 'template_get') {
+                const r = await runCommand(buildArgoTemplateGetArgs({ name: str(payload['name'], ''), namespace: ns, output: 'json' }), workspaceDir);
+                return safeJson({ ok: r.exitCode === 0, action: 'template_get', output: r.stdout });
+            }
+
+            if (sub === 'template_create') {
+                const r = await runCommand(buildArgoTemplateCreateArgs({ file: str(payload['file'], '-'), namespace: ns }), workspaceDir);
+                return safeJson({ ok: r.exitCode === 0, action: 'template_create', output: r.stdout });
+            }
+
+            if (sub === 'template_delete') {
+                const r = await runCommand(buildArgoTemplateDeleteArgs({ name: str(payload['name'], ''), namespace: ns }), workspaceDir);
+                return safeJson({ ok: r.exitCode === 0, action: 'template_delete', output: r.stdout });
+            }
+
+            if (sub === 'cron_list') {
+                const r = await runCommand(buildArgoCronListArgs({ namespace: ns, output: 'json' }), workspaceDir);
+                return safeJson({ ok: r.exitCode === 0, action: 'cron_list', output: r.stdout });
+            }
+
+            if (sub === 'cron_create') {
+                const r = await runCommand(buildArgoCronCreateArgs({ file: str(payload['file'], '-'), namespace: ns }), workspaceDir);
+                return safeJson({ ok: r.exitCode === 0, action: 'cron_create', output: r.stdout });
+            }
+
+            if (sub === 'cron_suspend') {
+                const r = await runCommand(buildArgoCronSuspendArgs({ name: str(payload['name'], ''), namespace: ns }), workspaceDir);
+                return safeJson({ ok: r.exitCode === 0, action: 'cron_suspend', output: r.stdout });
+            }
+
+            if (sub === 'cron_resume') {
+                const r = await runCommand(buildArgoCronResumeArgs({ name: str(payload['name'], ''), namespace: ns }), workspaceDir);
+                return safeJson({ ok: r.exitCode === 0, action: 'cron_resume', output: r.stdout });
+            }
+
+            if (sub === 'cron_delete') {
+                const r = await runCommand(buildArgoCronDeleteArgs({ name: str(payload['name'], ''), namespace: ns }), workspaceDir);
+                return safeJson({ ok: r.exitCode === 0, action: 'cron_delete', output: r.stdout });
+            }
+
+            if (sub === 'generate') {
+                const prompt = buildArgoWorkflowGeneratePrompt(str(payload['description'], ''), str(payload['context']) || undefined);
+                const raw    = await callLlmSafe(callLlm, prompt);
+                return safeJson({ ok: !!raw, action: 'generate', yaml: raw, output: raw });
+            }
+
+            return { ok: false, output: '', errorOutput: `Unknown argo_workflow sub_action: ${sub}` };
+        }
+
+        // ── workspace_devops_backstage ───────────────────────────────────────────
+        case 'workspace_devops_backstage': {
+            if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+            const sub     = str(payload['sub_action'], 'entity_get');
+            const baseUrl = str(payload['base_url'], 'http://localhost:7007');
+            const token   = str(payload['token']) || undefined;
+
+            if (sub === 'entity_get' || sub === 'component_info') {
+                const args = sub === 'component_info'
+                    ? buildBackstageComponentInfoArgs({ baseUrl, name: str(payload['name'], ''), namespace: str(payload['namespace']) || undefined, token })
+                    : buildBackstageEntityGetArgs({ baseUrl, kind: str(payload['kind'], 'Component'), name: str(payload['name'], ''), namespace: str(payload['namespace']) || undefined, token });
+                const r = await runCommand(args, workspaceDir);
+                const entity = parseBackstageEntity(r.stdout);
+                return safeJson({ ok: r.exitCode === 0 && !!entity, action: sub, entity, report: entity ? formatBackstageEntityReport(entity) : r.stdout });
+            }
+
+            if (sub === 'entity_list' || sub === 'owner_components' || sub === 'api_list' || sub === 'resource_list' || sub === 'system_list') {
+                let args: string[];
+                if (sub === 'owner_components') {
+                    args = buildBackstageOwnerComponentsArgs({ baseUrl, owner: str(payload['owner'], ''), token });
+                } else if (sub === 'api_list') {
+                    args = buildBackstageApiListArgs({ baseUrl, lifecycle: str(payload['lifecycle']) || undefined, token });
+                } else if (sub === 'resource_list') {
+                    args = buildBackstageResourceListArgs({ baseUrl, type: str(payload['type']) || undefined, token });
+                } else if (sub === 'system_list') {
+                    args = buildBackstageSystemListArgs({ baseUrl, token });
+                } else {
+                    args = buildBackstageEntityListArgs({ baseUrl, kind: str(payload['kind']) || undefined, owner: str(payload['owner']) || undefined, lifecycle: str(payload['lifecycle']) || undefined, type: str(payload['type']) || undefined, namespace: str(payload['namespace']) || undefined, limit: payload['limit'] ? num(payload['limit'], 100) : undefined, token });
+                }
+                const r       = await runCommand(args, workspaceDir);
+                const entities = parseBackstageEntityList(r.stdout);
+                return safeJson({ ok: r.exitCode === 0, action: sub, entities, report: formatBackstageEntityListReport(entities) });
+            }
+
+            if (sub === 'entity_search') {
+                const r = await runCommand(buildBackstageEntitySearchArgs({ baseUrl, query: str(payload['query'], ''), kind: str(payload['kind']) || undefined, limit: payload['limit'] ? num(payload['limit'], 20) : undefined, token }), workspaceDir);
+                return safeJson({ ok: r.exitCode === 0, action: 'entity_search', output: r.stdout });
+            }
+
+            if (sub === 'entity_ref') {
+                const refs = Array.isArray(payload['refs']) ? payload['refs'] as string[] : [str(payload['ref'], '')].filter(Boolean);
+                const r = await runCommand(buildBackstageEntityRefArgs({ baseUrl, refs, token }), workspaceDir);
+                const entities = parseBackstageEntityList(r.stdout);
+                return safeJson({ ok: r.exitCode === 0, action: 'entity_ref', entities });
+            }
+
+            if (sub === 'techdocs_get') {
+                const r = await runCommand(buildBackstageTechDocsArgs({ baseUrl, kind: str(payload['kind'], 'Component'), name: str(payload['name'], ''), namespace: str(payload['namespace']) || undefined, token }), workspaceDir);
+                return safeJson({ ok: r.exitCode === 0, action: 'techdocs_get', output: r.stdout });
+            }
+
+            if (sub === 'health') {
+                const r = await runCommand(buildBackstageHealthArgs({ baseUrl }), workspaceDir);
+                return safeJson({ ok: r.exitCode === 0, action: 'health', output: r.stdout });
+            }
+
+            return { ok: false, output: '', errorOutput: `Unknown backstage sub_action: ${sub}` };
+        }
+
+        // ── workspace_devops_slack_incident ──────────────────────────────────────
+        case 'workspace_devops_slack_incident': {
+            if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+            const sub   = str(payload['sub_action'], 'channel_info');
+            const token = str(payload['token'], '');
+            if (!token) return { ok: false, output: '', errorOutput: 'Slack token required (payload.token)' };
+
+            if (sub === 'channel_create') {
+                const r = await runCommand(buildSlackChannelCreateArgs({ token, name: str(payload['name'], ''), isPrivate: payload['is_private'] === true }), workspaceDir);
+                const ch = parseSlackChannel(r.stdout);
+                return safeJson({ ok: r.exitCode === 0 && !!ch?.id, action: 'channel_create', channel: ch });
+            }
+
+            if (sub === 'channel_invite') {
+                const users = Array.isArray(payload['users']) ? payload['users'] as string[] : [str(payload['user'], '')].filter(Boolean);
+                const r = await runCommand(buildSlackChannelInviteArgs({ token, channel: str(payload['channel'], ''), users }), workspaceDir);
+                return safeJson({ ok: r.exitCode === 0, action: 'channel_invite', output: r.stdout });
+            }
+
+            if (sub === 'channel_topic') {
+                const r = await runCommand(buildSlackChannelTopicArgs({ token, channel: str(payload['channel'], ''), topic: str(payload['topic'], '') }), workspaceDir);
+                return safeJson({ ok: r.exitCode === 0, action: 'channel_topic', output: r.stdout });
+            }
+
+            if (sub === 'channel_archive') {
+                const r = await runCommand(buildSlackChannelArchiveArgs({ token, channel: str(payload['channel'], '') }), workspaceDir);
+                return safeJson({ ok: r.exitCode === 0, action: 'channel_archive', output: r.stdout });
+            }
+
+            if (sub === 'channel_info') {
+                const r = await runCommand(buildSlackChannelInfoArgs({ token, channel: str(payload['channel'], '') }), workspaceDir);
+                const ch = parseSlackChannel(r.stdout);
+                return safeJson({ ok: r.exitCode === 0, action: 'channel_info', channel: ch, report: ch ? formatSlackIncidentChannelReport(ch) : r.stdout });
+            }
+
+            if (sub === 'channel_list') {
+                const r = await runCommand(buildSlackChannelListArgs({ token, limit: payload['limit'] ? num(payload['limit'], 200) : undefined, excludeArchived: payload['exclude_archived'] !== false }), workspaceDir);
+                const channels = parseSlackChannelList(r.stdout);
+                return safeJson({ ok: r.exitCode === 0, action: 'channel_list', channels });
+            }
+
+            if (sub === 'message_post') {
+                const r = await runCommand(buildSlackMessagePostArgs({
+                    token,
+                    channel:   str(payload['channel'],  ''),
+                    text:      str(payload['text'],     ''),
+                    threadTs:  str(payload['thread_ts']) || undefined,
+                    username:  str(payload['username'])  || undefined,
+                    iconEmoji: str(payload['icon_emoji']) || undefined,
+                }), workspaceDir);
+                const msg = parseSlackMessage(r.stdout);
+                return safeJson({ ok: r.exitCode === 0 && !!msg?.ts, action: 'message_post', message: msg });
+            }
+
+            if (sub === 'message_update') {
+                const r = await runCommand(buildSlackMessageUpdateArgs({ token, channel: str(payload['channel'], ''), ts: str(payload['ts'], ''), text: str(payload['text'], '') }), workspaceDir);
+                return safeJson({ ok: r.exitCode === 0, action: 'message_update', output: r.stdout });
+            }
+
+            if (sub === 'pin_message') {
+                const r = await runCommand(buildSlackPinAddArgs({ token, channel: str(payload['channel'], ''), ts: str(payload['ts'], '') }), workspaceDir);
+                return safeJson({ ok: r.exitCode === 0, action: 'pin_message', output: r.stdout });
+            }
+
+            if (sub === 'unpin_message') {
+                const r = await runCommand(buildSlackPinRemoveArgs({ token, channel: str(payload['channel'], ''), ts: str(payload['ts'], '') }), workspaceDir);
+                return safeJson({ ok: r.exitCode === 0, action: 'unpin_message', output: r.stdout });
+            }
+
+            if (sub === 'user_lookup') {
+                const r = await runCommand(buildSlackUserLookupArgs({ token, email: str(payload['email'], '') }), workspaceDir);
+                const userId = parseSlackUserId(r.stdout);
+                return safeJson({ ok: r.exitCode === 0 && !!userId, action: 'user_lookup', user_id: userId });
+            }
+
+            if (sub === 'war_room_setup') {
+                const spec: IncidentWarRoomSpec = {
+                    incidentId:   str(payload['incident_id'],  `inc-${Date.now()}`),
+                    severity:     (str(payload['severity'], 'p2') as 'p1' | 'p2' | 'p3' | 'p4'),
+                    title:        str(payload['title'],        'Incident'),
+                    responders:   Array.isArray(payload['responders']) ? payload['responders'] as string[] : [],
+                    service:      str(payload['service'])       || undefined,
+                    runbookUrl:   str(payload['runbook_url'])   || undefined,
+                    dashboardUrl: str(payload['dashboard_url']) || undefined,
+                };
+                const channelName = buildIncidentChannelName(spec);
+                const createR  = await runCommand(buildSlackChannelCreateArgs({ token, name: channelName, isPrivate: true }), workspaceDir);
+                const ch       = parseSlackChannel(createR.stdout);
+                if (!ch?.id) return safeJson({ ok: false, action: 'war_room_setup', errorOutput: `Failed to create channel: ${createR.stdout}` });
+
+                let invitedCount = 0;
+                if (spec.responders.length > 0) {
+                    await runCommand(buildSlackChannelInviteArgs({ token, channel: ch.id, users: spec.responders }), workspaceDir);
+                    invitedCount = spec.responders.length;
+                }
+
+                const topic   = `[${spec.severity.toUpperCase()}] ${spec.title} | ID: ${spec.incidentId}`;
+                await runCommand(buildSlackChannelTopicArgs({ token, channel: ch.id, topic }), workspaceDir);
+
+                const welcome = buildWarRoomWelcomeMessage(spec);
+                const msgR    = await runCommand(buildSlackMessagePostArgs({ token, channel: ch.id, text: welcome }), workspaceDir);
+                const msg     = parseSlackMessage(msgR.stdout);
+
+                let pinnedTs: string | undefined;
+                if (msg?.ts) {
+                    await runCommand(buildSlackPinAddArgs({ token, channel: ch.id, ts: msg.ts }), workspaceDir);
+                    pinnedTs = msg.ts;
+                }
+
+                const result = { channelId: ch.id, channelName: ch.name, pinnedTs, invitedCount };
+                return safeJson({ ok: true, action: 'war_room_setup', ...result, report: formatWarRoomCreatedReport(result) });
+            }
+
+            return { ok: false, output: '', errorOutput: `Unknown slack_incident sub_action: ${sub}` };
+        }
+
+        // ── workspace_devops_scheduled_monitor ───────────────────────────────────
+        case 'workspace_devops_scheduled_monitor': {
+            if (!runCommand) return { ok: false, output: '', errorOutput: 'runCommand not available' };
+            const sub = str(payload['sub_action'], 'evaluate');
+
+            if (sub === 'create_metric_watch') {
+                const spec = buildMetricWatchSpec({
+                    id:            str(payload['id'],   `monitor-${Date.now()}`),
+                    name:          str(payload['name'], 'Metric Monitor'),
+                    description:   str(payload['description']) || undefined,
+                    query:         str(payload['query'],        ''),
+                    prometheusUrl: str(payload['prometheus_url'], 'http://localhost:9090'),
+                    warnThreshold: payload['warn_threshold'] ? num(payload['warn_threshold'], 0) : undefined,
+                    critThreshold: payload['crit_threshold'] ? num(payload['crit_threshold'], 0) : undefined,
+                    comparison:    (str(payload['comparison'], '>') as '>' | '<' | '>=' | '<=' | '=='),
+                    severity:      (str(payload['severity'], 'warning') as 'critical' | 'warning' | 'info'),
+                });
+                return safeJson({ ok: true, action: 'create_metric_watch', spec });
+            }
+
+            if (sub === 'create_log_watch') {
+                const spec = buildLogWatchSpec({
+                    id:          str(payload['id'],   `monitor-${Date.now()}`),
+                    name:        str(payload['name'], 'Log Monitor'),
+                    description: str(payload['description']) || undefined,
+                    pattern:     str(payload['pattern'], ''),
+                    source:      (str(payload['source'], 'kubectl') as 'kubectl' | 'journald' | 'file'),
+                    target:      str(payload['target'], ''),
+                    namespace:   str(payload['namespace']) || undefined,
+                    sinceSeconds: payload['since_seconds'] ? num(payload['since_seconds'], 300) : undefined,
+                    severity:    (str(payload['severity'], 'warning') as 'critical' | 'warning' | 'info'),
+                    suppressIfContains: Array.isArray(payload['suppress_if_contains']) ? payload['suppress_if_contains'] as string[] : undefined,
+                });
+                return safeJson({ ok: true, action: 'create_log_watch', spec });
+            }
+
+            if (sub === 'create_endpoint_watch') {
+                const spec = buildEndpointWatchSpec({
+                    id:             str(payload['id'],   `monitor-${Date.now()}`),
+                    name:           str(payload['name'], 'Endpoint Monitor'),
+                    description:    str(payload['description']) || undefined,
+                    url:            str(payload['url'],  ''),
+                    method:         (str(payload['method'], 'GET') as 'GET' | 'POST' | 'HEAD'),
+                    expectedStatus: num(payload['expected_status'], 200),
+                    warnLatencyMs:  payload['warn_latency_ms'] ? num(payload['warn_latency_ms'], 0) : undefined,
+                    critLatencyMs:  payload['crit_latency_ms'] ? num(payload['crit_latency_ms'], 0) : undefined,
+                    bodyContains:   str(payload['body_contains']) || undefined,
+                    tlsCheck:       payload['tls_check'] !== false,
+                    severity:       (str(payload['severity'], 'critical') as 'critical' | 'warning' | 'info'),
+                });
+                return safeJson({ ok: true, action: 'create_endpoint_watch', spec });
+            }
+
+            if (sub === 'evaluate') {
+                const specRaw = payload['spec'];
+                if (!specRaw || typeof specRaw !== 'object') {
+                    return { ok: false, output: '', errorOutput: 'spec required for evaluate' };
+                }
+                const spec = specRaw as MonitorSpec;
+                let checkResult: MonitorCheckResult;
+
+                if (spec.kind === 'metric') {
+                    const r = await runCommand(buildMonitorPrometheusQueryArgs({ prometheusUrl: spec.prometheusUrl, query: spec.query }), workspaceDir);
+                    checkResult = evaluateMetricResult(spec, r.stdout);
+                } else if (spec.kind === 'log') {
+                    const r = await runCommand(buildLogWatchArgs(spec), workspaceDir);
+                    checkResult = evaluateLogResult(spec, r.stdout);
+                } else {
+                    const r = await runCommand(spec.bodyContains ? buildEndpointBodyCheckArgs(spec) : buildEndpointCheckArgs(spec), workspaceDir);
+                    checkResult = evaluateEndpointResult(spec, r.stdout);
+                }
+
+                return safeJson({ ok: true, action: 'evaluate', result: checkResult, alert_message: checkResult.status !== 'ok' ? buildMonitorAlertMessage(checkResult, spec.severity) : undefined });
+            }
+
+            if (sub === 'report') {
+                const results = Array.isArray(payload['results'])
+                    ? payload['results'] as MonitorCheckResult[]
+                    : [];
+                const report = buildMonitorReport(results);
+                return safeJson({ ok: true, action: 'report', report, formatted: formatMonitorReport(report) });
+            }
+
+            return { ok: false, output: '', errorOutput: `Unknown scheduled_monitor sub_action: ${sub}` };
+        }
+
+        // ── workspace_devops_incident_context ────────────────────────────────────
+        case 'workspace_devops_incident_context': {
+            const sub = str(payload['sub_action'], 'build_context');
+
+            const alertRaw = payload['alert'];
+            if (!alertRaw || typeof alertRaw !== 'object') {
+                return { ok: false, output: '', errorOutput: 'alert object required' };
+            }
+            const alert = alertRaw as RawAlert;
+
+            const pastRaw = Array.isArray(payload['past_incidents']) ? payload['past_incidents'] as PastIncident[] : [];
+            const serviceRaw = payload['service'] && typeof payload['service'] === 'object'
+                ? payload['service'] as ServiceContext : undefined;
+
+            if (sub === 'build_context' || sub === 'enrich') {
+                const relevant = selectRelevantPastIncidents(alert, pastRaw, num(payload['top_n'], 5));
+                const ctx      = assembleIncidentContext({ alert, service: serviceRaw, pastIncidents: relevant });
+                return safeJson({ ok: true, action: sub, context: ctx, report: buildEnrichedAlertSummary(ctx) });
+            }
+
+            if (sub === 'noise_filter') {
+                const { score, reason } = computeNoiseScore(alert, pastRaw);
+                return safeJson({ ok: true, action: 'noise_filter', noise_score: score, reason, is_noise: score > 0.6 });
+            }
+
+            if (sub === 'suggest_triage') {
+                const relevant = selectRelevantPastIncidents(alert, pastRaw, num(payload['top_n'], 5));
+                const ctx      = assembleIncidentContext({ alert, service: serviceRaw, pastIncidents: relevant });
+                const prompt   = buildIncidentTriagePrompt(ctx);
+                const raw      = await callLlmSafe(callLlm, prompt);
+                const triage   = raw ? parseTriageSuggestion(raw) : null;
+                const report   = buildEnrichedAlertSummary(ctx, triage ?? undefined);
+                return safeJson({ ok: true, action: 'suggest_triage', context: ctx, triage, report });
+            }
+
+            return { ok: false, output: '', errorOutput: `Unknown incident_context sub_action: ${sub}` };
         }
     }
 }
