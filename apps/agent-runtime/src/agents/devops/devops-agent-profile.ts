@@ -186,6 +186,22 @@ export const DEVOPS_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = [
     'workspace_devops_net_diag',
     // ── Bucket 3 — Human Handoff / Dashboard Escalation ────────────────────
     'workspace_devops_human_handoff',
+    // ── Wave 1 Gap 1 — Port-forward / SSH Tunnel ───────────────────────────
+    'workspace_devops_tunnel',
+    // ── Wave 1 Gap 2 — Prometheus Management API ───────────────────────────
+    'workspace_devops_prometheus_mgmt',
+    // ── Wave 1 Gap 3 — Vault Dynamic Secrets ──────────────────────────────
+    'workspace_devops_vault_dynamic',
+    // ── Wave 1 Gap 4 — Argo Workflows ─────────────────────────────────────
+    'workspace_devops_argo_workflow',
+    // ── Wave 1 Gap 5 — Backstage Catalog ──────────────────────────────────
+    'workspace_devops_backstage',
+    // ── Wave 1 Gap 6 — Slack Incident Channel ─────────────────────────────
+    'workspace_devops_slack_incident',
+    // ── Wave 2 Gap 1 — Scheduled Monitor ──────────────────────────────────
+    'workspace_devops_scheduled_monitor',
+    // ── Wave 2 Gap 2 — Incident Context / Noise Filter ────────────────────
+    'workspace_devops_incident_context',
 ];
 
 // ---------------------------------------------------------------------------

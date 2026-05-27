@@ -84,7 +84,31 @@ export interface RunbookBranchNode {
     else?: string;
 }
 
-export type RunbookNode = RunbookActionStep | RunbookBranchNode;
+/**
+ * A checkpoint node that pauses execution until a human approves or a signal
+ * is received.  When encountered, the runbook halts and returns a partial
+ * result with `pausedAt` set.  The orchestrator can resume by re-running the
+ * runbook with `resume_from_step` pointing to the step AFTER this checkpoint.
+ */
+export interface RunbookCheckpointNode {
+    /** Stable identifier for the checkpoint. */
+    id:              string;
+    /** Type discriminator. */
+    checkpoint:      true;
+    /** Human-readable reason displayed in the dashboard task. */
+    require_approval: string;
+    /**
+     * Optional: escalation type for the dashboard task.
+     * Defaults to 'approval_required'.
+     */
+    escalation_type?: string;
+    /**
+     * Optional: metadata forwarded to the dashboard task artifacts.
+     */
+    metadata?: Record<string, unknown>;
+}
+
+export type RunbookNode = RunbookActionStep | RunbookBranchNode | RunbookCheckpointNode;
 
 /** Top-level runbook definition. */
 export interface RunbookDefinition {
@@ -116,6 +140,12 @@ export interface RunbookResult {
     stepsSucceeded: number;
     stepsFailed:    number;
     abortedAt?:     string;
+    /** Set when execution is paused at a checkpoint awaiting human approval. */
+    pausedAt?:      string;
+    /** The checkpoint node that triggered the pause. */
+    pausedCheckpoint?: RunbookCheckpointNode;
+    /** Step index to resume from after approval. */
+    resumeFromIndex?: number;
     results:        StepExecutionResult[];
     report:         string;
 }
@@ -130,6 +160,10 @@ export function isRunbookBranchNode(node: RunbookNode): node is RunbookBranchNod
 
 export function isRunbookActionStep(node: RunbookNode): node is RunbookActionStep {
     return 'action' in node;
+}
+
+export function isRunbookCheckpointNode(node: RunbookNode): node is RunbookCheckpointNode {
+    return 'checkpoint' in node && (node as RunbookCheckpointNode).checkpoint === true;
 }
 
 // ---------------------------------------------------------------------------
@@ -249,6 +283,21 @@ export function parseRunbookDefinition(raw: unknown): RunbookDefinition {
             } as RunbookBranchNode;
         }
 
+        if ('checkpoint' in step && step['checkpoint'] === true) {
+            if (typeof step['id'] !== 'string') {
+                throw new Error(`Checkpoint node at index ${i} must have a string "id" field`);
+            }
+            return {
+                id:               step['id'],
+                checkpoint:       true,
+                require_approval: typeof step['require_approval'] === 'string' ? step['require_approval'] : 'Manual approval required',
+                escalation_type:  typeof step['escalation_type'] === 'string' ? step['escalation_type'] : undefined,
+                metadata:         (step['metadata'] && typeof step['metadata'] === 'object' && !Array.isArray(step['metadata']))
+                                    ? step['metadata'] as Record<string, unknown>
+                                    : undefined,
+            } as RunbookCheckpointNode;
+        }
+
         if ('action' in step) {
             if (typeof step['id'] !== 'string') {
                 throw new Error(`Action step at index ${i} must have a string "id" field`);
@@ -268,7 +317,7 @@ export function parseRunbookDefinition(raw: unknown): RunbookDefinition {
             } as RunbookActionStep;
         }
 
-        throw new Error(`Step ${i} must have either an "action" field (action step) or "if"/"then" fields (branch node)`);
+        throw new Error(`Step ${i} must have either an "action" field, "if"/"then" fields (branch), or "checkpoint: true" field`);
     });
 
     return {
@@ -348,6 +397,39 @@ export async function executeRunbook(
             }
             cursor = entry.idx;
             continue;
+        }
+
+        // ── Checkpoint node ──────────────────────────────────────────────────
+        if (isRunbookCheckpointNode(node)) {
+            // Pause execution — return partial result with resumeFromIndex
+            const succeeded2 = ordered.filter((r) => r.ok && !r.skipped).length;
+            const failed2    = ordered.filter((r) => !r.ok && !r.skipped).length;
+            const report2    = formatRunbookReport({
+                name:           runbook.name,
+                ok:             false,
+                stepsTotal:     nodes.filter(isRunbookActionStep).length,
+                stepsExecuted:  ordered.length,
+                stepsSucceeded: succeeded2,
+                stepsFailed:    failed2,
+                pausedAt:       node.id,
+                pausedCheckpoint: node,
+                resumeFromIndex: cursor + 1,
+                results:        ordered,
+                report:         '',
+            });
+            return {
+                name:             runbook.name,
+                ok:               false,
+                stepsTotal:       nodes.filter(isRunbookActionStep).length,
+                stepsExecuted:    ordered.length,
+                stepsSucceeded:   succeeded2,
+                stepsFailed:      failed2,
+                pausedAt:         node.id,
+                pausedCheckpoint: node,
+                resumeFromIndex:  cursor + 1,
+                results:          ordered,
+                report:           report2,
+            };
         }
 
         // ── Action step ──────────────────────────────────────────────────────
@@ -443,7 +525,15 @@ export function formatRunbookReport(result: RunbookResult): string {
     const name = result.name ?? 'Unnamed Runbook';
 
     lines.push(`# Runbook Report — ${name}`);
-    lines.push(`**Status:** ${result.ok ? '✅ Completed' : '❌ Failed'}${result.abortedAt ? ` (aborted at ${result.abortedAt})` : ''}`);
+    const statusLabel = result.ok           ? '✅ Completed'
+                      : result.pausedAt     ? `⏸️ Paused at checkpoint \`${result.pausedAt}\` — awaiting approval`
+                      : result.abortedAt    ? `❌ Failed (aborted at ${result.abortedAt})`
+                      : '❌ Failed';
+    lines.push(`**Status:** ${statusLabel}`);
+    if (result.pausedCheckpoint) {
+        lines.push(`**Approval required:** ${result.pausedCheckpoint.require_approval}`);
+        lines.push(`**Resume from index:** ${result.resumeFromIndex ?? 'N/A'}`);
+    }
     lines.push('');
     lines.push(
         `| Total Steps | Executed | Succeeded | Failed |`,

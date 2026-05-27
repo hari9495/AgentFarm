@@ -473,6 +473,15 @@ export type LocalWorkspaceActionType =
     // Tier 32c (Bucket 3 — net diag & human handoff)
     | 'workspace_devops_net_diag'
     | 'workspace_devops_human_handoff'
+    // Tier 32d (Wave 1 & 2 — new builders)
+    | 'workspace_devops_tunnel'
+    | 'workspace_devops_prometheus_mgmt'
+    | 'workspace_devops_vault_dynamic'
+    | 'workspace_devops_argo_workflow'
+    | 'workspace_devops_backstage'
+    | 'workspace_devops_slack_incident'
+    | 'workspace_devops_scheduled_monitor'
+    | 'workspace_devops_incident_context'
     // Tier 32 (Mobile / iOS + Android domain actions)
     | 'workspace_mob_ios_component'
     | 'workspace_mob_ios_build'
@@ -1242,6 +1251,14 @@ export const LOCAL_WORKSPACE_ACTION_TYPES = new Set<LocalWorkspaceActionType>([
     'workspace_devops_runbook_execute',
     'workspace_devops_net_diag',
     'workspace_devops_human_handoff',
+    'workspace_devops_tunnel',
+    'workspace_devops_prometheus_mgmt',
+    'workspace_devops_vault_dynamic',
+    'workspace_devops_argo_workflow',
+    'workspace_devops_backstage',
+    'workspace_devops_slack_incident',
+    'workspace_devops_scheduled_monitor',
+    'workspace_devops_incident_context',
     // Tier 32 (Mobile / iOS + Android domain actions)
     'workspace_mob_ios_component',
     'workspace_mob_ios_build',
@@ -14066,7 +14083,15 @@ export async function executeLocalWorkspaceAction(input: {
         case 'workspace_devops_debug_session':
         case 'workspace_devops_runbook_execute':
         case 'workspace_devops_net_diag':
-        case 'workspace_devops_human_handoff': {
+        case 'workspace_devops_human_handoff':
+        case 'workspace_devops_tunnel':
+        case 'workspace_devops_prometheus_mgmt':
+        case 'workspace_devops_vault_dynamic':
+        case 'workspace_devops_argo_workflow':
+        case 'workspace_devops_backstage':
+        case 'workspace_devops_slack_incident':
+        case 'workspace_devops_scheduled_monitor':
+        case 'workspace_devops_incident_context': {
             if (!isDevopsActionType(actionType)) {
                 return { ok: false, output: '', errorOutput: `Unrecognised DevOps action: ${actionType}` };
             }
