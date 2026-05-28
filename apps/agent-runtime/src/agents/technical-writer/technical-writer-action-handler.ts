@@ -3907,5 +3907,10 @@ export async function handleTechnicalWriterAction(params: {
                 return { ok: false, output: '', errorOutput: String(err) };
             }
         }
+
+        default: {
+            const exhaustive: never = actionType;
+            return { ok: false, output: '', errorOutput: `Unknown technical writer action: ${String(exhaustive)}` };
+        }
     }
 }
