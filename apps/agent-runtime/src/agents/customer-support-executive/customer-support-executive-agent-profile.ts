@@ -64,5 +64,4 @@ export const CUSTOMER_SUPPORT_EXECUTIVE_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspa
     // ── Standup / live meetings (shared) ─────────────────────────────────────
     'workspace_meeting_join',
     'workspace_meeting_speak',
-    'workspace_meeting_interview_live',
 ];

@@ -236,6 +236,7 @@ export const DEVELOPER_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = 
     // ── Standup / live meetings (shared) ─────────────────────────────────────
     'workspace_meeting_join',
     'workspace_meeting_speak',
+    'workspace_meeting_interview_live',
 ];
 
 // ---------------------------------------------------------------------------

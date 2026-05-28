@@ -70,6 +70,7 @@ export const TECHNICAL_WRITER_ROLE_ALLOWED_LOCAL_ACTIONS: (LocalWorkspaceActionT
     // ── Standup / live meetings (shared) ─────────────────────────────────────
     'workspace_meeting_join',
     'workspace_meeting_speak',
+    'workspace_meeting_interview_live',
 ];
 
 export const TECHNICAL_WRITER_ROLE_BLOCKED_ACTIONS = [

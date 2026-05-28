@@ -52,6 +52,7 @@ export const MARKETING_SPECIALIST_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActi
     // Meeting — join stakeholder calls, present campaign results
     'workspace_meeting_join',
     'workspace_meeting_speak',
+    'workspace_meeting_interview_live',
     // Tier 46 — Marketing Specialist domain actions
     'workspace_ms_plan_campaign',
     'workspace_ms_monitor_campaign',

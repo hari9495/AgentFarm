@@ -21,6 +21,7 @@ export const CORPORATE_ASSISTANT_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActio
     // Meetings / standup
     'workspace_meeting_join',
     'workspace_meeting_speak',
+    'workspace_meeting_interview_live',
     'workspace_standup_report',
     // Email (Tier 25)
     'workspace_ca_email_compose',
