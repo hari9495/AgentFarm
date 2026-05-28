@@ -3870,6 +3870,13 @@ export async function executeLocalWorkspaceAction(input: {
      *  When provided and the task has no pre-generated plan, workspace_subagent_spawn
      *  calls this to produce real code_edit steps from the prompt + file contents. */
     llmCodeGenFn?: LlmCodeGenFn;
+    /**
+     * Optional higher-quality planner function for initial plan generation.
+     * When provided, workspace_subagent_spawn uses this for the upfront reasoning
+     * (quality_first tier) and llmCodeGenFn for fix attempts (cost_balanced tier).
+     * Falls back to llmCodeGenFn when absent.
+     */
+    llmPlannerFn?: LlmCodeGenFn;
     /** Optional LLM prose caller injected by the execution engine.
      *  Required for all workspace_cw_* actions that generate or transform text via LLM.
      *  When omitted the executor builds one from AF_MODEL_PROVIDER env vars if available. */
@@ -9517,12 +9524,14 @@ export async function executeLocalWorkspaceAction(input: {
 
             // FIX 7: Generate the implementation plan. Priority order:
             // 1. Caller-provided initial_plan (e.g. LLM classifier pre-generated code edits)
-            // 2. Injected LLM code-gen function (produces real code_edit steps)
+            // 2. Injected LLM planner function (quality_first tier) — preferred for upfront reasoning
+            //    Falls back to llmCodeGenFn (cost_balanced tier) when llmPlannerFn is absent.
             // 3. Keyword-based fallback (inferSubagentPlan — only run_tests / run_build)
+            const effectivePlannerFn = input.llmPlannerFn ?? input.llmCodeGenFn;
             if (initialPlan.length === 0 && fixAttempts.length === 0) {
-                if (input.llmCodeGenFn) {
+                if (effectivePlannerFn) {
                     try {
-                        const generatedSteps = await input.llmCodeGenFn(prompt, fileContents, targetFiles);
+                        const generatedSteps = await effectivePlannerFn(prompt, fileContents, targetFiles);
                         if (generatedSteps.length > 0) {
                             initialPlan = generatedSteps;
                             planSource = 'llm_generated' as typeof planSource;

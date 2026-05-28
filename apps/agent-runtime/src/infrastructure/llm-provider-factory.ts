@@ -21,15 +21,89 @@ import type { LlmCodeGenFn, AutonomousStep } from '../local-workspace-executor.j
 
 type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string };
 
+export type LlmCodeGenProfile = 'quality_first' | 'cost_balanced' | 'speed_first';
+
 type ProviderConfig =
     | { kind: 'anthropic'; apiKey: string; model: string }
     | { kind: 'openai_compatible'; apiKey: string; baseUrl: string; model: string; isAzure: boolean };
 
 // ---------------------------------------------------------------------------
+// Per-provider profile model resolution
+//
+// Operator env vars override built-in defaults.
+// Lookup order: AF_<PROVIDER>_MODEL_<PROFILE> → AF_<PROVIDER>_MODEL → built-in default
+// ---------------------------------------------------------------------------
+
+const PROFILE_SUFFIX: Record<LlmCodeGenProfile, string> = {
+    quality_first: 'QUALITY_FIRST',
+    cost_balanced: 'COST_BALANCED',
+    speed_first:   'SPEED_FIRST',
+};
+
+function resolveAnthropicModel(env: NodeJS.ProcessEnv, profile: LlmCodeGenProfile): string {
+    const builtins: Record<LlmCodeGenProfile, string> = {
+        quality_first: 'claude-opus-4-7',
+        cost_balanced: 'claude-sonnet-4-6',
+        speed_first:   'claude-haiku-4-5',
+    };
+    const suffix = PROFILE_SUFFIX[profile];
+    return (
+        env[`AF_ANTHROPIC_MODEL_${suffix}`] ??
+        env[`AGENTFARM_ANTHROPIC_MODEL_${suffix}`] ??
+        env['AF_ANTHROPIC_MODEL'] ??
+        env['AGENTFARM_ANTHROPIC_MODEL'] ??
+        builtins[profile]
+    );
+}
+
+function resolveOpenAiModel(env: NodeJS.ProcessEnv, profile: LlmCodeGenProfile): string {
+    const builtins: Record<LlmCodeGenProfile, string> = {
+        quality_first: 'gpt-4o',
+        cost_balanced: 'gpt-4o',
+        speed_first:   'gpt-4o-mini',
+    };
+    const suffix = PROFILE_SUFFIX[profile];
+    return (
+        env[`AF_OPENAI_MODEL_${suffix}`] ??
+        env[`AGENTFARM_OPENAI_MODEL_${suffix}`] ??
+        env['AF_OPENAI_MODEL'] ??
+        env['AGENTFARM_OPENAI_MODEL'] ??
+        builtins[profile]
+    );
+}
+
+function resolveGitHubModelsModel(env: NodeJS.ProcessEnv, profile: LlmCodeGenProfile): string {
+    const builtins: Record<LlmCodeGenProfile, string> = {
+        quality_first: 'gpt-4o',
+        cost_balanced: 'gpt-4o-mini',
+        speed_first:   'gpt-4o-mini',
+    };
+    const suffix = PROFILE_SUFFIX[profile];
+    return (
+        env[`AF_GITHUB_MODELS_MODEL_${suffix}`] ??
+        env[`AGENTFARM_GITHUB_MODELS_MODEL_${suffix}`] ??
+        env['AF_GITHUB_MODELS_MODEL'] ??
+        env['AGENTFARM_GITHUB_MODELS_MODEL'] ??
+        builtins[profile]
+    );
+}
+
+function resolveAzureDeployment(env: NodeJS.ProcessEnv, profile: LlmCodeGenProfile): string {
+    const suffix = PROFILE_SUFFIX[profile];
+    return (
+        env[`AF_AZURE_OPENAI_DEPLOYMENT_${suffix}`] ??
+        env[`AGENTFARM_AZURE_OPENAI_DEPLOYMENT_${suffix}`] ??
+        env['AF_AZURE_OPENAI_DEPLOYMENT'] ??
+        env['AGENTFARM_AZURE_OPENAI_DEPLOYMENT'] ??
+        ''
+    );
+}
+
+// ---------------------------------------------------------------------------
 // Provider config resolution
 // ---------------------------------------------------------------------------
 
-const resolveProviderConfig = (env: NodeJS.ProcessEnv): ProviderConfig | null => {
+const resolveProviderConfig = (env: NodeJS.ProcessEnv, profile: LlmCodeGenProfile = 'cost_balanced'): ProviderConfig | null => {
     const provider = (env['AF_MODEL_PROVIDER'] ?? env['AGENTFARM_MODEL_PROVIDER'] ?? 'agentfarm')
         .toLowerCase()
         .trim();
@@ -38,22 +112,20 @@ const resolveProviderConfig = (env: NodeJS.ProcessEnv): ProviderConfig | null =>
 
     if (provider === 'anthropic') {
         const apiKey = env['AF_ANTHROPIC_API_KEY'] ?? env['AGENTFARM_ANTHROPIC_API_KEY'] ?? '';
-        const model = env['AF_ANTHROPIC_MODEL'] ?? env['AGENTFARM_ANTHROPIC_MODEL'] ?? 'claude-3-5-haiku-latest';
         if (!apiKey.trim()) return null;
-        return { kind: 'anthropic', apiKey, model };
+        return { kind: 'anthropic', apiKey, model: resolveAnthropicModel(env, profile) };
     }
 
     if (provider === 'github_models') {
         const apiKey = env['AF_GITHUB_MODELS_API_KEY'] ?? env['AGENTFARM_GITHUB_MODELS_API_KEY'] ?? '';
         const baseUrl = (env['AF_GITHUB_MODELS_BASE_URL'] ?? env['AGENTFARM_GITHUB_MODELS_BASE_URL'] ?? 'https://models.inference.ai.azure.com').replace(/\/+$/, '');
-        const model = env['AF_GITHUB_MODELS_MODEL'] ?? env['AGENTFARM_GITHUB_MODELS_MODEL'] ?? 'openai/gpt-4.1-mini';
         if (!apiKey.trim()) return null;
-        return { kind: 'openai_compatible', apiKey, baseUrl, model, isAzure: false };
+        return { kind: 'openai_compatible', apiKey, baseUrl, model: resolveGitHubModelsModel(env, profile), isAzure: false };
     }
 
     if (provider === 'azure_openai' || provider === 'azure-openai') {
         const endpoint = (env['AF_AZURE_OPENAI_ENDPOINT'] ?? env['AGENTFARM_AZURE_OPENAI_ENDPOINT'] ?? '').replace(/\/+$/, '');
-        const deployment = env['AF_AZURE_OPENAI_DEPLOYMENT'] ?? env['AGENTFARM_AZURE_OPENAI_DEPLOYMENT'] ?? '';
+        const deployment = resolveAzureDeployment(env, profile);
         const apiVersion = env['AF_AZURE_OPENAI_API_VERSION'] ?? env['AGENTFARM_AZURE_OPENAI_API_VERSION'] ?? '2024-06-01';
         const apiKey = env['AF_AZURE_OPENAI_API_KEY'] ?? env['AGENTFARM_AZURE_OPENAI_API_KEY'] ?? '';
         if (!apiKey.trim() || !endpoint || !deployment) return null;
@@ -64,9 +136,8 @@ const resolveProviderConfig = (env: NodeJS.ProcessEnv): ProviderConfig | null =>
     // Default: openai and openai-compatible providers
     const apiKey = env['AF_OPENAI_API_KEY'] ?? env['AGENTFARM_OPENAI_API_KEY'] ?? '';
     const baseUrl = (env['AF_OPENAI_BASE_URL'] ?? env['AGENTFARM_OPENAI_BASE_URL'] ?? 'https://api.openai.com/v1').replace(/\/+$/, '');
-    const model = env['AF_OPENAI_MODEL'] ?? env['AGENTFARM_OPENAI_MODEL'] ?? 'gpt-4o-mini';
     if (!apiKey.trim()) return null;
-    return { kind: 'openai_compatible', apiKey, baseUrl, model, isAzure: false };
+    return { kind: 'openai_compatible', apiKey, baseUrl, model: resolveOpenAiModel(env, profile), isAzure: false };
 };
 
 // ---------------------------------------------------------------------------
@@ -210,13 +281,22 @@ const buildOpenAICompatibleCodeGenFn = (
 /**
  * Creates a code-generation function wired to the configured LLM provider.
  *
- * Returns `undefined` when no provider is configured so that callers can
- * fall back to keyword-based plan inference without additional guards.
+ * The optional `profile` selects the model tier for this function:
+ *   - 'quality_first'  — expensive model, best for initial plan generation (planner)
+ *   - 'cost_balanced'  — mid-tier, best for fix-attempt generation (worker)
+ *   - 'speed_first'    — cheapest, for classification / light tasks
  *
- * @param env - process.env (injectable for testing)
+ * Returns `undefined` when no provider is configured so callers can fall back
+ * to keyword-based plan inference without additional guards.
+ *
+ * @param env     - process.env (injectable for testing)
+ * @param profile - model tier selection (default: 'cost_balanced')
  */
-export const createCodeGenFn = (env: NodeJS.ProcessEnv = process.env): LlmCodeGenFn | undefined => {
-    const config = resolveProviderConfig(env);
+export const createCodeGenFn = (
+    env: NodeJS.ProcessEnv = process.env,
+    profile: LlmCodeGenProfile = 'cost_balanced',
+): LlmCodeGenFn | undefined => {
+    const config = resolveProviderConfig(env, profile);
     if (!config) return undefined;
 
     if (config.kind === 'anthropic') {

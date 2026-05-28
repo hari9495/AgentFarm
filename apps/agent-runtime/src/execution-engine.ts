@@ -181,7 +181,7 @@ const KILL_SWITCH_BLOCKED_MESSAGE = (killSwitchId?: string): string =>
 async function executeLowRiskAction(
     task: TaskEnvelope,
     attempt: number,
-    opts?: { llmCodeGenFn?: LlmCodeGenFn },
+    opts?: { llmCodeGenFn?: LlmCodeGenFn; llmPlannerFn?: LlmCodeGenFn },
 ): Promise<{ actionOutput?: string }> {
     if (shouldFailTransiently(task.payload, attempt)) throw new Error('TRANSIENT_EXECUTOR_ERROR');
     if (task.payload['force_failure'] === true) throw new Error('NON_RETRYABLE_EXECUTOR_ERROR');
@@ -209,6 +209,7 @@ async function executeLowRiskAction(
             actionType: rawActionType as Parameters<typeof executeLocalWorkspaceAction>[0]['actionType'],
             payload: task.payload,
             llmCodeGenFn: opts?.llmCodeGenFn,
+            llmPlannerFn: opts?.llmPlannerFn,
         });
         if (!result.ok) {
             throw new Error(`Workspace action failed [${rawActionType}]: ${result.errorOutput ?? result.output ?? 'workspace action failed'}`);
@@ -236,7 +237,7 @@ async function executeTaskWithRetries(
     decision: ActionDecision,
     payloadOverrideSource: PayloadOverrideSource,
     llmExecution?: LlmDecisionMetadata,
-    options?: { maxAttempts?: number; llmCodeGenFn?: LlmCodeGenFn },
+    options?: { maxAttempts?: number; llmCodeGenFn?: LlmCodeGenFn; llmPlannerFn?: LlmCodeGenFn },
 ): Promise<ProcessedTaskResult> {
     const maxAttempts = options?.maxAttempts ?? 3;
     let allowedAttempts = maxAttempts;
@@ -251,7 +252,7 @@ async function executeTaskWithRetries(
             const { actionOutput } = await executeLowRiskAction(
                 { ...task, payload: currentPayload },
                 attempts,
-                { llmCodeGenFn: options?.llmCodeGenFn },
+                { llmCodeGenFn: options?.llmCodeGenFn, llmPlannerFn: options?.llmPlannerFn },
             );
             return { decision, status: 'success', attempts, transientRetries, executionPayload: currentPayload, payloadOverrideSource, llmExecution, actionOutput };
         } catch (err: unknown) {
@@ -331,6 +332,7 @@ export async function processApprovedTask(
         progressSink?: ProgressSink;
         killSwitchCheckFn?: KillSwitchCheckFn;
         llmCodeGenFn?: LlmCodeGenFn;
+        llmPlannerFn?: LlmCodeGenFn;
     },
 ): Promise<ProcessedTaskResult> {
     const taskWithAuditContext: TaskEnvelope = { ...task, payload: enrichPayloadWithAuditContext(task.payload, task.taskId) };
@@ -365,8 +367,9 @@ export async function processApprovedTask(
     };
 
     await reportProgress(progressCtx, 'coding_started', 'Executing approved task.', sink);
-    const resolvedCodeGenFn = options?.llmCodeGenFn ?? createCodeGenFn();
-    const result = await executeTaskWithRetries(taskWithAuditContext, approvedDecision, 'none', llmExecution, { ...options, llmCodeGenFn: resolvedCodeGenFn });
+    const resolvedWorkerFn = options?.llmCodeGenFn ?? createCodeGenFn(process.env, 'cost_balanced');
+    const resolvedPlannerFn = options?.llmPlannerFn ?? createCodeGenFn(process.env, 'quality_first');
+    const result = await executeTaskWithRetries(taskWithAuditContext, approvedDecision, 'none', llmExecution, { ...options, llmCodeGenFn: resolvedWorkerFn, llmPlannerFn: resolvedPlannerFn });
 
     await reportProgress(
         progressCtx,
@@ -506,11 +509,13 @@ export async function processDeveloperTask(
     }
 
     await reportProgress(progressCtx, 'coding_started', 'Executing low-risk developer task.', sink);
-    const codeGenFn: LlmCodeGenFn | undefined = createCodeGenFn();
+    // Planner (initial plan generation) uses quality_first; worker (fix attempts) uses cost_balanced.
+    const plannerFn: LlmCodeGenFn | undefined = createCodeGenFn(process.env, 'quality_first');
+    const workerFn: LlmCodeGenFn | undefined = createCodeGenFn(process.env, 'cost_balanced');
     const execResult = await executeTaskWithRetries(
         { ...taskWithAuditContext, payload: executionPayload },
         decision, payloadOverrideSource, llmExecution,
-        { ...options, llmCodeGenFn: codeGenFn },
+        { ...options, llmCodeGenFn: workerFn, llmPlannerFn: plannerFn },
     );
 
     await reportProgress(
