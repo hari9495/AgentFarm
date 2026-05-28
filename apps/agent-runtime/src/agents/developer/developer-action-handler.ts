@@ -282,16 +282,20 @@ export async function handleDeveloperAction(
                 contextSnippet && `Grep context:\n${contextSnippet}`,
             ].filter(Boolean).join('\n\n');
 
-            const result = await executeAction('workspace_autonomous_plan_execute', {
-                prompt:    fixPrompt,
-                file_path: filePath || undefined,
-                dry_run:   dryRun,
+            // workspace_autonomous_plan_execute requires a pre-built plan[] array and
+            // would return an error here — use workspace_subagent_spawn which accepts
+            // a natural-language prompt natively (same fix as implement_feature).
+            const result = await executeAction('workspace_subagent_spawn', {
+                prompt:       fixPrompt,
+                target_files: filePath ? [filePath] : undefined,
+                dry_run:      dryRun,
             });
             const data = parseSubOutput(result);
             return safeJson({
                 ok:            result.ok,
-                summary:       data['summary'] ?? (result.ok ? 'Bug fixed.' : 'Fix failed.'),
+                summary:       data['summary'] ?? data['specialist_brief'] ?? (result.ok ? 'Bug fixed.' : 'Fix failed.'),
                 files_changed: data['files_changed'] ?? [],
+                plan_source:   data['plan_source'] ?? 'subagent',
                 dry_run:       dryRun,
             });
         }
