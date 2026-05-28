@@ -145,6 +145,7 @@ import {
 } from './agents/content-writer/content-writer-agent-profile.js';
 import { getContentWriterDefaultPersona } from './agents/content-writer/content-writer-persona-defaults.js';
 import { buildContentWriterEpisodicPattern, buildContentWriterEpisodicSummary } from './agents/content-writer/content-writer-episodic-hooks.js';
+import { buildCseEpisodicPattern, buildCseEpisodicSummary } from './agents/customer-support-executive/customer-support-executive-episodic-hooks.js';
 import { getContentWriterMcpClients } from './agents/content-writer/content-writer-mcp-provisioner.js';
 import { assessTaskClarity, buildClarificationMessage } from './intent-clarifier.js';
 import { enforceRole } from './role-enforcer.js';
@@ -5123,6 +5124,57 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                             botId: config.botId,
                             content: cwSummary,
                             sourceType: 'content_writer_artifact',
+                        },
+                        semanticEmbed,
+                        options.prisma,
+                        semanticDeployment,
+                    ).catch((err: unknown) => {
+                        emitRuntimeEvent('runtime.semantic_memory_write_failed', config, {
+                            task_id: task.taskId,
+                            error_message: err instanceof Error ? err.message : String(err),
+                        });
+                    });
+                }
+            }
+
+            // ---- CSE-specific episodic write: customer interaction memory ----
+            // Fires in addition to the generic write above. Uses domain-aware
+            // pattern keys (e.g. "cse:ticket:closed:done", "cse:refund:processed:done")
+            // keyed by customer email/id so future sessions can recognise returning
+            // customers and recall past tickets, refunds, and escalations.
+            if (config.roleKey === 'customer_support_executive') {
+                const csePattern = buildCseEpisodicPattern(task, result);
+                const cseSummary = buildCseEpisodicSummary(task, result);
+                writeEpisodicMemory(
+                    {
+                        tenantId: config.tenantId,
+                        botId: config.botId,
+                        workspaceId: config.workspaceId,
+                        summary: cseSummary,
+                        pattern: csePattern,
+                        confidence: estimateLlmQualityScore(result),
+                        taskId: task.taskId,
+                    },
+                    episodicEmbed,
+                    options.prisma,
+                    episodicDeployment,
+                ).catch((err: unknown) => {
+                    emitRuntimeEvent('runtime.episodic_memory_write_failed', config, {
+                        task_id: task.taskId,
+                        error_message: err instanceof Error ? err.message : String(err),
+                    });
+                });
+
+                // ---- CSE semantic memory: persist customer interaction artifacts for RAG ----
+                // Ticket resolutions, refund decisions, and KB articles are written to
+                // semantic memory so future searches surface past case context.
+                if (semanticEmbed && options.prisma && cseSummary && !csePattern.endsWith(':fail')) {
+                    writeSemanticMemory(
+                        {
+                            tenantId: config.tenantId,
+                            botId: config.botId,
+                            content: cseSummary,
+                            sourceType: 'cse_interaction',
                         },
                         semanticEmbed,
                         options.prisma,
