@@ -396,6 +396,14 @@ export async function handleFsdAction(
             const props         = Array.isArray(payload['props']) ? (payload['props'] as ComponentSpec['props']) : [];
 
             // ── Unknown framework path — LLM-driven generation ────────────────
+            if (!isKnownFramework(frameworkRaw) && !callLlm) {
+                return {
+                    ok: false,
+                    output: '',
+                    errorOutput: `Unknown framework "${frameworkRaw}": component generation for non-standard frameworks requires callLlm. ` +
+                        `Supported frameworks without LLM: react, vue, angular, svelte, solid.`,
+                };
+            }
             if (!isKnownFramework(frameworkRaw) && callLlm) {
                 const prompt = buildUnknownFrameworkComponentPrompt({
                     framework:     frameworkRaw,

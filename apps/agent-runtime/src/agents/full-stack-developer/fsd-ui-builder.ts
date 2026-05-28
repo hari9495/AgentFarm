@@ -141,6 +141,7 @@ function buildReactComponent(spec: ComponentSpec): ComponentScaffold {
     const styleImport = buildReactStyleImport(spec);
     const className   = buildClassName(spec);
 
+    const innerContent = buildMinimalContent(spec, 'react-jsx');
     const code = [
         `import React from 'react';`,
         styleImport,
@@ -154,7 +155,7 @@ function buildReactComponent(spec: ComponentSpec): ComponentScaffold {
         stateLines,
         `  return (`,
         `    <div${className}>`,
-        `      {/* TODO: implement ${spec.name} */}`,
+        ...(innerContent ? [`      ${innerContent}`] : []),
         `    </div>`,
         `  );`,
         `};`,
@@ -214,10 +215,11 @@ function buildVueComponent(spec: ComponentSpec): ComponentScaffold {
         `    ${p.name}: { type: ${mapTypeToVue(p.type)}${p.required ? ', required: true' : ''} },`,
     ).join('\n');
 
+    const vueInner = buildMinimalContent(spec, 'vue-template');
     const code = [
         `<template>`,
         `  <div${spec.styling === 'tailwind' ? ' class="flex flex-col"' : ''}>`,
-        `    <!-- TODO: implement ${spec.name} -->`,
+        `    ${vueInner}`,
         `  </div>`,
         `</template>`,
         '',
@@ -279,7 +281,8 @@ function buildAngularComponent(spec: ComponentSpec): ComponentScaffold {
         `}`,
     ].join('\n');
 
-    const htmlCode = `<div>\n  <!-- TODO: implement ${spec.name} -->\n</div>\n`;
+    const angularInner = buildMinimalContent(spec, 'angular-html');
+    const htmlCode = `<div>\n  ${angularInner}\n</div>\n`;
 
     const testCode = [
         `import { ComponentFixture, TestBed } from '@angular/core/testing';`,
@@ -312,6 +315,7 @@ function buildSvelteComponent(spec: ComponentSpec): ComponentScaffold {
         `  export let ${p.name}${p.default ? ` = ${p.default}` : (p.required ? '' : ' = undefined')}: ${p.type};`,
     ).join('\n');
 
+    const svelteInner = buildMinimalContent(spec, 'svelte-template');
     const code = [
         `<script lang="ts">`,
         `  /** ${spec.description} */`,
@@ -320,7 +324,7 @@ function buildSvelteComponent(spec: ComponentSpec): ComponentScaffold {
         `</script>`,
         '',
         `<div${spec.styling === 'tailwind' ? ' class="flex flex-col"' : ''}>`,
-        `  <!-- TODO: implement ${spec.name} -->`,
+        `  ${svelteInner}`,
         `</div>`,
         '',
         `<style>`,
@@ -350,6 +354,7 @@ function buildSvelteComponent(spec: ComponentSpec): ComponentScaffold {
 
 function buildSolidComponent(spec: ComponentSpec): ComponentScaffold {
     const propsType = buildTsPropsInterface(spec.name, spec.props);
+    const solidInner = buildMinimalContent(spec, 'solid-jsx');
     const code = [
         `import { Component${spec.hasState ? ', createSignal' : ''} } from 'solid-js';`,
         '',
@@ -358,7 +363,9 @@ function buildSolidComponent(spec: ComponentSpec): ComponentScaffold {
         `/** ${spec.description} */`,
         `const ${spec.name}: Component<${spec.name}Props> = (props) => {`,
         spec.hasState ? `  const [state, setState] = createSignal<unknown>(null);` : '',
-        `  return <div>{/* TODO: implement ${spec.name} */}</div>;`,
+        solidInner
+            ? `  return <div>${solidInner}</div>;`
+            : `  return <div />;`,
         `};`,
         '',
         `export default ${spec.name};`,
@@ -696,6 +703,52 @@ function buildStyleFile(spec: ComponentSpec): { styleFilename?: string; styleCod
 
 function kebab(name: string): string {
     return name.replace(/([A-Z])/g, (m) => `-${m.toLowerCase()}`).replace(/^-/, '');
+}
+
+/**
+ * Returns a minimal, non-TODO inner content string for a generated component.
+ * Replaces TODO stubs with real code built from the component spec — no LLM needed.
+ *
+ * Priority:
+ *   1. `children` prop  → framework slot/children expression
+ *   2. First renderable string/number prop → inline binding
+ *   3. No renderable props → framework default slot (Vue/Svelte) or empty (React/Solid)
+ */
+function buildMinimalContent(
+    spec:   ComponentSpec,
+    syntax: 'react-jsx' | 'vue-template' | 'angular-html' | 'svelte-template' | 'solid-jsx',
+): string {
+    const hasChildren = spec.props.some((p) => p.name === 'children');
+    const textProp = spec.props.find(
+        (p) =>
+            p.name !== 'children' &&
+            !['className', 'class', 'style', 'onClick', 'onChange', 'onSubmit', 'ref'].includes(p.name) &&
+            ['string', 'number', 'String', 'Number', 'React.ReactNode', 'ReactNode'].includes(p.type),
+    );
+
+    switch (syntax) {
+        case 'react-jsx':
+            if (hasChildren) return '{children}';
+            if (textProp)    return `{${textProp.name}}`;
+            return '';
+
+        case 'solid-jsx':
+            if (hasChildren) return '{props.children}';
+            if (textProp)    return `{props.${textProp.name}}`;
+            return '';
+
+        case 'vue-template':
+            if (!textProp)   return '<slot />';
+            return `{{ ${textProp.name} }}`;
+
+        case 'svelte-template':
+            if (!textProp)   return '<slot />';
+            return `{${textProp.name}}`;
+
+        case 'angular-html':
+            if (textProp)    return `{{ ${textProp.name} }}`;
+            return '<ng-content></ng-content>';
+    }
 }
 
 function mapTypeToVue(tsType: string): string {
