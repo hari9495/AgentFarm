@@ -158,6 +158,92 @@ const parseStepsFromJson = (raw: unknown): AutonomousStep[] => {
 };
 
 // ---------------------------------------------------------------------------
+// Streaming helpers — early-stop on JSON array close
+//
+// Instead of waiting for max_tokens to be consumed (or the model to emit a
+// stop token), we stream the response and abort as soon as the outer JSON
+// array `[...]` is closed. This eliminates model-padding tokens — e.g. blank
+// lines, "Here is the plan:" suffixes — that follow the valid JSON.
+//
+// Bracket-balance logic tracks depth across `[`, `{`, `]`, `}` while correctly
+// ignoring characters inside string literals (including escaped quotes).
+// ---------------------------------------------------------------------------
+
+async function streamJsonArray(
+    body: ReadableStream<Uint8Array>,
+    extractDelta: (line: string) => string | null,
+): Promise<string> {
+    const reader = body.getReader();
+    const decoder = new TextDecoder();
+    let sseBuffer = '';
+    let jsonText = '';
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+    let started = false;
+
+    const feed = (ch: string): boolean => {
+        jsonText += ch;
+        if (escaped) { escaped = false; return false; }
+        if (ch === '\\' && inString) { escaped = true; return false; }
+        if (ch === '"') { inString = !inString; return false; }
+        if (inString) return false;
+        if (ch === '[' || ch === '{') { depth++; started = true; }
+        else if ((ch === ']' || ch === '}') && --depth === 0 && started) return true;
+        return false;
+    };
+
+    try {
+        loop: while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            sseBuffer += decoder.decode(value, { stream: true });
+            const lines = sseBuffer.split('\n');
+            sseBuffer = lines.pop() ?? '';
+            for (const line of lines) {
+                const delta = extractDelta(line.trim());
+                if (delta === null) continue;
+                for (const ch of delta) {
+                    if (feed(ch)) break loop;
+                }
+            }
+        }
+    } finally {
+        reader.cancel().catch(() => {});
+    }
+    return jsonText;
+}
+
+const extractAnthropicDelta = (line: string): string | null => {
+    if (!line.startsWith('data: ')) return null;
+    const payload = line.slice(6).trim();
+    if (!payload || payload === '[DONE]') return null;
+    try {
+        const event = JSON.parse(payload) as {
+            type?: string;
+            delta?: { type?: string; text?: string };
+        };
+        if (event.type === 'content_block_delta' && event.delta?.type === 'text_delta') {
+            return event.delta.text ?? null;
+        }
+    } catch { /* ignore non-JSON lines */ }
+    return null;
+};
+
+const extractOpenAiDelta = (line: string): string | null => {
+    if (!line.startsWith('data: ')) return null;
+    const payload = line.slice(6).trim();
+    if (!payload || payload === '[DONE]') return null;
+    try {
+        const event = JSON.parse(payload) as {
+            choices?: Array<{ delta?: { content?: string } }>;
+        };
+        return event.choices?.[0]?.delta?.content ?? null;
+    } catch { /* ignore non-JSON lines */ }
+    return null;
+};
+
+// ---------------------------------------------------------------------------
 // Provider implementations
 // ---------------------------------------------------------------------------
 
@@ -189,12 +275,11 @@ const buildAnthropicCodeGenFn = (apiKey: string, model: string): LlmCodeGenFn =>
                     'x-api-key': apiKey,
                     'anthropic-version': '2023-06-01',
                 },
-                body: JSON.stringify({ model, max_tokens: 4096, system: systemMsg, messages: [{ role: 'user', content: userMsg }] }),
+                body: JSON.stringify({ model, max_tokens: 4096, stream: true, system: systemMsg, messages: [{ role: 'user', content: userMsg }] }),
                 signal: AbortSignal.timeout(120_000),
             });
-            if (!response.ok) return [];
-            const parsed = await response.json() as { content?: Array<{ type: string; text?: string }> };
-            const text = parsed.content?.find((b) => b.type === 'text')?.text ?? '';
+            if (!response.ok || !response.body) return [];
+            const text = await streamJsonArray(response.body, extractAnthropicDelta);
             const s = text.indexOf('[');
             const e = text.lastIndexOf(']');
             if (s === -1 || e === -1) return [];
@@ -259,16 +344,18 @@ const buildOpenAICompatibleCodeGenFn = (
                 body: JSON.stringify({
                     model,
                     temperature: 0,
-                    response_format: { type: 'json_object' },
+                    stream: true,
                     messages,
                 }),
                 signal: AbortSignal.timeout(120_000),
             });
-            if (!response.ok) return [];
-            const parsed = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
-            const content = parsed.choices?.[0]?.message?.content;
-            if (!content) return [];
-            return parseStepsFromJson(JSON.parse(content));
+            if (!response.ok || !response.body) return [];
+            const text = await streamJsonArray(response.body, extractOpenAiDelta);
+            if (!text.trim()) return [];
+            const s = text.indexOf('[');
+            const e = text.lastIndexOf(']');
+            if (s === -1 || e === -1) return [];
+            return parseStepsFromJson(JSON.parse(text.slice(s, e + 1)));
         } catch {
             return [];
         }

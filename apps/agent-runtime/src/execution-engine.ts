@@ -38,6 +38,9 @@ import {
     scoreConfidence as _scoreConfidence,
     classifyRisk as _classifyRisk,
 } from './domain/risk-policy.js';
+import { createHash } from 'node:crypto';
+import { getRedisClient } from '@agentfarm/redis-client';
+import { getCompressedEpisodicContext } from './infrastructure/episodic-summarizer.js';
 import { createCodeGenFn } from './infrastructure/llm-provider-factory.js';
 import { recordEpisode } from './application/episodic-recorder.js';
 
@@ -127,6 +130,57 @@ export const normalizeActionType = _normalizeActionType;
 export const scoreConfidence = _scoreConfidence;
 export const classifyRisk = _classifyRisk;
 export const buildDecision = _buildDecision;
+
+// ---------------------------------------------------------------------------
+// Fix 1: Confidence-based LLM classification skip
+//
+// Pure read/query action types where heuristic classification is sufficient —
+// the LLM would confirm the same route without adding a plan or overrides.
+// Any action type NOT in this set always goes through the LLM when a resolver
+// is configured. Requires confidence >= HEURISTIC_CONFIDENCE_SKIP_THRESHOLD
+// AND riskLevel === 'low' (both conditions must hold).
+// ---------------------------------------------------------------------------
+const HEURISTIC_SUFFICIENT_ACTIONS = new Set([
+    'code_read',
+    'workspace_read_file',
+    'workspace_list_files',
+    'workspace_grep',
+    'workspace_scout',
+    // DevOps read-only: fully structured payloads, no plan generation needed
+    'k8s_get',
+    'k8s_logs',
+    'prometheus_query',
+    'vault_read',
+]);
+const HEURISTIC_CONFIDENCE_SKIP_THRESHOLD = 0.80;
+
+// ---------------------------------------------------------------------------
+// Fix 2: Redis classification cache
+//
+// Caches low-risk LLM classification results for 1 hour. Cache key is a
+// sha256 of tenantId + botId + actionType + first 200 chars of the prompt.
+// Medium/high-risk decisions are NOT cached — they route to approval and
+// caching them could mask a legitimate policy change.
+// ---------------------------------------------------------------------------
+const CLASSIFICATION_CACHE_TTL_S = 3600;
+
+type CachedClassificationEntry = {
+    decision: ActionDecision;
+    payloadOverrides?: Record<string, unknown>;
+    metadata: Omit<LlmDecisionMetadata, 'classificationSource'>;
+};
+
+function buildClassificationCacheKey(task: TaskEnvelope): string {
+    const tenantId = typeof task.payload['tenantId'] === 'string' ? task.payload['tenantId'] : 'unknown';
+    const botId = typeof task.payload['botId'] === 'string' ? task.payload['botId'] : 'unknown';
+    const actionType = typeof task.payload['actionType'] === 'string' ? task.payload['actionType'] : '';
+    const summary =
+        typeof task.payload['summary'] === 'string' ? task.payload['summary'].slice(0, 200) :
+        typeof task.payload['prompt'] === 'string' ? task.payload['prompt'].slice(0, 200) :
+        typeof task.payload['description'] === 'string' ? task.payload['description'].slice(0, 200) : '';
+    const raw = `${tenantId}:${botId}:${actionType}:${summary}`;
+    return 'af:class:v1:' + createHash('sha256').update(raw).digest('hex');
+}
 
 // ---------------------------------------------------------------------------
 // Internal helpers
@@ -448,7 +502,13 @@ export async function processDeveloperTask(
     const recentMemories = workspaceIdForMemory
         ? await globalEpisodicMemory.readRecentForWorkspace(workspaceIdForMemory).catch(() => [])
         : [];
-    const episodicContext = globalEpisodicMemory.buildCompactContextBlock(recentMemories);
+    const rawEpisodicContext = globalEpisodicMemory.buildCompactContextBlock(recentMemories);
+    // Fix 3: compress episodic context with Haiku (speed_first) when >2 000 chars.
+    // Cached in Redis for 15 min — cost ~$0.0003/compression vs. paying for 12 000
+    // chars of raw history on every classification prompt.
+    const episodicContext = rawEpisodicContext.length > 2_000 && workspaceIdForMemory
+        ? await getCompressedEpisodicContext(workspaceIdForMemory, rawEpisodicContext).catch(() => rawEpisodicContext)
+        : rawEpisodicContext;
 
     // Per-person episodic recall
     const personForTask = extractPersonKeyFromPayload(taskWithAuditContext.payload);
@@ -477,29 +537,76 @@ export async function processDeveloperTask(
 
     // Phase 6: LLM decision (optional — falls back to heuristic when not configured)
     if (options?.llmDecisionResolver) {
-        try {
-            const llmResult = await options.llmDecisionResolver({ task: taskForLlm, heuristicDecision });
-            if (llmResult) {
-                decision = llmResult.decision;
-                executionPayload = llmResult.payloadOverrides
-                    ? { ...taskWithAuditContext.payload, ...llmResult.payloadOverrides }
+        // Fix 1: Confidence skip — pure read/query actions with high heuristic confidence
+        // do not benefit from LLM classification; skip the call to save cost.
+        const canSkipLlm =
+            heuristicDecision.confidence >= HEURISTIC_CONFIDENCE_SKIP_THRESHOLD &&
+            heuristicDecision.riskLevel === 'low' &&
+            HEURISTIC_SUFFICIENT_ACTIONS.has(heuristicDecision.actionType);
+
+        if (canSkipLlm) {
+            llmExecution = { ...llmExecution, fallbackReason: 'heuristic_confidence_skip' };
+        } else {
+            // Fix 2: Redis classification cache — avoid re-classifying identical tasks
+            const cacheKey = buildClassificationCacheKey(taskForLlm);
+            const redis = getRedisClient();
+            let cacheHit: CachedClassificationEntry | null = null;
+            if (redis) {
+                try {
+                    const raw = await redis.get(cacheKey);
+                    if (raw) cacheHit = JSON.parse(raw) as CachedClassificationEntry;
+                } catch { /* best-effort */ }
+            }
+
+            if (cacheHit) {
+                decision = cacheHit.decision;
+                executionPayload = cacheHit.payloadOverrides
+                    ? { ...taskWithAuditContext.payload, ...cacheHit.payloadOverrides }
                     : { ...taskWithAuditContext.payload };
-                payloadOverrideSource = llmResult.payloadOverrides ? 'llm_generated' : 'none';
-
-                // Wire the LLM's classified actionType into the execution payload
-                executionPayload['actionType'] = llmResult.decision.actionType;
-
-                // Map description/summary/intent → prompt for workspace_subagent_spawn
+                payloadOverrideSource = cacheHit.payloadOverrides ? 'llm_generated' : 'none';
+                executionPayload['actionType'] = cacheHit.decision.actionType;
                 if (!executionPayload['prompt']) {
                     executionPayload['prompt'] =
                         executionPayload['description'] ?? executionPayload['summary'] ?? executionPayload['intent'] ??
                         taskWithAuditContext.payload['description'] ?? taskWithAuditContext.payload['summary'] ?? taskWithAuditContext.payload['intent'] ?? '';
                 }
+                llmExecution = { classificationSource: 'llm', ...cacheHit.metadata, fallbackReason: 'classification_cache_hit' };
+            } else {
+                try {
+                    const llmResult = await options.llmDecisionResolver({ task: taskForLlm, heuristicDecision });
+                    if (llmResult) {
+                        decision = llmResult.decision;
+                        executionPayload = llmResult.payloadOverrides
+                            ? { ...taskWithAuditContext.payload, ...llmResult.payloadOverrides }
+                            : { ...taskWithAuditContext.payload };
+                        payloadOverrideSource = llmResult.payloadOverrides ? 'llm_generated' : 'none';
 
-                llmExecution = { classificationSource: 'llm', ...llmResult.metadata };
+                        // Wire the LLM's classified actionType into the execution payload
+                        executionPayload['actionType'] = llmResult.decision.actionType;
+
+                        // Map description/summary/intent → prompt for workspace_subagent_spawn
+                        if (!executionPayload['prompt']) {
+                            executionPayload['prompt'] =
+                                executionPayload['description'] ?? executionPayload['summary'] ?? executionPayload['intent'] ??
+                                taskWithAuditContext.payload['description'] ?? taskWithAuditContext.payload['summary'] ?? taskWithAuditContext.payload['intent'] ?? '';
+                        }
+
+                        llmExecution = { classificationSource: 'llm', ...llmResult.metadata };
+
+                        // Cache low-risk results only — medium/high go to approval and must not be cached
+                        if (redis && llmResult.decision.riskLevel === 'low') {
+                            const entry: CachedClassificationEntry = {
+                                decision: llmResult.decision,
+                                payloadOverrides: llmResult.payloadOverrides,
+                                metadata: llmResult.metadata,
+                            };
+                            redis.set(cacheKey, JSON.stringify(entry), 'EX', CLASSIFICATION_CACHE_TTL_S).catch(() => {});
+                        }
+                    }
+                } catch {
+                    llmExecution = { ...llmExecution, fallbackReason: 'llm_resolution_failed' };
+                }
             }
-        } catch {
-            llmExecution = { ...llmExecution, fallbackReason: 'llm_resolution_failed' };
         }
     }
 
