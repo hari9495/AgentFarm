@@ -151,6 +151,58 @@ const DEFAULT_TIMEOUT_MS = 5_000;
 const DEFAULT_COOLDOWN_STATE_PATH = '.agent-runtime/provider-cooldowns.json';
 const DEFAULT_TOKEN_BUDGET_STATE_PATH = '.agent-runtime/token-budget-state.json';
 
+// ---------------------------------------------------------------------------
+// Built-in per-provider model tier defaults.
+//
+// These ensure that speed_first and cost_balanced automatically use the cheap
+// model for their provider even when the operator hasn't configured explicit
+// AF_<PROVIDER>_MODEL_SPEED_FIRST / _COST_BALANCED env vars.
+//
+// Merge order: BUILTIN_PROFILES < operator-configured modelProfiles
+// (operator always wins — if they set AF_ANTHROPIC_MODEL_SPEED_FIRST=claude-opus-4-7
+//  for some reason, that explicit choice is respected).
+// ---------------------------------------------------------------------------
+const ANTHROPIC_BUILTIN_PROFILES: ModelProfileMap = {
+    quality_first: 'claude-opus-4-7',
+    cost_balanced: 'claude-sonnet-4-6',
+    speed_first:   'claude-haiku-4-5',
+};
+const OPENAI_BUILTIN_PROFILES: ModelProfileMap = {
+    quality_first: 'gpt-4o',
+    cost_balanced: 'gpt-4o',
+    speed_first:   'gpt-4o-mini',
+};
+const GITHUB_MODELS_BUILTIN_PROFILES: ModelProfileMap = {
+    quality_first: 'gpt-4o',
+    cost_balanced: 'gpt-4o-mini',
+    speed_first:   'gpt-4o-mini',
+};
+const GOOGLE_BUILTIN_PROFILES: ModelProfileMap = {
+    quality_first: 'gemini-1.5-pro',
+    cost_balanced: 'gemini-1.5-flash',
+    speed_first:   'gemini-1.5-flash',
+};
+const XAI_BUILTIN_PROFILES: ModelProfileMap = {
+    quality_first: 'grok-beta',
+    cost_balanced: 'grok-beta',
+    speed_first:   'grok-beta',
+};
+const MISTRAL_BUILTIN_PROFILES: ModelProfileMap = {
+    quality_first: 'mistral-large-latest',
+    cost_balanced: 'mistral-small-latest',
+    speed_first:   'mistral-small-latest',
+};
+const TOGETHER_BUILTIN_PROFILES: ModelProfileMap = {
+    quality_first: 'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo',
+    cost_balanced: 'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo',
+    speed_first:   'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo',
+};
+const DEEPSEEK_BUILTIN_PROFILES: ModelProfileMap = {
+    quality_first: 'deepseek-reasoner',
+    cost_balanced: 'deepseek-chat',
+    speed_first:   'deepseek-chat',
+};
+
 type TaskComplexity = 'simple' | 'moderate' | 'complex';
 
 type TokenBudgetState = {
@@ -1101,10 +1153,11 @@ const createAnthropicResolver = (input: {
     timeoutMs: number;
     apiVersion: string;
 }): LlmDecisionResolver => {
+    const mergedProfiles: ModelProfileMap = { ...ANTHROPIC_BUILTIN_PROFILES, ...input.modelProfiles };
     return async ({ task, heuristicDecision }) => {
         const resolvedLanguage = await resolveTaskOutputLanguage(task);
         const modelProfile = pickModelProfile(task, heuristicDecision);
-        const selectedModel = resolveProfileTarget(input.model, input.modelProfiles, modelProfile);
+        const selectedModel = resolveProfileTarget(input.model, mergedProfiles, modelProfile);
         const systemPromptText = buildPromptForTask(task, resolvedLanguage);
         const response = await fetch(`${input.baseUrl.replace(/\/+$/, '')}/v1/messages`, {
             method: 'POST',
@@ -1193,10 +1246,11 @@ const createGoogleResolver = (input: {
     modelProfiles?: ModelProfileMap;
     timeoutMs: number;
 }): LlmDecisionResolver => {
+    const mergedProfiles: ModelProfileMap = { ...GOOGLE_BUILTIN_PROFILES, ...input.modelProfiles };
     return async ({ task, heuristicDecision }) => {
         const resolvedLanguage = await resolveTaskOutputLanguage(task);
         const modelProfile = pickModelProfile(task, heuristicDecision);
-        const selectedModel = resolveProfileTarget(input.model, input.modelProfiles, modelProfile);
+        const selectedModel = resolveProfileTarget(input.model, mergedProfiles, modelProfile);
         const base = input.baseUrl.replace(/\/+$/, '');
         const url = `${base}/models/${encodeURIComponent(selectedModel)}:generateContent?key=${encodeURIComponent(input.apiKey)}`;
 
@@ -1483,10 +1537,11 @@ const createOpenAiResolver = (input: {
     modelProfiles?: ModelProfileMap;
     timeoutMs: number;
 }): LlmDecisionResolver => {
+    const mergedProfiles: ModelProfileMap = { ...OPENAI_BUILTIN_PROFILES, ...input.modelProfiles };
     return async ({ task, heuristicDecision }) => {
         const resolvedLanguage = await resolveTaskOutputLanguage(task);
         const modelProfile = pickModelProfile(task, heuristicDecision);
-        const selectedModel = resolveProfileTarget(input.model, input.modelProfiles, modelProfile);
+        const selectedModel = resolveProfileTarget(input.model, mergedProfiles, modelProfile);
         const response = await fetch(`${input.baseUrl.replace(/\/+$/, '')}/chat/completions`, {
             method: 'POST',
             headers: {
@@ -1551,10 +1606,11 @@ const createGitHubModelsResolver = (input: {
     modelProfiles?: ModelProfileMap;
     timeoutMs: number;
 }): LlmDecisionResolver => {
+    const mergedProfiles: ModelProfileMap = { ...GITHUB_MODELS_BUILTIN_PROFILES, ...input.modelProfiles };
     return async ({ task, heuristicDecision }) => {
         const resolvedLanguage = await resolveTaskOutputLanguage(task);
         const modelProfile = pickModelProfile(task, heuristicDecision);
-        const selectedModel = resolveProfileTarget(input.model, input.modelProfiles, modelProfile);
+        const selectedModel = resolveProfileTarget(input.model, mergedProfiles, modelProfile);
         const response = await fetch(`${input.baseUrl.replace(/\/+$/, '')}/chat/completions`, {
             method: 'POST',
             headers: {
@@ -1619,10 +1675,11 @@ const createXaiResolver = (input: {
     modelProfiles?: ModelProfileMap;
     timeoutMs: number;
 }): LlmDecisionResolver => {
+    const mergedProfiles: ModelProfileMap = { ...XAI_BUILTIN_PROFILES, ...input.modelProfiles };
     return async ({ task, heuristicDecision }) => {
         const resolvedLanguage = await resolveTaskOutputLanguage(task);
         const modelProfile = pickModelProfile(task, heuristicDecision);
-        const selectedModel = resolveProfileTarget(input.model, input.modelProfiles, modelProfile);
+        const selectedModel = resolveProfileTarget(input.model, mergedProfiles, modelProfile);
         const response = await fetch(`${input.baseUrl.replace(/\/+$/, '')}/chat/completions`, {
             method: 'POST',
             headers: {
@@ -1681,10 +1738,11 @@ const createMistralResolver = (input: {
     modelProfiles?: ModelProfileMap;
     timeoutMs: number;
 }): LlmDecisionResolver => {
+    const mergedProfiles: ModelProfileMap = { ...MISTRAL_BUILTIN_PROFILES, ...input.modelProfiles };
     return async ({ task, heuristicDecision }) => {
         const resolvedLanguage = await resolveTaskOutputLanguage(task);
         const modelProfile = pickModelProfile(task, heuristicDecision);
-        const selectedModel = resolveProfileTarget(input.model, input.modelProfiles, modelProfile);
+        const selectedModel = resolveProfileTarget(input.model, mergedProfiles, modelProfile);
         const response = await fetch(`${input.baseUrl.replace(/\/+$/, '')}/chat/completions`, {
             method: 'POST',
             headers: {
@@ -1743,10 +1801,11 @@ const createTogetherResolver = (input: {
     modelProfiles?: ModelProfileMap;
     timeoutMs: number;
 }): LlmDecisionResolver => {
+    const mergedProfiles: ModelProfileMap = { ...TOGETHER_BUILTIN_PROFILES, ...input.modelProfiles };
     return async ({ task, heuristicDecision }) => {
         const resolvedLanguage = await resolveTaskOutputLanguage(task);
         const modelProfile = pickModelProfile(task, heuristicDecision);
-        const selectedModel = resolveProfileTarget(input.model, input.modelProfiles, modelProfile);
+        const selectedModel = resolveProfileTarget(input.model, mergedProfiles, modelProfile);
         const response = await fetch(`${input.baseUrl.replace(/\/+$/, '')}/chat/completions`, {
             method: 'POST',
             headers: {
@@ -1805,12 +1864,11 @@ const createDeepSeekResolver = (input: {
     modelProfiles?: ModelProfileMap;
     timeoutMs: number;
 }): LlmDecisionResolver => {
+    const mergedProfiles: ModelProfileMap = { ...DEEPSEEK_BUILTIN_PROFILES, ...input.modelProfiles };
     return async ({ task, heuristicDecision }) => {
         const resolvedLanguage = await resolveTaskOutputLanguage(task);
         const modelProfile = pickModelProfile(task, heuristicDecision);
-        // Built-in default: quality_first → deepseek-reasoner; others → deepseek-chat
-        const profileFallback = modelProfile === 'quality_first' ? DEFAULT_DEEPSEEK_MODEL_QUALITY_FIRST : input.model;
-        const selectedModel = resolveProfileTarget(profileFallback, input.modelProfiles, modelProfile);
+        const selectedModel = resolveProfileTarget(input.model, mergedProfiles, modelProfile);
         const response = await fetch(`${input.baseUrl.replace(/\/+$/, '')}/chat/completions`, {
             method: 'POST',
             headers: {
