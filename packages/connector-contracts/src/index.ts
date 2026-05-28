@@ -5,14 +5,16 @@ export type ConnectorCategory =
   | 'task_tracker'   // Jira, Linear, Asana, Monday, Trello, ClickUp
   | 'messaging'      // Teams, Slack, Discord, Google Chat
   | 'code'           // GitHub, GitLab, Bitbucket, Azure DevOps
-  | 'email';         // Outlook (Graph), Gmail, Exchange
+  | 'email'          // Outlook (Graph), Gmail, Exchange
+  | 'telephony';     // Twilio, Vonage, Amazon Connect, Genesys, Generic
 
 // ─── Supported tool slugs per category ───────────────────────────────────
 export type TaskTrackerTool = 'jira' | 'linear' | 'asana' | 'monday' | 'trello' | 'clickup' | 'generic_rest';
 export type MessagingTool = 'teams' | 'slack' | 'discord' | 'google_chat' | 'generic_rest_messaging';
 export type CodeTool = 'github' | 'gitlab' | 'bitbucket' | 'azure_devops' | 'generic_rest_code';
 export type EmailTool = 'outlook' | 'gmail' | 'exchange' | 'generic_smtp' | 'generic_rest_email';
-export type ConnectorTool = TaskTrackerTool | MessagingTool | CodeTool | EmailTool;
+export type TelephonyTool = 'twilio' | 'vonage' | 'amazon_connect' | 'genesys' | 'generic_telephony';
+export type ConnectorTool = TaskTrackerTool | MessagingTool | CodeTool | EmailTool | TelephonyTool;
 
 // Legacy alias kept for back-compat with existing gateway code
 export type ConnectorId = ConnectorTool;
@@ -71,7 +73,14 @@ export type NormalizedActionType =
   | 'read_email'
   | 'send_email'
   | 'reply_email'
-  | 'read_thread';
+  | 'read_thread'
+  // telephony
+  | 'initiate_call'
+  | 'hangup_call'
+  | 'transfer_call'
+  | 'get_call_status'
+  | 'get_call_recording'
+  | 'send_dtmf';
 
 // ─── Connector definition (what the registry stores) ─────────────────────
 export interface ConnectorDefinition {
@@ -458,6 +467,95 @@ export const CONNECTOR_REGISTRY: ConnectorDefinition[] = [
       { key: 'password', label: 'Password', type: 'password', required: true, placeholder: 'SMTP password' },
       { key: 'fromAddress', label: 'From Address', type: 'text', required: true, placeholder: 'bot@yourcompany.com' },
       { key: 'useTls', label: 'Use TLS', type: 'select', required: true, options: [{ value: 'true', label: 'Yes' }, { value: 'false', label: 'No' }] },
+    ],
+    docsUrl: '',
+  },
+  // ── Telephony ─────────────────────────────────────────────────────────
+  {
+    tool: 'twilio',
+    category: 'telephony',
+    displayName: 'Twilio Voice',
+    logoUrl: '/icons/connectors/twilio.svg',
+    authMethod: 'basic',
+    allowedRoles: ['customer_support_executive'],
+    supportedActions: ['initiate_call', 'hangup_call', 'transfer_call', 'get_call_status', 'get_call_recording', 'send_dtmf'],
+    configSchema: [
+      { key: 'accountSid', label: 'Account SID', type: 'text', required: true, placeholder: 'ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' },
+      { key: 'authToken', label: 'Auth Token', type: 'password', required: true, placeholder: 'Your Twilio auth token' },
+      { key: 'fromNumber', label: 'From Phone Number', type: 'text', required: true, placeholder: '+1234567890', hint: 'Twilio number to use as caller ID for outbound calls.' },
+      { key: 'webhookSecret', label: 'Webhook Signing Secret', type: 'password', required: false, placeholder: 'Twilio webhook signing secret', hint: 'Used to verify Twilio webhook authenticity. Found in your Twilio console.' },
+    ],
+    docsUrl: 'https://www.twilio.com/docs/voice/api',
+  },
+  {
+    tool: 'vonage',
+    category: 'telephony',
+    displayName: 'Vonage Voice (Nexmo)',
+    logoUrl: '/icons/connectors/vonage.svg',
+    authMethod: 'api_key',
+    allowedRoles: ['customer_support_executive'],
+    supportedActions: ['initiate_call', 'hangup_call', 'transfer_call', 'get_call_status', 'get_call_recording', 'send_dtmf'],
+    configSchema: [
+      { key: 'apiKey', label: 'API Key', type: 'text', required: true, placeholder: 'Your Vonage API key' },
+      { key: 'apiSecret', label: 'API Secret', type: 'password', required: true, placeholder: 'Your Vonage API secret' },
+      { key: 'applicationId', label: 'Application ID', type: 'text', required: true, placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', hint: 'Vonage Voice Application ID.' },
+      { key: 'privateKey', label: 'Private Key (PEM)', type: 'password', required: true, placeholder: '-----BEGIN PRIVATE KEY-----\n...', hint: 'Private key for JWT signing. Download from Vonage dashboard.' },
+      { key: 'fromNumber', label: 'From Phone Number', type: 'text', required: true, placeholder: '+1234567890' },
+    ],
+    docsUrl: 'https://developer.vonage.com/en/voice/voice-api/overview',
+  },
+  {
+    tool: 'amazon_connect',
+    category: 'telephony',
+    displayName: 'Amazon Connect',
+    logoUrl: '/icons/connectors/amazon-connect.svg',
+    authMethod: 'api_key',
+    allowedRoles: ['customer_support_executive'],
+    supportedActions: ['initiate_call', 'hangup_call', 'transfer_call', 'get_call_status', 'get_call_recording'],
+    configSchema: [
+      { key: 'instanceId', label: 'Instance ID', type: 'text', required: true, placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx' },
+      { key: 'region', label: 'AWS Region', type: 'text', required: true, placeholder: 'us-east-1' },
+      { key: 'accessKeyId', label: 'AWS Access Key ID', type: 'text', required: true, placeholder: 'AKIAIOSFODNN7EXAMPLE' },
+      { key: 'secretAccessKey', label: 'AWS Secret Access Key', type: 'password', required: true, placeholder: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY' },
+      { key: 'contactFlowId', label: 'Contact Flow ID', type: 'text', required: false, placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', hint: 'Default contact flow for outbound calls.' },
+    ],
+    docsUrl: 'https://docs.aws.amazon.com/connect/latest/APIReference/',
+  },
+  {
+    tool: 'genesys',
+    category: 'telephony',
+    displayName: 'Genesys Cloud',
+    logoUrl: '/icons/connectors/genesys.svg',
+    authMethod: 'oauth2',
+    allowedRoles: ['customer_support_executive'],
+    supportedActions: ['initiate_call', 'hangup_call', 'transfer_call', 'get_call_status', 'get_call_recording'],
+    configSchema: [
+      { key: 'clientId', label: 'OAuth Client ID', type: 'text', required: true, placeholder: 'Your Genesys OAuth client ID' },
+      { key: 'clientSecret', label: 'OAuth Client Secret', type: 'password', required: true, placeholder: 'Your Genesys OAuth client secret' },
+      { key: 'region', label: 'Genesys Region', type: 'select', required: true, options: [{ value: 'mypurecloud.com', label: 'US East' }, { value: 'usw2.pure.cloud', label: 'US West' }, { value: 'euw2.pure.cloud', label: 'EU (London)' }, { value: 'aps1.pure.cloud', label: 'Asia Pacific' }, { value: 'apne1.pure.cloud', label: 'Asia Pacific (Tokyo)' }, { value: 'ind.pure.cloud', label: 'India' }] },
+      { key: 'queueId', label: 'Default Queue ID', type: 'text', required: false, placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', hint: 'Queue for inbound call routing.' },
+    ],
+    docsUrl: 'https://developer.genesys.cloud/api/rest/',
+  },
+  {
+    tool: 'generic_telephony',
+    category: 'telephony',
+    displayName: 'Custom Telephony API',
+    logoUrl: '/icons/connectors/generic.svg',
+    authMethod: 'generic_rest',
+    allowedRoles: ['customer_support_executive'],
+    supportedActions: ['initiate_call', 'hangup_call', 'transfer_call', 'get_call_status', 'get_call_recording', 'send_dtmf'],
+    configSchema: [
+      { key: 'baseUrl', label: 'API Base URL', type: 'url', required: true, placeholder: 'https://api.yourtelephony.com/v1', hint: 'The root URL of your telephony provider REST API.' },
+      { key: 'providerFormat', label: 'Provider Format', type: 'select', required: true, options: [{ value: 'twilio', label: 'Twilio-compatible' }, { value: 'vonage', label: 'Vonage-compatible (NCCO)' }, { value: 'amazon_connect', label: 'Amazon Connect-compatible' }, { value: 'generic', label: 'Generic JSON' }], hint: 'Controls how webhooks are parsed and responses are formatted.' },
+      { key: 'authType', label: 'Auth Type', type: 'select', required: true, options: [{ value: 'basic', label: 'Basic Auth (username:password)' }, { value: 'bearer', label: 'Bearer Token' }, { value: 'api_key', label: 'API Key Header' }, { value: 'hmac', label: 'HMAC Signature' }] },
+      { key: 'authValue', label: 'Token / API Key / Password', type: 'password', required: true, placeholder: 'Your authentication value' },
+      { key: 'authHeaderName', label: 'Auth Header Name', type: 'text', required: false, placeholder: 'X-API-Key', hint: 'Required when Auth Type is "API Key Header".' },
+      { key: 'webhookSecret', label: 'Webhook Signing Secret', type: 'password', required: false, placeholder: 'Secret for verifying inbound webhook signatures', hint: 'Used for HMAC validation of inbound call events from your provider.' },
+      { key: 'inboundRecordingPath', label: 'Recording Fetch Path', type: 'text', required: false, placeholder: '/calls/{callId}/recording', hint: 'Path to download the call recording. Use {callId} as a placeholder.' },
+      { key: 'outboundCallPath', label: 'Outbound Call Path', type: 'text', required: false, placeholder: '/calls', hint: 'Path to initiate an outbound call (POST).' },
+      { key: 'hangupPath', label: 'Hangup Path', type: 'text', required: false, placeholder: '/calls/{callId}', hint: 'Path to end an active call (DELETE or POST). Use {callId} as placeholder.' },
+      { key: 'fromNumber', label: 'From Phone Number', type: 'text', required: false, placeholder: '+1234567890', hint: 'Caller ID for outbound calls.' },
     ],
     docsUrl: '',
   },

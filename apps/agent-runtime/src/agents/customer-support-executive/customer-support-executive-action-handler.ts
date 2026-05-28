@@ -40,6 +40,7 @@ import {
     handleVoiceCall, handleVoiceTranscribe,
     type VoiceSttProvider, type VoiceTtsProvider,
 } from './voice-call-handler.js';
+import type { TelephonyConnectorConfig } from './telephony-normalizer.js';
 
 // ---------------------------------------------------------------------------
 // Action type union
@@ -691,12 +692,22 @@ export async function handleCustomerSupportExecutiveAction(params: {
         // ====================================================================
 
         case 'workspace_cse_voice_call_handle': {
-            const audioRef = str(payload['audioRef']);
-            if (!audioRef) return fail('payload.audioRef (URL or base64) is required.');
+            const audioRef = str(payload['audioRef']) || undefined;
+            const webhookPayload = typeof payload['webhookPayload'] === 'object' && payload['webhookPayload'] !== null
+                ? (payload['webhookPayload'] as Record<string, unknown>)
+                : undefined;
+            const telephonyConnector = typeof payload['telephonyConnector'] === 'object' && payload['telephonyConnector'] !== null
+                ? (payload['telephonyConnector'] as TelephonyConnectorConfig)
+                : undefined;
+            if (!audioRef && !webhookPayload) {
+                return fail('payload.audioRef or payload.webhookPayload is required.');
+            }
             try {
                 const result = await handleVoiceCall({
                     tenantId, botId,
                     audioRef,
+                    webhookPayload,
+                    telephonyConnector,
                     callId: str(payload['callId']) || undefined,
                     customerId: str(payload['customerId']) || undefined,
                     customerEmail: str(payload['customerEmail']) || undefined,

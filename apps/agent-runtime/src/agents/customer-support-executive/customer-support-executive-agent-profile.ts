@@ -19,6 +19,8 @@ export const CUSTOMER_SUPPORT_EXECUTIVE_ROLE_ALLOWED_CONNECTORS: readonly string
     'surveymonkey', 'typeform',
     // Voice STT/TTS
     'sarvam_ai', 'deepgram',
+    // Telephony
+    'twilio', 'vonage', 'amazon_connect', 'genesys', 'generic_telephony',
 ];
 
 export const CUSTOMER_SUPPORT_EXECUTIVE_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = [

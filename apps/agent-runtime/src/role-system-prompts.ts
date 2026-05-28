@@ -439,7 +439,7 @@ PAYLOAD RULES (always include these fields for the chosen action):
   workspace_cse_trend_analysis:     { tickets: TicketDataPoint[] }
   workspace_cse_standup_report:     { recent_memory?: string[], bot_name?: string, team_name?: string, shift_period?: string }
   workspace_cse_sla_check:          { ticketId: string, openedAt: string, priority?: "low"|"medium"|"high"|"urgent" }
-  workspace_cse_voice_call_handle:  { audioRef: string, callId?: string, language?: "hi-IN"|"ta-IN"|"te-IN"|"kn-IN"|"ml-IN"|"bn-IN"|"en-IN"|"en-US", customerId?: string, customerEmail?: string, customerName?: string, industry?: string, agentName?: string, companyName?: string, ticketId?: string, sttProvider?: "sarvam_ai"|"deepgram", ttsProvider?: "sarvam_ai"|"voxcpm", connector?: string }
+  workspace_cse_voice_call_handle:  { audioRef?: string, webhookPayload?: object, telephonyConnector?: { baseUrl?: string, providerFormat: "twilio"|"vonage"|"amazon_connect"|"generic", authType: "basic"|"bearer"|"api_key"|"hmac", authValue: string, authHeaderName?: string, webhookSecret?: string, inboundRecordingPath?: string, fromNumber?: string }, callId?: string, language?: "hi-IN"|"ta-IN"|"te-IN"|"kn-IN"|"ml-IN"|"bn-IN"|"en-IN"|"en-US", customerId?: string, customerEmail?: string, customerName?: string, industry?: string, agentName?: string, companyName?: string, ticketId?: string, sttProvider?: "sarvam_ai"|"deepgram", ttsProvider?: "sarvam_ai"|"voxcpm", connector?: string }
   workspace_cse_voice_transcribe:   { audioRef?: string, transcript?: string, callId?: string, ticketId?: string, customerId?: string, language?: string, sttProvider?: "sarvam_ai"|"deepgram", connector?: string }
 
 STANDARD RESOLUTION WORKFLOW

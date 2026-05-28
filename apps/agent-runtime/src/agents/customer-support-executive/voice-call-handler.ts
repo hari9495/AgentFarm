@@ -28,6 +28,12 @@ import { classifyIssueCategory, composeReply } from './response-composer.js';
 import { searchKnowledgeBase } from './knowledge-base-searcher.js';
 import { openTicket, updateTicket } from './ticket-manager.js';
 import type { IssueCategory, Industry } from './response-composer.js';
+import {
+    normalizeInboundWebhook, buildWebhookResponse, fetchRecordingBytes,
+    type TelephonyConnectorConfig, type TelephonyProviderFormat, type InboundCallEvent,
+} from './telephony-normalizer.js';
+
+export type { TelephonyProviderFormat, InboundCallEvent };
 
 // ---------------------------------------------------------------------------
 // Types
@@ -39,7 +45,9 @@ export type VoiceTtsProvider = 'sarvam_ai' | 'voxcpm';
 export interface VoiceCallParams {
     tenantId: string;
     botId: string;
-    audioRef: string; // URL or base64-encoded audio bytes
+    audioRef?: string; // URL or base64-encoded audio bytes (optional when webhookPayload is provided)
+    webhookPayload?: Record<string, unknown>; // raw inbound webhook body from telephony provider
+    telephonyConnector?: TelephonyConnectorConfig; // dashboard-configured telephony connector
     callId?: string;
     customerId?: string;
     customerEmail?: string;
@@ -61,6 +69,7 @@ export interface VoiceCallResult {
     issueCategory: IssueCategory;
     replyText: string;
     replyAudioRef: string | null; // base64-encoded audio
+    webhookResponse: { contentType: string; body: string } | null; // provider-native response for webhook reply
     ticketId: string | null;
     sttProvider: string;
     ttsProvider: string;
@@ -286,54 +295,114 @@ async function runTts(
 
 export async function handleVoiceCall(params: VoiceCallParams): Promise<VoiceCallResult> {
     const {
-        tenantId, botId, audioRef, customerId, customerEmail, customerName,
-        language, industry, agentName, companyName, ticketId, connector,
+        tenantId, botId, customerId, customerEmail, customerName,
+        language, industry, agentName, companyName, connector,
+        telephonyConnector, webhookPayload,
     } = params;
 
     const sttProv: VoiceSttProvider = params.sttProvider ?? 'sarvam_ai';
     const ttsProv: VoiceTtsProvider = params.ttsProvider ?? 'sarvam_ai';
-    const callId = params.callId ?? `call-${Date.now()}`;
 
-    // 1. Transcribe customer speech
+    // ── Resolve audio source ─────────────────────────────────────────────────
+    // Path A: customer's telephony connector sent a webhook — normalize it and
+    //         fetch the recording via the connector's configured API.
+    // Path B: caller passed a direct audioRef (URL or base64).
+
+    let audioRef = params.audioRef;
+    let callId = params.callId ?? `call-${Date.now()}`;
+    let ticketId = params.ticketId;
+    let providerFormat: TelephonyProviderFormat | undefined;
+
+    if (webhookPayload && telephonyConnector) {
+        providerFormat = telephonyConnector.providerFormat;
+        const event = normalizeInboundWebhook(webhookPayload, providerFormat);
+        callId = event.callId || callId;
+
+        if (event.transcriptText) {
+            // Provider already transcribed — skip STT entirely
+            const issueCategory = classifyIssueCategory('', event.transcriptText);
+            let resolutionSteps: string[] = [];
+            try {
+                const kb = await searchKnowledgeBase({
+                    tenantId, botId,
+                    query: event.transcriptText.slice(0, 300),
+                    issueCategory, industry, maxResults: 3, connector,
+                });
+                resolutionSteps = kb.articles[0]?.resolutionSteps ?? kb.fallbackPlaybook.slice(0, 3);
+            } catch { /* KB unavailable */ }
+
+            const reply = composeReply({
+                issueDescription: event.transcriptText,
+                issueCategory, customerName, industry,
+                tone: 'empathetic', resolutionSteps, agentName, companyName,
+            });
+            const { audioRef: replyAudioRef, providerUsed: ttsProviderUsed } =
+                await runTts(reply.body, language ?? 'en-IN', ttsProv);
+            const webhookResponse = buildWebhookResponse(providerFormat, reply.body, replyAudioRef);
+
+            let resolvedTicketId: string | null = ticketId ?? null;
+            try {
+                const ticket = await openTicket({
+                    tenantId, botId,
+                    subject: `Voice call — ${issueCategory.replace(/_/g, ' ')}`,
+                    description: event.transcriptText,
+                    priority: 'medium', channel: 'phone',
+                    customerId: customerId ?? event.from, customerEmail,
+                    connector,
+                });
+                resolvedTicketId = ticket.ticketId;
+            } catch { /* non-fatal */ }
+
+            return {
+                callId, transcript: event.transcriptText,
+                languageDetected: language ?? 'en-IN', issueCategory,
+                replyText: reply.body, replyAudioRef, webhookResponse,
+                ticketId: resolvedTicketId, sttProvider: 'provider_native',
+                ttsProvider: ttsProviderUsed, processedAt: new Date().toISOString(),
+            };
+        }
+
+        // No pre-transcribed text — fetch recording bytes from connector API
+        if (event.recordingUrl || event.callId) {
+            const audioBytes = await fetchRecordingBytes(event.callId, telephonyConnector, event.recordingUrl);
+            if (audioBytes) {
+                audioRef = Buffer.from(audioBytes).toString('base64');
+            }
+        }
+    }
+
+    if (!audioRef) throw new Error('payload.audioRef or payload.webhookPayload with a recording is required.');
+
+    // ── STT ──────────────────────────────────────────────────────────────────
     const { transcript, languageDetected, providerUsed: sttProviderUsed } =
         await runStt(audioRef, sttProv, language);
 
-    // 2. Classify issue from transcript
+    // ── Classify + KB ────────────────────────────────────────────────────────
     const issueCategory = classifyIssueCategory('', transcript);
-
-    // 3. Search KB for resolution steps
     let resolutionSteps: string[] = [];
     try {
         const kb = await searchKnowledgeBase({
             tenantId, botId,
             query: transcript.slice(0, 300),
-            issueCategory,
-            industry,
-            maxResults: 3,
-            connector,
+            issueCategory, industry, maxResults: 3, connector,
         });
         resolutionSteps = kb.articles[0]?.resolutionSteps ?? kb.fallbackPlaybook.slice(0, 3);
-    } catch {
-        // KB unavailable — continue without steps
-    }
+    } catch { /* KB unavailable */ }
 
-    // 4. Compose text reply
+    // ── Compose + TTS ────────────────────────────────────────────────────────
     const reply = composeReply({
-        issueDescription: transcript,
-        issueCategory,
-        customerName,
-        industry,
-        tone: 'empathetic',
-        resolutionSteps,
-        agentName,
-        companyName,
+        issueDescription: transcript, issueCategory, customerName, industry,
+        tone: 'empathetic', resolutionSteps, agentName, companyName,
     });
-
-    // 5. Synthesize audio reply
     const { audioRef: replyAudioRef, providerUsed: ttsProviderUsed } =
         await runTts(reply.body, languageDetected, ttsProv);
 
-    // 6. Open or update ticket (non-fatal)
+    // Build provider-native webhook response when we have a format
+    const webhookResponse = providerFormat
+        ? buildWebhookResponse(providerFormat, reply.body, replyAudioRef)
+        : null;
+
+    // ── Ticket ───────────────────────────────────────────────────────────────
     let resolvedTicketId: string | null = ticketId ?? null;
     try {
         if (ticketId) {
@@ -346,30 +415,18 @@ export async function handleVoiceCall(params: VoiceCallParams): Promise<VoiceCal
             const ticket = await openTicket({
                 tenantId, botId,
                 subject: `Voice call — ${issueCategory.replace(/_/g, ' ')}`,
-                description: transcript,
-                priority: 'medium',
-                channel: 'phone',
-                customerId,
-                customerEmail,
-                connector,
+                description: transcript, priority: 'medium', channel: 'phone',
+                customerId, customerEmail, connector,
             });
             resolvedTicketId = ticket.ticketId;
         }
-    } catch {
-        // ticket ops are non-fatal for live call
-    }
+    } catch { /* non-fatal */ }
 
     return {
-        callId,
-        transcript,
-        languageDetected,
-        issueCategory,
-        replyText: reply.body,
-        replyAudioRef,
-        ticketId: resolvedTicketId,
-        sttProvider: sttProviderUsed,
-        ttsProvider: ttsProviderUsed,
-        processedAt: new Date().toISOString(),
+        callId, transcript, languageDetected, issueCategory,
+        replyText: reply.body, replyAudioRef, webhookResponse,
+        ticketId: resolvedTicketId, sttProvider: sttProviderUsed,
+        ttsProvider: ttsProviderUsed, processedAt: new Date().toISOString(),
     };
 }
 
