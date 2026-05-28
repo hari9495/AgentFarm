@@ -25,19 +25,26 @@ const PRICING_MAP: Record<string, PricingEntry> = {
     'gpt-4o':                     { inputPerMillion: 2.50,  outputPerMillion: 10.00, tier: 'gpt-4o' },
     'gemini-1.5-pro':             { inputPerMillion: 1.25,  outputPerMillion: 5.00,  tier: 'gemini-1.5-pro' },
     'gemini-1.5-flash':           { inputPerMillion: 0.075, outputPerMillion: 0.30,  tier: 'gemini-1.5-flash' },
+    // DeepSeek pricing (cache-miss input rate). Cache-hit input is ~74% cheaper.
+    'deepseek-chat':              { inputPerMillion: 0.27,  outputPerMillion: 1.10,  tier: 'deepseek-chat' },
+    'deepseek-reasoner':          { inputPerMillion: 0.55,  outputPerMillion: 2.19,  tier: 'deepseek-reasoner' },
     'mock':                       { inputPerMillion: 0.00,  outputPerMillion: 0.00,  tier: 'mock' },
 };
 
-// Tier-alias map for profile keywords (quality_first, speed_first, etc.)
+// Tier-alias map for profile keywords and short model name shorthands.
 // Only used as a secondary lookup when the model ID itself is unknown.
 const TIER_ALIAS: Record<string, PricingEntry> = {
     'quality_first':  PRICING_MAP['claude-opus-4-7']!,
     'speed_first':    PRICING_MAP['claude-haiku-4-5']!,
     'cost_balanced':  PRICING_MAP['claude-sonnet-4-6']!,
+    // Short-name shorthands: allow e.g. "claude-haiku" to resolve correctly
+    'claude-haiku':   PRICING_MAP['claude-haiku-4-5']!,
+    'claude-sonnet':  PRICING_MAP['claude-sonnet-4-6']!,
+    'claude-opus':    PRICING_MAP['claude-opus-4-7']!,
 };
 
 function normalizeModelId(raw: string): string {
-    return raw.toLowerCase().replace(/^(anthropic|openai|azure|google)\//, '');
+    return raw.toLowerCase().replace(/^(anthropic|openai|azure|google|deepseek)\//, '');
 }
 
 function findPricing(modelProvider: string, modelProfile: string): PricingEntry {

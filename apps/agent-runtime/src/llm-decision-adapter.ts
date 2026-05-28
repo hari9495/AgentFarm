@@ -58,9 +58,9 @@ type ModelProfileKey = 'quality_first' | 'speed_first' | 'cost_balanced' | 'cust
 
 type ModelProfileMap = Partial<Record<ModelProfileKey, string>>;
 
-type RuntimeModelProvider = 'agentfarm' | 'openai' | 'azure_openai' | 'github_models' | 'anthropic' | 'google' | 'xai' | 'mistral' | 'together' | 'auto' | 'mock';
+type RuntimeModelProvider = 'agentfarm' | 'openai' | 'azure_openai' | 'github_models' | 'anthropic' | 'google' | 'xai' | 'mistral' | 'together' | 'deepseek' | 'auto' | 'mock';
 
-type AutoProvider = 'openai' | 'azure_openai' | 'github_models' | 'anthropic' | 'google' | 'xai' | 'mistral' | 'together';
+type AutoProvider = 'openai' | 'azure_openai' | 'github_models' | 'anthropic' | 'google' | 'xai' | 'mistral' | 'together' | 'deepseek';
 
 type AutoProfileProviderMap = Partial<Record<ModelProfileKey, AutoProvider[]>>;
 
@@ -117,6 +117,12 @@ export type RuntimeLlmWorkspaceConfig = {
         api_key?: string;
         model_profiles?: ModelProfileMap;
     };
+    deepseek?: {
+        model?: string;
+        base_url?: string;
+        api_key?: string;
+        model_profiles?: ModelProfileMap;
+    };
     auto?: {
         profile_providers?: AutoProfileProviderMap;
     };
@@ -136,6 +142,9 @@ const DEFAULT_MISTRAL_BASE_URL = 'https://api.mistral.ai/v1';
 const DEFAULT_MISTRAL_MODEL = 'mistral-small-latest';
 const DEFAULT_TOGETHER_BASE_URL = 'https://api.together.xyz/v1';
 const DEFAULT_TOGETHER_MODEL = 'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo';
+const DEFAULT_DEEPSEEK_BASE_URL = 'https://api.deepseek.com';
+const DEFAULT_DEEPSEEK_MODEL = 'deepseek-chat';
+const DEFAULT_DEEPSEEK_MODEL_QUALITY_FIRST = 'deepseek-reasoner';
 const DEFAULT_AZURE_OPENAI_API_VERSION = '2024-06-01';
 const DEFAULT_TIMEOUT_MS = 5_000;
 const DEFAULT_COOLDOWN_STATE_PATH = '.agent-runtime/provider-cooldowns.json';
@@ -434,7 +443,7 @@ const scoreProvider = (provider: AutoProvider): number => {
 };
 
 const providerCostWeight = (provider: AutoProvider): number => {
-    if (provider === 'together' || provider === 'mistral' || provider === 'github_models') {
+    if (provider === 'deepseek' || provider === 'together' || provider === 'mistral' || provider === 'github_models') {
         return 0.1;
     }
     if (provider === 'google' || provider === 'xai') {
@@ -612,6 +621,9 @@ const normalizeProvider = (value: string | undefined): RuntimeModelProvider => {
     }
     if (normalized === 'together' || normalized === 'togetherai') {
         return 'together';
+    }
+    if (normalized === 'deepseek') {
+        return 'deepseek';
     }
     if (normalized === 'auto') {
         return 'auto';
@@ -1038,18 +1050,21 @@ const normalizeAutoProviders = (value: unknown): AutoProvider[] => {
 
 const defaultAutoProvidersByProfile = (profile: ModelProfileKey): AutoProvider[] => {
     if (profile === 'quality_first') {
-        return ['anthropic', 'azure_openai', 'openai', 'xai', 'google', 'mistral', 'github_models', 'together'];
+        // Anthropic Opus leads; DeepSeek Reasoner (R1) is second — ~27× cheaper than Opus with strong reasoning
+        return ['anthropic', 'deepseek', 'openai', 'azure_openai', 'xai', 'google', 'mistral', 'github_models', 'together'];
     }
 
     if (profile === 'speed_first') {
-        return ['together', 'mistral', 'google', 'github_models', 'xai', 'openai', 'azure_openai', 'anthropic'];
+        // DeepSeek Chat leads — fast inference, $0.27/M input vs $0.80/M for Haiku
+        return ['deepseek', 'together', 'mistral', 'google', 'github_models', 'xai', 'openai', 'azure_openai', 'anthropic'];
     }
 
     if (profile === 'cost_balanced') {
-        return ['together', 'mistral', 'github_models', 'google', 'xai', 'openai', 'azure_openai', 'anthropic'];
+        // DeepSeek Chat leads — $0.27/$1.10 per million vs Sonnet $3/$15 (11× cheaper)
+        return ['deepseek', 'together', 'mistral', 'github_models', 'google', 'xai', 'openai', 'azure_openai', 'anthropic'];
     }
 
-    return ['openai', 'anthropic', 'google', 'xai', 'mistral', 'together', 'github_models', 'azure_openai'];
+    return ['deepseek', 'openai', 'anthropic', 'google', 'xai', 'mistral', 'together', 'github_models', 'azure_openai'];
 };
 
 // ---------------------------------------------------------------------------
@@ -1746,6 +1761,69 @@ const createTogetherResolver = (input: {
     };
 };
 
+const createDeepSeekResolver = (input: {
+    apiKey: string;
+    baseUrl: string;
+    model: string;
+    modelProfiles?: ModelProfileMap;
+    timeoutMs: number;
+}): LlmDecisionResolver => {
+    return async ({ task, heuristicDecision }) => {
+        const resolvedLanguage = await resolveTaskOutputLanguage(task);
+        const modelProfile = pickModelProfile(task, heuristicDecision);
+        // Built-in default: quality_first → deepseek-reasoner; others → deepseek-chat
+        const profileFallback = modelProfile === 'quality_first' ? DEFAULT_DEEPSEEK_MODEL_QUALITY_FIRST : input.model;
+        const selectedModel = resolveProfileTarget(profileFallback, input.modelProfiles, modelProfile);
+        const response = await fetch(`${input.baseUrl.replace(/\/+$/, '')}/chat/completions`, {
+            method: 'POST',
+            headers: {
+                'content-type': 'application/json',
+                authorization: `Bearer ${input.apiKey}`,
+            },
+            body: JSON.stringify({
+                model: selectedModel,
+                temperature: 0,
+                response_format: { type: 'json_object' },
+                messages: [
+                    { role: 'system', content: buildPromptForTask(task, resolvedLanguage) },
+                    { role: 'user', content: createTaskPrompt(task, heuristicDecision) },
+                ],
+            }),
+            signal: AbortSignal.timeout(input.timeoutMs),
+        });
+
+        if (!response.ok) {
+            throw new Error(`deepseek_request_failed:${response.status}`);
+        }
+
+        const parsed = await response.json() as {
+            choices?: Array<{ message?: { content?: string } }>;
+            usage?: OpenAiLikeUsage;
+        };
+
+        const content = parsed.choices?.[0]?.message?.content;
+        if (typeof content !== 'string' || !content.trim()) {
+            throw new Error('deepseek_empty_response');
+        }
+
+        const decision = parseAndValidateDecision(content, heuristicDecision);
+        const usage = parsed.usage ?? {};
+
+        return {
+            decision,
+            payloadOverrides: decision.payloadOverrides,
+            metadata: {
+                modelProvider: 'deepseek',
+                model: selectedModel,
+                modelProfile,
+                promptTokens: toNumberOrNull(usage.prompt_tokens),
+                completionTokens: toNumberOrNull(usage.completion_tokens),
+                totalTokens: toNumberOrNull(usage.total_tokens),
+            },
+        };
+    };
+};
+
 // ---------------------------------------------------------------------------
 // Mock resolver — deterministic, no API calls, for testing and demo deployments
 // ---------------------------------------------------------------------------
@@ -1820,6 +1898,7 @@ const createAutoResolver = (input: {
     xai?: RuntimeLlmWorkspaceConfig['xai'];
     mistral?: RuntimeLlmWorkspaceConfig['mistral'];
     together?: RuntimeLlmWorkspaceConfig['together'];
+    deepseek?: RuntimeLlmWorkspaceConfig['deepseek'];
     profileProviders?: AutoProfileProviderMap;
 }): LlmDecisionResolver | undefined => {
     const openaiResolver = input.openai?.api_key?.trim()
@@ -1907,6 +1986,16 @@ const createAutoResolver = (input: {
         })
         : undefined;
 
+    const deepseekResolver = input.deepseek?.api_key?.trim()
+        ? createDeepSeekResolver({
+            apiKey: input.deepseek.api_key,
+            baseUrl: input.deepseek.base_url ?? DEFAULT_DEEPSEEK_BASE_URL,
+            model: input.deepseek.model ?? DEFAULT_DEEPSEEK_MODEL,
+            modelProfiles: input.deepseek.model_profiles,
+            timeoutMs: input.timeoutMs,
+        })
+        : undefined;
+
     const resolverMap: Record<AutoProvider, LlmDecisionResolver | undefined> = {
         openai: openaiResolver,
         azure_openai: azureResolver,
@@ -1916,6 +2005,7 @@ const createAutoResolver = (input: {
         xai: xaiResolver,
         mistral: mistralResolver,
         together: togetherResolver,
+        deepseek: deepseekResolver,
     };
 
     const hasAnyResolver = Object.values(resolverMap).some((resolver) => Boolean(resolver));
@@ -2485,6 +2575,26 @@ export const createLlmDecisionResolver = (env: NodeJS.ProcessEnv): LlmDecisionRe
         }));
     }
 
+    if (provider === 'deepseek') {
+        const deepseekApiKey = readEnv(env, 'AF_DEEPSEEK_API_KEY', 'AGENTFARM_DEEPSEEK_API_KEY');
+        if (!deepseekApiKey || !deepseekApiKey.trim()) {
+            return undefined;
+        }
+
+        return withTokenBudgetGuard(createDeepSeekResolver({
+            apiKey: deepseekApiKey,
+            baseUrl: readEnv(env, 'AF_DEEPSEEK_BASE_URL', 'AGENTFARM_DEEPSEEK_BASE_URL') ?? DEFAULT_DEEPSEEK_BASE_URL,
+            model: readEnv(env, 'AF_DEEPSEEK_MODEL', 'AGENTFARM_DEEPSEEK_MODEL') ?? DEFAULT_DEEPSEEK_MODEL,
+            modelProfiles: {
+                quality_first: readEnv(env, 'AF_DEEPSEEK_MODEL_QUALITY_FIRST', 'AGENTFARM_DEEPSEEK_MODEL_QUALITY_FIRST') ?? DEFAULT_DEEPSEEK_MODEL_QUALITY_FIRST,
+                speed_first: readEnv(env, 'AF_DEEPSEEK_MODEL_SPEED_FIRST', 'AGENTFARM_DEEPSEEK_MODEL_SPEED_FIRST'),
+                cost_balanced: readEnv(env, 'AF_DEEPSEEK_MODEL_COST_BALANCED', 'AGENTFARM_DEEPSEEK_MODEL_COST_BALANCED'),
+                custom: readEnv(env, 'AF_DEEPSEEK_MODEL_CUSTOM', 'AGENTFARM_DEEPSEEK_MODEL_CUSTOM'),
+            },
+            timeoutMs,
+        }));
+    }
+
     const azureEndpoint = readEnv(env, 'AF_AZURE_OPENAI_ENDPOINT', 'AGENTFARM_AZURE_OPENAI_ENDPOINT');
     const azureKey = readEnv(env, 'AF_AZURE_OPENAI_API_KEY', 'AGENTFARM_AZURE_OPENAI_API_KEY');
     const azureDeployment = readEnv(env, 'AF_AZURE_OPENAI_DEPLOYMENT', 'AGENTFARM_AZURE_OPENAI_DEPLOYMENT');
@@ -2608,6 +2718,17 @@ export const createLlmDecisionResolver = (env: NodeJS.ProcessEnv): LlmDecisionRe
                     speed_first: readEnv(env, 'AF_TOGETHER_MODEL_SPEED_FIRST', 'AGENTFARM_TOGETHER_MODEL_SPEED_FIRST'),
                     cost_balanced: readEnv(env, 'AF_TOGETHER_MODEL_COST_BALANCED', 'AGENTFARM_TOGETHER_MODEL_COST_BALANCED'),
                     custom: readEnv(env, 'AF_TOGETHER_MODEL_CUSTOM', 'AGENTFARM_TOGETHER_MODEL_CUSTOM'),
+                },
+            },
+            deepseek: {
+                api_key: readEnv(env, 'AF_DEEPSEEK_API_KEY', 'AGENTFARM_DEEPSEEK_API_KEY'),
+                base_url: readEnv(env, 'AF_DEEPSEEK_BASE_URL', 'AGENTFARM_DEEPSEEK_BASE_URL') ?? DEFAULT_DEEPSEEK_BASE_URL,
+                model: readEnv(env, 'AF_DEEPSEEK_MODEL', 'AGENTFARM_DEEPSEEK_MODEL') ?? DEFAULT_DEEPSEEK_MODEL,
+                model_profiles: {
+                    quality_first: readEnv(env, 'AF_DEEPSEEK_MODEL_QUALITY_FIRST', 'AGENTFARM_DEEPSEEK_MODEL_QUALITY_FIRST') ?? DEFAULT_DEEPSEEK_MODEL_QUALITY_FIRST,
+                    speed_first: readEnv(env, 'AF_DEEPSEEK_MODEL_SPEED_FIRST', 'AGENTFARM_DEEPSEEK_MODEL_SPEED_FIRST'),
+                    cost_balanced: readEnv(env, 'AF_DEEPSEEK_MODEL_COST_BALANCED', 'AGENTFARM_DEEPSEEK_MODEL_COST_BALANCED'),
+                    custom: readEnv(env, 'AF_DEEPSEEK_MODEL_CUSTOM', 'AGENTFARM_DEEPSEEK_MODEL_CUSTOM'),
                 },
             },
             profileProviders: autoProfiles,
@@ -2788,6 +2909,11 @@ export async function* streamLLM(
             apiKey = options.apiKey ?? process.env['AF_TOGETHER_API_KEY'] ?? process.env['AGENTFARM_TOGETHER_API_KEY'] ?? '';
             baseUrl = (options.baseUrl ?? process.env['AF_TOGETHER_BASE_URL'] ?? process.env['AGENTFARM_TOGETHER_BASE_URL'] ?? DEFAULT_TOGETHER_BASE_URL).replace(/\/+$/, '');
             model = options.model ?? process.env['AF_TOGETHER_MODEL'] ?? process.env['AGENTFARM_TOGETHER_MODEL'] ?? 'meta-llama/Llama-3.3-70B-Instruct-Turbo';
+            break;
+        case 'deepseek':
+            apiKey = options.apiKey ?? process.env['AF_DEEPSEEK_API_KEY'] ?? process.env['AGENTFARM_DEEPSEEK_API_KEY'] ?? '';
+            baseUrl = (options.baseUrl ?? process.env['AF_DEEPSEEK_BASE_URL'] ?? process.env['AGENTFARM_DEEPSEEK_BASE_URL'] ?? DEFAULT_DEEPSEEK_BASE_URL).replace(/\/+$/, '');
+            model = options.model ?? process.env['AF_DEEPSEEK_MODEL'] ?? process.env['AGENTFARM_DEEPSEEK_MODEL'] ?? DEFAULT_DEEPSEEK_MODEL;
             break;
         default: // openai and auto fallback
             apiKey = options.apiKey ?? process.env['AF_OPENAI_API_KEY'] ?? process.env['AGENTFARM_OPENAI_API_KEY'] ?? '';
@@ -3096,6 +3222,11 @@ export async function callLLMWithTools(
             apiKey = options.apiKey ?? process.env['AF_TOGETHER_API_KEY'] ?? process.env['AGENTFARM_TOGETHER_API_KEY'] ?? '';
             fetchUrl = `${(options.baseUrl ?? process.env['AF_TOGETHER_BASE_URL'] ?? process.env['AGENTFARM_TOGETHER_BASE_URL'] ?? DEFAULT_TOGETHER_BASE_URL).replace(/\/+$/, '')}/chat/completions`;
             model = options.model ?? process.env['AF_TOGETHER_MODEL'] ?? process.env['AGENTFARM_TOGETHER_MODEL'] ?? 'meta-llama/Llama-3.3-70B-Instruct-Turbo';
+            break;
+        case 'deepseek':
+            apiKey = options.apiKey ?? process.env['AF_DEEPSEEK_API_KEY'] ?? process.env['AGENTFARM_DEEPSEEK_API_KEY'] ?? '';
+            fetchUrl = `${(options.baseUrl ?? process.env['AF_DEEPSEEK_BASE_URL'] ?? process.env['AGENTFARM_DEEPSEEK_BASE_URL'] ?? DEFAULT_DEEPSEEK_BASE_URL).replace(/\/+$/, '')}/chat/completions`;
+            model = options.model ?? process.env['AF_DEEPSEEK_MODEL'] ?? process.env['AGENTFARM_DEEPSEEK_MODEL'] ?? DEFAULT_DEEPSEEK_MODEL;
             break;
         default: // openai and auto fallback
             apiKey = options.apiKey ?? process.env['AF_OPENAI_API_KEY'] ?? process.env['AGENTFARM_OPENAI_API_KEY'] ?? '';
