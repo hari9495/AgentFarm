@@ -22,6 +22,7 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import { SessionManager } from './session-manager.js';
 import type { ManagedSession } from './session-manager.js';
 import { SupertonicClient } from './supertonic-client.js';
+import type { SynthesizeResult } from './supertonic-client.js';
 import type { VoiceInjector } from './voice-injector.js';
 import type { CaptureController } from './capture-controller.js';
 import type { MeetingMode, MeetingPlatform } from '@agentfarm/shared-types';
@@ -39,11 +40,17 @@ const ALLOWED_MODES: ReadonlySet<MeetingMode> = new Set([
     'standup',
     'interactive_qa',
     'interview_assistant',
+    'one_on_one',
 ]);
+
+/** Minimal TTS client interface — satisfied by SupertonicClient and SarvamMeetingTtsClient. */
+export interface MeetingTtsClient {
+    synthesize(text: string, options?: { voice?: string }): Promise<SynthesizeResult>;
+}
 
 export interface MeetingAgentServerOptions {
     sessionManager?: SessionManager;
-    tts?: SupertonicClient | null;
+    tts?: MeetingTtsClient | null;
     /**
      * Optional voice injector. When set, the synthesised audio from `/say`
      * is forwarded to the desktop-agent voice sidecar so it lands on the
@@ -181,7 +188,7 @@ export function createMeetingAgentServer(
 
 interface HandleContext {
     sessions: SessionManager;
-    tts: SupertonicClient | null;
+    tts: MeetingTtsClient | null;
     voiceInjector: VoiceInjector | null;
     captureController: CaptureController | null;
     publicBaseUrl: string;

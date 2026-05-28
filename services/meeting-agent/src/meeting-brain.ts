@@ -102,6 +102,15 @@ function buildModeGuidance(mode: string): string {
                 'Give complete, helpful answers. Ask a clarifying question if the intent is unclear ' +
                 'rather than guessing and giving a wrong answer.'
             );
+        case 'one_on_one':
+            return (
+                'MEETING MODE: One-on-one meeting.\n' +
+                'This is a private, focused conversation between you and one other person. ' +
+                'Treat every statement and question as directed at you — respond to everything. ' +
+                'Be conversational, attentive, and thorough. ' +
+                'Ask follow-up questions when appropriate to keep the conversation productive. ' +
+                'You do not need to be addressed by name.'
+            );
         default:
             return '';
     }

@@ -14,10 +14,13 @@ export type { MeetingBrainOptions, BrainTurn, BrainLlmProvider } from './meeting
 export { MeetingEpisodicMemory } from './meeting-episodic-memory.js';
 export type { PastExchange, MemoryWriteFn, MemoryReadFn } from './meeting-episodic-memory.js';
 export { createMeetingAgentServer } from './server.js';
-export type { MeetingAgentApp, MeetingAgentServerOptions } from './server.js';
+export type { MeetingAgentApp, MeetingAgentServerOptions, MeetingTtsClient } from './server.js';
+export { SarvamMeetingTtsClient } from './sarvam-tts-client.js';
+export type { SarvamMeetingTtsOptions } from './sarvam-tts-client.js';
 
 import { createMeetingAgentServer } from './server.js';
 import { SupertonicClient } from './supertonic-client.js';
+import { SarvamMeetingTtsClient } from './sarvam-tts-client.js';
 import { HttpVoiceInjector } from './voice-injector.js';
 import { HttpCaptureController } from './capture-controller.js';
 import { MeetingBrain } from './meeting-brain.js';
@@ -33,6 +36,9 @@ import { MeetingEpisodicMemory } from './meeting-episodic-memory.js';
  *   SUPERTONIC_URL       — base URL of the Supertonic-compatible TTS server
  *   SUPERTONIC_API_KEY   — optional bearer token sent to the TTS server
  *   SUPERTONIC_MODEL     — TTS model identifier (default `supertonic`)
+ *   SARVAM_API_KEY       — Sarvam AI subscription key; used as TTS fallback
+ *                          when SUPERTONIC_URL is not set
+ *   SARVAM_LANGUAGE_CODE — BCP-47 code for Sarvam TTS (default `hi-IN`)
  *   DESKTOP_AGENT_VOICE_URL    — base URL of the pipecat voice sidecar
  *                                (e.g. `http://desktop-agent:7800`). When
  *                                set, /say also injects audio into the
@@ -77,16 +83,24 @@ export async function bootFromEnv(): Promise<void> {
     const authToken = process.env['MEETING_AGENT_TOKEN'] || undefined;
 
     const ttsEndpoint = process.env['SUPERTONIC_URL'];
+    const sarvamApiKey = process.env['SARVAM_API_KEY'];
     const tts = ttsEndpoint
         ? new SupertonicClient({
             endpoint: ttsEndpoint,
             apiKey: process.env['SUPERTONIC_API_KEY'] || undefined,
             model: process.env['SUPERTONIC_MODEL'] || undefined,
         })
-        : null;
+        : sarvamApiKey
+            ? new SarvamMeetingTtsClient({
+                apiKey: sarvamApiKey,
+                languageCode: process.env['SARVAM_LANGUAGE_CODE'] ?? 'hi-IN',
+            })
+            : null;
 
     if (!tts) {
-        console.error('[meeting-agent] SUPERTONIC_URL not set; /say will record transcript only.');
+        console.error('[meeting-agent] Neither SUPERTONIC_URL nor SARVAM_API_KEY set; /say will record transcript only.');
+    } else if (!ttsEndpoint && sarvamApiKey) {
+        console.error(`[meeting-agent] TTS: Sarvam AI (lang=${process.env['SARVAM_LANGUAGE_CODE'] ?? 'hi-IN'})`);
     }
 
     const voiceEndpoint = process.env['DESKTOP_AGENT_VOICE_URL'];

@@ -1336,7 +1336,7 @@ export type MeetingQuestionHandlingStatus =
   | 'escalated'
   | 'blocked';
 
-export type MeetingMode = 'standup' | 'interactive_qa' | 'interview_assistant';
+export type MeetingMode = 'standup' | 'interactive_qa' | 'interview_assistant' | 'one_on_one';
 
 export type MeetingPlatform = 'teams' | 'zoom' | 'meet' | 'webex';
 

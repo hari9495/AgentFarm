@@ -8,6 +8,151 @@ import type {
 import { CONTRACT_VERSIONS } from '@agentfarm/shared-types';
 import { randomUUID } from 'node:crypto';
 
+// ── Provider endpoints ────────────────────────────────────────────────────────
+
+const SARVAM_STT_URL = 'https://api.sarvam.ai/speech-to-text';
+const SARVAM_TTS_URL = 'https://api.sarvam.ai/text-to-speech';
+const DEEPGRAM_STT_URL = 'https://api.deepgram.com/v1/listen?smart_format=true&detect_language=true';
+
+const SARVAM_SPEAKER_MAP: Record<string, string> = {
+    'hi-IN': 'meera', 'ta-IN': 'pavithra', 'te-IN': 'arvind',
+    'kn-IN': 'arvind', 'ml-IN': 'arvind', 'mr-IN': 'amol',
+    'bn-IN': 'meera', 'gu-IN': 'meera', 'pa-IN': 'meera',
+};
+
+// ── Audio download helper ─────────────────────────────────────────────────────
+
+async function resolveAudioBytes(audioRef: string): Promise<ArrayBuffer> {
+    if (audioRef.startsWith('data:')) {
+        const comma = audioRef.indexOf(',');
+        const b64 = comma === -1 ? audioRef : audioRef.slice(comma + 1);
+        const buf = Buffer.from(b64, 'base64');
+        return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer;
+    }
+    const res = await fetch(audioRef);
+    if (!res.ok) throw new Error(`resolveAudioBytes: fetch ${res.status} for ${audioRef}`);
+    return res.arrayBuffer();
+}
+
+// ── Sarvam AI STT ─────────────────────────────────────────────────────────────
+
+async function sarvamSttImpl(
+    audioRef: string,
+    config: VoicePipelineConfig,
+): Promise<{ transcript: string; confidence?: number; durationMs?: number; languageDetected?: string }> {
+    const apiKey = process.env['SARVAM_API_KEY'] ?? '';
+    if (!apiKey) throw new Error('SARVAM_API_KEY not set');
+    const audioBytes = await resolveAudioBytes(audioRef);
+    const form = new FormData();
+    form.append('file', new Blob([audioBytes]), 'audio.wav');
+    form.append('model', config.sttModel ?? 'saarika:v2');
+    if (config.languageCode) form.append('language_code', config.languageCode);
+    const started = Date.now();
+    const res = await fetch(SARVAM_STT_URL, {
+        method: 'POST',
+        headers: { 'api-subscription-key': apiKey },
+        body: form,
+    });
+    if (!res.ok) {
+        const detail = await res.text().catch(() => '');
+        throw new Error(`Sarvam STT ${res.status}: ${detail.slice(0, 256)}`);
+    }
+    const data = await res.json() as { transcript?: string; language_code?: string };
+    return {
+        transcript: data.transcript ?? '',
+        languageDetected: data.language_code,
+        durationMs: Date.now() - started,
+    };
+}
+
+// ── Deepgram STT ─────────────────────────────────────────────────────────────
+
+async function deepgramSttImpl(
+    audioRef: string,
+    _config: VoicePipelineConfig,
+): Promise<{ transcript: string; confidence?: number; durationMs?: number; languageDetected?: string }> {
+    const apiKey = process.env['DEEPGRAM_API_KEY'] ?? '';
+    if (!apiKey) throw new Error('DEEPGRAM_API_KEY not set');
+    const audioBytes = await resolveAudioBytes(audioRef);
+    const started = Date.now();
+    const res = await fetch(DEEPGRAM_STT_URL, {
+        method: 'POST',
+        headers: { Authorization: `Token ${apiKey}`, 'Content-Type': 'audio/*' },
+        body: audioBytes,
+    });
+    if (!res.ok) {
+        const detail = await res.text().catch(() => '');
+        throw new Error(`Deepgram STT ${res.status}: ${detail.slice(0, 256)}`);
+    }
+    type DeepgramResponse = {
+        results?: { channels?: Array<{ alternatives?: Array<{ transcript?: string; confidence?: number }> }> };
+        metadata?: { detected_language?: string };
+    };
+    const data = await res.json() as DeepgramResponse;
+    const alt = data.results?.channels?.[0]?.alternatives?.[0];
+    return {
+        transcript: alt?.transcript ?? '',
+        confidence: alt?.confidence,
+        languageDetected: data.metadata?.detected_language,
+        durationMs: Date.now() - started,
+    };
+}
+
+// ── Sarvam AI TTS ─────────────────────────────────────────────────────────────
+
+async function sarvamTtsImpl(
+    text: string,
+    config: VoicePipelineConfig,
+): Promise<{ audioRef?: string; durationMs?: number }> {
+    const apiKey = process.env['SARVAM_API_KEY'] ?? '';
+    if (!apiKey) throw new Error('SARVAM_API_KEY not set');
+    const langCode = config.languageCode ?? 'hi-IN';
+    const speaker = config.voiceProfileId ?? SARVAM_SPEAKER_MAP[langCode] ?? 'meera';
+    const started = Date.now();
+    const res = await fetch(SARVAM_TTS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'api-subscription-key': apiKey },
+        body: JSON.stringify({
+            inputs: [text],
+            target_language_code: langCode,
+            speaker,
+            model: config.ttsModel ?? 'bulbul:v1',
+        }),
+    });
+    if (!res.ok) {
+        const detail = await res.text().catch(() => '');
+        throw new Error(`Sarvam TTS ${res.status}: ${detail.slice(0, 256)}`);
+    }
+    const data = await res.json() as { audios?: string[] };
+    const b64 = data.audios?.[0];
+    if (!b64) throw new Error('Sarvam TTS: no audio in response');
+    return { audioRef: `data:audio/wav;base64,${b64}`, durationMs: Date.now() - started };
+}
+
+// ── VoxCPM TTS ────────────────────────────────────────────────────────────────
+
+async function voxcpmTtsImpl(
+    text: string,
+    config: VoicePipelineConfig,
+): Promise<{ audioRef?: string; durationMs?: number }> {
+    const endpoint = config.ttsEndpoint;
+    if (!endpoint) throw new Error('VoicePipelineConfig.ttsEndpoint not set for voxcpm TTS');
+    const body = buildVoxCpmRequest(text, config.ttsModel, config.voiceProfileId);
+    const started = Date.now();
+    const res = await fetch(`${endpoint.replace(/\/+$/u, '')}/v1/audio/speech`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'audio/*' },
+        body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+        const detail = await res.text().catch(() => '');
+        throw new Error(`VoxCPM TTS ${res.status}: ${detail.slice(0, 256)}`);
+    }
+    const bytes = await res.arrayBuffer();
+    const b64 = Buffer.from(bytes).toString('base64');
+    return { audioRef: `data:audio/mpeg;base64,${b64}`, durationMs: Date.now() - started };
+}
+
 // ── Adapters for STT / TTS (injectable for testing) ──────────────────────────
 
 export type SttAdapter = (
@@ -20,17 +165,21 @@ export type TtsAdapter = (
     config: VoicePipelineConfig,
 ) => Promise<{ audioRef?: string; durationMs?: number }>;
 
-/** Default STT stub — in production replace with a Whisper API call. */
-const defaultSttAdapter: SttAdapter = async (_audioRef, _config) => {
-    // Production: POST audio to Whisper endpoint
-    console.error('[voice-pipeline] defaultSttAdapter called: no STT provider configured, returning empty transcript. Set a real SttAdapter in VoicePipeline constructor.');
-    return { transcript: '', confidence: undefined };
+const defaultSttAdapter: SttAdapter = async (audioRef, config) => {
+    if (config.sttProvider === 'sarvam_ai') return sarvamSttImpl(audioRef, config);
+    if (config.sttProvider === 'deepgram') return deepgramSttImpl(audioRef, config);
+    console.error(
+        `[voice-pipeline] no built-in STT adapter for provider "${config.sttProvider}". Inject a custom SttAdapter.`,
+    );
+    return { transcript: '' };
 };
 
-/** Default TTS stub — in production replace with VoxCPM /v1/audio/speech call. */
-const defaultTtsAdapter: TtsAdapter = async (_text, _config) => {
-    // Production: POST to config.ttsEndpoint (OpenAI-compatible /v1/audio/speech)
-    console.error('[voice-pipeline] defaultTtsAdapter called: no TTS provider configured, returning empty audioRef. Set a real TtsAdapter in VoicePipeline constructor.');
+const defaultTtsAdapter: TtsAdapter = async (text, config) => {
+    if (config.ttsProvider === 'sarvam_ai') return sarvamTtsImpl(text, config);
+    if (config.ttsProvider === 'voxcpm') return voxcpmTtsImpl(text, config);
+    console.error(
+        `[voice-pipeline] no built-in TTS adapter for provider "${config.ttsProvider}". Inject a custom TtsAdapter.`,
+    );
     return { audioRef: undefined };
 };
 
