@@ -233,6 +233,9 @@ export const DEVELOPER_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = 
     // ── Gap 5e — Team context sweep & meeting digest (Tier 43) ───────────────
     'workspace_dev_context_sweep',
     'workspace_dev_meeting_digest',
+    // ── Standup / live meetings (shared) ─────────────────────────────────────
+    'workspace_meeting_join',
+    'workspace_meeting_speak',
 ];
 
 // ---------------------------------------------------------------------------

@@ -61,4 +61,8 @@ export const CUSTOMER_SUPPORT_EXECUTIVE_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspa
     // ── Voice (Sarvam AI STT/TTS) ─────────────────────────────────────────────
     'workspace_cse_voice_call_handle',
     'workspace_cse_voice_transcribe',
+    // ── Standup / live meetings (shared) ─────────────────────────────────────
+    'workspace_meeting_join',
+    'workspace_meeting_speak',
+    'workspace_meeting_interview_live',
 ];

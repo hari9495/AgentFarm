@@ -67,6 +67,9 @@ export const TECHNICAL_WRITER_ROLE_ALLOWED_LOCAL_ACTIONS: (LocalWorkspaceActionT
     'workspace_tw_pr_review_respond',   // gap 2: review→revise loop
     'workspace_tw_doc_index',           // gap 3: mental model of whole doc set
     'workspace_tw_roadmap_context',     // gap 4: long-range strategic judgment
+    // ── Standup / live meetings (shared) ─────────────────────────────────────
+    'workspace_meeting_join',
+    'workspace_meeting_speak',
 ];
 
 export const TECHNICAL_WRITER_ROLE_BLOCKED_ACTIONS = [

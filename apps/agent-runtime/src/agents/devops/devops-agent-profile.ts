@@ -202,6 +202,9 @@ export const DEVOPS_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = [
     'workspace_devops_scheduled_monitor',
     // ── Wave 2 Gap 2 — Incident Context / Noise Filter ────────────────────
     'workspace_devops_incident_context',
+    // ── Standup / live meetings (shared) ─────────────────────────────────────
+    'workspace_meeting_join',
+    'workspace_meeting_speak',
 ];
 
 // ---------------------------------------------------------------------------

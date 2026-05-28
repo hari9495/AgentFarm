@@ -85,6 +85,9 @@ export const MOBILE_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = [
     'workspace_mob_store_upload',
     'workspace_mob_scaffold_project',
     'workspace_mob_standup_report',
+    // ── Standup / live meetings (shared) ─────────────────────────────────────
+    'workspace_meeting_join',
+    'workspace_meeting_speak',
 ];
 
 // ---------------------------------------------------------------------------

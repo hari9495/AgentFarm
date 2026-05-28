@@ -59,6 +59,9 @@ export const CONTENT_WRITER_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType
     'workspace_cw_send_for_review',
     'workspace_cw_run_workflow',
     'workspace_cw_request_human_gate',
+    // ── Standup / live meetings (shared) ─────────────────────────────────────
+    'workspace_meeting_join',
+    'workspace_meeting_speak',
 ];
 
 export const CONTENT_WRITER_ROLE_BLOCKED_ACTIONS = [

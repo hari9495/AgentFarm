@@ -106,6 +106,9 @@ export const FSD_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = [
     // ── Gap 5d — Aesthetic / design scoring & reference compare (Tier 42) ─────
     'workspace_fsd_design_score',
     'workspace_fsd_design_reference',
+    // ── Standup / live meetings (shared) ─────────────────────────────────────
+    'workspace_meeting_join',
+    'workspace_meeting_speak',
 ];
 
 // ---------------------------------------------------------------------------
