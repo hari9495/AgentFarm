@@ -36,6 +36,10 @@ import { sendSurvey, type SurveyType } from './csat-surveyor.js';
 import { updateCrmRecord, documentCase, type InteractionChannel, type InteractionOutcome } from './crm-updater.js';
 import { computeKpiReport, analyseTrends, checkSla, type TicketDataPoint } from './kpi-reporter.js';
 import { buildCseStandupSummary } from './customer-support-executive-standup-builder.js';
+import {
+    handleVoiceCall, handleVoiceTranscribe,
+    type VoiceSttProvider, type VoiceTtsProvider,
+} from './voice-call-handler.js';
 
 // ---------------------------------------------------------------------------
 // Action type union
@@ -75,7 +79,10 @@ export type CustomerSupportExecutiveActionType =
     | 'workspace_cse_standup_report'
     // Multi-channel
     | 'workspace_cse_live_chat_handle'
-    | 'workspace_cse_sla_check';
+    | 'workspace_cse_sla_check'
+    // Voice
+    | 'workspace_cse_voice_call_handle'
+    | 'workspace_cse_voice_transcribe';
 
 export function isCustomerSupportExecutiveActionType(t: string): t is CustomerSupportExecutiveActionType {
     return (
@@ -103,7 +110,9 @@ export function isCustomerSupportExecutiveActionType(t: string): t is CustomerSu
         t === 'workspace_cse_trend_analysis' ||
         t === 'workspace_cse_standup_report' ||
         t === 'workspace_cse_live_chat_handle' ||
-        t === 'workspace_cse_sla_check'
+        t === 'workspace_cse_sla_check' ||
+        t === 'workspace_cse_voice_call_handle' ||
+        t === 'workspace_cse_voice_transcribe'
     );
 }
 
@@ -675,6 +684,60 @@ export async function handleCustomerSupportExecutiveAction(params: {
                 priority: str(payload['priority']) || undefined,
             });
             return ok(result);
+        }
+
+        // ====================================================================
+        // VOICE  (Sarvam AI STT/TTS + Deepgram fallback)
+        // ====================================================================
+
+        case 'workspace_cse_voice_call_handle': {
+            const audioRef = str(payload['audioRef']);
+            if (!audioRef) return fail('payload.audioRef (URL or base64) is required.');
+            try {
+                const result = await handleVoiceCall({
+                    tenantId, botId,
+                    audioRef,
+                    callId: str(payload['callId']) || undefined,
+                    customerId: str(payload['customerId']) || undefined,
+                    customerEmail: str(payload['customerEmail']) || undefined,
+                    customerName: str(payload['customerName']) || undefined,
+                    language: str(payload['language']) || undefined,
+                    industry: str(payload['industry']) as never || undefined,
+                    agentName: str(payload['agentName']) || undefined,
+                    companyName: str(payload['companyName']) || undefined,
+                    ticketId: str(payload['ticketId']) || undefined,
+                    sttProvider: (str(payload['sttProvider']) as VoiceSttProvider) || undefined,
+                    ttsProvider: (str(payload['ttsProvider']) as VoiceTtsProvider) || undefined,
+                    connector: str(payload['connector']) || undefined,
+                });
+                return ok(result);
+            } catch (err) {
+                return fail(String(err));
+            }
+        }
+
+        case 'workspace_cse_voice_transcribe': {
+            const audioRef = str(payload['audioRef']) || undefined;
+            const transcript = str(payload['transcript']) || undefined;
+            if (!audioRef && !transcript) {
+                return fail('payload.audioRef or payload.transcript is required.');
+            }
+            try {
+                const result = await handleVoiceTranscribe({
+                    tenantId, botId,
+                    audioRef,
+                    transcript,
+                    callId: str(payload['callId']) || undefined,
+                    ticketId: str(payload['ticketId']) || undefined,
+                    customerId: str(payload['customerId']) || undefined,
+                    language: str(payload['language']) || undefined,
+                    sttProvider: (str(payload['sttProvider']) as VoiceSttProvider) || undefined,
+                    connector: str(payload['connector']) || undefined,
+                });
+                return ok(result);
+            } catch (err) {
+                return fail(String(err));
+            }
         }
 
         default: {

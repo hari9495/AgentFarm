@@ -1385,9 +1385,9 @@ export interface MeetingQuestionRecord {
 // VOICE PIPELINE CONTRACTS (VoxCPM / Voicebox / Whisper)
 // ============================================================================
 
-export type SttProvider = 'whisper_local' | 'whisper_cloud' | 'azure_speech';
+export type SttProvider = 'whisper_local' | 'whisper_cloud' | 'azure_speech' | 'sarvam_ai' | 'deepgram';
 
-export type TtsProvider = 'voxcpm' | 'voicebox' | 'azure_tts' | 'openai_tts';
+export type TtsProvider = 'voxcpm' | 'voicebox' | 'azure_tts' | 'openai_tts' | 'sarvam_ai';
 
 export type VoiceQuality = 'standard' | 'high' | 'studio';
 

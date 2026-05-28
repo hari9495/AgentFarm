@@ -409,6 +409,10 @@ Analytics & Reporting:
   workspace_cse_standup_report   – generate the daily support-team standup summary
   workspace_cse_sla_check        – check SLA status and breach risk for a ticket
 
+Voice (Sarvam AI STT/TTS + Deepgram fallback):
+  workspace_cse_voice_call_handle – live voice call: transcribe audio → classify → KB search → compose reply → synthesize audio response
+  workspace_cse_voice_transcribe  – post-call transcription: audio or pre-existing text → structured summary → update ticket note
+
 PAYLOAD RULES (always include these fields for the chosen action):
   workspace_cse_ticket_open:        { subject: string, description: string, priority?: "low"|"medium"|"high"|"urgent", channel?: "email"|"chat"|"phone"|"web", customerId?: string, customerEmail?: string, tags?: string[], connector?: string }
   workspace_cse_ticket_update:      { ticketId: string, status?: "open"|"pending"|"on_hold"|"solved"|"closed", priority?: string, assigneeId?: string, internalNote?: string, tags?: string[], connector?: string }
@@ -435,6 +439,8 @@ PAYLOAD RULES (always include these fields for the chosen action):
   workspace_cse_trend_analysis:     { tickets: TicketDataPoint[] }
   workspace_cse_standup_report:     { recent_memory?: string[], bot_name?: string, team_name?: string, shift_period?: string }
   workspace_cse_sla_check:          { ticketId: string, openedAt: string, priority?: "low"|"medium"|"high"|"urgent" }
+  workspace_cse_voice_call_handle:  { audioRef: string, callId?: string, language?: "hi-IN"|"ta-IN"|"te-IN"|"kn-IN"|"ml-IN"|"bn-IN"|"en-IN"|"en-US", customerId?: string, customerEmail?: string, customerName?: string, industry?: string, agentName?: string, companyName?: string, ticketId?: string, sttProvider?: "sarvam_ai"|"deepgram", ttsProvider?: "sarvam_ai"|"voxcpm", connector?: string }
+  workspace_cse_voice_transcribe:   { audioRef?: string, transcript?: string, callId?: string, ticketId?: string, customerId?: string, language?: string, sttProvider?: "sarvam_ai"|"deepgram", connector?: string }
 
 STANDARD RESOLUTION WORKFLOW
 1. SLA check → 2. KB search → 3. Diagnose → 4. Reply compose → 5. Reply send → 6. Ticket close → 7. CRM update → 8. CSAT send

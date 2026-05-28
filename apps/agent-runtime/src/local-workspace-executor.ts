@@ -655,7 +655,9 @@ export type LocalWorkspaceActionType =
     | 'workspace_cse_trend_analysis'
     | 'workspace_cse_standup_report'
     | 'workspace_cse_live_chat_handle'
-    | 'workspace_cse_sla_check';
+    | 'workspace_cse_sla_check'
+    | 'workspace_cse_voice_call_handle'
+    | 'workspace_cse_voice_transcribe';
 
 export type LocalWorkspaceResult = {
     ok: boolean;
@@ -14902,7 +14904,9 @@ export async function executeLocalWorkspaceAction(input: {
         case 'workspace_cse_trend_analysis':
         case 'workspace_cse_standup_report':
         case 'workspace_cse_live_chat_handle':
-        case 'workspace_cse_sla_check': {
+        case 'workspace_cse_sla_check':
+        case 'workspace_cse_voice_call_handle':
+        case 'workspace_cse_voice_transcribe': {
             if (!isCustomerSupportExecutiveActionType(actionType)) {
                 return { ok: false, output: '', errorOutput: `Unrecognised Customer Support Executive action: ${actionType}` };
             }
