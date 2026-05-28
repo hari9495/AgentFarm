@@ -24,6 +24,10 @@ import {
     RECRUITER_ROLE_ALLOWED_LOCAL_ACTIONS,
 } from '../agents/recruiter/recruiter-agent-profile.js';
 import {
+    CUSTOMER_SUPPORT_EXECUTIVE_ROLE_ALLOWED_CONNECTORS,
+    CUSTOMER_SUPPORT_EXECUTIVE_ROLE_ALLOWED_LOCAL_ACTIONS,
+} from '../agents/customer-support-executive/customer-support-executive-agent-profile.js';
+import {
     DEVELOPER_ROLE_ALLOWED_CONNECTORS,
     DEVELOPER_ROLE_ALLOWED_LOCAL_ACTIONS,
 } from '../agents/developer/developer-agent-profile.js';
@@ -137,9 +141,9 @@ export const ROLE_PROFILES: Record<RoleKey, RoleProfile> = {
     customer_support_executive: {
         roleKey: 'customer_support_executive',
         displayName: 'Customer Support Executive',
-        description: 'Handles support tickets, customer replies, escalations, and issue resolution',
-        allowedConnectorTools: ['jira', 'slack', 'microsoft_teams', 'gmail', 'outlook', 'zendesk', 'intercom'],
-        allowedActions: ['create_issue', 'comment_issue', 'send_email', 'send_message', 'escalate_ticket', 'close_ticket', 'update_crm'],
+        description: 'Handles the full customer support lifecycle — multi-channel inbound/outbound, ticket management, issue diagnosis, tiered escalation, refund processing, CSAT/NPS surveys, CRM documentation, KB authoring, KPI reporting, and SLA adherence across all industries and domains',
+        allowedConnectorTools: [...CUSTOMER_SUPPORT_EXECUTIVE_ROLE_ALLOWED_CONNECTORS],
+        allowedActions: [...CUSTOMER_SUPPORT_EXECUTIVE_ROLE_ALLOWED_LOCAL_ACTIONS],
         requiredConfig: ['ticketingProvider', 'emailProvider'],
     },
     project_manager_product_owner_scrum_master: {

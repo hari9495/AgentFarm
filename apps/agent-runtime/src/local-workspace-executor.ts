@@ -63,6 +63,7 @@ import { handlePmAction, isPmActionType, type PmActionType } from './agents/proj
 import { handleBaAction, isBaActionType, type BaActionType } from './agents/business-analyst/business-analyst-action-handler.js';
 import { handleMarketingSpecialistAction, isMarketingSpecialistActionType, type MarketingSpecialistActionType } from './agents/marketing-specialist/marketing-specialist-action-handler.js';
 import { handleRecruiterAction, isRecruiterActionType, type RecruiterActionType } from './agents/recruiter/recruiter-action-handler.js';
+import { handleCustomerSupportExecutiveAction, isCustomerSupportExecutiveActionType, type CustomerSupportExecutiveActionType } from './agents/customer-support-executive/customer-support-executive-action-handler.js';
 import type { ProseCallerFn } from './agents/content-writer/llm-prose-writer.js';
 import { streamLLM } from './llm-decision-adapter.js';
 import { globalEpisodicMemory } from './episodic-memory.js';
@@ -628,7 +629,33 @@ export type LocalWorkspaceActionType =
     | 'workspace_rec_advise_jd_compliance'
     | 'workspace_rec_international'
     | 'workspace_rec_campus_recruiting'
-    | 'workspace_rec_dashboard_request';
+    | 'workspace_rec_dashboard_request'
+    // Tier 48 (Customer Support Executive domain actions)
+    | 'workspace_cse_ticket_open'
+    | 'workspace_cse_ticket_update'
+    | 'workspace_cse_ticket_close'
+    | 'workspace_cse_ticket_merge'
+    | 'workspace_cse_ticket_assign'
+    | 'workspace_cse_reply_compose'
+    | 'workspace_cse_reply_send'
+    | 'workspace_cse_reply_followup'
+    | 'workspace_cse_outbound_call_log'
+    | 'workspace_cse_kb_search'
+    | 'workspace_cse_kb_create_article'
+    | 'workspace_cse_issue_diagnose'
+    | 'workspace_cse_escalate'
+    | 'workspace_cse_deescalate'
+    | 'workspace_cse_refund_process'
+    | 'workspace_cse_order_modify'
+    | 'workspace_cse_csat_send'
+    | 'workspace_cse_nps_send'
+    | 'workspace_cse_crm_update'
+    | 'workspace_cse_case_document'
+    | 'workspace_cse_kpi_report'
+    | 'workspace_cse_trend_analysis'
+    | 'workspace_cse_standup_report'
+    | 'workspace_cse_live_chat_handle'
+    | 'workspace_cse_sla_check';
 
 export type LocalWorkspaceResult = {
     ok: boolean;
@@ -14837,6 +14864,61 @@ export async function executeLocalWorkspaceAction(input: {
                 errorMessage: recResult.errorOutput ? recResult.errorOutput.slice(0, 200) : undefined,
             });
             return recResult;
+        }
+
+        // ====================================================================
+        // TIER 48: CUSTOMER SUPPORT EXECUTIVE DOMAIN ACTIONS
+        // ====================================================================
+        case 'workspace_cse_ticket_open':
+        case 'workspace_cse_ticket_update':
+        case 'workspace_cse_ticket_close':
+        case 'workspace_cse_ticket_merge':
+        case 'workspace_cse_ticket_assign':
+        case 'workspace_cse_reply_compose':
+        case 'workspace_cse_reply_send':
+        case 'workspace_cse_reply_followup':
+        case 'workspace_cse_outbound_call_log':
+        case 'workspace_cse_kb_search':
+        case 'workspace_cse_kb_create_article':
+        case 'workspace_cse_issue_diagnose':
+        case 'workspace_cse_escalate':
+        case 'workspace_cse_deescalate':
+        case 'workspace_cse_refund_process':
+        case 'workspace_cse_order_modify':
+        case 'workspace_cse_csat_send':
+        case 'workspace_cse_nps_send':
+        case 'workspace_cse_crm_update':
+        case 'workspace_cse_case_document':
+        case 'workspace_cse_kpi_report':
+        case 'workspace_cse_trend_analysis':
+        case 'workspace_cse_standup_report':
+        case 'workspace_cse_live_chat_handle':
+        case 'workspace_cse_sla_check': {
+            if (!isCustomerSupportExecutiveActionType(actionType)) {
+                return { ok: false, output: '', errorOutput: `Unrecognised Customer Support Executive action: ${actionType}` };
+            }
+            const cseResult = await handleCustomerSupportExecutiveAction({
+                actionType: actionType as CustomerSupportExecutiveActionType,
+                tenantId,
+                botId,
+                taskId,
+                payload,
+            });
+            const cseTitle =
+                typeof payload['subject'] === 'string' ? payload['subject'] :
+                typeof payload['ticketId'] === 'string' ? `Ticket #${payload['ticketId']}` :
+                typeof payload['customerEmail'] === 'string' ? payload['customerEmail'] : actionType;
+            void globalEpisodicMemory.record({
+                taskId,
+                workspaceId: workspaceDir,
+                botId,
+                actionType,
+                promptSummary: cseTitle.slice(0, 200),
+                outcome: cseResult.ok ? 'success' : 'failed',
+                timestamp: Date.now(),
+                errorMessage: cseResult.errorOutput ? cseResult.errorOutput.slice(0, 200) : undefined,
+            });
+            return cseResult;
         }
 
         default: {
