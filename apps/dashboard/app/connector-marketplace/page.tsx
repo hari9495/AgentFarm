@@ -1,20 +1,26 @@
 import { redirect } from 'next/navigation';
-import { ConnectorMarketplacePanel } from '../components/connector-marketplace-panel';
+import { AgentCapabilitiesPanel } from '../components/agent-capabilities-panel';
 import { getSessionPayload, getInternalSessionAuthHeader } from '../lib/internal-session';
 
 const API_BASE = process.env['API_GATEWAY_URL'] ?? 'http://localhost:3000';
 
-async function fetchAgentRoles(authHeader: string): Promise<string[]> {
+type CapabilitiesResponse = {
+    sections: unknown[];
+    purchasedRoleKeys: string[];
+    totalPurchased: number;
+    totalAvailable: number;
+};
+
+async function fetchCapabilities(authHeader: string): Promise<CapabilitiesResponse | null> {
     try {
-        const res = await fetch(`${API_BASE}/v1/agents`, {
+        const res = await fetch(`${API_BASE}/v1/connectors/capabilities`, {
             headers: { Authorization: authHeader },
             cache: 'no-store',
         });
-        if (!res.ok) return [];
-        const data = await res.json() as { bots?: { role?: string }[] };
-        return (data.bots ?? []).map((b) => b.role ?? '').filter(Boolean);
+        if (!res.ok) return null;
+        return res.json() as Promise<CapabilitiesResponse>;
     } catch {
-        return [];
+        return null;
     }
 }
 
@@ -25,7 +31,12 @@ export default async function ConnectorMarketplacePage() {
     }
 
     const authHeader = await getInternalSessionAuthHeader();
-    const agentRoles = authHeader ? await fetchAgentRoles(authHeader) : [];
+    const capabilities = authHeader ? await fetchCapabilities(authHeader) : null;
 
-    return <ConnectorMarketplacePanel agentRoles={agentRoles} />;
+    return (
+        <AgentCapabilitiesPanel
+            capabilities={capabilities as never}
+            error={!capabilities ? 'Unable to load capabilities. Please refresh.' : undefined}
+        />
+    );
 }

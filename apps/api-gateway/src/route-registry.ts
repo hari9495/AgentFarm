@@ -33,6 +33,7 @@ import { registerWebhookRoutes } from './routes/connectors/webhooks.js';
 import { registerConnectorHealthRoutes } from './routes/connectors/connector-health.js';
 import { registerAdapterRegistryRoutes } from './routes/connectors/adapter-registry.js';
 import { registerOutboundWebhookRoutes } from './routes/connectors/outbound-webhooks.js';
+import { registerConnectorCapabilitiesRoutes } from './routes/connectors/connector-capabilities.js';
 
 // Governance
 import { registerApprovalRoutes } from './routes/governance/approvals.js';
@@ -181,6 +182,7 @@ export const registerAllRoutes = async (
     registerConnectorHealthRoutes(app);
     registerAdapterRegistryRoutes(app, { getSession });
     await registerOutboundWebhookRoutes(app, { getSession });
+    await registerConnectorCapabilitiesRoutes(app, { getSession });
 
     // Governance
     await registerApprovalRoutes(app, { getSession });

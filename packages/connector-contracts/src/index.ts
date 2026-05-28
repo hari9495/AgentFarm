@@ -561,6 +561,186 @@ export const CONNECTOR_REGISTRY: ConnectorDefinition[] = [
   },
 ];
 
+// ─── Agent role metadata (display names, groups, feature highlights) ─────────
+
+export type AgentGroup = 'engineering' | 'business' | 'content' | 'marketing' | 'people' | 'support';
+
+export interface AgentRoleMeta {
+  displayName: string;
+  tagline: string;
+  group: AgentGroup;
+  /** 4-5 bullet-point capability highlights shown in the dashboard capabilities section */
+  featureHighlights: string[];
+}
+
+export const AGENT_ROLE_META: Record<AgentRoleKey, AgentRoleMeta> = {
+  developer: {
+    displayName: 'Developer',
+    tagline: 'Code, debug, and ship features autonomously',
+    group: 'engineering',
+    featureHighlights: [
+      'Read, edit, and refactor files across any codebase',
+      'Generate and fix failing tests end-to-end',
+      'Create pull requests, run CI checks, and manage git',
+      'Security scanning and vulnerability suggestions',
+      'Deep debug, architecture research, and pair-mode',
+    ],
+  },
+  fullstack_developer: {
+    displayName: 'Full-Stack Developer',
+    tagline: 'End-to-end web development — frontend to API',
+    group: 'engineering',
+    featureHighlights: [
+      'React / Next.js UI implementation and styling',
+      'API design and backend service integration',
+      'UX analytics, design scoring, and A11y audits',
+      'Cross-repo coordination and feature-flag wiring',
+      'Performance profiling and bundle analysis',
+    ],
+  },
+  tester: {
+    displayName: 'QA Tester',
+    tagline: 'Automated test generation, execution, and reporting',
+    group: 'engineering',
+    featureHighlights: [
+      'Unit, integration, and E2E test generation',
+      'Flaky test detection and coverage reporting',
+      'Browser automation — Selenium, Playwright, Cypress',
+      'Load testing with k6, JMeter, and Artillery',
+      'Security scanning via OWASP ZAP and Burp Suite',
+    ],
+  },
+  devops_engineer: {
+    displayName: 'DevOps Engineer',
+    tagline: 'Infrastructure, CI/CD pipelines, and incident response',
+    group: 'engineering',
+    featureHighlights: [
+      'Terraform plan, validate, and apply (with approval gate)',
+      'Kubernetes deploy, rollback, and pod management',
+      'Helm chart generation, diff, and upgrade',
+      'Incident triage, log analysis, and DORA metrics',
+      'Secret rotation, cert renewal, and cost estimation',
+    ],
+  },
+  business_analyst: {
+    displayName: 'Business Analyst',
+    tagline: 'Requirements, process modelling, and stakeholder reporting',
+    group: 'business',
+    featureHighlights: [
+      'Requirements gathering and BRD / FRD authoring',
+      'Process flow and swimlane diagram generation',
+      'Gap analysis and feasibility assessments',
+      'Backlog grooming from business inputs',
+      'Executive summaries and stakeholder reports',
+    ],
+  },
+  project_manager_product_owner_scrum_master: {
+    displayName: 'Project Manager',
+    tagline: 'Sprint planning, backlog management, and delivery tracking',
+    group: 'business',
+    featureHighlights: [
+      'Sprint creation, planning, and retrospectives',
+      'Backlog grooming and priority scoring',
+      'Risk register and dependency tracking',
+      'RAG status and stakeholder update emails',
+      'Daily standup summaries and blocker tracking',
+    ],
+  },
+  technical_writer: {
+    displayName: 'Technical Writer',
+    tagline: 'API docs, changelogs, and developer guides',
+    group: 'content',
+    featureHighlights: [
+      'OpenAPI / Swagger documentation generation',
+      'Changelog and release notes from git history',
+      'README and onboarding guide authoring',
+      'Architecture decision records (ADRs)',
+      'Runbook and incident playbook creation',
+    ],
+  },
+  content_writer: {
+    displayName: 'Content Writer',
+    tagline: 'Blog posts, landing pages, and SEO copy',
+    group: 'content',
+    featureHighlights: [
+      'Long-form blog and article writing',
+      'SEO keyword optimisation and meta tags',
+      'Landing page and CTA copy',
+      'Social media posts and caption drafting',
+      'Newsletter and drip email sequences',
+    ],
+  },
+  marketing_specialist: {
+    displayName: 'Marketing Specialist',
+    tagline: 'Campaigns, growth analytics, and brand strategy',
+    group: 'marketing',
+    featureHighlights: [
+      'Campaign planning and creative briefing',
+      'Competitor and market analysis reports',
+      'Ad copy and A/B variant generation',
+      'UTM tracking and attribution analysis',
+      'ROI and funnel reporting',
+    ],
+  },
+  sales_rep: {
+    displayName: 'Sales Representative',
+    tagline: 'Lead qualification, outreach, and deal tracking',
+    group: 'marketing',
+    featureHighlights: [
+      'Prospect research and ICP scoring',
+      'Personalised outbound email sequences',
+      'CRM record updates and pipeline tracking',
+      'Meeting scheduling and follow-up automation',
+      'Win/loss analysis and proposal drafting',
+    ],
+  },
+  recruiter: {
+    displayName: 'Recruiter',
+    tagline: 'Job postings, candidate screening, and interview scheduling',
+    group: 'people',
+    featureHighlights: [
+      'Job description authoring and JD scoring',
+      'CV parsing and candidate shortlisting',
+      'Interview question generation per role',
+      'Offer letter and rejection email drafting',
+      'ATS integration and pipeline tracking',
+    ],
+  },
+  corporate_assistant: {
+    displayName: 'Corporate Assistant',
+    tagline: 'Calendar, email management, and internal workflows',
+    group: 'people',
+    featureHighlights: [
+      'Meeting scheduling and calendar management',
+      'Email drafting, triage, and follow-up',
+      'Document preparation and summarisation',
+      'Internal announcement authoring',
+      'Task delegation and reminder management',
+    ],
+  },
+  customer_support_executive: {
+    displayName: 'Customer Support Executive',
+    tagline: 'Multi-channel support, voice care, and KPI reporting',
+    group: 'support',
+    featureHighlights: [
+      'Ticket management across Zendesk, Freshdesk, and ServiceNow',
+      'Voice support via Sarvam AI (10 Indian languages) + Deepgram fallback',
+      'Telephony: Twilio, Vonage, Amazon Connect, or any custom provider',
+      'Refund processing, escalation routing, and SLA enforcement',
+      'CSAT / NPS surveys and KPI dashboards (FCR, AHT)',
+    ],
+  },
+};
+
+export const AGENT_GROUP_LABELS: Record<AgentGroup, string> = {
+  engineering: 'Engineering',
+  business: 'Business & Operations',
+  content: 'Content & Documentation',
+  marketing: 'Marketing & Sales',
+  people: 'People & Administration',
+  support: 'Customer Support',
+};
+
 export function getConnectorDefinition(tool: ConnectorTool): ConnectorDefinition | undefined {
   return CONNECTOR_REGISTRY.find((c) => c.tool === tool);
 }
