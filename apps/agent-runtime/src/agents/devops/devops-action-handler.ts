@@ -946,6 +946,131 @@ export function isDevopsActionType(at: string): at is DevopsActionType {
     return DEVOPS_ACTION_TYPES.has(at as DevopsActionType);
 }
 
+/**
+ * Per-action operational guardrails — moved here from the classification system
+ * prompt (was ~2,600 tokens of seldom-relevant rules sent on every routing call).
+ *
+ * These rules are enforced at execution time. Each entry is an array of
+ * safety constraints for that action type. The executor can surface them in
+ * pre-flight validation or inject them into LLM sub-calls when relevant.
+ */
+export const OPERATIONAL_GUARDRAILS: Partial<Record<DevopsActionType, string[]>> = {
+    workspace_devops_prometheus_mgmt: [
+        'Never run sub_action=quit outside an explicitly approved emergency maintenance window.',
+        'Always verify target health (sub_action=healthy) before issuing reload.',
+        'Never delete_series on production without an approved payload — set allow_destructive guard.',
+        'Always snapshot TSDB before running clean_tombstones on production.',
+    ],
+    workspace_devops_argo_workflow: [
+        'Always run sub_action=list before submit to check for existing duplicate workflows.',
+        'Never terminate a running workflow without first inspecting its logs.',
+        'Never delete a cron workflow without confirming it is suspended first.',
+        'Always lint a workflow YAML before apply (sub_action=lint).',
+    ],
+    workspace_devops_vault_dynamic: [
+        'Never revoke_prefix on a live path without first listing leases to assess blast radius.',
+        'Always lookup a lease before renewing to confirm it has not already expired.',
+        'Never create tokens with policies broader than the task requires.',
+        'Always use token_capabilities to verify access before requesting credentials.',
+    ],
+    workspace_devops_k8s_rbac: [
+        'Never generate cluster-wide roles when namespace-scoped roles are sufficient.',
+        'Always audit existing RBAC before applying new bindings.',
+        'Never grant wildcard resource or verb permissions.',
+    ],
+    workspace_devops_db_admin: [
+        'Never run patroni_failover or patroni_switchover without human approval — always route=approval.',
+        'Never vacuum FULL on a table without verifying an exclusive lock is safe at that time.',
+        'Always show_locks before killing backends to understand the dependency chain.',
+        'Never run allow_destructive=true operations without an approved task payload.',
+    ],
+    workspace_devops_chaos: [
+        'Never inject chaos into production clusters without an explicit approved experiment plan.',
+        'Always record the blast radius (affected pods / nodes) before starting any chaos action.',
+        'Never run fis_start or litmus experiments without a rollback plan in the task payload.',
+        'Always pause/resume rather than delete when stopping an in-progress chaos experiment.',
+    ],
+    workspace_devops_incident_contain: [
+        'Never cordon or drain a node without verifying workloads can be safely rescheduled.',
+        'Never delete_pod in production without checking whether it is the only replica.',
+        'Always apply deny_all_policy only to the specific affected namespace, never cluster-wide.',
+        'Never use allow_destructive=true without route=approval in the task decision.',
+    ],
+    workspace_devops_fleet: [
+        'Never cluster_remove a production cluster without human confirmation.',
+        'Always cluster_list before cluster_add to avoid duplicate registrations.',
+        'Never kubectl_multi with destructive commands across all clusters simultaneously.',
+    ],
+    workspace_devops_tf_apply: [
+        'Never set auto_approve=true in a task payload — the ApprovalEnforcer must gate every apply.',
+        'Always run tf_plan immediately before tf_apply and include the plan output in the approval record.',
+        'Never apply against production without a var_file that scopes the workspace correctly.',
+    ],
+    workspace_devops_secret_rotate: [
+        'Always verify the current secret is in use before rotation to avoid service outages.',
+        'Never rotate Kubernetes secrets without checking which pods mount them first.',
+        'Always store the old value in a backup path before overwriting (when backend supports it).',
+    ],
+    workspace_devops_image_scan: [
+        'Always fail the pipeline if scanner reports CRITICAL severity unfixed vulnerabilities.',
+        'Never ignore_unfixed=true on production image promotions without an approved exception.',
+    ],
+    workspace_devops_pipeline_trigger: [
+        'Never trigger a production pipeline without verifying the ref points to a reviewed commit.',
+        'Always check pipeline_status after trigger to confirm it started successfully.',
+    ],
+    workspace_devops_aws_cli: [
+        'Never set allow_destructive=true without route=approval.',
+        'Always scope --region explicitly; never rely on default region for production operations.',
+        'Never run IAM or org-level operations without a destructive=true flag and approval gate.',
+    ],
+    workspace_devops_az_cli: [
+        'Never set allow_destructive=true without route=approval.',
+        'Always specify --subscription explicitly for production operations.',
+    ],
+    workspace_devops_gcloud_cli: [
+        'Never set allow_destructive=true without route=approval.',
+        'Always specify --project explicitly; never rely on gcloud default project in automation.',
+    ],
+    workspace_devops_tf_state: [
+        'Never run state mv, rm, or import without a dry_run=true preview first.',
+        'Always pull current state before any mutation to ensure no concurrent modifications.',
+        'Never unlock a state lock without first identifying who holds it and why.',
+    ],
+    workspace_devops_helm_install: [
+        'Always use atomic=true for production installs so failed releases auto-rollback.',
+        'Always helm_diff before install/upgrade in production to preview the changeset.',
+        'Never skip dry_run=true on first-time chart installs in a new namespace.',
+    ],
+    workspace_devops_env_promote: [
+        'Always verify the from_environment deployment is healthy before promoting.',
+        'Never promote directly from dev to production — staging must be an intermediate step.',
+    ],
+    workspace_devops_cert_renew: [
+        'Always run check_only=true first to confirm cert expiry before attempting renewal.',
+        'Never renew a cert without verifying the new cert will be accepted by all dependent services.',
+    ],
+    workspace_devops_registry: [
+        'Never delete_images or purge without dry_run=true preview showing affected digests.',
+        'Always set keep_latest or keep_tag_prefixes to prevent accidental deletion of all tags.',
+        'Never allow_destructive=true without route=approval.',
+    ],
+    workspace_devops_windows: [
+        'Never run allow_destructive=true operations on Windows hosts without approval.',
+        'Always test_wsm connectivity before issuing remote commands.',
+        'Never install_updates with auto_reboot=true on production without a maintenance window.',
+    ],
+    workspace_devops_mlops: [
+        'Never transition an MLflow model to Production without a prior Staging validation run.',
+        'Never delete a SageMaker endpoint during peak traffic — always check endpoint status first.',
+        'Always stop training jobs gracefully before sagemaker_stop_training if checkpoints matter.',
+    ],
+    workspace_devops_load_test: [
+        'Never run load tests against production with vus > 100 without an approved test plan.',
+        'Always set thresholds so the test fails fast if error_rate or p99 latency exceeds limits.',
+    ],
+};
+
 export type DevopsActionResult = { ok: boolean; output: string; errorOutput?: string; [key: string]: unknown };
 
 type SubResult      = { ok: boolean; output: string; errorOutput?: string };

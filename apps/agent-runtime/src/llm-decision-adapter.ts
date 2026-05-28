@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { dirname, resolve } from 'path';
-import { getRoleSystemPrompt } from './role-system-prompts.js';
+import { getRoleSystemPrompt, DEVOPS_PAYLOAD_RULES } from './role-system-prompts.js';
 import { buildSystemPrompt } from './system-prompt-builder.js';
 import { resolveLanguage } from './language-resolver.js';
 import type {
@@ -32,6 +32,7 @@ function buildPromptForTask(task: TaskEnvelope, language: string): string {
         basePrompt: getRoleSystemPrompt(roleKey, process.env['GITHUB_REPO'] ?? undefined),
         language,
         persona,
+        isExternalFacing: false,
     });
 }
 
@@ -871,6 +872,11 @@ const createTaskPrompt = (task: TaskEnvelope, heuristicDecision: ActionDecision)
             .join(' | ')
         : '';
 
+    // Inject only the payload schema for the heuristically-chosen action type.
+    // DEVOPS_PAYLOAD_RULES holds per-action schemas — sending just the relevant one
+    // saves ~6,700 tokens vs embedding the full block in the system prompt.
+    const devopsPayloadRule = DEVOPS_PAYLOAD_RULES[heuristicDecision.actionType] ?? null;
+
     // Look up any skill sequence learned during autonomous loops for this workspace.
     // If found, surface it so the LLM can prefer the proven path instead of guessing.
     const learnedPattern = globalLearningStore.findPattern(workspaceKey);
@@ -896,7 +902,7 @@ const createTaskPrompt = (task: TaskEnvelope, heuristicDecision: ActionDecision)
     const episodicContext = !isSimpleTask && typeof task.payload['_episodic_context'] === 'string'
         ? task.payload['_episodic_context'].slice(0, CONTEXT_FIELD_CAP)
         : null;
-    const episodicPersonContext = typeof task.payload['_episodic_person_context'] === 'string'
+    const episodicPersonContext = !isSimpleTask && typeof task.payload['_episodic_person_context'] === 'string'
         ? task.payload['_episodic_person_context'].slice(0, CONTEXT_FIELD_CAP)
         : null;
     // Sanitise: remove hoisted fields from payload so truncateTaskForPrompt doesn't
@@ -978,6 +984,9 @@ const createTaskPrompt = (task: TaskEnvelope, heuristicDecision: ActionDecision)
                     useCount: learnedPattern.use_count,
                 },
             }),
+            // Per-action payload schema — only the relevant rule injected here; full
+            // DEVOPS_PAYLOAD_RULES map stays out of the system prompt (~6,700 tokens saved).
+            ...(devopsPayloadRule ? { devopsPayloadRule } : {}),
             // ─────────────────────────────────────────────────────────────────────
             task: truncateTaskForPrompt(sanitizedTask),
             heuristicDecision,
@@ -1096,18 +1105,27 @@ const createAnthropicResolver = (input: {
         const resolvedLanguage = await resolveTaskOutputLanguage(task);
         const modelProfile = pickModelProfile(task, heuristicDecision);
         const selectedModel = resolveProfileTarget(input.model, input.modelProfiles, modelProfile);
+        const systemPromptText = buildPromptForTask(task, resolvedLanguage);
         const response = await fetch(`${input.baseUrl.replace(/\/+$/, '')}/v1/messages`, {
             method: 'POST',
             headers: {
                 'content-type': 'application/json',
                 'x-api-key': input.apiKey,
                 'anthropic-version': input.apiVersion,
+                // Prompt caching: static system prompt billed at 10% on cache hits (5-min TTL)
+                'anthropic-beta': 'prompt-caching-2024-07-31',
             },
             body: JSON.stringify({
                 model: selectedModel,
-                max_tokens: 512,
+                max_tokens: 256,
                 temperature: 0,
-                system: buildPromptForTask(task, resolvedLanguage),
+                system: [
+                    {
+                        type: 'text',
+                        text: systemPromptText,
+                        cache_control: { type: 'ephemeral' },
+                    },
+                ],
                 messages: [
                     {
                         role: 'user',
@@ -1124,7 +1142,12 @@ const createAnthropicResolver = (input: {
 
         const parsed = await response.json() as {
             content?: Array<{ text?: string }>;
-            usage?: { input_tokens?: number; output_tokens?: number };
+            usage?: {
+                input_tokens?: number;
+                output_tokens?: number;
+                cache_read_input_tokens?: number;
+                cache_creation_input_tokens?: number;
+            };
         };
 
         const content = parsed.content?.[0]?.text;
@@ -1133,7 +1156,15 @@ const createAnthropicResolver = (input: {
         }
 
         const decision = parseAndValidateDecision(content, heuristicDecision);
-        const promptTokens = toNumberOrNull(parsed.usage?.input_tokens);
+        // Sum cache tokens into promptTokens for accurate budget tracking.
+        // cache_creation_input_tokens: tokens written to cache (billed at 125% base rate)
+        // cache_read_input_tokens: tokens read from cache (billed at 10% base rate)
+        const rawInput = toNumberOrNull(parsed.usage?.input_tokens) ?? 0;
+        const cacheWrite = toNumberOrNull(parsed.usage?.cache_creation_input_tokens) ?? 0;
+        const cacheRead = toNumberOrNull(parsed.usage?.cache_read_input_tokens) ?? 0;
+        const promptTokens = rawInput + cacheWrite + cacheRead > 0
+            ? rawInput + cacheWrite + cacheRead
+            : null;
         const completionTokens = toNumberOrNull(parsed.usage?.output_tokens);
         const totalTokens =
             promptTokens !== null && completionTokens !== null
@@ -1177,6 +1208,7 @@ const createGoogleResolver = (input: {
             body: JSON.stringify({
                 generationConfig: {
                     temperature: 0,
+                    maxOutputTokens: 256,
                     responseMimeType: 'application/json',
                 },
                 contents: [
@@ -1464,6 +1496,7 @@ const createOpenAiResolver = (input: {
             body: JSON.stringify({
                 model: selectedModel,
                 temperature: 0,
+                max_tokens: 256,
                 response_format: { type: 'json_object' },
                 messages: [
                     {
@@ -1531,6 +1564,7 @@ const createGitHubModelsResolver = (input: {
             body: JSON.stringify({
                 model: selectedModel,
                 temperature: 0,
+                max_tokens: 256,
                 response_format: { type: 'json_object' },
                 messages: [
                     {
@@ -1598,6 +1632,7 @@ const createXaiResolver = (input: {
             body: JSON.stringify({
                 model: selectedModel,
                 temperature: 0,
+                max_tokens: 256,
                 response_format: { type: 'json_object' },
                 messages: [
                     { role: 'system', content: buildPromptForTask(task, resolvedLanguage) },
@@ -1659,6 +1694,7 @@ const createMistralResolver = (input: {
             body: JSON.stringify({
                 model: selectedModel,
                 temperature: 0,
+                max_tokens: 256,
                 response_format: { type: 'json_object' },
                 messages: [
                     { role: 'system', content: buildPromptForTask(task, resolvedLanguage) },
@@ -1720,6 +1756,7 @@ const createTogetherResolver = (input: {
             body: JSON.stringify({
                 model: selectedModel,
                 temperature: 0,
+                max_tokens: 256,
                 response_format: { type: 'json_object' },
                 messages: [
                     { role: 'system', content: buildPromptForTask(task, resolvedLanguage) },
@@ -1783,6 +1820,7 @@ const createDeepSeekResolver = (input: {
             body: JSON.stringify({
                 model: selectedModel,
                 temperature: 0,
+                max_tokens: 256,
                 response_format: { type: 'json_object' },
                 messages: [
                     { role: 'system', content: buildPromptForTask(task, resolvedLanguage) },
