@@ -14,6 +14,71 @@
  */
 
 import type { RoleKey } from '@agentfarm/shared-types';
+import type { LocalWorkspaceActionType } from '../../local-workspace-executor.js';
+
+// ---------------------------------------------------------------------------
+// Allowed connectors
+// ---------------------------------------------------------------------------
+
+export const PROJECT_MANAGER_ROLE_ALLOWED_CONNECTORS = [
+    // Issue / project tracking
+    'jira', 'linear', 'asana', 'trello', 'clickup',
+    // Documentation / knowledge
+    'confluence', 'notion',
+    // Communication
+    'slack', 'teams', 'microsoft_teams', 'outlook', 'gmail',
+    // Source control (for PR / release visibility)
+    'github', 'gitlab',
+    // Scheduling & meetings
+    'google_calendar', 'outlook_calendar',
+    'google_meet', 'zoom',
+] as const;
+
+// ---------------------------------------------------------------------------
+// Allowed local workspace actions
+// ---------------------------------------------------------------------------
+
+export const PROJECT_MANAGER_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = [
+    // ── Workspace support ─────────────────────────────────────────────────────
+    'code_read',
+    'workspace_memory_read',
+    'workspace_memory_write',
+    'workspace_memory_search',
+    'workspace_search_docs',
+    'workspace_semantic_search',
+    // ── PM document generation ────────────────────────────────────────────────
+    'workspace_pm_project_charter',
+    'workspace_pm_status_report',
+    'workspace_pm_risk_register',
+    'workspace_pm_dependency_map',
+    'workspace_pm_change_request',
+    'workspace_pm_milestone_plan',
+    'workspace_pm_budget_forecast',
+    // ── SM structured actions ─────────────────────────────────────────────────
+    'workspace_pm_sprint_plan',
+    'workspace_pm_backlog_groom',
+    'workspace_pm_velocity_report',
+    'workspace_pm_standup_summary',
+    'workspace_pm_retrospective',
+    'workspace_pm_impediment_log',
+    'workspace_pm_ceremony_agenda',
+    // ── Proactive monitoring ──────────────────────────────────────────────────
+    'workspace_pm_proactive_blocker_scan',
+    'workspace_pm_proactive_scope_drift',
+    // ── Scheduling + cross-agent orchestration ────────────────────────────────
+    'workspace_pm_schedule_standup',
+    'workspace_pm_handoff_to_developer',
+    'workspace_pm_handoff_to_tester',
+    'workspace_pm_check_handoff_status',
+    // ── Human-PM parity: live board, delivery forecast, sprint health ─────────
+    'workspace_pm_delivery_forecast',
+    'workspace_pm_sprint_health_check',
+    'workspace_pm_board_sync',
+    // ── Stakeholder meetings ──────────────────────────────────────────────────
+    'workspace_meeting_join',
+    'workspace_meeting_speak',
+    'workspace_standup_report',
+];
 
 // ---------------------------------------------------------------------------
 // Action-type hard blocklist

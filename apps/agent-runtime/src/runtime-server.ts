@@ -126,6 +126,8 @@ import {
 } from './agents/corporate-assistant/corporate-assistant-agent-profile.js';
 import { DEVOPS_ROLE_ALLOWED_LOCAL_ACTIONS } from './agents/devops/devops-agent-profile.js';
 import { MOBILE_ROLE_ALLOWED_CONNECTORS, MOBILE_ROLE_ALLOWED_LOCAL_ACTIONS } from './agents/mobile/mobile-agent-profile.js';
+import { BUSINESS_ANALYST_ROLE_ALLOWED_CONNECTORS, BUSINESS_ANALYST_ROLE_ALLOWED_LOCAL_ACTIONS } from './agents/business-analyst/business-analyst-role-profile.js';
+import { PROJECT_MANAGER_ROLE_ALLOWED_CONNECTORS, PROJECT_MANAGER_ROLE_ALLOWED_LOCAL_ACTIONS } from './agents/project-manager/project-manager-role-profile.js';
 import { getCorporateAssistantDefaultPersona } from './agents/corporate-assistant/corporate-assistant-persona-defaults.js';
 import { buildCorporateAssistantEpisodicPattern, buildCorporateAssistantEpisodicSummary } from './agents/corporate-assistant/corporate-assistant-episodic-hooks.js';
 import { getCorporateAssistantMcpClients } from './agents/corporate-assistant/corporate-assistant-mcp-provisioner.js';
@@ -850,6 +852,8 @@ type RuntimeConnectorType =
     | 'wordpress' | 'contentful' | 'hubspot_cms'
     // Content Writer analytics
     | 'google_analytics'
+    // BA / PM project tracking connectors
+    | 'asana' | 'trello' | 'clickup'
     // Mobile Engineer connectors
     | 'github_issues' | 'bitbucket'
     | 'github_actions' | 'gitlab_ci' | 'bitrise' | 'codemagic' | 'fastlane'
@@ -877,14 +881,14 @@ const ROLE_CONNECTOR_POLICY: Record<RoleKey, RuntimeConnectorType[]> = {
     developer: ['jira', 'teams', 'github', 'email'],
     fullstack_developer: ['jira', 'teams', 'github', 'email'],
     tester: [...TESTER_ROLE_ALLOWED_CONNECTORS],
-    business_analyst: ['jira', 'teams', 'email'],
+    business_analyst: [...BUSINESS_ANALYST_ROLE_ALLOWED_CONNECTORS],
     technical_writer: [...TECHNICAL_WRITER_ROLE_ALLOWED_CONNECTORS],
     content_writer: [...CONTENT_WRITER_ROLE_ALLOWED_CONNECTORS],
     sales_rep: [...SALES_REP_ROLE_ALLOWED_CONNECTORS],
     marketing_specialist: ['teams', 'email'],
     corporate_assistant: [...CORPORATE_ASSISTANT_ROLE_ALLOWED_CONNECTORS],
     customer_support_executive: ['jira', 'teams', 'email'],
-    project_manager_product_owner_scrum_master: ['jira', 'linear', 'slack', 'teams', 'github', 'email'],
+    project_manager_product_owner_scrum_master: [...PROJECT_MANAGER_ROLE_ALLOWED_CONNECTORS],
     devops_engineer: ['github', 'gitlab', 'azure_devops', 'jira', 'linear', 'slack', 'teams', 'email'],
     mobile_engineer: [...MOBILE_ROLE_ALLOWED_CONNECTORS],
 };
@@ -1139,26 +1143,7 @@ const LOCAL_WORKSPACE_ACTION_POLICY: Record<RoleKey, RuntimeLocalWorkspaceAction
         'workspace_pr_review_poll',
     ],
     tester: [...TESTER_ROLE_ALLOWED_LOCAL_ACTIONS],
-    business_analyst: [
-        'code_read',
-        // BA domain actions (Tier 45)
-        'workspace_ba_draft_brd',
-        'workspace_ba_draft_user_story',
-        'workspace_ba_finalize_brd',
-        'workspace_ba_finalize_acceptance_criteria',
-        'workspace_ba_process_map',
-        'workspace_ba_gap_analysis',
-        'workspace_ba_impact_analysis',
-        'workspace_ba_solution_eval',
-        'workspace_ba_stakeholder_update',
-        'workspace_ba_uat_checklist',
-        'workspace_ba_elicit_requirements',
-        'share_spec_external',
-        'workspace_ba_proactive_ac_check',
-        'workspace_ba_proactive_epic_check',
-        'workspace_ba_proactive_conflict_scan',
-        'workspace_ba_rtm_generate',
-    ],
+    business_analyst: [...BUSINESS_ANALYST_ROLE_ALLOWED_LOCAL_ACTIONS],
     technical_writer: [...TECHNICAL_WRITER_ROLE_ALLOWED_LOCAL_ACTIONS],
     content_writer: [...CONTENT_WRITER_ROLE_ALLOWED_LOCAL_ACTIONS],
     sales_rep: [...SALES_REP_ROLE_ALLOWED_LOCAL_ACTIONS],
@@ -1167,35 +1152,7 @@ const LOCAL_WORKSPACE_ACTION_POLICY: Record<RoleKey, RuntimeLocalWorkspaceAction
     customer_support_executive: [],
     devops_engineer: [...DEVOPS_ROLE_ALLOWED_LOCAL_ACTIONS],
     mobile_engineer: [...MOBILE_ROLE_ALLOWED_LOCAL_ACTIONS],
-    project_manager_product_owner_scrum_master: [
-        'code_read',
-        // PM / Scrum Master domain actions (Tier 44)
-        'workspace_pm_project_charter',
-        'workspace_pm_status_report',
-        'workspace_pm_risk_register',
-        'workspace_pm_dependency_map',
-        'workspace_pm_change_request',
-        'workspace_pm_milestone_plan',
-        'workspace_pm_budget_forecast',
-        'workspace_pm_sprint_plan',
-        'workspace_pm_backlog_groom',
-        'workspace_pm_velocity_report',
-        'workspace_pm_standup_summary',
-        'workspace_pm_retrospective',
-        'workspace_pm_impediment_log',
-        'workspace_pm_ceremony_agenda',
-        'workspace_pm_proactive_blocker_scan',
-        'workspace_pm_proactive_scope_drift',
-        // Scheduling + cross-agent orchestration (Tier 44 ext)
-        'workspace_pm_schedule_standup',
-        'workspace_pm_handoff_to_developer',
-        'workspace_pm_handoff_to_tester',
-        'workspace_pm_check_handoff_status',
-        // Human-PM parity: live board, delivery forecast, sprint health (Tier 44 ext2)
-        'workspace_pm_delivery_forecast',
-        'workspace_pm_sprint_health_check',
-        'workspace_pm_board_sync',
-    ],
+    project_manager_product_owner_scrum_master: [...PROJECT_MANAGER_ROLE_ALLOWED_LOCAL_ACTIONS],
 };
 
 const getAllowedActionsForRole = (roleKey: RoleKey): string[] => {

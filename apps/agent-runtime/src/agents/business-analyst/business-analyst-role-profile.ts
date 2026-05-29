@@ -14,6 +14,63 @@
  */
 
 import type { RoleKey } from '@agentfarm/shared-types';
+import type { LocalWorkspaceActionType } from '../../local-workspace-executor.js';
+
+// ---------------------------------------------------------------------------
+// Allowed connectors
+// ---------------------------------------------------------------------------
+
+export const BUSINESS_ANALYST_ROLE_ALLOWED_CONNECTORS = [
+    // Issue / requirements tracking
+    'jira', 'linear', 'asana', 'trello', 'clickup',
+    // Documentation / knowledge
+    'confluence', 'notion', 'google_drive',
+    // Communication
+    'slack', 'teams', 'microsoft_teams', 'outlook', 'gmail',
+    // Meeting platforms (stakeholder interviews)
+    'google_meet', 'zoom',
+    // Scheduling
+    'google_calendar',
+] as const;
+
+// ---------------------------------------------------------------------------
+// Allowed local workspace actions
+// ---------------------------------------------------------------------------
+
+export const BUSINESS_ANALYST_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = [
+    // ── Workspace support ─────────────────────────────────────────────────────
+    'code_read',
+    'workspace_scout',
+    'workspace_grep',
+    'workspace_list_files',
+    'workspace_search_docs',
+    'workspace_semantic_search',
+    'workspace_memory_read',
+    'workspace_memory_write',
+    'workspace_memory_search',
+    // ── Core BA document generation ───────────────────────────────────────────
+    'workspace_ba_draft_brd',
+    'workspace_ba_draft_user_story',
+    'workspace_ba_finalize_brd',
+    'workspace_ba_finalize_acceptance_criteria',
+    'workspace_ba_process_map',
+    'workspace_ba_gap_analysis',
+    'workspace_ba_impact_analysis',
+    'workspace_ba_solution_eval',
+    'workspace_ba_stakeholder_update',
+    'workspace_ba_uat_checklist',
+    'workspace_ba_elicit_requirements',
+    'share_spec_external',
+    // ── Proactive monitoring ───────────────────────────────────────────────────
+    'workspace_ba_proactive_ac_check',
+    'workspace_ba_proactive_epic_check',
+    'workspace_ba_proactive_conflict_scan',
+    'workspace_ba_rtm_generate',
+    // ── Stakeholder meetings / interviews ─────────────────────────────────────
+    'workspace_meeting_join',
+    'workspace_meeting_speak',
+    'workspace_meeting_interview_live',
+];
 
 // ---------------------------------------------------------------------------
 // Action-type hard blocklist

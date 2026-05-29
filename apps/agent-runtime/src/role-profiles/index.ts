@@ -43,6 +43,14 @@ import {
     MOBILE_ROLE_ALLOWED_CONNECTORS,
     MOBILE_ROLE_ALLOWED_LOCAL_ACTIONS,
 } from '../agents/mobile/mobile-agent-profile.js';
+import {
+    BUSINESS_ANALYST_ROLE_ALLOWED_CONNECTORS,
+    BUSINESS_ANALYST_ROLE_ALLOWED_LOCAL_ACTIONS,
+} from '../agents/business-analyst/business-analyst-role-profile.js';
+import {
+    PROJECT_MANAGER_ROLE_ALLOWED_CONNECTORS,
+    PROJECT_MANAGER_ROLE_ALLOWED_LOCAL_ACTIONS,
+} from '../agents/project-manager/project-manager-role-profile.js';
 
 export interface RoleProfile {
     roleKey: RoleKey;
@@ -91,9 +99,9 @@ export const ROLE_PROFILES: Record<RoleKey, RoleProfile> = {
     business_analyst: {
         roleKey: 'business_analyst',
         displayName: 'Business Analyst',
-        description: 'Handles requirements gathering, documentation, and stakeholder communication',
-        allowedConnectorTools: ['jira', 'confluence', 'slack', 'google_drive', 'microsoft_teams'],
-        allowedActions: ['create_issue', 'comment_issue', 'create_document', 'send_message', 'read_document'],
+        description: 'Handles the full requirements lifecycle — BRD drafting and finalisation, user story and acceptance criteria authoring, process mapping, gap and impact analysis, solution evaluation, stakeholder communication, UAT checklists, RTM generation, and proactive AC/epic/conflict monitoring',
+        allowedConnectorTools: [...BUSINESS_ANALYST_ROLE_ALLOWED_CONNECTORS],
+        allowedActions: [...BUSINESS_ANALYST_ROLE_ALLOWED_LOCAL_ACTIONS],
         requiredConfig: ['documentProvider', 'issueTrackerProvider'],
     },
     technical_writer: {
@@ -155,12 +163,9 @@ export const ROLE_PROFILES: Record<RoleKey, RoleProfile> = {
     project_manager_product_owner_scrum_master: {
         roleKey: 'project_manager_product_owner_scrum_master',
         displayName: 'Project Manager / Product Owner / Scrum Master',
-        description: 'Handles sprint planning, backlog grooming, stakeholder updates, and delivery tracking',
-        allowedConnectorTools: ['jira', 'confluence', 'slack', 'github', 'gitlab', 'microsoft_teams', 'google_calendar'],
-        allowedActions: [
-            'create_issue', 'comment_issue', 'create_document', 'update_document',
-            'send_message', 'schedule_meeting', 'run_pipeline', 'create_pr',
-        ],
+        description: 'Handles the full delivery lifecycle — project charters, status reports, risk registers, dependency maps, change requests, milestone plans, budget forecasts, sprint planning, backlog grooming, velocity reports, retrospectives, impediment logs, ceremony facilitation, live board sync, delivery forecasting, sprint health monitoring, and cross-agent handoffs',
+        allowedConnectorTools: [...PROJECT_MANAGER_ROLE_ALLOWED_CONNECTORS],
+        allowedActions: [...PROJECT_MANAGER_ROLE_ALLOWED_LOCAL_ACTIONS],
         requiredConfig: ['issueTrackerProvider', 'documentProvider'],
     },
     devops_engineer: {
