@@ -47,6 +47,14 @@ export interface SystemPromptOptions {
     userId?: string;
     /** Agent persona — when present, prepends identity block to the prompt. */
     persona?: AgentPersonaRecord;
+    /**
+     * Whether this prompt is for an external-facing response.
+     * When false (internal classification calls), the persona identity block is
+     * skipped — saving ~100 tokens per classification call with no impact on
+     * routing quality.
+     * Defaults to true to preserve existing behaviour.
+     */
+    isExternalFacing?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -61,11 +69,12 @@ export interface SystemPromptOptions {
  *   the END of the prompt so it takes precedence over earlier instructions.
  */
 export function buildSystemPrompt(options: SystemPromptOptions): string {
-    const { basePrompt, language, persona, role } = options;
+    const { basePrompt, language, persona, role, isExternalFacing = true } = options;
 
-    // Prepend persona identity block when available
+    // Prepend persona identity block only for external-facing responses.
+    // Internal LLM classification calls pass isExternalFacing:false to skip this.
     let prompt = basePrompt;
-    if (persona) {
+    if (persona && isExternalFacing) {
         const identityBlock = [
             `You are ${persona.displayName}, an AI ${role ?? 'agent'} working at AgentFarm.`,
             `Your email address is ${persona.emailAddress}. Communication style: ${persona.communicationStyle}.`,
