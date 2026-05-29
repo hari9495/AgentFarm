@@ -1,6 +1,6 @@
 import type { LocalWorkspaceActionType } from '../../local-workspace-executor.js';
 
-export const CUSTOMER_SUPPORT_EXECUTIVE_ROLE_ALLOWED_CONNECTORS: readonly string[] = [
+export const CUSTOMER_SUPPORT_EXECUTIVE_ROLE_ALLOWED_CONNECTORS = [
     // Helpdesk / ticketing
     'zendesk', 'intercom', 'freshdesk', 'freshservice', 'servicenow', 'happyfox',
     // CRM
@@ -21,7 +21,7 @@ export const CUSTOMER_SUPPORT_EXECUTIVE_ROLE_ALLOWED_CONNECTORS: readonly string
     'sarvam_ai', 'deepgram',
     // Telephony
     'twilio', 'vonage', 'amazon_connect', 'genesys', 'generic_telephony',
-];
+] as const;
 
 export const CUSTOMER_SUPPORT_EXECUTIVE_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = [
     // ── Ticket lifecycle ──────────────────────────────────────────────────────

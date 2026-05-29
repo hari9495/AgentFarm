@@ -124,10 +124,14 @@ import {
     CORPORATE_ASSISTANT_ROLE_ALLOWED_LOCAL_ACTIONS,
     isCorporateAssistantRoleProfile,
 } from './agents/corporate-assistant/corporate-assistant-agent-profile.js';
-import { DEVOPS_ROLE_ALLOWED_LOCAL_ACTIONS } from './agents/devops/devops-agent-profile.js';
+import { DEVOPS_ROLE_ALLOWED_CONNECTORS, DEVOPS_ROLE_ALLOWED_LOCAL_ACTIONS } from './agents/devops/devops-agent-profile.js';
 import { MOBILE_ROLE_ALLOWED_CONNECTORS, MOBILE_ROLE_ALLOWED_LOCAL_ACTIONS } from './agents/mobile/mobile-agent-profile.js';
 import { BUSINESS_ANALYST_ROLE_ALLOWED_CONNECTORS, BUSINESS_ANALYST_ROLE_ALLOWED_LOCAL_ACTIONS } from './agents/business-analyst/business-analyst-role-profile.js';
 import { PROJECT_MANAGER_ROLE_ALLOWED_CONNECTORS, PROJECT_MANAGER_ROLE_ALLOWED_LOCAL_ACTIONS } from './agents/project-manager/project-manager-role-profile.js';
+import { RECRUITER_ROLE_ALLOWED_CONNECTORS, RECRUITER_ROLE_ALLOWED_LOCAL_ACTIONS } from './agents/recruiter/recruiter-agent-profile.js';
+import { FSD_ROLE_ALLOWED_CONNECTORS, FSD_ROLE_ALLOWED_LOCAL_ACTIONS } from './agents/full-stack-developer/fsd-agent-profile.js';
+import { MARKETING_SPECIALIST_ROLE_ALLOWED_CONNECTORS, MARKETING_SPECIALIST_ROLE_ALLOWED_LOCAL_ACTIONS } from './agents/marketing-specialist/marketing-specialist-agent-profile.js';
+import { CUSTOMER_SUPPORT_EXECUTIVE_ROLE_ALLOWED_CONNECTORS, CUSTOMER_SUPPORT_EXECUTIVE_ROLE_ALLOWED_LOCAL_ACTIONS } from './agents/customer-support-executive/customer-support-executive-agent-profile.js';
 import { getCorporateAssistantDefaultPersona } from './agents/corporate-assistant/corporate-assistant-persona-defaults.js';
 import { buildCorporateAssistantEpisodicPattern, buildCorporateAssistantEpisodicSummary } from './agents/corporate-assistant/corporate-assistant-episodic-hooks.js';
 import { getCorporateAssistantMcpClients } from './agents/corporate-assistant/corporate-assistant-mcp-provisioner.js';
@@ -862,7 +866,31 @@ type RuntimeConnectorType =
     | 'browserstack' | 'saucelabs'
     | 'sentry' | 'datadog' | 'pagerduty'
     | 'onesignal' | 'braze'
-    | 'notion';
+    | 'notion'
+    // Recruiter connectors
+    | 'linkedin_recruiter' | 'indeed' | 'glassdoor'
+    | 'greenhouse' | 'lever' | 'workday' | 'ashby' | 'icims'
+    | 'calendly' | 'cal_com' | 'docusign' | 'zoho_sign'
+    // Marketing Specialist connectors
+    | 'google_ads' | 'meta_ads' | 'linkedin_ads' | 'mailchimp' | 'semrush' | 'hootsuite'
+    // Customer Support Executive connectors
+    | 'zendesk' | 'intercom' | 'freshdesk' | 'freshservice' | 'servicenow' | 'happyfox'
+    | 'zoho_crm' | 'microsoft_dynamics'
+    | 'exchange' | 'generic_smtp' | 'generic_rest_email'
+    | 'discord' | 'google_chat' | 'generic_rest_messaging'
+    | 'stripe' | 'braintree' | 'shopify' | 'woocommerce' | 'magento' | 'razorpay'
+    | 'surveymonkey' | 'typeform'
+    | 'sarvam_ai' | 'deepgram'
+    | 'twilio' | 'vonage' | 'amazon_connect' | 'genesys' | 'generic_telephony'
+    // Fullstack Developer connectors
+    | 'sonarqube' | 'codecov' | 'figma' | 'storybook' | 'vercel' | 'netlify' | 'cloudflare_pages'
+    // DevOps connectors
+    | 'azure_pipelines' | 'tekton' | 'argocd'
+    | 'docker_hub' | 'ecr' | 'gcr' | 'acr' | 'ghcr'
+    | 'aws' | 'azure' | 'gcp' | 'terraform_cloud'
+    | 'rancher' | 'lens'
+    | 'grafana' | 'prometheus' | 'new_relic' | 'cloudwatch'
+    | 'vault' | 'aws_secrets_manager';
 type RuntimeConnectorActionType =
     | 'read_task'
     | 'create_comment'
@@ -877,19 +905,19 @@ type RuntimeConnectorActionType =
 type RuntimeLocalWorkspaceActionType = LocalWorkspaceActionType;
 
 const ROLE_CONNECTOR_POLICY: Record<RoleKey, RuntimeConnectorType[]> = {
-    recruiter: ['teams', 'email'],
+    recruiter: [...RECRUITER_ROLE_ALLOWED_CONNECTORS],
     developer: ['jira', 'teams', 'github', 'email'],
-    fullstack_developer: ['jira', 'teams', 'github', 'email'],
+    fullstack_developer: [...FSD_ROLE_ALLOWED_CONNECTORS],
     tester: [...TESTER_ROLE_ALLOWED_CONNECTORS],
     business_analyst: [...BUSINESS_ANALYST_ROLE_ALLOWED_CONNECTORS],
     technical_writer: [...TECHNICAL_WRITER_ROLE_ALLOWED_CONNECTORS],
     content_writer: [...CONTENT_WRITER_ROLE_ALLOWED_CONNECTORS],
     sales_rep: [...SALES_REP_ROLE_ALLOWED_CONNECTORS],
-    marketing_specialist: ['teams', 'email'],
+    marketing_specialist: [...MARKETING_SPECIALIST_ROLE_ALLOWED_CONNECTORS],
     corporate_assistant: [...CORPORATE_ASSISTANT_ROLE_ALLOWED_CONNECTORS],
-    customer_support_executive: ['jira', 'teams', 'email'],
+    customer_support_executive: [...CUSTOMER_SUPPORT_EXECUTIVE_ROLE_ALLOWED_CONNECTORS],
     project_manager_product_owner_scrum_master: [...PROJECT_MANAGER_ROLE_ALLOWED_CONNECTORS],
-    devops_engineer: ['github', 'gitlab', 'azure_devops', 'jira', 'linear', 'slack', 'teams', 'email'],
+    devops_engineer: [...DEVOPS_ROLE_ALLOWED_CONNECTORS],
     mobile_engineer: [...MOBILE_ROLE_ALLOWED_CONNECTORS],
 };
 
@@ -909,7 +937,7 @@ const ROLE_CONNECTOR_ACTION_OVERRIDES: Partial<
 };
 
 const LOCAL_WORKSPACE_ACTION_POLICY: Record<RoleKey, RuntimeLocalWorkspaceActionType[]> = {
-    recruiter: [],
+    recruiter: [...RECRUITER_ROLE_ALLOWED_LOCAL_ACTIONS],
     developer: [
         // Tier 0-1
         'git_clone',
@@ -1028,128 +1056,15 @@ const LOCAL_WORKSPACE_ACTION_POLICY: Record<RoleKey, RuntimeLocalWorkspaceAction
         // PR review polling — autonomous response to reviewer comments
         'workspace_pr_review_poll',
     ],
-    fullstack_developer: [
-        // Tier 0-1
-        'git_clone',
-        'git_branch',
-        'git_commit',
-        'git_push',
-        'git_stash',
-        'git_log',
-        'code_read',
-        'code_edit',
-        'code_edit_patch',
-        'code_search_replace',
-        'apply_patch',
-        'file_move',
-        'file_delete',
-        'run_build',
-        'run_tests',
-        'run_linter',
-        'workspace_install_deps',
-        'workspace_list_files',
-        'workspace_grep',
-        'workspace_scout',
-        'workspace_checkpoint',
-        'autonomous_loop',
-        'workspace_cleanup',
-        'workspace_diff',
-        'workspace_memory_write',
-        'workspace_memory_read',
-        'workspace_memory_search',
-        'run_shell_command',
-        'create_pr_from_workspace',
-        // Tier 3: IDE-level capabilities
-        'workspace_find_references',
-        'workspace_rename_symbol',
-        'workspace_extract_function',
-        'workspace_go_to_definition',
-        'workspace_hover_type',
-        'workspace_analyze_imports',
-        'workspace_code_coverage',
-        'workspace_complexity_metrics',
-        'workspace_security_scan',
-        // Tier 4: Multi-file coordination
-        'workspace_bulk_refactor',
-        'workspace_atomic_edit_set',
-        'workspace_generate_from_template',
-        'workspace_migration_helper',
-        'workspace_summarize_folder',
-        'workspace_dependency_tree',
-        'workspace_test_impact_analysis',
-        // Tier 5: External knowledge & experimentation
-        'workspace_search_docs',
-        'workspace_package_lookup',
-        'workspace_ai_code_review',
-        'workspace_repl_start',
-        'workspace_repl_execute',
-        'workspace_repl_stop',
-        'workspace_debug_breakpoint',
-        'workspace_profiler_run',
-        // Tier 6: Language adapters
-        'workspace_language_adapter_python',
-        'workspace_language_adapter_java',
-        'workspace_language_adapter_go',
-        'workspace_language_adapter_csharp',
-        // Tier 7: Governance & safety
-        'workspace_dry_run_with_approval_chain',
-        'workspace_change_impact_report',
-        'workspace_rollback_to_checkpoint',
-        // Tier 8: Release & collaboration intelligence
-        'workspace_generate_test',
-        'workspace_format_code',
-        'workspace_version_bump',
-        'workspace_changelog_generate',
-        'workspace_git_blame',
-        'workspace_outline_symbols',
-        // Tier 9: Pilot roadmap productivity actions
-        'workspace_create_pr',
-        'workspace_run_ci_checks',
-        'workspace_fix_test_failures',
-        'workspace_security_fix_suggest',
-        'workspace_pr_review_prepare',
-        'workspace_dependency_upgrade_plan',
-        'workspace_release_notes_generate',
-        'workspace_incident_patch_pack',
-        'workspace_memory_profile',
-        'workspace_autonomous_plan_execute',
-        'workspace_policy_preflight',
-        // Tier 10: Connector hardening, code intelligence, observability
-        'workspace_connector_test',
-        'workspace_pr_auto_assign',
-        'workspace_ci_watch',
-        'workspace_explain_code',
-        'workspace_add_docstring',
-        'workspace_refactor_plan',
-        'workspace_semantic_search',
-        'workspace_diff_preview',
-        'workspace_approval_status',
-        'workspace_audit_export',
-        // Tier 11: Local desktop and browser control
-        'workspace_browser_open',
-        'workspace_app_launch',
-        'workspace_meeting_join',
-        'workspace_meeting_speak',
-        'workspace_meeting_interview_live',
-        'workspace_visual_task',
-        // Tier 12: Sub-agent delegation, GitHub intelligence, Slack notifications
-        'workspace_subagent_spawn',
-        'workspace_github_pr_status',
-        'workspace_github_issue_triage',
-        'workspace_github_issue_fix',
-        'workspace_azure_deploy_plan',
-        'workspace_slack_notify',
-        // PR review polling — autonomous response to reviewer comments
-        'workspace_pr_review_poll',
-    ],
+    fullstack_developer: [...FSD_ROLE_ALLOWED_LOCAL_ACTIONS],
     tester: [...TESTER_ROLE_ALLOWED_LOCAL_ACTIONS],
     business_analyst: [...BUSINESS_ANALYST_ROLE_ALLOWED_LOCAL_ACTIONS],
     technical_writer: [...TECHNICAL_WRITER_ROLE_ALLOWED_LOCAL_ACTIONS],
     content_writer: [...CONTENT_WRITER_ROLE_ALLOWED_LOCAL_ACTIONS],
     sales_rep: [...SALES_REP_ROLE_ALLOWED_LOCAL_ACTIONS],
-    marketing_specialist: [],
+    marketing_specialist: [...MARKETING_SPECIALIST_ROLE_ALLOWED_LOCAL_ACTIONS],
     corporate_assistant: [...CORPORATE_ASSISTANT_ROLE_ALLOWED_LOCAL_ACTIONS],
-    customer_support_executive: [],
+    customer_support_executive: [...CUSTOMER_SUPPORT_EXECUTIVE_ROLE_ALLOWED_LOCAL_ACTIONS],
     devops_engineer: [...DEVOPS_ROLE_ALLOWED_LOCAL_ACTIONS],
     mobile_engineer: [...MOBILE_ROLE_ALLOWED_LOCAL_ACTIONS],
     project_manager_product_owner_scrum_master: [...PROJECT_MANAGER_ROLE_ALLOWED_LOCAL_ACTIONS],
