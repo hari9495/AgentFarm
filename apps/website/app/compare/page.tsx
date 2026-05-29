@@ -3,8 +3,8 @@ import { CheckCircle, XCircle, MinusCircle, ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-    title: "AgentFarms vs Alternatives — Compare",
-    description: "See how AgentFarms compares to GitHub Copilot, hiring a contractor, and traditional hiring.",
+    title: "AgentFarms vs Alternatives — AI Workers vs Copilot",
+    description: "Compare AgentFarms against GitHub Copilot, contractors, and full-time hires. Governed AI workers execute tasks end-to-end — see the key differences.",
 };
 
 type Value = "yes" | "no" | "partial";

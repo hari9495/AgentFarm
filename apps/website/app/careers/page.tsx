@@ -3,9 +3,9 @@ import { ArrowRight, MapPin, Clock, Zap, Users, ShieldCheck, BarChart3 } from "l
 import Link from "next/link";
 
 export const metadata: Metadata = {
-    title: "Careers — AgentFarms",
+    title: "Join AgentFarms — Careers at the Governed AI Platform",
     description:
-        "Join the team building the governed execution layer for AI work. We're a small team making AI workers trustworthy for real business operations.",
+        "Join the team building the governed execution layer for AI work. Small team, direct impact — making AI workers trustworthy for real-world business operations.",
 };
 
 const openRoles = [

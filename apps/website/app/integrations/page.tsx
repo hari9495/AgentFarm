@@ -3,9 +3,9 @@ import { ArrowRight, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-    title: "Integrations — AgentFarms",
+    title: "Integrations — 18 AgentFarms Connectors and Workflows",
     description:
-        "Connect AgentFarms AI workers to the tools your team already uses. 18 connectors across code, task management, messaging, CRM, and more.",
+        "Connect AgentFarms AI workers to the tools your team uses. 18 connectors covering code, task management, messaging, and CRM. OAuth and API key setup included.",
 };
 
 const categories = [

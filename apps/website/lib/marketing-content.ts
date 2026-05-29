@@ -1197,7 +1197,7 @@ export const cookiesPageContent = {
 
 export const aboutPageContent = {
     metadata: {
-        title: "About AgentFarms — Our Mission and the Team Behind AI Workers",
+        title: "About AgentFarms — Our Mission and the AI Workers Team",
         description:
             "Learn why AgentFarms exists and how we think about governed AI execution. Meet the team building AI workers that increase output without giving up accountability.",
     },

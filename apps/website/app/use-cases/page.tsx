@@ -3,8 +3,8 @@ import { Code2, Megaphone, HeadphonesIcon, Briefcase, Users, ShieldCheck, CheckC
 import Link from "next/link";
 
 export const metadata: Metadata = {
-    title: "Use Cases — AgentFarms",
-    description: "Real-world examples of how teams across every department use AgentFarms AI workers to ship faster with full human oversight.",
+    title: "AI Worker Use Cases — Engineering, Support, Operations",
+    description: "Real-world examples of how engineering, support, and operations teams use AgentFarms AI workers to increase output while keeping full human oversight.",
 };
 
 const cases = [

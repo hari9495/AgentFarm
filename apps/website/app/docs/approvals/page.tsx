@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { H1, H2, H3, Lead, P, Code, Callout, InlineCode, ParamTable, Response, Endpoint, PageNav, Tag, TypeTable, Divider } from "@/components/docs/DocComponents";
 
 export const metadata: Metadata = {
-    title: "Approval Gates — Risk Classification and Human Review in AgentFarms",
+    title: "Approval Gates — AgentFarms Risk Classification and Review",
     description: "How AgentFarms risk classification, approval queues, and human-in-the-loop review work. Configure thresholds and handle approval decisions via API.",
     alternates: { canonical: "https://agentfarms.in/docs/approvals" },
 };

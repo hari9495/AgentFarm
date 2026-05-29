@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { H1, H2, H3, Lead, P, Code, Callout, InlineCode, ParamTable, Response, Endpoint, PageNav, Tag, TypeTable, Divider } from "@/components/docs/DocComponents";
 
 export const metadata: Metadata = {
-    title: "Connectors — All 18 AgentFarms Tool Integrations and OAuth Setup",
+    title: "Connectors — 18 AgentFarms Tool Integrations and OAuth",
     description: "All 18 AgentFarms connectors — GitHub, Jira, Slack, Salesforce, Gmail, and more. OAuth setup, available actions, permission scopes, and integration guide.",
     alternates: { canonical: "https://agentfarms.in/docs/connectors" },
 };

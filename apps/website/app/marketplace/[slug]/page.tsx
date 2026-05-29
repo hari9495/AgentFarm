@@ -15,8 +15,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const bot = marketplaceBots.find((b) => b.slug === slug);
     if (!bot) return {};
     return {
-        title: `${bot.name} – AgentFarms Marketplace`,
-        description: bot.tagline,
+        title: `Hire ${bot.name} — Governed Worker on AgentFarms`,
+        description: `${bot.name} on AgentFarms. ${bot.tagline}. Governed AI worker with full tool access, human approval gates, and a complete evidence trail for every task.`,
     };
 }
 

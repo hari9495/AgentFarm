@@ -9,9 +9,9 @@ import HireAgentButton from "@/components/marketplace/HireAgentButton";
 import { getSessionUser, listWorkspaceBotsForUser } from "@/lib/auth-store";
 
 export const metadata: Metadata = {
-    title: "AI Tester Agent – AgentFarms Marketplace",
+    title: "AI Tester Agent — Hire a Governed QA Worker | AgentFarms",
     description:
-        "Hire an AI Tester that handles every testing discipline: manual testing via desktop VM, Selenium/Playwright/Cypress/Appium automation, JMeter/k6 load testing, Postman API testing, OWASP ZAP security scans, and TestRail/Zephyr test management.",
+        "Hire an AI Tester that handles manual testing, Playwright/Cypress automation, JMeter load testing, Postman API testing, OWASP ZAP security scans, and test management.",
     openGraph: {
         title: "AI Tester Agent \u2013 AgentFarms",
         description:

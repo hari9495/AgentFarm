@@ -13,7 +13,21 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
 
     async headers() {
-        return [{ source: '/(.*)', headers: securityHeaders }];
+        return [
+            { source: '/(.*)', headers: securityHeaders },
+            {
+                source: '/_next/static/(.*)',
+                headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+            },
+            {
+                source: '/_next/image(.*)',
+                headers: [{ key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' }],
+            },
+            {
+                source: '/theme-init.js',
+                headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+            },
+        ];
     },
     eslint: {
         // The repository currently has broad legacy lint debt; keep build signal focused on compile/type health.

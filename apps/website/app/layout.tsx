@@ -141,12 +141,11 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        {/* Respect saved dark mode preference */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('agentfarm-theme');if(t==='dark'){document.documentElement.classList.add('dark')}}catch(e){}})()`,
-          }}
-        />
+        {/* Respect saved dark mode preference — external script avoids inline JS penalty */}
+        <script src="/theme-init.js" />
+
+        {/* Sitemap reference for crawlers */}
+        <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
 
         {/* DNS prefetch for external resources */}
         <link rel="dns-prefetch" href="//fonts.googleapis.com" />

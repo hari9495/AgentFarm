@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { H1, H2, H3, Lead, P, Code, Callout, InlineCode, TypeTable, Response, PageNav, Tag, Divider } from "@/components/docs/DocComponents";
 
 export const metadata: Metadata = {
-    title: "Webhooks — AgentFarms Real-Time Lifecycle Event Subscriptions",
+    title: "Webhooks — AgentFarms Lifecycle Events and Subscriptions",
     description: "Subscribe to AgentFarms lifecycle events over HTTP. Task status changes, approval requests, and evidence events delivered securely to your endpoint.",
     alternates: { canonical: "https://agentfarms.in/docs/webhooks" },
 };
