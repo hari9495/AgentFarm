@@ -401,41 +401,161 @@ export async function listenAndRespond(
 // runSpeakingAgentLoop
 // ---------------------------------------------------------------------------
 
+const MAX_CONSECUTIVE_FAILURES = 5;
+const FAILURE_BACKOFF_MS = 2_000;
+const SPEAKING_ENABLED_RECHECK_INTERVAL = 20; // re-poll speakingEnabled every N turns
+
 /**
- * Scaffold entry point for the speaking agent loop.
+ * Canonical capture-respond-speak loop for a live meeting session.
  *
- * Fetches the session to check `speakingEnabled`.  Returns early when disabled.
- * Real audio I/O loop wiring is deferred to a future prompt.
+ * Each turn:
+ *   1. Capture audio from the desktop VM
+ *   2. Transcribe + generate a persona-aware reply via listenAndRespond
+ *   3. Play the response audio back into the meeting
+ *
+ * Graceful shutdown: pass an AbortSignal, or let the operator toggle
+ * speakingEnabled off in the gateway — the loop re-polls every
+ * SPEAKING_ENABLED_RECHECK_INTERVAL turns and exits cleanly.
+ *
+ * Error resilience: up to MAX_CONSECUTIVE_FAILURES failures per phase are
+ * tolerated with FAILURE_BACKOFF_MS backoff before the loop exits.
  */
 export async function runSpeakingAgentLoop(
     sessionId: string,
     resolvedLanguage: string,
+    options: {
+        desktopSessionId: string;
+        maxTurns?: number;
+        captureDurationSeconds?: number;
+        signal?: AbortSignal;
+    },
 ): Promise<void> {
     const base = gatewayBase();
+    const { desktopSessionId, maxTurns = 200, captureDurationSeconds = 10, signal } = options;
 
+    // Initial session check
     const response = await fetch(
         `${base}/v1/meetings/${encodeURIComponent(sessionId)}`,
-        {
-            method: 'GET',
-            headers: { 'content-type': 'application/json' },
-            signal: AbortSignal.timeout(10_000),
-        },
+        { method: 'GET', headers: { 'content-type': 'application/json' }, signal: AbortSignal.timeout(10_000) },
     );
 
     if (!response.ok) {
-        console.warn(
-            `[speaking-agent] Failed to fetch session ${sessionId}: HTTP ${response.status}`,
-        );
+        console.warn(`[speaking-agent] Failed to fetch session ${sessionId}: HTTP ${response.status}`);
         return;
     }
 
     const session = (await response.json()) as MeetingSessionRecord;
-
     if (!session.speakingEnabled) {
         return;
     }
 
-    console.log(
-        `[speaking-agent] Speaking agent ready for session ${sessionId} (language: ${resolvedLanguage})`,
-    );
+    console.log(`[speaking-agent] Speaking agent ready for session ${sessionId} (language: ${resolvedLanguage})`);
+
+    let consecutiveFailures = 0;
+
+    for (let turn = 0; turn < maxTurns; turn++) {
+        // Graceful shutdown via AbortSignal
+        if (signal?.aborted) {
+            console.log(`[speaking-agent] Shutdown signal received — stopping after ${turn} turns`);
+            break;
+        }
+
+        // Periodic re-poll of speakingEnabled so the operator can stop the loop
+        // without needing an AbortSignal (e.g. dashboard toggle mid-meeting)
+        if (turn > 0 && turn % SPEAKING_ENABLED_RECHECK_INTERVAL === 0) {
+            try {
+                const recheckRes = await fetch(
+                    `${base}/v1/meetings/${encodeURIComponent(sessionId)}`,
+                    { method: 'GET', headers: { 'content-type': 'application/json' }, signal: AbortSignal.timeout(5_000) },
+                );
+                if (recheckRes.ok) {
+                    const recheckSession = (await recheckRes.json()) as MeetingSessionRecord;
+                    if (!recheckSession.speakingEnabled) {
+                        console.log(`[speaking-agent] speakingEnabled turned off — stopping loop after ${turn} turns`);
+                        break;
+                    }
+                }
+            } catch {
+                // Non-fatal — continue even if the recheck fails
+            }
+        }
+
+        // ── Capture audio from desktop VM ────────────────────────────────────
+        let audioBuffer: Buffer;
+        try {
+            const captureRes = await fetch(
+                `${base}/v1/desktop-sessions/${encodeURIComponent(desktopSessionId)}/capture-audio`,
+                {
+                    method: 'POST',
+                    headers: { 'content-type': 'application/json' },
+                    body: JSON.stringify({ durationSeconds: captureDurationSeconds }),
+                    signal: AbortSignal.timeout((captureDurationSeconds + 15) * 1_000),
+                },
+            );
+
+            if (!captureRes.ok) {
+                console.warn(`[speaking-agent] capture-audio HTTP ${captureRes.status} on turn ${turn}`);
+                if (++consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+                    console.error(`[speaking-agent] ${consecutiveFailures} consecutive failures — stopping loop`);
+                    break;
+                }
+                continue;
+            }
+
+            const captured = (await captureRes.json()) as { audioBase64?: string };
+            if (!captured.audioBase64) {
+                consecutiveFailures = 0; // silence is not a failure
+                continue;
+            }
+            audioBuffer = Buffer.from(captured.audioBase64, 'base64');
+        } catch (captureErr: unknown) {
+            console.warn(`[speaking-agent] capture-audio error on turn ${turn}: ${String(captureErr)}`);
+            if (++consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+                console.error(`[speaking-agent] ${consecutiveFailures} consecutive failures — stopping loop`);
+                break;
+            }
+            await new Promise<void>((r) => setTimeout(r, FAILURE_BACKOFF_MS));
+            continue;
+        }
+
+        // ── Transcribe + generate LLM reply ──────────────────────────────────
+        let responseAudio: Buffer;
+        try {
+            responseAudio = await listenAndRespond(sessionId, audioBuffer, resolvedLanguage);
+        } catch (respondErr: unknown) {
+            console.warn(`[speaking-agent] listenAndRespond failed on turn ${turn}: ${String(respondErr)}`);
+            if (++consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+                console.error(`[speaking-agent] ${consecutiveFailures} consecutive failures — stopping loop`);
+                break;
+            }
+            await new Promise<void>((r) => setTimeout(r, FAILURE_BACKOFF_MS));
+            continue;
+        }
+
+        consecutiveFailures = 0; // reset on any successful capture+respond turn
+
+        // Zero-length buffer means the gate decided not to speak this turn
+        if (responseAudio.length === 0) {
+            continue;
+        }
+
+        // ── Play response audio back into the meeting ─────────────────────────
+        try {
+            const speakRes = await fetch(
+                `${base}/v1/desktop-sessions/${encodeURIComponent(desktopSessionId)}/speak`,
+                {
+                    method: 'POST',
+                    headers: { 'content-type': 'application/json' },
+                    body: JSON.stringify({ audioBase64: responseAudio.toString('base64'), format: 'wav' }),
+                    signal: AbortSignal.timeout(30_000),
+                },
+            );
+            if (!speakRes.ok) {
+                console.warn(`[speaking-agent] speak HTTP ${speakRes.status} on turn ${turn}`);
+            }
+        } catch (speakErr: unknown) {
+            // Non-fatal — a failed playback does not stop the loop
+            console.warn(`[speaking-agent] speak error on turn ${turn}: ${String(speakErr)}`);
+        }
+    }
 }

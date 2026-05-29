@@ -11,7 +11,7 @@
 import type { AgentPersonaRecord } from '@agentfarm/shared-types';
 import { VoiceboxClient } from '../../voicebox-client.js';
 import { buildSystemPrompt } from '../../system-prompt-builder.js';
-import { speakResponse, listenAndRespond } from '../../speaking-agent.js';
+import { speakResponse, listenAndRespond, runSpeakingAgentLoop } from '../../speaking-agent.js';
 import { logMeetingEvent } from './meeting-audit-logger.js';
 
 // ---------------------------------------------------------------------------
@@ -488,6 +488,8 @@ export type MeetingParticipationParams = {
     maxTurns?: number;
     /** Seconds of audio to capture per turn. Default 10. */
     captureDurationSeconds?: number;
+    /** Optional signal for graceful shutdown — passed through to runSpeakingAgentLoop. */
+    signal?: AbortSignal;
 };
 
 /**
@@ -510,6 +512,7 @@ export async function runMeetingParticipation(
         language = 'en',
         maxTurns = 200,
         captureDurationSeconds = 10,
+        signal,
     } = params;
 
     const base = gatewayBase();
@@ -549,64 +552,14 @@ export async function runMeetingParticipation(
         payload: { meetingUrl, desktopSessionId },
     });
 
-    // Step 3 — Participation loop: capture → respond → speak.
-    for (let turn = 0; turn < maxTurns; turn++) {
-        const captureRes = await fetch(
-            `${base}/v1/desktop-sessions/${encodeURIComponent(desktopSessionId)}/capture-audio`,
-            {
-                method: 'POST',
-                headers: { 'content-type': 'application/json' },
-                body: JSON.stringify({ durationSeconds: captureDurationSeconds }),
-                signal: AbortSignal.timeout((captureDurationSeconds + 15) * 1_000),
-            },
-        );
-
-        if (!captureRes.ok) {
-            console.warn(`[meeting] capture-audio HTTP ${captureRes.status} — skipping turn ${turn}`);
-            continue;
-        }
-
-        const captured = (await captureRes.json()) as { audioBase64?: string };
-        if (!captured.audioBase64) {
-            continue;
-        }
-
-        const audioBuffer = Buffer.from(captured.audioBase64, 'base64');
-
-        // listenAndRespond transcribes the audio, generates a reply via LLM,
-        // and synthesises it with the agent's cloned voice.  Returns a WAV Buffer.
-        let responseAudio: Buffer;
-        try {
-            responseAudio = await listenAndRespond(meetingSessionId, audioBuffer, language);
-        } catch (respondErr: unknown) {
-            console.warn(`[meeting] listenAndRespond failed on turn ${turn}: ${String(respondErr)}`);
-            continue;
-        }
-
-        // Zero-length buffer means the gate decided not to respond on this turn
-        // (silence, not addressed, etc.) — skip speaking and listen on next turn.
-        if (responseAudio.length === 0) {
-            continue;
-        }
-
-        // Play the response audio into the virtual PulseAudio sink so meeting
-        // participants hear the agent speak.
-        const speakRes = await fetch(
-            `${base}/v1/desktop-sessions/${encodeURIComponent(desktopSessionId)}/speak`,
-            {
-                method: 'POST',
-                headers: { 'content-type': 'application/json' },
-                body: JSON.stringify({
-                    audioBase64: responseAudio.toString('base64'),
-                    format: 'wav',
-                }),
-                signal: AbortSignal.timeout(30_000),
-            },
-        );
-        if (!speakRes.ok) {
-            console.warn(`[meeting] speak HTTP ${speakRes.status} on turn ${turn}`);
-        }
-    }
+    // Step 3 — Delegate the capture → respond → speak loop to the canonical
+    // runSpeakingAgentLoop, which adds graceful shutdown and error resilience.
+    await runSpeakingAgentLoop(meetingSessionId, language, {
+        desktopSessionId,
+        maxTurns,
+        captureDurationSeconds,
+        signal,
+    });
 
     await logMeetingEvent({
         meetingSessionId,

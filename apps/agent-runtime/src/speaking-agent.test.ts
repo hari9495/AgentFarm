@@ -532,7 +532,7 @@ describe('speaking-agent', () => {
             return fakeJsonResponse({ agentVoiceId: null, speakingEnabled: false });
         });
 
-        await runSpeakingAgentLoop('sess-disabled', 'en');
+        await runSpeakingAgentLoop('sess-disabled', 'en', { desktopSessionId: 'desktop-x' });
 
         // Only the one GET to check speakingEnabled should have been made
         assert.equal(fetchCallCount, 1, 'should only fetch the session once before returning early');
