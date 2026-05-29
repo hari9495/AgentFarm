@@ -1,4 +1,4 @@
-const CLASSIFIER_MODEL = 'claude-sonnet-4-20250514';
+import { callAnthropic, extractText } from '../../infrastructure/anthropic-caller.js';
 
 export type ReplyIntent =
     | 'interested'
@@ -39,30 +39,13 @@ export async function classifyReply(params: ClassifyReplyParams): Promise<Classi
         const userPrompt =
             `Original subject: ${params.originalSubject}\nReply text:\n${params.replyText}`;
 
-        const response = await fetch('https://api.anthropic.com/v1/messages', {
-            method: 'POST',
-            headers: {
-                'content-type': 'application/json',
-                'x-api-key': apiKey ?? '',
-                'anthropic-version': '2023-06-01',
-            },
-            body: JSON.stringify({
-                model: CLASSIFIER_MODEL,
-                max_tokens: 512,
-                system,
-                messages: [{ role: 'user', content: userPrompt }],
-            }),
+        const { content } = await callAnthropic({
+            tier: 'balanced',
+            system,
+            messages: [{ role: 'user', content: userPrompt }],
+            maxTokens: 512,
         });
-
-        if (!response.ok) {
-            return FALLBACK_RESULT;
-        }
-
-        const parsed = await response.json() as { content?: Array<{ type: string; text?: string }> };
-        const raw = (parsed.content ?? [])
-            .filter((b) => b.type === 'text')
-            .map((b) => b.text ?? '')
-            .join('');
+        const raw = extractText(content);
         const cleaned = raw.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
 
         let parsedJson: unknown;

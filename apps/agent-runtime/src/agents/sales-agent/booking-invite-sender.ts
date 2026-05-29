@@ -3,7 +3,7 @@ import type { SalesAgentConfigRecord } from '@agentfarm/shared-types';
 import { getEmailProvider } from './email-provider-factory.js';
 import type { IEmailProvider, EmailProviderConfig } from './email-provider.js';
 
-const INVITE_MODEL = 'claude-sonnet-4-20250514';
+import { callAnthropic, extractText } from '../../infrastructure/anthropic-caller.js';
 
 export interface BookingInviteResult {
     subject: string;
@@ -82,27 +82,13 @@ Product: ${config.productDescription}
 Tone: ${config.emailTone}
 Last interaction: ${lastActivity ? `${String(lastActivity['activityType'])} — ${String(lastActivity['subject'])}` : 'First contact'}`;
 
-        const llmRes = await fetch('https://api.anthropic.com/v1/messages', {
-            method: 'POST',
-            headers: {
-                'content-type': 'application/json',
-                'x-api-key': apiKey,
-                'anthropic-version': '2023-06-01',
-            },
-            body: JSON.stringify({
-                model: INVITE_MODEL,
-                max_tokens: 512,
-                system,
-                messages: [{ role: 'user', content: userPrompt }],
-            }),
+        const { content } = await callAnthropic({
+            tier: 'balanced',
+            system,
+            messages: [{ role: 'user', content: userPrompt }],
+            maxTokens: 512,
         });
-
-        if (!llmRes.ok) {
-            return { subject: '', body: '', sent: false, error: `LLM error: ${llmRes.status}` };
-        }
-
-        const parsed = await llmRes.json() as { content: Array<{ type: string; text?: string }> };
-        const raw = parsed.content.filter(b => b.type === 'text').map(b => b.text ?? '').join('');
+        const raw = extractText(content);
         const cleaned = raw.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
 
         let parsedJson: unknown;

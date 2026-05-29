@@ -1,4 +1,4 @@
-const CALL_MODEL = 'claude-sonnet-4-20250514';
+import { callAnthropic, extractText } from '../../infrastructure/anthropic-caller.js';
 
 export interface CallScriptContext {
     prospectName: string;
@@ -36,25 +36,13 @@ Product: ${ctx.productDescription}
 ICP: ${ctx.icp}
 Generate the cold call opening script.`;
 
-    const llmRes = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-            'content-type': 'application/json',
-            'x-api-key': apiKey,
-            'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-            model: CALL_MODEL,
-            max_tokens: 512,
-            system,
-            messages: [{ role: 'user', content: userPrompt }],
-        }),
+    const { content } = await callAnthropic({
+        tier: 'balanced',
+        system,
+        messages: [{ role: 'user', content: userPrompt }],
+        maxTokens: 512,
     });
-
-    if (!llmRes.ok) return fallback;
-
-    const parsed = await llmRes.json() as { content: Array<{ type: string; text?: string }> };
-    const raw = parsed.content.filter(b => b.type === 'text').map(b => b.text ?? '').join('');
+    const raw = extractText(content);
     const cleaned = raw.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
 
     try {
@@ -101,25 +89,13 @@ Classified intent: ${intent}
 Turn number: ${turnNumber} of 5
 Product: ${ctx.productDescription} | Company being sold to: ${ctx.company}`;
 
-    const llmRes = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-            'content-type': 'application/json',
-            'x-api-key': apiKey,
-            'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-            model: CALL_MODEL,
-            max_tokens: 256,
-            system,
-            messages: [{ role: 'user', content: userPrompt }],
-        }),
+    const { content: _wrapBlocks } = await callAnthropic({
+        tier: 'balanced',
+        system,
+        messages: [{ role: 'user', content: userPrompt }],
+        maxTokens: 256,
     });
-
-    if (!llmRes.ok) return wrapUp;
-
-    const parsed = await llmRes.json() as { content: Array<{ type: string; text?: string }> };
-    const raw = parsed.content.filter(b => b.type === 'text').map(b => b.text ?? '').join('');
+    const raw = extractText(_wrapBlocks);
     const cleaned = raw.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
 
     try {
@@ -148,25 +124,13 @@ export async function classifyCallUtterance(
         'You are a B2B sales call classifier. Classify the spoken prospect utterance and return ONLY JSON: ' +
         '{ "intent": "interested|not_now|unsubscribe|objection|question|unknown", "confidence": 0.0-1.0 }';
 
-    const llmRes = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-            'content-type': 'application/json',
-            'x-api-key': apiKey,
-            'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-            model: CALL_MODEL,
-            max_tokens: 128,
-            system,
-            messages: [{ role: 'user', content: speechText }],
-        }),
+    const { content: _classBlocks } = await callAnthropic({
+        tier: 'balanced',
+        system,
+        messages: [{ role: 'user', content: speechText }],
+        maxTokens: 128,
     });
-
-    if (!llmRes.ok) return { intent: 'unknown', confidence: 0 };
-
-    const parsed = await llmRes.json() as { content: Array<{ type: string; text?: string }> };
-    const raw = parsed.content.filter(b => b.type === 'text').map(b => b.text ?? '').join('');
+    const raw = extractText(_classBlocks);
     const cleaned = raw.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
 
     try {

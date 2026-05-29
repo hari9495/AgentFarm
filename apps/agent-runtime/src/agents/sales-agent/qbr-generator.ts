@@ -17,6 +17,7 @@
  *   to the agent for delivery (email, meeting share, etc.).
  */
 
+import { callAnthropic, extractText } from '../../infrastructure/anthropic-caller.js';
 import type { PrismaClient } from '@prisma/client';
 import type { SalesAgentConfigRecord } from '@agentfarm/shared-types';
 
@@ -82,23 +83,13 @@ async function generateQbrSlides(ctx: {
         `Generate a professional, data-driven QBR slide deck.`;
 
     try {
-        const resp = await fetch('https://api.anthropic.com/v1/messages', {
-            method: 'POST',
-            headers: {
-                'x-api-key': process.env['ANTHROPIC_API_KEY'] ?? '',
-                'anthropic-version': '2023-06-01',
-                'content-type': 'application/json',
-            },
-            body: JSON.stringify({
-                model: 'claude-sonnet-4-20250514',
-                max_tokens: 2048,
-                system: systemPrompt,
-                messages: [{ role: 'user', content: userPrompt }],
-            }),
+        const { content } = await callAnthropic({
+            tier: 'balanced',
+            system: systemPrompt,
+            messages: [{ role: 'user', content: userPrompt }],
+            maxTokens: 2048,
         });
-        if (!resp.ok) throw new Error(`LLM error ${resp.status}`);
-        const data = await resp.json() as { content: Array<{ type: string; text: string }> };
-        const raw = data.content[0]?.text ?? '[]';
+        const raw = extractText(content) || '[]';
         const parsed = JSON.parse(raw.replace(/^```json\n?/, '').replace(/\n?```$/, ''));
         if (Array.isArray(parsed) && parsed.length > 0) return parsed as QbrSlide[];
     } catch {

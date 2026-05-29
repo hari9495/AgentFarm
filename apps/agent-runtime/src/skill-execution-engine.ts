@@ -6,6 +6,7 @@
 // requiring live credentials in every environment.
 
 import { spawnSync } from 'node:child_process';
+import { callAnthropic, extractText } from './infrastructure/anthropic-caller.js';
 import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 
@@ -2690,31 +2691,21 @@ export async function analyzeIssueWithLLM(
     const apiKey = process.env['ANTHROPIC_API_KEY'];
     if (!apiKey) return null;
     try {
-        const resp = await fetch('https://api.anthropic.com/v1/messages', {
-            method: 'POST',
-            headers: {
-                'x-api-key': apiKey,
-                'anthropic-version': '2023-06-01',
-                'content-type': 'application/json',
-            },
-            body: JSON.stringify({
-                model: 'claude-haiku-4-5',
-                max_tokens: 1024,
-                messages: [{
-                    role: 'user',
-                    content: [
-                        'You are a senior software engineer. Analyse this GitHub issue and respond with ONLY valid JSON (no markdown):',
-                        `{"subtasks":["step 1","step 2",...],"affected_areas":["module/path",...],"approach":"brief paragraph"}`,
-                        '',
-                        `Title: ${issueTitle}`,
-                        `Body: ${issueBody.slice(0, 1500)}`,
-                    ].join('\n'),
-                }],
-            }),
+        const { content: _blocks1 } = await callAnthropic({
+            tier: 'speed',
+            messages: [{
+                role: 'user',
+                content: [
+                    'You are a senior software engineer. Analyse this GitHub issue and respond with ONLY valid JSON (no markdown):',
+                    `{"subtasks":["step 1","step 2",...],"affected_areas":["module/path",...],"approach":"brief paragraph"}`,
+                    '',
+                    `Title: ${issueTitle}`,
+                    `Body: ${issueBody.slice(0, 1500)}`,
+                ].join('\n'),
+            }],
+            maxTokens: 1024,
         });
-        if (!resp.ok) return null;
-        const json = await resp.json() as { content?: Array<{ type: string; text?: string }> };
-        const text = json.content?.find((c) => c.type === 'text')?.text?.trim();
+        const text = extractText(_blocks1).trim();
         if (!text) return null;
         // Strip any accidental markdown fences
         const cleaned = text.replace(/^```[a-z]*\n?/i, '').replace(/\n?```$/i, '').trim();
@@ -2746,31 +2737,21 @@ export async function analyzeDiffWithLLM(
     const apiKey = process.env['ANTHROPIC_API_KEY'];
     if (!apiKey) return null;
     try {
-        const resp = await fetch('https://api.anthropic.com/v1/messages', {
-            method: 'POST',
-            headers: {
-                'x-api-key': apiKey,
-                'anthropic-version': '2023-06-01',
-                'content-type': 'application/json',
-            },
-            body: JSON.stringify({
-                model: 'claude-haiku-4-5',
-                max_tokens: 512,
-                messages: [{
-                    role: 'user',
-                    content: [
-                        'You are a code reviewer. Analyse this diff snippet and respond with ONLY valid JSON (no markdown):',
-                        `{"concern":"what is wrong or risky","suggestion":"concrete fix or improvement","severity":"low|medium|high"}`,
-                        '',
-                        `File: ${filePath}  Line: ${lineNumber}`,
-                        `Diff:\n${diff.slice(0, 2000)}`,
-                    ].join('\n'),
-                }],
-            }),
+        const { content: _blocks2 } = await callAnthropic({
+            tier: 'speed',
+            messages: [{
+                role: 'user',
+                content: [
+                    'You are a code reviewer. Analyse this diff snippet and respond with ONLY valid JSON (no markdown):',
+                    `{"concern":"what is wrong or risky","suggestion":"concrete fix or improvement","severity":"low|medium|high"}`,
+                    '',
+                    `File: ${filePath}  Line: ${lineNumber}`,
+                    `Diff:\n${diff.slice(0, 2000)}`,
+                ].join('\n'),
+            }],
+            maxTokens: 512,
         });
-        if (!resp.ok) return null;
-        const json = await resp.json() as { content?: Array<{ type: string; text?: string }> };
-        const text = json.content?.find((c) => c.type === 'text')?.text?.trim();
+        const text = extractText(_blocks2).trim();
         if (!text) return null;
         const cleaned = text.replace(/^```[a-z]*\n?/i, '').replace(/\n?```$/i, '').trim();
         const parsed = JSON.parse(cleaned) as { concern?: unknown; suggestion?: unknown; severity?: unknown };
@@ -2808,35 +2789,25 @@ export async function generateTestsWithLLM(
         : 'valid input, null/undefined input, empty input, boundary values';
     const useJest = testFramework === 'jest';
     try {
-        const resp = await fetch('https://api.anthropic.com/v1/messages', {
-            method: 'POST',
-            headers: {
-                'x-api-key': apiKey,
-                'anthropic-version': '2023-06-01',
-                'content-type': 'application/json',
-            },
-            body: JSON.stringify({
-                model: 'claude-haiku-4-5',
-                max_tokens: 2048,
-                messages: [{
-                    role: 'user',
-                    content: [
-                        `You are a senior TypeScript engineer. Write ${useJest ? 'Jest' : 'node:test'} tests for this function.`,
-                        'Respond with ONLY the complete test file code — no explanation, no markdown fences.',
-                        `Use real assertions with concrete expected values derived from the function logic.`,
-                        `Cover these edge cases: ${edgeCaseList}`,
-                        '',
-                        `Import path: '${importPath}'`,
-                        `Function signature: ${functionSignature}`,
-                        '',
-                        `Source:\n${functionSource.slice(0, 3000)}`,
-                    ].join('\n'),
-                }],
-            }),
+        const { content: _blocks3 } = await callAnthropic({
+            tier: 'speed',
+            messages: [{
+                role: 'user',
+                content: [
+                    `You are a senior TypeScript engineer. Write ${useJest ? 'Jest' : 'node:test'} tests for this function.`,
+                    'Respond with ONLY the complete test file code — no explanation, no markdown fences.',
+                    `Use real assertions with concrete expected values derived from the function logic.`,
+                    `Cover these edge cases: ${edgeCaseList}`,
+                    '',
+                    `Import path: '${importPath}'`,
+                    `Function signature: ${functionSignature}`,
+                    '',
+                    `Source:\n${functionSource.slice(0, 3000)}`,
+                ].join('\n'),
+            }],
+            maxTokens: 2048,
         });
-        if (!resp.ok) return null;
-        const json = await resp.json() as { content?: Array<{ type: string; text?: string }> };
-        const text = json.content?.find((c) => c.type === 'text')?.text?.trim();
+        const text = extractText(_blocks3).trim();
         if (!text) return null;
         // Strip accidental markdown fences
         return text.replace(/^```[a-z]*\n?/i, '').replace(/\n?```$/i, '').trim();
@@ -2935,35 +2906,25 @@ export async function synthesizeCodeFixWithLLM(
         ? `Candidate files that may need changes: ${targetFiles.slice(0, 8).join(', ')}`
         : 'Identify the relevant file from the error messages.';
     try {
-        const resp = await fetch('https://api.anthropic.com/v1/messages', {
-            method: 'POST',
-            headers: {
-                'x-api-key': apiKey,
-                'anthropic-version': '2023-06-01',
-                'content-type': 'application/json',
-            },
-            body: JSON.stringify({
-                model: 'claude-haiku-4-5',
-                max_tokens: 1536,
-                messages: [{
-                    role: 'user',
-                    content: [
-                        'You are a senior software engineer fixing a test failure.',
-                        'Respond with ONLY valid JSON (no markdown). Return a list of minimal search-and-replace patches:',
-                        `{"fixes":[{"filePath":"src/foo.ts","searchString":"exact code to find","replacement":"corrected code"}]}`,
-                        'Rules: searchString must be the exact literal text in the file. Keep fixes minimal.',
-                        `${filesHint}`,
-                        '',
-                        `Task: ${taskDescription}`,
-                        '',
-                        `Test failure output:\n${testOutput.slice(0, 3000)}`,
-                    ].join('\n'),
-                }],
-            }),
+        const { content: _blocks4 } = await callAnthropic({
+            tier: 'speed',
+            messages: [{
+                role: 'user',
+                content: [
+                    'You are a senior software engineer fixing a test failure.',
+                    'Respond with ONLY valid JSON (no markdown). Return a list of minimal search-and-replace patches:',
+                    `{"fixes":[{"filePath":"src/foo.ts","searchString":"exact code to find","replacement":"corrected code"}]}`,
+                    'Rules: searchString must be the exact literal text in the file. Keep fixes minimal.',
+                    `${filesHint}`,
+                    '',
+                    `Task: ${taskDescription}`,
+                    '',
+                    `Test failure output:\n${testOutput.slice(0, 3000)}`,
+                ].join('\n'),
+            }],
+            maxTokens: 1536,
         });
-        if (!resp.ok) return null;
-        const json = await resp.json() as { content?: Array<{ type: string; text?: string }> };
-        const text = json.content?.find((c) => c.type === 'text')?.text?.trim();
+        const text = extractText(_blocks4).trim();
         if (!text) return null;
         const cleaned = text.replace(/^```[a-z]*\n?/i, '').replace(/\n?```$/i, '').trim();
         const parsed = JSON.parse(cleaned) as { fixes?: unknown };

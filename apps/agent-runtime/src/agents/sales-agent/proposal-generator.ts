@@ -19,6 +19,7 @@
  *   (activityType: proposal_generated).
  */
 
+import { callAnthropic, extractText } from '../../infrastructure/anthropic-caller.js';
 import type { PrismaClient } from '@prisma/client';
 import type { SalesAgentConfigRecord, ProposalSection } from '@agentfarm/shared-types';
 import { getEmailProvider } from './email-provider-factory.js';
@@ -75,23 +76,13 @@ async function generateProposalSections(ctx: {
         `Generate a compelling proposal tailored to ${ctx.company}'s likely pain points in the ${ctx.industry} space.`;
 
     try {
-        const resp = await fetch('https://api.anthropic.com/v1/messages', {
-            method: 'POST',
-            headers: {
-                'x-api-key': process.env['ANTHROPIC_API_KEY'] ?? '',
-                'anthropic-version': '2023-06-01',
-                'content-type': 'application/json',
-            },
-            body: JSON.stringify({
-                model: 'claude-sonnet-4-20250514',
-                max_tokens: 2048,
-                system: systemPrompt,
-                messages: [{ role: 'user', content: userPrompt }],
-            }),
+        const { content } = await callAnthropic({
+            tier: 'balanced',
+            system: systemPrompt,
+            messages: [{ role: 'user', content: userPrompt }],
+            maxTokens: 2048,
         });
-        if (!resp.ok) throw new Error(`LLM error ${resp.status}`);
-        const data = await resp.json() as { content: Array<{ type: string; text: string }> };
-        const raw = data.content[0]?.text ?? '[]';
+        const raw = extractText(content) || '[]';
         const parsed = JSON.parse(raw.replace(/^```json\n?/, '').replace(/\n?```$/, ''));
         if (Array.isArray(parsed)) return parsed as ProposalSection[];
     } catch {

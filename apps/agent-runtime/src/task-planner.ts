@@ -1,9 +1,7 @@
 import type { ActionPlan } from '@agentfarm/shared-types';
 import { buildSystemPrompt } from './system-prompt-builder.js';
 
-const ANTHROPIC_BASE_URL = 'https://api.anthropic.com';
-const ANTHROPIC_API_VERSION = '2023-06-01';
-const PLANNER_MODEL = 'claude-opus-4-5';
+import { callAnthropic, extractText } from './infrastructure/anthropic-caller.js';
 
 const PLANNER_SYSTEM_PROMPT = `
 You are a task planning agent. Given a natural language task, output a JSON ActionPlan.
@@ -51,33 +49,13 @@ export async function planTask(task: string, context?: string, language?: string
         ? `Task: ${task}\n\nPrior execution context:\n${context}`
         : `Task: ${task}`;
 
-    const response = await fetch(`${ANTHROPIC_BASE_URL}/v1/messages`, {
-        method: 'POST',
-        headers: {
-            'content-type': 'application/json',
-            'x-api-key': apiKey,
-            'anthropic-version': ANTHROPIC_API_VERSION,
-        },
-        body: JSON.stringify({
-            model: PLANNER_MODEL,
-            max_tokens: 1024,
-            system: buildSystemPrompt({ basePrompt: PLANNER_SYSTEM_PROMPT, language: language ?? 'en' }),
-            messages: [{ role: 'user', content: userMessage }],
-        }),
+    const { content } = await callAnthropic({
+        tier: 'quality',
+        system: buildSystemPrompt({ basePrompt: PLANNER_SYSTEM_PROMPT, language: language ?? 'en' }),
+        messages: [{ role: 'user', content: userMessage }],
+        maxTokens: 1024,
     });
-
-    if (!response.ok) {
-        throw new PlannerError(`Anthropic request failed: ${response.status}`, '');
-    }
-
-    const parsed = await response.json() as {
-        content?: Array<{ type: string; text?: string }>;
-    };
-
-    const raw = (parsed.content ?? [])
-        .filter((b) => b.type === 'text')
-        .map((b) => b.text ?? '')
-        .join('');
+    const raw = extractText(content);
 
     const cleaned = raw.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
 

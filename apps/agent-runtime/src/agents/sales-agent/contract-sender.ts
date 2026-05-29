@@ -4,7 +4,7 @@ import { getEmailProvider } from './email-provider-factory.js';
 import type { IEmailProvider, EmailProviderConfig } from './email-provider.js';
 import { appendGdprFooter, resolveOptOutUrl } from '../../gdpr-email-footer.js';
 
-const CONTRACT_MODEL = 'claude-sonnet-4-20250514';
+import { callAnthropic, extractText } from '../../infrastructure/anthropic-caller.js';
 
 type PrismaWithSales = {
     prospect: {
@@ -83,27 +83,13 @@ Contract URL: ${contractUrl}
 Product: ${config.productDescription}
 Tone: ${config.emailTone}`;
 
-        const llmRes = await fetch('https://api.anthropic.com/v1/messages', {
-            method: 'POST',
-            headers: {
-                'content-type': 'application/json',
-                'x-api-key': apiKey,
-                'anthropic-version': '2023-06-01',
-            },
-            body: JSON.stringify({
-                model: CONTRACT_MODEL,
-                max_tokens: 500,
-                system,
-                messages: [{ role: 'user', content: userPrompt }],
-            }),
+        const { content } = await callAnthropic({
+            tier: 'balanced',
+            system,
+            messages: [{ role: 'user', content: userPrompt }],
+            maxTokens: 500,
         });
-
-        if (!llmRes.ok) {
-            return { subject: '', body: '', sent: false, error: `LLM error: ${llmRes.status}` };
-        }
-
-        const parsed = await llmRes.json() as { content: Array<{ type: string; text?: string }> };
-        const raw = parsed.content.filter(b => b.type === 'text').map(b => b.text ?? '').join('');
+        const raw = extractText(content);
         const cleaned = raw.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
 
         let parsedJson: unknown;

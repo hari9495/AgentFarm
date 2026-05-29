@@ -9,6 +9,7 @@
  */
 
 import { VoiceboxClient } from './voicebox-client.js';
+import { callAnthropic, extractText } from './infrastructure/anthropic-caller.js';
 import { loadPersonaForBot } from './persona-context-loader.js';
 import type { AgentPersonaRecord } from '@agentfarm/shared-types';
 
@@ -360,32 +361,14 @@ export async function listenAndRespond(
     const history = conversationHistory.get(sessionId) ?? [];
 
     // Generate a reply via Anthropic, with system prompt + multi-turn history
-    const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-            'content-type': 'application/json',
-            'x-api-key': anthropicApiKey(),
-            'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-            model: 'claude-sonnet-4-6',
-            max_tokens: 512,
-            system: buildSystemPrompt(persona, sessionRecord.meetingPurpose, recentWork),
-            messages: history,
-        }),
+    const { content: blocks } = await callAnthropic({
+        tier: 'balanced',
+        system: buildSystemPrompt(persona, sessionRecord.meetingPurpose, recentWork),
+        messages: history,
+        maxTokens: 512,
         signal: AbortSignal.timeout(30_000),
     });
-
-    if (!anthropicResponse.ok) {
-        const errText = await anthropicResponse.text().catch(() => '');
-        throw new Error(
-            `[speaking-agent] Anthropic API failed: ${anthropicResponse.status} ${errText}`,
-        );
-    }
-
-    const raw = (await anthropicResponse.json()) as AnthropicResponse;
-    const textBlock = raw.content.find((b) => b.type === 'text');
-    const responseText = (textBlock?.text ?? '').trim();
+    const responseText = extractText(blocks).trim();
 
     if (!responseText) {
         return Buffer.alloc(0);

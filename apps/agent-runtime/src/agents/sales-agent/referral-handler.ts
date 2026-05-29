@@ -4,7 +4,7 @@ import { getEmailProvider } from './email-provider-factory.js';
 import type { EmailProviderConfig } from './email-provider.js';
 import { appendGdprFooter, resolveOptOutUrl } from '../../gdpr-email-footer.js';
 
-const REFERRAL_MODEL = 'claude-sonnet-4-20250514';
+import { callAnthropic, extractText } from '../../infrastructure/anthropic-caller.js';
 // Referral-sourced leads are high-signal — add a score bonus (capped at 100)
 const REFERRAL_SCORE_BONUS = 20;
 
@@ -141,25 +141,13 @@ Product: ${config.productDescription}
 Tone: ${config.emailTone}
 Write a referral request email asking if they know anyone else in their network who might benefit from ${config.productDescription}.`;
 
-    const llmRes = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-            'content-type': 'application/json',
-            'x-api-key': apiKey,
-            'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-            model: REFERRAL_MODEL,
-            max_tokens: 512,
-            system,
-            messages: [{ role: 'user', content: userPrompt }],
-        }),
+    const { content } = await callAnthropic({
+        tier: 'balanced',
+        system,
+        messages: [{ role: 'user', content: userPrompt }],
+        maxTokens: 512,
     });
-
-    if (!llmRes.ok) return { ok: false, sent: false, error: `LLM error: ${llmRes.status}` };
-
-    const parsed = await llmRes.json() as { content: Array<{ type: string; text?: string }> };
-    const raw = parsed.content.filter(b => b.type === 'text').map(b => b.text ?? '').join('');
+    const raw = extractText(content);
     const cleaned = raw.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
 
     let llmObj: Record<string, unknown>;

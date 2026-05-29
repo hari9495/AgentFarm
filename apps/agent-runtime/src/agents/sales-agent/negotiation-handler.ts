@@ -16,6 +16,7 @@
  *   and a notification email is sent to discountApproverEmail.
  */
 
+import { callAnthropic, extractText } from '../../infrastructure/anthropic-caller.js';
 import type { PrismaClient } from '@prisma/client';
 import type { SalesAgentConfigRecord } from '@agentfarm/shared-types';
 import { getEmailProvider } from './email-provider-factory.js';
@@ -76,23 +77,13 @@ async function generateNegotiationMessage(ctx: {
           `Write a brief, persuasive counter-offer email that justifies the value and presents our offer.`;
 
     try {
-        const resp = await fetch('https://api.anthropic.com/v1/messages', {
-            method: 'POST',
-            headers: {
-                'x-api-key': process.env['ANTHROPIC_API_KEY'] ?? '',
-                'anthropic-version': '2023-06-01',
-                'content-type': 'application/json',
-            },
-            body: JSON.stringify({
-                model: 'claude-sonnet-4-20250514',
-                max_tokens: 256,
-                system: systemPrompt,
-                messages: [{ role: 'user', content: userPrompt }],
-            }),
+        const { content } = await callAnthropic({
+            tier: 'balanced',
+            system: systemPrompt,
+            messages: [{ role: 'user', content: userPrompt }],
+            maxTokens: 256,
         });
-        if (!resp.ok) throw new Error(`LLM error ${resp.status}`);
-        const data = await resp.json() as { content: Array<{ type: string; text: string }> };
-        return data.content[0]?.text?.trim() ?? '';
+        return extractText(content).trim();
     } catch {
         return ctx.isEscalation
             ? `Thank you for your counter-offer. We need to run this by our team and will get back to you within 24 hours.`

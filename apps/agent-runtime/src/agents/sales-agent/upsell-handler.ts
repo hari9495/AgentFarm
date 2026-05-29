@@ -19,6 +19,7 @@
  *   - upsell-worker.ts (scheduled, sweeps customers due for check-in)
  */
 
+import { callAnthropic, extractText } from '../../infrastructure/anthropic-caller.js';
 import type { PrismaClient } from '@prisma/client';
 import type { SalesAgentConfigRecord } from '@agentfarm/shared-types';
 import { getEmailProvider } from './email-provider-factory.js';
@@ -78,23 +79,13 @@ async function generateUpsellEmail(ctx: {
         `Email tone: ${tone}`;
 
     try {
-        const resp = await fetch('https://api.anthropic.com/v1/messages', {
-            method: 'POST',
-            headers: {
-                'x-api-key': process.env['ANTHROPIC_API_KEY'] ?? '',
-                'anthropic-version': '2023-06-01',
-                'content-type': 'application/json',
-            },
-            body: JSON.stringify({
-                model: 'claude-sonnet-4-20250514',
-                max_tokens: 512,
-                system: systemPrompt,
-                messages: [{ role: 'user', content: userPrompt }],
-            }),
+        const { content } = await callAnthropic({
+            tier: 'balanced',
+            system: systemPrompt,
+            messages: [{ role: 'user', content: userPrompt }],
+            maxTokens: 512,
         });
-        if (!resp.ok) throw new Error(`LLM error ${resp.status}`);
-        const data = await resp.json() as { content: Array<{ type: string; text: string }> };
-        const raw = data.content[0]?.text ?? '{}';
+        const raw = extractText(content) || '{}';
         const parsed = JSON.parse(raw.replace(/^```json\n?/, '').replace(/\n?```$/, ''));
         if (typeof parsed?.subject === 'string' && typeof parsed?.body === 'string') {
             return { subject: parsed.subject as string, body: parsed.body as string };

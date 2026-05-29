@@ -1,7 +1,7 @@
 import type { PrismaClient } from '@prisma/client';
 import type { PreMeetingBrief } from '@agentfarm/shared-types';
 
-const RESEARCH_MODEL = 'claude-sonnet-4-20250514';
+import { callAnthropic, extractText } from '../../infrastructure/anthropic-caller.js';
 
 type PrismaWithSales = {
     prospect: {
@@ -72,24 +72,14 @@ Generate 3-5 suggested conversation topics and 2-3 risk signals.`;
 
     try {
         if (apiKey) {
-            const llmRes = await fetch('https://api.anthropic.com/v1/messages', {
-                method: 'POST',
-                headers: {
-                    'content-type': 'application/json',
-                    'x-api-key': apiKey,
-                    'anthropic-version': '2023-06-01',
-                },
-                body: JSON.stringify({
-                    model: RESEARCH_MODEL,
-                    max_tokens: 512,
-                    system,
-                    messages: [{ role: 'user', content: userPrompt }],
-                }),
+            const { content } = await callAnthropic({
+                tier: 'balanced',
+                system,
+                messages: [{ role: 'user', content: userPrompt }],
+                maxTokens: 512,
             });
-
-            if (llmRes.ok) {
-                const parsed = await llmRes.json() as { content: Array<{ type: string; text?: string }> };
-                const raw = parsed.content.filter(b => b.type === 'text').map(b => b.text ?? '').join('');
+            {
+                const raw = extractText(content);
                 const cleaned = raw.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
                 let llmData: unknown;
                 try { llmData = JSON.parse(cleaned); } catch { llmData = null; }

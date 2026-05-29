@@ -13,6 +13,7 @@
  *   no module automatically composes and sends a rebuttal.
  */
 
+import { callAnthropic, extractText } from '../../infrastructure/anthropic-caller.js';
 import type { PrismaClient } from '@prisma/client';
 import type { SalesAgentConfigRecord } from '@agentfarm/shared-types';
 import { getEmailProvider } from './email-provider-factory.js';
@@ -84,24 +85,13 @@ Their concern: "${objectionText || `Unspecified ${objectionType} concern`}"
 Strategy to apply: ${strategy}`;
 
     try {
-        const resp = await fetch('https://api.anthropic.com/v1/messages', {
-            method: 'POST',
-            headers: {
-                'x-api-key': process.env['ANTHROPIC_API_KEY'] ?? '',
-                'anthropic-version': '2023-06-01',
-                'content-type': 'application/json',
-            },
-            body: JSON.stringify({
-                model: 'claude-sonnet-4-20250514',
-                max_tokens: 600,
-                system: systemPrompt,
-                messages: [{ role: 'user', content: userPrompt }],
-            }),
+        const { content } = await callAnthropic({
+            tier: 'balanced',
+            system: systemPrompt,
+            messages: [{ role: 'user', content: userPrompt }],
+            maxTokens: 600,
         });
-
-        if (!resp.ok) throw new Error(`LLM API error: ${resp.status}`);
-        const data = await resp.json() as { content: Array<{ type: string; text: string }> };
-        const text = data.content.find((c) => c.type === 'text')?.text ?? '';
+        const text = extractText(content);
         const match = text.match(/\{[\s\S]*\}/);
         if (!match) throw new Error('No JSON found');
         return JSON.parse(match[0]) as { subject: string; body: string };

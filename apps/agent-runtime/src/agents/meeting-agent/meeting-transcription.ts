@@ -9,6 +9,7 @@
  */
 
 import type { AgentPersonaRecord } from '@agentfarm/shared-types';
+import { callAnthropic, extractText } from '../../infrastructure/anthropic-caller.js';
 import { VoiceboxClient } from '../../voicebox-client.js';
 import { buildSystemPrompt } from '../../system-prompt-builder.js';
 import { speakResponse, listenAndRespond, runSpeakingAgentLoop } from '../../speaking-agent.js';
@@ -174,50 +175,33 @@ export async function summarizeMeeting(
     persona?: AgentPersonaRecord,
 ): Promise<MeetingSummaryResult> {
     const key = anthropicApiKey();
-    const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-            'content-type': 'application/json',
-            'x-api-key': key,
-            'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-            model: 'claude-sonnet-4-6',
-            max_tokens: 1500,
-            system: buildSystemPrompt({
-                basePrompt: 'You are a meeting assistant. Extract a concise summary and action items.',
-                language,
-                persona,
-                role: 'meeting assistant',
-            }),
-            messages: [
-                {
-                    role: 'user',
-                    content: `Transcript:\n${transcript}\n\nRespond in ${language}. Return JSON only: { "summary": string, "actionItems": string[] }`,
-                },
-            ],
+    const { content: blocks } = await callAnthropic({
+        tier: 'balanced',
+        system: buildSystemPrompt({
+            basePrompt: 'You are a meeting assistant. Extract a concise summary and action items.',
+            language,
+            persona,
+            role: 'meeting assistant',
         }),
+        messages: [
+            {
+                role: 'user',
+                content: `Transcript:\n${transcript}\n\nRespond in ${language}. Return JSON only: { "summary": string, "actionItems": string[] }`,
+            },
+        ],
+        maxTokens: 1500,
         signal: AbortSignal.timeout(60_000),
     });
-
-    if (!anthropicResponse.ok) {
-        const errText = await anthropicResponse.text().catch(() => '');
-        throw new Error(
-            `[meeting] Anthropic API failed with HTTP ${anthropicResponse.status}: ${errText}`,
-        );
-    }
-
-    const raw = (await anthropicResponse.json()) as AnthropicResponse;
-    const textContent = raw.content.find((b) => b.type === 'text');
+    const textContent = extractText(blocks);
     if (!textContent) {
         throw new Error('[meeting] Anthropic returned no text content block');
     }
 
     let parsed: { summary: string; actionItems: string[] };
     try {
-        parsed = JSON.parse(textContent.text) as { summary: string; actionItems: string[] };
+        parsed = JSON.parse(textContent) as { summary: string; actionItems: string[] };
     } catch {
-        throw new Error(`[meeting] Failed to parse Anthropic JSON response: ${textContent.text}`);
+        throw new Error(`[meeting] Failed to parse Anthropic JSON response: ${textContent}`);
     }
 
     const { summary, actionItems } = parsed;

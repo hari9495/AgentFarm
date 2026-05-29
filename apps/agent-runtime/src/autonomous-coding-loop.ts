@@ -299,7 +299,7 @@ async function runImplementChanges(
                 try {
                     // Use the runtime's configured model rather than a hardcoded version.
                     // Falls back to the current fast Haiku model if env is unset.
-                    const model = process.env['AF_SYNTHESIS_MODEL'] ?? 'claude-haiku-4-5-20251001';
+                    const model = process.env['AF_SYNTHESIS_MODEL'] ?? 'claude-haiku-4-5';
                     const resp = await fetch('https://api.anthropic.com/v1/messages', {
                         method: 'POST',
                         headers: {

@@ -382,7 +382,7 @@ export function generateTestFile(opts: GenerateTestFileOptions): GenerateTestFil
 // set, the network fails, or the model returns an empty/unusable response.
 // ---------------------------------------------------------------------------
 
-const LLM_TESTGEN_MODEL = 'claude-haiku-3-5';
+import { callAnthropic, extractText } from './infrastructure/anthropic-caller.js';
 const LLM_TESTGEN_MAX_SRC_CHARS = 5_000;
 
 function buildTestGenPrompt(opts: GenerateTestFileOptions): string {
@@ -420,40 +420,18 @@ export async function generateTestFileWithLlm(opts: GenerateTestFileOptions): Pr
     const prompt = buildTestGenPrompt(opts);
 
     try {
-        const response = await fetch('https://api.anthropic.com/v1/messages', {
-            method: 'POST',
-            headers: {
-                'content-type': 'application/json',
-                'x-api-key': apiKey,
-                'anthropic-version': '2023-06-01',
-            },
-            body: JSON.stringify({
-                model: LLM_TESTGEN_MODEL,
-                max_tokens: 4096,
-                messages: [{ role: 'user', content: prompt }],
-            }),
+        const { content } = await callAnthropic({
+            tier: 'speed',
+            messages: [{ role: 'user', content: prompt }],
+            maxTokens: 4096,
             signal: AbortSignal.timeout(60_000),
         });
-
-        if (!response.ok) {
-            return generateTestFile(opts);
-        }
-
-        const json = await response.json() as {
-            content?: Array<{ type: string; text?: string }>;
-        };
-        const raw = (json.content ?? [])
-            .filter((b) => b.type === 'text')
-            .map((b) => b.text ?? '')
-            .join('');
-
-        // Strip markdown fences if the model included them despite instructions
-        const content = raw
+        const raw = extractText(content)
             .replace(/^```(?:typescript|ts)?\s*/im, '')
             .replace(/```\s*$/m, '')
             .trim();
 
-        if (!content) {
+        if (!raw) {
             return generateTestFile(opts);
         }
 
@@ -461,7 +439,7 @@ export async function generateTestFileWithLlm(opts: GenerateTestFileOptions): Pr
         const { signatures, fallbackSymbols } = extractSignatures(opts.src);
         const symbols = [...signatures.map((s) => s.name), ...fallbackSymbols];
 
-        return { content: content + '\n', symbols, framework: opts.framework ?? 'node:test' };
+        return { content: raw + '\n', symbols, framework: opts.framework ?? 'node:test' };
     } catch {
         // Network / timeout / parse failure — fall back silently
         return generateTestFile(opts);

@@ -2,7 +2,7 @@ import type { PrismaClient } from '@prisma/client';
 import type { SalesAgentConfigRecord, LinkedInOutreachType } from '@agentfarm/shared-types';
 import { runBrowserTask } from './browser-executor.js';
 
-const LINKEDIN_MODEL = 'claude-sonnet-4-20250514';
+import { callAnthropic, extractText } from '../../infrastructure/anthropic-caller.js';
 // LinkedIn caps connection-request notes at 300 chars; direct messages at 8000
 const CONNECTION_NOTE_MAX = 300;
 const MESSAGE_MAX = 600;
@@ -62,25 +62,13 @@ Product/Service: ${productDescription}
 ICP context: ${icp}
 Write the LinkedIn ${outreachType === 'connection_request' ? 'connection note' : 'message'}.`;
 
-    const llmRes = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-            'content-type': 'application/json',
-            'x-api-key': apiKey,
-            'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-            model: LINKEDIN_MODEL,
-            max_tokens: 256,
-            system,
-            messages: [{ role: 'user', content: userPrompt }],
-        }),
+    const { content } = await callAnthropic({
+        tier: 'balanced',
+        system,
+        messages: [{ role: 'user', content: userPrompt }],
+        maxTokens: 256,
     });
-
-    if (!llmRes.ok) return fallback;
-
-    const parsed = await llmRes.json() as { content: Array<{ type: string; text?: string }> };
-    const text = parsed.content.filter(b => b.type === 'text').map(b => b.text ?? '').join('').trim();
+    const text = extractText(content).trim();
     return text.slice(0, maxChars) || fallback;
 }
 

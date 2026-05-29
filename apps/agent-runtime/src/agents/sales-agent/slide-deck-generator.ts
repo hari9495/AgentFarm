@@ -14,7 +14,7 @@
 import type { PrismaClient } from '@prisma/client';
 import type { SalesAgentConfigRecord, SlideDeck, SlideDeckSlide } from '@agentfarm/shared-types';
 
-const SLIDE_MODEL = 'claude-sonnet-4-20250514';
+import { callAnthropic, extractText } from '../../infrastructure/anthropic-caller.js';
 
 type PrismaWithSlides = {
     prospect: {
@@ -201,24 +201,14 @@ ICP: ${config.icp}${customStr}${dealStr}
 Tailor every slide to ${company}'s specific context and pain points.`;
 
         try {
-            const llmRes = await fetch('https://api.anthropic.com/v1/messages', {
-                method: 'POST',
-                headers: {
-                    'content-type': 'application/json',
-                    'x-api-key': apiKey,
-                    'anthropic-version': '2023-06-01',
-                },
-                body: JSON.stringify({
-                    model: SLIDE_MODEL,
-                    max_tokens: 2048,
-                    system,
-                    messages: [{ role: 'user', content: userPrompt }],
-                }),
+            const { content } = await callAnthropic({
+                tier: 'balanced',
+                system,
+                messages: [{ role: 'user', content: userPrompt }],
+                maxTokens: 2048,
             });
-
-            if (llmRes.ok) {
-                const parsed = await llmRes.json() as { content: Array<{ type: string; text?: string }> };
-                const raw = parsed.content.filter(b => b.type === 'text').map(b => b.text ?? '').join('');
+            {
+                const raw = extractText(content);
                 const cleaned = raw.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
                 const arr = JSON.parse(cleaned) as SlideDeckSlide[];
                 if (Array.isArray(arr) && arr.length > 0) {
