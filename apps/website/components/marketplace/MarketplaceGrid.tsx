@@ -14,6 +14,17 @@ import { useCart } from "@/lib/cart-store";
 import AddToCartButton from "@/components/shared/AddToCartButton";
 import { useFunnelTracking } from "@/lib/use-funnel-tracking";
 
+// ─── Short department display names ──────────────────────────────────────────
+const DEPT_SHORT: Partial<Record<BotDepartment, string>> = {
+    "Customer Success": "Cust. Success",
+    "HR & Talent": "HR & Talent",
+    "Quality & Testing": "QA & Testing",
+    "DevOps & Infrastructure": "DevOps",
+    "Data & Analytics": "Data & Analytics",
+    "Business Operations": "Biz Ops",
+    "Compliance & Security": "Compliance",
+};
+
 // ─── Agent icon map ───────────────────────────────────────────────────────────
 const AGENT_ICONS: Record<string, string> = {
     "ai-backend-developer": "/agent-icons/ai-backend-developer.png",
@@ -192,12 +203,12 @@ function AgentFlipCard({ bot, index }: { bot: Bot; index: number }) {
                     {/* Header row */}
                     <div className="flex items-center justify-between px-4 pt-4 pb-2.5" style={{ borderBottom: "1px solid #f0f0f0" }}>
                         <div className="flex-1 min-w-0 pr-2">
-                            {/* Department — single line, truncated */}
+                            {/* Department badge */}
                             <span
-                                className="inline-block text-[10px] font-semibold uppercase tracking-[0.05em] px-1.5 py-0.5 rounded whitespace-nowrap overflow-hidden text-ellipsis max-w-full"
+                                className="inline-block text-[10px] font-semibold uppercase tracking-[0.05em] px-1.5 py-0.5 rounded leading-tight"
                                 style={{ background: "rgba(0,102,204,0.08)", color: "#0066cc" }}
                             >
-                                {bot.department}
+                                {DEPT_SHORT[bot.department as BotDepartment] ?? bot.department}
                             </span>
                             <p className="font-semibold text-[#1d1d1f] text-[13px] mt-1 leading-snug" style={{ letterSpacing: "-0.01em" }}>
                                 {bot.name.replace("AI ", "")}
@@ -411,7 +422,7 @@ export default function MarketplaceGrid() {
                     </button>
                 </div>
             ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                     {filtered.map((bot, i) => (
                         <AgentFlipCard key={bot.slug} bot={bot} index={i} />
                     ))}
