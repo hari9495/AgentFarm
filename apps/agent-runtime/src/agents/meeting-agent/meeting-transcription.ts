@@ -8,6 +8,7 @@
  * or the full orchestrated pipeline via runFullMeetingPipeline.
  */
 
+import type { AgentPersonaRecord } from '@agentfarm/shared-types';
 import { VoiceboxClient } from '../../voicebox-client.js';
 import { buildSystemPrompt } from '../../system-prompt-builder.js';
 import { speakResponse, listenAndRespond } from '../../speaking-agent.js';
@@ -28,6 +29,12 @@ const anthropicApiKey = (): string =>
 // ---------------------------------------------------------------------------
 
 export type MeetingPlatform = 'teams' | 'zoom' | 'google_meet' | 'webex';
+
+/** Distribution target for meeting summaries — one entry per channel to notify. */
+export type MeetingDistributionChannel =
+    | { type: 'slack'; channel?: string }
+    | { type: 'teams'; webhookUrl: string }
+    | { type: 'email'; address: string };
 
 export type StartMeetingParams = {
     tenantId: string;
@@ -164,6 +171,7 @@ export async function summarizeMeeting(
     transcript: string,
     language: string,
     tenantId?: string,
+    persona?: AgentPersonaRecord,
 ): Promise<MeetingSummaryResult> {
     const key = anthropicApiKey();
     const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
@@ -176,7 +184,12 @@ export async function summarizeMeeting(
         body: JSON.stringify({
             model: 'claude-sonnet-4-6',
             max_tokens: 1500,
-            system: buildSystemPrompt({ basePrompt: 'You are a meeting assistant. Extract a concise summary and action items.', language }),
+            system: buildSystemPrompt({
+                basePrompt: 'You are a meeting assistant. Extract a concise summary and action items.',
+                language,
+                persona,
+                role: 'meeting assistant',
+            }),
             messages: [
                 {
                     role: 'user',
@@ -242,7 +255,10 @@ export async function summarizeMeeting(
 // ---------------------------------------------------------------------------
 
 /**
- * Send the meeting summary to Slack via ProviderExecutor, then mark session done.
+ * Send the meeting summary to one or more channels via ProviderExecutor,
+ * then mark session done.
+ *
+ * Defaults to a Slack broadcast when no channels are specified (backward-compatible).
  */
 export async function distributeMeetingSummary(
     sessionId: string,
@@ -251,6 +267,7 @@ export async function distributeMeetingSummary(
     language: string,
     tenantId: string,
     executor: MeetingProviderExecutor,
+    channels?: MeetingDistributionChannel[],
 ): Promise<void> {
     const message =
         `📋 *Meeting Summary*\n${summary}\n\n*Action Items:*\n` +
@@ -262,16 +279,36 @@ export async function distributeMeetingSummary(
         console.warn(`[meeting] speaking-agent synthesis failed (non-fatal): ${String(synthErr)}`);
     });
 
-    await executor({
-        connectorType: 'slack',
-        actionType: 'send_message',
-        payload: {
-            text: message,
-            language,
-        },
-        attempt: 1,
-        secretRefId: null,
-    });
+    // Default to a single Slack broadcast when no channels are configured.
+    const targets: MeetingDistributionChannel[] = channels?.length ? channels : [{ type: 'slack' }];
+
+    for (const ch of targets) {
+        if (ch.type === 'slack') {
+            await executor({
+                connectorType: 'slack',
+                actionType: 'send_message',
+                payload: { text: message, language, ...(ch.channel ? { channel: ch.channel } : {}) },
+                attempt: 1,
+                secretRefId: null,
+            });
+        } else if (ch.type === 'teams') {
+            await executor({
+                connectorType: 'teams',
+                actionType: 'send_message',
+                payload: { text: message, language, webhook_url: ch.webhookUrl },
+                attempt: 1,
+                secretRefId: null,
+            });
+        } else if (ch.type === 'email') {
+            await executor({
+                connectorType: 'email',
+                actionType: 'send_email',
+                payload: { to: ch.address, subject: 'Meeting Summary', body: message, language },
+                attempt: 1,
+                secretRefId: null,
+            });
+        }
+    }
 
     const base = gatewayBase();
     const patchResponse = await fetch(
@@ -304,6 +341,10 @@ export async function distributeMeetingSummary(
 
 export type RunFullMeetingPipelineParams = StartMeetingParams & {
     audioBuffer: Buffer;
+    /** Agent persona — passed to summarizeMeeting so the LLM summarises in role context. */
+    persona?: AgentPersonaRecord;
+    /** Channels to distribute the summary to. Defaults to Slack when omitted. */
+    distributionChannels?: MeetingDistributionChannel[];
 };
 
 /**
@@ -314,7 +355,7 @@ export async function runFullMeetingPipeline(
     params: RunFullMeetingPipelineParams,
     executor: MeetingProviderExecutor,
 ): Promise<{ sessionId: string; summary: string; actionItems: string[] }> {
-    const { audioBuffer, ...startParams } = params;
+    const { audioBuffer, persona, distributionChannels, ...startParams } = params;
 
     let sessionId = '';
     try {
@@ -353,6 +394,7 @@ export async function runFullMeetingPipeline(
             transcript,
             language,
             params.tenantId,
+            persona,
         );
 
         await logMeetingEvent({
@@ -373,8 +415,10 @@ export async function runFullMeetingPipeline(
             language,
             params.tenantId,
             executor,
+            distributionChannels,
         );
 
+        const channelNames = distributionChannels?.map((c) => c.type).join(', ') ?? 'slack';
         await logMeetingEvent({
             meetingSessionId: sessionId,
             tenantId: params.tenantId,
@@ -382,7 +426,7 @@ export async function runFullMeetingPipeline(
             agentId: params.agentId,
             platform: params.platform,
             eventType: 'summary_distributed',
-            summary: 'Meeting summary distributed to Slack',
+            summary: `Meeting summary distributed to ${channelNames}`,
         });
 
         await logMeetingEvent({
