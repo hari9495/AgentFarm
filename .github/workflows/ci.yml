@@ -39,7 +39,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 9.12.0
 
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
@@ -86,7 +86,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 9.12.0
 
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
@@ -127,7 +127,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 9.12.0
 
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
@@ -152,7 +152,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 9.12.0
 
       - name: Cache pnpm store
         uses: actions/cache@v4
@@ -194,7 +194,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 9.12.0
 
       - name: Restore pnpm cache
         uses: actions/cache@v4
@@ -260,7 +260,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 9.12.0
 
       - name: Restore pnpm cache
         uses: actions/cache@v4
@@ -368,7 +368,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 9.12.0
 
       - name: Restore pnpm cache
         uses: actions/cache@v4
@@ -430,7 +430,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 9.12.0
 
       - name: Restore pnpm cache
         uses: actions/cache@v4

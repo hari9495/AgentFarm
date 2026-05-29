@@ -6,7 +6,23 @@
  *
  * The global variable pattern keeps the map alive across Next.js hot-reloads in dev.
  */
-import { type TenantConnector } from "@agentfarm/connector-contracts";
+interface TenantConnector {
+    connectorId: string;
+    tenantId: string;
+    workspaceId: string;
+    tool: string;
+    category: string;
+    displayName: string;
+    status: string;
+    authMethod: string;
+    secretRefId: string | null;
+    baseUrl?: string;
+    configValues?: Record<string, string>;
+    lastHealthcheckAt: string | null;
+    lastErrorClass: string | null;
+    createdAt: string;
+    updatedAt: string;
+}
 
 declare global {
     // eslint-disable-next-line no-var

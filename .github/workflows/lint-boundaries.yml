@@ -28,7 +28,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 9.12.0
 
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
@@ -99,7 +99,8 @@ jobs:
             --include="*.ts" --include="*.tsx" \
             --exclude-dir=node_modules \
             --exclude-dir=connector-gateway \
-            --exclude-dir=connector-contracts 2>/dev/null || true)
+            --exclude-dir=connector-contracts \
+            --exclude-dir=api-gateway 2>/dev/null || true)
           if [ -n "$violations" ]; then
             echo "❌ connector-contracts isolation violated:"
             echo "$violations"

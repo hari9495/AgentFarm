@@ -11,7 +11,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-    transpilePackages: ['@agentfarm/connector-contracts'],
+
     async headers() {
         return [{ source: '/(.*)', headers: securityHeaders }];
     },
