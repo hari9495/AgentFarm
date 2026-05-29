@@ -2,7 +2,7 @@
 
 **Platform:** AgentFarm Multi-Tenant AI Agent Orchestration  
 **Date:** 2026-05-29  
-**Scope:** All 14 role-based agents across engineering, business, and operations domains
+**Scope:** 13 top-level agents + 1 Tester sub-agent across engineering, business, and operations domains
 
 ---
 
@@ -24,7 +24,7 @@
 14. [DevOps Engineer](#11-devops-engineer)
 15. [Business Analyst](#12-business-analyst)
 16. [Project Manager / Scrum Master](#13-project-manager--scrum-master)
-17. [Mobile Engineer](#14-mobile-engineer)
+17. [Mobile Engineer (Tester Sub-Agent)](#14-mobile-engineer-tester-sub-agent)
 18. [Cross-Agent Capabilities](#cross-agent-capabilities)
 19. [Governance & Safety Model](#governance--safety-model)
 
@@ -61,6 +61,8 @@ Each agent section follows the same structure:
 
 ## Agent Roster at a Glance
 
+### Top-Level Agents (13)
+
 | # | Agent | Actions | Connectors | Status |
 |---|---|---|---|---|
 | 1 | Recruiter | 26 | 22 | Production-ready |
@@ -74,9 +76,16 @@ Each agent section follows the same structure:
 | 9 | Corporate Assistant | 10 | 12 | Production-ready |
 | 10 | Customer Support Executive | 27 | 22 | Production-ready |
 | 11 | DevOps Engineer | 69+ | 18+ | Production-ready |
-| 12 | Business Analyst | 16 | ~5 | Implemented, pending profile extraction |
-| 13 | Project Manager / Scrum Master | 23 | 11 | Implemented, pending profile extraction |
-| 14 | Mobile Engineer | 15 | 15 | Implemented, pending registration |
+| 12 | Business Analyst | 16 | 13 | Production-ready |
+| 13 | Project Manager / Scrum Master | 23 | 11 | Production-ready |
+
+### Sub-Agents (1)
+
+Sub-agents are not directly subscribable by operators. They are spawned by a parent agent to handle a specialised task domain and operate under the parent's governance envelope.
+
+| Sub-Agent | Parent | Actions | Connectors | Status |
+|---|---|---|---|---|
+| Mobile Engineer | QA Tester | 15+ | 27 | Production-ready |
 
 ---
 
@@ -1131,11 +1140,13 @@ Jira · Linear · Asana · Trello · ClickUp · Confluence · Notion · Slack ·
 
 ---
 
-## 14. Mobile Engineer
+## 14. Mobile Engineer (Tester Sub-Agent)
+
+> **This is a sub-agent, not a top-level agent.** The Mobile Engineer is spawned exclusively by the QA Tester when a task requires native iOS or Android work. It is not directly subscribable by operators and cannot be assigned tasks independently. It operates under the Tester's governance envelope and inherits the Tester's approval chain.
 
 ### Role Summary
 
-The Mobile Engineer agent covers native iOS (Swift / SwiftUI) and Android (Kotlin / Jetpack Compose) development, including UI component generation, app building, test execution, push notification integration, deep linking, auth scaffolding, performance profiling, accessibility auditing, and App Store / Google Play submission.
+The Mobile Engineer sub-agent covers native iOS (Swift / SwiftUI) and Android (Kotlin / Jetpack Compose) development and testing, including UI component generation, app building, test execution, push notification integration, deep linking, auth scaffolding, performance profiling, accessibility auditing, and App Store / Google Play submission. The QA Tester spawns it via `workspace_subagent_spawn` when a mobile-specific test execution or mobile build task is part of a broader testing workflow.
 
 ### Human Equivalent
 

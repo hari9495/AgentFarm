@@ -46,11 +46,11 @@ import {
 import {
     BUSINESS_ANALYST_ROLE_ALLOWED_CONNECTORS,
     BUSINESS_ANALYST_ROLE_ALLOWED_LOCAL_ACTIONS,
-} from '../agents/business-analyst/business-analyst-role-profile.js';
+} from '../agents/business-analyst/business-analyst-agent-profile.js';
 import {
     PROJECT_MANAGER_ROLE_ALLOWED_CONNECTORS,
     PROJECT_MANAGER_ROLE_ALLOWED_LOCAL_ACTIONS,
-} from '../agents/project-manager/project-manager-role-profile.js';
+} from '../agents/project-manager/project-manager-agent-profile.js';
 
 export interface RoleProfile {
     roleKey: RoleKey;
