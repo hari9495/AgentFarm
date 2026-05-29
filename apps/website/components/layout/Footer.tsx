@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Github, Twitter, Linkedin } from "lucide-react";
+import { Twitter, Linkedin } from "lucide-react";
 
 const footerCols = [
     {
@@ -44,9 +44,8 @@ const footerCols = [
 ];
 
 const socials = [
-    { icon: Github, href: "https://github.com/agentfarm", label: "GitHub" },
-    { icon: Twitter, href: "https://twitter.com/agentfarm", label: "X / Twitter" },
-    { icon: Linkedin, href: "https://linkedin.com/company/agentfarm", label: "LinkedIn" },
+    { icon: Twitter, href: "https://twitter.com/agentfarms", label: "X / Twitter" },
+    { icon: Linkedin, href: "https://linkedin.com/company/agentfarms", label: "LinkedIn" },
 ];
 
 export default function Footer() {
