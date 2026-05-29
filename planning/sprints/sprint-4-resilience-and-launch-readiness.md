@@ -1,4 +1,4 @@
-# Sprint 4: Resilience And Launch Readiness
+﻿# Sprint 4: Resilience And Launch Readiness
 
 Status: CLOSED
 
@@ -96,8 +96,5 @@ Approver record:
 3. Security and Safety: Accepted
 4. Compliance: Accepted
 
-<!-- doc-sync: 2026-05-06 sprint-6 -->
-> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
-
-<!-- doc-sync: 2026-05-06 full-pass-2 -->
-> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
+<!-- doc-sync: 2026-05-29 sprint-18 -->
+> Last synchronized: 2026-05-29 (Sprint 18 — full documentation update).

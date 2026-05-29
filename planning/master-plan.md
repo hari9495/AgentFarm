@@ -1,4 +1,4 @@
-# AgentFarm Master Plan
+﻿# AgentFarm Master Plan
 ## Purpose
 Build role-based AI agents for companies with clear ownership, clear release gates, and simple weekly execution.
 Planning-first rule: no feature development starts until architecture baseline and decision gates are approved.
@@ -7,13 +7,13 @@ Planning-first rule: no feature development starts until architecture baseline a
 2. Keep strict safety and approval controls.
 3. Launch only when gold-standard quality is proven.
 ## Phases
-1. Validation and Architecture (Weeks 1-6) � **COMPLETED 2026-04-19**
+1. Validation and Architecture (Weeks 1-6) ï¿½ **COMPLETED 2026-04-19**
 - Validate customer need and workflow fit.
 - Confirm top gold standards and evidence rules.
 - Finalize MVP role scope.
 - Finalize product architecture and decision records.
 - Approve architecture gates before implementation.
-2. MVP Build (Weeks 7-20) � **COMPLETED 2026-04-30**
+2. MVP Build (Weeks 7-20) ï¿½ **COMPLETED 2026-04-30**
 - Built Developer Agent with 70+ local workspace action types across 12 tiers and 6 connector actions.
 - Ten LLM providers with health-score fallback routing (openai, azure_openai, github_models, anthropic, google, xai, mistral, together, agentfarm, auto).
 - Full approval and risk enforcement (HIGH/MEDIUM/LOW) with audit evidence.
@@ -27,7 +27,7 @@ Planning-first rule: no feature development starts until architecture baseline a
 - **Six-priority spec-alignment wave shipped (2026-05-07)**: long-term memory model + hooks, proactive CI/CVE signals, approval batching end-to-end, tester policy hardening, quality feedback loop into provider routing, and handoff protocol normalization. See planning/build-snapshot-2026-05-07.md.
 - **Question escalation + memory continuation shipped (2026-05-07)**: question creation/answer/pending/sweep routes, webhook answer handling, and code-review memory ingestion are wired in api-gateway and memory-service.
 - **Browser/Desktop evidence foundation shipped (2026-05-08)**: Azure Blob screenshot uploader, browser-action upload wrapper scaffold, desktop accessibility-tree capture, runtime audit integration scaffold, and dashboard session replay/evidence viewer are in repo. Targeted package tests/typechecks pass; repo-wide `pnpm quality:gate` is currently blocked by two failing question-route tests in api-gateway.
-3. Pilot (Weeks 21-30) � **ACTIVE**
+3. Pilot (Weeks 21-30) — **SPRINT 18 COMPLETE (2026-05-23)**
 - Run with 1-2 customers per operations/company-access-rollout.md.
 - Track quality, safety, and business value weekly.
 - Harden production connector SDK integrations.
@@ -133,14 +133,13 @@ Rule: development starts only after all architecture gates are approved.
 2. Complete final approval checklist from planning/v1-release-pack.md.
 3. Development may start only after all checklist items are complete.
 
-<!-- doc-sync: 2026-05-06 sprint-6 -->
-> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
 
-<!-- doc-sync: 2026-05-06 full-pass-2 -->
-> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
 
 <!-- doc-sync: 2026-05-07 six-priority-closure -->
 > Last synchronized: 2026-05-07 (Six-priority implementation closure and validation snapshot).
 
 <!-- doc-sync: 2026-05-08 observability-and-question-continuation -->
 > Last synchronized: 2026-05-08 (Question/memory continuation plus browser-desktop evidence foundation, with current quality-gate blocker recorded).
+
+<!-- doc-sync: 2026-05-29 sprint-18 -->
+> Last synchronized: 2026-05-29 (Sprint 18 — full documentation update).

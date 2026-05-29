@@ -1,9 +1,9 @@
-> **Status:** Mixed planned + shipped behavior. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for the authoritative gap tracker.
+﻿> **Status:** Sprint 18 complete. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for the authoritative status tracker.
 # API Reference
 
-> AgentFarm API Gateway — Fastify v5, port 3000 (default)
+> AgentFarm API Gateway â€” Fastify v5, port 3000 (default)
 > All endpoints are prefixed `/v1` unless noted.
-> Last updated: 2026-05-10
+> Last updated: 2026-05-29 (Sprint 18)
 
 ---
 
@@ -23,8 +23,8 @@ All protected endpoints require a valid session cookie (`agentfarm_session`) or 
 }
 ```
 
-- `scope: 'internal'` — admin/internal users; required for admin routes
-- `scope: 'customer'` — regular customers; required for standard routes
+- `scope: 'internal'` â€” admin/internal users; required for admin routes
+- `scope: 'customer'` â€” regular customers; required for standard routes
 
 ---
 
@@ -126,10 +126,10 @@ Create a new payment order.
 Stripe webhook receiver. Verifies `Stripe-Signature` header using `STRIPE_WEBHOOK_SECRET`. No auth session required.
 
 **Headers:**
-- `stripe-signature` — Stripe signature header
+- `stripe-signature` â€” Stripe signature header
 
 **Events handled:**
-- `payment_intent.succeeded` — marks order paid, creates invoice, triggers contract PDF + Zoho Sign submission
+- `payment_intent.succeeded` â€” marks order paid, creates invoice, triggers contract PDF + Zoho Sign submission
 
 ---
 
@@ -137,10 +137,10 @@ Stripe webhook receiver. Verifies `Stripe-Signature` header using `STRIPE_WEBHOO
 Razorpay webhook receiver. Verifies `x-razorpay-signature` HMAC-SHA256. No auth session required.
 
 **Headers:**
-- `x-razorpay-signature` — HMAC-SHA256 of `order_id|payment_id` using `RAZORPAY_KEY_SECRET`
+- `x-razorpay-signature` â€” HMAC-SHA256 of `order_id|payment_id` using `RAZORPAY_KEY_SECRET`
 
 **Events handled:**
-- `payment.captured` — marks order paid, creates invoice, triggers contract PDF + Zoho Sign submission
+- `payment.captured` â€” marks order paid, creates invoice, triggers contract PDF + Zoho Sign submission
 
 ---
 
@@ -172,10 +172,10 @@ List invoices for the authenticated customer.
 ## Zoho Sign Webhook
 
 ### `POST /v1/webhooks/zoho-sign`
-Zoho Sign completion webhook. No auth session — verified by token header.
+Zoho Sign completion webhook. No auth session â€” verified by token header.
 
 **Headers:**
-- `x-zoho-webhook-token` — must match `ZOHO_SIGN_WEBHOOK_TOKEN`
+- `x-zoho-webhook-token` â€” must match `ZOHO_SIGN_WEBHOOK_TOKEN`
 
 **Body:**
 ```json
@@ -206,10 +206,10 @@ List approval records.
 **Auth:** Internal session required.
 
 **Query params:**
-- `status` — `pending | approved | rejected`
-- `workspaceId` — filter by workspace
-- `limit` — max records (default 50)
-- `cursor` — pagination cursor
+- `status` â€” `pending | approved | rejected`
+- `workspaceId` â€” filter by workspace
+- `limit` â€” max records (default 50)
+- `cursor` â€” pagination cursor
 
 **Response `200`:**
 ```json
@@ -244,7 +244,7 @@ Get a single approval record including full approval packet.
 ---
 
 ### `POST /v1/approvals/:id/approve`
-Approve an action. Decision is immutable — returns 409 if already decided.
+Approve an action. Decision is immutable â€” returns 409 if already decided.
 
 **Auth:** Internal session required.
 
@@ -276,8 +276,8 @@ Query audit log (append-only).
 - `actorEmail`
 - `action`
 - `tenantId`
-- `from` — ISO 8601 start datetime
-- `to` — ISO 8601 end datetime
+- `from` â€” ISO 8601 start datetime
+- `to` â€” ISO 8601 end datetime
 - `limit`
 
 **Response `200`:**
@@ -304,8 +304,8 @@ Query audit log (append-only).
 Export audit log as CSV or JSON compliance pack.
 
 **Query params:**
-- `format` — `csv | json`
-- `from`, `to` — date range
+- `format` â€” `csv | json`
+- `from`, `to` â€” date range
 
 ---
 
@@ -486,7 +486,7 @@ Register a new MCP tool server.
 ## Language Routes
 
 ### `GET /v1/language/config`
-Get effective language config (user → workspace → tenant → default).
+Get effective language config (user â†’ workspace â†’ tenant â†’ default).
 
 ### `PUT /v1/language/workspace/:workspaceId`
 Set workspace language override.
@@ -557,9 +557,9 @@ All errors follow:
 ## Rate Limiting
 
 All public endpoints are rate-limited. Response headers:
-- `X-RateLimit-Limit` — requests per window
-- `X-RateLimit-Remaining` — remaining in current window
-- `X-RateLimit-Reset` — window reset timestamp
+- `X-RateLimit-Limit` â€” requests per window
+- `X-RateLimit-Remaining` â€” remaining in current window
+- `X-RateLimit-Reset` â€” window reset timestamp
 
 Webhook endpoints use per-IP limits with higher ceilings (100 req/min default).
 

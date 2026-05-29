@@ -1,4 +1,4 @@
----
+﻿---
 description: "Testing and quality gate discipline for AgentFarm CI and local validation"
 applyTo: "apps/**/*.test.ts,apps/**/*.spec.ts,services/**/*.test.ts,services/**/*.spec.ts,apps/website/tests/**/*.ts,scripts/**/*.mjs,.github/workflows/**/*.yml,operations/quality/**/*.md"
 ---
@@ -22,8 +22,5 @@ applyTo: "apps/**/*.test.ts,apps/**/*.spec.ts,services/**/*.test.ts,services/**/
 - For bug fixes, add a regression test that fails before the fix and passes after.
 - For cross-service changes, validate upstream and downstream contract behavior.
 
-<!-- doc-sync: 2026-05-06 sprint-6 -->
-> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
-
-<!-- doc-sync: 2026-05-06 full-pass-2 -->
-> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
+<!-- doc-sync: 2026-05-29 sprint-18 -->
+> Last synchronized: 2026-05-29 (Sprint 18 — full documentation update).

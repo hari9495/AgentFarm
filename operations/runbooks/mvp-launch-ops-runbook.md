@@ -1,4 +1,4 @@
-# MVP Launch Operations Runbook (Tasks 7.1, 8.2, 8.3)
+﻿# MVP Launch Operations Runbook (Tasks 7.1, 8.2, 8.3)
 
 ## Purpose
 Operational execution guide to close final MVP launch blockers after engineering completion.
@@ -9,15 +9,15 @@ All 24 local Sprint 1 tasks are **completed and validated**. The three tasks bel
 
 | Task | Status | Blocker |
 |------|--------|---------|
-| 7.1 — Website SWA deployment | ⏳ Blocked | GitHub secret `AZURE_STATIC_WEB_APPS_API_TOKEN_WEBSITE` not set |
-| 8.2 — Production deployment | ⏳ Blocked | Azure extension context not signed in |
-| 8.3 — Security/load/evidence gates | ⏳ Blocked | Requires deployed environment (8.2 first) |
+| 7.1 â€” Website SWA deployment | â³ Blocked | GitHub secret `AZURE_STATIC_WEB_APPS_API_TOKEN_WEBSITE` not set |
+| 8.2 â€” Production deployment | â³ Blocked | Azure extension context not signed in |
+| 8.3 â€” Security/load/evidence gates | â³ Blocked | Requires deployed environment (8.2 first) |
 
 ### Pre-Launch Engineering Evidence
 - API Gateway: 209 tests passing, typecheck clean
 - Agent Runtime: 118 tests passing, typecheck clean
 - Website: 28+ tests across 9 suites, typecheck clean
-- Quality gate: 33 checks — 32 PASS, 1 SKIP (DB snapshot, needs Docker)
+- Quality gate: 33 checks â€” 32 PASS, 1 SKIP (DB snapshot, needs Docker)
 - Approval enforcement + kill-switch: implemented and tested in `services/approval-service`
 - Audit and evidence dashboard: implemented and tested in `apps/website`
 - 18 connector plugin registry: implemented in `packages/connector-contracts` (13 named + 5 generic REST)
@@ -257,9 +257,9 @@ Ensure each workspace in the internal dashboard remembers its own last active ta
 
 | Credential | Where it appeared | Action required |
 |------------|-------------------|-----------------|
-| `POSTGRES_PASSWORD` (was `agentfarm`) | `docker-compose.yml` git history — commit `b6a2a1f` | Set a strong random password in your production secret store. Update `DATABASE_URL` to match. |
-| `agentfarm_test` (test DB password) | `docker-compose.test.yml` git history — commit `cdd775fe` | Rotate the test DB password before running integration tests against any shared environment. |
-| `API_SESSION_SECRET` | `docker-compose.yml` — was already using `${API_SESSION_SECRET}` | Verify this is set in CI secrets and production secret store; generate via `openssl rand -base64 64`. |
+| `POSTGRES_PASSWORD` (was `agentfarm`) | `docker-compose.yml` git history â€” commit `b6a2a1f` | Set a strong random password in your production secret store. Update `DATABASE_URL` to match. |
+| `agentfarm_test` (test DB password) | `docker-compose.test.yml` git history â€” commit `cdd775fe` | Rotate the test DB password before running integration tests against any shared environment. |
+| `API_SESSION_SECRET` | `docker-compose.yml` â€” was already using `${API_SESSION_SECRET}` | Verify this is set in CI secrets and production secret store; generate via `openssl rand -base64 64`. |
 | `DASHBOARD_API_TOKEN` | Same | Same. |
 
 ### How to set a strong random password (Linux/macOS)
@@ -274,9 +274,9 @@ openssl rand -base64 32
 
 ---
 
-## Authentication & Authorization Security Checklist (items 13–16)
+## Authentication & Authorization Security Checklist (items 13â€“16)
 
-### 13 — Auth provider: hand-rolled (acknowledged tech debt)
+### 13 â€” Auth provider: hand-rolled (acknowledged tech debt)
 
 AgentFarm uses a hand-rolled auth stack in `apps/api-gateway/src/routes/auth.ts` and
 `apps/website/lib/auth-store.ts`. The implementation includes:
@@ -297,7 +297,7 @@ AgentFarm uses a hand-rolled auth stack in `apps/api-gateway/src/routes/auth.ts`
 | MFA / passkey support | Not implemented |
 
 **Required before production:**
-- [ ] Implement account lockout after N failed login attempts (recommend: 10 attempts → 15 min lockout, stored in session/Redis)
+- [ ] Implement account lockout after N failed login attempts (recommend: 10 attempts â†’ 15 min lockout, stored in session/Redis)
 - [ ] Deliver password-reset emails (wire `forgot-password` route to a transactional email provider)
 - [ ] Add verified-email gate on first login
 
@@ -308,7 +308,7 @@ migration path.
 
 ---
 
-### 14 — Cross-tenant isolation ("logged in as A, hit B's URL")
+### 14 â€” Cross-tenant isolation ("logged in as A, hit B's URL")
 
 **Status: Enforced at the route level. Tests exist.**
 
@@ -317,14 +317,14 @@ session before reading or writing data:
 
 | Route file | Enforcement |
 |------------|-------------|
-| `routes/roles.ts` | `tenantId !== session.tenantId → 403 tenant_scope_violation` |
+| `routes/roles.ts` | `tenantId !== session.tenantId â†’ 403 tenant_scope_violation` |
 | `routes/workspace-session.ts` | `canAccessWorkspace(session, workspaceId)` (checks `session.workspaceIds`) |
-| `routes/governance-workflows.ts` | `session.workspaceIds.includes(workspaceId) → 403 workspace_scope_violation` |
-| `routes/plugin-loading.ts` | `session.workspaceIds.includes(workspaceId) → 403 workspace_scope_violation` |
+| `routes/governance-workflows.ts` | `session.workspaceIds.includes(workspaceId) â†’ 403 workspace_scope_violation` |
+| `routes/plugin-loading.ts` | `session.workspaceIds.includes(workspaceId) â†’ 403 workspace_scope_violation` |
 
 Tests covering this isolation:
-- `routes/roles.test.ts` — "role subscriptions endpoint enforces tenant scope" (403 for tenant_2 while session is tenant_1)
-- `routes/workspace-session.test.ts` — "returns forbidden when session cannot access requested workspace" (403 for ws_2 while session only has ws_1)
+- `routes/roles.test.ts` â€” "role subscriptions endpoint enforces tenant scope" (403 for tenant_2 while session is tenant_1)
+- `routes/workspace-session.test.ts` â€” "returns forbidden when session cannot access requested workspace" (403 for ws_2 while session only has ws_1)
 
 **Pre-launch manual test (item 14 attack):**
 1. Sign up as user A (tenant A).
@@ -337,16 +337,16 @@ Tests covering this isolation:
 
 ---
 
-### 15 — Session cookie flags
+### 15 â€” Session cookie flags
 
 **Status: Fixed in this sprint.**
 
 | Cookie | App | HttpOnly | SameSite | Secure |
 |--------|-----|----------|----------|--------|
-| `agentfarm_session` (API gateway) | `api-gateway` | ✅ | Strict | ✅ (production or `COOKIE_SECURE=true`) |
-| `agentfarm_session` (website) | `website` | ✅ | Strict | ✅ (`NODE_ENV=production`) |
-| `agentfarm_internal_session` | `website` | ✅ | Strict | ✅ (`NODE_ENV=production`) |
-| `agentfarm_gateway_session` | `website` | ✅ | Strict | ✅ (`NODE_ENV=production`) |
+| `agentfarm_session` (API gateway) | `api-gateway` | âœ… | Strict | âœ… (production or `COOKIE_SECURE=true`) |
+| `agentfarm_session` (website) | `website` | âœ… | Strict | âœ… (`NODE_ENV=production`) |
+| `agentfarm_internal_session` | `website` | âœ… | Strict | âœ… (`NODE_ENV=production`) |
+| `agentfarm_gateway_session` | `website` | âœ… | Strict | âœ… (`NODE_ENV=production`) |
 
 **To enable `Secure` in a non-production environment** (e.g. staging over HTTPS):
 ```bash
@@ -355,7 +355,7 @@ COOKIE_SECURE=true  # set in .env or secret store
 
 ---
 
-### 16 — Re-authentication for destructive actions
+### 16 â€” Re-authentication for destructive actions
 
 **Status: No destructive endpoints exist yet. Requirement documented here.**
 
@@ -384,7 +384,7 @@ if (!valid) {
 
 ### Confirming nothing sensitive is currently in git (run before each release)
 ```bash
-# Full history scan — requires gitleaks installed locally
+# Full history scan â€” requires gitleaks installed locally
 gitleaks detect --source . --config .gitleaks.toml --verbose
 
 # Quick grep for common patterns
@@ -427,11 +427,7 @@ The CI `secret-scan` job (`.github/workflows/ci.yml`) runs gitleaks on every pus
 3. Task 8.3 security, load, and freshness gates complete.
 4. MVP launch signoff approved by Product, Engineering, and Security leads.
 
-<!-- doc-sync: 2026-05-06 sprint-6 -->
-> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
 
-<!-- doc-sync: 2026-05-06 full-pass-2 -->
-> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
 
 
 ## Current Implementation Pointer (2026-05-07)
@@ -439,9 +435,9 @@ The CI `secret-scan` job (`.github/workflows/ci.yml`) runs gitleaks on every pus
 
 ---
 
-## Security Checklist: Admin Panel & Internal Tools (Items 17–21)
+## Security Checklist: Admin Panel & Internal Tools (Items 17â€“21)
 
-### Item 17 — Real Admin Panel with DB Exports
+### Item 17 â€” Real Admin Panel with DB Exports
 
 **Status**: Implemented
 
@@ -463,7 +459,7 @@ Export buttons are available on the Admin Console page (`/admin`) in the "Data E
 
 ---
 
-### Item 18 — Admin Panel Behind Its Own Login, Non-Obvious Path, 2FA
+### Item 18 â€” Admin Panel Behind Its Own Login, Non-Obvious Path, 2FA
 
 **Status**: Partially implemented. 2FA is a known gap.
 
@@ -475,14 +471,14 @@ Export buttons are available on the Admin Console page (`/admin`) in the "Data E
 #### Path obfuscation
 - The admin route is currently `/admin` (visible). For production, consider adding an env-var-gated path prefix (e.g., `AGENTFARM_ADMIN_PATH_TOKEN`) and validating it in the layout or middleware. This is documented as future work.
 
-#### 2FA — Known gap
+#### 2FA â€” Known gap
 - TOTP (RFC 6238) 2FA is not currently implemented.
 - **Recommendation**: Add a `totp_secret` column to the `users` table and enforce OTP validation for `admin`/`superadmin` logins using a library such as `otpauth`.
 - Until 2FA is live, enforce strong password requirements and consider IP-allowlisting the admin path in Azure Front Door or NGINX.
 
 ---
 
-### Item 19 — Admin Role = DB Flag, Not Hardcoded Email
+### Item 19 â€” Admin Role = DB Flag, Not Hardcoded Email
 
 **Status**: Implemented
 
@@ -494,12 +490,12 @@ Export buttons are available on the Admin Console page (`/admin`) in the "Data E
 
 ---
 
-### Item 20 — Append-Only Audit Log for Every Admin Action
+### Item 20 â€” Append-Only Audit Log for Every Admin Action
 
 **Status**: Implemented
 
 #### Table
-`company_audit_events` (SQLite) — schema:
+`company_audit_events` (SQLite) â€” schema:
 ```
 id, actor_id, actor_email, action, target_type, target_id,
 tenant_id, before_state, after_state, reason, created_at
@@ -516,7 +512,7 @@ tenant_id, before_state, after_state, reason, created_at
 | `bot.config_change` | `PATCH /api/admin/bots/[slug]` |
 
 #### Viewing the log
-- Admin UI: `/admin/audit` — real-time fetch from `GET /api/admin/audit-log`, supports action-filter tabs and free-text search.
+- Admin UI: `/admin/audit` â€” real-time fetch from `GET /api/admin/audit-log`, supports action-filter tabs and free-text search.
 - Export: `/api/admin/export/csv?table=company_audit_events`
 
 #### Append-only guarantee
@@ -525,7 +521,7 @@ tenant_id, before_state, after_state, reason, created_at
 
 ---
 
-### Item 21 — Staging Admin Account; Never Test Destructive Features as Founder
+### Item 21 â€” Staging Admin Account; Never Test Destructive Features as Founder
 
 **Status**: Procedure documented
 
@@ -545,7 +541,7 @@ Invoke-RestMethod -Method PATCH `
 
 #### Rules
 1. Never use your founder / superadmin account to test destructive features (role stripping, user deletion, data exports in prod).
-2. The staging admin account must not be granted `superadmin` role — use `admin` only.
+2. The staging admin account must not be granted `superadmin` role â€” use `admin` only.
 3. Rotate the staging account password after every destructive test.
 4. The staging account should be excluded from any real tenant data in production by operating under a dedicated staging tenant.
 
@@ -553,9 +549,9 @@ Invoke-RestMethod -Method PATCH `
 
 ---
 
-## Items 22–25: Input Validation, File Safety, Rate Limiting & XSS
+## Items 22â€“25: Input Validation, File Safety, Rate Limiting & XSS
 
-### Item 22 — Server-Side Input Validation
+### Item 22 â€” Server-Side Input Validation
 
 All API routes validate inputs on the server regardless of frontend constraints. Standard caps applied:
 
@@ -572,7 +568,7 @@ All API routes validate inputs on the server regardless of frontend constraints.
 
 Routes hardened: uth/login, uth/signup, uth/forgot-password, pprovals (GET limit capped at 500, POST fields capped), onboarding/complete, dmin/provision.
 
-### Item 23 — File Upload Safety
+### Item 23 â€” File Upload Safety
 
 No file upload routes exist in the current codebase. When uploads are added:
 - Set maxSize hard limit (e.g. 10 MB) in the route before reading the body.
@@ -580,13 +576,13 @@ No file upload routes exist in the current codebase. When uploads are added:
 - Never trust the client-supplied filename; generate a safe random name server-side.
 - Store uploaded files outside the webroot (e.g. Azure Blob, not public/).
 
-### Item 24 — Rate Limiting
+### Item 24 â€” Rate Limiting
 
-**Module**: pps/website/lib/rate-limit.ts — in-memory sliding-window, no Redis required.
+**Module**: pps/website/lib/rate-limit.ts â€” in-memory sliding-window, no Redis required.
 
 Two exported functions:
-- checkRateLimit(userId) — general 60 req / 1 min per authenticated user.
-- checkAuthRateLimit(key, windowMs, maxRequests) — customisable, keyed by arbitrary string (e.g. IP or email).
+- checkRateLimit(userId) â€” general 60 req / 1 min per authenticated user.
+- checkAuthRateLimit(key, windowMs, maxRequests) â€” customisable, keyed by arbitrary string (e.g. IP or email).
 
 Limits applied to unauthenticated auth endpoints:
 
@@ -601,46 +597,46 @@ All 429 responses include a Retry-After header (seconds to next allowed request)
 
 **Ops note**: Rate-limit state is process-local and resets on server restart. For multi-instance deployments, replace the Map with a Redis-backed store (e.g. ioredis sliding-window) and update checkAuthRateLimit.
 
-### Item 25 — XSS / User-Generated Content
+### Item 25 â€” XSS / User-Generated Content
 
 Next.js JSX text interpolation is safe by default (HTML-escapes all values). Audit findings:
 
 - layout.tsx uses dangerouslySetInnerHTML in two places:
-  1. Inline theme-detection script — hardcoded string literal, no user data. ✅ Safe.
-  2. JSON.stringify(jsonLd) for structured data — static constant, no user data. ✅ Safe.
+  1. Inline theme-detection script â€” hardcoded string literal, no user data. âœ… Safe.
+  2. JSON.stringify(jsonLd) for structured data â€” static constant, no user data. âœ… Safe.
 - No other dangerouslySetInnerHTML found across the codebase.
 - No innerHTML = assignments found.
 
 **Rules going forward**:
 - Never pass user-supplied strings to dangerouslySetInnerHTML.
 - If rich-text user content must be rendered as HTML (e.g. markdown previews), add isomorphic-dompurify and sanitize with DOMPurify.sanitize(html, { ALLOWED_TAGS: [...] }) before rendering.
-- Approval titles, reasons, bot names, and user names are always rendered as JSX text nodes — no sanitization needed beyond max-length enforcement.
+- Approval titles, reasons, bot names, and user names are always rendered as JSX text nodes â€” no sanitization needed beyond max-length enforcement.
 
 
 ---
 
-## Items 26–29: Costs & Spending Limits
+## Items 26â€“29: Costs & Spending Limits
 
-### Item 26 — Hard spending limits on every paid service
+### Item 26 â€” Hard spending limits on every paid service
 
 Spending limits must be set in each provider's billing portal **before** going live.
-No service stops charging automatically — the cap is yours to set and maintain.
+No service stops charging automatically â€” the cap is yours to set and maintain.
 
 | Service | Where to set the cap |
 |---------|---------------------|
-| OpenAI | platform.openai.com → Billing → Limits → "Set a hard limit" |
-| Azure OpenAI | Azure Portal → Cost Management + Billing → Budgets (set budget action = Stop) |
-| Anthropic | console.anthropic.com → Plans & Billing → Usage Limits |
-| AWS | CloudWatch Billing Alarm → SNS alert at 80% + Cost Budget action at 100% |
-| Google Cloud | console.cloud.google.com → Billing → Budgets → "Actions" → disable billing |
-| Twilio | console.twilio.com → Account → Balance Alerts |
-| SendGrid | app.sendgrid.com → Settings → Mail Settings → Send Frequency |
+| OpenAI | platform.openai.com â†’ Billing â†’ Limits â†’ "Set a hard limit" |
+| Azure OpenAI | Azure Portal â†’ Cost Management + Billing â†’ Budgets (set budget action = Stop) |
+| Anthropic | console.anthropic.com â†’ Plans & Billing â†’ Usage Limits |
+| AWS | CloudWatch Billing Alarm â†’ SNS alert at 80% + Cost Budget action at 100% |
+| Google Cloud | console.cloud.google.com â†’ Billing â†’ Budgets â†’ "Actions" â†’ disable billing |
+| Twilio | console.twilio.com â†’ Account â†’ Balance Alerts |
+| SendGrid | app.sendgrid.com â†’ Settings â†’ Mail Settings â†’ Send Frequency |
 
 Record the USD values you set as commented-out reference vars in .env.example
 (section "External service spending limits" at the bottom of the file). This makes
 the caps visible in version control next to the code that calls each service.
 
-### Item 27 — Per-bot daily token limit
+### Item 27 â€” Per-bot daily token limit
 
 AgentFarm uses an in-process sliding-window token budget inside gent-runtime.
 The budget is scoped per 	enant:workspace:bot and persisted to a JSON state file.
@@ -660,7 +656,7 @@ tasks are routed to the approval queue instead of executing.
 Raise AF_TOKEN_BUDGET_DAILY_LIMIT deliberately per bot, not globally. Start low
 (500 000) and increase only after validating actual usage patterns.
 
-### Item 28 — Hard iteration ceiling on agent loops
+### Item 28 â€” Hard iteration ceiling on agent loops
 
 AutonomousLoopOrchestrator.execute() enforces a hard cap of **25 iterations** per
 loop run regardless of the caller-supplied max_iterations value. The constant
@@ -673,9 +669,9 @@ Additional ceilings already in place:
 - All loop configs also accept 	imeout_seconds and max_cost_tokens kill-switches.
 
 **Ops rule**: any new loop that calls a paid API must include an explicit max_iterations
-with maxReplans/max_fix_attempts set to ≤ 5 and a 	imeout_seconds kill-switch.
+with maxReplans/max_fix_attempts set to â‰¤ 5 and a 	imeout_seconds kill-switch.
 
-### Item 29 — Billing alert email
+### Item 29 â€” Billing alert email
 
 Set BILLING_ALERT_EMAIL in .env to an address that pushes a phone notification.
 Use a team alias (not a personal inbox) for resilience, and confirm the alias is
@@ -690,16 +686,16 @@ connected to a push-notification service (PagerDuty, OpsGenie, Slack mobile push
 1. Set BILLING_ALERT_EMAIL in .env.production and verify it delivers within 5 minutes.
 2. Configure each external service (AWS CloudWatch, OpenAI billing alert, etc.) to also
    email or call the same address at 80% of the monthly cap.
-3. Confirm the recipient has a mobile push rule — not just an email notification.
+3. Confirm the recipient has a mobile push rule â€” not just an email notification.
 
 
 ---
 
-## Items 30–50: Environments, Logging, Code & Git, Legal, Ops
+## Items 30â€“50: Environments, Logging, Code & Git, Legal, Ops
 
 ---
 
-### Item 30 — Three environments: local / staging / production
+### Item 30 â€” Three environments: local / staging / production
 
 Every code change must pass through three environments in this order:
 
@@ -715,14 +711,14 @@ Use separate .env.staging and .env.production files (never commit secrets).
 
 ---
 
-### Item 31 — Disable debug mode, stack traces, and verbose errors in production
+### Item 31 â€” Disable debug mode, stack traces, and verbose errors in production
 
 **Status**: enforced by code.
 
 - API gateway: setErrorHandler in pps/api-gateway/src/main.ts catches all 5xx
-  errors and returns { error: "internal server error" } — never a stack trace.
+  errors and returns { error: "internal server error" } â€” never a stack trace.
 - Website: pps/website/app/error.tsx and pps/website/app/global-error.tsx show
-  a plain "Something went wrong" message — no error.message or digest rendered.
+  a plain "Something went wrong" message â€” no error.message or digest rendered.
 - NODE_ENV=production must be set in the hosting platform (Vercel, etc.).
 
 **Checklist before launch:**
@@ -732,7 +728,7 @@ Use separate .env.staging and .env.production files (never commit secrets).
 
 ---
 
-### Item 32 — CORS: lock to actual domain, not "*"
+### Item 32 â€” CORS: lock to actual domain, not "*"
 
 **Status**: enforced by code in pps/api-gateway/src/main.ts.
 
@@ -747,19 +743,19 @@ header is not in the allow-list, the gateway returns 403 origin not allowed.
 
 ---
 
-### Item 33 — HTTPS everywhere
+### Item 33 â€” HTTPS everywhere
 
-HTTPS is handled at the edge (Vercel, Cloudflare, Nginx termination) — not in application code.
+HTTPS is handled at the edge (Vercel, Cloudflare, Nginx termination) â€” not in application code.
 
 **Pre-launch checklist:**
 1. Confirm TLS certificate is valid and auto-renews (Let's Encrypt via Vercel/Cloudflare).
 2. Enable HSTS in Vercel project settings: Strict-Transport-Security: max-age=31536000; includeSubDomains.
-3. Redirect HTTP → HTTPS at the CDN or load balancer level — never skip this for admin panels or internal tools.
+3. Redirect HTTP â†’ HTTPS at the CDN or load balancer level â€” never skip this for admin panels or internal tools.
 4. Verify: curl -I http://agentfarm.ai should return a 301/308 redirect, not content.
 
 ---
 
-### Item 34 — Health-check endpoint + uptime monitoring
+### Item 34 â€” Health-check endpoint + uptime monitoring
 
 **Status**: endpoints exist.
 
@@ -770,27 +766,27 @@ HTTPS is handled at the edge (Vercel, Cloudflare, Nginx termination) — not in 
 | GET /api/health | website (port 3002) | No | { status, service, ts } |
 
 **Set up uptime monitoring (free options):**
-- UptimeRobot: monitor.uptimerobot.com — create HTTP monitors for each /health URL.
-- BetterStack: betterstack.com/uptime — free tier covers several monitors with 3-min checks.
+- UptimeRobot: monitor.uptimerobot.com â€” create HTTP monitors for each /health URL.
+- BetterStack: betterstack.com/uptime â€” free tier covers several monitors with 3-min checks.
 - Configure alert to SMS/push, not just email.
 
 ---
 
-### Item 35 — SPF, DKIM, and DMARC for outbound email
+### Item 35 â€” SPF, DKIM, and DMARC for outbound email
 
 **Why**: Without these DNS records, password-reset and notification emails land in spam or get dropped silently.
 
 **How** (one-time, done in your DNS provider):
 1. **SPF**: Add a TXT record: =spf1 include:yoursendgridprovider.com ~all
-2. **DKIM**: Your email provider (Resend, SendGrid, SES) provides a CNAME or TXT record — follow their guide.
+2. **DKIM**: Your email provider (Resend, SendGrid, SES) provides a CNAME or TXT record â€” follow their guide.
 3. **DMARC**: Add a TXT record: =DMARC1; p=quarantine; rua=mailto:dmarc-reports@yourdomain.com
 
-**Verify**: Use mail-tester.com — send a test email and confirm score is 10/10.
+**Verify**: Use mail-tester.com â€” send a test email and confirm score is 10/10.
 Do this before sending any transactional email in production.
 
 ---
 
-### Item 36 — Error logging to a service (Sentry)
+### Item 36 â€” Error logging to a service (Sentry)
 
 **Setup steps (one-time):**
 1. Create a project at sentry.io (free tier handles ~5 000 errors/month).
@@ -806,16 +802,16 @@ API gateway already logs all 5xx errors with console.error('[unhandled-error]', 
 
 ---
 
-### Item 37 — Don't log PII
+### Item 37 â€” Don't log PII
 
 **Policy:**
 - Never log passwords, password hashes, session tokens, credit card numbers, or full email addresses in error-level messages.
 - Login failures log only userId (not email) in structured fields.
-- Rate-limit keys using IP or truncated session token — never a full token or email.
+- Rate-limit keys using IP or truncated session token â€” never a full token or email.
 
 **Existing safeguards:**
 - exportTableCsv in auth-store redacts password_hash and 	oken_hash columns.
-- Session tokens are stored hashed (	oken_hash) — the cleartext token is never written to the DB.
+- Session tokens are stored hashed (	oken_hash) â€” the cleartext token is never written to the DB.
 - Delete-account endpoint logs nothing about the user; result is a silent 200.
 
 **Pre-launch checklist:**
@@ -824,10 +820,10 @@ API gateway already logs all 5xx errors with console.error('[unhandled-error]', 
 
 ---
 
-### Item 38 — 30 days of logs minimum
+### Item 38 â€” 30 days of logs minimum
 
 Configure your log provider to retain logs for at least 30 days:
-- **Vercel**: Functions → Log Drains → connect Papertrail, Logtail, or Datadog (free tiers start at 7 days; paid plans for 30+).
+- **Vercel**: Functions â†’ Log Drains â†’ connect Papertrail, Logtail, or Datadog (free tiers start at 7 days; paid plans for 30+).
 - **Datadog**: 15-day retention on the free trial; 30 days on the cheapest paid plan.
 - **Logtail / Better Stack**: 3 days free, 30 days on the Starter plan.
 - **Self-hosted**: logrotate with otate 30 (one file per day, keep 30).
@@ -836,15 +832,15 @@ Put a calendar reminder to verify retention settings 1 week before launch.
 
 ---
 
-### Item 39 — Commit to git before every major agent change
+### Item 39 â€” Commit to git before every major agent change
 
 **Rule**: run git add -A && git commit -m "checkpoint: before <change>" before every
 agent task that modifies more than one file. This is your undo button. The agent has no
-memory — "undo" means git checkout to the last commit.
+memory â€” "undo" means git checkout to the last commit.
 
 ---
 
-### Item 40 — Read the diff before accepting
+### Item 40 â€” Read the diff before accepting
 
 Before accepting an agent change, review every file it touched with git diff --staged.
 If any chunk is unclear, ask the agent to explain it line-by-line before merging.
@@ -852,7 +848,7 @@ Never use "Accept All" without at least skimming auth, payment, and permission-r
 
 ---
 
-### Item 41 — Plain-English product rules doc
+### Item 41 â€” Plain-English product rules doc
 
 Location: planning/master-plan.md and mvp/mvp-scope-and-gates.md.
 Add a "Business Rules" section to one of these docs listing rules that must always hold:
@@ -863,19 +859,19 @@ When the agent rewrites a feature and "forgets" a rule, this doc is how you catc
 
 ---
 
-### Item 42 — Human dev review for payments, auth, and sensitive data
+### Item 42 â€” Human dev review for payments, auth, and sensitive data
 
 Before launch: hire a senior engineer for a 1-hour targeted security review of:
-1. pps/website/lib/auth-store.ts — auth, sessions, role assignment
-2. pps/api-gateway/src/routes/billing.ts — payment flows
-3. pps/website/app/api/auth/* — all auth endpoints
-4. pps/api-gateway/src/main.ts — CORS, headers, rate limits
+1. pps/website/lib/auth-store.ts â€” auth, sessions, role assignment
+2. pps/api-gateway/src/routes/billing.ts â€” payment flows
+3. pps/website/app/api/auth/* â€” all auth endpoints
+4. pps/api-gateway/src/main.ts â€” CORS, headers, rate limits
 
 Ask them specifically: "Are there any missing authorization checks or unsafe queries?"
 
 ---
 
-### Item 43 — Privacy policy and terms of service
+### Item 43 â€” Privacy policy and terms of service
 
 **Status**: privacy policy exists at /privacy in the website.
 
@@ -887,7 +883,7 @@ Ask them specifically: "Are there any missing authorization checks or unsafe que
 
 ---
 
-### Item 44 — Applicable privacy laws
+### Item 44 â€” Applicable privacy laws
 
 Identify which laws apply based on where your users are:
 
@@ -903,13 +899,13 @@ If you have EU users, you need a GDPR-compliant privacy notice and a lawful basi
 
 ---
 
-### Item 45 — "Delete my account" feature
+### Item 45 â€” "Delete my account" feature
 
 **Status**: implemented.
 
-- deleteAccount(userId) in pps/website/lib/auth-store.ts — anonymises PII columns,
+- deleteAccount(userId) in pps/website/lib/auth-store.ts â€” anonymises PII columns,
   deletes sessions, sets deleted_at tombstone (prevents ID reuse).
-- DELETE /api/auth/delete-account route in pps/website/app/api/auth/delete-account/route.ts —
+- DELETE /api/auth/delete-account route in pps/website/app/api/auth/delete-account/route.ts â€”
   requires valid session, rate-limited to 3/15 min, clears session cookie on success.
 - Migration: ALTER TABLE users ADD COLUMN deleted_at INTEGER runs on startup.
 
@@ -922,19 +918,19 @@ If you have EU users, you need a GDPR-compliant privacy notice and a lawful basi
 
 ---
 
-### Item 46 — Cookie consent banner
+### Item 46 â€” Cookie consent banner
 
 **Status**: CookieConsent component exists at pps/website/components/shared/CookieConsent.tsx.
 
 **Pre-launch checklist:**
 1. Verify the banner is rendered on first visit for all pages (check pps/website/app/layout.tsx).
 2. Ensure non-essential scripts (analytics, ad trackers) only load after "accepted" is stored.
-3. "Declined" state must actually block non-essential cookies — not just hide the banner.
+3. "Declined" state must actually block non-essential cookies â€” not just hide the banner.
 4. If using Vercel Analytics: it is privacy-preserving (no cookies), so consent is not required.
 
 ---
 
-### Item 47 — Disaster recovery runbook: top 3 scenarios
+### Item 47 â€” Disaster recovery runbook: top 3 scenarios
 
 #### Scenario A: Database corrupted / lost
 
@@ -964,13 +960,13 @@ If you have EU users, you need a GDPR-compliant privacy notice and a lawful basi
 
 ---
 
-### Item 48 — Maintenance mode
+### Item 48 â€” Maintenance mode
 
 **Status**: implemented.
 
 Set NEXT_PUBLIC_MAINTENANCE_MODE=true in the hosting platform's environment variable
-settings (Vercel: Project → Settings → Environment Variables → Override for Production).
-No redeploy required — the middleware reads the env var at the edge.
+settings (Vercel: Project â†’ Settings â†’ Environment Variables â†’ Override for Production).
+No redeploy required â€” the middleware reads the env var at the edge.
 
 - /api/health and /maintenance remain available during maintenance.
 - All other routes return 503 Service Unavailable (JSON for API routes, redirect for pages).
@@ -978,13 +974,13 @@ No redeploy required — the middleware reads the env var at the edge.
 
 ---
 
-### Item 49 — Alerting: failed payments, signup spikes, error spikes, server down
+### Item 49 â€” Alerting: failed payments, signup spikes, error spikes, server down
 
 | Alert | Where to configure | Threshold |
 |-------|-------------------|-----------|
 | Server down | UptimeRobot / BetterStack (free) | /health non-200 for 2 min |
 | Error spike | Sentry lertRules or Datadog monitor | > 10 errors/min |
-| Failed payments | Stripe Dashboard → Alerts → Payment failures | Any failure sends email |
+| Failed payments | Stripe Dashboard â†’ Alerts â†’ Payment failures | Any failure sends email |
 | Signup spike | Custom metric in log aggregator | > 50 signups/hr from single IP |
 | Token budget hit | BILLING_ALERT_EMAIL (see items 26-29) | 80% / 100% of daily limit |
 
@@ -993,9 +989,9 @@ Both are free and take < 10 minutes to configure.
 
 ---
 
-### Item 50 — Shared access and renewal reminders
+### Item 50 â€” Shared access and renewal reminders
 
-**Access inventory — keep updated in a shared password manager (1Password, Bitwarden Teams):**
+**Access inventory â€” keep updated in a shared password manager (1Password, Bitwarden Teams):**
 
 | System | What to share |
 |--------|--------------|
@@ -1006,6 +1002,9 @@ Both are free and take < 10 minutes to configure.
 | SSL certificates | Auto-renew enabled; calendar reminder 30 days before expiry |
 
 **Rules:**
-1. No single point of failure — at least two people can access each system.
+1. No single point of failure â€” at least two people can access each system.
 2. Put a calendar reminder on every domain and SSL expiry date, starting 60 days out.
 3. Never store production credentials only in someone's personal vault.
+
+<!-- doc-sync: 2026-05-29 sprint-18 -->
+> Last synchronized: 2026-05-29 (Sprint 18 — full documentation update).

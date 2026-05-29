@@ -1,4 +1,4 @@
-# Database Integration Testing Runbook
+﻿# Database Integration Testing Runbook
 
 ## Purpose
 Provide a repeatable, real-database validation workflow for AgentFarm runtime persistence paths, especially capability snapshot migration and restart-load behavior.
@@ -196,11 +196,7 @@ Recovery:
 2. For repeat smoke runs with deterministic first-start behavior, set a new `AF_DB_SMOKE_BOT_ID` per run.
 3. Document every DB incident or migration anomaly in `operations/quality/8.1-quality-gate-report.md`.
 
-<!-- doc-sync: 2026-05-06 sprint-6 -->
-> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
 
-<!-- doc-sync: 2026-05-06 full-pass-2 -->
-> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
 
 
 ## Current Implementation Pointer (2026-05-07)
@@ -214,3 +210,6 @@ Recovery:
 pnpm db:backfill:replay
 ```
 4. Replay endpoint is now Prisma-only; legacy sessions must be backfilled before strict replay mode can return data.
+
+<!-- doc-sync: 2026-05-29 sprint-18 -->
+> Last synchronized: 2026-05-29 (Sprint 18 — full documentation update).

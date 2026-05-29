@@ -1,7 +1,7 @@
-> **Status:** Mixed planned + shipped behavior. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for the authoritative gap tracker.
+﻿> **Status:** Sprint 18 complete. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for the authoritative status tracker.
 # AgentFarm Language System
 
-> Last updated: May 10, 2026 | AgentFarm monorepo audit
+> Last updated: 2026-05-29 (Sprint 18)
 
 Full reference for the language detection and resolution system across `apps/agent-runtime/src/language-resolver.ts` and `apps/api-gateway/src/routes/language.ts`.
 
@@ -31,11 +31,11 @@ Detects language from Unicode character ranges:
 
 | Language | Code | Unicode Range(s) |
 |---|---|---|
-| Japanese | `ja` | Hiragana (U+3040–U+309F), Katakana (U+30A0–U+30FF), CJK (U+4E00–U+9FFF) |
-| Korean | `ko` | Hangul (U+AC00–U+D7AF), Hangul Jamo (U+1100–U+11FF) |
-| Arabic | `ar` | Arabic block (U+0600–U+06FF) |
-| Hindi | `hi` | Devanagari (U+0900–U+097F) |
-| English | `en` | ASCII letters (U+0041–U+007A) as fallback |
+| Japanese | `ja` | Hiragana (U+3040â€“U+309F), Katakana (U+30A0â€“U+30FF), CJK (U+4E00â€“U+9FFF) |
+| Korean | `ko` | Hangul (U+AC00â€“U+D7AF), Hangul Jamo (U+1100â€“U+11FF) |
+| Arabic | `ar` | Arabic block (U+0600â€“U+06FF) |
+| Hindi | `hi` | Devanagari (U+0900â€“U+097F) |
+| English | `en` | ASCII letters (U+0041â€“U+007A) as fallback |
 
 Returns `undefined` if the text is too short or no script is detected with sufficient confidence.
 
@@ -55,7 +55,7 @@ type LanguageContext = {
   userId?: string;
   inputText?: string;     // For text-based detection
   audioLanguage?: string; // From voice provider (e.g. Whisper)
-  confidence?: number;    // Audio detection confidence (0.0–1.0)
+  confidence?: number;    // Audio detection confidence (0.0â€“1.0)
 }
 ```
 
@@ -64,7 +64,7 @@ type LanguageContext = {
 type ResolvedLanguage = {
   language: string;   // BCP-47 language code (e.g. "en", "ja", "ar")
   source: 'audio' | 'text' | 'user_profile' | 'workspace' | 'tenant' | 'default';
-  confidence: number; // 0.0–1.0
+  confidence: number; // 0.0â€“1.0
 }
 ```
 
@@ -95,10 +95,10 @@ if tenantConfig.defaultLanguage != 'en':
 return { language: 'en', source: 'default', confidence: 1.0 }
 ```
 
-All HTTP calls to the gateway are fire-safe — errors fall through to the next cascade level.
+All HTTP calls to the gateway are fire-safe â€” errors fall through to the next cascade level.
 
 ### `getOutputLanguage(ctx: LanguageContext): Promise<string>`
-Fire-safe wrapper around `resolveLanguage` — returns `"en"` on any error. Used in post-task closeout.
+Fire-safe wrapper around `resolveLanguage` â€” returns `"en"` on any error. Used in post-task closeout.
 
 ---
 
@@ -108,7 +108,7 @@ Fire-safe wrapper around `resolveLanguage` — returns `"en"` on any error. Used
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `tenantId` | `String` @unique | — | Tenant identifier |
+| `tenantId` | `String` @unique | â€” | Tenant identifier |
 | `defaultLanguage` | `String` | `"en"` | Default output language for all agents |
 | `ticketLanguage` | `String` | `"en"` | Language for Jira/Linear comments |
 | `autoDetect` | `Boolean` | `true` | Whether to use text/audio detection |
@@ -157,11 +157,11 @@ Fire-safe wrapper around `resolveLanguage` — returns `"en"` on any error. Used
 ## Voice Integration
 
 For meeting sessions (`MeetingSession.language`), the language is resolved from:
-1. `agentVoiceId` — VoxCPM2 cloned voice ID
-2. `resolvedLanguage` — BCP-47 code stored after resolution
+1. `agentVoiceId` â€” VoxCPM2 cloned voice ID
+2. `resolvedLanguage` â€” BCP-47 code stored after resolution
 3. Meeting transcript is processed in the resolved language
 
-**VoxCPM2 TTS:** Docker image at `docker/voxcpm2/` — self-hosted text-to-speech for multilingual agent voice.
+**VoxCPM2 TTS:** Docker image at `docker/voxcpm2/` â€” self-hosted text-to-speech for multilingual agent voice.
 
 ---
 

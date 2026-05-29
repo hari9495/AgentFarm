@@ -4,19 +4,20 @@ This folder contains shared control-plane IaC for AgentFarm.
 
 ## Status
 
-IaC templates are planned. Production deployment is blocked pending Azure sign-in (Tasks 8.2/8.3). See [operations/runbooks/mvp-launch-ops-runbook.md](../../operations/runbooks/mvp-launch-ops-runbook.md) for execution steps.
+IaC templates are in place. Production deployment is pending Azure sign-in (Tasks 8.2/8.3). See [operations/runbooks/mvp-launch-ops-runbook.md](../../operations/runbooks/mvp-launch-ops-runbook.md) for execution steps.
 
-Application quality gate: **PASS** (EXIT_CODE=0, 2026-05-04). All service code is production-ready pending infrastructure provisioning.
+Application quality gate: **47/47 PASS** (2026-05-23, Sprint 18). All service code is production-ready pending infrastructure provisioning.
 
 ## Planned Resources (MVP)
 
 | Resource | Purpose |
 |----------|---------|
-| Azure PostgreSQL | Primary relational store for tenant, workspace, bot, approval, and audit records |
+| Azure PostgreSQL + pgvector | Primary relational store + vector embeddings for episodic/semantic memory |
 | Azure Redis | Session cache and ephemeral queue backing |
-| Azure Container Registry | Bot and runtime container images |
+| Azure Container Registry | Bot, runtime, and desktop-agent container images |
 | Azure Key Vault | Connector OAuth tokens, session secrets — stored as `kv://` references only |
 | Azure Monitor Workspace | Structured logging and telemetry for all services |
+| Azure OpenAI (embeddings) | text-embedding-3-small for pgvector episodic + semantic memory |
 
 ## Deployment Approach
 
@@ -36,8 +37,5 @@ azd up
 - All connector credentials must be injected via Key Vault references at runtime
 - Least-privilege managed identities for all service-to-service access
 
-<!-- doc-sync: 2026-05-06 sprint-6 -->
-> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
-
-<!-- doc-sync: 2026-05-06 full-pass-2 -->
-> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
+<!-- doc-sync: 2026-05-29 sprint-18 -->
+> Last synchronized: 2026-05-29 (Sprint 18 — production-ready service code, pgvector added to required resources).

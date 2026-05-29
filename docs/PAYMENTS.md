@@ -1,8 +1,8 @@
-> **Status:** Mixed planned + shipped behavior. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for the authoritative gap tracker.
+> **Status:** Stripe checkout session, webhook handler (checkout.session.completed + payment_intent.succeeded), Razorpay webhook, and Zoho Sign contract flow are all shipped (Sprint 13/16). Invoice download and per-agent billing breakdown are also shipped (Sprint 15). See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for details.
 # Payments & E-Signature
 
 > AgentFarm dual-provider payment infrastructure (Stripe + Razorpay) with Zoho Sign e-signature contract workflow.
-> Last updated: 2026-05-10
+> Last updated: 2026-05-29 (Sprint 16)
 
 ---
 

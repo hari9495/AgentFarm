@@ -1,4 +1,4 @@
-# AgentFarm Copilot Instructions
+﻿# AgentFarm Copilot Instructions
 
 ## Project Context
 AgentFarm is a TypeScript pnpm monorepo with these primary boundaries:
@@ -33,8 +33,5 @@ AgentFarm is a TypeScript pnpm monorepo with these primary boundaries:
 - Update nearby planning or operations docs when architecture-level behavior changes.
 - Keep runbooks and quality docs aligned with actual scripts and workflow names.
 
-<!-- doc-sync: 2026-05-06 sprint-6 -->
-> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
-
-<!-- doc-sync: 2026-05-06 full-pass-2 -->
-> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
+<!-- doc-sync: 2026-05-29 sprint-18 -->
+> Last synchronized: 2026-05-29 (Sprint 18 — full documentation update).

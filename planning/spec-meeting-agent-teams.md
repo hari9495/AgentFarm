@@ -1,4 +1,4 @@
-# AgentFarm Spec: Teams Meeting Agent
+﻿# AgentFarm Spec: Teams Meeting Agent
 
 ## Purpose
 Define how a workspace bot can join Microsoft Teams meetings as an AI-disclosed participant, provide standup updates, answer scoped questions, and support interview workflows with human oversight.
@@ -386,12 +386,11 @@ Bots must understand a question in the context of the full meeting conversation 
 1. Teams Graph auth and consent
 - planning/spec-teams-graph-auth-and-consent.md
 
-<!-- doc-sync: 2026-05-06 sprint-6 -->
-> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
 
-<!-- doc-sync: 2026-05-06 full-pass-2 -->
-> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
 
 
 ## Current Implementation Pointer (2026-05-07)
 1. For the latest built-state summary and file map, see planning/build-snapshot-2026-05-07.md.
+
+<!-- doc-sync: 2026-05-29 sprint-18 -->
+> Last synchronized: 2026-05-29 (Sprint 18 — full documentation update).

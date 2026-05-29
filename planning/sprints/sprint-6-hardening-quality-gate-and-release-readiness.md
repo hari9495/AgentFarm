@@ -1,4 +1,4 @@
-# Sprint 6: Hardening, Quality Gate, and Release Readiness
+﻿# Sprint 6: Hardening, Quality Gate, and Release Readiness
 
 Status: CLOSED
 
@@ -69,5 +69,5 @@ Sprint 6 Hardening, Quality Gate, and Release Readiness is accepted and closed.
 
 Decision: Proceed to release signoff workflow.
 
-<!-- doc-sync: 2026-05-06 full-pass-2 -->
-> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
+<!-- doc-sync: 2026-05-29 sprint-18 -->
+> Last synchronized: 2026-05-29 (Sprint 18 — full documentation update).

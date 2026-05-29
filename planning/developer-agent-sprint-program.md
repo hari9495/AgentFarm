@@ -1,4 +1,4 @@
-# AgentFarm Developer Agent Sprint Program
+﻿# AgentFarm Developer Agent Sprint Program
 
 ## Purpose
 Convert the MVP Developer Agent roadmap into sprint-wise execution documents that teams can run in sequence without breaking MVP guardrails.
@@ -45,12 +45,11 @@ Convert the MVP Developer Agent roadmap into sprint-wise execution documents tha
 ## Delivery Rule
 Execute sprints in order. Do not start Sprint 2 implementation until Sprint 1 exit gate is passed; do not start Sprint 3 implementation until Sprint 2 exit gate is passed.
 
-<!-- doc-sync: 2026-05-06 sprint-6 -->
-> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
 
-<!-- doc-sync: 2026-05-06 full-pass-2 -->
-> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
 
 
 ## Current Implementation Pointer (2026-05-07)
 1. For the latest built-state summary and file map, see planning/build-snapshot-2026-05-07.md.
+
+<!-- doc-sync: 2026-05-29 sprint-18 -->
+> Last synchronized: 2026-05-29 (Sprint 18 — full documentation update).

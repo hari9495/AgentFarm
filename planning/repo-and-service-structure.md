@@ -1,4 +1,4 @@
-# AgentFarm Repo and Service Structure
+﻿# AgentFarm Repo and Service Structure
 
 ## Purpose
 Define the monorepo folder layout, service names, package names, and file conventions
@@ -19,80 +19,80 @@ that every engineer uses from day one. This is the source of truth for "where do
 
 ```
 agentfarm/
-├── apps/                        # Deployable applications (6)
-│   ├── api-gateway/             # Fastify 5 — control plane API entry point (port 3000)
-│   │                            # 62 route files, 898 tests
-│   ├── agent-runtime/           # Fastify 5 — AI agent execution engine (port 4000)
-│   │                            # 9 LLM providers, 12 action tiers, 906 tests
-│   ├── orchestrator/            # Fastify 5 — multi-agent workflow coordinator (port 3011)
-│   │                            # GOAP A* planner, routine scheduler, proactive signal detector,
-│   │                            # agent handoff manager (pending/accepted/completed/failed/timed_out)
-│   ├── trigger-service/         # Fastify 5 — inbound webhook/email/Slack intake (port 3002)
-│   │                            # 49 tests
-│   ├── dashboard/               # Next.js 15 — operator and tenant UI (port 3001)
-│   │                            # 51 pages, 159 proxy routes
-│   └── website/                 # Next.js 15 — public/tenant-facing web (Azure SWA in prod)
-│                                # 43 API route groups, marketplace, admin portal
-│
-├── services/                    # Internal domain services (15)
-│   ├── agent-observability/     # Action interception, audit log writer, browser capture,
-│   │                            # correctness scorer, diff verifier
-│   ├── agent-question-service/  # Human-in-the-loop question parking; Prisma-backed store
-│   ├── approval-service/        # Approval batcher, kill-switch enforcer, governance
-│   │                            # workflow manager; batch create + batch decision
-│   ├── audit-storage/           # Azure Blob screenshot and evidence uploader
-│   ├── browser-actions/         # Playwright browser action executor (web-actions)
-│   ├── compliance-export/       # JSON/JSONL/CSV compliance pack export
-│   ├── connector-gateway/       # 12-connector OAuth registry (GitHub, GitLab, Jira, Linear,
-│   │                            # Slack, Teams, Notion, Confluence, PagerDuty, Sentry,
-│   │                            # Azure DevOps, Email), mTLS cert verifier, PII filter,
-│   │                            # plugin loader, adapter registry
-│   ├── evidence-service/        # Governance KPI calculator, HNSW vector search index
-│   ├── identity-service/        # Tenant, workspace, user lifecycle scaffold
-│   ├── meeting-agent/           # Meeting lifecycle state machine, STT/TTS voice pipeline
-│   ├── memory-service/          # Long-term memory read/write/update with TTL + relevance
-│   ├── notification-service/    # Multi-channel approval alert dispatcher: Telegram, Slack,
-│   │                            # Discord, Webhook, Voice; dispatchApprovalAlert()
-│   ├── policy-engine/           # Governance routing policy resolution
-│   ├── provisioning-service/    # Azure VM lifecycle — 11-step state machine, job processor,
-│   │                            # queue consumer, VM bootstrap, SLA monitoring
-│   └── retention-cleanup/       # Scheduled retention policy cleanup job
-│
-├── packages/                    # Shared internal libraries — not deployed independently (13)
-│   ├── auth-utils/              # scrypt password hashing + verification
-│   ├── cli/                     # af developer CLI (bin: af, depends on sdk)
-│   ├── config/                  # Centralised service URL and config constants
-│   ├── connector-contracts/     # 18-connector registry, 18 action types, 12 role policies
-│   ├── crm-service/             # CRM adapter types and clients (Salesforce, HubSpot)
-│   ├── db-schema/               # Prisma schema (70 models), migrations, generated client
-│   ├── e2e/                     # Playwright end-to-end test suite
-│   ├── erp-service/             # ERP adapter types and clients (SAP, Oracle)
-│   ├── notification-service/    # Notification adapter types
-│   ├── observability/           # OpenTelemetry + Azure Monitor helpers
-│   ├── queue-contracts/         # Queue name constants + lease/budget types
-│   ├── sdk/                     # AgentFarmClient SDK (agents, analytics, notifications)
-│   └── shared-types/            # 100+ TypeScript contracts shared across all apps
-│
-├── infrastructure/              # Infrastructure as Code
-│   ├── control-plane/           # Azure Bicep: Log Analytics, App Insights, Key Vault,
-│   │                            # PostgreSQL, Redis, Container Registry
-│   └── runtime-plane/           # Azure Bicep + cloud-init for VM provisioning
-│
-├── scripts/                     # Developer utility scripts
-│   ├── quality-gate.mjs         # CI orchestrator — 46 checks
-│   ├── graphify.mjs             # Monorepo package dependency graph (Mermaid/DOT/JSON)
-│   ├── e2e-smoke.mjs            # E2E smoke tests (dashboard + website)
-│   ├── coverage-threshold-check.mjs  # Coverage summary validator
-│   ├── a4-contract-validation.mjs    # Contract versioning validator
-│   ├── a4-import-boundary-check.mjs  # Import boundary enforcer
-│   └── website-swa-verify.mjs   # SWA deployment verifier
-├── docs/                        # Detailed architecture, API reference, test strategy, etc.
-├── .github/                     # CI/CD workflows, PR templates, Copilot instructions
-├── docker-compose.yml           # Local development stack: PostgreSQL, Redis, OPA, VoxCPM2,
-│                                # api-gateway, agent-runtime, trigger-service, dashboard
-├── pnpm-workspace.yaml          # pnpm monorepo workspace definition
-├── tsconfig.base.json           # Shared TypeScript base config (strict, ES2022, NodeNext)
-└── package.json                 # Root scripts: quality:gate, test, build, lint, typecheck
+â”œâ”€â”€ apps/                        # Deployable applications (6)
+â”‚   â”œâ”€â”€ api-gateway/             # Fastify 5 â€” control plane API entry point (port 3000)
+â”‚   â”‚                            # 62 route files, 898 tests
+â”‚   â”œâ”€â”€ agent-runtime/           # Fastify 5 â€” AI agent execution engine (port 4000)
+â”‚   â”‚                            # 9 LLM providers, 12 action tiers, 906 tests
+â”‚   â”œâ”€â”€ orchestrator/            # Fastify 5 â€” multi-agent workflow coordinator (port 3011)
+â”‚   â”‚                            # GOAP A* planner, routine scheduler, proactive signal detector,
+â”‚   â”‚                            # agent handoff manager (pending/accepted/completed/failed/timed_out)
+â”‚   â”œâ”€â”€ trigger-service/         # Fastify 5 â€” inbound webhook/email/Slack intake (port 3002)
+â”‚   â”‚                            # 49 tests
+â”‚   â”œâ”€â”€ dashboard/               # Next.js 15 â€” operator and tenant UI (port 3001)
+â”‚   â”‚                            # 51 pages, 159 proxy routes
+â”‚   â””â”€â”€ website/                 # Next.js 15 â€” public/tenant-facing web (Azure SWA in prod)
+â”‚                                # 43 API route groups, marketplace, admin portal
+â”‚
+â”œâ”€â”€ services/                    # Internal domain services (15)
+â”‚   â”œâ”€â”€ agent-observability/     # Action interception, audit log writer, browser capture,
+â”‚   â”‚                            # correctness scorer, diff verifier
+â”‚   â”œâ”€â”€ agent-question-service/  # Human-in-the-loop question parking; Prisma-backed store
+â”‚   â”œâ”€â”€ approval-service/        # Approval batcher, kill-switch enforcer, governance
+â”‚   â”‚                            # workflow manager; batch create + batch decision
+â”‚   â”œâ”€â”€ audit-storage/           # Azure Blob screenshot and evidence uploader
+â”‚   â”œâ”€â”€ browser-actions/         # Playwright browser action executor (web-actions)
+â”‚   â”œâ”€â”€ compliance-export/       # JSON/JSONL/CSV compliance pack export
+â”‚   â”œâ”€â”€ connector-gateway/       # 12-connector OAuth registry (GitHub, GitLab, Jira, Linear,
+â”‚   â”‚                            # Slack, Teams, Notion, Confluence, PagerDuty, Sentry,
+â”‚   â”‚                            # Azure DevOps, Email), mTLS cert verifier, PII filter,
+â”‚   â”‚                            # plugin loader, adapter registry
+â”‚   â”œâ”€â”€ evidence-service/        # Governance KPI calculator, HNSW vector search index
+â”‚   â”œâ”€â”€ identity-service/        # Tenant, workspace, user lifecycle scaffold
+â”‚   â”œâ”€â”€ meeting-agent/           # Meeting lifecycle state machine, STT/TTS voice pipeline
+â”‚   â”œâ”€â”€ memory-service/          # Long-term memory read/write/update with TTL + relevance
+â”‚   â”œâ”€â”€ notification-service/    # Multi-channel approval alert dispatcher: Telegram, Slack,
+â”‚   â”‚                            # Discord, Webhook, Voice; dispatchApprovalAlert()
+â”‚   â”œâ”€â”€ policy-engine/           # Governance routing policy resolution
+â”‚   â”œâ”€â”€ provisioning-service/    # Azure VM lifecycle â€” 11-step state machine, job processor,
+â”‚   â”‚                            # queue consumer, VM bootstrap, SLA monitoring
+â”‚   â””â”€â”€ retention-cleanup/       # Scheduled retention policy cleanup job
+â”‚
+â”œâ”€â”€ packages/                    # Shared internal libraries â€” not deployed independently (13)
+â”‚   â”œâ”€â”€ auth-utils/              # scrypt password hashing + verification
+â”‚   â”œâ”€â”€ cli/                     # af developer CLI (bin: af, depends on sdk)
+â”‚   â”œâ”€â”€ config/                  # Centralised service URL and config constants
+â”‚   â”œâ”€â”€ connector-contracts/     # 18-connector registry, 18 action types, 12 role policies
+â”‚   â”œâ”€â”€ crm-service/             # CRM adapter types and clients (Salesforce, HubSpot)
+â”‚   â”œâ”€â”€ db-schema/               # Prisma schema (70 models), migrations, generated client
+â”‚   â”œâ”€â”€ e2e/                     # Playwright end-to-end test suite
+â”‚   â”œâ”€â”€ erp-service/             # ERP adapter types and clients (SAP, Oracle)
+â”‚   â”œâ”€â”€ notification-service/    # Notification adapter types
+â”‚   â”œâ”€â”€ observability/           # OpenTelemetry + Azure Monitor helpers
+â”‚   â”œâ”€â”€ queue-contracts/         # Queue name constants + lease/budget types
+â”‚   â”œâ”€â”€ sdk/                     # AgentFarmClient SDK (agents, analytics, notifications)
+â”‚   â””â”€â”€ shared-types/            # 100+ TypeScript contracts shared across all apps
+â”‚
+â”œâ”€â”€ infrastructure/              # Infrastructure as Code
+â”‚   â”œâ”€â”€ control-plane/           # Azure Bicep: Log Analytics, App Insights, Key Vault,
+â”‚   â”‚                            # PostgreSQL, Redis, Container Registry
+â”‚   â””â”€â”€ runtime-plane/           # Azure Bicep + cloud-init for VM provisioning
+â”‚
+â”œâ”€â”€ scripts/                     # Developer utility scripts
+â”‚   â”œâ”€â”€ quality-gate.mjs         # CI orchestrator â€” 46 checks
+â”‚   â”œâ”€â”€ graphify.mjs             # Monorepo package dependency graph (Mermaid/DOT/JSON)
+â”‚   â”œâ”€â”€ e2e-smoke.mjs            # E2E smoke tests (dashboard + website)
+â”‚   â”œâ”€â”€ coverage-threshold-check.mjs  # Coverage summary validator
+â”‚   â”œâ”€â”€ a4-contract-validation.mjs    # Contract versioning validator
+â”‚   â”œâ”€â”€ a4-import-boundary-check.mjs  # Import boundary enforcer
+â”‚   â””â”€â”€ website-swa-verify.mjs   # SWA deployment verifier
+â”œâ”€â”€ docs/                        # Detailed architecture, API reference, test strategy, etc.
+â”œâ”€â”€ .github/                     # CI/CD workflows, PR templates, Copilot instructions
+â”œâ”€â”€ docker-compose.yml           # Local development stack: PostgreSQL, Redis, OPA, VoxCPM2,
+â”‚                                # api-gateway, agent-runtime, trigger-service, dashboard
+â”œâ”€â”€ pnpm-workspace.yaml          # pnpm monorepo workspace definition
+â”œâ”€â”€ tsconfig.base.json           # Shared TypeScript base config (strict, ES2022, NodeNext)
+â””â”€â”€ package.json                 # Root scripts: quality:gate, test, build, lint, typecheck
 ```
 
 ---
@@ -217,7 +217,7 @@ agentfarm/
 - Domain: Approval-scoped notification dispatch gateway.
 - Channel adapters: Telegram, Slack, Discord, Webhook (generic HTTP), Voice (VoxCPM/VoIP).
 - Key exports: `dispatch()`, `dispatchApprovalAlert()`, `APPROVAL_TRIGGERS`, channel adapter send/build functions.
-- `NotificationChannelConfig.allowedTriggers?: NotificationEventTrigger[]` — optional per-channel trigger scope.
+- `NotificationChannelConfig.allowedTriggers?: NotificationEventTrigger[]` â€” optional per-channel trigger scope.
 - `dispatchApprovalAlert()` enforces approval-only trigger filter; returns `[]` for non-approval calls.
 - Tests: 31 passing.
 
@@ -331,12 +331,12 @@ agentfarm/
 ---
 
 ## Service Communication Rules
-1. Dashboard → api-gateway only. HTTP/REST.
-2. api-gateway → identity-service, provisioning-service, approval-service, evidence-service, connector-gateway. HTTP/REST (internal).
-3. provisioning-service → BullMQ. Async job dispatch and consumption.
-4. approval-service → notification-service. Event via BullMQ approval queue.
-5. agent-runtime → connector-gateway. HTTP/REST over Azure private network.
-6. agent-runtime → orchestrator. RPC over Azure private network.
+1. Dashboard â†’ api-gateway only. HTTP/REST.
+2. api-gateway â†’ identity-service, provisioning-service, approval-service, evidence-service, connector-gateway. HTTP/REST (internal).
+3. provisioning-service â†’ BullMQ. Async job dispatch and consumption.
+4. approval-service â†’ notification-service. Event via BullMQ approval queue.
+5. agent-runtime â†’ connector-gateway. HTTP/REST over Azure private network.
+6. agent-runtime â†’ orchestrator. RPC over Azure private network.
 7. policy-engine: OPA sidecar on localhost within approval-service or orchestrator process. No external HTTP call.
 8. No service calls evidence-service directly except through api-gateway or through the internal evidence write queue.
 9. No service imports the Prisma client of another service. Each service owns its own Prisma client scoped to its tables.
@@ -344,15 +344,12 @@ agentfarm/
 ---
 
 ## Document Status
-- Status: Active — monorepo baseline.
+- Status: Active â€” monorepo baseline.
 - Effective date: 2026-04-20.
 - Owner: Engineering Lead.
 - Next review: 2026-04-28 (end of Sprint 0).
 - Change control: Any structural change to service boundaries requires Architecture Owner approval.
 - Canonical source map entry: planning/repo-and-service-structure.md.
 
-<!-- doc-sync: 2026-05-06 sprint-6 -->
-> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
-
-<!-- doc-sync: 2026-05-06 full-pass-2 -->
-> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
+<!-- doc-sync: 2026-05-29 sprint-18 -->
+> Last synchronized: 2026-05-29 (Sprint 18 — full documentation update).

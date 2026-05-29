@@ -1,8 +1,8 @@
-> **Status:** Mixed planned + shipped behavior. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for the authoritative gap tracker.
+> **Status:** 47/47 quality gate checks PASS (Sprint 18). See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for details.
 # Testing Guide
 
 > AgentFarm testing conventions, patterns, and quality gate reference.
-> Last updated: 2026-05-10
+> Last updated: 2026-05-29 (Sprint 18)
 
 ---
 
@@ -10,10 +10,10 @@
 
 | Package | Tests | Framework | Coverage Threshold |
 |---|---|---|---|
-| `@agentfarm/agent-runtime` | 906 | `node:test` | ≥ 80% |
-| `@agentfarm/api-gateway` | 898 | `node:test` | ≥ 80% |
+| `@agentfarm/agent-runtime` | 1,120+ | `node:test` | ≥ 80% |
+| `@agentfarm/api-gateway` | 1,237+ | `node:test` | ≥ 80% |
 | `@agentfarm/dashboard` | 118 | `node:test` | — |
-| `@agentfarm/website` | 118 | `node:test` | — |
+| `@agentfarm/website` | 118+ | `node:test` | — |
 | `@agentfarm/orchestrator` | 62 | `node:test` | — |
 | `@agentfarm/trigger-service` | 49 | `node:test` | — |
 | `@agentfarm/provisioning-service` | 15 | `node:test` | — |

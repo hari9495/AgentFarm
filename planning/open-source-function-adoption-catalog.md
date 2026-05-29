@@ -1,4 +1,4 @@
-# AgentFarm Open-Source Function Adoption Catalog
+﻿# AgentFarm Open-Source Function Adoption Catalog
 
 ## Purpose
 Provide a clear list of open-source products that are useful for AgentFarm and map each product to concrete functions we can adopt.
@@ -302,12 +302,11 @@ This catalog operationalizes:
 3. 2026-04-25: Added dedicated Paperclip and Claw3D sections with explicit fit, adopt, avoid, and integration stance notes.
 4. 2026-04-25: Added direct source-to-implementation mapping table with AgentFarm targets and week priorities.
 
-<!-- doc-sync: 2026-05-06 sprint-6 -->
-> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
 
-<!-- doc-sync: 2026-05-06 full-pass-2 -->
-> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
 
 
 ## Current Implementation Pointer (2026-05-07)
 1. For the latest built-state summary and file map, see planning/build-snapshot-2026-05-07.md.
+
+<!-- doc-sync: 2026-05-29 sprint-18 -->
+> Last synchronized: 2026-05-29 (Sprint 18 — full documentation update).

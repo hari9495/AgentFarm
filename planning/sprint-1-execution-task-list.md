@@ -1,4 +1,4 @@
-# AgentFarm Sprint 1 Execution Task List (Implementation)
+﻿# AgentFarm Sprint 1 Execution Task List (Implementation)
 
 ## Purpose
 Execute all MVP build tasks to move from frozen contracts (Sprint 0) to a working, tested, deployable platform with Developer Agent operational end-to-end.
@@ -13,7 +13,7 @@ Only tasks that map to frozen Sprint 0 contracts and approved MVP documentation 
 
 ## Workstreams
 
-### Workstream 1: Signup and Tenant Lifecycle (Tasks 1.1–1.3)
+### Workstream 1: Signup and Tenant Lifecycle (Tasks 1.1â€“1.3)
 Build user signup, auth service, tenant provisioning, and workspace initialization.
 
 **Task 1.1: Implement signup and auth flow**
@@ -21,11 +21,11 @@ Build user signup, auth service, tenant provisioning, and workspace initializati
 - Create user identity (tenant owner)
 - Initialize tenant, workspace, and bot records
 - Emit provisioning.requested event to queue
-- Acceptance criteria: User signup → instant tenant → bot in created status → provisioning queued
+- Acceptance criteria: User signup â†’ instant tenant â†’ bot in created status â†’ provisioning queued
 - Status: Completed (2026-04-30)
 - Evidence: apps/api-gateway/src/routes/auth.ts, apps/api-gateway/src/routes/auth.test.ts
 - Validation: pnpm --filter @agentfarm/api-gateway test (200/200 pass), pnpm --filter @agentfarm/api-gateway typecheck (pass)
-- Notes: POST /auth/signup runs atomic Prisma transaction creating tenant (status→provisioning), TenantUser (role owner), Workspace, Bot (status created), and ProvisioningJob (status queued). Returns session token and HttpOnly cookie. Email normalised to lowercase; duplicate emails rejected 409; timing-safe dummy-hash prevents user enumeration on login. ProvisioningJob acts as durable queue message consumed by provisioning-service poll loop.
+- Notes: POST /auth/signup runs atomic Prisma transaction creating tenant (statusâ†’provisioning), TenantUser (role owner), Workspace, Bot (status created), and ProvisioningJob (status queued). Returns session token and HttpOnly cookie. Email normalised to lowercase; duplicate emails rejected 409; timing-safe dummy-hash prevents user enumeration on login. ProvisioningJob acts as durable queue message consumed by provisioning-service poll loop.
 - Owner: Engineering Lead
 - Dependency: None
 - Due: 2026-05-02
@@ -52,11 +52,11 @@ Build user signup, auth service, tenant provisioning, and workspace initializati
 - Dependency: 1.2
 - Due: 2026-05-08
 
-### Workstream 2: Azure Runtime Provisioning (Tasks 2.1–2.4)
+### Workstream 2: Azure Runtime Provisioning (Tasks 2.1â€“2.4)
 Build the provisioning orchestrator that creates VMs, bootstraps Docker, registers runtime, and health-checks the bot.
 
 **Task 2.1: Build provisioning state machine and job processor**
-- Implement provisioning job state transitions (queued → validating → creating_resources → ... → completed or failed)
+- Implement provisioning job state transitions (queued â†’ validating â†’ creating_resources â†’ ... â†’ completed or failed)
 - Build async job processor that consumes provisioning.requested events
 - Implement resource group and VM creation via Azure SDK
 - Implement failure handling and cleanup workflow
@@ -100,7 +100,7 @@ Build the provisioning orchestrator that creates VMs, bootstraps Docker, registe
 - Dependency: 2.1, 2.3
 - Due: 2026-05-18
 
-### Workstream 3: Docker Runtime and Bot Execution (Tasks 3.1–3.3)
+### Workstream 3: Docker Runtime and Bot Execution (Tasks 3.1â€“3.3)
 Build the Docker runtime that executes bot logic, handles lifecycle, and reports health.
 
 **Task 3.1: Implement Docker runtime contract and bot entrypoint**
@@ -134,14 +134,14 @@ Build the Docker runtime that executes bot logic, handles lifecycle, and reports
 **Task 3.3: Implement runtime observability and state management**
 - Add structured logging to /logs endpoint (JSON format)
 - Implement heartbeat to control plane (every 30s)
-- Add runtime state tracking (created → starting → ready → active → stopping → stopped)
+- Add runtime state tracking (created â†’ starting â†’ ready â†’ active â†’ stopping â†’ stopped)
 - Acceptance criteria: Logs queryable, heartbeats reliable, state transitions tracked
 - Status: Completed (2026-04-27)
 - Evidence: apps/agent-runtime/src/runtime-server.ts, apps/agent-runtime/src/runtime-server.test.ts
 - Dependency: 3.1
 - Due: 2026-05-16
 
-### Workstream 4: Connector Auth and Action Execution (Tasks 4.1–4.4)
+### Workstream 4: Connector Auth and Action Execution (Tasks 4.1â€“4.4)
 Build the connector layer for Jira, Teams, GitHub, and email with OAuth and normalized action execution.
 
 **Task 4.1: Implement connector auth state machine and OAuth initiation**
@@ -199,12 +199,12 @@ Build the connector layer for Jira, Teams, GitHub, and email with OAuth and norm
 - Dependency: 4.3
 - Due: 2026-05-23
 
-### Workstream 5: Approval and Risk Controls (Tasks 5.1–5.3)
+### Workstream 5: Approval and Risk Controls (Tasks 5.1â€“5.3)
 Build the approval workflow service, risk evaluation engine, and human approval UI.
 
 **Task 5.1: Implement risk classification and approval routing**
 - Build risk evaluator (classifies actions as low/medium/high per frozen policy)
-- Implement approval routing (medium/high → approval queue, auto-escalation after 1 hour)
+- Implement approval routing (medium/high â†’ approval queue, auto-escalation after 1 hour)
 - Build Approval record creation and immutability enforcement
 - Acceptance criteria: Actions classified correctly, medium/high actions routed to approvers, timeout escalation works
 - Status: Completed (2026-04-30)
@@ -243,7 +243,7 @@ Build the approval workflow service, risk evaluation engine, and human approval 
 - Dependency: 5.1, 5.2
 - Due: 2026-05-24
 
-### Workstream 6: Audit, Evidence, and Observability (Tasks 6.1–6.2)
+### Workstream 6: Audit, Evidence, and Observability (Tasks 6.1â€“6.2)
 Build the audit and evidence system for compliance gates and incident investigation.
 
 **Task 6.1: Implement audit event logging and retention**
@@ -273,7 +273,7 @@ Build the audit and evidence system for compliance gates and incident investigat
 - Dependency: 6.1
 - Due: 2026-05-26
 
-### Workstream 7: Website and Marketplace (Tasks 7.1–7.2)
+### Workstream 7: Website and Marketplace (Tasks 7.1â€“7.2)
 Resume deferred marketing website and bot marketplace.
 
 **Task 7.1: Resume and finalize website (from Sprint 0 deferred work)**
@@ -295,13 +295,13 @@ Resume deferred marketing website and bot marketplace.
 - Dependency: 1.1, 1.2
 - Due: 2026-05-26
 
-### Workstream 8: Testing and Deployment (Tasks 8.1–8.3)
+### Workstream 8: Testing and Deployment (Tasks 8.1â€“8.3)
 Build end-to-end testing, load testing, and production deployment.
 
 **Task 8.1: Implement comprehensive test suite**
 - Build unit tests for provisioning, connector, approval logic (target >80% coverage)
-- Build integration tests (provisioning → runtime → connector → action)
-- Build end-to-end tests (signup → provisioning → bot action → approval)
+- Build integration tests (provisioning â†’ runtime â†’ connector â†’ action)
+- Build end-to-end tests (signup â†’ provisioning â†’ bot action â†’ approval)
 - Acceptance criteria: All tests pass, coverage >80%, CI/CD pipeline green
 - Status: Completed (2026-05-06)
 - Owner: QA Lead
@@ -328,7 +328,7 @@ Build end-to-end testing, load testing, and production deployment.
 - Dependency: 8.1, 8.2
 - Due: 2026-05-26
 
-### Workstream 9: Tier 1/2 Local Workspace Actions (Tasks 9.1–9.11)
+### Workstream 9: Tier 1/2 Local Workspace Actions (Tasks 9.1â€“9.11)
 Implement the Developer Agent Tier 1 and Tier 2 local workspace actions for Claude Code / Codex parity. All implemented in `apps/agent-runtime/src/local-workspace-executor.ts`.
 
 **Task 9.1: Implement `workspace_list_files`**
@@ -369,7 +369,7 @@ Implement the Developer Agent Tier 1 and Tier 2 local workspace actions for Clau
 - Due: 2026-04-30
 
 **Task 9.5: Implement `workspace_install_deps`**
-- Auto-detects package manager: pnpm-lock.yaml→pnpm, yarn.lock→yarn, go.mod→go mod tidy, requirements.txt→pip, Cargo.toml→cargo build, else→npm
+- Auto-detects package manager: pnpm-lock.yamlâ†’pnpm, yarn.lockâ†’yarn, go.modâ†’go mod tidy, requirements.txtâ†’pip, Cargo.tomlâ†’cargo build, elseâ†’npm
 - Supports explicit override via command field
 - Status: Completed (2026-04-30)
 - Evidence: apps/agent-runtime/src/local-workspace-executor.ts
@@ -435,14 +435,14 @@ Implement the Developer Agent Tier 1 and Tier 2 local workspace actions for Clau
 
 | Task ID | Task Name | Owner | Status | Priority | Dependency | Due Date | Scope Check | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1.1 | Implement signup and auth flow | Engineering Lead | Completed | P0 | None | 2026-04-21 | Pass | POST /auth/signup — creates Tenant/TenantUser/Workspace/Bot/ProvisioningJob in atomic transaction; HMAC session token returned in body + Set-Cookie; POST /auth/login — scrypt-based password verify with timing-safe comparison; POST /auth/logout — clears cookie. Password hashed via Node crypto.scrypt (no external dependency). |
+| 1.1 | Implement signup and auth flow | Engineering Lead | Completed | P0 | None | 2026-04-21 | Pass | POST /auth/signup â€” creates Tenant/TenantUser/Workspace/Bot/ProvisioningJob in atomic transaction; HMAC session token returned in body + Set-Cookie; POST /auth/login â€” scrypt-based password verify with timing-safe comparison; POST /auth/logout â€” clears cookie. Password hashed via Node crypto.scrypt (no external dependency). |
 | 1.2 | Dashboard access control and session management | Engineering Lead | Completed | P0 | 1.1 | 2026-04-21 | Pass | Auth preHandler hardened: public paths (signup/login/logout) bypass session check but still rate-limited at 20 req/min to slow brute-force. All /v1/* routes require valid session when API_REQUIRE_AUTH=true. Dashboard page.tsx now reads agentfarm_session cookie via next/headers cookies() first, then falls back to DASHBOARD_API_TOKEN env and dev-session endpoint. Workspace RLS enforced on all :workspaceId params. |
 | 1.3 | Dashboard provisioning status UI | Frontend Lead | Completed | P0 | 1.2 | 2026-04-21 | Pass | login/page.tsx and signup/page.tsx created as client components with form validation, error display, and cookie-setting on success. Provisioning section upgraded to numbered step pipeline with done/active/pending state pills, job ID display, start time, failure error+remediation card, and completed success banner. Auth-gated redirect to /login when API_REQUIRE_AUTH=true and no session. |
-| 2.1 | Provisioning state machine and job processor | Engineering Lead + Cloud Ops | Completed | P0 | 1.1 | 2026-04-22 | Pass | 11-state machine (queued→validating→creating_resources→bootstrapping_vm→starting_container→registering_runtime→healthchecking→completed). Async poll loop (5s active / 30s idle, max 3 concurrent jobs). Atomic job claim via updateMany WHERE status=queued. Per-state audit events emitted. Failure path: →failed→cleanup_pending→cleaned_up with remediationHint. RuntimeInstance upserted at registering_runtime; Bot/Workspace/Tenant marked ready on completion. Azure SDK calls stubbed (Task 2.2 wires real SDK). SIGTERM/SIGINT graceful shutdown hooked. api-gateway typecheck clean ✓ |
-| 2.2 | Azure VM bootstrap and Docker setup | Cloud Ops + Engineering Lead | Completed | P0 | 2.1 | 2026-04-22 | Pass | azure-client.ts: DefaultAzureCredential singleton, ARM client factories (resource/compute/network), vmSkuForTier map. vm-bootstrap.ts: cloud-init YAML builder (apt Docker CE install, ACR docker login, systemd agentfarm-bot service, env file at /etc/agentfarm/bot.env — no secrets in image layers). azure-provisioning-steps.ts: validateTenant (resourceGroups.list probe), createResources (RG + VNet + subnet + NIC), bootstrapVm (ARM VM create + poll Succeeded + resolve private IP), startContainer (poll /health 18×10s), healthCheck (single GET /health), cleanupResources (resourceGroups.beginDeleteAndWait). Stubs in provisioning-worker.ts replaced with real delegation calls. api-gateway typecheck clean ✓ |
-| 2.3 | Provisioning failure recovery and cleanup | Cloud Ops | Completed | P0 | 2.1, 2.2 | 2026-04-22 | Pass | provisioning-worker.ts: rollback side effects added by failure state (Bot→failed, Workspace→failed, Tenant→degraded; RuntimeInstance→failed for late-stage failures). cleanup_pending recovery worker added inside poll loop with claim marker (`cleanup_in_progress:*`) and retry cleanup to cleaned_up. Failure path now preserves remediation and retry metadata in cleanupResult. Dashboard page now shows owner-facing remediation alert for failed, cleanup_pending, and cleaned_up statuses. |
+| 2.1 | Provisioning state machine and job processor | Engineering Lead + Cloud Ops | Completed | P0 | 1.1 | 2026-04-22 | Pass | 11-state machine (queuedâ†’validatingâ†’creating_resourcesâ†’bootstrapping_vmâ†’starting_containerâ†’registering_runtimeâ†’healthcheckingâ†’completed). Async poll loop (5s active / 30s idle, max 3 concurrent jobs). Atomic job claim via updateMany WHERE status=queued. Per-state audit events emitted. Failure path: â†’failedâ†’cleanup_pendingâ†’cleaned_up with remediationHint. RuntimeInstance upserted at registering_runtime; Bot/Workspace/Tenant marked ready on completion. Azure SDK calls stubbed (Task 2.2 wires real SDK). SIGTERM/SIGINT graceful shutdown hooked. api-gateway typecheck clean âœ“ |
+| 2.2 | Azure VM bootstrap and Docker setup | Cloud Ops + Engineering Lead | Completed | P0 | 2.1 | 2026-04-22 | Pass | azure-client.ts: DefaultAzureCredential singleton, ARM client factories (resource/compute/network), vmSkuForTier map. vm-bootstrap.ts: cloud-init YAML builder (apt Docker CE install, ACR docker login, systemd agentfarm-bot service, env file at /etc/agentfarm/bot.env â€” no secrets in image layers). azure-provisioning-steps.ts: validateTenant (resourceGroups.list probe), createResources (RG + VNet + subnet + NIC), bootstrapVm (ARM VM create + poll Succeeded + resolve private IP), startContainer (poll /health 18Ã—10s), healthCheck (single GET /health), cleanupResources (resourceGroups.beginDeleteAndWait). Stubs in provisioning-worker.ts replaced with real delegation calls. api-gateway typecheck clean âœ“ |
+| 2.3 | Provisioning failure recovery and cleanup | Cloud Ops | Completed | P0 | 2.1, 2.2 | 2026-04-22 | Pass | provisioning-worker.ts: rollback side effects added by failure state (Botâ†’failed, Workspaceâ†’failed, Tenantâ†’degraded; RuntimeInstanceâ†’failed for late-stage failures). cleanup_pending recovery worker added inside poll loop with claim marker (`cleanup_in_progress:*`) and retry cleanup to cleaned_up. Failure path now preserves remediation and retry metadata in cleanupResult. Dashboard page now shows owner-facing remediation alert for failed, cleanup_pending, and cleaned_up statuses. |
 | 2.4 | Provisioning SLA and monitoring | Cloud Ops | Completed | P1 | 2.1, 2.3 | 2026-04-22 | Pass | Worker monitors active jobs against 10m SLA target, emits stuck-state alerts when any monitored state exceeds 1h (with cooldown), and enforces 24h timeout auto-remediation by failing and entering cleanup flow. API provisioning payload now exposes latency/sla/stuck/timeout fields. Dashboard provisioning card and KPI strip now display SLA status, current latency vs target, stuck alert state, and timeout timestamp. |
-| 3.1 | Docker runtime contract and bot entrypoint | Engineering Lead | Completed | P0 | 2.2 | 2026-04-22 | Pass | apps/agent-runtime now exposes runtime contract endpoints: POST /startup, GET /health/live, GET /health/ready, compatibility GET /health, POST /kill (graceful shutdown). Real worker loop + task intake integrated via POST /tasks/intake; runtime.worker_loops_started emitted only when worker loop is actually started during startup. Runtime state transitions include degraded on dependency failure and stopped on kill path. Contract tests added in src/runtime-server.test.ts covering startup success, /health/ready active→degraded transition, and /kill stopping→stopped behavior (all passing). |
+| 3.1 | Docker runtime contract and bot entrypoint | Engineering Lead | Completed | P0 | 2.2 | 2026-04-22 | Pass | apps/agent-runtime now exposes runtime contract endpoints: POST /startup, GET /health/live, GET /health/ready, compatibility GET /health, POST /kill (graceful shutdown). Real worker loop + task intake integrated via POST /tasks/intake; runtime.worker_loops_started emitted only when worker loop is actually started during startup. Runtime state transitions include degraded on dependency failure and stopped on kill path. Contract tests added in src/runtime-server.test.ts covering startup success, /health/ready activeâ†’degraded transition, and /kill stoppingâ†’stopped behavior (all passing). |
 | 3.2 | Bot core execution engine | AI/LLM Lead + Engineering Lead | Completed | P0 | 3.1 | 2026-04-22 | Pass | Ten LLM providers supported (openai, azure_openai, github_models, anthropic, google, xai, mistral, together, agentfarm, auto). Auto mode with per-profile priority list and 5-minute rolling health-score reordering. Four model profiles: quality_first, speed_first, cost_balanced, custom. API gateway config route stores and redacts all ten provider keys. See ADR-007. |
 | 3.3 | Runtime observability and state management | Engineering Lead | Completed | P1 | 3.1 | 2026-05-16 | Pass | Structured runtime observability completed in `apps/agent-runtime/src/runtime-server.ts`: JSON event logging, bounded in-memory `/logs` feed, heartbeat loop metrics (`heartbeat_sent`, `heartbeat_failed`, `last_heartbeat_at`), and explicit runtime state transition history via `/state/history`. Validated by runtime tests (`logs endpoint`, `heartbeat loop`, `state history endpoint`) and current local run: `pnpm --filter @agentfarm/agent-runtime test` (24/24 passing) + `typecheck` pass. |
 | 4.1 | Connector auth state machine and OAuth initiation | Engineering Lead + Security Lead | Completed | P0 | 2.1 | 2026-05-12 | Pass | OAuth initiate + callback implemented for Jira/Teams/GitHub with state nonce validation, workspace scope checks, auth session lifecycle, and Key Vault reference-only persistence (no raw tokens in DB). Route tests passing. |
@@ -487,12 +487,11 @@ Implement the Developer Agent Tier 1 and Tier 2 local workspace actions for Clau
 3. Sprint 1 trust-and-execution closure record accepted in `planning/sprints/sprint-1-trust-and-execution-core.md`.
 4. Next action: begin Sprint 2 planning and implementation.
 
-<!-- doc-sync: 2026-05-06 sprint-6 -->
-> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
 
-<!-- doc-sync: 2026-05-06 full-pass-2 -->
-> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
 
 
 ## Current Implementation Pointer (2026-05-07)
 1. For the latest built-state summary and file map, see planning/build-snapshot-2026-05-07.md.
+
+<!-- doc-sync: 2026-05-29 sprint-18 -->
+> Last synchronized: 2026-05-29 (Sprint 18 — full documentation update).

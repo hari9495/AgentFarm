@@ -1,4 +1,4 @@
-# AgentFarm Spec: Independent Role Bot Operating Model
+﻿# AgentFarm Spec: Independent Role Bot Operating Model
 
 ## Purpose
 Capture the canonical product intent for AgentFarm role bots so future sessions and teams do not drift.
@@ -355,12 +355,11 @@ If another document conflicts, this file is the decision source until formally s
 1. 2026-04-25: Created canonical model for independent role bots, role-based UI/integration behavior, data model updates, API contracts, and migration plan.
 2. 2026-04-25: Added canonical LLM-first brain model, runtime safety rules, role-brain config requirements, and phased LLM-centric implementation plan.
 
-<!-- doc-sync: 2026-05-06 sprint-6 -->
-> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
 
-<!-- doc-sync: 2026-05-06 full-pass-2 -->
-> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
 
 
 ## Current Implementation Pointer (2026-05-07)
 1. For the latest built-state summary and file map, see planning/build-snapshot-2026-05-07.md.
+
+<!-- doc-sync: 2026-05-29 sprint-18 -->
+> Last synchronized: 2026-05-29 (Sprint 18 — full documentation update).

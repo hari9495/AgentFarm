@@ -1,6 +1,7 @@
 ﻿# AgentFarm Codebase Report
 
-> Generated: 2026-05-07 | Quality Gate: PASS (52/52) | Tests: 1,542 total, 0 failures
+> Generated: 2026-05-07 | Last updated: 2026-05-29 (Sprint 18)
+> Quality Gate: 47/47 PASS | api-gateway: 1,237+ tests | agent-runtime: 1,120+ tests | 0 failures
 
 ---
 

@@ -1,7 +1,7 @@
-> **Status:** Mixed planned + shipped behavior. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for the authoritative gap tracker.
+> **Status:** 47/47 quality gate checks PASS (Sprint 18). See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for details.
 # AgentFarm Test Strategy
 
-> Last updated: May 10, 2026 | AgentFarm monorepo audit
+> Last updated: 2026-05-29 (Sprint 18)
 
 Complete reference for the testing architecture, test counts, coverage policies, CI integration, and known coverage gaps across the AgentFarm monorepo.
 

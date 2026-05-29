@@ -1,4 +1,4 @@
-# AgentFarm Spec: Teams Graph Auth and Consent
+﻿# AgentFarm Spec: Teams Graph Auth and Consent
 
 ## Purpose
 Define authentication, authorization, tenant consent, and permission governance for Teams meeting participation and chat actions in AgentFarm.
@@ -216,12 +216,11 @@ Requirements:
 4. Revocation disables meeting actions safely within SLA.
 5. Auth and consent events are queryable in evidence APIs.
 
-<!-- doc-sync: 2026-05-06 sprint-6 -->
-> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
 
-<!-- doc-sync: 2026-05-06 full-pass-2 -->
-> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
 
 
 ## Current Implementation Pointer (2026-05-07)
 1. For the latest built-state summary and file map, see planning/build-snapshot-2026-05-07.md.
+
+<!-- doc-sync: 2026-05-29 sprint-18 -->
+> Last synchronized: 2026-05-29 (Sprint 18 — full documentation update).

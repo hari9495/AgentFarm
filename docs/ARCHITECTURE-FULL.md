@@ -2,7 +2,7 @@
 
 > Built from direct source code inspection of every service, package, and schema file.  
 > No guessing. No documentation reuse. Every fact below is sourced from the actual code.  
-> Last compiled: Sprint 6 hardening pass.
+> Last compiled: Sprint 18 (2026-05-29) — Content Writer gap closure, pgvector memory, desktop VM, disclosure compliance.
 
 ---
 

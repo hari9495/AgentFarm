@@ -104,6 +104,10 @@ pnpm --filter @agentfarm/dashboard build
 | `/webhooks` | Outbound webhook management |
 | `/webhooks-ops` | Webhook DLQ and replay |
 | `/work-memory` | Work memory viewer |
+| `/desktop` | Desktop agent stream (noVNC) |
+| `/settings/persona` | Agent persona configuration |
+| `/settings/disclosure` | Disclosure compliance settings (EU AI Act / FTC) |
+| `/billing/checkout` | Stripe checkout session |
 
 ---
 

@@ -1,9 +1,18 @@
-# AgentFarm MVP Scope and Gates
+﻿# AgentFarm MVP Scope and Gates
+
+> **Status:** MVP delivered (Developer Agent). Extended to 5 roles (Sprint 18). See [IMPLEMENTATION_STATUS.md](../docs/IMPLEMENTATION_STATUS.md) for current state.
+
 ## MVP Goal
 Launch one high-quality role first, prove value, then expand.
 Planning-first rule: MVP implementation starts only after architecture baseline is approved.
-## MVP Role
-1. Developer Agent
+## MVP Role (Original)
+1. Developer Agent — ✅ DELIVERED (Sprint 7)
+## Expanded Roles (Sprint 18)
+1. Developer — ✅ Full
+2. Tester — ✅ Full (18 connectors, Tier 20 testing tools)
+3. Technical Writer — ✅ Full
+4. Content Writer — ✅ Full (10 capability modules)
+5. Corporate Assistant — ✅ Full
 ## MVP Integrations
 1. Jira
 2. Microsoft Teams
@@ -78,7 +87,7 @@ The following features were built as Sprint 2 open-source-inspired additions:
 | Feature | Status | Notes |
 |---------|--------|-------|
 | Messaging gateway (Telegram/Slack/Discord/Webhook) | **Built** | notification-service, 31 tests |
-| Voice notification channel (VoxCPM/VoIP) | **Built** | voice-adapter.ts � previously listed as "Not Included in MVP" |
+| Voice notification channel (VoxCPM/VoIP) | **Built** | voice-adapter.ts ï¿½ previously listed as "Not Included in MVP" |
 | GOAP A* goal planner | **Built** | orchestrator/goap-planner.ts |
 | SSE task stream with auto-recovery | **Built** | api-gateway/routes/sse-tasks.ts |
 | Skills crystallization (Hermes Agent pattern) | **Built** | agent-runtime/skills-registry.ts |
@@ -92,12 +101,11 @@ The following features were built as Sprint 2 open-source-inspired additions:
 Note: Voice notification channel (VoxCPM) has been built. Live meeting participation (voice join to a real meeting call) remains out of scope until a separate safety gate is approved.
 
 
-<!-- doc-sync: 2026-05-06 sprint-6 -->
-> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
 
-<!-- doc-sync: 2026-05-06 full-pass-2 -->
-> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
 
 
 ## Current Implementation Pointer (2026-05-07)
 1. For the latest built-state summary and file map, see planning/build-snapshot-2026-05-07.md.
+
+<!-- doc-sync: 2026-05-29 sprint-18 -->
+> Last synchronized: 2026-05-29 (Sprint 18 — full documentation update).

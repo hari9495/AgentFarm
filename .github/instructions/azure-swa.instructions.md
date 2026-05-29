@@ -1,4 +1,4 @@
----
+﻿---
 description: "Azure Static Web Apps guidance for the AgentFarm website app and SWA workflow"
 applyTo: "apps/website/**,.github/workflows/website-swa.yml"
 ---
@@ -22,8 +22,5 @@ applyTo: "apps/website/**,.github/workflows/website-swa.yml"
 - For deployment behavior changes, update the related runbook in `operations/runbooks/`.
 - Keep failure messaging clear in workflows so on-call engineers can triage quickly.
 
-<!-- doc-sync: 2026-05-06 sprint-6 -->
-> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
-
-<!-- doc-sync: 2026-05-06 full-pass-2 -->
-> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
+<!-- doc-sync: 2026-05-29 sprint-18 -->
+> Last synchronized: 2026-05-29 (Sprint 18 — full documentation update).

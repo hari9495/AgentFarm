@@ -1,4 +1,4 @@
-# Workspace Codebase Audit (2026-05-06)
+﻿# Workspace Codebase Audit (2026-05-06)
 
 ## Scope
 Tracked repository code inventory used for workspace-wide documentation synchronization.
@@ -26,12 +26,11 @@ Tracked repository code inventory used for workspace-wide documentation synchron
 2. This audit is intended to anchor repo-owned documentation synchronization work.
 3. Runtime-generated artifacts (for example sqlite wal/shm and transient evidence exports) are excluded from ownership decisions.
 
-<!-- doc-sync: 2026-05-06 sprint-6 -->
-> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
 
-<!-- doc-sync: 2026-05-06 full-pass-2 -->
-> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
 
 
 ## Current Implementation Pointer (2026-05-07)
 1. For the latest built-state summary and file map, see planning/build-snapshot-2026-05-07.md.
+
+<!-- doc-sync: 2026-05-29 sprint-18 -->
+> Last synchronized: 2026-05-29 (Sprint 18 — full documentation update).

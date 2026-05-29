@@ -1,7 +1,7 @@
-> **Status:** Mixed planned + shipped behavior. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for the authoritative gap tracker.
+﻿> **Status:** Sprint 18 complete. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for the authoritative status tracker.
 # AgentFarm Agent System
 
-> Last updated: May 10, 2026 | AgentFarm monorepo audit
+> Last updated: 2026-05-29 (Sprint 18)
 
 Full reference for the agent execution pipeline in `apps/agent-runtime`.
 
@@ -13,8 +13,8 @@ The agent runtime is a Fastify v5 server (port 4000) that receives task envelope
 
 **Core pipeline per task:**
 1. Pre-task scout (codebase context gathering)
-2. LLM classification → `ActionDecision`
-3. Risk evaluation → approve inline, queue for human approval, or reject
+2. LLM classification â†’ `ActionDecision`
+3. Risk evaluation â†’ approve inline, queue for human approval, or reject
 4. Action execution
 5. Post-quality gate (AF_TEST_AFTER_EDIT)
 6. Memory write
@@ -47,7 +47,7 @@ Each prompt follows this pattern:
 ```
 You are a <Role> agent in AgentFarm.
 Primary goal: <one-line objective>
-1–5 ordered priorities
+1â€“5 ordered priorities
 Never: hard constraints (3 rules)
 Always think step by step. Scout before you code. Test after every change.
 ```
@@ -138,7 +138,7 @@ The `workspace_explain_code` action performs **static analysis** of a code file 
 | `exports` | Named export identifiers |
 | `functions` | List of `{ name, async, exported, params }` for all function/arrow/Python def declarations |
 | `classes` | List of `{ name, extends?, implements? }` for class definitions |
-| `top_comment` | Leading JSDoc, Python docstring, or line-comment block (≤300 chars) |
+| `top_comment` | Leading JSDoc, Python docstring, or line-comment block (â‰¤300 chars) |
 | `structural` | Counts: `branch_points`, `loops`, `async_operations`, `error_handling` |
 | `language` | File extension used as language hint |
 
@@ -169,7 +169,7 @@ Previously the action returned only raw regex match counts with no structural an
 |---|---|
 | `quality_first` | Best available model; higher latency and cost |
 | `speed_first` | Smallest/fastest model |
-| `cost_balanced` | Default — balances quality vs cost |
+| `cost_balanced` | Default â€” balances quality vs cost |
 | `custom` | Use `CUSTOM_MODEL_NAME` env var |
 
 ### Auto Mode (Provider Failover)
@@ -212,9 +212,9 @@ Scout runs for these action types:
 - `workspace_generate_from_template`
 
 ### Scout Sequence
-1. `workspace_scout` — structural overview of the repo
-2. `workspace_grep` — grep for task-related symbols/terms
-3. `workspace_list_files` — list relevant directories
+1. `workspace_scout` â€” structural overview of the repo
+2. `workspace_grep` â€” grep for task-related symbols/terms
+3. `workspace_list_files` â€” list relevant directories
 
 ### Output
 - Single formatted string, capped at **4,000 characters**
@@ -268,7 +268,7 @@ After every completed task, the agent generates structured closeout artifacts fo
 | Function | Output | Used For |
 |---|---|---|
 | `buildCloseOutComment(task, result, language?)` | Plain text with status, action taken, outcome | Jira comment, Slack message |
-| `buildCloseOutSummary(task, result, language?)` | One-liner with emoji status (`✅` / `❌`) | Dashboard notification |
+| `buildCloseOutSummary(task, result, language?)` | One-liner with emoji status (`âœ…` / `âŒ`) | Dashboard notification |
 | `buildPRDescription(task, result)` | Markdown PR body with Summary/Motivation/Changes/Tests sections | GitHub/GitLab/Azure DevOps PR |
 
 ### Closeout Delivery (postTaskCloseOutV2)
@@ -283,7 +283,7 @@ After every completed task, the agent generates structured closeout artifacts fo
 
 After any code-touching action, if `AF_TEST_AFTER_EDIT=true` in env:
 1. Agent runs `run_tests` action automatically
-2. If tests fail: up to 2 retry loops (re-edit → re-test)
+2. If tests fail: up to 2 retry loops (re-edit â†’ re-test)
 3. If tests still fail after 2 loops: task is escalated via `test_failures_unresolved`
 4. Pass/fail result is recorded in `ActionResultRecord.approvalSummary`
 
@@ -304,7 +304,7 @@ When a high-risk or medium-risk action reaches human review, the agent generates
 | `proposed_rollback` | How to undo this change if approved and then failed |
 | `lint_status` | Lint result (`pass` / `fail` / `skipped`) |
 | `test_status` | Test result (`pass` / `fail` / `skipped`) |
-| `packet_complete` | Boolean — all required fields are present |
+| `packet_complete` | Boolean â€” all required fields are present |
 
 ---
 
@@ -412,8 +412,8 @@ All outbound connector calls (GitHub, Jira, TestRail, Zephyr) pass through `disp
 ### `assertTenantCredentialIsolation(payload)`
 
 Called before every connector dispatch. Rules:
-- If `payload.tenant_id` is non-empty **and not in the dev-bypass set** AND `payload.credentials` is absent → throws `CREDENTIAL_ISOLATION_REQUIRED`
-- Dev-bypass tenants: `dev`, `test`, `local`, `default`, `ci`, `localhost` — these may fall back to env-var credentials for local development
+- If `payload.tenant_id` is non-empty **and not in the dev-bypass set** AND `payload.credentials` is absent â†’ throws `CREDENTIAL_ISOLATION_REQUIRED`
+- Dev-bypass tenants: `dev`, `test`, `local`, `default`, `ci`, `localhost` â€” these may fall back to env-var credentials for local development
 - Production tenants must supply explicit `payload.credentials` or the dispatch returns `{ ok: false, error: 'CREDENTIAL_ISOLATION_REQUIRED: ...' }`
 
 This prevents credential bleed where one tenant's env-var token could be used to act on behalf of another tenant's resource.
@@ -423,8 +423,8 @@ This prevents credential bleed where one tenant's env-var token could be used to
 ## Desktop Operator Integration
 
 For workspace automation tasks (browser, app launch, REPL), the agent delegates to:
-- `MockDesktopOperator` — in test/dev mode
-- `PlaywrightDesktopOperator` — in production
+- `MockDesktopOperator` â€” in test/dev mode
+- `PlaywrightDesktopOperator` â€” in production
 
 Controlled by `DESKTOP_OPERATOR` env var. See [DESKTOP_OPERATOR.md](./DESKTOP_OPERATOR.md).
 
@@ -433,53 +433,53 @@ Controlled by `DESKTOP_OPERATOR` env var. See [DESKTOP_OPERATOR.md](./DESKTOP_OP
 ## Language Integration
 
 All agent output (comments, PR descriptions, Slack messages) is language-aware via `resolveTaskLanguage()`:
-- Cascades: audio → text detection → user profile → workspace config → tenant default → `en`
+- Cascades: audio â†’ text detection â†’ user profile â†’ workspace config â†’ tenant default â†’ `en`
 - 5 Unicode detection ranges: `ja`, `ko`, `ar`, `hi`, `en`
 
 See [LANGUAGE_SYSTEM.md](./LANGUAGE_SYSTEM.md).
 
 ---
 
-## Sprint 15 — Tester Agent Gap Fixes (2026-05-21)
+## Sprint 15 â€” Tester Agent Gap Fixes (2026-05-21)
 
 Three real gaps were validated against the live codebase (no hallucinations) and fixed.  
 Two previously-reported gaps (ImageMagick visual diff, ZAP passive DAST) were confirmed already resolved in Sprint 13.
 
-### Gap 1 — Exploratory Session Dispatcher (`workspace_exploratory_session`)
+### Gap 1 â€” Exploratory Session Dispatcher (`workspace_exploratory_session`)
 
 **Root cause:** The executor loop iterated over SFDPOT charter actions but never dispatched any browser action.  Every action was unconditionally marked `status = 'passed'` with a comment `"executor doesn't deep-evaluate each step"`.
 
-**Fix — `tester-exploration-engine.ts`:**  
+**Fix â€” `tester-exploration-engine.ts`:**  
 Added `mapActionToExecutableSteps(action, appUrl)` which maps each SFDPOT heuristic description to either:
-- `navigate_screenshot` → 2 steps: `workspace_web_navigate` + `workspace_screenshot`
-- `screenshot_only` → 1 step: `workspace_screenshot`
-- `skip` → 0 steps + a `skipReason` explaining why (e.g. multi-browser, clock manipulation, keyboard-only)
+- `navigate_screenshot` â†’ 2 steps: `workspace_web_navigate` + `workspace_screenshot`
+- `screenshot_only` â†’ 1 step: `workspace_screenshot`
+- `skip` â†’ 0 steps + a `skipReason` explaining why (e.g. multi-browser, clock manipulation, keyboard-only)
 
-**Fix — `local-workspace-executor.ts`:**  
+**Fix â€” `local-workspace-executor.ts`:**  
 The exploratory loop now calls `mapActionToExecutableSteps` per action, dispatches each step via `executeLocalWorkspaceAction`, records failures as `findings[]`, and sets `next.status = 'skipped' | 'passed' | 'failed'` correctly.  Non-automatable actions (Platform / Time dimension steps) receive a `skipped` status with an explanatory note instead of a false `passed`.
 
-### Gap 2 — Appium Fallback (`workspace_appium_test_run`)
+### Gap 2 â€” Appium Fallback (`workspace_appium_test_run`)
 
-**Root cause:** When `APPIUM_SERVER_URL` was not set, the case immediately returned `{ ok: false, errorOutput: '...' }` — no fallback, hard fail.
+**Root cause:** When `APPIUM_SERVER_URL` was not set, the case immediately returned `{ ok: false, errorOutput: '...' }` â€” no fallback, hard fail.
 
-**Fix — `local-workspace-executor.ts`:**  
+**Fix â€” `local-workspace-executor.ts`:**  
 1. Default the URL to `http://localhost:4723` when env var is absent (standard Appium default).
 2. Health-check the server with `fetch(.../status, { signal: AbortSignal.timeout(3_000) })`.
-3. If the health-check fails → fall back to **Playwright device emulation**: runs `npx playwright test --device="Pixel 5"` (Android) or `--device="iPhone 12"` (iOS) depending on `payload.platform`.  Returns the Playwright result as the action result.
-4. If Appium is reachable → proceed with original WebdriverIO / pytest path as before.
+3. If the health-check fails â†’ fall back to **Playwright device emulation**: runs `npx playwright test --device="Pixel 5"` (Android) or `--device="iPhone 12"` (iOS) depending on `payload.platform`.  Returns the Playwright result as the action result.
+4. If Appium is reachable â†’ proceed with original WebdriverIO / pytest path as before.
 
-### Gap 3 — SAST LLM Semantic Analysis (`workspace_sast_scan`)
+### Gap 3 â€” SAST LLM Semantic Analysis (`workspace_sast_scan`)
 
 **Root cause:** The SAST scan used 30+ regex patterns + optional Semgrep.  Neither engine can detect logic-level vulnerabilities: auth/authz bypass, IDOR, race conditions, TOCTOU, privilege escalation, or missing authorization checks.
 
-**Fix — new file `sast-semantic-analyzer.ts`:**  
+**Fix â€” new file `sast-semantic-analyzer.ts`:**  
 Exports four functions:
-- `buildSastSemanticPrompt(fileContent, filename)` — crafts an LLM prompt targeting 7 logic vulnerability categories, truncates to 6 000 chars, enforces JSON-array response format.
-- `parseSastSemanticResponse(rawResponse, filename)` — tolerantly extracts a JSON array from prose-wrapped LLM responses; validates severity, normalises unknowns to `medium`, skips entries without a message.
-- `callSastLlmIfConfigured(prompt, filename)` — returns `null` (graceful no-op) when `SAST_LLM_ENDPOINT` or `SAST_LLM_API_KEY` env vars are absent.  Uses `SAST_LLM_MODEL` (default `gpt-4o-mini`).  OpenAI-compatible chat completions format.  Never throws.
-- `selectFilesForSemanticAnalysis(files, topN)` — prioritises auth/controller/middleware/permission files by pattern score, returns top-N candidates.
+- `buildSastSemanticPrompt(fileContent, filename)` â€” crafts an LLM prompt targeting 7 logic vulnerability categories, truncates to 6 000 chars, enforces JSON-array response format.
+- `parseSastSemanticResponse(rawResponse, filename)` â€” tolerantly extracts a JSON array from prose-wrapped LLM responses; validates severity, normalises unknowns to `medium`, skips entries without a message.
+- `callSastLlmIfConfigured(prompt, filename)` â€” returns `null` (graceful no-op) when `SAST_LLM_ENDPOINT` or `SAST_LLM_API_KEY` env vars are absent.  Uses `SAST_LLM_MODEL` (default `gpt-4o-mini`).  OpenAI-compatible chat completions format.  Never throws.
+- `selectFilesForSemanticAnalysis(files, topN)` â€” prioritises auth/controller/middleware/permission files by pattern score, returns top-N candidates.
 
-**Fix — `local-workspace-executor.ts` (`workspace_sast_scan`):**  
+**Fix â€” `local-workspace-executor.ts` (`workspace_sast_scan`):**  
 When `payload.llm_analysis === true`, after the regex + Semgrep passes:
 1. Select top-5 files via `selectFilesForSemanticAnalysis`.
 2. For each, call `callSastLlmIfConfigured` (no-op when env not set).
@@ -492,17 +492,17 @@ Env vars required to activate: `SAST_LLM_ENDPOINT`, `SAST_LLM_API_KEY`.  Feature
 
 | File | Tests | All pass |
 |------|-------|----------|
-| `apps/agent-runtime/src/tester-exploration-engine.test.ts` | 18 | ✅ |
-| `apps/agent-runtime/src/sast-semantic-analyzer.test.ts` | 17 | ✅ |
+| `apps/agent-runtime/src/tester-exploration-engine.test.ts` | 18 | âœ… |
+| `apps/agent-runtime/src/sast-semantic-analyzer.test.ts` | 17 | âœ… |
 
 New test assertions:
-- `mapActionToExecutableSteps`: navigate_screenshot → 2 steps; screenshot_only → 1 step; missing appUrl → screenshot only; platform/time actions → skipped with reason.
+- `mapActionToExecutableSteps`: navigate_screenshot â†’ 2 steps; screenshot_only â†’ 1 step; missing appUrl â†’ screenshot only; platform/time actions â†’ skipped with reason.
 - `buildSastSemanticPrompt`: contains all 7 vuln categories; truncates at 6 000 chars; instructs JSON response.
 - `parseSastSemanticResponse`: parses valid array; returns `[]` for invalid JSON; extracts array from prose; normalises severity; skips items without message.
 - `callSastLlmIfConfigured`: returns `null` when env vars absent; returns `null` when only one env var set.
 - `selectFilesForSemanticAnalysis`: scores auth/controller files higher; respects topN; handles small file lists.
 
-### Quality Gate — Sprint 15 Baseline
+### Quality Gate â€” Sprint 15 Baseline
 
 | Metric | Result |
 |--------|--------|
@@ -513,7 +513,7 @@ New test assertions:
 
 ---
 
-## Sprint 13 — Tester Agent Gap Fixes
+## Sprint 13 â€” Tester Agent Gap Fixes
 
 > Applied: May 20, 2026
 
@@ -528,25 +528,25 @@ Six validated gaps in the Tester Agent were found and fixed. Three gaps were con
 | T3 | No persistent memory (`workspace_memory_search` missing) | **REAL** | Added `workspace_memory_write` + `workspace_memory_search` |
 | T4 | SAST is 9-rule regex heuristics only | **REAL** | Extended to 30+ patterns across 8 categories + Semgrep CLI integration |
 | T5 | `workspace_explain_code` is stubs | **NOT REAL** | Fixed in Sprint 12 (Developer Gap 4) |
-| T6 | Visual regression is pixel diff only | **REAL** (worse — was file-size ratio) | SHA256 exact match → ImageMagick RMSE → size fallback |
+| T6 | Visual regression is pixel diff only | **REAL** (worse â€” was file-size ratio) | SHA256 exact match â†’ ImageMagick RMSE â†’ size fallback |
 | T7 | DAST silently fails without ZAP | **REAL** | Passive DAST fallback: HTTP header checks + sensitive path exposure |
 | T8 | No browser screenshot streaming | **REAL but out of scope** | Requires noVNC container wiring (infrastructure sprint) |
 | T9 | No episodic memory | **NOT REAL** | `tester-episodic-hooks.ts` already wired in `runtime-server.ts` |
 
-### T1 + T2 + T3 — Tester Code Write, Git, and Memory
+### T1 + T2 + T3 â€” Tester Code Write, Git, and Memory
 
 **File:** `apps/agent-runtime/src/tester-agent-profile.ts`
 
 Added to `TESTER_ROLE_ALLOWED_LOCAL_ACTIONS`:
-- `code_edit` — enables test file creation and editing directly
-- `git_commit`, `git_push` — enables test branch commits and pushes
-- `workspace_memory_write`, `workspace_memory_search` — enables persistent working memory across tasks
+- `code_edit` â€” enables test file creation and editing directly
+- `git_commit`, `git_push` â€” enables test branch commits and pushes
+- `workspace_memory_write`, `workspace_memory_search` â€” enables persistent working memory across tasks
 
 PR creation via GitHub connector was already allowed via `ROLE_CONNECTOR_ACTION_OVERRIDES.tester.github`.
 
-### T4 — SAST Enhancement (30+ patterns + Semgrep)
+### T4 â€” SAST Enhancement (30+ patterns + Semgrep)
 
-**File:** `apps/agent-runtime/src/local-workspace-executor.ts` — `workspace_sast_scan` case
+**File:** `apps/agent-runtime/src/local-workspace-executor.ts` â€” `workspace_sast_scan` case
 
 Extended from 9 regex patterns to 30+ patterns across 8 security categories:
 - **Injection**: SQL template, NoSQL, command, LDAP, XPath
@@ -562,24 +562,24 @@ New Semgrep CLI integration: when `semgrep: true` (default) and Semgrep is insta
 
 Supported file extensions extended to include `.py`, `.java`, `.go`, `.cs`, `.rb`.
 
-### T6 — Visual Regression: SHA256 + ImageMagick + Fallback
+### T6 â€” Visual Regression: SHA256 + ImageMagick + Fallback
 
-**File:** `apps/agent-runtime/src/local-workspace-executor.ts` — `workspace_visual_regression` case
+**File:** `apps/agent-runtime/src/local-workspace-executor.ts` â€” `workspace_visual_regression` case
 
 3-tier comparison replacing the previous file-size ratio heuristic:
 
-1. **SHA256 exact match** (fast path) — `method: 'sha256_exact'`. If hashes match, no regression. Zero false positives for identical screenshots.
-2. **ImageMagick pixel diff** — `compare -metric RMSE` when ImageMagick (`compare`) is available. Produces quantitative `diff_pct` and a `diff_image` path on regression. Method: `imagemagick_pixel_diff`.
-3. **Size-ratio fallback** — when ImageMagick is absent. Returns `method: 'size_fallback'` with advisory to install ImageMagick.
+1. **SHA256 exact match** (fast path) â€” `method: 'sha256_exact'`. If hashes match, no regression. Zero false positives for identical screenshots.
+2. **ImageMagick pixel diff** â€” `compare -metric RMSE` when ImageMagick (`compare`) is available. Produces quantitative `diff_pct` and a `diff_image` path on regression. Method: `imagemagick_pixel_diff`.
+3. **Size-ratio fallback** â€” when ImageMagick is absent. Returns `method: 'size_fallback'` with advisory to install ImageMagick.
 
-### T7 — DAST Passive Fallback (no ZAP required)
+### T7 â€” DAST Passive Fallback (no ZAP required)
 
-**File:** `apps/agent-runtime/src/local-workspace-executor.ts` — `workspace_dast_scan` case
+**File:** `apps/agent-runtime/src/local-workspace-executor.ts` â€” `workspace_dast_scan` case
 
 When `ZAP_API_URL` is not set, performs a lightweight passive scan instead of returning an error:
 
-- **HTTP security headers** — checks for missing HSTS, X-Frame-Options, X-Content-Type-Options, CSP, Referrer-Policy, Permissions-Policy; detects Server banner and X-Powered-By disclosure
-- **Sensitive path exposure** — probes `/.git/HEAD`, `/.env`, `/wp-admin`, `/phpinfo.php`, `/admin`, `/swagger.json`, `/openapi.json`, `/api-docs`
+- **HTTP security headers** â€” checks for missing HSTS, X-Frame-Options, X-Content-Type-Options, CSP, Referrer-Policy, Permissions-Policy; detects Server banner and X-Powered-By disclosure
+- **Sensitive path exposure** â€” probes `/.git/HEAD`, `/.env`, `/wp-admin`, `/phpinfo.php`, `/admin`, `/swagger.json`, `/openapi.json`, `/api-docs`
 - Returns `{ ok: true, mode: 'passive_fallback', findings: [...] }` with severity-tagged findings
 
 Full ZAP active scan remains available when `ZAP_API_URL` is configured.
@@ -587,42 +587,42 @@ Full ZAP active scan remains available when `ZAP_API_URL` is configured.
 ### New Tests Added (Sprint 13)
 
 7 new tests in `apps/agent-runtime/src/local-workspace-executor.test.ts`:
-- `workspace_sast_scan` — SQL template injection, command injection, CORS wildcard, engine field presence
-- `workspace_visual_regression` — missing URL returns error
-- `workspace_dast_scan` — passive fallback returns `ok: true` with `mode: 'passive_fallback'`; missing `target_url` returns error
+- `workspace_sast_scan` â€” SQL template injection, command injection, CORS wildcard, engine field presence
+- `workspace_visual_regression` â€” missing URL returns error
+- `workspace_dast_scan` â€” passive fallback returns `ok: true` with `mode: 'passive_fallback'`; missing `target_url` returns error
 
 ---
 
-## Sprint 14 — Developer Agent Gap Fixes
+## Sprint 14 â€” Developer Agent Gap Fixes
 
-Sprint 14 validated and fixed three confirmed Developer agent gaps. No guessing — every gap
+Sprint 14 validated and fixed three confirmed Developer agent gaps. No guessing â€” every gap
 was verified against source code before any changes were made.
 
-### Gap 1 — `workspace_generate_test` wrote TODO stubs instead of real assertions
+### Gap 1 â€” `workspace_generate_test` wrote TODO stubs instead of real assertions
 
 **Root cause**: The original implementation iterated over symbol names and emitted
-`// TODO: implement test for ${sym}\n  assert.ok(true);` for every function — semantically
+`// TODO: implement test for ${sym}\n  assert.ok(true);` for every function â€” semantically
 useless tests that would pass vacuously regardless of what the function did.
 
 **Fix**: New module `apps/agent-runtime/src/test-generator.ts` added with smart assertion
 generation:
-- `extractSignatures(src)` — regex-parses exported functions and arrow-function constants from
+- `extractSignatures(src)` â€” regex-parses exported functions and arrow-function constants from
   TypeScript source. Falls back to symbol names for classes or unexported identifiers.
-- `categorise(name, returnType)` — infers category from return type (strips `Promise<>`) then
+- `categorise(name, returnType)` â€” infers category from return type (strips `Promise<>`) then
   name prefix heuristics. Categories: `boolean | number | string | array | nullable | object | void | unknown`.
-- `inferArgs(rawParams)` — maps parameter names to realistic values
-  (`email → 'user@example.com'`, `name → 'Alice'`, `id → 'id-1'`, numeric → `42`, etc.).
-- `buildNodeTestCases(sig)` / `buildJestCases(sig, isVitest)` — generate 3 meaningful assertions
+- `inferArgs(rawParams)` â€” maps parameter names to realistic values
+  (`email â†’ 'user@example.com'`, `name â†’ 'Alice'`, `id â†’ 'id-1'`, numeric â†’ `42`, etc.).
+- `buildNodeTestCases(sig)` / `buildJestCases(sig, isVitest)` â€” generate 3 meaningful assertions
   per function. Example for `add(a, b): number`: `assert.equal(add(2, 3), 5)` and
   `assert.equal(add(0, 0), 0)`. For `sub`: `assert.equal(sub(5, 3), 2)` and
   `assert.equal(sub(4, 4), 0)`.
-- `generateTestFile(opts)` — top-level entry point, returns `{ content, symbols, framework }`.
+- `generateTestFile(opts)` â€” top-level entry point, returns `{ content, symbols, framework }`.
   Supports `node:test`, `jest`, and `vitest` frameworks.
 
 `local-workspace-executor.ts` `workspace_generate_test` case now calls `generateTestFile()` and
 returns `ok: false` with a clear error when no exports are found.
 
-### Gap 2 — `DESKTOP_OPERATOR=native` bypassed the vision loop
+### Gap 2 â€” `DESKTOP_OPERATOR=native` bypassed the vision loop
 
 **Root cause**: Four action cases in `local-workspace-executor.ts` guarded native-operator routing
 with:
@@ -630,8 +630,8 @@ with:
 if (process.env['DESKTOP_OPERATOR'] === 'mock' || process.env['DESKTOP_OPERATOR'] === 'playwright')
 ```
 When `DESKTOP_OPERATOR=native` (the production Docker default), all four fell through to a raw
-`launchDetached()` OS call, completely bypassing `NativeDesktopOperator` and the screenshot →
-LLM → action vision loop in `docker/desktop-agent/agent-entrypoint.js`.
+`launchDetached()` OS call, completely bypassing `NativeDesktopOperator` and the screenshot â†’
+LLM â†’ action vision loop in `docker/desktop-agent/agent-entrypoint.js`.
 
 **Fix**: All four conditions now include `=== 'native'`:
 ```typescript
@@ -642,26 +642,26 @@ Affected actions: `workspace_browser_open`, `workspace_app_launch`, `workspace_m
 
 **How `native` mode works after the fix**: `NativeDesktopOperator` submits the request to the
 `localhost:5003` HTTP API served by `docker/desktop-agent/agent-entrypoint.js`, which runs the
-real `scrot → LLM-decision → xdotool` feedback loop.
+real `scrot â†’ LLM-decision â†’ xdotool` feedback loop.
 
-### Gap 3 — Episodic memory silently dropped without embedding keys
+### Gap 3 â€” Episodic memory silently dropped without embedding keys
 
 **Root cause**: `episodicEmbed` is `null` when `EPISODIC_EMBEDDING_ENDPOINT` /
 `EPISODIC_EMBEDDING_API_KEY` are absent (self-hosted or early-stage deployments). Both the recall
 path (line ~3494) and the write path (line ~4411) in `runtime-server.ts` were gated on
 `if (episodicEmbed && options.prisma)`. When the embed client was `null`, the entire episodic
-memory system was a silent no-op — all session context was lost on every container restart.
+memory system was a silent no-op â€” all session context was lost on every container restart.
 
 **Fix**: New module `services/memory-service/src/episodic-text-fallback.ts` with two functions:
-- `writeEpisodicMemoryNoEmbed(request, prisma)` — `INSERT ... ON CONFLICT DO UPDATE` with
+- `writeEpisodicMemoryNoEmbed(request, prisma)` â€” `INSERT ... ON CONFLICT DO UPDATE` with
   `embedding = NULL` and `embeddingModel = 'none:text-search-fallback'`. Durable across restarts.
-- `searchEpisodicMemoryNoEmbed(request, prisma)` — `SELECT WHERE summary ILIKE $pattern OR pattern
+- `searchEpisodicMemoryNoEmbed(request, prisma)` â€” `SELECT WHERE summary ILIKE $pattern OR pattern
   ILIKE $pattern ORDER BY lastSeen DESC LIMIT topK`. Returns fixed `similarity: 0.5` (honest
   signal that this is text-match, not cosine similarity). Vector-indexed rows (embedding IS NOT
   NULL) are still preferred in the upgrade path when embedding keys are later configured.
 
 `runtime-server.ts` changes:
-- Recall: dual-path ternary — vector path when `episodicEmbed && prisma`, text fallback when
+- Recall: dual-path ternary â€” vector path when `episodicEmbed && prisma`, text fallback when
   only `prisma`, `null` when neither.
 - Write: separate `if (!episodicEmbed && options.prisma)` block after the vector-write block,
   calling `writeEpisodicMemoryNoEmbed(...)` fire-and-forget (`.catch` logs, never throws).
@@ -670,20 +670,20 @@ Both functions exported from `services/memory-service/src/index.ts`.
 
 ### New Tests Added (Sprint 14)
 
-**`apps/agent-runtime/src/test-generator.test.ts`** — 31 unit tests:
-- `extractSignatures`: regular function, async function, arrow function, multiple functions, class → fallbackSymbols
-- `categorise`: all categories by return type, all categories by name prefix, `find*` → nullable, `filter*` → array, unknown fallback
+**`apps/agent-runtime/src/test-generator.test.ts`** â€” 31 unit tests:
+- `extractSignatures`: regular function, async function, arrow function, multiple functions, class â†’ fallbackSymbols
+- `categorise`: all categories by return type, all categories by name prefix, `find*` â†’ nullable, `filter*` â†’ array, unknown fallback
 - `inferArgs`: empty params, email, name, num, multiple params
 - `generateTestFile` (node:test): `add` function checks `assert.equal(add(2, 3), 5)` and no TODO, `sub`, `isEmail` boolean, `formatDate` string, `filterUsers` array
 - `generateTestFile` (jest): `describe(` present, `toBe(5)`, no vitest import
 - `generateTestFile` (vitest): `from 'vitest'` present
 - `generateTestFile` no exports: returns empty content and empty symbols array
 
-**`services/memory-service/src/episodic-text-fallback.test.ts`** — 7 unit tests:
+**`services/memory-service/src/episodic-text-fallback.test.ts`** â€” 7 unit tests:
 - `writeEpisodicMemoryNoEmbed`: returns shaped `EpisodicMemoryRecord`, throws on empty rows, falls back `botId` from request
 - `searchEpisodicMemoryNoEmbed`: returns shaped `EpisodicSearchResult[]` with `similarity: 0.5`, empty array for no rows, defaults `topK=5`, all similarities are 0.5
 
-**`apps/agent-runtime/src/local-workspace-executor.test.ts`** — updated:
+**`apps/agent-runtime/src/local-workspace-executor.test.ts`** â€” updated:
 - `workspace_generate_test` test now asserts real arithmetic: `assert.equal(add(2, 3), 5)`, `assert.equal(add(0, 0), 0)`, `assert.equal(sub(5, 3), 2)`, no TODO in output
 - Added jest-format variant: `describe(` present, `toBe(` assertions, no `assert.` methods
 

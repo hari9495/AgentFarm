@@ -1,9 +1,16 @@
-> **Status:** Mixed planned + shipped behavior. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for the authoritative gap tracker.
+> **Status:** 75+ models shipped. Requires PostgreSQL 16 + pgvector extension. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for details.
 # AgentFarm Data Model
 
-> Last updated: May 10, 2026 | AgentFarm monorepo audit
+> Last updated: 2026-05-29 (Sprint 18)
 
-Full Prisma schema reference for `packages/db-schema/prisma/schema.prisma` — PostgreSQL 16.
+Full Prisma schema reference for `packages/db-schema/prisma/schema.prisma` — PostgreSQL 16 + pgvector.
+
+**Sprint 8–18 model additions:**
+- `AgentPersona` — per-bot identity (display name, email, avatar, communication style, disclosure statement)
+- `SetupWizardSession` — multi-step agent onboarding state
+- `AgentLongTermMemory.embedding vector(1536)` — pgvector column for episodic memory (Sprint 3)
+- `AgentKnowledgeBase` — semantic knowledge base with `embedding vector(1536)` (Sprint 9)
+- `TaskExecutionRecord.platformFeeUsd Float?` — per-task platform fee tracking (Sprint 7 billing metering)
 
 ---
 

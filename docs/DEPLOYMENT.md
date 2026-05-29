@@ -1,7 +1,7 @@
-> **Status:** Mixed planned + shipped behavior. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for the authoritative gap tracker.
+> **Status:** All services ship via Docker Compose. Azure production deployment pending sign-in. Desktop-agent container added in Sprint 10. pgvector extension required for PostgreSQL. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for details.
 # AgentFarm Deployment Guide
 
-> Last updated: May 10, 2026 | AgentFarm monorepo audit
+> Last updated: 2026-05-29 (Sprint 18)
 
 ---
 

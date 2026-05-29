@@ -1,4 +1,4 @@
-# AgentFarm Architecture Risk Register
+﻿# AgentFarm Architecture Risk Register
 
 ## Purpose
 Track architecture risks before development and keep mitigations owner-driven.
@@ -139,7 +139,7 @@ Track architecture risks before development and keep mitigations owner-driven.
 - Engineering Lead / AI Lead
 4. Mitigation
 - Implemented multi-provider Auto fallback chain (ADR-007): runtime tries providers in priority order per model profile and continues to the next on any error.
-- Provider health scoring (5-minute rolling window, composite error-rate + latency score) dynamically reorders the fallback chain at runtime — degraded providers are deprioritized automatically.
+- Provider health scoring (5-minute rolling window, composite error-rate + latency score) dynamically reorders the fallback chain at runtime â€” degraded providers are deprioritized automatically.
 - Heuristic-only `agentfarm` provider is always available as the last-resort fallback with zero external dependency.
 - Dashboard model profiles allow operators to choose a cost envelope (quality_first / speed_first / cost_balanced / custom) without manual provider ordering.
 5. Mitigation Evidence
@@ -179,11 +179,10 @@ Track architecture risks before development and keep mitigations owner-driven.
 8. Closure Basis
 - Six-priority spec-alignment implementation completed with focused typecheck and test validation.
 
-<!-- doc-sync: 2026-05-06 sprint-6 -->
-> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
 
-<!-- doc-sync: 2026-05-06 full-pass-2 -->
-> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
 
 <!-- doc-sync: 2026-05-07 six-priority-closure -->
 > Last synchronized: 2026-05-07 (Cross-service contract drift risk closure and implementation snapshot linkage).
+
+<!-- doc-sync: 2026-05-29 sprint-18 -->
+> Last synchronized: 2026-05-29 (Sprint 18 — full documentation update).

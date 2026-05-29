@@ -1,4 +1,4 @@
-# AgentFarm MVP Approved Execution Task List
+﻿# AgentFarm MVP Approved Execution Task List
 
 ## Purpose
 Define execution tasks limited to already approved MVP items.
@@ -194,16 +194,16 @@ Update the table at end of day with evidence links and blocker ownership.
 4. Set Evidence Updated to Yes only after source docs are updated and cross-checked.
 5. If Scope Check changes to Fail, stop execution and escalate in same day governance check.
 
-## Deferred Work (Built but Parked — Resume After Sprint 0 Exit Gate)
+## Deferred Work (Built but Parked â€” Resume After Sprint 0 Exit Gate)
 | Item | Location | Why Deferred | Resume Trigger |
 | --- | --- | --- | --- |
 | Marketing website | apps/website | Out of Sprint 0 scope. Built and typechecks clean. Not part of any MVP task. | After Sprint 0 exit gate is cleared (2026-04-28) and Sprint 1 is authorized. |
-| Bot marketplace | apps/website/app/marketplace | Same as above — part of the marketing website copy. | Same as above. |
+| Bot marketplace | apps/website/app/marketplace | Same as above â€” part of the marketing website copy. | Same as above. |
 
 **Rule:** Do not touch apps/website or add new non-task work until all Sprint 0 P0 tasks (2.1, 2.2, 4.1, 5.1) are marked Completed and the exit gate is passed.
 
 ## Current Status
-1. List status: **ALL SPRINT 0 P0/P1 TASKS COMPLETED** — Approved for MVP exit gate (2026-04-28).
+1. List status: **ALL SPRINT 0 P0/P1 TASKS COMPLETED** â€” Approved for MVP exit gate (2026-04-28).
 2. Execution dates: 2026-04-21 (all tasks frozen in one engineering day).
 3. Next review date: 2026-04-28 Sprint 0 exit gate + Sprint 1 authorization.
 4. Sprint 0 exit gate deadline: 2026-04-28.
@@ -237,11 +237,10 @@ Validation reference:
 2. Any proposed expansion that adds new roles, connectors, or privileged runtime actions must be reviewed as out-of-scope by default until approved.
 3. Every post-MVP task must include owner, dependency, acceptance criteria, scope check, and evidence references before implementation begins.
 
-<!-- doc-sync: 2026-05-06 sprint-6 -->
-> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
 
-<!-- doc-sync: 2026-05-06 full-pass-2 -->
-> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
 
 <!-- doc-sync: 2026-05-07 six-priority-closure -->
 > Last synchronized: 2026-05-07 (Execution task list updated with six-priority closure state).
+
+<!-- doc-sync: 2026-05-29 sprint-18 -->
+> Last synchronized: 2026-05-29 (Sprint 18 — full documentation update).

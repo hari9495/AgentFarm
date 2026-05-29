@@ -1,23 +1,31 @@
-> **Status:** Mixed planned + shipped behavior. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for the authoritative gap tracker.
+> **Status:** All memory layers shipped. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for details.
 # AgentFarm Memory System
 
-> Last updated: May 10, 2026 | AgentFarm monorepo audit
+> Last updated: 2026-05-29 (Sprint 18)
 
-Full reference for the agent memory architecture spanning `apps/agent-runtime/src/prisma-memory-store.ts` and `services/memory-service`.
+Full reference for the agent memory architecture spanning `apps/agent-runtime/src/`, `services/memory-service/src/`, and `packages/db-schema`.
 
 ---
 
 ## Overview
 
-The agent memory system has three layers:
+The agent memory system has five layers:
 
-| Layer | Model | TTL | Scope |
-|---|---|---|---|
-| Short-term | `AgentShortTermMemory` | 7 days (default) | Per workspace, per task |
-| Long-term | `AgentLongTermMemory` | Permanent | Per tenant, per pattern |
-| Repo knowledge | `AgentRepoKnowledge` | Permanent | Per (tenant, repo, role, key) |
+| Layer | Model | TTL | Scope | Type |
+|---|---|---|---|---|
+| Short-term | `AgentShortTermMemory` | 7 days | Per workspace, per task | Relational |
+| Long-term | `AgentLongTermMemory` | Permanent | Per tenant, per pattern | Relational + pgvector |
+| Episodic | `AgentLongTermMemory.embedding` | Permanent | Per workspace + per person | pgvector 1536-dim |
+| Semantic knowledge | `AgentKnowledgeBase` | Permanent | Per tenant (+ optional botId) | pgvector 1536-dim |
+| Repo knowledge | `AgentRepoKnowledge` | Permanent | Per (tenant, repo, role, key) | Relational |
 
 Memory is read before each task and written after each task. It provides the LLM with historical context without requiring the full conversation history in the prompt.
+
+**Pre-task injection:**
+- `_episodic_person_context` — top-5 vector-similar memories for the person extracted from the task payload
+- `_semantic_context` — top-5 cosine-similar knowledge base entries (min similarity 0.70)
+
+Both injections are non-blocking (try/catch) and do not block task execution on failure.
 
 ---
 

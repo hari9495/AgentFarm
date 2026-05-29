@@ -1,4 +1,4 @@
-# Developer Bot Architecture
+﻿# Developer Bot Architecture
 
 **Last updated:** 2026-05-01
 
@@ -41,7 +41,7 @@ The Developer Agent executes all local workspace operations through `executeLoca
 | `code_edit_patch` | `workspace_key`, `file_path`, `old_snippet`, `new_snippet` | patch result |
 | `code_search_replace` | `workspace_key`, `pattern`, `replacement`, `flags?`, `file_pattern?` | JSON `{file, replacements_count}[]` |
 | `apply_patch` | `workspace_key`, `patch_text`, `check_only?` | `patch:applied:ok` or `patch:check:ok` |
-| `file_move` | `workspace_key`, `from_path`, `to_path` | `moved:<from>→<to>` |
+| `file_move` | `workspace_key`, `from_path`, `to_path` | `moved:<from>â†’<to>` |
 | `file_delete` | `workspace_key`, `file_path`, `recursive?` | `deleted:<path>` |
 
 ### Execution Actions
@@ -122,21 +122,21 @@ The MVP optimizes for one strong workflow: make safe, localized code changes in 
 
 ### MVP Components
 
-1. **Request Intake** — Accepts user task such as "add auth", "create CRUD API", "fix failing test". Produces a normalized task envelope.
+1. **Request Intake** â€” Accepts user task such as "add auth", "create CRUD API", "fix failing test". Produces a normalized task envelope.
 
-2. **Repo Scanner (`workspace_scout`)** — Reads lockfiles, package manifests, config files. Detects language, framework, build tools, test tools, package manager, and deployment style. _Implemented as `workspace_scout` action._
+2. **Repo Scanner (`workspace_scout`)** â€” Reads lockfiles, package manifests, config files. Detects language, framework, build tools, test tools, package manager, and deployment style. _Implemented as `workspace_scout` action._
 
-3. **Stack Detector** — Produces a ranked list of likely stacks with confidence. Picks the primary adapter only when confidence exceeds a threshold.
+3. **Stack Detector** â€” Produces a ranked list of likely stacks with confidence. Picks the primary adapter only when confidence exceeds a threshold.
 
-4. **Intent Planner** — Converts user request into normalized engineering operations: `create_endpoint`, `add_validation`, `create_model`, `update_tests`, `fix_type_error`, `add_ui_form`.
+4. **Intent Planner** â€” Converts user request into normalized engineering operations: `create_endpoint`, `add_validation`, `create_model`, `update_tests`, `fix_type_error`, `add_ui_form`.
 
-5. **Tech Adapter** — One adapter per supported stack. Encodes conventions for project layout, dependency patterns, test strategy, code style, file ownership boundaries, validation commands.
+5. **Tech Adapter** â€” One adapter per supported stack. Encodes conventions for project layout, dependency patterns, test strategy, code style, file ownership boundaries, validation commands.
 
-6. **Patch Executor (`code_edit`, `code_edit_patch`, `code_search_replace`, `apply_patch`)** — Applies file changes. Keeps edits local and minimal. Avoids touching unrelated files. _All implemented._
+6. **Patch Executor (`code_edit`, `code_edit_patch`, `code_search_replace`, `apply_patch`)** â€” Applies file changes. Keeps edits local and minimal. Avoids touching unrelated files. _All implemented._
 
-7. **Validation Runner (`run_tests`, `run_build`, `run_linter`)** — Runs the cheapest relevant check first: targeted unit test → typecheck → lint → broader package validation. _All implemented with auto-detection._
+7. **Validation Runner (`run_tests`, `run_build`, `run_linter`)** â€” Runs the cheapest relevant check first: targeted unit test â†’ typecheck â†’ lint â†’ broader package validation. _All implemented with auto-detection._
 
-8. **Fix Loop (`autonomous_loop`)** — If validation fails, retries within the same local slice. Returns structured JSON with per-attempt results. Stops after bounded attempts. _Implemented._
+8. **Fix Loop (`autonomous_loop`)** â€” If validation fails, retries within the same local slice. Returns structured JSON with per-attempt results. Stops after bounded attempts. _Implemented._
 
 ### MVP Supported Stacks
 1. TypeScript + Next.js
@@ -620,12 +620,11 @@ For the Developer Bot in AgentFarm, the best rollout path is:
 4. Route developer bot requests through normalized intents before code generation.
 5. Add approval and evidence hooks for risky code changes.
 
-<!-- doc-sync: 2026-05-06 sprint-6 -->
-> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
 
-<!-- doc-sync: 2026-05-06 full-pass-2 -->
-> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
 
 
 ## Current Implementation Pointer (2026-05-07)
 1. For the latest built-state summary and file map, see planning/build-snapshot-2026-05-07.md.
+
+<!-- doc-sync: 2026-05-29 sprint-18 -->
+> Last synchronized: 2026-05-29 (Sprint 18 — full documentation update).

@@ -1,4 +1,4 @@
-# Phase 1 Signoff Evidence (2026-05-04)
+﻿# Phase 1 Signoff Evidence (2026-05-04)
 
 ## Scope
 This document captures Phase 1 signoff evidence for Engineering, Security, and Product review after Sprint 4 completion.
@@ -79,7 +79,7 @@ Result:
 | Review Track | Criteria | Evidence | Status |
 | --- | --- | --- | --- |
 | Engineering Lead | New Phase 1 hardening checks implemented and passing | Targeted checks 1-4 above all PASS | PASS |
-| Engineering Lead | Full repository quality gate green | `pnpm quality:gate` — EXIT_CODE=0, PASS (2026-05-04) | **PASS** |
+| Engineering Lead | Full repository quality gate green | `pnpm quality:gate` â€” EXIT_CODE=0, PASS (2026-05-04) | **PASS** |
 | Security Lead | Desktop-action governance enforces approval path | Agent Runtime desktop-action governance tests PASS | PASS |
 | Security Lead | Contract metadata/versioning enforced for new records | A4 contract validation PASS | PASS |
 | Product Lead | Phase 1 end-to-end release confidence | Full quality gate PASS (47 checks, 46 passing) | **PASS** |
@@ -91,13 +91,13 @@ Current readiness: **READY FOR SIGNOFF**
 Final green run:
 - Command: `pnpm quality:gate`
 - Date: 2026-05-04
-- Result: EXIT_CODE=0 — Overall: PASS
-- Checks: 47 total, 46 passing, 1 skipped (DB runtime smoke — requires Docker, expected skip)
+- Result: EXIT_CODE=0 â€” Overall: PASS
+- Checks: 47 total, 46 passing, 1 skipped (DB runtime smoke â€” requires Docker, expected skip)
 
 Fixes applied to achieve green gate:
-1. `apps/website/lib/auth-store.ts` — Added `PRAGMA busy_timeout = 5000` to eliminate `SQLITE_BUSY` under concurrent test load.
-2. `apps/website/tests/signup-flow.test.ts` — Per-test `DatabaseSync` instances with `SQLITE_BUSY` retry loop.
-3. `apps/dashboard/scripts/workspace-tab-e2e.mjs` — Retry loop on tab-click navigation assertion to handle transient client-navigation race.
+1. `apps/website/lib/auth-store.ts` â€” Added `PRAGMA busy_timeout = 5000` to eliminate `SQLITE_BUSY` under concurrent test load.
+2. `apps/website/tests/signup-flow.test.ts` â€” Per-test `DatabaseSync` instances with `SQLITE_BUSY` retry loop.
+3. `apps/dashboard/scripts/workspace-tab-e2e.mjs` â€” Retry loop on tab-click navigation assertion to handle transient client-navigation race.
 
 
 
@@ -110,12 +110,11 @@ Fixes applied to achieve green gate:
 - `scripts/a4-contract-validation.mjs`
 - `scripts/quality-gate.mjs`
 
-<!-- doc-sync: 2026-05-06 sprint-6 -->
-> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
 
-<!-- doc-sync: 2026-05-06 full-pass-2 -->
-> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
 
 
 ## Current Implementation Pointer (2026-05-07)
 1. For the latest built-state summary and file map, see planning/build-snapshot-2026-05-07.md.
+
+<!-- doc-sync: 2026-05-29 sprint-18 -->
+> Last synchronized: 2026-05-29 (Sprint 18 — full documentation update).

@@ -1,4 +1,4 @@
-# AgentFarm Weekly Operating System
+﻿# AgentFarm Weekly Operating System
 
 ## Purpose
 Keep execution clear every week with simple routines.
@@ -57,27 +57,26 @@ Keep execution clear every week with simple routines.
 
 | Area | Status | Notes |
 |---|---|---|
-| Agent Runtime | ✅ Green | 906 tests passing, 0 failures |
-| API Gateway | ✅ Green | 898 tests passing, 0 failures |
-| Trigger Service | ✅ Green | 49 tests passing |
-| Orchestrator | ✅ Green | 62 tests passing, port 3011 |
-| Dashboard | ✅ Green | Typecheck clean, Next.js 15 |
-| Skill Marketplace | ✅ Shipped | 21 skills, invoke endpoint, dashboard panel |
-| Memory + Signals | ✅ Shipped | Long-term memory, proactive CI/CVE signals (ADR-016) |
-| Approval Batching | ✅ Shipped | Batch create + batch decision end-to-end |
-| Tester Policy | ✅ Shipped | Hardened contract + runtime enforcement |
-| Quality Feedback | ✅ Shipped | Approval outcomes feed back into LLM routing |
-| Handoff Protocol | ✅ Shipped | Normalized statuses + timeout semantics |
-| Website SWA | ⏳ Pending | Awaiting GitHub secret + Azure SWA deploy |
-| Production Deploy | ⏳ Pending | Awaiting Azure CLI context + `azd up` |
-| ADR Log | ✅ Current | ADR-001 through ADR-015 approved |
+| Agent Runtime | âœ… Green | 906 tests passing, 0 failures |
+| API Gateway | âœ… Green | 898 tests passing, 0 failures |
+| Trigger Service | âœ… Green | 49 tests passing |
+| Orchestrator | âœ… Green | 62 tests passing, port 3011 |
+| Dashboard | âœ… Green | Typecheck clean, Next.js 15 |
+| Skill Marketplace | âœ… Shipped | 21 skills, invoke endpoint, dashboard panel |
+| Memory + Signals | âœ… Shipped | Long-term memory, proactive CI/CVE signals (ADR-016) |
+| Approval Batching | âœ… Shipped | Batch create + batch decision end-to-end |
+| Tester Policy | âœ… Shipped | Hardened contract + runtime enforcement |
+| Quality Feedback | âœ… Shipped | Approval outcomes feed back into LLM routing |
+| Handoff Protocol | âœ… Shipped | Normalized statuses + timeout semantics |
+| Website SWA | â³ Pending | Awaiting GitHub secret + Azure SWA deploy |
+| Production Deploy | â³ Pending | Awaiting Azure CLI context + `azd up` |
+| ADR Log | âœ… Current | ADR-001 through ADR-015 approved |
 
-<!-- doc-sync: 2026-05-06 sprint-6 -->
-> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
 
-<!-- doc-sync: 2026-05-06 full-pass-2 -->
-> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
 
 
 ## Current Implementation Pointer (2026-05-07)
 1. For the latest built-state summary and file map, see planning/build-snapshot-2026-05-07.md.
+
+<!-- doc-sync: 2026-05-29 sprint-18 -->
+> Last synchronized: 2026-05-29 (Sprint 18 — full documentation update).

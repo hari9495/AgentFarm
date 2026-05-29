@@ -72,7 +72,10 @@ docker compose up
    ```
 
 ### Adding a shared type
-Shared contract types go in `packages/shared-types/src/`. Export from the package's `src/index.ts`. Do not duplicate types between packages.
+Shared contract types go in `packages/shared-types/src/`. Export from the package's `src/index.ts`. Do not duplicate types between packages. Add a key to `CONTRACT_VERSIONS` for every new inter-service contract.
+
+### Adding an agent role
+Follow the vertical pattern documented in [DESIGN.md](DESIGN.md): profile layer → role-profile layer → persona layer → memory layer → MCP layer → standup layer → handler layer → runtime wiring → classifier wiring. Implement a test for each handler module. Update `packages/connector-contracts/src/index.ts` role policy keys.
 
 ### Adding a shared package
 If a new shared package is needed, add it under `packages/` following the existing pattern:
@@ -118,13 +121,13 @@ pnpm test:db-smoke
 
 ## Quality gate
 
-The quality gate script checks typecheck, test counts, and coverage thresholds. Run it before opening a PR for any meaningful change:
+The quality gate script runs 47 checks: typechecks, test suites, coverage thresholds (≥80% line coverage on critical modules), and regression lanes. Run it before opening a PR for any meaningful change:
 
 ```bash
 pnpm quality:gate
 ```
 
-The gate is defined in `operations/quality/`. Passing the gate is the release-quality bar.
+Gate reports are written to `operations/quality/`. Passing 47/47 is the sprint close bar. The DB Runtime snapshot smoke lane (requires Docker/Postgres) is skipped in lightweight runs — wire it in CI's `db-integration` job.
 
 ---
 

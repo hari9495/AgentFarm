@@ -1,4 +1,4 @@
----
+﻿---
 description: "TypeScript monorepo engineering guidance for apps, services, and shared packages"
 applyTo: "apps/**/*.ts,apps/**/*.tsx,services/**/*.ts,packages/**/*.ts,scripts/**/*.mjs,.github/workflows/**/*.yml"
 ---
@@ -28,8 +28,5 @@ applyTo: "apps/**/*.ts,apps/**/*.tsx,services/**/*.ts,packages/**/*.ts,scripts/*
 - Prefer minimal diff changes over stylistic churn.
 - If a behavior change is introduced, add corresponding test coverage.
 
-<!-- doc-sync: 2026-05-06 sprint-6 -->
-> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
-
-<!-- doc-sync: 2026-05-06 full-pass-2 -->
-> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
+<!-- doc-sync: 2026-05-29 sprint-18 -->
+> Last synchronized: 2026-05-29 (Sprint 18 — full documentation update).

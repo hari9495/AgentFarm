@@ -1,4 +1,4 @@
-# AgentFarm Architecture Decision Log
+﻿# AgentFarm Architecture Decision Log
 
 ## Purpose
 Track architecture decisions with owner, status, and review dates before development begins.
@@ -106,7 +106,7 @@ Track architecture decisions with owner, status, and review dates before develop
 1. Decision
 - The runtime LLM decision adapter supports nine named providers: openai, azure_openai, github_models, anthropic, google, xai (Grok), mistral, together, and agentfarm (heuristic-only).
 - A tenth mode, `auto`, accepts a per-profile priority list and tries providers in order, falling back to the next on any error.
-- Provider health scoring uses a 5-minute rolling window (max 20 entries per provider). Score = errorRate × 0.7 + (min(avgLatency, 10 000) / 10 000) × 0.3. Providers with lower scores are tried first; providers with no data score 0 and keep their configured order.
+- Provider health scoring uses a 5-minute rolling window (max 20 entries per provider). Score = errorRate Ã— 0.7 + (min(avgLatency, 10 000) / 10 000) Ã— 0.3. Providers with lower scores are tried first; providers with no data score 0 and keep their configured order.
 - The API Gateway LLM config route stores and redacts keys for all ten providers. The dashboard LLM Config panel exposes per-provider fields plus four model profiles: quality_first, speed_first, cost_balanced, and custom.
 2. Owner
 - Engineering Lead / AI Lead
@@ -119,7 +119,7 @@ Track architecture decisions with owner, status, and review dates before develop
 6. Impact
 - Eliminates single-provider lock-in at runtime; health scoring improves reliability under partial provider outages; dashboard presets reduce operator configuration burden.
 
-## ADR-008: Local Workspace Execution Surface (Tier 0–9 Actions)
+## ADR-008: Local Workspace Execution Surface (Tier 0â€“9 Actions)
 1. Decision
 - The Developer Agent operates on two execution surfaces: (a) connector actions via the API Gateway, and (b) local workspace actions executed directly in a sandboxed VM directory.
 - 70+ local workspace action types across 12 tiers are implemented in `local-workspace-executor.ts`, dispatched from `runtime-server.ts` when the action type is in `LOCAL_WORKSPACE_ACTION_TYPES`.
@@ -153,7 +153,7 @@ Track architecture decisions with owner, status, and review dates before develop
 5. Review Date
 - 2026-05-26
 6. Impact
-- Developer Agent can read, write, search, validate, refactor, test, format, version, commit, create PRs, run CI checks, fix failing tests, suggest security patches, generate release notes, bundle incident patches, manage workspace memory profiles, execute autonomous plans with checkpoints, and simulate policy routing — all within the sandboxed workspace. workspace_scout + workspace_checkpoint + autonomous_loop + workspace_autonomous_plan_execute together form a safe, bounded autonomous coding loop with full audit trail. Approval gate for medium/high actions preserves human oversight over all destructive operations.
+- Developer Agent can read, write, search, validate, refactor, test, format, version, commit, create PRs, run CI checks, fix failing tests, suggest security patches, generate release notes, bundle incident patches, manage workspace memory profiles, execute autonomous plans with checkpoints, and simulate policy routing â€” all within the sandboxed workspace. workspace_scout + workspace_checkpoint + autonomous_loop + workspace_autonomous_plan_execute together form a safe, bounded autonomous coding loop with full audit trail. Approval gate for medium/high actions preserves human oversight over all destructive operations.
 
 ## ADR-010: Approval-Scoped Notification Dispatch (dispatchApprovalAlert)
 1. Decision
@@ -210,10 +210,10 @@ Track architecture decisions with owner, status, and review dates before develop
 ## ADR-013: Skills Crystallization Lifecycle (Hermes Agent Pattern)
 1. Decision
 - `SkillsRegistry` in `apps/agent-runtime/src/skills-registry.ts` implements the Hermes skill crystallization pattern.
-- Lifecycle: `draft → active → deprecated`. A skill transitions from draft to active via `setStatus()` once confirmed useful.
+- Lifecycle: `draft â†’ active â†’ deprecated`. A skill transitions from draft to active via `setStatus()` once confirmed useful.
 - `crystallize(runId, template)` records a new draft skill from a completed run's template.
 - `recordUse(skillId)` increments `useCount` and updates `lastUsedAt`.
-- `findMatching(context)` returns active skills whose template tags overlap with context keys — used to accelerate similar future tasks.
+- `findMatching(context)` returns active skills whose template tags overlap with context keys â€” used to accelerate similar future tasks.
 - Skills are stored in-memory for MVP; persistence to a backing store is planned via the state-store pattern already used by the orchestrator.
 2. Owner
 - Engineering Lead
@@ -287,16 +287,12 @@ Track architecture decisions with owner, status, and review dates before develop
 5. Review Date
 - 2026-06-05
 6. Impact
-- Any installed skill can be invoked from the dashboard UI or API without adding new runtime code. The catalog is extensible — new skills require only a `skills.json` entry and a handler registration. Risk and approval metadata is embedded in every SkillOutput, preserving the approval-first autonomy guarantee for high/medium-risk skills. 56 new tests validate all 21 handlers with registry invariant checks.
+- Any installed skill can be invoked from the dashboard UI or API without adding new runtime code. The catalog is extensible â€” new skills require only a `skills.json` entry and a handler registration. Risk and approval metadata is embedded in every SkillOutput, preserving the approval-first autonomy guarantee for high/medium-risk skills. 56 new tests validate all 21 handlers with registry invariant checks.
 
 ## Change Rules
 1. Any architecture change that affects release gates creates a new ADR entry.
 2. Superseded ADRs must link to replacement ADR.
 3. ADR status must be reviewed weekly in architecture governance meeting.
 
-
-<!-- doc-sync: 2026-05-06 sprint-6 -->
-> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
-
-<!-- doc-sync: 2026-05-06 full-pass-2 -->
-> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
+<!-- doc-sync: 2026-05-29 sprint-18 -->
+> Last synchronized: 2026-05-29 (Sprint 18 — full documentation update).

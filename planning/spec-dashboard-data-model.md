@@ -1,4 +1,4 @@
-# AgentFarm Spec: Dashboard Data Model
+﻿# AgentFarm Spec: Dashboard Data Model
 
 ## Purpose
 Define the data model and read views needed to power the customer dashboard for v1.
@@ -210,12 +210,11 @@ Bot status rule:
 ## Success Condition
 The dashboard gives the customer confidence that the bot is provisioned, healthy, connected, auditable, and under control without exposing internal infrastructure complexity.
 
-<!-- doc-sync: 2026-05-06 sprint-6 -->
-> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
 
-<!-- doc-sync: 2026-05-06 full-pass-2 -->
-> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
 
 
 ## Current Implementation Pointer (2026-05-07)
 1. For the latest built-state summary and file map, see planning/build-snapshot-2026-05-07.md.
+
+<!-- doc-sync: 2026-05-29 sprint-18 -->
+> Last synchronized: 2026-05-29 (Sprint 18 — full documentation update).

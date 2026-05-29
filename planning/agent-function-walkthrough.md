@@ -1,4 +1,4 @@
-# AgentFarm — Agent Function Walkthrough
+﻿# AgentFarm â€” Agent Function Walkthrough
 
 **Last updated:** 2026-04-30  
 **Scope:** `apps/agent-runtime` + `apps/api-gateway` (connector layer)  
@@ -23,33 +23,33 @@ An AgentFarm bot is a Docker container that runs inside a VM provisioned per ten
 
 ```
 Task arrives (POST /tasks/intake)
-         │
-         ▼
+         â”‚
+         â–¼
   Normalize action type
-  Score confidence (0–1)
+  Score confidence (0â€“1)
   Classify risk (policy table)
-         │
-    ┌────┴────┐
+         â”‚
+    â”Œâ”€â”€â”€â”€â”´â”€â”€â”€â”€â”
   LOW       MEDIUM / HIGH
-    │             │
+    â”‚             â”‚
   Execute     Send to approval queue
-  (retry 3x)  ← human reviews dashboard
-    │             │
-    │         approved / rejected
-    │             │
-    └─────┬───────┘
-          │
-    ┌─────┴──────────────────────────────────┐
-    │  Is it a LOCAL WORKSPACE action?        │
-    │  (LOCAL_WORKSPACE_ACTION_TYPES set)     │
-    └─────┬───────────────────────────────┬───┘
-       YES │                           NO │
-          ▼                              ▼
-  executeLocalWorkspaceAction()    API Gateway → connector policy check
-  (sandboxed in workspace dir)     → real API call (GitHub/Jira/Teams/Email)
-          │                              │
-          └──────────────┬───────────────┘
-                         ▼
+  (retry 3x)  â† human reviews dashboard
+    â”‚             â”‚
+    â”‚         approved / rejected
+    â”‚             â”‚
+    â””â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”˜
+          â”‚
+    â”Œâ”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+    â”‚  Is it a LOCAL WORKSPACE action?        â”‚
+    â”‚  (LOCAL_WORKSPACE_ACTION_TYPES set)     â”‚
+    â””â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”˜
+       YES â”‚                           NO â”‚
+          â–¼                              â–¼
+  executeLocalWorkspaceAction()    API Gateway â†’ connector policy check
+  (sandboxed in workspace dir)     â†’ real API call (GitHub/Jira/Teams/Email)
+          â”‚                              â”‚
+          â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+                         â–¼
           Write ActionResultRecord + emit event to /logs
 ```
 
@@ -90,7 +90,7 @@ Path traversal is blocked by `safeChildPath()`. All file operations are restrict
 
 ---
 
-## Step 1 — Task Arrives
+## Step 1 â€” Task Arrives
 
 A task is posted to the runtime's intake endpoint:
 
@@ -110,48 +110,48 @@ The task lands in the worker loop's in-memory queue (`workerLoop.queuedTasks`). 
 
 ---
 
-## Step 2 — Decision Making
+## Step 2 â€” Decision Making
 
 For each task the engine runs `processDeveloperTask()`, which has three sub-steps.
 
-### 2A — Normalize Action Type
+### 2A â€” Normalize Action Type
 
 Reads `action_type` from the payload. Falls back to `intent` field if missing. Defaults to `read_task` if neither is present.
 
-### 2B — Score Confidence
+### 2B â€” Score Confidence
 
 Starts at `0.92` and applies deductions:
 
 | Condition | Deduction |
 |---|---|
-| `summary` missing or shorter than 8 characters | −0.18 |
-| `target` missing or empty | −0.10 |
-| `complexity = high` | −0.16 |
-| `complexity = medium` | −0.08 |
-| `ambiguous = true` | −0.20 |
+| `summary` missing or shorter than 8 characters | âˆ’0.18 |
+| `target` missing or empty | âˆ’0.10 |
+| `complexity = high` | âˆ’0.16 |
+| `complexity = medium` | âˆ’0.08 |
+| `ambiguous = true` | âˆ’0.20 |
 
 Result is clamped to `[0, 1]` with two decimal places.
 
-### 2C — Classify Risk
+### 2C â€” Classify Risk
 
 Policy-driven lookup applied in order:
 
 | Action Type | Risk Level | Route |
 |---|---|---|
-| `merge_pr`, `merge_release`, `delete_resource`, `change_permissions`, `deploy_production` | **high** | → approval queue |
-| `create_pr`, `update_status`, `create_comment`, `create_pr_comment`, `send_message` | **medium** | → approval queue |
-| Payload has `risk_hint = high` | **high** | → approval queue |
-| Payload has `risk_hint = medium` | **medium** | → approval queue |
-| Payload has `risk_hint = low` | **low** | → execute |
-| Confidence < 0.6 (any action) | **medium** | → approval queue |
-| Everything else | **low** | → execute |
+| `merge_pr`, `merge_release`, `delete_resource`, `change_permissions`, `deploy_production` | **high** | â†’ approval queue |
+| `create_pr`, `update_status`, `create_comment`, `create_pr_comment`, `send_message` | **medium** | â†’ approval queue |
+| Payload has `risk_hint = high` | **high** | â†’ approval queue |
+| Payload has `risk_hint = medium` | **medium** | â†’ approval queue |
+| Payload has `risk_hint = low` | **low** | â†’ execute |
+| Confidence < 0.6 (any action) | **medium** | â†’ approval queue |
+| Everything else | **low** | â†’ execute |
 
-### 2D — Optional LLM Override
+### 2D â€” Optional LLM Override
 
 If an LLM provider is configured, the heuristic decision is sent to the model with a structured classification prompt. The model can upgrade or downgrade the risk level and route.
 
 - If the LLM responds within the timeout (default **5 s**), its decision is used.
-- If the LLM call fails, times out, or returns an unparseable response, the heuristic decision is used as fallback — the agent never crashes.
+- If the LLM call fails, times out, or returns an unparseable response, the heuristic decision is used as fallback â€” the agent never crashes.
 
 Supported providers:
 
@@ -168,14 +168,14 @@ Supported providers:
 | `auto` | `auto.profile_providers` | Multi-provider fallback chain with health-score reordering (see below) |
 | `agentfarm` | _(built-in)_ | Heuristic-only, no external call |
 
-#### Auto Mode — Multi-Provider Fallback Chain
+#### Auto Mode â€” Multi-Provider Fallback Chain
 
 When `provider = auto`, the runtime tries providers in priority order per active model profile (`quality_first`, `speed_first`, `cost_balanced`, or `custom`). If the first provider returns an error, the next one is tried automatically.
 
 Priority order is dynamically adjusted by a **provider health score** computed from a 5-minute rolling window of recent calls:
 
 ```
-score = errorRate × 0.7 + (min(avgLatency, 10 000 ms) / 10 000) × 0.3
+score = errorRate Ã— 0.7 + (min(avgLatency, 10 000 ms) / 10 000) Ã— 0.3
 ```
 
 Providers with lower scores are tried first. Providers with no recent data score 0 and preserve their configured order. Health data is in-memory per runtime process.
@@ -184,35 +184,35 @@ Providers with lower scores are tried first. Providers with no recent data score
 
 | Profile | Optimises for |
 |---|---|
-| `quality_first` | Anthropic → OpenAI → Azure OpenAI (highest capability) |
-| `speed_first` | Google → GitHub Models → Mistral (lowest latency) |
-| `cost_balanced` | Mistral → Together → xAI (cost vs quality balance) |
+| `quality_first` | Anthropic â†’ OpenAI â†’ Azure OpenAI (highest capability) |
+| `speed_first` | Google â†’ GitHub Models â†’ Mistral (lowest latency) |
+| `cost_balanced` | Mistral â†’ Together â†’ xAI (cost vs quality balance) |
 | `custom` | User-defined per-provider model selection |
 
 Each provider within Auto mode also supports per-profile model overrides via `model_profiles.{profile}` config keys.
 
 ---
 
-## Step 3A — Low Risk: Execute Immediately
+## Step 3A â€” Low Risk: Execute Immediately
 
 If route = `execute`, the action runs directly with **up to 3 retry attempts**:
 
-- Attempt throws a `TRANSIENT_*` error → retried automatically
-- Attempt throws a non-retryable error → stopped, result recorded as `failed`
-- Success → emits `task_processed` event, writes `ActionResultRecord`
+- Attempt throws a `TRANSIENT_*` error â†’ retried automatically
+- Attempt throws a non-retryable error â†’ stopped, result recorded as `failed`
+- Success â†’ emits `task_processed` event, writes `ActionResultRecord`
 
 ---
 
-## Step 3B — Medium / High Risk: Approval Queue
+## Step 3B â€” Medium / High Risk: Approval Queue
 
 The task does **not** execute. Instead:
 
 1. Runtime calls `POST /v1/approvals/intake` on the API Gateway with the action summary and risk level.
 2. Task is held in the runtime's `pendingApprovals` list.
-3. After **1 hour** without a decision, the task auto-escalates (`escalated = true`) — the dashboard shows a visual alert.
+3. After **1 hour** without a decision, the task auto-escalates (`escalated = true`) â€” the dashboard shows a visual alert.
 4. A human approver reviews the item in the Approval Queue panel on the dashboard.
 
-**Human approves or rejects** → API Gateway calls back to the runtime:
+**Human approves or rejects** â†’ API Gateway calls back to the runtime:
 
 ```
 POST /decision
@@ -227,15 +227,15 @@ x-runtime-decision-token: <token>
 
 | Decision | Outcome |
 |---|---|
-| `approved` | Task moves to execute queue → runs via real connector → result written |
-| `rejected` | Task cancelled → `cancelled` result persisted → bot notified |
-| `timeout_rejected` | Same as rejected — fires after escalation window |
+| `approved` | Task moves to execute queue â†’ runs via real connector â†’ result written |
+| `rejected` | Task cancelled â†’ `cancelled` result persisted â†’ bot notified |
+| `timeout_rejected` | Same as rejected â€” fires after escalation window |
 
 **Decision cache:** Approved decisions are cached. If the same task is re-submitted within the window, it executes immediately without requiring a duplicate approval.
 
 ---
 
-## Step 4 — Connector Execution
+## Step 4 â€” Connector Execution
 
 Once a task is approved (or was low-risk), the runtime calls the API Gateway connector action endpoint:
 
@@ -260,24 +260,24 @@ x-connector-exec-token: <service-token>
 
 The gateway enforces **two policy layers before any external call is made**:
 
-**Layer 1 — Role → Connector policy** (which connectors this bot role is allowed to use):
+**Layer 1 â€” Role â†’ Connector policy** (which connectors this bot role is allowed to use):
 
 | Role | Jira | Teams | GitHub | Email |
 |---|---|---|---|---|
-| `developer` | ✅ | ✅ | ✅ | ✅ |
-| `fullstack_developer` | ✅ | ✅ | ✅ | ✅ |
-| `tester` | ✅ | ✅ | ✅ | ✅ |
-| `project_manager_product_owner_scrum_master` | ✅ | ✅ | ✅ | ✅ |
-| `business_analyst` | ✅ | ✅ | ❌ | ✅ |
-| `customer_support_executive` | ✅ | ✅ | ❌ | ✅ |
-| `recruiter` | ❌ | ✅ | ❌ | ✅ |
-| `technical_writer` | ❌ | ✅ | ❌ | ✅ |
-| `content_writer` | ❌ | ✅ | ❌ | ✅ |
-| `sales_rep` | ❌ | ✅ | ❌ | ✅ |
-| `marketing_specialist` | ❌ | ✅ | ❌ | ✅ |
-| `corporate_assistant` | ❌ | ✅ | ❌ | ✅ |
+| `developer` | âœ… | âœ… | âœ… | âœ… |
+| `fullstack_developer` | âœ… | âœ… | âœ… | âœ… |
+| `tester` | âœ… | âœ… | âœ… | âœ… |
+| `project_manager_product_owner_scrum_master` | âœ… | âœ… | âœ… | âœ… |
+| `business_analyst` | âœ… | âœ… | âŒ | âœ… |
+| `customer_support_executive` | âœ… | âœ… | âŒ | âœ… |
+| `recruiter` | âŒ | âœ… | âŒ | âœ… |
+| `technical_writer` | âŒ | âœ… | âŒ | âœ… |
+| `content_writer` | âŒ | âœ… | âŒ | âœ… |
+| `sales_rep` | âŒ | âœ… | âŒ | âœ… |
+| `marketing_specialist` | âŒ | âœ… | âŒ | âœ… |
+| `corporate_assistant` | âŒ | âœ… | âŒ | âœ… |
 
-**Layer 2 — Connector → Action policy** (which actions each connector supports):
+**Layer 2 â€” Connector â†’ Action policy** (which actions each connector supports):
 
 | Connector | Allowed Actions |
 |---|---|
@@ -288,9 +288,9 @@ The gateway enforces **two policy layers before any external call is made**:
 
 A bot **cannot** exceed its role's connector permissions regardless of what the task payload says. Any violation returns HTTP 403 before any external API is contacted.
 
-If allowed, the gateway calls the real external API with **exponential backoff retries** (50 ms → 100 ms).
+If allowed, the gateway calls the real external API with **exponential backoff retries** (50 ms â†’ 100 ms).
 
-### GitHub Actions — HTTP mapping
+### GitHub Actions â€” HTTP mapping
 
 | Action | HTTP Method | Endpoint |
 |---|---|---|
@@ -301,7 +301,7 @@ If allowed, the gateway calls the real external API with **exponential backoff r
 
 ---
 
-## Step 5 — Background Observability Loops
+## Step 5 â€” Background Observability Loops
 
 Two background loops run in parallel throughout the bot's life:
 
@@ -336,14 +336,14 @@ Event types emitted:
 
 ---
 
-## Step 6 — Runtime State Machine
+## Step 6 â€” Runtime State Machine
 
 The bot transitions through these states:
 
 ```
-created → starting → ready → active → stopping → stopped
-                         ↘ degraded (dependency failure)
-                                  ↘ failed
+created â†’ starting â†’ ready â†’ active â†’ stopping â†’ stopped
+                         â†˜ degraded (dependency failure)
+                                  â†˜ failed
 ```
 
 State history is queryable at:
@@ -356,15 +356,15 @@ Each entry records: `from`, `to`, `at` (ISO timestamp), `reason`.
 
 ---
 
-## Step 7 — Shutdown
+## Step 7 â€” Shutdown
 
 ```
 POST /kill
 ```
 
-1. State: `active → stopping`
+1. State: `active â†’ stopping`
 2. 5-second grace window for in-flight tasks to complete
-3. State: `stopping → stopped`
+3. State: `stopping â†’ stopped`
 4. Process exits cleanly (`exit 0`)
 
 ---
@@ -387,18 +387,17 @@ POST /kill
 
 ## Security Boundaries
 
-- All connector tokens are stored in **Azure Key Vault** — never in the database or bot process
+- All connector tokens are stored in **Azure Key Vault** â€” never in the database or bot process
 - The approval intake uses a **service token** (`x-connector-exec-token`) scoped to runtime-to-gateway calls only
 - The decision webhook uses a separate **runtime decision token** (`x-runtime-decision-token`)
-- Approval records are **immutable** after creation — no modification, only append
+- Approval records are **immutable** after creation â€” no modification, only append
 - A bot cannot exceed its role's connector access regardless of payload content
 
-<!-- doc-sync: 2026-05-06 sprint-6 -->
-> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
 
-<!-- doc-sync: 2026-05-06 full-pass-2 -->
-> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
 
 
 ## Current Implementation Pointer (2026-05-07)
 1. For the latest built-state summary and file map, see planning/build-snapshot-2026-05-07.md.
+
+<!-- doc-sync: 2026-05-29 sprint-18 -->
+> Last synchronized: 2026-05-29 (Sprint 18 — full documentation update).

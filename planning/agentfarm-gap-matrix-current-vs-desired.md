@@ -1,4 +1,4 @@
-# AgentFarm Gap Matrix (Current vs Desired)
+﻿# AgentFarm Gap Matrix (Current vs Desired)
 
 ## Purpose
 Provide a concrete capability gap matrix mapped to existing AgentFarm apps, services, and shared packages.
@@ -13,7 +13,7 @@ Provide a concrete capability gap matrix mapped to existing AgentFarm apps, serv
 - Change type: Contract, Behavior, Operational, Observability
 - Status: **Open** = still a gap | **Closed** = implemented and tested
 
-## Closed Gaps (Tier 1/2 Local Workspace Actions — 2026-04-30)
+## Closed Gaps (Tier 1/2 Local Workspace Actions â€” 2026-04-30)
 
 | Capability | Prior State | Implemented | Actions | Risk | Status |
 |---|---|---|---|---|---|
@@ -64,11 +64,7 @@ All 11 actions are covered by tests in `apps/agent-runtime/src/local-workspace-e
 2. Quality gate includes regression checks for lease semantics, approval enforcement, and evidence completeness.
 3. Operations quality report reflects the new governance KPIs with pass/fail thresholds.
 
-<!-- doc-sync: 2026-05-06 sprint-6 -->
-> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
 
-<!-- doc-sync: 2026-05-06 full-pass-2 -->
-> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
 
 <!-- doc-sync: 2026-05-08 observability-foundation -->
 > Last synchronized: 2026-05-08 (Evidence/session-replay foundation reflected; attempt-chain gap remains open pending execution-path wiring).
@@ -77,3 +73,6 @@ All 11 actions are covered by tests in `apps/agent-runtime/src/local-workspace-e
 ## Current Implementation Pointer (2026-05-07)
 1. For the latest built-state summary and file map, see planning/build-snapshot-2026-05-07.md.
 2. For the latest D-drive continuation details and current blocker notes, see planning/session-handoff-2026-05-07-d-drive.md.
+
+<!-- doc-sync: 2026-05-29 sprint-18 -->
+> Last synchronized: 2026-05-29 (Sprint 18 — full documentation update).

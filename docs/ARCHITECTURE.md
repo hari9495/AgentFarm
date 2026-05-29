@@ -1,8 +1,8 @@
-> **Status:** Mixed planned + shipped behavior. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for the authoritative gap tracker.
-# AgentFarm Architecture — Full System
+﻿> **Status:** Sprint 18 complete. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for the authoritative status tracker.
+# AgentFarm Architecture â€” Full System
 
-> Last updated: May 10, 2026 | AgentFarm monorepo audit
-> AgentFarm — Multi-tenant AI agent platform with enterprise control gates, audit trails, and governed autonomy.
+> Last updated: 2026-05-29 (Sprint 18)
+> AgentFarm â€” Multi-tenant AI agent platform with enterprise control gates, audit trails, and governed autonomy.
 
 ---
 
@@ -16,61 +16,61 @@ AgentFarm is a TypeScript pnpm monorepo. It provides a production-grade platform
 
 ```
 d:\AgentFarm\
-├── apps/
-│   ├── agent-runtime/        AI agent execution engine (Fastify, 12 roles, 8 LLMs, voice)
-│   │   └── src/              110+ source files — execution-engine, llm-decision-adapter,
-│   │                         role-system-prompts, voicebox-client, voxcpm2-client,
-│   │                         pre-task-scout, post-task-closeout, escalation-engine,
-│   │                         skills-registry, multi-agent-orchestrator, speaking-agent
-│   ├── api-gateway/          Fastify control-plane backend (all business logic)
-│   │   └── src/
-│   │       ├── routes/       75+ route files — auth, billing, approvals, audit, connectors,
-│   │       │                 admin-provision, zoho-sign-webhook, meetings, runtime-tasks,
-│   │       │                 governance-workflows, budget-policy, plugin-loading, ...
-│   │       ├── services/     payment-service, provisioning-worker, contract-generator,
-│   │       │                 zoho-sign-client, connector-token-lifecycle-worker, ...
-│   │       └── lib/          session-auth, approval-packet, secret-store, rate-limit, ...
-│   ├── dashboard/            Ops dashboard (Next.js, approval queue, evidence panel)
-│   ├── orchestrator/         Multi-agent workflow coordinator (GOAP planner, scheduler)
-│   ├── trigger-service/      Slack/Email/Webhook trigger ingestion (Fastify, port 3002)
-│   └── website/              Public website + admin portal (Next.js 15, port 3002)
-│       └── app/
-│           ├── api/          43 API route groups (auth, billing, admin, webhooks, ...)
-│           ├── admin/        Admin billing, provisioning, user management pages
-│           ├── marketplace/  AI agent marketplace (179 agents, 29 departments)
-│           └── ...           50+ more pages
-├── packages/
-│   ├── db-schema/            Prisma schema (PostgreSQL) — 45+ models, 10+ migrations
-│   ├── shared-types/         100+ versioned TypeScript contracts, DesktopOperator interface
-│   ├── connector-contracts/  18-connector registry, 18 normalized action types
-│   ├── queue-contracts/      Queue event type definitions
-│   ├── observability/        Structured telemetry helpers
-│   └── notification-service/ Email notification gateway
-├── services/
-│   ├── agent-observability/  Action interception, browser capture, correctness scoring
-│   ├── agent-question-service/ Async agent Q&A with human teammates
-│   ├── approval-service/     Approval enforcement, kill-switch, governance workflow manager
-│   ├── audit-storage/        Azure Blob screenshot uploader, evidence persistence
-│   ├── browser-actions/      Playwright browser action executor
-│   ├── compliance-export/    JSON/CSV compliance packs, 365-day/730-day retention
-│   ├── connector-gateway/    OAuth, token refresh, adapter registry, mTLS cert verifier
-│   ├── evidence-service/     Governance KPI calculator, HNSW vector search
-│   ├── identity-service/     Tenant/workspace/user lifecycle
-│   ├── meeting-agent/        Meeting lifecycle state machine, STT/TTS adapters
-│   ├── memory-service/       Long-term memory store with TTL and relevance ranking
-│   ├── notification-service/ Telegram/Slack/Discord/Webhook/Voice approval alerts
-│   ├── policy-engine/        Governance routing policy resolution
-│   ├── provisioning-service/ Azure VM lifecycle, 11-step state machine, SLA monitoring
-│   └── retention-cleanup/    Scheduled retention cleanup job
-├── infrastructure/
-│   ├── control-plane/        Azure Bicep IaC for control-plane resources
-│   └── runtime-plane/        Azure ARM + Bicep + cloud-init for VM provisioning
-├── docker/
-│   └── voxcpm2/              VoxCPM2 TTS + voice cloning (openbmb/VoxCPM2) Docker service
-├── packages/db-schema/       Prisma schema, migrations
-├── docker-compose.yml        PostgreSQL 16, Redis 7, VoxCPM2
-├── pnpm-workspace.yaml       Monorepo workspace config
-└── .env.example              All environment variables with placeholders
+â”œâ”€â”€ apps/
+â”‚   â”œâ”€â”€ agent-runtime/        AI agent execution engine (Fastify, 12 roles, 8 LLMs, voice)
+â”‚   â”‚   â””â”€â”€ src/              110+ source files â€” execution-engine, llm-decision-adapter,
+â”‚   â”‚                         role-system-prompts, voicebox-client, voxcpm2-client,
+â”‚   â”‚                         pre-task-scout, post-task-closeout, escalation-engine,
+â”‚   â”‚                         skills-registry, multi-agent-orchestrator, speaking-agent
+â”‚   â”œâ”€â”€ api-gateway/          Fastify control-plane backend (all business logic)
+â”‚   â”‚   â””â”€â”€ src/
+â”‚   â”‚       â”œâ”€â”€ routes/       75+ route files â€” auth, billing, approvals, audit, connectors,
+â”‚   â”‚       â”‚                 admin-provision, zoho-sign-webhook, meetings, runtime-tasks,
+â”‚   â”‚       â”‚                 governance-workflows, budget-policy, plugin-loading, ...
+â”‚   â”‚       â”œâ”€â”€ services/     payment-service, provisioning-worker, contract-generator,
+â”‚   â”‚       â”‚                 zoho-sign-client, connector-token-lifecycle-worker, ...
+â”‚   â”‚       â””â”€â”€ lib/          session-auth, approval-packet, secret-store, rate-limit, ...
+â”‚   â”œâ”€â”€ dashboard/            Ops dashboard (Next.js, approval queue, evidence panel)
+â”‚   â”œâ”€â”€ orchestrator/         Multi-agent workflow coordinator (GOAP planner, scheduler)
+â”‚   â”œâ”€â”€ trigger-service/      Slack/Email/Webhook trigger ingestion (Fastify, port 3002)
+â”‚   â””â”€â”€ website/              Public website + admin portal (Next.js 15, port 3002)
+â”‚       â””â”€â”€ app/
+â”‚           â”œâ”€â”€ api/          43 API route groups (auth, billing, admin, webhooks, ...)
+â”‚           â”œâ”€â”€ admin/        Admin billing, provisioning, user management pages
+â”‚           â”œâ”€â”€ marketplace/  AI agent marketplace (179 agents, 29 departments)
+â”‚           â””â”€â”€ ...           50+ more pages
+â”œâ”€â”€ packages/
+â”‚   â”œâ”€â”€ db-schema/            Prisma schema (PostgreSQL) â€” 45+ models, 10+ migrations
+â”‚   â”œâ”€â”€ shared-types/         100+ versioned TypeScript contracts, DesktopOperator interface
+â”‚   â”œâ”€â”€ connector-contracts/  18-connector registry, 18 normalized action types
+â”‚   â”œâ”€â”€ queue-contracts/      Queue event type definitions
+â”‚   â”œâ”€â”€ observability/        Structured telemetry helpers
+â”‚   â””â”€â”€ notification-service/ Email notification gateway
+â”œâ”€â”€ services/
+â”‚   â”œâ”€â”€ agent-observability/  Action interception, browser capture, correctness scoring
+â”‚   â”œâ”€â”€ agent-question-service/ Async agent Q&A with human teammates
+â”‚   â”œâ”€â”€ approval-service/     Approval enforcement, kill-switch, governance workflow manager
+â”‚   â”œâ”€â”€ audit-storage/        Azure Blob screenshot uploader, evidence persistence
+â”‚   â”œâ”€â”€ browser-actions/      Playwright browser action executor
+â”‚   â”œâ”€â”€ compliance-export/    JSON/CSV compliance packs, 365-day/730-day retention
+â”‚   â”œâ”€â”€ connector-gateway/    OAuth, token refresh, adapter registry, mTLS cert verifier
+â”‚   â”œâ”€â”€ evidence-service/     Governance KPI calculator, HNSW vector search
+â”‚   â”œâ”€â”€ identity-service/     Tenant/workspace/user lifecycle
+â”‚   â”œâ”€â”€ meeting-agent/        Meeting lifecycle state machine, STT/TTS adapters
+â”‚   â”œâ”€â”€ memory-service/       Long-term memory store with TTL and relevance ranking
+â”‚   â”œâ”€â”€ notification-service/ Telegram/Slack/Discord/Webhook/Voice approval alerts
+â”‚   â”œâ”€â”€ policy-engine/        Governance routing policy resolution
+â”‚   â”œâ”€â”€ provisioning-service/ Azure VM lifecycle, 11-step state machine, SLA monitoring
+â”‚   â””â”€â”€ retention-cleanup/    Scheduled retention cleanup job
+â”œâ”€â”€ infrastructure/
+â”‚   â”œâ”€â”€ control-plane/        Azure Bicep IaC for control-plane resources
+â”‚   â””â”€â”€ runtime-plane/        Azure ARM + Bicep + cloud-init for VM provisioning
+â”œâ”€â”€ docker/
+â”‚   â””â”€â”€ voxcpm2/              VoxCPM2 TTS + voice cloning (openbmb/VoxCPM2) Docker service
+â”œâ”€â”€ packages/db-schema/       Prisma schema, migrations
+â”œâ”€â”€ docker-compose.yml        PostgreSQL 16, Redis 7, VoxCPM2
+â”œâ”€â”€ pnpm-workspace.yaml       Monorepo workspace config
+â””â”€â”€ .env.example              All environment variables with placeholders
 ```
 
 ---
@@ -81,107 +81,107 @@ d:\AgentFarm\
 
 ```
                               DISCOVERY PATH
-                              ══════════════
+                              â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   Website Visit
-       │
-       ├─► Contact Form ──► CRM (Sales Rep Agent) ──► Discovery Call
-       │                                                     │
-       │                                              Quote Generated
-       │
+       â”‚
+       â”œâ”€â–º Contact Form â”€â”€â–º CRM (Sales Rep Agent) â”€â”€â–º Discovery Call
+       â”‚                                                     â”‚
+       â”‚                                              Quote Generated
+       â”‚
                               SELF-SERVE PATH
-                              ══════════════
+                              â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   Website Visit
-       │
-       ├─► Marketplace ──► Select Plan ──► Payment
-       │                                      │
-       │              ┌───────────────────────┤
-       │              │                       │
-       │         India (INR)           International
-       │         Razorpay              Stripe
-       │              │                       │
-       │              └───────────┬───────────┘
-       │                          │
-       │                   Webhook Received
-       │                   (HMAC verified)
-       │                          │
-       │                  Order marked PAID
-       │                  Invoice created
-       │                          │
-       │              Contract PDF generated (pdfkit)
-       │                          │
-       │              Uploaded to Zoho Sign
-       │              ┌───────────────────────────┐
-       │              │   Document Request         │
-       │              │   Recipient: customer      │
-       │              │   E-signature required     │
-       │              └───────────────────────────┘
-       │                          │
-       │              Customer signs (Zoho Sign UI)
-       │                          │
-       │              Zoho Sign Webhook fires ──────────► POST /api/webhooks/zoho-sign
-       │                          │                                  │
-       │                  Order: signatureStatus=signed      ProvisioningJob created
-       │                          │                           status: queued
-       │                          │
-       │              ProvisioningWorker picks up job
-       │              11-step Azure VM state machine:
-       │              queued → validating → creating_resources
-       │                   → configuring_network → deploying_vm
-       │                   → installing_runtime → registering_bot
-       │                   → health_checking → completed
-       │                          │
-       └─────────────► Customer Dashboard shows live status
+       â”‚
+       â”œâ”€â–º Marketplace â”€â”€â–º Select Plan â”€â”€â–º Payment
+       â”‚                                      â”‚
+       â”‚              â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤
+       â”‚              â”‚                       â”‚
+       â”‚         India (INR)           International
+       â”‚         Razorpay              Stripe
+       â”‚              â”‚                       â”‚
+       â”‚              â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+       â”‚                          â”‚
+       â”‚                   Webhook Received
+       â”‚                   (HMAC verified)
+       â”‚                          â”‚
+       â”‚                  Order marked PAID
+       â”‚                  Invoice created
+       â”‚                          â”‚
+       â”‚              Contract PDF generated (pdfkit)
+       â”‚                          â”‚
+       â”‚              Uploaded to Zoho Sign
+       â”‚              â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+       â”‚              â”‚   Document Request         â”‚
+       â”‚              â”‚   Recipient: customer      â”‚
+       â”‚              â”‚   E-signature required     â”‚
+       â”‚              â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+       â”‚                          â”‚
+       â”‚              Customer signs (Zoho Sign UI)
+       â”‚                          â”‚
+       â”‚              Zoho Sign Webhook fires â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â–º POST /api/webhooks/zoho-sign
+       â”‚                          â”‚                                  â”‚
+       â”‚                  Order: signatureStatus=signed      ProvisioningJob created
+       â”‚                          â”‚                           status: queued
+       â”‚                          â”‚
+       â”‚              ProvisioningWorker picks up job
+       â”‚              11-step Azure VM state machine:
+       â”‚              queued â†’ validating â†’ creating_resources
+       â”‚                   â†’ configuring_network â†’ deploying_vm
+       â”‚                   â†’ installing_runtime â†’ registering_bot
+       â”‚                   â†’ health_checking â†’ completed
+       â”‚                          â”‚
+       â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â–º Customer Dashboard shows live status
 ```
 
 ### Agent Execution Flow
 
 ```
   Trigger Sources
-  ═══════════════
-  Slack message ─────────┐
-  Email received ─────────┤
-  Webhook POST ───────────┼──► Trigger Service (port 3002)
-  Teams message ──────────┤         │
-  API call ───────────────┘         │
-                                    ▼
+  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  Slack message â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+  Email received â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤
+  Webhook POST â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¼â”€â”€â–º Trigger Service (port 3002)
+  Teams message â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤         â”‚
+  API call â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜         â”‚
+                                    â–¼
                              Trigger Router
                              (workspace lookup,
                               rate limiting)
-                                    │
-                                    ▼
+                                    â”‚
+                                    â–¼
                              API Gateway (port 3000)
                              /v1/tasks  POST
-                                    │
-                                    ▼
+                                    â”‚
+                                    â–¼
                              Agent Runtime
-                             ┌──────────────────────────────────┐
-                             │  Pre-Task Scout                   │
-                             │  (codebase scan, context load)    │
-                             │              │                    │
-                             │              ▼                    │
-                             │  LLM Decision Adapter             │
-                             │  (role prompt + task envelope)    │
-                             │              │                    │
-                             │     ┌────────┴─────────┐         │
-                             │     │ Risk Classification│         │
-                             │     │  low │ medium │high│         │
-                             │     └──┬───────┬────┬───┘         │
-                             │        │       │    │             │
-                             │        ▼       ▼    ▼             │
-                             │     Execute  Approval  Escalate   │
-                             │     (async)  Queue     (human)    │
-                             │        │                          │
-                             │        ▼                          │
-                             │  LLM Provider (8 options)         │
-                             │  OpenAI│Anthropic│Google│xAI      │
-                             │  Mistral│Together│AzureOAI│Auto   │
-                             │        │                          │
-                             │        ▼                          │
-                             │  Post-Task Closeout               │
-                             │  (evidence, memory, skills)       │
-                             └──────────────────────────────────┘
-                                        │
-                                        ▼
+                             â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+                             â”‚  Pre-Task Scout                   â”‚
+                             â”‚  (codebase scan, context load)    â”‚
+                             â”‚              â”‚                    â”‚
+                             â”‚              â–¼                    â”‚
+                             â”‚  LLM Decision Adapter             â”‚
+                             â”‚  (role prompt + task envelope)    â”‚
+                             â”‚              â”‚                    â”‚
+                             â”‚     â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”€â”€â”€â”         â”‚
+                             â”‚     â”‚ Risk Classificationâ”‚         â”‚
+                             â”‚     â”‚  low â”‚ medium â”‚highâ”‚         â”‚
+                             â”‚     â””â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”¬â”€â”€â”€â”˜         â”‚
+                             â”‚        â”‚       â”‚    â”‚             â”‚
+                             â”‚        â–¼       â–¼    â–¼             â”‚
+                             â”‚     Execute  Approval  Escalate   â”‚
+                             â”‚     (async)  Queue     (human)    â”‚
+                             â”‚        â”‚                          â”‚
+                             â”‚        â–¼                          â”‚
+                             â”‚  LLM Provider (8 options)         â”‚
+                             â”‚  OpenAIâ”‚Anthropicâ”‚Googleâ”‚xAI      â”‚
+                             â”‚  Mistralâ”‚Togetherâ”‚AzureOAIâ”‚Auto   â”‚
+                             â”‚        â”‚                          â”‚
+                             â”‚        â–¼                          â”‚
+                             â”‚  Post-Task Closeout               â”‚
+                             â”‚  (evidence, memory, skills)       â”‚
+                             â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+                                        â”‚
+                                        â–¼
                              Reply Dispatcher
                              (Slack/Email/Teams/Webhook)
 ```
@@ -190,24 +190,24 @@ d:\AgentFarm\
 
 ```
   Audio Input (microphone / meeting recording)
-          │
-          ▼
+          â”‚
+          â–¼
   Voicebox MCP Client
   (transcription via Whisper-compatible API)
-          │
-          ▼
+          â”‚
+          â–¼
   Transcript text
-          │
-          ▼
+          â”‚
+          â–¼
   LLM (Speaking Agent role)
   (processes query, generates response)
-          │
-          ▼
+          â”‚
+          â–¼
   VoxCPM2 TTS Client
-  (openbmb/VoxCPM2 — Docker service)
-  voice cloning │ prosody control │ SSML
-          │
-          ▼
+  (openbmb/VoxCPM2 â€” Docker service)
+  voice cloning â”‚ prosody control â”‚ SSML
+          â”‚
+          â–¼
   Audio Output (stream / file / meeting channel)
 ```
 
@@ -215,24 +215,24 @@ d:\AgentFarm\
 
 ```
   Agent Action Decision
-          │
-          ├─── LOW RISK ──────────────────► Execute immediately
-          │                                      │
-          │                               Audit event logged
-          │
-          ├─── MEDIUM RISK ────────────► Approval queue (API Gateway)
-          │                                      │
-          │                           Notification dispatched
-          │                           (Slack/Telegram/Webhook)
-          │                                      │
-          │                       Human approves or rejects
-          │                                      │
-          │                       ┌──────────────┴────────────┐
-          │                       │ APPROVED                  │ REJECTED
-          │                       │ Execute + audit           │ Audit + notify
-          │                       └───────────────────────────┘
-          │
-          └─── HIGH RISK ──────────────► Approval queue
+          â”‚
+          â”œâ”€â”€â”€ LOW RISK â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â–º Execute immediately
+          â”‚                                      â”‚
+          â”‚                               Audit event logged
+          â”‚
+          â”œâ”€â”€â”€ MEDIUM RISK â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â–º Approval queue (API Gateway)
+          â”‚                                      â”‚
+          â”‚                           Notification dispatched
+          â”‚                           (Slack/Telegram/Webhook)
+          â”‚                                      â”‚
+          â”‚                       Human approves or rejects
+          â”‚                                      â”‚
+          â”‚                       â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+          â”‚                       â”‚ APPROVED                  â”‚ REJECTED
+          â”‚                       â”‚ Execute + audit           â”‚ Audit + notify
+          â”‚                       â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+          â”‚
+          â””â”€â”€â”€ HIGH RISK â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â–º Approval queue
                                    + escalation after 1 hour SLA
                                    + kill-switch can block all
 ```
@@ -363,18 +363,18 @@ Full reference in [API.md](API.md).
 ## Agent Runtime
 
 ### 12 Agent Roles
-1. `developer` — code writing, refactoring, review
-2. `fullstack_developer` — end-to-end feature implementation
-3. `tester` — test writing, coverage analysis
-4. `business_analyst` — requirements, specs, acceptance criteria
-5. `technical_writer` — documentation, API docs
-6. `content_writer` — marketing copy, blog posts
-7. `sales_rep` — lead qualification, CRM updates
-8. `marketing_specialist` — campaign planning, analytics
-9. `corporate_assistant` — internal ops, scheduling
-10. `recruiter` — candidate qualification, outreach
-11. `devops` — infrastructure, CI/CD, deployment
-12. `data_analyst` — data queries, reporting, dashboards
+1. `developer` â€” code writing, refactoring, review
+2. `fullstack_developer` â€” end-to-end feature implementation
+3. `tester` â€” test writing, coverage analysis
+4. `business_analyst` â€” requirements, specs, acceptance criteria
+5. `technical_writer` â€” documentation, API docs
+6. `content_writer` â€” marketing copy, blog posts
+7. `sales_rep` â€” lead qualification, CRM updates
+8. `marketing_specialist` â€” campaign planning, analytics
+9. `corporate_assistant` â€” internal ops, scheduling
+10. `recruiter` â€” candidate qualification, outreach
+11. `devops` â€” infrastructure, CI/CD, deployment
+12. `data_analyst` â€” data queries, reporting, dashboards
 
 ### 8 LLM Providers
 | Provider | Mode |
@@ -390,23 +390,23 @@ Full reference in [API.md](API.md).
 | Auto | Health-score failover across all providers |
 
 ### Key Engine Components
-- **Pre-task scout** — scans codebase, loads relevant context before LLM call
-- **Post-task closeout** — writes evidence, updates memory, crystallizes skills
-- **Escalation engine** — triggers on confidence < 0.6 or high-risk classification
-- **Language injection** — resolves tenant/workspace/user language into system prompt
-- **Memory system** — short-term (TTL), long-term (relevance ranking), repo knowledge graph
-- **Skills crystallization** (Hermes pattern) — successful runs become reusable skill templates
-- **Multi-agent orchestrator** — coordinating parallel agent task execution
+- **Pre-task scout** â€” scans codebase, loads relevant context before LLM call
+- **Post-task closeout** â€” writes evidence, updates memory, crystallizes skills
+- **Escalation engine** â€” triggers on confidence < 0.6 or high-risk classification
+- **Language injection** â€” resolves tenant/workspace/user language into system prompt
+- **Memory system** â€” short-term (TTL), long-term (relevance ranking), repo knowledge graph
+- **Skills crystallization** (Hermes pattern) â€” successful runs become reusable skill templates
+- **Multi-agent orchestrator** â€” coordinating parallel agent task execution
 
 ---
 
 ## Voice System
 
-- **Voicebox** — MCP-integrated transcription service (Whisper-compatible, `VOICEBOX_URL`)
-- **VoxCPM2** — TTS + voice cloning Docker container (`openbmb/VoxCPM2`, `VOXCPM2_MODEL_ID`)
-- **Meeting transcription pipeline** — join meeting → capture audio → transcribe → process → respond → speak
-- **Speaking agent** — dedicated agent role that generates spoken responses
-- **MCP registration** — `voicebox-mcp-registrar.ts` auto-registers Voicebox at startup
+- **Voicebox** â€” MCP-integrated transcription service (Whisper-compatible, `VOICEBOX_URL`)
+- **VoxCPM2** â€” TTS + voice cloning Docker container (`openbmb/VoxCPM2`, `VOXCPM2_MODEL_ID`)
+- **Meeting transcription pipeline** â€” join meeting â†’ capture audio â†’ transcribe â†’ process â†’ respond â†’ speak
+- **Speaking agent** â€” dedicated agent role that generates spoken responses
+- **MCP registration** â€” `voicebox-mcp-registrar.ts` auto-registers Voicebox at startup
 
 ---
 
@@ -417,64 +417,64 @@ Full reference in [PAYMENTS.md](PAYMENTS.md).
 ### Flow
 ```
 Customer checkout
-       │
-       ├─ India ──► Razorpay order ──► client SDK ──► webhook (/v1/billing/webhook/razorpay)
-       │                                                        │
-       └─ International ──► Stripe intent ──► client SDK ──► webhook (/v1/billing/webhook/stripe)
-                                                               │
+       â”‚
+       â”œâ”€ India â”€â”€â–º Razorpay order â”€â”€â–º client SDK â”€â”€â–º webhook (/v1/billing/webhook/razorpay)
+       â”‚                                                        â”‚
+       â””â”€ International â”€â”€â–º Stripe intent â”€â”€â–º client SDK â”€â”€â–º webhook (/v1/billing/webhook/stripe)
+                                                               â”‚
                                                     HMAC/signature verified
-                                                               │
+                                                               â”‚
                                                    Order: status = paid
                                                    Invoice record created
-                                                               │
+                                                               â”‚
                                                     setImmediate (non-blocking)
-                                                               │
+                                                               â”‚
                                                pdfkit contract PDF generated
-                                                               │
+                                                               â”‚
                                                Uploaded to Zoho Sign (multipart)
-                                                               │
+                                                               â”‚
                                                submitDocumentForSigning()
-                                                               │
+                                                               â”‚
                                           Order: zohoSignRequestId, contractSentAt, signatureStatus=sent
-                                                               │
+                                                               â”‚
                                                   Customer signs in Zoho Sign UI
-                                                               │
+                                                               â”‚
                                               POST /v1/webhooks/zoho-sign
                                               (x-zoho-webhook-token verified)
-                                                               │
+                                                               â”‚
                                           Order: signatureStatus=signed, signedAt
-                                                               │
+                                                               â”‚
                                               ProvisioningJob created (queued)
-                                                               │
-                                           Provisioning worker → Azure VM → done
+                                                               â”‚
+                                           Provisioning worker â†’ Azure VM â†’ done
 ```
 
 ---
 
 ## Infrastructure
 
-- **Azure ARM Provisioning Worker** — `apps/api-gateway/src/services/provisioning-worker.ts` — polls `queued` jobs, drives 11-step state machine
-- **Bicep IaC** — `infrastructure/control-plane/` and `infrastructure/runtime-plane/` — declarative Azure resources
-- **cloud-init** — VM bootstrap script installs Docker, pulls agent container, configures environment
-- **Docker Compose** — `docker-compose.yml` — PostgreSQL 16, Redis 7
-- **VoxCPM2 Docker** — `docker/voxcpm2/` — TTS voice synthesis service
-- **OPA Policy Engine** — `OPA_BASE_URL` — Open Policy Agent for governance decisions
-- **Redis** — `REDIS_URL` — session cache, rate limiting, task queue
+- **Azure ARM Provisioning Worker** â€” `apps/api-gateway/src/services/provisioning-worker.ts` â€” polls `queued` jobs, drives 11-step state machine
+- **Bicep IaC** â€” `infrastructure/control-plane/` and `infrastructure/runtime-plane/` â€” declarative Azure resources
+- **cloud-init** â€” VM bootstrap script installs Docker, pulls agent container, configures environment
+- **Docker Compose** â€” `docker-compose.yml` â€” PostgreSQL 16, Redis 7
+- **VoxCPM2 Docker** â€” `docker/voxcpm2/` â€” TTS voice synthesis service
+- **OPA Policy Engine** â€” `OPA_BASE_URL` â€” Open Policy Agent for governance decisions
+- **Redis** â€” `REDIS_URL` â€” session cache, rate limiting, task queue
 
 ---
 
 ## Security
 
-- **HMAC-SHA256 session tokens** — `buildSessionToken` / `verifySessionToken` in `lib/session-auth.ts`
-- **Zoho Sign webhook verification** — `x-zoho-webhook-token` header compared against `ZOHO_SIGN_WEBHOOK_TOKEN`
-- **Stripe webhook verification** — `stripe.webhooks.constructEvent()` with `STRIPE_WEBHOOK_SECRET`
-- **Razorpay webhook verification** — HMAC-SHA256 of `order_id|payment_id` against `RAZORPAY_KEY_SECRET`
-- **OPA policies** — governance rules evaluated per action request
-- **Connector OAuth** — CSRF nonce validation, token stored as Key Vault references (no inline secrets)
-- **mTLS certificate verifier** — `connector-gateway` verifies agent federation requests
-- **PII-strip middleware** — strips sensitive fields from connector action payloads in logs
-- **Rate limiting** — `lib/rate-limit.ts` in api-gateway
-- **Scope enforcement** — `scope: 'internal'` required for admin routes, `scope: 'customer'` for user routes
+- **HMAC-SHA256 session tokens** â€” `buildSessionToken` / `verifySessionToken` in `lib/session-auth.ts`
+- **Zoho Sign webhook verification** â€” `x-zoho-webhook-token` header compared against `ZOHO_SIGN_WEBHOOK_TOKEN`
+- **Stripe webhook verification** â€” `stripe.webhooks.constructEvent()` with `STRIPE_WEBHOOK_SECRET`
+- **Razorpay webhook verification** â€” HMAC-SHA256 of `order_id|payment_id` against `RAZORPAY_KEY_SECRET`
+- **OPA policies** â€” governance rules evaluated per action request
+- **Connector OAuth** â€” CSRF nonce validation, token stored as Key Vault references (no inline secrets)
+- **mTLS certificate verifier** â€” `connector-gateway` verifies agent federation requests
+- **PII-strip middleware** â€” strips sensitive fields from connector action payloads in logs
+- **Rate limiting** â€” `lib/rate-limit.ts` in api-gateway
+- **Scope enforcement** â€” `scope: 'internal'` required for admin routes, `scope: 'customer'` for user routes
 
 ---
 
@@ -493,7 +493,7 @@ Full reference in [TESTING.md](TESTING.md).
 | All other services | `node:test` | 200+ | per-package |
 
 **Key patterns:**
-- `t.mock.method(globalThis, 'fetch', ...)` — fetch mocking for HTTP calls
-- Optional `prisma?` parameter on route handlers — injected mock Prisma in tests
-- `Fastify().inject()` — full HTTP round-trip tests without a running server
-- Coverage enforced ≥ 80% on execution-engine, runtime-server, provisioning-monitoring
+- `t.mock.method(globalThis, 'fetch', ...)` â€” fetch mocking for HTTP calls
+- Optional `prisma?` parameter on route handlers â€” injected mock Prisma in tests
+- `Fastify().inject()` â€” full HTTP round-trip tests without a running server
+- Coverage enforced â‰¥ 80% on execution-engine, runtime-server, provisioning-monitoring

@@ -1,7 +1,7 @@
-> **Status:** Mixed planned + shipped behavior. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for the authoritative gap tracker.
+﻿> **Status:** Sprint 18 complete. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for the authoritative status tracker.
 # AgentFarm Trigger System
 
-> Last updated: May 10, 2026 | AgentFarm monorepo audit
+> Last updated: 2026-05-29 (Sprint 18)
 
 Full reference for the trigger service in `apps/trigger-service`.
 
@@ -19,23 +19,23 @@ The trigger service is a standalone Fastify server that receives inbound events 
 
 ```
 External Event
-      │
-      ▼
+      â”‚
+      â–¼
 TriggerSource (Slack / Email / Webhook)
-      │  raw event: { id, source, from, subject?, body }
-      ▼
+      â”‚  raw event: { id, source, from, subject?, body }
+      â–¼
 TriggerEngine.handleEvent()
-      │
-      ├─→ TriggerRouter.route(body, from)
-      │       Single tenant → direct shortcut
-      │       Multi tenant → LLM routing (claude-haiku)
-      │           → { tenantId, agentId, reason }
-      │
-      ├─→ TriggerDispatcher.dispatch(event)
-      │       POST {agentRuntimeUrl}/run-task
-      │           { task, tenantId, agentId, triggerId, source }
-      │
-      └─→ ReplyDispatcher.reply(event, dispatchResult)
+      â”‚
+      â”œâ”€â†’ TriggerRouter.route(body, from)
+      â”‚       Single tenant â†’ direct shortcut
+      â”‚       Multi tenant â†’ LLM routing (claude-haiku)
+      â”‚           â†’ { tenantId, agentId, reason }
+      â”‚
+      â”œâ”€â†’ TriggerDispatcher.dispatch(event)
+      â”‚       POST {agentRuntimeUrl}/run-task
+      â”‚           { task, tenantId, agentId, triggerId, source }
+      â”‚
+      â””â”€â†’ ReplyDispatcher.reply(event, dispatchResult)
               Sends success/error reply back to originating channel
 ```
 
@@ -65,7 +65,7 @@ class TriggerEngine {
 Routes raw events to the correct tenant and agent.
 
 ### Single-Tenant Mode
-- When exactly 1 tenant is configured, routes directly to `tenant.defaultAgentId` — no LLM call.
+- When exactly 1 tenant is configured, routes directly to `tenant.defaultAgentId` â€” no LLM call.
 
 ### Multi-Tenant Mode
 - Uses `claude-haiku-4-5-20251001` via Anthropic API
@@ -131,10 +131,10 @@ type DispatchResult = {
 
 Sends a reply back to the channel that originated the event.
 
-- Slack events → reply via Slack connector
-- Email events → reply via Email connector
-- Webhook events → no reply (fire and forget)
-- Failed dispatches → logs error, optionally notifies via fallback channel
+- Slack events â†’ reply via Slack connector
+- Email events â†’ reply via Email connector
+- Webhook events â†’ no reply (fire and forget)
+- Failed dispatches â†’ logs error, optionally notifies via fallback channel
 
 ---
 
@@ -145,7 +145,7 @@ Sends a reply back to the channel that originated the event.
 
 - Listens on `POST /webhook` (Fastify route)
 - **HMAC-SHA256 verification:** `X-Hub-Signature-256: sha256=<hex>` header
-  - Timing-safe comparison — rejects if missing or invalid
+  - Timing-safe comparison â€” rejects if missing or invalid
   - Shared secret from `WEBHOOK_SECRET` env
 - Payload parsed as JSON `{id, from, subject?, body}`
 
@@ -162,7 +162,7 @@ Sends a reply back to the channel that originated the event.
 **File:** `apps/trigger-service/src/sources/email-trigger.ts`
 
 - IMAP-based polling of configured inbox
-- Parses subject → `event.subject`, body text → `event.body`
+- Parses subject â†’ `event.subject`, body text â†’ `event.body`
 - `from` field extracted from email sender
 - Polling interval: `EMAIL_POLL_INTERVAL_MS` env (default: 60000)
 

@@ -1,4 +1,4 @@
-# Company Access Rollout Checklist
+﻿# Company Access Rollout Checklist
 
 ## 1) Configure production environment
 Set these variables in the production website environment:
@@ -34,12 +34,11 @@ pnpm --filter @agentfarm/website test:permissions
 ## 5) CI signal
 The repository CI workflow runs website permission tests automatically on pull requests and pushes to main.
 
-<!-- doc-sync: 2026-05-06 sprint-6 -->
-> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
 
-<!-- doc-sync: 2026-05-06 full-pass-2 -->
-> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
 
 
 ## Current Implementation Pointer (2026-05-07)
 1. For the latest built-state summary and file map, see planning/build-snapshot-2026-05-07.md.
+
+<!-- doc-sync: 2026-05-29 sprint-18 -->
+> Last synchronized: 2026-05-29 (Sprint 18 — full documentation update).

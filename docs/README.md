@@ -1,7 +1,7 @@
-> **Status:** Mixed planned + shipped behavior. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for the authoritative gap tracker.
+> **Status:** Sprint 18 complete. 47/47 quality gate checks PASS. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for gap tracker.
 # AgentFarm Documentation Index
 
-> Last updated: May 10, 2026 | AgentFarm monorepo audit
+> Last updated: May 29, 2026 | Sprint 18 — Content Writer Gap Closure
 
 AgentFarm is a **multi-tenant AI agent platform** that deploys specialised AI teammates (agents) for engineering teams. Agents handle code, QA, docs, recruiting, meetings, and more — with every action gated by a human-approval workflow.
 
@@ -136,25 +136,25 @@ pnpm --filter @agentfarm/trigger-service dev
 # Run ALL tests across the monorepo
 pnpm test
 
-# Quality gate (lint + typecheck + test)
+# Quality gate (47 checks: typecheck + test suites + coverage + regression lanes)
 pnpm quality:gate
 
 # Per-package tests
-pnpm --filter @agentfarm/api-gateway test          # ~898 tests
-pnpm --filter @agentfarm/agent-runtime test        # ~906 tests
-pnpm --filter @agentfarm/trigger-service test      # ~49 tests
-pnpm --filter @agentfarm/dashboard test            # ~118 tests
-pnpm --filter @agentfarm/website test              # ~118 tests
-pnpm --filter @agentfarm/orchestrator test         # ~62 tests
-pnpm --filter @agentfarm/connector-gateway test    # ~36 tests
-pnpm --filter @agentfarm/evidence-service test     # ~24 tests
-pnpm --filter @agentfarm/meeting-agent test        # ~23 tests
-pnpm --filter @agentfarm/notification-service test # ~31 tests
-pnpm --filter @agentfarm/agent-observability test  # ~9 tests
-pnpm --filter @agentfarm/approval-service test     # ~12 tests
-pnpm --filter @agentfarm/provisioning-service test # ~15 tests
-pnpm --filter @agentfarm/memory-service test       # ~11 tests
-pnpm --filter @agentfarm/policy-engine test        # ~2 tests
+pnpm --filter @agentfarm/api-gateway test          # 1,237+ tests
+pnpm --filter @agentfarm/agent-runtime test        # 1,120+ tests
+pnpm --filter @agentfarm/trigger-service test      # 49 tests
+pnpm --filter @agentfarm/dashboard test            # 118 tests
+pnpm --filter @agentfarm/website test              # 118+ tests
+pnpm --filter @agentfarm/orchestrator test         # 62 tests
+pnpm --filter @agentfarm/connector-gateway test    # 36 tests
+pnpm --filter @agentfarm/evidence-service test     # 24 tests
+pnpm --filter @agentfarm/meeting-agent test        # 23 tests
+pnpm --filter @agentfarm/notification-service test # 31 tests
+pnpm --filter @agentfarm/agent-observability test  # 9 tests
+pnpm --filter @agentfarm/approval-service test     # 12 tests
+pnpm --filter @agentfarm/provisioning-service test # 15 tests
+pnpm --filter @agentfarm/memory-service test       # 11 tests
+pnpm --filter @agentfarm/policy-engine test        # 2 tests
 
 # Typecheck a specific package
 pnpm --filter @agentfarm/api-gateway typecheck

@@ -1,11 +1,11 @@
-# AgentFarm Build Snapshot (As of 2026-04-28, updated 2026-05-05)
+﻿# AgentFarm Build Snapshot (As of 2026-04-28, updated 2026-05-05)
 
 ## Executive Status
 - Sprint 1 delivery status: 24 of 24 tasks completed (core sprint), plus 11 Tier 1/2 workspace action tasks completed (Workstream 9).
 - Sprint 2 delivery status: **10/10 autonomous intelligence and notification features built and tested (2026-05-04)**.
-- Sprint 3 delivery status: **Skill Marketplace — 21-skill catalog, execution engine, invoke endpoint, dashboard proxy (2026-05-05)**.
+- Sprint 3 delivery status: **Skill Marketplace â€” 21-skill catalog, execution engine, invoke endpoint, dashboard proxy (2026-05-05)**.
 - Remaining: Task 7.1 (Website SWA production rollout), Task 8.2 and 8.3 (deployment and pre-launch gates).
-- Quality gate status: **PASS — EXIT_CODE=0** (51 checks, 50 passing, 1 skipped: DB runtime smoke).
+- Quality gate status: **PASS â€” EXIT_CODE=0** (51 checks, 50 passing, 1 skipped: DB runtime smoke).
 - Agent Runtime test count: **299 tests, 0 failures** (as of 2026-05-05).
 - API Gateway test count: **351 tests, 0 failures** (as of 2026-05-04).
 - Dashboard test count: **69 tests, 0 failures** (as of 2026-05-04).
@@ -13,35 +13,35 @@
 
 ---
 
-## Sprint 3 Features Built (2026-05-05) — Skill Marketplace
+## Sprint 3 Features Built (2026-05-05) â€” Skill Marketplace
 
-### Feature 11 — 21-Skill Marketplace Catalog (`apps/agent-runtime/marketplace/skills.json`)
+### Feature 11 â€” 21-Skill Marketplace Catalog (`apps/agent-runtime/marketplace/skills.json`)
 - 21 developer-agent skills with SHA-256 integrity digests
 - Categories: Code Review (5), Testing (3), CI/CD (1), Incident Response (4), Documentation (2), Project Management (6)
 - Each entry: `{ id, name, version, description, category, permissions[], source, digest }`
 - Digest formula: `sha256(JSON.stringify({id, name, version, permissions: [...permissions].sort(), source}))`
 
-### Feature 12 — Skill Execution Engine (`apps/agent-runtime/src/skill-execution-engine.ts`)
-- `SKILL_HANDLERS: Readonly<Record<string, SkillHandler>>` — registry of all 21 pure-TypeScript handlers
+### Feature 12 â€” Skill Execution Engine (`apps/agent-runtime/src/skill-execution-engine.ts`)
+- `SKILL_HANDLERS: Readonly<Record<string, SkillHandler>>` â€” registry of all 21 pure-TypeScript handlers
 - `SkillOutput { ok, skill_id, summary, result, risk_level, requires_approval, actions_taken, duration_ms }`
-- `getSkillHandler(skillId)` — O(1) lookup, `undefined` for unknown
-- `listRegisteredSkillIds()` — returns all 21 IDs
+- `getSkillHandler(skillId)` â€” O(1) lookup, `undefined` for unknown
+- `listRegisteredSkillIds()` â€” returns all 21 IDs
 - All handlers operate on structured input with no external API dependencies
 - **Handlers:** pr-reviewer-risk-labels, code-review-summarizer, pr-comment-drafter, issue-autopilot, branch-manager, commit-diff-explainer, test-coverage-reporter, flaky-test-detector, test-generator, ci-failure-explainer, dependency-audit, release-notes-generator, incident-patch-pack, error-trace-analyzer, rollback-advisor, docstring-generator, readme-updater, api-diff-notifier, slack-incident-notifier, jira-issue-linker, pr-description-generator
 
-### Feature 13 — Marketplace Invoke Endpoint and Dashboard Proxy
+### Feature 13 â€” Marketplace Invoke Endpoint and Dashboard Proxy
 - `AdvancedRuntimeFeatures.executeInstalledSkill({ skillId, inputs, workspaceKey? })`:
   - Validates skill is installed in workspace (reads `installed-skills.json`)
   - Dispatches to handler via `getSkillHandler()`
   - Records `invoke` usage via `recordMarketplaceUsage()`
   - Returns 404-style output for not-installed, 501-style for no-handler
-- `POST /runtime/marketplace/invoke` — Fastify endpoint; 400 on missing skill_id, full SkillOutput on success
+- `POST /runtime/marketplace/invoke` â€” Fastify endpoint; 400 on missing skill_id, full SkillOutput on success
 - `buildMarketplaceInvokeUrl()` in `runtime-proxy-utils.ts`
 - `buildMarketplaceInvokeRouteContract()` in `route-contract.ts`
-- Next.js proxy: `apps/dashboard/app/api/runtime/[botId]/marketplace/invoke/route.ts` — session-authenticated
+- Next.js proxy: `apps/dashboard/app/api/runtime/[botId]/marketplace/invoke/route.ts` â€” session-authenticated
 
-### Feature 14 — Skill Execution Engine Tests (`apps/agent-runtime/src/skill-execution-engine.test.ts`)
-- **56 new tests** covering all 21 handlers individually (2–4 cases each)
+### Feature 14 â€” Skill Execution Engine Tests (`apps/agent-runtime/src/skill-execution-engine.test.ts`)
+- **56 new tests** covering all 21 handlers individually (2â€“4 cases each)
 - Registry tests: 21 handlers registered, all expected IDs present, `getSkillHandler` for unknown returns `undefined`
 - Cross-cutting invariants: `duration_ms >= 0` for all handlers, `skill_id` matches registry key
 - Fixed: `dependency-audit` version major parsing (regex `^(\d+)` correctly extracts major version from semver strings)
@@ -53,57 +53,57 @@
 
 Ten open-source-inspired features were built, tested, and integrated:
 
-### Feature 1 — Messaging Gateway (notification-service)
+### Feature 1 â€” Messaging Gateway (notification-service)
 - **File:** `services/notification-service/src/notification-dispatcher.ts`
 - **Adapters:** Telegram (`telegram-adapter.ts`), Slack (`slack-adapter.ts`), Discord (`discord-adapter.ts`), Webhook (inline), Voice (`voice-adapter.ts`)
-- **API:** `dispatch(record, configs, fetcher?)` — routes by channel, respects `allowedTriggers`
+- **API:** `dispatch(record, configs, fetcher?)` â€” routes by channel, respects `allowedTriggers`
 - **Tests:** 31 tests in `notification-dispatcher.test.ts`
 
-### Feature 2 — GOAP A* Goal Planner (orchestrator)
+### Feature 2 â€” GOAP A* Goal Planner (orchestrator)
 - **File:** `apps/orchestrator/src/goap-planner.ts`
 - **Exports:** `GoapPlanner` class, `planGoal()` function
 - **Pattern:** A* search over `GoalWorldState` with action preconditions/effects
 - **Tests:** 13 tests passing
 
-### Feature 3 — SSE Task Stream with Auto-Recovery (api-gateway)
+### Feature 3 â€” SSE Task Stream with Auto-Recovery (api-gateway)
 - **File:** `apps/api-gateway/src/routes/sse-tasks.ts`
 - **Exports:** `SseTaskQueue`, `registerSseTaskRoutes()`, `formatSseEvent()`, `channelKey()`
 - **Behaviour:** Per-bot SSE channel, 512-event buffer, reconnect drain, heartbeat keep-alive
 - **Tests:** Covered in api-gateway 351-test suite
 
-### Feature 4 — Skills Crystallization (agent-runtime)
+### Feature 4 â€” Skills Crystallization (agent-runtime)
 - **File:** `apps/agent-runtime/src/skills-registry.ts`
 - **Exports:** `SkillsRegistry` class
-- **Lifecycle:** `draft → active → deprecated`; `crystallize()` auto-generates templates from runs
+- **Lifecycle:** `draft â†’ active â†’ deprecated`; `crystallize()` auto-generates templates from runs
 - **Tests:** Covered in agent-runtime 239-test suite
 
-### Feature 5 — Graphify Dev Tool (scripts)
+### Feature 5 â€” Graphify Dev Tool (scripts)
 - **File:** `scripts/graphify.mjs`
 - **Usage:** `node scripts/graphify.mjs [--json|--dot]`
 - **Output:** Mermaid/DOT/JSON dependency graph of all pnpm workspace packages
 
-### Feature 6 — Agent Federation mTLS + PII Filter (connector-gateway)
+### Feature 6 â€” Agent Federation mTLS + PII Filter (connector-gateway)
 - **Files:** `services/connector-gateway/src/mtls-verifier.ts`, `services/connector-gateway/src/pii-filter.ts`
 - **Exports:** `MtlsVerifier`, `verifyMtlsCert()`, `stripPii()`, `containsPii()`
 - **Security:** Certificate CN/SAN allowlist, recursive PII field redaction
 
-### Feature 7 — HNSW Vector Search (evidence-service)
+### Feature 7 â€” HNSW Vector Search (evidence-service)
 - **File:** `services/evidence-service/src/hnsw-index.ts`
 - **Exports:** `HnswIndex` class, `cosineSimilarity()`
 - **Pattern:** Pure-TypeScript HNSW approximate nearest-neighbour search for evidence retrieval
 
-### Feature 8 — Kanban Board (dashboard)
+### Feature 8 â€” Kanban Board (dashboard)
 - **File:** `apps/dashboard/app/components/kanban-board-utils.ts`
 - **Exports:** `createBoard()`, `addCard()`, `moveCard()`, `removeCard()`, `getColumnCards()`, `filterCards()`
 - **Pattern:** Pure logic (no UI), WIP limits, priority-based filtering
 - **Tests:** Covered in dashboard 69-test suite
 
-### Feature 9 — Voice Notification Channel (notification-service)
+### Feature 9 â€” Voice Notification Channel (notification-service)
 - **File:** `services/notification-service/src/channels/voice-adapter.ts`
 - **Exports:** `sendVoice()`, `buildVoiceRequest()`
 - **Integration:** VoxCPM/VoIP API; TTS synthesis using title+body concatenation
 
-### Feature 10 — Approval-Only Messaging Gateway (notification-service)
+### Feature 10 â€” Approval-Only Messaging Gateway (notification-service)
 - **File:** `services/notification-service/src/notification-dispatcher.ts`
 - **Exports:** `dispatchApprovalAlert()`, `APPROVAL_TRIGGERS` set
 - **Behaviour:** Returns `[]` for non-approval triggers; enforces `approval_requested | approval_decided` filter before dispatching
@@ -124,20 +124,20 @@ Ten open-source-inspired features were built, tested, and integrated:
 ### 0. Local Workspace Execution Engine (Added 2026-04-30)
 28 local workspace actions are now fully implemented in `apps/agent-runtime/src/local-workspace-executor.ts`:
 
-**Tier 1 (Claude Code / Codex parity — 2026-04-30):**
-- `workspace_list_files` — Recursive file listing with depth/pattern/include_dirs filters → JSON string array
-- `workspace_grep` — Regex search across workspace files → `[{file, line, col, text}]` with context
-- `file_move` — Sandbox-safe file/directory rename with parent dir creation
-- `file_delete` — Sandbox-safe file/directory deletion with recursive flag
-- `workspace_install_deps` — Auto-detects pnpm/yarn/npm/pip/go/cargo from lockfiles
+**Tier 1 (Claude Code / Codex parity â€” 2026-04-30):**
+- `workspace_list_files` â€” Recursive file listing with depth/pattern/include_dirs filters â†’ JSON string array
+- `workspace_grep` â€” Regex search across workspace files â†’ `[{file, line, col, text}]` with context
+- `file_move` â€” Sandbox-safe file/directory rename with parent dir creation
+- `file_delete` â€” Sandbox-safe file/directory deletion with recursive flag
+- `workspace_install_deps` â€” Auto-detects pnpm/yarn/npm/pip/go/cargo from lockfiles
 
-**Tier 2 (autonomous agent capabilities — 2026-04-30):**
-- `run_linter` — ESLint (default) with fix mode, file targeting, auto command detection
-- `apply_patch` — Unified diff application via `git apply`; supports check_only dry-run
-- `git_stash` — push/pop/list/drop stash operations for WIP isolation
-- `git_log` — Structured JSON commit history `[{hash, short_hash, subject, author_name, author_email, date}]`
-- `workspace_scout` — Compact project summary: language, framework, package_manager, scripts, readme_excerpt
-- `workspace_checkpoint` — Creates rollback git branches; restore via `git reset --hard`
+**Tier 2 (autonomous agent capabilities â€” 2026-04-30):**
+- `run_linter` â€” ESLint (default) with fix mode, file targeting, auto command detection
+- `apply_patch` â€” Unified diff application via `git apply`; supports check_only dry-run
+- `git_stash` â€” push/pop/list/drop stash operations for WIP isolation
+- `git_log` â€” Structured JSON commit history `[{hash, short_hash, subject, author_name, author_email, date}]`
+- `workspace_scout` â€” Compact project summary: language, framework, package_manager, scripts, readme_excerpt
+- `workspace_checkpoint` â€” Creates rollback git branches; restore via `git reset --hard`
 
 **Previously implemented (17 actions):** `git_clone`, `git_branch`, `git_commit`, `git_push`, `code_read`, `code_edit`, `code_edit_patch`, `code_search_replace`, `run_build`, `run_tests`, `run_shell_command`, `autonomous_loop`, `workspace_cleanup`, `workspace_diff`, `workspace_memory_write`, `workspace_memory_read`, `create_pr_from_workspace`
 
@@ -200,12 +200,11 @@ All 28 actions are covered by 118 tests (0 failures). Risk classification and ro
 2. Finish SWA production rollout prerequisites and first green release.
 3. Execute 8.3 security and load gates, then perform final launch signoff.
 
-<!-- doc-sync: 2026-05-06 sprint-6 -->
-> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
 
-<!-- doc-sync: 2026-05-06 full-pass-2 -->
-> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
 
 
 ## Current Implementation Pointer (2026-05-07)
 1. For the latest built-state summary and file map, see planning/build-snapshot-2026-05-07.md.
+
+<!-- doc-sync: 2026-05-29 sprint-18 -->
+> Last synchronized: 2026-05-29 (Sprint 18 — full documentation update).

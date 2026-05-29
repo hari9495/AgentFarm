@@ -1,4 +1,4 @@
-# AgentFarm Spec: Connector Auth Flow
+﻿# AgentFarm Spec: Connector Auth Flow
 
 ## Purpose
 Define OAuth and token lifecycle behavior for MVP connectors with secure activation, refresh, revocation, and failure handling.
@@ -20,8 +20,8 @@ The connector `secretRefId` field on `ConnectorMetadata` is the URI used to retr
 
 | Scheme | Example | Resolution |
 |--------|---------|------------|
-| `kv://<vault>/secrets/<name>` | `kv://mykeyvault/secrets/jira-acme` | Azure Key Vault — `DefaultAzureCredential` |
-| `https://<vault>.vault.azure.net/secrets/<name>` | `https://mykeyvault.vault.azure.net/secrets/jira-acme` | Azure Key Vault — same client |
+| `kv://<vault>/secrets/<name>` | `kv://mykeyvault/secrets/jira-acme` | Azure Key Vault â€” `DefaultAzureCredential` |
+| `https://<vault>.vault.azure.net/secrets/<name>` | `https://mykeyvault.vault.azure.net/secrets/jira-acme` | Azure Key Vault â€” same client |
 | `env://<VAR>` | `env://JIRA_CREDENTIALS` | `process.env[VAR]` (local dev only) |
 
 > `createDefaultSecretStore()` tries Key Vault first, then falls back to env vars.
@@ -42,8 +42,8 @@ The connector `secretRefId` field on `ConnectorMetadata` is the URI used to retr
 
 | `actionType` | Required payload fields | Notes |
 |---|---|---|
-| `read_task` | `issue_key` | GET `/rest/api/3/issue/{key}` — returns summary + status |
-| `create_comment` | `issue_key`, `body` | POST `/rest/api/3/issue/{key}/comment` — ADF v3 format |
+| `read_task` | `issue_key` | GET `/rest/api/3/issue/{key}` â€” returns summary + status |
+| `create_comment` | `issue_key`, `body` | POST `/rest/api/3/issue/{key}/comment` â€” ADF v3 format |
 | `update_status` | `issue_key`, `transition_name` | GET transitions then POST matching transition by name |
 
 ---
@@ -80,7 +80,7 @@ The connector `secretRefId` field on `ConnectorMetadata` is the URI used to retr
 
 ---
 
-### Email Credentials — SendGrid
+### Email Credentials â€” SendGrid
 
 ```json
 {
@@ -90,7 +90,7 @@ The connector `secretRefId` field on `ConnectorMetadata` is the URI used to retr
 }
 ```
 
-### Email Credentials — SMTP
+### Email Credentials â€” SMTP
 
 ```json
 {
@@ -123,7 +123,7 @@ Each connector has a lightweight authenticated ping endpoint used by the health-
 | `teams` | `GET https://graph.microsoft.com/v1.0/me` | 200 | 401/403 | 429 |
 | `github` | `GET https://api.github.com/rate_limit` | 200 | 401/403 | 403 + `x-ratelimit-remaining: 0` |
 | `email` (sendgrid) | `GET https://api.sendgrid.com/v3/user/profile` | 200 | 401 | 429 |
-| `email` (smtp) | `transporter.verify()` via `nodemailer` | — | auth error | — |
+| `email` (smtp) | `transporter.verify()` via `nodemailer` | â€” | auth error | â€” |
 
 Network throws (e.g. `ECONNREFUSED`, `ETIMEDOUT`) map to `network_timeout` outcome.
 
@@ -144,7 +144,7 @@ This ensures health checks remain non-disruptive for unactivated connectors.
 
 ---
 
-## Wiring — Real Executor Injection
+## Wiring â€” Real Executor Injection
 
 The real HTTP executor is activated by passing `secretStore` to `registerConnectorActionRoutes`:
 
@@ -154,7 +154,7 @@ import { createDefaultSecretStore } from './lib/secret-store.js';
 
 await registerConnectorActionRoutes(app, {
     getSession: (request) => readSession(request),
-    secretStore: createDefaultSecretStore(),   // ← real Key Vault / env var store
+    secretStore: createDefaultSecretStore(),   // â† real Key Vault / env var store
 });
 ```
 
@@ -172,7 +172,7 @@ When `secretStore` is provided, the route handler dynamically imports
 | 409 | `conflict` | false |
 | 422 | `invalid_format` | false |
 | 429 | `rate_limit` | true |
-| 500–599 | `provider_unavailable` | true |
+| 500â€“599 | `provider_unavailable` | true |
 | Network throw | `provider_unavailable` | true |
 | Missing / invalid credentials | `upgrade_required` | false |
 
@@ -424,12 +424,11 @@ When `secretStore` is provided, the route handler dynamically imports
 2. planning/spec-product-structure-model-architecture.md
 3. planning/spec-dashboard-data-model.md
 
-<!-- doc-sync: 2026-05-06 sprint-6 -->
-> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
 
-<!-- doc-sync: 2026-05-06 full-pass-2 -->
-> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
 
 
 ## Current Implementation Pointer (2026-05-07)
 1. For the latest built-state summary and file map, see planning/build-snapshot-2026-05-07.md.
+
+<!-- doc-sync: 2026-05-29 sprint-18 -->
+> Last synchronized: 2026-05-29 (Sprint 18 — full documentation update).

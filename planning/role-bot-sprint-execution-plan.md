@@ -1,4 +1,4 @@
-# AgentFarm Role Bot Sprint Execution Plan
+﻿# AgentFarm Role Bot Sprint Execution Plan
 
 ## Purpose
 Define implementation sprints for the latest role-bot updates so code is built in controlled increments with clear acceptance gates.
@@ -18,12 +18,12 @@ Define implementation sprints for the latest role-bot updates so code is built i
 6. Runtime tests and gateway tests for the new enforcement paths are passing.
 
 ## Tuned Sprint Order and Duration
-1. Sprint 1 (6 days, Apr 27 – May 4, 2026): Capability Snapshot Persistence and Restart Safety.
-2. Sprint 2 (6 days, May 5 – May 12, 2026): LLM Metadata and Evidence Integrity.
-3. Sprint 3 (5 days, May 13 – May 19, 2026): Entitlement Enforcement at Bot Creation and Activation.
-4. Sprint 4 (6 days, May 20 – May 27, 2026): Bot-Scoped Capability and Integration APIs.
-5. Sprint 5 (5 days, May 28 – Jun 3, 2026): Dashboard Bot-Scoped UX and Explainability.
-6. Sprint 6 (4 days, Jun 4 – Jun 9, 2026): Hardening, Quality Gate, and Release Readiness.
+1. Sprint 1 (6 days, Apr 27 â€“ May 4, 2026): Capability Snapshot Persistence and Restart Safety.
+2. Sprint 2 (6 days, May 5 â€“ May 12, 2026): LLM Metadata and Evidence Integrity.
+3. Sprint 3 (5 days, May 13 â€“ May 19, 2026): Entitlement Enforcement at Bot Creation and Activation.
+4. Sprint 4 (6 days, May 20 â€“ May 27, 2026): Bot-Scoped Capability and Integration APIs.
+5. Sprint 5 (5 days, May 28 â€“ Jun 3, 2026): Dashboard Bot-Scoped UX and Explainability.
+6. Sprint 6 (4 days, Jun 4 â€“ Jun 9, 2026): Hardening, Quality Gate, and Release Readiness.
 
 ## Tier Scope Legend
 1. Base: open-source-first defaults with no mandatory per-minute managed speech/avatar spend.
@@ -39,14 +39,14 @@ Define implementation sprints for the latest role-bot updates so code is built i
 6. Sprint 6: Tier-specific hardening, pricing telemetry, and release signoff.
 
 ## Owner Model
-1. Platform Lead — **Priya Nair**: schema, migrations, cross-service contracts.
-2. Runtime Lead — **Marcus Chen**: runtime-server and action-result pipeline.
-3. API Lead — **Jordan Wells**: gateway routes and authz enforcement.
-4. Frontend Lead — **Aisha Okonkwo**: website/dashboard bot-scoped UX.
-5. QA Lead — **Sam Rivera**: regression matrix, integration tests, gate evidence.
-6. DevOps Lead — **Tobias Müller**: quality automation, release docs, runbook updates.
+1. Platform Lead â€” **Priya Nair**: schema, migrations, cross-service contracts.
+2. Runtime Lead â€” **Marcus Chen**: runtime-server and action-result pipeline.
+3. API Lead â€” **Jordan Wells**: gateway routes and authz enforcement.
+4. Frontend Lead â€” **Aisha Okonkwo**: website/dashboard bot-scoped UX.
+5. QA Lead â€” **Sam Rivera**: regression matrix, integration tests, gate evidence.
+6. DevOps Lead â€” **Tobias MÃ¼ller**: quality automation, release docs, runbook updates.
 
-## Sprint 1: Capability Snapshot Persistence and Restart Safety (6 Days | Apr 27 – May 4, 2026)
+## Sprint 1: Capability Snapshot Persistence and Restart Safety (6 Days | Apr 27 â€“ May 4, 2026)
 ### Objective
 Persist frozen capability snapshots and guarantee deterministic enforcement across runtime restarts.
 
@@ -87,7 +87,7 @@ Persist frozen capability snapshots and guarantee deterministic enforcement acro
 2. Snapshot source and version are observable through runtime API.
 3. Typecheck and affected test suites pass.
 
-## Sprint 2: LLM Metadata and Evidence Integrity (6 Days | May 5 – May 12, 2026)
+## Sprint 2: LLM Metadata and Evidence Integrity (6 Days | May 5 â€“ May 12, 2026)
 ### Objective
 Make LLM execution metadata first-class in persisted action and evidence records early in delivery.
 
@@ -128,7 +128,7 @@ Make LLM execution metadata first-class in persisted action and evidence records
 2. Evidence and audit outputs contain queryable metadata fields.
 3. Typecheck and targeted tests pass.
 
-## Sprint 3: Entitlement Enforcement at Bot Creation and Activation (5 Days | May 13 – May 19, 2026)
+## Sprint 3: Entitlement Enforcement at Bot Creation and Activation (5 Days | May 13 â€“ May 19, 2026)
 ### Objective
 Enforce paid role subscriptions during bot lifecycle operations.
 
@@ -166,7 +166,7 @@ Enforce paid role subscriptions during bot lifecycle operations.
 2. Existing authorized flows remain functional.
 3. Typecheck and targeted tests pass.
 
-## Sprint 4: Bot-Scoped Capability and Integration APIs (6 Days | May 20 – May 27, 2026)
+## Sprint 4: Bot-Scoped Capability and Integration APIs (6 Days | May 20 â€“ May 27, 2026)
 ### Objective
 Complete bot-scoped API surfaces needed by dashboard and runtime operators.
 
@@ -207,7 +207,7 @@ Complete bot-scoped API surfaces needed by dashboard and runtime operators.
 2. Bot-scoped endpoint contract tests pass.
 3. Typecheck and targeted tests pass.
 
-## Sprint 5: Dashboard Bot-Scoped UX and Explainability (5 Days | May 28 – Jun 3, 2026)
+## Sprint 5: Dashboard Bot-Scoped UX and Explainability (5 Days | May 28 â€“ Jun 3, 2026)
 ### Objective
 Move website and dashboard from tenant-global connector views to bot-scoped views.
 
@@ -244,7 +244,7 @@ Move website and dashboard from tenant-global connector views to bot-scoped view
 2. Disallowed integrations are not shown for selected bot.
 3. Typecheck and UI tests pass.
 
-## Sprint 6: Hardening, Quality Gate, and Release Readiness (4 Days | Jun 4 – Jun 9, 2026)
+## Sprint 6: Hardening, Quality Gate, and Release Readiness (4 Days | Jun 4 â€“ Jun 9, 2026)
 ### Objective
 Stabilize for release with strict regressions and operational runbook updates.
 
@@ -261,10 +261,10 @@ Stabilize for release with strict regressions and operational runbook updates.
 - Owner: Sam Rivera (QA Lead) and Marcus Chen (Runtime Lead).
 - Output: outage and stale snapshot scenarios covered.
 3. Day 3 (Jun 8, Mon) - Run full quality gate and fix blockers.
-- Owner: Tobias Müller (DevOps Lead) and Sam Rivera (QA Lead).
+- Owner: Tobias MÃ¼ller (DevOps Lead) and Sam Rivera (QA Lead).
 - Output: green pnpm typecheck, pnpm test, pnpm quality:gate.
 4. Day 4 (Jun 9, Tue) - Update quality report and runbooks for release signoff.
-- Owner: Tobias Müller (DevOps Lead).
+- Owner: Tobias MÃ¼ller (DevOps Lead).
 - Output: updated operations artifacts and release-readiness notes.
 
 ### Target Files
@@ -306,12 +306,11 @@ Stabilize for release with strict regressions and operational runbook updates.
 3. Behavioral changes must include regression tests in the same sprint.
 4. Do not bypass enforcement checks for temporary convenience paths.
 
-<!-- doc-sync: 2026-05-06 sprint-6 -->
-> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
 
-<!-- doc-sync: 2026-05-06 full-pass-2 -->
-> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
 
 
 ## Current Implementation Pointer (2026-05-07)
 1. For the latest built-state summary and file map, see planning/build-snapshot-2026-05-07.md.
+
+<!-- doc-sync: 2026-05-29 sprint-18 -->
+> Last synchronized: 2026-05-29 (Sprint 18 — full documentation update).

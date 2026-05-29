@@ -1,6 +1,6 @@
-# Crash Recovery + Repro Pack Runbook
+﻿# Crash Recovery + Repro Pack Runbook
 
-**Service**: `api-gateway` — Sprint 4 F9  
+**Service**: `api-gateway` â€” Sprint 4 F9  
 **Canonical Spec**: `planning/phase-1-vm-realism-execution-plan.md`  
 **Owner**: Platform Engineering  
 **Reviewed**: 2026-05-01  
@@ -11,8 +11,8 @@
 
 This runbook covers two operational procedures introduced in Sprint 4:
 
-1. **Crash Recovery** — resuming an interrupted agent run from a persisted checkpoint or latest state snapshot.
-2. **Repro Pack Generation** — creating an access-controlled, audited export package for post-crash investigation.
+1. **Crash Recovery** â€” resuming an interrupted agent run from a persisted checkpoint or latest state snapshot.
+2. **Repro Pack Generation** â€” creating an access-controlled, audited export package for post-crash investigation.
 
 ---
 
@@ -75,7 +75,7 @@ Content-Type: application/json
 
 ### KPI: Recovery Success Rate
 
-The platform maintains a **≥ 95% recovery success rate** for valid run IDs across both strategies. Monitor via the `phase1-run-recovery-worker-test` quality gate check.
+The platform maintains a **â‰¥ 95% recovery success rate** for valid run IDs across both strategies. Monitor via the `phase1-run-recovery-worker-test` quality gate check.
 
 ---
 
@@ -153,7 +153,7 @@ Authorization: Bearer <session-token>
      -d '{"runId":"run-xyz","includeScreenshots":true,"includeDiffs":true,"includeLogs":true}'
    ```
 3. Record the `exportAuditEventId` in the incident ticket.
-4. Share the `downloadRef` with the investigating engineer. Do **not** share the `downloadRef` publicly — it contains workspace-scoped data.
+4. Share the `downloadRef` with the investigating engineer. Do **not** share the `downloadRef` publicly â€” it contains workspace-scoped data.
 5. Confirm expiry and rotate/regenerate if the pack expires before investigation is complete.
 6. After investigation, confirm audit log shows the export event linked to the incident ticket.
 
@@ -173,7 +173,7 @@ Authorization: Bearer <session-token>
 | Resume returns `400 invalid_strategy` | Verify client is sending valid strategy | Client team |
 | Repro pack returns `403 forbidden` | Verify session workspaceIds include the target workspace | Auth/session service on-call |
 | Repro pack `downloadRef` returns 404 | Pack may have expired (7 day TTL) | Regenerate the pack |
-| `exportAuditEventId` missing | Critical — do not proceed | Escalate to security on-call immediately |
+| `exportAuditEventId` missing | Critical â€” do not proceed | Escalate to security on-call immediately |
 
 ---
 
@@ -194,12 +194,11 @@ pnpm --filter @agentfarm/api-gateway exec tsx --test src/services/run-recovery-w
 pnpm --filter @agentfarm/api-gateway exec tsx --test src/routes/sprint4-integration.test.ts
 ```
 
-<!-- doc-sync: 2026-05-06 sprint-6 -->
-> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
 
-<!-- doc-sync: 2026-05-06 full-pass-2 -->
-> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
 
 
 ## Current Implementation Pointer (2026-05-07)
 1. For the latest built-state summary and file map, see planning/build-snapshot-2026-05-07.md.
+
+<!-- doc-sync: 2026-05-29 sprint-18 -->
+> Last synchronized: 2026-05-29 (Sprint 18 — full documentation update).

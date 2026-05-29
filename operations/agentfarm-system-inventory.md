@@ -1,22 +1,24 @@
 # AgentFarm — Complete System Inventory
 
-> Generated: 2026-05-09 | Updated: 2026-05-10  
+> Generated: 2026-05-09 | Updated: 2026-05-29 (Sprint 18)
 > Scope: Full codebase read of `d:\AgentFarm`  
 > Method: All entry points, route files, service indexes, connectors, schema, and test results read directly from source.
 
 ---
 
-## Summary Counters
+## Summary Counters (Sprint 18)
 
 | Metric | Count |
 |---|---|
-| Total `.ts` source files (excl. tests, node_modules) | **606** |
-| Total `.test.ts` files | **155** |
-| Prisma DB models | **70** |
-| API route files (api-gateway) | **62** |
+| Total `.ts` source files (excl. tests, node_modules) | **700+** (Sprint 18 adds ~94 new files) |
+| Total `.test.ts` files | **175+** |
+| Prisma DB models | **75+** (5 new models in Sprints 8-18) |
+| API route files (api-gateway) | **86+** |
 | Connector implementations | **12** |
 | Workspace packages (apps + services + packages) | **34** |
-| Tests passing (Sprint 7 confirmed) | **1,853** |
+| api-gateway tests | **1,237+** |
+| agent-runtime tests | **1,120+** |
+| Quality gate checks | **47/47 PASS** |
 | Tests failing | **0** |
 
 ---

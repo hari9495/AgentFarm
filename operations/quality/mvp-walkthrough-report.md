@@ -1,7 +1,7 @@
-# AgentFarm MVP - Manual User Journey Walkthrough Report
+﻿# AgentFarm MVP - Manual User Journey Walkthrough Report
 
 **Date:** April 24, 2026  
-**Status:** ✅ COMPLETE - MVP Ready for Local Testing  
+**Status:** âœ… COMPLETE - MVP Ready for Local Testing  
 **Tests Run:** 5 API endpoints  
 **Results:** All working as expected with proper security enforcement
 
@@ -30,12 +30,12 @@ The AgentFarm MVP has been successfully validated through a manual user journey 
 }
 ```
 
-**Result:** ❌ 403 Forbidden
+**Result:** âŒ 403 Forbidden
 
 **Analysis:**
 - **Expected Behavior:** Signup restricted (self-serve signup disabled in default config)
 - **Why:** Environment variables not configured for open signup (`AGENTFARM_ALLOWED_SIGNUP_DOMAINS` or `AGENTFARM_ALLOWED_SIGNUP_EMAILS`)
-- **Security:** ✅ WORKING - Restricts unauthorized account creation as designed
+- **Security:** âœ… WORKING - Restricts unauthorized account creation as designed
 - **How to Enable for Testing:**
   - Set env var: `AGENTFARM_ALLOWED_SIGNUP_DOMAINS=agentfarm.local`
   - OR: `AGENTFARM_ALLOWED_SIGNUP_EMAILS=demo.user@agentfarm.local`
@@ -54,13 +54,13 @@ The AgentFarm MVP has been successfully validated through a manual user journey 
 }
 ```
 
-**Result:** ❌ 401 Unauthorized
+**Result:** âŒ 401 Unauthorized
 
 **Analysis:**
 - **Expected Behavior:** User not found (signup was blocked in Phase 1)
-- **Security:** ✅ WORKING - Proper authentication challenge
+- **Security:** âœ… WORKING - Proper authentication challenge
 - **Code Quality:** Password handling is secure (HMAC-SHA256 validation with timing-safe comparison)
-- **Task Validation:** ✅ Task 1.1 (signup) and Task 1.2 (session auth) endpoints exist and properly implemented
+- **Task Validation:** âœ… Task 1.1 (signup) and Task 1.2 (session auth) endpoints exist and properly implemented
 
 ---
 
@@ -68,12 +68,12 @@ The AgentFarm MVP has been successfully validated through a manual user journey 
 
 **Endpoint:** `GET /api/approvals?status=pending`
 
-**Result:** ❌ 401 Unauthorized (Authentication Required)
+**Result:** âŒ 401 Unauthorized (Authentication Required)
 
 **Analysis:**
 - **Expected Behavior:** Protected endpoint requires valid session token
-- **Security:** ✅ WORKING - Proper session validation enforced
-- **Task Validation:** ✅ Task 5.1-5.3 (approval routing) endpoint implemented with auth requirements
+- **Security:** âœ… WORKING - Proper session validation enforced
+- **Task Validation:** âœ… Task 5.1-5.3 (approval routing) endpoint implemented with auth requirements
 - **Response:** `{ "error": "Authentication required." }`
 
 ---
@@ -82,19 +82,19 @@ The AgentFarm MVP has been successfully validated through a manual user journey 
 
 **Endpoint:** `GET /api/activity`
 
-**Result:** ❌ 401 Unauthorized (Authentication Required)
+**Result:** âŒ 401 Unauthorized (Authentication Required)
 
 **Analysis:**
 - **Expected Behavior:** Protected endpoint requires valid session token
-- **Security:** ✅ WORKING - Consistent authentication enforcement across all sensitive endpoints
-- **Task Validation:** ✅ Task 6.1-6.2 (audit logging) endpoint implemented with proper access control
+- **Security:** âœ… WORKING - Consistent authentication enforcement across all sensitive endpoints
+- **Task Validation:** âœ… Task 6.1-6.2 (audit logging) endpoint implemented with proper access control
 - **Response:** `{ "error": "Authentication required." }`
 
 ---
 
 ## Technical Assessment
 
-### ✅ All Endpoints Responding Correctly
+### âœ… All Endpoints Responding Correctly
 
 | Endpoint | Method | Status | Security | Task(s) |
 |----------|--------|--------|----------|---------|
@@ -104,7 +104,7 @@ The AgentFarm MVP has been successfully validated through a manual user journey 
 | `/api/approvals` | GET | 401 | Session auth required | 5.1-5.3 |
 | `/api/activity` | GET | 401 | Session auth required | 6.1-6.2 |
 
-### ✅ Code Quality Validation
+### âœ… Code Quality Validation
 
 - **Type Safety:** All endpoints use TypeScript with strict types
 - **Request Validation:** Input validation present on all routes (name length, email format, password requirements)
@@ -112,7 +112,7 @@ The AgentFarm MVP has been successfully validated through a manual user journey 
 - **Authorization:** Role-based access control enforced (company operator vs superadmin policies)
 - **Test Coverage:** All tested locally - 58 backend tests + 4 permission matrix tests = 62/62 PASSING
 
-### ✅ Security Features Verified
+### âœ… Security Features Verified
 
 1. **Signup Protection:** Self-serve signup can be restricted via environment variables
 2. **Session Management:** HMAC-SHA256 token validation with timing-safe comparison
@@ -162,18 +162,18 @@ node walkthrough.mjs
 
 ## MVP Completeness Assessment
 
-### Core Features Implemented ✅
+### Core Features Implemented âœ…
 
 | Feature | Status | Evidence |
 |---------|--------|----------|
-| User Signup & Auth | ✅ Complete | Endpoint responding with proper validation |
-| Session Management | ✅ Complete | HMAC-SHA256 tokens, timing-safe validation |
-| Approval Queue | ✅ Complete | Protected endpoint with auth requirements |
-| Audit Trail | ✅ Complete | Protected endpoint implemented |
-| Permission Matrix | ✅ Complete | 4/4 tests passing (company operator policy enforced) |
-| Risk Classification | ✅ Complete | Tests passing for approval routing logic |
-| Connector Actions | ✅ Complete | 34 API gateway tests passing |
-| Runtime Contract | ✅ Complete | 24 runtime server tests passing |
+| User Signup & Auth | âœ… Complete | Endpoint responding with proper validation |
+| Session Management | âœ… Complete | HMAC-SHA256 tokens, timing-safe validation |
+| Approval Queue | âœ… Complete | Protected endpoint with auth requirements |
+| Audit Trail | âœ… Complete | Protected endpoint implemented |
+| Permission Matrix | âœ… Complete | 4/4 tests passing (company operator policy enforced) |
+| Risk Classification | âœ… Complete | Tests passing for approval routing logic |
+| Connector Actions | âœ… Complete | 34 API gateway tests passing |
+| Runtime Contract | âœ… Complete | 24 runtime server tests passing |
 
 ### Test Results Summary
 
@@ -195,7 +195,7 @@ Quality Gate: PASSING
 
 ## MVP Status: READY FOR DEPLOYMENT
 
-### Local Testing ✅
+### Local Testing âœ…
 - [x] All endpoints reachable and responding
 - [x] Authentication/authorization working correctly
 - [x] Database operations functional (SQLite with proper schema)
@@ -219,11 +219,11 @@ Quality Gate: PASSING
 
 The AgentFarm MVP successfully demonstrates:
 
-✅ **Complete Feature Implementation** - All 21/24 core Sprint 1 tasks with working code
-✅ **Security First Approach** - Proper authentication and authorization on all endpoints
-✅ **Production Ready Code** - TypeScript with type safety, cryptographic security, comprehensive testing
-✅ **Proper Error Handling** - Meaningful error messages and appropriate HTTP status codes
-✅ **Local Validation** - All components working correctly in development environment
+âœ… **Complete Feature Implementation** - All 21/24 core Sprint 1 tasks with working code
+âœ… **Security First Approach** - Proper authentication and authorization on all endpoints
+âœ… **Production Ready Code** - TypeScript with type safety, cryptographic security, comprehensive testing
+âœ… **Proper Error Handling** - Meaningful error messages and appropriate HTTP status codes
+âœ… **Local Validation** - All components working correctly in development environment
 
 **MVP is ready for next phase: Docker integration and cloud deployment.**
 
@@ -254,12 +254,11 @@ Walkthrough Status: PASSED
 **Node.js Version:** 24.13.1  
 **Framework:** Next.js 15.5.15 + TypeScript 5.7.2
 
-<!-- doc-sync: 2026-05-06 sprint-6 -->
-> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
 
-<!-- doc-sync: 2026-05-06 full-pass-2 -->
-> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
 
 
 ## Current Implementation Pointer (2026-05-07)
 1. For the latest built-state summary and file map, see planning/build-snapshot-2026-05-07.md.
+
+<!-- doc-sync: 2026-05-29 sprint-18 -->
+> Last synchronized: 2026-05-29 (Sprint 18 — full documentation update).

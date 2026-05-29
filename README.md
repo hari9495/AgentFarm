@@ -91,16 +91,21 @@ packages/
 ### Agent management
 - Agent (bot) creation, versioning, and lifecycle management
 - Per-agent rate limiting, capability snapshots, and role profiles
+- **Agent personas** — display name, email address, avatar, communication style, disclosure statement per bot
 - Bot marketplace with install/uninstall and version history
 - Agent runtime instance registration and health tracking
+- **Graceful agent deprovisioning** — `POST /v1/agents/:botId/terminate` triggers 11-step VM cleanup lifecycle
+- **Setup wizard** — governed multi-step onboarding (role → connectors → persona → approval policy → deploy)
 
 ### Task execution
 - Multi-step task planning with LLM-backed planner loop
 - 9 LLM providers: OpenAI, Azure OpenAI, Anthropic, Google, xAI, Mistral, Together AI, GitHub Models, Auto (health-score failover)
 - Auto mode: 5-minute rolling health score (error rate + latency) with per-profile priority lists
-- 12 tiers of local workspace actions (file ops, shell, IDE, browser, desktop, meetings, sub-agents)
+- 12 original action tiers + **Tier 20** (testing tools: Selenium, Cypress, Appium, Playwright, k6/Artillery, Newman, OWASP ZAP, Semgrep, visual regression) + **Tier 28** (content writer: prose, research, SEO, CMS publish, image sourcing, tone, revisions, brand voice, scheduling)
+- **Role enforcement** — `role-enforcer.ts` hard-blocks out-of-role tasks before any LLM call; `task-classifier.ts` provides LLM-based role membership checks
 - Task queue with priority lanes, lease locking, and retry
 - Cost estimation per task with token budget enforcement and daily limit alerts
+- **Platform billing metering** — $0.10/task platform fee tracked per agent with `UsageMeteringEvent`
 
 ### Multi-agent orchestration
 - Multi-agent dispatch with `AgentDispatchRecord` tracking
@@ -145,9 +150,13 @@ packages/
 
 ### Voice and meetings
 - Meeting session management with STT transcription (Voicebox)
-- Speaking agent with TTS voice synthesis (VoxCPM2)
+- Speaking agent with TTS voice synthesis (VoiceboxClient)
+- **12 role voice profiles** — Alex through Rowan, auto-seeded at startup per role
+- **Meeting participation loop** — join → capture audio → transcribe → speak lifecycle
+- **PulseAudio virtual audio** — desktop-agent container with virtual microphone/speaker for meeting injection
 - Language resolver for locale-aware TTS
 - Language configuration per tenant, workspace, and user
+- EU AI Act Art. 52 disclosure enforcement on first meeting utterance
 
 ### Governance and compliance
 - Approval queue: risk-based routing (low/medium/high), decision latency tracking
@@ -168,6 +177,20 @@ packages/
 - Environment profile reconciler
 - Scheduled reports via nodemailer
 - Work memory viewer
+- **Desktop VM operator** — noVNC + Xvfb browser-accessible desktop; vision loop (screenshot→LLM→action)
+- **Evaluator webhook** — fire-and-forget quality signal dispatch post-task
+- **GDPR episodic memory** — browse and delete per-person interaction history
+
+### Memory and knowledge
+- **Episodic memory** — pgvector (1536-dim) per-person interaction history, dual-indexed by workspaceId and personKey
+- **Semantic knowledge base** — `AgentKnowledgeBase` with cosine similarity search (top-5, min 0.70)
+- Long-term behavioral memory with TTL and relevance ranking
+- Pre-task semantic recall — top-5 similar memories injected as `_semantic_context`
+
+### Compliance and disclosure
+- **EU AI Act Art. 52 / FTC / CA SB 1001** disclosure enforcement across all outbound channels (email, Slack, PR, meeting, chat)
+- Disclosure audit trail per bot
+- `outbound-disclosure.ts` chokepoint applied in connector dispatcher and direct send-sites
 
 ---
 
@@ -263,7 +286,7 @@ packages/
 
 ## Database
 
-70 Prisma models across 8 domains:
+75+ Prisma models across 8 domains (70 core + sprint additions):
 
 **Identity and tenancy** (8): `Tenant`, `TenantUser`, `Workspace`, `WorkspaceSessionState`, `TenantLanguageConfig`, `WorkspaceLanguageConfig`, `UserLanguageProfile`, `TenantMcpServer`
 
@@ -338,12 +361,14 @@ See `.env.example` (380 lines, fully commented) for all variables.
 ## Testing
 
 ```bash
-pnpm --filter @agentfarm/api-gateway test       # 898 tests, 57 suites
-pnpm --filter @agentfarm/agent-runtime test     # 906 tests, 118 suites
-pnpm --filter @agentfarm/trigger-service test   #  49 tests, 19 suites
+pnpm --filter @agentfarm/api-gateway test       # 1,237+ tests
+pnpm --filter @agentfarm/agent-runtime test     # 1,120+ tests
+pnpm --filter @agentfarm/trigger-service test   #    49 tests
+pnpm --filter @agentfarm/dashboard test         #   118 tests
+pnpm --filter @agentfarm/orchestrator test      #    62 tests
 ```
 
-**Total: 1,853 tests, 0 failures.**
+**47/47 quality gate checks PASS.**
 
 Test framework: Node.js built-in `node:test`. No Jest, no Vitest.
 
@@ -351,7 +376,7 @@ Test framework: Node.js built-in `node:test`. No Jest, no Vitest.
 
 ## CI/CD
 
-Seven GitHub Actions jobs in `.github/workflows/ci.yml`:
+Seven GitHub Actions jobs in `.github/workflows/ci.yml`. Quality gate script (`pnpm quality:gate`) runs 47 checks including typechecks, test suites, coverage gates, and regression lanes.
 
 | Job | Purpose |
 |-----|---------|

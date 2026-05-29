@@ -1,26 +1,31 @@
 # AgentFarm — Technical Reference
 
-AgentFarm is a TypeScript pnpm monorepo for operating AI agents with enterprise control gates. The platform delivers one production-grade Developer Agent role backed by 18 connectors across 4 categories, risk-based autonomy with human approval enforcement, 12 tiers of local workspace actions, a desktop-operator abstraction layer, 10 LLM providers with health-score failover, and a complete audit and evidence path for compliance teams.
+AgentFarm is a TypeScript pnpm monorepo for operating AI agents with enterprise control gates. The platform delivers role-based AI agent teammates (Developer, Tester, Content Writer, Technical Writer, Corporate Assistant, and 7 more) backed by 18 connectors, risk-based autonomy with human approval enforcement, 12+ tiers of local workspace actions, full desktop VM operation (noVNC), pgvector episodic + semantic memory, EU AI Act disclosure compliance, and a complete audit and evidence path for compliance teams.
 
-**1,853 tests passing across apps and services. Quality gate: 46 checks, all PASS.**
+**1,237+ api-gateway tests · 1,120+ agent-runtime tests · 47/47 quality gate checks PASS (Sprint 18)**
 
 ---
 
 ## What We Built
 
-### MVP Outcome
-- One production-grade Developer Agent role operating across Jira, Teams, GitHub, Outlook, and more
+### Platform Outcome (Sprint 18)
+- **5 fully-implemented agent roles**: Developer, Tester (18 connectors, Tier 20 testing tools), Content Writer (10 capability modules), Technical Writer, Corporate Assistant
 - 18 connectors in the plugin registry (13 named + 5 generic REST variants) across 4 categories
 - Risk-based autonomy: low-risk actions execute immediately, medium/high actions route to the human approval queue
 - Full audit and evidence path: append-only audit log, compliance export (JSON and CSV), evidence freshness dashboard
-- 12-tier local workspace action system with 70+ action types for the Developer Agent
-- Desktop Operator abstraction: frozen interface + mock factory for browser, app launch, meeting join/speak
+- 12-tier base workspace action system + Tier 20 (testing tools) + Tier 28 (content writer) — 80+ action types total
+- **Full desktop VM mode**: noVNC + Xvfb + Python vision loop (Anthropic/OpenAI/Ollama) via desktop-agent Docker service
+- **pgvector episodic memory**: 1536-dim dual-indexed by workspaceId + personKey; per-task recall injects `_episodic_person_context`
+- **Semantic knowledge base**: `AgentKnowledgeBase` with cosine similarity search; pre-task recall injects `_semantic_context`
+- **Agent persona system**: display name, email, avatar, communication style, disclosure statement per bot
+- **EU AI Act / FTC / CA SB 1001 disclosure compliance**: outbound-disclosure.ts chokepoint on all channels
 - 10 LLM providers with Auto mode and health-score-based failover, 4 configurable model profiles
-- Budget policy enforcement: per-workspace daily/monthly limits with hard stop and ledger events
+- Budget policy enforcement: per-workspace daily/monthly limits with hard stop and $0.10/task platform fee metering
 - Orchestrator with heartbeat wake model, routine scheduling, GOAP A* planner, plugin capability guard
+- Setup wizard: governed multi-step agent onboarding (role → connectors → persona → approval policy → deploy)
 - 179-agent marketplace catalogue across 29 departments
 - Website with 51 pages, 43 API routes, and superadmin portal
-- Operator dashboard with 14 UI components, runtime proxy, budget panel, governance workflow panel
+- Operator dashboard with 14+ UI components, runtime proxy, budget panel, governance workflow panel
 
 ---
 
@@ -39,12 +44,12 @@ infrastructure/  Azure control-plane and runtime-plane IaC
 
 | App | Port | Purpose | Tests |
 |-----|------|---------|-------|
-| `apps/api-gateway` | 3000 | Control-plane API: auth, session, connector execution, approvals, audit, budget policy, roles, snapshots, plugin loading, LLM config, governance workflows, SSE task-stream | 898 |
-| `apps/agent-runtime` | 4000 | Per-tenant execution engine: risk classification, LLM dispatch, 12-tier workspace actions, desktop-operator factory | 906 |
-| `apps/orchestrator` | 3011 | Multi-agent coordinator: heartbeat wake model, routine scheduler, plugin capability guard, GOAP A* planner, state persistence | 62 |
+| `apps/api-gateway` | 3000 | Control-plane API: auth, session, connector execution, approvals, audit, budget policy, roles, snapshots, plugin loading, LLM config, governance workflows, SSE task-stream, personas, setup-wizard, agent-lifecycle, knowledge-base, desktop-sessions, episodic-memory, disclosure, billing checkout | 1,237+ |
+| `apps/agent-runtime` | 4000 | Per-tenant execution engine: risk classification, LLM dispatch, 12-tier + Tier 20 + Tier 28 workspace actions, desktop-operator factory, persona loader, role enforcer, memory injector, voice profiles | 1,120+ |
+| `apps/orchestrator` | 3011 | Multi-agent coordinator: heartbeat wake model, routine scheduler, plugin capability guard, GOAP A* planner, state persistence, durable handoff manager | 62 |
 | `apps/trigger-service` | 3002 | Inbound webhook/email/Slack intake; HMAC verification, Anthropic trigger processing | 49 |
-| `apps/dashboard` | 3001 | Operator UI: approval queue, evidence panel, runtime observability, LLM config, governance workflows, plugin loading, budget panel, workspace switcher, Kanban board | — |
-| `apps/website` | dev:3002, prod:Azure SWA | Product surface: 51 pages, 43 API routes, auth, connectors, marketplace, approvals, evidence, superadmin | — |
+| `apps/dashboard` | 3001 | Operator UI: approval queue, evidence panel, runtime observability, LLM config, governance workflows, plugin loading, budget panel, workspace switcher, Kanban board, persona editor, desktop stream panel, per-agent billing, episodic memory browser, disclosure settings | — |
+| `apps/website` | dev:3002, prod:Azure SWA | Product surface: 51 pages, 43 API routes, auth, connectors, marketplace (Developer + Tester + all 12 roles), approvals, evidence, superadmin, setup wizard | — |
 
 ### Domain Services
 
@@ -69,7 +74,7 @@ infrastructure/  Azure control-plane and runtime-plane IaC
 
 | Package | Purpose |
 |---------|---------|
-| `packages/shared-types` | 100+ versioned contract types, enums, kill-switch types, GOAP plan types, skills crystallization types, voice/meeting types, `DesktopOperator` interface |
+| `packages/shared-types` | 100+ versioned contract types, enums, kill-switch types, GOAP plan types, skills crystallization types, voice/meeting types, `DesktopOperator` interface, `AgentPersonaRecord`, `EpisodicMemoryRecord`, `SemanticMemoryRecord`, `SetupWizardSessionRecord`, `UsageMeteringEvent`, `RoleProfile`, `RoleDeclineResult`, `DesktopAgentContracts` |
 | `packages/connector-contracts` | 18-connector plugin registry, 18 normalized action types, 12 role policy keys |
 | `packages/queue-contracts` | Queue name constants, lease types, budget decision types |
 | `packages/db-schema` | Prisma schema (70 models, 8 domains), migrations, generated Prisma client |
@@ -96,6 +101,8 @@ Sprint 2–4 additions: `WORKSPACE_SESSION_STATE`, `DESKTOP_PROFILE`, `IDE_STATE
 Human-parity additions: `TASK_PROGRESS`, `AGENT_QUESTION`, `WEB_RESEARCH`, `REVIEW_LESSON`, `EFFORT_ESTIMATE`, `PACKAGE_OPERATION`, `VISION_ANALYSIS`, `TASK_SLOT`
 
 Audit additions: `BROWSER_AUDIT`, `RETENTION_POLICY`
+
+Sprint 8–18 additions: `ROLE_ENFORCEMENT`, `EPISODIC_MEMORY`, `SETUP_WIZARD`, `USAGE_METERING`, `SEMANTIC_MEMORY`
 
 ---
 
@@ -354,6 +361,21 @@ Extended route modules: `activity-events`, `adapter-registry`, `agent-feedback`,
 - `MemoryWriteRequest`: `workspaceId`, `tenantId`, `taskId`, `actionsTaken[]`, `approvalOutcomes[]`, `connectorsUsed[]`, `llmProvider?`, `executionStatus`, `summary`, `correlationId`
 - Post-task memory crystallization integrated with the Hermes skills pattern
 
+### Episodic Memory (pgvector)
+- `episodic-write-hook.ts` — embeds content via Azure OpenAI (1536-dim), writes to `AgentLongTermMemory.embedding vector(1536)`
+- `episodic-read-hook.ts` — reads top memories for a workspace or person key
+- `embedding-service.ts` — Azure OpenAI text-embedding-3-small wrapper
+- Dual-indexed: `workspaceId` and normalized `personKey` (email / Slack ID / CRM ID / phone)
+- `person-key-extractor.ts` — universal person extraction from task payloads
+- Pre-task injection: top-5 similar memories → `task.payload._episodic_person_context`
+- GDPR: `clearPerson(personKey)` wipes all embeddings for a person
+
+### Semantic Knowledge Base (pgvector)
+- `semantic-write-hook.ts` — embeds content, inserts to `AgentKnowledgeBase` using `$queryRaw + ::vector cast`
+- `semantic-search-hook.ts` — cosine similarity query (`1 - (embedding <=> ::vector)`), top-5, min similarity 0.70
+- Pre-task recall: `searchSemanticMemory` → `task.payload._semantic_context` (non-blocking, try/catch)
+- API: `POST /v1/knowledge-base/write`, `POST /v1/knowledge-base/search`
+
 ---
 
 ## Meeting Agent
@@ -565,6 +587,37 @@ SQLite-backed (`node:sqlite` `DatabaseSync`). Key types: `UserRecord`, `SessionR
 - Approval event emitted → `dispatchApprovalAlert()` enforces approval-trigger filter
 - Routed to Telegram/Slack/Discord/Webhook/Voice channel adapters (independently non-blocking)
 
+### 12. Persona + Disclosure Enforcement
+1. `persona-context-loader.ts` fetches `AgentPersona` from DB (60s LRU cache); falls back to role defaults
+2. `system-prompt-builder.ts` injects persona identity block + disclosure footer into LLM system prompt
+3. `outbound-disclosure.ts` applied at: connector dispatcher (`executeConnectorActionForTask`), `workspace_slack_notify`, `workspace_create_bug`, `workspace_post_pr_review`, `workspace_meeting_speak`
+4. Meeting sessions: FSM refuses `speaking` state until `disclosureAnnounced: true` is set
+
+### 13. Role Enforcement
+1. Agent receives task
+2. `task-classifier.ts` checks LLM-based role membership + heuristic keywords
+3. `role-enforcer.ts` hard-blocks out-of-role tasks (returns `RoleDeclineResult`) before any LLM call
+4. For tester role: `tester-edit-guard.ts` restricts `code_edit`/`code_edit_patch` to test files only
+
+### 14. Agent Setup Wizard
+1. `POST /v1/setup-wizard` → creates `SetupWizardSession` with `step: 'role_select'`
+2. `PATCH /:sessionId/step` → advances through role → connectors → persona → approval_policy → review
+3. `POST /:sessionId/complete` → `hire-handler.ts` creates `ProvisioningJob(queued)`
+4. Provisioning worker picks up job and runs 11-step VM state machine
+
+### 15. Semantic Memory Pre-task Recall
+1. Runtime server calls `searchSemanticMemory({ tenantId, query: taskDescription })`
+2. Returns top-5 results with cosine similarity ≥ 0.70
+3. Results attached as `task.payload._semantic_context` (non-blocking, silenced on error)
+4. LLM receives knowledge base context in system prompt for informed decision-making
+
+### 16. Desktop Vision Loop
+1. Agent requests `workspace_visual_task` (or desktop-agent Tier 11 action)
+2. API gateway desktop-sessions proxy: `POST /v1/sessions` → creates session
+3. `POST /v1/sessions/:id/task` → submits goal (e.g. "click the submit button on the form")
+4. Desktop-agent Flask service: screenshot → LLM vision prompt → action (click/type/scroll via PyAutoGUI)
+5. Result polled and returned to runtime as `DesktopAction` record
+
 ---
 
 ## Security and Reliability Posture
@@ -596,15 +649,15 @@ pnpm smoke:e2e           # E2E auth/session smoke lane
 pnpm verify:website:prod # production website verification
 ```
 
-### Quality Gate (46 checks — current)
+### Quality Gate (47 checks — Sprint 18)
 
 | Check | Status |
 |-------|--------|
-| Agent Runtime: 906 tests | ✅ PASS |
+| Agent Runtime: 1,120+ tests | ✅ PASS |
 | Trigger Service: 49 tests | ✅ PASS |
-| API Gateway: 898 tests | ✅ PASS |
+| API Gateway: 1,237+ tests | ✅ PASS |
 | Dashboard: 118 tests | ✅ PASS |
-| Website: 118 tests across 9 suites | ✅ PASS |
+| Website: 118+ tests across 9 suites | ✅ PASS |
 | Orchestrator: 62 tests | ✅ PASS |
 | Connector Gateway: 36 tests | ✅ PASS |
 | Notification Service: 31 tests | ✅ PASS |
@@ -758,5 +811,5 @@ Never commit secrets to source. All connector tokens are stored as Key Vault ref
 - **Security and compliance teams** requiring auditable decision and execution traces
 - **Product and operations leads** preparing pilot-ready enterprise delivery
 
-<!-- doc-sync: 2026-05-08 desktop-operator + full-service-coverage + test-count-update -->
-> Last synchronized: 2026-05-08 (desktop-operator abstraction, all 14 services documented, 1,853 total tests, quality gate 46 checks).
+<!-- doc-sync: 2026-05-29 sprint-18-content-writer-gaps + full-doc-update -->
+> Last synchronized: 2026-05-29 (Sprint 18 complete — Content Writer gaps, 5 full role implementations, desktop VM, pgvector memory, disclosure compliance, 47 quality gate checks).

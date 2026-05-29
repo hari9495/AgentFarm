@@ -4,7 +4,7 @@ The API Gateway is the control-plane entry point for AgentFarm. All authenticate
 
 **Port**: 3000
 **Framework**: Fastify 5 with TypeScript
-**Tests**: 898 tests, 57 suites
+**Tests**: 1,237+ tests (Sprint 18)
 
 ---
 
@@ -88,13 +88,13 @@ Otherwise returns HTTP 403 with `error: internal_access_denied`.
 
 **Auth and identity**: `auth.ts`, `workspace-session.ts`, `roles.ts`, `internal-login-policy.ts`
 
-**Agents and bots**: `agents.ts`, `bot-versions.ts`, `agent-control.ts`, `agent-dispatch.ts`, `agent-feedback.ts`
+**Agents and bots**: `agents.ts`, `bot-versions.ts`, `agent-control.ts`, `agent-dispatch.ts`, `agent-feedback.ts`, `personas.ts`, `agent-lifecycle.ts`
 
 **Task execution**: `runtime-tasks.ts`, `task-queue.ts`, `sse-tasks.ts`, `runtime-llm-config.ts`, `repro-packs.ts`, `schedules.ts`, `skill-scheduler.ts`
 
 **Orchestration and skills**: `orchestration.ts`, `autonomous-loops.ts`, `skill-pipelines.ts`, `skill-composition-execute.ts`, `handoffs.ts`
 
-**Governance and audit**: `approvals.ts`, `audit.ts`, `governance-kpis.ts`, `governance-workflows.ts`, `budget-policy.ts`, `retention-policy.ts`, `circuit-breakers.ts`, `snapshots.ts`, `ab-tests.ts`, `plugin-loading.ts`, `ci-failures.ts`
+**Governance and audit**: `approvals.ts`, `audit.ts`, `governance-kpis.ts`, `governance-workflows.ts`, `budget-policy.ts`, `retention-policy.ts`, `circuit-breakers.ts`, `snapshots.ts`, `ab-tests.ts`, `plugin-loading.ts`, `ci-failures.ts`, `disclosure.ts`
 
 **Billing**: `billing.ts`, `zoho-sign-webhook.ts`
 
@@ -102,13 +102,13 @@ Otherwise returns HTTP 403 with `error: internal_access_denied`.
 
 **Observability**: `analytics.ts`, `observability.ts`, `activity-events.ts`
 
-**Voice and meetings**: `meetings.ts`, `language.ts`
+**Voice and meetings**: `meetings.ts`, `language.ts`, `desktop-sessions.ts`
 
-**Memory and knowledge**: `memory.ts`, `work-memory.ts`, `knowledge-graph.ts`
+**Memory and knowledge**: `memory.ts`, `work-memory.ts`, `knowledge-graph.ts`, `knowledge-base.ts`, `episodic-memory.ts`
 
 **Notifications**: `notifications.ts`, `questions.ts`
 
-**Developer tools**: `api-keys.ts`, `webhooks.ts`, `outbound-webhooks.ts`, `scheduled-reports.ts`, `pull-requests.ts`, `ide-state.ts`, `desktop-actions.ts`, `desktop-profile.ts`, `env-reconciler.ts`, `mcp-registry.ts`, `zoho-sign-webhook.ts`, `admin-provision.ts`, `chat.ts`, `team.ts`
+**Developer tools**: `api-keys.ts`, `webhooks.ts`, `outbound-webhooks.ts`, `scheduled-reports.ts`, `pull-requests.ts`, `ide-state.ts`, `desktop-actions.ts`, `desktop-profile.ts`, `env-reconciler.ts`, `mcp-registry.ts`, `admin-provision.ts`, `chat.ts`, `team.ts`, `setup-wizard.ts`
 
 ---
 
@@ -190,15 +190,7 @@ Covered in the api-gateway 351-test suite under `src/routes/sse-tasks.test.ts`.
 | SSE task stream | covered |
 | **Total** | **351 passing** |
 
-Last quality gate run: **2026-05-06 — EXIT_CODE=0 (PASS)**
+Last quality gate run: **2026-05-23 (Sprint 18) — 47/47 PASS**
 
-Sprint 6 coordination note:
-1. Website connector scope hardening now returns HTTP 400 for invalid workspace/bot context requests.
-2. This improves deterministic behavior when api-gateway actions are triggered from connector-backed website flows.
-
-
-<!-- doc-sync: 2026-05-06 sprint-6 -->
-> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
-
-<!-- doc-sync: 2026-05-06 full-pass-2 -->
-> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
+<!-- doc-sync: 2026-05-29 sprint-18 -->
+> Last synchronized: 2026-05-29 (Sprint 18 — Content Writer gaps, 1,237+ tests, 86+ route files).

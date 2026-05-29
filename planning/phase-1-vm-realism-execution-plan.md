@@ -1,4 +1,4 @@
-# AgentFarm Phase 1 Plan - VM Workstation Realism
+﻿# AgentFarm Phase 1 Plan - VM Workstation Realism
 
 ## Purpose
 Define a concrete Phase 1 implementation plan to make the Developer Agent behave like a realistic laptop operator while running in a VM, using the current AgentFarm architecture.
@@ -355,12 +355,11 @@ Pass criteria:
 - QA Lead: acceptance criteria are testable and tracked
 - DevOps Lead: environment reconcile and recovery operational boundaries approved
 
-<!-- doc-sync: 2026-05-06 sprint-6 -->
-> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
 
-<!-- doc-sync: 2026-05-06 full-pass-2 -->
-> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
 
 
 ## Current Implementation Pointer (2026-05-07)
 1. For the latest built-state summary and file map, see planning/build-snapshot-2026-05-07.md.
+
+<!-- doc-sync: 2026-05-29 sprint-18 -->
+> Last synchronized: 2026-05-29 (Sprint 18 — full documentation update).

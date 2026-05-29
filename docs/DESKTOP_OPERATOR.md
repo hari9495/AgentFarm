@@ -1,25 +1,49 @@
-> **Status:** Mixed planned + shipped behavior. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for the authoritative gap tracker.
+> **Status:** All desktop operator paths shipped (Sprint 10). Desktop agent container with noVNC/Xvfb is production-ready. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for details.
 # AgentFarm Desktop Operator
 
-> Last updated: May 10, 2026 | AgentFarm monorepo audit
+> Last updated: 2026-05-29 (Sprint 18)
 
-Full reference for the desktop and browser automation system in `apps/agent-runtime`.
+Full reference for the desktop and browser automation system in `apps/agent-runtime` and `services/desktop-agent`.
 
 ---
 
 ## Overview
 
-The Desktop Operator provides the agent with the ability to control a browser or desktop environment to complete tasks that require web-based UI interaction. It is the execution layer for all `workspace_browser_open`, `workspace_app_launch`, `workspace_repl_*`, and similar workspace automation actions.
+The Desktop Operator provides the agent with the ability to control a browser or full desktop environment. It supports two execution paths:
 
-**Three implementations:**
+1. **Local path** — `MockDesktopOperator` (CI/dev) or `PlaywrightDesktopOperator` (headless Chromium)
+2. **Desktop VM path** — `NativeDesktopOperator` dispatches to the `desktop-agent` Flask service running in a Docker container with Xvfb (virtual display) + x11vnc + noVNC + PyAutoGUI. A vision loop (screenshot → LLM → action) lets the agent operate any GUI application.
+
+The vision loop supports three LLM providers for vision: Anthropic (claude-3-5-sonnet), OpenAI (gpt-4o), and Ollama (llava). The `workspace_visual_task` action type lets any agent role submit arbitrary GUI goals.
+
+**Three operator implementations:**
 
 | Mode | Class | Use Case |
 |---|---|---|
-| `mock` | `MockDesktopOperator` | Development, testing, CI |
-| `native` | `NativeDesktopOperator` | Native OS automation (keyboard/mouse) |
-| `playwright` | `PlaywrightDesktopOperator` | Real browser automation via Playwright |
+| `mock` | `MockDesktopOperator` | Development, testing, CI — always returns `{ ok: true }` |
+| `native` | `NativeDesktopOperator` | Dispatches to desktop-agent Flask API via HTTP |
+| `playwright` | `PlaywrightDesktopOperator` | Direct headless Chromium automation |
 
 **Selection:** `DESKTOP_OPERATOR` environment variable controls which operator is instantiated.
+
+### Desktop Agent Service (`services/desktop-agent`)
+
+Python Flask service running inside the per-tenant Docker container:
+
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /health` | Liveness — returns active session count |
+| `POST /v1/sessions` | Create desktop session |
+| `GET /v1/sessions/:id/screenshot` | Take and return screenshot |
+| `POST /v1/sessions/:id/task` | Submit vision goal; returns action steps |
+| `DELETE /v1/sessions/:id` | Terminate session |
+| `POST /v1/sessions/:id/join-meeting` | Join a video meeting URL |
+| `POST /v1/sessions/:id/speak` | Synthesize and inject speech via PulseAudio |
+| `POST /v1/sessions/:id/capture-audio` | Capture meeting audio stream |
+
+**API gateway proxy:** `apps/api-gateway/src/routes/desktop-sessions.ts` proxies all desktop-agent routes under `/v1/sessions/*`.
+
+**Dashboard:** `apps/dashboard/app/components/desktop-stream-panel.tsx` embeds the noVNC iframe and provides session controls (start/stop/task submission).
 
 ---
 

@@ -1,7 +1,7 @@
-> **Status:** Mixed planned + shipped behavior. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for the authoritative gap tracker.
+﻿> **Status:** Sprint 18 complete. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for the authoritative status tracker.
 # AgentFarm MCP Registry
 
-> Last updated: May 10, 2026 | AgentFarm monorepo audit
+> Last updated: 2026-05-29 (Sprint 18)
 
 Full reference for the Model Context Protocol (MCP) server registry.
 
@@ -22,16 +22,16 @@ The MCP registry allows tenants to register custom MCP-compatible tool servers. 
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `id` | `String` @id | cuid() | |
-| `tenantId` | `String` | — | Tenant that owns this server |
-| `workspaceId` | `String?` | — | Optional workspace scope; null = available to all workspaces |
-| `name` | `String` | — | Display name (unique per tenant) |
-| `url` | `String` | — | HTTP endpoint of the MCP server |
-| `headers` | `Json?` | — | Additional auth headers (e.g. `{Authorization: "Bearer ..."}`) |
-| `isActive` | `Boolean` | `true` | Soft delete — false = deactivated |
-| `createdAt` | `DateTime` | — | |
-| `updatedAt` | `DateTime` | — | |
+| `tenantId` | `String` | â€” | Tenant that owns this server |
+| `workspaceId` | `String?` | â€” | Optional workspace scope; null = available to all workspaces |
+| `name` | `String` | â€” | Display name (unique per tenant) |
+| `url` | `String` | â€” | HTTP endpoint of the MCP server |
+| `headers` | `Json?` | â€” | Additional auth headers (e.g. `{Authorization: "Bearer ..."}`) |
+| `isActive` | `Boolean` | `true` | Soft delete â€” false = deactivated |
+| `createdAt` | `DateTime` | â€” | |
+| `updatedAt` | `DateTime` | â€” | |
 
-**Unique:** `(tenantId, name)` — a tenant cannot register two servers with the same name.
+**Unique:** `(tenantId, name)` â€” a tenant cannot register two servers with the same name.
 
 ---
 
@@ -45,7 +45,7 @@ The MCP registry allows tenants to register custom MCP-compatible tool servers. 
 | `POST` | `/v1/mcp` | required | Register a new MCP server (or reactivate a deactivated one with the same name) |
 | `GET` | `/v1/mcp/:id` | required | Get a specific server by ID |
 | `PATCH` | `/v1/mcp/:id` | required | Update server URL, headers, or workspace scope |
-| `DELETE` | `/v1/mcp/:id` | required | Deactivate server (`isActive = false`) — not a hard delete |
+| `DELETE` | `/v1/mcp/:id` | required | Deactivate server (`isActive = false`) â€” not a hard delete |
 
 ### POST `/v1/mcp` Request Body
 ```json
@@ -82,7 +82,7 @@ The MCP registry allows tenants to register custom MCP-compatible tool servers. 
 
 ### `getTenantMcpServers(tenantId: string): Promise<TenantMcpServer[]>`
 - `GET {API_GATEWAY_URL}/v1/mcp`
-- Returns `[]` on any error (fire-safe — never throws)
+- Returns `[]` on any error (fire-safe â€” never throws)
 - Called before task classification to build the tool list
 
 ### `registerMcpServer(tenantId, input): Promise<TenantMcpServer | null>`
@@ -119,5 +119,5 @@ MCP tools appear alongside built-in actions in the `ActionDecision` output. Risk
 ## Registration Behavior
 
 - If a server with the same `(tenantId, name)` exists and is inactive (`isActive = false`), `POST /v1/mcp` reactivates it and updates `url` and `headers`.
-- If the server is already active, the POST returns a conflict error — use `PATCH` to update an active server.
-- Deleting a server sets `isActive = false` — the record is never hard-deleted, preserving audit history.
+- If the server is already active, the POST returns a conflict error â€” use `PATCH` to update an active server.
+- Deleting a server sets `isActive = false` â€” the record is never hard-deleted, preserving audit history.

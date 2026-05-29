@@ -1,4 +1,4 @@
-# AgentFarm Engineering Execution Design
+﻿# AgentFarm Engineering Execution Design
 
 ## Purpose
 Translate the approved product architecture into a build-ready engineering design for v1.
@@ -126,29 +126,29 @@ Acceptance rules:
 9. Control plane updates tenant and bot status to ready.
 
 ### Provisioning Job States
-Canonical source: planning/spec-azure-provisioning-workflow.md — frozen as of 2026-04-21.
-1. queued — job accepted, not yet started
-2. validating — entitlement and quota checks running
-3. creating_resources — Azure resource group, identity, VM, NIC, NSG, and disk creation in progress
-4. bootstrapping_vm — Docker and runtime dependencies installing on VM
-5. starting_container — bot image pulled, container starting
-6. registering_runtime — bot runtime calling control plane registration endpoint
-7. healthchecking — liveness and readiness checks running
-8. completed — runtime healthy, bot marked active
-9. failed — terminal failure; failure_reason and remediation_hint persisted
-10. cleanup_pending — cleanup workflow triggered for failed or deprovisioned job
-11. cleaned_up — all partial Azure resources deleted and logged
+Canonical source: planning/spec-azure-provisioning-workflow.md â€” frozen as of 2026-04-21.
+1. queued â€” job accepted, not yet started
+2. validating â€” entitlement and quota checks running
+3. creating_resources â€” Azure resource group, identity, VM, NIC, NSG, and disk creation in progress
+4. bootstrapping_vm â€” Docker and runtime dependencies installing on VM
+5. starting_container â€” bot image pulled, container starting
+6. registering_runtime â€” bot runtime calling control plane registration endpoint
+7. healthchecking â€” liveness and readiness checks running
+8. completed â€” runtime healthy, bot marked active
+9. failed â€” terminal failure; failure_reason and remediation_hint persisted
+10. cleanup_pending â€” cleanup workflow triggered for failed or deprovisioned job
+11. cleaned_up â€” all partial Azure resources deleted and logged
 
 Note: Azure sub-steps (resource_group_created, identity_created, vm_created) are internal adapter implementation details, not job state machine states. They are not exposed via the API or dashboard.
 
 ### Workspace Runtime States
-Canonical source: planning/spec-azure-provisioning-workflow.md — frozen as of 2026-04-21.
-1. pending — workspace record exists, provisioning not yet started
-2. provisioning — provisioning job accepted and running
-3. ready — runtime healthy and accepting tasks
-4. degraded — runtime reachable but dependency health failing
-5. failed — runtime unrecoverable; requires reprovisioning
-6. suspended — tenant or admin suspended the workspace
+Canonical source: planning/spec-azure-provisioning-workflow.md â€” frozen as of 2026-04-21.
+1. pending â€” workspace record exists, provisioning not yet started
+2. provisioning â€” provisioning job accepted and running
+3. ready â€” runtime healthy and accepting tasks
+4. degraded â€” runtime reachable but dependency health failing
+5. failed â€” runtime unrecoverable; requires reprovisioning
+6. suspended â€” tenant or admin suspended the workspace
 
 ### Provisioning Failure Policy
 1. Retry transient Azure API failures with exponential backoff.
@@ -185,7 +185,7 @@ Canonical source: planning/spec-azure-provisioning-workflow.md — frozen as of 
 4. Support secure image pull and restart policy.
 
 ### Runtime Config Inputs
-Canonical source: planning/spec-docker-runtime-contract.md — frozen as of 2026-04-21.
+Canonical source: planning/spec-docker-runtime-contract.md â€” frozen as of 2026-04-21.
 1. tenant_id
 2. workspace_id
 3. bot_id
@@ -198,20 +198,20 @@ Canonical source: planning/spec-docker-runtime-contract.md — frozen as of 2026
 10. runtime_contract_version
 
 ### Runtime State Machine
-Canonical source: planning/spec-docker-runtime-contract.md — frozen as of 2026-04-21.
-1. created — container record exists, not yet started
-2. starting — startup sequence running
-3. ready — startup complete, no tasks yet
-4. active — processing tasks
-5. degraded — running but dependency health failing; no new task intake
-6. paused — kill switch or admin pause; existing loops suspended
-7. stopping — graceful shutdown in progress
-8. stopped — container stopped cleanly
-9. failed — non-recoverable failure; incident tag triggered
+Canonical source: planning/spec-docker-runtime-contract.md â€” frozen as of 2026-04-21.
+1. created â€” container record exists, not yet started
+2. starting â€” startup sequence running
+3. ready â€” startup complete, no tasks yet
+4. active â€” processing tasks
+5. degraded â€” running but dependency health failing; no new task intake
+6. paused â€” kill switch or admin pause; existing loops suspended
+7. stopping â€” graceful shutdown in progress
+8. stopped â€” container stopped cleanly
+9. failed â€” non-recoverable failure; incident tag triggered
 
 ### Startup Contract
 1. Pre-start: validate required env vars, managed identity token, connector secret refs, policy pack fetch.
-2. Startup sequence events: runtime.init_started → runtime.config_loaded → runtime.policy_loaded → runtime.connector_bindings_loaded → runtime.worker_loops_started → runtime.ready.
+2. Startup sequence events: runtime.init_started â†’ runtime.config_loaded â†’ runtime.policy_loaded â†’ runtime.connector_bindings_loaded â†’ runtime.worker_loops_started â†’ runtime.ready.
 3. Startup failure: emit runtime.init_failed, exit non-zero, escalate to failed after retry threshold.
 
 ### Restart Contract
@@ -233,7 +233,7 @@ Canonical source: planning/spec-docker-runtime-contract.md — frozen as of 2026
 4. Only approved ports exposed.
 
 ## 4. Connector Authentication and Integration Design
-Frozen 2026-04-21 — canonical source: planning/spec-connector-auth-flow.md.
+Frozen 2026-04-21 â€” canonical source: planning/spec-connector-auth-flow.md.
 
 ### Auth Principles
 1. Least privilege scopes only.
@@ -242,31 +242,31 @@ Frozen 2026-04-21 — canonical source: planning/spec-connector-auth-flow.md.
 4. Revocation disables connector actions immediately.
 
 ### Connector Auth State Machine
-Frozen 2026-04-21 — 11 states.
-1. not_configured — connector record exists, no activation attempted
-2. auth_initiated — OAuth flow started, awaiting redirect
-3. consent_pending — user redirected to provider; awaiting callback
-4. token_received — callback received, exchange in progress
-5. validation_in_progress — scope validation running
-6. connected — scopes valid, connector healthy and active
-7. degraded — partial scopes; feature-gated execution only
-8. token_expired — access token expired; refresh or re-consent required
-9. permission_invalid — insufficient scopes; admin remediation required
-10. revoked — admin or provider revoked; full reactivation required
-11. disconnected — explicitly disconnected by tenant admin
+Frozen 2026-04-21 â€” 11 states.
+1. not_configured â€” connector record exists, no activation attempted
+2. auth_initiated â€” OAuth flow started, awaiting redirect
+3. consent_pending â€” user redirected to provider; awaiting callback
+4. token_received â€” callback received, exchange in progress
+5. validation_in_progress â€” scope validation running
+6. connected â€” scopes valid, connector healthy and active
+7. degraded â€” partial scopes; feature-gated execution only
+8. token_expired â€” access token expired; refresh or re-consent required
+9. permission_invalid â€” insufficient scopes; admin remediation required
+10. revoked â€” admin or provider revoked; full reactivation required
+11. disconnected â€” explicitly disconnected by tenant admin
 
 ### Connector Activation Flow (OAuth)
 1. User selects connector in dashboard.
-2. Control plane creates auth session and nonce; status → auth_initiated.
-3. User redirected to provider consent page; status → consent_pending.
+2. Control plane creates auth session and nonce; status â†’ auth_initiated.
+3. User redirected to provider consent page; status â†’ consent_pending.
 4. Provider returns auth code with state parameter.
 5. Control plane validates state and nonce match.
-6. Control plane exchanges auth code for access token (and refresh token where available); status → token_received.
+6. Control plane exchanges auth code for access token (and refresh token where available); status â†’ token_received.
 7. Token reference persisted in secure store; plaintext token never persisted in DB.
-8. Scope validation runs against required capability matrix; status → validation_in_progress.
-9. If scopes sufficient: status → connected.
-10. If scopes partial: status → degraded (feature-gated).
-11. If scopes insufficient: status → permission_invalid; activation blocked.
+8. Scope validation runs against required capability matrix; status â†’ validation_in_progress.
+9. If scopes sufficient: status â†’ connected.
+10. If scopes partial: status â†’ degraded (feature-gated).
+11. If scopes insufficient: status â†’ permission_invalid; activation blocked.
 
 ### Secure Storage Contract
 1. Store provider credentials in Key Vault or equivalent secure secret store.
@@ -278,14 +278,14 @@ Frozen 2026-04-21 — 11 states.
 Refresh:
 1. Refresh before expiration threshold using stored refresh token.
 2. Use bounded exponential backoff on transient refresh errors.
-3. On repeated refresh failure: status → token_expired.
+3. On repeated refresh failure: status â†’ token_expired.
 
 Expiration:
 1. Detect expired token on proactive checks or runtime call failure.
-2. Status → token_expired; connector actions blocked until refresh or re-consent.
+2. Status â†’ token_expired; connector actions blocked until refresh or re-consent.
 
 Revocation:
-1. Tenant admin or provider-side revoke: status → revoked immediately.
+1. Tenant admin or provider-side revoke: status â†’ revoked immediately.
 2. Connector actions blocked; full reactivation required to return to connected.
 
 ### Permission Scope Model
@@ -297,9 +297,9 @@ Required fields per connector:
 5. effective_scope_status (full | partial | insufficient)
 
 Scope outcome mapping:
-- full → connected (if health is good)
-- partial → degraded (feature-gated execution)
-- insufficient → permission_invalid
+- full â†’ connected (if health is good)
+- partial â†’ degraded (feature-gated execution)
+- insufficient â†’ permission_invalid
 
 ### Error Model
 Standard error classes:
@@ -324,12 +324,12 @@ Error handling rules:
 
 ### Connector Auth APIs
 Frozen 2026-04-21.
-1. POST /bots/{botId}/connectors/{connectorType}/activate — start OAuth activation
-2. POST /connectors/auth/callback/{connectorType} — process provider callback and token exchange
-3. POST /bots/{botId}/connectors/{connectorType}/validate — validate effective scopes and connection health
-4. POST /bots/{botId}/connectors/{connectorType}/refresh — trigger refresh flow
-5. POST /bots/{botId}/connectors/{connectorType}/revoke — revoke connector and disable actions
-6. GET /bots/{botId}/connectors — return connector state and last auth health status
+1. POST /bots/{botId}/connectors/{connectorType}/activate â€” start OAuth activation
+2. POST /connectors/auth/callback/{connectorType} â€” process provider callback and token exchange
+3. POST /bots/{botId}/connectors/{connectorType}/validate â€” validate effective scopes and connection health
+4. POST /bots/{botId}/connectors/{connectorType}/refresh â€” trigger refresh flow
+5. POST /bots/{botId}/connectors/{connectorType}/revoke â€” revoke connector and disable actions
+6. GET /bots/{botId}/connectors â€” return connector state and last auth health status
 
 ### Connector Contract Model
 1. Common connector fields
@@ -343,17 +343,17 @@ Frozen 2026-04-21.
 - last_healthcheck_at
 
 ### Normalized Connector Action Contract
-Frozen 2026-04-21 — canonical source: product-architecture.md Step 6 (all connector contracts approved).
+Frozen 2026-04-21 â€” canonical source: product-architecture.md Step 6 (all connector contracts approved).
 
 Contract Version: v1.0 (semver format; must increment on breaking API changes).
 
 Six canonical normalized actions:
-1. read_task — fetch task/issue/message details
-2. create_comment — add comment to task/issue
-3. update_status — change task/issue state
-4. send_message — send message to channel/user
-5. create_pr_comment — add comment to pull request
-6. send_email — send email
+1. read_task â€” fetch task/issue/message details
+2. create_comment â€” add comment to task/issue
+3. update_status â€” change task/issue state
+4. send_message â€” send message to channel/user
+5. create_pr_comment â€” add comment to pull request
+6. send_email â€” send email
 
 Common action request fields:
 1. action_id (UUID)
@@ -438,21 +438,21 @@ Contract versioning rule:
 5. audit_event_view
 
 ## 6. Approval and Policy Enforcement Design
-Frozen 2026-04-21 — consistent with ADR-002, product-architecture.md Step 5, and mvp/mvp-scope-and-gates.md.
+Frozen 2026-04-21 â€” consistent with ADR-002, product-architecture.md Step 5, and mvp/mvp-scope-and-gates.md.
 
 ### Risk Classification Criteria
-Low risk — auto-execute with full logging. Examples:
+Low risk â€” auto-execute with full logging. Examples:
 1. Read-only queries (Jira issue fetch, GitHub file read, Teams message read)
 2. Non-destructive status updates with no external side-effect
 3. Draft creation with no publish/send action
 
-Medium risk — mandatory human approval before execution. Examples:
+Medium risk â€” mandatory human approval before execution. Examples:
 1. Creating or updating a Jira ticket or GitHub PR
 2. Sending a message on behalf of the bot in Teams
 3. Committing code changes to a branch
 4. Updating task status in a shared workspace
 
-High risk — mandatory human approval with escalation timeout. Examples:
+High risk â€” mandatory human approval with escalation timeout. Examples:
 1. Merging a pull request
 2. Deploying or triggering a CI/CD pipeline
 3. Sending email to external recipients
@@ -480,20 +480,20 @@ Medium risk path:
 6. Approval service signs and returns decision to runtime.
 7. Runtime executes (if approved) or discards and logs (if rejected).
 
-High risk path — same as medium risk plus:
+High risk path â€” same as medium risk plus:
 1. Escalation timer starts at approval request creation.
 2. escalation_timeout_seconds: 3600 (1 hour); configurable per plan tier.
 3. On timeout: escalate to secondary approver if configured, else auto-reject and log escalation_event.
 4. Timeout outcome is logged as decision = timeout_rejected with reason.
 
 ### Approval Decision States
-1. pending — waiting for approver
-2. approved — approver confirmed; runtime may execute
-3. rejected — approver denied; runtime discards action and logs reason
-4. timeout_rejected — escalation timer expired; runtime discards action
+1. pending â€” waiting for approver
+2. approved â€” approver confirmed; runtime may execute
+3. rejected â€” approver denied; runtime discards action and logs reason
+4. timeout_rejected â€” escalation timer expired; runtime discards action
 
 ### Approval Record Fields
-Frozen 2026-04-21 — canonical source: planning/engineering-execution-design.md Section 6. Supports full decision traceability and P95 latency reporting per product-architecture.md Step 8.
+Frozen 2026-04-21 â€” canonical source: planning/engineering-execution-design.md Section 6. Supports full decision traceability and P95 latency reporting per product-architecture.md Step 8.
 1. approval_id (unique identifier)
 2. tenant_id (required for multi-tenant isolation)
 3. workspace_id (required for dashboard scope filtering; per spec-dashboard-data-model.md approval_queue_view)
@@ -513,7 +513,7 @@ Frozen 2026-04-21 — canonical source: planning/engineering-execution-design.md
 17. decided_at (approval decision timestamp; null if pending; immutable after set)
 
 ### Approval Record Immutability Rules
-Frozen 2026-04-21 — canonical source: planning/engineering-execution-design.md Section 7 (Evidence Pipeline).
+Frozen 2026-04-21 â€” canonical source: planning/engineering-execution-design.md Section 7 (Evidence Pipeline).
 1. All approval record fields are append-only; no updates after created_at.
 2. Once decided_at is set, no field modifications are permitted.
 3. Deletion of approval records is prohibited; compliance requirement.
@@ -527,7 +527,7 @@ Frozen 2026-04-21 — canonical source: planning/engineering-execution-design.md
 4. Policy version must be recorded in every action and approval record for traceability.
 
 ## 7. Logging, Evidence, and Observability Design
-Frozen 2026-04-21 — consistent with ADR-004, product-architecture.md Step 4, and research/competitive-gold-standards.md.
+Frozen 2026-04-21 â€” consistent with ADR-004, product-architecture.md Step 4, and research/competitive-gold-standards.md.
 
 ### Event Categories
 1. provisioning_event
@@ -556,7 +556,7 @@ Frozen 2026-04-21.
 15. completed_at
 
 ### Minimum Audit Event Record Fields
-Frozen 2026-04-21 — canonical source: planning/spec-dashboard-data-model.md audit_event_view.
+Frozen 2026-04-21 â€” canonical source: planning/spec-dashboard-data-model.md audit_event_view.
 1. event_id
 2. tenant_id
 3. workspace_id
@@ -569,7 +569,7 @@ Frozen 2026-04-21 — canonical source: planning/spec-dashboard-data-model.md au
 10. created_at
 
 ### Minimum Approval Evidence Fields
-Frozen 2026-04-21 — see Section 6 Approval Record Fields for full list.
+Frozen 2026-04-21 â€” see Section 6 Approval Record Fields for full list.
 Required for gate-audit evidence:
 1. approval_id
 2. risk_level
@@ -580,14 +580,14 @@ Required for gate-audit evidence:
 7. decided_at
 
 ### Retention and Immutability Policy
-Frozen 2026-04-21 — canonical source: product-architecture.md Step 4.
+Frozen 2026-04-21 â€” canonical source: product-architecture.md Step 4.
 1. Active audit records retained for 12 months.
 2. Archived records retained for 24 months total.
 3. Evidence records are append-only; no update or delete is permitted after creation.
 4. Compliance with this policy is a mandatory release gate requirement.
 
 ### Evidence Freshness Target
-Frozen 2026-04-21 — canonical source: ADR-004.
+Frozen 2026-04-21 â€” canonical source: ADR-004.
 1. Evidence for active release gates must be dated within 90 days.
 2. Stale evidence (older than 90 days) invalidates the corresponding gate score.
 3. Quarterly refresh of evidence is mandatory before each gate audit.
@@ -730,8 +730,5 @@ Frozen 2026-04-21 — canonical source: ADR-004.
 2. Teams Graph auth and consent spec
 - planning/spec-teams-graph-auth-and-consent.md
 
-<!-- doc-sync: 2026-05-06 sprint-6 -->
-> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
-
-<!-- doc-sync: 2026-05-06 full-pass-2 -->
-> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
+<!-- doc-sync: 2026-05-29 sprint-18 -->
+> Last synchronized: 2026-05-29 (Sprint 18 — full documentation update).

@@ -1,4 +1,4 @@
-# AgentFarm Development Kickoff Plan
+﻿# AgentFarm Development Kickoff Plan
 
 ## Purpose
 Provide the engineering team a precise, unambiguous starting point for development execution.
@@ -6,7 +6,7 @@ This document bridges the completed planning pack to the first lines of working 
 
 ## Authority
 - Planning pack status: Fully closed. Go decision recorded 2026-04-19.
-- Scope: MVP only — Developer Agent role, four approved connectors.
+- Scope: MVP only â€” Developer Agent role, four approved connectors.
 - Source of truth: planning/mvp-approved-execution-task-list.md P0 task sequence.
 - Scope enforcement: Any work not traceable to an approved execution task is blocked under MVP scope freeze.
 
@@ -22,7 +22,7 @@ This document bridges the completed planning pack to the first lines of working 
 #### Repository Setup
 - [ ] Monorepo initialized (pnpm workspaces, TypeScript project references)
 - [ ] Lint, format, and pre-commit hooks active (ESLint, Prettier, Husky)
-- [ ] CI pipeline skeleton in place (build, lint, test gates — no product logic yet)
+- [ ] CI pipeline skeleton in place (build, lint, test gates â€” no product logic yet)
 - [ ] Branch protection on main: require PR, require passing CI, no direct push
 - [ ] Secrets policy: no credentials in source, .env.example files only, real secrets to Vault/Key Vault
 
@@ -89,7 +89,7 @@ This document bridges the completed planning pack to the first lines of working 
 ## Sprint 1: Tenant Lifecycle and Azure Provisioning
 **Dates:** 2026-04-29 to 2026-05-12
 **Goal:** A tenant can sign up, trigger provisioning, and reach a "ready" state with a running agent VM.
-**Exit criteria:** End-to-end provisioning test passes. Bot status transitions from created → bootstrapping → active verified by integration test.
+**Exit criteria:** End-to-end provisioning test passes. Bot status transitions from created â†’ bootstrapping â†’ active verified by integration test.
 
 ### Sprint 1 Objectives
 1. Implement tenant and user creation (identity-service).
@@ -122,7 +122,7 @@ This document bridges the completed planning pack to the first lines of working 
 ## Sprint 2: Connector Auth, Approval Controls, and Audit Evidence
 **Dates:** 2026-05-13 to 2026-05-26
 **Goal:** An active agent can authenticate to all four connectors, execute role tasks, route actions through the approval engine, and produce complete audit evidence.
-**Exit criteria:** Full action lifecycle test passes: task intake → risk classification → approval (for medium/high) → action execution → evidence record written.
+**Exit criteria:** Full action lifecycle test passes: task intake â†’ risk classification â†’ approval (for medium/high) â†’ action execution â†’ evidence record written.
 
 ### Sprint 2 Objectives
 1. Implement OAuth and token lifecycle for Jira, Teams, GitHub, and company email (connector-gateway).
@@ -157,11 +157,11 @@ These tasks gate all Sprint 1 work. They must be fully closed in Sprint 0.
 
 ```
 1.1 (tenant + bot state contract)
-  └─► 1.2 (signup-to-provisioning handoff)
-        └─► 2.1 (provisioning state machine)
-              └─► 2.2 (Docker runtime contract)
-                    └─► 4.1 (risk classification + approval routing)
-                          └─► 5.1 (audit evidence field lock)
+  â””â”€â–º 1.2 (signup-to-provisioning handoff)
+        â””â”€â–º 2.1 (provisioning state machine)
+              â””â”€â–º 2.2 (Docker runtime contract)
+                    â””â”€â–º 4.1 (risk classification + approval routing)
+                          â””â”€â–º 5.1 (audit evidence field lock)
 ```
 
 No Sprint 1 implementation begins until 1.1 and 1.2 are closed.
@@ -226,19 +226,18 @@ Use this checklist the morning Sprint 0 begins.
 ---
 
 ## Document Status
-- Status: Active — development kickoff baseline.
+- Status: Active â€” development kickoff baseline.
 - Effective date: 2026-04-20.
 - Owner: Engineering Lead.
 - Next review: 2026-04-28 (end of Sprint 0).
 - Change control: Any change to sprint scope or critical path requires Architecture Owner and Product Lead sign-off.
 - Canonical source map entry: planning/development-kickoff-plan.md.
 
-<!-- doc-sync: 2026-05-06 sprint-6 -->
-> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
 
-<!-- doc-sync: 2026-05-06 full-pass-2 -->
-> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
 
 
 ## Current Implementation Pointer (2026-05-07)
 1. For the latest built-state summary and file map, see planning/build-snapshot-2026-05-07.md.
+
+<!-- doc-sync: 2026-05-29 sprint-18 -->
+> Last synchronized: 2026-05-29 (Sprint 18 — full documentation update).

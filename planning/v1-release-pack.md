@@ -1,4 +1,4 @@
-# AgentFarm Production-Ready v1 Pack
+﻿# AgentFarm Production-Ready v1 Pack
 
 ## Purpose
 Provide one review path and one signoff checklist before development begins.
@@ -180,11 +180,10 @@ No implementation work is included in this pack.
 4. Remediation owners and due dates: None required.
 5. Next review date: 2026-05-03.
 
-<!-- doc-sync: 2026-05-06 sprint-6 -->
-> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
 
-<!-- doc-sync: 2026-05-06 full-pass-2 -->
-> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
 
 <!-- doc-sync: 2026-05-07 six-priority-closure -->
 > Last synchronized: 2026-05-07 (Post-build six-priority implementation snapshot added).
+
+<!-- doc-sync: 2026-05-29 sprint-18 -->
+> Last synchronized: 2026-05-29 (Sprint 18 — full documentation update).

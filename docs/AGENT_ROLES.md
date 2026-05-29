@@ -1,8 +1,8 @@
-> **Status:** Mixed planned + shipped behavior. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for the authoritative gap tracker.
+> **Status:** 5 roles fully implemented (Developer, Tester, Technical Writer, Content Writer, Corporate Assistant). 7 profiles defined but handlers not yet built. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for the authoritative status.
 # Agent Roles
 
 > AgentFarm — 12 agent role profiles with connectors, capabilities, and risk posture.
-> Last updated: 2026-05-10
+> Last updated: 2026-05-29 (Sprint 18)
 
 ---
 

@@ -54,8 +54,9 @@ AgentFarm is a TypeScript pnpm monorepo. The system is composed of six applicati
 | Service | Port | Purpose | Used by |
 |---------|------|---------|---------|
 | OPA (Open Policy Agent) | 8181 | Policy evaluation | api-gateway (future integration) |
-| Voicebox | 17493 | Speech-to-text transcription | agent-runtime (on-demand per request) |
-| VoxCPM2 | — | Text-to-speech synthesis | agent-runtime (on-demand per request) |
+| Voicebox | 17493 | Speech-to-text transcription + voice profile management | agent-runtime, desktop-agent |
+| Desktop Agent | — | noVNC/Xvfb vision loop, meeting audio (PulseAudio) | agent-runtime via desktop-sessions proxy |
+| Azure OpenAI (embeddings) | — | pgvector embedding generation for episodic + semantic memory | memory-service |
 
 ---
 
@@ -107,13 +108,14 @@ Dashboard browser
 
 - **Framework**: Fastify 5 with TypeScript
 - **Port**: 3000
-- **Database**: PostgreSQL 16 via Prisma ORM
+- **Database**: PostgreSQL 16 via Prisma ORM (with pgvector extension)
 - **Cache/Rate-limit**: Redis
 - **Auth**: Cookie-based session tokens; all `/v1/*` routes protected
 - **Rate limits**: 180 req/min per IP general; 20 req/min per IP on auth routes; 600 req/min per tenant
 - **Security headers**: `@fastify/helmet` (CSP, HSTS, X-Frame-Options, Referrer-Policy, Permissions-Policy)
-- **Route count**: 62 route files covering all platform domains
-- **Tests**: 898 tests, 57 suites
+- **Route count**: 86+ route files covering all platform domains
+- **New routes (Sprint 8-18)**: personas, setup-wizard, agent-lifecycle (terminate), knowledge-base, desktop-sessions, episodic-memory, disclosure, billing checkout, per-agent billing
+- **Tests**: 1,237+ tests
 
 ### Agent Runtime (`apps/agent-runtime/`)
 
@@ -122,10 +124,14 @@ Dashboard browser
 - **LLM providers**: 9 named providers + Auto mode
   - OpenAI, Azure OpenAI, Anthropic, Google, xAI, Mistral, Together AI, GitHub Models, AgentFarm native
   - Auto: 5-minute rolling health score (error rate + latency) drives provider selection order
-- **Action tiers**: 12 tiers — file ops, shell, IDE, multi-file, REPL, language adapters, governance, release, productivity, observability, desktop/meeting (HIGH), sub-agent/GitHub (HIGH)
+- **Action tiers**: 12 base tiers + Tier 20 (testing tools: Selenium, Cypress, Appium, Playwright, k6, Artillery, Newman, OWASP ZAP, visual regression) + Tier 28 (content writer: prose, research, SEO, CMS, images, tone, revisions, brand voice, scheduling)
+- **Role enforcement**: `role-enforcer.ts` hard-blocks out-of-role tasks; `task-classifier.ts` LLM-based membership check
+- **Persona system**: `persona-context-loader.ts` with 60s LRU cache; `system-prompt-builder.ts` injects persona identity + disclosure footer
+- **Memory system**: episodic memory (pgvector, dual-indexed by workspaceId + personKey); semantic knowledge base (cosine similarity, top-5 pre-task recall)
+- **Voice profiles**: 12 role voices auto-seeded at startup; meeting participation loop (join→capture→transcribe→speak)
+- **Desktop operator**: `NativeDesktopOperator` dispatches to desktop-agent Flask service; `MockDesktopOperator` for CI
 - **Sandbox**: `safeChildPath` enforces workspace-scoped paths on all file and shell operations
-- **Source files**: 74 non-test TypeScript files
-- **Tests**: 906 tests, 118 suites
+- **Tests**: 1,120+ tests
 
 ### Trigger Service (`apps/trigger-service/`)
 
@@ -194,18 +200,19 @@ Dashboard browser
 
 ## Database schema
 
-70 Prisma models across 8 domains. Schema lives in `packages/db-schema/prisma/schema.prisma`.
+75+ Prisma models. Schema lives in `packages/db-schema/prisma/schema.prisma`. Requires the `pgvector` extension for embedding columns.
 
 | Domain | Model count | Key models |
 |--------|-------------|------------|
 | Identity and tenancy | 8 | `Tenant`, `TenantUser`, `Workspace` |
-| Agents and bots | 8 | `Bot`, `AgentSession`, `RuntimeInstance` |
-| Task execution | 9 | `TaskExecutionRecord`, `TaskQueueEntry`, `Plan` |
-| Memory and knowledge | 5 | `AgentShortTermMemory`, `WorkMemory`, `AgentRepoKnowledge` |
+| Agents and bots | 9 | `Bot`, `AgentSession`, `RuntimeInstance`, `AgentPersona` |
+| Task execution | 9 | `TaskExecutionRecord` (with `platformFeeUsd`), `TaskQueueEntry`, `Plan` |
+| Memory and knowledge | 7 | `AgentShortTermMemory`, `AgentLongTermMemory` (pgvector 1536-dim), `AgentKnowledgeBase` (pgvector), `WorkMemory` |
 | Billing and subscriptions | 5 | `Order`, `Invoice`, `ProvisioningJob` |
 | Connectors and marketplace | 6 | `ConnectorAuthSession`, `MarketplaceListing` |
 | Governance and audit | 12 | `Approval`, `AuditEvent`, `QualitySignalLog` |
 | Communication and developer tools | 17 | `ChatSession`, `ApiKey`, `OutboundWebhook` |
+| Onboarding | 1 | `SetupWizardSession` |
 
 ### Key design decisions
 

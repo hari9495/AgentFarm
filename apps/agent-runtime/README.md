@@ -4,7 +4,7 @@ The Agent Runtime is the AI task execution engine for AgentFarm. It receives tas
 
 **Port**: 4000 (main), `AF_HEALTH_PORT` (health, default 4001)
 **Framework**: Fastify 5 with TypeScript
-**Tests**: 906 tests, 118 suites
+**Tests**: 1,120+ tests (Sprint 18)
 
 ---
 
@@ -13,15 +13,21 @@ The Agent Runtime is the AI task execution engine for AgentFarm. It receives tas
 - Multi-step task planning via `TaskPlanner` (LLM-backed)
 - LLM provider routing across 9 providers with Auto mode failover
 - Risk classification: LOW executes immediately; MEDIUM/HIGH routes to approval queue
-- 12 tiers of local workspace actions (`local-workspace-executor.ts`)
+- 12 base tiers + Tier 20 (testing tools) + Tier 28 (content writer) of local workspace actions
+- **Role enforcement** — `role-enforcer.ts` hard-blocks out-of-role tasks; `task-classifier.ts` LLM membership check
+- **Persona system** — `persona-context-loader.ts` (60s LRU cache) + `system-prompt-builder.ts`
+- **Memory injection** — episodic memory (pgvector, per-person) + semantic knowledge base (pre-task recall)
+- **Disclosure compliance** — `outbound-disclosure.ts` chokepoint on all outbound channels
 - Skills registry: crystallize, match, and reuse successful task patterns
 - Autonomous loop orchestrator for background agent cycles
 - Multi-agent dispatch and orchestration run management
-- Desktop and browser operator (mock or native via `DESKTOP_OPERATOR` env var)
-- Voice pipeline: meeting transcription (Voicebox STT), speaking agent (VoxCPM2 TTS)
+- Desktop and browser operator: `NativeDesktopOperator` (dispatches to desktop-agent Flask service), `MockDesktopOperator` (CI)
+- Voice pipeline: meeting transcription (Voicebox STT), speaking agent, 12 role voices seeded at startup
+- Meeting participation loop: join → capture audio → transcribe → speak
 - Evidence assembly and action result recording
-- Budget alert emission and token cost tracking
+- Budget alert emission and token cost tracking ($0.10/task platform fee)
 - MCP (Model Context Protocol) client and registry integration
+- Evaluator webhook (`evaluator-webhook.ts`) — fire-and-forget post-task quality dispatch
 
 ---
 
@@ -85,7 +91,7 @@ pnpm --filter @agentfarm/agent-runtime test
 
 ## Action tiers
 
-12 tiers of local workspace actions. All file and shell operations enforce `safeChildPath` sandbox to prevent path traversal.
+12 base tiers + extended tiers. All file and shell operations enforce `safeChildPath` sandbox.
 
 | Tier | Category | Risk | Description |
 |------|----------|------|-------------|
@@ -99,8 +105,10 @@ pnpm --filter @agentfarm/agent-runtime test
 | 8 | Release | HIGH | Tag, publish, deploy artifacts |
 | 9 | Productivity | LOW | Calendar, notes, scheduling |
 | 10 | Observability | LOW | Metrics, tracing, log queries |
-| 11 | Desktop/meeting | HIGH | Browser, app launch, meeting join/speak |
+| 11 | Desktop/meeting | HIGH | Browser, app launch, meeting join/speak, interview |
 | 12 | Sub-agent/GitHub | HIGH | Spawn sub-agents, GitHub PR and issue ops |
+| 20 | Testing tools | MED/HIGH | Selenium, Cypress, Appium, Playwright, k6/Artillery, Newman, OWASP ZAP, Semgrep, TestRail/Zephyr sync, visual regression |
+| 28 | Content writer | LOW/MED | LLM prose, research, SEO, CMS publish, image sourcing, tone adaptation, revision, brand voice learning, editorial scheduling |
 
 ---
 

@@ -1,7 +1,7 @@
-> **Status:** Mixed planned + shipped behavior. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for the authoritative gap tracker.
+> **Status:** OAuth flows for Jira, GitHub, Teams, Email shipped (Sprint 12). Connector-gateway implements GitHub, Slack, Azure DevOps, Linear, Confluence, Notion, PagerDuty, Sentry, Email. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for details.
 # AgentFarm Connector System
 
-> Last updated: May 10, 2026 | AgentFarm monorepo audit
+> Last updated: 2026-05-29 (Sprint 18)
 
 Full reference for the connector gateway in `services/connector-gateway`.
 

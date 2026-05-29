@@ -1,4 +1,4 @@
-# AgentFarm Two-Sprint Backlog (Safety and Orchestration)
+﻿# AgentFarm Two-Sprint Backlog (Safety and Orchestration)
 
 ## Purpose
 Define a concrete 2-sprint execution backlog with exact epics, owners, dependencies, acceptance criteria, and quality-gate wiring.
@@ -247,12 +247,11 @@ Define a concrete 2-sprint execution backlog with exact epics, owners, dependenc
 3. Risk: dashboard lag for governance KPIs.
 - Mitigation: pre-aggregated read models for KPI panels.
 
-<!-- doc-sync: 2026-05-06 sprint-6 -->
-> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
 
-<!-- doc-sync: 2026-05-06 full-pass-2 -->
-> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
 
 
 ## Current Implementation Pointer (2026-05-07)
 1. For the latest built-state summary and file map, see planning/build-snapshot-2026-05-07.md.
+
+<!-- doc-sync: 2026-05-29 sprint-18 -->
+> Last synchronized: 2026-05-29 (Sprint 18 — full documentation update).

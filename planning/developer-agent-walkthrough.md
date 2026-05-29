@@ -1,4 +1,4 @@
-# AgentFarm — Developer Agent Walkthrough
+﻿# AgentFarm â€” Developer Agent Walkthrough
 
 **Last updated:** 2026-04-30  
 **Role key:** `developer` / `fullstack_developer`  
@@ -9,13 +9,13 @@
 
 ## What the Developer Agent Is
 
-The Developer Agent is an AI bot deployed inside a Docker container on a tenant-provisioned Azure VM. Its purpose is to act as a software engineering assistant — performing code review, writing test plans, creating PRs, commenting on issues, tracking Jira tickets, and notifying teams via Teams or email.
+The Developer Agent is an AI bot deployed inside a Docker container on a tenant-provisioned Azure VM. Its purpose is to act as a software engineering assistant â€” performing code review, writing test plans, creating PRs, commenting on issues, tracking Jira tickets, and notifying teams via Teams or email.
 
 It supports **two execution surfaces**:
-1. **Connector actions** — calls external services (GitHub, Jira, Teams, Email) through the API Gateway connector layer.
-2. **Local workspace actions** — directly manipulates files, runs commands, manages git history, and reads/writes workspace context within a sandboxed workspace directory on the VM.
+1. **Connector actions** â€” calls external services (GitHub, Jira, Teams, Email) through the API Gateway connector layer.
+2. **Local workspace actions** â€” directly manipulates files, runs commands, manages git history, and reads/writes workspace context within a sandboxed workspace directory on the VM.
 
-Both surfaces are enforced by the same frozen capability snapshot — no task can execute outside the frozen permission boundary regardless of what the payload says.
+Both surfaces are enforced by the same frozen capability snapshot â€” no task can execute outside the frozen permission boundary regardless of what the payload says.
 
 ---
 
@@ -32,7 +32,7 @@ The `developer` role is granted access to all four connectors and all engineerin
 | **Teams** | `send_message` |
 | **Email** | `send_email` |
 
-No other role gets full GitHub write access. This is enforced at the frozen capability snapshot level — it cannot be overridden by a task payload.
+No other role gets full GitHub write access. This is enforced at the frozen capability snapshot level â€” it cannot be overridden by a task payload.
 
 ### Local Workspace Actions
 
@@ -77,7 +77,7 @@ The `developer` and `fullstack_developer` roles are also granted the full set of
 | `workspace_release_notes_generate` | medium | Generate release notes from a commit range plus PR merge metadata |
 | `workspace_incident_patch_pack` | medium | Build emergency patch bundle with rollback checkpoint and impact summary |
 | `workspace_memory_profile` | medium | Persist and read per-repo coding conventions (naming, lint style, test style) |
-| `workspace_autonomous_plan_execute` | medium | Structured plan → staged execution → checkpoint → verify → propose PR with full audit trail |
+| `workspace_autonomous_plan_execute` | medium | Structured plan â†’ staged execution â†’ checkpoint â†’ verify â†’ propose PR with full audit trail |
 | `workspace_policy_preflight` | low | Simulate risk and approval routing for any action without executing it |
 
 **Path safety:** All file operations are restricted to the workspace sandbox. Path traversal (`../`, absolute paths) is blocked by `safeChildPath()`.
@@ -86,11 +86,11 @@ The `developer` and `fullstack_developer` roles are also granted the full set of
 
 ---
 
-## Full Walkthrough — What Happens Step by Step
+## Full Walkthrough â€” What Happens Step by Step
 
 ---
 
-### Phase 1 — Startup
+### Phase 1 â€” Startup
 
 When the VM bootstraps the Docker container, it calls:
 
@@ -100,20 +100,20 @@ POST /startup
 
 The runtime:
 1. Reads all environment variables (`AF_TENANT_ID`, `AF_BOT_ID`, `AF_ROLE_PROFILE`, `AF_POLICY_PACK_VERSION`, connector URLs, tokens, etc.)
-2. Resolves `roleKey` from `AF_ROLE_KEY` env var, or by matching `AF_ROLE_PROFILE` against known aliases (e.g. `"Developer Agent"` → `developer`)
+2. Resolves `roleKey` from `AF_ROLE_KEY` env var, or by matching `AF_ROLE_PROFILE` against known aliases (e.g. `"Developer Agent"` â†’ `developer`)
 3. Checks whether a persisted capability snapshot exists in the database for this bot ID
-   - If found and compatible (role key, role version, policy pack version, allowed connectors all match) → uses the persisted snapshot
-   - If not found or incompatible → freezes a new snapshot from the current role policy and persists it
+   - If found and compatible (role key, role version, policy pack version, allowed connectors all match) â†’ uses the persisted snapshot
+   - If not found or incompatible â†’ freezes a new snapshot from the current role policy and persists it
 4. Fetches the workspace LLM config from the API Gateway (`GET /v1/workspaces/{id}/runtime/llm-config`) to wire up the LLM decision resolver
-5. Probes the approval API dependency (`GET /health`) — if it fails, state transitions to `degraded` instead of `active`
+5. Probes the approval API dependency (`GET /health`) â€” if it fails, state transitions to `degraded` instead of `active`
 6. Starts the **worker loop** (every 250 ms) and **heartbeat loop** (every 30 s)
-7. State: `created → starting → ready → active`
+7. State: `created â†’ starting â†’ ready â†’ active`
 
 **Capability snapshot** is a versioned, checksummed record that freezes exactly which connectors and actions this bot is authorized to use at startup. A SHA-256 checksum prevents tampered snapshots from being loaded from DB.
 
 ---
 
-### Phase 2 — A Task Arrives
+### Phase 2 â€” A Task Arrives
 
 A task is submitted to the bot:
 
@@ -139,62 +139,62 @@ The task is pushed into the worker loop queue (`workerLoop.queuedTasks`). The wo
 
 ---
 
-### Phase 3 — Capability Policy Check
+### Phase 3 â€” Capability Policy Check
 
 Before any decision logic runs, the runtime checks the **frozen capability snapshot**:
 
 1. Reads `connector_type` from the payload (`github`)
-2. Checks that `github` is in `snapshot.allowedConnectorTools` — it is, for `developer`
-3. Checks that `create_pr` is in `snapshot.allowedActions` — it is
-4. If either check fails → task immediately fails with `capability_policy_blocked` event, no external call is made
+2. Checks that `github` is in `snapshot.allowedConnectorTools` â€” it is, for `developer`
+3. Checks that `create_pr` is in `snapshot.allowedActions` â€” it is
+4. If either check fails â†’ task immediately fails with `capability_policy_blocked` event, no external call is made
 
 This check is non-bypassable. Even if the LLM or the task payload says otherwise, the snapshot is the authority.
 
 ---
 
-### Phase 4 — Decision Making
+### Phase 4 â€” Decision Making
 
 The engine runs `processDeveloperTask()` with three sub-steps:
 
-#### 4A — Normalize Action Type
+#### 4A â€” Normalize Action Type
 
-Reads `action_type` from payload → `"create_pr"`.  
+Reads `action_type` from payload â†’ `"create_pr"`.  
 Falls back to `intent` field if `action_type` is missing or whitespace.  
 Falls back to `"read_task"` if both are absent.  
 Normalized to lowercase snake_case.
 
-#### 4B — Score Confidence
+#### 4B â€” Score Confidence
 
 Starts at `0.92` and applies deductions based on payload quality:
 
 | Condition | Deduction |
 |---|---|
-| `summary` missing or shorter than 8 characters | −0.18 |
-| `target` missing or empty | −0.10 |
-| `complexity = high` | −0.16 |
-| `complexity = medium` | −0.08 |
-| `ambiguous = true` | −0.20 |
+| `summary` missing or shorter than 8 characters | âˆ’0.18 |
+| `target` missing or empty | âˆ’0.10 |
+| `complexity = high` | âˆ’0.16 |
+| `complexity = medium` | âˆ’0.08 |
+| `ambiguous = true` | âˆ’0.20 |
 
-Example: payload has a good `summary` and `target` → confidence stays at `0.92`.
+Example: payload has a good `summary` and `target` â†’ confidence stays at `0.92`.
 
-#### 4C — Classify Risk
+#### 4C â€” Classify Risk
 
 Policy lookup (in order):
 
 | Action | Risk | Route |
 |---|---|---|
-| `create_pr` | **medium** | → approval queue |
-| `merge_pr` | **high** | → approval queue |
-| `list_prs` | **low** | → execute |
-| `read_task`, `create_pr_comment` | **low** → medium (if confidence < 0.6) | → execute or approval |
-| `create_comment`, `update_status`, `send_message` | **medium** | → approval queue |
-| `send_email` | **low** | → execute |
+| `create_pr` | **medium** | â†’ approval queue |
+| `merge_pr` | **high** | â†’ approval queue |
+| `list_prs` | **low** | â†’ execute |
+| `read_task`, `create_pr_comment` | **low** â†’ medium (if confidence < 0.6) | â†’ execute or approval |
+| `create_comment`, `update_status`, `send_message` | **medium** | â†’ approval queue |
+| `send_email` | **low** | â†’ execute |
 | Payload `risk_hint = high/medium/low` | Overrides classification | Applies override |
-| Confidence < 0.6 (any action) | **medium** | → approval queue |
+| Confidence < 0.6 (any action) | **medium** | â†’ approval queue |
 
-`create_pr` → **medium risk** → the decision is `route: 'approval'`. No execution yet.
+`create_pr` â†’ **medium risk** â†’ the decision is `route: 'approval'`. No execution yet.
 
-#### 4D — LLM Override (if configured)
+#### 4D â€” LLM Override (if configured)
 
 If the workspace has an LLM configured (e.g. Azure OpenAI), the heuristic decision is sent to the model:
 
@@ -210,16 +210,16 @@ If the workspace has an LLM configured (e.g. Azure OpenAI), the heuristic decisi
 }
 ```
 
-The model responds with a structured JSON decision. If it upgrades `create_pr` to `high` risk, that decision is used. If the LLM call times out (5 s) or fails, the heuristic is used as fallback — the agent never crashes due to LLM unavailability.
+The model responds with a structured JSON decision. If it upgrades `create_pr` to `high` risk, that decision is used. If the LLM call times out (5 s) or fails, the heuristic is used as fallback â€” the agent never crashes due to LLM unavailability.
 
 ---
 
-### Phase 5A — Low Risk Path (e.g. `list_prs`, `read_task`)
+### Phase 5A â€” Low Risk Path (e.g. `list_prs`, `read_task`)
 
 If route = `execute`:
 
 1. Task passes the capability snapshot check
-2. If `connector_type` is present and the action is a known connector action → calls the API Gateway connector endpoint directly
+2. If `connector_type` is present and the action is a known connector action â†’ calls the API Gateway connector endpoint directly
 3. Up to **3 retry attempts** with transient error detection
 4. On success: emits `task_processed` event, writes `ActionResultRecord`, records latency and outcome in `TaskExecutionRecord`
 
@@ -239,11 +239,11 @@ POST /tasks/intake
 }
 ```
 
-→ Classified as **low risk** → executes immediately → calls GitHub `GET /repos/acme/backend/pulls?state=open` → returns list of open PRs.
+â†’ Classified as **low risk** â†’ executes immediately â†’ calls GitHub `GET /repos/acme/backend/pulls?state=open` â†’ returns list of open PRs.
 
 ---
 
-### Phase 5B — Medium/High Risk Path (e.g. `create_pr`, `merge_pr`)
+### Phase 5B â€” Medium/High Risk Path (e.g. `create_pr`, `merge_pr`)
 
 If route = `approval`:
 
@@ -258,7 +258,7 @@ x-approval-intake-token: <token>
   "bot_id": "bot-001",
   "task_id": "t-dev-001",
   "action_type": "create_pr",
-  "action_summary": "Create PR for feature/auth-hardening → main",
+  "action_summary": "Create PR for feature/auth-hardening â†’ main",
   "risk_level": "medium",
   "requested_by": "developer-bot",
   "policy_pack_version": "v1"
@@ -267,12 +267,12 @@ x-approval-intake-token: <token>
 
 3. Approval intake request retries up to **3 times** with backoff (200 ms) on rate limit (429) or server errors (5xx)
 4. Task is held in `pendingApprovals` list in runtime memory
-5. If no decision arrives within **1 hour** → task auto-escalates (`escalated = true`), dashboard shows a visual alert
+5. If no decision arrives within **1 hour** â†’ task auto-escalates (`escalated = true`), dashboard shows a visual alert
 6. Emits `approval_required` event to `/logs`
 
 ---
 
-### Phase 6 — Human Approval on Dashboard
+### Phase 6 â€” Human Approval on Dashboard
 
 The **Approval Queue panel** on the AgentFarm dashboard shows:
 
@@ -285,7 +285,7 @@ The approver clicks **Approve** or **Reject**, provides an optional reason, and 
 
 ---
 
-### Phase 7 — Decision Delivered Back to Runtime
+### Phase 7 â€” Decision Delivered Back to Runtime
 
 API Gateway fans out the decision to the runtime via webhook:
 
@@ -301,7 +301,7 @@ x-runtime-decision-token: <token>
 ```
 
 **If approved:**
-1. Runtime checks decision cache — if this `taskId` was already approved before, it skips straight to execution (cache hit path)
+1. Runtime checks decision cache â€” if this `taskId` was already approved before, it skips straight to execution (cache hit path)
 2. Re-runs capability snapshot policy check
 3. Executes the connector action via API Gateway:
 
@@ -321,7 +321,7 @@ x-connector-exec-token: <token>
 }
 ```
 
-4. GitHub API: `POST /repos/acme/backend/pulls` → PR created
+4. GitHub API: `POST /repos/acme/backend/pulls` â†’ PR created
 5. Emits `runtime.connector_action_executed` event
 6. Writes `ActionResultRecord` (success) and `TaskExecutionRecord`
 
@@ -332,15 +332,15 @@ x-connector-exec-token: <token>
 
 ---
 
-### Phase 8 — Connector Execution Detail (API Gateway side)
+### Phase 8 â€” Connector Execution Detail (API Gateway side)
 
 When the runtime calls the gateway's connector execute endpoint, the gateway enforces two layers:
 
-**Layer 1 — Role policy:** `developer` → allowed connectors are `[jira, teams, github, email]`  
-If `connector_type = github` → allowed ✅
+**Layer 1 â€” Role policy:** `developer` â†’ allowed connectors are `[jira, teams, github, email]`  
+If `connector_type = github` â†’ allowed âœ…
 
-**Layer 2 — Connector action policy:** `github` → allowed actions are `[create_pr_comment, create_pr, merge_pr, list_prs]`  
-If `action_type = create_pr` → allowed ✅
+**Layer 2 â€” Connector action policy:** `github` â†’ allowed actions are `[create_pr_comment, create_pr, merge_pr, list_prs]`  
+If `action_type = create_pr` â†’ allowed âœ…
 
 Then the real GitHub call:
 
@@ -358,13 +358,13 @@ Accept: application/vnd.github+json
 }
 ```
 
-Gateway uses **exponential backoff retries** (50 ms → 100 ms) for transient failures before returning the result to the runtime.
+Gateway uses **exponential backoff retries** (50 ms â†’ 100 ms) for transient failures before returning the result to the runtime.
 
 ---
 
 ## Developer Agent Task Scenarios
 
-### Scenario 1 — Code Review (Low Risk, executes immediately)
+### Scenario 1 â€” Code Review (Low Risk, executes immediately)
 
 ```json
 {
@@ -377,15 +377,15 @@ Gateway uses **exponential backoff retries** (50 ms → 100 ms) for transient fa
 }
 ```
 
-- `action_type` normalized from `intent` → `code_review`
-- Not in any risk set → **low risk**
-- Confidence 0.92 (good summary + target) → **execute**
+- `action_type` normalized from `intent` â†’ `code_review`
+- Not in any risk set â†’ **low risk**
+- Confidence 0.92 (good summary + target) â†’ **execute**
 - No connector call needed (internal decision action)
 - Result: `success`
 
 ---
 
-### Scenario 2 — Read a Jira Task (Low Risk)
+### Scenario 2 â€” Read a Jira Task (Low Risk)
 
 ```json
 {
@@ -400,13 +400,13 @@ Gateway uses **exponential backoff retries** (50 ms → 100 ms) for transient fa
 }
 ```
 
-- `read_task` → **low risk** → execute immediately
+- `read_task` â†’ **low risk** â†’ execute immediately
 - Calls `GET /rest/api/3/issue/PROJ-55` on Jira
 - Result: issue data returned in action summary
 
 ---
 
-### Scenario 3 — Comment on a PR (Medium Risk, needs approval)
+### Scenario 3 â€” Comment on a PR (Medium Risk, needs approval)
 
 ```json
 {
@@ -424,13 +424,13 @@ Gateway uses **exponential backoff retries** (50 ms → 100 ms) for transient fa
 }
 ```
 
-- `create_pr_comment` → **medium risk** → approval queue
+- `create_pr_comment` â†’ **medium risk** â†’ approval queue
 - Waits for human decision
-- If approved → calls `POST /repos/acme/backend/issues/41/comments`
+- If approved â†’ calls `POST /repos/acme/backend/issues/41/comments`
 
 ---
 
-### Scenario 4 — Merge a PR (High Risk, needs approval)
+### Scenario 4 â€” Merge a PR (High Risk, needs approval)
 
 ```json
 {
@@ -449,14 +449,14 @@ Gateway uses **exponential backoff retries** (50 ms → 100 ms) for transient fa
 }
 ```
 
-- `merge_pr` → **high risk** → approval queue
+- `merge_pr` â†’ **high risk** â†’ approval queue
 - Escalates after 1 hour without decision
-- If approved → calls `PUT /repos/acme/backend/pulls/41/merge`
-- If rejected → task cancelled, reason recorded
+- If approved â†’ calls `PUT /repos/acme/backend/pulls/41/merge`
+- If rejected â†’ task cancelled, reason recorded
 
 ---
 
-### Scenario 5 — Notify Team on Teams (Low Risk)
+### Scenario 5 â€” Notify Team on Teams (Low Risk)
 
 ```json
 {
@@ -472,8 +472,8 @@ Gateway uses **exponential backoff retries** (50 ms → 100 ms) for transient fa
 }
 ```
 
-- `send_message` → **medium risk** (policy) → approval queue
-- If approved → calls Teams API to send message
+- `send_message` â†’ **medium risk** (policy) â†’ approval queue
+- If approved â†’ calls Teams API to send message
 
 ---
 
@@ -545,7 +545,7 @@ Gateway uses **exponential backoff retries** (50 ms → 100 ms) for transient fa
 
 ---
 
-## Capability Snapshot — What Locks Developer Agent Permissions
+## Capability Snapshot â€” What Locks Developer Agent Permissions
 
 On startup the runtime freezes a `BotCapabilitySnapshotRecord`:
 
@@ -563,7 +563,7 @@ On startup the runtime freezes a `BotCapabilitySnapshotRecord`:
 }
 ```
 
-- The checksum is SHA-256 over all policy fields — if a row is tampered with in the database, the checksum fails and the snapshot is rejected
+- The checksum is SHA-256 over all policy fields â€” if a row is tampered with in the database, the checksum fails and the snapshot is rejected
 - If the snapshot's `roleKey`, `roleVersion`, or `policyPackVersion` no longer matches the environment, it is considered incompatible and a new one is frozen
 - **No task can execute outside these frozen permissions**, regardless of what the payload says
 
@@ -603,8 +603,8 @@ On startup the runtime freezes a `BotCapabilitySnapshotRecord`:
 4. Capability snapshot freeze with checksum validation and compatibility checks
 5. Multi-provider LLM decision routing with fallback behavior
 6. Full runtime observability endpoints (`/logs`, health, readiness, state history)
-7. **Tier 9 — Developer Productivity Wave (2026-04-30):** `workspace_create_pr`, `workspace_run_ci_checks`, `workspace_fix_test_failures`, `workspace_security_fix_suggest`, `workspace_pr_review_prepare`, `workspace_dependency_upgrade_plan`, `workspace_release_notes_generate`, `workspace_incident_patch_pack`, `workspace_memory_profile`, `workspace_autonomous_plan_execute`, `workspace_policy_preflight` — 11 actions, 179/179 tests passing, typecheck clean
-8. **Tier 10 — Connector Hardening, Code Intelligence & Observability (2026-05-01):** `workspace_connector_test`, `workspace_pr_auto_assign`, `workspace_ci_watch`, `workspace_explain_code`, `workspace_add_docstring`, `workspace_refactor_plan`, `workspace_semantic_search`, `workspace_diff_preview`, `workspace_approval_status`, `workspace_audit_export` — 10 actions, 190/190 tests passing, typecheck clean
+7. **Tier 9 â€” Developer Productivity Wave (2026-04-30):** `workspace_create_pr`, `workspace_run_ci_checks`, `workspace_fix_test_failures`, `workspace_security_fix_suggest`, `workspace_pr_review_prepare`, `workspace_dependency_upgrade_plan`, `workspace_release_notes_generate`, `workspace_incident_patch_pack`, `workspace_memory_profile`, `workspace_autonomous_plan_execute`, `workspace_policy_preflight` â€” 11 actions, 179/179 tests passing, typecheck clean
+8. **Tier 10 â€” Connector Hardening, Code Intelligence & Observability (2026-05-01):** `workspace_connector_test`, `workspace_pr_auto_assign`, `workspace_ci_watch`, `workspace_explain_code`, `workspace_add_docstring`, `workspace_refactor_plan`, `workspace_semantic_search`, `workspace_diff_preview`, `workspace_approval_status`, `workspace_audit_export` â€” 10 actions, 190/190 tests passing, typecheck clean
 
 ### What is pending before production go-live (not code gaps)
 
@@ -615,24 +615,24 @@ On startup the runtime freezes a `BotCapabilitySnapshotRecord`:
 
 ### What we can add next (Developer Agent roadmap backlog)
 
-Tier 9 is complete — all 11 previously planned actions have been built, tested (179/179 pass), and integrated into the risk, policy, and snapshot layers. Tier 10 is also complete — 10 new actions (190/190 tests passing) adding connector health probing, PR reviewer assignment, CI watching, code explanation, docstring scaffolding, structured refactor planning, semantic workspace search, diff preview, approval status query, and audit evidence export. The following represents the next wave.
+Tier 9 is complete â€” all 11 previously planned actions have been built, tested (179/179 pass), and integrated into the risk, policy, and snapshot layers. Tier 10 is also complete â€” 10 new actions (190/190 tests passing) adding connector health probing, PR reviewer assignment, CI watching, code explanation, docstring scaffolding, structured refactor planning, semantic workspace search, diff preview, approval status query, and audit evidence export. The following represents the next wave.
 
-#### Priority 1 — Real connector hardening
+#### Priority 1 â€” Real connector hardening
 
-1. **workspace_connector_test** — End-to-end integration test of a connector config (GitHub token, Jira credentials) without side effects
-2. **workspace_pr_auto_assign** — Auto-assign reviewers based on CODEOWNERS file and recent contributor activity
-3. **workspace_ci_watch** — Long-poll CI status until completion and return final pass/fail with log excerpt
+1. **workspace_connector_test** â€” End-to-end integration test of a connector config (GitHub token, Jira credentials) without side effects
+2. **workspace_pr_auto_assign** â€” Auto-assign reviewers based on CODEOWNERS file and recent contributor activity
+3. **workspace_ci_watch** â€” Long-poll CI status until completion and return final pass/fail with log excerpt
 
-#### Priority 2 — Multi-agent coordination
+#### Priority 2 â€” Multi-agent coordination
 
-1. **workspace_delegate_task** — Submit a sub-task to a peer agent (QA Agent, Manager Agent) with structured context handoff
-2. **workspace_wait_for_agent** — Block current plan step until a delegated task resolves (with timeout + escalation)
+1. **workspace_delegate_task** â€” Submit a sub-task to a peer agent (QA Agent, Manager Agent) with structured context handoff
+2. **workspace_wait_for_agent** â€” Block current plan step until a delegated task resolves (with timeout + escalation)
 
-#### Priority 3 — Advanced autonomy
+#### Priority 3 â€” Advanced autonomy
 
-1. **workspace_refactor_plan** — Produce a structured multi-step refactor plan before any edits are applied
-2. **workspace_explain_code** — Return an LLM-generated explanation of a code block for onboarding or review purposes
-3. **workspace_add_docstring** — Generate and insert docstrings/JSDoc comments for public APIs
+1. **workspace_refactor_plan** â€” Produce a structured multi-step refactor plan before any edits are applied
+2. **workspace_explain_code** â€” Return an LLM-generated explanation of a code block for onboarding or review purposes
+3. **workspace_add_docstring** â€” Generate and insert docstrings/JSDoc comments for public APIs
 
 ### Functional requirements for any new action
 
@@ -651,51 +651,50 @@ Every new Developer Agent action must include:
 
 ```
 Developer task submitted
-         │
-         ▼
+         â”‚
+         â–¼
  1. Capability snapshot check
     (is github/create_pr in frozen policy?)
-         │ YES
-         ▼
- 2. Normalize action type → "create_pr"
- 3. Score confidence → 0.92
- 4. Classify risk → MEDIUM (policy: create_pr = medium)
-         │
-         ▼
+         â”‚ YES
+         â–¼
+ 2. Normalize action type â†’ "create_pr"
+ 3. Score confidence â†’ 0.92
+ 4. Classify risk â†’ MEDIUM (policy: create_pr = medium)
+         â”‚
+         â–¼
  5. LLM override (if Azure OpenAI configured)
-    → may keep or upgrade risk level
-         │
-         ▼
+    â†’ may keep or upgrade risk level
+         â”‚
+         â–¼
  6. Route = APPROVAL
-    → POST /v1/approvals/intake (retries 3x)
-    → Task held in pendingApprovals
-    → After 1h: auto-escalate
-         │
-         ▼ (human approves on dashboard)
-         │
- 7. POST /decision → runtime webhook
-    → Check decision cache (skip approval if cached)
-    → Re-run snapshot policy check
-         │
-         ▼
+    â†’ POST /v1/approvals/intake (retries 3x)
+    â†’ Task held in pendingApprovals
+    â†’ After 1h: auto-escalate
+         â”‚
+         â–¼ (human approves on dashboard)
+         â”‚
+ 7. POST /decision â†’ runtime webhook
+    â†’ Check decision cache (skip approval if cached)
+    â†’ Re-run snapshot policy check
+         â”‚
+         â–¼
  8. Execute via API Gateway
     POST /v1/connectors/actions/execute
-    → Gateway: role policy check → connector policy check
-    → GitHub API: POST /repos/{owner}/{repo}/pulls
-    → Retry with backoff on transient errors
-         │
-         ▼
+    â†’ Gateway: role policy check â†’ connector policy check
+    â†’ GitHub API: POST /repos/{owner}/{repo}/pulls
+    â†’ Retry with backoff on transient errors
+         â”‚
+         â–¼
  9. Write ActionResultRecord + TaskExecutionRecord
     Emit runtime.connector_action_executed event
     Log entry appears at GET /logs
 ```
 
-<!-- doc-sync: 2026-05-06 sprint-6 -->
-> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
 
-<!-- doc-sync: 2026-05-06 full-pass-2 -->
-> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
 
 
 ## Current Implementation Pointer (2026-05-07)
 1. For the latest built-state summary and file map, see planning/build-snapshot-2026-05-07.md.
+
+<!-- doc-sync: 2026-05-29 sprint-18 -->
+> Last synchronized: 2026-05-29 (Sprint 18 — full documentation update).

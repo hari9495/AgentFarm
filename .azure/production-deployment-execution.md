@@ -1,6 +1,6 @@
-# Task 7.1 / 8.2 / 8.3 — Production Deployment Execution Guide
+﻿# Task 7.1 / 8.2 / 8.3 â€” Production Deployment Execution Guide
 
-## Status: Blocked — Azure subscription access required
+## Status: Blocked â€” Azure subscription access required
 
 **Blocker**: `az login` succeeds for `hari.m@yukthixconsulting.com` but ARM API returns
 `SubscriptionNotFound` for subscription `e8618958-e77a-4932-b49e-f94ccbaf90bc`.
@@ -8,13 +8,13 @@ The account has no subscription-level RBAC. Resolve in Azure portal before proce
 
 **To unblock**:
 1. Log in to https://portal.azure.com as a subscription Owner
-2. Go to **Subscriptions → YukthiX Consulting Dev Subscription → Access control (IAM)**
+2. Go to **Subscriptions â†’ YukthiX Consulting Dev Subscription â†’ Access control (IAM)**
 3. Add role assignment: Role = **Contributor**, Member = `hari.m@yukthixconsulting.com`
 4. Re-run `az login` and verify with `az group list`
 
 ---
 
-## Phase 1 — Control Plane Infrastructure (Task 8.2)
+## Phase 1 â€” Control Plane Infrastructure (Task 8.2)
 
 ### 1.1 Create resource group
 
@@ -80,7 +80,7 @@ DATABASE_URL=$(az keyvault secret show --vault-name agentfarm-kv --name Database
 
 ---
 
-## Phase 2 — Website SWA Deployment (Task 7.1)
+## Phase 2 â€” Website SWA Deployment (Task 7.1)
 
 ### 2.1 Create Static Web App resource
 
@@ -112,7 +112,7 @@ az staticwebapp secrets list \
 
 ### 2.3 Add GitHub secret
 
-In GitHub → Settings → Secrets and variables → Actions, create:
+In GitHub â†’ Settings â†’ Secrets and variables â†’ Actions, create:
 - **Name**: `AZURE_STATIC_WEB_APPS_API_TOKEN_WEBSITE`
 - **Value**: output from step 2.2
 
@@ -145,7 +145,7 @@ curl -f "https://$SWA_URL/api/auth/session" -o /dev/null -w "HTTP %{http_code}\n
 
 ---
 
-## Phase 3 — Runtime Plane Deployment (Task 8.2 — per-tenant VMs)
+## Phase 3 â€” Runtime Plane Deployment (Task 8.2 â€” per-tenant VMs)
 
 > Deploy one VM per active tenant bot. Repeat per tenant.
 
@@ -197,7 +197,7 @@ az role assignment create \
 
 ---
 
-## Phase 4 — Security & Launch Gates (Task 8.3)
+## Phase 4 â€” Security & Launch Gates (Task 8.3)
 
 ### 4.1 Security header check
 
@@ -225,7 +225,7 @@ curl -s "https://$SWA_URL/api/evidence/export?format=json" \
 pnpm quality:gate
 ```
 
-Must report: `SUCCESS` — all lanes pass, DB lane skipped only if DATABASE_URL not configured locally.
+Must report: `SUCCESS` â€” all lanes pass, DB lane skipped only if DATABASE_URL not configured locally.
 
 ### 4.4 Record production deployment evidence
 
@@ -260,11 +260,8 @@ echo "{
 |------|---------|
 | `infrastructure/control-plane/main.bicep` | PostgreSQL, Redis, ACR, Key Vault, Log Analytics, App Insights |
 | `infrastructure/runtime-plane/main.bicep` | Per-tenant VM, NSG, VNet, NIC, managed identity, auto-shutdown |
-| `.github/workflows/website-swa.yml` | CI/CD pipeline for website → Azure SWA |
+| `.github/workflows/website-swa.yml` | CI/CD pipeline for website â†’ Azure SWA |
 | `apps/website/staticwebapp.config.json` | SWA routing rules and security headers |
 
-<!-- doc-sync: 2026-05-06 sprint-6 -->
-> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
-
-<!-- doc-sync: 2026-05-06 full-pass-2 -->
-> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
+<!-- doc-sync: 2026-05-29 sprint-18 -->
+> Last synchronized: 2026-05-29 (Sprint 18 — full documentation update).

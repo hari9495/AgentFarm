@@ -1,4 +1,4 @@
-# AgentFarm — Local Development Setup
+﻿# AgentFarm â€” Local Development Setup
 
 ## Prerequisites
 
@@ -58,15 +58,15 @@ docker compose up -d
 ```bash
 # Website (product surface, onboarding, connector dashboard, approvals, evidence)
 pnpm --filter @agentfarm/website dev
-# → http://localhost:3002
+# â†’ http://localhost:3002
 
 # API Gateway (control-plane API)
 pnpm --filter @agentfarm/api-gateway dev
-# → http://localhost:3001
+# â†’ http://localhost:3001
 
 # Operator Dashboard
 pnpm --filter @agentfarm/dashboard dev
-# → http://localhost:3000
+# â†’ http://localhost:3000
 ```
 
 ---
@@ -74,19 +74,19 @@ pnpm --filter @agentfarm/dashboard dev
 ## 5. Run Tests
 
 ```bash
-# API Gateway — 351 tests
+# API Gateway â€” 351 tests
 pnpm --filter @agentfarm/api-gateway test
 
-# Agent Runtime — 239 tests
+# Agent Runtime â€” 239 tests
 pnpm --filter @agentfarm/agent-runtime test
 
-# Dashboard — 69 tests
+# Dashboard â€” 69 tests
 pnpm --filter @agentfarm/dashboard test
 
-# Notification service — 31 tests
+# Notification service â€” 31 tests
 pnpm --filter @agentfarm/notification-service test
 
-# Provisioning service — 15 tests
+# Provisioning service â€” 15 tests
 pnpm --filter @agentfarm/provisioning-service test
 
 # Website tests (individual suites)
@@ -100,7 +100,7 @@ pnpm --filter @agentfarm/website test:evidence         # Task 6.1/6.2 evidence c
 pnpm --filter @agentfarm/website test:deployments
 pnpm --filter @agentfarm/website test:deployments:ui
 
-# Full quality gate (46 checks — 45 pass, 1 skipped: DB smoke)
+# Full quality gate (46 checks â€” 45 pass, 1 skipped: DB smoke)
 pnpm quality:gate
 
 # E2E smoke lane
@@ -156,12 +156,9 @@ This validates: signup, login, provisioning status, connector API, approval API,
 ## Troubleshooting
 
 - **Signup returns 403**: Set `AGENTFARM_ALLOWED_SIGNUP_DOMAINS=agentfarm.local` in `.env`
-- **SQLite experimental warning**: Expected on Node.js v24 — not an error
-- **DB runtime snapshot SKIP**: Requires Docker running — safe to skip for local dev
+- **SQLite experimental warning**: Expected on Node.js v24 â€” not an error
+- **DB runtime snapshot SKIP**: Requires Docker running â€” safe to skip for local dev
 - **Azure extension not signed in**: Non-blocking for local development; required only for Tasks 7.1/8.2/8.3
 
-<!-- doc-sync: 2026-05-06 sprint-6 -->
-> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
-
-<!-- doc-sync: 2026-05-06 full-pass-2 -->
-> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
+<!-- doc-sync: 2026-05-29 sprint-18 -->
+> Last synchronized: 2026-05-29 (Sprint 18 — full documentation update).

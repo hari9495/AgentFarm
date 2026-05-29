@@ -4,16 +4,16 @@ This folder contains per-tenant runtime IaC templates for AgentFarm.
 
 ## Status
 
-IaC templates are planned. The provisioning state machine is fully implemented in `services/provisioning-service/src/`. Production deployment is blocked pending Azure sign-in (Tasks 8.2/8.3).
+IaC templates are in place. The provisioning state machine is fully implemented in `services/provisioning-service/src/`. The VM lifecycle manager (`vm-lifecycle-manager.ts`) provides `provisionAgentVM` and `terminateAgentVM` via Azure ARM. Production deployment is pending Azure sign-in (Tasks 8.2/8.3).
 
-Application quality gate: **PASS** (EXIT_CODE=0, 2026-05-04). Provisioning service has 15 tests passing. All service code is production-ready pending infrastructure provisioning.
+Application quality gate: **47/47 PASS** (2026-05-23, Sprint 18). Provisioning service has 15 tests. All service code is production-ready pending infrastructure provisioning.
 
 ## Planned Resources Per Tenant
 
 | Resource | Purpose |
 |----------|---------|
 | Resource Group | Isolated tenant resource boundary |
-| Virtual Machine | Bot runtime host (Docker container) |
+| Virtual Machine | Bot runtime host + desktop-agent container (Xvfb/noVNC) |
 | NIC + NSG | Network interface with security group rules |
 | Managed Disk | Persistent storage for bot workspace |
 | Managed Identity | Least-privilege identity for Key Vault and Azure API access |
@@ -41,8 +41,5 @@ The VM bootstrap sequence is orchestrated by `services/provisioning-service`:
 - Auto-restart policy configured on Docker containers
 - Health probes enabled on the runtime container
 
-<!-- doc-sync: 2026-05-06 sprint-6 -->
-> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
-
-<!-- doc-sync: 2026-05-06 full-pass-2 -->
-> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
+<!-- doc-sync: 2026-05-29 sprint-18 -->
+> Last synchronized: 2026-05-29 (Sprint 18 — VM lifecycle manager shipped, desktop-agent container added to runtime plane).

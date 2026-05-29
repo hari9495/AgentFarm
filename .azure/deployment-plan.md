@@ -1,4 +1,4 @@
-# Azure Deployment Plan
+﻿# Azure Deployment Plan
 
 ## Metadata
 - Date: 2026-04-22
@@ -65,8 +65,5 @@
 - Domain and DNS cutover remain operational tasks tracked in runbook.
 - Azure extension authentication context is currently signed out in this workspace, so resource creation and deployment execution are blocked until sign-in is completed.
 
-<!-- doc-sync: 2026-05-06 sprint-6 -->
-> Last synchronized: 2026-05-06 (Sprint 6 hardening and quality gate pass).
-
-<!-- doc-sync: 2026-05-06 full-pass-2 -->
-> Last synchronized: 2026-05-06 (Full workspace sync pass 2 + semantic sprint-6 alignment).
+<!-- doc-sync: 2026-05-29 sprint-18 -->
+> Last synchronized: 2026-05-29 (Sprint 18 — full documentation update).
