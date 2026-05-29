@@ -154,3 +154,90 @@ All variables documented in `.env.example` (380 lines). Minimum required to run 
 ### CI pipeline
 
 `.github/workflows/ci.yml` runs 7 jobs: `secret-scan` (gitleaks), `website-permissions`, `validate` (typecheck + build), `db-integration`, `install` (cache), `typecheck` (matrix: 6 apps), `test` (matrix: 6 apps), `build` (Docker matrix: 4 apps).
+
+## RAG (Retrieval-Augmented Generation)
+
+All 15 agents use RAG to ground LLM prompts in workspace-specific prior work, templates, and learned lessons. The pattern is identical across every agent — only the domain vocabulary differs.
+
+### Infrastructure
+
+| Component | Location | Role |
+|-----------|----------|------|
+| `AgentKnowledgeBase` | Prisma schema | pgvector table — semantic memory (documents, templates) |
+| `AgentLongTermMemory` | Prisma schema | pgvector table — episodic memory (patterns, lessons) |
+| `@agentfarm/memory-service` | `packages/memory-service/` | `writeSemanticMemory`, `searchSemanticMemory`, episodic variants |
+| Knowledge base API | `POST /v1/knowledge-base/search` | Cosine-similarity search over AgentKnowledgeBase |
+| Patterns API | `GET /v1/workspaces/:id/memory/patterns` | Retrieve long-term lesson patterns |
+
+Vector similarity uses the pgvector `<=>` cosine-distance operator. Default thresholds: 0.65 for document retrieval, 0.55 for template/compliance retrieval.
+
+### The Retrieval Pattern (three parallel paths)
+
+Every agent RAG retriever follows this structure:
+
+```
+Path 1: retrieveSimilar*()       → prior approved artifacts (sourceType ≠ *_template)
+Path 2: retrieve*Templates()     → domain templates & compliance (sourceType = *_template)
+Path 3: retrieve*Lessons()       → long-term memory patterns (prefix: agent:lesson:)
+
+build*RagContext() runs all three via Promise.all() and assembles a ## Context block.
+```
+
+The context block is prepended to the agent's system prompt. If nothing is retrieved, the block is an empty string and nothing is injected.
+
+### The Flywheel (lessons compound over time)
+
+When an artifact is approved/accepted → `ingestApproved*()` writes it to `AgentKnowledgeBase`.
+When an artifact is rejected/fails → `ingest*Feedback()` → `classifyFeedback()` → lesson stored in `AgentLongTermMemory` under key `<agent>:lesson:<category>:<workspaceId>:<lessonId>`.
+
+Next run retrieves both — so agents improve automatically without retraining.
+
+### Agent RAG Coverage
+
+| Agent | RAG Retriever | Lesson Pipeline | Lesson Key Prefix |
+|-------|--------------|-----------------|-------------------|
+| `business-analyst` | `business-analyst-rag-retriever.ts` | `business-analyst-lesson-pipeline.ts` | `ba:lesson:` |
+| `sales-agent` | `sales-agent-rag-retriever.ts` | `sales-agent-lesson-pipeline.ts` | `sales:lesson:` |
+| `recruiter` | `recruiter-rag-retriever.ts` | `recruiter-lesson-pipeline.ts` | `rec:lesson:` |
+| `content-writer` | `content-writer-rag-retriever.ts` | `content-writer-lesson-pipeline.ts` | `cw:lesson:` |
+| `technical-writer` | `technical-writer-rag-retriever.ts` | `technical-writer-lesson-pipeline.ts` | `tw:lesson:` |
+| `project-manager` | `project-manager-rag-retriever.ts` | `project-manager-lesson-pipeline.ts` | `pm:lesson:` |
+| `marketing-specialist` | `marketing-specialist-rag-retriever.ts` | `marketing-specialist-lesson-pipeline.ts` | `ms:lesson:` |
+| `devops` | `devops-rag-retriever.ts` | `devops-lesson-pipeline.ts` | `devops:lesson:` |
+| `full-stack-developer` | `fsd-rag-retriever.ts` | `fsd-lesson-pipeline.ts` | `fsd:lesson:` |
+| `developer` | `developer-rag-retriever.ts` | `developer-episodic-hooks.ts` (existing) | `dev:` |
+| `customer-support-executive` | `customer-support-rag-retriever.ts` | `customer-support-lesson-pipeline.ts` | `cs:lesson:` |
+| `corporate-assistant` | `corporate-assistant-rag-retriever.ts` | `corporate-assistant-lesson-pipeline.ts` | `ca:lesson:` |
+| `mobile` | `mobile-rag-retriever.ts` | `mobile-lesson-pipeline.ts` | `mobile:lesson:` |
+| `tester` | `tester-rag-retriever.ts` | `tester-lesson-pipeline.ts` | `tester:lesson:` |
+| `meeting-agent` | `meeting-agent-rag-retriever.ts` | `meeting-agent-lesson-pipeline.ts` | `meeting:lesson:` |
+
+### Lesson Category Taxonomy
+
+Each agent's lesson pipeline uses a domain-specific set of categories for targeted retrieval. The `classifyFeedback()` heuristic uses regex patterns — no LLM call required. Default category is the most common root cause per domain.
+
+| Agent | Lesson Categories |
+|-------|------------------|
+| business-analyst | scope, clarity, completeness, stakeholder_alignment, technical_accuracy, format, risk_omission |
+| sales-agent | email_personalization, objection_handling, proposal_quality, timing, closing_technique, follow_up, discovery |
+| recruiter | jd_quality, screening_accuracy, interview_process, offer_strategy, candidate_experience, compliance, diversity |
+| content-writer | brand_voice, seo_optimization, factual_accuracy, structure, engagement, tone, clarity |
+| technical-writer | completeness, accuracy, structure, style_compliance, audience_fit, code_examples, versioning |
+| project-manager | scope_management, estimation, risk_identification, stakeholder_communication, delivery_predictability, resource_allocation, retrospective_insights |
+| marketing-specialist | targeting_accuracy, creative_quality, channel_selection, budget_allocation, timing, message_clarity, conversion_optimization |
+| devops | incident_response, deployment_safety, configuration_management, monitoring_gaps, security_compliance, cost_optimization, reliability |
+| full-stack-developer | code_quality, performance, accessibility, api_design, testing_strategy, security, architecture |
+| customer-support-executive | resolution_quality, escalation_timing, empathy, product_accuracy, sla_compliance, de_escalation, follow_through |
+| corporate-assistant | tone, completeness, urgency_detection, stakeholder_awareness, formatting, confidentiality, escalation_timing |
+| mobile | platform_consistency, performance, accessibility, ux_patterns, code_quality, testing_coverage, api_integration |
+| tester | coverage_gaps, bug_reproduction, edge_cases, environment_setup, test_quality, regression_detection, reporting |
+| meeting-agent | action_item_clarity, decision_capture, participant_engagement, summary_accuracy, follow_up_tracking, time_management |
+
+### Adding RAG to a New Agent
+
+1. Create `<agent>-rag-retriever.ts` with `build*RagContext()` and `ingestApproved*()`.
+2. Create `<agent>-lesson-pipeline.ts` with `classifyFeedback()`, `ingest*Feedback()`, `Gateway*LessonStore`, and `build*EpisodicPattern/Summary()`.
+3. In the action handler, call `build*RagContext()` before LLM generation and prepend `ragContext.contextBlock` to the system prompt.
+4. After rejection/failure, call `ingest*Feedback()` with the feedback text.
+5. After approval/success, call `ingestApproved*()` to feed the flywheel.
+6. Add an entry to the table above in this file.
