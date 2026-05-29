@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { H1, H2, H3, Lead, P, Code, Callout, InlineCode, TypeTable, PageNav, Tag, Divider } from "@/components/docs/DocComponents";
 
 export const metadata: Metadata = {
-    title: "TypeScript SDK",
-    description: "The official AgentFarms TypeScript SDK. Install, authenticate, deploy workers, assign tasks, handle approvals, and query evidence.",
+    title: "TypeScript SDK — Official AgentFarms Client Library",
+    description: "The official AgentFarms TypeScript SDK. Install, authenticate, deploy AI workers, assign governed tasks, handle approvals, and query the evidence trail.",
     alternates: { canonical: "https://agentfarms.in/docs/sdk" },
 };
 

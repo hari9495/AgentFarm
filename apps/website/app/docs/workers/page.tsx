@@ -3,8 +3,8 @@ import Link from "next/link";
 import { H1, H2, Lead, P, Code, Callout, InlineCode, PageNav, Tag, TypeTable, Divider, ParamTable, Response, Endpoint } from "@/components/docs/DocComponents";
 
 export const metadata: Metadata = {
-    title: "Worker Roles — AgentFarms Docs",
-    description: "All 12 AgentFarms AI worker roles — skills, use cases, integrations, and pricing. Backend Developer, QA Engineer, Sales Rep, and more.",
+    title: "AI Worker Roles — All 12 AgentFarms Roles, Skills, and Pricing",
+    description: "All 12 AgentFarms AI worker roles — skills, use cases, integrations, and pricing. Backend Developer, QA Engineer, Sales Rep, Project Manager, and more.",
     alternates: { canonical: "https://agentfarms.in/docs/workers" },
 };
 

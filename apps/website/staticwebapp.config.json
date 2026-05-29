@@ -2,6 +2,7 @@
     "globalHeaders": {
         "X-Content-Type-Options": "nosniff",
         "X-Frame-Options": "DENY",
+        "X-XSS-Protection": "1; mode=block",
         "Referrer-Policy": "strict-origin-when-cross-origin",
         "Permissions-Policy": "geolocation=(), microphone=(), camera=()",
         "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload"
@@ -14,9 +15,33 @@
             }
         },
         {
+            "route": "/_next/static/*",
+            "headers": {
+                "Cache-Control": "public, max-age=31536000, immutable"
+            }
+        },
+        {
+            "route": "/_next/image*",
+            "headers": {
+                "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800"
+            }
+        },
+        {
+            "route": "/*.{ico,png,jpg,jpeg,gif,svg,webp,avif,woff,woff2,ttf,otf}",
+            "headers": {
+                "Cache-Control": "public, max-age=31536000, immutable"
+            }
+        },
+        {
+            "route": "/*.{css,js}",
+            "headers": {
+                "Cache-Control": "public, max-age=31536000, immutable"
+            }
+        },
+        {
             "route": "/*",
             "headers": {
-                "Cache-Control": "public, max-age=300"
+                "Cache-Control": "public, max-age=300, stale-while-revalidate=3600"
             }
         }
     ]

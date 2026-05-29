@@ -431,8 +431,8 @@ export const homeMarketingContent = {
 
 export const pricingPageContent = {
     metadata: {
-        title: "Pricing - AgentFarms",
-        description: "Pricing for teams that want AI workers to prove themselves before they scale.",
+        title: "AgentFarms Pricing — AI Worker Plans, 14-Day Free Trial",
+        description: "AgentFarms pricing starts with one governed AI worker for one real workflow. Prove value, then expand. Three plans from Starter+ to Enterprise. 14-day free trial.",
     },
     hero: {
         eyebrow: "Pricing",
@@ -519,9 +519,9 @@ export const pricingPageContent = {
 
 export const productPageContent = {
     metadata: {
-        title: "Product - AgentFarms",
+        title: "AgentFarms Product — Governed AI Workers With Approvals",
         description:
-            "Explore the AgentFarms product experience for launching governed AI workers with approvals, evidence, and role-based execution.",
+            "Deploy AI workers with real tool access, hard approval checkpoints, and full evidence trails. The AgentFarms platform puts humans in control at every step.",
     },
     hero: {
         badge: "Product",
@@ -634,9 +634,9 @@ export const productPageContent = {
 
 export const docsOverviewContent = {
     metadata: {
-        title: "Documentation - AgentFarms",
+        title: "AgentFarms Documentation — Deploy and Govern AI Workers",
         description:
-            "Documentation for deploying and governing AgentFarms AI workers across real team workflows.",
+            "Everything you need to deploy AgentFarms workers, connect real systems, configure approval controls, and understand the governed AI runtime and evidence model.",
     },
     hero: {
         title: "AgentFarms Docs",
@@ -767,8 +767,8 @@ export const docsOverviewContent = {
 
 export const docsQuickstartContent = {
     metadata: {
-        title: "Quickstart - AgentFarms Docs",
-        description: "Launch your first AgentFarms worker with governed setup in under 10 minutes.",
+        title: "Quickstart — Launch Your First AgentFarms AI Worker",
+        description: "Get your first AgentFarms AI worker running in under 10 minutes. Covers workspace setup, tool connections, approval gates, and launching your first governed task.",
     },
     hero: {
         badge: "Getting started",
@@ -854,9 +854,9 @@ export const docsQuickstartContent = {
 
 export const docsConceptsContent = {
     metadata: {
-        title: "How Workers Operate - AgentFarms Docs",
+        title: "Core Concepts — AgentFarms AI Worker Runtime Model",
         description:
-            "Understand AgentFarms's task lifecycle, runtime isolation, approval controls, and working context model.",
+            "Understand the AgentFarms task lifecycle, runtime isolation model, approval controls, and working context system that governs how AI workers execute safely.",
     },
     hero: {
         badge: "Core concepts",
@@ -942,9 +942,9 @@ export const docsConceptsContent = {
 
 export const docsApiReferenceContent = {
     metadata: {
-        title: "REST API Reference - AgentFarms Docs",
+        title: "REST API Reference — AgentFarms Governed Worker API",
         description:
-            "API reference for authenticating, launching workers, assigning tasks, and subscribing to governed workflow events.",
+            "Full API reference for authenticating, launching AI workers, assigning governed tasks, querying evidence, and subscribing to real-time execution events.",
     },
     hero: {
         badge: "Reference",
@@ -1032,8 +1032,8 @@ const legalIntro =
 
 export const privacyPageContent = {
     metadata: {
-        title: "Privacy Policy - AgentFarms",
-        description: "How AgentFarms collects, uses, stores, and protects information.",
+        title: "Privacy Policy — How AgentFarms Handles Your Data",
+        description: "AgentFarms collects only what is needed to operate the platform. This policy explains what we collect, why we collect it, how it is stored, and your choices.",
     },
     title: "Privacy Policy",
     updatedAt: "May 26, 2026",
@@ -1086,8 +1086,8 @@ export const privacyPageContent = {
 
 export const termsPageContent = {
     metadata: {
-        title: "Terms of Service - AgentFarms",
-        description: "Terms governing access to and use of the AgentFarms platform.",
+        title: "Terms of Service — AgentFarms Platform Access Rules",
+        description: "Terms governing access to and use of AgentFarms. Covers account responsibilities, acceptable use, billing, data handling, and service limitations.",
     },
     title: "Terms of Service",
     updatedAt: "May 26, 2026",
@@ -1149,8 +1149,8 @@ export const termsPageContent = {
 
 export const cookiesPageContent = {
     metadata: {
-        title: "Cookie Policy - AgentFarms",
-        description: "How AgentFarms uses cookies, local storage, and similar technologies.",
+        title: "Cookie Policy — AgentFarms Tracking & Storage Practices",
+        description: "AgentFarms uses cookies and local storage to support authentication, product experience, and analytics. This policy explains what we store and how to control it.",
     },
     title: "Cookie Policy",
     updatedAt: "May 26, 2026",
@@ -1197,9 +1197,9 @@ export const cookiesPageContent = {
 
 export const aboutPageContent = {
     metadata: {
-        title: "About AgentFarms",
+        title: "About AgentFarms — Our Mission and the Team Behind AI Workers",
         description:
-            "Learn why AgentFarms exists and how we build governed AI workers that increase output without giving up accountability.",
+            "Learn why AgentFarms exists and how we think about governed AI execution. Meet the team building AI workers that increase output without giving up accountability.",
     },
     hero: {
         image: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1800&q=80",
@@ -1290,9 +1290,9 @@ export const aboutPageContent = {
 
 export const howItWorksPageContent = {
     metadata: {
-        title: "How AgentFarms Works",
+        title: "How AgentFarms Works — AI Worker Deployment and Controls",
         description:
-            "See how AgentFarms deploys governed AI workers, connects them to real tools, and routes risky actions through review.",
+            "See how AgentFarms deploys governed AI workers, connects them to real tools, routes risky actions through human review, and records every decision as evidence.",
     },
     hero: {
         image: "https://images.unsplash.com/photo-1600880292203-757bb62b4baf?auto=format&fit=crop&w=1800&q=80",
@@ -1381,9 +1381,9 @@ export const howItWorksPageContent = {
 
 export const securityPageContent = {
     metadata: {
-        title: "Security at AgentFarms",
+        title: "Security at AgentFarms — Runtime Isolation and Compliance",
         description:
-            "Review how AgentFarms approaches runtime isolation, access control, approvals, auditability, and compliance readiness.",
+            "Review how AgentFarms approaches runtime isolation, access control, approval workflows, auditability, and compliance readiness for regulated environments.",
     },
     hero: {
         eyebrow: "Security & compliance",
@@ -1552,9 +1552,9 @@ export const securityPageContent = {
 
 export const customersPageContent = {
     metadata: {
-        title: "Customer Stories - AgentFarms",
+        title: "Customer Stories — How Teams Use AgentFarms AI Workers",
         description:
-            "See how teams use AgentFarms to increase throughput, reduce repetitive work, and keep review standards intact.",
+            "See how teams across engineering, support, and operations use AgentFarms to increase throughput, reduce repetitive work, and keep their review standards intact.",
     },
     hero: {
         eyebrow: "Customer stories",
@@ -1676,9 +1676,9 @@ export const customersPageContent = {
 
 export const blogListingContent = {
     metadata: {
-        title: "Blog - AgentFarms",
+        title: "AgentFarms Blog — Governed AI Workers and Execution Systems",
         description:
-            "Notes on governed AI workers, execution systems, review loops, and the future of software team operations.",
+            "Notes on governed AI workers, execution systems, approval loops, and the future of software team operations from the AgentFarms engineering and product team.",
     },
     hero: {
         image: "https://images.unsplash.com/photo-1504639725590-34d0984388bd?auto=format&fit=crop&w=1800&q=80",
@@ -1898,9 +1898,9 @@ export const blogPostsContent = [
 
 export const changelogListingContent = {
     metadata: {
-        title: "Changelog - AgentFarms",
+        title: "AgentFarms Changelog — Platform Updates and New Releases",
         description:
-            "Track shipped improvements, platform milestones, and the roadmap shaping governed AI work at AgentFarms.",
+            "Track shipped improvements, new agent capabilities, platform milestones, and what is next on the roadmap. Full history of governed AI releases at AgentFarms.",
     },
     hero: {
         eyebrow: "Changelog",

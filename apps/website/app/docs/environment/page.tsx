@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { H1, H2, H3, Lead, P, Code, Callout, InlineCode, TypeTable, PageNav, Tag, Divider } from "@/components/docs/DocComponents";
 
 export const metadata: Metadata = {
-    title: "Environment Variables",
-    description: "All AgentFarms environment variables for the API Gateway, Agent Runtime, Trigger Service, and website. Self-hosted configuration reference.",
+    title: "Environment Variables — AgentFarms Self-Hosted Configuration",
+    description: "All AgentFarms environment variables for the API Gateway, Agent Runtime, Trigger Service, and website. Complete self-hosted configuration reference and defaults.",
     alternates: { canonical: "https://agentfarms.in/docs/environment" },
 };
 

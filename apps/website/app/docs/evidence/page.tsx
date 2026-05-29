@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { H1, H2, H3, Lead, P, Code, Callout, InlineCode, TypeTable, Response, Endpoint, PageNav, Tag, ParamTable, Divider } from "@/components/docs/DocComponents";
 
 export const metadata: Metadata = {
-    title: "Evidence Trail — AgentFarms Docs",
-    description: "How AgentFarms captures, stores, and exposes every action, decision, and output for audit, compliance, and review.",
+    title: "Evidence Trail — Audit and Compliance Records in AgentFarms",
+    description: "How AgentFarms captures, stores, and exposes every action, decision, and output for audit, compliance, and review. Full evidence API reference included.",
     alternates: { canonical: "https://agentfarms.in/docs/evidence" },
 };
 
