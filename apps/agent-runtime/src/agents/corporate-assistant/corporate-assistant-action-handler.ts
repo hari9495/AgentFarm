@@ -116,6 +116,10 @@ export async function handleCorporateAssistantAction(params: {
     botId: string;
     taskId: string;
     payload: Record<string, unknown>;
+    /** Optional — when provided, approved communications are ingested and lessons fetched. */
+    gatewayBaseUrl?: string;
+    serviceToken?: string;
+    workspaceId?: string;
 }): Promise<LocalWorkspaceResult> {
     const { actionType, tenantId, botId, taskId, payload } = params;
 
@@ -447,4 +451,36 @@ export async function handleCorporateAssistantAction(params: {
             };
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// Post-decision hooks
+// ---------------------------------------------------------------------------
+
+export async function onCommunicationApproved(params: {
+    tenantId: string; botId?: string; workspaceId: string; taskId: string;
+    subject: string; documentType: import('./corporate-assistant-rag-retriever.js').CorporateDocumentType;
+    content: string; sourceUrl?: string;
+    gatewayBaseUrl: string; serviceToken: string;
+}): Promise<void> {
+    try {
+        const { ingestApprovedCommunication } = await import('./corporate-assistant-rag-retriever.js');
+        await ingestApprovedCommunication({ ...params });
+    } catch { /* non-fatal */ }
+}
+
+export async function onCorporateFeedbackReceived(params: {
+    tenantId: string; workspaceId: string; taskId: string;
+    feedbackReasons: string[];
+    gatewayBaseUrl: string; serviceToken: string;
+}): Promise<void> {
+    try {
+        const { ingestCorporateFeedback, GatewayCorporateLessonStore } = await import('./corporate-assistant-lesson-pipeline.js');
+        const store = new GatewayCorporateLessonStore(params.gatewayBaseUrl, params.serviceToken);
+        await ingestCorporateFeedback(
+            { tenantId: params.tenantId, workspaceId: params.workspaceId, taskId: params.taskId, documentType: 'any', actionType: 'feedback', correlationId: params.taskId },
+            params.feedbackReasons.map((body) => ({ body })),
+            store,
+        );
+    } catch { /* non-fatal */ }
 }

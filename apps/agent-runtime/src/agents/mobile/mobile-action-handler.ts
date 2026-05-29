@@ -74,15 +74,19 @@ type RunCommandFn    = (args: string[], cwd: string, timeoutMs?: number) => Prom
 type LlmCallFn       = (prompt: string, systemPrompt?: string) => Promise<string>;
 
 export interface MobileActionParams {
-    actionType:    MobileActionType;
-    tenantId:      string;
-    botId:         string;
-    taskId:        string;
-    payload:       Record<string, unknown>;
-    workspaceDir:  string;
-    executeAction: ExecuteActionFn;
-    runCommand?:   RunCommandFn;
-    callLlm?:      LlmCallFn;
+    actionType:       MobileActionType;
+    tenantId:         string;
+    botId:            string;
+    taskId:           string;
+    payload:          Record<string, unknown>;
+    workspaceDir:     string;
+    executeAction:    ExecuteActionFn;
+    runCommand?:      RunCommandFn;
+    callLlm?:         LlmCallFn;
+    /** Optional — when provided, RAG context is fetched and injected into every LLM call. */
+    gatewayBaseUrl?:  string;
+    serviceToken?:    string;
+    workspaceId?:     string;
 }
 
 // ---------------------------------------------------------------------------
@@ -104,7 +108,29 @@ async function callLlmSafe(fn: LlmCallFn | undefined, prompt: string, sys?: stri
 // ---------------------------------------------------------------------------
 
 export async function handleMobileAction(params: MobileActionParams): Promise<MobileActionResult> {
-    const { actionType, payload, workspaceDir, executeAction, runCommand, callLlm } = params;
+    const { actionType, payload, workspaceDir, executeAction, runCommand,
+            callLlm: rawCallLlm, gatewayBaseUrl, serviceToken, workspaceId, tenantId, botId } = params;
+
+    // RAG pre-flight — wrap callLlm with platform guidelines and prior component context
+    let callLlm = rawCallLlm;
+    if (rawCallLlm && gatewayBaseUrl && serviceToken && workspaceId) {
+        try {
+            const { buildMobileRagContext } = await import('./mobile-rag-retriever.js');
+            const ragCtx = await buildMobileRagContext(
+                {
+                    tenantId, botId,
+                    componentTitle: String(payload['component_name'] ?? payload['title'] ?? actionType),
+                    componentDescription: String(payload['description'] ?? ''),
+                    documentType: 'ui_component',
+                },
+                gatewayBaseUrl, serviceToken, workspaceId,
+            );
+            if (ragCtx.contextBlock) {
+                callLlm = (prompt: string, sys?: string): Promise<string> =>
+                    rawCallLlm(prompt, sys ? `${sys}\n\n${ragCtx.contextBlock}` : ragCtx.contextBlock);
+            }
+        } catch { /* non-fatal */ }
+    }
 
     switch (actionType) {
 
@@ -627,4 +653,36 @@ export async function handleMobileAction(params: MobileActionParams): Promise<Mo
             });
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// Post-decision hooks
+// ---------------------------------------------------------------------------
+
+export async function onMobileComponentApproved(params: {
+    tenantId: string; botId?: string; workspaceId: string; taskId: string;
+    componentTitle: string; documentType: import('./mobile-rag-retriever.js').MobileDocumentType;
+    content: string; sourceUrl?: string;
+    gatewayBaseUrl: string; serviceToken: string;
+}): Promise<void> {
+    try {
+        const { ingestApprovedMobileComponent } = await import('./mobile-rag-retriever.js');
+        await ingestApprovedMobileComponent({ ...params });
+    } catch { /* non-fatal */ }
+}
+
+export async function onMobileFeedbackReceived(params: {
+    tenantId: string; workspaceId: string; taskId: string;
+    feedbackReasons: string[];
+    gatewayBaseUrl: string; serviceToken: string;
+}): Promise<void> {
+    try {
+        const { ingestMobileFeedback, GatewayMobileLessonStore } = await import('./mobile-lesson-pipeline.js');
+        const store = new GatewayMobileLessonStore(params.gatewayBaseUrl, params.serviceToken);
+        await ingestMobileFeedback(
+            { tenantId: params.tenantId, workspaceId: params.workspaceId, taskId: params.taskId, documentType: 'any', actionType: 'feedback', correlationId: params.taskId },
+            params.feedbackReasons.map((body) => ({ body })),
+            store,
+        );
+    } catch { /* non-fatal */ }
 }

@@ -173,12 +173,42 @@ export async function summarizeMeeting(
     language: string,
     tenantId?: string,
     persona?: AgentPersonaRecord,
+    ragOptions?: { workspaceId: string; botId?: string; meetingTitle?: string; serviceToken?: string },
 ): Promise<MeetingSummaryResult> {
     const key = anthropicApiKey();
+    void key; // used by anthropic-caller internally
+
+    // RAG pre-flight — retrieve similar prior meeting summaries and templates
+    let ragContextBlock = '';
+    if (ragOptions?.workspaceId && tenantId) {
+        try {
+            const { buildMeetingRagContext } = await import('./meeting-agent-rag-retriever.js');
+            const base = gatewayBase();
+            const svcToken = ragOptions.serviceToken ?? process.env['RUNTIME_TASK_SHARED_TOKEN'] ?? '';
+            if (base && svcToken) {
+                const ragCtx = await buildMeetingRagContext(
+                    {
+                        tenantId,
+                        botId: ragOptions.botId,
+                        meetingTitle: ragOptions.meetingTitle ?? sessionId,
+                        meetingDescription: transcript.slice(0, 500),
+                        documentType: 'meeting_summary',
+                    },
+                    base, svcToken, ragOptions.workspaceId,
+                );
+                ragContextBlock = ragCtx.contextBlock;
+            }
+        } catch { /* non-fatal */ }
+    }
+
+    const basePrompt = ragContextBlock
+        ? `You are a meeting assistant. Extract a concise summary and action items.\n\n${ragContextBlock}`
+        : 'You are a meeting assistant. Extract a concise summary and action items.';
+
     const { content: blocks } = await callAnthropic({
         tier: 'balanced',
         system: buildSystemPrompt({
-            basePrompt: 'You are a meeting assistant. Extract a concise summary and action items.',
+            basePrompt,
             language,
             persona,
             role: 'meeting assistant',
@@ -556,4 +586,50 @@ export async function runMeetingParticipation(
     });
 
     return { meetingSessionId };
+}
+
+// ---------------------------------------------------------------------------
+// Post-decision hooks — call after summary is approved / feedback received
+// ---------------------------------------------------------------------------
+
+export async function onMeetingSummaryApproved(params: {
+    tenantId: string; botId?: string; workspaceId: string; meetingTitle: string;
+    content: string; meetingType?: import('./meeting-agent-rag-retriever.js').MeetingType;
+    serviceToken?: string;
+}): Promise<void> {
+    try {
+        const { ingestMeetingSummary } = await import('./meeting-agent-rag-retriever.js');
+        const base = gatewayBase();
+        const svcToken = params.serviceToken ?? process.env['RUNTIME_TASK_SHARED_TOKEN'] ?? '';
+        if (!base || !svcToken) return;
+        await ingestMeetingSummary({
+            tenantId: params.tenantId,
+            botId: params.botId,
+            meetingTitle: params.meetingTitle,
+            documentType: 'meeting_summary',
+            content: params.content,
+            meetingType: params.meetingType,
+            gatewayBaseUrl: base,
+            serviceToken: svcToken,
+        });
+    } catch { /* non-fatal */ }
+}
+
+export async function onMeetingFeedbackReceived(params: {
+    tenantId: string; workspaceId: string; taskId: string;
+    feedbackReasons: string[];
+    serviceToken?: string;
+}): Promise<void> {
+    try {
+        const { ingestMeetingFeedback, GatewayMeetingLessonStore } = await import('./meeting-agent-lesson-pipeline.js');
+        const base = gatewayBase();
+        const svcToken = params.serviceToken ?? process.env['RUNTIME_TASK_SHARED_TOKEN'] ?? '';
+        if (!base || !svcToken) return;
+        const store = new GatewayMeetingLessonStore(base, svcToken);
+        await ingestMeetingFeedback(
+            { tenantId: params.tenantId, workspaceId: params.workspaceId, taskId: params.taskId, documentType: 'any', actionType: 'feedback', correlationId: params.taskId },
+            params.feedbackReasons.map((body) => ({ body })),
+            store,
+        );
+    } catch { /* non-fatal */ }
 }

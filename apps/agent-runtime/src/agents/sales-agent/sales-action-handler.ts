@@ -158,8 +158,37 @@ export async function handleSalesAction(params: {
     botId: string;
     taskId: string;
     payload: Record<string, unknown>;
+    /** Optional — when provided, approved artifacts are ingested and lessons fetched for LLM context. */
+    gatewayBaseUrl?: string;
+    serviceToken?: string;
+    workspaceId?: string;
+    /** Optional LLM caller for prose generation actions. */
+    callLlm?: (prompt: string, systemPrompt?: string) => Promise<string>;
 }): Promise<LocalWorkspaceResult> {
-    const { actionType, tenantId, botId, payload } = params;
+    const { actionType, tenantId, botId, payload, gatewayBaseUrl, serviceToken, workspaceId,
+            callLlm: rawCallLlm } = params;
+
+    // RAG pre-flight — wrap callLlm with past proposals, objection scripts, and deal lessons
+    let callLlm = rawCallLlm;
+    if (rawCallLlm && gatewayBaseUrl && serviceToken && workspaceId) {
+        try {
+            const { buildSalesRagContext } = await import('./sales-agent-rag-retriever.js');
+            const ragCtx = await buildSalesRagContext(
+                {
+                    tenantId, botId,
+                    prospectName: String(payload['prospect_name'] ?? payload['company'] ?? ''),
+                    contextDescription: String(payload['description'] ?? payload['pain_points'] ?? ''),
+                    documentType: 'outreach_email',
+                },
+                gatewayBaseUrl, serviceToken, workspaceId,
+            );
+            if (ragCtx.contextBlock) {
+                callLlm = (prompt: string, sys?: string): Promise<string> =>
+                    rawCallLlm(prompt, sys ? `${sys}\n\n${ragCtx.contextBlock}` : ragCtx.contextBlock);
+            }
+        } catch { /* non-fatal */ }
+    }
+    void callLlm; // available to LLM-using cases
 
     switch (actionType) {
         // ------------------------------------------------------------------
@@ -1096,4 +1125,36 @@ export async function handleSalesAction(params: {
             }
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// Post-decision hooks
+// ---------------------------------------------------------------------------
+
+export async function onSalesArtifactApproved(params: {
+    tenantId: string; botId?: string; workspaceId: string; taskId: string;
+    artifactTitle: string; documentType: import('./sales-agent-rag-retriever.js').SalesDocumentType;
+    content: string; sourceUrl?: string; outcome?: 'won' | 'high_open_rate' | 'accepted' | 'positive_reply';
+    gatewayBaseUrl: string; serviceToken: string;
+}): Promise<void> {
+    try {
+        const { ingestApprovedSalesArtifact } = await import('./sales-agent-rag-retriever.js');
+        await ingestApprovedSalesArtifact({ ...params });
+    } catch { /* non-fatal */ }
+}
+
+export async function onSalesFeedbackReceived(params: {
+    tenantId: string; workspaceId: string; taskId: string; dealId: string;
+    feedbackReasons: string[];
+    gatewayBaseUrl: string; serviceToken: string;
+}): Promise<void> {
+    try {
+        const { ingestSalesFeedback, GatewaySalesLessonStore } = await import('./sales-agent-lesson-pipeline.js');
+        const store = new GatewaySalesLessonStore(params.gatewayBaseUrl, params.serviceToken);
+        await ingestSalesFeedback(
+            { tenantId: params.tenantId, workspaceId: params.workspaceId, taskId: params.taskId, dealId: params.dealId, documentType: 'any', actionType: 'feedback', correlationId: params.taskId },
+            params.feedbackReasons.map((body) => ({ body })),
+            store,
+        );
+    } catch { /* non-fatal */ }
 }

@@ -257,15 +257,19 @@ type RunCommandFn = (
 type LlmCallFn = (prompt: string, systemPrompt?: string) => Promise<string>;
 
 export interface FsdActionParams {
-    actionType:    FsdActionType;
-    tenantId:      string;
-    botId:         string;
-    taskId:        string;
-    payload:       Record<string, unknown>;
-    workspaceDir:  string;
-    executeAction: ExecuteActionFn;
-    runCommand?:   RunCommandFn;
-    callLlm?:      LlmCallFn;
+    actionType:       FsdActionType;
+    tenantId:         string;
+    botId:            string;
+    taskId:           string;
+    payload:          Record<string, unknown>;
+    workspaceDir:     string;
+    executeAction:    ExecuteActionFn;
+    runCommand?:      RunCommandFn;
+    callLlm?:         LlmCallFn;
+    /** Optional — when provided, RAG context is fetched and injected into every LLM call. */
+    gatewayBaseUrl?:  string;
+    serviceToken?:    string;
+    workspaceId?:     string;
 }
 
 // ---------------------------------------------------------------------------
@@ -336,7 +340,29 @@ function isHttpClient(v: unknown): v is HttpClient {
 export async function handleFsdAction(
     params: FsdActionParams,
 ): Promise<FsdActionResult> {
-    const { actionType, payload, workspaceDir, executeAction, runCommand, callLlm: callLlmBase } = params;
+    const { actionType, payload, workspaceDir, executeAction, runCommand,
+            callLlm: callLlmRaw, gatewayBaseUrl, serviceToken, workspaceId, tenantId, botId } = params;
+
+    // RAG pre-flight — wrap callLlm so every LLM call receives design/arch context
+    let callLlmBase = callLlmRaw;
+    if (callLlmRaw && gatewayBaseUrl && serviceToken && workspaceId) {
+        try {
+            const { buildFsdRagContext } = await import('./fsd-rag-retriever.js');
+            const ragCtx = await buildFsdRagContext(
+                {
+                    tenantId, botId,
+                    featureTitle: String(payload['title'] ?? payload['feature_name'] ?? actionType),
+                    featureDescription: String(payload['description'] ?? ''),
+                    documentType: 'feature_implementation',
+                },
+                gatewayBaseUrl, serviceToken, workspaceId,
+            );
+            if (ragCtx.contextBlock) {
+                callLlmBase = (prompt: string, sys?: string): Promise<string> =>
+                    callLlmRaw(prompt, sys ? `${sys}\n\n${ragCtx.contextBlock}` : ragCtx.contextBlock);
+            }
+        } catch { /* non-fatal */ }
+    }
 
     // ── Load project context (best-effort, non-blocking) ─────────────────────
     const CONTEXT_FILE = '.agentfarm/project-context.json';
@@ -2476,4 +2502,36 @@ export async function handleFsdAction(
             });
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// Post-decision hooks
+// ---------------------------------------------------------------------------
+
+export async function onFsdImplementationApproved(params: {
+    tenantId: string; botId?: string; workspaceId: string; taskId: string;
+    implTitle: string; documentType: import('./fsd-rag-retriever.js').FsdDocumentType;
+    content: string; sourceUrl?: string;
+    gatewayBaseUrl: string; serviceToken: string;
+}): Promise<void> {
+    try {
+        const { ingestApprovedImplementation } = await import('./fsd-rag-retriever.js');
+        await ingestApprovedImplementation({ ...params });
+    } catch { /* non-fatal */ }
+}
+
+export async function onFsdFeedbackReceived(params: {
+    tenantId: string; workspaceId: string; taskId: string; prId: string;
+    feedbackReasons: string[];
+    gatewayBaseUrl: string; serviceToken: string;
+}): Promise<void> {
+    try {
+        const { ingestFsdFeedback, GatewayFsdLessonStore } = await import('./fsd-lesson-pipeline.js');
+        const store = new GatewayFsdLessonStore(params.gatewayBaseUrl, params.serviceToken);
+        await ingestFsdFeedback(
+            { tenantId: params.tenantId, workspaceId: params.workspaceId, taskId: params.taskId, prId: params.prId, documentType: 'any', actionType: 'feedback', correlationId: params.taskId },
+            params.feedbackReasons.map((body) => ({ body })),
+            store,
+        );
+    } catch { /* non-fatal */ }
 }

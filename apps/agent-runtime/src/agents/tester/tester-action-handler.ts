@@ -83,6 +83,10 @@ export async function handleTesterAction(params: {
     /** Optional callback to execute generic workspace actions (e.g. meeting_join, meeting_speak).
      *  Required for workspace_standup_report non-dry-run path. */
     executeAction?: ExecuteActionCallback;
+    /** Optional — when provided, approved test suites are ingested and lessons fetched. */
+    gatewayBaseUrl?: string;
+    serviceToken?: string;
+    workspaceId?: string;
 }): Promise<LocalWorkspaceResult> {
     const {
         actionType,
@@ -414,4 +418,36 @@ export async function handleTesterAction(params: {
             };
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// Post-decision hooks
+// ---------------------------------------------------------------------------
+
+export async function onTestSuiteApproved(params: {
+    tenantId: string; botId?: string; workspaceId: string; taskId: string;
+    suiteTitle: string; documentType: import('./tester-rag-retriever.js').TesterDocumentType;
+    content: string; sourceUrl?: string; bugCount?: number;
+    gatewayBaseUrl: string; serviceToken: string;
+}): Promise<void> {
+    try {
+        const { ingestApprovedTestSuite } = await import('./tester-rag-retriever.js');
+        await ingestApprovedTestSuite({ ...params });
+    } catch { /* non-fatal */ }
+}
+
+export async function onTesterFeedbackReceived(params: {
+    tenantId: string; workspaceId: string; taskId: string;
+    feedbackReasons: string[];
+    gatewayBaseUrl: string; serviceToken: string;
+}): Promise<void> {
+    try {
+        const { ingestTesterFeedback, GatewayTesterLessonStore } = await import('./tester-lesson-pipeline.js');
+        const store = new GatewayTesterLessonStore(params.gatewayBaseUrl, params.serviceToken);
+        await ingestTesterFeedback(
+            { tenantId: params.tenantId, workspaceId: params.workspaceId, taskId: params.taskId, documentType: 'any', actionType: 'feedback', correlationId: params.taskId },
+            params.feedbackReasons.map((body) => ({ body })),
+            store,
+        );
+    } catch { /* non-fatal */ }
 }

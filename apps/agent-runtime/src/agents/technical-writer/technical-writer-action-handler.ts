@@ -1554,8 +1554,36 @@ export async function handleTechnicalWriterAction(params: {
      * Used by workspace_tw_interact_product.
      */
     interactPage?: InteractPageFn;
+    /** Optional — when provided, RAG context is fetched and injected into every LLM call. */
+    gatewayBaseUrl?: string;
+    serviceToken?: string;
+    workspaceId?: string;
 }): Promise<LocalWorkspaceResult> {
-    const { actionType, taskId, payload, workspaceDir, runCommand, callLlm, browsePage, interactPage } = params;
+    const { actionType, taskId, payload, workspaceDir, runCommand, callLlm: rawCallLlm, browsePage, interactPage,
+            gatewayBaseUrl, serviceToken, workspaceId } = params;
+    const tenantId = String(params['tenantId'] ?? '');
+    const botId = String(params['botId'] ?? '');
+
+    // RAG pre-flight — wrap callLlm with prior docs, style guides, and TW lessons
+    let callLlm = rawCallLlm;
+    if (rawCallLlm && gatewayBaseUrl && serviceToken && workspaceId) {
+        try {
+            const { buildTechnicalWriterRagContext } = await import('./technical-writer-rag-retriever.js');
+            const ragCtx = await buildTechnicalWriterRagContext(
+                {
+                    tenantId, botId,
+                    docTitle: String(payload['title'] ?? payload['doc_title'] ?? actionType),
+                    docDescription: String(payload['description'] ?? ''),
+                    documentType: 'api_reference',
+                },
+                gatewayBaseUrl, serviceToken, workspaceId,
+            );
+            if (ragCtx.contextBlock) {
+                callLlm = (prompt: string, sys?: string): Promise<string> =>
+                    rawCallLlm(prompt, sys ? `${sys}\n\n${ragCtx.contextBlock}` : ragCtx.contextBlock);
+            }
+        } catch { /* non-fatal */ }
+    }
 
     switch (actionType) {
 
@@ -3913,4 +3941,36 @@ export async function handleTechnicalWriterAction(params: {
             return { ok: false, output: '', errorOutput: `Unknown technical writer action: ${String(exhaustive)}` };
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// Post-decision hooks
+// ---------------------------------------------------------------------------
+
+export async function onTwDocApproved(params: {
+    tenantId: string; botId?: string; workspaceId: string; taskId: string;
+    docTitle: string; documentType: import('./technical-writer-rag-retriever.js').TwDocumentType;
+    content: string; sourceUrl?: string;
+    gatewayBaseUrl: string; serviceToken: string;
+}): Promise<void> {
+    try {
+        const { ingestApprovedDoc } = await import('./technical-writer-rag-retriever.js');
+        await ingestApprovedDoc({ ...params });
+    } catch { /* non-fatal */ }
+}
+
+export async function onTwFeedbackReceived(params: {
+    tenantId: string; workspaceId: string; taskId: string; docId: string;
+    feedbackReasons: string[];
+    gatewayBaseUrl: string; serviceToken: string;
+}): Promise<void> {
+    try {
+        const { ingestTwFeedback, GatewayTwLessonStore } = await import('./technical-writer-lesson-pipeline.js');
+        const store = new GatewayTwLessonStore(params.gatewayBaseUrl, params.serviceToken);
+        await ingestTwFeedback(
+            { tenantId: params.tenantId, workspaceId: params.workspaceId, taskId: params.taskId, docId: params.docId, documentType: 'any', actionType: 'feedback', correlationId: params.taskId },
+            params.feedbackReasons.map((body) => ({ body })),
+            store,
+        );
+    } catch { /* non-fatal */ }
 }

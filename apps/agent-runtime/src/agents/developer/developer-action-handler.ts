@@ -102,15 +102,19 @@ type RunCommandFn = (
 type LlmCallFn = (prompt: string, systemPrompt?: string) => Promise<string>;
 
 export interface DeveloperActionParams {
-    actionType:    DeveloperActionType;
-    tenantId:      string;
-    botId:         string;
-    taskId:        string;
-    payload:       Record<string, unknown>;
-    workspaceDir:  string;
-    executeAction: ExecuteActionFn;
-    runCommand?:   RunCommandFn;
-    callLlm?:      LlmCallFn;
+    actionType:       DeveloperActionType;
+    tenantId:         string;
+    botId:            string;
+    taskId:           string;
+    payload:          Record<string, unknown>;
+    workspaceDir:     string;
+    executeAction:    ExecuteActionFn;
+    runCommand?:      RunCommandFn;
+    callLlm?:         LlmCallFn;
+    /** Optional — when provided, RAG context is fetched and injected into every LLM call. */
+    gatewayBaseUrl?:  string;
+    serviceToken?:    string;
+    workspaceId?:     string;
 }
 
 // ---------------------------------------------------------------------------
@@ -154,7 +158,29 @@ function parseSubOutput(result: SubResult): Record<string, unknown> {
 export async function handleDeveloperAction(
     params: DeveloperActionParams,
 ): Promise<DevActionResult> {
-    const { actionType, payload, workspaceDir, executeAction, runCommand, callLlm } = params;
+    const { actionType, payload, workspaceDir, executeAction, runCommand,
+            callLlm: rawCallLlm, gatewayBaseUrl, serviceToken, workspaceId, tenantId, botId } = params;
+
+    // RAG pre-flight — wrap callLlm with architecture patterns and past implementation context
+    let callLlm = rawCallLlm;
+    if (rawCallLlm && gatewayBaseUrl && serviceToken && workspaceId) {
+        try {
+            const { buildDeveloperRagContext } = await import('./developer-rag-retriever.js');
+            const ragCtx = await buildDeveloperRagContext(
+                {
+                    tenantId, botId,
+                    taskTitle: String(payload['title'] ?? payload['description'] ?? actionType),
+                    taskDescription: String(payload['description'] ?? ''),
+                    documentType: 'feature_implementation',
+                },
+                gatewayBaseUrl, serviceToken, workspaceId,
+            );
+            if (ragCtx.contextBlock) {
+                callLlm = (prompt: string, sys?: string): Promise<string> =>
+                    rawCallLlm(prompt, sys ? `${sys}\n\n${ragCtx.contextBlock}` : ragCtx.contextBlock);
+            }
+        } catch { /* non-fatal */ }
+    }
 
     switch (actionType) {
 
@@ -1234,4 +1260,50 @@ function generateApiSpecSkeleton(description: string, format: string): string {
         return `type Query {\n  # ${description.slice(0, 60)}\n  items: [Item]\n}\n\ntype Item {\n  id: ID!\n  name: String!\n}\n`;
     }
     return `# REST API: ${description.slice(0, 60)}\n\n## Endpoints\n\n### GET /resource\nList all resources.\n`;
+}
+
+// ---------------------------------------------------------------------------
+// Post-decision hooks
+// ---------------------------------------------------------------------------
+
+export async function onDeveloperImplementationApproved(params: {
+    tenantId: string; botId?: string; workspaceId: string; taskId: string;
+    implTitle: string; documentType: import('./developer-rag-retriever.js').DevDocumentType;
+    content: string; sourceUrl?: string;
+    gatewayBaseUrl: string; serviceToken: string;
+}): Promise<void> {
+    try {
+        const { ingestApprovedImplementation } = await import('./developer-rag-retriever.js');
+        await ingestApprovedImplementation({ ...params });
+    } catch { /* non-fatal */ }
+}
+
+export async function onDeveloperFeedbackReceived(params: {
+    tenantId: string; workspaceId: string; taskId: string; prId: string;
+    feedbackReasons: string[];
+    gatewayBaseUrl: string; serviceToken: string;
+}): Promise<void> {
+    try {
+        const { buildDeveloperEpisodicPattern } = await import('./developer-rag-retriever.js');
+        // Lessons are stored directly via episodic hooks (developer-episodic-hooks.ts)
+        // This hook records the feedback as a lesson pattern for RAG retrieval
+        const base = params.gatewayBaseUrl.replace(/\/+$/, '');
+        for (const reason of params.feedbackReasons) {
+            await fetch(`${base}/v1/memory/patterns`, {
+                method: 'POST',
+                headers: { 'content-type': 'application/json', Authorization: `Bearer ${params.serviceToken}` },
+                body: JSON.stringify({
+                    tenantId: params.tenantId,
+                    workspaceId: params.workspaceId,
+                    pattern: `dev:review:feedback:${params.prId}`,
+                    summary: reason.slice(0, 200),
+                    confidence: 0.7,
+                    observedCount: 1,
+                    lastSeen: new Date().toISOString(),
+                }),
+                signal: AbortSignal.timeout(10_000),
+            }).catch(() => undefined);
+        }
+        void buildDeveloperEpisodicPattern; // referenced to avoid unused-import lint
+    } catch { /* non-fatal */ }
 }

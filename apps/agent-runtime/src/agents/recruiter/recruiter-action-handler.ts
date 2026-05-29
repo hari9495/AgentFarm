@@ -265,6 +265,10 @@ export interface RecruiterActionInput {
     taskId: string;
     payload: Record<string, unknown>;
     workspaceDir: string;
+    /** Optional — when provided, approved artifacts are ingested for future RAG retrieval. */
+    gatewayBaseUrl?: string;
+    serviceToken?: string;
+    workspaceId?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -1682,4 +1686,36 @@ export async function handleRecruiterAction(
             return fail(`Unknown recruiter action type: ${String(exhaustive)}`);
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// Post-decision hooks
+// ---------------------------------------------------------------------------
+
+export async function onRecruiterArtifactApproved(params: {
+    tenantId: string; botId?: string; workspaceId: string; taskId: string;
+    artifactTitle: string; documentType: import('./recruiter-rag-retriever.js').RecruiterDocumentType;
+    content: string; sourceUrl?: string;
+    gatewayBaseUrl: string; serviceToken: string;
+}): Promise<void> {
+    try {
+        const { ingestApprovedHiringArtifact } = await import('./recruiter-rag-retriever.js');
+        await ingestApprovedHiringArtifact({ ...params });
+    } catch { /* non-fatal */ }
+}
+
+export async function onRecruiterFeedbackReceived(params: {
+    tenantId: string; workspaceId: string; taskId: string; roleId: string;
+    feedbackReasons: string[];
+    gatewayBaseUrl: string; serviceToken: string;
+}): Promise<void> {
+    try {
+        const { ingestRecruiterFeedback, GatewayRecruiterLessonStore } = await import('./recruiter-lesson-pipeline.js');
+        const store = new GatewayRecruiterLessonStore(params.gatewayBaseUrl, params.serviceToken);
+        await ingestRecruiterFeedback(
+            { tenantId: params.tenantId, workspaceId: params.workspaceId, taskId: params.taskId, roleId: params.roleId, documentType: 'any', actionType: 'feedback', correlationId: params.taskId },
+            params.feedbackReasons.map((body) => ({ body })),
+            store,
+        );
+    } catch { /* non-fatal */ }
 }

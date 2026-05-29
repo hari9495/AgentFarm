@@ -1079,15 +1079,19 @@ type RunCommandFn   = (args: string[], cwd: string, timeoutMs?: number) => Promi
 type LlmCallFn      = (prompt: string, systemPrompt?: string) => Promise<string>;
 
 export interface DevopsActionParams {
-    actionType:    DevopsActionType;
-    tenantId:      string;
-    botId:         string;
-    taskId:        string;
-    payload:       Record<string, unknown>;
-    workspaceDir:  string;
-    executeAction: ExecuteActionFn;
-    runCommand?:   RunCommandFn;
-    callLlm?:      LlmCallFn;
+    actionType:       DevopsActionType;
+    tenantId:         string;
+    botId:            string;
+    taskId:           string;
+    payload:          Record<string, unknown>;
+    workspaceDir:     string;
+    executeAction:    ExecuteActionFn;
+    runCommand?:      RunCommandFn;
+    callLlm?:         LlmCallFn;
+    /** Optional — when provided, RAG context is fetched and injected into every LLM call. */
+    gatewayBaseUrl?:  string;
+    serviceToken?:    string;
+    workspaceId?:     string;
 }
 
 // ---------------------------------------------------------------------------
@@ -1109,7 +1113,29 @@ async function callLlmSafe(fn: LlmCallFn | undefined, prompt: string, sys?: stri
 // ---------------------------------------------------------------------------
 
 export async function handleDevopsAction(params: DevopsActionParams): Promise<DevopsActionResult> {
-    const { actionType, payload, workspaceDir, executeAction, runCommand, callLlm } = params;
+    const { actionType, payload, workspaceDir, executeAction, runCommand,
+            callLlm: rawCallLlm, gatewayBaseUrl, serviceToken, workspaceId, tenantId, botId } = params;
+
+    // RAG pre-flight — wrap callLlm so every LLM call receives ops context
+    let callLlm = rawCallLlm;
+    if (rawCallLlm && gatewayBaseUrl && serviceToken && workspaceId) {
+        try {
+            const { buildDevOpsRagContext } = await import('./devops-rag-retriever.js');
+            const ragCtx = await buildDevOpsRagContext(
+                {
+                    tenantId, botId,
+                    serviceOrComponent: String(payload['service'] ?? payload['component'] ?? actionType),
+                    contextDescription: String(payload['description'] ?? ''),
+                    documentType: 'runbook',
+                },
+                gatewayBaseUrl, serviceToken, workspaceId,
+            );
+            if (ragCtx.contextBlock) {
+                callLlm = (prompt: string, sys?: string): Promise<string> =>
+                    rawCallLlm(prompt, sys ? `${sys}\n\n${ragCtx.contextBlock}` : ragCtx.contextBlock);
+            }
+        } catch { /* non-fatal — proceed without RAG */ }
+    }
 
     switch (actionType) {
 
@@ -6307,4 +6333,36 @@ export async function handleDevopsAction(params: DevopsActionParams): Promise<De
             return { ok: false, output: '', errorOutput: `Unknown incident_context sub_action: ${sub}` };
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// Post-decision hooks — call after operator approval / rejection
+// ---------------------------------------------------------------------------
+
+export async function onDevOpsArtifactApproved(params: {
+    tenantId: string; botId?: string; workspaceId: string; taskId: string;
+    artifactTitle: string; documentType: import('./devops-rag-retriever.js').DevOpsDocumentType;
+    content: string; sourceUrl?: string;
+    gatewayBaseUrl: string; serviceToken: string;
+}): Promise<void> {
+    try {
+        const { ingestApprovedOpsArtifact } = await import('./devops-rag-retriever.js');
+        await ingestApprovedOpsArtifact({ ...params });
+    } catch { /* non-fatal */ }
+}
+
+export async function onDevOpsFeedbackReceived(params: {
+    tenantId: string; workspaceId: string; taskId: string; incidentId: string;
+    feedbackReasons: string[];
+    gatewayBaseUrl: string; serviceToken: string;
+}): Promise<void> {
+    try {
+        const { ingestDevOpsFeedback, GatewayDevOpsLessonStore } = await import('./devops-lesson-pipeline.js');
+        const store = new GatewayDevOpsLessonStore(params.gatewayBaseUrl, params.serviceToken);
+        await ingestDevOpsFeedback(
+            { tenantId: params.tenantId, workspaceId: params.workspaceId, taskId: params.taskId, incidentId: params.incidentId, documentType: 'any', actionType: 'feedback', correlationId: params.taskId },
+            params.feedbackReasons.map((body) => ({ body })),
+            store,
+        );
+    } catch { /* non-fatal */ }
 }

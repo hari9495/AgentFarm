@@ -129,6 +129,10 @@ export interface ContentWriterActionInput {
     /** Parsed JSON payload from the task. */
     payload: Record<string, unknown>;
     workspaceDir: string;
+    /** Optional — when provided, RAG context is fetched and prepended to every LLM call. */
+    gatewayBaseUrl?: string;
+    serviceToken?: string;
+    workspaceId?: string;
     /**
      * Injectable LLM caller. Provided by the runtime when a live LLM is
      * available; may be omitted in tests that cover non-LLM actions.
@@ -215,7 +219,27 @@ function noLlm(): LocalWorkspaceResult {
 export async function handleContentWriterAction(
     input: ContentWriterActionInput,
 ): Promise<LocalWorkspaceResult> {
-    const { actionType, payload, callerFn } = input;
+    const { actionType, payload, callerFn: rawCallerFn, gatewayBaseUrl, serviceToken, workspaceId, tenantId, botId } = input;
+
+    // RAG pre-flight — wrap callerFn with brand voice, prior articles, and editorial lessons
+    let callerFn = rawCallerFn;
+    if (rawCallerFn && gatewayBaseUrl && serviceToken && workspaceId) {
+        try {
+            const { buildContentWriterRagContext } = await import('./content-writer-rag-retriever.js');
+            const ragCtx = await buildContentWriterRagContext(
+                {
+                    tenantId, botId,
+                    contentTitle: String(payload['title'] ?? payload['topic'] ?? actionType),
+                    contentDescription: String(payload['description'] ?? payload['brief'] ?? ''),
+                    documentType: 'blog_post',
+                },
+                gatewayBaseUrl, serviceToken, workspaceId,
+            );
+            if (ragCtx.contextBlock) {
+                callerFn = (prompt: string): Promise<string> => rawCallerFn(`${ragCtx.contextBlock}\n\n${prompt}`);
+            }
+        } catch { /* non-fatal */ }
+    }
 
     switch (actionType) {
         // ----------------------------------------------------------------
@@ -799,4 +823,36 @@ export async function handleContentWriterAction(
             return fail(`Unknown content writer action type: ${String(exhaustive)}`);
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// Post-decision hooks
+// ---------------------------------------------------------------------------
+
+export async function onContentPublished(params: {
+    tenantId: string; botId?: string; workspaceId: string; taskId: string;
+    contentTitle: string; documentType: import('./content-writer-rag-retriever.js').ContentDocumentType;
+    content: string; sourceUrl?: string;
+    gatewayBaseUrl: string; serviceToken: string;
+}): Promise<void> {
+    try {
+        const { ingestPublishedContent } = await import('./content-writer-rag-retriever.js');
+        await ingestPublishedContent({ ...params });
+    } catch { /* non-fatal */ }
+}
+
+export async function onContentFeedbackReceived(params: {
+    tenantId: string; workspaceId: string; taskId: string; contentId: string;
+    feedbackReasons: string[];
+    gatewayBaseUrl: string; serviceToken: string;
+}): Promise<void> {
+    try {
+        const { ingestContentFeedback, GatewayContentLessonStore } = await import('./content-writer-lesson-pipeline.js');
+        const store = new GatewayContentLessonStore(params.gatewayBaseUrl, params.serviceToken);
+        await ingestContentFeedback(
+            { tenantId: params.tenantId, workspaceId: params.workspaceId, taskId: params.taskId, contentId: params.contentId, documentType: 'any', actionType: 'feedback', correlationId: params.taskId },
+            params.feedbackReasons.map((body) => ({ body })),
+            store,
+        );
+    } catch { /* non-fatal */ }
 }

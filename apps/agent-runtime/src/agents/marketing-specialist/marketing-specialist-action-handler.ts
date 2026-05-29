@@ -122,6 +122,10 @@ export interface MarketingSpecialistActionInput {
     competitorFetchFn?: CompetitorFetchFn;
     keywordFetchFn?: KeywordFetchFn;
     socialFetchFn?: SocialFetchFn;
+    /** Optional — when provided, RAG context is fetched and prepended to every LLM call. */
+    gatewayBaseUrl?: string;
+    serviceToken?: string;
+    workspaceId?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -142,7 +146,27 @@ function strArr(v: unknown): string[] { return Array.isArray(v) ? v.map(str) : t
 export async function handleMarketingSpecialistAction(
     input: MarketingSpecialistActionInput,
 ): Promise<LocalWorkspaceResult> {
-    const { actionType, payload, callerFn } = input;
+    const { actionType, payload, callerFn: rawCallerFn, gatewayBaseUrl, serviceToken, workspaceId, tenantId, botId } = input;
+
+    // RAG pre-flight — wrap callerFn with campaign and channel context
+    let callerFn = rawCallerFn;
+    if (rawCallerFn && gatewayBaseUrl && serviceToken && workspaceId) {
+        try {
+            const { buildMarketingRagContext } = await import('./marketing-specialist-rag-retriever.js');
+            const ragCtx = await buildMarketingRagContext(
+                {
+                    tenantId, botId,
+                    campaignTitle: String(payload['campaign_name'] ?? payload['title'] ?? actionType),
+                    campaignDescription: String(payload['description'] ?? payload['goal'] ?? ''),
+                    documentType: 'campaign_plan',
+                },
+                gatewayBaseUrl, serviceToken, workspaceId,
+            );
+            if (ragCtx.contextBlock) {
+                callerFn = (prompt: string): Promise<string> => rawCallerFn(`${ragCtx.contextBlock}\n\n${prompt}`);
+            }
+        } catch { /* non-fatal */ }
+    }
 
     switch (actionType) {
         // ----------------------------------------------------------------
@@ -524,4 +548,36 @@ export async function handleMarketingSpecialistAction(
             return fail(`Unknown marketing specialist action type: ${String(exhaustive)}`);
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// Post-decision hooks
+// ---------------------------------------------------------------------------
+
+export async function onMarketingCampaignApproved(params: {
+    tenantId: string; botId?: string; workspaceId: string; taskId: string;
+    campaignTitle: string; documentType: import('./marketing-specialist-rag-retriever.js').MarketingDocumentType;
+    content: string; sourceUrl?: string;
+    gatewayBaseUrl: string; serviceToken: string;
+}): Promise<void> {
+    try {
+        const { ingestApprovedCampaign } = await import('./marketing-specialist-rag-retriever.js');
+        await ingestApprovedCampaign({ ...params });
+    } catch { /* non-fatal */ }
+}
+
+export async function onMarketingFeedbackReceived(params: {
+    tenantId: string; workspaceId: string; taskId: string; campaignId: string;
+    feedbackReasons: string[];
+    gatewayBaseUrl: string; serviceToken: string;
+}): Promise<void> {
+    try {
+        const { ingestMarketingFeedback, GatewayMarketingLessonStore } = await import('./marketing-specialist-lesson-pipeline.js');
+        const store = new GatewayMarketingLessonStore(params.gatewayBaseUrl, params.serviceToken);
+        await ingestMarketingFeedback(
+            { tenantId: params.tenantId, workspaceId: params.workspaceId, taskId: params.taskId, campaignId: params.campaignId, documentType: 'any', actionType: 'feedback', correlationId: params.taskId },
+            params.feedbackReasons.map((body) => ({ body })),
+            store,
+        );
+    } catch { /* non-fatal */ }
 }

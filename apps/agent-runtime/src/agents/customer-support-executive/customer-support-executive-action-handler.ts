@@ -151,6 +151,10 @@ export async function handleCustomerSupportExecutiveAction(params: {
     botId: string;
     taskId: string;
     payload: Record<string, unknown>;
+    /** Optional — when provided, resolved tickets are ingested and lessons fetched for context. */
+    gatewayBaseUrl?: string;
+    serviceToken?: string;
+    workspaceId?: string;
 }): Promise<LocalWorkspaceResult> {
     const { actionType, tenantId, botId, taskId, payload } = params;
 
@@ -756,4 +760,36 @@ export async function handleCustomerSupportExecutiveAction(params: {
             return fail(`Unknown customer support executive action: ${_exhaustive as string}`);
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// Post-decision hooks
+// ---------------------------------------------------------------------------
+
+export async function onTicketResolved(params: {
+    tenantId: string; botId?: string; workspaceId: string; taskId: string;
+    issueTitle: string; documentType: import('./customer-support-rag-retriever.js').SupportDocumentType;
+    content: string; sourceUrl?: string; csatScore?: number;
+    gatewayBaseUrl: string; serviceToken: string;
+}): Promise<void> {
+    try {
+        const { ingestResolvedTicket } = await import('./customer-support-rag-retriever.js');
+        await ingestResolvedTicket({ ...params });
+    } catch { /* non-fatal */ }
+}
+
+export async function onSupportFeedbackReceived(params: {
+    tenantId: string; workspaceId: string; taskId: string; ticketId: string;
+    feedbackReasons: string[];
+    gatewayBaseUrl: string; serviceToken: string;
+}): Promise<void> {
+    try {
+        const { ingestSupportFeedback, GatewaySupportLessonStore } = await import('./customer-support-lesson-pipeline.js');
+        const store = new GatewaySupportLessonStore(params.gatewayBaseUrl, params.serviceToken);
+        await ingestSupportFeedback(
+            { tenantId: params.tenantId, workspaceId: params.workspaceId, taskId: params.taskId, ticketId: params.ticketId, documentType: 'any', actionType: 'feedback', correlationId: params.taskId },
+            params.feedbackReasons.map((body) => ({ body })),
+            store,
+        );
+    } catch { /* non-fatal */ }
 }

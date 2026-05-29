@@ -1704,20 +1704,32 @@ async function handlePmDocumentAction(params: PmActionParams): Promise<PmActionR
     const documentType = ACTION_TYPE_TO_DOC_TYPE[actionType] ?? 'pm_document';
     const riskLevel = classifyPmActionRisk(actionType);
 
-    // RAG context retrieval
-    const ragQuery = `${projectName} ${documentType.replace(/_/g, ' ')} project manager`;
-    const ragDocs = await fetchPmKbContext({
-        tenantId,
-        botId,
-        queryText: ragQuery,
-        topK: 8,
-        gatewayBaseUrl,
-        serviceToken,
-    });
-
-    const ragContextBlock = ragDocs.length > 0
-        ? `## Prior Project Context (from knowledge base)\n${ragDocs.slice(0, 3).map((d) => d.content.slice(0, 600)).join('\n\n---\n\n')}`
-        : '';
+    // RAG context retrieval — cosine-similarity search + lessons (upgraded from simple text search)
+    let ragContextBlock = '';
+    try {
+        const { buildPmRagContext } = await import('./project-manager-rag-retriever.js');
+        const pmDocType = (() => {
+            if (actionType === 'workspace_pm_project_charter')  return 'project_charter' as const;
+            if (actionType === 'workspace_pm_status_report')    return 'status_report' as const;
+            if (actionType === 'workspace_pm_risk_register')    return 'risk_register' as const;
+            if (actionType === 'workspace_pm_dependency_map')   return 'dependency_map' as const;
+            if (actionType === 'workspace_pm_change_request')   return 'change_request' as const;
+            if (actionType === 'workspace_pm_milestone_plan')   return 'milestone_plan' as const;
+            return 'budget_forecast' as const;
+        })();
+        const ragCtx = await buildPmRagContext(
+            { tenantId, botId, projectTitle: projectName, projectDescription: str(payload['description']), documentType: pmDocType },
+            gatewayBaseUrl, serviceToken, workspaceId,
+        );
+        ragContextBlock = ragCtx.contextBlock;
+    } catch {
+        // Fallback to legacy simple search
+        const ragQuery = `${projectName} ${documentType.replace(/_/g, ' ')} project manager`;
+        const ragDocs = await fetchPmKbContext({ tenantId, botId, queryText: ragQuery, topK: 5, gatewayBaseUrl, serviceToken });
+        ragContextBlock = ragDocs.length > 0
+            ? `## Prior Project Context\n${ragDocs.slice(0, 3).map((d) => d.content.slice(0, 600)).join('\n\n---\n\n')}`
+            : '';
+    }
 
     // Build prompts
     const systemPrompt = buildPmSystemPrompt({ actionType, ragContextBlock });
@@ -1847,3 +1859,35 @@ export async function handlePmAction(params: PmActionParams): Promise<PmActionRe
 // ---------------------------------------------------------------------------
 
 export { buildPmEpisodicPattern, buildPmEpisodicSummary };
+
+// ---------------------------------------------------------------------------
+// Post-decision hooks
+// ---------------------------------------------------------------------------
+
+export async function onPmArtifactApproved(params: {
+    tenantId: string; botId?: string; workspaceId: string; taskId: string;
+    artifactTitle: string; documentType: import('./project-manager-rag-retriever.js').PmDocumentType;
+    content: string; sourceUrl?: string;
+    gatewayBaseUrl: string; serviceToken: string;
+}): Promise<void> {
+    try {
+        const { ingestApprovedPmArtifact } = await import('./project-manager-rag-retriever.js');
+        await ingestApprovedPmArtifact({ ...params });
+    } catch { /* non-fatal */ }
+}
+
+export async function onPmFeedbackReceived(params: {
+    tenantId: string; workspaceId: string; taskId: string; projectId: string;
+    feedbackReasons: string[];
+    gatewayBaseUrl: string; serviceToken: string;
+}): Promise<void> {
+    try {
+        const { ingestPmFeedback, GatewayPmLessonStore } = await import('./project-manager-lesson-pipeline.js');
+        const store = new GatewayPmLessonStore(params.gatewayBaseUrl, params.serviceToken);
+        await ingestPmFeedback(
+            { tenantId: params.tenantId, workspaceId: params.workspaceId, taskId: params.taskId, projectId: params.projectId, documentType: 'any', actionType: 'feedback', correlationId: params.taskId },
+            params.feedbackReasons.map((body) => ({ body })),
+            store,
+        );
+    } catch { /* non-fatal */ }
+}
