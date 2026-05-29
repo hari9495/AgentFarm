@@ -84,11 +84,11 @@ function AgentFlipCard({ bot, index }: { bot: Bot; index: number }) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.28, delay: Math.min(index * 0.04, 0.5) }}
             className="relative"
-            style={{ height: 200, perspective: 900 }}
+            style={{ height: 264, perspective: 900 }}
             onMouseEnter={() => setHovered(true)}
-            onMouseLeave={() => { setHovered(false); }}
+            onMouseLeave={() => setHovered(false)}
         >
-            {/* Card container — rotates on flip */}
+            {/* Flip container */}
             <div
                 className="relative w-full h-full"
                 style={{
@@ -99,59 +99,77 @@ function AgentFlipCard({ bot, index }: { bot: Bot; index: number }) {
             >
                 {/* ── FRONT FACE ── */}
                 <div
-                    className="absolute inset-0 rounded-[18px] flex flex-col items-center justify-center gap-3 cursor-default"
+                    className="absolute inset-0 rounded-[18px] flex flex-col items-center justify-center gap-2.5 cursor-default"
                     style={{
                         backfaceVisibility: "hidden",
                         WebkitBackfaceVisibility: "hidden",
                         border: inCart ? "2px solid #0066cc" : "1px solid #d2d2d7",
                         background: inCart ? "rgba(0,102,204,0.03)" : "#ffffff",
                         boxShadow: hovered && !flipped ? "0 8px 24px -10px rgba(0,0,0,0.15)" : "none",
-                        transition: "box-shadow 200ms ease, border-color 200ms ease",
+                        transition: "box-shadow 200ms ease",
                     }}
                 >
-                    {/* Icon */}
-                    <div className="relative">
+                    {/* Icon — crop bottom 22% to hide baked-in text label */}
+                    <div className="relative shrink-0">
                         {iconSrc ? (
-                            <img
-                                src={iconSrc}
-                                alt={bot.name}
-                                className="w-20 h-20 object-contain"
-                                draggable={false}
-                            />
+                            <div
+                                style={{
+                                    width: 100,
+                                    height: 100,
+                                    overflow: "hidden",
+                                    position: "relative",
+                                }}
+                            >
+                                <img
+                                    src={iconSrc}
+                                    alt={bot.name}
+                                    draggable={false}
+                                    style={{
+                                        width: "100%",
+                                        height: "128%",          /* show only top 78%, hides bottom text label */
+                                        objectFit: "cover",
+                                        objectPosition: "top center",
+                                        display: "block",
+                                    }}
+                                />
+                            </div>
                         ) : (
                             <div
-                                className="w-20 h-20 rounded-2xl flex items-center justify-center"
-                                style={{ background: "rgba(0,102,204,0.08)" }}
+                                className="rounded-2xl flex items-center justify-center"
+                                style={{ width: 100, height: 100, background: "rgba(0,102,204,0.08)" }}
                             >
-                                <FallbackIcon className="w-9 h-9 text-[#0066cc]" />
+                                <FallbackIcon className="w-10 h-10 text-[#0066cc]" />
                             </div>
                         )}
-                        {/* Live indicator */}
+                        {/* Live dot — bottom-right of the visible image area */}
                         {bot.available && (
                             <span
-                                className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-[#34c759]"
-                                style={{ border: "2px solid white" }}
+                                className="absolute rounded-full bg-[#34c759]"
+                                style={{ width: 13, height: 13, bottom: 0, right: 0, border: "2.5px solid white" }}
                             />
                         )}
                     </div>
 
-                    {/* Name */}
+                    {/* Agent name */}
                     <p
                         className="font-semibold text-[#1d1d1f] text-center px-3 leading-snug"
-                        style={{ fontSize: "13px", letterSpacing: "-0.01em", maxWidth: 140 }}
+                        style={{ fontSize: "13px", letterSpacing: "-0.01em", maxWidth: 150 }}
                     >
                         {bot.name.replace("AI ", "")}
                     </p>
 
-                    {/* Read More — appears on hover */}
+                    {/* Read More — fade in on hover */}
                     <AnimatePresence>
                         {hovered && !flipped && (
                             <motion.button
                                 initial={{ opacity: 0, y: 4 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: 4 }}
-                                transition={{ duration: 0.18 }}
-                                onClick={() => { setFlipped(true); track({ type: "bot_peek_toggle", slug: bot.slug, name: bot.name, open: true }); }}
+                                transition={{ duration: 0.16 }}
+                                onClick={() => {
+                                    setFlipped(true);
+                                    track({ type: "bot_peek_toggle", slug: bot.slug, name: bot.name, open: true });
+                                }}
                                 className="flex items-center gap-1 text-[12px] font-semibold text-[#0066cc] hover:text-[#0071e3] transition-colors cursor-pointer"
                             >
                                 Read More <ArrowRight className="w-3 h-3" />
@@ -162,7 +180,7 @@ function AgentFlipCard({ bot, index }: { bot: Bot; index: number }) {
 
                 {/* ── BACK FACE ── */}
                 <div
-                    className="absolute inset-0 rounded-[18px] flex flex-col p-4 overflow-hidden"
+                    className="absolute inset-0 rounded-[18px] flex flex-col overflow-hidden"
                     style={{
                         backfaceVisibility: "hidden",
                         WebkitBackfaceVisibility: "hidden",
@@ -171,54 +189,79 @@ function AgentFlipCard({ bot, index }: { bot: Bot; index: number }) {
                         background: "#ffffff",
                     }}
                 >
-                    {/* Back header */}
-                    <div className="flex items-start justify-between mb-2">
-                        <div className="flex-1 min-w-0">
+                    {/* Header row */}
+                    <div className="flex items-center justify-between px-4 pt-4 pb-2.5" style={{ borderBottom: "1px solid #f0f0f0" }}>
+                        <div className="flex-1 min-w-0 pr-2">
+                            {/* Department — single line, truncated */}
                             <span
-                                className="text-[10px] font-semibold uppercase tracking-[0.06em] px-1.5 py-0.5 rounded"
+                                className="inline-block text-[10px] font-semibold uppercase tracking-[0.05em] px-1.5 py-0.5 rounded whitespace-nowrap overflow-hidden text-ellipsis max-w-full"
                                 style={{ background: "rgba(0,102,204,0.08)", color: "#0066cc" }}
                             >
                                 {bot.department}
                             </span>
-                            <p className="font-semibold text-[#1d1d1f] text-[13px] mt-1.5 leading-snug" style={{ letterSpacing: "-0.01em" }}>
+                            <p className="font-semibold text-[#1d1d1f] text-[13px] mt-1 leading-snug" style={{ letterSpacing: "-0.01em" }}>
                                 {bot.name.replace("AI ", "")}
                             </p>
                         </div>
                         <button
                             onClick={() => setFlipped(false)}
-                            className="shrink-0 ml-1 text-[#aeaeb2] hover:text-[#6e6e73] transition-colors cursor-pointer"
-                            aria-label="Close"
+                            className="shrink-0 text-[#aeaeb2] hover:text-[#6e6e73] transition-colors cursor-pointer"
+                            aria-label="Flip back"
                         >
                             <X className="w-3.5 h-3.5" />
                         </button>
                     </div>
 
-                    {/* Tagline */}
-                    <p className="text-[11px] text-[#0066cc] font-medium mb-2 leading-snug">
-                        {bot.tagline}
-                    </p>
+                    {/* Body */}
+                    <div className="flex flex-col flex-1 px-4 py-3 gap-2 overflow-hidden">
+                        {/* Tagline */}
+                        <p className="text-[11px] font-semibold text-[#0066cc] leading-snug">
+                            {bot.tagline}
+                        </p>
 
-                    {/* Description */}
-                    <p className="text-[11px] text-[#6e6e73] leading-relaxed flex-1 overflow-hidden" style={{ display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                        {bot.description}
-                    </p>
+                        {/* Description — 2 lines max */}
+                        <p
+                            className="text-[11px] text-[#6e6e73]"
+                            style={{
+                                lineHeight: 1.55,
+                                display: "-webkit-box",
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: "vertical",
+                                overflow: "hidden",
+                            }}
+                        >
+                            {bot.description}
+                        </p>
 
-                    {/* Skills pills */}
-                    <div className="flex flex-wrap gap-1 my-2">
-                        {bot.skills.slice(0, 3).map((s) => (
-                            <span key={s} className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: "#f5f5f7", color: "#6e6e73" }}>
-                                {s}
-                            </span>
-                        ))}
+                        {/* Skills */}
+                        <div className="flex flex-wrap gap-1">
+                            {bot.skills.slice(0, 3).map((s) => (
+                                <span
+                                    key={s}
+                                    className="text-[10px] px-1.5 py-0.5 rounded"
+                                    style={{ background: "#f5f5f7", color: "#6e6e73" }}
+                                >
+                                    {s}
+                                </span>
+                            ))}
+                        </div>
+
+                        {/* First use case */}
+                        <p className="text-[11px] text-[#aeaeb2]" style={{ lineHeight: 1.4 }}>
+                            {bot.useCases[0]}
+                        </p>
                     </div>
 
-                    {/* Price + CTA */}
-                    <div className="flex items-center justify-between mt-auto pt-1.5" style={{ borderTop: "1px solid #f0f0f0" }}>
+                    {/* Footer: price + CTA */}
+                    <div
+                        className="flex items-center justify-between px-4 py-3"
+                        style={{ borderTop: "1px solid #f0f0f0" }}
+                    >
                         <div>
-                            <p className="font-semibold text-[#1d1d1f] text-[14px]" style={{ letterSpacing: "-0.02em", lineHeight: 1 }}>
+                            <p className="font-semibold text-[#1d1d1f] text-[15px]" style={{ letterSpacing: "-0.02em", lineHeight: 1 }}>
                                 {bot.price}
                             </p>
-                            <p className="text-[10px] text-[#aeaeb2]">{bot.plan}</p>
+                            <p className="text-[10px] text-[#aeaeb2] mt-0.5">{bot.plan}</p>
                         </div>
                         <AddToCartButton bot={bot} compact />
                     </div>
