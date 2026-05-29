@@ -3,18 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
-import {
-    ArrowRight,
-    CheckCircle2,
-    Eye,
-    EyeOff,
-    GitPullRequest,
-    Lock,
-    Mail,
-    Shield,
-    Sparkles,
-    Zap,
-} from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Lock, Mail, ShieldCheck, CheckCircle2, GitPullRequest } from "lucide-react";
 
 function LoginForm() {
     const searchParams = useSearchParams();
@@ -47,10 +36,7 @@ function LoginForm() {
                 setServerError(data.error ?? "Unable to sign in right now.");
                 return;
             }
-            const redirectTo = data.redirectTo ?? "/dashboard";
-            // Use window.location.assign for all redirects to ensure cookies are
-            // always sent on the subsequent navigation (avoids SPA/RSC timing issues).
-            window.location.assign(redirectTo);
+            window.location.assign(data.redirectTo ?? "/dashboard");
         } catch {
             setServerError("Network error. Please try again.");
         } finally {
@@ -59,113 +45,127 @@ function LoginForm() {
     }
 
     return (
-        <div className="min-h-screen flex bg-[var(--canvas)]">
-            {/* ── Left Panel — Brand ── */}
-            <div className="hidden lg:flex lg:w-[58%] relative overflow-hidden flex-col bg-[#0d0d0d]">
-                {/* Layered gradient mesh */}
-                <div className="absolute inset-0 pointer-events-none">
-                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_10%_10%,rgba(14,165,233,0.25)_0%,transparent_60%)]" />
-                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_90%_85%,rgba(16,185,129,0.18)_0%,transparent_60%)]" />
-                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_40%_at_50%_50%,rgba(99,102,241,0.10)_0%,transparent_70%)]" />
-                    {/* Dot grid */}
-                    <div
-                        className="absolute inset-0 opacity-[0.07]"
-                        style={{
-                            backgroundImage: "radial-gradient(circle, rgba(255,255,255,1) 1px, transparent 1px)",
-                            backgroundSize: "28px 28px",
-                        }}
-                    />
-                </div>
+        <div className="min-h-screen flex" style={{ background: "#ffffff" }}>
+
+            {/* ── Left panel — brand / social proof ── */}
+            <div
+                className="hidden lg:flex lg:w-[52%] flex-col relative overflow-hidden"
+                style={{ background: "#1a1a1c" }}
+            >
+                {/* Subtle ambient glow */}
+                <div
+                    className="absolute inset-0 pointer-events-none"
+                    style={{
+                        background: "radial-gradient(ellipse 70% 50% at 20% 20%, rgba(0,102,204,0.18) 0%, transparent 60%), radial-gradient(ellipse 50% 40% at 80% 80%, rgba(41,151,255,0.10) 0%, transparent 60%)",
+                    }}
+                />
 
                 <div className="relative z-10 flex flex-col h-full p-12">
                     {/* Logo */}
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#ff5757] to-[#a1131a] flex items-center justify-center shadow-xl shadow-red-900/30">
-                            <Zap className="w-5 h-5 text-white" />
+                    <div className="flex items-center gap-2.5">
+                        <div
+                            className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                            style={{ background: "#0066cc" }}
+                        >
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                <circle cx="8" cy="8" r="6.5" stroke="white" strokeWidth="2" />
+                                <path d="M5 8h6M8 5v6" stroke="white" strokeWidth="2" strokeLinecap="round" />
+                            </svg>
                         </div>
-                        <span className="text-xl font-semibold text-white tracking-tight">AgentFarms</span>
+                        <span className="text-white font-semibold text-[15px]" style={{ letterSpacing: "-0.01em" }}>
+                            AgentFarms
+                        </span>
                     </div>
 
                     {/* Hero copy */}
-                    <div className="flex-1 flex flex-col justify-center max-w-[440px]">
-                        <span className="inline-flex items-center gap-2 self-start rounded-full border border-[#57c1ff]/30 bg-[#57c1ff]/10 px-3.5 py-1.5 text-xs font-semibold text-[#57c1ff] mb-7">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#57c1ff] animate-pulse" />
-                            AI teammates are live right now
-                        </span>
+                    <div className="flex-1 flex flex-col justify-center max-w-[420px]">
+                        <div
+                            className="inline-flex items-center gap-2 self-start rounded-full mb-7 px-3.5 py-1.5 text-[12px] font-semibold"
+                            style={{ border: "1px solid rgba(41,151,255,0.3)", background: "rgba(41,151,255,0.1)", color: "#2997ff" }}
+                        >
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#2997ff] animate-pulse" />
+                            Workers active right now
+                        </div>
 
-                        <h2 className="text-[2.6rem] font-semibold text-white leading-[1.15] tracking-[-0.03em]">
-                            Your engineering team,{" "}
-                            <span className="bg-gradient-to-r from-[#57c1ff] to-[#59d499] bg-clip-text text-transparent">
-                                always on.
-                            </span>
+                        <h2
+                            className="font-semibold text-white"
+                            style={{ fontSize: "clamp(2rem, 3.5vw, 2.6rem)", letterSpacing: "-0.03em", lineHeight: 1.1 }}
+                        >
+                            AI workers that ship{" "}
+                            <span style={{ color: "#2997ff" }}>with your oversight.</span>
                         </h2>
-                        <p className="mt-4 text-[var(--mute)] text-base leading-relaxed">
-                            Deploy AI engineers that plan, code, review, and ship — while you focus on strategy and growth.
+                        <p className="mt-4 text-[15px]" style={{ color: "#98989d", lineHeight: 1.6 }}>
+                            12 specialist roles, 18 connectors, approval gates on every high-stakes action.
                         </p>
 
-                        {/* Live metric mini-cards */}
-                        <div className="mt-9 grid grid-cols-2 gap-3">
-                            <div className="rounded-2xl bg-white/[0.04] border border-white/[0.08] backdrop-blur-sm p-5 group hover:border-sky-500/30 transition-colors">
-                                <div className="flex items-center gap-2 mb-3">
-                                    <div className="w-7 h-7 rounded-xl bg-sky-500/15 flex items-center justify-center">
-                                        <CheckCircle2 className="w-3.5 h-3.5 text-sky-400" />
+                        {/* Metric mini-cards */}
+                        <div className="mt-8 grid grid-cols-2 gap-3">
+                            {[
+                                { label: "Tasks today", value: "184", delta: "↑ 19% this week", icon: CheckCircle2, color: "#2997ff" },
+                                { label: "PRs merged", value: "46", delta: "↑ 12% this week", icon: GitPullRequest, color: "#30d158" },
+                            ].map(({ label, value, delta, icon: Icon, color }) => (
+                                <div
+                                    key={label}
+                                    className="rounded-[14px] p-5"
+                                    style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
+                                >
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: `${color}20` }}>
+                                            <Icon className="w-3.5 h-3.5" style={{ color }} />
+                                        </div>
+                                        <span className="text-[12px] font-medium" style={{ color: "#6e6e73" }}>{label}</span>
                                     </div>
-                                    <span className="text-xs font-medium text-slate-400">Tasks today</span>
+                                    <p className="text-[2rem] font-semibold text-white" style={{ letterSpacing: "-0.03em", lineHeight: 1 }}>{value}</p>
+                                    <p className="text-[12px] font-semibold mt-2" style={{ color }}>{delta}</p>
                                 </div>
-                                <p className="text-3xl font-extrabold text-white tabular-nums leading-none">184</p>
-                                <p className="text-xs text-emerald-400 font-semibold mt-2">↑ 19% this week</p>
-                            </div>
-                            <div className="rounded-2xl bg-white/[0.04] border border-white/[0.08] backdrop-blur-sm p-5 group hover:border-violet-500/30 transition-colors">
-                                <div className="flex items-center gap-2 mb-3">
-                                    <div className="w-7 h-7 rounded-xl bg-violet-500/15 flex items-center justify-center">
-                                        <GitPullRequest className="w-3.5 h-3.5 text-violet-400" />
-                                    </div>
-                                    <span className="text-xs font-medium text-slate-400">PRs merged</span>
-                                </div>
-                                <p className="text-3xl font-extrabold text-white tabular-nums leading-none">46</p>
-                                <p className="text-xs text-violet-400 font-semibold mt-2">↑ 12% this week</p>
-                            </div>
+                            ))}
                         </div>
 
                         {/* Live activity feed */}
-                        <div className="mt-4 rounded-2xl bg-white/[0.04] border border-white/[0.08] backdrop-blur-sm p-5 space-y-4">
-                            <div className="flex items-center justify-between">
-                                <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Live Activity</span>
-                                <span className="flex items-center gap-1.5 text-[11px] text-emerald-400 font-semibold">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        <div
+                            className="mt-3 rounded-[14px] p-5"
+                            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+                        >
+                            <div className="flex items-center justify-between mb-4">
+                                <span className="text-[11px] font-semibold uppercase tracking-[0.07em]" style={{ color: "#6e6e73" }}>
+                                    Live Activity
+                                </span>
+                                <span className="flex items-center gap-1.5 text-[11px] font-semibold" style={{ color: "#30d158" }}>
+                                    <span className="w-1.5 h-1.5 rounded-full bg-[#30d158] animate-pulse" />
                                     Streaming
                                 </span>
                             </div>
-                            {[
-                                { initials: "AB", agent: "AI Backend Dev", action: "opened PR #482 · billing webhooks", time: "2m ago", color: "text-sky-400", ring: "ring-sky-500/30 bg-sky-500/10" },
-                                { initials: "AQ", agent: "AI QA Engineer", action: "passed 423/423 tests", time: "8m ago", color: "text-violet-400", ring: "ring-violet-500/30 bg-violet-500/10" },
-                                { initials: "AD", agent: "AI DevOps", action: "deployed canary to staging", time: "15m ago", color: "text-amber-400", ring: "ring-amber-500/30 bg-amber-500/10" },
-                            ].map((item) => (
-                                <div key={item.action} className="flex items-center gap-3">
-                                    <div className={`w-7 h-7 rounded-full ring-1 ${item.ring} flex items-center justify-center shrink-0`}>
-                                        <span className={`text-[10px] font-bold ${item.color}`}>{item.initials}</span>
+                            <div className="space-y-3.5">
+                                {[
+                                    { initials: "AB", agent: "AI Backend Dev", action: "opened PR #482 · billing webhooks", time: "2m ago", color: "#2997ff" },
+                                    { initials: "AQ", agent: "AI QA Engineer", action: "passed 423/423 tests", time: "8m ago", color: "#30d158" },
+                                    { initials: "AD", agent: "AI DevOps", action: "deployed canary to staging", time: "15m ago", color: "#ff9f0a" },
+                                ].map((item) => (
+                                    <div key={item.action} className="flex items-center gap-3">
+                                        <div
+                                            className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-[11px] font-bold"
+                                            style={{ background: `${item.color}18`, color: item.color, border: `1px solid ${item.color}30` }}
+                                        >
+                                            {item.initials}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-[12px] truncate" style={{ color: "#e5e5ea" }}>
+                                                <span className="font-semibold" style={{ color: item.color }}>{item.agent}</span>{" "}
+                                                {item.action}
+                                            </p>
+                                        </div>
+                                        <span className="text-[11px] shrink-0" style={{ color: "#6e6e73" }}>{item.time}</span>
                                     </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-xs text-slate-300 truncate">
-                                            <span className={`font-semibold ${item.color}`}>{item.agent}</span>{" "}
-                                            {item.action}
-                                        </p>
-                                    </div>
-                                    <span className="text-[11px] text-slate-500 shrink-0">{item.time}</span>
-                                </div>
-                            ))}
+                                ))}
+                            </div>
                         </div>
                     </div>
 
                     {/* Trust bar */}
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                        {[
-                            { icon: <Shield className="w-3.5 h-3.5" />, label: "SOC 2 Ready" },
-                            { icon: <Sparkles className="w-3.5 h-3.5" />, label: "Enterprise-grade" },
-                            { label: "99.9% uptime" },
-                        ].map(({ icon, label }) => (
-                            <span key={label} className="flex items-center gap-1.5 text-xs text-slate-500">
-                                {icon}
+                    <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+                        {["SOC 2 Ready", "256-bit encryption", "99.9% uptime"].map((label) => (
+                            <span key={label} className="flex items-center gap-1.5 text-[12px]" style={{ color: "#6e6e73" }}>
+                                <ShieldCheck className="w-3.5 h-3.5" />
                                 {label}
                             </span>
                         ))}
@@ -173,92 +173,109 @@ function LoginForm() {
                 </div>
             </div>
 
-            {/* ── Right Panel — Form ── */}
-            <div className="flex-1 flex items-center justify-center p-6 sm:p-10 bg-[var(--canvas)]">
+            {/* ── Right panel — form ── */}
+            <div className="flex-1 flex items-center justify-center px-6 py-12" style={{ background: "#ffffff" }}>
                 <div className="w-full max-w-[400px]">
 
                     {/* Mobile logo */}
-                    <div className="flex items-center gap-3 mb-10 lg:hidden">
-                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#ff5757] to-[#a1131a] flex items-center justify-center shadow-lg shadow-red-900/30">
-                            <Zap className="w-5 h-5 text-white" />
+                    <div className="flex items-center gap-2.5 mb-10 lg:hidden">
+                        <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "#0066cc" }}>
+                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                                <circle cx="7" cy="7" r="5.5" stroke="white" strokeWidth="1.8" />
+                                <path d="M4.5 7h5M7 4.5v5" stroke="white" strokeWidth="1.8" strokeLinecap="round" />
+                            </svg>
                         </div>
-                        <span className="text-lg font-semibold text-[var(--ink)]">AgentFarms</span>
+                        <span className="font-semibold text-[#1d1d1f] text-[15px]">AgentFarms</span>
                     </div>
 
+                    {/* Heading */}
                     <div className="mb-8">
-                        <h1 className="text-3xl font-semibold text-[var(--ink)] tracking-[-0.03em]">
+                        <h1 className="font-semibold text-[#1d1d1f]" style={{ fontSize: "2rem", letterSpacing: "-0.028em", lineHeight: 1.1 }}>
                             Welcome back
                         </h1>
-                        <p className="mt-2 text-[var(--mute)] text-sm">
-                            Sign in to your AI teammate dashboard.
+                        <p className="mt-2 text-[15px] text-[#6e6e73]" style={{ lineHeight: 1.5 }}>
+                            Sign in to your AgentFarms workspace.
                         </p>
                     </div>
 
-                    <form onSubmit={onSubmit} noValidate className="space-y-5">
+                    <form onSubmit={onSubmit} noValidate className="space-y-4">
                         {/* Email */}
-                        <div className="space-y-1.5">
-                            <label className="block text-sm font-medium text-[var(--body-color)]">
+                        <div>
+                            <label className="block text-[14px] font-semibold text-[#1d1d1f] mb-1.5">
                                 Work email
                             </label>
                             <div className="relative">
-                                <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--ash)] z-10" />
+                                <Mail className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 z-10" style={{ color: "#aeaeb2" }} />
                                 <input
                                     type="email"
                                     placeholder="you@company.com"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    className="w-full rounded-xl border border-[var(--hairline)] bg-[var(--surface-card)] pl-11 pr-4 py-3.5 text-sm text-[var(--ink)] placeholder:text-[var(--ash)] outline-none transition-all focus:border-[var(--accent-blue)]/60 focus:ring-2 focus:ring-[var(--accent-blue)]/15"
+                                    className="w-full pl-10 pr-4 py-3 text-[15px] text-[#1d1d1f] placeholder:text-[#aeaeb2] outline-none transition-colors"
+                                    style={{
+                                        border: errors.email ? "1px solid #ff3b30" : "1px solid #d2d2d7",
+                                        borderRadius: 11,
+                                        background: "#f5f5f7",
+                                    }}
+                                    onFocus={(e) => (e.currentTarget.style.borderColor = "#0066cc")}
+                                    onBlur={(e) => (e.currentTarget.style.borderColor = errors.email ? "#ff3b30" : "#d2d2d7")}
                                     autoComplete="email"
                                 />
                             </div>
                             {errors.email && (
-                                <p className="text-xs text-[var(--accent-red)] flex items-center gap-1 pl-1">
-                                    {errors.email}
-                                </p>
+                                <p className="mt-1.5 text-[12px] text-[#ff3b30]">{errors.email}</p>
                             )}
                         </div>
 
                         {/* Password */}
-                        <div className="space-y-1.5">
-                            <div className="flex items-center justify-between">
-                                <label className="block text-sm font-medium text-[var(--body-color)]">
+                        <div>
+                            <div className="flex items-center justify-between mb-1.5">
+                                <label className="block text-[14px] font-semibold text-[#1d1d1f]">
                                     Password
                                 </label>
                                 <Link
                                     href="/forgot-password"
-                                    className="text-xs font-medium text-[var(--accent-blue)] hover:text-[#8dd7ff] transition-colors"
+                                    className="text-[13px] font-medium text-[#0066cc] hover:text-[#0071e3] transition-colors"
                                 >
                                     Forgot password?
                                 </Link>
                             </div>
                             <div className="relative">
-                                <Lock className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--ash)]" />
+                                <Lock className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "#aeaeb2" }} />
                                 <input
                                     type={showPassword ? "text" : "password"}
                                     placeholder="••••••••"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full rounded-xl border border-[var(--hairline)] bg-[var(--surface-card)] pl-11 pr-12 py-3.5 text-sm text-[var(--ink)] placeholder:text-[var(--ash)] outline-none transition-all focus:border-[var(--accent-blue)]/60 focus:ring-2 focus:ring-[var(--accent-blue)]/15"
+                                    className="w-full pl-10 pr-12 py-3 text-[15px] text-[#1d1d1f] placeholder:text-[#aeaeb2] outline-none transition-colors"
+                                    style={{
+                                        border: errors.password ? "1px solid #ff3b30" : "1px solid #d2d2d7",
+                                        borderRadius: 11,
+                                        background: "#f5f5f7",
+                                    }}
+                                    onFocus={(e) => (e.currentTarget.style.borderColor = "#0066cc")}
+                                    onBlur={(e) => (e.currentTarget.style.borderColor = errors.password ? "#ff3b30" : "#d2d2d7")}
                                     autoComplete="current-password"
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword((p) => !p)}
-                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--ash)] hover:text-[var(--mute)] transition-colors p-0.5"
+                                    className="absolute right-3.5 top-1/2 -translate-y-1/2 cursor-pointer transition-colors"
+                                    style={{ color: "#aeaeb2" }}
                                     aria-label={showPassword ? "Hide password" : "Show password"}
                                 >
-                                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                 </button>
                             </div>
                             {errors.password && (
-                                <p className="text-xs text-[var(--accent-red)] pl-1">{errors.password}</p>
+                                <p className="mt-1.5 text-[12px] text-[#ff3b30]">{errors.password}</p>
                             )}
                         </div>
 
                         {/* Server error */}
                         {serverError && (
-                            <div className="rounded-xl border border-[var(--accent-red)]/30 bg-[var(--accent-red)]/8 px-4 py-3.5">
-                                <p className="text-sm text-[var(--accent-red)] font-medium">{serverError}</p>
+                            <div className="rounded-[11px] px-4 py-3" style={{ background: "rgba(255,59,48,0.06)", border: "1px solid rgba(255,59,48,0.25)" }}>
+                                <p className="text-[13px] text-[#ff3b30] font-medium">{serverError}</p>
                             </div>
                         )}
 
@@ -266,11 +283,14 @@ function LoginForm() {
                         <button
                             type="submit"
                             disabled={submitting}
-                            className="w-full flex items-center justify-center gap-2.5 rounded-xl bg-[var(--accent-blue)] px-6 py-3.5 text-sm font-semibold text-[#07080a] shadow-sm transition-all hover:bg-[#8dd7ff] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+                            className="w-full flex items-center justify-center gap-2 py-3 text-[15px] font-medium text-white rounded-full transition-colors disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+                            style={{ background: "#0066cc" }}
+                            onMouseOver={(e) => !submitting && (e.currentTarget.style.background = "#0071e3")}
+                            onMouseOut={(e) => (e.currentTarget.style.background = "#0066cc")}
                         >
                             {submitting ? (
                                 <>
-                                    <svg className="animate-spin h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none">
+                                    <svg className="animate-spin w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none">
                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                                     </svg>
@@ -279,26 +299,27 @@ function LoginForm() {
                             ) : (
                                 <>
                                     Sign in to AgentFarms
-                                    <ArrowRight className="h-4 w-4 shrink-0" />
+                                    <ArrowRight className="w-4 h-4 shrink-0" />
                                 </>
                             )}
                         </button>
                     </form>
 
-                    <p className="mt-6 text-center text-sm text-[var(--mute)]">
+                    {/* Sign up link */}
+                    <p className="mt-6 text-center text-[14px] text-[#6e6e73]">
                         Don&rsquo;t have an account?{" "}
-                        <Link
-                            href="/signup"
-                            className="font-semibold text-[var(--accent-blue)] hover:text-[#8dd7ff] transition-colors"
-                        >
-                            Request access
+                        <Link href="/get-started" className="font-semibold text-[#0066cc] hover:text-[#0071e3] transition-colors">
+                            Get started free
                         </Link>
                     </p>
 
-                    {/* Bottom trust row */}
-                    <div className="mt-8 pt-7 border-t border-[var(--hairline)] flex items-center justify-center gap-3 text-xs text-[var(--ash)]">
+                    {/* Trust row */}
+                    <div
+                        className="mt-8 pt-6 flex items-center justify-center gap-3 text-[12px] text-[#aeaeb2]"
+                        style={{ borderTop: "1px solid #e8e8ed" }}
+                    >
                         <span className="flex items-center gap-1">
-                            <Shield className="w-3 h-3" />
+                            <ShieldCheck className="w-3.5 h-3.5" />
                             SOC 2 Ready
                         </span>
                         <span>·</span>
