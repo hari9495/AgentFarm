@@ -488,7 +488,7 @@ export const bots: Bot[] = [
         plan: "Starter+",
         color: "indigo",
         department: "Engineering",
-        available: false,
+        available: true,
     },
     {
         slug: "ai-platform-engineer",
@@ -728,7 +728,7 @@ export const bots: Bot[] = [
         plan: "Starter+",
         color: "teal",
         department: "Product",
-        available: false,
+        available: true,
     },
 
     // â”€â”€â”€ Design â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -826,7 +826,7 @@ export const bots: Bot[] = [
         plan: "Starter+",
         color: "pink",
         department: "Marketing",
-        available: false,
+        available: true,
     },
     {
         slug: "ai-seo-specialist",
@@ -872,7 +872,7 @@ export const bots: Bot[] = [
         plan: "Starter+",
         color: "purple",
         department: "Marketing",
-        available: false,
+        available: true,
     },
 
     // â”€â”€â”€ HR & Talent â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -897,7 +897,7 @@ export const bots: Bot[] = [
         plan: "Starter+",
         color: "blue",
         department: "HR & Talent",
-        available: false,
+        available: true,
     },
     {
         slug: "ai-hr-analyst",
@@ -970,7 +970,7 @@ export const bots: Bot[] = [
         plan: "Starter+",
         color: "orange",
         department: "Customer Success",
-        available: false,
+        available: true,
     },
     {
         slug: "ai-customer-success-manager",
@@ -1018,7 +1018,7 @@ export const bots: Bot[] = [
         plan: "Starter+",
         color: "slate",
         department: "Operations",
-        available: false,
+        available: true,
     },
     // â”€â”€â”€ Sales â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     {
@@ -1042,7 +1042,7 @@ export const bots: Bot[] = [
         plan: "Starter+",
         color: "green",
         department: "Sales",
-        available: false,
+        available: true,
     },
 
     // â”€â”€â”€ Marketing (additional) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -1067,7 +1067,7 @@ export const bots: Bot[] = [
         plan: "Starter+",
         color: "purple",
         department: "Marketing",
-        available: false,
+        available: true,
     },
 
     // â”€â”€â”€ Operations (additional) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -1092,7 +1092,7 @@ export const bots: Bot[] = [
         plan: "Starter+",
         color: "slate",
         department: "Operations",
-        available: false,
+        available: true,
     },
 
     // â”€â”€â”€ Catalogue agents (auto-generated from agents/catalogue) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
