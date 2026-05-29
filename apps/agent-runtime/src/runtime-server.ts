@@ -124,6 +124,7 @@ import {
     CORPORATE_ASSISTANT_ROLE_ALLOWED_LOCAL_ACTIONS,
     isCorporateAssistantRoleProfile,
 } from './agents/corporate-assistant/corporate-assistant-agent-profile.js';
+import { DEVELOPER_ROLE_ALLOWED_CONNECTORS } from './agents/developer/developer-agent-profile.js';
 import { DEVOPS_ROLE_ALLOWED_CONNECTORS, DEVOPS_ROLE_ALLOWED_LOCAL_ACTIONS } from './agents/devops/devops-agent-profile.js';
 import { MOBILE_ROLE_ALLOWED_CONNECTORS, MOBILE_ROLE_ALLOWED_LOCAL_ACTIONS } from './agents/mobile/mobile-agent-profile.js';
 import { BUSINESS_ANALYST_ROLE_ALLOWED_CONNECTORS, BUSINESS_ANALYST_ROLE_ALLOWED_LOCAL_ACTIONS } from './agents/business-analyst/business-analyst-role-profile.js';
@@ -906,7 +907,7 @@ type RuntimeLocalWorkspaceActionType = LocalWorkspaceActionType;
 
 const ROLE_CONNECTOR_POLICY: Record<RoleKey, RuntimeConnectorType[]> = {
     recruiter: [...RECRUITER_ROLE_ALLOWED_CONNECTORS],
-    developer: ['jira', 'teams', 'github', 'email'],
+    developer: [...DEVELOPER_ROLE_ALLOWED_CONNECTORS],
     fullstack_developer: [...FSD_ROLE_ALLOWED_CONNECTORS],
     tester: [...TESTER_ROLE_ALLOWED_CONNECTORS],
     business_analyst: [...BUSINESS_ANALYST_ROLE_ALLOWED_CONNECTORS],
