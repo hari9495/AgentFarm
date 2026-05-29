@@ -1,19 +1,6 @@
 import type { Metadata } from "next";
-import {
-    Activity,
-    Code2,
-    GitBranch,
-    Layout,
-    Server,
-    Shield,
-    Sparkles,
-    TestTube2,
-    Zap,
-    CheckCircle2,
-} from "lucide-react";
-import ButtonLink from "@/components/shared/ButtonLink";
-import ProductSceneSection from "@/components/product/ProductSceneSection";
-import ProductDemoVideo from "@/components/product/ProductDemoVideo";
+import { ArrowRight, CheckCircle2, Code2, Zap, Shield, Server, TestTube2, Activity, GitBranch, Layout } from "lucide-react";
+import Link from "next/link";
 import { productPageContent } from "@/lib/marketing-content";
 
 export const metadata: Metadata = {
@@ -21,162 +8,175 @@ export const metadata: Metadata = {
     description: productPageContent.metadata.description,
 };
 
-const features = [
-    { icon: Code2, ...productPageContent.features[0] },
-    { icon: Zap, ...productPageContent.features[1] },
-    { icon: Shield, ...productPageContent.features[2] },
-    { icon: Server, ...productPageContent.features[3] },
-    { icon: TestTube2, ...productPageContent.features[4] },
-    { icon: Activity, ...productPageContent.features[5] },
-    { icon: GitBranch, ...productPageContent.features[6] },
-    { icon: Layout, ...productPageContent.features[7] },
-];
+const featureIcons = [Code2, Zap, Shield, Server, TestTube2, Activity, GitBranch, Layout];
 
 export default function ProductPage() {
     return (
-        <div>
-            <section className="relative overflow-hidden">
-                <img
-                    src="https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=1800&q=80"
-                    alt="AgentFarm product dashboard showing governed AI workers in action"
-                    className="h-[440px] w-full object-cover sm:h-[540px]"
-                    loading="eager"
-                />
-                <div className="absolute inset-0 bg-gradient-to-r from-[#07080a]/90 via-[#07080a]/60 to-transparent" />
-                <div className="absolute inset-0 flex items-center">
-                    <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-                        <div className="max-w-2xl">
-                            <span className="mb-5 inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-violet-300 backdrop-blur">
-                                <Sparkles className="h-3.5 w-3.5" />
-                                {productPageContent.hero.badge}
-                            </span>
-                            <h1 className="mt-3 text-4xl font-extrabold tracking-tight text-white sm:text-6xl">
+        <div style={{ background: "#ffffff" }}>
+
+            {/* Hero — white */}
+            <section className="af-tile af-tile-white" style={{ paddingTop: 80, paddingBottom: 80 }}>
+                <div className="af-container">
+                    <div className="grid lg:grid-cols-2 gap-12 items-center">
+                        <div>
+                            <p className="af-eyebrow mb-4">{productPageContent.hero.badge}</p>
+                            <h1
+                                className="font-semibold text-[#1d1d1f]"
+                                style={{ fontSize: "clamp(2.4rem, 4.5vw, 3.4rem)", letterSpacing: "-0.03em", lineHeight: 1.07 }}
+                            >
                                 {productPageContent.hero.titleLead}{" "}
-                                <span className="bg-gradient-to-r from-violet-300 to-blue-300 bg-clip-text text-transparent">
-                                    {productPageContent.hero.titleAccent}
-                                </span>
+                                <span className="text-[#0066cc]">{productPageContent.hero.titleAccent}</span>
                             </h1>
-                            <p className="mt-5 text-xl leading-relaxed text-slate-300">
+                            <p className="mt-5 text-[17px] text-[#424245] max-w-lg" style={{ lineHeight: 1.47, letterSpacing: "-0.022em" }}>
                                 {productPageContent.hero.description}
                             </p>
-                            <div className="mt-8 flex flex-wrap gap-4">
-                                <ButtonLink href={productPageContent.hero.primaryCta.href} size="lg">
+                            <ul className="mt-6 space-y-2.5">
+                                {productPageContent.outcomes.map((o) => (
+                                    <li key={o} className="flex items-start gap-2.5 text-[15px] text-[#424245]">
+                                        <CheckCircle2 className="mt-0.5 w-4 h-4 shrink-0 text-[#0066cc]" />
+                                        <span style={{ lineHeight: 1.5 }}>{o}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                            <div className="mt-8 flex flex-col sm:flex-row gap-3">
+                                <Link href={productPageContent.hero.primaryCta.href} className="btn-primary">
                                     {productPageContent.hero.primaryCta.label}
-                                </ButtonLink>
-                                <ButtonLink href={productPageContent.hero.secondaryCta.href} variant="outline" size="lg">
+                                    <ArrowRight className="w-4 h-4" />
+                                </Link>
+                                <Link href={productPageContent.hero.secondaryCta.href} className="btn-secondary">
                                     {productPageContent.hero.secondaryCta.label}
-                                </ButtonLink>
+                                </Link>
+                            </div>
+                        </div>
+
+                        {/* Right — execution flow preview */}
+                        <div
+                            className="rounded-[18px] overflow-hidden"
+                            style={{ border: "1px solid #d2d2d7", boxShadow: "0 24px 56px -20px rgba(0,0,0,0.12)" }}
+                        >
+                            <div className="px-5 py-4" style={{ background: "#f5f5f7", borderBottom: "1px solid #e8e8ed" }}>
+                                <p className="text-[12px] font-semibold text-[#1d1d1f]">Execution flow</p>
+                            </div>
+                            <div className="p-4 space-y-2" style={{ background: "#ffffff" }}>
+                                {productPageContent.executionFlow.map((step) => (
+                                    <div
+                                        key={step.step}
+                                        className="rounded-[11px] p-4 flex gap-4"
+                                        style={{ border: "1px solid #e8e8ed", background: "#fafafa" }}
+                                    >
+                                        <span
+                                            className="font-mono text-[11px] font-semibold shrink-0 mt-0.5 text-[#0066cc]"
+                                        >
+                                            {step.step}
+                                        </span>
+                                        <div>
+                                            <p className="text-[13px] font-semibold text-[#1d1d1f]" style={{ letterSpacing: "-0.01em" }}>{step.title}</p>
+                                            <p className="mt-0.5 text-[12px] text-[#6e6e73]" style={{ lineHeight: 1.5 }}>{step.detail}</p>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     </div>
                 </div>
             </section>
 
-            <section className="border-b border-[var(--hairline)] bg-[var(--surface)] py-10">
-                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-                        {productPageContent.outcomes.map((outcome) => (
-                            <div key={outcome} className="flex items-start gap-3">
-                                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-[var(--accent-green)]" />
-                                <p className="text-sm leading-snug text-[var(--body-color)]">{outcome}</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            <section className="py-14 sm:py-16">
-                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                    <div className="rounded-3xl border border-[var(--hairline)] bg-[var(--surface-card)] px-5 py-6 sm:px-8 sm:py-8">
-                        <p className="chip chip-accent">Execution path</p>
-                        <h2 className="mt-4 text-2xl font-semibold tracking-[-0.03em] text-[var(--ink)] sm:text-3xl">
-                            From role selection to trusted delivery in three steps
-                        </h2>
-                        <div className="mt-6 grid gap-4 md:grid-cols-3">
-                            {productPageContent.executionFlow.map((item) => (
-                                <article key={item.step} className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface-el)] p-4">
-                                    <p className="text-xs font-semibold tracking-[0.14em] text-[var(--ash)]">STEP {item.step}</p>
-                                    <h3 className="mt-2 text-base font-semibold text-[var(--ink)]">{item.title}</h3>
-                                    <p className="mt-2 text-sm text-[var(--body-color)]">{item.detail}</p>
-                                </article>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <ProductSceneSection />
-
-            <section className="bg-[var(--surface)] py-20">
-                <div className="mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
-                    <p className="chip chip-accent mb-4">{productPageContent.demo.badge}</p>
-                    <h2 className="mb-4 text-2xl font-semibold tracking-[-0.03em] text-[var(--ink)] sm:text-3xl">
-                        {productPageContent.demo.title}
-                    </h2>
-                    <p className="mx-auto mb-8 max-w-xl text-base text-[var(--mute)]">
-                        {productPageContent.demo.description}
-                    </p>
-                    <ProductDemoVideo />
-                </div>
-            </section>
-
-            <section className="py-24">
-                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                    <div className="mx-auto mb-16 max-w-2xl text-center">
-                        <h2 className="text-3xl font-semibold tracking-[-0.03em] text-[var(--ink)] sm:text-4xl">
+            {/* Features grid — parchment */}
+            <section className="af-tile af-tile-parchment">
+                <div className="af-container">
+                    <div className="text-center mb-12">
+                        <h2
+                            className="font-semibold text-[#1d1d1f]"
+                            style={{ fontSize: "clamp(1.9rem, 3.5vw, 2.8rem)", letterSpacing: "-0.028em", lineHeight: 1.07 }}
+                        >
                             {productPageContent.featuresHeader.title}
                         </h2>
-                        <p className="mt-4 text-lg text-[var(--mute)]">
+                        <p className="mt-3 mx-auto max-w-lg text-[17px] text-[#424245]" style={{ lineHeight: 1.47, letterSpacing: "-0.022em" }}>
                             {productPageContent.featuresHeader.description}
                         </p>
                     </div>
-                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-                        {features.map(({ icon: Icon, gradient, title, description, image }) => (
-                            <div
-                                key={title}
-                                className="group overflow-hidden rounded-2xl border border-[var(--hairline)] bg-[var(--surface-card)] transition-all hover:-translate-y-1 hover:border-[var(--accent-blue)]/40"
-                            >
-                                <div className="relative h-36 overflow-hidden">
-                                    <img
-                                        src={image}
-                                        alt={title}
-                                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                                        loading="lazy"
-                                    />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-[#07080a]/70 to-transparent" />
-                                    <div className="absolute bottom-3 left-3">
-                                        <div className={`flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br ${gradient}`}>
-                                            <Icon className="h-5 w-5 text-white" />
-                                        </div>
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {productPageContent.features.map((feature, i) => {
+                            const Icon = featureIcons[i] ?? Zap;
+                            return (
+                                <div
+                                    key={feature.title}
+                                    className="rounded-[18px] p-5"
+                                    style={{ background: "#ffffff", border: "1px solid #d2d2d7" }}
+                                >
+                                    <div
+                                        className="w-9 h-9 rounded-[8px] flex items-center justify-center mb-3"
+                                        style={{ background: "rgba(0,102,204,0.08)" }}
+                                    >
+                                        <Icon className="w-5 h-5 text-[#0066cc]" />
                                     </div>
+                                    <h3 className="font-semibold text-[15px] text-[#1d1d1f] mb-1.5" style={{ letterSpacing: "-0.015em" }}>
+                                        {feature.title}
+                                    </h3>
+                                    <p className="text-[13px] text-[#6e6e73]" style={{ lineHeight: 1.5 }}>
+                                        {feature.description}
+                                    </p>
                                 </div>
-                                <div className="p-5">
-                                    <h3 className="mb-2 text-sm font-semibold text-[var(--ink)]">{title}</h3>
-                                    <p className="text-xs leading-relaxed text-[var(--mute)]">{description}</p>
-                                </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
             </section>
 
-            <section className="py-20">
-                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                    <div className="relative overflow-hidden rounded-3xl">
-                        <img
-                            src="https://images.unsplash.com/photo-1504639725590-34d0984388bd?auto=format&fit=crop&w=1800&q=80"
-                            alt="Team building software together"
-                            className="absolute inset-0 h-full w-full object-cover"
-                            loading="lazy"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-br from-[#07080a]/90 via-[#07080a]/90 to-[#07080a]/90" />
-                        <div className="relative px-10 py-16 text-center text-white">
-                            <h2 className="mb-4 text-3xl font-bold">{productPageContent.cta.title}</h2>
-                            <p className="mx-auto mb-8 max-w-md text-[var(--mute)]">{productPageContent.cta.description}</p>
-                            <ButtonLink href={productPageContent.cta.button.href} size="lg">
-                                {productPageContent.cta.button.label}
-                            </ButtonLink>
-                        </div>
+            {/* Demo section — dark */}
+            <section className="af-tile af-tile-dark text-center">
+                <div className="af-container-narrow">
+                    <p className="af-eyebrow mb-4">{productPageContent.demo.badge}</p>
+                    <h2
+                        className="font-semibold text-white"
+                        style={{ fontSize: "clamp(1.9rem, 3.5vw, 2.8rem)", letterSpacing: "-0.028em", lineHeight: 1.07 }}
+                    >
+                        {productPageContent.demo.title}
+                    </h2>
+                    <p className="mt-4 text-[17px] text-[#98989d]" style={{ lineHeight: 1.47, letterSpacing: "-0.022em" }}>
+                        {productPageContent.demo.description}
+                    </p>
+                    {/* Video placeholder */}
+                    <div
+                        className="mt-10 mx-auto rounded-[18px] overflow-hidden flex items-center justify-center"
+                        style={{ maxWidth: 720, aspectRatio: "16/9", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}
+                    >
+                        <Link
+                            href="/book-demo"
+                            className="flex flex-col items-center gap-3 text-[#98989d] hover:text-white transition-colors"
+                        >
+                            <div
+                                className="w-14 h-14 rounded-full flex items-center justify-center"
+                                style={{ background: "rgba(0,102,204,0.25)", border: "1px solid rgba(41,151,255,0.3)" }}
+                            >
+                                <span className="text-[#2997ff] text-xl ml-1">▶</span>
+                            </div>
+                            <span className="text-[15px]">Book a live demo</span>
+                        </Link>
+                    </div>
+                </div>
+            </section>
+
+            {/* CTA — white */}
+            <section className="af-tile af-tile-white text-center">
+                <div className="af-container-narrow">
+                    <h2
+                        className="font-semibold text-[#1d1d1f]"
+                        style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.6rem)", letterSpacing: "-0.025em", lineHeight: 1.1 }}
+                    >
+                        {productPageContent.cta.title}
+                    </h2>
+                    <p className="mt-4 text-[17px] text-[#6e6e73]" style={{ lineHeight: 1.47 }}>
+                        {productPageContent.cta.description}
+                    </p>
+                    <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+                        <Link href="/get-started" className="btn-primary">
+                            Start free trial
+                            <ArrowRight className="w-4 h-4" />
+                        </Link>
+                        <Link href="/how-it-works" className="btn-secondary">
+                            See how it works
+                        </Link>
                     </div>
                 </div>
             </section>

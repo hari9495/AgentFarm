@@ -1,14 +1,6 @@
 import type { Metadata } from "next";
-import {
-    BarChart3,
-    CheckCircle2,
-    Link as LinkIcon,
-    MessageSquare,
-    ShoppingCart,
-    Sparkles,
-    Users,
-} from "lucide-react";
-import ButtonLink from "@/components/shared/ButtonLink";
+import { ArrowRight, CheckCircle2, ShoppingCart, Users, Link as LinkIcon, MessageSquare, CheckCircle, BarChart3 } from "lucide-react";
+import Link from "next/link";
 import { howItWorksPageContent } from "@/lib/marketing-content";
 
 export const metadata: Metadata = howItWorksPageContent.metadata;
@@ -18,7 +10,7 @@ const stepIcons = {
     users: Users,
     link: LinkIcon,
     "message-square": MessageSquare,
-    "check-circle-2": CheckCircle2,
+    "check-circle-2": CheckCircle,
     "bar-chart-3": BarChart3,
 } as const;
 
@@ -26,95 +18,137 @@ export default function HowItWorksPage() {
     const { hero, timeline, steps, cta } = howItWorksPageContent;
 
     return (
-        <div>
-            <section className="relative overflow-hidden">
-                <img
-                    src={hero.image}
-                    alt={hero.imageAlt}
-                    className="w-full h-[420px] sm:h-[500px] object-cover"
-                    loading="eager"
-                />
-                <div className="absolute inset-0 bg-gradient-to-r from-[#07080a]/85 via-[#07080a]/70 to-transparent" />
-                <div className="absolute inset-0 flex items-center">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-                        <div className="max-w-2xl">
-                            <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-emerald-300 bg-white/10 backdrop-blur border border-white/20 px-3 py-1.5 rounded-full mb-5">
-                                <Sparkles className="w-3.5 h-3.5" />
-                                {hero.eyebrow}
-                            </span>
-                            <h1 className="mt-3 text-4xl sm:text-6xl font-extrabold text-white tracking-tight leading-tight">
-                                {hero.titleLead}{" "}
-                                <span className="bg-gradient-to-r from-emerald-300 to-blue-300 bg-clip-text text-transparent">
-                                    {hero.titleAccent}
+        <div style={{ background: "#ffffff" }}>
+
+            {/* Hero — white */}
+            <section className="af-tile af-tile-white text-center" style={{ paddingTop: 80, paddingBottom: 72 }}>
+                <div className="af-container-narrow">
+                    <p className="af-eyebrow mb-4">{hero.eyebrow}</p>
+                    <h1
+                        className="font-semibold text-[#1d1d1f]"
+                        style={{ fontSize: "clamp(2.4rem, 5vw, 3.6rem)", letterSpacing: "-0.03em", lineHeight: 1.07 }}
+                    >
+                        {hero.titleLead}{" "}
+                        <span className="text-[#0066cc]">{hero.titleAccent}</span>
+                    </h1>
+                    <p className="mt-5 text-[17px] text-[#424245] max-w-lg mx-auto" style={{ lineHeight: 1.47, letterSpacing: "-0.022em" }}>
+                        {hero.description}
+                    </p>
+                </div>
+            </section>
+
+            {/* Timeline bar — parchment */}
+            <section className="af-tile af-tile-parchment" style={{ paddingTop: 32, paddingBottom: 32 }}>
+                <div className="af-container">
+                    <div className="flex flex-wrap justify-center gap-6">
+                        {timeline.map((item, i) => (
+                            <div key={item.label} className="flex items-center gap-3">
+                                <span
+                                    className="text-[12px] font-semibold text-white rounded-full w-5 h-5 flex items-center justify-center shrink-0"
+                                    style={{ background: "#0066cc", fontSize: "11px" }}
+                                >
+                                    {i + 1}
                                 </span>
-                            </h1>
-                            <p className="mt-5 text-xl text-slate-300 leading-relaxed">{hero.description}</p>
-                        </div>
+                                <span className="text-[14px] text-[#6e6e73]">{item.label}</span>
+                                <span className="text-[14px] font-semibold text-[#0066cc]">{item.time}</span>
+                                {i < timeline.length - 1 && (
+                                    <ArrowRight className="w-3.5 h-3.5 text-[#d2d2d7] hidden sm:block" />
+                                )}
+                            </div>
+                        ))}
                     </div>
                 </div>
             </section>
 
-            <div className="bg-[var(--canvas)] border-b border-[var(--hairline)]">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-wrap justify-center gap-8 text-center">
-                    {timeline.map((item) => (
-                        <div key={item.label} className="flex items-center gap-3">
-                            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                            <span className="text-[var(--mute)] text-sm">{item.label}</span>
-                            <span className="text-[var(--ink)] font-semibold text-sm">{item.time}</span>
-                        </div>
-                    ))}
-                </div>
-            </div>
+            {/* Steps — alternating tiles */}
+            {steps.map((step, index) => {
+                const StepIcon = stepIcons[step.icon as keyof typeof stepIcons] ?? CheckCircle;
+                const isDark = index % 2 === 1;
+                const isReversed = index % 2 === 1;
 
-            <section className="py-24">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="space-y-16">
-                        {steps.map((step, index) => {
-                            const StepIcon = stepIcons[step.icon];
-                            const isEven = index % 2 === 1;
-
-                            return (
-                                <div key={step.number} className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
-                                    <div className={isEven ? "lg:order-2" : ""}>
-                                        <div className="flex items-center gap-3 mb-4">
-                                            <div className={`w-11 h-11 rounded-2xl bg-gradient-to-br ${step.gradient} flex items-center justify-center shadow-lg`}>
-                                                <StepIcon className="w-5 h-5 text-white" />
-                                            </div>
-                                            <span className="text-xs font-bold text-[var(--ash)] font-mono uppercase tracking-widest">
-                                                Step {step.number}
-                                            </span>
+                return (
+                    <section
+                        key={step.number}
+                        className={`af-tile ${isDark ? "af-tile-dark" : "af-tile-white"}`}
+                        style={{ paddingTop: 72, paddingBottom: 72 }}
+                    >
+                        <div className="af-container">
+                            <div className={`grid lg:grid-cols-2 gap-12 items-center ${isReversed ? "lg:[&>*:first-child]:order-2 lg:[&>*:last-child]:order-1" : ""}`}>
+                                <div>
+                                    <div className="flex items-center gap-3 mb-5">
+                                        <div
+                                            className="w-10 h-10 rounded-[10px] flex items-center justify-center"
+                                            style={{ background: isDark ? "rgba(41,151,255,0.15)" : "rgba(0,102,204,0.08)" }}
+                                        >
+                                            <StepIcon className="w-5 h-5" style={{ color: isDark ? "#2997ff" : "#0066cc" }} />
                                         </div>
-                                        <h2 className="text-2xl font-semibold tracking-[-0.03em] text-[var(--ink)] mb-4">{step.title}</h2>
-                                        <p className="text-[var(--mute)] leading-relaxed mb-5">{step.description}</p>
-                                        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--accent-green)] bg-[var(--accent-green)]/10 border border-[var(--accent-green)]/20 px-3 py-1.5 rounded-full">
-                                            {step.detail}
+                                        <span className="text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: isDark ? "#98989d" : "#aeaeb2" }}>
+                                            Step {step.number}
                                         </span>
                                     </div>
-                                    <div className={`relative rounded-2xl overflow-hidden shadow-xl ${isEven ? "lg:order-1" : ""}`}>
-                                        <img
-                                            src={step.image}
-                                            alt={step.title}
-                                            className="w-full h-64 sm:h-72 object-cover"
-                                            loading="lazy"
-                                        />
-                                        <div className="absolute top-3 left-3 bg-[#07080a]/80 backdrop-blur-sm text-white text-xs font-mono px-2.5 py-1 rounded-full">
-                                            {step.number}
-                                        </div>
-                                    </div>
+                                    <h2
+                                        className="font-semibold mb-4"
+                                        style={{
+                                            fontSize: "clamp(1.6rem, 3vw, 2.2rem)",
+                                            letterSpacing: "-0.025em",
+                                            lineHeight: 1.1,
+                                            color: isDark ? "#f5f5f7" : "#1d1d1f",
+                                        }}
+                                    >
+                                        {step.title}
+                                    </h2>
+                                    <p className="text-[17px] mb-5" style={{ lineHeight: 1.47, letterSpacing: "-0.022em", color: isDark ? "#98989d" : "#424245" }}>
+                                        {step.description}
+                                    </p>
+                                    <span
+                                        className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-full"
+                                        style={{
+                                            background: isDark ? "rgba(41,151,255,0.12)" : "rgba(0,102,204,0.08)",
+                                            color: isDark ? "#2997ff" : "#0066cc",
+                                        }}
+                                    >
+                                        {step.detail}
+                                    </span>
                                 </div>
-                            );
-                        })}
-                    </div>
-
-                    <div className="mt-20 relative overflow-hidden rounded-3xl">
-                        <div className="absolute inset-0 bg-[var(--canvas)] border border-[var(--hairline)]" />
-                        <div className="relative py-14 px-10 text-center">
-                            <h3 className="text-2xl font-semibold tracking-[-0.03em] text-[var(--ink)] mb-3">{cta.title}</h3>
-                            <p className="text-[var(--mute)] mb-6">{cta.description}</p>
-                            <ButtonLink href={cta.primary.href} size="lg">
-                                {cta.primary.label}
-                            </ButtonLink>
+                                <div
+                                    className="rounded-[18px] overflow-hidden"
+                                    style={{
+                                        border: isDark ? "1px solid rgba(255,255,255,0.1)" : "1px solid #d2d2d7",
+                                        boxShadow: "0 24px 56px -20px rgba(0,0,0,0.18)",
+                                    }}
+                                >
+                                    <img
+                                        src={step.image}
+                                        alt={step.title}
+                                        className="w-full h-64 sm:h-72 object-cover"
+                                        loading="lazy"
+                                    />
+                                </div>
+                            </div>
                         </div>
+                    </section>
+                );
+            })}
+
+            {/* CTA — dark */}
+            <section className="af-tile af-tile-dark text-center">
+                <div className="af-container-narrow">
+                    <h2
+                        className="font-semibold text-white"
+                        style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.6rem)", letterSpacing: "-0.025em", lineHeight: 1.1 }}
+                    >
+                        {cta.title}
+                    </h2>
+                    <p className="mt-4 text-[17px] text-[#98989d]" style={{ lineHeight: 1.47 }}>
+                        {cta.description}
+                    </p>
+                    <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+                        <Link href={cta.primary.href} className="px-6 py-3 rounded-full text-[17px] font-medium text-white transition-colors" style={{ background: "#0066cc" }}>
+                            {cta.primary.label}
+                        </Link>
+                        <Link href="/pricing" className="px-6 py-3 rounded-full text-[17px] font-medium text-white transition-colors" style={{ border: "1px solid rgba(255,255,255,0.25)" }}>
+                            See pricing
+                        </Link>
                     </div>
                 </div>
             </section>

@@ -8,25 +8,31 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
     return (
-        <div className="mx-auto max-w-3xl px-4 py-24 sm:px-6 lg:px-8">
-            <div className="chip chip-accent mb-4">Legal</div>
-            <h1 className="mb-3 text-4xl font-semibold tracking-[-0.03em] text-[var(--ink)]">
-                {termsPageContent.title}
-            </h1>
-            <p className="mb-12 text-[var(--mute)]">Last updated: {termsPageContent.updatedAt}</p>
-
-            <p className="mb-12 text-lg leading-relaxed text-[var(--body-color)]">
-                {termsPageContent.intro}
-            </p>
-
-            <div className="space-y-8">
-                {termsPageContent.sections.map(({ heading, body }) => (
-                    <div key={heading} className="border-b border-[var(--hairline)] pb-8 last:border-0">
-                        <h2 className="mb-3 text-lg font-semibold text-[var(--ink)]">{heading}</h2>
-                        <p className="leading-relaxed text-[var(--body-color)]">{body}</p>
+        <div style={{ background: "#ffffff" }}>
+            <section className="af-tile af-tile-white" style={{ paddingTop: 80, paddingBottom: 80 }}>
+                <div className="af-container-narrow">
+                    <p className="af-eyebrow mb-3">Legal</p>
+                    <h1 className="font-semibold text-[#1d1d1f] mb-2" style={{ fontSize: "clamp(2rem, 4vw, 2.8rem)", letterSpacing: "-0.028em", lineHeight: 1.1 }}>
+                        {termsPageContent.title}
+                    </h1>
+                    <p className="text-[14px] text-[#aeaeb2] mb-8">Last updated: {termsPageContent.updatedAt}</p>
+                    <div style={{ borderTop: "1px solid #e8e8ed" }} className="pt-8">
+                        <p className="text-[17px] text-[#424245] mb-10" style={{ lineHeight: 1.7 }}>
+                            {termsPageContent.intro}
+                        </p>
+                        <div className="space-y-8">
+                            {termsPageContent.sections.map((section) => (
+                                <div key={section.heading}>
+                                    <h2 className="font-semibold text-[#1d1d1f] mb-3" style={{ fontSize: "1.1rem", letterSpacing: "-0.015em" }}>
+                                        {section.heading}
+                                    </h2>
+                                    <p className="text-[15px] text-[#424245]" style={{ lineHeight: 1.7 }}>{section.body}</p>
+                                </div>
+                            ))}
+                        </div>
                     </div>
-                ))}
-            </div>
+                </div>
+            </section>
         </div>
     );
 }

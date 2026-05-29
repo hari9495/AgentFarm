@@ -1,76 +1,75 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { blogListingContent, blogPostsContent } from "@/lib/marketing-content";
 
 export const metadata: Metadata = blogListingContent.metadata;
 
-const categoryColors: Record<string, string> = {
-    Product: "bg-[var(--accent-blue)]/10 text-[var(--accent-blue)] border border-[var(--accent-blue)]/20",
-    Engineering: "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20",
-    Insights: "bg-[var(--accent-green)]/10 text-[var(--accent-green)] border border-[var(--accent-green)]/20",
+const featuredPost = blogPostsContent[0];
+const otherPosts = blogPostsContent.slice(1);
+
+const categoryColors: Record<string, { bg: string; text: string }> = {
+    Product: { bg: "rgba(0,102,204,0.08)", text: "#0066cc" },
+    Engineering: { bg: "rgba(88,86,214,0.08)", text: "#5856d6" },
+    Insights: { bg: "rgba(52,199,89,0.08)", text: "#1a7a4a" },
 };
 
-const featuredPost = blogPostsContent[0];
+function categoryStyle(cat: string) {
+    return categoryColors[cat] ?? { bg: "rgba(0,102,204,0.08)", text: "#0066cc" };
+}
 
 export default function BlogPage() {
     const { hero } = blogListingContent;
 
     return (
-        <div>
-            <section className="relative overflow-hidden">
-                <img
-                    src={hero.image}
-                    alt={hero.imageAlt}
-                    className="w-full h-[360px] sm:h-[440px] object-cover"
-                    loading="eager"
-                />
-                <div className="absolute inset-0 bg-gradient-to-r from-[#07080a]/90 via-[#07080a]/60 to-transparent" />
-                <div className="absolute inset-0 flex items-center">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-                        <div className="max-w-2xl">
-                            <span className="chip chip-accent mb-5">{hero.eyebrow}</span>
-                            <h1 className="mt-3 text-4xl sm:text-6xl font-semibold text-white tracking-[-0.03em]">
-                                {hero.titleLead}{" "}
-                                <span className="bg-gradient-to-r from-[var(--accent-blue)] to-indigo-300 bg-clip-text text-transparent">
-                                    {hero.titleAccent}
-                                </span>
-                            </h1>
-                            <p className="mt-5 text-xl text-slate-300 max-w-2xl leading-relaxed">{hero.description}</p>
-                        </div>
-                    </div>
+        <div style={{ background: "#ffffff" }}>
+
+            {/* Hero */}
+            <section className="af-tile af-tile-white text-center" style={{ paddingTop: 80, paddingBottom: 56 }}>
+                <div className="af-container-narrow">
+                    <p className="af-eyebrow mb-4">{hero.eyebrow}</p>
+                    <h1 className="font-semibold text-[#1d1d1f]" style={{ fontSize: "clamp(2.4rem, 5vw, 3.6rem)", letterSpacing: "-0.03em", lineHeight: 1.07 }}>
+                        {hero.titleLead}{" "}
+                        <span className="text-[#0066cc]">{hero.titleAccent}</span>
+                    </h1>
+                    <p className="mt-5 text-[17px] text-[#424245] max-w-lg mx-auto" style={{ lineHeight: 1.47 }}>{hero.description}</p>
                 </div>
             </section>
 
-            <section className="py-12 border-b border-[var(--hairline)]">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <p className="chip chip-accent mb-4">{blogListingContent.featuredLabel}</p>
+            {/* Featured post — parchment */}
+            <section className="af-tile af-tile-parchment" style={{ paddingTop: 0, paddingBottom: 56 }}>
+                <div className="af-container-wide">
+                    <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#6e6e73] mb-5">
+                        {blogListingContent.featuredLabel}
+                    </p>
                     <Link
                         href={`/blog/${featuredPost.slug}`}
-                        className="group flex flex-col md:flex-row gap-6 rounded-2xl border border-[var(--hairline)] bg-[var(--surface-card)] overflow-hidden hover:-translate-y-0.5 hover:border-[var(--accent-blue)]/30 transition-all"
+                        className="group flex flex-col md:flex-row gap-0 rounded-[18px] overflow-hidden transition-all hover:shadow-xl"
+                        style={{ border: "1px solid #d2d2d7", boxShadow: "0 8px 24px -12px rgba(0,0,0,0.1)" }}
                     >
-                        <div className="relative md:w-2/5 h-52 md:h-auto overflow-hidden shrink-0">
+                        <div className="md:w-2/5 h-56 md:h-auto overflow-hidden shrink-0">
                             <img
                                 src={featuredPost.image}
                                 alt={featuredPost.title}
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                 loading="eager"
                             />
-                            <div className="absolute inset-0 bg-gradient-to-r from-transparent to-black/20" />
                         </div>
-                        <div className="flex flex-col justify-center px-6 py-6 md:py-8 flex-1">
-                            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full self-start mb-3 ${categoryColors[featuredPost.category]}`}>
+                        <div className="flex flex-col justify-center px-7 py-8 flex-1" style={{ background: "#ffffff" }}>
+                            <span
+                                className="self-start text-[11px] font-semibold uppercase tracking-[0.06em] px-2.5 py-1 rounded-full mb-3"
+                                style={{ background: categoryStyle(featuredPost.category).bg, color: categoryStyle(featuredPost.category).text }}
+                            >
                                 {featuredPost.category}
                             </span>
-                            <h2 className="text-xl font-semibold text-[var(--ink)] leading-snug mb-3 group-hover:text-[var(--accent-blue)] transition-colors">
+                            <h2 className="font-semibold text-[#1d1d1f] mb-3 group-hover:text-[#0066cc] transition-colors" style={{ fontSize: "clamp(1.3rem, 2.5vw, 1.6rem)", letterSpacing: "-0.02em", lineHeight: 1.2 }}>
                                 {featuredPost.title}
                             </h2>
-                            <p className="text-sm text-[var(--mute)] leading-relaxed mb-5">{featuredPost.excerpt}</p>
+                            <p className="text-[15px] text-[#6e6e73] mb-5" style={{ lineHeight: 1.6 }}>{featuredPost.excerpt}</p>
                             <div className="flex items-center gap-3">
-                                <span className="text-xs text-[var(--ash)]">
-                                    {featuredPost.date} | {featuredPost.readTime}
-                                </span>
-                                <span className="text-xs font-semibold text-[var(--accent-blue)] group-hover:underline">
-                                    {blogListingContent.readNowLabel}
+                                <span className="text-[13px] text-[#aeaeb2]">{featuredPost.date} · {featuredPost.readTime}</span>
+                                <span className="flex items-center gap-1 text-[13px] font-medium text-[#0066cc]">
+                                    {blogListingContent.readNowLabel} <ArrowRight className="w-3.5 h-3.5" />
                                 </span>
                             </div>
                         </div>
@@ -78,51 +77,63 @@ export default function BlogPage() {
                 </div>
             </section>
 
-            <section className="py-24">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <p className="chip chip-accent mb-8">{blogListingContent.allPostsLabel}</p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        {blogPostsContent.map((post) => (
+            {/* Post grid — white */}
+            <section className="af-tile af-tile-white">
+                <div className="af-container-wide">
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                        {otherPosts.map((post) => (
                             <Link
                                 key={post.slug}
                                 href={`/blog/${post.slug}`}
-                                className="group border border-[var(--hairline)] rounded-2xl overflow-hidden hover:-translate-y-1 hover:border-[var(--accent-blue)]/30 transition-all flex flex-col bg-[var(--surface-card)]"
+                                className="group rounded-[18px] overflow-hidden flex flex-col transition-all hover:-translate-y-1 hover:shadow-lg"
+                                style={{ border: "1px solid #d2d2d7" }}
                             >
-                                <div className="relative h-44 overflow-hidden">
+                                <div className="h-44 overflow-hidden">
                                     <img
                                         src={post.image}
                                         alt={post.title}
                                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                         loading="lazy"
                                     />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                                    <div className="absolute bottom-3 left-3 flex items-center gap-2">
-                                        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${categoryColors[post.category]}`}>
-                                            {post.category}
-                                        </span>
-                                        {post.slug === blogListingContent.trendingSlug && (
-                                            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-rose-500 text-white">
-                                                {blogListingContent.trendingLabel}
-                                            </span>
-                                        )}
-                                    </div>
                                 </div>
-                                <div className="p-6 flex flex-col flex-1">
-                                    <h2 className="font-semibold text-[var(--ink)] mb-3 leading-snug group-hover:text-[var(--accent-blue)] transition-colors">
+                                <div className="flex flex-col flex-1 p-5">
+                                    <span
+                                        className="self-start text-[11px] font-semibold uppercase tracking-[0.06em] px-2.5 py-1 rounded-full mb-3"
+                                        style={{ background: categoryStyle(post.category).bg, color: categoryStyle(post.category).text }}
+                                    >
+                                        {post.category}
+                                    </span>
+                                    <h3 className="font-semibold text-[#1d1d1f] mb-2 flex-1 group-hover:text-[#0066cc] transition-colors" style={{ fontSize: "15px", letterSpacing: "-0.015em", lineHeight: 1.4 }}>
                                         {post.title}
-                                    </h2>
-                                    <p className="text-sm text-[var(--mute)] leading-relaxed flex-1">{post.excerpt}</p>
-                                    <div className="mt-5 pt-4 border-t border-[var(--hairline)] flex items-center justify-between">
-                                        <p className="text-xs text-[var(--ash)]">
-                                            {post.date} | {post.readTime}
-                                        </p>
-                                        <span className="text-xs font-semibold text-[var(--accent-blue)] group-hover:underline">
-                                            {blogListingContent.readLabel}
-                                        </span>
+                                    </h3>
+                                    <p className="text-[13px] text-[#6e6e73] mb-4" style={{ lineHeight: 1.5 }}>{post.excerpt}</p>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[12px] text-[#aeaeb2]">{post.date} · {post.readTime}</span>
+                                        <span className="text-[12px] font-medium text-[#0066cc]">Read →</span>
                                     </div>
                                 </div>
                             </Link>
                         ))}
+                    </div>
+                </div>
+            </section>
+
+            {/* CTA — dark */}
+            <section className="af-tile af-tile-dark text-center">
+                <div className="af-container-narrow">
+                    <h2 className="font-semibold text-white" style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.6rem)", letterSpacing: "-0.025em", lineHeight: 1.1 }}>
+                        Ready to see a worker in action?
+                    </h2>
+                    <p className="mt-4 text-[17px] text-[#98989d]" style={{ lineHeight: 1.47 }}>
+                        Start free, no credit card needed.
+                    </p>
+                    <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+                        <Link href="/get-started" className="px-6 py-3 rounded-full text-[17px] font-medium text-white transition-colors" style={{ background: "#0066cc" }}>
+                            Start free trial
+                        </Link>
+                        <Link href="/changelog" className="px-6 py-3 rounded-full text-[17px] font-medium text-white transition-colors" style={{ border: "1px solid rgba(255,255,255,0.25)" }}>
+                            View changelog
+                        </Link>
                     </div>
                 </div>
             </section>

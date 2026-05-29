@@ -1,33 +1,46 @@
-﻿import { Bot } from "lucide-react";
-import ButtonLink from "@/components/shared/ButtonLink";
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 
 export default function NotFound() {
-  return (
-    <div className="min-h-[80vh] flex items-center justify-center bg-white dark:bg-slate-950 py-24">
-      <div className="max-w-md mx-auto px-4 text-center">
-        <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-violet-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-blue-500/25">
-          <Bot className="w-10 h-10 text-white" />
+    return (
+        <div style={{ background: "#ffffff" }}>
+            <section className="af-tile af-tile-white text-center" style={{ paddingTop: 120, paddingBottom: 120 }}>
+                <div className="af-container-narrow">
+                    <p className="font-semibold text-[#0066cc]" style={{ fontSize: "4rem", letterSpacing: "-0.05em", lineHeight: 1 }}>
+                        404
+                    </p>
+                    <h1
+                        className="mt-4 font-semibold text-[#1d1d1f]"
+                        style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.6rem)", letterSpacing: "-0.025em", lineHeight: 1.1 }}
+                    >
+                        Page not found
+                    </h1>
+                    <p className="mt-4 text-[17px] text-[#6e6e73] max-w-sm mx-auto" style={{ lineHeight: 1.47 }}>
+                        The page you&apos;re looking for doesn&apos;t exist or has been moved.
+                    </p>
+                    <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
+                        <Link href="/" className="btn-primary">
+                            Back to home
+                            <ArrowRight className="w-4 h-4" />
+                        </Link>
+                        <Link href="/docs" className="btn-secondary">
+                            Documentation
+                        </Link>
+                    </div>
+                    <div className="mt-10 flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+                        {[
+                            { label: "Marketplace", href: "/marketplace" },
+                            { label: "Pricing", href: "/pricing" },
+                            { label: "Contact", href: "/contact" },
+                            { label: "Status", href: "/status" },
+                        ].map((l) => (
+                            <Link key={l.href} href={l.href} className="text-[14px] text-[#0066cc] hover:text-[#0071e3] transition-colors">
+                                {l.label}
+                            </Link>
+                        ))}
+                    </div>
+                </div>
+            </section>
         </div>
-
-        <p className="text-6xl font-extrabold bg-gradient-to-r from-blue-200 to-violet-200 bg-clip-text text-transparent mb-2">404</p>
-
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-3">
-          This robot went off-script
-        </h1>
-        <p className="text-slate-500 dark:text-slate-400 mb-8 leading-relaxed">
-          The page you are looking for does not exist, or your AI worker accidentally deleted it. Either way, let us get you back on track.
-        </p>
-
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-          <ButtonLink href="/" size="md">
-            Back to Home
-          </ButtonLink>
-          <ButtonLink href="/docs" variant="outline" size="md">
-            View Docs
-          </ButtonLink>
-        </div>
-      </div>
-    </div>
-  );
+    );
 }
-

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Bot, Building2, Quote, Star, TrendingUp } from "lucide-react";
+import { ArrowRight, Star } from "lucide-react";
 import { customersPageContent } from "@/lib/marketing-content";
 
 export const metadata: Metadata = customersPageContent.metadata;
@@ -9,177 +9,151 @@ export default function CustomersPage() {
     const { hero, stats, logos, caseStudies, testimonials, cta } = customersPageContent;
 
     return (
-        <div className="min-h-screen">
-            <div className="bg-[var(--canvas)] border-b border-[var(--hairline)]">
-                <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
-                    <div className="chip chip-accent mb-6">
-                        <Building2 className="w-3.5 h-3.5" /> {hero.eyebrow}
-                    </div>
-                    <h1 className="text-4xl sm:text-5xl font-semibold tracking-[-0.03em] text-[var(--ink)] mb-6 leading-tight">
-                        {hero.titleLead}
-                        <br className="hidden sm:block" />
-                        <span className="bg-gradient-to-r from-[var(--accent-blue)] to-[var(--accent-green)] bg-clip-text text-transparent">
-                            {" "}{hero.titleAccent}
-                        </span>
+        <div style={{ background: "#ffffff" }}>
+
+            {/* Hero */}
+            <section className="af-tile af-tile-white text-center" style={{ paddingTop: 80, paddingBottom: 64 }}>
+                <div className="af-container-narrow">
+                    <p className="af-eyebrow mb-4">{hero.eyebrow}</p>
+                    <h1 className="font-semibold text-[#1d1d1f]" style={{ fontSize: "clamp(2.4rem, 5vw, 3.6rem)", letterSpacing: "-0.03em", lineHeight: 1.07 }}>
+                        {hero.titleLead}{" "}
+                        <span className="text-[#0066cc]">{hero.titleAccent}</span>
                     </h1>
-                    <p className="text-lg text-[var(--mute)] max-w-2xl mx-auto mb-10">{hero.description}</p>
-                    <Link
-                        href={hero.primary.href}
-                        className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-[var(--accent-blue)] text-[#07080a] font-semibold text-sm hover:bg-[#8dd7ff] transition-all"
-                    >
-                        {hero.primary.label} <ArrowRight className="w-4 h-4" />
-                    </Link>
+                    <p className="mt-5 text-[17px] text-[#424245] max-w-lg mx-auto" style={{ lineHeight: 1.47, letterSpacing: "-0.022em" }}>
+                        {hero.description}
+                    </p>
+                    <div className="mt-8">
+                        <Link href={hero.primary.href} className="btn-primary">
+                            {hero.primary.label} <ArrowRight className="w-4 h-4" />
+                        </Link>
+                    </div>
                 </div>
-            </div>
+            </section>
 
-            <div className="bg-[var(--canvas)] border-b border-[var(--hairline)]">
-                <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 grid grid-cols-2 sm:grid-cols-4 gap-8">
-                    {stats.map((stat) => (
-                        <div key={stat.label} className="text-center">
-                            <p className="text-2xl font-bold text-[var(--ink)] mb-1">{stat.value}</p>
-                            <p className="text-xs text-[var(--ash)]">{stat.label}</p>
-                        </div>
-                    ))}
-                </div>
-            </div>
-
-            <div className="py-14 border-b border-[var(--hairline)]">
-                <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-                    <p className="chip chip-accent mx-auto w-fit mb-8">{customersPageContent.logosTitle}</p>
-                    <div className="flex flex-wrap justify-center gap-4">
-                        {logos.map((logo) => (
-                            <div
-                                key={logo.name}
-                                className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[var(--hairline)] bg-[var(--surface-card)]"
-                            >
-                                <div className="h-6 w-6 rounded-md bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center text-[9px] font-bold text-white">
-                                    {logo.initials}
-                                </div>
-                                <span className="text-sm font-semibold text-[var(--body-color)]">{logo.name}</span>
+            {/* Stats */}
+            <section className="af-tile af-tile-parchment" style={{ paddingTop: 40, paddingBottom: 40 }}>
+                <div className="af-container-narrow">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
+                        {stats.map((stat) => (
+                            <div key={stat.label}>
+                                <p className="font-semibold text-[#1d1d1f]" style={{ fontSize: "2rem", letterSpacing: "-0.03em", lineHeight: 1 }}>{stat.value}</p>
+                                <p className="mt-1.5 text-[13px] text-[#6e6e73]">{stat.label}</p>
                             </div>
                         ))}
                     </div>
                 </div>
-            </div>
+            </section>
 
-            <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16 space-y-12">
-                <div className="text-center mb-4">
-                    <div className="chip chip-accent mb-4">
-                        <TrendingUp className="w-3.5 h-3.5" /> Case studies
+            {/* Logo strip */}
+            <section className="af-tile af-tile-white" style={{ paddingTop: 48, paddingBottom: 48 }}>
+                <div className="af-container-wide">
+                    <p className="text-center text-[12px] font-semibold uppercase tracking-[0.08em] text-[#6e6e73] mb-8">
+                        {customersPageContent.logosTitle}
+                    </p>
+                    <div className="flex flex-wrap justify-center gap-3">
+                        {logos.map((logo) => (
+                            <span key={logo.name} className="flex items-center gap-2 rounded-full px-5 py-2.5" style={{ border: "1px solid #d2d2d7" }}>
+                                <span className="w-6 h-6 rounded-full text-[11px] font-bold text-white flex items-center justify-center shrink-0" style={{ background: "#0066cc" }}>
+                                    {logo.initials}
+                                </span>
+                                <span className="text-[14px] font-medium text-[#1d1d1f]">{logo.name}</span>
+                            </span>
+                        ))}
                     </div>
-                    <h2 className="text-3xl font-semibold tracking-[-0.03em] text-[var(--ink)] mb-4">
+                </div>
+            </section>
+
+            {/* Case studies */}
+            <section className="af-tile af-tile-parchment">
+                <div className="af-container">
+                    <h2 className="font-semibold text-[#1d1d1f] mb-12 text-center" style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.4rem)", letterSpacing: "-0.025em" }}>
                         {customersPageContent.caseStudiesTitle}
                     </h2>
-                </div>
-
-                {caseStudies.map((study) => (
-                    <div key={study.company} className="bg-[var(--surface-card)] rounded-3xl border border-[var(--hairline)] overflow-hidden">
-                        <div className="p-8 md:p-10">
-                            <div className="flex items-center gap-3 mb-6">
-                                <div className={`h-12 w-12 rounded-2xl ${study.accentBg} flex items-center justify-center text-sm font-bold ${study.accentColor}`}>
-                                    {study.initials}
-                                </div>
-                                <div>
-                                    <p className="text-lg font-semibold text-[var(--ink)]">{study.company}</p>
-                                    <p className="text-xs text-[var(--ash)]">{study.tagline}</p>
-                                </div>
-                            </div>
-
-                            <div className="grid md:grid-cols-2 gap-8 mb-8">
-                                <div>
-                                    <p className="text-xs font-bold uppercase tracking-wide text-[var(--ash)] mb-2">Challenge</p>
-                                    <p className="text-sm text-[var(--mute)] leading-relaxed">{study.challenge}</p>
-                                </div>
-                                <div>
-                                    <p className="text-xs font-bold uppercase tracking-wide text-[var(--ash)] mb-2">Outcome</p>
-                                    <p className="text-sm text-[var(--mute)] leading-relaxed">{study.outcome}</p>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-                                {study.metrics.map((metric) => (
-                                    <div key={metric.label} className="text-center p-4 rounded-xl bg-[var(--surface-el)]">
-                                        <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--ash)] mb-2">{metric.label}</p>
-                                        <div className="flex items-center justify-center gap-2">
-                                            <span className="text-xs text-[var(--ash)] line-through">{metric.before}</span>
-                                            {metric.before !== "-" && <ArrowRight className="w-3 h-3 text-[var(--ash)]" />}
-                                            <span className="text-sm font-bold text-[var(--accent-green)]">{metric.after}</span>
+                    <div className="space-y-5">
+                        {caseStudies.map((cs) => (
+                            <div key={cs.company} className="rounded-[18px] p-7" style={{ background: "#ffffff", border: "1px solid #d2d2d7" }}>
+                                <div className="grid lg:grid-cols-[1fr_1fr] gap-8">
+                                    <div>
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <div className="w-10 h-10 rounded-full text-[13px] font-bold text-white flex items-center justify-center shrink-0" style={{ background: "#0066cc" }}>
+                                                {cs.initials}
+                                            </div>
+                                            <div>
+                                                <p className="font-semibold text-[15px] text-[#1d1d1f]">{cs.company}</p>
+                                                <p className="text-[12px] text-[#6e6e73]">{cs.tagline}</p>
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
-                            </div>
-
-                            <div className="flex items-start gap-3 p-4 rounded-2xl bg-[var(--surface-el)]">
-                                <Quote className="w-5 h-5 text-[var(--hairline)] shrink-0 mt-0.5" />
-                                <div>
-                                    <p className="text-sm text-[var(--body-color)] italic leading-relaxed mb-2">"{study.quote}"</p>
-                                    <p className="text-xs font-semibold text-[var(--ash)]">{study.quoteAuthor}</p>
-                                </div>
-                            </div>
-
-                            <div className="mt-4">
-                                <a
-                                    href={`/downloads/${study.company.toLowerCase().replace(/\s+/g, "-")}-case-study.pdf`}
-                                    download
-                                    className="inline-flex items-center gap-2 text-xs font-semibold text-[var(--body-color)] border border-[var(--hairline)] rounded-lg px-3 py-2 hover:bg-[var(--surface-el)] transition-colors"
-                                >
-                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M8 12l4 4m0 0l4-4m-4 4V4" />
-                                    </svg>
-                                    Download {study.pdfLabel} (PDF)
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            <div className="bg-[var(--surface)] border-y border-[var(--hairline)] py-16">
-                <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <p className="chip chip-accent mx-auto w-fit mb-10">{customersPageContent.testimonialsTitle}</p>
-                    <div className="grid md:grid-cols-3 gap-6">
-                        {testimonials.map((testimonial) => (
-                            <div key={testimonial.author} className="bg-[var(--surface-card)] rounded-2xl border border-[var(--hairline)] p-6">
-                                <div className="flex gap-0.5 mb-4">
-                                    {[0, 1, 2, 3, 4].map((star) => (
-                                        <Star key={star} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                                    ))}
-                                </div>
-                                <p className="text-sm text-[var(--body-color)] leading-relaxed mb-4 italic">"{testimonial.text}"</p>
-                                <div className="flex items-center gap-2">
-                                    <div className="h-7 w-7 rounded-full bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center text-[9px] font-bold text-white">
-                                        {testimonial.initials}
+                                        <p className="text-[14px] text-[#6e6e73] mb-3" style={{ lineHeight: 1.6 }}>
+                                            <strong className="text-[#1d1d1f]">Challenge:</strong> {cs.challenge}
+                                        </p>
+                                        <p className="text-[14px] text-[#6e6e73]" style={{ lineHeight: 1.6 }}>
+                                            <strong className="text-[#1d1d1f]">Outcome:</strong> {cs.outcome}
+                                        </p>
                                     </div>
                                     <div>
-                                        <p className="text-xs font-semibold text-[var(--ink)]">{testimonial.author}</p>
-                                        <p className="text-[10px] text-[var(--ash)]">{testimonial.company}</p>
+                                        <div className="rounded-[14px] overflow-hidden mb-4" style={{ border: "1px solid #e8e8ed" }}>
+                                            <div className="px-4 py-2.5 grid grid-cols-3 text-[12px] font-semibold text-[#6e6e73]" style={{ background: "#f5f5f7", borderBottom: "1px solid #e8e8ed" }}>
+                                                <span>Metric</span><span className="text-center">Before</span><span className="text-center">After</span>
+                                            </div>
+                                            {cs.metrics.map((m) => (
+                                                <div key={m.label} className="px-4 py-3 grid grid-cols-3 text-[13px]" style={{ borderBottom: "1px solid #f0f0f0" }}>
+                                                    <span className="text-[#6e6e73]">{m.label}</span>
+                                                    <span className="text-center text-[#aeaeb2]">{m.before}</span>
+                                                    <span className="text-center font-semibold text-[#0066cc]">{m.after}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <blockquote className="italic text-[14px] text-[#424245]" style={{ lineHeight: 1.6 }}>
+                                            &ldquo;{cs.quote}&rdquo;
+                                            <footer className="mt-2 text-[12px] text-[#aeaeb2] not-italic">{cs.quoteAuthor}</footer>
+                                        </blockquote>
                                     </div>
                                 </div>
                             </div>
                         ))}
                     </div>
                 </div>
-            </div>
+            </section>
 
-            <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
-                <Bot className="w-10 h-10 mx-auto mb-4 text-[var(--accent-blue)]" />
-                <h2 className="text-3xl font-semibold tracking-[-0.03em] text-[var(--ink)] mb-4">{cta.title}</h2>
-                <p className="text-[var(--mute)] mb-8 max-w-xl mx-auto">{cta.description}</p>
-                <div className="flex flex-wrap justify-center gap-4">
-                    <Link
-                        href={cta.primary.href}
-                        className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-[var(--accent-blue)] text-[#07080a] font-semibold text-sm hover:bg-[#8dd7ff] transition-all"
-                    >
-                        {cta.primary.label} <ArrowRight className="w-4 h-4" />
-                    </Link>
-                    <Link
-                        href={cta.secondary.href}
-                        className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl border border-[var(--hairline)] text-[var(--body-color)] font-semibold text-sm hover:bg-[var(--surface-el)] transition-all"
-                    >
-                        {cta.secondary.label}
-                    </Link>
+            {/* Testimonials */}
+            <section className="af-tile af-tile-dark">
+                <div className="af-container">
+                    <h2 className="font-semibold text-white text-center mb-12" style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.4rem)", letterSpacing: "-0.025em" }}>
+                        {customersPageContent.testimonialsTitle}
+                    </h2>
+                    <div className="grid sm:grid-cols-3 gap-4">
+                        {testimonials.map((t, i) => (
+                            <div key={i} className="rounded-[18px] p-6 flex flex-col gap-3" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}>
+                                <div className="flex gap-0.5">
+                                    {[1,2,3,4,5].map((s) => <Star key={s} className="w-3.5 h-3.5 fill-[#2997ff] text-[#2997ff]" />)}
+                                </div>
+                                <p className="text-[15px] text-[#e5e5ea] flex-1 italic" style={{ lineHeight: 1.6 }}>&ldquo;{t.text}&rdquo;</p>
+                                <div className="flex items-center gap-2.5 pt-2" style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+                                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-semibold text-white shrink-0" style={{ background: "#0066cc" }}>
+                                        {t.initials}
+                                    </div>
+                                    <div>
+                                        <p className="text-[14px] font-semibold text-white">{t.author}</p>
+                                        <p className="text-[12px] text-[#98989d]">{t.company}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 </div>
-            </div>
+            </section>
+
+            {/* CTA */}
+            <section className="af-tile af-tile-white text-center">
+                <div className="af-container-narrow">
+                    <h2 className="font-semibold text-[#1d1d1f]" style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.6rem)", letterSpacing: "-0.025em", lineHeight: 1.1 }}>{cta.title}</h2>
+                    <p className="mt-4 text-[17px] text-[#6e6e73]" style={{ lineHeight: 1.47 }}>{cta.description}</p>
+                    <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+                        <Link href={cta.primary.href} className="btn-primary">{cta.primary.label} <ArrowRight className="w-4 h-4" /></Link>
+                        <Link href={cta.secondary.href} className="btn-secondary">{cta.secondary.label}</Link>
+                    </div>
+                </div>
+            </section>
         </div>
     );
 }

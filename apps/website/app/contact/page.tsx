@@ -1,103 +1,95 @@
 import type { Metadata } from "next";
-import { Mail, Clock, MapPin } from "lucide-react";
+import { Mail, Clock, MapPin, ArrowRight } from "lucide-react";
 import ContactForm from "@/components/shared/ContactForm";
-
 
 export const metadata: Metadata = {
     title: "Contact — AgentFarm",
-    description:
-        "Get in touch with the AgentFarm team. Questions, demos, partnerships — we'd love to hear from you.",
+    description: "Get in touch with the AgentFarm team. Questions, demos, partnerships — we'd love to hear from you.",
 };
 
 const contactItems = [
     {
         icon: Mail,
         label: "Email us",
-        lines: ["hello@AgentFarm.ai", "support@AgentFarm.ai"],
-        gradient: "from-blue-500 to-cyan-500",
+        lines: ["hello@agentfarm.ai", "support@agentfarm.ai"],
     },
     {
         icon: Clock,
         label: "Response time",
-        lines: ["We reply within 1 business day.", "Critical issues: 2–4 hours."],
-        gradient: "from-violet-500 to-blue-500",
+        lines: ["Sales: within 4 hours", "Support: within 24 hours"],
     },
     {
         icon: MapPin,
-        label: "Office",
-        lines: ["123 Market Street, Suite 400", "San Francisco, CA 94105"],
-        gradient: "from-emerald-500 to-teal-500",
+        label: "Based in",
+        lines: ["San Francisco, CA", "Remote-first team"],
     },
 ];
 
 export default function ContactPage() {
     return (
-        <div className="min-h-screen">
-            {/* Hero with photo */}
-            <section className="relative overflow-hidden">
-                <img
-                    src="https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=1800&q=80"
-                    alt="Friendly team in a bright office"
-                    className="w-full h-[300px] sm:h-[360px] object-cover"
-                    loading="eager"
-                />
-                <div className="absolute inset-0 bg-gradient-to-r from-[#07080a]/85 via-[#07080a]/60 to-transparent" />
-                <div className="absolute inset-0 flex items-center">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full text-center">
-                        <span className="chip chip-accent mb-5">
-                            Contact
-                        </span>
-                        <h1 className="mt-3 text-4xl sm:text-5xl font-semibold text-white tracking-[-0.03em] mb-4">
-                            Get in{" "}
-                            <span className="bg-gradient-to-r from-[var(--accent-blue)] to-purple-400 bg-clip-text text-transparent">
-                                touch
-                            </span>
-                        </h1>
-                        <p className="text-xl text-slate-300 max-w-xl mx-auto">
-                            Questions about AgentFarm? Want a personalised demo? We&apos;d love to
-                            hear from you.
-                        </p>
-                    </div>
+        <div style={{ background: "#ffffff" }}>
+
+            {/* Hero */}
+            <section className="af-tile af-tile-white text-center" style={{ paddingTop: 80, paddingBottom: 64 }}>
+                <div className="af-container-narrow">
+                    <p className="af-eyebrow mb-4">Contact</p>
+                    <h1 className="font-semibold text-[#1d1d1f]" style={{ fontSize: "clamp(2.4rem, 5vw, 3.6rem)", letterSpacing: "-0.03em", lineHeight: 1.07 }}>
+                        Get in touch
+                    </h1>
+                    <p className="mt-5 text-[17px] text-[#424245] max-w-md mx-auto" style={{ lineHeight: 1.47, letterSpacing: "-0.022em" }}>
+                        Questions about the platform, a demo request, or a partnership inquiry — we read everything and respond fast.
+                    </p>
                 </div>
             </section>
 
-            <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-                <div className="grid lg:grid-cols-5 gap-12">
-                    {/* Contact info */}
-                    <div className="lg:col-span-2 space-y-6">
-                        {contactItems.map(({ icon: Icon, label, lines, gradient }) => (
-                            <div key={label} className="flex gap-4 group">
-                                <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center shrink-0`}>
-                                    <Icon className="w-5 h-5 text-white" />
-                                </div>
-                                <div>
-                                    <p className="font-semibold text-[var(--ink)] mb-1">{label}</p>
-                                    {lines.map((l) => (
-                                        <p key={l} className="text-sm text-[var(--mute)]">{l}</p>
-                                    ))}
-                                </div>
-                            </div>
-                        ))}
+            {/* Contact info + form — parchment */}
+            <section className="af-tile af-tile-parchment" style={{ paddingTop: 0, paddingBottom: 80 }}>
+                <div className="af-container">
+                    <div className="grid lg:grid-cols-[1fr_1.6fr] gap-12 items-start">
 
-                        <div className="p-5 bg-[var(--surface-el)] rounded-2xl border border-[var(--hairline)]">
-                            <p className="text-sm font-semibold text-[var(--ink)] mb-2">
-                                Want a live demo?
-                            </p>
-                            <p className="text-sm text-[var(--mute)] leading-relaxed">
-                                We offer 30-minute personalised demos for teams of 3+. Mention
-                                &quot;demo&quot; in your message and we&apos;ll prioritise scheduling.
-                            </p>
+                        {/* Info cards */}
+                        <div className="space-y-4">
+                            {contactItems.map((item) => {
+                                const Icon = item.icon;
+                                return (
+                                    <div key={item.label} className="rounded-[18px] p-5" style={{ background: "#ffffff", border: "1px solid #d2d2d7" }}>
+                                        <div className="flex items-center gap-3 mb-3">
+                                            <div className="w-8 h-8 rounded-[8px] flex items-center justify-center" style={{ background: "rgba(0,102,204,0.08)" }}>
+                                                <Icon className="w-4 h-4 text-[#0066cc]" />
+                                            </div>
+                                            <span className="text-[14px] font-semibold text-[#1d1d1f]">{item.label}</span>
+                                        </div>
+                                        {item.lines.map((line) => (
+                                            <p key={line} className="text-[14px] text-[#6e6e73]" style={{ lineHeight: 1.6 }}>{line}</p>
+                                        ))}
+                                    </div>
+                                );
+                            })}
+
+                            <div className="rounded-[18px] p-5" style={{ background: "rgba(0,102,204,0.04)", border: "1px solid rgba(0,102,204,0.2)" }}>
+                                <p className="text-[14px] font-semibold text-[#0066cc] mb-1">Want a live demo instead?</p>
+                                <p className="text-[13px] text-[#424245] mb-3" style={{ lineHeight: 1.5 }}>
+                                    Book a 30-minute session with the team and see a worker in action.
+                                </p>
+                                <a
+                                    href="/book-demo"
+                                    className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[#0066cc] hover:text-[#0071e3] transition-colors"
+                                >
+                                    Book a demo <ArrowRight className="w-3.5 h-3.5" />
+                                </a>
+                            </div>
+                        </div>
+
+                        {/* Contact form */}
+                        <div className="rounded-[18px] p-7" style={{ background: "#ffffff", border: "1px solid #d2d2d7" }}>
+                            <h2 className="font-semibold text-[#1d1d1f] mb-6" style={{ fontSize: "1.2rem", letterSpacing: "-0.018em" }}>
+                                Send us a message
+                            </h2>
+                            <ContactForm />
                         </div>
                     </div>
-
-                    {/* Form */}
-                    <div className="lg:col-span-3 bg-[var(--surface-card)] border border-[var(--hairline)] rounded-2xl p-8">
-                        <ContactForm />
-                    </div>
                 </div>
-            </div>
+            </section>
         </div>
     );
 }
-
-
