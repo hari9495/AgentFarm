@@ -743,7 +743,7 @@ export const docsOverviewContent = {
         },
     ],
     apiTitle: "REST API reference",
-    apiBaseUrl: "https://api.agentfarm.ai/v1",
+    apiBaseUrl: "https://api.agentfarms.in/v1",
     apiEndpoints: [
         { method: "GET", path: "/tasks", description: "List tasks with status, worker, and evidence context" },
         { method: "POST", path: "/tasks", description: "Create a new governed task for an active worker" },
@@ -957,7 +957,7 @@ export const docsApiReferenceContent = {
             "All API requests require a bearer token generated from your workspace settings.",
         code: [
             "# Base URL",
-            "https://api.agentfarm.ai/v1",
+            "https://api.agentfarms.in/v1",
             "",
             "# Authentication header",
             "Authorization: Bearer af_live_xxxxxxxxxxxxxxxxxxxx",
@@ -1392,7 +1392,7 @@ export const securityPageContent = {
         description:
             "AgentFarms is for teams that refuse to trade governance for momentum. Boundaries, approvals, scoped access, and evidence are built into the product because useful automation without control is just a new failure mode.",
         primary: { label: "Start free trial", href: "/signup" },
-        secondary: { label: "Contact security team", href: "mailto:security@agentfarm.ai" },
+        secondary: { label: "Contact security team", href: "mailto:security@agentfarms.in" },
     },
     certificationsTitle: "Certifications & readiness",
     certifications: [
@@ -1545,7 +1545,7 @@ export const securityPageContent = {
         title: "Need a deeper security review?",
         description:
             "If your security team wants to go deeper, we are happy to get specific about architecture, controls, and rollout policy before anything ships.",
-        primary: { label: "Contact security team", href: "mailto:security@agentfarm.ai" },
+        primary: { label: "Contact security team", href: "mailto:security@agentfarms.in" },
         secondary: { label: "Start free trial", href: "/signup" },
     },
 } as const;

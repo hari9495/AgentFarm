@@ -38,10 +38,10 @@ export default function MaintenancePage() {
                 <p className="text-sm text-slate-400">
                     If you need urgent help, email{" "}
                     <a
-                        href="mailto:support@agentfarm.ai"
+                        href="mailto:support@agentfarms.in"
                         className="underline hover:text-slate-600"
                     >
-                        support@agentfarm.ai
+                        support@agentfarms.in
                     </a>
                 </p>
             </div>

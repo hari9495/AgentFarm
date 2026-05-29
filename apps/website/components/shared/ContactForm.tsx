@@ -25,7 +25,7 @@ export default function ContactForm() {
             toast.success("Message sent! We'll reply within 1 business day.");
             form.reset();
         } catch {
-            toast.error("Failed to send. Please email us directly at hello@AgentFarms.ai");
+            toast.error("Failed to send. Please email us directly at hello@agentfarms.in");
         } finally {
             setLoading(false);
         }

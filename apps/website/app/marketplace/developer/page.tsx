@@ -15,10 +15,10 @@ export const metadata: Metadata = {
         description:
             "An always-on AI developer that works your Jira backlog: writes tested code, opens pull requests, and ships features end-to-end.",
         type: "website",
-        url: "https://agentfarm.ai/marketplace/developer",
+        url: "https://agentfarms.in/marketplace/developer",
     },
     alternates: {
-        canonical: "https://agentfarm.ai/marketplace/developer",
+        canonical: "https://agentfarms.in/marketplace/developer",
     },
 };
 

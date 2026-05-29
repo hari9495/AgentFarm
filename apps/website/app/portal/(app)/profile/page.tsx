@@ -167,7 +167,7 @@ export default async function PortalProfilePage() {
                             </p>
                         </div>
                         <a
-                            href="mailto:support@agentfarm.ai"
+                            href="mailto:support@agentfarms.in"
                             className="inline-flex items-center gap-1.5 text-sm font-medium text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300 transition-colors"
                         >
                             Contact support

@@ -17,10 +17,10 @@ export const metadata: Metadata = {
         description:
             "A complete QA platform in one AI agent: automation testing, performance, API, security, manual, and test management \u2014 integrated with your entire stack.",
         type: "website",
-        url: "https://agentfarm.ai/marketplace/tester",
+        url: "https://agentfarms.in/marketplace/tester",
     },
     alternates: {
-        canonical: "https://agentfarm.ai/marketplace/tester",
+        canonical: "https://agentfarms.in/marketplace/tester",
     },
 };
 

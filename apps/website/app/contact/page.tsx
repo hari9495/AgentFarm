@@ -11,7 +11,7 @@ const contactItems = [
     {
         icon: Mail,
         label: "Email us",
-        lines: ["hello@agentfarm.ai", "support@agentfarm.ai"],
+        lines: ["hello@agentfarms.in", "support@agentfarms.in"],
     },
     {
         icon: Clock,

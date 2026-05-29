@@ -29,7 +29,7 @@ const sora = Sora({
 
 export const metadata: Metadata = {
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL ?? "https://agentfarm.ai"
+    process.env.NEXT_PUBLIC_SITE_URL ?? "https://agentfarms.in"
   ),
   title: siteMarketingMetadata.siteTitle,
   description: siteMarketingMetadata.siteDescription,
@@ -47,7 +47,7 @@ const jsonLd = {
   applicationCategory: "BusinessApplication",
   operatingSystem: "Web",
   description: siteMarketingMetadata.siteDescription,
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://agentfarm.ai",
+  url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://agentfarms.in",
   offers: {
     "@type": "Offer",
     price: "0",

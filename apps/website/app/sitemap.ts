@@ -1,7 +1,7 @@
 ﻿import type { MetadataRoute } from "next";
 import { getAllSlugs } from "@/lib/bots";
 
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://AgentFarms.ai";
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://agentfarms.in";
 
 // Static public routes
 const STATIC_ROUTES = [
