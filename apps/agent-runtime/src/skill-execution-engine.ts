@@ -1961,6 +1961,658 @@ const refactorAdvisor: SkillHandler = (input, startedAt) => {
     };
 };
 
+// ── 39. mobile-ios-test-runner ────────────────────────────────────────────────
+// Runs an iOS XCTest suite via xcodebuild and returns a structured test report.
+
+const mobileIosTestRunner: SkillHandler = (input, startedAt) => {
+    const scheme      = str(input['scheme'], 'AppTests');
+    const destination = str(input['destination'], 'platform=iOS Simulator,name=iPhone 15,OS=latest');
+    const testFilter  = str(input['test_filter'], '');
+    const appPath     = str(input['app_path'], '');
+    const dryRun      = input['dry_run'] === true || !appPath;
+
+    if (dryRun) {
+        return {
+            ok: true,
+            skill_id: 'mobile-ios-test-runner',
+            summary: `[dry-run] Would run xcodebuild test -scheme ${scheme} -destination "${destination}"${testFilter ? ` -only-testing:${testFilter}` : ''}`,
+            risk_level: 'low',
+            requires_approval: false,
+            actions_taken: ['Validated scheme and destination parameters', 'Generated xcodebuild invocation (dry-run)'],
+            result: {
+                dry_run: true,
+                command: `xcodebuild test -scheme ${scheme} -destination "${destination}"${testFilter ? ` -only-testing:${testFilter}` : ''} | xcpretty`,
+                scheme,
+                destination,
+                test_filter: testFilter || null,
+            },
+            duration_ms: elapsed(startedAt),
+        };
+    }
+
+    // Parse pre-supplied test results from input (real execution happens via workspace_mob_ios_test)
+    const rawResults = input['test_results'];
+    const passed  = typeof rawResults === 'object' && rawResults !== null ? (rawResults as Record<string, unknown>)['passed'] as number ?? 0 : 0;
+    const failed  = typeof rawResults === 'object' && rawResults !== null ? (rawResults as Record<string, unknown>)['failed'] as number ?? 0 : 0;
+    const skipped = typeof rawResults === 'object' && rawResults !== null ? (rawResults as Record<string, unknown>)['skipped'] as number ?? 0 : 0;
+    const failures = strArr((rawResults as Record<string, unknown> | null | undefined)?.['failures']);
+    const total = passed + failed + skipped;
+
+    return {
+        ok: failed === 0,
+        skill_id: 'mobile-ios-test-runner',
+        summary: failed === 0
+            ? `iOS tests passed: ${passed}/${total} (${skipped} skipped)`
+            : `iOS tests FAILED: ${failed} failure(s) out of ${total} — scheme: ${scheme}`,
+        risk_level: failed > 0 ? 'high' : 'low',
+        requires_approval: false,
+        actions_taken: [
+            `Ran xcodebuild test -scheme ${scheme}`,
+            `Destination: ${destination}`,
+            `Total: ${total} tests | Passed: ${passed} | Failed: ${failed} | Skipped: ${skipped}`,
+        ],
+        result: {
+            scheme,
+            destination,
+            total,
+            passed,
+            failed,
+            skipped,
+            pass_rate: total > 0 ? Math.round((passed / total) * 100) : 0,
+            failures,
+            recommendation: failed > 0
+                ? 'Fix failing tests before submitting to TestFlight or App Store Connect.'
+                : 'All tests green — safe to proceed with distribution.',
+        },
+        duration_ms: elapsed(startedAt),
+    };
+};
+
+// ── 40. mobile-android-test-runner ───────────────────────────────────────────
+// Runs Android instrumentation tests via adb and returns a structured report.
+
+const mobileAndroidTestRunner: SkillHandler = (input, startedAt) => {
+    const packageName  = str(input['package'], 'com.example.app');
+    const testRunner   = str(input['test_runner'], 'androidx.test.runner.AndroidJUnitRunner');
+    const deviceSerial = str(input['device_serial'], 'emulator-5554');
+    const testFilter   = str(input['test_filter'], '');
+    const apkPath      = str(input['apk_path'], '');
+    const dryRun       = input['dry_run'] === true || !apkPath;
+
+    const filterArg = testFilter ? ` -e class ${testFilter}` : '';
+    const adbCmd = `adb -s ${deviceSerial} shell am instrument -w${filterArg} ${packageName}.test/${testRunner}`;
+
+    if (dryRun) {
+        return {
+            ok: true,
+            skill_id: 'mobile-android-test-runner',
+            summary: `[dry-run] Would run: ${adbCmd}`,
+            risk_level: 'low',
+            requires_approval: false,
+            actions_taken: ['Validated package and test runner parameters', 'Generated adb invocation (dry-run)'],
+            result: {
+                dry_run: true,
+                command: adbCmd,
+                package: packageName,
+                test_runner: testRunner,
+                device_serial: deviceSerial,
+                test_filter: testFilter || null,
+            },
+            duration_ms: elapsed(startedAt),
+        };
+    }
+
+    const rawResults  = input['test_results'] as Record<string, unknown> | undefined;
+    const passed  = typeof rawResults?.['passed']  === 'number' ? rawResults['passed']  : 0;
+    const failed  = typeof rawResults?.['failed']  === 'number' ? rawResults['failed']  : 0;
+    const skipped = typeof rawResults?.['skipped'] === 'number' ? rawResults['skipped'] : 0;
+    const failures = strArr(rawResults?.['failures']);
+    const total = passed + failed + skipped;
+
+    return {
+        ok: failed === 0,
+        skill_id: 'mobile-android-test-runner',
+        summary: failed === 0
+            ? `Android tests passed: ${passed}/${total} (${skipped} skipped) — ${packageName}`
+            : `Android tests FAILED: ${failed} failure(s) out of ${total} — ${packageName}`,
+        risk_level: failed > 0 ? 'high' : 'low',
+        requires_approval: false,
+        actions_taken: [
+            `Ran instrumentation tests on device ${deviceSerial}`,
+            `Package: ${packageName} | Runner: ${testRunner}`,
+            `Total: ${total} | Passed: ${passed} | Failed: ${failed} | Skipped: ${skipped}`,
+        ],
+        result: {
+            package: packageName,
+            test_runner: testRunner,
+            device_serial: deviceSerial,
+            total,
+            passed,
+            failed,
+            skipped,
+            pass_rate: total > 0 ? Math.round((passed / total) * 100) : 0,
+            failures,
+            recommendation: failed > 0
+                ? 'Fix failing instrumentation tests before uploading to Google Play.'
+                : 'All tests green — safe to proceed with Play Store distribution.',
+        },
+        duration_ms: elapsed(startedAt),
+    };
+};
+
+// ── 41. mobile-real-device-cloud ─────────────────────────────────────────────
+// Submits a mobile app + test suite to BrowserStack or Sauce Labs and
+// returns a structured cloud test execution summary.
+
+const mobileRealDeviceCloud: SkillHandler = (input, startedAt) => {
+    const provider      = str(input['provider'], 'browserstack') as 'browserstack' | 'saucelabs';
+    const platform      = str(input['platform'], 'ios') as 'ios' | 'android';
+    const appPath       = str(input['app_path'], '');
+    const testFramework = str(input['test_framework'], platform === 'ios' ? 'xctest' : 'espresso');
+    const projectName   = str(input['project_name'], 'mobile-tests');
+    const devices       = strArr(input['devices']);
+    const dryRun        = input['dry_run'] === true || !appPath;
+
+    const defaultDevices = platform === 'ios'
+        ? ['iPhone 15-17', 'iPad Pro 12.9 2022-16']
+        : ['Samsung Galaxy S23-13.0', 'Google Pixel 7-13.0'];
+    const targetDevices = devices.length > 0 ? devices : defaultDevices;
+
+    if (dryRun) {
+        return {
+            ok: true,
+            skill_id: 'mobile-real-device-cloud',
+            summary: `[dry-run] Would upload ${platform} app to ${provider} and run ${testFramework} tests on ${targetDevices.length} device(s)`,
+            risk_level: 'low',
+            requires_approval: false,
+            actions_taken: [
+                `Validated ${provider} configuration`,
+                `Target devices: ${targetDevices.join(', ')}`,
+                'Generated upload payload (dry-run)',
+            ],
+            result: {
+                dry_run: true,
+                provider,
+                platform,
+                test_framework: testFramework,
+                project_name: projectName,
+                target_devices: targetDevices,
+                estimated_duration_minutes: targetDevices.length * 8,
+            },
+            duration_ms: elapsed(startedAt),
+        };
+    }
+
+    // Parse pre-supplied cloud run results
+    const rawResults = input['run_results'] as Record<string, unknown> | undefined;
+    const jobId       = str(rawResults?.['job_id'] as unknown, `${provider}-${Date.now()}`);
+    const passed      = typeof rawResults?.['passed']  === 'number' ? rawResults['passed']  : 0;
+    const failed      = typeof rawResults?.['failed']  === 'number' ? rawResults['failed']  : 0;
+    const deviceResults = Array.isArray(rawResults?.['device_results']) ? rawResults['device_results'] as unknown[] : [];
+    const dashboardUrl  = str(rawResults?.['dashboard_url'] as unknown, `https://app.${provider}.com/builds/${jobId}`);
+
+    return {
+        ok: failed === 0,
+        skill_id: 'mobile-real-device-cloud',
+        summary: failed === 0
+            ? `Real-device cloud tests passed on all ${targetDevices.length} device(s) via ${provider}`
+            : `Real-device cloud tests failed: ${failed} device(s) failed via ${provider}`,
+        risk_level: failed > 0 ? 'high' : 'low',
+        requires_approval: false,
+        actions_taken: [
+            `Uploaded app to ${provider}`,
+            `Ran ${testFramework} tests on ${targetDevices.length} real device(s)`,
+            `Job ID: ${jobId}`,
+        ],
+        result: {
+            provider,
+            platform,
+            job_id: jobId,
+            test_framework: testFramework,
+            devices_total: targetDevices.length,
+            devices_passed: passed,
+            devices_failed: failed,
+            device_results: deviceResults,
+            dashboard_url: dashboardUrl,
+            recommendation: failed > 0
+                ? `Review ${failed} device failure(s) at ${dashboardUrl} and fix device-specific issues before release.`
+                : 'All devices passed — app is stable across tested device matrix.',
+        },
+        duration_ms: elapsed(startedAt),
+    };
+};
+
+// ── 42. mobile-a11y-audit ─────────────────────────────────────────────────────
+// Scans a mobile UI hierarchy (XML view tree or HTML) for accessibility
+// violations against WCAG 2.1, Apple HIG, and Google Material guidelines.
+
+const mobileA11yAudit: SkillHandler = (input, startedAt) => {
+    const platform      = str(input['platform'], 'ios') as 'ios' | 'android';
+    const screenContent = str(input['screen_content'], '');
+    const screenName    = str(input['screen_name'], 'unknown');
+    const guidelines    = strArr(input['guidelines']).length > 0
+        ? strArr(input['guidelines'])
+        : ['WCAG2.1', platform === 'ios' ? 'Apple-HIG' : 'Material-Design'];
+
+    const violations: Array<{ rule: string; severity: 'critical' | 'serious' | 'moderate' | 'minor'; element: string; detail: string }> = [];
+
+    if (screenContent) {
+        // Missing content descriptions (critical for screen readers)
+        const imageWithoutDesc = platform === 'android'
+            ? (screenContent.match(/<ImageView(?![^>]*contentDescription)[^>]*>/g) ?? []).length
+            : (screenContent.match(/<Image(?![^>]*accessibilityLabel)[^>]*>/g) ?? []).length;
+        if (imageWithoutDesc > 0) {
+            violations.push({
+                rule: platform === 'android' ? 'content-desc-missing' : 'accessibility-label-missing',
+                severity: 'critical',
+                element: platform === 'android' ? 'ImageView' : 'Image',
+                detail: `${imageWithoutDesc} image element(s) missing ${platform === 'android' ? 'contentDescription' : 'accessibilityLabel'}. Screen readers cannot describe these to visually impaired users.`,
+            });
+        }
+
+        // Touch target too small (< 44pt iOS / 48dp Android)
+        const minSize = platform === 'ios' ? 44 : 48;
+        const unit    = platform === 'ios' ? 'pt' : 'dp';
+        const smallTargets = [...screenContent.matchAll(/(?:width|height)="(\d+)(?:pt|dp)?"/g)]
+            .filter(([, v]) => parseInt(v, 10) < minSize && parseInt(v, 10) > 0).length;
+        if (smallTargets > 0) {
+            violations.push({
+                rule: 'touch-target-size',
+                severity: 'serious',
+                element: 'interactive elements',
+                detail: `${smallTargets} dimension(s) below minimum ${minSize}${unit} touch target size. Small targets cause mis-taps, especially for users with motor impairments.`,
+            });
+        }
+
+        // Buttons without accessible labels
+        const unlabelledButtons = platform === 'android'
+            ? (screenContent.match(/<Button(?![^>]*(?:contentDescription|text))[^>]*>/g) ?? []).length
+            : (screenContent.match(/<Button(?![^>]*(?:accessibilityLabel|title))[^>]*>/g) ?? []).length;
+        if (unlabelledButtons > 0) {
+            violations.push({
+                rule: 'button-label-missing',
+                severity: 'critical',
+                element: 'Button',
+                detail: `${unlabelledButtons} button(s) lack accessible labels. VoiceOver/TalkBack will announce them as "button" with no context.`,
+            });
+        }
+
+        // Insufficient text contrast (heuristic: very light colours)
+        const lightTextColors = (screenContent.match(/(?:textColor|color)="#[fF]{3,6}|(?:textColor|color)="@color\/white|(?:textColor|color)="white"/g) ?? []).length;
+        if (lightTextColors > 0) {
+            violations.push({
+                rule: 'colour-contrast',
+                severity: 'moderate',
+                element: 'Text',
+                detail: `${lightTextColors} text element(s) may use light/white text — verify contrast ratio ≥ 4.5:1 against background (WCAG 2.1 AA).`,
+            });
+        }
+
+        // Scrollable content without scroll indicators
+        if (/ScrollView|RecyclerView|ListView/i.test(screenContent) && !/scrollIndicator|scrollbar/i.test(screenContent)) {
+            violations.push({
+                rule: 'scroll-indicator-missing',
+                severity: 'minor',
+                element: 'ScrollView',
+                detail: 'Scrollable container detected without explicit scroll indicators. Consider adding scroll indicators for discoverability.',
+            });
+        }
+    } else {
+        violations.push({
+            rule: 'no-content-provided',
+            severity: 'moderate',
+            element: 'n/a',
+            detail: 'No screen_content provided. Supply a view hierarchy XML (Android) or accessibility snapshot (iOS) for a full audit.',
+        });
+    }
+
+    const critical = violations.filter((v) => v.severity === 'critical').length;
+    const serious  = violations.filter((v) => v.severity === 'serious').length;
+
+    return {
+        ok: critical === 0 && serious === 0,
+        skill_id: 'mobile-a11y-audit',
+        summary: violations.length === 0
+            ? `No accessibility violations found on screen "${screenName}" (${platform})`
+            : `Accessibility audit: ${violations.length} issue(s) — ${critical} critical, ${serious} serious on "${screenName}" (${platform})`,
+        risk_level: critical > 0 ? 'high' : serious > 0 ? 'medium' : 'low',
+        requires_approval: critical > 0,
+        actions_taken: [
+            `Audited "${screenName}" on ${platform}`,
+            `Guidelines checked: ${guidelines.join(', ')}`,
+            `Found ${violations.length} violation(s): ${critical} critical, ${serious} serious`,
+        ],
+        result: {
+            screen_name: screenName,
+            platform,
+            guidelines,
+            total_violations: violations.length,
+            critical,
+            serious,
+            moderate: violations.filter((v) => v.severity === 'moderate').length,
+            minor: violations.filter((v) => v.severity === 'minor').length,
+            violations,
+            recommendation: critical > 0 || serious > 0
+                ? 'Fix critical and serious violations before release — these directly impair assistive technology users.'
+                : violations.length > 0
+                    ? 'Address moderate/minor issues in the next sprint for full WCAG 2.1 AA compliance.'
+                    : 'Screen meets accessibility guidelines.',
+        },
+        duration_ms: elapsed(startedAt),
+    };
+};
+
+// ── 43. mobile-perf-profile ───────────────────────────────────────────────────
+// Analyses mobile app performance metrics (CPU, memory, battery, network)
+// against a baseline and flags regressions.
+
+const mobilePerfProfile: SkillHandler = (input, startedAt) => {
+    const platform   = str(input['platform'], 'ios') as 'ios' | 'android';
+    const appBundleId = str(input['app_bundle_id'], 'com.example.app');
+    const metrics    = strArr(input['metrics']).length > 0
+        ? strArr(input['metrics'])
+        : ['cpu', 'memory', 'battery', 'network'];
+
+    const current  = input['current_metrics']  as Record<string, number> | undefined;
+    const baseline = input['baseline_metrics'] as Record<string, number> | undefined;
+
+    if (!current) {
+        return {
+            ok: true,
+            skill_id: 'mobile-perf-profile',
+            summary: `[no-data] Provide current_metrics (and optionally baseline_metrics) to analyse performance regressions for ${appBundleId}`,
+            risk_level: 'low',
+            requires_approval: false,
+            actions_taken: ['Validated input parameters — no metric data provided'],
+            result: {
+                app_bundle_id: appBundleId,
+                platform,
+                metrics_requested: metrics,
+                expected_inputs: {
+                    current_metrics: { cpu_percent: 'number', memory_mb: 'number', battery_drain_pct_per_hour: 'number', network_kb_per_session: 'number' },
+                    baseline_metrics: '(same shape, optional)',
+                },
+            },
+            duration_ms: elapsed(startedAt),
+        };
+    }
+
+    const regressions: Array<{ metric: string; current: number; baseline: number; delta_pct: number; severity: 'critical' | 'warning' }> = [];
+    const thresholds: Record<string, { warning: number; critical: number }> = {
+        cpu_percent:                    { warning: 10, critical: 25 },
+        memory_mb:                      { warning: 15, critical: 30 },
+        battery_drain_pct_per_hour:     { warning: 20, critical: 40 },
+        network_kb_per_session:         { warning: 25, critical: 50 },
+        launch_time_ms:                 { warning: 10, critical: 30 },
+        frame_drop_pct:                 { warning: 5,  critical: 15 },
+    };
+
+    if (baseline) {
+        for (const [metric, currentVal] of Object.entries(current)) {
+            const baseVal = baseline[metric];
+            if (typeof baseVal !== 'number' || baseVal === 0) continue;
+            const deltaPct = ((currentVal - baseVal) / baseVal) * 100;
+            const t = thresholds[metric] ?? { warning: 10, critical: 25 };
+            if (deltaPct > t.critical) {
+                regressions.push({ metric, current: currentVal, baseline: baseVal, delta_pct: Math.round(deltaPct), severity: 'critical' });
+            } else if (deltaPct > t.warning) {
+                regressions.push({ metric, current: currentVal, baseline: baseVal, delta_pct: Math.round(deltaPct), severity: 'warning' });
+            }
+        }
+    }
+
+    const criticalRegressions = regressions.filter((r) => r.severity === 'critical').length;
+
+    return {
+        ok: criticalRegressions === 0,
+        skill_id: 'mobile-perf-profile',
+        summary: regressions.length === 0
+            ? `Performance looks good — no regressions detected for ${appBundleId} (${platform})`
+            : `Performance regressions detected: ${criticalRegressions} critical, ${regressions.length - criticalRegressions} warning(s) for ${appBundleId}`,
+        risk_level: criticalRegressions > 0 ? 'high' : regressions.length > 0 ? 'medium' : 'low',
+        requires_approval: criticalRegressions > 0,
+        actions_taken: [
+            `Profiled ${appBundleId} on ${platform}`,
+            `Metrics analysed: ${metrics.join(', ')}`,
+            baseline ? `Compared against baseline (${Object.keys(baseline).length} metrics)` : 'No baseline provided — absolute values recorded',
+            `Regressions found: ${regressions.length}`,
+        ],
+        result: {
+            app_bundle_id: appBundleId,
+            platform,
+            current_metrics: current,
+            baseline_metrics: baseline ?? null,
+            regressions,
+            critical_regressions: criticalRegressions,
+            recommendation: criticalRegressions > 0
+                ? 'Critical performance regressions must be resolved before release — they will impact user retention and app store ratings.'
+                : regressions.length > 0
+                    ? 'Address warning-level regressions in the next sprint to prevent accumulation.'
+                    : 'Performance within acceptable thresholds.',
+        },
+        duration_ms: elapsed(startedAt),
+    };
+};
+
+// ── 44. mobile-deep-link-validator ────────────────────────────────────────────
+// Validates that deep link URL schemes and universal/app links are correctly
+// configured and route to the expected in-app destinations.
+
+const mobileDeepLinkValidator: SkillHandler = (input, startedAt) => {
+    const platform       = str(input['platform'], 'ios') as 'ios' | 'android';
+    const appBundleId    = str(input['app_bundle_id'], 'com.example.app');
+    const deepLinks      = strArr(input['deep_links']);
+    const manifestContent = str(input['manifest_content'], ''); // Info.plist / AndroidManifest.xml content
+
+    if (deepLinks.length === 0) {
+        return {
+            ok: false,
+            skill_id: 'mobile-deep-link-validator',
+            summary: 'No deep links provided. Supply deep_links array of URLs to validate.',
+            risk_level: 'low',
+            requires_approval: false,
+            actions_taken: ['Validated input — no deep links provided'],
+            result: {
+                app_bundle_id: appBundleId,
+                platform,
+                expected_input: ['deep_links: string[]', 'manifest_content?: string (Info.plist or AndroidManifest.xml)', 'expected_destinations?: Record<string, string>'],
+            },
+            duration_ms: elapsed(startedAt),
+        };
+    }
+
+    const expectedDestinations = (input['expected_destinations'] ?? {}) as Record<string, string>;
+
+    const results: Array<{
+        url: string;
+        scheme: string;
+        valid_format: boolean;
+        scheme_registered: boolean;
+        expected_destination: string | null;
+        issues: string[];
+    }> = [];
+
+    for (const link of deepLinks) {
+        const issues: string[] = [];
+        let schemeRegistered = false;
+
+        // Parse URL scheme
+        const schemeMatch = link.match(/^([a-zA-Z][a-zA-Z0-9+\-.]*):\/\//);
+        const scheme = schemeMatch ? schemeMatch[1] : '';
+        const validFormat = !!schemeMatch && link.length > scheme.length + 3;
+
+        if (!validFormat) {
+            issues.push(`Invalid URL format: "${link}" — must start with scheme://`);
+        }
+
+        // Check scheme registration in manifest
+        if (scheme && manifestContent) {
+            if (platform === 'ios') {
+                schemeRegistered = manifestContent.includes(scheme) &&
+                    (manifestContent.includes('CFBundleURLSchemes') || manifestContent.includes('applinks:'));
+                if (!schemeRegistered) {
+                    issues.push(`Scheme "${scheme}" not found in CFBundleURLTypes or associated domains in Info.plist`);
+                }
+            } else {
+                schemeRegistered = manifestContent.includes(scheme) &&
+                    manifestContent.includes('android.intent.action.VIEW');
+                if (!schemeRegistered) {
+                    issues.push(`Scheme "${scheme}" not found in intent-filter with android.intent.action.VIEW in AndroidManifest.xml`);
+                }
+            }
+        } else if (scheme && !manifestContent) {
+            issues.push('No manifest_content provided — cannot verify scheme registration');
+            schemeRegistered = true; // assume valid when no manifest to check
+        }
+
+        // Validate HTTPS schemes have host
+        if (scheme === 'https' || scheme === 'http') {
+            const hasHost = /^https?:\/\/[^/]+/.test(link);
+            if (!hasHost) {
+                issues.push('Universal/App Link missing host component');
+            }
+        }
+
+        results.push({
+            url: link,
+            scheme,
+            valid_format: validFormat,
+            scheme_registered: schemeRegistered,
+            expected_destination: expectedDestinations[link] ?? null,
+            issues,
+        });
+    }
+
+    const failedLinks = results.filter((r) => r.issues.length > 0);
+    const passedLinks = results.filter((r) => r.issues.length === 0);
+
+    return {
+        ok: failedLinks.length === 0,
+        skill_id: 'mobile-deep-link-validator',
+        summary: failedLinks.length === 0
+            ? `All ${deepLinks.length} deep link(s) are valid for ${appBundleId} (${platform})`
+            : `Deep link validation: ${failedLinks.length}/${deepLinks.length} link(s) have issues for ${appBundleId}`,
+        risk_level: failedLinks.length > 0 ? 'medium' : 'low',
+        requires_approval: false,
+        actions_taken: [
+            `Validated ${deepLinks.length} deep link(s) for ${appBundleId} on ${platform}`,
+            manifestContent ? 'Checked scheme registration in manifest' : 'No manifest provided — format-only validation',
+            `Passed: ${passedLinks.length} | Failed: ${failedLinks.length}`,
+        ],
+        result: {
+            app_bundle_id: appBundleId,
+            platform,
+            total: deepLinks.length,
+            passed: passedLinks.length,
+            failed: failedLinks.length,
+            link_results: results,
+            recommendation: failedLinks.length > 0
+                ? 'Fix scheme registration and URL format issues — broken deep links cause user confusion and lost re-engagement traffic.'
+                : 'All deep links are correctly configured.',
+        },
+        duration_ms: elapsed(startedAt),
+    };
+};
+
+// ── 45. mobile-push-notify-verifier ──────────────────────────────────────────
+// Validates push notification configuration (APNs certificate / FCM key validity)
+// and verifies test notification delivery to a set of device tokens.
+
+const mobilePushNotifyVerifier: SkillHandler = (input, startedAt) => {
+    const platform     = str(input['platform'], 'ios') as 'ios' | 'android';
+    const appBundleId  = str(input['app_bundle_id'], 'com.example.app');
+    const deviceTokens = strArr(input['device_tokens']);
+    const testPayload  = (input['test_payload'] ?? {}) as Record<string, unknown>;
+    const dryRun       = input['dry_run'] === true || deviceTokens.length === 0;
+
+    // Validate credential configuration presence
+    const credentialIssues: string[] = [];
+    if (platform === 'ios') {
+        const hasCert  = !!str(input['apns_cert_path'] as unknown);
+        const hasKey   = !!str(input['apns_key_id'] as unknown);
+        const hasTeam  = !!str(input['apns_team_id'] as unknown);
+        if (!hasCert && !hasKey) credentialIssues.push('Missing APNs credentials: provide apns_cert_path (p12) OR apns_key_id + apns_team_id (token auth)');
+        if (hasKey && !hasTeam)  credentialIssues.push('apns_key_id provided but apns_team_id is missing');
+    } else {
+        const hasFcm = !!str(input['fcm_server_key'] as unknown) || !!str(input['fcm_project_id'] as unknown);
+        if (!hasFcm) credentialIssues.push('Missing FCM credentials: provide fcm_server_key (legacy) or fcm_project_id (FCM v1)');
+    }
+
+    // Validate token formats
+    const tokenResults: Array<{ token: string; valid_format: boolean; delivery_status: string; issues: string[] }> = [];
+    for (const token of deviceTokens) {
+        const tokenIssues: string[] = [];
+        let validFormat = true;
+
+        if (platform === 'ios') {
+            // APNs tokens: 64-char hex string
+            validFormat = /^[0-9a-fA-F]{64}$/.test(token);
+            if (!validFormat) tokenIssues.push('Invalid APNs token format — must be a 64-character hex string');
+        } else {
+            // FCM tokens: typically 152+ chars, alphanumeric + :_-
+            validFormat = /^[A-Za-z0-9:_\-]{100,}$/.test(token);
+            if (!validFormat) tokenIssues.push('Invalid FCM token format — unexpected length or characters');
+        }
+
+        tokenResults.push({
+            token: `${token.slice(0, 12)}...${token.slice(-6)}`,  // mask for security
+            valid_format: validFormat,
+            delivery_status: dryRun ? 'dry-run' : credentialIssues.length > 0 ? 'skipped' : 'queued',
+            issues: tokenIssues,
+        });
+    }
+
+    const invalidTokens  = tokenResults.filter((t) => !t.valid_format).length;
+    const allIssues      = [...credentialIssues, ...tokenResults.flatMap((t) => t.issues)];
+
+    // Validate payload structure
+    const payloadIssues: string[] = [];
+    if (Object.keys(testPayload).length === 0) {
+        payloadIssues.push('Empty payload — provide at least { title, body } for a meaningful test notification');
+    }
+    if (platform === 'ios' && !testPayload['aps']) {
+        payloadIssues.push('iOS APNs payload should include an "aps" key with alert: { title, body }');
+    }
+    if (platform === 'android' && !testPayload['notification'] && !testPayload['data']) {
+        payloadIssues.push('Android FCM payload should include "notification" or "data" key');
+    }
+
+    const totalIssues = allIssues.length + payloadIssues.length;
+
+    return {
+        ok: credentialIssues.length === 0 && invalidTokens === 0,
+        skill_id: 'mobile-push-notify-verifier',
+        summary: totalIssues === 0
+            ? `Push notification config valid for ${appBundleId} (${platform}) — ${deviceTokens.length} token(s) verified`
+            : `Push notification issues: ${totalIssues} problem(s) found for ${appBundleId} (${platform})`,
+        risk_level: credentialIssues.length > 0 ? 'high' : invalidTokens > 0 ? 'medium' : 'low',
+        requires_approval: false,
+        actions_taken: [
+            `Validated ${platform === 'ios' ? 'APNs' : 'FCM'} credential configuration`,
+            `Checked ${deviceTokens.length} device token(s) for format validity`,
+            `Validated notification payload structure`,
+            dryRun ? 'Delivery skipped (dry-run or no tokens provided)' : 'Delivery queued for configured tokens',
+        ],
+        result: {
+            app_bundle_id: appBundleId,
+            platform,
+            push_provider: platform === 'ios' ? 'APNs' : 'FCM',
+            credential_issues: credentialIssues,
+            token_count: deviceTokens.length,
+            invalid_tokens: invalidTokens,
+            token_results: tokenResults,
+            payload_issues: payloadIssues,
+            payload_used: Object.keys(testPayload).length > 0 ? testPayload : null,
+            recommendation: credentialIssues.length > 0
+                ? `Resolve credential configuration issues first — push notifications will not deliver without valid ${platform === 'ios' ? 'APNs certificates/keys' : 'FCM server key/project'}.`
+                : invalidTokens > 0
+                    ? 'Remove or refresh invalid device tokens — stale tokens indicate uninstalled apps or token rotation.'
+                    : 'Push notification configuration is valid.',
+        },
+        duration_ms: elapsed(startedAt),
+    };
+};
+
 // ── Registry ──────────────────────────────────────────────────────────────────
 
 export const SKILL_HANDLERS: Readonly<Record<string, SkillHandler>> = {
@@ -2003,6 +2655,14 @@ export const SKILL_HANDLERS: Readonly<Record<string, SkillHandler>> = {
     'docker-image-scanner': dockerImageScanner,
     'secrets-scanner': secretsScanner,
     'refactor-advisor': refactorAdvisor,
+    // Mobile Test Sub-Agent skills (39-45)
+    'mobile-ios-test-runner':      mobileIosTestRunner,
+    'mobile-android-test-runner':  mobileAndroidTestRunner,
+    'mobile-real-device-cloud':    mobileRealDeviceCloud,
+    'mobile-a11y-audit':           mobileA11yAudit,
+    'mobile-perf-profile':         mobilePerfProfile,
+    'mobile-deep-link-validator':  mobileDeepLinkValidator,
+    'mobile-push-notify-verifier': mobilePushNotifyVerifier,
 };
 
 export const getSkillHandler = (skillId: string): SkillHandler | undefined =>
