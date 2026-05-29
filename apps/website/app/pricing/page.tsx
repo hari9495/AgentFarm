@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { CheckCircle2, ArrowRight } from "lucide-react";
 import Link from "next/link";
-import PricingCalculator from "@/components/pricing/PricingCalculator";
 import { marketplaceBots, type Bot } from "@/lib/bots";
 import { pricingPageContent } from "@/lib/marketing-content";
 
@@ -43,8 +42,8 @@ const plans = PLAN_ORDER.map((tier) => {
     };
 });
 
-const starterPlanPrice = plans.find((plan) => plan.name === "Starter+")?.price ?? "$299";
-const proPlanPrice = plans.find((plan) => plan.name === "Pro+")?.price ?? "$599";
+const starterPlanPrice = plans.find((p) => p.name === "Starter+")?.price ?? "$299";
+const proPlanPrice = plans.find((p) => p.name === "Pro+")?.price ?? "$599";
 
 const decisionCards = [
     {
@@ -66,111 +65,167 @@ const decisionCards = [
 
 export default function PricingPage() {
     return (
-        <div className="bg-[var(--canvas)]">
-            <section className="relative overflow-hidden border-b border-[var(--hairline)] py-24 text-center">
-                <div
-                    aria-hidden
-                    className="pointer-events-none absolute inset-x-0 top-0 h-[400px]"
-                    style={{
-                        background: "radial-gradient(ellipse 70% 40% at 50% -5%, rgba(89,212,153,0.06) 0%, transparent 70%)",
-                    }}
-                />
-                <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                    <p className="mb-5 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--accent-green)]">
-                        {pricingPageContent.hero.eyebrow}
-                    </p>
-                    <h1 className="text-[clamp(2.4rem,5.5vw,4rem)] font-black tracking-[-0.04em] text-[var(--ink)]">
+        <div style={{ background: "#ffffff" }}>
+
+            {/* Hero tile */}
+            <section className="af-tile af-tile-white text-center" style={{ paddingTop: 80, paddingBottom: 64 }}>
+                <div className="af-container-narrow">
+                    <p className="af-eyebrow mb-4">{pricingPageContent.hero.eyebrow}</p>
+                    <h1
+                        className="font-semibold text-[#1d1d1f]"
+                        style={{ fontSize: "clamp(2.4rem, 5vw, 3.6rem)", letterSpacing: "-0.03em", lineHeight: 1.07 }}
+                    >
                         {pricingPageContent.hero.title}
                     </h1>
-                    <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-[var(--body-color)]">
+                    <p className="mt-5 mx-auto max-w-lg text-[17px] text-[#424245]" style={{ lineHeight: 1.47, letterSpacing: "-0.022em" }}>
                         {pricingPageContent.hero.description}
                     </p>
-                    <p className="mt-4 text-sm text-[var(--ash)]">
+                    <p className="mt-3 text-[14px] text-[#aeaeb2]">
                         {pricingPageContent.hero.footnoteTemplate.replace("{count}", String(availableMarketplaceBots.length))}
                     </p>
                 </div>
             </section>
 
-            <PricingCalculator />
-
-            <section className="border-b border-[var(--hairline)] py-10 sm:py-12">
-                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                    <div className="grid gap-4 md:grid-cols-3">
-                        {decisionCards.map((card) => (
-                            <article
-                                key={card.chip}
-                                className="rounded-xl border border-[var(--hairline)] bg-[var(--surface-card)] p-6"
-                            >
-                                <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--accent-green)]">
-                                    {card.chip}
-                                </p>
-                                <p className="text-base font-bold text-[var(--ink)]">{card.price}</p>
-                                <p className="mt-1 text-sm leading-relaxed text-[var(--mute)]">{card.desc}</p>
-                            </article>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            <section className="py-24">
-                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                    <div className="mx-auto grid max-w-5xl grid-cols-1 items-stretch gap-5 md:grid-cols-3">
+            {/* Plan cards */}
+            <section className="af-tile af-tile-parchment" style={{ paddingTop: 0, paddingBottom: 64 }}>
+                <div className="af-container">
+                    <div className="grid md:grid-cols-3 gap-4 max-w-[900px] mx-auto">
                         {plans.map((plan) => (
                             <div
                                 key={plan.name}
-                                className={`flex flex-col rounded-xl border bg-[var(--surface-card)] p-7 ${plan.highlighted ? "border-[var(--accent-green)]" : "border-[var(--hairline)]"}`}
+                                className="rounded-[18px] p-6 flex flex-col"
+                                style={{
+                                    border: plan.highlighted ? "2px solid #0066cc" : "1px solid #d2d2d7",
+                                    background: plan.highlighted ? "rgba(0,102,204,0.02)" : "#ffffff",
+                                }}
                             >
                                 {plan.highlighted && (
-                                    <p className="mb-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--accent-green)]">
+                                    <span
+                                        className="self-start mb-3 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#0066cc] px-2.5 py-1 rounded-full"
+                                        style={{ background: "rgba(0,102,204,0.1)" }}
+                                    >
                                         Most popular
-                                    </p>
+                                    </span>
                                 )}
-                                <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-[var(--ash)]">{plan.name}</p>
-                                <div className="mt-1 flex items-end gap-1">
-                                    <span className="text-4xl font-black tracking-tight text-[var(--ink)]">{plan.price}</span>
-                                    {plan.period ? <span className="mb-1.5 text-sm text-[var(--ash)]">{plan.period}</span> : null}
+                                <p className="text-[12px] font-semibold text-[#6e6e73] uppercase tracking-[0.06em]">{plan.name}</p>
+                                <div className="mt-2 flex items-end gap-1.5">
+                                    <span
+                                        className="font-semibold text-[#1d1d1f]"
+                                        style={{ fontSize: "2.4rem", letterSpacing: "-0.03em", lineHeight: 1 }}
+                                    >
+                                        {plan.price}
+                                    </span>
+                                    {plan.period && (
+                                        <span className="mb-1 text-[14px] text-[#aeaeb2]">{plan.period}</span>
+                                    )}
                                 </div>
-                                <p className="mt-3 text-sm leading-relaxed text-[var(--mute)]">{plan.description}</p>
-                                <ul className="mt-6 flex-1 space-y-2.5">
-                                    {plan.features.map((feature) => (
-                                        <li key={feature} className="flex items-start gap-2.5 text-sm text-[var(--body-color)]">
-                                            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[var(--accent-green)]" />
-                                            {feature}
+                                <p className="mt-2.5 text-[14px] text-[#6e6e73]" style={{ lineHeight: 1.5 }}>{plan.description}</p>
+                                <ul className="mt-5 flex-1 space-y-2.5">
+                                    {plan.features.map((f) => (
+                                        <li key={f} className="flex items-start gap-2 text-[14px] text-[#424245]">
+                                            <CheckCircle2 className="mt-0.5 w-4 h-4 shrink-0 text-[#0066cc]" />
+                                            <span style={{ lineHeight: 1.5 }}>{f}</span>
                                         </li>
                                     ))}
                                 </ul>
-                                <div className="mt-8">
-                                    <Link
-                                        href={plan.ctaHref}
-                                        className={`${plan.highlighted ? "btn-primary" : "btn-secondary"} w-full justify-center`}
-                                    >
-                                        {plan.cta}
-                                        {plan.highlighted ? <ArrowRight className="h-4 w-4" /> : null}
-                                    </Link>
-                                </div>
+                                <Link
+                                    href={plan.ctaHref}
+                                    className="mt-6 flex items-center justify-center gap-2 rounded-full py-2.5 text-[15px] font-medium transition-colors"
+                                    style={{
+                                        background: plan.highlighted ? "#0066cc" : "transparent",
+                                        color: plan.highlighted ? "#ffffff" : "#1d1d1f",
+                                        border: plan.highlighted ? "none" : "1px solid #d2d2d7",
+                                    }}
+                                >
+                                    {plan.cta}
+                                    {plan.highlighted && <ArrowRight className="w-4 h-4" />}
+                                </Link>
                             </div>
                         ))}
                     </div>
-                    <p className="mt-8 text-center text-sm text-[var(--ash)]">
+
+                    <p className="mt-6 text-center text-[13px] text-[#aeaeb2]">
                         {pricingPageContent.pageFooterNote}
                     </p>
                 </div>
             </section>
 
-            <section className="border-t border-[var(--hairline)] py-24">
-                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                    <div className="mx-auto max-w-3xl">
-                        <h2 className="mb-10 text-center text-2xl font-black text-[var(--ink)] tracking-[-0.03em]">
-                            Frequently asked questions
-                        </h2>
-                        <div className="overflow-hidden rounded-xl border border-[var(--hairline)] bg-[var(--surface-card)] divide-y divide-[var(--hairline)]">
-                            {pricingPageContent.faqs.map(({ q, a }) => (
-                                <div key={q} className="p-6 transition-colors hover:bg-[var(--surface-elevated)]">
-                                    <h3 className="mb-2 font-semibold text-[var(--ink)]">{q}</h3>
-                                    <p className="text-sm leading-relaxed text-[var(--mute)]">{a}</p>
-                                </div>
-                            ))}
-                        </div>
+            {/* Decision helper cards */}
+            <section className="af-tile af-tile-white" style={{ paddingTop: 48, paddingBottom: 48 }}>
+                <div className="af-container">
+                    <div className="grid md:grid-cols-3 gap-4">
+                        {decisionCards.map((card) => (
+                            <div
+                                key={card.chip}
+                                className="rounded-[18px] p-6"
+                                style={{ border: "1px solid #d2d2d7" }}
+                            >
+                                <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#0066cc]">
+                                    {card.chip}
+                                </p>
+                                <p className="text-[17px] font-semibold text-[#1d1d1f]" style={{ letterSpacing: "-0.018em" }}>
+                                    {card.price}
+                                </p>
+                                <p className="mt-1.5 text-[14px] text-[#6e6e73]" style={{ lineHeight: 1.5 }}>{card.desc}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            {/* FAQ */}
+            <section className="af-tile af-tile-parchment" aria-label="Pricing FAQ">
+                <div className="af-container-narrow">
+                    <h2
+                        className="text-center font-semibold text-[#1d1d1f] mb-10"
+                        style={{ fontSize: "clamp(1.6rem, 3vw, 2.2rem)", letterSpacing: "-0.025em" }}
+                    >
+                        Frequently asked questions
+                    </h2>
+                    <div className="rounded-[18px] overflow-hidden" style={{ border: "1px solid #d2d2d7", background: "#ffffff" }}>
+                        {pricingPageContent.faqs.map(({ q, a }, i) => (
+                            <div
+                                key={q}
+                                className="px-6 py-5 hover:bg-[#f5f5f7] transition-colors"
+                                style={{ borderBottom: i < pricingPageContent.faqs.length - 1 ? "1px solid #e8e8ed" : "none" }}
+                            >
+                                <h3 className="font-semibold text-[#1d1d1f] mb-2" style={{ fontSize: "15px", letterSpacing: "-0.015em" }}>
+                                    {q}
+                                </h3>
+                                <p className="text-[14px] text-[#6e6e73]" style={{ lineHeight: 1.6 }}>{a}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            {/* CTA tile */}
+            <section className="af-tile af-tile-dark text-center">
+                <div className="af-container-narrow">
+                    <h2
+                        className="font-semibold text-white"
+                        style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.6rem)", letterSpacing: "-0.025em", lineHeight: 1.1 }}
+                    >
+                        Ready to deploy your first worker?
+                    </h2>
+                    <p className="mt-4 text-[17px] text-[#98989d]" style={{ lineHeight: 1.47 }}>
+                        Start free for 14 days. No credit card required.
+                    </p>
+                    <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+                        <Link
+                            href="/get-started"
+                            className="px-6 py-3 rounded-full text-[17px] font-medium text-white transition-colors"
+                            style={{ background: "#0066cc" }}
+                        >
+                            Start free trial
+                        </Link>
+                        <Link
+                            href="/book-demo"
+                            className="px-6 py-3 rounded-full text-[17px] font-medium text-white transition-colors"
+                            style={{ border: "1px solid rgba(255,255,255,0.25)" }}
+                        >
+                            Talk to sales
+                        </Link>
                     </div>
                 </div>
             </section>

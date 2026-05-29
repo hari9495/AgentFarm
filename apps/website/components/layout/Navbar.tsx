@@ -4,9 +4,7 @@ import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { Menu, X, Bot, ChevronDown } from "lucide-react";
-import ThemeToggle from "@/components/shared/ThemeToggle";
-import CartIcon from "@/components/shared/CartIcon";
+import { Menu, X, ChevronDown } from "lucide-react";
 
 type ChildLink = { href: string; label: string };
 type NavLink =
@@ -31,21 +29,22 @@ const navLinks: NavLink[] = [
   },
 ];
 
-function DropdownMenu({ children, onClose }: { children: ChildLink[]; onClose: () => void }) {
+function DropdownMenu({ items, onClose }: { items: ChildLink[]; onClose: () => void }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 6, scale: 0.97 }}
+      initial={{ opacity: 0, y: 4, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: 4, scale: 0.97 }}
+      exit={{ opacity: 0, y: 2, scale: 0.98 }}
       transition={{ duration: 0.14, ease: [0.22, 1, 0.36, 1] }}
-      className="absolute top-full left-0 mt-1.5 w-44 bg-[var(--surface-card)] border border-[var(--hairline)] rounded-xl shadow-xl shadow-gray-900/10 dark:shadow-black/60 py-1 z-50"
+      className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-44 rounded-xl overflow-hidden"
+      style={{ background: "rgba(28,28,30,0.96)", border: "1px solid rgba(255,255,255,0.12)", backdropFilter: "blur(20px)" }}
     >
-      {children.map((child) => (
+      {items.map((child) => (
         <Link
           key={child.href}
           href={child.href}
           onClick={onClose}
-          className="block px-3.5 py-2 text-sm text-[var(--mute)] hover:text-[var(--ink)] hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-colors rounded-lg mx-1"
+          className="block px-4 py-2.5 text-[13px] text-[rgba(255,255,255,0.75)] hover:text-white hover:bg-white/[0.06] transition-colors"
         >
           {child.label}
         </Link>
@@ -60,70 +59,64 @@ export default function Navbar() {
   const [dropdown, setDropdown] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    setOpen(false);
-    setDropdown(null);
-  }, [pathname]);
+  useEffect(() => { setOpen(false); setDropdown(null); }, [pathname]);
 
   useEffect(() => {
-    if (open) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => {
-      document.body.style.overflow = "";
-    };
+    document.body.style.overflow = open ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
   }, [open]);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setDropdown(null);
-      }
+      if (ref.current && !ref.current.contains(e.target as Node)) setDropdown(null);
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
   return (
-    <header className="sticky top-0 z-50 bg-white/90 dark:bg-[#07080a]/90 backdrop-blur-xl border-b border-[var(--hairline)]">
-      <nav ref={ref} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-6">
+    <header
+      className="sticky top-0 z-50"
+      style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "saturate(180%) blur(20px)", WebkitBackdropFilter: "saturate(180%) blur(20px)" }}
+    >
+      <nav ref={ref} className="max-w-[1200px] mx-auto px-5 h-11 flex items-center justify-between gap-4">
 
         {/* Logo */}
-        <Link href="/" className="group flex items-center gap-2.5 shrink-0">
-          <span className="relative inline-flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-[#ff5757] to-[#a1131a] shadow-lg shadow-red-900/40 transition-transform duration-300 group-hover:scale-105">
-            <Bot className="w-4 h-4 text-white" />
+        <Link href="/" className="flex items-center gap-2 shrink-0 group">
+          <span className="inline-flex h-[22px] w-[22px] items-center justify-center rounded-md bg-[#0066cc]">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
+              <circle cx="6" cy="6" r="5" stroke="white" strokeWidth="1.5" />
+              <path d="M4 6h4M6 4v4" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
           </span>
-          <span className="text-[var(--ink)] font-semibold tracking-tight text-[15px]">AgentFarm</span>
+          <span className="text-white font-semibold text-[13px] tracking-[-0.01em]">AgentFarm</span>
         </Link>
 
         {/* Desktop nav links */}
-        <ul className="hidden md:flex items-center gap-0.5 flex-1">
+        <ul className="hidden md:flex items-center gap-0 flex-1 justify-center">
           {navLinks.map((l) => (
             <li key={l.label} className="relative">
               {l.children ? (
                 <>
                   <button
                     onClick={() => setDropdown(dropdown === l.label ? null : l.label)}
-                    className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-[var(--mute)] hover:text-[var(--ink)] hover:bg-black/[0.04] dark:hover:bg-white/[0.04] rounded-lg transition-colors cursor-pointer"
+                    className="flex items-center gap-1 px-3 py-1.5 text-[12px] text-[rgba(255,255,255,0.72)] hover:text-white transition-colors cursor-pointer"
                   >
                     {l.label}
                     <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${dropdown === l.label ? "rotate-180" : ""}`} />
                   </button>
                   <AnimatePresence>
                     {dropdown === l.label && (
-                      <DropdownMenu children={l.children} onClose={() => setDropdown(null)} />
+                      <DropdownMenu items={l.children} onClose={() => setDropdown(null)} />
                     )}
                   </AnimatePresence>
                 </>
               ) : (
                 <Link
                   href={l.href!}
-                  className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors block ${pathname === l.href
-                    ? "text-[var(--ink)] bg-black/[0.06] dark:bg-white/[0.06]"
-                    : "text-[var(--mute)] hover:text-[var(--ink)] hover:bg-black/[0.04] dark:hover:bg-white/[0.04]"
-                    }`}
+                  className={`px-3 py-1.5 text-[12px] transition-colors block ${
+                    pathname === l.href ? "text-white" : "text-[rgba(255,255,255,0.72)] hover:text-white"
+                  }`}
                 >
                   {l.label}
                 </Link>
@@ -133,19 +126,19 @@ export default function Navbar() {
         </ul>
 
         {/* Desktop CTAs */}
-        <div className="hidden md:flex items-center gap-1.5">
-          <ThemeToggle />
-          <CartIcon />
-          <div className="w-px h-4 bg-[var(--hairline)] mx-0.5" />
+        <div className="hidden md:flex items-center gap-2">
           <Link
             href="/login"
-            className="px-3 py-1.5 text-sm font-medium text-[var(--mute)] hover:text-[var(--ink)] hover:bg-black/[0.04] dark:hover:bg-white/[0.04] rounded-lg transition-colors"
+            className="px-3 py-1 text-[12px] text-[rgba(255,255,255,0.72)] hover:text-white transition-colors"
           >
             Sign in
           </Link>
           <Link
             href="/get-started"
-            className="px-4 py-1.5 text-sm font-semibold text-[#000000] bg-[#ffffff] rounded-lg hover:bg-[#e8e8e8] transition-colors shadow-sm"
+            className="px-4 py-1.5 text-[13px] font-medium text-white rounded-full transition-colors"
+            style={{ background: "#0066cc" }}
+            onMouseOver={(e) => (e.currentTarget.style.background = "#0071e3")}
+            onMouseOut={(e) => (e.currentTarget.style.background = "#0066cc")}
           >
             Get Started
           </Link>
@@ -153,7 +146,7 @@ export default function Navbar() {
 
         {/* Mobile hamburger */}
         <button
-          className="md:hidden p-2 rounded-lg text-[var(--mute)] hover:text-[var(--ink)] hover:bg-black/[0.06] dark:hover:bg-white/[0.06] transition-colors cursor-pointer"
+          className="md:hidden p-1.5 text-[rgba(255,255,255,0.72)] hover:text-white transition-colors cursor-pointer"
           onClick={() => setOpen(!open)}
           aria-label="Toggle menu"
         >
@@ -169,65 +162,62 @@ export default function Navbar() {
               type="button"
               aria-label="Close mobile navigation"
               onClick={() => setOpen(false)}
-              className="md:hidden fixed inset-0 top-14 bg-black/60 backdrop-blur-sm"
+              className="md:hidden fixed inset-0 top-11"
+              style={{ background: "rgba(0,0,0,0.5)" }}
             />
             <motion.div
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
-              className="md:hidden absolute inset-x-0 top-14 border-t border-[var(--hairline)] bg-[var(--surface-card)] px-4 py-4 flex flex-col gap-1 max-h-[calc(100vh-3.5rem)] overflow-y-auto z-40"
+              className="md:hidden absolute inset-x-0 top-11 flex flex-col gap-0 z-40 max-h-[calc(100vh-2.75rem)] overflow-y-auto"
+              style={{ background: "rgba(28,28,30,0.97)", borderTop: "1px solid rgba(255,255,255,0.1)", backdropFilter: "blur(20px)" }}
             >
-              {navLinks.map((l) =>
-                l.children ? (
-                  <div key={l.label}>
-                    <p className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-[var(--ash)]">
-                      {l.label}
-                    </p>
-                    {l.children.map((child) => (
-                      <Link
-                        key={child.href}
-                        href={child.href}
-                        onClick={() => setOpen(false)}
-                        className={`block px-4 py-2.5 text-sm font-medium rounded-lg ${pathname === child.href
-                          ? "bg-black/[0.06] dark:bg-white/[0.06] text-[var(--ink)]"
-                          : "text-[var(--mute)] hover:bg-black/[0.04] dark:hover:bg-white/[0.04] hover:text-[var(--ink)]"
-                          }`}
-                      >
-                        {child.label}
-                      </Link>
-                    ))}
-                  </div>
-                ) : (
-                  <Link
-                    key={l.href}
-                    href={l.href!}
-                    onClick={() => setOpen(false)}
-                    className={`px-3 py-2.5 text-sm font-medium rounded-lg ${pathname === l.href
-                      ? "bg-black/[0.06] dark:bg-white/[0.06] text-[var(--ink)]"
-                      : "text-[var(--mute)] hover:bg-black/[0.04] dark:hover:bg-white/[0.04] hover:text-[var(--ink)]"
+              <div className="px-4 py-4 flex flex-col gap-1">
+                {navLinks.map((l) =>
+                  l.children ? (
+                    <div key={l.label}>
+                      <p className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-[rgba(255,255,255,0.4)]">
+                        {l.label}
+                      </p>
+                      {l.children.map((child) => (
+                        <Link
+                          key={child.href}
+                          href={child.href}
+                          onClick={() => setOpen(false)}
+                          className="block px-4 py-2.5 text-[14px] text-[rgba(255,255,255,0.7)] hover:text-white rounded-lg hover:bg-white/[0.06] transition-colors"
+                        >
+                          {child.label}
+                        </Link>
+                      ))}
+                    </div>
+                  ) : (
+                    <Link
+                      key={l.href}
+                      href={l.href!}
+                      onClick={() => setOpen(false)}
+                      className={`px-4 py-2.5 text-[14px] rounded-lg transition-colors ${
+                        pathname === l.href ? "text-white bg-white/[0.08]" : "text-[rgba(255,255,255,0.7)] hover:text-white hover:bg-white/[0.06]"
                       }`}
-                  >
-                    {l.label}
-                  </Link>
-                )
-              )}
-              <div className="mt-4 flex flex-col gap-2 pt-4 border-t border-[var(--hairline)]">
-                <div className="flex gap-2 justify-end mb-1">
-                  <ThemeToggle />
-                  <CartIcon />
-                </div>
+                    >
+                      {l.label}
+                    </Link>
+                  )
+                )}
+              </div>
+              <div className="px-4 pb-5 pt-2 flex flex-col gap-2 border-t border-white/[0.08]">
                 <Link
                   href="/login"
                   onClick={() => setOpen(false)}
-                  className="w-full text-center px-4 py-2.5 text-sm font-medium border border-[var(--hairline)] text-[var(--mute)] rounded-lg hover:bg-black/[0.04] dark:hover:bg-white/[0.04] hover:text-[var(--ink)]"
+                  className="w-full text-center px-4 py-2.5 text-[14px] text-[rgba(255,255,255,0.7)] border border-white/[0.15] rounded-full hover:text-white hover:border-white/[0.3] transition-colors"
                 >
                   Sign in
                 </Link>
                 <Link
                   href="/get-started"
                   onClick={() => setOpen(false)}
-                  className="w-full text-center px-4 py-2.5 text-sm font-semibold bg-white text-black rounded-lg hover:bg-[#e8e8e8]"
+                  className="w-full text-center px-4 py-2.5 text-[14px] font-medium text-white rounded-full"
+                  style={{ background: "#0066cc" }}
                 >
                   Get Started
                 </Link>
@@ -239,4 +229,3 @@ export default function Navbar() {
     </header>
   );
 }
-

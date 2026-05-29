@@ -5,63 +5,67 @@ import { AnimatePresence, motion } from "motion/react";
 import { ChevronDown } from "lucide-react";
 import { homeMarketingContent } from "@/lib/marketing-content";
 
-const ease = [0.22, 1, 0.36, 1] as const;
-
 export default function FAQ() {
     const [open, setOpen] = useState<number | null>(null);
-    const content = homeMarketingContent.faq;
+    const { faq } = homeMarketingContent;
 
     return (
-        <section className="border-t border-[var(--hairline)] bg-[var(--surface)] py-24" id="faq">
-            <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+        <section className="af-tile af-tile-parchment" aria-label="FAQ">
+            <div className="af-container-narrow">
                 <motion.div
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 0, y: 16 }}
                     whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.46, ease }}
-                    className="mb-14 text-center"
+                    viewport={{ once: true, margin: "-80px" }}
+                    transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                    className="text-center mb-12"
                 >
-                    <span className="chip chip-accent mb-4 text-xs">{content.eyebrow}</span>
-                    <h2 className="text-[clamp(1.8rem,3.5vw,2.6rem)] font-semibold tracking-[-0.03em] text-[var(--ink)]">
-                        {content.title}
+                    <p className="af-eyebrow mb-4">{faq.eyebrow}</p>
+                    <h2
+                        className="font-semibold text-[#1d1d1f]"
+                        style={{ fontSize: "clamp(1.9rem, 3.5vw, 2.8rem)", letterSpacing: "-0.028em", lineHeight: 1.07 }}
+                    >
+                        {faq.title}
                     </h2>
-                    <p className="mt-4 leading-relaxed text-[var(--mute)]">{content.description}</p>
+                    <p className="mt-3 text-[17px] text-[#424245]" style={{ lineHeight: 1.47, letterSpacing: "-0.022em" }}>
+                        {faq.description}
+                    </p>
                 </motion.div>
 
-                <div className="divide-y divide-[var(--hairline)]">
-                    {content.items.map((item, index) => (
-                        <motion.div
+                <div className="rounded-[18px] overflow-hidden" style={{ border: "1px solid #d2d2d7" }}>
+                    {faq.items.map((item, i) => (
+                        <div
                             key={item.question}
-                            initial={{ opacity: 0, y: 12 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true, margin: "-30px" }}
-                            transition={{ duration: 0.38, delay: index * 0.04, ease }}
+                            style={{ borderBottom: i < faq.items.length - 1 ? "1px solid #e8e8ed" : "none" }}
                         >
                             <button
-                                onClick={() => setOpen(open === index ? null : index)}
-                                className="group flex w-full cursor-pointer items-center justify-between gap-4 py-5 text-left"
+                                className="w-full flex items-center justify-between gap-4 px-6 py-5 text-left cursor-pointer hover:bg-[#f5f5f7] transition-colors"
+                                onClick={() => setOpen(open === i ? null : i)}
+                                aria-expanded={open === i}
                             >
-                                <span className="text-[15px] font-medium text-[var(--ink)] transition-colors group-hover:text-[var(--ink)]">
+                                <span className="text-[17px] font-semibold text-[#1d1d1f]" style={{ letterSpacing: "-0.018em" }}>
                                     {item.question}
                                 </span>
-                                <motion.div animate={{ rotate: open === index ? 180 : 0 }} transition={{ duration: 0.22, ease }} className="shrink-0">
-                                    <ChevronDown className="h-4.5 w-4.5 text-[var(--ash)]" />
-                                </motion.div>
+                                <ChevronDown
+                                    className={`w-5 h-5 shrink-0 text-[#6e6e73] transition-transform duration-200 ${open === i ? "rotate-180" : ""}`}
+                                />
                             </button>
-                            <AnimatePresence initial={false}>
-                                {open === index ? (
+                            <AnimatePresence>
+                                {open === i && (
                                     <motion.div
                                         initial={{ height: 0, opacity: 0 }}
                                         animate={{ height: "auto", opacity: 1 }}
                                         exit={{ height: 0, opacity: 0 }}
-                                        transition={{ duration: 0.28, ease }}
+                                        transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
                                         className="overflow-hidden"
+                                        style={{ background: "#ffffff" }}
                                     >
-                                        <p className="pb-5 pr-8 text-sm leading-relaxed text-[var(--mute)]">{item.answer}</p>
+                                        <p className="px-6 pt-1 pb-5 text-[15px] text-[#424245]" style={{ lineHeight: 1.6 }}>
+                                            {item.answer}
+                                        </p>
                                     </motion.div>
-                                ) : null}
+                                )}
                             </AnimatePresence>
-                        </motion.div>
+                        </div>
                     ))}
                 </div>
             </div>

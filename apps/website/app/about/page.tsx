@@ -1,126 +1,164 @@
 import type { Metadata } from "next";
-import { Bot, Sparkles, Target, Users, Zap } from "lucide-react";
-import ButtonLink from "@/components/shared/ButtonLink";
+import { Target, Zap, Users } from "lucide-react";
+import Link from "next/link";
 import { aboutPageContent } from "@/lib/marketing-content";
 
 export const metadata: Metadata = aboutPageContent.metadata;
 
-const valueIcons = {
-    target: Target,
-    zap: Zap,
-    users: Users,
-} as const;
-
-const gradients = [
-    "from-blue-500 to-blue-600",
-    "from-violet-500 to-violet-600",
-    "from-emerald-500 to-emerald-600",
-] as const;
+const valueIcons = { target: Target, zap: Zap, users: Users } as const;
 
 export default function AboutPage() {
     const { hero, stats, mission, values, team, backers, cta } = aboutPageContent;
 
     return (
-        <div>
-            <section className="relative overflow-hidden">
-                <img
-                    src={hero.image}
-                    alt={hero.imageAlt}
-                    className="w-full h-[420px] sm:h-[520px] object-cover"
-                    loading="eager"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#07080a]/85 via-[#07080a]/40 to-transparent" />
-                <div className="absolute bottom-0 left-0 right-0 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-14">
-                    <div className="inline-flex items-center gap-2 bg-white/15 backdrop-blur border border-white/20 text-white text-xs font-semibold px-4 py-1.5 rounded-full mb-5">
-                        <Bot className="w-3.5 h-3.5" />
-                        {hero.eyebrow}
-                    </div>
-                    <h1 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight leading-tight">
-                        {hero.titleLead}
-                        <br className="hidden sm:block" />
-                        <span className="bg-gradient-to-r from-sky-300 via-blue-300 to-violet-300 bg-clip-text text-transparent">
-                            {hero.titleAccent}
-                        </span>
+        <div style={{ background: "#ffffff" }}>
+
+            {/* Hero tile — white */}
+            <section className="af-tile af-tile-white text-center" style={{ paddingTop: 80, paddingBottom: 72 }}>
+                <div className="af-container-narrow">
+                    <p className="af-eyebrow mb-4">{hero.eyebrow}</p>
+                    <h1
+                        className="font-semibold text-[#1d1d1f]"
+                        style={{ fontSize: "clamp(2.4rem, 5vw, 3.6rem)", letterSpacing: "-0.03em", lineHeight: 1.07 }}
+                    >
+                        {hero.titleLead}{" "}
+                        <span className="text-[#0066cc]">{hero.titleAccent}</span>
                     </h1>
-                    <p className="mt-4 text-lg text-slate-300 max-w-2xl leading-relaxed">{hero.description}</p>
+                    <p className="mt-5 text-[17px] text-[#424245]" style={{ lineHeight: 1.47, letterSpacing: "-0.022em" }}>
+                        {hero.description}
+                    </p>
                 </div>
             </section>
 
-            <div className="bg-[var(--canvas)] border-b border-[var(--hairline)]">
-                <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
-                    {stats.map((stat) => (
-                        <div key={stat.label}>
-                            <p className="text-xl font-bold text-[var(--ink)]">{stat.value}</p>
-                            <p className="text-xs text-[var(--ash)] mt-0.5">{stat.label}</p>
-                        </div>
-                    ))}
-                </div>
-            </div>
-
-            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
-                <div className="mb-20 grid lg:grid-cols-2 gap-10 items-center">
-                    <div className="relative bg-gradient-to-br from-blue-600 to-violet-600 rounded-3xl p-10 text-white overflow-hidden">
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
-                        <Sparkles className="w-8 h-8 mb-4 text-white/80" />
-                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-100/80 mb-3">{mission.eyebrow}</p>
-                        <h2 className="text-2xl font-bold mb-4">{mission.title}</h2>
-                        <p className="text-lg text-blue-100 leading-relaxed">{mission.description}</p>
-                        <div className="mt-6 grid grid-cols-2 gap-4">
-                            {mission.callouts.map((callout) => (
-                                <div key={callout.label} className="bg-white/15 rounded-xl p-3 text-center">
-                                    <p className="text-sm font-bold">{callout.value}</p>
-                                    <p className="text-xs text-blue-200">{callout.label}</p>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                    <div className="relative rounded-3xl overflow-hidden shadow-xl">
-                        <img
-                            src={mission.image}
-                            alt={mission.imageAlt}
-                            className="w-full h-72 object-cover"
-                            loading="lazy"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-[#07080a]/60 to-transparent" />
-                        <div className="absolute bottom-4 left-4 right-4 text-white">
-                            <p className="text-sm font-semibold">{mission.imageCaptionTitle}</p>
-                            <p className="text-xs text-slate-300">{mission.imageCaptionBody}</p>
-                        </div>
+            {/* Stats tile — parchment */}
+            <section className="af-tile af-tile-parchment" style={{ paddingTop: 48, paddingBottom: 48 }}>
+                <div className="af-container-narrow">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
+                        {stats.map((stat) => (
+                            <div key={stat.label}>
+                                <p
+                                    className="font-semibold text-[#1d1d1f]"
+                                    style={{ fontSize: "2rem", letterSpacing: "-0.03em", lineHeight: 1 }}
+                                >
+                                    {stat.value}
+                                </p>
+                                <p className="mt-1.5 text-[13px] text-[#6e6e73]">{stat.label}</p>
+                            </div>
+                        ))}
                     </div>
                 </div>
+            </section>
 
-                <div className="mb-20">
-                    <h2 className="text-2xl font-semibold tracking-[-0.03em] text-[var(--ink)] mb-3">What we believe</h2>
-                    <p className="text-[var(--mute)] mb-8 max-w-2xl">{aboutPageContent.teamIntro}</p>
-                    <div className="grid sm:grid-cols-3 gap-6">
-                        {values.map((value, index) => {
+            {/* Mission tile — white */}
+            <section className="af-tile af-tile-white">
+                <div className="af-container">
+                    <div className="grid lg:grid-cols-2 gap-12 items-center">
+                        <div>
+                            <p className="af-eyebrow mb-4">{mission.eyebrow}</p>
+                            <h2
+                                className="font-semibold text-[#1d1d1f]"
+                                style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.6rem)", letterSpacing: "-0.028em", lineHeight: 1.07 }}
+                            >
+                                {mission.title}
+                            </h2>
+                            <p className="mt-4 text-[17px] text-[#424245]" style={{ lineHeight: 1.47, letterSpacing: "-0.022em" }}>
+                                {mission.description}
+                            </p>
+                            <div className="mt-6 grid grid-cols-2 gap-3">
+                                {mission.callouts.map((callout) => (
+                                    <div
+                                        key={callout.label}
+                                        className="rounded-[14px] p-4"
+                                        style={{ border: "1px solid #d2d2d7", background: "#f5f5f7" }}
+                                    >
+                                        <p
+                                            className="font-semibold text-[#1d1d1f]"
+                                            style={{ fontSize: "1.5rem", letterSpacing: "-0.025em" }}
+                                        >
+                                            {callout.value}
+                                        </p>
+                                        <p className="text-[13px] text-[#6e6e73] mt-0.5">{callout.label}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                        <div
+                            className="rounded-[18px] overflow-hidden"
+                            style={{ border: "1px solid #d2d2d7", boxShadow: "0 24px 56px -20px rgba(0,0,0,0.12)" }}
+                        >
+                            <img
+                                src={mission.image}
+                                alt={mission.imageAlt}
+                                className="w-full h-72 object-cover"
+                                loading="lazy"
+                            />
+                            <div className="px-5 py-4" style={{ background: "#f5f5f7", borderTop: "1px solid #e8e8ed" }}>
+                                <p className="text-[15px] font-semibold text-[#1d1d1f]">{mission.imageCaptionTitle}</p>
+                                <p className="text-[13px] text-[#6e6e73] mt-0.5">{mission.imageCaptionBody}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* Values tile — parchment */}
+            <section className="af-tile af-tile-parchment">
+                <div className="af-container">
+                    <h2
+                        className="font-semibold text-[#1d1d1f] mb-2"
+                        style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.4rem)", letterSpacing: "-0.025em" }}
+                    >
+                        What we believe
+                    </h2>
+                    <p className="text-[17px] text-[#6e6e73] mb-10 max-w-2xl" style={{ lineHeight: 1.5 }}>
+                        {aboutPageContent.teamIntro}
+                    </p>
+                    <div className="grid sm:grid-cols-3 gap-4">
+                        {values.map((value) => {
                             const Icon = valueIcons[value.icon];
                             return (
                                 <div
                                     key={value.title}
-                                    className="p-6 rounded-2xl border border-[var(--hairline)] bg-[var(--surface-card)] hover:-translate-y-1 hover:border-[var(--accent-blue)]/30 transition-all"
+                                    className="rounded-[18px] p-6"
+                                    style={{ background: "#ffffff", border: "1px solid #d2d2d7" }}
                                 >
-                                    <div className="mb-4">
-                                        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${gradients[index % gradients.length]} flex items-center justify-center`}>
-                                            <Icon className="w-5 h-5 text-white" />
-                                        </div>
+                                    <div
+                                        className="w-10 h-10 rounded-[10px] flex items-center justify-center mb-4"
+                                        style={{ background: "rgba(0,102,204,0.08)" }}
+                                    >
+                                        <Icon className="w-5 h-5 text-[#0066cc]" />
                                     </div>
-                                    <h3 className="font-semibold text-[var(--ink)] mb-2">{value.title}</h3>
-                                    <p className="text-sm text-[var(--mute)] leading-relaxed">{value.description}</p>
+                                    <h3 className="font-semibold text-[17px] text-[#1d1d1f] mb-2" style={{ letterSpacing: "-0.018em" }}>
+                                        {value.title}
+                                    </h3>
+                                    <p className="text-[15px] text-[#6e6e73]" style={{ lineHeight: 1.5 }}>
+                                        {value.description}
+                                    </p>
                                 </div>
                             );
                         })}
                     </div>
                 </div>
+            </section>
 
-                <div className="mb-20">
-                    <h2 className="text-2xl font-semibold tracking-[-0.03em] text-[var(--ink)] mb-3">The team</h2>
-                    <p className="text-[var(--mute)] mb-8">{aboutPageContent.teamIntro}</p>
-                    <div className="grid sm:grid-cols-2 gap-6">
+            {/* Team tile — white */}
+            <section className="af-tile af-tile-white">
+                <div className="af-container">
+                    <h2
+                        className="font-semibold text-[#1d1d1f] mb-2"
+                        style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.4rem)", letterSpacing: "-0.025em" }}
+                    >
+                        The team
+                    </h2>
+                    <p className="text-[17px] text-[#6e6e73] mb-10 max-w-2xl" style={{ lineHeight: 1.5 }}>
+                        {aboutPageContent.teamIntro}
+                    </p>
+                    <div className="grid sm:grid-cols-2 gap-4">
                         {team.map((member) => (
                             <div
                                 key={member.name}
-                                className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface-card)] hover:-translate-y-1 transition-all overflow-hidden"
+                                className="rounded-[18px] overflow-hidden"
+                                style={{ border: "1px solid #d2d2d7" }}
                             >
                                 <img
                                     src={member.photo}
@@ -128,44 +166,69 @@ export default function AboutPage() {
                                     className="w-full h-48 object-cover object-top"
                                     loading="lazy"
                                 />
-                                <div className="p-5">
-                                    <p className="font-semibold text-[var(--ink)]">{member.name}</p>
-                                    <p className="text-sm text-[var(--accent-blue)] mb-2 font-medium">{member.role}</p>
-                                    <p className="text-sm text-[var(--mute)] leading-relaxed">{member.bio}</p>
+                                <div className="px-5 py-4" style={{ background: "#f5f5f7", borderTop: "1px solid #e8e8ed" }}>
+                                    <p className="font-semibold text-[17px] text-[#1d1d1f]" style={{ letterSpacing: "-0.018em" }}>
+                                        {member.name}
+                                    </p>
+                                    <p className="text-[14px] text-[#0066cc] mt-0.5 font-medium">{member.role}</p>
+                                    <p className="text-[14px] text-[#6e6e73] mt-2" style={{ lineHeight: 1.5 }}>{member.bio}</p>
                                 </div>
                             </div>
                         ))}
                     </div>
                 </div>
+            </section>
 
-                <div className="mb-20 text-center">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-[var(--ash)] mb-6">Backed by builders who care about durable systems</p>
-                    <div className="flex flex-wrap justify-center gap-8 text-slate-400 font-semibold text-sm">
+            {/* Backers tile — parchment */}
+            <section className="af-tile af-tile-parchment text-center">
+                <div className="af-container">
+                    <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#6e6e73] mb-8">
+                        Backed by builders who care about durable systems
+                    </p>
+                    <div className="flex flex-wrap justify-center gap-3">
                         {backers.map((backer) => (
                             <span
                                 key={backer}
-                                className="px-4 py-2 bg-[var(--surface-el)] rounded-xl border border-[var(--hairline)] text-[var(--body-color)]"
+                                className="rounded-full px-5 py-2.5 text-[15px] font-semibold text-[#1d1d1f]"
+                                style={{ background: "#ffffff", border: "1px solid #d2d2d7" }}
                             >
                                 {backer}
                             </span>
                         ))}
                     </div>
                 </div>
+            </section>
 
-                <div className="relative text-center bg-[var(--surface-card)] border border-[var(--hairline)] rounded-3xl p-10 overflow-hidden">
-                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(59,130,246,0.2)_0%,_transparent_70%)] pointer-events-none" />
-                    <div className="relative">
-                        <h2 className="text-2xl font-semibold tracking-[-0.03em] text-[var(--ink)] mb-3">{cta.title}</h2>
-                        <p className="text-[var(--mute)] mb-6">{cta.description}</p>
-                        <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                            <ButtonLink href={cta.primary.href}>{cta.primary.label}</ButtonLink>
-                            <ButtonLink href={cta.secondary.href} variant="outline">
-                                {cta.secondary.label}
-                            </ButtonLink>
-                        </div>
+            {/* CTA tile — dark */}
+            <section className="af-tile af-tile-dark text-center">
+                <div className="af-container-narrow">
+                    <h2
+                        className="font-semibold text-white"
+                        style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.6rem)", letterSpacing: "-0.025em", lineHeight: 1.1 }}
+                    >
+                        {cta.title}
+                    </h2>
+                    <p className="mt-4 text-[17px] text-[#98989d]" style={{ lineHeight: 1.47 }}>
+                        {cta.description}
+                    </p>
+                    <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+                        <Link
+                            href={cta.primary.href}
+                            className="px-6 py-3 rounded-full text-[17px] font-medium text-white transition-colors"
+                            style={{ background: "#0066cc" }}
+                        >
+                            {cta.primary.label}
+                        </Link>
+                        <Link
+                            href={cta.secondary.href}
+                            className="px-6 py-3 rounded-full text-[17px] font-medium text-white transition-colors"
+                            style={{ border: "1px solid rgba(255,255,255,0.25)" }}
+                        >
+                            {cta.secondary.label}
+                        </Link>
                     </div>
                 </div>
-            </div>
+            </section>
         </div>
     );
 }

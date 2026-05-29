@@ -1,128 +1,92 @@
 "use client";
 
-import { useState } from "react";
 import { motion } from "motion/react";
-import { CheckCircle2, Zap } from "lucide-react";
+import { CheckCircle2, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { homeMarketingContent } from "@/lib/marketing-content";
 
-const ease = [0.22, 1, 0.36, 1] as const;
-
 export default function PricingSection() {
-    const [annual, setAnnual] = useState(false);
-    const content = homeMarketingContent.pricing;
-
-    const getPrice = (monthly: string) => {
-        if (monthly === "Custom") return "Custom";
-        const num = parseInt(monthly.replace("$", ""), 10);
-        return annual ? `$${Math.round(num * 0.8)}` : monthly;
-    };
+    const { pricing } = homeMarketingContent;
 
     return (
-        <section id="pricing" className="border-t border-[var(--hairline)] bg-[var(--canvas)] py-24">
-            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <section className="af-tile af-tile-white" aria-label="Pricing">
+            <div className="af-container">
                 <motion.div
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 0, y: 16 }}
                     whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.48, ease }}
-                    className="mx-auto mb-10 max-w-2xl text-center"
+                    viewport={{ once: true, margin: "-80px" }}
+                    transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                    className="text-center mb-14"
                 >
-                    <span className="chip chip-accent mb-4 text-xs">{content.eyebrow}</span>
-                    <h2 className="text-[clamp(1.8rem,3.5vw,2.6rem)] font-semibold tracking-[-0.03em] text-[var(--ink)]">
-                        {content.title}
+                    <p className="af-eyebrow mb-4">{pricing.eyebrow}</p>
+                    <h2
+                        className="font-semibold text-[#1d1d1f]"
+                        style={{ fontSize: "clamp(1.9rem, 3.5vw, 2.8rem)", letterSpacing: "-0.028em", lineHeight: 1.07 }}
+                    >
+                        {pricing.title}
                     </h2>
-                    <p className="mt-4 leading-relaxed text-[var(--mute)]">{content.description}</p>
+                    <p className="mt-4 mx-auto max-w-md text-[17px] text-[#424245]" style={{ lineHeight: 1.47, letterSpacing: "-0.022em" }}>
+                        {pricing.description}
+                    </p>
                 </motion.div>
 
-                <div className="mb-10 flex justify-center">
-                    <div className="flex items-center gap-3 rounded-xl border border-[var(--hairline)] bg-[var(--surface-card)] p-1">
-                        <button
-                            onClick={() => setAnnual(false)}
-                            className={`rounded-lg px-4 py-1.5 text-sm font-medium transition-colors ${!annual ? "bg-white/[0.08] text-[var(--ink)]" : "text-[var(--mute)] hover:text-[var(--ink)]"}`}
-                        >
-                            {content.monthlyLabel}
-                        </button>
-                        <button
-                            onClick={() => setAnnual(true)}
-                            className={`relative rounded-lg px-4 py-1.5 text-sm font-medium transition-colors ${annual ? "bg-white/[0.08] text-[var(--ink)]" : "text-[var(--mute)] hover:text-[var(--ink)]"}`}
-                        >
-                            {content.annualLabel}
-                            <span className="ml-2 rounded-full border border-[#59d499]/25 bg-[#59d499]/10 px-1.5 py-0.5 text-[10px] font-bold text-[var(--accent-green)]">
-                                {content.annualDiscountLabel}
-                            </span>
-                        </button>
-                    </div>
-                </div>
-
-                <div className="mx-auto grid max-w-5xl grid-cols-1 items-stretch gap-5 md:grid-cols-3">
-                    {content.plans.map((plan, index) => (
+                <div className="grid md:grid-cols-3 gap-4 max-w-[860px] mx-auto">
+                    {pricing.plans.map((plan, i) => (
                         <motion.div
                             key={plan.name}
-                            initial={{ opacity: 0, y: 24 }}
+                            initial={{ opacity: 0, y: 20 }}
                             whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true, margin: "-40px" }}
-                            transition={{ delay: index * 0.1, duration: 0.46, ease }}
-                            className={`relative flex flex-col rounded-2xl border p-7 transition-all ${plan.highlighted ? "border-[var(--accent-blue)]/50 bg-[var(--surface-card)] shadow-[0_0_0_1px_rgba(87,193,255,0.2),0_8px_40px_rgba(87,193,255,0.06)]" : "border-[var(--hairline)] bg-[var(--surface-card)]"}`}
+                            viewport={{ once: true, margin: "-60px" }}
+                            transition={{ duration: 0.5, delay: i * 0.07, ease: [0.22, 1, 0.36, 1] }}
+                            className="rounded-[18px] p-6 flex flex-col"
+                            style={{
+                                border: plan.highlighted ? "2px solid #0066cc" : "1px solid #d2d2d7",
+                                background: plan.highlighted ? "rgba(0,102,204,0.03)" : "#ffffff",
+                            }}
                         >
-                            {plan.highlighted ? (
-                                <div className="absolute -top-3 left-7">
-                                    <span className="flex items-center gap-1 rounded-full bg-[var(--accent-blue)] px-2.5 py-1 text-[10px] font-bold text-[#07080a] shadow">
-                                        <Zap className="h-2.5 w-2.5" />
-                                        Most popular
-                                    </span>
-                                </div>
-                            ) : null}
-
-                            <div className="mb-5">
-                                <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-[var(--mute)]">{plan.name}</p>
-                                <div className="mt-1 flex items-end gap-1">
-                                    <motion.span
-                                        key={annual ? `${plan.name}-annual` : `${plan.name}-monthly`}
-                                        initial={{ opacity: 0, y: 8 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ duration: 0.22 }}
-                                        className="text-4xl font-bold tracking-tight text-[var(--ink)]"
-                                    >
-                                        {getPrice(plan.price)}
-                                    </motion.span>
-                                    {plan.price !== "Custom" ? (
-                                        <span className="mb-1.5 text-sm text-[var(--ash)]">/ {annual ? "mo, billed annually" : "month"}</span>
-                                    ) : null}
-                                </div>
-                                <p className="mt-3 text-sm leading-relaxed text-[var(--mute)]">{plan.description}</p>
+                            {plan.highlighted && (
+                                <span className="self-start mb-3 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#0066cc] px-2.5 py-1 rounded-full" style={{ background: "rgba(0,102,204,0.1)" }}>
+                                    Most popular
+                                </span>
+                            )}
+                            <p className="text-[13px] font-semibold text-[#6e6e73] uppercase tracking-[0.06em]">{plan.name}</p>
+                            <div className="mt-2 flex items-end gap-1">
+                                <span className="text-[2.4rem] font-semibold text-[#1d1d1f]" style={{ letterSpacing: "-0.03em", lineHeight: 1 }}>
+                                    {plan.price}
+                                </span>
+                                {plan.price !== "Custom" && (
+                                    <span className="mb-1 text-[14px] text-[#aeaeb2]">/month</span>
+                                )}
                             </div>
-
-                            <ul className="mb-7 flex-1 space-y-2.5">
-                                {plan.features.map((feature) => (
-                                    <li key={feature} className="flex items-start gap-2.5 text-sm text-[var(--body-color)]">
-                                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[var(--accent-green)]" />
-                                        {feature}
+                            <p className="mt-2 text-[14px] text-[#6e6e73]" style={{ lineHeight: 1.5 }}>{plan.description}</p>
+                            <ul className="mt-5 flex-1 space-y-2">
+                                {plan.features.map((f) => (
+                                    <li key={f} className="flex items-start gap-2 text-[14px] text-[#424245]">
+                                        <CheckCircle2 className="mt-0.5 w-4 h-4 shrink-0 text-[#0066cc]" />
+                                        <span style={{ lineHeight: 1.5 }}>{f}</span>
                                     </li>
                                 ))}
                             </ul>
-
                             <Link
                                 href={plan.ctaHref}
-                                className={`w-full rounded-xl py-2.5 text-center text-sm font-semibold transition-all ${plan.highlighted ? "bg-[var(--accent-blue)] text-[#07080a] hover:bg-[#8dd7ff]" : "border border-[var(--hairline)] bg-[var(--surface-el)] text-[var(--ink)] hover:bg-[var(--hairline)]"}`}
+                                className={`mt-6 flex items-center justify-center gap-2 rounded-full py-2.5 text-[15px] font-medium transition-colors ${
+                                    plan.highlighted
+                                        ? "bg-[#0066cc] text-white hover:bg-[#0071e3]"
+                                        : "border border-[#d2d2d7] text-[#1d1d1f] hover:bg-[#f5f5f7]"
+                                }`}
                             >
                                 {plan.cta}
+                                {plan.highlighted && <ArrowRight className="w-4 h-4" />}
                             </Link>
                         </motion.div>
                     ))}
                 </div>
 
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    whileInView={{ opacity: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: 0.3, duration: 0.4 }}
-                    className="mt-8 text-center"
-                >
-                    <Link href="/pricing" className="text-sm text-[var(--mute)] underline underline-offset-4 transition-colors hover:text-[var(--ink)]">
-                        {content.linkLabel}
+                <p className="mt-8 text-center text-[14px] text-[#6e6e73]">
+                    <Link href="/pricing" className="text-[#0066cc] hover:text-[#0071e3] transition-colors">
+                        {pricing.linkLabel}
                     </Link>
-                </motion.div>
+                </p>
             </div>
         </section>
     );

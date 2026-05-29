@@ -1,159 +1,118 @@
 "use client";
 
 import { motion } from "motion/react";
-import { ArrowRight, CheckCircle2, Clock3, GitPullRequest, ShieldCheck } from "lucide-react";
+import { ArrowRight, CheckCircle2, GitPullRequest, ShieldCheck, Clock } from "lucide-react";
+import Link from "next/link";
 import { homeMarketingContent } from "@/lib/marketing-content";
 
+const eventIcons = [GitPullRequest, ShieldCheck, Clock];
+
 export default function Solution() {
-    const content = homeMarketingContent.solution;
+    const { solution } = homeMarketingContent;
 
     return (
-        <section className="bg-[var(--surface)] py-24">
-            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                <div className="grid grid-cols-1 items-center gap-16 lg:grid-cols-2">
-                    <div>
-                        <motion.p initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} className="mb-4 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--ash)]">
-                            {content.eyebrow}
-                        </motion.p>
-                        <motion.h2
-                            initial={{ opacity: 0, y: 12 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true }}
-                            transition={{ duration: 0.44, ease: [0.22, 1, 0.36, 1] }}
-                            className="text-[clamp(1.8rem,3.5vw,2.8rem)] font-semibold leading-[1.1] tracking-tight text-[var(--ink)]"
+        <section className="af-tile af-tile-white" aria-label="The solution">
+            <div className="af-container">
+                <div className="grid lg:grid-cols-2 gap-16 items-center">
+                    {/* Left — text */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 16 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true, margin: "-80px" }}
+                        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                    >
+                        <p className="af-eyebrow mb-4">{solution.eyebrow}</p>
+                        <h2
+                            className="font-semibold text-[#1d1d1f]"
+                            style={{ fontSize: "clamp(1.9rem, 3.5vw, 2.8rem)", letterSpacing: "-0.028em", lineHeight: 1.07 }}
                         >
-                            {content.title}
-                        </motion.h2>
-                        <motion.p
-                            initial={{ opacity: 0, y: 10 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true }}
-                            transition={{ delay: 0.08, duration: 0.44, ease: [0.22, 1, 0.36, 1] }}
-                            className="mt-5 leading-relaxed text-[var(--mute)]"
-                        >
-                            {content.description}
-                        </motion.p>
-                        <motion.ul
-                            initial={{ opacity: 0, y: 8 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true }}
-                            transition={{ delay: 0.14, duration: 0.44, ease: [0.22, 1, 0.36, 1] }}
-                            className="mt-8 space-y-3"
-                        >
-                            {content.benefits.map((benefit) => (
-                                <li key={benefit} className="flex items-start gap-3 text-sm text-[var(--body-color)]">
-                                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#59d499]" />
-                                    <span className="leading-relaxed">{benefit}</span>
+                            {solution.title}
+                        </h2>
+                        <p className="mt-4 text-[17px] text-[#424245]" style={{ lineHeight: 1.47, letterSpacing: "-0.022em" }}>
+                            {solution.description}
+                        </p>
+                        <ul className="mt-6 space-y-3">
+                            {solution.benefits.map((b) => (
+                                <li key={b} className="flex items-start gap-2.5 text-[15px] text-[#424245]">
+                                    <CheckCircle2 className="mt-0.5 w-4 h-4 shrink-0 text-[#0066cc]" />
+                                    <span style={{ lineHeight: 1.5, letterSpacing: "-0.01em" }}>{b}</span>
                                 </li>
                             ))}
-                        </motion.ul>
-                        <motion.a
-                            initial={{ opacity: 0 }}
-                            whileInView={{ opacity: 1 }}
-                            viewport={{ once: true }}
-                            transition={{ delay: 0.26, duration: 0.36 }}
-                            href={content.link.href}
-                            className="mt-8 inline-flex items-center gap-2 text-sm font-medium text-[#57c1ff] transition-colors hover:text-[#8dd7ff]"
-                        >
-                            {content.link.label} <ArrowRight className="h-4 w-4" />
-                        </motion.a>
-                    </div>
+                        </ul>
+                        <Link href={solution.link.href} className="mt-8 inline-flex items-center gap-1.5 text-[17px] text-[#0066cc] hover:text-[#0071e3] transition-colors">
+                            {solution.link.label}
+                            <ArrowRight className="w-4 h-4" />
+                        </Link>
+                    </motion.div>
 
+                    {/* Right — live event feed */}
                     <motion.div
-                        initial={{ opacity: 0, x: 30 }}
-                        whileInView={{ opacity: 1, x: 0 }}
-                        viewport={{ once: true }}
-                        transition={{ duration: 0.52, ease: [0.22, 1, 0.36, 1] }}
-                        className="relative"
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true, margin: "-80px" }}
+                        transition={{ duration: 0.6, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
                     >
                         <div
-                            className="relative overflow-hidden rounded-xl border border-[var(--hairline)] bg-[var(--surface)]"
-                            style={{ boxShadow: "0 20px 48px -16px rgba(0,0,0,0.45)" }}
+                            className="rounded-[18px] overflow-hidden"
+                            style={{ border: "1px solid #d2d2d7", boxShadow: "0 24px 56px -20px rgba(0,0,0,0.12)" }}
                         >
-                            <div className="flex items-center justify-between border-b border-[var(--hairline)] bg-[var(--surface-card)] px-4 py-3">
-                                <span className="text-[11px] font-semibold text-[var(--ash)]">Live operations</span>
-                                <span className="flex items-center gap-1.5 text-[11px] font-semibold text-[var(--accent-green)]">
-                                    <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent-green)]" />
-                                    {content.liveStatusLabel}
+                            <div className="px-5 py-3.5 flex items-center justify-between" style={{ background: "#f5f5f7", borderBottom: "1px solid #e0e0e0" }}>
+                                <span className="text-[12px] font-semibold text-[#1d1d1f]">Live operations</span>
+                                <span className="flex items-center gap-1.5 text-[12px] font-semibold text-[#34c759]">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-[#34c759]" />
+                                    {solution.liveStatusLabel}
                                 </span>
                             </div>
-
-                            <div className="space-y-2.5 p-4">
-                                {content.events.map((event, index) => (
-                                    <motion.div
-                                        key={event.label}
-                                        initial={{ opacity: 0, x: -8 }}
-                                        whileInView={{ opacity: 1, x: 0 }}
-                                        viewport={{ once: true }}
-                                        transition={{ delay: 0.3 + index * 0.1, duration: 0.36, ease: [0.22, 1, 0.36, 1] }}
-                                        className="flex items-start gap-3 rounded-lg border border-[var(--hairline)] bg-[var(--surface-card)] p-3"
-                                    >
+                            <div className="p-4 space-y-2.5" style={{ background: "#ffffff" }}>
+                                {solution.events.map((event, i) => {
+                                    const Icon = eventIcons[i] ?? Clock;
+                                    const isHigh = event.risk === "high";
+                                    return (
                                         <div
-                                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[11px] font-bold"
+                                            key={event.label}
+                                            className="rounded-[11px] p-3.5"
                                             style={{
-                                                background: `${event.accentColor}14`,
-                                                border: `1px solid ${event.accentColor}28`,
-                                                color: event.accentColor,
+                                                border: isHigh ? "1px solid rgba(255,159,10,0.3)" : "1px solid #e8e8ed",
+                                                background: isHigh ? "rgba(255,159,10,0.04)" : "#fafafa",
                                             }}
                                         >
-                                            {event.initials}
-                                        </div>
-                                        <div className="min-w-0 flex-1">
-                                            <div className="mb-0.5 flex items-center gap-2">
-                                                <span className="text-xs font-semibold text-[var(--ink)]">{event.label}</span>
-                                                <span
-                                                    className="ml-auto shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold"
-                                                    style={{
-                                                        color: event.risk === "high" ? "#ffc533" : "#59d499",
-                                                        background: event.risk === "high" ? "rgba(255,197,51,0.1)" : "rgba(89,212,153,0.1)",
-                                                    }}
+                                            <div className="flex items-start gap-3">
+                                                <div
+                                                    className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-[11px] font-bold text-white"
+                                                    style={{ background: event.accentColor }}
                                                 >
-                                                    {event.risk.toUpperCase()}
-                                                </span>
-                                                <span className="shrink-0 text-[10px] text-[var(--ash)]">{event.time}</span>
+                                                    {event.initials}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-[13px] font-semibold text-[#1d1d1f]" style={{ letterSpacing: "-0.01em" }}>{event.label}</p>
+                                                    <p className="text-[11px] text-[#aeaeb2] mt-0.5">{event.detail}</p>
+                                                </div>
+                                                <div className="flex flex-col items-end gap-1 shrink-0">
+                                                    <span
+                                                        className="text-[10px] font-semibold uppercase tracking-[0.04em] px-1.5 py-0.5 rounded-full"
+                                                        style={{
+                                                            background: isHigh ? "rgba(255,159,10,0.1)" : "rgba(52,199,89,0.1)",
+                                                            color: isHigh ? "#ff9f0a" : "#34c759",
+                                                        }}
+                                                    >
+                                                        {event.risk}
+                                                    </span>
+                                                    <span className="text-[11px] text-[#aeaeb2]">{event.time}</span>
+                                                </div>
                                             </div>
-                                            <p className="truncate text-xs text-[var(--mute)]">{event.detail}</p>
-                                            <p className="mt-0.5 text-[11px] font-medium" style={{ color: event.accentColor }}>
-                                                {event.agent}
-                                            </p>
-                                        </div>
-                                    </motion.div>
-                                ))}
-
-                                <div className="rounded-lg border border-[rgba(255,197,51,0.18)] bg-[rgba(255,197,51,0.04)] p-3.5">
-                                    <p className="mb-2.5 text-xs font-semibold text-[#ffc533]">{content.approvalTitle}</p>
-                                    <div className="flex gap-2">
-                                        <button className="flex-1 rounded-lg bg-[#59d499] py-2 text-xs font-semibold text-black transition-colors hover:bg-[#6ee8ae]">
-                                            Approve
-                                        </button>
-                                        <button className="flex-1 rounded-lg border border-[var(--hairline)] py-2 text-xs font-semibold text-[var(--mute)] transition-colors hover:bg-black/[0.04] hover:text-[var(--ink)] dark:hover:bg-white/[0.04]">
-                                            Review diff
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-3 gap-3 border-t border-[var(--hairline)] bg-[var(--surface-card)] px-4 py-3">
-                                {content.stats.map((stat, index) => {
-                                    const Icon = index === 0 ? Clock3 : index === 1 ? GitPullRequest : ShieldCheck;
-                                    return (
-                                        <div key={stat.label} className="flex items-center gap-2">
-                                            <Icon className="h-4 w-4 shrink-0" style={{ color: stat.color }} />
-                                            <div>
-                                                <p className="text-[10px] text-[var(--ash)]">{stat.label}</p>
-                                                <p className="text-xs font-semibold text-[var(--ink)]">{stat.value}</p>
-                                            </div>
+                                            {isHigh && (
+                                                <div className="mt-3 flex gap-2">
+                                                    <button className="flex-1 rounded-full bg-[#0066cc] py-1.5 text-[12px] font-medium text-white hover:bg-[#0071e3] transition-colors cursor-pointer">
+                                                        Approve
+                                                    </button>
+                                                    <button className="flex-1 rounded-full py-1.5 text-[12px] font-medium text-[#6e6e73] hover:text-[#1d1d1f] transition-colors cursor-pointer" style={{ border: "1px solid #d2d2d7" }}>
+                                                        Review diff
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
                                     );
                                 })}
-                            </div>
-                        </div>
-
-                        <div className="mt-4 flex items-center gap-3 rounded-xl border border-[rgba(89,212,153,0.15)] bg-[rgba(89,212,153,0.04)] px-4 py-3">
-                            <CheckCircle2 className="h-4 w-4 shrink-0 text-[#59d499]" />
-                            <div>
-                                <p className="text-sm font-semibold text-[var(--ink)]">{content.calloutTitle}</p>
-                                <p className="mt-0.5 text-xs text-[var(--ash)]">{content.calloutDescription}</p>
                             </div>
                         </div>
                     </motion.div>
