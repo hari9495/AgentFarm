@@ -1,113 +1,138 @@
 import type { Metadata } from "next";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import MarketplaceGrid from "@/components/marketplace/MarketplaceGrid";
 
 export const metadata: Metadata = {
-  title: "Agent Marketplace – AgentFarm",
-  description:
-    "Browse and hire AI workers across 12 roles and every department — from Developer and Sales Rep to Customer Support, Recruiter, and more.",
+    title: "Agent Marketplace – AgentFarm",
+    description:
+        "Browse and hire AI workers across 12 roles and every department — from Developer and Sales Rep to Customer Support, Recruiter, and more.",
 };
 
-const launchPaths = [
-  {
-    label: "Start with Engineering & QA",
-    detail: "Deploy a Developer + Tester agent pair to ship code faster with automated PR review, CI fixes, and test coverage.",
-  },
-  {
-    label: "Add Sales & Marketing",
-    detail: "Sales Rep and Marketing Specialist agents that manage outreach, CRM updates, and campaign execution automatically.",
-  },
-  {
-    label: "Cover Operations & Support",
-    detail: "Corporate Assistant, Customer Support Executive, and Project Manager agents for every recurring operational task.",
-  },
+const stats = [
+    { label: "AI worker roles", value: "12" },
+    { label: "Avg hire time", value: "< 10 min" },
+    { label: "Actions audited", value: "100%" },
+    { label: "Departments covered", value: "8" },
 ];
 
-const stats = [
-  { label: "AI worker roles", value: "12" },
-  { label: "Avg hire time", value: "< 10 min" },
-  { label: "Actions audited", value: "100%" },
-  { label: "Departments covered", value: "16" },
+const launchPaths = [
+    {
+        label: "Start with Engineering & QA",
+        detail: "Deploy a Backend Developer and QA Engineer pair. PRs open automatically, CI runs, failures fix themselves — engineers review, not babysit.",
+    },
+    {
+        label: "Add Sales & Marketing",
+        detail: "Sales Rep and Marketing Specialist handle outreach, CRM hygiene, campaign drafts, and follow-up sequences with full human approval on every send.",
+    },
+    {
+        label: "Cover Operations & Support",
+        detail: "Corporate Assistant, Customer Support, and Project Manager workers for every recurring task that currently eats up your most capable people.",
+    },
+];
+
+const trustPoints = [
+    "14-day free trial, no card required",
+    "Deploy in under 10 minutes",
+    "Human approval on every high-risk action",
+    "Full audit trail — every task, every decision",
 ];
 
 export default function MarketplacePage() {
-  return (
-    <div style={{ background: "#ffffff" }}>
+    return (
+        <div style={{ background: "#ffffff" }}>
 
-      {/* Hero tile */}
-      <section className="af-tile af-tile-white" style={{ paddingTop: 80, paddingBottom: 64 }}>
-        <div className="af-container-wide">
-          <div className="grid lg:grid-cols-[1fr_auto] gap-12 items-start">
+            {/* Hero — white */}
+            <section className="af-tile af-tile-white" style={{ paddingTop: 80, paddingBottom: 64 }}>
+                <div className="af-container-wide">
+                    <div className="grid lg:grid-cols-[1fr_320px] gap-12 items-start">
 
-            <div>
-              <p className="af-eyebrow mb-5">Agent Marketplace</p>
-              <h1
-                className="font-semibold text-[#1d1d1f]"
-                style={{ fontSize: "clamp(2.2rem, 4.5vw, 3.4rem)", letterSpacing: "-0.03em", lineHeight: 1.07 }}
-              >
-                Hire an AI worker for every role in your company
-              </h1>
-              <p className="mt-4 max-w-xl text-[17px] text-[#424245]" style={{ lineHeight: 1.47, letterSpacing: "-0.022em" }}>
-                Browse 12 AI worker roles across every department — Engineering, Sales, Marketing,
-                Customer Support, Operations, and more. Each agent ships real work with real tools,
-                human approval on every high-stakes decision.
-              </p>
-              <div className="mt-8 flex flex-col sm:flex-row gap-3">
-                <Link href="/checkout" className="btn-primary">
-                  Browse all roles
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
-                <Link href="/book-demo" className="btn-secondary">
-                  See a live demo
-                </Link>
-              </div>
-            </div>
+                        {/* Left — headline + CTAs */}
+                        <div>
+                            <p className="af-eyebrow mb-5">Agent Marketplace</p>
+                            <h1
+                                className="font-semibold text-[#1d1d1f]"
+                                style={{ fontSize: "clamp(2.2rem, 4.5vw, 3.4rem)", letterSpacing: "-0.03em", lineHeight: 1.07 }}
+                            >
+                                Hire an AI worker for every role in your company
+                            </h1>
+                            <p className="mt-4 max-w-xl text-[17px] text-[#424245]" style={{ lineHeight: 1.47, letterSpacing: "-0.022em" }}>
+                                12 specialist AI workers across engineering, sales, marketing, support, operations, and more.
+                                Real tool access, approval gates on every high-stakes action, full evidence trail.
+                            </p>
 
-            {/* Stat tiles */}
-            <div className="grid grid-cols-2 gap-3 min-w-[280px]" aria-label="Marketplace metrics">
-              {stats.map((s) => (
-                <div
-                  key={s.label}
-                  className="rounded-[14px] p-5 flex flex-col gap-1"
-                  style={{ border: "1px solid #d2d2d7", background: "#f5f5f7" }}
-                >
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#aeaeb2]">{s.label}</p>
-                  <p
-                    className="font-semibold text-[#1d1d1f]"
-                    style={{ fontSize: "2rem", letterSpacing: "-0.03em", lineHeight: 1 }}
-                  >
-                    {s.value}
-                  </p>
+                            {/* Trust bullets */}
+                            <ul className="mt-5 grid sm:grid-cols-2 gap-2">
+                                {trustPoints.map((t) => (
+                                    <li key={t} className="flex items-center gap-2 text-[14px] text-[#424245]">
+                                        <CheckCircle2 className="w-4 h-4 shrink-0 text-[#0066cc]" />
+                                        {t}
+                                    </li>
+                                ))}
+                            </ul>
+
+                            <div className="mt-8 flex flex-col sm:flex-row gap-3">
+                                <Link href="/get-started" className="btn-primary">
+                                    Start free trial
+                                    <ArrowRight className="w-4 h-4" />
+                                </Link>
+                                <Link href="/book-demo" className="btn-secondary">
+                                    Book a live demo
+                                </Link>
+                            </div>
+                        </div>
+
+                        {/* Right — stat tiles */}
+                        <div className="grid grid-cols-2 gap-3" aria-label="Marketplace metrics">
+                            {stats.map((s) => (
+                                <div
+                                    key={s.label}
+                                    className="rounded-[14px] p-5 flex flex-col gap-1"
+                                    style={{ border: "1px solid #d2d2d7", background: "#f5f5f7" }}
+                                >
+                                    <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#aeaeb2]">{s.label}</p>
+                                    <p className="font-semibold text-[#1d1d1f]" style={{ fontSize: "1.8rem", letterSpacing: "-0.03em", lineHeight: 1 }}>
+                                        {s.value}
+                                    </p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Launch path cards */}
+                    <div className="mt-10 grid md:grid-cols-3 gap-4">
+                        {launchPaths.map((path) => (
+                            <div
+                                key={path.label}
+                                className="rounded-[14px] p-5"
+                                style={{ border: "1px solid #d2d2d7", background: "#f5f5f7" }}
+                            >
+                                <p className="font-semibold text-[15px] text-[#1d1d1f] mb-2" style={{ letterSpacing: "-0.015em" }}>
+                                    {path.label}
+                                </p>
+                                <p className="text-[13px] text-[#6e6e73]" style={{ lineHeight: 1.5 }}>{path.detail}</p>
+                            </div>
+                        ))}
+                    </div>
                 </div>
-              ))}
-            </div>
-          </div>
+            </section>
 
-          {/* Launch paths */}
-          <div className="mt-10 grid md:grid-cols-3 gap-4">
-            {launchPaths.map((path) => (
-              <div
-                key={path.label}
-                className="rounded-[14px] p-5"
-                style={{ border: "1px solid #d2d2d7", background: "#f5f5f7" }}
-              >
-                <p className="font-semibold text-[15px] text-[#1d1d1f] mb-2" style={{ letterSpacing: "-0.015em" }}>
-                  {path.label}
-                </p>
-                <p className="text-[14px] text-[#6e6e73]" style={{ lineHeight: 1.5 }}>{path.detail}</p>
-              </div>
-            ))}
-          </div>
+            {/* Grid section — parchment */}
+            <section className="af-tile af-tile-parchment" style={{ paddingTop: 56, paddingBottom: 80 }}>
+                <div className="af-container-wide">
+                    <div className="flex items-baseline justify-between mb-8">
+                        <div>
+                            <h2 className="font-semibold text-[#1d1d1f]" style={{ fontSize: "clamp(1.4rem, 2.5vw, 1.8rem)", letterSpacing: "-0.022em" }}>
+                                Browse all workers
+                            </h2>
+                            <p className="mt-1 text-[14px] text-[#6e6e73]">
+                                Filter by department, plan, or search by skill
+                            </p>
+                        </div>
+                    </div>
+                    <MarketplaceGrid />
+                </div>
+            </section>
         </div>
-      </section>
-
-      {/* Agent grid */}
-      <section className="af-tile af-tile-parchment" style={{ paddingTop: 48 }}>
-        <div className="af-container-wide">
-          <MarketplaceGrid />
-        </div>
-      </section>
-    </div>
-  );
+    );
 }
