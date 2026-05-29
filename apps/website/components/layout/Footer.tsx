@@ -109,12 +109,9 @@ export default function Footer() {
                 </div>
 
                 {/* Bottom bar */}
-                <div className="mt-12 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3" style={{ borderTop: "1px solid #d2d2d7" }}>
+                <div className="mt-12 pt-6" style={{ borderTop: "1px solid #d2d2d7" }}>
                     <p className="text-[12px] text-[#6e6e73]">
                         Copyright &copy; {new Date().getFullYear()} AgentFarm. All rights reserved.
-                    </p>
-                    <p className="text-[12px] text-[#6e6e73]">
-                        Built with Next.js &middot; Deployed on Azure
                     </p>
                 </div>
             </div>
