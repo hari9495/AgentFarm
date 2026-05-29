@@ -56,7 +56,7 @@ export default function BookDemoPage() {
                         See a governed AI worker in action
                     </h1>
                     <p className="mt-5 text-[17px] text-[#424245] max-w-md mx-auto" style={{ lineHeight: 1.47, letterSpacing: "-0.022em" }}>
-                        30 minutes with the AgentFarm team. We&apos;ll show a live worker, answer your governance questions, and help scope the right starting workflow.
+                        30 minutes with the AgentFarms team. We&apos;ll show a live worker, answer your governance questions, and help scope the right starting workflow.
                     </p>
                 </div>
             </section>

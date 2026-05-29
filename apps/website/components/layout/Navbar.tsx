@@ -89,7 +89,7 @@ export default function Navbar() {
               <path d="M4 6h4M6 4v4" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
           </span>
-          <span className="text-white font-semibold text-[13px] tracking-[-0.01em]">AgentFarm</span>
+          <span className="text-white font-semibold text-[13px] tracking-[-0.01em]">AgentFarms</span>
         </Link>
 
         {/* Desktop nav links */}

@@ -83,7 +83,7 @@ function LoginForm() {
                         <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#ff5757] to-[#a1131a] flex items-center justify-center shadow-xl shadow-red-900/30">
                             <Zap className="w-5 h-5 text-white" />
                         </div>
-                        <span className="text-xl font-semibold text-white tracking-tight">AgentFarm</span>
+                        <span className="text-xl font-semibold text-white tracking-tight">AgentFarms</span>
                     </div>
 
                     {/* Hero copy */}
@@ -182,7 +182,7 @@ function LoginForm() {
                         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#ff5757] to-[#a1131a] flex items-center justify-center shadow-lg shadow-red-900/30">
                             <Zap className="w-5 h-5 text-white" />
                         </div>
-                        <span className="text-lg font-semibold text-[var(--ink)]">AgentFarm</span>
+                        <span className="text-lg font-semibold text-[var(--ink)]">AgentFarms</span>
                     </div>
 
                     <div className="mb-8">
@@ -278,7 +278,7 @@ function LoginForm() {
                                 </>
                             ) : (
                                 <>
-                                    Sign in to AgentFarm
+                                    Sign in to AgentFarms
                                     <ArrowRight className="h-4 w-4 shrink-0" />
                                 </>
                             )}

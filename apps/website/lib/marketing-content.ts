@@ -1,8 +1,8 @@
 export const siteMarketingMetadata = {
-    siteTitle: "AgentFarm - AI Workers That Ship With Human Control",
+    siteTitle: "AgentFarms - AI Workers That Ship With Human Control",
     siteDescription:
         "Deploy AI workers that do real work inside your systems, stop at approval boundaries, and leave behind evidence your team can trust.",
-    homeTitle: "AgentFarm - AI Workers That Ship With Human Control",
+    homeTitle: "AgentFarms - AI Workers That Ship With Human Control",
     homeDescription:
         "Give your team AI workers with real tool access, approval checkpoints, and a full evidence trail so output goes up without governance falling apart.",
 } as const;
@@ -13,7 +13,7 @@ export const homeMarketingContent = {
         titleLead: "Hire AI workers that",
         cycleWords: ["Ship backlog", "Handle support", "Run operations", "Keep teams aligned", "Protect delivery"],
         description:
-            "AgentFarm is built for teams who want more output, not more AI theater. Deploy workers with real tool access, hard role boundaries, and human approval where the stakes are real.",
+            "AgentFarms is built for teams who want more output, not more AI theater. Deploy workers with real tool access, hard role boundaries, and human approval where the stakes are real.",
         benefits: [
             "Launch specialist workers across engineering, support, operations, and revenue",
             "Stop risky actions at the approval layer before they touch customers, code, or production",
@@ -77,7 +77,7 @@ export const homeMarketingContent = {
         eyebrow: "The solution",
         title: "A governed execution layer for the work teams repeat every day",
         description:
-            "AgentFarm turns autonomous work into something operationally sane. Every worker has a role, a boundary, and a review model your team can actually live with.",
+            "AgentFarms turns autonomous work into something operationally sane. Every worker has a role, a boundary, and a review model your team can actually live with.",
         benefits: [
             "Role-based AI workers with clear responsibilities and expected outputs",
             "Direct connections into GitHub, Jira, Slack, email, and internal tools",
@@ -161,7 +161,7 @@ export const homeMarketingContent = {
                 color: "#59d499",
                 headline: "Workers act inside the systems your team already runs",
                 description:
-                    "AgentFarm workers move through full workflows, whether the work lives in APIs, Git repositories, dashboards, or browser-driven tools.",
+                    "AgentFarms workers move through full workflows, whether the work lives in APIs, Git repositories, dashboards, or browser-driven tools.",
                 points: [
                     "Run full execution flows from intake to output, status, and follow-through",
                     "Support both API-driven work and visual desktop-style interaction when needed",
@@ -224,7 +224,7 @@ export const homeMarketingContent = {
         eyebrow: "Customer stories",
         title: "Real teams. Measurable outcomes.",
         description:
-            "Founders and operators use AgentFarm when they want more output without introducing a new black box into the business.",
+            "Founders and operators use AgentFarms when they want more output without introducing a new black box into the business.",
         items: [
             {
                 name: "Sarah Chen",
@@ -254,7 +254,7 @@ export const homeMarketingContent = {
                 stars: 5,
                 metric: "MVP shipped in 6 days",
                 quote:
-                    "As a small team, AgentFarm gave us execution capacity we simply did not have. We moved like a much larger company without losing review discipline.",
+                    "As a small team, AgentFarms gave us execution capacity we simply did not have. We moved like a much larger company without losing review discipline.",
             },
             {
                 name: "James Okafor",
@@ -354,14 +354,14 @@ export const homeMarketingContent = {
         description: "Clear answers about setup, governance, pricing, and everyday operations.",
         items: [
             {
-                question: "What is AgentFarm?",
+                question: "What is AgentFarms?",
                 answer:
-                    "AgentFarm is a governed AI worker platform. You deploy role-based workers that complete real tasks inside your tools while routing important decisions through human approval.",
+                    "AgentFarms is a governed AI worker platform. You deploy role-based workers that complete real tasks inside your tools while routing important decisions through human approval.",
             },
             {
-                question: "How is AgentFarm different from coding copilots or chat tools?",
+                question: "How is AgentFarms different from coding copilots or chat tools?",
                 answer:
-                    "Copilots help individuals generate suggestions. AgentFarm workers execute complete workflows with task ownership, tool access, status tracking, approvals, and evidence.",
+                    "Copilots help individuals generate suggestions. AgentFarms workers execute complete workflows with task ownership, tool access, status tracking, approvals, and evidence.",
             },
             {
                 question: "How are risky actions handled?",
@@ -381,7 +381,7 @@ export const homeMarketingContent = {
             {
                 question: "What connectors are supported?",
                 answer:
-                    "AgentFarm supports common delivery and business systems such as GitHub, Jira, Slack, email, calendars, and internal tools through approved connector paths.",
+                    "AgentFarms supports common delivery and business systems such as GitHub, Jira, Slack, email, calendars, and internal tools through approved connector paths.",
             },
             {
                 question: "How does pricing work?",
@@ -431,14 +431,14 @@ export const homeMarketingContent = {
 
 export const pricingPageContent = {
     metadata: {
-        title: "Pricing - AgentFarm",
+        title: "Pricing - AgentFarms",
         description: "Pricing for teams that want AI workers to prove themselves before they scale.",
     },
     hero: {
         eyebrow: "Pricing",
         title: "Buy small. Prove value. Expand with evidence.",
         description:
-            "AgentFarm is priced for teams that want to start with one real workflow, measure the output, and expand from proof instead of hype.",
+            "AgentFarms is priced for teams that want to start with one real workflow, measure the output, and expand from proof instead of hype.",
         footnoteTemplate: "{count} live roles - 14-day free trial - no card required",
     },
     decisionCards: [
@@ -504,7 +504,7 @@ export const pricingPageContent = {
         },
         {
             q: "What integrations are supported?",
-            a: "AgentFarm supports core delivery, communication, and operating tools, and can extend into internal systems through approved connector paths.",
+            a: "AgentFarms supports core delivery, communication, and operating tools, and can extend into internal systems through approved connector paths.",
         },
         {
             q: "Is our data isolated?",
@@ -519,16 +519,16 @@ export const pricingPageContent = {
 
 export const productPageContent = {
     metadata: {
-        title: "Product - AgentFarm",
+        title: "Product - AgentFarms",
         description:
-            "Explore the AgentFarm product experience for launching governed AI workers with approvals, evidence, and role-based execution.",
+            "Explore the AgentFarms product experience for launching governed AI workers with approvals, evidence, and role-based execution.",
     },
     hero: {
         badge: "Product",
         titleLead: "One platform for",
         titleAccent: "AI work you can actually trust",
         description:
-            "AgentFarm helps teams launch role-based AI workers that act in real systems, respect approval boundaries, and show their work clearly enough to earn trust.",
+            "AgentFarms helps teams launch role-based AI workers that act in real systems, respect approval boundaries, and show their work clearly enough to earn trust.",
         primaryCta: { label: "Start free trial", href: "/#waitlist" },
         secondaryCta: { label: "How it works", href: "/how-it-works" },
     },
@@ -634,12 +634,12 @@ export const productPageContent = {
 
 export const docsOverviewContent = {
     metadata: {
-        title: "Documentation - AgentFarm",
+        title: "Documentation - AgentFarms",
         description:
-            "Documentation for deploying and governing AgentFarm AI workers across real team workflows.",
+            "Documentation for deploying and governing AgentFarms AI workers across real team workflows.",
     },
     hero: {
-        title: "AgentFarm Docs",
+        title: "AgentFarms Docs",
         description:
             "Everything you need to deploy workers, connect real systems, and understand the operating model behind controlled AI execution.",
     },
@@ -672,7 +672,7 @@ export const docsOverviewContent = {
             label: "Step 1",
             title: "Create your account and choose a starting role",
             description:
-                "Create an AgentFarm account and pick the first role you want to validate so the platform can tailor setup defaults around that workflow.",
+                "Create an AgentFarms account and pick the first role you want to validate so the platform can tailor setup defaults around that workflow.",
             code: null,
         },
         {
@@ -716,7 +716,7 @@ export const docsOverviewContent = {
         {
             title: "Git and delivery workflows",
             description:
-                "How AgentFarm workers interact with repositories, reviews, CI, and downstream delivery coordination.",
+                "How AgentFarms workers interact with repositories, reviews, CI, and downstream delivery coordination.",
             href: "/docs/concepts#git",
             gradient: "from-violet-500 to-blue-500",
         },
@@ -767,8 +767,8 @@ export const docsOverviewContent = {
 
 export const docsQuickstartContent = {
     metadata: {
-        title: "Quickstart - AgentFarm Docs",
-        description: "Launch your first AgentFarm worker with governed setup in under 10 minutes.",
+        title: "Quickstart - AgentFarms Docs",
+        description: "Launch your first AgentFarms worker with governed setup in under 10 minutes.",
     },
     hero: {
         badge: "Getting started",
@@ -781,7 +781,7 @@ export const docsQuickstartContent = {
             title: "Create your account",
             paragraphs: [
                 "Sign up with a work email and choose the team or workflow you want to start with.",
-                "Your onboarding answers help AgentFarm configure sensible defaults for the first worker you deploy.",
+                "Your onboarding answers help AgentFarms configure sensible defaults for the first worker you deploy.",
             ],
             code: null,
         },
@@ -812,10 +812,10 @@ export const docsQuickstartContent = {
             ],
             code: [
                 "# Invite the app to a channel",
-                "/invite @AgentFarm",
+                "/invite @AgentFarms",
                 "",
                 "# Assign a task to a worker",
-                "@AgentFarm assign investigate the login timeout issue",
+                "@AgentFarms assign investigate the login timeout issue",
             ],
             aside: null,
         },
@@ -854,16 +854,16 @@ export const docsQuickstartContent = {
 
 export const docsConceptsContent = {
     metadata: {
-        title: "How Workers Operate - AgentFarm Docs",
+        title: "How Workers Operate - AgentFarms Docs",
         description:
-            "Understand AgentFarm's task lifecycle, runtime isolation, approval controls, and working context model.",
+            "Understand AgentFarms's task lifecycle, runtime isolation, approval controls, and working context model.",
     },
     hero: {
         badge: "Core concepts",
         titleLead: "How workers",
         titleAccent: "operate",
         description:
-            "A practical mental model for how AgentFarm workers receive tasks, use context, execute inside boundaries, and hand decisions back to people when needed.",
+            "A practical mental model for how AgentFarms workers receive tasks, use context, execute inside boundaries, and hand decisions back to people when needed.",
     },
     taskLifecycleTitle: "Task lifecycle",
     taskLifecycleDescription: "Every governed task moves through the same five-stage flow:",
@@ -942,7 +942,7 @@ export const docsConceptsContent = {
 
 export const docsApiReferenceContent = {
     metadata: {
-        title: "REST API Reference - AgentFarm Docs",
+        title: "REST API Reference - AgentFarms Docs",
         description:
             "API reference for authenticating, launching workers, assigning tasks, and subscribing to governed workflow events.",
     },
@@ -1028,17 +1028,17 @@ export const docsApiReferenceContent = {
 } as const;
 
 const legalIntro =
-    "These pages describe the current product posture and operating policies for AgentFarm. They are written to be clear, reviewable, and easy to update as the platform evolves.";
+    "These pages describe the current product posture and operating policies for AgentFarms. They are written to be clear, reviewable, and easy to update as the platform evolves.";
 
 export const privacyPageContent = {
     metadata: {
-        title: "Privacy Policy - AgentFarm",
-        description: "How AgentFarm collects, uses, stores, and protects information.",
+        title: "Privacy Policy - AgentFarms",
+        description: "How AgentFarms collects, uses, stores, and protects information.",
     },
     title: "Privacy Policy",
     updatedAt: "May 26, 2026",
     intro:
-        "AgentFarm is committed to handling personal information responsibly. This policy explains what we collect, why we collect it, and the choices available to users and workspace administrators.",
+        "AgentFarms is committed to handling personal information responsibly. This policy explains what we collect, why we collect it, and the choices available to users and workspace administrators.",
     preface: legalIntro,
     sections: [
         {
@@ -1054,17 +1054,17 @@ export const privacyPageContent = {
         {
             heading: "Security and access",
             body:
-                "AgentFarm applies scoped access, transport encryption, runtime isolation, and audit-aware review processes to reduce unnecessary exposure. Access to sensitive operational data should remain limited to authorized personnel with a valid business need.",
+                "AgentFarms applies scoped access, transport encryption, runtime isolation, and audit-aware review processes to reduce unnecessary exposure. Access to sensitive operational data should remain limited to authorized personnel with a valid business need.",
         },
         {
             heading: "Connectors and third-party systems",
             body:
-                "When customers connect external systems, AgentFarm uses only the access granted through those connector flows. Third-party systems continue to apply their own privacy and security policies to the data they process.",
+                "When customers connect external systems, AgentFarms uses only the access granted through those connector flows. Third-party systems continue to apply their own privacy and security policies to the data they process.",
         },
         {
             heading: "Retention and deletion",
             body:
-                "Retention periods can vary by workspace policy, product plan, and operational need. When accounts are deleted or retention windows expire, AgentFarm should remove or anonymize data according to the active policy and legal obligations.",
+                "Retention periods can vary by workspace policy, product plan, and operational need. When accounts are deleted or retention windows expire, AgentFarms should remove or anonymize data according to the active policy and legal obligations.",
         },
         {
             heading: "User rights and requests",
@@ -1074,30 +1074,30 @@ export const privacyPageContent = {
         {
             heading: "Policy changes",
             body:
-                "AgentFarm may update this policy as the platform evolves. Material changes should be communicated through product, administrative, or direct notice before they take effect where required.",
+                "AgentFarms may update this policy as the platform evolves. Material changes should be communicated through product, administrative, or direct notice before they take effect where required.",
         },
         {
             heading: "Contact",
             body:
-                "Questions about privacy, data handling, or policy interpretation can be directed to the privacy contact listed by AgentFarm for current customers and prospects.",
+                "Questions about privacy, data handling, or policy interpretation can be directed to the privacy contact listed by AgentFarms for current customers and prospects.",
         },
     ],
 } as const;
 
 export const termsPageContent = {
     metadata: {
-        title: "Terms of Service - AgentFarm",
-        description: "Terms governing access to and use of the AgentFarm platform.",
+        title: "Terms of Service - AgentFarms",
+        description: "Terms governing access to and use of the AgentFarms platform.",
     },
     title: "Terms of Service",
     updatedAt: "May 26, 2026",
     intro:
-        "These terms describe the rules, responsibilities, and limitations that apply when organizations or individuals access and use AgentFarm.",
+        "These terms describe the rules, responsibilities, and limitations that apply when organizations or individuals access and use AgentFarms.",
     sections: [
         {
             heading: "1. Use of the service",
             body:
-                "AgentFarm provides software for launching and governing AI workers. Use of the service must remain within applicable law, contractual obligations, and the policies configured for the relevant workspace.",
+                "AgentFarms provides software for launching and governing AI workers. Use of the service must remain within applicable law, contractual obligations, and the policies configured for the relevant workspace.",
         },
         {
             heading: "2. Accounts and administrators",
@@ -1107,7 +1107,7 @@ export const termsPageContent = {
         {
             heading: "3. Acceptable use",
             body:
-                "Customers may not use AgentFarm to violate law, abuse third-party systems, bypass access controls, distribute malicious content, or direct workers toward clearly prohibited or harmful activity.",
+                "Customers may not use AgentFarms to violate law, abuse third-party systems, bypass access controls, distribute malicious content, or direct workers toward clearly prohibited or harmful activity.",
         },
         {
             heading: "4. Customer data and outputs",
@@ -1122,40 +1122,40 @@ export const termsPageContent = {
         {
             heading: "6. Availability and changes",
             body:
-                "AgentFarm may improve, modify, or retire product capabilities over time. Planned changes should be communicated in a commercially reasonable manner when they materially affect current service usage.",
+                "AgentFarms may improve, modify, or retire product capabilities over time. Planned changes should be communicated in a commercially reasonable manner when they materially affect current service usage.",
         },
         {
             heading: "7. Disclaimers",
             body:
-                "AI-generated and workflow-generated outputs require customer judgment. AgentFarm does not guarantee that every output will be correct, complete, or suitable for every use case without human review.",
+                "AI-generated and workflow-generated outputs require customer judgment. AgentFarms does not guarantee that every output will be correct, complete, or suitable for every use case without human review.",
         },
         {
             heading: "8. Liability limits",
             body:
-                "Any applicable limitations of liability, indemnity provisions, or warranty carve-outs should be interpreted according to the controlling commercial agreement between AgentFarm and the customer.",
+                "Any applicable limitations of liability, indemnity provisions, or warranty carve-outs should be interpreted according to the controlling commercial agreement between AgentFarms and the customer.",
         },
         {
             heading: "9. Suspension and termination",
             body:
-                "AgentFarm may suspend or terminate access for material breach, serious security risk, non-payment, or prohibited use, subject to the governing commercial terms where applicable.",
+                "AgentFarms may suspend or terminate access for material breach, serious security risk, non-payment, or prohibited use, subject to the governing commercial terms where applicable.",
         },
         {
             heading: "10. Contact",
             body:
-                "Questions about these terms or their application should be directed to the legal or commercial contact provided by AgentFarm.",
+                "Questions about these terms or their application should be directed to the legal or commercial contact provided by AgentFarms.",
         },
     ],
 } as const;
 
 export const cookiesPageContent = {
     metadata: {
-        title: "Cookie Policy - AgentFarm",
-        description: "How AgentFarm uses cookies, local storage, and similar technologies.",
+        title: "Cookie Policy - AgentFarms",
+        description: "How AgentFarms uses cookies, local storage, and similar technologies.",
     },
     title: "Cookie Policy",
     updatedAt: "May 26, 2026",
     intro:
-        "This policy explains how AgentFarm uses cookies and related storage technologies to support authentication, product experience, and operational insight.",
+        "This policy explains how AgentFarms uses cookies and related storage technologies to support authentication, product experience, and operational insight.",
     sections: [
         {
             heading: "What cookies are",
@@ -1163,9 +1163,9 @@ export const cookiesPageContent = {
                 "Cookies are small pieces of data stored on a browser or device. Similar technologies such as local storage and session storage can also be used to preserve product state or user preferences.",
         },
         {
-            heading: "How AgentFarm uses them",
+            heading: "How AgentFarms uses them",
             body:
-                "AgentFarm uses cookies and related storage for session continuity, security controls, user preference persistence, and limited product analytics that help improve reliability and usability.",
+                "AgentFarms uses cookies and related storage for session continuity, security controls, user preference persistence, and limited product analytics that help improve reliability and usability.",
         },
         {
             heading: "Types of storage in use",
@@ -1185,7 +1185,7 @@ export const cookiesPageContent = {
         {
             heading: "Policy updates",
             body:
-                "AgentFarm may revise this policy when storage behavior or third-party service use changes in a meaningful way.",
+                "AgentFarms may revise this policy when storage behavior or third-party service use changes in a meaningful way.",
         },
         {
             heading: "Contact",
@@ -1197,18 +1197,18 @@ export const cookiesPageContent = {
 
 export const aboutPageContent = {
     metadata: {
-        title: "About AgentFarm",
+        title: "About AgentFarms",
         description:
-            "Learn why AgentFarm exists and how we build governed AI workers that increase output without giving up accountability.",
+            "Learn why AgentFarms exists and how we build governed AI workers that increase output without giving up accountability.",
     },
     hero: {
         image: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1800&q=80",
-        imageAlt: "AgentFarm team collaborating",
+        imageAlt: "AgentFarms team collaborating",
         eyebrow: "Our story",
         titleLead: "We build AI workers that",
         titleAccent: "earn trust before scale",
         description:
-            "AgentFarm started from a blunt observation: strong teams are still drowning in repetitive execution. We are building AI workers that can take that layer on without asking teams to accept mystery behavior, weak controls, or governance debt.",
+            "AgentFarms started from a blunt observation: strong teams are still drowning in repetitive execution. We are building AI workers that can take that layer on without asking teams to accept mystery behavior, weak controls, or governance debt.",
     },
     stats: [
         { value: "2025", label: "Founded" },
@@ -1290,9 +1290,9 @@ export const aboutPageContent = {
 
 export const howItWorksPageContent = {
     metadata: {
-        title: "How AgentFarm Works",
+        title: "How AgentFarms Works",
         description:
-            "See how AgentFarm deploys governed AI workers, connects them to real tools, and routes risky actions through review.",
+            "See how AgentFarms deploys governed AI workers, connects them to real tools, and routes risky actions through review.",
     },
     hero: {
         image: "https://images.unsplash.com/photo-1600880292203-757bb62b4baf?auto=format&fit=crop&w=1800&q=80",
@@ -1301,7 +1301,7 @@ export const howItWorksPageContent = {
         titleLead: "From setup to first useful output in",
         titleAccent: "under 10 minutes",
         description:
-            "AgentFarm fits into the workflow you already run. Choose a role, connect the right tools, define the approval line, and let the worker start with bounded work your team can actually review.",
+            "AgentFarms fits into the workflow you already run. Choose a role, connect the right tools, define the approval line, and let the worker start with bounded work your team can actually review.",
     },
     timeline: [
         { label: "Choose a role", time: "1 min" },
@@ -1346,7 +1346,7 @@ export const howItWorksPageContent = {
             gradient: "from-orange-500 to-orange-600",
             title: "Assign work and classify risk",
             description:
-                "Tasks can arrive from the dashboard, API, or your team systems. AgentFarm checks policy before the worker acts so low-risk work can flow and sensitive actions can pause.",
+                "Tasks can arrive from the dashboard, API, or your team systems. AgentFarms checks policy before the worker acts so low-risk work can flow and sensitive actions can pause.",
             detail: "Execution begins in seconds",
             image: "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?auto=format&fit=crop&w=900&q=80",
         },
@@ -1381,16 +1381,16 @@ export const howItWorksPageContent = {
 
 export const securityPageContent = {
     metadata: {
-        title: "Security at AgentFarm",
+        title: "Security at AgentFarms",
         description:
-            "Review how AgentFarm approaches runtime isolation, access control, approvals, auditability, and compliance readiness.",
+            "Review how AgentFarms approaches runtime isolation, access control, approvals, auditability, and compliance readiness.",
     },
     hero: {
         eyebrow: "Security & compliance",
         titleLead: "Built for teams that need",
         titleAccent: "control, not just speed",
         description:
-            "AgentFarm is for teams that refuse to trade governance for momentum. Boundaries, approvals, scoped access, and evidence are built into the product because useful automation without control is just a new failure mode.",
+            "AgentFarms is for teams that refuse to trade governance for momentum. Boundaries, approvals, scoped access, and evidence are built into the product because useful automation without control is just a new failure mode.",
         primary: { label: "Start free trial", href: "/signup" },
         secondary: { label: "Contact security team", href: "mailto:security@agentfarm.ai" },
     },
@@ -1503,7 +1503,7 @@ export const securityPageContent = {
     ],
     faqs: [
         {
-            question: "Does AgentFarm store our source code?",
+            question: "Does AgentFarms store our source code?",
             answer:
                 "Workers use the access you grant at task time. Teams can keep scope narrow and require review before anything sensitive moves forward.",
         },
@@ -1515,7 +1515,7 @@ export const securityPageContent = {
         {
             question: "How are credentials managed?",
             answer:
-                "AgentFarm is designed around scoped access, short-lived task credentials where possible, and centrally managed connector permissions.",
+                "AgentFarms is designed around scoped access, short-lived task credentials where possible, and centrally managed connector permissions.",
         },
         {
             question: "Can security teams review how a worker acted?",
@@ -1552,16 +1552,16 @@ export const securityPageContent = {
 
 export const customersPageContent = {
     metadata: {
-        title: "Customer Stories - AgentFarm",
+        title: "Customer Stories - AgentFarms",
         description:
-            "See how teams use AgentFarm to increase throughput, reduce repetitive work, and keep review standards intact.",
+            "See how teams use AgentFarms to increase throughput, reduce repetitive work, and keep review standards intact.",
     },
     hero: {
         eyebrow: "Customer stories",
         titleLead: "Teams getting more done with",
         titleAccent: "governed AI workers",
         description:
-            "From engineering delivery to support operations, teams use AgentFarm when they need more execution capacity but do not want to solve the problem with endless hiring or weaker standards.",
+            "From engineering delivery to support operations, teams use AgentFarms when they need more execution capacity but do not want to solve the problem with endless hiring or weaker standards.",
         primary: { label: "Start free trial", href: "/signup" },
     },
     stats: [
@@ -1592,7 +1592,7 @@ export const customersPageContent = {
             challenge:
                 "A small security team was buried under CVE triage, dependency review, and access-policy follow-up across a growing service footprint.",
             outcome:
-                "AgentFarm workers absorbed the repeatable scan-and-remediate loop so human security engineers could focus on architecture and higher-judgment review.",
+                "AgentFarms workers absorbed the repeatable scan-and-remediate loop so human security engineers could focus on architecture and higher-judgment review.",
             metrics: [
                 { label: "Detection time", before: "11 days", after: "4 hours" },
                 { label: "CVEs resolved / month", before: "8", after: "47" },
@@ -1676,7 +1676,7 @@ export const customersPageContent = {
 
 export const blogListingContent = {
     metadata: {
-        title: "Blog - AgentFarm",
+        title: "Blog - AgentFarms",
         description:
             "Notes on governed AI workers, execution systems, review loops, and the future of software team operations.",
     },
@@ -1696,7 +1696,7 @@ export const blogListingContent = {
     readNowLabel: "Read now ->",
     readLabel: "Read ->",
     postCta: {
-        title: "See AgentFarm in action",
+        title: "See AgentFarms in action",
         description: "Deploy your first AI worker in under 10 minutes and see what the review loop feels like in practice.",
         buttonLabel: "Start free trial",
         buttonHref: "/signup",
@@ -1707,7 +1707,7 @@ export const blogPostsContent = [
     {
         slug: "introducing-agentfarm",
         category: "Product",
-        title: "Introducing AgentFarm: Governed AI Workers for Modern Teams",
+        title: "Introducing AgentFarms: Governed AI Workers for Modern Teams",
         excerpt:
             "Why we are building AI workers that can move real work forward while staying inside approval policy, role scope, and reviewable evidence.",
         date: "March 15, 2026",
@@ -1716,7 +1716,7 @@ export const blogPostsContent = [
         author: { name: "Jane Doe", role: "Co-founder & CEO", initials: "JD" },
         body: [
             "Most teams do not have a thinking problem. They have an execution problem. Valuable people keep getting pulled into repetitive implementation, triage, coordination, and cleanup work that steals time from the hardest decisions.",
-            "AgentFarm exists to absorb that repeatable layer without turning the delivery process into a black box. We deploy AI workers with a role, real tool access, and a clear approval model so teams can increase output without relaxing control.",
+            "AgentFarms exists to absorb that repeatable layer without turning the delivery process into a black box. We deploy AI workers with a role, real tool access, and a clear approval model so teams can increase output without relaxing control.",
             "That distinction matters. We are not trying to build a chatbot that occasionally helps with work. We are building workers that can take ownership of bounded tasks, operate in real systems, and surface meaningful actions for review when policy requires it.",
             "From the beginning, we built around three principles: scoped access, approval-aware execution, and evidence on every task. If a worker cannot stay inside those boundaries, it should not be operating in the workflow.",
             "We are starting with the workflows where repetitive work is easiest to identify and easiest to measure: engineering delivery, testing, support operations, and follow-through across internal systems.",
@@ -1736,7 +1736,7 @@ export const blogPostsContent = [
         body: [
             "The moment a worker moves from suggesting ideas to taking action, isolation stops being an infrastructure detail and becomes a product requirement.",
             "A shared runtime makes it too easy for credentials, state, or unintended side effects to leak across tasks. That is acceptable for prototypes. It is not acceptable for production workflows.",
-            "At AgentFarm, isolation is designed around scope and reset. Workers get only the access required for the current task, and that execution context should disappear cleanly when the work is done.",
+            "At AgentFarms, isolation is designed around scope and reset. Workers get only the access required for the current task, and that execution context should disappear cleanly when the work is done.",
             "This helps in three ways. First, it shrinks blast radius if a task goes wrong. Second, it makes evidence easier to interpret because the environment is bounded. Third, it keeps the next task from inheriting stale state that changes behavior in hard-to-debug ways.",
             "There is a cost to this approach. Isolated execution is less efficient than one giant shared pool. But the tradeoff is worth it when the alternative is losing trust in the system the first time something unexpected happens.",
             "We think isolated runtimes will become table stakes for serious autonomous systems in the same way test isolation became table stakes for serious software delivery.",
@@ -1898,9 +1898,9 @@ export const blogPostsContent = [
 
 export const changelogListingContent = {
     metadata: {
-        title: "Changelog - AgentFarm",
+        title: "Changelog - AgentFarms",
         description:
-            "Track shipped improvements, platform milestones, and the roadmap shaping governed AI work at AgentFarm.",
+            "Track shipped improvements, platform milestones, and the roadmap shaping governed AI work at AgentFarms.",
     },
     hero: {
         eyebrow: "Changelog",

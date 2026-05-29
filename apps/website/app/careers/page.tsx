@@ -3,7 +3,7 @@ import { ArrowRight, MapPin, Clock, Zap, Users, ShieldCheck, BarChart3 } from "l
 import Link from "next/link";
 
 export const metadata: Metadata = {
-    title: "Careers — AgentFarm",
+    title: "Careers — AgentFarms",
     description:
         "Join the team building the governed execution layer for AI work. We're a small team making AI workers trustworthy for real business operations.",
 };
@@ -105,7 +105,7 @@ export default function CareersPage() {
                             <ArrowRight className="w-4 h-4" />
                         </a>
                         <Link href="/about" className="btn-secondary">
-                            About AgentFarm
+                            About AgentFarms
                         </Link>
                     </div>
                 </div>

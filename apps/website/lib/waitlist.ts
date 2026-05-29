@@ -26,7 +26,7 @@ export async function submitToWaitlist(
             if (!res.ok) throw new Error("Formspree submission failed.");
         } else {
             // Default: console log (swap in real backend when ready)
-            console.log("[AgentFarm Waitlist] New signup:", email);
+            console.log("[AgentFarms Waitlist] New signup:", email);
         }
 
         return { success: true };

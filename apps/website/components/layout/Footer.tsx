@@ -64,7 +64,7 @@ export default function Footer() {
                                     <path d="M4 6h4M6 4v4" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
                                 </svg>
                             </span>
-                            <span className="text-[#1d1d1f] font-semibold text-[13px] tracking-[-0.01em]">AgentFarm</span>
+                            <span className="text-[#1d1d1f] font-semibold text-[13px] tracking-[-0.01em]">AgentFarms</span>
                         </Link>
                         <p className="mt-3 text-[14px] text-[#6e6e73] leading-relaxed max-w-xs">
                             AI staffing platform — 12 specialist roles, approval gates, and a full audit trail.
@@ -111,7 +111,7 @@ export default function Footer() {
                 {/* Bottom bar */}
                 <div className="mt-12 pt-6" style={{ borderTop: "1px solid #d2d2d7" }}>
                     <p className="text-[12px] text-[#6e6e73]">
-                        Copyright &copy; {new Date().getFullYear()} AgentFarm. All rights reserved.
+                        Copyright &copy; {new Date().getFullYear()} AgentFarms. All rights reserved.
                     </p>
                 </div>
             </div>

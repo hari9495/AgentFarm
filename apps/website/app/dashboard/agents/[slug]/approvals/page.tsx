@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import ApprovalsQueue from "@/components/dashboard/ApprovalsQueue";
 
 export const metadata: Metadata = {
-    title: "Agent Approvals - AgentFarm Dashboard",
+    title: "Agent Approvals - AgentFarms Dashboard",
 };
 
 const agents: Record<string, { name: string }> = {

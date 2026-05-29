@@ -3,33 +3,33 @@ import { CheckCircle, XCircle, MinusCircle, ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-    title: "AgentFarm vs Alternatives — Compare",
-    description: "See how AgentFarm compares to GitHub Copilot, hiring a contractor, and traditional hiring.",
+    title: "AgentFarms vs Alternatives — Compare",
+    description: "See how AgentFarms compares to GitHub Copilot, hiring a contractor, and traditional hiring.",
 };
 
 type Value = "yes" | "no" | "partial";
 
-const rows: { feature: string; AgentFarm: Value; copilot: Value; contractor: Value; hiring: Value }[] = [
-    { feature: "Executes tasks autonomously", AgentFarm: "yes", copilot: "no", contractor: "yes", hiring: "yes" },
-    { feature: "Opens GitHub PRs automatically", AgentFarm: "yes", copilot: "no", contractor: "yes", hiring: "yes" },
-    { feature: "Works 24/7 without breaks", AgentFarm: "yes", copilot: "partial", contractor: "no", hiring: "no" },
-    { feature: "Risk-classified approval gates", AgentFarm: "yes", copilot: "no", contractor: "no", hiring: "partial" },
-    { feature: "Jira & Linear integration", AgentFarm: "yes", copilot: "no", contractor: "partial", hiring: "yes" },
-    { feature: "Day-one productivity", AgentFarm: "yes", copilot: "yes", contractor: "partial", hiring: "no" },
-    { feature: "Runs CI checks & fixes failures", AgentFarm: "yes", copilot: "partial", contractor: "partial", hiring: "yes" },
-    { feature: "Full audit trail", AgentFarm: "yes", copilot: "no", contractor: "no", hiring: "partial" },
-    { feature: "Cost under $500/mo per worker", AgentFarm: "yes", copilot: "yes", contractor: "no", hiring: "no" },
-    { feature: "No hiring / onboarding time", AgentFarm: "yes", copilot: "yes", contractor: "partial", hiring: "no" },
-    { feature: "Scales instantly", AgentFarm: "yes", copilot: "yes", contractor: "no", hiring: "no" },
-    { feature: "Understands full codebase context", AgentFarm: "yes", copilot: "partial", contractor: "partial", hiring: "yes" },
-    { feature: "12 AI worker roles available", AgentFarm: "yes", copilot: "no", contractor: "partial", hiring: "partial" },
-    { feature: "OWASP / security scanning per PR", AgentFarm: "yes", copilot: "no", contractor: "no", hiring: "partial" },
-    { feature: "Test coverage delta tracked per PR", AgentFarm: "yes", copilot: "no", contractor: "no", hiring: "partial" },
-    { feature: "Per-skill analytics dashboard", AgentFarm: "yes", copilot: "no", contractor: "no", hiring: "no" },
-    { feature: "Iterate on PR review comments", AgentFarm: "yes", copilot: "partial", contractor: "yes", hiring: "yes" },
-    { feature: "Cancel & reassign tasks instantly", AgentFarm: "yes", copilot: "yes", contractor: "no", hiring: "no" },
-    { feature: "Tenant-isolated Azure runtime", AgentFarm: "yes", copilot: "no", contractor: "no", hiring: "no" },
-    { feature: "Microsoft Teams task assignment", AgentFarm: "yes", copilot: "no", contractor: "no", hiring: "yes" },
+const rows: { feature: string; AgentFarms: Value; copilot: Value; contractor: Value; hiring: Value }[] = [
+    { feature: "Executes tasks autonomously", AgentFarms: "yes", copilot: "no", contractor: "yes", hiring: "yes" },
+    { feature: "Opens GitHub PRs automatically", AgentFarms: "yes", copilot: "no", contractor: "yes", hiring: "yes" },
+    { feature: "Works 24/7 without breaks", AgentFarms: "yes", copilot: "partial", contractor: "no", hiring: "no" },
+    { feature: "Risk-classified approval gates", AgentFarms: "yes", copilot: "no", contractor: "no", hiring: "partial" },
+    { feature: "Jira & Linear integration", AgentFarms: "yes", copilot: "no", contractor: "partial", hiring: "yes" },
+    { feature: "Day-one productivity", AgentFarms: "yes", copilot: "yes", contractor: "partial", hiring: "no" },
+    { feature: "Runs CI checks & fixes failures", AgentFarms: "yes", copilot: "partial", contractor: "partial", hiring: "yes" },
+    { feature: "Full audit trail", AgentFarms: "yes", copilot: "no", contractor: "no", hiring: "partial" },
+    { feature: "Cost under $500/mo per worker", AgentFarms: "yes", copilot: "yes", contractor: "no", hiring: "no" },
+    { feature: "No hiring / onboarding time", AgentFarms: "yes", copilot: "yes", contractor: "partial", hiring: "no" },
+    { feature: "Scales instantly", AgentFarms: "yes", copilot: "yes", contractor: "no", hiring: "no" },
+    { feature: "Understands full codebase context", AgentFarms: "yes", copilot: "partial", contractor: "partial", hiring: "yes" },
+    { feature: "12 AI worker roles available", AgentFarms: "yes", copilot: "no", contractor: "partial", hiring: "partial" },
+    { feature: "OWASP / security scanning per PR", AgentFarms: "yes", copilot: "no", contractor: "no", hiring: "partial" },
+    { feature: "Test coverage delta tracked per PR", AgentFarms: "yes", copilot: "no", contractor: "no", hiring: "partial" },
+    { feature: "Per-skill analytics dashboard", AgentFarms: "yes", copilot: "no", contractor: "no", hiring: "no" },
+    { feature: "Iterate on PR review comments", AgentFarms: "yes", copilot: "partial", contractor: "yes", hiring: "yes" },
+    { feature: "Cancel & reassign tasks instantly", AgentFarms: "yes", copilot: "yes", contractor: "no", hiring: "no" },
+    { feature: "Tenant-isolated Azure runtime", AgentFarms: "yes", copilot: "no", contractor: "no", hiring: "no" },
+    { feature: "Microsoft Teams task assignment", AgentFarms: "yes", copilot: "no", contractor: "no", hiring: "yes" },
 ];
 
 function Cell({ v }: { v: Value }) {
@@ -39,7 +39,7 @@ function Cell({ v }: { v: Value }) {
 }
 
 const cols = [
-    { key: "AgentFarm", label: "AgentFarm", highlight: true },
+    { key: "AgentFarms", label: "AgentFarms", highlight: true },
     { key: "copilot", label: "Copilot / Cursor", highlight: false },
     { key: "contractor", label: "Contractor", highlight: false },
     { key: "hiring", label: "Full-time hire", highlight: false },
@@ -54,10 +54,10 @@ export default function ComparePage() {
                 <div className="af-container-narrow">
                     <p className="af-eyebrow mb-4">Compare</p>
                     <h1 className="font-semibold text-[#1d1d1f]" style={{ fontSize: "clamp(2.4rem, 5vw, 3.6rem)", letterSpacing: "-0.03em", lineHeight: 1.07 }}>
-                        AgentFarm vs the alternatives
+                        AgentFarms vs the alternatives
                     </h1>
                     <p className="mt-5 text-[17px] text-[#424245] max-w-lg mx-auto" style={{ lineHeight: 1.47, letterSpacing: "-0.022em" }}>
-                        Copilots suggest. Contractors bill by the hour. Full-time hires take months to onboard. AgentFarm workers execute with accountability from day one.
+                        Copilots suggest. Contractors bill by the hour. Full-time hires take months to onboard. AgentFarms workers execute with accountability from day one.
                     </p>
                 </div>
             </section>

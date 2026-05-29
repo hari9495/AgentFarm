@@ -20,7 +20,7 @@ import ProvisioningProgressCard from "@/components/dashboard/ProvisioningProgres
 import PremiumIcon from "@/components/shared/PremiumIcon";
 
 export const metadata: Metadata = {
-    title: "Customer Dashboard · AgentFarm",
+    title: "Customer Dashboard · AgentFarms",
     description: "Track AI teammate output, task execution, and team outcomes in one dashboard.",
 };
 

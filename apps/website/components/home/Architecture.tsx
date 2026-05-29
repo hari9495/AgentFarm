@@ -27,7 +27,7 @@ export default function Architecture() {
                     <div className="flex flex-col gap-4">
                         <p className="text-xs font-semibold uppercase tracking-wider text-[var(--ash)] mb-1">Your Stack</p>
                         {[
-                            { icon: Monitor, label: "AgentFarm Dashboard", sub: "Assign tasks, review PRs", color: "bg-blue-600" },
+                            { icon: Monitor, label: "AgentFarms Dashboard", sub: "Assign tasks, review PRs", color: "bg-blue-600" },
                             { icon: GitBranch, label: "GitHub / GitLab", sub: "Source control & PRs", color: "bg-slate-700" },
                             { icon: Database, label: "Teams / Jira / Email", sub: "Task assignments & approvals", color: "bg-indigo-600" },
                         ].map(({ icon: Icon, label, sub, color }, i) => (

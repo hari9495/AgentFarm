@@ -290,7 +290,7 @@ export default function AdminIntegrationsPage() {
                                         <CheckCircle2 className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
                                     </div>
                                     <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-1">Jira connected successfully</h3>
-                                    <p className="text-xs text-slate-500 dark:text-slate-400">AgentFarm can now read and update Jira issues. You can configure project filters in Settings.</p>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">AgentFarms can now read and update Jira issues. You can configure project filters in Settings.</p>
                                 </div>
                             )}
                         </div>

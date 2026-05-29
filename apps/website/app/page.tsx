@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 
 export default function Home() {
   return (
-    <main aria-label="AgentFarm home">
+    <main aria-label="AgentFarms home">
       <Hero />
       <LogosStrip />
       <Problem />

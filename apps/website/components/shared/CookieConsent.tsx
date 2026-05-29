@@ -6,18 +6,18 @@ export default function CookieConsent() {
     const [visible, setVisible] = useState(false);
 
     useEffect(() => {
-        if (!localStorage.getItem("AgentFarm-cookies")) {
+        if (!localStorage.getItem("AgentFarms-cookies")) {
             setVisible(true);
         }
     }, []);
 
     function accept() {
-        localStorage.setItem("AgentFarm-cookies", "accepted");
+        localStorage.setItem("AgentFarms-cookies", "accepted");
         setVisible(false);
     }
 
     function decline() {
-        localStorage.setItem("AgentFarm-cookies", "declined");
+        localStorage.setItem("AgentFarms-cookies", "declined");
         setVisible(false);
     }
 

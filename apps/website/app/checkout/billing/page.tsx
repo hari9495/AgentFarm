@@ -196,7 +196,7 @@ function BillingCheckoutContent() {
                             amount: data.amount,
                             currency: data.currency ?? "INR",
                             order_id: data.razorpayOrderId,
-                            name: "AgentFarm",
+                            name: "AgentFarms",
                             description: `${plan?.name ?? "Plan"} subscription`,
                             prefill: {
                                 name: fullName.trim(),
@@ -429,7 +429,7 @@ function BillingCheckoutContent() {
                 </div>
 
                 <p className="mt-6 text-center text-xs text-slate-400 dark:text-slate-500">
-                    By completing this payment you agree to the AgentFarm{" "}
+                    By completing this payment you agree to the AgentFarms{" "}
                     <a href="/terms" className="underline hover:text-slate-600 dark:hover:text-slate-300">
                         Terms of Service
                     </a>

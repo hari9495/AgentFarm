@@ -142,7 +142,7 @@ function SidebarContent({
                     <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-sky-500 via-blue-600 to-emerald-500 shadow-sm">
                         <Bot className="w-3.5 h-3.5 text-white" />
                     </span>
-                    <span className="text-sm tracking-tight">AgentFarm</span>
+                    <span className="text-sm tracking-tight">AgentFarms</span>
                 </Link>
                 {onClose && (
                     <button

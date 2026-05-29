@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import ActivityFeed from "@/components/dashboard/ActivityFeed";
 
 export const metadata: Metadata = {
-    title: "Activity - AgentFarm Dashboard",
+    title: "Activity - AgentFarms Dashboard",
     description: "Live activity feed across all AI agents.",
 };
 

@@ -17,7 +17,7 @@ export default function NewsletterCapture() {
             <div className="max-w-2xl mx-auto px-4 sm:px-6 text-center">
                 <span className="chip chip-accent">Stay in the loop</span>
                 <h2 className="mt-4 text-2xl sm:text-3xl font-semibold tracking-[-0.03em] text-[var(--ink)] leading-tight">
-                    Get AgentFarm product updates
+                    Get AgentFarms product updates
                 </h2>
                 <p className="mt-3 text-[var(--mute)] max-w-md mx-auto">
                     New AI worker roles, integration launches, and performance guides — delivered monthly.

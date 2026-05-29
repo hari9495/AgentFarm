@@ -16,8 +16,8 @@ import ButtonLink from "@/components/shared/ButtonLink";
 import PremiumIcon from "@/components/shared/PremiumIcon";
 
 export const metadata: Metadata = {
-    title: "Admin Console - AgentFarm",
-    description: "Manage organization users, permissions, policy controls, and billing for AgentFarm.",
+    title: "Admin Console - AgentFarms",
+    description: "Manage organization users, permissions, policy controls, and billing for AgentFarms.",
 };
 
 const orgStats = [

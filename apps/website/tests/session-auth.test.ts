@@ -43,7 +43,7 @@ test("session auth: valid session token resolves to the correct user", async () 
     const email = `tst_auth_${suffix}@agentfarm.local`;
     const password = "Test1234!";
 
-    const user = await createUser({ email, password, name: "Auth Tester", company: "AgentFarm Test" });
+    const user = await createUser({ email, password, name: "Auth Tester", company: "AgentFarms Test" });
     const { sessionToken } = await createSession(user.id);
 
     const resolved = await getSessionUser(sessionToken);
@@ -67,7 +67,7 @@ test("session auth: deleted session token returns null", async () => {
     const email = `tst_del_${suffix}@agentfarm.local`;
     const password = "Delete1234!";
 
-    const user = await createUser({ email, password, name: "Delete Tester", company: "AgentFarm Test" });
+    const user = await createUser({ email, password, name: "Delete Tester", company: "AgentFarms Test" });
     const { sessionToken } = await createSession(user.id);
 
     await deleteSession(sessionToken);
@@ -84,7 +84,7 @@ test("session auth: tenantId is populated after tenant initialization", async ()
     const email = `tst_tid_${suffix}@agentfarm.local`;
     const password = "Tenant1234!";
 
-    const user = await createUser({ email, password, name: "Tenant Tester", company: "AgentFarm Test" });
+    const user = await createUser({ email, password, name: "Tenant Tester", company: "AgentFarms Test" });
     const init = await initializeTenantWorkspaceAndBot({ userId: user.id, tenantName: "Auth Test Corp" });
     const { sessionToken } = await createSession(user.id);
 
@@ -101,7 +101,7 @@ test("session auth: login returns authenticated user via authenticateUser", asyn
     const email = `tst_login_${suffix}@agentfarm.local`;
     const password = "Login1234!";
 
-    await createUser({ email, password, name: "Login Tester", company: "AgentFarm Test" });
+    await createUser({ email, password, name: "Login Tester", company: "AgentFarms Test" });
 
     const authenticated = await authenticateUser(email, password);
     assert.ok(authenticated, "should authenticate with correct credentials");

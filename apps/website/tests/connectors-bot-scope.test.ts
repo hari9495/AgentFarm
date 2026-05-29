@@ -63,12 +63,12 @@ test("connectors GET returns bot-scoped catalog filtered by selected role", asyn
         const user = await createUser({
             name: `Connector Scope ${suffix}`,
             email: `connector_scope_${suffix}@agentfarm.local`,
-            company: "AgentFarm Test",
+            company: "AgentFarms Test",
             password: "Password123!",
         });
         userId = user.id;
 
-        const initialized = initializeTenantWorkspaceAndBot({ userId: user.id, tenantName: "AgentFarm Test" });
+        const initialized = initializeTenantWorkspaceAndBot({ userId: user.id, tenantName: "AgentFarms Test" });
         const alt = addWorkspaceBot(db, initialized.tenant.id, "corporate_assistant");
 
         const { sessionToken } = createSession(user.id);
@@ -107,12 +107,12 @@ test("connectors POST rejects disallowed tool for selected bot role", async () =
         const user = await createUser({
             name: `Connector Reject ${suffix}`,
             email: `connector_reject_${suffix}@agentfarm.local`,
-            company: "AgentFarm Test",
+            company: "AgentFarms Test",
             password: "Password123!",
         });
         userId = user.id;
 
-        const initialized = initializeTenantWorkspaceAndBot({ userId: user.id, tenantName: "AgentFarm Test" });
+        const initialized = initializeTenantWorkspaceAndBot({ userId: user.id, tenantName: "AgentFarms Test" });
         const alt = addWorkspaceBot(db, initialized.tenant.id, "corporate_assistant");
         const { sessionToken } = createSession(user.id);
 
@@ -152,12 +152,12 @@ test("connectors are isolated by selected workspace", async () => {
         const user = await createUser({
             name: `Connector Isolation ${suffix}`,
             email: `connector_isolation_${suffix}@agentfarm.local`,
-            company: "AgentFarm Test",
+            company: "AgentFarms Test",
             password: "Password123!",
         });
         userId = user.id;
 
-        const initialized = initializeTenantWorkspaceAndBot({ userId: user.id, tenantName: "AgentFarm Test" });
+        const initialized = initializeTenantWorkspaceAndBot({ userId: user.id, tenantName: "AgentFarms Test" });
         const alt = addWorkspaceBot(db, initialized.tenant.id, "corporate_assistant");
         const { sessionToken } = createSession(user.id);
 
@@ -204,11 +204,11 @@ test("connectors GET returns 400 for invalid requested scope instead of silently
         const user = await createUser({
             name: `Connector Invalid Scope GET ${suffix}`,
             email: `connector_invalid_scope_get_${suffix}@agentfarm.local`,
-            company: "AgentFarm Test",
+            company: "AgentFarms Test",
             password: "Password123!",
         });
         userId = user.id;
-        initializeTenantWorkspaceAndBot({ userId: user.id, tenantName: "AgentFarm Test" });
+        initializeTenantWorkspaceAndBot({ userId: user.id, tenantName: "AgentFarms Test" });
         const { sessionToken } = createSession(user.id);
 
         const response = await getConnectors(
@@ -237,11 +237,11 @@ test("connectors POST returns 400 for invalid requested scope instead of silentl
         const user = await createUser({
             name: `Connector Invalid Scope POST ${suffix}`,
             email: `connector_invalid_scope_post_${suffix}@agentfarm.local`,
-            company: "AgentFarm Test",
+            company: "AgentFarms Test",
             password: "Password123!",
         });
         userId = user.id;
-        initializeTenantWorkspaceAndBot({ userId: user.id, tenantName: "AgentFarm Test" });
+        initializeTenantWorkspaceAndBot({ userId: user.id, tenantName: "AgentFarms Test" });
         const { sessionToken } = createSession(user.id);
 
         const response = await postConnectors(

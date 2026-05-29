@@ -92,7 +92,7 @@ const ensureRoleUser = (db: DatabaseSync, role: UserRecord["role"], email: strin
     const id = `tst_${role}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     db.prepare(
         "INSERT INTO users (id, email, name, company, role, password_hash, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-    ).run(id, email, name, "AgentFarm Test", role, DUMMY_PASSWORD_HASH, Date.now());
+    ).run(id, email, name, "AgentFarms Test", role, DUMMY_PASSWORD_HASH, Date.now());
 
     return {
         id,
@@ -310,7 +310,7 @@ test("company operator policy — additional security regressions", () => {
 
     // Domain match is case-insensitive.
     assert.equal(
-        isCompanyOperatorEmailForPolicy("OPS@AgentFarm.LOCAL", {
+        isCompanyOperatorEmailForPolicy("OPS@AgentFarms.LOCAL", {
             nodeEnv: "development",
             companyEmails: "",
             companyDomains: "",

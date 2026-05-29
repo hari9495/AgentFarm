@@ -135,7 +135,7 @@ export default function Integrations() {
                         transition={{ delay: 0.1 }}
                         className="mt-4 text-lg text-[var(--mute)] max-w-2xl mx-auto"
                     >
-                        AgentFarm connects to your existing developer stack via OAuth with least-privilege scopes.
+                        AgentFarms connects to your existing developer stack via OAuth with least-privilege scopes.
                         No workflow changes required � the agent comes to your tools.
                     </motion.p>
                 </div>

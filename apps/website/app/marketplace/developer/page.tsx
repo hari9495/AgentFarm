@@ -7,11 +7,11 @@ import {
 import HireAgentButton from "@/components/marketplace/HireAgentButton";
 
 export const metadata: Metadata = {
-    title: "AI Developer Agent – AgentFarm Marketplace",
+    title: "AI Developer Agent – AgentFarms Marketplace",
     description:
         "Hire an AI Developer that writes code, creates PRs, fixes CI failures, and reviews pull requests — integrated with GitHub, Jira, and your existing stack.",
     openGraph: {
-        title: "AI Developer Agent – AgentFarm",
+        title: "AI Developer Agent – AgentFarms",
         description:
             "An always-on AI developer that works your Jira backlog: writes tested code, opens pull requests, and ships features end-to-end.",
         type: "website",

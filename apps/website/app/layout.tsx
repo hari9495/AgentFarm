@@ -43,7 +43,7 @@ export const metadata: Metadata = {
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  name: "AgentFarm",
+  name: "AgentFarms",
   applicationCategory: "BusinessApplication",
   operatingSystem: "Web",
   description: siteMarketingMetadata.siteDescription,

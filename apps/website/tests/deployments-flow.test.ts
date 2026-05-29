@@ -19,7 +19,7 @@ const createTestUser = (db: DatabaseSync, suffix: string): string => {
     const id = `tst_dep_${suffix}`;
     db.prepare(
         "INSERT INTO users (id, email, name, company, role, password_hash, created_at) VALUES (?, ?, ?, ?, 'member', ?, ?)",
-    ).run(id, `${id}@agentfarm.local`, `Deploy ${suffix}`, "AgentFarm Test", DUMMY_PASSWORD_HASH, Date.now());
+    ).run(id, `${id}@agentfarm.local`, `Deploy ${suffix}`, "AgentFarms Test", DUMMY_PASSWORD_HASH, Date.now());
     return id;
 };
 

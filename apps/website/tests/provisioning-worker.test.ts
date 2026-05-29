@@ -18,7 +18,7 @@ const createTestUser = (db: DatabaseSync, suffix: string): string => {
     const id = `tst_prv_${suffix}`;
     db.prepare(
         "INSERT INTO users (id, email, name, company, role, password_hash, created_at) VALUES (?, ?, ?, ?, 'admin', ?, ?)",
-    ).run(id, `${id}@agentfarm.local`, `Provisioning ${suffix}`, "AgentFarm Test", DUMMY_PASSWORD_HASH, Date.now());
+    ).run(id, `${id}@agentfarm.local`, `Provisioning ${suffix}`, "AgentFarms Test", DUMMY_PASSWORD_HASH, Date.now());
     return id;
 };
 
@@ -43,7 +43,7 @@ test("provisioning worker: queued job progresses to completed and updates runtim
     const suffix = `${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     const userId = createTestUser(db, suffix);
 
-    const init = await initializeTenantWorkspaceAndBot({ userId, tenantName: "AgentFarm Provisioning" });
+    const init = await initializeTenantWorkspaceAndBot({ userId, tenantName: "AgentFarms Provisioning" });
 
     const run = await processProvisioningQueue({
         limit: 1,
@@ -77,7 +77,7 @@ test("provisioning worker: failed jobs mark tenant/workspace/bot degraded and em
     const suffix = `${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     const userId = createTestUser(db, suffix);
 
-    const init = await initializeTenantWorkspaceAndBot({ userId, tenantName: "AgentFarm Provisioning" });
+    const init = await initializeTenantWorkspaceAndBot({ userId, tenantName: "AgentFarms Provisioning" });
 
     const run = await processProvisioningQueue({
         limit: 1,
@@ -116,8 +116,8 @@ test("provisioning worker: respects processing limit and only consumes queued jo
     const userA = createTestUser(db, suffixA);
     const userB = createTestUser(db, suffixB);
 
-    const initA = await initializeTenantWorkspaceAndBot({ userId: userA, tenantName: "AgentFarm Provisioning A" });
-    const initB = await initializeTenantWorkspaceAndBot({ userId: userB, tenantName: "AgentFarm Provisioning B" });
+    const initA = await initializeTenantWorkspaceAndBot({ userId: userA, tenantName: "AgentFarms Provisioning A" });
+    const initB = await initializeTenantWorkspaceAndBot({ userId: userB, tenantName: "AgentFarms Provisioning B" });
 
     const firstRun = await processProvisioningQueue({
         limit: 1,
@@ -163,7 +163,7 @@ test("provisioning auto-tick: processes queued job for a specific user tenant", 
     const suffix = `${Date.now()}_${Math.floor(Math.random() * 1000)}_auto`;
     const userId = createTestUser(db, suffix);
 
-    await initializeTenantWorkspaceAndBot({ userId, tenantName: "AgentFarm Auto Tick" });
+    await initializeTenantWorkspaceAndBot({ userId, tenantName: "AgentFarms Auto Tick" });
 
     const result = await autoProcessProvisioningForUser({
         userId,
@@ -186,7 +186,7 @@ test("provisioning retry: failed job creates a new queued retry and is idempoten
     const suffix = `${Date.now()}_${Math.floor(Math.random() * 1000)}_retry`;
     const userId = createTestUser(db, suffix);
 
-    const init = await initializeTenantWorkspaceAndBot({ userId, tenantName: "AgentFarm Retry" });
+    const init = await initializeTenantWorkspaceAndBot({ userId, tenantName: "AgentFarms Retry" });
 
     await processProvisioningQueue({
         limit: 1,
@@ -245,7 +245,7 @@ test("provisioning retry: rate-limit blocks attempt beyond MAX_RETRY_ATTEMPTS (3
     const suffix = `${Date.now()}_${Math.floor(Math.random() * 1000)}_ratelimit`;
     const userId = createTestUser(db, suffix);
 
-    const init = await initializeTenantWorkspaceAndBot({ userId, tenantName: "AgentFarm Rate Limit" });
+    const init = await initializeTenantWorkspaceAndBot({ userId, tenantName: "AgentFarms Rate Limit" });
 
     // Fail the original job
     await processProvisioningQueue({

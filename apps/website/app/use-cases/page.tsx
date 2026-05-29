@@ -3,8 +3,8 @@ import { Code2, Megaphone, HeadphonesIcon, Briefcase, Users, ShieldCheck, CheckC
 import Link from "next/link";
 
 export const metadata: Metadata = {
-    title: "Use Cases — AgentFarm",
-    description: "Real-world examples of how teams across every department use AgentFarm AI workers to ship faster with full human oversight.",
+    title: "Use Cases — AgentFarms",
+    description: "Real-world examples of how teams across every department use AgentFarms AI workers to ship faster with full human oversight.",
 };
 
 const cases = [
@@ -76,7 +76,7 @@ export default function UseCasesPage() {
                         Built for every department in your company
                     </h1>
                     <p className="mt-5 text-[17px] text-[#424245] max-w-lg mx-auto" style={{ lineHeight: 1.47, letterSpacing: "-0.022em" }}>
-                        From engineering teams to HR, operations, and sales — see how AgentFarm workers take on repeatable work across every function.
+                        From engineering teams to HR, operations, and sales — see how AgentFarms workers take on repeatable work across every function.
                     </p>
                 </div>
             </section>
@@ -146,7 +146,7 @@ export default function UseCasesPage() {
                         ))}
                     </div>
                     <p className="text-center text-[12px] text-[#aeaeb2] mt-6">
-                        Estimate based on $80/hr blended labor cost across all role types and median AgentFarm automation rates.
+                        Estimate based on $80/hr blended labor cost across all role types and median AgentFarms automation rates.
                     </p>
                 </div>
             </section>

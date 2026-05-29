@@ -1,7 +1,7 @@
 ﻿import type { MetadataRoute } from "next";
 import { getAllSlugs } from "@/lib/bots";
 
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://AgentFarm.ai";
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://AgentFarms.ai";
 
 // Static public routes
 const STATIC_ROUTES = [
@@ -28,10 +28,10 @@ const STATIC_ROUTES = [
 
 // Blog post slugs (static — not auto-generated)
 const BLOG_SLUGS = [
-    "introducing-AgentFarm",
+    "introducing-AgentFarms",
     "isolated-robot-runtimes",
     "developer-shortage-2026",
-    "AgentFarm-github-integration",
+    "AgentFarms-github-integration",
     "task-queue-architecture",
     "measuring-ai-worker-output",
     "engineer-time-allocation-2026",

@@ -4,7 +4,7 @@ import Link from "next/link";
 import MarketplaceGrid from "@/components/marketplace/MarketplaceGrid";
 
 export const metadata: Metadata = {
-    title: "Agent Marketplace – AgentFarm",
+    title: "Agent Marketplace – AgentFarms",
     description:
         "Browse and hire AI workers across 12 roles and every department — from Developer and Sales Rep to Customer Support, Recruiter, and more.",
 };

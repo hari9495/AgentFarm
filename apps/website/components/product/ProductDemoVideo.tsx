@@ -48,9 +48,9 @@ const STORIES: Record<PersonaId, PersonaStory> = {
             {
                 eyebrow: "Executive View",
                 title: "From backlog to governed execution",
-                detail: "AgentFarm turns a Jira ticket into controlled delivery with policy enforcement, evidence capture, and approval gates.",
+                detail: "AgentFarms turns a Jira ticket into controlled delivery with policy enforcement, evidence capture, and approval gates.",
                 bubble: "Show me velocity without losing control.",
-                subtitle: "AgentFarm converts a Jira ticket into governed AI execution with approvals and auditability.",
+                subtitle: "AgentFarms converts a Jira ticket into governed AI execution with approvals and auditability.",
                 metric: "4x faster feature throughput",
                 laneLabel: "Governed delivery",
             },
@@ -75,7 +75,7 @@ const STORIES: Record<PersonaId, PersonaStory> = {
             {
                 eyebrow: "Call To Action",
                 title: "Launch trusted AI delivery across your engineering org",
-                detail: "Start with a controlled rollout, connect GitHub and Jira, and let AgentFarm prove speed with governance.",
+                detail: "Start with a controlled rollout, connect GitHub and Jira, and let AgentFarms prove speed with governance.",
                 bubble: "This is the operational layer for enterprise AI execution.",
                 subtitle: "Book a live walkthrough or start a free trial to see governed AI delivery on your own backlog.",
                 metric: "Ready for pilot rollout",
@@ -125,7 +125,7 @@ const STORIES: Record<PersonaId, PersonaStory> = {
                 title: "Scale delivery without adding management overhead",
                 detail: "Put repetitive implementation into a governed agent workflow while your team stays focused on planning and architecture.",
                 bubble: "Give my team leverage, not more process.",
-                subtitle: "Start a free trial and see how AgentFarm improves delivery flow without losing visibility or control.",
+                subtitle: "Start a free trial and see how AgentFarms improves delivery flow without losing visibility or control.",
                 metric: "Manager-ready rollout",
                 laneLabel: "Start free trial",
                 ctaLabel: "Start Free Trial",
@@ -144,7 +144,7 @@ const STORIES: Record<PersonaId, PersonaStory> = {
             {
                 eyebrow: "Daily Workflow",
                 title: "Kick off implementation from the ticket",
-                detail: "AgentFarm reads Jira context, opens a branch, writes the first pass, and gets the PR ready without repetitive setup work.",
+                detail: "AgentFarms reads Jira context, opens a branch, writes the first pass, and gets the PR ready without repetitive setup work.",
                 bubble: "Handle the boilerplate. I will review the real logic.",
                 subtitle: "The agent handles ticket intake, branch setup, and the first implementation pass automatically.",
                 metric: "Branch + PR drafted automatically",
@@ -171,7 +171,7 @@ const STORIES: Record<PersonaId, PersonaStory> = {
             {
                 eyebrow: "Call To Action",
                 title: "Work like a senior engineer with extra execution power",
-                detail: "Let AgentFarm handle the repetitive parts of delivery so you can spend time on architecture, debugging, and product thinking.",
+                detail: "Let AgentFarms handle the repetitive parts of delivery so you can spend time on architecture, debugging, and product thinking.",
                 bubble: "I want a teammate that ships, not another chatbot.",
                 subtitle: "Start free and watch your next ticket become a review-ready PR with tests and evidence included.",
                 metric: "Developer-ready workflow",
@@ -207,7 +207,7 @@ function CartoonScene({
             >
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(34,211,238,0.18),transparent_24%),radial-gradient(circle_at_72%_28%,rgba(168,85,247,0.18),transparent_22%),radial-gradient(circle_at_78%_78%,rgba(59,130,246,0.16),transparent_20%)]" />
                 <div className="absolute left-[8%] top-[18%] rounded-full border border-sky-400/15 bg-sky-400/8 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em]">
-                    <span className={`bg-gradient-to-r ${accent} bg-clip-text text-transparent`}>AgentFarm</span>
+                    <span className={`bg-gradient-to-r ${accent} bg-clip-text text-transparent`}>AgentFarms</span>
                 </div>
                 <div className={`absolute left-[5%] top-[33%] flex h-10 w-10 items-center justify-center rounded-[14px] bg-gradient-to-br ${accent} shadow-lg shadow-black/40`}>
                     <span className="text-sm font-black tracking-tight text-white">AF</span>
@@ -376,7 +376,7 @@ export default function ProductDemoVideo() {
                         <div className="max-w-[640px] text-center">
                             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-300">2D Cartoon Product Demo</p>
                             <h3 className="mt-4 text-3xl font-black tracking-tight text-white sm:text-4xl">
-                                Watch AgentFarm explain itself for {currentStory.label}
+                                Watch AgentFarms explain itself for {currentStory.label}
                             </h3>
                             <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-slate-300 sm:text-base">
                                 A custom animated story that shows how your developer agents execute work, log evidence, and pause for approval before trusted delivery.
@@ -386,7 +386,7 @@ export default function ProductDemoVideo() {
                                     type="button"
                                     onClick={() => setPlaying(true)}
                                     className="inline-flex items-center gap-3 rounded-full bg-white px-6 py-3 text-sm font-bold text-slate-950 shadow-xl transition-transform hover:scale-[1.03]"
-                                    aria-label="Play AgentFarm animated demo"
+                                    aria-label="Play AgentFarms animated demo"
                                 >
                                     <span className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-white">
                                         <Play className="ml-0.5 h-4 w-4 fill-white" />

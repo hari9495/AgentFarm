@@ -5,7 +5,7 @@ import { useState } from "react";
 import { motion } from "motion/react";
 
 const terminalLines = [
-  { delay: 0.2, color: "text-slate-400", text: "$ AgentFarm assign --worker backend-dev-01 --task \"Add rate limiting to /api/auth\"" },
+  { delay: 0.2, color: "text-slate-400", text: "$ AgentFarms assign --worker backend-dev-01 --task \"Add rate limiting to /api/auth\"" },
   { delay: 0.8, color: "text-blue-400", text: "? Task received by backend-dev-01" },
   { delay: 1.4, color: "text-slate-400", text: "? Cloning repository: my-app (branch: main)" },
   { delay: 2.0, color: "text-slate-400", text: "? Analysing codebase context�" },
@@ -49,7 +49,7 @@ export default function DemoSection() {
               <span className="w-3 h-3 rounded-full bg-red-500/70" />
               <span className="w-3 h-3 rounded-full bg-yellow-500/70" />
               <span className="w-3 h-3 rounded-full bg-green-500/70" />
-              <span className="ml-auto text-[var(--ash)] text-xs font-mono">AgentFarm · terminal</span>
+              <span className="ml-auto text-[var(--ash)] text-xs font-mono">AgentFarms · terminal</span>
             </div>
 
             {/* Terminal body */}

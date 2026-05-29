@@ -34,7 +34,7 @@ export default function ProductSceneSection() {
                         <div>
                             <p className="text-xs uppercase tracking-[0.14em] text-sky-700 dark:text-sky-300 font-semibold">Interactive Runtime View</p>
                             <h2 className="mt-3 text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100">
-                                Scroll to inspect a real AgentFarm workflow from task intake to approved merge
+                                Scroll to inspect a real AgentFarms workflow from task intake to approved merge
                             </h2>
                             <p className="mt-4 text-slate-600 dark:text-slate-300 leading-relaxed">
                                 Instead of abstract 3D geometry, this view mirrors actual product behavior: agent execution,

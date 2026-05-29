@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-    title: "Maintenance — AgentFarm",
-    description: "AgentFarm is briefly down for maintenance.",
+    title: "Maintenance — AgentFarms",
+    description: "AgentFarms is briefly down for maintenance.",
 };
 
 /**

@@ -5,7 +5,7 @@ import PremiumIcon from "@/components/shared/PremiumIcon";
 import { Activity, AlertTriangle, CheckCircle2, Layers } from "lucide-react";
 
 export const metadata: Metadata = {
-    title: "Deployments - AgentFarm Dashboard",
+    title: "Deployments - AgentFarms Dashboard",
     description: "Track deployment history and status transitions for marketplace-launched agents.",
 };
 

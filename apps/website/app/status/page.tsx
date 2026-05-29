@@ -4,8 +4,8 @@ import type { Metadata } from 'next';
 import { StatusRefresher } from './StatusRefresher';
 
 export const metadata: Metadata = {
-    title: 'System Status — AgentFarm',
-    description: 'Real-time status for AgentFarm services.',
+    title: 'System Status — AgentFarms',
+    description: 'Real-time status for AgentFarms services.',
 };
 
 type ServiceStatus = 'operational' | 'degraded' | 'outage';

@@ -234,7 +234,7 @@ export default function MultiStepForm() {
                     You&apos;re on the list!
                 </h2>
                 <p className="text-slate-500 max-w-md mx-auto leading-relaxed">
-                    A AgentFarm team member will reach out within 1 business day to walk
+                    A AgentFarms team member will reach out within 1 business day to walk
                     you through your bot configuration and answer any questions.
                 </p>
                 <p className="mt-4 text-sm text-slate-400">
@@ -603,7 +603,7 @@ export default function MultiStepForm() {
 
                     <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                            How did you hear about AgentFarm?{" "}
+                            How did you hear about AgentFarms?{" "}
                             <span className="text-slate-400 font-normal">(optional)</span>
                         </label>
                         <input

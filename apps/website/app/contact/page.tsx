@@ -3,8 +3,8 @@ import { Mail, Clock, MapPin, ArrowRight } from "lucide-react";
 import ContactForm from "@/components/shared/ContactForm";
 
 export const metadata: Metadata = {
-    title: "Contact — AgentFarm",
-    description: "Get in touch with the AgentFarm team. Questions, demos, partnerships — we'd love to hear from you.",
+    title: "Contact — AgentFarms",
+    description: "Get in touch with the AgentFarms team. Questions, demos, partnerships — we'd love to hear from you.",
 };
 
 const contactItems = [

@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: { params: Promise<{ version: 
     }
 
     return {
-        title: `${entry.version} - ${entry.title} - AgentFarm`,
+        title: `${entry.version} - ${entry.title} - AgentFarms`,
         description: entry.summary,
     };
 }

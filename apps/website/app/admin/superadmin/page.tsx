@@ -177,7 +177,7 @@ export default function TenantSuperAdminPage() {
                         Tenant Superadmin
                     </div>
                     <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">Customer tenant governance</h1>
-                    <p className="mt-2 text-violet-100 max-w-3xl">Manage users and monitor bots inside this customer tenant. AgentFarm company portal is separated at /company.</p>
+                    <p className="mt-2 text-violet-100 max-w-3xl">Manage users and monitor bots inside this customer tenant. AgentFarms company portal is separated at /company.</p>
                     <div className="mt-5 flex flex-wrap gap-3">
                         <button onClick={loadData} disabled={loading} className="inline-flex items-center gap-1.5 rounded-lg bg-white/15 border border-white/20 px-3.5 py-2 text-sm font-semibold text-white hover:bg-white/20 disabled:opacity-60">
                             <PremiumIcon icon={RefreshCw} tone="slate" containerClassName="w-6 h-6 rounded-lg bg-white/15 text-white border-white/30" iconClassName={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />Refresh

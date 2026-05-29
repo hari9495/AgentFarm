@@ -72,7 +72,7 @@ export default async function PortalAppLayout({
                     className="flex items-center gap-2 font-semibold text-slate-900 dark:text-slate-100 hover:opacity-80 transition-opacity"
                 >
                     <LayoutDashboard className="h-4 w-4 text-sky-600 dark:text-sky-400" />
-                    <span className="text-sm">AgentFarm Portal</span>
+                    <span className="text-sm">AgentFarms Portal</span>
                 </Link>
 
                 <div className="flex-1" />

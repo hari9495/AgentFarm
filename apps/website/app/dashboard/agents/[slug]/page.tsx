@@ -15,7 +15,7 @@ import RiskyActionTrigger from "@/components/dashboard/RiskyActionTrigger";
 import PremiumIcon from "@/components/shared/PremiumIcon";
 
 export const metadata: Metadata = {
-    title: "Agent Detail - AgentFarm Dashboard",
+    title: "Agent Detail - AgentFarms Dashboard",
 };
 
 const workers: Record<

@@ -1,6 +1,6 @@
 ﻿import { ImageResponse } from "next/og";
 
-export const alt = "AgentFarm — Trusted AI Teammates for Your Engineering Team";
+export const alt = "AgentFarms — Trusted AI Teammates for Your Engineering Team";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -34,7 +34,7 @@ export default function OGImage() {
           >
             ??
           </div>
-          <span style={{ color: "#f8fafc", fontSize: 28, fontWeight: 700 }}>AgentFarm</span>
+          <span style={{ color: "#f8fafc", fontSize: 28, fontWeight: 700 }}>AgentFarms</span>
         </div>
 
         {/* Headline */}

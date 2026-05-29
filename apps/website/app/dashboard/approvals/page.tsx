@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import ApprovalsQueue from "@/components/dashboard/ApprovalsQueue";
 
 export const metadata: Metadata = {
-    title: "Approvals - AgentFarm Dashboard",
+    title: "Approvals - AgentFarms Dashboard",
     description: "Org-wide approval inbox for all pending high-risk actions.",
 };
 

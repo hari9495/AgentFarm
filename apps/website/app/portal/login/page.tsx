@@ -72,7 +72,7 @@ export default function PortalLoginPage() {
                             Tenant Portal Login
                         </h1>
                         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                            Sign in to manage your AgentFarm account
+                            Sign in to manage your AgentFarms account
                         </p>
                     </div>
                 </div>

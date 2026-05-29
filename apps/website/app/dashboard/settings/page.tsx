@@ -18,7 +18,7 @@ import ButtonLink from "@/components/shared/ButtonLink";
 import PremiumIcon from "@/components/shared/PremiumIcon";
 
 export const metadata: Metadata = {
-    title: "Worker Settings - AgentFarm Dashboard",
+    title: "Worker Settings - AgentFarms Dashboard",
     description: "Configure shift hours, approval thresholds, and integrations per AI agent.",
 };
 

@@ -3,7 +3,7 @@ import { BarChart3, CheckCircle2, Clock, GitPullRequest, ShieldAlert, TrendingDo
 import PremiumIcon from "@/components/shared/PremiumIcon";
 
 export const metadata: Metadata = {
-    title: "Reports & Analytics - AgentFarm Dashboard",
+    title: "Reports & Analytics - AgentFarms Dashboard",
     description: "Weekly output reports, reliability trends, and risk distribution across all AI workers.",
 };
 

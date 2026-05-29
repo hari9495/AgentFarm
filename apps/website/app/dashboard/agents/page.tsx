@@ -4,7 +4,7 @@ import { ArrowRight, ClipboardCheck, Shield, Timer } from "lucide-react";
 import PremiumIcon from "@/components/shared/PremiumIcon";
 
 export const metadata: Metadata = {
-    title: "Agents - AgentFarm Dashboard",
+    title: "Agents - AgentFarms Dashboard",
     description: "Browse and manage deployed AI workers.",
 };
 

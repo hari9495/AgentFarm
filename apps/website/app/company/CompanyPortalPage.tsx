@@ -990,7 +990,7 @@ export default function CompanyPortalPage() {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
                     <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-fuchsia-200 mb-4">
                         <Crown className="w-3.5 h-3.5" />
-                        AgentFarm Company Portal
+                        AgentFarms Company Portal
                     </div>
                     <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">
                         Control every customer tenant from one place

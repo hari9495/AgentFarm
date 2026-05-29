@@ -227,7 +227,7 @@ export default function CheckoutPage() {
                                 : `Submit onboarding request${items.length > 0 ? ` (${items.length} bot${items.length !== 1 ? "s" : ""})` : ""}`}
                         </button>
                         <p className="text-xs text-slate-400 dark:text-slate-500">
-                            By submitting, you agree to start a no-obligation onboarding discussion with the AgentFarm team.
+                            By submitting, you agree to start a no-obligation onboarding discussion with the AgentFarms team.
                         </p>
                     </form>
                 </section>

@@ -4,7 +4,7 @@ import PremiumIcon from "@/components/shared/PremiumIcon";
 import type { LucideIcon } from "lucide-react";
 
 export const metadata: Metadata = {
-    title: "Notifications - AgentFarm Dashboard",
+    title: "Notifications - AgentFarms Dashboard",
     description: "System alerts, approval outcomes, and deployment events.",
 };
 

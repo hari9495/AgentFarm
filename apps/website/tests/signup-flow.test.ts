@@ -37,7 +37,7 @@ const createTestUser = (db: DatabaseSync, suffix: string): string => {
     withSqliteBusyRetry(() =>
         db.prepare(
             "INSERT INTO users (id, email, name, company, role, password_hash, created_at) VALUES (?, ?, ?, ?, 'member', ?, ?)",
-        ).run(id, `${id}@agentfarm.local`, `Signup ${suffix}`, "AgentFarm Test", DUMMY_PASSWORD_HASH, Date.now()),
+        ).run(id, `${id}@agentfarm.local`, `Signup ${suffix}`, "AgentFarms Test", DUMMY_PASSWORD_HASH, Date.now()),
     );
     return id;
 };
@@ -63,10 +63,10 @@ test("signup flow: tenant is created with provisioning status after initializati
     const suffix = `${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     const userId = createTestUser(db, suffix);
 
-    const result = await initializeTenantWorkspaceAndBot({ userId, tenantName: "AgentFarm Test" });
+    const result = await initializeTenantWorkspaceAndBot({ userId, tenantName: "AgentFarms Test" });
 
     assert.equal(result.tenant.tenantStatus, "provisioning");
-    assert.equal(result.tenant.tenantName, "AgentFarm Test");
+    assert.equal(result.tenant.tenantName, "AgentFarms Test");
     assert.equal(result.tenant.planId, "starter");
     assert.ok(result.tenant.id.startsWith("tnt_"), "tenant id must use tnt_ prefix");
 
@@ -79,7 +79,7 @@ test("signup flow: default workspace is created with provisioning status and cor
     const suffix = `${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     const userId = createTestUser(db, suffix);
 
-    const result = await initializeTenantWorkspaceAndBot({ userId, tenantName: "AgentFarm Test" });
+    const result = await initializeTenantWorkspaceAndBot({ userId, tenantName: "AgentFarms Test" });
 
     assert.equal(result.workspace.workspaceStatus, "provisioning");
     assert.equal(result.workspace.workspaceName, "Primary Workspace");
@@ -96,7 +96,7 @@ test("signup flow: default bot is created with created status and correct fields
     const suffix = `${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     const userId = createTestUser(db, suffix);
 
-    const result = await initializeTenantWorkspaceAndBot({ userId, tenantName: "AgentFarm Test" });
+    const result = await initializeTenantWorkspaceAndBot({ userId, tenantName: "AgentFarms Test" });
 
     assert.equal(result.bot.botStatus, "created");
     assert.equal(result.bot.botName, "Developer Agent");
@@ -113,7 +113,7 @@ test("signup flow: provisioning queue entry satisfies provisioning.requested con
     const suffix = `${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     const userId = createTestUser(db, suffix);
 
-    const result = await initializeTenantWorkspaceAndBot({ userId, tenantName: "AgentFarm Test" });
+    const result = await initializeTenantWorkspaceAndBot({ userId, tenantName: "AgentFarms Test" });
     const status = await getProvisioningStatusForUser(userId);
 
     assert.ok(status.provisioningJob, "provisioning job must exist");
@@ -139,8 +139,8 @@ test("signup flow: initializeTenantWorkspaceAndBot is idempotent on repeated cal
     const suffix = `${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     const userId = createTestUser(db, suffix);
 
-    const first = await initializeTenantWorkspaceAndBot({ userId, tenantName: "AgentFarm Test" });
-    const second = await initializeTenantWorkspaceAndBot({ userId, tenantName: "AgentFarm Test" });
+    const first = await initializeTenantWorkspaceAndBot({ userId, tenantName: "AgentFarms Test" });
+    const second = await initializeTenantWorkspaceAndBot({ userId, tenantName: "AgentFarms Test" });
 
     assert.equal(first.tenant.id, second.tenant.id);
     assert.equal(first.workspace.id, second.workspace.id);
