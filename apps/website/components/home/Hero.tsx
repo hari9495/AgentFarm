@@ -45,19 +45,24 @@ export default function Hero() {
                         </p>
 
                         <h1
-                            className="font-semibold leading-[1.07] text-[#1d1d1f]"
-                            style={{ fontSize: "clamp(2.6rem, 5vw, 3.6rem)", letterSpacing: "-0.03em" }}
+                            className="font-semibold text-[#1d1d1f]"
+                            style={{ fontSize: "clamp(2.6rem, 5vw, 3.6rem)", letterSpacing: "-0.03em", lineHeight: 1.1 }}
                         >
-                            {content.titleLead}{" "}
-                            <span className="relative inline-block h-[1.15em] overflow-hidden align-bottom min-w-[10ch]">
+                            {content.titleLead}
+                            {/* Animated word — separate block line to avoid width/height clipping */}
+                            <span
+                                className="block relative overflow-hidden"
+                                style={{ height: "1.25em" }}
+                            >
                                 <AnimatePresence mode="wait">
                                     <motion.span
                                         key={content.cycleWords[wordIdx]}
-                                        initial={{ y: "100%", opacity: 0 }}
+                                        initial={{ y: "110%", opacity: 0 }}
                                         animate={{ y: "0%", opacity: 1 }}
-                                        exit={{ y: "-100%", opacity: 0 }}
-                                        transition={{ duration: 0.36, ease: [0.22, 1, 0.36, 1] }}
-                                        className="absolute inset-0 text-[#0066cc] whitespace-nowrap"
+                                        exit={{ y: "-110%", opacity: 0 }}
+                                        transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
+                                        className="absolute left-0 top-0 text-[#0066cc]"
+                                        style={{ lineHeight: 1.25 }}
                                     >
                                         {content.cycleWords[wordIdx]}
                                     </motion.span>
