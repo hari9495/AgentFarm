@@ -10,14 +10,14 @@ const footerCols = [
             { href: "/how-it-works", label: "How It Works" },
             { href: "/pricing", label: "Pricing" },
             { href: "/compare", label: "Compare" },
-            { href: "/product#connectors", label: "Connectors" },
+            { href: "/product#connectors", label: "Integrations" },
         ],
     },
     {
         heading: "Company",
         links: [
             { href: "/about", label: "About" },
-            { href: "#", label: "Careers" },
+            { href: "/careers", label: "Careers" },
             { href: "/blog", label: "Blog" },
             { href: "/changelog", label: "Changelog" },
             { href: "/contact", label: "Contact" },
@@ -38,7 +38,6 @@ const footerCols = [
         links: [
             { href: "/privacy", label: "Privacy Policy" },
             { href: "/terms", label: "Terms of Service" },
-            { href: "/security", label: "Security" },
             { href: "/cookies", label: "Cookie Policy" },
         ],
     },
