@@ -12,6 +12,7 @@
 import Fastify, { type FastifyInstance, type FastifyError } from 'fastify';
 import helmet from '@fastify/helmet';
 import cors from '@fastify/cors';
+import multipart from '@fastify/multipart';
 import { buildSessionToken } from './lib/session-auth.js';
 import { rateLimitAsync, rateLimitTenantAsync } from './lib/rate-limit.js';
 import { checkSubscription } from './lib/subscription-guard.js';
@@ -63,6 +64,14 @@ export const createServer = async (): Promise<FastifyInstance> => {
         },
         referrerPolicy: { policy: ['strict-origin-when-cross-origin'] },
         frameguard: { action: 'deny' },
+    });
+
+    await app.register(multipart, {
+        limits: {
+            fileSize: 25_000_000,  // 25 MB — enough for any document
+            files: 1,
+            fields: 10,
+        },
     });
 
     await app.register(cors, {
