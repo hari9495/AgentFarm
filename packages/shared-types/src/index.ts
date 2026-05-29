@@ -146,6 +146,7 @@ export type RoleKey =
   | 'developer'
   | 'fullstack_developer'
   | 'tester'
+  | 'mobile_engineer'
   | 'business_analyst'
   | 'technical_writer'
   | 'content_writer'

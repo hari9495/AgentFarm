@@ -125,18 +125,23 @@ export const TESTER_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = [
     // ── Working memory: persist and search test session context (Gap T3 fix)
     'workspace_memory_write',
     'workspace_memory_search',
+    // ── Sub-agent spawning: delegate mobile testing to mobile_engineer ─────
+    'workspace_subagent_spawn',
 ];
 
 export const TESTER_ROLE_BLOCKED_ACTIONS = [
     'merge_pr',
     'deploy_production',
     'delete_resource',
-    'workspace_subagent_spawn',
     'run_shell_command',
     'change_permissions',
     'code_edit_patch',
     'workspace_bulk_refactor',
 ] as const;
+
+/** Sub-agents the Tester is permitted to spawn — keyed by role */
+export const TESTER_SPAWNABLE_SUB_AGENTS = ['mobile_engineer'] as const;
+export type TesterSpawnableSubAgent = (typeof TESTER_SPAWNABLE_SUB_AGENTS)[number];
 
 export const TESTER_ROLE_HIGH_RISK_ACTIONS = [
     'workspace_autonomous_plan_execute',

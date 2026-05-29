@@ -39,6 +39,10 @@ import {
     DEVOPS_ROLE_ALLOWED_CONNECTORS,
     DEVOPS_ROLE_ALLOWED_LOCAL_ACTIONS,
 } from '../agents/devops/devops-agent-profile.js';
+import {
+    MOBILE_ROLE_ALLOWED_CONNECTORS,
+    MOBILE_ROLE_ALLOWED_LOCAL_ACTIONS,
+} from '../agents/mobile/mobile-agent-profile.js';
 
 export interface RoleProfile {
     roleKey: RoleKey;
@@ -47,6 +51,8 @@ export interface RoleProfile {
     allowedConnectorTools: string[];
     allowedActions: string[];
     requiredConfig: string[];
+    /** Set when this role is a sub-agent spawned by another role rather than a top-level agent */
+    parentRole?: RoleKey;
 }
 
 export const ROLE_PROFILES: Record<RoleKey, RoleProfile> = {
@@ -164,6 +170,15 @@ export const ROLE_PROFILES: Record<RoleKey, RoleProfile> = {
         allowedConnectorTools: [...DEVOPS_ROLE_ALLOWED_CONNECTORS],
         allowedActions: [...DEVOPS_ROLE_ALLOWED_LOCAL_ACTIONS],
         requiredConfig: ['codeRepoProvider'],
+    },
+    mobile_engineer: {
+        roleKey: 'mobile_engineer',
+        displayName: 'Mobile Engineer',
+        description: 'Sub-agent of the Tester — handles iOS and Android test execution, real-device cloud testing (BrowserStack, Sauce Labs), app store uploads, push-notification verification, deep-link validation, and mobile performance/accessibility audits',
+        allowedConnectorTools: [...MOBILE_ROLE_ALLOWED_CONNECTORS],
+        allowedActions: [...MOBILE_ROLE_ALLOWED_LOCAL_ACTIONS],
+        requiredConfig: ['codeRepoProvider'],
+        parentRole: 'tester',
     },
 };
 

@@ -125,6 +125,7 @@ import {
     isCorporateAssistantRoleProfile,
 } from './agents/corporate-assistant/corporate-assistant-agent-profile.js';
 import { DEVOPS_ROLE_ALLOWED_LOCAL_ACTIONS } from './agents/devops/devops-agent-profile.js';
+import { MOBILE_ROLE_ALLOWED_CONNECTORS, MOBILE_ROLE_ALLOWED_LOCAL_ACTIONS } from './agents/mobile/mobile-agent-profile.js';
 import { getCorporateAssistantDefaultPersona } from './agents/corporate-assistant/corporate-assistant-persona-defaults.js';
 import { buildCorporateAssistantEpisodicPattern, buildCorporateAssistantEpisodicSummary } from './agents/corporate-assistant/corporate-assistant-episodic-hooks.js';
 import { getCorporateAssistantMcpClients } from './agents/corporate-assistant/corporate-assistant-mcp-provisioner.js';
@@ -848,7 +849,16 @@ type RuntimeConnectorType =
     // Content Writer CMS connectors
     | 'wordpress' | 'contentful' | 'hubspot_cms'
     // Content Writer analytics
-    | 'google_analytics';
+    | 'google_analytics'
+    // Mobile Engineer connectors
+    | 'github_issues' | 'bitbucket'
+    | 'github_actions' | 'gitlab_ci' | 'bitrise' | 'codemagic' | 'fastlane'
+    | 'app_store_connect' | 'google_play'
+    | 'firebase' | 'appcenter' | 'testflight'
+    | 'browserstack' | 'saucelabs'
+    | 'sentry' | 'datadog' | 'pagerduty'
+    | 'onesignal' | 'braze'
+    | 'notion';
 type RuntimeConnectorActionType =
     | 'read_task'
     | 'create_comment'
@@ -876,6 +886,7 @@ const ROLE_CONNECTOR_POLICY: Record<RoleKey, RuntimeConnectorType[]> = {
     customer_support_executive: ['jira', 'teams', 'email'],
     project_manager_product_owner_scrum_master: ['jira', 'linear', 'slack', 'teams', 'github', 'email'],
     devops_engineer: ['github', 'gitlab', 'azure_devops', 'jira', 'linear', 'slack', 'teams', 'email'],
+    mobile_engineer: [...MOBILE_ROLE_ALLOWED_CONNECTORS],
 };
 
 const CONNECTOR_ACTION_POLICY: Partial<Record<RuntimeConnectorType, RuntimeConnectorActionType[]>> = {
@@ -1155,6 +1166,7 @@ const LOCAL_WORKSPACE_ACTION_POLICY: Record<RoleKey, RuntimeLocalWorkspaceAction
     corporate_assistant: [...CORPORATE_ASSISTANT_ROLE_ALLOWED_LOCAL_ACTIONS],
     customer_support_executive: [],
     devops_engineer: [...DEVOPS_ROLE_ALLOWED_LOCAL_ACTIONS],
+    mobile_engineer: [...MOBILE_ROLE_ALLOWED_LOCAL_ACTIONS],
     project_manager_product_owner_scrum_master: [
         'code_read',
         // PM / Scrum Master domain actions (Tier 44)
@@ -1307,6 +1319,12 @@ const roleKeyFromRoleProfile = (roleProfile: string): RoleKey | null => {
         site_reliability_engineer: 'devops_engineer',
         platform_engineer: 'devops_engineer',
         infrastructure_engineer: 'devops_engineer',
+        mobile_engineer: 'mobile_engineer',
+        mobile: 'mobile_engineer',
+        ios_developer: 'mobile_engineer',
+        ios_engineer: 'mobile_engineer',
+        android_developer: 'mobile_engineer',
+        android_engineer: 'mobile_engineer',
     };
     return aliases[normalized] ?? null;
 };

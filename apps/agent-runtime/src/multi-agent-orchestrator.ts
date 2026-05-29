@@ -30,7 +30,8 @@ export type AgentCapability =
     | 'documentation'
     | 'dependency_management'
     | 'performance_analysis'
-    | 'ci_monitoring';
+    | 'ci_monitoring'
+    | 'mobile_testing';
 
 export type AgentSpec = {
     id: string;
@@ -114,6 +115,21 @@ const BUILT_IN_AGENTS: AgentSpec[] = [
         capabilities: ['performance_analysis'],
         skill_ids: ['openapi-spec-linter', 'accessibility-checker', 'code-churn-analyzer'],
         affinity_weight: 0.9,
+    },
+    {
+        id: 'agent-mobile-test',
+        name: 'Mobile Test Sub-Agent',
+        capabilities: ['mobile_testing', 'test_generation'],
+        skill_ids: [
+            'mobile-ios-test-runner',
+            'mobile-android-test-runner',
+            'mobile-real-device-cloud',
+            'mobile-a11y-audit',
+            'mobile-perf-profile',
+            'mobile-deep-link-validator',
+            'mobile-push-notify-verifier',
+        ],
+        affinity_weight: 1.1,
     },
 ];
 
