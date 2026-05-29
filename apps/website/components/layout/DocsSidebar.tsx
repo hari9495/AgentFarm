@@ -1,58 +1,181 @@
-﻿"use client";
+"use client";
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { cn } from "@/lib/cn";
+import { useState } from "react";
+import { ChevronDown, ExternalLink } from "lucide-react";
 
-const sidebarSections = [
-  {
-    heading: "Getting Started",
-    items: [
-      { href: "/docs", label: "Overview" },
-      { href: "/docs/quickstart", label: "Quickstart" },
-    ],
-  },
-  {
-    heading: "Core Concepts",
-    items: [{ href: "/docs/concepts", label: "How Robots Work" }],
-  },
-  {
-    heading: "Reference",
-    items: [{ href: "/docs/api-reference", label: "REST API" }],
-  },
+type NavItem = { href: string; label: string; badge?: string };
+type NavSection = { heading: string; items: NavItem[]; defaultOpen?: boolean };
+
+const NAV: NavSection[] = [
+    {
+        heading: "Getting Started",
+        defaultOpen: true,
+        items: [
+            { href: "/docs", label: "Overview" },
+            { href: "/docs/quickstart", label: "Quickstart" },
+        ],
+    },
+    {
+        heading: "Core Concepts",
+        defaultOpen: true,
+        items: [
+            { href: "/docs/concepts", label: "How Workers Operate" },
+            { href: "/docs/approvals", label: "Approval Gates" },
+            { href: "/docs/evidence", label: "Evidence Trail" },
+        ],
+    },
+    {
+        heading: "Workers",
+        defaultOpen: true,
+        items: [
+            { href: "/docs/workers", label: "Worker Roles", badge: "12" },
+        ],
+    },
+    {
+        heading: "Integrations",
+        defaultOpen: true,
+        items: [
+            { href: "/docs/connectors", label: "Connectors", badge: "18" },
+        ],
+    },
+    {
+        heading: "API Reference",
+        defaultOpen: true,
+        items: [
+            { href: "/docs/api-reference", label: "REST API" },
+            { href: "/docs/webhooks", label: "Webhooks" },
+            { href: "/docs/sdk", label: "TypeScript SDK" },
+        ],
+    },
+    {
+        heading: "Configuration",
+        defaultOpen: false,
+        items: [
+            { href: "/docs/environment", label: "Environment Variables" },
+        ],
+    },
 ];
 
-export default function DocsSidebar() {
-  const pathname = usePathname();
+const EXTERNAL = [
+    { href: "/changelog", label: "Changelog" },
+    { href: "/status", label: "System Status" },
+    { href: "/contact", label: "Support" },
+];
 
-  return (
-    <aside className="hidden lg:block w-52 shrink-0">
-      <nav className="sticky top-24 space-y-7">
-        {sidebarSections.map(({ heading, items }) => (
-          <div key={heading}>
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2 px-3">
-              {heading}
-            </p>
-            <ul className="space-y-0.5">
-              {items.map(({ href, label }) => (
-                <li key={href}>
-                  <Link
-                    href={href}
-                    className={cn(
-                      "block px-3 py-1.5 text-sm rounded-lg transition-colors",
-                      pathname === href
-                        ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-medium"
-                        : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100"
-                    )}
-                  >
-                    {label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </nav>
-    </aside>
-  );
+function SidebarSection({ section, pathname }: { section: NavSection; pathname: string }) {
+    const hasActive = section.items.some((i) => pathname === i.href);
+    const [open, setOpen] = useState(section.defaultOpen ?? hasActive);
+
+    return (
+        <div>
+            <button
+                onClick={() => setOpen(!open)}
+                className="w-full flex items-center justify-between px-3 py-1.5 rounded cursor-pointer"
+            >
+                <span className="text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: "#6e6e73" }}>
+                    {section.heading}
+                </span>
+                <ChevronDown
+                    className="w-3.5 h-3.5 transition-transform"
+                    style={{ color: "#aeaeb2", transform: open ? "rotate(0deg)" : "rotate(-90deg)" }}
+                />
+            </button>
+
+            {open && (
+                <ul className="mt-0.5 space-y-0.5">
+                    {section.items.map(({ href, label, badge }) => {
+                        const active = pathname === href;
+                        return (
+                            <li key={href}>
+                                <Link
+                                    href={href}
+                                    className="flex items-center justify-between px-3 py-1.5 rounded-[8px] text-[13px] transition-colors"
+                                    style={{
+                                        background: active ? "rgba(0,102,204,0.08)" : "transparent",
+                                        color: active ? "#0066cc" : "#424245",
+                                        fontWeight: active ? 600 : 400,
+                                    }}
+                                >
+                                    {label}
+                                    {badge && (
+                                        <span
+                                            className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                                            style={{ background: "rgba(0,102,204,0.1)", color: "#0066cc" }}
+                                        >
+                                            {badge}
+                                        </span>
+                                    )}
+                                </Link>
+                            </li>
+                        );
+                    })}
+                </ul>
+            )}
+        </div>
+    );
 }
 
+export default function DocsSidebar() {
+    const pathname = usePathname();
+    const isDocsPage = pathname.startsWith("/docs");
+
+    if (!isDocsPage) return null;
+
+    return (
+        <aside
+            className="hidden lg:block shrink-0 border-r"
+            style={{ width: 240, minWidth: 240, borderColor: "#e8e8ed", background: "#fafafa" }}
+        >
+            <nav
+                className="sticky flex flex-col gap-1 py-6 px-3 overflow-y-auto"
+                style={{ top: 88, maxHeight: "calc(100vh - 88px)" }}
+            >
+                {/* Logo in sidebar */}
+                <div className="px-3 mb-4 flex items-center gap-2">
+                    <div
+                        className="w-5 h-5 rounded flex items-center justify-center shrink-0"
+                        style={{ background: "#0066cc" }}
+                    >
+                        <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                            <circle cx="5" cy="5" r="4" stroke="white" strokeWidth="1.5" />
+                            <path d="M3 5h4M5 3v4" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+                        </svg>
+                    </div>
+                    <span className="text-[13px] font-semibold text-[#1d1d1f]">AgentFarms</span>
+                    <span
+                        className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                        style={{ background: "rgba(0,102,204,0.1)", color: "#0066cc" }}
+                    >
+                        Docs
+                    </span>
+                </div>
+
+                {/* Nav sections */}
+                <div className="space-y-3">
+                    {NAV.map((section) => (
+                        <SidebarSection key={section.heading} section={section} pathname={pathname} />
+                    ))}
+                </div>
+
+                {/* External links */}
+                <div className="mt-4 pt-4 border-t border-[#e8e8ed]">
+                    <p className="px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#aeaeb2] mb-1.5">
+                        Resources
+                    </p>
+                    {EXTERNAL.map((l) => (
+                        <a
+                            key={l.label}
+                            href={l.href}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] text-[13px] text-[#6e6e73] hover:text-[#1d1d1f] hover:bg-[rgba(0,0,0,0.03)] transition-colors"
+                        >
+                            {l.label}
+                            <ExternalLink className="w-3 h-3 opacity-50" />
+                        </a>
+                    ))}
+                </div>
+            </nav>
+        </aside>
+    );
+}
