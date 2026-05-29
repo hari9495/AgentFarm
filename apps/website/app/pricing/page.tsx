@@ -3,10 +3,24 @@ import { CheckCircle2, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { marketplaceBots, type Bot } from "@/lib/bots";
 import { pricingPageContent } from "@/lib/marketing-content";
+import { pricingFAQSchema, softwareApplicationSchema, breadcrumbSchema } from "@/lib/seo-schemas";
 
 export const metadata: Metadata = {
     title: pricingPageContent.metadata.title,
     description: pricingPageContent.metadata.description,
+    keywords: [
+        "AgentFarms pricing", "AI worker plans", "AI automation cost",
+        "Starter+ plan", "Pro+ plan", "Enterprise AI plan",
+        "AI staffing pricing India", "governed AI platform price",
+        "AI worker subscription", "14 day free trial AI",
+    ],
+    alternates: { canonical: "https://agentfarms.in/pricing" },
+    openGraph: {
+        title: pricingPageContent.metadata.title,
+        description: pricingPageContent.metadata.description,
+        url: "https://agentfarms.in/pricing",
+        type: "website",
+    },
 };
 
 type PlanTier = Bot["plan"];
@@ -63,9 +77,18 @@ const decisionCards = [
     },
 ];
 
+const pageSchemas = [
+    pricingFAQSchema,
+    breadcrumbSchema([
+        { name: "Home", url: "https://agentfarms.in" },
+        { name: "Pricing", url: "https://agentfarms.in/pricing" },
+    ]),
+];
+
 export default function PricingPage() {
     return (
         <div style={{ background: "#ffffff" }}>
+            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(pageSchemas) }} />
 
             {/* Hero tile */}
             <section className="af-tile af-tile-white text-center" style={{ paddingTop: 80, paddingBottom: 64 }}>

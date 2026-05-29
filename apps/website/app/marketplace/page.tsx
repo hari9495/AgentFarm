@@ -2,11 +2,25 @@ import type { Metadata } from "next";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import MarketplaceGrid from "@/components/marketplace/MarketplaceGrid";
+import { marketplaceItemListSchema, aggregateRatingSchema, breadcrumbSchema } from "@/lib/seo-schemas";
 
 export const metadata: Metadata = {
-    title: "Agent Marketplace – AgentFarms",
+    title: "AI Worker Marketplace — 12 Specialist Roles | AgentFarms",
     description:
-        "Browse and hire AI workers across 12 roles and every department — from Developer and Sales Rep to Customer Support, Recruiter, and more.",
+        "Browse and hire AI workers across 12 specialist roles — Backend Developer, QA Engineer, Sales Rep, Customer Support, Project Manager, and more. Deploy in under 10 minutes.",
+    keywords: [
+        "AI worker marketplace", "hire AI agents", "AI backend developer",
+        "AI QA engineer", "AI sales rep", "AI customer support agent",
+        "AI project manager", "AI content writer", "AI recruiter",
+        "AI marketing specialist", "buy AI worker India", "AI staffing marketplace",
+    ],
+    alternates: { canonical: "https://agentfarms.in/marketplace" },
+    openGraph: {
+        title: "AI Worker Marketplace — 12 Specialist Roles | AgentFarms",
+        description: "Browse 12 governed AI worker roles. Deploy in under 10 minutes with human approval gates.",
+        url: "https://agentfarms.in/marketplace",
+        type: "website",
+    },
 };
 
 const stats = [
@@ -38,9 +52,19 @@ const trustPoints = [
     "Full audit trail — every task, every decision",
 ];
 
+const pageSchemas = [
+    marketplaceItemListSchema,
+    aggregateRatingSchema,
+    breadcrumbSchema([
+        { name: "Home", url: "https://agentfarms.in" },
+        { name: "Marketplace", url: "https://agentfarms.in/marketplace" },
+    ]),
+];
+
 export default function MarketplacePage() {
     return (
         <div style={{ background: "#ffffff" }}>
+            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(pageSchemas) }} />
 
             {/* Hero — white */}
             <section className="af-tile af-tile-white" style={{ paddingTop: 80, paddingBottom: 64 }}>

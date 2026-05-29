@@ -2,8 +2,23 @@ import type { Metadata } from "next";
 import { ArrowRight, CheckCircle2, ShoppingCart, Users, Link as LinkIcon, MessageSquare, CheckCircle, BarChart3 } from "lucide-react";
 import Link from "next/link";
 import { howItWorksPageContent } from "@/lib/marketing-content";
+import { howItWorksHowToSchema, breadcrumbSchema } from "@/lib/seo-schemas";
 
-export const metadata: Metadata = howItWorksPageContent.metadata;
+export const metadata: Metadata = {
+    ...howItWorksPageContent.metadata,
+    keywords: [
+        "how AgentFarms works", "deploy AI worker tutorial", "AI agent setup guide",
+        "governed AI deployment", "AI worker onboarding", "connect AI to GitHub Jira Slack",
+        "AI approval policy setup", "AI task execution guide",
+    ],
+    alternates: { canonical: "https://agentfarms.in/how-it-works" },
+    openGraph: {
+        title: howItWorksPageContent.metadata.title,
+        description: howItWorksPageContent.metadata.description,
+        url: "https://agentfarms.in/how-it-works",
+        type: "website",
+    },
+};
 
 const stepIcons = {
     "shopping-cart": ShoppingCart,
@@ -14,11 +29,20 @@ const stepIcons = {
     "bar-chart-3": BarChart3,
 } as const;
 
+const pageSchemas = [
+    howItWorksHowToSchema,
+    breadcrumbSchema([
+        { name: "Home", url: "https://agentfarms.in" },
+        { name: "How It Works", url: "https://agentfarms.in/how-it-works" },
+    ]),
+];
+
 export default function HowItWorksPage() {
     const { hero, timeline, steps, cta } = howItWorksPageContent;
 
     return (
         <div style={{ background: "#ffffff" }}>
+            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(pageSchemas) }} />
 
             {/* Hero — white */}
             <section className="af-tile af-tile-white text-center" style={{ paddingTop: 80, paddingBottom: 72 }}>

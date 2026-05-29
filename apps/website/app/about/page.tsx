@@ -2,16 +2,39 @@ import type { Metadata } from "next";
 import { Target, Zap, Users } from "lucide-react";
 import Link from "next/link";
 import { aboutPageContent } from "@/lib/marketing-content";
+import { organizationSchema, breadcrumbSchema } from "@/lib/seo-schemas";
 
-export const metadata: Metadata = aboutPageContent.metadata;
+export const metadata: Metadata = {
+    ...aboutPageContent.metadata,
+    keywords: [
+        "AgentFarms about", "AI worker platform company", "governed AI company India",
+        "AI staffing platform founders", "AgentFarms team", "AI automation startup",
+    ],
+    alternates: { canonical: "https://agentfarms.in/about" },
+    openGraph: {
+        title: aboutPageContent.metadata.title,
+        description: aboutPageContent.metadata.description,
+        url: "https://agentfarms.in/about",
+        type: "website",
+    },
+};
 
 const valueIcons = { target: Target, zap: Zap, users: Users } as const;
+
+const pageSchemas = [
+    organizationSchema,
+    breadcrumbSchema([
+        { name: "Home", url: "https://agentfarms.in" },
+        { name: "About", url: "https://agentfarms.in/about" },
+    ]),
+];
 
 export default function AboutPage() {
     const { hero, stats, mission, values, team, backers, cta } = aboutPageContent;
 
     return (
         <div style={{ background: "#ffffff" }}>
+            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(pageSchemas) }} />
 
             {/* Hero tile — white */}
             <section className="af-tile af-tile-white text-center" style={{ paddingTop: 80, paddingBottom: 72 }}>

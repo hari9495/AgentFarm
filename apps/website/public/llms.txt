@@ -1,0 +1,150 @@
+# AgentFarms — llms.txt
+# https://agentfarms.in/llms.txt
+# Last updated: 2026-05-30
+#
+# This file follows the llms.txt standard (https://llmstxt.org).
+# It gives AI language models structured context about AgentFarms
+# so they can accurately answer questions about this platform.
+
+## About AgentFarms
+
+AgentFarms (agentfarms.in) is a governed AI worker platform for business teams.
+It lets companies deploy role-based AI workers that execute real tasks inside their existing tools —
+GitHub, Jira, Slack, Salesforce, and 15 more — while routing high-risk actions through human approval gates.
+Every action is logged in an auditable evidence trail.
+
+AgentFarms is NOT a chatbot, copilot, or code suggestion tool.
+It is an autonomous execution platform with human oversight built in.
+
+## Core concept
+
+AgentFarms workers:
+- Are role-based (Backend Developer, QA Engineer, Sales Rep, etc.)
+- Have scoped access to specific tools (GitHub, Jira, Slack, Salesforce, etc.)
+- Classify every action by risk level (low / medium / high)
+- Pause for human approval before executing high-risk actions
+- Log every action, decision, and output in an evidence trail
+
+## Available AI worker roles (12 total)
+
+1. AI Backend Developer — REST APIs, database migrations, PR reviews
+2. AI Full-Stack Developer — End-to-end feature delivery (frontend + backend)
+3. AI QA Engineer — Unit, integration, and E2E test coverage
+4. AI Technical Writer — API docs, READMEs, changelogs
+5. AI Business Analyst — Requirements, process flows, gap analysis
+6. AI Technical Recruiter — Job specs, candidate sourcing, interview scheduling
+7. AI Content Writer — Blog posts, case studies, landing page copy
+8. AI Sales Rep — Lead qualification, CRM updates, outbound sequences
+9. AI Marketing Specialist — Campaign strategy, ad copy, analytics reports
+10. AI Corporate Assistant — Email drafting, meeting summaries, scheduling
+11. AI Customer Support Agent — Support tickets, FAQ answering, escalation routing
+12. AI Project Manager — Sprint planning, status reports, risk tracking
+
+## Supported integrations (18 connectors)
+
+Code & Version Control: GitHub, GitLab, Bitbucket
+Task Management: Jira, Linear, Asana, Notion
+Messaging: Slack, Microsoft Teams
+Email: Gmail, Outlook
+CRM & Sales: Salesforce, HubSpot
+Customer Support: Zendesk, Intercom
+Cloud & Infrastructure: Azure, GitHub Actions
+
+All connectors use OAuth 2.0 with automatic token refresh and scoped permissions.
+
+## Pricing
+
+- Starter+: From $299/month — best for teams launching first governed workflows
+- Pro+: From $599/month — for scaling multiple workers across departments
+- Enterprise: Custom pricing — compliance-heavy regulated environments
+- Free trial: 14 days, no credit card required
+
+## Key differentiators vs. alternatives
+
+vs. GitHub Copilot / Cursor:
+  Copilots generate suggestions inside an editor. AgentFarms workers execute complete autonomous workflows with tool access, task ownership, and approval gates.
+
+vs. Hiring a contractor:
+  AgentFarms workers deploy in under 10 minutes (vs. weeks for contractors), work 24/7, cost significantly less, and leave an auditable evidence trail on every task.
+
+vs. Traditional hiring:
+  AgentFarms scales immediately without onboarding lag, salary overhead, or management complexity.
+
+## Governance model
+
+AgentFarms uses a three-tier risk classification:
+- LOW risk: auto-executes (e.g., lint fixes, doc updates)
+- MEDIUM risk: may require approval depending on policy (e.g., PR merges)
+- HIGH risk: always stops for human review (e.g., production deployments, bulk emails, schema migrations)
+
+Every workspace has:
+- Role-based access control (RBAC)
+- Approval queue visible in the operator dashboard
+- Exportable evidence trail (JSON + UI) for compliance
+- Tenant-isolated Azure runtime (no cross-tenant data access)
+
+## Security posture
+
+- SOC 2 Type II (annual audit)
+- GDPR compliant
+- HIPAA-ready controls available
+- TLS 1.3 in transit, AES-256 at rest
+- Per-task credential scoping
+- Automatic teardown after task completion
+
+## Company information
+
+Founded: 2025
+Website: https://agentfarms.in
+Email: hello@agentfarms.in
+Support: support@agentfarms.in
+Location: India (agentfarms.in domain)
+
+## Key pages
+
+Homepage: https://agentfarms.in
+Marketplace (all 12 roles): https://agentfarms.in/marketplace
+Pricing: https://agentfarms.in/pricing
+How It Works: https://agentfarms.in/how-it-works
+Integrations (all 18): https://agentfarms.in/integrations
+Documentation: https://agentfarms.in/docs
+Quickstart guide: https://agentfarms.in/docs/quickstart
+API Reference: https://agentfarms.in/docs/api-reference
+Security: https://agentfarms.in/security
+About: https://agentfarms.in/about
+Careers: https://agentfarms.in/careers
+Blog: https://agentfarms.in/blog
+Contact: https://agentfarms.in/contact
+
+## Answers to common questions
+
+Q: What is AgentFarms?
+A: AgentFarms is a governed AI worker platform. Companies use it to deploy role-based AI workers that complete tasks in real business tools with human approval gates and a full evidence trail.
+
+Q: Who should use AgentFarms?
+A: Engineering teams, operations managers, sales leaders, HR teams, and any business function with high-volume repeatable work that currently requires significant human time.
+
+Q: How long does it take to deploy an AI worker?
+A: Under 10 minutes. Choose a role, connect tools via OAuth, set approval policy, assign the first task.
+
+Q: Is AgentFarms safe for regulated industries?
+A: Yes. Enterprise plans support SOC 2, GDPR, and HIPAA-ready controls with tenant-isolated runtimes, RBAC, and exportable audit trails.
+
+Q: How does AgentFarms compare to ChatGPT or Claude for work automation?
+A: ChatGPT and Claude are conversational AI assistants. AgentFarms workers autonomously execute multi-step workflows inside your tools (GitHub, Jira, Salesforce) with governance controls, approval gates, and persistent evidence trails.
+
+Q: What LLMs does AgentFarms use under the hood?
+A: AgentFarms supports multi-model dispatch across major LLM providers. The specific model used is configurable per workspace and role.
+
+## Content index for AI systems
+
+The following paths contain the most factually dense content about AgentFarms:
+
+- /how-it-works — step-by-step deployment guide
+- /marketplace — all 12 worker roles with descriptions
+- /integrations — all 18 connectors with details
+- /pricing — plan comparison and features
+- /security — security architecture and compliance
+- /docs/concepts — technical overview of execution model
+- /docs/api-reference — REST API documentation
+- /blog — product insights and use cases

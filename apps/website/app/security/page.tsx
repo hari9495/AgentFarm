@@ -2,8 +2,24 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Shield, ShieldCheck, Globe, FileLock2, Lock, Server, Eye, KeyRound, Zap, RefreshCw } from "lucide-react";
 import { securityPageContent } from "@/lib/marketing-content";
+import { breadcrumbSchema } from "@/lib/seo-schemas";
 
-export const metadata: Metadata = securityPageContent.metadata;
+export const metadata: Metadata = {
+    ...securityPageContent.metadata,
+    keywords: [
+        "AgentFarms security", "AI platform SOC 2", "governed AI GDPR",
+        "AI worker data isolation", "enterprise AI security India",
+        "AI platform compliance", "HIPAA ready AI platform", "AI audit trail",
+        "tenant isolated AI runtime", "secure AI workers",
+    ],
+    alternates: { canonical: "https://agentfarms.in/security" },
+    openGraph: {
+        title: securityPageContent.metadata.title,
+        description: securityPageContent.metadata.description,
+        url: "https://agentfarms.in/security",
+        type: "website",
+    },
+};
 
 const iconMap = {
     shield: Shield,
@@ -18,11 +34,19 @@ const iconMap = {
     "refresh-cw": RefreshCw,
 } as const;
 
+const pageSchemas = [
+    breadcrumbSchema([
+        { name: "Home", url: "https://agentfarms.in" },
+        { name: "Security", url: "https://agentfarms.in/security" },
+    ]),
+];
+
 export default function SecurityPage() {
     const { hero, certifications, features, faqs, checklist, cta } = securityPageContent;
 
     return (
         <div style={{ background: "#ffffff" }}>
+            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(pageSchemas) }} />
 
             {/* Hero */}
             <section className="af-tile af-tile-white text-center" style={{ paddingTop: 80, paddingBottom: 64 }}>

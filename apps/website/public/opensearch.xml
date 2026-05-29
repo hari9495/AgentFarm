@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/">
+  <ShortName>AgentFarms</ShortName>
+  <Description>Search the AgentFarms AI worker marketplace</Description>
+  <InputEncoding>UTF-8</InputEncoding>
+  <Image width="16" height="16" type="image/x-icon">https://agentfarms.in/favicon.ico</Image>
+  <Url type="text/html" template="https://agentfarms.in/marketplace?q={searchTerms}"/>
+  <Url type="application/opensearchdescription+xml" rel="self" template="https://agentfarms.in/opensearch.xml"/>
+  <Contact>hello@agentfarms.in</Contact>
+  <Tags>AI workers AI agents automation governed AI AgentFarms</Tags>
+  <LongName>AgentFarms AI Worker Marketplace</LongName>
+  <Language>en-IN</Language>
+</OpenSearchDescription>

@@ -1,6 +1,6 @@
-﻿import { ImageResponse } from "next/og";
+import { ImageResponse } from "next/og";
 
-export const alt = "AgentFarms — Trusted AI Teammates for Your Engineering Team";
+export const alt = "AgentFarms — AI Workers That Ship With Human Control";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -9,73 +9,112 @@ export default function OGImage() {
     (
       <div
         style={{
-          background: "#0f172a",
+          background: "#ffffff",
           width: "100%",
           height: "100%",
           display: "flex",
           flexDirection: "column",
-          padding: "80px",
-          fontFamily: "sans-serif",
+          padding: "72px 80px",
+          fontFamily: "system-ui, -apple-system, sans-serif",
+          position: "relative",
         }}
       >
+        {/* Top accent bar */}
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: "4px",
+            background: "#0066cc",
+          }}
+        />
+
         {/* Logo row */}
-        <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "48px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "14px", marginBottom: "52px" }}>
           <div
             style={{
-              width: 48,
-              height: 48,
-              borderRadius: 12,
-              background: "#2563eb",
+              width: 44,
+              height: 44,
+              borderRadius: "10px",
+              background: "#0066cc",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: 24,
             }}
           >
-            ??
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+              <circle cx="11" cy="11" r="9" stroke="white" strokeWidth="2.5" />
+              <path d="M7 11h8M11 7v8" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
+            </svg>
           </div>
-          <span style={{ color: "#f8fafc", fontSize: 28, fontWeight: 700 }}>AgentFarms</span>
+          <span style={{ color: "#1d1d1f", fontSize: 26, fontWeight: 600, letterSpacing: "-0.5px" }}>
+            AgentFarms
+          </span>
         </div>
 
         {/* Headline */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
           <h1
             style={{
-              color: "#f8fafc",
-              fontSize: 64,
-              fontWeight: 800,
-              lineHeight: 1.1,
+              color: "#1d1d1f",
+              fontSize: 60,
+              fontWeight: 600,
+              lineHeight: 1.07,
               margin: 0,
-              marginBottom: 24,
+              marginBottom: 22,
+              letterSpacing: "-2px",
             }}
           >
-            Trusted AI Teammates for Your{" "}
-            <span style={{ color: "#2563eb" }}>Engineering Team</span>
+            AI Workers That Ship{" "}
+            <span style={{ color: "#0066cc" }}>With Human Control</span>
           </h1>
-          <p style={{ color: "#94a3b8", fontSize: 28, margin: 0 }}>
-            Deploy secure AI teammates with approvals,
-            <br />
-            audit trails, and real delivery outcomes.
+          <p style={{ color: "#424245", fontSize: 24, margin: 0, lineHeight: 1.47, letterSpacing: "-0.5px" }}>
+            12 specialist roles · 18 connectors · approval gates on every high-risk action
           </p>
         </div>
 
-        {/* Stats row */}
-        <div style={{ display: "flex", gap: "40px", marginTop: "48px" }}>
+        {/* Bottom stats row */}
+        <div
+          style={{
+            display: "flex",
+            gap: "48px",
+            marginTop: "48px",
+            paddingTop: "28px",
+            borderTop: "1px solid #e8e8ed",
+          }}
+        >
           {[
-            { label: "Tasks Completed", value: "12,480+" },
-            { label: "PRs Merged", value: "3,210+" },
-            { label: "Test Coverage", value: "94%" },
+            { label: "Worker roles", value: "12" },
+            { label: "Connectors", value: "18" },
+            { label: "Avg deploy time", value: "< 10 min" },
+            { label: "Actions audited", value: "100%" },
           ].map((s) => (
-            <div key={s.label} style={{ display: "flex", flexDirection: "column" }}>
-              <span style={{ color: "#2563eb", fontSize: 32, fontWeight: 800 }}>{s.value}</span>
-              <span style={{ color: "#64748b", fontSize: 16 }}>{s.label}</span>
+            <div key={s.label} style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+              <span style={{ color: "#0066cc", fontSize: 30, fontWeight: 600, letterSpacing: "-1px" }}>
+                {s.value}
+              </span>
+              <span style={{ color: "#aeaeb2", fontSize: 14 }}>{s.label}</span>
             </div>
           ))}
+        </div>
+
+        {/* Domain badge bottom-right */}
+        <div
+          style={{
+            position: "absolute",
+            bottom: "32px",
+            right: "80px",
+            fontSize: 14,
+            color: "#aeaeb2",
+            letterSpacing: "0.5px",
+          }}
+        >
+          agentfarms.in
         </div>
       </div>
     ),
     { ...size }
   );
 }
-
-
