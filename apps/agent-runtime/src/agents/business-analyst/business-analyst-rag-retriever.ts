@@ -24,6 +24,8 @@
 // Types
 // ---------------------------------------------------------------------------
 
+import { normalizeIngestContent } from '../shared/rag-ingest-normalizer.js';
+
 export type BaComplianceFramework =
     | 'gdpr'
     | 'hipaa'
@@ -401,6 +403,7 @@ export async function ingestApprovedDocument(params: {
     documentTitle: string;
     documentType: BaRagQuery['documentType'];
     content: string;
+    mimeType?: string;
     sourceUrl?: string;
     domain?: string;
     complianceFrameworks?: string[];
@@ -408,16 +411,17 @@ export async function ingestApprovedDocument(params: {
     serviceToken: string;
 }): Promise<boolean> {
     const {
-        tenantId, botId, documentTitle, documentType, content,
+        tenantId, botId, documentTitle, documentType, content, mimeType,
         sourceUrl, domain, complianceFrameworks, gatewayBaseUrl, serviceToken,
     } = params;
 
     const base = gatewayBaseUrl.replace(/\/+$/, '');
+    const normalizedContent = await normalizeIngestContent(content, mimeType);
     const enrichedContent = [
         `[BA Approved Document: ${documentTitle}]`,
         `Type: ${documentType}${domain ? ` | Domain: ${domain}` : ''}${complianceFrameworks?.length ? ` | Compliance: ${complianceFrameworks.join(', ')}` : ''}`,
         '',
-        content,
+        normalizedContent,
     ].join('\n');
 
     try {

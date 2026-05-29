@@ -14,6 +14,8 @@
  *      performance regressions, and security findings (from fsd-lesson-pipeline.ts)
  */
 
+import { normalizeIngestContent } from '../shared/rag-ingest-normalizer.js';
+
 export type FsdDocumentType =
     | 'component'
     | 'api_endpoint'
@@ -116,10 +118,11 @@ export async function buildFsdRagContext(query: FsdRagQuery, gatewayBaseUrl: str
     return { contextBlock: sections.length > 0 ? `## Dev Context\n\n${sections.join('\n---\n\n')}` : '', similarImplCount: similarImpls.length, patternChunkCount: patternChunks.length, lessonCount: lessons.length, retrievedAt: new Date().toISOString() };
 }
 
-export async function ingestApprovedImplementation(params: { tenantId: string; botId?: string; implTitle: string; documentType: FsdDocumentType; content: string; sourceUrl?: string; stack?: FsdStack[]; gatewayBaseUrl: string; serviceToken: string }): Promise<boolean> {
-    const { tenantId, botId, implTitle, documentType, content, sourceUrl, stack, gatewayBaseUrl, serviceToken } = params;
+export async function ingestApprovedImplementation(params: { tenantId: string; botId?: string; implTitle: string; documentType: FsdDocumentType; content: string; mimeType?: string; sourceUrl?: string; stack?: FsdStack[]; gatewayBaseUrl: string; serviceToken: string }): Promise<boolean> {
+    const { tenantId, botId, implTitle, documentType, content, mimeType, sourceUrl, stack, gatewayBaseUrl, serviceToken } = params;
     const base = gatewayBaseUrl.replace(/\/+$/, '');
-    const enriched = [`[FSD Approved: ${implTitle}]`, `Type: ${documentType}${stack?.length ? ` | Stack: ${stack.join(', ')}` : ''}`, '', content].join('\n');
+    const normalizedContent = await normalizeIngestContent(content, mimeType);
+    const enriched = [`[FSD Approved: ${implTitle}]`, `Type: ${documentType}${stack?.length ? ` | Stack: ${stack.join(', ')}` : ''}`, '', normalizedContent].join('\n');
     try {
         const res = await fetch(`${base}/v1/knowledge-base/write`, { method: 'POST', headers: { 'content-type': 'application/json', Authorization: `Bearer ${serviceToken}` }, body: JSON.stringify({ tenantId, botId, content: enriched, sourceUrl: sourceUrl ?? `urn:agentfarm:fsd:approved:${documentType}:${Date.now()}`, sourceType: 'fsd_approved_implementation' }), signal: AbortSignal.timeout(15_000) });
         return res.ok;

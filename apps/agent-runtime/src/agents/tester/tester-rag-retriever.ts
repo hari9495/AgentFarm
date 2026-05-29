@@ -14,6 +14,8 @@
  *      positives, and coverage gaps (from tester-lesson-pipeline.ts)
  */
 
+import { normalizeIngestContent } from '../shared/rag-ingest-normalizer.js';
+
 export type TesterDocumentType =
     | 'test_plan'
     | 'test_cases'
@@ -99,10 +101,11 @@ export async function buildTesterRagContext(query: TesterRagQuery, gatewayBaseUr
     return { contextBlock: sections.length > 0 ? `## Testing Context\n\n${sections.join('\n---\n\n')}` : '', similarTestCount: similarTests.length, templateChunkCount: templateChunks.length, lessonCount: lessons.length, retrievedAt: new Date().toISOString() };
 }
 
-export async function ingestApprovedTestSuite(params: { tenantId: string; botId?: string; suiteTitle: string; documentType: TesterDocumentType; content: string; sourceUrl?: string; testType?: string; bugCount?: number; gatewayBaseUrl: string; serviceToken: string }): Promise<boolean> {
-    const { tenantId, botId, suiteTitle, documentType, content, sourceUrl, testType, bugCount, gatewayBaseUrl, serviceToken } = params;
+export async function ingestApprovedTestSuite(params: { tenantId: string; botId?: string; suiteTitle: string; documentType: TesterDocumentType; content: string; mimeType?: string; sourceUrl?: string; testType?: string; bugCount?: number; gatewayBaseUrl: string; serviceToken: string }): Promise<boolean> {
+    const { tenantId, botId, suiteTitle, documentType, content, mimeType, sourceUrl, testType, bugCount, gatewayBaseUrl, serviceToken } = params;
     const base = gatewayBaseUrl.replace(/\/+$/, '');
-    const enriched = [`[Tester Approved: ${suiteTitle}]`, `Type: ${documentType}${testType ? ` | Test type: ${testType}` : ''}${bugCount !== undefined ? ` | Bugs found: ${bugCount}` : ''}`, '', content].join('\n');
+    const normalizedContent = await normalizeIngestContent(content, mimeType);
+    const enriched = [`[Tester Approved: ${suiteTitle}]`, `Type: ${documentType}${testType ? ` | Test type: ${testType}` : ''}${bugCount !== undefined ? ` | Bugs found: ${bugCount}` : ''}`, '', normalizedContent].join('\n');
     try {
         const res = await fetch(`${base}/v1/knowledge-base/write`, { method: 'POST', headers: { 'content-type': 'application/json', Authorization: `Bearer ${serviceToken}` }, body: JSON.stringify({ tenantId, botId, content: enriched, sourceUrl: sourceUrl ?? `urn:agentfarm:tester:approved:${documentType}:${Date.now()}`, sourceType: 'tester_approved_suite' }), signal: AbortSignal.timeout(15_000) });
         return res.ok;

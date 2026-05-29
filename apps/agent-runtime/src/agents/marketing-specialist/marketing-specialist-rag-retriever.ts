@@ -14,6 +14,8 @@
  *      campaigns and A/B test results (from marketing-specialist-lesson-pipeline.ts)
  */
 
+import { normalizeIngestContent } from '../shared/rag-ingest-normalizer.js';
+
 export type MarketingChannel =
     | 'email'
     | 'ppc'
@@ -138,10 +140,11 @@ export async function buildMarketingRagContext(query: MarketingRagQuery, gateway
     return { contextBlock: sections.length > 0 ? `## Marketing Context\n\n${sections.join('\n---\n\n')}` : '', similarCampaignCount: similarCampaigns.length, playbookChunkCount: playbookChunks.length, lessonCount: lessons.length, retrievedAt: new Date().toISOString() };
 }
 
-export async function ingestApprovedCampaign(params: { tenantId: string; botId?: string; campaignTitle: string; documentType: MarketingDocumentType; content: string; sourceUrl?: string; channels?: MarketingChannel[]; performanceScore?: number; gatewayBaseUrl: string; serviceToken: string }): Promise<boolean> {
-    const { tenantId, botId, campaignTitle, documentType, content, sourceUrl, channels, performanceScore, gatewayBaseUrl, serviceToken } = params;
+export async function ingestApprovedCampaign(params: { tenantId: string; botId?: string; campaignTitle: string; documentType: MarketingDocumentType; content: string; mimeType?: string; sourceUrl?: string; channels?: MarketingChannel[]; performanceScore?: number; gatewayBaseUrl: string; serviceToken: string }): Promise<boolean> {
+    const { tenantId, botId, campaignTitle, documentType, content, mimeType, sourceUrl, channels, performanceScore, gatewayBaseUrl, serviceToken } = params;
     const base = gatewayBaseUrl.replace(/\/+$/, '');
-    const enriched = [`[Marketing Approved: ${campaignTitle}]`, `Type: ${documentType}${channels?.length ? ` | Channels: ${channels.join(', ')}` : ''}${performanceScore !== undefined ? ` | Score: ${performanceScore}` : ''}`, '', content].join('\n');
+    const normalizedContent = await normalizeIngestContent(content, mimeType);
+    const enriched = [`[Marketing Approved: ${campaignTitle}]`, `Type: ${documentType}${channels?.length ? ` | Channels: ${channels.join(', ')}` : ''}${performanceScore !== undefined ? ` | Score: ${performanceScore}` : ''}`, '', normalizedContent].join('\n');
     try {
         const res = await fetch(`${base}/v1/knowledge-base/write`, { method: 'POST', headers: { 'content-type': 'application/json', Authorization: `Bearer ${serviceToken}` }, body: JSON.stringify({ tenantId, botId, content: enriched, sourceUrl: sourceUrl ?? `urn:agentfarm:ms:approved:${documentType}:${Date.now()}`, sourceType: 'ms_approved_campaign' }), signal: AbortSignal.timeout(15_000) });
         return res.ok;

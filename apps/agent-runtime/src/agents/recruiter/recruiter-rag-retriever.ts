@@ -23,6 +23,8 @@
 // Types
 // ---------------------------------------------------------------------------
 
+import { normalizeIngestContent } from '../shared/rag-ingest-normalizer.js';
+
 export type RecruiterDomain =
     | 'engineering'
     | 'sales'
@@ -300,6 +302,7 @@ export async function ingestApprovedHiringArtifact(params: {
     artifactTitle: string;
     documentType: RecruiterDocumentType;
     content: string;
+    mimeType?: string;
     sourceUrl?: string;
     domain?: RecruiterDomain;
     seniorityLevel?: string;
@@ -307,13 +310,14 @@ export async function ingestApprovedHiringArtifact(params: {
     gatewayBaseUrl: string;
     serviceToken: string;
 }): Promise<boolean> {
-    const { tenantId, botId, artifactTitle, documentType, content, sourceUrl, domain, seniorityLevel, outcome, gatewayBaseUrl, serviceToken } = params;
+    const { tenantId, botId, artifactTitle, documentType, content, mimeType, sourceUrl, domain, seniorityLevel, outcome, gatewayBaseUrl, serviceToken } = params;
     const base = gatewayBaseUrl.replace(/\/+$/, '');
+    const normalizedContent = await normalizeIngestContent(content, mimeType);
     const enrichedContent = [
         `[Recruiter Approved Artifact: ${artifactTitle}]`,
         `Type: ${documentType}${domain ? ` | Domain: ${domain}` : ''}${seniorityLevel ? ` | Seniority: ${seniorityLevel}` : ''}${outcome ? ` | Outcome: ${outcome}` : ''}`,
         '',
-        content,
+        normalizedContent,
     ].join('\n');
 
     try {

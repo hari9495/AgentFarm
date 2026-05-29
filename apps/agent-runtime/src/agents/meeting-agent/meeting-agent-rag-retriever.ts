@@ -13,6 +13,8 @@
  *      poor summaries, and distribution failures (from meeting-agent-lesson-pipeline.ts)
  */
 
+import { normalizeIngestContent } from '../shared/rag-ingest-normalizer.js';
+
 export type MeetingDocumentType =
     | 'meeting_summary'
     | 'action_items'
@@ -106,10 +108,11 @@ export async function buildMeetingRagContext(query: MeetingRagQuery, gatewayBase
     return { contextBlock: sections.length > 0 ? `## Meeting Context\n\n${sections.join('\n---\n\n')}` : '', similarMeetingCount: similarMeetings.length, templateChunkCount: templateChunks.length, lessonCount: lessons.length, retrievedAt: new Date().toISOString() };
 }
 
-export async function ingestMeetingSummary(params: { tenantId: string; botId?: string; meetingTitle: string; documentType: MeetingDocumentType; content: string; sourceUrl?: string; meetingType?: MeetingType; gatewayBaseUrl: string; serviceToken: string }): Promise<boolean> {
-    const { tenantId, botId, meetingTitle, documentType, content, sourceUrl, meetingType, gatewayBaseUrl, serviceToken } = params;
+export async function ingestMeetingSummary(params: { tenantId: string; botId?: string; meetingTitle: string; documentType: MeetingDocumentType; content: string; mimeType?: string; sourceUrl?: string; meetingType?: MeetingType; gatewayBaseUrl: string; serviceToken: string }): Promise<boolean> {
+    const { tenantId, botId, meetingTitle, documentType, content, mimeType, sourceUrl, meetingType, gatewayBaseUrl, serviceToken } = params;
     const base = gatewayBaseUrl.replace(/\/+$/, '');
-    const enriched = [`[Meeting Summary: ${meetingTitle}]`, `Type: ${documentType}${meetingType ? ` | Meeting type: ${meetingType}` : ''}`, '', content].join('\n');
+    const normalizedContent = await normalizeIngestContent(content, mimeType);
+    const enriched = [`[Meeting Summary: ${meetingTitle}]`, `Type: ${documentType}${meetingType ? ` | Meeting type: ${meetingType}` : ''}`, '', normalizedContent].join('\n');
     try {
         const res = await fetch(`${base}/v1/knowledge-base/write`, { method: 'POST', headers: { 'content-type': 'application/json', Authorization: `Bearer ${serviceToken}` }, body: JSON.stringify({ tenantId, botId, content: enriched, sourceUrl: sourceUrl ?? `urn:agentfarm:meeting:summary:${documentType}:${Date.now()}`, sourceType: 'meeting_approved_summary' }), signal: AbortSignal.timeout(15_000) });
         return res.ok;

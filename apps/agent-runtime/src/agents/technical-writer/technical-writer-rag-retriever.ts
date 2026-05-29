@@ -22,6 +22,8 @@
 // Types
 // ---------------------------------------------------------------------------
 
+import { normalizeIngestContent } from '../shared/rag-ingest-normalizer.js';
+
 export type TwDocumentType =
     | 'api_reference'
     | 'tutorial'
@@ -251,19 +253,21 @@ export async function ingestApprovedDoc(params: {
     docTitle: string;
     documentType: TwDocumentType;
     content: string;
+    mimeType?: string;
     sourceUrl?: string;
     audience?: TwAudience;
     productArea?: string;
     gatewayBaseUrl: string;
     serviceToken: string;
 }): Promise<boolean> {
-    const { tenantId, botId, docTitle, documentType, content, sourceUrl, audience, productArea, gatewayBaseUrl, serviceToken } = params;
+    const { tenantId, botId, docTitle, documentType, content, mimeType, sourceUrl, audience, productArea, gatewayBaseUrl, serviceToken } = params;
     const base = gatewayBaseUrl.replace(/\/+$/, '');
+    const normalizedContent = await normalizeIngestContent(content, mimeType);
     const enrichedContent = [
         `[Technical Writer Approved Doc: ${docTitle}]`,
         `Type: ${documentType}${audience ? ` | Audience: ${audience}` : ''}${productArea ? ` | Product: ${productArea}` : ''}`,
         '',
-        content,
+        normalizedContent,
     ].join('\n');
 
     try {

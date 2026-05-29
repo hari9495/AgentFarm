@@ -22,6 +22,8 @@
 // Types
 // ---------------------------------------------------------------------------
 
+import { normalizeIngestContent } from '../shared/rag-ingest-normalizer.js';
+
 export type PmDocumentType =
     | 'project_charter'
     | 'status_report'
@@ -229,19 +231,21 @@ export async function ingestApprovedPmArtifact(params: {
     artifactTitle: string;
     documentType: PmDocumentType;
     content: string;
+    mimeType?: string;
     sourceUrl?: string;
     methodology?: PmMethodology;
     domain?: string;
     gatewayBaseUrl: string;
     serviceToken: string;
 }): Promise<boolean> {
-    const { tenantId, botId, artifactTitle, documentType, content, sourceUrl, methodology, domain, gatewayBaseUrl, serviceToken } = params;
+    const { tenantId, botId, artifactTitle, documentType, content, mimeType, sourceUrl, methodology, domain, gatewayBaseUrl, serviceToken } = params;
     const base = gatewayBaseUrl.replace(/\/+$/, '');
+    const normalizedContent = await normalizeIngestContent(content, mimeType);
     const enrichedContent = [
         `[PM Approved Artifact: ${artifactTitle}]`,
         `Type: ${documentType}${methodology ? ` | Methodology: ${methodology}` : ''}${domain ? ` | Domain: ${domain}` : ''}`,
         '',
-        content,
+        normalizedContent,
     ].join('\n');
     try {
         const res = await fetch(`${base}/v1/knowledge-base/write`, {

@@ -14,6 +14,8 @@
  *      escalation patterns, and SLA breaches (from customer-support-lesson-pipeline.ts)
  */
 
+import { normalizeIngestContent } from '../shared/rag-ingest-normalizer.js';
+
 export type SupportDocumentType =
     | 'ticket_response'
     | 'escalation_summary'
@@ -114,10 +116,11 @@ export async function buildSupportRagContext(query: SupportRagQuery, gatewayBase
     return { contextBlock: sections.length > 0 ? `## Support Context\n\n${sections.join('\n---\n\n')}` : '', similarResolutionCount: similarResolutions.length, knowledgeChunkCount: knowledgeChunks.length, lessonCount: lessons.length, retrievedAt: new Date().toISOString() };
 }
 
-export async function ingestResolvedTicket(params: { tenantId: string; botId?: string; issueTitle: string; documentType: SupportDocumentType; content: string; sourceUrl?: string; productArea?: string; csatScore?: number; gatewayBaseUrl: string; serviceToken: string }): Promise<boolean> {
-    const { tenantId, botId, issueTitle, documentType, content, sourceUrl, productArea, csatScore, gatewayBaseUrl, serviceToken } = params;
+export async function ingestResolvedTicket(params: { tenantId: string; botId?: string; issueTitle: string; documentType: SupportDocumentType; content: string; mimeType?: string; sourceUrl?: string; productArea?: string; csatScore?: number; gatewayBaseUrl: string; serviceToken: string }): Promise<boolean> {
+    const { tenantId, botId, issueTitle, documentType, content, mimeType, sourceUrl, productArea, csatScore, gatewayBaseUrl, serviceToken } = params;
     const base = gatewayBaseUrl.replace(/\/+$/, '');
-    const enriched = [`[Support Resolved: ${issueTitle}]`, `Type: ${documentType}${productArea ? ` | Product: ${productArea}` : ''}${csatScore !== undefined ? ` | CSAT: ${csatScore}` : ''}`, '', content].join('\n');
+    const normalizedContent = await normalizeIngestContent(content, mimeType);
+    const enriched = [`[Support Resolved: ${issueTitle}]`, `Type: ${documentType}${productArea ? ` | Product: ${productArea}` : ''}${csatScore !== undefined ? ` | CSAT: ${csatScore}` : ''}`, '', normalizedContent].join('\n');
     try {
         const res = await fetch(`${base}/v1/knowledge-base/write`, { method: 'POST', headers: { 'content-type': 'application/json', Authorization: `Bearer ${serviceToken}` }, body: JSON.stringify({ tenantId, botId, content: enriched, sourceUrl: sourceUrl ?? `urn:agentfarm:cs:resolved:${documentType}:${Date.now()}`, sourceType: 'support_resolved_ticket' }), signal: AbortSignal.timeout(15_000) });
         return res.ok;

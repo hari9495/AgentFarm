@@ -14,6 +14,8 @@
  *      failures (from devops-lesson-pipeline.ts)
  */
 
+import { normalizeIngestContent } from '../shared/rag-ingest-normalizer.js';
+
 export type DevOpsDocumentType =
     | 'runbook'
     | 'incident_report'
@@ -121,10 +123,11 @@ export async function buildDevOpsRagContext(query: DevOpsRagQuery, gatewayBaseUr
     return { contextBlock: sections.length > 0 ? `## Ops Context\n\n${sections.join('\n---\n\n')}` : '', similarArtifactCount: similarArtifacts.length, templateChunkCount: templateChunks.length, lessonCount: lessons.length, retrievedAt: new Date().toISOString() };
 }
 
-export async function ingestApprovedOpsArtifact(params: { tenantId: string; botId?: string; artifactTitle: string; documentType: DevOpsDocumentType; content: string; sourceUrl?: string; cloudProvider?: CloudProvider; stack?: string[]; gatewayBaseUrl: string; serviceToken: string }): Promise<boolean> {
-    const { tenantId, botId, artifactTitle, documentType, content, sourceUrl, cloudProvider, stack, gatewayBaseUrl, serviceToken } = params;
+export async function ingestApprovedOpsArtifact(params: { tenantId: string; botId?: string; artifactTitle: string; documentType: DevOpsDocumentType; content: string; mimeType?: string; sourceUrl?: string; cloudProvider?: CloudProvider; stack?: string[]; gatewayBaseUrl: string; serviceToken: string }): Promise<boolean> {
+    const { tenantId, botId, artifactTitle, documentType, content, mimeType, sourceUrl, cloudProvider, stack, gatewayBaseUrl, serviceToken } = params;
     const base = gatewayBaseUrl.replace(/\/+$/, '');
-    const enriched = [`[DevOps Approved: ${artifactTitle}]`, `Type: ${documentType}${cloudProvider ? ` | Cloud: ${cloudProvider}` : ''}${stack?.length ? ` | Stack: ${stack.join(', ')}` : ''}`, '', content].join('\n');
+    const normalizedContent = await normalizeIngestContent(content, mimeType);
+    const enriched = [`[DevOps Approved: ${artifactTitle}]`, `Type: ${documentType}${cloudProvider ? ` | Cloud: ${cloudProvider}` : ''}${stack?.length ? ` | Stack: ${stack.join(', ')}` : ''}`, '', normalizedContent].join('\n');
     try {
         const res = await fetch(`${base}/v1/knowledge-base/write`, { method: 'POST', headers: { 'content-type': 'application/json', Authorization: `Bearer ${serviceToken}` }, body: JSON.stringify({ tenantId, botId, content: enriched, sourceUrl: sourceUrl ?? `urn:agentfarm:devops:approved:${documentType}:${Date.now()}`, sourceType: 'devops_approved_artifact' }), signal: AbortSignal.timeout(15_000) });
         return res.ok;

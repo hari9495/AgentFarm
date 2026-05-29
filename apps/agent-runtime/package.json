@@ -208,6 +208,7 @@
         "@types/nodemailer": "^6.4.17"
     },
     "dependencies": {
+        "@agentfarm/document-converter": "workspace:*",
         "@agentfarm/agent-observability": "workspace:*",
         "@agentfarm/redis-client": "workspace:*",
         "@agentfarm/config": "workspace:*",

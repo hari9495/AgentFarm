@@ -25,6 +25,8 @@
 // Types
 // ---------------------------------------------------------------------------
 
+import { normalizeIngestContent } from '../shared/rag-ingest-normalizer.js';
+
 export type SalesDomain =
     | 'saas'
     | 'enterprise'
@@ -362,6 +364,7 @@ export async function ingestApprovedSalesArtifact(params: {
     artifactTitle: string;
     documentType: SalesDocumentType;
     content: string;
+    mimeType?: string;
     sourceUrl?: string;
     domain?: SalesDomain;
     dealStage?: string;
@@ -370,16 +373,17 @@ export async function ingestApprovedSalesArtifact(params: {
     serviceToken: string;
 }): Promise<boolean> {
     const {
-        tenantId, botId, artifactTitle, documentType, content,
+        tenantId, botId, artifactTitle, documentType, content, mimeType,
         sourceUrl, domain, dealStage, outcome, gatewayBaseUrl, serviceToken,
     } = params;
 
     const base = gatewayBaseUrl.replace(/\/+$/, '');
+    const normalizedContent = await normalizeIngestContent(content, mimeType);
     const enrichedContent = [
         `[Sales Approved Artifact: ${artifactTitle}]`,
         `Type: ${documentType}${domain ? ` | Industry: ${domain}` : ''}${dealStage ? ` | Stage: ${dealStage}` : ''}${outcome ? ` | Outcome: ${outcome}` : ''}`,
         '',
-        content,
+        normalizedContent,
     ].join('\n');
 
     try {

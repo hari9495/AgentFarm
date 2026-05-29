@@ -14,6 +14,8 @@
  *      tone complaints, and missed escalations (from corporate-assistant-lesson-pipeline.ts)
  */
 
+import { normalizeIngestContent } from '../shared/rag-ingest-normalizer.js';
+
 export type CorporateDocumentType =
     | 'email'
     | 'memo'
@@ -99,10 +101,11 @@ export async function buildCorporateRagContext(query: CorporateRagQuery, gateway
     return { contextBlock: sections.length > 0 ? `## Communication Context\n\n${sections.join('\n---\n\n')}` : '', similarDocCount: similarDocs.length, templateChunkCount: templateChunks.length, lessonCount: lessons.length, retrievedAt: new Date().toISOString() };
 }
 
-export async function ingestApprovedCommunication(params: { tenantId: string; botId?: string; subject: string; documentType: CorporateDocumentType; content: string; sourceUrl?: string; recipientRole?: string; gatewayBaseUrl: string; serviceToken: string }): Promise<boolean> {
-    const { tenantId, botId, subject, documentType, content, sourceUrl, recipientRole, gatewayBaseUrl, serviceToken } = params;
+export async function ingestApprovedCommunication(params: { tenantId: string; botId?: string; subject: string; documentType: CorporateDocumentType; content: string; mimeType?: string; sourceUrl?: string; recipientRole?: string; gatewayBaseUrl: string; serviceToken: string }): Promise<boolean> {
+    const { tenantId, botId, subject, documentType, content, mimeType, sourceUrl, recipientRole, gatewayBaseUrl, serviceToken } = params;
     const base = gatewayBaseUrl.replace(/\/+$/, '');
-    const enriched = [`[Corporate Approved: ${subject}]`, `Type: ${documentType}${recipientRole ? ` | Recipient: ${recipientRole}` : ''}`, '', content].join('\n');
+    const normalizedContent = await normalizeIngestContent(content, mimeType);
+    const enriched = [`[Corporate Approved: ${subject}]`, `Type: ${documentType}${recipientRole ? ` | Recipient: ${recipientRole}` : ''}`, '', normalizedContent].join('\n');
     try {
         const res = await fetch(`${base}/v1/knowledge-base/write`, { method: 'POST', headers: { 'content-type': 'application/json', Authorization: `Bearer ${serviceToken}` }, body: JSON.stringify({ tenantId, botId, content: enriched, sourceUrl: sourceUrl ?? `urn:agentfarm:ca:approved:${documentType}:${Date.now()}`, sourceType: 'ca_approved_communication' }), signal: AbortSignal.timeout(15_000) });
         return res.ok;

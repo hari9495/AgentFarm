@@ -22,6 +22,8 @@
 // Types
 // ---------------------------------------------------------------------------
 
+import { normalizeIngestContent } from '../shared/rag-ingest-normalizer.js';
+
 export type ContentDomain =
     | 'technology'
     | 'finance'
@@ -299,19 +301,21 @@ export async function ingestPublishedContent(params: {
     contentTitle: string;
     documentType: ContentDocumentType;
     content: string;
+    mimeType?: string;
     sourceUrl?: string;
     domain?: ContentDomain;
     performanceScore?: number;
     gatewayBaseUrl: string;
     serviceToken: string;
 }): Promise<boolean> {
-    const { tenantId, botId, contentTitle, documentType, content, sourceUrl, domain, performanceScore, gatewayBaseUrl, serviceToken } = params;
+    const { tenantId, botId, contentTitle, documentType, content, mimeType, sourceUrl, domain, performanceScore, gatewayBaseUrl, serviceToken } = params;
     const base = gatewayBaseUrl.replace(/\/+$/, '');
+    const normalizedContent = await normalizeIngestContent(content, mimeType);
     const enrichedContent = [
         `[Content Writer Published: ${contentTitle}]`,
         `Type: ${documentType}${domain ? ` | Domain: ${domain}` : ''}${performanceScore !== undefined ? ` | Performance: ${performanceScore}` : ''}`,
         '',
-        content,
+        normalizedContent,
     ].join('\n');
 
     try {

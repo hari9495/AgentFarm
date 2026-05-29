@@ -44,6 +44,9 @@ importers:
       '@agentfarm/crm-adapters':
         specifier: workspace:*
         version: link:../../packages/crm-service
+      '@agentfarm/document-converter':
+        specifier: workspace:*
+        version: link:../../packages/document-converter
       '@agentfarm/erp-adapters':
         specifier: workspace:*
         version: link:../../packages/erp-service

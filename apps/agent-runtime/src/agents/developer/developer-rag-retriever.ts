@@ -22,6 +22,8 @@
 // Types
 // ---------------------------------------------------------------------------
 
+import { normalizeIngestContent } from '../shared/rag-ingest-normalizer.js';
+
 export type DevDocumentType =
     | 'feature_implementation'
     | 'bug_fix'
@@ -243,19 +245,21 @@ export async function ingestApprovedImplementation(params: {
     implTitle: string;
     documentType: DevDocumentType;
     content: string;
+    mimeType?: string;
     sourceUrl?: string;
     language?: DevLanguage;
     framework?: string;
     gatewayBaseUrl: string;
     serviceToken: string;
 }): Promise<boolean> {
-    const { tenantId, botId, implTitle, documentType, content, sourceUrl, language, framework, gatewayBaseUrl, serviceToken } = params;
+    const { tenantId, botId, implTitle, documentType, content, mimeType, sourceUrl, language, framework, gatewayBaseUrl, serviceToken } = params;
     const base = gatewayBaseUrl.replace(/\/+$/, '');
+    const normalizedContent = await normalizeIngestContent(content, mimeType);
     const enriched = [
         `[Developer Approved: ${implTitle}]`,
         `Type: ${documentType}${language ? ` | Language: ${language}` : ''}${framework ? ` | Framework: ${framework}` : ''}`,
         '',
-        content,
+        normalizedContent,
     ].join('\n');
     try {
         const res = await fetch(`${base}/v1/knowledge-base/write`, {

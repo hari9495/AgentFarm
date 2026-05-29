@@ -14,6 +14,8 @@
  *      crash reports, and UX review feedback (from mobile-lesson-pipeline.ts)
  */
 
+import { normalizeIngestContent } from '../shared/rag-ingest-normalizer.js';
+
 export type MobilePlatform = 'ios' | 'android' | 'cross_platform';
 export type MobileDocumentType = 'ui_component' | 'api_client' | 'push_notification' | 'deep_link' | 'navigation' | 'state_management' | 'widget' | 'accessibility';
 
@@ -92,10 +94,11 @@ export async function buildMobileRagContext(query: MobileRagQuery, gatewayBaseUr
     return { contextBlock: sections.length > 0 ? `## Mobile Dev Context\n\n${sections.join('\n---\n\n')}` : '', similarComponentCount: similarComponents.length, guidelineChunkCount: guidelineChunks.length, lessonCount: lessons.length, retrievedAt: new Date().toISOString() };
 }
 
-export async function ingestApprovedMobileComponent(params: { tenantId: string; botId?: string; componentTitle: string; documentType: MobileDocumentType; content: string; sourceUrl?: string; platform?: MobilePlatform; framework?: string; gatewayBaseUrl: string; serviceToken: string }): Promise<boolean> {
-    const { tenantId, botId, componentTitle, documentType, content, sourceUrl, platform, framework, gatewayBaseUrl, serviceToken } = params;
+export async function ingestApprovedMobileComponent(params: { tenantId: string; botId?: string; componentTitle: string; documentType: MobileDocumentType; content: string; mimeType?: string; sourceUrl?: string; platform?: MobilePlatform; framework?: string; gatewayBaseUrl: string; serviceToken: string }): Promise<boolean> {
+    const { tenantId, botId, componentTitle, documentType, content, mimeType, sourceUrl, platform, framework, gatewayBaseUrl, serviceToken } = params;
     const base = gatewayBaseUrl.replace(/\/+$/, '');
-    const enriched = [`[Mobile Approved: ${componentTitle}]`, `Type: ${documentType}${platform ? ` | Platform: ${platform}` : ''}${framework ? ` | Framework: ${framework}` : ''}`, '', content].join('\n');
+    const normalizedContent = await normalizeIngestContent(content, mimeType);
+    const enriched = [`[Mobile Approved: ${componentTitle}]`, `Type: ${documentType}${platform ? ` | Platform: ${platform}` : ''}${framework ? ` | Framework: ${framework}` : ''}`, '', normalizedContent].join('\n');
     try {
         const res = await fetch(`${base}/v1/knowledge-base/write`, { method: 'POST', headers: { 'content-type': 'application/json', Authorization: `Bearer ${serviceToken}` }, body: JSON.stringify({ tenantId, botId, content: enriched, sourceUrl: sourceUrl ?? `urn:agentfarm:mobile:approved:${documentType}:${Date.now()}`, sourceType: 'mobile_approved_component' }), signal: AbortSignal.timeout(15_000) });
         return res.ok;
