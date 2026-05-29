@@ -84,7 +84,7 @@ function AgentFlipCard({ bot, index }: { bot: Bot; index: number }) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.28, delay: Math.min(index * 0.04, 0.5) }}
             className="relative"
-            style={{ height: 264, perspective: 900 }}
+            style={{ height: 288, perspective: 900 }}
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => setHovered(false)}
         >
@@ -213,19 +213,28 @@ function AgentFlipCard({ bot, index }: { bot: Bot; index: number }) {
                     </div>
 
                     {/* Body */}
-                    <div className="flex flex-col flex-1 px-4 py-3 gap-2 overflow-hidden">
-                        {/* Tagline */}
-                        <p className="text-[11px] font-semibold text-[#0066cc] leading-snug">
+                    <div className="flex flex-col flex-1 px-4 py-2.5 gap-2 overflow-hidden">
+                        {/* Tagline — single line, truncated */}
+                        <p
+                            className="text-[11px] font-semibold text-[#0066cc]"
+                            style={{
+                                lineHeight: 1.4,
+                                display: "-webkit-box",
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: "vertical",
+                                overflow: "hidden",
+                            }}
+                        >
                             {bot.tagline}
                         </p>
 
-                        {/* Description — 2 lines max */}
+                        {/* Description — 3 lines max */}
                         <p
                             className="text-[11px] text-[#6e6e73]"
                             style={{
-                                lineHeight: 1.55,
+                                lineHeight: 1.5,
                                 display: "-webkit-box",
-                                WebkitLineClamp: 2,
+                                WebkitLineClamp: 3,
                                 WebkitBoxOrient: "vertical",
                                 overflow: "hidden",
                             }}
@@ -233,23 +242,18 @@ function AgentFlipCard({ bot, index }: { bot: Bot; index: number }) {
                             {bot.description}
                         </p>
 
-                        {/* Skills */}
+                        {/* Skills — max 3 pills on one row */}
                         <div className="flex flex-wrap gap-1">
                             {bot.skills.slice(0, 3).map((s) => (
                                 <span
                                     key={s}
-                                    className="text-[10px] px-1.5 py-0.5 rounded"
+                                    className="text-[10px] px-1.5 py-0.5 rounded whitespace-nowrap"
                                     style={{ background: "#f5f5f7", color: "#6e6e73" }}
                                 >
                                     {s}
                                 </span>
                             ))}
                         </div>
-
-                        {/* First use case */}
-                        <p className="text-[11px] text-[#aeaeb2]" style={{ lineHeight: 1.4 }}>
-                            {bot.useCases[0]}
-                        </p>
                     </div>
 
                     {/* Footer: price + CTA */}
