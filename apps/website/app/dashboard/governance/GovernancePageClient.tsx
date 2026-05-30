@@ -5,11 +5,12 @@ import {
     TrendingUp, GitBranch, Puzzle, Plus, RefreshCw,
     CheckCircle2, AlertTriangle, Clock, ChevronRight,
     Trash2, ToggleLeft, ToggleRight, Shield, Zap, Eye, X,
+    Database, Calendar, Info,
 } from "lucide-react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type Tab = "kpis" | "workflows" | "plugins";
+type Tab = "kpis" | "workflows" | "plugins" | "retention";
 
 type KpiData = {
     sla_compliance_pct?: number;
@@ -502,12 +503,287 @@ function PluginsSection() {
     );
 }
 
+// ── Retention Policies Section ────────────────────────────────────────────────
+
+type RetentionPolicy = {
+    id: string;
+    name: string;
+    description?: string;
+    scope: "tenant" | "workspace" | "role";
+    action: "delete" | "archive" | "never_delete";
+    retentionDays: number | null;
+    workspaceId?: string;
+    roleKey?: string;
+    createdAt?: string;
+};
+
+type RetentionResponse = {
+    policies?: RetentionPolicy[];
+    error?: string;
+    message?: string;
+};
+
+const DATA_TYPES = [
+    { value: "task_logs",        label: "Task Execution Logs",     desc: "Logs of every task run by an agent" },
+    { value: "evidence",         label: "Evidence Bundles",        desc: "Files, screenshots, and context attached to approvals" },
+    { value: "transcripts",      label: "Conversation Transcripts",desc: "Full LLM conversation history" },
+    { value: "approvals",        label: "Approval Records",        desc: "Every human decision made on agent actions" },
+    { value: "audit_events",     label: "Audit Events",            desc: "All platform activity and config changes" },
+    { value: "memory",           label: "Agent Memory",            desc: "Episodic and semantic memory records" },
+];
+
+const RETENTION_PRESETS = [
+    { label: "30 days",  days: 30,   tag: "Standard — good for task logs" },
+    { label: "90 days",  days: 90,   tag: "GDPR — personal data maximum" },
+    { label: "1 year",   days: 365,  tag: "Typical compliance" },
+    { label: "7 years",  days: 2555, tag: "SOX / HIPAA requirement" },
+    { label: "Forever",  days: null, tag: "Never delete" },
+];
+
+function RetentionSection() {
+    const [policies, setPolicies] = useState<RetentionPolicy[]>([]);
+    const [loading, setLoading]   = useState(true);
+    const [showForm, setShowForm] = useState(false);
+    const [deleting, setDeleting] = useState<string | null>(null);
+    const [error, setError]       = useState<string | null>(null);
+
+    // form state
+    const [name, setName]             = useState("");
+    const [dataType, setDataType]     = useState("task_logs");
+    const [scope, setScope]           = useState<"tenant" | "workspace">("tenant");
+    const [retentionDays, setRetDays] = useState<number | null>(90);
+    const [saving, setSaving]         = useState(false);
+    const [formError, setFormError]   = useState<string | null>(null);
+
+    const load = useCallback(async () => {
+        setLoading(true);
+        try {
+            const res = await fetch("/api/governance/retention");
+            const body = (await res.json()) as RetentionResponse;
+            setPolicies(body.policies ?? []);
+        } catch { /* silent */ } finally { setLoading(false); }
+    }, []);
+
+    useEffect(() => { void load(); }, [load]);
+
+    const save = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!name.trim()) { setFormError("Name is required."); return; }
+        setSaving(true); setFormError(null);
+        try {
+            const res = await fetch("/api/governance/retention", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    name: name.trim(),
+                    description: `${DATA_TYPES.find(d => d.value === dataType)?.label} — ${retentionDays ? `${retentionDays} day` : "never delete"}`,
+                    scope,
+                    action: retentionDays === null ? "never_delete" : "delete",
+                    retentionDays,
+                    roleKey: dataType,
+                }),
+            });
+            const body = (await res.json()) as RetentionResponse;
+            if (!res.ok) { setFormError(body.message ?? body.error ?? "Failed to save."); return; }
+            setShowForm(false);
+            setName(""); setDataType("task_logs"); setScope("tenant"); setRetDays(90);
+            await load();
+        } catch { setFormError("Network error."); }
+        finally { setSaving(false); }
+    };
+
+    const deletePolicy = async (id: string) => {
+        setDeleting(id); setError(null);
+        try {
+            const res = await fetch(`/api/governance/retention?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+            if (res.ok) { await load(); }
+            else { const b = (await res.json()) as RetentionResponse; setError(b.message ?? "Failed to delete."); }
+        } catch { setError("Network error."); }
+        finally { setDeleting(null); }
+    };
+
+    const inputCls = "w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500";
+
+    return (
+        <div className="space-y-5">
+            {/* Header */}
+            <div className="flex items-start justify-between gap-4">
+                <div>
+                    <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Data Retention Policies</h3>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                        Control how long AgentFarm keeps your data. Each policy sets a TTL (time-to-live) on
+                        a specific data type — after which records are automatically deleted.
+                    </p>
+                </div>
+                <button onClick={() => setShowForm(v => !v)}
+                    className="flex items-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 text-sm font-bold transition-colors flex-shrink-0">
+                    <Plus className="w-4 h-4" /> New policy
+                </button>
+            </div>
+
+            {/* Info callout */}
+            <div className="rounded-2xl bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/40 px-5 py-4 flex gap-3">
+                <Info className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
+                    <p className="font-semibold">Why this matters for your compliance</p>
+                    <ul className="text-xs text-blue-600 dark:text-blue-400 space-y-0.5 list-disc list-inside">
+                        <li><strong>GDPR:</strong> Personal data must not be kept longer than necessary — typically 90 days</li>
+                        <li><strong>HIPAA:</strong> Medical records require 7-year (2,555 day) minimum retention</li>
+                        <li><strong>SOX:</strong> Financial audit records require 7-year retention</li>
+                        <li><strong>Default (no policy):</strong> Data is kept indefinitely — costs grow and breach surface expands</li>
+                    </ul>
+                </div>
+            </div>
+
+            {/* Create form */}
+            {showForm && (
+                <div className="rounded-2xl border border-blue-500/30 bg-blue-50/40 dark:bg-blue-950/10 p-6">
+                    <div className="flex items-center justify-between mb-5">
+                        <div>
+                            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">New Retention Policy</h3>
+                            <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Set how long a specific type of data should be kept</p>
+                        </div>
+                        <button onClick={() => setShowForm(false)} className="rounded-full p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400 transition-colors">
+                            <X className="w-4 h-4" />
+                        </button>
+                    </div>
+
+                    <form onSubmit={save} className="space-y-4">
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Policy name</label>
+                            <input value={name} onChange={e => setName(e.target.value)} className={inputCls} placeholder="e.g. GDPR - 90 day task log deletion" />
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Data type to apply this to</label>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                {DATA_TYPES.map(dt => (
+                                    <button key={dt.value} type="button" onClick={() => setDataType(dt.value)}
+                                        className={`text-left rounded-xl border px-3 py-2.5 transition-colors ${dataType === dt.value ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300" : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-300"}`}>
+                                        <p className="text-sm font-semibold">{dt.label}</p>
+                                        <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{dt.desc}</p>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Scope</label>
+                            <div className="flex gap-2">
+                                {[{ v: "tenant" as const, l: "Entire workspace" }, { v: "workspace" as const, l: "This workspace only" }].map(({ v, l }) => (
+                                    <button key={v} type="button" onClick={() => setScope(v)}
+                                        className={`flex-1 rounded-xl border py-2.5 text-sm font-semibold transition-colors ${scope === v ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300" : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300"}`}>
+                                        {l}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">How long to keep it</label>
+                            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                                {RETENTION_PRESETS.map(p => (
+                                    <button key={p.label} type="button" onClick={() => setRetDays(p.days)}
+                                        className={`rounded-xl border px-3 py-2.5 text-center transition-colors ${retentionDays === p.days ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300" : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-300"}`}>
+                                        <p className="text-sm font-bold">{p.label}</p>
+                                        <p className="text-[10px] text-slate-400 mt-0.5">{p.tag}</p>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Preview */}
+                        <div className="rounded-xl bg-slate-100 dark:bg-slate-800/50 px-4 py-3 text-sm">
+                            <span className="font-semibold text-slate-700 dark:text-slate-300">Preview: </span>
+                            <span className="text-slate-500 dark:text-slate-400">
+                                {DATA_TYPES.find(d => d.value === dataType)?.label} records
+                                {retentionDays ? ` older than ${retentionDays} days will be automatically deleted` : ` will never be automatically deleted`}
+                                {scope === "workspace" ? " (this workspace only)" : " (all workspaces)"}.
+                            </span>
+                        </div>
+
+                        {formError && <p className="text-sm text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30 rounded-xl px-4 py-2">{formError}</p>}
+
+                        <div className="flex gap-3">
+                            <button type="button" onClick={() => setShowForm(false)} className="flex-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 py-2.5 text-sm font-semibold">Cancel</button>
+                            <button type="submit" disabled={saving} className="flex-1 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white py-2.5 text-sm font-bold transition-colors">
+                                {saving ? "Saving…" : "Create Policy"}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            )}
+
+            {error && <p className="text-sm text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30 rounded-xl px-4 py-2">{error}</p>}
+
+            {/* Policy list */}
+            {loading ? (
+                <div className="space-y-3">{[1,2].map(i => <div key={i} className="h-20 rounded-2xl bg-slate-200 dark:bg-slate-800 animate-pulse" />)}</div>
+            ) : policies.length === 0 && !showForm ? (
+                <div className="rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 p-12 text-center">
+                    <div className="w-14 h-14 rounded-2xl bg-blue-500/10 flex items-center justify-center mx-auto mb-4">
+                        <Database className="w-7 h-7 text-blue-500" />
+                    </div>
+                    <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-1">No retention policies yet</h3>
+                    <p className="text-sm text-slate-400 dark:text-slate-500 max-w-sm mx-auto mb-5">
+                        Without policies, all data is kept indefinitely. Create your first policy to
+                        control costs and meet your compliance requirements.
+                    </p>
+                    <button onClick={() => setShowForm(true)} className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 text-sm font-bold transition-colors">
+                        Create your first policy
+                    </button>
+                </div>
+            ) : (
+                <div className="space-y-3">
+                    {policies.map(p => {
+                        const dt = DATA_TYPES.find(d => d.value === p.roleKey);
+                        return (
+                            <div key={p.id} className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
+                                <div className="flex items-start justify-between gap-3">
+                                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                                        <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                                            <Database className="w-5 h-5 text-blue-500" />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="font-bold text-slate-900 dark:text-slate-100">{p.name}</p>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                                {dt?.label ?? p.roleKey} ·{" "}
+                                                {p.retentionDays ? `${p.retentionDays} days` : "Never delete"} ·{" "}
+                                                {p.scope === "workspace" ? "This workspace" : "All workspaces"}
+                                            </p>
+                                            {p.description && <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{p.description}</p>}
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3 flex-shrink-0">
+                                        <div className="flex items-center gap-1.5">
+                                            <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                                            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                                                {p.retentionDays ? `${p.retentionDays}d TTL` : "∞ Forever"}
+                                            </span>
+                                        </div>
+                                        <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/40 rounded-full px-2.5 py-1">Active</span>
+                                        <button onClick={() => void deletePolicy(p.id)} disabled={deleting === p.id}
+                                            className="rounded-lg p-1.5 text-slate-300 dark:text-slate-600 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors disabled:opacity-40">
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+}
+
 // ── Main client component ─────────────────────────────────────────────────────
 
 const TABS = [
-    { id: "kpis" as Tab,      label: "KPIs",      icon: TrendingUp  },
-    { id: "workflows" as Tab, label: "Workflows",  icon: GitBranch   },
-    { id: "plugins" as Tab,   label: "Plugins",    icon: Puzzle      },
+    { id: "kpis" as Tab,       label: "KPIs",       icon: TrendingUp },
+    { id: "workflows" as Tab,  label: "Workflows",  icon: GitBranch  },
+    { id: "plugins" as Tab,    label: "Plugins",    icon: Puzzle     },
+    { id: "retention" as Tab,  label: "Retention",  icon: Database   },
 ];
 
 export default function GovernancePageClient() {
@@ -570,6 +846,12 @@ export default function GovernancePageClient() {
             {activeTab === "plugins" && (
                 <div>
                     <PluginsSection />
+                </div>
+            )}
+
+            {activeTab === "retention" && (
+                <div>
+                    <RetentionSection />
                 </div>
             )}
         </div>
