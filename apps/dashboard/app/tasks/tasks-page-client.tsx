@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import {
     Activity, History, List, RefreshCw, Layers,
-    Radio, Package, ChevronDown, Bot,
+    Radio, Package, ChevronDown, Bot, Plug,
 } from 'lucide-react';
 import { LiveTaskFeed } from '../components/live-task-feed';
 import TaskHistoryPanel from '../components/task-history-panel';
@@ -12,10 +12,11 @@ import TaskQueuePanel from '../components/task-queue-panel';
 import TaskRetryPanel from '../components/task-retry-panel';
 import RuntimeObservabilityWrapper from '../components/runtime-observability-wrapper';
 import ReproPackPanel from '../components/repro-pack-panel';
+import SseStreamPanel from '../components/sse-stream-panel';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type Tab = 'live' | 'history' | 'queue' | 'retry' | 'runtime' | 'repro';
+type Tab = 'live' | 'history' | 'queue' | 'retry' | 'runtime' | 'repro' | 'sse';
 
 const TABS: { key: Tab; label: string; icon: React.ElementType; desc: string }[] = [
     { key: 'live',    label: 'Live Feed',    icon: Radio,     desc: 'Real-time SSE task events' },
@@ -24,6 +25,7 @@ const TABS: { key: Tab; label: string; icon: React.ElementType; desc: string }[]
     { key: 'retry',   label: 'Retry',        icon: RefreshCw, desc: 'Manually retry failed tasks' },
     { key: 'runtime', label: 'Runtime',      icon: Activity,  desc: 'Status, logs & transcripts' },
     { key: 'repro',   label: 'Repro Packs',  icon: Package,   desc: 'Bug-report bundles from tasks' },
+    { key: 'sse',     label: 'SSE Stream',   icon: Plug,      desc: 'API endpoint · build your own tooling' },
 ];
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -211,6 +213,18 @@ export default function TasksPageClient({
                         <BotIdGuard botId={botId} featureName="repro packs">
                             <ReproPackPanel botId={botId} />
                         </BotIdGuard>
+                    </div>
+                )}
+
+                {/* SSE Stream */}
+                {activeTab === 'sse' && (
+                    <div>
+                        <SectionHeader
+                            icon={Plug}
+                            title="SSE Task Stream — API Reference"
+                            description="Connect external tools (Slack, PagerDuty, mobile apps, CI pipelines) to the live task event stream. No polling required."
+                        />
+                        <SseStreamPanel workspaceId={workspaceId || undefined} />
                     </div>
                 )}
             </div>
