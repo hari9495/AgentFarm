@@ -1257,17 +1257,15 @@ export default async function HomePage({
                                 }))}
                                 syncFromStorage
                             />
-                            <span className={`badge ${source === 'live' ? 'low' : 'warn'}`}>
-                                {source === 'live' ? 'Live Data' : 'Fallback Data'}
+                            <span className={`badge ${source === 'live' ? 'low' : 'warn'}`}
+                                title={source === 'live' ? 'Connected to live API' : 'Using fallback data — backend may be offline'}>
+                                {source === 'live' ? '● Live' : '● Fallback'}
                             </span>
-                            <Link href={unifiedView ? tabbedHref : oneViewHref} className={`badge ${unifiedView ? 'info' : 'neutral'}`} style={{ textDecoration: 'none' }}>
-                                {unifiedView ? 'One View' : 'Tabbed View'}
+                            <Link href={unifiedView ? tabbedHref : oneViewHref}
+                                className="badge neutral" style={{ textDecoration: 'none' }}
+                                title={unifiedView ? 'Switch to tabbed view' : 'Switch to unified single-page view'}>
+                                {unifiedView ? 'Tabbed' : 'Unified'}
                             </Link>
-                            <Link href={compactToggleHref} className="badge neutral" style={{ textDecoration: 'none' }}>
-                                {compactMode ? 'Comfortable' : 'Compact'}
-                            </Link>
-                            <span className="badge neutral">{summary.tenant_name}</span>
-                            <span className="badge neutral" title="Press Ctrl+K or ⌘K to open command palette">⌘K</span>
                         </div>
                     </header>
 
@@ -1296,23 +1294,30 @@ export default async function HomePage({
                                 systemHealthPct={systemHealthPct}
                             />
 
-                            <div className="card health-rings-row">
-                                <p className="eyebrow">System Health</p>
-                                <HealthRing
-                                    value={systemHealthPct}
-                                    tone={systemHealthPct >= 80 ? 'ok' : systemHealthPct >= 50 ? 'warn' : 'danger'}
-                                    label="Workspaces"
-                                />
-                                <HealthRing
-                                    value={approvalHealthPct}
-                                    tone={approvalHealthPct >= 80 ? 'ok' : approvalHealthPct >= 50 ? 'warn' : 'danger'}
-                                    label="Approvals"
-                                />
-                                <HealthRing
-                                    value={connectorHealthPct}
-                                    tone={connectorHealthPct >= 80 ? 'ok' : connectorHealthPct >= 50 ? 'warn' : 'danger'}
-                                    label="Connectors"
-                                />
+                            <div className="card" style={{ padding: '16px 20px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                                    <p className="eyebrow" style={{ margin: 0 }}>System Health</p>
+                                    <span style={{ fontSize: 11, color: 'var(--ink-muted)', fontWeight: 500 }}>
+                                        {systemHealthPct >= 80 && approvalHealthPct >= 80 && connectorHealthPct >= 80 ? '✓ All systems healthy' : 'Review required'}
+                                    </span>
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                                    {[
+                                        { label: 'Workspaces', value: systemHealthPct, color: systemHealthPct >= 80 ? '#1a7a4a' : systemHealthPct >= 50 ? '#b45309' : '#c4161c' },
+                                        { label: 'Approvals', value: approvalHealthPct, color: approvalHealthPct >= 80 ? '#1a7a4a' : approvalHealthPct >= 50 ? '#b45309' : '#c4161c' },
+                                        { label: 'Connectors', value: connectorHealthPct, color: connectorHealthPct >= 80 ? '#1a7a4a' : connectorHealthPct >= 50 ? '#b45309' : '#c4161c' },
+                                    ].map(({ label, value, color }) => (
+                                        <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</span>
+                                                <span style={{ fontSize: 13, fontWeight: 800, color, letterSpacing: '-0.02em' }}>{value}%</span>
+                                            </div>
+                                            <div style={{ height: 5, borderRadius: 9999, background: 'var(--bg-deep)', overflow: 'hidden' }}>
+                                                <div style={{ height: '100%', width: `${value}%`, background: color, borderRadius: 9999, transition: 'width 0.7s cubic-bezier(0.34,1.56,0.64,1)' }} />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
 
                             <section className="metric-row">
