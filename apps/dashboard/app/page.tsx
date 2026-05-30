@@ -1607,12 +1607,23 @@ export default async function HomePage({
                         <section id="dashboard-panel-marketplace" role="tabpanel" aria-labelledby="dashboard-tab-marketplace" className="dashboard-panel mission-section" style={{ '--stagger-index': '4' } as React.CSSProperties}>
                             {unifiedView && <p className="mission-section-label">Section 05 · Skill Marketplace</p>}
                             <header className="hero">
-                                <p className="eyebrow">Marketplace</p>
+                                <p className="eyebrow">🧠 Skill Marketplace</p>
                                 <h1>Skill Marketplace</h1>
                                 <p>
-                                    Install and manage skills for your agent bot. Entitlements control which skills are available to install.
+                                    Install and manage <strong>skills</strong> for your agent — pre-packaged capabilities like "code review", "write tests", or "draft PRs". Skills define <em>what your agent knows how to do</em>.
                                 </p>
                             </header>
+
+                            {/* Disambiguation notice */}
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 16px', borderRadius: 12, background: 'rgba(0,102,204,0.06)', border: '1px solid rgba(0,102,204,0.18)', marginBottom: 16 }}>
+                                <span style={{ fontSize: 18, flexShrink: 0, marginTop: 1 }}>💡</span>
+                                <div style={{ fontSize: 13, color: '#424245', lineHeight: 1.55 }}>
+                                    <strong style={{ color: '#0066cc' }}>Not what you're looking for?</strong>
+                                    {' '}If you want to connect Slack, GitHub, Jira, or other external tools — those are <strong>Connectors</strong>, not skills.
+                                    {' '}<a href="/connectors" style={{ color: '#0066cc', fontWeight: 700, textDecoration: 'none' }}>Go to Connectors → Install Connectors tab →</a>
+                                </div>
+                            </div>
+
                             <SkillMarketplacePanel workspaceId={workspace.workspace_id} botId={workspace.bot_id} />
                         </section>
                     )}

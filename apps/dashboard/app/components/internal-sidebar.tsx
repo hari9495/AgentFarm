@@ -33,7 +33,7 @@ const navItems: NavItemDef[] = [
     { key: 'approvals', label: 'Approvals', icon: ClipboardCheck },
     { key: 'observability', label: 'Observability', icon: Activity },
     { key: 'audit', label: 'Audit', icon: FileText },
-    { key: 'marketplace', label: 'Marketplace', icon: Store },
+    { key: 'marketplace', label: 'Skill Marketplace', icon: Store },
 ];
 
 type WorkspaceOption = {

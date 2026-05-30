@@ -29,7 +29,7 @@ type Tab = 'config' | 'marketplace' | 'health' | 'adapters' | 'mcp' | 'inbound' 
 
 const TABS: { key: Tab; label: string; icon: React.ElementType; desc: string }[] = [
     { key: 'config',      label: 'Connectors',         icon: Link2,            desc: 'OAuth / API-key / mTLS config per service'   },
-    { key: 'marketplace', label: 'Marketplace',        icon: ShoppingBag,      desc: 'Browse and install connector integrations'    },
+    { key: 'marketplace', label: 'Install Connectors',  icon: ShoppingBag,      desc: 'Browse and install external service integrations' },
     { key: 'health',      label: 'Health',             icon: Activity,         desc: 'Live status and last healthcheck per service' },
     { key: 'adapters',    label: 'Adapters',           icon: Layers,           desc: 'Discover registered adapters and endpoints'  },
     { key: 'mcp',         label: 'MCP',                icon: Cpu,              desc: 'Model Context Protocol server config'         },
@@ -240,10 +240,37 @@ export default function ConnectorsHubClient({
                 )}
 
                 {activeTab === 'marketplace' && (
-                    <TabShell icon={ShoppingBag} title="Connector Marketplace"
-                        description="Browse the full catalogue of available connectors. Each connector lists what actions agents can perform and what permissions are required.">
-                        <ConnectorMarketplacePanel agentRoles={[]} />
-                    </TabShell>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                        {/* Clear identity banner */}
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, padding: '16px 18px', background: '#fff', border: '2px solid rgba(0,102,204,0.2)', borderRadius: 16, boxShadow: '0 0 0 4px rgba(0,102,204,0.04)' }}>
+                            <div style={{ width: 42, height: 42, borderRadius: 12, background: 'rgba(0,102,204,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 20 }}>🔌</div>
+                            <div style={{ flex: 1 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                                    <span style={{ fontSize: 11, fontWeight: 800, color: '#0066cc', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Connector Marketplace</span>
+                                    <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 9999, background: 'rgba(0,102,204,0.08)', border: '1px solid rgba(0,102,204,0.2)', color: '#0066cc' }}>External Services</span>
+                                </div>
+                                <p style={{ margin: 0, fontSize: 13, color: '#1d1d1f', fontWeight: 600, marginBottom: 3 }}>
+                                    Install Slack, GitHub, Jira, PagerDuty and other external tools
+                                </p>
+                                <p style={{ margin: 0, fontSize: 12, color: '#6e6e73', lineHeight: 1.5 }}>
+                                    Connectors = <strong>what tools agents can use</strong>. Click <strong>+ Install</strong> on any card below, enter your API key or OAuth token, and agents gain access to that service.
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Skill Marketplace distinction callout */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: '#f5f5f7', border: '1px solid #e5e5ea', borderRadius: 12 }}>
+                            <span style={{ fontSize: 15 }}>🧠</span>
+                            <p style={{ margin: 0, fontSize: 12, color: '#6e6e73', lineHeight: 1.5 }}>
+                                <strong style={{ color: '#424245' }}>Different from Skill Marketplace</strong> — Skills (found in the main dashboard → Skill Marketplace tab) define agent <em>behaviors</em>.
+                                Connectors here give agents access to <em>external tools</em>. They work together: skills use connectors to act on your tools.
+                            </p>
+                        </div>
+
+                        <div style={{ background: '#fff', border: '1px solid #d2d2d7', borderRadius: 18, padding: 0, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
+                            <ConnectorMarketplacePanel agentRoles={[]} />
+                        </div>
+                    </div>
                 )}
 
                 {activeTab === 'health' && (
