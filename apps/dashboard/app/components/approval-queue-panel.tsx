@@ -139,6 +139,9 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
     const [reasonByApproval, setReasonByApproval] = useState<Record<string, string>>({});
     const [busyByApproval, setBusyByApproval] = useState<Record<string, boolean>>({});
     const [escalationBusy, setEscalationBusy] = useState(false);
+    const [escalateByApproval, setEscalateByApproval] = useState<Record<string, boolean>>({});
+    const [escalateReasonByApproval, setEscalateReasonByApproval] = useState<Record<string, string>>({});
+    const [escalateResultByApproval, setEscalateResultByApproval] = useState<Record<string, { ok: boolean; msg: string }>>({});
     const [message, setMessage] = useState<string | null>(null);
     const [riskFilter, setRiskFilter] = useState<'all' | 'low' | 'medium' | 'high'>('all');
     const [search, setSearch] = useState('');
@@ -604,6 +607,34 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
         }
     };
 
+    const escalateApproval = async (approvalId: string) => {
+        const reason = escalateReasonByApproval[approvalId]?.trim();
+        if (!reason) {
+            setEscalateResultByApproval(prev => ({ ...prev, [approvalId]: { ok: false, msg: 'Please enter a reason for escalation.' } }));
+            return;
+        }
+        setEscalateByApproval(prev => ({ ...prev, [approvalId]: true }));
+        setEscalateResultByApproval(prev => { const n = { ...prev }; delete n[approvalId]; return n; });
+        try {
+            const response = await fetch('/api/approvals/escalate', {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({ workspace_id: workspaceId, approval_id: approvalId, reason }),
+            });
+            const body = (await response.json().catch(() => ({}))) as { error?: string; message?: string };
+            if (!response.ok) {
+                setEscalateResultByApproval(prev => ({ ...prev, [approvalId]: { ok: false, msg: body.message ?? body.error ?? 'Escalation failed.' } }));
+            } else {
+                setEscalateResultByApproval(prev => ({ ...prev, [approvalId]: { ok: true, msg: 'Escalated successfully. A senior reviewer has been notified.' } }));
+                setEscalateReasonByApproval(prev => { const n = { ...prev }; delete n[approvalId]; return n; });
+            }
+        } catch {
+            setEscalateResultByApproval(prev => ({ ...prev, [approvalId]: { ok: false, msg: 'Network error during escalation.' } }));
+        } finally {
+            setEscalateByApproval(prev => ({ ...prev, [approvalId]: false }));
+        }
+    };
+
     const onChangeRisk = (next: 'all' | 'low' | 'medium' | 'high') => {
         setRiskFilter(next);
         setPendingPage(1);
@@ -985,6 +1016,22 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                                 >
                                                     Timeout Reject
                                                 </button>
+                                                <button
+                                                    type="button"
+                                                    disabled={escalateByApproval[approval.approval_id] === true}
+                                                    onClick={() => {
+                                                        setSelectedApprovalId(approval.approval_id);
+                                                        setDrawerTab('summary');
+                                                        // Scroll the escalation section into view after drawer opens
+                                                        setTimeout(() => {
+                                                            const el = document.querySelector('[data-escalate-section]');
+                                                            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                                        }, 150);
+                                                    }}
+                                                    style={{ padding: '0.35rem 0.7rem', borderRadius: 9999, border: '1px solid rgba(180,83,9,0.3)', background: 'rgba(180,83,9,0.07)', color: '#b45309', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
+                                                >
+                                                    ↑ Escalate
+                                                </button>
                                             </div>
                                         </div>
                                     </td>
@@ -1251,6 +1298,47 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                             <p style={{ margin: '0.2rem 0 0', color: '#44403c' }}>{selectedApproval.action_summary}</p>
                                         </div>
                                     )}
+
+                                    {/* ── Per-approval escalation ─────────────────────────── */}
+                                    {selectedApproval.decision_status === 'pending' && (() => {
+                                        const id = selectedApproval.approval_id;
+                                        const busy = escalateByApproval[id] === true;
+                                        const result = escalateResultByApproval[id];
+                                        const reason = escalateReasonByApproval[id] ?? '';
+                                        return (
+                                            <div data-escalate-section style={{ borderTop: '1px solid #e5e5ea', paddingTop: 14, marginTop: 4 }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                                                    <div style={{ width: 26, height: 26, borderRadius: 7, background: 'rgba(180,83,9,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                                        <span style={{ fontSize: 13 }}>↑</span>
+                                                    </div>
+                                                    <div>
+                                                        <div style={{ fontSize: 12, fontWeight: 700, color: '#1d1d1f' }}>Escalate to Senior Reviewer</div>
+                                                        <div style={{ fontSize: 11, color: '#6e6e73' }}>This decision is above my authority</div>
+                                                    </div>
+                                                </div>
+                                                <textarea
+                                                    value={reason}
+                                                    onChange={e => setEscalateReasonByApproval(prev => ({ ...prev, [id]: e.target.value }))}
+                                                    placeholder="Why are you escalating? e.g. This touches production data — needs VP approval."
+                                                    rows={2}
+                                                    style={{ width: '100%', padding: '7px 10px', borderRadius: 9, border: '1px solid #d2d2d7', background: '#fff', color: '#1d1d1f', fontSize: 12, resize: 'vertical', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}
+                                                />
+                                                {result && (
+                                                    <div style={{ marginTop: 6, padding: '6px 10px', borderRadius: 8, background: result.ok ? 'rgba(26,122,74,0.07)' : 'rgba(196,22,28,0.07)', border: `1px solid ${result.ok ? 'rgba(26,122,74,0.2)' : 'rgba(196,22,28,0.2)'}`, fontSize: 12, color: result.ok ? '#1a7a4a' : '#c4161c' }}>
+                                                        {result.ok ? '✓ ' : '⚠ '}{result.msg}
+                                                    </div>
+                                                )}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => void escalateApproval(id)}
+                                                    disabled={busy || !reason.trim()}
+                                                    style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 9999, border: '1px solid rgba(180,83,9,0.35)', background: busy || !reason.trim() ? '#f5f5f7' : 'rgba(180,83,9,0.08)', color: busy || !reason.trim() ? '#aeaeb2' : '#b45309', fontSize: 12, fontWeight: 700, cursor: busy || !reason.trim() ? 'not-allowed' : 'pointer', transition: 'all 0.15s' }}
+                                                >
+                                                    ↑ {busy ? 'Escalating…' : 'Escalate'}
+                                                </button>
+                                            </div>
+                                        );
+                                    })()}
                                 </>
                             )}
 
