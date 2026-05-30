@@ -13,6 +13,7 @@ import {
     LogOut,
     Settings,
     ChevronDown,
+    Bot,
     type LucideIcon,
 } from 'lucide-react';
 import type { DashboardTab } from './dashboard-navigation';
@@ -65,18 +66,21 @@ function NavItem({
             className={[
                 'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left',
                 active
-                    ? 'bg-sky-50 text-sky-700 font-semibold'
+                    ? 'font-semibold'
                     : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
             ].join(' ')}
+            style={active ? { background: 'rgba(0,102,204,0.07)', color: '#0066cc' } : {}}
         >
             <span
                 className={[
                     'inline-flex h-7 w-7 items-center justify-center rounded-lg shrink-0',
-                    active ? 'bg-sky-100' : 'bg-slate-100',
+                    active ? '' : 'bg-slate-100',
                 ].join(' ')}
+                style={active ? { background: 'rgba(0,102,204,0.12)' } : {}}
             >
                 <Icon
-                    className={['w-3.5 h-3.5', active ? 'text-sky-600' : 'text-slate-500'].join(' ')}
+                    className={['w-3.5 h-3.5', active ? '' : 'text-slate-500'].join(' ')}
+                    style={active ? { color: '#0066cc' } : {}}
                     aria-hidden="true"
                 />
             </span>
@@ -125,7 +129,7 @@ export function InternalSidebar({
         <div className="flex flex-col h-full bg-white border-r border-slate-200 overflow-hidden">
             {/* Logo */}
             <div className="flex items-center gap-2.5 px-4 h-14 border-b border-slate-200 shrink-0">
-                <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-sky-500 via-blue-600 to-emerald-500 shadow-sm shrink-0">
+                <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg shadow-sm shrink-0" style={{ background: '#0066cc' }}>
                     <Cpu className="w-3.5 h-3.5 text-white" aria-hidden="true" />
                 </span>
                 <span className="text-sm font-bold tracking-tight text-slate-900">AgentFarms Ops</span>
@@ -188,12 +192,21 @@ export function InternalSidebar({
                     </div>
                 </div>
 
-                {/* Quick links */}
+                {/* Platform links */}
                 <div>
                     <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
                         Platform
                     </p>
                     <div className="space-y-0.5">
+                        <Link
+                            href="/agents"
+                            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                        >
+                            <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0">
+                                <Bot className="w-3.5 h-3.5 text-slate-500" aria-hidden="true" />
+                            </span>
+                            <span className="flex-1">Agents</span>
+                        </Link>
                         <Link
                             href="/settings"
                             className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"

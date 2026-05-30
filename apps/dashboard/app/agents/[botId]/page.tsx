@@ -5,6 +5,11 @@ import AgentPersonaPanel from '../../components/agent-persona-panel';
 import AgentObservabilityPanel from '../../components/agent-observability-panel';
 import AgentDecommissionButton from '../../components/agent-decommission-button';
 import AgentBillingCard from '../../components/agent-billing-card';
+import AgentVersionHistory from '../../components/agent-version-history';
+import AgentMessagesPanel from '../../components/agent-messages-panel';
+import AgentCapabilitiesFetcher from '../../components/agent-capabilities-fetcher';
+import AgentEpisodicMemoryPanel from '../../components/agent-episodic-memory-panel';
+import AgentMemoryPatternFetcher from '../../components/agent-memory-pattern-fetcher';
 import { getInternalSessionAuthHeader } from '../../lib/internal-session';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -137,14 +142,14 @@ function InfoRow({ label, value }: { label: string; value: string }) {
             justifyContent: 'space-between',
             alignItems: 'flex-start',
             padding: '9px 0',
-            borderBottom: '1px solid #1e293b',
+            borderBottom: '1px solid #f0f0f2',
         }}>
-            <span style={{ fontSize: '12px', color: '#64748b', flexShrink: 0, marginRight: '12px' }}>
+            <span style={{ fontSize: '12px', color: '#6e6e73', flexShrink: 0, marginRight: '12px' }}>
                 {label}
             </span>
             <span style={{
                 fontSize: '12px',
-                color: '#e2e8f0',
+                color: '#1d1d1f',
                 fontFamily: /id|workspace/i.test(label) ? 'monospace' : undefined,
                 textAlign: 'right',
                 wordBreak: 'break-all',
@@ -158,16 +163,17 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
     return (
         <div style={{
-            background: '#0f172a',
-            border: '1px solid #1e293b',
-            borderRadius: '12px',
+            background: '#ffffff',
+            border: '1px solid #d2d2d7',
+            borderRadius: '18px',
             padding: '20px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
         }}>
             <h2 style={{
                 margin: '0 0 16px',
-                fontSize: '13px',
+                fontSize: '11px',
                 fontWeight: 700,
-                color: '#94a3b8',
+                color: '#6e6e73',
                 textTransform: 'uppercase',
                 letterSpacing: '0.08em',
             }}>
@@ -201,7 +207,7 @@ export default async function AgentDetailPage({ params }: PageProps) {
     });
 
     return (
-        <main className="page-shell" style={{ maxWidth: '1200px', margin: '0 auto' }}>
+        <main className="page-shell" style={{ maxWidth: '1200px', margin: '0 auto', background: '#f5f5f7', minHeight: '100vh' }}>
             {/* ── Header ─────────────────────────────────────────────────────── */}
             <PageHeader
                 eyebrow="Agent Detail"
@@ -218,17 +224,18 @@ export default async function AgentDetailPage({ params }: PageProps) {
                 alignItems: 'center',
                 gap: '16px',
                 padding: '16px 20px',
-                background: '#0f172a',
-                border: '1px solid #1e293b',
-                borderRadius: '12px',
+                background: '#ffffff',
+                border: '1px solid #d2d2d7',
+                borderRadius: '18px',
                 marginBottom: '24px',
                 flexWrap: 'wrap',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
             }}>
                 <div style={{
                     width: '48px',
                     height: '48px',
-                    borderRadius: '10px',
-                    background: '#1e3a5f',
+                    borderRadius: '12px',
+                    background: 'rgba(0,102,204,0.1)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -238,10 +245,10 @@ export default async function AgentDetailPage({ params }: PageProps) {
                     {icon}
                 </div>
                 <div style={{ flex: 1, minWidth: '160px' }}>
-                    <div style={{ fontSize: '15px', fontWeight: 700, color: '#e2e8f0', marginBottom: '3px' }}>
-                        {agent.role.replace(/_/g, ' ')}
+                    <div style={{ fontSize: '16px', fontWeight: 700, color: '#1d1d1f', marginBottom: '3px', letterSpacing: '-0.02em' }}>
+                        {agent.role.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
                     </div>
-                    <div style={{ fontSize: '11px', color: '#64748b', fontFamily: 'monospace' }}>
+                    <div style={{ fontSize: '11px', color: '#6e6e73', fontFamily: 'monospace' }}>
                         ID #{shortId}
                     </div>
                 </div>
@@ -309,6 +316,31 @@ export default async function AgentDetailPage({ params }: PageProps) {
                 <AgentObservabilityPanel botId={botId} />
             </SectionCard>
 
+            {/* ── Capabilities ─────────────────────────────────────────────────── */}
+            <SectionCard title="Capabilities">
+                <AgentCapabilitiesFetcher botId={botId} />
+            </SectionCard>
+
+            {/* ── Messages ─────────────────────────────────────────────────────── */}
+            <SectionCard title="Messages">
+                <AgentMessagesPanel botId={botId} />
+            </SectionCard>
+
+            {/* ── Version History ──────────────────────────────────────────────── */}
+            <SectionCard title="Version History">
+                <AgentVersionHistory botId={botId} />
+            </SectionCard>
+
+            {/* ── Episodic Memory ──────────────────────────────────────────────── */}
+            <SectionCard title="Episodic Memory">
+                <AgentEpisodicMemoryPanel defaultBotId={botId} />
+            </SectionCard>
+
+            {/* ── Memory Pattern Browser ───────────────────────────────────────── */}
+            <SectionCard title="Memory Patterns">
+                <AgentMemoryPatternFetcher botId={botId} />
+            </SectionCard>
+
             {/* ── Quick navigation ─────────────────────────────────────────────── */}
             <div style={{
                 display: 'grid',
@@ -329,26 +361,27 @@ export default async function AgentDetailPage({ params }: PageProps) {
                         style={{
                             display: 'block',
                             padding: '16px',
-                            background: '#0f172a',
-                            border: '1px solid #1e293b',
-                            borderRadius: '10px',
+                            background: '#ffffff',
+                            border: '1px solid #d2d2d7',
+                            borderRadius: '14px',
                             textDecoration: 'none',
-                            transition: 'border-color 0.15s, background 0.15s',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                            transition: 'box-shadow 0.2s ease, transform 0.2s ease',
                         }}
                         onMouseEnter={(e) => {
-                            (e.currentTarget as HTMLAnchorElement).style.borderColor = '#334155';
-                            (e.currentTarget as HTMLAnchorElement).style.background = '#0d1f38';
+                            (e.currentTarget as HTMLAnchorElement).style.boxShadow = '0 4px 16px rgba(0,0,0,0.1)';
+                            (e.currentTarget as HTMLAnchorElement).style.transform = 'translateY(-2px)';
                         }}
                         onMouseLeave={(e) => {
-                            (e.currentTarget as HTMLAnchorElement).style.borderColor = '#1e293b';
-                            (e.currentTarget as HTMLAnchorElement).style.background = '#0f172a';
+                            (e.currentTarget as HTMLAnchorElement).style.boxShadow = '0 1px 3px rgba(0,0,0,0.06)';
+                            (e.currentTarget as HTMLAnchorElement).style.transform = 'translateY(0)';
                         }}
                     >
                         <div style={{ fontSize: '20px', marginBottom: '6px' }}>{navIcon}</div>
-                        <div style={{ fontSize: '13px', fontWeight: 600, color: '#e2e8f0', marginBottom: '2px' }}>
+                        <div style={{ fontSize: '13px', fontWeight: 600, color: '#1d1d1f', marginBottom: '2px' }}>
                             {label}
                         </div>
-                        <div style={{ fontSize: '11px', color: '#64748b' }}>{desc}</div>
+                        <div style={{ fontSize: '11px', color: '#6e6e73' }}>{desc}</div>
                     </a>
                 ))}
             </div>

@@ -64,8 +64,8 @@ const formatDate = (iso: string): string => {
 const truncate = (str: string, max: number): string =>
     str.length > max ? `${str.slice(0, max)}…` : str;
 
-export default function AgentEpisodicMemoryPanel() {
-    const [botId, setBotId] = useState('');
+export default function AgentEpisodicMemoryPanel({ defaultBotId = '' }: { defaultBotId?: string }) {
+    const [botId, setBotId] = useState(defaultBotId);
     const [workspaceId, setWorkspaceId] = useState('');
     const [page, setPage] = useState(1);
     const [records, setRecords] = useState<EpisodicRecord[]>([]);
