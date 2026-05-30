@@ -14,7 +14,7 @@ export default async function DocsPage() {
             <PageHeader
                 eyebrow="Developer"
                 title="API Reference & SDK"
-                description="REST API reference and TypeScript SDK quick-start for AgentFarm."
+                description="REST API reference and TypeScript SDK quick-start for AgentFarms."
             />
             <ApiDocsPanel />
         </main>

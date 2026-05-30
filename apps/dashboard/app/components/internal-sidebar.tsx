@@ -128,7 +128,7 @@ export function InternalSidebar({
                 <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-sky-500 via-blue-600 to-emerald-500 shadow-sm shrink-0">
                     <Cpu className="w-3.5 h-3.5 text-white" aria-hidden="true" />
                 </span>
-                <span className="text-sm font-bold tracking-tight text-slate-900">AgentFarm Ops</span>
+                <span className="text-sm font-bold tracking-tight text-slate-900">AgentFarms Ops</span>
             </div>
 
             {/* Nav */}

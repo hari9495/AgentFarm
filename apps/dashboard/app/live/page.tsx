@@ -12,7 +12,7 @@ export default function LivePage() {
             <PageHeader
                 eyebrow="Operations"
                 title="Live Task Feed"
-                description="Real-time task events streamed from the AgentFarm runtime."
+                description="Real-time task events streamed from the AgentFarms runtime."
             />
 
             <input

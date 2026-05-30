@@ -77,7 +77,7 @@ export default function SignupPage() {
     return (
         <main className="page-shell" style={{ maxWidth: 480, paddingTop: '3rem' }}>
             <PageHeader
-                eyebrow="AgentFarm Internal"
+                eyebrow="AgentFarms Internal"
                 title="Internal Access Setup"
                 description="Internal dashboard access is intended for approved team members."
             />

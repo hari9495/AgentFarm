@@ -2,6 +2,7 @@
 
 import { Suspense, useState, type FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { Loader2, Lock, Mail } from 'lucide-react';
 
 function LoginForm() {
     const router = useRouter();
@@ -41,92 +42,159 @@ function LoginForm() {
     };
 
     return (
-        <div className="ops-shell magic-canvas min-h-screen flex items-center justify-center relative overflow-hidden">
-            {/* Aurora background */}
-            <div aria-hidden className="aurora-bg pointer-events-none">
-                <div className="orb orb-3" />
-                <div className="orb orb-4" />
-                <div className="cyber-grid" />
-                <div className="magic-grain" />
-            </div>
-
-            <div className="relative z-10 w-full max-w-[460px] mx-auto px-4 py-10">
+        <div style={{ minHeight: '100vh', background: '#f5f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+            <div style={{ width: '100%', maxWidth: '420px' }}>
                 {/* Brand header */}
-                <div className="mb-8 text-center">
-                    <span className="neon-chip neon-chip-cyan text-[10px]">
-                        <span className="dot" aria-hidden />AgentFarm Internal
+                <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+                    <span style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '0.375rem',
+                        background: 'rgba(0,102,204,0.06)', border: '1px solid rgba(0,102,204,0.18)',
+                        borderRadius: '9999px', padding: '0.25rem 0.75rem',
+                        fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.03em',
+                        color: '#0066cc', textTransform: 'uppercase',
+                    }}>
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#0066cc', display: 'inline-block' }} aria-hidden />
+                        AgentFarms Internal
                     </span>
-                    <h1 className="mt-4 text-[1.9rem] font-black tracking-[-0.03em] text-[var(--m-ink)]">
+                    <h1 style={{
+                        marginTop: '1rem', marginBottom: 0,
+                        fontSize: 'clamp(1.6rem, 4vw, 2rem)', fontWeight: 700,
+                        letterSpacing: '-0.025em', color: '#1d1d1f', lineHeight: 1.1,
+                    }}>
                         Internal Team{' '}
-                        <span className="holo-text">Sign In</span>
+                        <span style={{ color: '#0066cc' }}>Sign In</span>
                     </h1>
-                    <p className="mt-2 text-sm text-[var(--m-ink-muted)]">
+                    <p style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: '#6e6e73' }}>
                         Operations and support teams only.
                     </p>
                 </div>
 
                 {/* Form card */}
-                <div className="glass-card holo-edge p-8">
-                    <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '1.1rem' }}>
+                <div style={{
+                    background: '#ffffff', border: '1px solid #d2d2d7',
+                    borderRadius: '18px', padding: '2rem',
+                    boxShadow: '0 4px 24px -8px rgba(0,0,0,0.08)',
+                }}>
+                    <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '1rem' }}>
                         {error && (
-                            <div className="p-3 rounded-lg text-sm" style={{
-                                background: 'rgba(239,68,68,0.12)',
-                                border: '1px solid rgba(239,68,68,0.3)',
-                                color: '#fca5a5',
+                            <div style={{
+                                padding: '0.75rem 1rem', borderRadius: '10px', fontSize: '0.875rem',
+                                background: 'rgba(255,59,48,0.06)', border: '1px solid rgba(255,59,48,0.2)',
+                                color: '#c4161c',
                             }}>
                                 {error}
                             </div>
                         )}
 
-                        <label style={{ display: 'grid', gap: '0.4rem' }}>
-                            <span className="text-xs font-semibold uppercase tracking-wider text-[var(--m-ink-muted)]">Email</span>
-                            <input
-                                type="email"
-                                required
-                                autoComplete="email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                className="w-full rounded-lg px-3 py-2.5 text-sm text-[var(--m-ink)] placeholder-[var(--m-ink-faint)] outline-none transition-all focus:ring-1"
-                                style={{
-                                    background: 'var(--m-surface-elev, rgba(255,255,255,0.05))',
-                                    border: '1px solid var(--m-hairline)',
-                                }}
-                                placeholder="you@agentfarm.io"
-                            />
-                        </label>
+                        <div style={{ display: 'grid', gap: '0.375rem' }}>
+                            <label htmlFor="login-email" style={{ fontSize: '0.8rem', fontWeight: 600, color: '#1d1d1f', letterSpacing: '0.01em' }}>
+                                Email
+                            </label>
+                            <div style={{ position: 'relative' }}>
+                                <Mail style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', width: 16, height: 16, color: '#aeaeb2' }} />
+                                <input
+                                    id="login-email"
+                                    type="email"
+                                    required
+                                    autoComplete="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    disabled={loading}
+                                    placeholder="you@agentfarm.io"
+                                    style={{
+                                        width: '100%', paddingLeft: '2.25rem', paddingRight: '0.75rem',
+                                        paddingTop: '0.625rem', paddingBottom: '0.625rem',
+                                        borderRadius: '10px', border: '1px solid #d2d2d7',
+                                        background: '#f5f5f7', fontSize: '0.9rem', color: '#1d1d1f',
+                                        outline: 'none', boxSizing: 'border-box',
+                                        transition: 'border-color 180ms ease, box-shadow 180ms ease',
+                                    }}
+                                    onFocus={(e) => {
+                                        e.currentTarget.style.borderColor = '#0066cc';
+                                        e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0,102,204,0.12)';
+                                    }}
+                                    onBlur={(e) => {
+                                        e.currentTarget.style.borderColor = '#d2d2d7';
+                                        e.currentTarget.style.boxShadow = 'none';
+                                    }}
+                                />
+                            </div>
+                        </div>
 
-                        <label style={{ display: 'grid', gap: '0.4rem' }}>
-                            <span className="text-xs font-semibold uppercase tracking-wider text-[var(--m-ink-muted)]">Password</span>
-                            <input
-                                type="password"
-                                required
-                                autoComplete="current-password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="w-full rounded-lg px-3 py-2.5 text-sm text-[var(--m-ink)] placeholder-[var(--m-ink-faint)] outline-none transition-all"
-                                style={{
-                                    background: 'var(--m-surface-elev, rgba(255,255,255,0.05))',
-                                    border: '1px solid var(--m-hairline)',
-                                }}
-                                placeholder="••••••••"
-                            />
-                        </label>
+                        <div style={{ display: 'grid', gap: '0.375rem' }}>
+                            <label htmlFor="login-password" style={{ fontSize: '0.8rem', fontWeight: 600, color: '#1d1d1f', letterSpacing: '0.01em' }}>
+                                Password
+                            </label>
+                            <div style={{ position: 'relative' }}>
+                                <Lock style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', width: 16, height: 16, color: '#aeaeb2' }} />
+                                <input
+                                    id="login-password"
+                                    type="password"
+                                    required
+                                    autoComplete="current-password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    disabled={loading}
+                                    placeholder="••••••••"
+                                    style={{
+                                        width: '100%', paddingLeft: '2.25rem', paddingRight: '0.75rem',
+                                        paddingTop: '0.625rem', paddingBottom: '0.625rem',
+                                        borderRadius: '10px', border: '1px solid #d2d2d7',
+                                        background: '#f5f5f7', fontSize: '0.9rem', color: '#1d1d1f',
+                                        outline: 'none', boxSizing: 'border-box',
+                                        transition: 'border-color 180ms ease, box-shadow 180ms ease',
+                                    }}
+                                    onFocus={(e) => {
+                                        e.currentTarget.style.borderColor = '#0066cc';
+                                        e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0,102,204,0.12)';
+                                    }}
+                                    onBlur={(e) => {
+                                        e.currentTarget.style.borderColor = '#d2d2d7';
+                                        e.currentTarget.style.boxShadow = 'none';
+                                    }}
+                                />
+                            </div>
+                        </div>
 
                         <button
                             type="submit"
                             disabled={loading}
-                            className="magic-btn magic-btn-primary w-full"
-                            style={{ opacity: loading ? 0.7 : 1, cursor: loading ? 'not-allowed' : 'pointer' }}
+                            style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                                width: '100%', padding: '0.7rem 1.5rem',
+                                background: loading ? '#5599d8' : '#0066cc',
+                                color: '#ffffff', border: 'none', borderRadius: '9999px',
+                                fontSize: '1rem', fontWeight: 500, letterSpacing: '-0.01em',
+                                cursor: loading ? 'not-allowed' : 'pointer',
+                                transition: 'background-color 180ms ease, transform 180ms ease',
+                                marginTop: '0.25rem',
+                            }}
+                            onMouseEnter={(e) => { if (!loading) e.currentTarget.style.background = '#0071e3'; }}
+                            onMouseLeave={(e) => { if (!loading) e.currentTarget.style.background = '#0066cc'; }}
                         >
-                            {loading ? 'Signing in…' : 'Sign in'}
+                            {loading ? (
+                                <>
+                                    <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />
+                                    Signing in…
+                                </>
+                            ) : (
+                                'Sign in'
+                            )}
                         </button>
-
-                        <p className="text-center text-xs text-[var(--m-ink-faint)]">
-                            Customer user? Use the customer portal login.
-                        </p>
                     </form>
                 </div>
+
+                <p style={{ marginTop: '1.5rem', textAlign: 'center', fontSize: '0.8rem', color: '#aeaeb2' }}>
+                    Customer user?{' '}
+                    <a href="https://agentfarm.io/portal/login" style={{ color: '#0066cc', textDecoration: 'none' }}>
+                        Use the customer portal login.
+                    </a>
+                </p>
             </div>
+
+            <style>{`
+                @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+            `}</style>
         </div>
     );
 }

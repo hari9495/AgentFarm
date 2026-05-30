@@ -877,7 +877,7 @@ export default function OnboardingPage() {
                             display: 'inline-block',
                         }}
                     >
-                        AgentFarm
+                        AgentFarms
                     </span>
                     <h1
                         style={{

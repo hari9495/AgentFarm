@@ -19,7 +19,7 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-    title: 'AgentFarm Internal Dashboard',
+    title: 'AgentFarms Internal Dashboard',
     description: 'Internal operations dashboard for runtime, approvals, and evidence monitoring.',
 };
 

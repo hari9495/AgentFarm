@@ -23,7 +23,7 @@ const PLANS: PlanTier[] = [
         name: 'Free',
         price: '$0',
         period: 'forever',
-        description: 'For individuals exploring AgentFarm.',
+        description: 'For individuals exploring AgentFarms.',
         features: [
             '1 active agent',
             '50 tasks / month',

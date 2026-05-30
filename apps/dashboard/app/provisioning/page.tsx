@@ -122,7 +122,7 @@ export default async function ProvisioningPage({
     return (
         <main className="page-shell" style={{ maxWidth: 720 }}>
             <PageHeader
-                eyebrow="AgentFarm"
+                eyebrow="AgentFarms"
                 title="Provisioning your workspace"
                 description={`Your Developer Agent VM is being prepared. This takes up to ${slaMin} minutes.`}
             />
