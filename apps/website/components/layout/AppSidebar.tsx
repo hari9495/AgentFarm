@@ -38,6 +38,7 @@ const dashboardNav = [
     { href: "/dashboard/bots", label: "Bot Status", icon: Radio },
     { href: "/dashboard/approvals", label: "Approvals", icon: ClipboardCheck, badgeCount: 3 },
     { href: "/dashboard/evidence", label: "Evidence", icon: FileArchive },
+    { href: "/dashboard/governance", label: "Governance", icon: ShieldCheck },
     { href: "/dashboard/integrations", label: "Integrations", icon: Link2 },
     { href: "/dashboard/activity", label: "Activity", icon: Activity },
     { href: "/dashboard/reports", label: "Reports", icon: BarChart3 },
