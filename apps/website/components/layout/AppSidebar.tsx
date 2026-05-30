@@ -26,6 +26,7 @@ import {
     BarChart3,
     Search,
     Layers,
+    Cpu,
     type LucideIcon,
 } from "lucide-react";
 import PremiumIcon from "@/components/shared/PremiumIcon";
@@ -40,7 +41,8 @@ const dashboardNav = [
     { href: "/dashboard/approvals", label: "Approvals", icon: ClipboardCheck, badgeCount: 3 },
     { href: "/dashboard/evidence", label: "Evidence", icon: FileArchive },
     { href: "/dashboard/governance", label: "Governance", icon: ShieldCheck },
-    { href: "/dashboard/integrations", label: "Integrations", icon: Link2 },
+    { href: "/dashboard/integrations", label: "Integrations",  icon: Link2 },
+    { href: "/dashboard/mcp",         label: "MCP Servers",   icon: Cpu   },
     { href: "/dashboard/adapters",    label: "Custom APIs",   icon: Layers },
     { href: "/dashboard/activity", label: "Activity", icon: Activity },
     { href: "/dashboard/reports", label: "Reports", icon: BarChart3 },
