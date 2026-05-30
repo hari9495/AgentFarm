@@ -267,6 +267,117 @@ const STATUS_DOT: Record<ConnectorStatus, string> = {
     unconfigured: 'bg-zinc-600',
 };
 
+// ── Connector field map (rich config for the install modal) ──────────────────
+
+type FieldDef = { key: string; label: string; type: 'text' | 'password' | 'url'; placeholder?: string; hint?: string; required: boolean };
+
+const CONNECTOR_FIELDS: Record<string, FieldDef[]> = {
+    slack:       [{ key: 'botToken', label: 'Bot Token', type: 'password', placeholder: 'xoxb-…', hint: 'Slack API → Your App → OAuth & Permissions', required: true }, { key: 'defaultChannel', label: 'Default Channel', type: 'text', placeholder: '#general', required: false }],
+    github:      [{ key: 'token', label: 'Personal Access Token', type: 'password', placeholder: 'ghp_…', hint: 'GitHub Settings → Developer settings → PAT', required: true }, { key: 'owner', label: 'Owner / Org', type: 'text', placeholder: 'your-org', required: false }],
+    jira:        [{ key: 'host', label: 'Jira Host', type: 'url', placeholder: 'https://yourorg.atlassian.net', required: true }, { key: 'email', label: 'Account Email', type: 'text', required: true }, { key: 'apiToken', label: 'API Token', type: 'password', hint: 'id.atlassian.com → Security → API tokens', required: true }],
+    linear:      [{ key: 'apiKey', label: 'API Key', type: 'password', hint: 'Linear → Settings → API → Personal API keys', required: true }],
+    pagerduty:   [{ key: 'apiKey', label: 'API Key', type: 'password', hint: 'PagerDuty → Integrations → API Access Keys', required: true }, { key: 'serviceId', label: 'Default Service ID', type: 'text', required: false }],
+    sentry:      [{ key: 'token', label: 'Auth Token', type: 'password', hint: 'Sentry → Settings → Auth Tokens', required: true }, { key: 'organization', label: 'Organization Slug', type: 'text', required: true }],
+    'azure-devops': [{ key: 'token', label: 'Personal Access Token', type: 'password', required: true }, { key: 'organization', label: 'Organization', type: 'text', required: true }, { key: 'project', label: 'Default Project', type: 'text', required: false }],
+    notion:      [{ key: 'apiKey', label: 'Integration Token', type: 'password', hint: 'notion.so/my-integrations', required: true }],
+    confluence:  [{ key: 'host', label: 'Confluence Host', type: 'url', placeholder: 'https://yourorg.atlassian.net/wiki', required: true }, { key: 'email', label: 'Account Email', type: 'text', required: true }, { key: 'apiToken', label: 'API Token', type: 'password', required: true }],
+};
+
+// ── Install Modal ─────────────────────────────────────────────────────────────
+
+function InstallModal({ connector, onClose, onInstalled }: {
+    connector: ConnectorEntry;
+    onClose: () => void;
+    onInstalled: () => void;
+}) {
+    const fields = CONNECTOR_FIELDS[connector.id] ?? connector.requiredEnvVars.map(k => ({
+        key: k.toLowerCase(), label: k, type: 'text' as const, required: true,
+    }));
+    const [values, setValues] = useState<Record<string, string>>({});
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [success, setSuccess] = useState(false);
+
+    const inputCls = 'w-full bg-zinc-700 border border-zinc-600 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500';
+
+    async function submit(e: React.FormEvent) {
+        e.preventDefault();
+        setSaving(true); setError(null);
+        try {
+            const res = await fetch('/api/connectors/install', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ connector_type: connector.id, config: values, display_name: connector.name }),
+            });
+            const body = (await res.json()) as { error?: string; message?: string; authorization_url?: string };
+            if (!res.ok) { setError(body.message ?? body.error ?? 'Failed to install.'); return; }
+            if (body.authorization_url) { window.location.href = body.authorization_url; return; }
+            setSuccess(true);
+            setTimeout(() => { onInstalled(); onClose(); }, 1200);
+        } catch { setError('Network error. Please try again.'); }
+        finally { setSaving(false); }
+    }
+
+    return (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
+            onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+            <div style={{ background: '#18181b', border: '1px solid #3f3f46', borderRadius: 16, width: '100%', maxWidth: 480, overflow: 'hidden' }}>
+                {/* Header */}
+                <div style={{ padding: '18px 20px', borderBottom: '1px solid #3f3f46', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: '#3b82f6', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2 }}>Install Connector</div>
+                        <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#f4f4f5' }}>{connector.name}</h2>
+                        <p style={{ margin: 0, fontSize: 12, color: '#71717a', marginTop: 2 }}>{CATEGORY_LABELS[connector.category]}</p>
+                    </div>
+                    <button onClick={onClose} style={{ background: '#27272a', border: 'none', borderRadius: '50%', width: 30, height: 30, cursor: 'pointer', color: '#71717a', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+                </div>
+
+                {/* What agents can do */}
+                <div style={{ padding: '12px 20px', background: '#09090b', borderBottom: '1px solid #27272a' }}>
+                    <p style={{ fontSize: 10, fontWeight: 700, color: '#52525b', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>Your agents will be able to</p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                        {(connector as ConnectorEntry & { supportedActions?: string[] }).supportedActions?.slice(0, 6).map((a: string) => (
+                            <span key={a} style={{ padding: '2px 8px', borderRadius: 6, background: '#18181b', border: '1px solid #3f3f46', fontSize: 10, fontFamily: 'monospace', color: '#a1a1aa' }}>{a}</span>
+                        )) ?? connector.requiredEnvVars.slice(0, 4).map(e => (
+                            <span key={e} style={{ padding: '2px 8px', borderRadius: 6, background: '#18181b', border: '1px solid #3f3f46', fontSize: 10, fontFamily: 'monospace', color: '#a1a1aa' }}>{e}</span>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Form */}
+                <form onSubmit={submit} style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {fields.map(field => (
+                        <div key={field.key}>
+                            <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#a1a1aa', marginBottom: 5 }}>
+                                {field.label} {field.required && <span style={{ color: '#f43f5e' }}>*</span>}
+                            </label>
+                            <input
+                                type={field.type === 'password' ? 'password' : field.type === 'url' ? 'url' : 'text'}
+                                value={values[field.key] ?? ''}
+                                onChange={e => setValues(v => ({ ...v, [field.key]: e.target.value }))}
+                                className={inputCls}
+                                placeholder={field.placeholder}
+                                required={field.required}
+                            />
+                            {field.hint && <p style={{ margin: '3px 0 0', fontSize: 11, color: '#52525b' }}>{field.hint}</p>}
+                        </div>
+                    ))}
+
+                    {error && <div style={{ padding: '8px 12px', borderRadius: 9, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#fca5a5', fontSize: 12 }}>⚠ {error}</div>}
+                    {success && <div style={{ padding: '8px 12px', borderRadius: 9, background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.3)', color: '#86efac', fontSize: 12 }}>✓ {connector.name} installed successfully!</div>}
+
+                    <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                        <button type="button" onClick={onClose} style={{ flex: 1, padding: '8px', borderRadius: 9, border: '1px solid #3f3f46', background: 'transparent', color: '#a1a1aa', fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+                        <button type="submit" disabled={saving || success} style={{ flex: 1, padding: '8px', borderRadius: 9, border: 'none', background: saving || success ? '#1d4ed8' : '#2563eb', color: '#fff', fontSize: 13, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
+                            {saving ? 'Installing…' : success ? '✓ Done' : `Install ${connector.name}`}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
+
 type ConnectorMarketplacePanelProps = {
     /** Role keys for the active agents in this workspace, e.g. ['developer', 'tester']. */
     agentRoles?: string[];
@@ -283,6 +394,7 @@ export function ConnectorMarketplacePanel({ agentRoles = [] }: ConnectorMarketpl
     const [filter, setFilter] = useState<ConnectorEntry['category'] | 'all'>('all');
     const [testing, setTesting] = useState<Record<string, boolean>>({});
     const [selected, setSelected] = useState<ConnectorEntry | null>(null);
+    const [installing, setInstalling] = useState<ConnectorEntry | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     const botId = 'default';
@@ -329,6 +441,18 @@ export function ConnectorMarketplacePanel({ agentRoles = [] }: ConnectorMarketpl
 
     return (
         <div className="flex flex-col gap-6 p-6 bg-zinc-900 min-h-screen text-zinc-100">
+            {installing && (
+                <InstallModal
+                    connector={installing}
+                    onClose={() => setInstalling(null)}
+                    onInstalled={() => {
+                        setConnectors(prev => prev.map(c =>
+                            c.id === installing.id ? { ...c, status: 'connected' as const } : c
+                        ));
+                        setInstalling(null);
+                    }}
+                />
+            )}
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight">Connector Marketplace</h1>
@@ -415,15 +539,27 @@ export function ConnectorMarketplacePanel({ agentRoles = [] }: ConnectorMarketpl
                         )}
 
                         <div className="flex gap-2 mt-auto">
+                            {connector.status !== 'connected' ? (
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); setInstalling(connector); }}
+                                    className="flex-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 rounded-lg text-xs font-semibold transition-colors text-white"
+                                >
+                                    + Install
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); setInstalling(connector); }}
+                                    className="flex-1 px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 rounded-lg text-xs font-medium transition-colors text-zinc-300"
+                                >
+                                    Reconfigure
+                                </button>
+                            )}
                             <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    testConnector(connector);
-                                }}
+                                onClick={(e) => { e.stopPropagation(); testConnector(connector); }}
                                 disabled={testing[connector.id]}
-                                className="flex-1 px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 rounded-lg text-xs font-medium transition-colors"
+                                className="px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 rounded-lg text-xs font-medium transition-colors"
                             >
-                                {testing[connector.id] ? 'Testing…' : 'Health Check'}
+                                {testing[connector.id] ? '…' : 'Test'}
                             </button>
                             <a
                                 href={connector.docs_url}
