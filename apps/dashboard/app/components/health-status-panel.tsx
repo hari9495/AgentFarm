@@ -43,6 +43,32 @@ type ConnectorStatus = {
     [key: string]: unknown;
 };
 
+type AgentRuntimeHealth = {
+    reachable: boolean;
+    ok?: boolean;
+    state?: string;
+    worker_loop_running?: boolean;
+    heartbeat_loop_running?: boolean;
+    task_queue_depth?: number;
+    active_task_slots?: number;
+    max_concurrent_tasks?: number;
+    processed_tasks?: number;
+    succeeded_tasks?: number;
+    failed_tasks?: number;
+    pending_approval_tasks?: number;
+    heartbeat_sent?: number;
+    heartbeat_failed?: number;
+    error?: string;
+};
+
+type SimpleServiceHealth = {
+    reachable: boolean;
+    status?: string;
+    service?: string;
+    timestamp?: string;
+    error?: string;
+};
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatUptime(seconds: number): string {
@@ -155,55 +181,42 @@ const TABLE_TD_STYLE: React.CSSProperties = {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function HealthStatusPanel() {
-    const [gateway, setGateway] = useState<GatewayStatus | null>(null);
-    const [circuits, setCircuits] = useState<CircuitEntry[]>([]);
-    const [queue, setQueue] = useState<QueueStatus | null>(null);
-    const [connectors, setConnectors] = useState<ConnectorStatus[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const [gateway,       setGateway]       = useState<GatewayStatus | null>(null);
+    const [circuits,      setCircuits]      = useState<CircuitEntry[]>([]);
+    const [queue,         setQueue]         = useState<QueueStatus | null>(null);
+    const [connectors,    setConnectors]    = useState<ConnectorStatus[]>([]);
+    const [agentRuntime,  setAgentRuntime]  = useState<AgentRuntimeHealth | null>(null);
+    const [triggerSvc,    setTriggerSvc]    = useState<SimpleServiceHealth | null>(null);
+    const [orchestrator,  setOrchestrator]  = useState<SimpleServiceHealth | null>(null);
+    const [loading,       setLoading]       = useState(true);
+    const [error,         setError]         = useState<string | null>(null);
     const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
-    const [refreshing, setRefreshing] = useState(false);
+    const [refreshing,    setRefreshing]    = useState(false);
 
     const fetchAll = useCallback(async () => {
         try {
-            const [gwRes, cbRes, tqRes, cnRes] = await Promise.all([
-                fetch('/api/health/gateway', { cache: 'no-store' }),
-                fetch('/api/health/circuit-breakers', { cache: 'no-store' }),
-                fetch('/api/health/task-queue', { cache: 'no-store' }),
-                fetch('/api/health/connectors', { cache: 'no-store' }),
+            const [gwRes, cbRes, tqRes, cnRes, arRes, tsRes, orRes] = await Promise.all([
+                fetch('/api/health/gateway',        { cache: 'no-store' }),
+                fetch('/api/health/circuit-breakers',{ cache: 'no-store' }),
+                fetch('/api/health/task-queue',     { cache: 'no-store' }),
+                fetch('/api/health/connectors',     { cache: 'no-store' }),
+                fetch('/api/health/agent-runtime',  { cache: 'no-store' }),
+                fetch('/api/health/trigger-service',{ cache: 'no-store' }),
+                fetch('/api/health/orchestrator',   { cache: 'no-store' }),
             ]);
 
-            // Gateway
-            if (gwRes.ok) {
-                const gw = (await gwRes.json().catch(() => null)) as GatewayStatus | null;
-                setGateway(gw);
-            } else {
-                setGateway(null);
-            }
+            if (gwRes.ok) { const gw = await gwRes.json().catch(() => null) as GatewayStatus | null; setGateway(gw); } else { setGateway(null); }
+            if (cbRes.ok) { const cb = await cbRes.json().catch(() => null) as { circuits: CircuitEntry[] } | null; setCircuits(cb?.circuits ?? []); } else { setCircuits([]); }
+            if (tqRes.ok) { const tq = await tqRes.json().catch(() => null) as QueueStatus | null; setQueue(tq); } else { setQueue(null); }
+            if (cnRes.ok) { const cn = await cnRes.json().catch(() => null) as { statuses: ConnectorStatus[] } | null; setConnectors(cn?.statuses ?? []); } else { setConnectors([]); }
 
-            // Circuit breakers
-            if (cbRes.ok) {
-                const cb = (await cbRes.json().catch(() => null)) as { circuits: CircuitEntry[] } | null;
-                setCircuits(cb?.circuits ?? []);
-            } else {
-                setCircuits([]);
-            }
-
-            // Task queue
-            if (tqRes.ok) {
-                const tq = (await tqRes.json().catch(() => null)) as QueueStatus | null;
-                setQueue(tq);
-            } else {
-                setQueue(null);
-            }
-
-            // Connectors
-            if (cnRes.ok) {
-                const cn = (await cnRes.json().catch(() => null)) as { statuses: ConnectorStatus[] } | null;
-                setConnectors(cn?.statuses ?? []);
-            } else {
-                setConnectors([]);
-            }
+            // New services — reachable even on 502 (we set reachable:false in those routes)
+            const ar = await arRes.json().catch(() => ({ reachable: false })) as AgentRuntimeHealth;
+            setAgentRuntime(ar);
+            const ts = await tsRes.json().catch(() => ({ reachable: false })) as SimpleServiceHealth;
+            setTriggerSvc(ts);
+            const or = await orRes.json().catch(() => ({ reachable: false })) as SimpleServiceHealth;
+            setOrchestrator(or);
 
             setError(null);
         } catch (err) {
@@ -639,6 +652,133 @@ export default function HealthStatusPanel() {
                                             </td>
                                         </tr>
                                     ))}
+                                </tbody>
+                            </table>
+                        </>
+                    )}
+                </div>
+            </div>
+
+            {/* ── Row 2: Agent Runtime + Trigger Service + Orchestrator ── */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginTop: '1rem' }}>
+
+                {/* Agent Runtime */}
+                <div style={PANEL_STYLE}>
+                    <p style={PANEL_TITLE_STYLE}>
+                        Agent Runtime
+                        <span style={{ marginLeft: 8, fontSize: '0.72rem', fontWeight: 500, color: 'var(--ink-muted)' }}>port 4000</span>
+                    </p>
+                    {loading ? <PanelSkeleton /> : agentRuntime === null ? (
+                        <p style={{ fontSize: '0.82rem', color: 'var(--ink-muted)' }}>No data</p>
+                    ) : !agentRuntime.reachable ? (
+                        <div style={{ padding: '0.5rem 0.75rem', borderRadius: 8, background: '#fee2e2', border: '1px solid #fca5a5' }}>
+                            <p style={{ margin: 0, fontSize: '0.82rem', color: '#991b1b', fontWeight: 600 }}>⚠ Unreachable</p>
+                            <p style={{ margin: '0.2rem 0 0', fontSize: '0.75rem', color: '#b91c1c' }}>Agent Runtime is not responding. Agents cannot execute tasks.</p>
+                        </div>
+                    ) : (
+                        <>
+                            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.6rem' }}>
+                                <InlineBadge badgeStyle={agentRuntime.ok ? { bg: '#dcfce7', color: '#166534' } : { bg: '#fee2e2', color: '#991b1b' }} label={agentRuntime.state ?? 'unknown'} />
+                                {agentRuntime.worker_loop_running && <InlineBadge badgeStyle={{ bg: '#dbeafe', color: '#1e40af' }} label="worker ✓" />}
+                                {agentRuntime.heartbeat_loop_running && <InlineBadge badgeStyle={{ bg: '#dbeafe', color: '#1e40af' }} label="heartbeat ✓" />}
+                            </div>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                                <tbody>
+                                    {[
+                                        { label: 'Queue depth',      value: agentRuntime.task_queue_depth ?? 0 },
+                                        { label: 'Active slots',     value: `${agentRuntime.active_task_slots ?? 0} / ${agentRuntime.max_concurrent_tasks ?? '—'}` },
+                                        { label: 'Processed tasks',  value: agentRuntime.processed_tasks ?? 0 },
+                                        { label: 'Succeeded',        value: agentRuntime.succeeded_tasks ?? 0 },
+                                        { label: 'Failed',           value: agentRuntime.failed_tasks ?? 0 },
+                                        { label: 'Pending approvals',value: agentRuntime.pending_approval_tasks ?? 0 },
+                                        { label: 'Heartbeats sent',  value: agentRuntime.heartbeat_sent ?? 0 },
+                                        { label: 'Heartbeat fails',  value: agentRuntime.heartbeat_failed ?? 0 },
+                                    ].map(({ label, value }) => (
+                                        <tr key={label}>
+                                            <td style={{ ...TABLE_TD_STYLE, color: 'var(--ink-muted)', paddingLeft: 0 }}>{label}</td>
+                                            <td style={{ ...TABLE_TD_STYLE, fontWeight: 600, textAlign: 'right' }}>{String(value)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </>
+                    )}
+                </div>
+
+                {/* Trigger Service */}
+                <div style={PANEL_STYLE}>
+                    <p style={PANEL_TITLE_STYLE}>
+                        Trigger Service
+                        <span style={{ marginLeft: 8, fontSize: '0.72rem', fontWeight: 500, color: 'var(--ink-muted)' }}>port 3002</span>
+                    </p>
+                    <p style={{ margin: '0 0 0.5rem', fontSize: '0.78rem', color: 'var(--ink-muted)', lineHeight: 1.5 }}>
+                        Handles inbound webhooks, IMAP email, and Slack triggers. Routes events to agents.
+                    </p>
+                    {loading ? <PanelSkeleton /> : triggerSvc === null ? (
+                        <p style={{ fontSize: '0.82rem', color: 'var(--ink-muted)' }}>No data</p>
+                    ) : !triggerSvc.reachable ? (
+                        <div style={{ padding: '0.5rem 0.75rem', borderRadius: 8, background: '#fee2e2', border: '1px solid #fca5a5' }}>
+                            <p style={{ margin: 0, fontSize: '0.82rem', color: '#991b1b', fontWeight: 600 }}>⚠ Unreachable</p>
+                            <p style={{ margin: '0.2rem 0 0', fontSize: '0.75rem', color: '#b91c1c' }}>Inbound webhooks and email triggers are not being processed.</p>
+                        </div>
+                    ) : (
+                        <>
+                            <div style={{ marginBottom: '0.6rem' }}>
+                                <InlineBadge badgeStyle={triggerSvc.status === 'ok' ? { bg: '#dcfce7', color: '#166534' } : { bg: '#fef9c3', color: '#854d0e' }} label={triggerSvc.status ?? 'unknown'} />
+                            </div>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                                <tbody>
+                                    <tr>
+                                        <td style={{ ...TABLE_TD_STYLE, color: 'var(--ink-muted)', paddingLeft: 0 }}>Service</td>
+                                        <td style={{ ...TABLE_TD_STYLE, fontWeight: 600, textAlign: 'right' }}>trigger-service</td>
+                                    </tr>
+                                    {triggerSvc.timestamp && (
+                                        <tr>
+                                            <td style={{ ...TABLE_TD_STYLE, color: 'var(--ink-muted)', paddingLeft: 0 }}>Last checked</td>
+                                            <td style={{ ...TABLE_TD_STYLE, fontWeight: 600, textAlign: 'right' }}>
+                                                {new Date(triggerSvc.timestamp).toLocaleTimeString()}
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </>
+                    )}
+                </div>
+
+                {/* Orchestrator */}
+                <div style={PANEL_STYLE}>
+                    <p style={PANEL_TITLE_STYLE}>
+                        Orchestrator
+                        <span style={{ marginLeft: 8, fontSize: '0.72rem', fontWeight: 500, color: 'var(--ink-muted)' }}>port 3011</span>
+                    </p>
+                    <p style={{ margin: '0 0 0.5rem', fontSize: '0.78rem', color: 'var(--ink-muted)', lineHeight: 1.5 }}>
+                        GOAP multi-agent planner, routine schedulers, and handoff coordinator.
+                    </p>
+                    {loading ? <PanelSkeleton /> : orchestrator === null ? (
+                        <p style={{ fontSize: '0.82rem', color: 'var(--ink-muted)' }}>No data</p>
+                    ) : !orchestrator.reachable ? (
+                        <div style={{ padding: '0.5rem 0.75rem', borderRadius: 8, background: '#fee2e2', border: '1px solid #fca5a5' }}>
+                            <p style={{ margin: 0, fontSize: '0.82rem', color: '#991b1b', fontWeight: 600 }}>⚠ Unreachable</p>
+                            <p style={{ margin: '0.2rem 0 0', fontSize: '0.75rem', color: '#b91c1c' }}>Multi-agent workflows and scheduled routines are not running.</p>
+                        </div>
+                    ) : (
+                        <>
+                            <div style={{ marginBottom: '0.6rem' }}>
+                                <InlineBadge badgeStyle={orchestrator.status === 'ok' ? { bg: '#dcfce7', color: '#166534' } : { bg: '#fef9c3', color: '#854d0e' }} label={orchestrator.status ?? 'unknown'} />
+                            </div>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                                <tbody>
+                                    <tr>
+                                        <td style={{ ...TABLE_TD_STYLE, color: 'var(--ink-muted)', paddingLeft: 0 }}>Service</td>
+                                        <td style={{ ...TABLE_TD_STYLE, fontWeight: 600, textAlign: 'right' }}>orchestrator</td>
+                                    </tr>
+                                    {orchestrator.service && (
+                                        <tr>
+                                            <td style={{ ...TABLE_TD_STYLE, color: 'var(--ink-muted)', paddingLeft: 0 }}>Identity</td>
+                                            <td style={{ ...TABLE_TD_STYLE, fontWeight: 600, textAlign: 'right' }}>{orchestrator.service}</td>
+                                        </tr>
+                                    )}
                                 </tbody>
                             </table>
                         </>
