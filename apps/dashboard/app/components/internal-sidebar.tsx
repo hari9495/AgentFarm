@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
     Cpu,
+    Brain,
     LayoutDashboard,
     ClipboardCheck,
     Activity,
@@ -218,6 +219,15 @@ export function InternalSidebar({
                                 <Cpu className="w-3.5 h-3.5 text-slate-500" aria-hidden="true" />
                             </span>
                             <span className="flex-1">Platform MCP</span>
+                        </Link>
+                        <Link
+                            href="/memory"
+                            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                        >
+                            <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0">
+                                <Brain className="w-3.5 h-3.5 text-slate-500" aria-hidden="true" />
+                            </span>
+                            <span className="flex-1">Memory</span>
                         </Link>
                         <Link
                             href="/governance"
