@@ -137,7 +137,7 @@ export const createServer = async (): Promise<FastifyInstance> => {
                 request.headers['authorization'] as string | undefined,
             );
             if (apiKeySession) {
-                (request as Record<string, unknown>)._injectedSession = apiKeySession;
+                (request as unknown as Record<string, unknown>)._injectedSession = apiKeySession;
                 session = apiKeySession;
             }
         }
@@ -152,7 +152,7 @@ export const createServer = async (): Promise<FastifyInstance> => {
 
     // Subscription guard — attaches session to request then checks tenant status
     app.addHook('preHandler', async (request, reply) => {
-        (request as Record<string, unknown>).session = readSession(request) ?? undefined;
+        (request as unknown as Record<string, unknown>).session = readSession(request) ?? undefined;
         await checkSubscription(request, reply);
     });
 

@@ -220,10 +220,6 @@ type HealthCheckBody = {
     workspace_id?: string;
 };
 
-type HealthSummaryQuery = {
-    connector_type?: string;
-    workspace_id?: string;
-};
 
 const SUPPORTED_CONNECTORS: ConnectorType[] = ['jira', 'teams', 'github', 'email', 'custom_api'];
 const SUPPORTED_ACTIONS: ConnectorActionType[] = [
@@ -1098,57 +1094,6 @@ export const registerConnectorActionRoutes = async (
                 remediation_required: remediationRequired,
             },
             results,
-        };
-    });
-
-    app.get<{ Querystring: HealthSummaryQuery }>('/v1/connectors/health/summary', async (request, reply) => {
-        const session = options.getSession(request);
-        if (!session) {
-            return reply.code(401).send({
-                error: 'unauthorized',
-                message: 'A valid authenticated session is required.',
-            });
-        }
-
-        const connectorType = normalizeConnectorType(request.query?.connector_type);
-        if (request.query?.connector_type && !connectorType) {
-            return reply.code(400).send({
-                error: 'invalid_connector_type',
-                message: 'connector_type must be one of jira, teams, github, email, custom_api',
-            });
-        }
-
-        const workspaceId = request.query?.workspace_id ?? session.workspaceIds[0];
-        if (!workspaceId || !session.workspaceIds.includes(workspaceId)) {
-            return reply.code(403).send({
-                error: 'workspace_scope_violation',
-                message: 'workspace_id is not in your authenticated session scope.',
-            });
-        }
-
-        const connectors = await repo.listAuthMetadata({
-            tenantId: session.tenantId,
-            workspaceId,
-            connectorType: connectorType ?? undefined,
-        });
-
-        return {
-            workspace_id: workspaceId,
-            connector_count: connectors.length,
-            connectors: connectors.map((item) => ({
-                connector_id: item.connectorId,
-                connector_type: item.connectorType,
-                status: item.status,
-                scope_status: item.scopeStatus,
-                last_error_class: item.lastErrorClass,
-                last_healthcheck_at: item.lastHealthcheckAt?.toISOString() ?? null,
-                remediation:
-                    item.status === 'permission_invalid' || item.status === 'consent_pending'
-                        ? 're_auth_or_reconsent'
-                        : item.lastErrorClass === 'provider_rate_limited' || item.lastErrorClass === 'provider_unavailable'
-                            ? 'backoff'
-                            : 'none',
-            })),
         };
     });
 

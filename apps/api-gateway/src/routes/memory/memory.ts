@@ -1,19 +1,26 @@
 /**
  * Agent Memory Service REST API (Fastify routes)
- * Frozen 2026-05-07 — Completed Feature #7 Implementation
  *
  * Handles:
- * - GET    /api/v1/workspaces/:id/memory          — read short-term memory for LLM injection
- * - POST   /api/v1/workspaces/:id/memory          — write task memory after execution
- * - GET    /api/v1/workspaces/:id/memory/patterns — read learned long-term patterns
- * - POST   /api/v1/memory/patterns                — ingest new patterns (e.g., from code review)
- * - POST   /api/v1/memory/cleanup                 — cleanup expired short-term memory
+ * - GET    /v1/workspaces/:workspaceId/memory          — read recent patterns for LLM injection
+ * - POST   /v1/workspaces/:workspaceId/memory          — write task memory after execution
+ * - GET    /v1/workspaces/:workspaceId/memory/patterns — read learned long-term patterns
+ * - POST   /v1/memory/patterns                         — ingest new patterns (e.g., from code review)
+ * - POST   /v1/memory/patterns/:patternId/reinforce    — update pattern confidence
+ * - POST   /v1/memory/cleanup                          — cleanup old low-confidence records
+ * - POST   /v1/episodic-memory/search                  — semantic similarity search
+ * - POST   /v1/episodic-memory/write                   — upsert with vector embedding
  */
 
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient } from '@prisma/client';
-import { MemoryStore, searchEpisodicMemory, writeEpisodicMemory } from '@agentfarm/memory-service';
-import type { MemoryWriteRequest, MemoryReadResponse, LongTermMemoryWriteRequest, EmbedFn } from '@agentfarm/memory-service';
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import type { PrismaClient } from '@prisma/client';
+import {
+    searchEpisodicMemory,
+    writeEpisodicMemory,
+    writeEpisodicMemoryNoEmbed,
+    searchEpisodicMemoryNoEmbed,
+} from '@agentfarm/memory-service';
+import type { EmbedFn } from '@agentfarm/memory-service';
 import type { EpisodicSearchRequest, EpisodicWriteRequest } from '@agentfarm/shared-types';
 
 type SessionContext = {
@@ -30,36 +37,45 @@ export type RegisterMemoryRoutesOptions = {
     embeddingDeployment?: string;
 };
 
-export async function registerMemoryRoutes(app: FastifyInstance, prisma: PrismaClient, options?: RegisterMemoryRoutesOptions) {
-    const memoryStore = new MemoryStore(prisma);
+export async function registerMemoryRoutes(
+    app: FastifyInstance,
+    prisma: PrismaClient,
+    options?: RegisterMemoryRoutesOptions,
+) {
     const getSession = options?.getSession ?? (() => null);
     const embedFn = options?.embedFn ?? null;
     const embeddingDeployment = options?.embeddingDeployment ?? 'text-embedding-3-small';
 
-    // Register route at both /v1/ (auth-protected by middleware) and /api/v1/ (deprecated alias — will be removed in v2)
-    const on = (m: 'get' | 'post' | 'patch' | 'delete', p: string, h: (req: FastifyRequest, res: FastifyReply) => Promise<unknown>) => {
-        (app as any)[m](`/v1${p}`, h);
-        (app as any)[m](`/api/v1${p}`, h); // deprecated: use /v1/
+    // Register route at both /v1/ and deprecated /api/v1/ alias
+    const on = (
+        m: 'get' | 'post' | 'patch' | 'delete',
+        p: string,
+        h: (req: FastifyRequest, res: FastifyReply) => Promise<unknown>,
+    ) => {
+        (app as unknown as Record<string, (p: string, h: unknown) => void>)[m](`/v1${p}`, h);
+        (app as unknown as Record<string, (p: string, h: unknown) => void>)[m](`/api/v1${p}`, h);
     };
 
-    // ========== READ SHORT-TERM MEMORY (for LLM prompt injection) ==========
+    // ── READ recent patterns for LLM injection ────────────────────────────────
     on('get', '/workspaces/:workspaceId/memory', async (req: FastifyRequest, res: FastifyReply) => {
         const session = getSession(req);
         if (!session) return res.status(401).send({ error: 'unauthorized' });
         try {
-            const params = req.params as any;
-            const query = req.query as any;
-            const { workspaceId } = params;
-            const { maxResults } = query;
+            const { workspaceId } = req.params as { workspaceId: string };
+            const { maxResults } = req.query as { maxResults?: string };
+            const limit = maxResults ? parseInt(maxResults, 10) : 5;
 
-            const memoryResponse: MemoryReadResponse = await memoryStore.readMemoryForTask(
-                workspaceId,
-                maxResults ? parseInt(maxResults, 10) : 5
-            );
+            const records = await (prisma as any).agentLongTermMemory.findMany({
+                where: { workspaceId, tenantId: session.tenantId },
+                orderBy: { lastSeen: 'desc' },
+                take: limit,
+                select: { pattern: true, summary: true, confidence: true, lastSeen: true },
+            });
 
             return res.send({
                 workspaceId,
-                ...memoryResponse,
+                records,
+                count: records.length,
                 message: 'Ready to inject into LLM prompt',
             });
         } catch (error) {
@@ -68,23 +84,13 @@ export async function registerMemoryRoutes(app: FastifyInstance, prisma: PrismaC
         }
     });
 
-    // ========== WRITE SHORT-TERM MEMORY (after task execution) ==========
+    // ── WRITE task memory after execution ─────────────────────────────────────
     on('post', '/workspaces/:workspaceId/memory', async (req: FastifyRequest, res: FastifyReply) => {
         const session = getSession(req);
         if (!session) return res.status(401).send({ error: 'unauthorized' });
         try {
-            const body = req.body as any;
-            const {
-                workspaceId,
-                tenantId,
-                taskId,
-                actionsTaken,
-                approvalOutcomes,
-                connectorsUsed,
-                llmProvider,
-                executionStatus,
-                summary,
-            } = body;
+            const body = req.body as Record<string, unknown>;
+            const { workspaceId, tenantId, taskId, summary, executionStatus } = body;
 
             if (!workspaceId || !tenantId || !taskId || !summary) {
                 return res.status(400).send({
@@ -92,20 +98,17 @@ export async function registerMemoryRoutes(app: FastifyInstance, prisma: PrismaC
                 });
             }
 
-            const request: MemoryWriteRequest = {
-                workspaceId,
-                tenantId,
-                taskId,
-                actionsTaken: actionsTaken || [],
-                approvalOutcomes: approvalOutcomes || [],
-                connectorsUsed: connectorsUsed || [],
-                llmProvider,
-                executionStatus: executionStatus || 'success',
-                summary,
-                correlationId: (req as any).id || 'unknown',
+            const request: EpisodicWriteRequest = {
+                tenantId: String(tenantId),
+                botId: '',
+                workspaceId: String(workspaceId),
+                summary: String(summary),
+                pattern: `task:${String(executionStatus ?? 'success')}:${String(taskId)}`,
+                confidence: 0.7,
+                taskId: String(taskId),
             };
 
-            await memoryStore.writeMemoryAfterTask(request);
+            await writeEpisodicMemoryNoEmbed(request, prisma);
 
             return res.status(201).send({
                 message: 'Memory recorded successfully',
@@ -118,20 +121,25 @@ export async function registerMemoryRoutes(app: FastifyInstance, prisma: PrismaC
         }
     });
 
-    // ========== READ LONG-TERM LEARNED PATTERNS ==========
+    // ── READ long-term learned patterns ───────────────────────────────────────
     on('get', '/workspaces/:workspaceId/memory/patterns', async (req: FastifyRequest, res: FastifyReply) => {
         const session = getSession(req);
         if (!session) return res.status(401).send({ error: 'unauthorized' });
         try {
-            const params = req.params as any;
-            const query = req.query as any;
-            const { workspaceId } = params;
-            const { minConfidence } = query;
+            const { workspaceId } = req.params as { workspaceId: string };
+            const { minConfidence } = req.query as { minConfidence?: string };
+            const threshold = minConfidence ? parseFloat(minConfidence) : 0.5;
 
-            const patterns = await memoryStore.readLongTermMemory(
-                workspaceId,
-                minConfidence ? parseFloat(minConfidence) : 0.5
-            );
+            const patterns = await (prisma as any).agentLongTermMemory.findMany({
+                where: {
+                    workspaceId,
+                    tenantId: session.tenantId,
+                    confidence: { gte: threshold },
+                },
+                orderBy: { confidence: 'desc' },
+                take: 50,
+                select: { id: true, pattern: true, summary: true, confidence: true, observedCount: true, lastSeen: true },
+            });
 
             return res.send({
                 workspaceId,
@@ -145,31 +153,32 @@ export async function registerMemoryRoutes(app: FastifyInstance, prisma: PrismaC
         }
     });
 
-    // ========== WRITE LONG-TERM PATTERN (from code review feedback or manual learning) ==========
+    // ── WRITE long-term pattern (from code review feedback etc.) ──────────────
     on('post', '/memory/patterns', async (req: FastifyRequest, res: FastifyReply) => {
         const session = getSession(req);
         if (!session) return res.status(401).send({ error: 'unauthorized' });
         try {
-            const body = req.body as any;
-            const { tenantId, workspaceId, pattern, confidence, observedCount, lastSeen, sourceTaskId, sourcePrUrl } = body;
+            const body = req.body as Record<string, unknown>;
+            const { tenantId, workspaceId, pattern, confidence, sourceTaskId, sourcePrUrl } = body;
 
             if (!tenantId || !workspaceId || !pattern) {
                 return res.status(400).send({ error: 'Missing required: tenantId, workspaceId, pattern' });
             }
 
-            const request: LongTermMemoryWriteRequest = {
-                tenantId,
-                workspaceId,
-                pattern,
-                confidence: confidence || 0.5,
-                observedCount: observedCount || 1,
-                lastSeen: lastSeen || new Date().toISOString(),
+            const request: EpisodicWriteRequest = {
+                tenantId: String(tenantId),
+                botId: '',
+                workspaceId: String(workspaceId),
+                summary: String(pattern),
+                pattern: String(pattern),
+                confidence: typeof confidence === 'number' ? confidence : 0.5,
+                taskId: '',
             };
 
-            const record = await memoryStore.writeLongTermMemory(request);
+            await writeEpisodicMemoryNoEmbed(request, prisma);
 
             return res.status(201).send({
-                pattern: record,
+                pattern: request.pattern,
                 message: 'Pattern learned and will be applied to future tasks',
                 sourceTaskId,
                 sourcePrUrl,
@@ -180,15 +189,21 @@ export async function registerMemoryRoutes(app: FastifyInstance, prisma: PrismaC
         }
     });
 
-    // ========== UPDATE PATTERN CONFIDENCE (when pattern is reinforced) ==========
+    // ── REINFORCE pattern confidence ──────────────────────────────────────────
     on('post', '/memory/patterns/:patternId/reinforce', async (req: FastifyRequest, res: FastifyReply) => {
         const session = getSession(req);
         if (!session) return res.status(401).send({ error: 'unauthorized' });
         try {
-            const params = req.params as any;
-            const { patternId } = params;
+            const { patternId } = req.params as { patternId: string };
 
-            await memoryStore.updateMemoryConfidence(patternId, new Date().toISOString());
+            await (prisma as any).agentLongTermMemory.updateMany({
+                where: { id: patternId, tenantId: session.tenantId },
+                data: {
+                    confidence: { increment: 0.05 },
+                    observedCount: { increment: 1 },
+                    lastSeen: new Date(),
+                },
+            });
 
             return res.send({ patternId, message: 'Pattern confidence updated' });
         } catch (error) {
@@ -197,17 +212,24 @@ export async function registerMemoryRoutes(app: FastifyInstance, prisma: PrismaC
         }
     });
 
-    // ========== CLEANUP EXPIRED SHORT-TERM MEMORY (background job) ==========
+    // ── CLEANUP old low-confidence records ────────────────────────────────────
     on('post', '/memory/cleanup', async (req: FastifyRequest, res: FastifyReply) => {
         const session = getSession(req);
         if (!session) return res.status(401).send({ error: 'unauthorized' });
         try {
-            const deletedCount = await memoryStore.cleanupExpiredMemories();
+            const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // 30 days
+            const result = await (prisma as any).agentLongTermMemory.deleteMany({
+                where: {
+                    tenantId: session.tenantId,
+                    confidence: { lt: 0.2 },
+                    lastSeen: { lt: cutoff },
+                },
+            });
 
             return res.send({
                 message: 'Cleanup complete',
-                deletedCount,
-                unit: 'short-term memory records',
+                deletedCount: result.count,
+                unit: 'low-confidence memory records',
             });
         } catch (error) {
             const msg = error instanceof Error ? error.message : 'Unknown error';
@@ -215,10 +237,10 @@ export async function registerMemoryRoutes(app: FastifyInstance, prisma: PrismaC
         }
     });
 
-    // ========== SEARCH MEMORY (full-text relevance search via agent-runtime) ==========
+    // ── SEARCH memory (proxy to agent-runtime) ────────────────────────────────
     const resolveFetch = options?.fetch ?? globalThis.fetch;
     function getRuntimeUrl(): string {
-        return (process.env['AGENT_RUNTIME_URL'] ?? 'http://localhost:3001').replace(/\/+$/, '');
+        return (process.env['AGENT_RUNTIME_URL'] ?? 'http://localhost:4000').replace(/\/+$/, '');
     }
 
     app.get('/v1/memory/search', async (req: FastifyRequest, res: FastifyReply) => {
@@ -239,11 +261,7 @@ export async function registerMemoryRoutes(app: FastifyInstance, prisma: PrismaC
         try {
             const upstream = await resolveFetch(
                 `${getRuntimeUrl()}/memory/search?${params.toString()}`,
-                {
-                    headers: {
-                        'x-tenant-id': session.tenantId,
-                    },
-                },
+                { headers: { 'x-tenant-id': session.tenantId } },
             );
             const body = await upstream.json() as unknown;
             if (!upstream.ok) return res.status(502).send({ error: 'upstream error', detail: body });
@@ -253,7 +271,7 @@ export async function registerMemoryRoutes(app: FastifyInstance, prisma: PrismaC
         }
     });
 
-    // ========== EPISODIC MEMORY SEARCH (semantic similarity via pgvector) ==========
+    // ── EPISODIC MEMORY SEARCH (semantic via pgvector) ────────────────────────
     on('post', '/episodic-memory/search', async (req: FastifyRequest, res: FastifyReply) => {
         const session = getSession(req);
         if (!session) return res.status(401).send({ error: 'unauthorized' });
@@ -284,7 +302,7 @@ export async function registerMemoryRoutes(app: FastifyInstance, prisma: PrismaC
         }
     });
 
-    // ========== EPISODIC MEMORY WRITE (upsert with vector embedding) ==========
+    // ── EPISODIC MEMORY WRITE (upsert with vector embedding) ─────────────────
     on('post', '/episodic-memory/write', async (req: FastifyRequest, res: FastifyReply) => {
         const session = getSession(req);
         if (!session) return res.status(401).send({ error: 'unauthorized' });
@@ -308,11 +326,41 @@ export async function registerMemoryRoutes(app: FastifyInstance, prisma: PrismaC
         };
 
         try {
-            const record = await writeEpisodicMemory(request, embedFn, prisma, embeddingDeployment);
-            return res.status(201).send({ record });
+            await writeEpisodicMemory(request, embedFn, prisma, embeddingDeployment);
+            return res.status(201).send({ pattern: request.pattern, message: 'Episodic memory written' });
         } catch (error) {
             const msg = error instanceof Error ? error.message : 'Unknown error';
             return res.status(500).send({ error: `Episodic memory write failed: ${msg}` });
+        }
+    });
+
+    // ── EPISODIC MEMORY SEARCH (no-embed fallback) ────────────────────────────
+    on('post', '/episodic-memory/search/text', async (req: FastifyRequest, res: FastifyReply) => {
+        const session = getSession(req);
+        if (!session) return res.status(401).send({ error: 'unauthorized' });
+
+        const body = req.body as Record<string, unknown>;
+        const { tenantId, botId, workspaceId, queryText, topK, minSimilarity } = body;
+
+        if (!tenantId || !workspaceId || !queryText) {
+            return res.status(400).send({ error: 'Missing required: tenantId, workspaceId, queryText' });
+        }
+
+        const request: EpisodicSearchRequest = {
+            tenantId: String(tenantId),
+            botId: typeof botId === 'string' ? botId : '',
+            workspaceId: String(workspaceId),
+            queryText: String(queryText),
+            topK: typeof topK === 'number' ? topK : undefined,
+            minSimilarity: typeof minSimilarity === 'number' ? minSimilarity : undefined,
+        };
+
+        try {
+            const results = await searchEpisodicMemoryNoEmbed(request, prisma);
+            return res.send({ results, count: results.length });
+        } catch (error) {
+            const msg = error instanceof Error ? error.message : 'Unknown error';
+            return res.status(500).send({ error: `Episodic memory text search failed: ${msg}` });
         }
     });
 }

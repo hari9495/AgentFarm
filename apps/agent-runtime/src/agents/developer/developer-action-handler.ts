@@ -1284,7 +1284,7 @@ export async function onDeveloperFeedbackReceived(params: {
     gatewayBaseUrl: string; serviceToken: string;
 }): Promise<void> {
     try {
-        const { buildDeveloperEpisodicPattern } = await import('./developer-rag-retriever.js');
+        const { buildDeveloperEpisodicPattern } = await import('./developer-episodic-hooks.js');
         // Lessons are stored directly via episodic hooks (developer-episodic-hooks.ts)
         // This hook records the feedback as a lesson pattern for RAG retrieval
         const base = params.gatewayBaseUrl.replace(/\/+$/, '');

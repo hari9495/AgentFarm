@@ -236,7 +236,7 @@ export async function handleContentWriterAction(
                 gatewayBaseUrl, serviceToken, workspaceId,
             );
             if (ragCtx.contextBlock) {
-                callerFn = (prompt: string): Promise<string> => rawCallerFn(`${ragCtx.contextBlock}\n\n${prompt}`);
+                callerFn = (systemPrompt: string, userPrompt: string) => rawCallerFn(`${ragCtx.contextBlock}\n\n${systemPrompt}`, userPrompt);
             }
         } catch { /* non-fatal */ }
     }

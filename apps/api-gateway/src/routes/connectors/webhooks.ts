@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
 import { answerQuestion, PrismaQuestionStore } from '@agentfarm/agent-question-service';
-import { MemoryStore } from '@agentfarm/memory-service';
+import { writeEpisodicMemoryNoEmbed } from '@agentfarm/memory-service';
 import { verifyHmacSha256 } from '../../lib/webhook-verify.js';
 
 type WebhookRegisterBody = {
@@ -104,7 +104,6 @@ const normalizePattern = (comment: string): string | null => {
 
 export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient): void {
     const questionStore = new PrismaQuestionStore(prisma);
-    const memoryStore = new MemoryStore(prisma);
 
     // List registrations
     app.get('/webhooks', async (_req, reply) => {
@@ -304,14 +303,19 @@ export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient
                 : 0.65;
 
             const learned = await Promise.all(
-                normalizedPatterns.map(async (pattern, index) => memoryStore.writeLongTermMemory({
-                    tenantId,
-                    workspaceId,
-                    pattern,
-                    confidence: Math.max(0.1, Math.min(1, confidenceBase + (normalizedPatterns.length > 1 ? 0.05 : 0) - index * 0.01)),
-                    observedCount: comments.filter((comment) => normalizePattern(comment) === pattern).length || 1,
-                    lastSeen: new Date().toISOString(),
-                })),
+                normalizedPatterns.map(async (pattern, index) => {
+                    const confidence = Math.max(0.1, Math.min(1, confidenceBase + (normalizedPatterns.length > 1 ? 0.05 : 0) - index * 0.01));
+                    await writeEpisodicMemoryNoEmbed({
+                        tenantId,
+                        botId: '',
+                        workspaceId,
+                        summary: pattern,
+                        pattern,
+                        confidence,
+                        taskId: '',
+                    }, prisma);
+                    return { pattern, confidence };
+                }),
             );
 
             return reply.code(201).send({
