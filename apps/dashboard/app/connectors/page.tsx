@@ -29,7 +29,9 @@ async function fetchConnectors(workspaceId: string, authHeader: string): Promise
         );
         if (!res.ok) return FALLBACK_CONNECTORS;
         const data = await res.json() as { connectors?: ConnectorSummary[] };
-        return data.connectors ?? FALLBACK_CONNECTORS;
+        // Use fallback when empty (dev workspace has no real connectors provisioned)
+        const list = data.connectors ?? [];
+        return list.length > 0 ? list : FALLBACK_CONNECTORS;
     } catch {
         return FALLBACK_CONNECTORS;
     }
