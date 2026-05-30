@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
-import { Cpu, RefreshCw, Copy, Check, ChevronDown, ChevronUp } from 'lucide-react';
+import { Cpu, RefreshCw, Copy, Check, ChevronDown, ChevronUp, Settings2, X, CheckCircle2, AlertCircle } from 'lucide-react';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -63,6 +63,108 @@ function CopyBtn({ text }: { text: string }) {
     );
 }
 
+// ── Configure Modal ───────────────────────────────────────────────────────────
+
+function ConfigureModal({
+    connector,
+    onClose,
+    onSaved,
+}: {
+    connector: McpConnector;
+    onClose: () => void;
+    onSaved: () => void;
+}) {
+    const [url, setUrl]       = useState('');
+    const [saving, setSaving] = useState(false);
+    const [error, setError]   = useState<string | null>(null);
+    const [saved, setSaved]   = useState(false);
+
+    async function save(e: React.FormEvent) {
+        e.preventDefault();
+        if (!url.trim()) { setError('URL is required.'); return; }
+        setSaving(true); setError(null);
+        try {
+            const res = await fetch('/api/platform-mcp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ connectorId: connector.id, url: url.trim(), label: connector.label }),
+            });
+            const body = (await res.json()) as { error?: string; message?: string };
+            if (!res.ok) { setError(body.message ?? body.error ?? 'Failed to save.'); return; }
+            setSaved(true);
+            setTimeout(() => { onSaved(); onClose(); }, 1200);
+        } catch { setError('Network error. Try again.'); }
+        finally { setSaving(false); }
+    }
+
+    return (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
+            onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+            <div style={{ background: '#fff', borderRadius: 20, padding: 28, width: '100%', maxWidth: 480, border: '1px solid #d2d2d7', boxShadow: '0 24px 48px -12px rgba(0,0,0,0.2)' }}>
+                {/* Header */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
+                    <div>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: '#0066cc', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Configure Platform MCP</div>
+                        <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#1d1d1f', letterSpacing: '-0.02em' }}>{connector.label}</h2>
+                    </div>
+                    <button onClick={onClose} style={{ background: '#f5f5f7', border: 'none', borderRadius: '50%', width: 30, height: 30, cursor: 'pointer', color: '#6e6e73', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={14} /></button>
+                </div>
+
+                {/* What this does */}
+                <div style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(0,102,204,0.05)', border: '1px solid rgba(0,102,204,0.15)', marginBottom: 18, fontSize: 12, color: '#424245', lineHeight: 1.55 }}>
+                    <strong style={{ color: '#0066cc' }}>Platform-wide:</strong> Setting this URL makes <strong>{connector.label}</strong> available to
+                    every <strong>{connector.agents.map(a => AGENT_LABELS[a] ?? a).join(', ')}</strong> agent across all tenants automatically.
+                    No per-tenant registration needed.
+                </div>
+
+                <form onSubmit={save} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    <div>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 5 }}>
+                            MCP Server URL <span style={{ color: '#c4161c' }}>*</span>
+                        </label>
+                        <input
+                            value={url}
+                            onChange={e => setUrl(e.target.value)}
+                            type="url"
+                            placeholder={`http://mcp-${connector.id.replace(/_/g, '-')}:3100`}
+                            style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: '1px solid #d2d2d7', background: '#fff', color: '#1d1d1f', fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: 'ui-monospace, monospace' }}
+                            required
+                        />
+                        <p style={{ margin: '5px 0 0', fontSize: 11, color: '#aeaeb2' }}>
+                            The URL of your {connector.label} MCP server. Stored securely and used by the agent-runtime.
+                        </p>
+                    </div>
+
+                    {/* Env var reference */}
+                    <div style={{ padding: '10px 14px', borderRadius: 10, background: '#f5f5f7', border: '1px solid #e5e5ea', fontSize: 12 }}>
+                        <div style={{ fontWeight: 700, color: '#424245', marginBottom: 3 }}>Or set via environment variable:</div>
+                        <code style={{ fontFamily: 'ui-monospace, monospace', color: '#0066cc' }}>{connector.envVar}=http://your-mcp-server:3100</code>
+                        <div style={{ color: '#aeaeb2', marginTop: 3 }}>Both methods work. The database entry (set here) takes precedence over the env var.</div>
+                    </div>
+
+                    {error && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 12px', borderRadius: 9, background: 'rgba(196,22,28,0.07)', border: '1px solid rgba(196,22,28,0.2)', color: '#c4161c', fontSize: 12 }}>
+                            <AlertCircle size={13} /> {error}
+                        </div>
+                    )}
+                    {saved && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 12px', borderRadius: 9, background: 'rgba(26,122,74,0.07)', border: '1px solid rgba(26,122,74,0.2)', color: '#1a7a4a', fontSize: 12 }}>
+                            <CheckCircle2 size={13} /> Saved! {connector.label} is now configured for all agents.
+                        </div>
+                    )}
+
+                    <div style={{ display: 'flex', gap: 8 }}>
+                        <button type="button" onClick={onClose} style={{ flex: 1, padding: '9px 0', borderRadius: 9999, border: '1px solid #d2d2d7', background: '#fff', color: '#424245', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>Cancel</button>
+                        <button type="submit" disabled={saving || saved} style={{ flex: 1, padding: '9px 0', borderRadius: 9999, border: 'none', background: saving || saved ? '#aeaeb2' : '#0066cc', color: '#fff', fontSize: 14, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer' }}>
+                            {saving ? 'Saving…' : saved ? '✓ Saved' : 'Save URL'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function PlatformMcpPage() {
@@ -71,6 +173,7 @@ export default function PlatformMcpPage() {
     const [expanded, setExpanded]   = useState<Record<string, boolean>>({});
     const [filterUnconfigured, setFilterUnconfigured] = useState(false);
     const [search, setSearch]       = useState('');
+    const [configuring, setConfiguring] = useState<McpConnector | null>(null);
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -105,6 +208,14 @@ export default function PlatformMcpPage() {
 
     return (
         <div style={{ minHeight: '100vh', background: '#f5f5f7', fontFamily: "var(--font-inter), -apple-system, sans-serif" }}>
+            {/* Configure modal */}
+            {configuring && (
+                <ConfigureModal
+                    connector={configuring}
+                    onClose={() => setConfiguring(null)}
+                    onSaved={() => { setConfiguring(null); void load(); }}
+                />
+            )}
 
             {/* Header */}
             <header style={{ height: 56, background: '#fff', borderBottom: '1px solid #d2d2d7', display: 'flex', alignItems: 'center', padding: '0 24px', gap: 12, position: 'sticky', top: 0, zIndex: 10, flexShrink: 0 }}>
@@ -226,14 +337,24 @@ export default function PlatformMcpPage() {
                                                 border: `1px solid ${c.configured ? 'rgba(26,122,74,0.25)' : '#e5e5ea'}`,
                                                 background: c.configured ? 'rgba(26,122,74,0.04)' : '#f9f9f9',
                                             }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                                                {/* Name + status */}
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
                                                     <span style={{ width: 8, height: 8, borderRadius: '50%', background: c.configured ? '#1a7a4a' : '#aeaeb2', flexShrink: 0 }} />
-                                                    <span style={{ fontSize: 13, fontWeight: 700, color: '#1d1d1f' }}>{c.label}</span>
-                                                    <span style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 700, color: c.configured ? '#1a7a4a' : '#aeaeb2' }}>
-                                                        {c.configured ? '✓ SET' : 'NOT SET'}
-                                                    </span>
+                                                    <span style={{ fontSize: 13, fontWeight: 700, color: '#1d1d1f', flex: 1 }}>{c.label}</span>
+                                                    {/* SET URL / CONFIGURED button */}
+                                                    {c.configured ? (
+                                                        <button onClick={() => setConfiguring(c)}
+                                                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 9px', borderRadius: 9999, border: '1px solid rgba(26,122,74,0.35)', background: 'rgba(26,122,74,0.07)', color: '#1a7a4a', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}>
+                                                            <CheckCircle2 size={10} /> Configured
+                                                        </button>
+                                                    ) : (
+                                                        <button onClick={() => setConfiguring(c)}
+                                                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 9px', borderRadius: 9999, border: '1px solid rgba(0,102,204,0.35)', background: 'rgba(0,102,204,0.07)', color: '#0066cc', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}>
+                                                            <Settings2 size={10} /> Set URL
+                                                        </button>
+                                                    )}
                                                 </div>
-                                                <code style={{ fontSize: 11, fontFamily: 'ui-monospace, monospace', color: '#6e6e73', display: 'block', marginBottom: 6 }}>
+                                                <code style={{ fontSize: 11, fontFamily: 'ui-monospace, monospace', color: '#6e6e73', display: 'block', marginBottom: 7 }}>
                                                     {c.envVar}
                                                 </code>
                                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
