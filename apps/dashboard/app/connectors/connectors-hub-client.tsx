@@ -1,11 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
     Link2, ShoppingBag, Activity, Layers,
-    Cpu, ArrowDownToLine, ArrowUpFromLine, Database,
-    ExternalLink, ChevronRight,
+    Cpu, ArrowDownToLine, ArrowUpFromLine, ExternalLink,
+    Plus, Trash2, Radio, CheckCircle2, AlertCircle, RefreshCw,
 } from 'lucide-react';
 import { ConnectorConfigPanel } from '../components/connector-config-panel';
 import { ConnectorMarketplacePanel } from '../components/connector-marketplace-panel';
@@ -77,52 +77,191 @@ function AdaptersTab({ workspaceId }: { workspaceId: string }) {
     );
 }
 
-// ── MCP tab — shows MCP config with link to full settings page ────────────────
+// ── MCP tab — full working MCP server management ──────────────────────────────
+
+type McpServer = { id: string; name: string; url: string; workspaceId: string | null; isActive: boolean };
+type PingState = { loading: boolean; ok?: boolean; latencyMs?: number };
 
 function McpTab() {
+    const [servers, setServers]       = useState<McpServer[]>([]);
+    const [loading, setLoading]       = useState(true);
+    const [error, setError]           = useState<string | null>(null);
+    const [pingStates, setPingStates] = useState<Record<string, PingState>>({});
+    const [showForm, setShowForm]     = useState(false);
+    const [addName, setAddName]       = useState('');
+    const [addUrl, setAddUrl]         = useState('');
+    const [addWs, setAddWs]           = useState('');
+    const [adding, setAdding]         = useState(false);
+    const [addError, setAddError]     = useState<string | null>(null);
+
+    const load = useCallback(async () => {
+        setLoading(true); setError(null);
+        try {
+            const res = await fetch('/api/tenant/mcp', { cache: 'no-store' });
+            const data = (await res.json().catch(() => [])) as McpServer[] | { error?: string };
+            if (!res.ok) { setError((data as { error?: string }).error ?? 'Failed to load MCP servers'); return; }
+            setServers(Array.isArray(data) ? data : []);
+        } catch { setError('Network error loading MCP servers'); }
+        finally { setLoading(false); }
+    }, []);
+
+    useEffect(() => { void load(); }, [load]);
+
+    const addServer = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!addName.trim() || !addUrl.trim()) { setAddError('Name and URL are required.'); return; }
+        setAdding(true); setAddError(null);
+        try {
+            const res = await fetch('/api/tenant/mcp', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: addName.trim(), url: addUrl.trim(), workspaceId: addWs.trim() || undefined }),
+            });
+            const data = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
+            if (!res.ok) { setAddError(data.message ?? data.error ?? 'Failed to add server.'); return; }
+            setAddName(''); setAddUrl(''); setAddWs(''); setShowForm(false);
+            await load();
+        } catch { setAddError('Network error.'); }
+        finally { setAdding(false); }
+    };
+
+    const remove = async (server: McpServer) => {
+        if (!confirm(`Remove "${server.name}"?`)) return;
+        try { await fetch(`/api/tenant/mcp/${encodeURIComponent(server.id)}`, { method: 'DELETE' }); await load(); }
+        catch { /* silent */ }
+    };
+
+    const ping = async (server: McpServer) => {
+        setPingStates(p => ({ ...p, [server.id]: { loading: true } }));
+        try {
+            const res = await fetch(`/api/tenant/mcp/${encodeURIComponent(server.id)}/ping`, { cache: 'no-store' });
+            const data = (await res.json().catch(() => ({}))) as { ok?: boolean; latencyMs?: number };
+            setPingStates(p => ({ ...p, [server.id]: { loading: false, ok: data.ok ?? false, latencyMs: data.latencyMs } }));
+        } catch { setPingStates(p => ({ ...p, [server.id]: { loading: false, ok: false } })); }
+    };
+
+    const inp: React.CSSProperties = { width: '100%', padding: '8px 11px', borderRadius: 9, border: '1px solid #d2d2d7', background: '#fff', color: '#1d1d1f', fontSize: 13, outline: 'none', boxSizing: 'border-box' };
+    const lbl: React.CSSProperties = { fontSize: 11, fontWeight: 700, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 5 };
+
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, padding: '16px 18px', background: '#fff', border: '1px solid #d2d2d7', borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                <div style={{ width: 40, height: 40, borderRadius: 11, background: 'rgba(0,102,204,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Cpu size={18} color="#0066cc" />
-                </div>
-                <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: '#1d1d1f', letterSpacing: '-0.01em', marginBottom: 4 }}>Model Context Protocol (MCP)</div>
-                    <p style={{ fontSize: 13, color: '#6e6e73', lineHeight: 1.55, margin: 0 }}>
-                        MCP servers give agents access to external tools and data sources through a standardised
-                        protocol. Each registered server exposes capabilities that agents can call during task
-                        execution — filesystem access, browser control, custom APIs, and more.
+            {/* Compact explainer */}
+            <div style={{ padding: '12px 16px', background: 'rgba(0,102,204,0.04)', border: '1px solid rgba(0,102,204,0.15)', borderRadius: 12 }}>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                    <Cpu size={15} color="#0066cc" style={{ flexShrink: 0, marginTop: 2 }} />
+                    <p style={{ margin: 0, fontSize: 13, color: '#424245', lineHeight: 1.55 }}>
+                        <strong style={{ color: '#0066cc' }}>Model Context Protocol</strong> — register MCP servers to give agents
+                        access to filesystems, browser automation, REST APIs, and custom tools.
+                        Agents discover these servers automatically on their next task.
                     </p>
                 </div>
             </div>
 
-            {/* What MCP does */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                {[
-                    { icon: '🌐', title: 'External APIs',    desc: 'Connect agents to REST or GraphQL APIs via MCP tool wrappers' },
-                    { icon: '📁', title: 'File systems',     desc: 'Grant agents controlled read/write access to local or remote files' },
-                    { icon: '🖥️', title: 'Browser control',  desc: 'MCP-powered browser automation for web research and form filling' },
-                    { icon: '🔌', title: 'Custom tools',     desc: 'Register your own internal tools as MCP servers for any agent' },
-                ].map(({ icon, title, desc }) => (
-                    <div key={title} style={{ padding: '14px 16px', background: '#fff', border: '1px solid #d2d2d7', borderRadius: 14, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                        <div style={{ fontSize: 20, marginBottom: 8 }}>{icon}</div>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: '#1d1d1f', marginBottom: 3 }}>{title}</div>
-                        <div style={{ fontSize: 12, color: '#6e6e73', lineHeight: 1.45 }}>{desc}</div>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: '#1d1d1f' }}>Registered MCP Servers</div>
+                    <div style={{ fontSize: 12, color: '#6e6e73', marginTop: 2 }}>
+                        {loading ? 'Loading…' : `${servers.length} server${servers.length !== 1 ? 's' : ''} registered for this tenant`}
                     </div>
-                ))}
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                    <button onClick={load} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 9999, border: '1px solid #d2d2d7', background: '#fff', color: '#424245', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
+                        <RefreshCw size={11} /> Refresh
+                    </button>
+                    <button onClick={() => setShowForm(v => !v)} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 9999, border: 'none', background: showForm ? '#aeaeb2' : '#0066cc', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                        {showForm ? '✕ Cancel' : <><Plus size={12} /> Add MCP Server</>}
+                    </button>
+                </div>
             </div>
 
-            {/* Link to full MCP config */}
-            <Link href="/tenant-settings" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 18px', background: '#ffffff', border: '1px solid rgba(0,102,204,0.25)', borderRadius: 14, textDecoration: 'none', boxShadow: '0 0 0 3px rgba(0,102,204,0.06)' }}>
-                <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(0,102,204,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Cpu size={16} color="#0066cc" />
+            {/* Add form */}
+            {showForm && (
+                <div style={{ border: '1px solid rgba(0,102,204,0.25)', borderRadius: 16, background: '#fff', padding: '18px 20px', boxShadow: '0 0 0 4px rgba(0,102,204,0.04)' }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#0066cc', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14 }}>Add MCP Server</div>
+                    <form onSubmit={addServer} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 12 }}>
+                            <div>
+                                <label style={lbl}>Server Name <span style={{ color: '#c4161c' }}>*</span></label>
+                                <input value={addName} onChange={e => setAddName(e.target.value)} style={inp} placeholder="My Filesystem Server" required />
+                            </div>
+                            <div>
+                                <label style={lbl}>Server URL <span style={{ color: '#c4161c' }}>*</span></label>
+                                <input value={addUrl} onChange={e => setAddUrl(e.target.value)} type="url" style={inp} placeholder="http://localhost:3100" required />
+                                <p style={{ fontSize: 11, color: '#aeaeb2', margin: '4px 0 0' }}>The MCP endpoint agents connect to</p>
+                            </div>
+                        </div>
+                        <div>
+                            <label style={lbl}>Workspace ID <span style={{ color: '#6e6e73', fontWeight: 400 }}>(optional — leave blank for all workspaces)</span></label>
+                            <input value={addWs} onChange={e => setAddWs(e.target.value)} style={{ ...inp, maxWidth: 300 }} placeholder="ws_… or leave blank" />
+                        </div>
+                        <div style={{ padding: '10px 14px', borderRadius: 10, background: '#f5f5f7', fontSize: 12, color: '#6e6e73', lineHeight: 1.5 }}>
+                            💡 After adding: agents in the scoped workspace will discover this server on their next task and gain access to all tools it exposes. Use <strong>Ping</strong> to verify it is reachable first.
+                        </div>
+                        {addError && <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 12px', borderRadius: 9, background: 'rgba(196,22,28,0.07)', border: '1px solid rgba(196,22,28,0.2)', color: '#c4161c', fontSize: 12 }}><AlertCircle size={13} /> {addError}</div>}
+                        <div style={{ display: 'flex', gap: 8 }}>
+                            <button type="button" onClick={() => setShowForm(false)} style={{ padding: '8px 18px', borderRadius: 9999, border: '1px solid #d2d2d7', background: '#fff', color: '#424245', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>Cancel</button>
+                            <button type="submit" disabled={adding} style={{ padding: '8px 24px', borderRadius: 9999, border: 'none', background: adding ? '#aeaeb2' : '#0066cc', color: '#fff', fontSize: 13, fontWeight: 700, cursor: adding ? 'not-allowed' : 'pointer' }}>{adding ? 'Adding…' : 'Add Server'}</button>
+                        </div>
+                    </form>
                 </div>
-                <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: '#0066cc' }}>Open MCP Server Configuration</div>
-                    <div style={{ fontSize: 12, color: '#6e6e73', marginTop: 2 }}>Add, remove, and ping MCP servers registered for this tenant</div>
+            )}
+
+            {error && <div style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(196,22,28,0.07)', border: '1px solid rgba(196,22,28,0.2)', color: '#c4161c', fontSize: 13 }}>{error}</div>}
+            {loading && !showForm && <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>{[1,2].map(i => <div key={i} style={{ height: 70, borderRadius: 14, background: '#f5f5f7' }} />)}</div>}
+
+            {/* Empty state */}
+            {!loading && servers.length === 0 && !showForm && !error && (
+                <div style={{ padding: '36px', textAlign: 'center', border: '1px dashed #d2d2d7', borderRadius: 16, background: '#f5f5f7' }}>
+                    <div style={{ fontSize: 28, marginBottom: 10 }}>⚙️</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: '#1d1d1f', marginBottom: 6 }}>No MCP servers registered</div>
+                    <p style={{ margin: '0 0 16px', fontSize: 13, color: '#6e6e73', lineHeight: 1.5, maxWidth: 340, marginLeft: 'auto', marginRight: 'auto' }}>
+                        Register an MCP server to give agents access to filesystems, browser automation, custom APIs, and database tools.
+                    </p>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16, textAlign: 'left', maxWidth: 440, marginLeft: 'auto', marginRight: 'auto' }}>
+                        {[['🌐','External APIs','Your REST/GraphQL microservices'],['📁','File systems','Read configs, write reports'],['🖥️','Browser control','Form filling, web research'],['🔌','Custom tools','Anything that speaks MCP']].map(([icon, title, desc]) => (
+                            <div key={title} style={{ padding: '10px 12px', background: '#fff', border: '1px solid #e5e5ea', borderRadius: 10 }}>
+                                <div style={{ fontSize: 16, marginBottom: 4 }}>{icon}</div>
+                                <div style={{ fontSize: 12, fontWeight: 700, color: '#1d1d1f' }}>{title}</div>
+                                <div style={{ fontSize: 11, color: '#6e6e73', marginTop: 2 }}>{desc}</div>
+                            </div>
+                        ))}
+                    </div>
+                    <button onClick={() => setShowForm(true)} style={{ padding: '8px 20px', borderRadius: 9999, border: 'none', background: '#0066cc', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Add your first MCP server</button>
                 </div>
-                <ChevronRight size={16} color="#0066cc" />
-            </Link>
+            )}
+
+            {/* Server list */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {servers.map(server => {
+                    const ps = pingStates[server.id];
+                    return (
+                        <div key={server.id} style={{ background: '#fff', border: `1px solid ${server.isActive ? 'rgba(26,122,74,0.25)' : '#d2d2d7'}`, borderRadius: 14, padding: '14px 16px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                                <div style={{ width: 9, height: 9, borderRadius: '50%', background: server.isActive ? '#1a7a4a' : '#aeaeb2', flexShrink: 0, marginTop: 5 }} />
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ fontSize: 14, fontWeight: 700, color: '#1d1d1f', marginBottom: 3 }}>{server.name}</div>
+                                    <div style={{ fontSize: 12, fontFamily: 'ui-monospace, monospace', color: '#0066cc' }}>{server.url}</div>
+                                    <div style={{ fontSize: 11, color: '#6e6e73', marginTop: 2 }}>{server.workspaceId ? `Workspace: ${server.workspaceId}` : 'Scope: All workspaces'}</div>
+                                    {ps && !ps.loading && (
+                                        <div style={{ marginTop: 5, display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: ps.ok ? '#1a7a4a' : '#c4161c' }}>
+                                            {ps.ok ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
+                                            {ps.ok ? `Reachable · ${ps.latencyMs ?? 0}ms` : 'Unreachable — check URL and confirm server is running'}
+                                        </div>
+                                    )}
+                                </div>
+                                <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                                    <button onClick={() => void ping(server)} disabled={ps?.loading} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 11px', borderRadius: 9999, border: '1px solid #d2d2d7', background: '#fff', color: '#424245', fontSize: 12, fontWeight: 600, cursor: ps?.loading ? 'wait' : 'pointer' }}>
+                                        <Radio size={11} />{ps?.loading ? 'Pinging…' : 'Ping'}
+                                    </button>
+                                    <button onClick={() => void remove(server)} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 11px', borderRadius: 9999, border: '1px solid rgba(196,22,28,0.25)', background: 'rgba(196,22,28,0.06)', color: '#c4161c', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                                        <Trash2 size={11} /> Remove
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
         </div>
     );
 }
