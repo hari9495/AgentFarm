@@ -15,6 +15,7 @@ import {
     ChevronDown,
     Bot,
     ListChecks,
+    ShieldCheck,
     type LucideIcon,
 } from 'lucide-react';
 import type { DashboardTab } from './dashboard-navigation';
@@ -199,6 +200,15 @@ export function InternalSidebar({
                         Platform
                     </p>
                     <div className="space-y-0.5">
+                        <Link
+                            href="/governance"
+                            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                        >
+                            <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0">
+                                <ShieldCheck className="w-3.5 h-3.5 text-slate-500" aria-hidden="true" />
+                            </span>
+                            <span className="flex-1">Governance</span>
+                        </Link>
                         <Link
                             href="/agents"
                             className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
