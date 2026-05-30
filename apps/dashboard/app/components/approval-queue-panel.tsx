@@ -1407,164 +1407,184 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                             })()}
 
                             {drawerTab === 'evidence' && (
-                                <>
-                                    {evidenceBusy && <p style={{ color: '#57534e', fontSize: '0.85rem' }}>Loading evidence...</p>}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+                                    {/* Loading */}
+                                    {evidenceBusy && (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                            {[1,2,3].map(i => <div key={i} style={{ height: 52, borderRadius: 10, background: '#f5f5f7' }} />)}
+                                        </div>
+                                    )}
+
+                                    {/* No evidence */}
+                                    {!evidenceBusy && evidenceData && evidenceData.total === 0 && (
+                                        <div style={{ padding: '20px 16px', textAlign: 'center', borderRadius: 12, border: '1px dashed #d2d2d7', background: '#f5f5f7' }}>
+                                            <div style={{ fontSize: 22, marginBottom: 6 }}>📋</div>
+                                            <div style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', marginBottom: 3 }}>No evidence bundle yet</div>
+                                            <div style={{ fontSize: 12, color: '#6e6e73', lineHeight: 1.5 }}>
+                                                The agent has not submitted an evidence bundle for this approval.
+                                                Evidence is attached when an agent packages context for a high-risk action.
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Evidence record */}
                                     {!evidenceBusy && evidenceData && (() => {
-                                        const latestRecord = evidenceData.evidence[0];
-                                        const pagination = getEvidencePaginationState(
-                                            evidenceData.total,
-                                            evidenceData.limit,
-                                            evidenceData.offset,
-                                        );
+                                        const rec = evidenceData.evidence[0];
+                                        const pagination = getEvidencePaginationState(evidenceData.total, evidenceData.limit, evidenceData.offset);
+                                        if (!rec) return null;
+
+                                        const fieldStyle: React.CSSProperties = {
+                                            background: '#fff', border: '1px solid #e5e5ea',
+                                            borderRadius: 10, padding: '10px 12px',
+                                        };
+                                        const labelStyle: React.CSSProperties = {
+                                            fontSize: 10, fontWeight: 700, color: '#aeaeb2',
+                                            textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4,
+                                        };
+                                        const valueStyle: React.CSSProperties = {
+                                            fontSize: 13, color: '#1d1d1f', lineHeight: 1.45,
+                                            fontFamily: rec.connector_used ? 'ui-monospace, monospace' : undefined,
+                                        };
+
                                         return (
                                             <>
-                                                {evidenceData.total === 0 && (
-                                                    <p style={{ color: '#92400e', fontSize: '0.85rem', fontStyle: 'italic' }}>
-                                                        Evidence record not found for this approval yet.
-                                                    </p>
+                                                {/* Evidence count badge */}
+                                                {evidenceData.total > 0 && (
+                                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                        <span style={{ fontSize: 11, fontWeight: 700, color: '#0066cc', padding: '2px 8px', borderRadius: 9999, background: 'rgba(0,102,204,0.07)', border: '1px solid rgba(0,102,204,0.18)' }}>
+                                                            {evidenceData.total} evidence record{evidenceData.total !== 1 ? 's' : ''}
+                                                        </span>
+                                                        {evidenceData.total > 1 && (
+                                                            <span style={{ fontSize: 11, color: '#6e6e73' }}>
+                                                                Showing {pagination.startIndex}–{pagination.endIndex} of {evidenceData.total}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 )}
 
-                                                {latestRecord && (
-                                                    <>
-                                                        {latestRecord.connector_used && (
-                                                            <div>
-                                                                <strong>Connector</strong>
-                                                                <p style={{ margin: '0.2rem 0 0', color: '#44403c', fontSize: '0.78rem' }}>{latestRecord.connector_used}</p>
-                                                            </div>
-                                                        )}
+                                                {/* Context fields */}
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
 
-                                                        {latestRecord.actor_id && (
-                                                            <div>
-                                                                <strong>Actor</strong>
-                                                                <p style={{ margin: '0.2rem 0 0', color: '#44403c', fontSize: '0.78rem' }}>{latestRecord.actor_id}</p>
-                                                            </div>
-                                                        )}
+                                                    {rec.connector_used && (
+                                                        <div style={fieldStyle}>
+                                                            <div style={labelStyle}>Connector</div>
+                                                            <div style={valueStyle}>{rec.connector_used}</div>
+                                                        </div>
+                                                    )}
 
-                                                        {latestRecord.approval_reason && (
-                                                            <div>
-                                                                <strong>Approval Reason</strong>
-                                                                <p style={{ margin: '0.2rem 0 0', color: '#44403c', fontSize: '0.78rem' }}>{latestRecord.approval_reason}</p>
-                                                            </div>
-                                                        )}
+                                                    {rec.actor_id && (
+                                                        <div style={fieldStyle}>
+                                                            <div style={labelStyle}>Actor (Bot)</div>
+                                                            <div style={{ ...valueStyle, fontFamily: 'ui-monospace, monospace', fontSize: 12 }}>{rec.actor_id}</div>
+                                                        </div>
+                                                    )}
 
-                                                        {latestRecord.quality_gate_results && latestRecord.quality_gate_results.length > 0 && (
-                                                            <div>
-                                                                <strong>Quality Gate Results</strong>
-                                                                <div style={{ display: 'grid', gap: '0.3rem', marginTop: '0.2rem' }}>
-                                                                    {latestRecord.quality_gate_results.map((check, idx) => (
-                                                                        <div key={idx} style={{ fontSize: '0.78rem', color: '#44403c' }}>
-                                                                            <span
-                                                                                style={{
-                                                                                    display: 'inline-block',
-                                                                                    padding: '0.1rem 0.3rem',
-                                                                                    borderRadius: '0.2rem',
-                                                                                    background:
-                                                                                        check.status === 'passed'
-                                                                                            ? '#dcfce7'
-                                                                                            : check.status === 'failed'
-                                                                                                ? '#fee2e2'
-                                                                                                : '#fef3c7',
-                                                                                    color:
-                                                                                        check.status === 'passed'
-                                                                                            ? '#166534'
-                                                                                            : check.status === 'failed'
-                                                                                                ? '#991b1b'
-                                                                                                : '#92400e',
-                                                                                }}
-                                                                            >
-                                                                                {check.checkType} {check.status}
-                                                                            </span>
+                                                    {rec.approval_reason && (
+                                                        <div style={fieldStyle}>
+                                                            <div style={labelStyle}>Agent's Justification</div>
+                                                            <div style={{ ...valueStyle, fontFamily: undefined }}>{rec.approval_reason}</div>
+                                                        </div>
+                                                    )}
+
+                                                    {rec.action_outcome && (
+                                                        <div style={{ ...fieldStyle, borderColor: rec.action_outcome.error_reason ? 'rgba(196,22,28,0.3)' : 'rgba(26,122,74,0.3)', background: rec.action_outcome.error_reason ? 'rgba(196,22,28,0.04)' : 'rgba(26,122,74,0.04)' }}>
+                                                            <div style={{ ...labelStyle, color: rec.action_outcome.error_reason ? '#c4161c' : '#1a7a4a' }}>Action Outcome</div>
+                                                            <div style={{ ...valueStyle, fontFamily: undefined, color: rec.action_outcome.error_reason ? '#c4161c' : '#1a7a4a', fontWeight: 600 }}>
+                                                                {rec.action_outcome.result_summary ?? 'Pending'}
+                                                            </div>
+                                                            {rec.action_outcome.error_reason && (
+                                                                <div style={{ fontSize: 12, color: '#c4161c', marginTop: 4 }}>
+                                                                    {rec.action_outcome.error_reason}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* Quality gates */}
+                                                {rec.quality_gate_results && rec.quality_gate_results.length > 0 && (
+                                                    <div>
+                                                        <div style={{ fontSize: 11, fontWeight: 700, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>
+                                                            Quality Gates ({rec.quality_gate_results.length})
+                                                        </div>
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                                                            {rec.quality_gate_results.map((check, idx) => {
+                                                                const passed = check.status === 'passed';
+                                                                const failed = check.status === 'failed';
+                                                                return (
+                                                                    <div key={idx} style={{
+                                                                        display: 'flex', alignItems: 'flex-start', gap: 8,
+                                                                        padding: '8px 10px', borderRadius: 9,
+                                                                        background: passed ? 'rgba(26,122,74,0.06)' : failed ? 'rgba(196,22,28,0.06)' : 'rgba(180,83,9,0.06)',
+                                                                        border: `1px solid ${passed ? 'rgba(26,122,74,0.2)' : failed ? 'rgba(196,22,28,0.2)' : 'rgba(180,83,9,0.2)'}`,
+                                                                    }}>
+                                                                        <span style={{ fontSize: 13, flexShrink: 0, marginTop: 1 }}>{passed ? '✅' : failed ? '❌' : '⚠️'}</span>
+                                                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                                                            <div style={{ fontSize: 12, fontWeight: 700, color: passed ? '#1a7a4a' : failed ? '#c4161c' : '#b45309' }}>
+                                                                                {check.checkType}
+                                                                            </div>
                                                                             {check.details && (
-                                                                                <p style={{ margin: '0.1rem 0 0', fontSize: '0.7rem' }}>{check.details}</p>
+                                                                                <div style={{ fontSize: 11, color: '#6e6e73', marginTop: 2 }}>{check.details}</div>
                                                                             )}
                                                                         </div>
-                                                                    ))}
-                                                                </div>
-                                                            </div>
-                                                        )}
-
-                                                        {latestRecord.execution_logs && latestRecord.execution_logs.length > 0 && (
-                                                            <div>
-                                                                <strong>Execution Logs (last 10)</strong>
-                                                                <div style={{ display: 'grid', gap: '0.2rem', marginTop: '0.2rem', maxHeight: '12rem', overflowY: 'auto' }}>
-                                                                    {latestRecord.execution_logs.slice(-10).map((log, idx) => (
-                                                                        <div key={idx} style={{ fontSize: '0.7rem', fontFamily: 'monospace', color: '#44403c' }}>
-                                                                            <span style={{ color: log.level === 'error' ? '#dc2626' : log.level === 'warn' ? '#b45309' : '#57534e' }}>
-                                                                                [{log.timestamp.split('T')[1]?.slice(0, 8)}] {log.level}
-                                                                            </span>
-                                                                            {' '} {log.message}
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-                                                            </div>
-                                                        )}
-
-                                                        {latestRecord.action_outcome && (
-                                                            <div>
-                                                                <strong>Action Outcome</strong>
-                                                                <p style={{ margin: '0.2rem 0 0', color: '#44403c', fontSize: '0.78rem' }}>
-                                                                    {latestRecord.action_outcome.result_summary ?? 'Pending'}
-                                                                </p>
-                                                                {latestRecord.action_outcome.error_reason && (
-                                                                    <p style={{ margin: '0.2rem 0 0', color: '#dc2626', fontSize: '0.78rem' }}>
-                                                                        Error: {latestRecord.action_outcome.error_reason}
-                                                                    </p>
-                                                                )}
-                                                            </div>
-                                                        )}
-
-                                                        {evidenceData.total > 1 && (
-                                                            <div style={{ display: 'grid', gap: '0.25rem', marginTop: '0.25rem' }}>
-                                                                <p style={{ fontSize: '0.72rem', color: '#57534e', margin: 0 }}>
-                                                                    Showing {pagination.startIndex}-{pagination.endIndex} of {evidenceData.total} evidence records.
-                                                                </p>
-                                                                {evidencePaginationEnabled && (
-                                                                    <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
-                                                                        <button
-                                                                            type="button"
-                                                                            className="chip-button"
-                                                                            disabled={!pagination.canPrev || evidenceBusy}
-                                                                            onClick={() => {
-                                                                                void fetchEvidence(selectedApproval.approval_id, {
-                                                                                    offset: normalizeEvidenceOffset(
-                                                                                        evidenceData.total,
-                                                                                        evidenceData.limit,
-                                                                                        Math.max(0, evidenceOffset - evidenceData.limit),
-                                                                                    ),
-                                                                                });
-                                                                            }}
-                                                                        >
-                                                                            Newer
-                                                                        </button>
-                                                                        <button
-                                                                            type="button"
-                                                                            className="chip-button"
-                                                                            disabled={!pagination.canNext || evidenceBusy}
-                                                                            onClick={() => {
-                                                                                void fetchEvidence(selectedApproval.approval_id, {
-                                                                                    offset: normalizeEvidenceOffset(
-                                                                                        evidenceData.total,
-                                                                                        evidenceData.limit,
-                                                                                        evidenceOffset + evidenceData.limit,
-                                                                                    ),
-                                                                                });
-                                                                            }}
-                                                                        >
-                                                                            Older
-                                                                        </button>
-                                                                        <span style={{ fontSize: '0.72rem', color: '#57534e' }}>
-                                                                            Page {pagination.page} of {pagination.pageCount}
+                                                                        <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: passed ? '#1a7a4a' : failed ? '#c4161c' : '#b45309', flexShrink: 0 }}>
+                                                                            {check.status}
                                                                         </span>
                                                                     </div>
-                                                                )}
-                                                            </div>
-                                                        )}
-                                                    </>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Execution logs */}
+                                                {rec.execution_logs && rec.execution_logs.length > 0 && (
+                                                    <div>
+                                                        <div style={{ fontSize: 11, fontWeight: 700, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>
+                                                            Execution Logs
+                                                        </div>
+                                                        <div style={{ background: '#1d1d1f', borderRadius: 10, padding: '10px 12px', maxHeight: '180px', overflowY: 'auto' }}>
+                                                            {rec.execution_logs.slice(-10).map((log, idx) => {
+                                                                const color = log.level === 'error' ? '#ff6b6b' : log.level === 'warn' ? '#ffd93d' : '#a8e6cf';
+                                                                return (
+                                                                    <div key={idx} style={{ fontSize: 11, fontFamily: 'ui-monospace, monospace', lineHeight: 1.6, display: 'flex', gap: 8 }}>
+                                                                        <span style={{ color: '#6e6e73', flexShrink: 0 }}>
+                                                                            {log.timestamp.split('T')[1]?.slice(0, 8)}
+                                                                        </span>
+                                                                        <span style={{ color, flexShrink: 0, fontWeight: 700 }}>
+                                                                            {log.level.toUpperCase()}
+                                                                        </span>
+                                                                        <span style={{ color: '#e5e5e7' }}>{log.message}</span>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Pagination */}
+                                                {evidenceData.total > 1 && evidencePaginationEnabled && (
+                                                    <div style={{ display: 'flex', gap: 6, alignItems: 'center', paddingTop: 4 }}>
+                                                        <button type="button" className="chip-button"
+                                                            disabled={!pagination.canPrev || evidenceBusy}
+                                                            onClick={() => void fetchEvidence(selectedApproval.approval_id, { offset: normalizeEvidenceOffset(evidenceData.total, evidenceData.limit, Math.max(0, evidenceOffset - evidenceData.limit)) })}>
+                                                            ← Newer
+                                                        </button>
+                                                        <span style={{ fontSize: 11, color: '#6e6e73' }}>
+                                                            Page {pagination.page} / {pagination.pageCount}
+                                                        </span>
+                                                        <button type="button" className="chip-button"
+                                                            disabled={!pagination.canNext || evidenceBusy}
+                                                            onClick={() => void fetchEvidence(selectedApproval.approval_id, { offset: normalizeEvidenceOffset(evidenceData.total, evidenceData.limit, evidenceOffset + evidenceData.limit) })}>
+                                                            Older →
+                                                        </button>
+                                                    </div>
                                                 )}
                                             </>
                                         );
                                     })()}
-                                </>
+                                </div>
                             )}
                         </div>
                     </div>
