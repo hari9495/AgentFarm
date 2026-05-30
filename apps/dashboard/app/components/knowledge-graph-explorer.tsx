@@ -14,108 +14,101 @@ type GraphSymbol = {
 type GraphSnapshot = {
     symbols: GraphSymbol[];
     call_edges: { from: string; to: string }[];
-    dep_edges: { from: string; to: string }[];
+    dep_edges:  { from: string; to: string }[];
     last_indexed: string;
 };
 
-type Suggestion = {
-    skill_id: string;
-    confidence: number;
-    rationale: string;
+type Suggestion = { skill_id: string; confidence: number; rationale: string };
+
+// ── Light-mode kind colours ───────────────────────────────────────────────────
+
+const KIND_BADGE: Record<GraphSymbol['kind'], { bg: string; color: string; border: string }> = {
+    function:  { bg: 'rgba(0,102,204,0.08)',   color: '#0066cc', border: 'rgba(0,102,204,0.2)'   },
+    class:     { bg: 'rgba(124,45,146,0.08)',  color: '#7c2d92', border: 'rgba(124,45,146,0.2)'  },
+    interface: { bg: 'rgba(0,155,199,0.08)',   color: '#007ba7', border: 'rgba(0,155,199,0.2)'   },
+    type:      { bg: 'rgba(26,122,74,0.08)',   color: '#1a7a4a', border: 'rgba(26,122,74,0.2)'   },
+    variable:  { bg: 'rgba(110,110,115,0.08)', color: '#6e6e73', border: 'rgba(110,110,115,0.2)' },
+    unknown:   { bg: 'rgba(110,110,115,0.06)', color: '#aeaeb2', border: 'rgba(110,110,115,0.15)'},
 };
 
-const KIND_COLORS: Record<GraphSymbol['kind'], string> = {
-    function: 'text-blue-400',
-    class: 'text-yellow-400',
-    interface: 'text-purple-400',
-    type: 'text-cyan-400',
-    variable: 'text-zinc-400',
-    unknown: 'text-zinc-500',
+const KIND_TEXT: Record<GraphSymbol['kind'], string> = {
+    function: '#0066cc', class: '#7c2d92', interface: '#007ba7',
+    type: '#1a7a4a', variable: '#6e6e73', unknown: '#aeaeb2',
 };
 
-const KIND_BADGES: Record<GraphSymbol['kind'], string> = {
-    function: 'bg-blue-900/40 text-blue-300',
-    class: 'bg-yellow-900/40 text-yellow-300',
-    interface: 'bg-purple-900/40 text-purple-300',
-    type: 'bg-cyan-900/40 text-cyan-300',
-    variable: 'bg-zinc-700 text-zinc-400',
-    unknown: 'bg-zinc-800 text-zinc-500',
+const KIND_DOT: Record<GraphSymbol['kind'], string> = {
+    function: '#2563eb', class: '#7c3aed', interface: '#0891b2',
+    type: '#059669', variable: '#6b7280', unknown: '#9ca3af',
 };
+
+// ── Shared styles ─────────────────────────────────────────────────────────────
+
+const card: React.CSSProperties = {
+    background: '#fff', border: '1px solid #d2d2d7', borderRadius: 14,
+    overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+};
+
+const chip = (kind: GraphSymbol['kind']): React.CSSProperties => ({
+    padding: '2px 7px', borderRadius: 6, fontSize: 10, fontWeight: 800,
+    fontFamily: 'ui-monospace, monospace', letterSpacing: '0.02em',
+    background: KIND_BADGE[kind].bg, color: KIND_BADGE[kind].color,
+    border: `1px solid ${KIND_BADGE[kind].border}`,
+});
 
 export function KnowledgeGraphExplorer() {
-    const [snapshot, setSnapshot] = useState<GraphSnapshot | null>(null);
-    const [searchQuery, setSearchQuery] = useState('');
+    const [snapshot, setSnapshot]         = useState<GraphSnapshot | null>(null);
+    const [searchQuery, setSearchQuery]   = useState('');
     const [searchResults, setSearchResults] = useState<GraphSymbol[]>([]);
-    const [selected, setSelected] = useState<GraphSymbol | null>(null);
-    const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [indexing, setIndexing] = useState(false);
+    const [selected, setSelected]         = useState<GraphSymbol | null>(null);
+    const [suggestions, setSuggestions]   = useState<Suggestion[]>([]);
+    const [loading, setLoading]           = useState(false);
+    const [indexing, setIndexing]         = useState(false);
     const [searchLoading, setSearchLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<'symbols' | 'graph' | 'suggestions'>('symbols');
+    const [error, setError]               = useState<string | null>(null);
+    const [activeTab, setActiveTab]       = useState<'symbols' | 'graph' | 'suggestions'>('symbols');
     const [selectedNode, setSelectedNode] = useState<string | null>(null);
 
     const loadSnapshot = async () => {
-        setLoading(true);
-        setError(null);
+        setLoading(true); setError(null);
         try {
             const res = await fetch('/api/knowledge-graph/snapshot');
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const data = (await res.json()) as GraphSnapshot;
-            setSnapshot(data);
-        } catch {
-            setError('Failed to load knowledge graph snapshot');
-        } finally {
-            setLoading(false);
-        }
+            setSnapshot((await res.json()) as GraphSnapshot);
+        } catch { setError('Failed to load knowledge graph snapshot'); }
+        finally { setLoading(false); }
     };
 
     const triggerIndex = async () => {
-        setIndexing(true);
-        setError(null);
+        setIndexing(true); setError(null);
         try {
             const res = await fetch('/api/knowledge-graph/index', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ root_dir: '.' }),
             });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             await loadSnapshot();
-        } catch {
-            setError('Failed to index workspace');
-        } finally {
-            setIndexing(false);
-        }
+        } catch { setError('Failed to index workspace'); }
+        finally { setIndexing(false); }
     };
 
     const search = async () => {
         if (!searchQuery.trim()) return;
-        setSearchLoading(true);
-        setError(null);
+        setSearchLoading(true); setError(null);
         try {
-            const res = await fetch(
-                `/api/knowledge-graph/symbols?q=${encodeURIComponent(searchQuery)}`,
-            );
+            const res = await fetch(`/api/knowledge-graph/symbols?q=${encodeURIComponent(searchQuery)}`);
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = (await res.json()) as { symbols: GraphSymbol[] };
             setSearchResults(data.symbols);
-        } catch {
-            setError('Search failed');
-        } finally {
-            setSearchLoading(false);
-        }
+        } catch { setError('Search failed'); }
+        finally { setSearchLoading(false); }
     };
 
     const loadSuggestions = async (context?: string) => {
         try {
             const url = `/api/knowledge-graph/suggestions${context ? `?context=${encodeURIComponent(context)}` : ''}`;
-            const res = await fetch(url);
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const data = (await res.json()) as { suggestions: Suggestion[] };
+            const data = (await (await fetch(url)).json()) as { suggestions: Suggestion[] };
             setSuggestions(data.suggestions);
-        } catch {
-            setError('Failed to load suggestions');
-        }
+        } catch { setError('Failed to load suggestions'); }
     };
 
     const selectSymbol = async (symbol: GraphSymbol) => {
@@ -127,78 +120,64 @@ export function KnowledgeGraphExplorer() {
     const hasData = snapshot !== null || searchResults.length > 0;
 
     return (
-        <div className="flex flex-col gap-6 p-6 bg-zinc-900 min-h-screen text-zinc-100">
-            <div className="flex items-center justify-between">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+            {/* Header row */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight">Knowledge Graph Explorer</h1>
-                    <p className="text-zinc-400 text-sm mt-1">
-                        Browse repository symbols, call graphs, and skill suggestions
-                    </p>
+                    <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.01em' }}>Knowledge Graph Explorer</h2>
+                    <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--ink-muted)' }}>Browse repository symbols, call graphs, and skill suggestions</p>
                 </div>
-                <div className="flex gap-2">
-                    <button
-                        onClick={loadSnapshot}
-                        disabled={loading}
-                        className="px-3 py-2 bg-zinc-700 hover:bg-zinc-600 rounded-lg text-sm transition-colors disabled:opacity-50"
-                    >
+                <div style={{ display: 'flex', gap: 8 }}>
+                    <button onClick={loadSnapshot} disabled={loading}
+                        style={{ padding: '6px 14px', borderRadius: 9999, border: '1px solid #d2d2d7', background: '#fff', color: '#424245', fontSize: 12, fontWeight: 600, cursor: loading ? 'wait' : 'pointer', opacity: loading ? 0.6 : 1 }}>
                         {loading ? 'Loading…' : 'Load Snapshot'}
                     </button>
-                    <button
-                        onClick={triggerIndex}
-                        disabled={indexing}
-                        className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
-                    >
+                    <button onClick={triggerIndex} disabled={indexing}
+                        style={{ padding: '6px 16px', borderRadius: 9999, border: 'none', background: indexing ? '#aeaeb2' : '#0066cc', color: '#fff', fontSize: 12, fontWeight: 700, cursor: indexing ? 'not-allowed' : 'pointer' }}>
                         {indexing ? 'Indexing…' : '⟳ Index Workspace'}
                     </button>
                 </div>
             </div>
 
+            {/* Error */}
             {error && (
-                <div className="p-3 bg-red-900/40 border border-red-700 rounded-lg text-red-300 text-sm">
-                    {error}
+                <div style={{ padding: '8px 12px', background: 'rgba(196,22,28,0.07)', border: '1px solid rgba(196,22,28,0.2)', borderRadius: 10, color: '#c4161c', fontSize: 13 }}>
+                    ⚠ {error}
                 </div>
             )}
 
             {/* Stats bar */}
             {snapshot && (
-                <div className="grid grid-cols-3 gap-3">
-                    <div className="bg-zinc-800 border border-zinc-700 rounded-xl p-4">
-                        <p className="text-3xl font-bold tabular-nums">{snapshot.symbols.length}</p>
-                        <p className="text-xs text-zinc-400 mt-1">Indexed Symbols</p>
-                    </div>
-                    <div className="bg-zinc-800 border border-zinc-700 rounded-xl p-4">
-                        <p className="text-3xl font-bold tabular-nums">{snapshot.call_edges.length}</p>
-                        <p className="text-xs text-zinc-400 mt-1">Call Edges</p>
-                    </div>
-                    <div className="bg-zinc-800 border border-zinc-700 rounded-xl p-4">
-                        <p className="text-3xl font-bold tabular-nums">{snapshot.dep_edges.length}</p>
-                        <p className="text-xs text-zinc-400 mt-1">Dep Edges</p>
-                    </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+                    {[
+                        { label: 'Indexed Symbols',  value: snapshot.symbols.length    },
+                        { label: 'Call Edges',        value: snapshot.call_edges.length },
+                        { label: 'Dependency Edges',  value: snapshot.dep_edges.length  },
+                    ].map(({ label, value }) => (
+                        <div key={label} style={{ ...card, padding: '12px 16px' }}>
+                            <div style={{ fontSize: 24, fontWeight: 800, color: '#1d1d1f', letterSpacing: '-0.03em', tabularNums: true } as React.CSSProperties}>{value}</div>
+                            <div style={{ fontSize: 11, color: '#6e6e73', marginTop: 3 }}>{label}</div>
+                        </div>
+                    ))}
                 </div>
             )}
 
             {/* Search */}
-            <div className="flex gap-2">
-                <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && search()}
+            <div style={{ display: 'flex', gap: 8 }}>
+                <input type="text" value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && void search()}
                     placeholder="Search symbols by name, e.g. 'runAutonomousLoop'"
-                    className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-sm font-mono focus:outline-none focus:border-blue-500"
+                    style={{ flex: 1, padding: '8px 12px', borderRadius: 9999, border: '1px solid #d2d2d7', background: '#fff', color: '#1d1d1f', fontSize: 13, fontFamily: 'ui-monospace, monospace', outline: 'none' }}
                 />
-                <button
-                    onClick={search}
-                    disabled={searchLoading || !searchQuery.trim()}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 rounded-lg text-sm font-medium transition-colors"
-                >
+                <button onClick={() => void search()} disabled={searchLoading || !searchQuery.trim()}
+                    style={{ padding: '8px 18px', borderRadius: 9999, border: 'none', background: '#0066cc', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: searchLoading || !searchQuery.trim() ? 0.5 : 1 }}>
                     {searchLoading ? '…' : 'Search'}
                 </button>
                 {searchResults.length > 0 && (
-                    <button
-                        onClick={() => { setSearchResults([]); setSearchQuery(''); }}
-                        className="px-3 py-2 bg-zinc-700 hover:bg-zinc-600 rounded-lg text-sm transition-colors"
-                    >
+                    <button onClick={() => { setSearchResults([]); setSearchQuery(''); }}
+                        style={{ padding: '8px 14px', borderRadius: 9999, border: '1px solid #d2d2d7', background: '#fff', color: '#424245', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
                         Clear
                     </button>
                 )}
@@ -206,106 +185,70 @@ export function KnowledgeGraphExplorer() {
 
             {/* Tabs */}
             {hasData && (
-                <div className="flex gap-1 bg-zinc-800 rounded-lg p-1 w-fit">
-                    {(['symbols', 'graph', 'suggestions'] as const).map((tab) => (
-                        <button
-                            key={tab}
-                            onClick={() => {
-                                setActiveTab(tab);
-                                if (tab !== 'graph') setSelectedNode(null);
-                                if (tab === 'suggestions') loadSuggestions();
-                            }}
-                            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors capitalize ${activeTab === tab ? 'bg-zinc-600 text-white' : 'text-zinc-400 hover:text-zinc-200'}`}
-                        >
+                <div style={{ display: 'flex', gap: 2, padding: '3px', borderRadius: 9999, background: '#f5f5f7', width: 'fit-content', border: '1px solid #e5e5ea' }}>
+                    {(['symbols', 'graph', 'suggestions'] as const).map(tab => (
+                        <button key={tab} onClick={() => { setActiveTab(tab); if (tab !== 'graph') setSelectedNode(null); if (tab === 'suggestions') void loadSuggestions(); }}
+                            style={{ padding: '5px 14px', borderRadius: 9999, fontSize: 12, fontWeight: activeTab === tab ? 700 : 500, cursor: 'pointer', border: 'none', background: activeTab === tab ? '#fff' : 'transparent', color: activeTab === tab ? '#1d1d1f' : '#6e6e73', boxShadow: activeTab === tab ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', textTransform: 'capitalize' }}>
                             {tab}
                         </button>
                     ))}
                 </div>
             )}
 
-            {/* Symbols tab */}
+            {/* ── Symbols tab ────────────────────────────────────────────── */}
             {activeTab === 'symbols' && (
-                <div className="flex gap-4">
+                <div style={{ display: 'flex', gap: 12 }}>
                     {/* Symbol list */}
-                    <div className="flex-1 bg-zinc-800 border border-zinc-700 rounded-xl overflow-hidden">
-                        <div className="px-4 py-3 border-b border-zinc-700 flex items-center justify-between">
-                            <h2 className="font-semibold text-sm">Symbols</h2>
-                            <span className="text-xs text-zinc-500">{displaySymbols.length} results</span>
+                    <div style={{ flex: 1, ...card }}>
+                        <div style={{ padding: '10px 14px', borderBottom: '1px solid #f0f0f2', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: '#1d1d1f' }}>Symbols</span>
+                            <span style={{ fontSize: 11, color: '#aeaeb2' }}>{displaySymbols.length} results</span>
                         </div>
                         {displaySymbols.length === 0 ? (
-                            <div className="p-8 text-center text-zinc-500 text-sm">
-                                {snapshot
-                                    ? 'No symbols found. Try a different search.'
-                                    : 'Load a snapshot or index the workspace to begin.'}
+                            <div style={{ padding: '32px', textAlign: 'center', color: '#aeaeb2', fontSize: 13 }}>
+                                {snapshot ? 'No symbols found. Try a different search.' : 'Load a snapshot or index the workspace to begin.'}
                             </div>
                         ) : (
-                            <div className="divide-y divide-zinc-700 max-h-[480px] overflow-y-auto">
-                                {displaySymbols.slice(0, 100).map((sym) => (
-                                    <button
-                                        key={`${sym.file_path}:${sym.name}`}
-                                        onClick={() => selectSymbol(sym)}
-                                        className={`w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-zinc-700/50 transition-colors ${selected?.name === sym.name ? 'bg-zinc-700/70' : ''}`}
-                                    >
-                                        <span className={`mt-0.5 px-1.5 py-0.5 rounded text-xs font-mono font-bold ${KIND_BADGES[sym.kind]}`}>
-                                            {sym.kind.slice(0, 2).toUpperCase()}
-                                        </span>
-                                        <div className="flex-1 min-w-0">
-                                            <p className={`text-sm font-mono font-medium ${KIND_COLORS[sym.kind]}`}>
-                                                {sym.name}
-                                            </p>
-                                            <p className="text-xs text-zinc-500 truncate mt-0.5">
-                                                {sym.file_path}:{sym.line}
-                                            </p>
+                            <div style={{ maxHeight: 480, overflowY: 'auto' }}>
+                                {displaySymbols.slice(0, 100).map(sym => (
+                                    <button key={`${sym.file_path}:${sym.name}`} onClick={() => void selectSymbol(sym)}
+                                        style={{ width: '100%', display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', textAlign: 'left', border: 'none', borderBottom: '1px solid #f5f5f7', background: selected?.name === sym.name ? 'rgba(0,102,204,0.05)' : 'transparent', cursor: 'pointer', transition: 'background 0.1s' }}>
+                                        <span style={{ ...chip(sym.kind), flexShrink: 0, marginTop: 2 }}>{sym.kind.slice(0, 2).toUpperCase()}</span>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <div style={{ fontSize: 13, fontFamily: 'ui-monospace, monospace', fontWeight: 600, color: KIND_TEXT[sym.kind] }}>{sym.name}</div>
+                                            <div style={{ fontSize: 11, color: '#aeaeb2', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sym.file_path}:{sym.line}</div>
                                         </div>
-                                        <div className="text-right shrink-0">
-                                            <p className="text-xs text-zinc-500">
-                                                ↑{sym.callers.length} ↓{sym.callees.length}
-                                            </p>
-                                        </div>
+                                        <div style={{ fontSize: 11, color: '#aeaeb2', flexShrink: 0 }}>↑{sym.callers.length} ↓{sym.callees.length}</div>
                                     </button>
                                 ))}
                             </div>
                         )}
                     </div>
 
-                    {/* Symbol detail */}
+                    {/* Symbol detail panel */}
                     {selected && (
-                        <div className="w-72 bg-zinc-800 border border-zinc-700 rounded-xl p-4 flex flex-col gap-3">
+                        <div style={{ width: 260, ...card, padding: 16, display: 'flex', flexDirection: 'column', gap: 14, alignSelf: 'flex-start' }}>
                             <div>
-                                <span className={`px-2 py-0.5 rounded text-xs font-medium ${KIND_BADGES[selected.kind]}`}>
-                                    {selected.kind}
-                                </span>
-                                <h3 className="font-mono font-bold text-sm mt-2">{selected.name}</h3>
-                                <p className="text-xs text-zinc-500 mt-1 break-all">
-                                    {selected.file_path}:{selected.line}
-                                </p>
+                                <span style={chip(selected.kind)}>{selected.kind}</span>
+                                <div style={{ fontSize: 13, fontFamily: 'ui-monospace, monospace', fontWeight: 700, color: '#1d1d1f', marginTop: 8 }}>{selected.name}</div>
+                                <div style={{ fontSize: 11, color: '#aeaeb2', marginTop: 3, wordBreak: 'break-all' }}>{selected.file_path}:{selected.line}</div>
                             </div>
-
                             {selected.callers.length > 0 && (
                                 <div>
-                                    <p className="text-xs font-semibold text-zinc-400 mb-1 uppercase tracking-wide">
-                                        Called by ({selected.callers.length})
-                                    </p>
-                                    <div className="flex flex-col gap-1">
-                                        {selected.callers.slice(0, 8).map((c) => (
-                                            <span key={c} className="text-xs font-mono text-zinc-300 bg-zinc-700 px-2 py-1 rounded">
-                                                {c}
-                                            </span>
+                                    <div style={{ fontSize: 10, fontWeight: 700, color: '#aeaeb2', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Called by ({selected.callers.length})</div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                        {selected.callers.slice(0, 8).map(c => (
+                                            <span key={c} style={{ fontSize: 11, fontFamily: 'ui-monospace, monospace', color: '#424245', background: '#f5f5f7', border: '1px solid #e5e5ea', padding: '3px 7px', borderRadius: 6 }}>{c}</span>
                                         ))}
                                     </div>
                                 </div>
                             )}
-
                             {selected.callees.length > 0 && (
                                 <div>
-                                    <p className="text-xs font-semibold text-zinc-400 mb-1 uppercase tracking-wide">
-                                        Calls ({selected.callees.length})
-                                    </p>
-                                    <div className="flex flex-col gap-1">
-                                        {selected.callees.slice(0, 8).map((c) => (
-                                            <span key={c} className="text-xs font-mono text-zinc-300 bg-zinc-700 px-2 py-1 rounded">
-                                                {c}
-                                            </span>
+                                    <div style={{ fontSize: 10, fontWeight: 700, color: '#aeaeb2', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Calls ({selected.callees.length})</div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                        {selected.callees.slice(0, 8).map(c => (
+                                            <span key={c} style={{ fontSize: 11, fontFamily: 'ui-monospace, monospace', color: '#424245', background: '#f5f5f7', border: '1px solid #e5e5ea', padding: '3px 7px', borderRadius: 6 }}>{c}</span>
                                         ))}
                                     </div>
                                 </div>
@@ -315,199 +258,107 @@ export function KnowledgeGraphExplorer() {
                 </div>
             )}
 
-            {/* Graph tab */}
+            {/* ── Graph tab ──────────────────────────────────────────────── */}
             {activeTab === 'graph' && snapshot && (() => {
-                const kindFill = (kind: string): string => {
-                    const map: Record<string, string> = {
-                        function: '#3b82f6',
-                        class: '#8b5cf6',
-                        interface: '#06b6d4',
-                        variable: '#6b7280',
-                    };
-                    return map[kind] ?? '#6b7280';
-                };
-
-                const topSymbols = [...snapshot.symbols]
-                    .sort((a, b) => (b.callers.length + b.callees.length) - (a.callers.length + a.callees.length))
-                    .slice(0, 40);
-
+                const kindFill = (k: string): string => ({ function: '#2563eb', class: '#7c3aed', interface: '#0891b2', variable: '#6b7280' }[k] ?? '#6b7280');
+                const topSymbols = [...snapshot.symbols].sort((a, b) => (b.callers.length + b.callees.length) - (a.callers.length + a.callees.length)).slice(0, 40);
                 const count = topSymbols.length;
                 const cols = Math.max(1, Math.ceil(Math.sqrt(count)));
                 const rows = Math.max(1, Math.ceil(count / cols));
-                const padX = 80;
-                const padY = 50;
+                const [padX, padY] = [80, 50];
                 const colStep = (800 - 2 * padX) / cols;
                 const rowStep = (500 - 2 * padY) / rows;
-
                 const nodePositions = new Map<string, { x: number; y: number }>();
-                topSymbols.forEach((s, i) => {
-                    const col = i % cols;
-                    const row = Math.floor(i / cols);
-                    nodePositions.set(s.name, {
-                        x: padX + col * colStep,
-                        y: padY + row * rowStep,
-                    });
-                });
-
+                topSymbols.forEach((s, i) => nodePositions.set(s.name, { x: padX + (i % cols) * colStep, y: padY + Math.floor(i / cols) * rowStep }));
                 const nodeNames = new Set(topSymbols.map(s => s.name));
-                const visibleEdges = snapshot.call_edges.filter(
-                    e => nodeNames.has(e.from) && nodeNames.has(e.to),
-                );
-
-                const selSym = selectedNode
-                    ? (snapshot.symbols.find(s => s.name === selectedNode) ?? null)
-                    : null;
-
+                const visibleEdges = snapshot.call_edges.filter(e => nodeNames.has(e.from) && nodeNames.has(e.to));
+                const selSym = selectedNode ? snapshot.symbols.find(s => s.name === selectedNode) ?? null : null;
                 return (
                     <>
-                        <div className="bg-zinc-800 border border-zinc-700 rounded-xl p-4">
+                        <div style={{ ...card, padding: 16 }}>
                             <svg viewBox="0 0 800 500" width="100%" preserveAspectRatio="xMidYMid meet">
-                                <rect width={800} height={500} fill="#18181b" rx={8} />
+                                <rect width={800} height={500} fill="#f9f9fb" rx={10} />
                                 {visibleEdges.map((e, idx) => {
-                                    const from = nodePositions.get(e.from);
-                                    const to = nodePositions.get(e.to);
+                                    const from = nodePositions.get(e.from); const to = nodePositions.get(e.to);
                                     if (!from || !to) return null;
-                                    return (
-                                        <line
-                                            key={`${e.from}:${e.to}:${idx}`}
-                                            x1={from.x} y1={from.y}
-                                            x2={to.x} y2={to.y}
-                                            stroke="#3f3f46"
-                                            strokeWidth={1}
-                                            opacity={0.6}
-                                        />
-                                    );
+                                    return <line key={`${e.from}:${e.to}:${idx}`} x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke="#d2d2d7" strokeWidth={1} opacity={0.7} />;
                                 })}
                                 {topSymbols.map(s => {
-                                    const pos = nodePositions.get(s.name);
-                                    if (!pos) return null;
-                                    const fill = kindFill(s.kind);
+                                    const pos = nodePositions.get(s.name); if (!pos) return null;
                                     const isSelected = selectedNode === s.name;
-                                    const label = s.name.length > 12 ? s.name.slice(0, 11) + '\u2026' : s.name;
+                                    const label = s.name.length > 12 ? s.name.slice(0, 11) + '…' : s.name;
                                     return (
-                                        <g
-                                            key={s.name}
-                                            onClick={() => setSelectedNode(selectedNode === s.name ? null : s.name)}
-                                            style={{ cursor: 'pointer' }}
-                                        >
-                                            <circle
-                                                cx={pos.x}
-                                                cy={pos.y}
-                                                r={18}
-                                                fill={fill}
-                                                stroke={isSelected ? '#fbbf24' : 'none'}
-                                                strokeWidth={isSelected ? 2 : 0}
-                                            />
-                                            <text
-                                                x={pos.x}
-                                                y={pos.y + 28}
-                                                fontSize={8}
-                                                fill="#a1a1aa"
-                                                textAnchor="middle"
-                                            >
-                                                {label}
-                                            </text>
+                                        <g key={s.name} onClick={() => setSelectedNode(selectedNode === s.name ? null : s.name)} style={{ cursor: 'pointer' }}>
+                                            <circle cx={pos.x} cy={pos.y} r={16} fill={kindFill(s.kind)} stroke={isSelected ? '#1d1d1f' : 'rgba(255,255,255,0.4)'} strokeWidth={isSelected ? 2.5 : 1} />
+                                            <text x={pos.x} y={pos.y + 26} fontSize={8} fill="#6e6e73" textAnchor="middle">{label}</text>
                                         </g>
                                     );
                                 })}
                             </svg>
-                            <p className="text-xs text-zinc-500 mt-2">
-                                Showing {count} of {snapshot.symbols.length} symbols · {visibleEdges.length} call edges rendered
-                            </p>
-                            <p className="text-xs text-zinc-600 mt-1">
-                                Last indexed:{' '}
-                                {snapshot.last_indexed ? new Date(snapshot.last_indexed).toLocaleString() : '—'}
-                            </p>
+                            <div style={{ display: 'flex', gap: 16, marginTop: 10, fontSize: 11, color: '#aeaeb2' }}>
+                                <span>{count} of {snapshot.symbols.length} symbols</span>
+                                <span>{visibleEdges.length} call edges</span>
+                                {snapshot.last_indexed && <span>Last indexed: {new Date(snapshot.last_indexed).toLocaleString()}</span>}
+                            </div>
+                            {/* Legend */}
+                            <div style={{ display: 'flex', gap: 10, marginTop: 8, flexWrap: 'wrap' }}>
+                                {Object.entries(KIND_DOT).slice(0, 5).map(([kind, color]) => (
+                                    <div key={kind} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: '#6e6e73' }}>
+                                        <span style={{ width: 10, height: 10, borderRadius: '50%', background: color, display: 'inline-block' }} />
+                                        {kind}
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                         {selSym && (
-                            <div className="bg-zinc-800 border border-zinc-700 rounded-xl p-4 mt-4">
-                                <div className="flex items-center gap-2 mb-3">
-                                    <span className="font-mono font-bold text-sm text-zinc-100">{selSym.name}</span>
-                                    <span
-                                        className="px-2 py-0.5 rounded text-xs font-semibold"
-                                        style={{ background: kindFill(selSym.kind), color: '#fff' }}
-                                    >
-                                        {selSym.kind}
-                                    </span>
+                            <div style={{ ...card, padding: 14, marginTop: 4 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                                    <span style={{ fontSize: 13, fontFamily: 'ui-monospace, monospace', fontWeight: 700, color: '#1d1d1f' }}>{selSym.name}</span>
+                                    <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: kindFill(selSym.kind), color: '#fff' }}>{selSym.kind}</span>
                                 </div>
-                                <p className="text-xs text-zinc-500 font-mono mb-3">
-                                    {selSym.file_path}:{selSym.line}
-                                </p>
-                                {selSym.callers.length > 0 && (
-                                    <div className="mb-2">
-                                        <p className="text-xs text-zinc-400 font-semibold uppercase tracking-wide mb-1">Callers</p>
-                                        <div className="flex flex-col gap-1">
-                                            {selSym.callers.slice(0, 5).map(c => (
-                                                <span
-                                                    key={c}
-                                                    className="text-xs font-mono text-zinc-300 bg-zinc-700 px-2 py-0.5 rounded"
-                                                    title={c}
-                                                >
-                                                    {c.length > 30 ? c.slice(0, 29) + '\u2026' : c}
-                                                </span>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                                {selSym.callees.length > 0 && (
-                                    <div>
-                                        <p className="text-xs text-zinc-400 font-semibold uppercase tracking-wide mb-1">Callees</p>
-                                        <div className="flex flex-col gap-1">
-                                            {selSym.callees.slice(0, 5).map(c => (
-                                                <span
-                                                    key={c}
-                                                    className="text-xs font-mono text-zinc-300 bg-zinc-700 px-2 py-0.5 rounded"
-                                                    title={c}
-                                                >
-                                                    {c.length > 30 ? c.slice(0, 29) + '\u2026' : c}
-                                                </span>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
+                                <div style={{ fontSize: 11, fontFamily: 'monospace', color: '#aeaeb2', marginBottom: 10 }}>{selSym.file_path}:{selSym.line}</div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                                    {selSym.callers.length > 0 && <div>
+                                        <div style={{ fontSize: 10, fontWeight: 700, color: '#aeaeb2', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 5 }}>Callers</div>
+                                        {selSym.callers.slice(0, 5).map(c => <div key={c} style={{ fontSize: 11, fontFamily: 'monospace', color: '#424245', background: '#f5f5f7', border: '1px solid #e5e5ea', padding: '3px 7px', borderRadius: 6, marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c}</div>)}
+                                    </div>}
+                                    {selSym.callees.length > 0 && <div>
+                                        <div style={{ fontSize: 10, fontWeight: 700, color: '#aeaeb2', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 5 }}>Callees</div>
+                                        {selSym.callees.slice(0, 5).map(c => <div key={c} style={{ fontSize: 11, fontFamily: 'monospace', color: '#424245', background: '#f5f5f7', border: '1px solid #e5e5ea', padding: '3px 7px', borderRadius: 6, marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c}</div>)}
+                                    </div>}
+                                </div>
                             </div>
                         )}
                     </>
                 );
             })()}
 
-            {/* Suggestions tab */}
+            {/* ── Suggestions tab ────────────────────────────────────────── */}
             {activeTab === 'suggestions' && (
-                <div className="bg-zinc-800 border border-zinc-700 rounded-xl overflow-hidden">
-                    <div className="px-4 py-3 border-b border-zinc-700">
-                        <h2 className="font-semibold text-sm">Skill Suggestions</h2>
-                        <p className="text-xs text-zinc-500 mt-0.5">
+                <div style={card}>
+                    <div style={{ padding: '10px 14px', borderBottom: '1px solid #f0f0f2' }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: '#1d1d1f' }}>Skill Suggestions</div>
+                        <div style={{ fontSize: 11, color: '#aeaeb2', marginTop: 2 }}>
                             {selected ? `Based on symbol: ${selected.name}` : 'Based on overall workspace context'}
-                        </p>
+                        </div>
                     </div>
                     {suggestions.length === 0 ? (
-                        <div className="p-8 text-center text-zinc-500 text-sm">
+                        <div style={{ padding: '32px', textAlign: 'center', color: '#aeaeb2', fontSize: 13 }}>
                             No suggestions available. Select a symbol or load a snapshot first.
                         </div>
                     ) : (
-                        <div className="divide-y divide-zinc-700">
-                            {suggestions.map((s) => (
-                                <div key={s.skill_id} className="flex items-center gap-4 px-4 py-3">
-                                    <span className="px-2 py-1 bg-zinc-700 rounded font-mono text-xs text-zinc-300">
-                                        {s.skill_id}
-                                    </span>
-                                    <p className="flex-1 text-xs text-zinc-400">{s.rationale}</p>
-                                    <div className="text-right">
-                                        <div className="flex items-center gap-1">
-                                            <div className="w-16 bg-zinc-700 rounded-full h-1.5">
-                                                <div
-                                                    className="bg-blue-500 h-1.5 rounded-full"
-                                                    style={{ width: `${s.confidence * 100}%` }}
-                                                />
-                                            </div>
-                                            <span className="text-xs text-zinc-500 tabular-nums">
-                                                {(s.confidence * 100).toFixed(0)}%
-                                            </span>
-                                        </div>
+                        suggestions.map(s => (
+                            <div key={s.skill_id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderBottom: '1px solid #f5f5f7' }}>
+                                <span style={{ padding: '3px 8px', borderRadius: 7, fontFamily: 'ui-monospace, monospace', fontSize: 11, fontWeight: 700, color: '#0066cc', background: 'rgba(0,102,204,0.07)', border: '1px solid rgba(0,102,204,0.2)', flexShrink: 0 }}>{s.skill_id}</span>
+                                <p style={{ flex: 1, fontSize: 12, color: '#6e6e73', margin: 0, lineHeight: 1.5 }}>{s.rationale}</p>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                                    <div style={{ width: 60, height: 4, borderRadius: 9999, background: '#f0f0f2', overflow: 'hidden' }}>
+                                        <div style={{ height: '100%', borderRadius: 9999, background: '#0066cc', width: `${s.confidence * 100}%` }} />
                                     </div>
+                                    <span style={{ fontSize: 11, color: '#6e6e73', fontWeight: 600 }}>{(s.confidence * 100).toFixed(0)}%</span>
                                 </div>
-                            ))}
-                        </div>
+                            </div>
+                        ))
                     )}
                 </div>
             )}
