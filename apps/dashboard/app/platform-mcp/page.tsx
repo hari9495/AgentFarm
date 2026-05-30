@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
-import { Cpu, RefreshCw, Copy, Check, ChevronDown, ChevronUp, Settings2, X, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Cpu, RefreshCw, Copy, Check, ChevronDown, ChevronUp, Settings2, X, CheckCircle2, AlertCircle, Plus } from 'lucide-react';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -60,6 +60,177 @@ function CopyBtn({ text }: { text: string }) {
             {copied ? <Check size={11} /> : <Copy size={11} />}
             {copied ? 'Copied!' : 'Copy'}
         </button>
+    );
+}
+
+// ── Add Custom MCP Modal ──────────────────────────────────────────────────────
+
+const ALL_AGENT_ROLES = [
+    { id: 'developer',   label: 'Developer'           },
+    { id: 'fsd',         label: 'Full-Stack Dev'       },
+    { id: 'devops',      label: 'DevOps'              },
+    { id: 'tester',      label: 'Tester'              },
+    { id: 'pm',          label: 'Project Manager'     },
+    { id: 'ba',          label: 'Business Analyst'    },
+    { id: 'tw',          label: 'Technical Writer'    },
+    { id: 'sales',       label: 'Sales'               },
+    { id: 'marketing',   label: 'Marketing'           },
+    { id: 'cs',          label: 'Customer Support'    },
+    { id: 'ca',          label: 'Corporate Asst.'     },
+    { id: 'recruiter',   label: 'Recruiter'           },
+    { id: 'mobile',      label: 'Mobile Dev'          },
+];
+
+function AddCustomMcpModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+    const [name, setName]         = useState('');
+    const [connectorId, setId]    = useState('');
+    const [url, setUrl]           = useState('');
+    const [selectedRoles, setRoles] = useState<string[]>(['developer']);
+    const [saving, setSaving]     = useState(false);
+    const [error, setError]       = useState<string | null>(null);
+    const [saved, setSaved]       = useState(false);
+
+    // Auto-generate connector ID from name
+    const handleNameChange = (val: string) => {
+        setName(val);
+        setId(val.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, ''));
+    };
+
+    const toggleRole = (role: string) => {
+        setRoles(prev => prev.includes(role) ? prev.filter(r => r !== role) : [...prev, role]);
+    };
+
+    async function save(e: React.FormEvent) {
+        e.preventDefault();
+        if (!name.trim() || !url.trim()) { setError('Name and URL are required.'); return; }
+        if (selectedRoles.length === 0) { setError('Select at least one agent role.'); return; }
+        setSaving(true); setError(null);
+        try {
+            const res = await fetch('/api/platform-mcp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    connectorId: connectorId || name.toLowerCase().replace(/\s+/g, '_'),
+                    url: url.trim(),
+                    label: name.trim(),
+                    agents: selectedRoles,
+                }),
+            });
+            const body = (await res.json()) as { error?: string; message?: string };
+            if (!res.ok) { setError(body.message ?? body.error ?? 'Failed to save.'); return; }
+            setSaved(true);
+            setTimeout(() => { onSaved(); onClose(); }, 1200);
+        } catch { setError('Network error. Try again.'); }
+        finally { setSaving(false); }
+    }
+
+    const inp: React.CSSProperties = {
+        width: '100%', padding: '9px 12px', borderRadius: 10,
+        border: '1px solid #d2d2d7', background: '#fff',
+        color: '#1d1d1f', fontSize: 13, outline: 'none', boxSizing: 'border-box',
+    };
+    const lbl: React.CSSProperties = {
+        fontSize: 11, fontWeight: 700, color: '#6e6e73',
+        textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 5,
+    };
+
+    return (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
+            onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+            <div style={{ background: '#fff', borderRadius: 20, padding: 28, width: '100%', maxWidth: 520, border: '1px solid #d2d2d7', boxShadow: '0 24px 48px -12px rgba(0,0,0,0.2)', maxHeight: '90vh', overflowY: 'auto' }}>
+
+                {/* Header */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
+                    <div>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: '#0066cc', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Add Custom Platform MCP</div>
+                        <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#1d1d1f', letterSpacing: '-0.02em' }}>Register any MCP server</h2>
+                        <p style={{ margin: '4px 0 0', fontSize: 13, color: '#6e6e73' }}>No code changes needed — works immediately across all tenants.</p>
+                    </div>
+                    <button onClick={onClose} style={{ background: '#f5f5f7', border: 'none', borderRadius: '50%', width: 30, height: 30, cursor: 'pointer', color: '#6e6e73', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><X size={14} /></button>
+                </div>
+
+                <form onSubmit={save} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+                    {/* Name + auto ID */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                        <div>
+                            <label style={lbl}>Display Name <span style={{ color: '#c4161c' }}>*</span></label>
+                            <input value={name} onChange={e => handleNameChange(e.target.value)} style={inp} placeholder="e.g. Stripe Payments" required />
+                            <p style={{ fontSize: 11, color: '#aeaeb2', margin: '4px 0 0' }}>Human-readable label shown in the UI</p>
+                        </div>
+                        <div>
+                            <label style={lbl}>Connector ID</label>
+                            <input value={connectorId} onChange={e => setId(e.target.value)} style={{ ...inp, fontFamily: 'ui-monospace, monospace', background: '#f5f5f7', color: '#6e6e73' }} placeholder="auto-generated" readOnly />
+                            <p style={{ fontSize: 11, color: '#aeaeb2', margin: '4px 0 0' }}>Auto-generated from name</p>
+                        </div>
+                    </div>
+
+                    {/* URL */}
+                    <div>
+                        <label style={lbl}>MCP Server URL <span style={{ color: '#c4161c' }}>*</span></label>
+                        <input value={url} onChange={e => setUrl(e.target.value)} type="url" style={{ ...inp, fontFamily: 'ui-monospace, monospace' }} placeholder="http://mcp-stripe:3100" required />
+                        <p style={{ fontSize: 11, color: '#aeaeb2', margin: '4px 0 0' }}>
+                            The URL of your MCP server. Must be reachable from the agent-runtime network.
+                        </p>
+                    </div>
+
+                    {/* Agent roles */}
+                    <div>
+                        <label style={lbl}>Which agents get access? <span style={{ color: '#c4161c' }}>*</span></label>
+                        <p style={{ fontSize: 12, color: '#6e6e73', margin: '0 0 8px', lineHeight: 1.5 }}>
+                            Select the agent roles that should automatically receive this MCP server. All agents of these types, across all tenants, will have access.
+                        </p>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                            {ALL_AGENT_ROLES.map(({ id, label }) => {
+                                const selected = selectedRoles.includes(id);
+                                return (
+                                    <button key={id} type="button" onClick={() => toggleRole(id)}
+                                        style={{
+                                            padding: '5px 12px', borderRadius: 9999, cursor: 'pointer', fontSize: 12, fontWeight: 600, transition: 'all 0.15s',
+                                            border: `1px solid ${selected ? '#0066cc' : '#d2d2d7'}`,
+                                            background: selected ? 'rgba(0,102,204,0.08)' : '#fff',
+                                            color: selected ? '#0066cc' : '#424245',
+                                        }}>
+                                        {selected && '✓ '}{label}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        <button type="button" onClick={() => setRoles(selectedRoles.length === ALL_AGENT_ROLES.length ? [] : ALL_AGENT_ROLES.map(r => r.id))}
+                            style={{ marginTop: 8, fontSize: 11, fontWeight: 600, color: '#0066cc', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                            {selectedRoles.length === ALL_AGENT_ROLES.length ? 'Deselect all' : 'Select all roles'}
+                        </button>
+                    </div>
+
+                    {/* Preview */}
+                    {name && url && selectedRoles.length > 0 && (
+                        <div style={{ padding: '12px 14px', borderRadius: 12, background: 'rgba(0,102,204,0.04)', border: '1px solid rgba(0,102,204,0.15)', fontSize: 13, color: '#424245', lineHeight: 1.6 }}>
+                            <strong style={{ color: '#0066cc' }}>Preview:</strong> <strong>{name}</strong> will be available
+                            to every <strong>{selectedRoles.map(r => ALL_AGENT_ROLES.find(a => a.id === r)?.label ?? r).join(', ')}</strong> agent
+                            across all tenants at <code style={{ fontFamily: 'monospace', background: 'rgba(0,0,0,0.05)', padding: '1px 4px', borderRadius: 4 }}>{url}</code>
+                        </div>
+                    )}
+
+                    {error && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 12px', borderRadius: 9, background: 'rgba(196,22,28,0.07)', border: '1px solid rgba(196,22,28,0.2)', color: '#c4161c', fontSize: 12 }}>
+                            <AlertCircle size={13} /> {error}
+                        </div>
+                    )}
+                    {saved && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 12px', borderRadius: 9, background: 'rgba(26,122,74,0.07)', border: '1px solid rgba(26,122,74,0.2)', color: '#1a7a4a', fontSize: 12 }}>
+                            <CheckCircle2 size={13} /> Saved! {name} is now available to all selected agents across all tenants.
+                        </div>
+                    )}
+
+                    <div style={{ display: 'flex', gap: 8, paddingTop: 4 }}>
+                        <button type="button" onClick={onClose} style={{ flex: 1, padding: '10px 0', borderRadius: 9999, border: '1px solid #d2d2d7', background: '#fff', color: '#424245', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>Cancel</button>
+                        <button type="submit" disabled={saving || saved} style={{ flex: 1, padding: '10px 0', borderRadius: 9999, border: 'none', background: saving || saved ? '#aeaeb2' : '#0066cc', color: '#fff', fontSize: 14, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer' }}>
+                            {saving ? 'Adding…' : saved ? '✓ Added' : 'Add MCP Server'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
     );
 }
 
@@ -173,7 +344,8 @@ export default function PlatformMcpPage() {
     const [expanded, setExpanded]   = useState<Record<string, boolean>>({});
     const [filterUnconfigured, setFilterUnconfigured] = useState(false);
     const [search, setSearch]       = useState('');
-    const [configuring, setConfiguring] = useState<McpConnector | null>(null);
+    const [configuring, setConfiguring]   = useState<McpConnector | null>(null);
+    const [showAddCustom, setShowAddCustom] = useState(false);
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -208,7 +380,14 @@ export default function PlatformMcpPage() {
 
     return (
         <div style={{ minHeight: '100vh', background: '#f5f5f7', fontFamily: "var(--font-inter), -apple-system, sans-serif" }}>
-            {/* Configure modal */}
+            {/* Add custom MCP modal */}
+            {showAddCustom && (
+                <AddCustomMcpModal
+                    onClose={() => setShowAddCustom(false)}
+                    onSaved={() => { setShowAddCustom(false); void load(); }}
+                />
+            )}
+            {/* Configure existing modal */}
             {configuring && (
                 <ConfigureModal
                     connector={configuring}
@@ -232,6 +411,9 @@ export default function PlatformMcpPage() {
                         <RefreshCw size={11} /> Refresh
                     </button>
                     <CopyBtn text={envTemplate} />
+                    <button onClick={() => setShowAddCustom(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 16px', borderRadius: 9999, border: 'none', background: '#0066cc', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                        <Plus size={12} /> Add Custom MCP
+                    </button>
                 </div>
             </header>
 
