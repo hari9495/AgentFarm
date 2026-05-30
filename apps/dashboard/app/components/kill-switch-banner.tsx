@@ -93,73 +93,83 @@ export function KillSwitchBanner({ className }: Props) {
             aria-live="assertive"
             className={className}
             style={{
-                background: '#fef3c7',
-                borderLeft: '4px solid #d97706',
-                borderRadius: '0.375rem',
-                padding: '0.75rem 1rem',
+                background: 'rgba(196,22,28,0.06)',
+                border: '1px solid rgba(196,22,28,0.3)',
+                borderLeft: '4px solid #c4161c',
+                borderRadius: 14,
+                padding: '14px 18px',
                 marginBottom: '1rem',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '0.5rem',
+                gap: 10,
+                boxShadow: '0 0 0 4px rgba(196,22,28,0.06)',
             }}
         >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span style={{ fontSize: '1rem' }} aria-hidden="true">⏸</span>
-                <strong style={{ color: '#92400e', fontSize: '0.9rem' }}>
-                    Agent Paused — {activeSwitches.length === 1 ? '1 kill-switch active' : `${activeSwitches.length} kill-switches active`}
-                </strong>
+            {/* Header row */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 32, height: 32, borderRadius: 9, background: 'rgba(196,22,28,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <span style={{ fontSize: 16 }} aria-hidden="true">⛔</span>
+                </div>
+                <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: '#c4161c', letterSpacing: '-0.01em' }}>
+                        AGENTS HALTED — {activeSwitches.length === 1 ? '1 kill switch active' : `${activeSwitches.length} kill switches active`}
+                    </div>
+                    <div style={{ fontSize: 12, color: '#c4161c', opacity: 0.75, marginTop: 1 }}>
+                        All task execution is stopped in the affected scope. Resume when the incident is resolved.
+                    </div>
+                </div>
             </div>
 
             {activeSwitches.map((ks) => (
                 <div
                     key={ks.id}
                     style={{
-                        background: '#fff',
-                        border: '1px solid #fde68a',
-                        borderRadius: '0.25rem',
-                        padding: '0.6rem 0.75rem',
+                        background: '#ffffff',
+                        border: '1px solid rgba(196,22,28,0.2)',
+                        borderRadius: 10,
+                        padding: '10px 14px',
                         display: 'flex',
                         alignItems: 'flex-start',
                         justifyContent: 'space-between',
-                        gap: '0.75rem',
+                        gap: 12,
                         flexWrap: 'wrap',
                     }}
                 >
                     <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '0.2rem' }}>
+                        {/* Type + scope badges */}
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
                             <span style={{
-                                background: '#fef3c7',
-                                color: '#92400e',
-                                fontSize: '0.72rem',
-                                fontWeight: 700,
-                                padding: '1px 7px',
-                                borderRadius: '999px',
-                                border: '1px solid #fde68a',
+                                display: 'inline-flex', alignItems: 'center', gap: 4,
+                                background: 'rgba(196,22,28,0.08)', color: '#c4161c',
+                                fontSize: 11, fontWeight: 700, padding: '2px 9px',
+                                borderRadius: 9999, border: '1px solid rgba(196,22,28,0.22)',
+                                letterSpacing: '0.02em',
                             }}>
+                                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#c4161c', display: 'inline-block' }} />
                                 {SWITCH_TYPE_LABELS[ks.switchType]}
                             </span>
                             {ks.workspaceId && (
-                                <span style={{ fontSize: '0.72rem', color: '#78716c' }}>
-                                    workspace: {ks.workspaceId}
+                                <span style={{ fontSize: 11, fontWeight: 600, color: '#6e6e73', padding: '2px 8px', borderRadius: 9999, background: '#f5f5f7', border: '1px solid #e5e5ea', fontFamily: 'ui-monospace, monospace' }}>
+                                    ws: {ks.workspaceId}
                                 </span>
                             )}
                             {ks.botId && (
-                                <span style={{ fontSize: '0.72rem', color: '#78716c' }}>
+                                <span style={{ fontSize: 11, fontWeight: 600, color: '#6e6e73', padding: '2px 8px', borderRadius: 9999, background: '#f5f5f7', border: '1px solid #e5e5ea', fontFamily: 'ui-monospace, monospace' }}>
                                     bot: {ks.botId}
                                 </span>
                             )}
                         </div>
-                        <p style={{ margin: 0, fontSize: '0.82rem', color: '#44403c' }}>
+                        {/* Reason */}
+                        <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#1d1d1f', lineHeight: 1.45 }}>
                             {ks.reason}
                         </p>
                         {ks.incidentRef && (
-                            <p style={{ margin: '0.15rem 0 0', fontSize: '0.72rem', color: '#78716c' }}>
-                                Incident: {ks.incidentRef}
+                            <p style={{ margin: '4px 0 0', fontSize: 11, color: '#6e6e73' }}>
+                                Incident ref: <strong style={{ fontFamily: 'ui-monospace, monospace', color: '#424245' }}>{ks.incidentRef}</strong>
                             </p>
                         )}
-                        <p style={{ margin: '0.15rem 0 0', fontSize: '0.72rem', color: '#a8a29e' }}>
-                            Affected actions: {ks.affectedActionTypes.join(', ')}
-                            {' · '}
+                        <p style={{ margin: '4px 0 0', fontSize: 11, color: '#aeaeb2' }}>
+                            {ks.affectedActionTypes.length > 0 && `Blocked: ${ks.affectedActionTypes.join(', ')} · `}
                             Activated: {new Date(ks.activatedAt).toLocaleString()}
                         </p>
                     </div>
@@ -168,27 +178,29 @@ export function KillSwitchBanner({ className }: Props) {
                         disabled={resumingId === ks.id}
                         onClick={() => { void handleResume(ks.id); }}
                         style={{
-                            padding: '0.35rem 0.9rem',
-                            background: resumingId === ks.id ? '#d1d5db' : '#d97706',
-                            color: '#fff',
-                            border: 'none',
-                            borderRadius: '0.25rem',
-                            fontSize: '0.8rem',
-                            fontWeight: 600,
+                            display: 'inline-flex', alignItems: 'center', gap: 6,
+                            padding: '7px 16px',
+                            background: resumingId === ks.id ? '#aeaeb2' : 'rgba(26,122,74,0.1)',
+                            color: resumingId === ks.id ? '#fff' : '#1a7a4a',
+                            border: '1px solid rgba(26,122,74,0.3)',
+                            borderRadius: 9999,
+                            fontSize: 12,
+                            fontWeight: 700,
                             cursor: resumingId === ks.id ? 'not-allowed' : 'pointer',
                             whiteSpace: 'nowrap',
                             flexShrink: 0,
+                            transition: 'all 0.15s',
                         }}
                     >
-                        {resumingId === ks.id ? 'Resuming…' : 'Resume'}
+                        ▶ {resumingId === ks.id ? 'Resuming…' : 'Resume'}
                     </button>
                 </div>
             ))}
 
             {resumeError && (
-                <p style={{ margin: 0, fontSize: '0.78rem', color: '#b45309' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 8, background: 'rgba(196,22,28,0.07)', border: '1px solid rgba(196,22,28,0.2)', color: '#c4161c', fontSize: 12 }}>
                     ⚠ {resumeError}
-                </p>
+                </div>
             )}
         </div>
     );
