@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -73,8 +73,8 @@ function formatDate(iso: string): string {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function CiTriagePanel({ workspaceId }: CiTriagePanelProps) {
-    // Session-local reports
     const [reports, setReports] = useState<CiTriageReport[]>([]);
+    const [historyLoading, setHistoryLoading] = useState(true);
     const [selectedTriageId, setSelectedTriageId] = useState<string | null>(null);
     const [selectedReport, setSelectedReport] = useState<CiTriageReport | null>(null);
     const [detailLoading, setDetailLoading] = useState(false);
@@ -89,16 +89,37 @@ export default function CiTriagePanel({ workspaceId }: CiTriagePanelProps) {
     const [intakeError, setIntakeError] = useState<string | null>(null);
     const [intakeSuccess, setIntakeSuccess] = useState<string | null>(null);
 
+    // Load history on mount
+    const loadHistory = useCallback(async () => {
+        setHistoryLoading(true);
+        try {
+            const res = await fetch(`/api/ci/${workspaceId}?limit=50`);
+            if (res.ok) {
+                const data = await res.json() as { runs?: CiTriageReport[] } | CiTriageReport[];
+                const runs = Array.isArray(data) ? data : (data.runs ?? []);
+                setReports(runs);
+            }
+        } catch {
+            // silently fall back to empty list
+        } finally {
+            setHistoryLoading(false);
+        }
+    }, [workspaceId]);
+
+    useEffect(() => { void loadHistory(); }, [loadHistory]);
+
     async function submitIntake() {
         if (!intakeProvider.trim() || !intakeRunId.trim() || !intakeRepo.trim() || !intakeBranch.trim()) {
             setIntakeError('provider, runId, repo, and branch are required.');
             return;
         }
 
+        // Bug fix: API expects { jobName } objects, not plain strings
         const failedJobs = intakeJobsRaw
             .split(',')
             .map((s) => s.trim())
-            .filter(Boolean);
+            .filter(Boolean)
+            .map((jobName) => ({ jobName }));
 
         setIntakeSubmitting(true);
         setIntakeError(null);
@@ -122,28 +143,16 @@ export default function CiTriagePanel({ workspaceId }: CiTriagePanelProps) {
                 setIntakeError(data.message ?? data.error ?? 'Intake failed.');
             } else {
                 const triageId = data.triageId ?? '';
-                setIntakeSuccess(`Queued — triageId: ${triageId}`);
-                // Seed into session-local list so user can view report
-                setReports((prev) => [
-                    {
-                        triageId,
-                        provider: intakeProvider.trim(),
-                        runId: intakeRunId.trim(),
-                        repo: intakeRepo.trim(),
-                        branch: intakeBranch.trim(),
-                        failedJobs,
-                        status: data.status ?? 'queued',
-                        correlationId: data.correlationId ?? '',
-                        createdAt: new Date().toISOString(),
-                        updatedAt: new Date().toISOString(),
-                    },
-                    ...prev,
-                ]);
+                setIntakeSuccess(`Submitted — triageId: ${triageId}`);
                 setIntakeProvider('');
                 setIntakeRunId('');
                 setIntakeRepo('');
                 setIntakeBranch('');
                 setIntakeJobsRaw('');
+                // Bug fix: reload history to get actual status from server
+                // (intake response hardcodes 'queued'; triage runs synchronously so
+                // the DB already has 'complete' by the time we reload)
+                await loadHistory();
             }
         } catch {
             setIntakeError('Network error during intake.');
@@ -181,26 +190,6 @@ export default function CiTriagePanel({ workspaceId }: CiTriagePanelProps) {
         <div style={{ display: 'grid', gridTemplateColumns: selectedTriageId ? '1fr 1.4fr' : '1fr', gap: '24px', alignItems: 'start' }}>
             {/* Left column */}
             <div>
-                {/* Session-only warning banner */}
-                <div
-                    style={{
-                        background: '#451a03',
-                        border: '1px solid #92400e',
-                        borderRadius: '8px',
-                        padding: '10px 14px',
-                        marginBottom: '20px',
-                        fontSize: '12px',
-                        color: '#fcd34d',
-                        display: 'flex',
-                        gap: '8px',
-                        alignItems: 'flex-start',
-                    }}
-                >
-                    <span style={{ flexShrink: 0 }}>⚠</span>
-                    <span>
-                        Reports are <strong>session-only</strong> — submitted triage IDs are tracked in memory and lost on page reload. Copy triageIds you need before leaving.
-                    </span>
-                </div>
 
                 {/* Intake form */}
                 <div
@@ -287,8 +276,22 @@ export default function CiTriagePanel({ workspaceId }: CiTriagePanelProps) {
                 </div>
 
                 {/* Report list */}
-                {reports.length === 0 ? (
-                    <p style={{ fontSize: '13px', color: 'var(--ink-soft)' }}>No triage reports this session.</p>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                        Triage History
+                    </span>
+                    <button
+                        type="button"
+                        onClick={() => void loadHistory()}
+                        style={{ fontSize: '11px', color: 'var(--ink-muted)', background: 'transparent', border: '1px solid var(--line)', borderRadius: '5px', padding: '3px 8px', cursor: 'pointer' }}
+                    >
+                        ↻ Refresh
+                    </button>
+                </div>
+                {historyLoading ? (
+                    <p style={{ fontSize: '13px', color: 'var(--ink-soft)' }}>Loading reports…</p>
+                ) : reports.length === 0 ? (
+                    <p style={{ fontSize: '13px', color: 'var(--ink-soft)' }}>No triage reports found.</p>
                 ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         {reports.map((r) => (
