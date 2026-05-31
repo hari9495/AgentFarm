@@ -190,9 +190,9 @@ export function InternalSidebar({
                     </div>
                 </div>
 
-                {/* ── Agents & Execution ───────────────────────────── */}
+                {/* ── Agents ───────────────────────────────────────── */}
                 <div>
-                    <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Agents & Execution</p>
+                    <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Agents</p>
                     <div className="space-y-0.5">
                         {[{ href: '/agents', label: 'Agents', Icon: Bot },{ href: '/tasks', label: 'Tasks', Icon: ListChecks },{ href: '/devops', label: 'DevOps', Icon: Wrench },{ href: '/agent-chat', label: 'Chat', Icon: MessageSquare }].map(({ href, label, Icon }) => (
                             <Link key={href} href={href} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
@@ -202,11 +202,18 @@ export function InternalSidebar({
                         ))}
                     </div>
                 </div>
-                {/* ── Integrations ─────────────────────────────────── */}
+
+                {/* ── Analytics ────────────────────────────────────── */}
                 <div>
-                    <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Integrations</p>
+                    <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Analytics</p>
                     <div className="space-y-0.5">
-                        {[{ href: '/connectors', label: 'Connectors', Icon: Link2 },{ href: '/platform-mcp', label: 'Platform MCP', Icon: Cpu },{ href: '/skills', label: 'Skills', Icon: ShoppingBag }].map(({ href, label, Icon }) => (
+                        {[
+                            { href: '/analytics', label: 'Overview', Icon: BarChart2 },
+                            { href: '/cost-dashboard', label: 'Cost Dashboard', Icon: PieChart },
+                            { href: '/historical-metrics', label: 'Historical Metrics', Icon: LineChart },
+                            { href: '/quality-roi', label: 'Quality ROI', Icon: Trophy },
+                            { href: '/scheduled-reports', label: 'Scheduled Reports', Icon: CalendarClock },
+                        ].map(({ href, label, Icon }) => (
                             <Link key={href} href={href} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
                                 <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Icon className="w-3.5 h-3.5 text-slate-500" /></span>
                                 <span className="flex-1">{label}</span>
@@ -214,11 +221,18 @@ export function InternalSidebar({
                         ))}
                     </div>
                 </div>
-                {/* ── Intelligence ─────────────────────────────────── */}
+
+                {/* ── Platform ─────────────────────────────────────── */}
                 <div>
-                    <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Intelligence</p>
+                    <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Platform</p>
                     <div className="space-y-0.5">
-                        {[{ href: '/memory', label: 'Memory', Icon: Brain },{ href: '/governance', label: 'Governance', Icon: ShieldCheck }].map(({ href, label, Icon }) => (
+                        {[
+                            { href: '/connectors', label: 'Connectors', Icon: Link2 },
+                            { href: '/platform-mcp', label: 'Platform MCP', Icon: Cpu },
+                            { href: '/skills', label: 'Skills', Icon: ShoppingBag },
+                            { href: '/memory', label: 'Memory', Icon: Brain },
+                            { href: '/governance', label: 'Governance', Icon: ShieldCheck },
+                        ].map(({ href, label, Icon }) => (
                             <Link key={href} href={href} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
                                 <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Icon className="w-3.5 h-3.5 text-slate-500" /></span>
                                 <span className="flex-1">{label}</span>
@@ -226,16 +240,12 @@ export function InternalSidebar({
                         ))}
                     </div>
                 </div>
+
                 {/* ── Business ─────────────────────────────────────── */}
                 <div>
                     <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Business</p>
                     <div className="space-y-0.5">
                         {[
-                            { href: '/analytics', label: 'Analytics', Icon: BarChart2 },
-                            { href: '/cost-dashboard', label: 'Cost Dashboard', Icon: PieChart },
-                            { href: '/historical-metrics', label: 'Historical Metrics', Icon: LineChart },
-                            { href: '/quality-roi', label: 'Quality ROI', Icon: Trophy },
-                            { href: '/scheduled-reports', label: 'Scheduled Reports', Icon: CalendarClock },
                             { href: '/sales', label: 'Sales', Icon: TrendingUp },
                             { href: '/meetings', label: 'Meetings', Icon: Video },
                             { href: '/billing', label: 'Billing', Icon: CreditCard },
@@ -248,6 +258,7 @@ export function InternalSidebar({
                         ))}
                     </div>
                 </div>
+
                 {/* ── Admin ────────────────────────────────────────── */}
                 <div>
                     <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Admin</p>
