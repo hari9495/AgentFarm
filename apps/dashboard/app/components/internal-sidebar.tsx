@@ -120,7 +120,7 @@ export function InternalSidebar({
     };
 
     return (
-        <div className="flex flex-col h-full bg-white border-r border-slate-200 overflow-hidden">
+        <div className="flex flex-col h-screen sticky top-0 bg-white border-r border-slate-200 overflow-hidden">
             {/* Logo */}
             <div className="flex items-center gap-2.5 px-4 h-14 border-b border-slate-200 shrink-0">
                 <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg shadow-sm shrink-0" style={{ background: '#0066cc' }}>
@@ -130,7 +130,7 @@ export function InternalSidebar({
             </div>
 
             {/* Nav */}
-            <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-5">
+            <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-5 sidebar-scroll">
                 {/* ⌘K Search */}
                 <button
                     type="button"
