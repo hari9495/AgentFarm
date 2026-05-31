@@ -1,7 +1,7 @@
 ﻿'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import Link from 'next/link';
+import { PageHeader } from '../components/page-header';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -208,27 +208,14 @@ export default function AuditPage() {
 
     return (
         <div style={{ minHeight: '100vh', background: '#f9fafb' }}>
-
-            {/* ── Header ── */}
-            <header style={{
-                background: '#fff',
-                borderBottom: '1px solid #e5e7eb',
-                padding: '0 1.5rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '1rem',
-                minHeight: 56,
-            }}>
-                <Link
-                    href="/"
-                    style={{ fontSize: '0.82rem', color: '#6366f1', textDecoration: 'none', fontWeight: 600, whiteSpace: 'nowrap' }}
-                >
-                    ← Dashboard
-                </Link>
-                <h1 style={{ fontSize: '1rem', fontWeight: 700, color: '#111827', margin: 0 }}>
-                    Audit Log
-                </h1>
-            </header>
+            <div style={{ padding: '1.5rem 1.5rem 0' }}>
+                <PageHeader
+                    eyebrow="Audit & Compliance"
+                    title="Audit Log"
+                    description="Filterable event log by workspace, bot, and event type. Download as CSV."
+                    tone="violet"
+                />
+            </div>
 
             {/* ── Filter bar ── */}
             <div style={{

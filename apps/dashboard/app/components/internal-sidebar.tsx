@@ -8,6 +8,7 @@ import {
     ChevronDown, Bot, ListChecks, ShieldCheck, Link2,
     BarChart2, CreditCard, Wrench, TrendingUp, Video,
     MessageSquare, DollarSign, PieChart, LineChart, Trophy, Bell, CalendarClock,
+    ScrollText, Film, Waves,
     type LucideIcon,
 } from 'lucide-react';
 import type { DashboardTab } from './dashboard-navigation';
@@ -23,7 +24,7 @@ const navItems: NavItemDef[] = [
     { key: 'overview', label: 'Overview', icon: LayoutDashboard },
     { key: 'approvals', label: 'Approvals', icon: ClipboardCheck },
     { key: 'observability', label: 'Observability', icon: Activity },
-    { key: 'audit', label: 'Audit', icon: FileText },
+    { key: 'audit', label: 'Evidence', icon: FileText },
     { key: 'marketplace', label: 'Skill Marketplace', icon: Store },
 ];
 
@@ -212,6 +213,23 @@ export function InternalSidebar({
                             { href: '/cost-dashboard', label: 'Cost Dashboard', Icon: PieChart },
                             { href: '/historical-metrics', label: 'Historical Metrics', Icon: LineChart },
                             { href: '/quality-roi', label: 'Quality ROI', Icon: Trophy },
+                        ].map(({ href, label, Icon }) => (
+                            <Link key={href} href={href} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
+                                <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Icon className="w-3.5 h-3.5 text-slate-500" /></span>
+                                <span className="flex-1">{label}</span>
+                            </Link>
+                        ))}
+                    </div>
+                </div>
+
+                {/* ── Audit & Compliance ───────────────────────────── */}
+                <div>
+                    <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Audit & Compliance</p>
+                    <div className="space-y-0.5">
+                        {[
+                            { href: '/audit', label: 'Audit Log', Icon: ScrollText },
+                            { href: '/audit/session-replay', label: 'Session Replay', Icon: Film },
+                            { href: '/operational-signals', label: 'Op. Signals', Icon: Waves },
                         ].map(({ href, label, Icon }) => (
                             <Link key={href} href={href} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
                                 <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Icon className="w-3.5 h-3.5 text-slate-500" /></span>
