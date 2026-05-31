@@ -25,7 +25,9 @@ const CATEGORIES: ToolCategory[] = [
             { label: 'Observability', href: '/?tab=observability', icon: '📈', description: 'Metrics & traces' },
             { label: 'Audit Log', href: '/?tab=audit', icon: '📋', description: 'All activity history' },
             { label: 'Analytics', href: '/analytics', icon: '📊', description: 'Usage analytics' },
+            { label: 'Cost Dashboard', href: '/cost-dashboard', icon: '💹', description: 'Token usage & costs' },
             { label: 'Activity', href: '/activity', icon: '🔔', description: 'Recent activity' },
+            { label: 'Historical Metrics', href: '/historical-metrics', icon: '📉', description: 'Per-workspace time-series' },
         ],
     },
     {
@@ -48,7 +50,7 @@ const CATEGORIES: ToolCategory[] = [
         tools: [
             { label: 'Workflow Builder', href: '/workflow-builder', icon: '⚙️', description: 'Build workflows' },
             { label: 'Routine Tasks', href: '/routines', icon: '🔄', description: 'Scheduled routines' },
-            { label: 'Scheduled Reports', href: '/reports', icon: '📅', description: 'Automated reports' },
+            { label: 'Scheduled Reports', href: '/scheduled-reports', icon: '📅', description: 'Automated reports' },
             { label: 'Pipelines', href: '/pipelines', icon: '🚀', description: 'Data pipelines' },
             { label: 'Loops', href: '/loops', icon: '🔁', description: 'Iteration loops' },
             { label: 'Handoffs', href: '/handoffs', icon: '🤝', description: 'Task handoffs' },
@@ -91,6 +93,7 @@ const CATEGORIES: ToolCategory[] = [
             { label: 'Lead Queue', href: '/leads', icon: '🎯', description: 'Inbound leads' },
             { label: 'Retention', href: '/retention', icon: '📊', description: 'Customer retention' },
             { label: 'Meetings', href: '/meetings', icon: '📆', description: 'Scheduled meetings' },
+            { label: 'Weekly Quality ROI', href: '/quality-roi', icon: '🏆', description: 'Value vs cost per agent' },
         ],
     },
     {
