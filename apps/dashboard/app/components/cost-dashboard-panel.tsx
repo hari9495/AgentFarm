@@ -1,15 +1,8 @@
 'use client';
 
-/**
- * CostDashboardPanel
- *
- * Renders LLM token usage charts by skill/provider/week,
- * skill invocation counts, success rates, and skill analytics.
- *
- * Data is fetched from /api/analytics/cost-summary.
- */
-
 import { useEffect, useState } from 'react';
+import { CostTrendChart } from './cost-trend-chart';
+import { MetricSparkline } from './metric-sparkline';
 
 type SkillStat = {
     skill_id: string;
@@ -45,13 +38,20 @@ type CostSummary = {
     weekly_trend: WeeklyBucket[];
 };
 
-function StatCard({ label, value, unit }: { label: string; value: string | number; unit?: string }) {
+function StatCard({ label, value, unit, sparkline, tone }: {
+    label: string;
+    value: string | number;
+    unit?: string;
+    sparkline?: number[];
+    tone?: 'brand' | 'sky' | 'emerald' | 'amber' | 'violet';
+}) {
     return (
-        <div style={{ padding: '0.9rem 1rem', background: '#1a1a2e', borderRadius: 10, border: '1px solid #333', minWidth: 140 }}>
-            <p style={{ fontSize: '0.72rem', color: '#888', marginBottom: '0.3rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</p>
-            <p style={{ fontSize: '1.5rem', fontWeight: 700, color: '#e2e8f0' }}>
+        <div style={{ padding: '0.9rem 1rem', background: '#1a1a2e', borderRadius: 10, border: '1px solid #333', minWidth: 140, display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+            <p style={{ fontSize: '0.72rem', color: '#888', margin: 0, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</p>
+            <p style={{ fontSize: '1.5rem', fontWeight: 700, color: '#e2e8f0', margin: 0 }}>
                 {value}{unit && <span style={{ fontSize: '0.8rem', color: '#888', marginLeft: 2 }}>{unit}</span>}
             </p>
+            {sparkline && sparkline.length >= 2 && <MetricSparkline data={sparkline} tone={tone ?? 'brand'} />}
         </div>
     );
 }
@@ -173,6 +173,11 @@ export function CostDashboardPanel() {
 
     if (!data) return null;
 
+    const weeklyTokens = data.weekly_trend.map((b) => b.tokens_used);
+    const weeklyCosts = data.weekly_trend.map((b) => b.cost_usd);
+    const weeklyInvocations = data.weekly_trend.map((b) => b.invocations);
+    const costTrendData = data.weekly_trend.map((b) => ({ week: b.week, tokens_used: b.tokens_used, invocations: b.invocations, cost_usd: b.cost_usd }));
+
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             {usingMock && (
@@ -181,20 +186,16 @@ export function CostDashboardPanel() {
                 </div>
             )}
 
-            {/* Summary stats */}
+            {/* KPI tiles with sparklines */}
             <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                <StatCard label="Total Tokens" value={(data.total_tokens / 1000).toFixed(1)} unit="k" />
-                <StatCard label="Total Cost" value={`$${data.total_cost_usd.toFixed(2)}`} />
-                <StatCard label="Invocations" value={data.total_invocations.toLocaleString()} />
-                <StatCard label="Success Rate" value={`${Math.round(data.success_rate * 100)}%`} />
+                <StatCard label="Total Tokens" value={(data.total_tokens / 1000).toFixed(1)} unit="k" sparkline={weeklyTokens} tone="sky" />
+                <StatCard label="Total Cost" value={`$${data.total_cost_usd.toFixed(2)}`} sparkline={weeklyCosts} tone="amber" />
+                <StatCard label="Invocations" value={data.total_invocations.toLocaleString()} sparkline={weeklyInvocations} tone="brand" />
+                <StatCard label="Success Rate" value={`${Math.round(data.success_rate * 100)}%`} tone="emerald" />
             </div>
 
-            {/* Weekly chart */}
-            {data.weekly_trend.length > 0 && (
-                <div style={{ padding: '1rem', background: '#1a1a2e', borderRadius: 10, border: '1px solid #333' }}>
-                    <WeeklyChart buckets={data.weekly_trend} />
-                </div>
-            )}
+            {/* Weekly cost trend — always visible, shows empty state when no data */}
+            <CostTrendChart data={costTrendData} height={180} />
 
             {/* Skills table */}
             <div style={{ padding: '1rem', background: '#1a1a2e', borderRadius: 10, border: '1px solid #333', overflowX: 'auto' }}>
@@ -210,7 +211,11 @@ export function CostDashboardPanel() {
                         </tr>
                     </thead>
                     <tbody>
-                        {data.by_skill.map((stat) => <SkillRow key={stat.skill_id} stat={stat} />)}
+                        {data.by_skill.length === 0 ? (
+                            <tr><td colSpan={5} style={{ padding: '1.5rem', textAlign: 'center', color: '#555', fontSize: '0.82rem' }}>No skill invocations yet. Skills will appear here once agents run tasks.</td></tr>
+                        ) : (
+                            data.by_skill.map((stat) => <SkillRow key={stat.skill_id} stat={stat} />)
+                        )}
                     </tbody>
                 </table>
             </div>
@@ -227,7 +232,11 @@ export function CostDashboardPanel() {
                         </tr>
                     </thead>
                     <tbody>
-                        {data.by_provider.map((stat) => <ProviderRow key={stat.provider} stat={stat} />)}
+                        {data.by_provider.length === 0 ? (
+                            <tr><td colSpan={3} style={{ padding: '1.5rem', textAlign: 'center', color: '#555', fontSize: '0.82rem' }}>No provider usage yet. Costs will appear here once agents make LLM calls.</td></tr>
+                        ) : (
+                            data.by_provider.map((stat) => <ProviderRow key={stat.provider} stat={stat} />)
+                        )}
                     </tbody>
                 </table>
             </div>
