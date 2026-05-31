@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { PageHeader } from '../components/page-header';
+import { AuditUpgradeWall } from '../components/audit-upgrade-wall';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -56,6 +57,9 @@ function severityBadge(severity: string): { bg: string; color: string; label: st
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AuditPage() {
+    const [planChecked, setPlanChecked] = useState(false);
+    const [auditAccess, setAuditAccess] = useState(true);
+    const [planName, setPlanName] = useState('');
     const [filters, setFilters] = useState<Filters>(defaultFilters);
     const [page, setPage] = useState(0);
     const [events, setEvents] = useState<AuditEvent[]>([]);
@@ -67,6 +71,17 @@ export default function AuditPage() {
     const [exportError, setExportError] = useState<string | null>(null);
     const [sortKey, setSortKey] = useState<SortKey>('created_at');
     const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+
+    useEffect(() => {
+        void fetch('/api/billing/plan-features', { cache: 'no-store' })
+            .then((r) => r.json() as Promise<{ planName: string; auditAccess: boolean }>)
+            .then((data) => {
+                setPlanName(data.planName ?? '');
+                setAuditAccess(data.auditAccess ?? true);
+            })
+            .catch(() => { /* allow access on fetch failure */ })
+            .finally(() => setPlanChecked(true));
+    }, []);
 
     // Cursor stack — ref so mutations don't re-trigger the fetch effect.
     // pageCursors[i] = cursor to send for page i.
@@ -205,6 +220,23 @@ export default function AuditPage() {
         { label: 'Outcome',   key: 'severity' },
         { label: 'Details',   key: null },
     ];
+
+    if (!planChecked) {
+        return (
+            <div style={{ minHeight: '100vh', background: '#f9fafb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>Loading…</p>
+            </div>
+        );
+    }
+
+    if (!auditAccess) {
+        return (
+            <main className="page-shell">
+                <PageHeader eyebrow="Audit & Compliance" title="Audit Log" tone="violet" />
+                <AuditUpgradeWall planName={planName} />
+            </main>
+        );
+    }
 
     return (
         <div style={{ minHeight: '100vh', background: '#f9fafb' }}>

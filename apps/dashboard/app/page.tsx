@@ -1234,6 +1234,7 @@ export default async function HomePage({
                                 workspaceName: item.workspace_name,
                             }))}
                             pendingCount={pendingAgentQuestions.length}
+                            planName={summary.plan_name}
                         />
                     </Suspense>
                 )}

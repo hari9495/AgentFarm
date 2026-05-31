@@ -8,9 +8,10 @@ import {
     ChevronDown, Bot, ListChecks, ShieldCheck, Link2,
     BarChart2, CreditCard, Wrench, TrendingUp, Video,
     MessageSquare, DollarSign, PieChart, LineChart, Trophy, Bell, CalendarClock,
-    ScrollText, Film, Waves,
+    ScrollText, Film, Waves, Lock,
     type LucideIcon,
 } from 'lucide-react';
+import { hasAuditAccess } from '../lib/plan-gate';
 import type { DashboardTab } from './dashboard-navigation';
 import { getDashboardTabStorageKey } from './dashboard-tab-storage';
 
@@ -39,6 +40,7 @@ type InternalSidebarProps = {
     workspaceName: string;
     workspaces: WorkspaceOption[];
     pendingCount?: number;
+    planName?: string;
 };
 
 function NavItem({
@@ -98,7 +100,9 @@ export function InternalSidebar({
     workspaceName,
     workspaces,
     pendingCount = 0,
+    planName = '',
 }: InternalSidebarProps) {
+    const auditUnlocked = hasAuditAccess(planName);
     const router = useRouter();
     const searchParams = useSearchParams();
 
@@ -224,18 +228,46 @@ export function InternalSidebar({
 
                 {/* ── Audit & Compliance ───────────────────────────── */}
                 <div>
-                    <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Audit & Compliance</p>
+                    <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
+                        Audit &amp; Compliance
+                        {!auditUnlocked && <Lock className="w-2.5 h-2.5 text-slate-400" />}
+                    </p>
                     <div className="space-y-0.5">
-                        {[
-                            { href: '/audit', label: 'Audit Log', Icon: ScrollText },
-                            { href: '/audit/session-replay', label: 'Session Replay', Icon: Film },
-                            { href: '/operational-signals', label: 'Op. Signals', Icon: Waves },
-                        ].map(({ href, label, Icon }) => (
-                            <Link key={href} href={href} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
-                                <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Icon className="w-3.5 h-3.5 text-slate-500" /></span>
-                                <span className="flex-1">{label}</span>
+                        {auditUnlocked ? (
+                            [
+                                { href: '/audit', label: 'Audit Log', Icon: ScrollText },
+                                { href: '/audit/session-replay', label: 'Session Replay', Icon: Film },
+                                { href: '/operational-signals', label: 'Op. Signals', Icon: Waves },
+                            ].map(({ href, label, Icon }) => (
+                                <Link key={href} href={href} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
+                                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Icon className="w-3.5 h-3.5 text-slate-500" /></span>
+                                    <span className="flex-1">{label}</span>
+                                </Link>
+                            ))
+                        ) : (
+                            <Link
+                                href="/billing"
+                                className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+                                style={{ color: '#94a3b8' }}
+                            >
+                                <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg shrink-0" style={{ background: 'rgba(148,163,184,0.1)' }}>
+                                    <Lock className="w-3.5 h-3.5" style={{ color: '#94a3b8' }} />
+                                </span>
+                                <span className="flex-1 text-slate-400">Upgrade to unlock</span>
+                                <span style={{
+                                    fontSize: '0.62rem',
+                                    fontWeight: 700,
+                                    padding: '1px 5px',
+                                    borderRadius: 4,
+                                    background: 'rgba(0,102,204,0.08)',
+                                    color: '#0066cc',
+                                    border: '1px solid rgba(0,102,204,0.2)',
+                                    whiteSpace: 'nowrap',
+                                }}>
+                                    Business+
+                                </span>
                             </Link>
-                        ))}
+                        )}
                     </div>
                 </div>
 

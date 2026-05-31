@@ -4,7 +4,9 @@ import {
     OperationalSignalTimeline,
     type OperationalSignalTimelinePoint,
 } from '../components/operational-signal-timeline';
+import { AuditUpgradeWall } from '../components/audit-upgrade-wall';
 import { getSessionPayload, getInternalSessionAuthHeader } from '../lib/internal-session';
+import { fetchAuditAccess } from '../lib/plan-gate';
 
 const API_BASE = () => process.env.DASHBOARD_API_BASE_URL ?? 'http://localhost:3000';
 
@@ -49,6 +51,17 @@ async function loadSignals(
 export default async function OperationalSignalsPage() {
     const session = await getSessionPayload();
     if (!session?.tenantId) redirect('/login?next=/operational-signals');
+
+    const { planName, access } = await fetchAuditAccess();
+    if (!access) {
+        return (
+            <main className="page-shell">
+                <PageHeader eyebrow="Audit & Compliance" title="Operational Signal Timeline" tone="violet" />
+                <AuditUpgradeWall planName={planName} />
+            </main>
+        );
+    }
+
     const workspaceId = session.workspaceIds?.[0] ?? '';
     const { points, source } = await loadSignals(workspaceId);
 
