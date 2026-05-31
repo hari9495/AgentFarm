@@ -1241,6 +1241,7 @@ export default async function HomePage({
                             }))}
                             pendingCount={pendingAgentQuestions.length}
                             auditUnlocked={auditUnlocked}
+                            activeRoles={workspaceOptions.map((item) => item.role_type).filter(Boolean)}
                         />
                     </Suspense>
                 )}

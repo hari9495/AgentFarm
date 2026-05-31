@@ -35,6 +35,11 @@ type WorkspaceOption = {
     workspaceName: string;
 };
 
+// Which roles unlock each section
+const DEV_ROLES = new Set(['developer', 'fullstack_developer', 'devops_engineer', 'mobile_engineer', 'tester']);
+const CONTENT_ROLES = new Set(['content_writer', 'technical_writer', 'corporate_assistant']);
+const BUSINESS_ROLES = new Set(['business_analyst', 'project_manager_product_owner_scrum_master', 'marketing_specialist', 'recruiter', 'customer_support_executive', 'sales_rep']);
+
 type InternalSidebarProps = {
     activeTab: DashboardTab;
     workspaceId: string;
@@ -42,6 +47,7 @@ type InternalSidebarProps = {
     workspaces: WorkspaceOption[];
     pendingCount?: number;
     auditUnlocked?: boolean;
+    activeRoles?: string[];
 };
 
 function NavItem({
@@ -102,7 +108,11 @@ export function InternalSidebar({
     workspaces,
     pendingCount = 0,
     auditUnlocked = true,
+    activeRoles = [],
 }: InternalSidebarProps) {
+    const showDevTools     = activeRoles.length === 0 || activeRoles.some(r => DEV_ROLES.has(r));
+    const showContentComms = activeRoles.length === 0 || activeRoles.some(r => CONTENT_ROLES.has(r));
+    const showBusinessOps  = activeRoles.length === 0 || activeRoles.some(r => BUSINESS_ROLES.has(r));
     const router = useRouter();
     const searchParams = useSearchParams();
 
@@ -213,30 +223,73 @@ export function InternalSidebar({
                     </div>
                 </div>
 
-                {/* ── Developer Tools ──────────────────────────────── */}
-                <div>
-                    <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Developer Tools</p>
-                    <div className="space-y-0.5">
-                        {[
-                            { href: '/ci',            label: 'CI Triage',          Icon: Terminal          },
-                            { href: '/pr-drafts',     label: 'PR Drafts',          Icon: GitPullRequest    },
-                            { href: '/env',           label: 'Env Reconciler',     Icon: SlidersHorizontal },
-                            { href: '/snapshots',     label: 'Bot Snapshots',      Icon: Camera            },
-                            { href: '/handoffs',      label: 'Handoffs',           Icon: GitBranch         },
-                            { href: '/loops',         label: 'Autonomous Loops',   Icon: RefreshCw         },
-                            { href: '/orchestration', label: 'Orchestration Runs', Icon: Network           },
-                            { href: '/routine-tasks', label: 'Routine Scheduler',  Icon: CalendarDays      },
-                            { href: '/wake-runs',     label: 'Wake Runs',          Icon: AlarmClock        },
-                            { href: '/ab-tests',      label: 'A/B Tests',          Icon: Beaker            },
-                            { href: '/desktop',       label: 'Desktop',            Icon: Monitor           },
-                        ].map(({ href, label, Icon }) => (
-                            <Link key={href} href={href} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
-                                <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Icon className="w-3.5 h-3.5 text-slate-500" /></span>
-                                <span className="flex-1">{label}</span>
-                            </Link>
-                        ))}
+                {/* ── Developer Tools (dev/devops/fsd/mobile/tester) ── */}
+                {showDevTools && (
+                    <div>
+                        <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Developer Tools</p>
+                        <div className="space-y-0.5">
+                            {[
+                                { href: '/ci',            label: 'CI Triage',          Icon: Terminal          },
+                                { href: '/pr-drafts',     label: 'PR Drafts',          Icon: GitPullRequest    },
+                                { href: '/env',           label: 'Env Reconciler',     Icon: SlidersHorizontal },
+                                { href: '/snapshots',     label: 'Bot Snapshots',      Icon: Camera            },
+                                { href: '/handoffs',      label: 'Handoffs',           Icon: GitBranch         },
+                                { href: '/loops',         label: 'Autonomous Loops',   Icon: RefreshCw         },
+                                { href: '/orchestration', label: 'Orchestration Runs', Icon: Network           },
+                                { href: '/routine-tasks', label: 'Routine Scheduler',  Icon: CalendarDays      },
+                                { href: '/wake-runs',     label: 'Wake Runs',          Icon: AlarmClock        },
+                                { href: '/ab-tests',      label: 'A/B Tests',          Icon: Beaker            },
+                                { href: '/desktop',       label: 'Desktop',            Icon: Monitor           },
+                            ].map(({ href, label, Icon }) => (
+                                <Link key={href} href={href} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
+                                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Icon className="w-3.5 h-3.5 text-slate-500" /></span>
+                                    <span className="flex-1">{label}</span>
+                                </Link>
+                            ))}
+                        </div>
                     </div>
-                </div>
+                )}
+
+                {/* ── Content & Comms (content_writer/technical_writer/corporate_assistant) */}
+                {showContentComms && (
+                    <div>
+                        <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Content &amp; Comms</p>
+                        <div className="space-y-0.5">
+                            {[
+                                { href: '/content-drafts', label: 'Content Drafts', Icon: FileText      },
+                                { href: '/comms-drafts',   label: 'Comms Inbox',   Icon: MessageSquare },
+                                { href: '/meetings',       label: 'Meetings',      Icon: Video         },
+                            ].map(({ href, label, Icon }) => (
+                                <Link key={href} href={href} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
+                                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Icon className="w-3.5 h-3.5 text-slate-500" /></span>
+                                    <span className="flex-1">{label}</span>
+                                </Link>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* ── Business Ops (ba/pm/marketing/recruiter/support/sales) */}
+                {showBusinessOps && (
+                    <div>
+                        <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Business Ops</p>
+                        <div className="space-y-0.5">
+                            {[
+                                { href: '/business-reports', label: 'Business Reports', Icon: BarChart2    },
+                                { href: '/project-plans',    label: 'Project Plans',    Icon: ListChecks   },
+                                { href: '/campaigns',        label: 'Campaigns',        Icon: TrendingUp   },
+                                { href: '/talent-pipeline',  label: 'Talent Pipeline',  Icon: Brain        },
+                                { href: '/support-queue',    label: 'Support Queue',    Icon: MessageSquare},
+                                { href: '/sales',            label: 'Sales',            Icon: TrendingUp   },
+                            ].map(({ href, label, Icon }) => (
+                                <Link key={href} href={href} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
+                                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Icon className="w-3.5 h-3.5 text-slate-500" /></span>
+                                    <span className="flex-1">{label}</span>
+                                </Link>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 {/* ── Analytics ────────────────────────────────────── */}
                 <div>
@@ -320,16 +373,14 @@ export function InternalSidebar({
                     </div>
                 </div>
 
-                {/* ── Business ─────────────────────────────────────── */}
+                {/* ── Business (billing / reports — always visible) ── */}
                 <div>
                     <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Business</p>
                     <div className="space-y-0.5">
                         {[
                             { href: '/scheduled-reports', label: 'Scheduled Reports', Icon: CalendarClock },
-                            { href: '/sales', label: 'Sales', Icon: TrendingUp },
-                            { href: '/meetings', label: 'Meetings', Icon: Video },
-                            { href: '/billing', label: 'Billing', Icon: CreditCard },
-                            { href: '/budget', label: 'Budget', Icon: DollarSign },
+                            { href: '/billing',           label: 'Billing',           Icon: CreditCard    },
+                            { href: '/budget',            label: 'Budget',            Icon: DollarSign    },
                         ].map(({ href, label, Icon }) => (
                             <Link key={href} href={href} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
                                 <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Icon className="w-3.5 h-3.5 text-slate-500" /></span>
