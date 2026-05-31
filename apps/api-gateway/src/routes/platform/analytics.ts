@@ -45,6 +45,13 @@ type TasksQuery = {
     limit?: string;
 };
 
+type AgentCostQuery = {
+    tenantId?: string;
+    from?: string;
+    to?: string;
+    workspaceId?: string;
+};
+
 const MAX_RANGE_MS = 90 * 24 * 60 * 60 * 1000;
 
 const parseDateParam = (value: string | undefined): Date | null => {
@@ -426,5 +433,106 @@ export const registerAnalyticsRoutes = async (
             hasMore: typedTasks.length === limit,
             nextCursor: typedTasks.at(-1)?.executedAt.toISOString() ?? null,
         });
+    });
+
+    // -----------------------------------------------------------------------
+    // GET /v1/analytics/agent-cost
+    // Per-agent-role cost breakdown: groups TaskExecutionRecord by botId,
+    // joins Bot.role, and returns aggregates per agent role.
+    // -----------------------------------------------------------------------
+    app.get<{ Querystring: AgentCostQuery }>('/v1/analytics/agent-cost', async (request, reply) => {
+        const session = options.getSession(request);
+        if (!session) {
+            return reply.code(401).send({ error: 'unauthorized', message: 'A valid authenticated session is required.' });
+        }
+        if ((ROLE_RANK[session.role ?? ''] ?? 0) < (ROLE_RANK['viewer'] ?? 99)) {
+            return reply.code(403).send({ error: 'insufficient_role', required: 'viewer', actual: session.role });
+        }
+
+        const tenantId = request.query.tenantId;
+        if (!tenantId || tenantId !== session.tenantId) {
+            return reply.code(tenantId ? 403 : 400).send({
+                error: tenantId ? 'forbidden' : 'invalid_request',
+                message: tenantId ? 'tenantId does not match session.' : 'tenantId is required.',
+            });
+        }
+
+        const toDate = parseDateParam(request.query.to) ?? new Date();
+        const fromDate = parseDateParam(request.query.from) ?? new Date(toDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+        if (toDate.getTime() - fromDate.getTime() > MAX_RANGE_MS) {
+            return reply.code(400).send({ error: 'date_range_exceeded', message: 'Date range must not exceed 90 days.' });
+        }
+
+        const workspaceId = request.query.workspaceId;
+        const db = await resolvePrisma();
+
+        const records = await db.taskExecutionRecord.findMany({
+            where: {
+                tenantId,
+                executedAt: { gte: fromDate, lte: toDate },
+                ...(workspaceId ? { workspaceId } : {}),
+            },
+            select: {
+                botId: true,
+                outcome: true,
+                totalTokens: true,
+                estimatedCostUsd: true,
+                latencyMs: true,
+            },
+        }) as Array<{
+            botId: string;
+            outcome: string;
+            totalTokens: number | null;
+            estimatedCostUsd: number | null;
+            latencyMs: number;
+        }>;
+
+        // Aggregate by botId
+        const byBot: Record<string, { taskCount: number; successCount: number; totalTokens: number; totalCostUsd: number; totalLatencyMs: number }> = {};
+        for (const r of records) {
+            if (!byBot[r.botId]) byBot[r.botId] = { taskCount: 0, successCount: 0, totalTokens: 0, totalCostUsd: 0, totalLatencyMs: 0 };
+            byBot[r.botId].taskCount++;
+            if (r.outcome === 'success') byBot[r.botId].successCount++;
+            byBot[r.botId].totalTokens += r.totalTokens ?? 0;
+            byBot[r.botId].totalCostUsd += r.estimatedCostUsd ?? 0;
+            byBot[r.botId].totalLatencyMs += r.latencyMs;
+        }
+
+        // Resolve agent roles
+        const botIds = Object.keys(byBot);
+        const bots = botIds.length > 0
+            ? await db.bot.findMany({ where: { id: { in: botIds } }, select: { id: true, role: true } }) as Array<{ id: string; role: string }>
+            : [];
+        const roleMap = Object.fromEntries(bots.map((b) => [b.id, b.role]));
+
+        // Roll up by role
+        const byRole: Record<string, { taskCount: number; successCount: number; totalTokens: number; totalCostUsd: number; totalLatencyMs: number; botCount: number }> = {};
+        for (const [botId, stats] of Object.entries(byBot)) {
+            const role = roleMap[botId] ?? 'unknown';
+            if (!byRole[role]) byRole[role] = { taskCount: 0, successCount: 0, totalTokens: 0, totalCostUsd: 0, totalLatencyMs: 0, botCount: 0 };
+            byRole[role].taskCount += stats.taskCount;
+            byRole[role].successCount += stats.successCount;
+            byRole[role].totalTokens += stats.totalTokens;
+            byRole[role].totalCostUsd += stats.totalCostUsd;
+            byRole[role].totalLatencyMs += stats.totalLatencyMs;
+            byRole[role].botCount++;
+        }
+
+        const result = Object.entries(byRole)
+            .map(([agentRole, s]) => ({
+                agentRole,
+                botCount: s.botCount,
+                taskCount: s.taskCount,
+                successCount: s.successCount,
+                successRate: s.taskCount > 0 ? s.successCount / s.taskCount : null,
+                totalTokens: s.totalTokens,
+                totalCostUsd: s.totalCostUsd,
+                avgCostUsd: s.taskCount > 0 ? s.totalCostUsd / s.taskCount : null,
+                avgLatencyMs: s.taskCount > 0 ? Math.round(s.totalLatencyMs / s.taskCount) : null,
+            }))
+            .sort((a, b) => b.totalCostUsd - a.totalCostUsd);
+
+        return reply.send({ from: fromDate.toISOString(), to: toDate.toISOString(), byAgent: result });
     });
 };

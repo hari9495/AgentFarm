@@ -4,6 +4,36 @@ import { useEffect, useState } from 'react';
 import { CostTrendChart } from './cost-trend-chart';
 import { MetricSparkline } from './metric-sparkline';
 
+type AgentCostRow = {
+    agentRole: string;
+    botCount: number;
+    taskCount: number;
+    successCount: number;
+    successRate: number | null;
+    totalTokens: number;
+    totalCostUsd: number;
+    avgCostUsd: number | null;
+    avgLatencyMs: number | null;
+};
+
+const ROLE_LABELS: Record<string, string> = {
+    developer_agent: 'Developer',
+    sales_agent: 'Sales',
+    recruiter: 'Recruiter',
+    content_writer: 'Content Writer',
+    technical_writer: 'Technical Writer',
+    project_manager: 'Project Manager',
+    marketing_specialist: 'Marketing',
+    devops: 'DevOps',
+    full_stack_developer: 'Full-Stack Dev',
+    customer_support_executive: 'Customer Support',
+    corporate_assistant: 'Corporate Asst.',
+    mobile: 'Mobile',
+    tester: 'Tester',
+    meeting_agent: 'Meeting Agent',
+    business_analyst: 'Business Analyst',
+};
+
 type SkillStat = {
     skill_id: string;
     invocations: number;
@@ -163,6 +193,8 @@ export function CostDashboardPanel() {
     const [data, setData] = useState<CostSummary | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [usingMock, setUsingMock] = useState(false);
+    const [agentCost, setAgentCost] = useState<AgentCostRow[]>([]);
+    const [agentCostLoading, setAgentCostLoading] = useState(true);
 
     useEffect(() => {
         const load = async () => {
@@ -183,6 +215,18 @@ export function CostDashboardPanel() {
             }
         };
         void load();
+
+        const loadAgentCost = async () => {
+            try {
+                const res = await fetch('/api/analytics/agent-cost', { cache: 'no-store' });
+                if (res.ok) {
+                    const body = await res.json() as { byAgent: AgentCostRow[] };
+                    setAgentCost(body.byAgent ?? []);
+                }
+            } catch { /* silent — empty state handles it */ }
+            finally { setAgentCostLoading(false); }
+        };
+        void loadAgentCost();
     }, []);
 
     if (isLoading) {
@@ -235,6 +279,66 @@ export function CostDashboardPanel() {
 
             {/* Weekly cost trend */}
             <CostTrendChart data={costTrendData} height={180} />
+
+            {/* Per-Agent Cost Breakdown */}
+            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                <div style={{ padding: '0.9rem 1.25rem 0.6rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ width: 3, height: '0.95rem', background: 'var(--brand)', borderRadius: 2, display: 'inline-block', flexShrink: 0 }} />
+                    <h2 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.005em' }}>Cost by Agent Role</h2>
+                    {agentCost.length > 0 && (
+                        <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'var(--ink-muted)' }}>{agentCost.length} roles active</span>
+                    )}
+                </div>
+                <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                            <tr>
+                                {['Agent Role', 'Tasks', 'Successes', 'Success Rate', 'Tokens', 'Total Cost', 'Avg Cost/Task', 'Avg Latency'].map((h, i) => (
+                                    <th key={h} style={{ ...thStyle, textAlign: i > 0 ? 'right' as const : 'left' as const }}>{h}</th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {agentCostLoading ? (
+                                <tr><td colSpan={8} style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--ink-muted)', fontSize: '0.82rem' }}>Loading…</td></tr>
+                            ) : agentCost.length === 0 ? (
+                                <EmptyState icon="🤖" message="No agent activity yet" sub="Costs by agent role will appear here once agents run tasks." />
+                            ) : agentCost.map((row) => {
+                                const rate = row.successRate !== null ? row.successRate * 100 : null;
+                                const rateColor = rate === null ? 'var(--ink-muted)' : rate >= 80 ? 'var(--ok)' : rate >= 50 ? 'var(--warn)' : 'var(--danger)';
+                                const totalCostShare = agentCost.reduce((s, r) => s + r.totalCostUsd, 0);
+                                const sharePct = totalCostShare > 0 ? (row.totalCostUsd / totalCostShare) * 100 : 0;
+                                return (
+                                    <tr key={row.agentRole} style={{ borderBottom: '1px solid var(--line)' }}>
+                                        <td style={{ padding: '0.55rem 0.75rem', fontSize: '0.82rem' }}>
+                                            <div style={{ fontWeight: 600, color: 'var(--ink)' }}>{ROLE_LABELS[row.agentRole] ?? row.agentRole}</div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.2rem' }}>
+                                                <div style={{ flex: 1, maxWidth: 80, background: 'var(--bg-deep)', borderRadius: 3, height: 4, overflow: 'hidden' }}>
+                                                    <div style={{ width: `${sharePct}%`, background: 'var(--brand)', height: '100%', borderRadius: 3 }} />
+                                                </div>
+                                                <span style={{ fontSize: '0.68rem', color: 'var(--ink-muted)' }}>{sharePct.toFixed(0)}% of spend</span>
+                                            </div>
+                                        </td>
+                                        <td style={{ padding: '0.55rem 0.75rem', fontSize: '0.82rem', textAlign: 'right', color: 'var(--ink)' }}>{row.taskCount.toLocaleString()}</td>
+                                        <td style={{ padding: '0.55rem 0.75rem', fontSize: '0.82rem', textAlign: 'right', color: 'var(--ok)' }}>{row.successCount.toLocaleString()}</td>
+                                        <td style={{ padding: '0.55rem 0.75rem', fontSize: '0.82rem', textAlign: 'right', fontWeight: 600, color: rateColor }}>
+                                            {rate !== null ? `${rate.toFixed(1)}%` : '—'}
+                                        </td>
+                                        <td style={{ padding: '0.55rem 0.75rem', fontSize: '0.82rem', textAlign: 'right', color: 'var(--ink-soft)' }}>{(row.totalTokens / 1000).toFixed(1)}k</td>
+                                        <td style={{ padding: '0.55rem 0.75rem', fontSize: '0.82rem', textAlign: 'right', fontWeight: 600, color: 'var(--ink)' }}>${row.totalCostUsd.toFixed(2)}</td>
+                                        <td style={{ padding: '0.55rem 0.75rem', fontSize: '0.82rem', textAlign: 'right', color: 'var(--ink-muted)' }}>
+                                            {row.avgCostUsd !== null ? `$${row.avgCostUsd.toFixed(4)}` : '—'}
+                                        </td>
+                                        <td style={{ padding: '0.55rem 0.75rem', fontSize: '0.82rem', textAlign: 'right', color: 'var(--ink-muted)' }}>
+                                            {row.avgLatencyMs !== null ? `${row.avgLatencyMs.toLocaleString()}ms` : '—'}
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
             {/* Skill Analytics table */}
             <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
