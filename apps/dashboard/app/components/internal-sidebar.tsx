@@ -3,22 +3,11 @@
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
-    Cpu,
-    Brain,
-    ShoppingBag,
-    LayoutDashboard,
-    ClipboardCheck,
-    Activity,
-    FileText,
-    Store,
-    Search,
-    LogOut,
-    Settings,
-    ChevronDown,
-    Bot,
-    ListChecks,
-    ShieldCheck,
-    Link2,
+    Cpu, Brain, ShoppingBag, LayoutDashboard, ClipboardCheck,
+    Activity, FileText, Store, Search, LogOut, Settings,
+    ChevronDown, Bot, ListChecks, ShieldCheck, Link2,
+    BarChart2, CreditCard, Wrench, TrendingUp, Video,
+    MessageSquare, DollarSign,
     type LucideIcon,
 } from 'lucide-react';
 import type { DashboardTab } from './dashboard-navigation';
@@ -197,82 +186,60 @@ export function InternalSidebar({
                     </div>
                 </div>
 
-                {/* Platform links */}
+                {/* ── Agents & Execution ───────────────────────────── */}
                 <div>
-                    <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
-                        Platform
-                    </p>
+                    <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Agents & Execution</p>
                     <div className="space-y-0.5">
-                        <Link
-                            href="/connectors"
-                            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
-                        >
-                            <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0">
-                                <Link2 className="w-3.5 h-3.5 text-slate-500" aria-hidden="true" />
-                            </span>
-                            <span className="flex-1">Connectors</span>
-                        </Link>
-                        <Link
-                            href="/platform-mcp"
-                            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
-                        >
-                            <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0">
-                                <Cpu className="w-3.5 h-3.5 text-slate-500" aria-hidden="true" />
-                            </span>
-                            <span className="flex-1">Platform MCP</span>
-                        </Link>
-                        <Link
-                            href="/skills"
-                            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
-                        >
-                            <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0">
-                                <ShoppingBag className="w-3.5 h-3.5 text-slate-500" aria-hidden="true" />
-                            </span>
-                            <span className="flex-1">Skills</span>
-                        </Link>
-                        <Link
-                            href="/memory"
-                            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
-                        >
-                            <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0">
-                                <Brain className="w-3.5 h-3.5 text-slate-500" aria-hidden="true" />
-                            </span>
-                            <span className="flex-1">Memory</span>
-                        </Link>
-                        <Link
-                            href="/governance"
-                            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
-                        >
-                            <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0">
-                                <ShieldCheck className="w-3.5 h-3.5 text-slate-500" aria-hidden="true" />
-                            </span>
-                            <span className="flex-1">Governance</span>
-                        </Link>
-                        <Link
-                            href="/agents"
-                            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
-                        >
-                            <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0">
-                                <Bot className="w-3.5 h-3.5 text-slate-500" aria-hidden="true" />
-                            </span>
-                            <span className="flex-1">Agents</span>
-                        </Link>
-                        <Link
-                            href="/tasks"
-                            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
-                        >
-                            <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0">
-                                <ListChecks className="w-3.5 h-3.5 text-slate-500" aria-hidden="true" />
-                            </span>
-                            <span className="flex-1">Tasks</span>
-                        </Link>
-                        <Link
-                            href="/settings"
-                            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
-                        >
-                            <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0">
-                                <Settings className="w-3.5 h-3.5 text-slate-500" aria-hidden="true" />
-                            </span>
+                        {[{ href: '/agents', label: 'Agents', Icon: Bot },{ href: '/tasks', label: 'Tasks', Icon: ListChecks },{ href: '/devops', label: 'DevOps', Icon: Wrench },{ href: '/agent-chat', label: 'Chat', Icon: MessageSquare }].map(({ href, label, Icon }) => (
+                            <Link key={href} href={href} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
+                                <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Icon className="w-3.5 h-3.5 text-slate-500" /></span>
+                                <span className="flex-1">{label}</span>
+                            </Link>
+                        ))}
+                    </div>
+                </div>
+                {/* ── Integrations ─────────────────────────────────── */}
+                <div>
+                    <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Integrations</p>
+                    <div className="space-y-0.5">
+                        {[{ href: '/connectors', label: 'Connectors', Icon: Link2 },{ href: '/platform-mcp', label: 'Platform MCP', Icon: Cpu },{ href: '/skills', label: 'Skills', Icon: ShoppingBag }].map(({ href, label, Icon }) => (
+                            <Link key={href} href={href} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
+                                <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Icon className="w-3.5 h-3.5 text-slate-500" /></span>
+                                <span className="flex-1">{label}</span>
+                            </Link>
+                        ))}
+                    </div>
+                </div>
+                {/* ── Intelligence ─────────────────────────────────── */}
+                <div>
+                    <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Intelligence</p>
+                    <div className="space-y-0.5">
+                        {[{ href: '/memory', label: 'Memory', Icon: Brain },{ href: '/governance', label: 'Governance', Icon: ShieldCheck }].map(({ href, label, Icon }) => (
+                            <Link key={href} href={href} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
+                                <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Icon className="w-3.5 h-3.5 text-slate-500" /></span>
+                                <span className="flex-1">{label}</span>
+                            </Link>
+                        ))}
+                    </div>
+                </div>
+                {/* ── Business ─────────────────────────────────────── */}
+                <div>
+                    <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Business</p>
+                    <div className="space-y-0.5">
+                        {[{ href: '/analytics', label: 'Analytics', Icon: BarChart2 },{ href: '/sales', label: 'Sales', Icon: TrendingUp },{ href: '/meetings', label: 'Meetings', Icon: Video },{ href: '/billing', label: 'Billing', Icon: CreditCard },{ href: '/budget', label: 'Budget', Icon: DollarSign }].map(({ href, label, Icon }) => (
+                            <Link key={href} href={href} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
+                                <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Icon className="w-3.5 h-3.5 text-slate-500" /></span>
+                                <span className="flex-1">{label}</span>
+                            </Link>
+                        ))}
+                    </div>
+                </div>
+                {/* ── Admin ────────────────────────────────────────── */}
+                <div>
+                    <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Admin</p>
+                    <div className="space-y-0.5">
+                        <Link href="/settings" className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
+                            <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Settings className="w-3.5 h-3.5 text-slate-500" /></span>
                             <span className="flex-1">Settings</span>
                         </Link>
                     </div>
