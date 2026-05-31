@@ -39,6 +39,7 @@ export default function ScheduledReportsPanel({ tenantId: _tenantId }: Scheduled
     const [newEmail, setNewEmail] = useState('');
     const [newFrequency, setNewFrequency] = useState('weekly');
     const [newReportTypes, setNewReportTypes] = useState<string[]>(['cost']);
+    const [newFormat, setNewFormat] = useState<'csv' | 'json'>('csv');
     const [newEnabled, setNewEnabled] = useState(true);
 
     // Edit form fields
@@ -46,6 +47,7 @@ export default function ScheduledReportsPanel({ tenantId: _tenantId }: Scheduled
     const [editEmail, setEditEmail] = useState('');
     const [editFrequency, setEditFrequency] = useState('weekly');
     const [editReportTypes, setEditReportTypes] = useState<string[]>([]);
+    const [editFormat, setEditFormat] = useState<'csv' | 'json'>('csv');
     const [editEnabled, setEditEnabled] = useState(true);
 
     const fetchReports = useCallback(async () => {
@@ -98,6 +100,7 @@ export default function ScheduledReportsPanel({ tenantId: _tenantId }: Scheduled
                     recipientEmail: newEmail,
                     frequency: newFrequency,
                     reportTypes: newReportTypes,
+                    format: newFormat,
                     enabled: newEnabled,
                 }),
             });
@@ -111,6 +114,7 @@ export default function ScheduledReportsPanel({ tenantId: _tenantId }: Scheduled
             setNewEmail('');
             setNewFrequency('weekly');
             setNewReportTypes(['cost']);
+            setNewFormat('csv');
             setNewEnabled(true);
             await fetchReports();
         } catch {
@@ -126,6 +130,7 @@ export default function ScheduledReportsPanel({ tenantId: _tenantId }: Scheduled
         setEditEmail(report.recipientEmail);
         setEditFrequency(report.frequency);
         setEditReportTypes([...report.reportTypes]);
+        setEditFormat('csv');
         setEditEnabled(report.enabled);
     }
 
@@ -263,85 +268,42 @@ export default function ScheduledReportsPanel({ tenantId: _tenantId }: Scheduled
                         </select>
                     </div>
                 </div>
-                <div
-                    style={{
-                        display: 'flex',
-                        gap: '1.5rem',
-                        flexWrap: 'wrap',
-                        marginBottom: '0.75rem',
-                        alignItems: 'center',
-                    }}
-                >
+                <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', marginBottom: '0.75rem', alignItems: 'center' }}>
                     <div>
-                        <span style={{ fontSize: '0.8rem', color: 'var(--ink-muted)', marginRight: '0.5rem' }}>
-                            Report Types:
-                        </span>
-                        <label
-                            style={{
-                                fontSize: '0.85rem',
-                                color: 'var(--ink)',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '0.3rem',
-                                marginRight: '0.75rem',
-                                cursor: 'pointer',
-                            }}
-                        >
-                            <input
-                                type="checkbox"
-                                checked={newReportTypes.includes('cost')}
-                                onChange={() => toggleReportType(newReportTypes, setNewReportTypes, 'cost')}
-                            />
-                            Cost
-                        </label>
-                        <label
-                            style={{
-                                fontSize: '0.85rem',
-                                color: 'var(--ink)',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '0.3rem',
-                                cursor: 'pointer',
-                            }}
-                        >
-                            <input
-                                type="checkbox"
-                                checked={newReportTypes.includes('performance')}
-                                onChange={() => toggleReportType(newReportTypes, setNewReportTypes, 'performance')}
-                            />
-                            Performance
-                        </label>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--ink-muted)', marginRight: '0.5rem' }}>Report Types:</span>
+                        {['cost', 'performance'].map((t) => (
+                            <label key={t} style={{ fontSize: '0.85rem', color: 'var(--ink)', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', marginRight: '0.75rem', cursor: 'pointer', textTransform: 'capitalize' }}>
+                                <input type="checkbox" checked={newReportTypes.includes(t)} onChange={() => toggleReportType(newReportTypes, setNewReportTypes, t)} />
+                                {t.charAt(0).toUpperCase() + t.slice(1)}
+                            </label>
+                        ))}
                     </div>
-                    <label
-                        style={{
-                            fontSize: '0.85rem',
-                            color: 'var(--ink)',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.3rem',
-                            cursor: 'pointer',
-                        }}
-                    >
-                        <input
-                            type="checkbox"
-                            checked={newEnabled}
-                            onChange={(e) => setNewEnabled(e.target.checked)}
-                        />
-                        Enabled
+                    <div>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--ink-muted)', marginRight: '0.5rem' }}>File Format:</span>
+                        {(['csv', 'json'] as const).map((f) => (
+                            <label key={f} style={{ fontSize: '0.85rem', color: 'var(--ink)', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', marginRight: '0.75rem', cursor: 'pointer' }}>
+                                <input type="radio" name="newFormat" value={f} checked={newFormat === f} onChange={() => setNewFormat(f)} />
+                                {f.toUpperCase()}
+                            </label>
+                        ))}
+                    </div>
+                    <label style={{ fontSize: '0.85rem', color: 'var(--ink)', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={newEnabled} onChange={(e) => setNewEnabled(e.target.checked)} />
+                        Active
                     </label>
                 </div>
                 <button
                     onClick={() => { void handleCreate(); }}
                     disabled={creating}
                     style={{
-                        padding: '0.4rem 1rem',
+                        padding: '0.45rem 1.2rem',
                         fontSize: '0.85rem',
-                        border: '1px solid var(--line)',
-                        borderRadius: '4px',
-                        background: 'var(--ink)',
-                        color: 'var(--bg)',
+                        border: 'none',
+                        borderRadius: '6px',
+                        background: creating ? 'var(--ink-muted)' : 'var(--brand)',
+                        color: '#fff',
                         cursor: creating ? 'not-allowed' : 'pointer',
-                        opacity: creating ? 0.6 : 1,
+                        fontWeight: 600,
                     }}
                 >
                     {creating ? 'Creating…' : 'Create Report'}
@@ -378,8 +340,9 @@ export default function ScheduledReportsPanel({ tenantId: _tenantId }: Scheduled
                             <th style={TH}>Name</th>
                             <th style={TH}>Email</th>
                             <th style={TH}>Frequency</th>
-                            <th style={TH}>Types</th>
-                            <th style={TH}>Enabled</th>
+                            <th style={TH}>Report Types</th>
+                            <th style={TH}>Format</th>
+                            <th style={TH}>Status</th>
                             <th style={TH}>Last Sent</th>
                             <th style={TH}>Next Send</th>
                             <th style={TH}></th>
@@ -388,25 +351,14 @@ export default function ScheduledReportsPanel({ tenantId: _tenantId }: Scheduled
                     <tbody>
                         {loading && (
                             <tr>
-                                <td
-                                    colSpan={8}
-                                    style={{ padding: '2rem', textAlign: 'center', color: 'var(--ink-muted)' }}
-                                >
+                                <td colSpan={9} style={{ padding: '2rem', textAlign: 'center', color: 'var(--ink-muted)' }}>
                                     Loading…
                                 </td>
                             </tr>
                         )}
                         {!loading && reports.length === 0 && (
                             <tr>
-                                <td
-                                    colSpan={8}
-                                    style={{
-                                        padding: '2rem',
-                                        textAlign: 'center',
-                                        color: 'var(--ink-muted)',
-                                        fontStyle: 'italic',
-                                    }}
-                                >
+                                <td colSpan={9} style={{ padding: '2rem', textAlign: 'center', color: 'var(--ink-muted)', fontStyle: 'italic' }}>
                                     No scheduled reports yet. Create one above.
                                 </td>
                             </tr>
@@ -435,20 +387,17 @@ export default function ScheduledReportsPanel({ tenantId: _tenantId }: Scheduled
                                                 {report.frequency}
                                             </span>
                                         </td>
-                                        <td style={TD_MUTED}>{report.reportTypes.join(', ')}</td>
+                                        <td style={TD_MUTED}>{report.reportTypes.map((t) => t.charAt(0).toUpperCase() + t.slice(1)).join(', ')}</td>
+                                        <td style={TD}>
+                                            <span style={{ padding: '2px 7px', borderRadius: 4, fontSize: '0.72rem', fontWeight: 700, background: '#f1f5f9', color: '#374151', border: '1px solid #e2e8f0' }}>
+                                                CSV
+                                            </span>
+                                        </td>
                                         <td style={TD}>
                                             {report.enabled ? (
-                                                <span
-                                                    style={{ color: '#166534', fontWeight: 600, fontSize: '0.85rem' }}
-                                                >
-                                                    ✓ Active
-                                                </span>
+                                                <span style={{ color: '#166534', fontWeight: 600, fontSize: '0.85rem' }}>✓ Active</span>
                                             ) : (
-                                                <span
-                                                    style={{ color: '#475569', fontWeight: 600, fontSize: '0.85rem' }}
-                                                >
-                                                    ✗ Paused
-                                                </span>
+                                                <span style={{ color: '#475569', fontWeight: 600, fontSize: '0.85rem' }}>✗ Paused</span>
                                             )}
                                         </td>
                                         <td style={TD_MUTED}>
@@ -652,29 +601,13 @@ export default function ScheduledReportsPanel({ tenantId: _tenantId }: Scheduled
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                         <button
                             onClick={() => { void handleSave(); }}
-                            style={{
-                                padding: '0.4rem 1rem',
-                                fontSize: '0.85rem',
-                                border: '1px solid var(--line)',
-                                borderRadius: '4px',
-                                background: 'var(--ink)',
-                                color: 'var(--bg)',
-                                cursor: 'pointer',
-                            }}
+                            style={{ padding: '0.45rem 1.2rem', fontSize: '0.85rem', border: 'none', borderRadius: '6px', background: 'var(--brand)', color: '#fff', cursor: 'pointer', fontWeight: 600 }}
                         >
-                            Save
+                            Save Changes
                         </button>
                         <button
                             onClick={() => setEditing(null)}
-                            style={{
-                                padding: '0.4rem 1rem',
-                                fontSize: '0.85rem',
-                                border: '1px solid var(--line)',
-                                borderRadius: '4px',
-                                background: 'var(--bg)',
-                                color: 'var(--ink)',
-                                cursor: 'pointer',
-                            }}
+                            style={{ padding: '0.45rem 1rem', fontSize: '0.85rem', border: '1px solid var(--line)', borderRadius: '6px', background: 'var(--bg)', color: 'var(--ink)', cursor: 'pointer' }}
                         >
                             Cancel
                         </button>

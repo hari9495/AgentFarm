@@ -7,7 +7,7 @@ import {
     Activity, FileText, Store, Search, LogOut, Settings,
     ChevronDown, Bot, ListChecks, ShieldCheck, Link2,
     BarChart2, CreditCard, Wrench, TrendingUp, Video,
-    MessageSquare, DollarSign, PieChart, LineChart, Trophy, Bell,
+    MessageSquare, DollarSign, PieChart, LineChart, Trophy, Bell, CalendarClock,
     type LucideIcon,
 } from 'lucide-react';
 import type { DashboardTab } from './dashboard-navigation';
@@ -235,6 +235,7 @@ export function InternalSidebar({
                             { href: '/cost-dashboard', label: 'Cost Dashboard', Icon: PieChart },
                             { href: '/historical-metrics', label: 'Historical Metrics', Icon: LineChart },
                             { href: '/quality-roi', label: 'Quality ROI', Icon: Trophy },
+                            { href: '/scheduled-reports', label: 'Scheduled Reports', Icon: CalendarClock },
                             { href: '/sales', label: 'Sales', Icon: TrendingUp },
                             { href: '/meetings', label: 'Meetings', Icon: Video },
                             { href: '/billing', label: 'Billing', Icon: CreditCard },
