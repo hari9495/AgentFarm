@@ -22,6 +22,12 @@ type ActivityEvent = {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
+const STATUS_LABEL: Record<string, string> = {
+    unread: 'New',
+    read: 'Seen',
+    acked: 'Acknowledged',
+};
+
 const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
     unread: { bg: '#dbeafe', color: '#1d4ed8' },
     read: { bg: '#f1f5f9', color: '#475569' },
@@ -40,7 +46,7 @@ const CATEGORY_BADGE: Record<string, { bg: string; color: string }> = {
 
 const CATEGORIES = ['runtime', 'approval', 'ci', 'connector', 'provisioning', 'security', 'system'];
 
-function inlineBadge(label: string, map: Record<string, { bg: string; color: string }>) {
+function inlineBadge(label: string, map: Record<string, { bg: string; color: string }>, displayLabel?: string) {
     const style = map[label] ?? { bg: 'var(--line)', color: 'var(--ink-muted)' };
     return (
         <span
@@ -53,9 +59,20 @@ function inlineBadge(label: string, map: Record<string, { bg: string; color: str
                 color: style.color,
             }}
         >
-            {label}
+            {displayLabel ?? label}
         </span>
     );
+}
+
+function formatDate(iso: string): string {
+    try {
+        return new Date(iso).toLocaleString('en-IN', {
+            day: '2-digit', month: 'short', year: 'numeric',
+            hour: '2-digit', minute: '2-digit', hour12: true,
+        });
+    } catch {
+        return iso;
+    }
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -268,9 +285,9 @@ export default function ActivityEventsPanel({ tenantId, workspaceId }: ActivityE
                         style={{ ...inputStyle, width: 'auto', flex: '1 1 110px' }}
                     >
                         <option value="">All Statuses</option>
-                        <option value="unread">unread</option>
-                        <option value="read">read</option>
-                        <option value="acked">acked</option>
+                        <option value="unread">New</option>
+                        <option value="read">Seen</option>
+                        <option value="acked">Acknowledged</option>
                     </select>
                     <select
                         value={limit}
@@ -307,7 +324,7 @@ export default function ActivityEventsPanel({ tenantId, workspaceId }: ActivityE
                             disabled={acking}
                             onClick={() => void ackSelected()}
                         >
-                            {acking ? 'Acking…' : 'Ack Selected'}
+                            {acking ? 'Acknowledging…' : 'Mark as Acknowledged'}
                         </button>
                         <button
                             type="button"
@@ -354,10 +371,10 @@ export default function ActivityEventsPanel({ tenantId, workspaceId }: ActivityE
                                     </th>
                                     <th style={{ padding: '0.35rem 0.5rem', color: 'var(--ink-muted)', fontWeight: 600 }}>Category</th>
                                     <th style={{ padding: '0.35rem 0.5rem', color: 'var(--ink-muted)', fontWeight: 600 }}>Status</th>
-                                    <th style={{ padding: '0.35rem 0.5rem', color: 'var(--ink-muted)', fontWeight: 600 }}>Title</th>
-                                    <th style={{ padding: '0.35rem 0.5rem', color: 'var(--ink-muted)', fontWeight: 600 }}>Body</th>
-                                    <th style={{ padding: '0.35rem 0.5rem', color: 'var(--ink-muted)', fontWeight: 600 }}>Seq</th>
-                                    <th style={{ padding: '0.35rem 0.5rem', color: 'var(--ink-muted)', fontWeight: 600 }}>Created At</th>
+                                    <th style={{ padding: '0.35rem 0.5rem', color: 'var(--ink-muted)', fontWeight: 600 }}>Event</th>
+                                    <th style={{ padding: '0.35rem 0.5rem', color: 'var(--ink-muted)', fontWeight: 600 }}>Details</th>
+                                    <th style={{ padding: '0.35rem 0.5rem', color: 'var(--ink-muted)', fontWeight: 600 }}>#</th>
+                                    <th style={{ padding: '0.35rem 0.5rem', color: 'var(--ink-muted)', fontWeight: 600 }}>Time</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -382,7 +399,7 @@ export default function ActivityEventsPanel({ tenantId, workspaceId }: ActivityE
                                             {inlineBadge(event.category, CATEGORY_BADGE)}
                                         </td>
                                         <td style={{ padding: '0.35rem 0.5rem' }}>
-                                            {inlineBadge(event.status, STATUS_BADGE)}
+                                            {inlineBadge(event.status, STATUS_BADGE, STATUS_LABEL[event.status])}
                                         </td>
                                         <td style={{ padding: '0.35rem 0.5rem', fontWeight: event.status === 'unread' ? 600 : 400 }}>
                                             {event.title}
@@ -398,7 +415,7 @@ export default function ActivityEventsPanel({ tenantId, workspaceId }: ActivityE
                                             {event.sequence}
                                         </td>
                                         <td style={{ padding: '0.35rem 0.5rem', color: 'var(--ink-soft)', whiteSpace: 'nowrap' }}>
-                                            {event.createdAt}
+                                            {formatDate(event.createdAt)}
                                         </td>
                                     </tr>
                                 ))}
