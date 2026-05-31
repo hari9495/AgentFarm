@@ -9,6 +9,8 @@ import {
     BarChart2, CreditCard, Wrench, TrendingUp, Video,
     MessageSquare, DollarSign, PieChart, LineChart, Trophy, Bell, CalendarClock,
     ScrollText, Film, Waves, Lock,
+    GitPullRequest, SlidersHorizontal, Camera, GitBranch, RefreshCw,
+    Network, CalendarDays, AlarmClock, Beaker, Monitor, Terminal,
     type LucideIcon,
 } from 'lucide-react';
 import type { DashboardTab } from './dashboard-navigation';
@@ -197,7 +199,37 @@ export function InternalSidebar({
                 <div>
                     <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Agents</p>
                     <div className="space-y-0.5">
-                        {[{ href: '/agents', label: 'Agents', Icon: Bot },{ href: '/tasks', label: 'Tasks', Icon: ListChecks },{ href: '/devops', label: 'DevOps', Icon: Wrench },{ href: '/agent-chat', label: 'Chat', Icon: MessageSquare }].map(({ href, label, Icon }) => (
+                        {[
+                            { href: '/agents',     label: 'Agents',       Icon: Bot         },
+                            { href: '/tasks',      label: 'Tasks',        Icon: ListChecks  },
+                            { href: '/devops',     label: 'DevOps Hub',   Icon: Wrench      },
+                            { href: '/agent-chat', label: 'Chat',         Icon: MessageSquare },
+                        ].map(({ href, label, Icon }) => (
+                            <Link key={href} href={href} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
+                                <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Icon className="w-3.5 h-3.5 text-slate-500" /></span>
+                                <span className="flex-1">{label}</span>
+                            </Link>
+                        ))}
+                    </div>
+                </div>
+
+                {/* ── Developer Tools ──────────────────────────────── */}
+                <div>
+                    <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Developer Tools</p>
+                    <div className="space-y-0.5">
+                        {[
+                            { href: '/ci',            label: 'CI Triage',          Icon: Terminal          },
+                            { href: '/pr-drafts',     label: 'PR Drafts',          Icon: GitPullRequest    },
+                            { href: '/env',           label: 'Env Reconciler',     Icon: SlidersHorizontal },
+                            { href: '/snapshots',     label: 'Bot Snapshots',      Icon: Camera            },
+                            { href: '/handoffs',      label: 'Handoffs',           Icon: GitBranch         },
+                            { href: '/loops',         label: 'Autonomous Loops',   Icon: RefreshCw         },
+                            { href: '/orchestration', label: 'Orchestration Runs', Icon: Network           },
+                            { href: '/routine-tasks', label: 'Routine Scheduler',  Icon: CalendarDays      },
+                            { href: '/wake-runs',     label: 'Wake Runs',          Icon: AlarmClock        },
+                            { href: '/ab-tests',      label: 'A/B Tests',          Icon: Beaker            },
+                            { href: '/desktop',       label: 'Desktop',            Icon: Monitor           },
+                        ].map(({ href, label, Icon }) => (
                             <Link key={href} href={href} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
                                 <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Icon className="w-3.5 h-3.5 text-slate-500" /></span>
                                 <span className="flex-1">{label}</span>
