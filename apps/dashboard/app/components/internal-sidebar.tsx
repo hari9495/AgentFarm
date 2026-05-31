@@ -110,9 +110,10 @@ export function InternalSidebar({
     auditUnlocked = true,
     activeRoles = [],
 }: InternalSidebarProps) {
-    const showDevTools     = activeRoles.length === 0 || activeRoles.some(r => DEV_ROLES.has(r));
-    const showContentComms = activeRoles.length === 0 || activeRoles.some(r => CONTENT_ROLES.has(r));
-    const showBusinessOps  = activeRoles.length === 0 || activeRoles.some(r => BUSINESS_ROLES.has(r));
+    // Testing: show all sections regardless of purchased roles
+    const showDevTools     = true;
+    const showContentComms = true;
+    const showBusinessOps  = true;
     const router = useRouter();
     const searchParams = useSearchParams();
 
