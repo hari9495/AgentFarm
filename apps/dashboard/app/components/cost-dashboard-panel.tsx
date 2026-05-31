@@ -38,6 +38,14 @@ type CostSummary = {
     weekly_trend: WeeklyBucket[];
 };
 
+const TONE_COLORS: Record<string, string> = {
+    brand: '#0066cc',
+    sky: '#0ea5e9',
+    emerald: '#1a7a4a',
+    amber: '#b45309',
+    violet: '#7c3aed',
+};
+
 function StatCard({ label, value, unit, sparkline, tone }: {
     label: string;
     value: string | number;
@@ -45,32 +53,51 @@ function StatCard({ label, value, unit, sparkline, tone }: {
     sparkline?: number[];
     tone?: 'brand' | 'sky' | 'emerald' | 'amber' | 'violet';
 }) {
+    const accentColor = TONE_COLORS[tone ?? 'brand'];
     return (
-        <div style={{ padding: '0.9rem 1rem', background: '#1a1a2e', borderRadius: 10, border: '1px solid #333', minWidth: 140, display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-            <p style={{ fontSize: '0.72rem', color: '#888', margin: 0, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</p>
-            <p style={{ fontSize: '1.5rem', fontWeight: 700, color: '#e2e8f0', margin: 0 }}>
-                {value}{unit && <span style={{ fontSize: '0.8rem', color: '#888', marginLeft: 2 }}>{unit}</span>}
+        <div style={{
+            flex: '1 1 0',
+            minWidth: 140,
+            padding: '1rem 1.1rem',
+            background: 'var(--card)',
+            border: '1px solid var(--line)',
+            borderRadius: 'var(--radius-md)',
+            boxShadow: 'var(--shadow-sm)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.3rem',
+        }}>
+            <p style={{ fontSize: '0.7rem', color: 'var(--ink-muted)', margin: 0, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</p>
+            <p style={{ fontSize: '1.45rem', fontWeight: 700, color: 'var(--ink)', margin: 0, letterSpacing: '-0.02em' }}>
+                {value}{unit && <span style={{ fontSize: '0.8rem', color: 'var(--ink-muted)', marginLeft: 3 }}>{unit}</span>}
             </p>
-            {sparkline && sparkline.length >= 2 && <MetricSparkline data={sparkline} tone={tone ?? 'brand'} />}
+            {sparkline && sparkline.length >= 2 && (
+                <div style={{ marginTop: '0.2rem' }}>
+                    <MetricSparkline data={sparkline} tone={tone ?? 'brand'} />
+                </div>
+            )}
+            <div style={{ height: 2, background: accentColor, borderRadius: 2, opacity: 0.18, marginTop: 'auto', paddingTop: '0.5rem' }} />
         </div>
     );
 }
 
 function SkillRow({ stat }: { stat: SkillStat }) {
     const successRate = stat.invocations > 0 ? Math.round((stat.successes / stat.invocations) * 100) : 0;
-    const barWidth = `${successRate}%`;
+    const barColor = successRate >= 80 ? 'var(--ok)' : successRate >= 50 ? 'var(--warn)' : 'var(--danger)';
     return (
-        <tr style={{ borderBottom: '1px solid #1e1e2e' }}>
-            <td style={{ padding: '0.5rem 0.4rem', fontSize: '0.8rem', color: '#a5b4fc', fontFamily: 'monospace' }}>{stat.skill_id}</td>
-            <td style={{ padding: '0.5rem 0.4rem', fontSize: '0.8rem', textAlign: 'right' }}>{stat.invocations.toLocaleString()}</td>
-            <td style={{ padding: '0.5rem 0.4rem', width: 120 }}>
-                <div style={{ background: '#1e1e2e', borderRadius: 4, height: 8, overflow: 'hidden' }}>
-                    <div style={{ width: barWidth, background: successRate >= 80 ? '#22c55e' : successRate >= 50 ? '#f59e0b' : '#ef4444', height: '100%', borderRadius: 4 }} />
+        <tr style={{ borderBottom: '1px solid var(--line)' }}>
+            <td style={{ padding: '0.55rem 0.75rem', fontSize: '0.8rem', color: 'var(--brand)', fontFamily: 'monospace', fontWeight: 500 }}>{stat.skill_id}</td>
+            <td style={{ padding: '0.55rem 0.75rem', fontSize: '0.82rem', textAlign: 'right', color: 'var(--ink)' }}>{stat.invocations.toLocaleString()}</td>
+            <td style={{ padding: '0.55rem 0.75rem', minWidth: 140 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div style={{ flex: 1, background: 'var(--bg-deep)', borderRadius: 4, height: 6, overflow: 'hidden' }}>
+                        <div style={{ width: `${successRate}%`, background: barColor, height: '100%', borderRadius: 4, transition: 'width 0.4s ease' }} />
+                    </div>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--ink-muted)', minWidth: 32, textAlign: 'right' }}>{successRate}%</span>
                 </div>
-                <span style={{ fontSize: '0.7rem', color: '#888' }}>{successRate}%</span>
             </td>
-            <td style={{ padding: '0.5rem 0.4rem', fontSize: '0.8rem', textAlign: 'right', color: '#888' }}>{stat.avg_duration_ms}ms</td>
-            <td style={{ padding: '0.5rem 0.4rem', fontSize: '0.8rem', textAlign: 'right', color: '#60a5fa' }}>
+            <td style={{ padding: '0.55rem 0.75rem', fontSize: '0.82rem', textAlign: 'right', color: 'var(--ink-muted)' }}>{stat.avg_duration_ms.toLocaleString()}ms</td>
+            <td style={{ padding: '0.55rem 0.75rem', fontSize: '0.82rem', textAlign: 'right', color: 'var(--brand)' }}>
                 {stat.total_tokens ? `${(stat.total_tokens / 1000).toFixed(1)}k` : '—'}
             </td>
         </tr>
@@ -78,34 +105,25 @@ function SkillRow({ stat }: { stat: SkillStat }) {
 }
 
 function ProviderRow({ stat }: { stat: ProviderStat }) {
+    const sharePct = 0; // populated when rendered with full dataset
     return (
-        <tr style={{ borderBottom: '1px solid #1e1e2e' }}>
-            <td style={{ padding: '0.5rem 0.4rem', fontSize: '0.82rem', fontWeight: 600 }}>{stat.provider}</td>
-            <td style={{ padding: '0.5rem 0.4rem', fontSize: '0.82rem', textAlign: 'right' }}>{(stat.tokens_used / 1000).toFixed(1)}k</td>
-            <td style={{ padding: '0.5rem 0.4rem', fontSize: '0.82rem', textAlign: 'right', color: '#22c55e' }}>${stat.estimated_cost_usd.toFixed(4)}</td>
+        <tr style={{ borderBottom: '1px solid var(--line)' }}>
+            <td style={{ padding: '0.55rem 0.75rem', fontSize: '0.82rem', fontWeight: 600, color: 'var(--ink)' }}>{stat.provider}</td>
+            <td style={{ padding: '0.55rem 0.75rem', fontSize: '0.82rem', textAlign: 'right', color: 'var(--ink-soft)' }}>{(stat.tokens_used / 1000).toFixed(1)}k</td>
+            <td style={{ padding: '0.55rem 0.75rem', fontSize: '0.82rem', textAlign: 'right', color: 'var(--ok)', fontWeight: 600 }}>${stat.estimated_cost_usd.toFixed(4)}</td>
         </tr>
     );
 }
 
-function WeeklyChart({ buckets }: { buckets: WeeklyBucket[] }) {
-    if (buckets.length === 0) return null;
-    const maxTokens = Math.max(...buckets.map((b) => b.tokens_used), 1);
+function EmptyState({ icon, message, sub }: { icon: string; message: string; sub: string }) {
     return (
-        <div style={{ marginTop: '1rem' }}>
-            <p style={{ fontSize: '0.75rem', color: '#888', marginBottom: '0.5rem', fontWeight: 600, textTransform: 'uppercase' }}>Weekly Token Usage</p>
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.4rem', height: 100 }}>
-                {buckets.map((b) => {
-                    const heightPct = (b.tokens_used / maxTokens) * 100;
-                    return (
-                        <div key={b.week} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
-                            <span style={{ fontSize: '0.6rem', color: '#60a5fa' }}>{(b.tokens_used / 1000).toFixed(0)}k</span>
-                            <div style={{ width: '100%', background: '#4f46e5', borderRadius: '3px 3px 0 0', height: `${heightPct}%`, minHeight: 2, transition: 'height 0.3s ease' }} />
-                            <span style={{ fontSize: '0.6rem', color: '#555' }}>{b.week.slice(5)}</span>
-                        </div>
-                    );
-                })}
-            </div>
-        </div>
+        <tr>
+            <td colSpan={5} style={{ padding: '2.5rem 1rem', textAlign: 'center' }}>
+                <div style={{ fontSize: '1.8rem', marginBottom: '0.5rem', opacity: 0.4 }}>{icon}</div>
+                <p style={{ margin: '0 0 0.25rem', fontSize: '0.85rem', fontWeight: 600, color: 'var(--ink-soft)' }}>{message}</p>
+                <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--ink-muted)' }}>{sub}</p>
+            </td>
+        </tr>
     );
 }
 
@@ -178,11 +196,32 @@ export function CostDashboardPanel() {
     const weeklyInvocations = data.weekly_trend.map((b) => b.invocations);
     const costTrendData = data.weekly_trend.map((b) => ({ week: b.week, tokens_used: b.tokens_used, invocations: b.invocations, cost_usd: b.cost_usd }));
 
+    const thStyle: React.CSSProperties = {
+        padding: '0.5rem 0.75rem',
+        textAlign: 'left' as const,
+        fontSize: '0.7rem',
+        color: 'var(--ink-muted)',
+        fontWeight: 700,
+        textTransform: 'uppercase' as const,
+        letterSpacing: '0.06em',
+        borderBottom: '2px solid var(--line)',
+        background: 'var(--bg)',
+        whiteSpace: 'nowrap' as const,
+    };
+
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             {usingMock && (
-                <div style={{ padding: '0.5rem 0.9rem', background: '#1c1c0a', borderRadius: 6, border: '1px solid #444', fontSize: '0.78rem', color: '#fbbf24' }}>
-                    Showing demo data — connect /api/analytics/cost-summary for live metrics.
+                <div style={{
+                    padding: '0.6rem 1rem',
+                    background: 'var(--warn-bg)',
+                    border: '1px solid var(--warn-border)',
+                    borderRadius: 'var(--radius-sm)',
+                    fontSize: '0.8rem',
+                    color: 'var(--warn)',
+                    fontWeight: 500,
+                }}>
+                    Showing demo data — live metrics will appear once agents make LLM calls.
                 </div>
             )}
 
@@ -194,51 +233,65 @@ export function CostDashboardPanel() {
                 <StatCard label="Success Rate" value={`${Math.round(data.success_rate * 100)}%`} tone="emerald" />
             </div>
 
-            {/* Weekly cost trend — always visible, shows empty state when no data */}
+            {/* Weekly cost trend */}
             <CostTrendChart data={costTrendData} height={180} />
 
-            {/* Skills table */}
-            <div style={{ padding: '1rem', background: '#1a1a2e', borderRadius: 10, border: '1px solid #333', overflowX: 'auto' }}>
-                <p style={{ fontSize: '0.75rem', color: '#888', marginBottom: '0.75rem', fontWeight: 600, textTransform: 'uppercase' }}>Skill Analytics</p>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                        <tr style={{ borderBottom: '1px solid #333' }}>
-                            <th style={{ padding: '0.4rem', textAlign: 'left', fontSize: '0.72rem', color: '#666', fontWeight: 600 }}>SKILL</th>
-                            <th style={{ padding: '0.4rem', textAlign: 'right', fontSize: '0.72rem', color: '#666', fontWeight: 600 }}>RUNS</th>
-                            <th style={{ padding: '0.4rem', fontSize: '0.72rem', color: '#666', fontWeight: 600 }}>SUCCESS</th>
-                            <th style={{ padding: '0.4rem', textAlign: 'right', fontSize: '0.72rem', color: '#666', fontWeight: 600 }}>AVG TIME</th>
-                            <th style={{ padding: '0.4rem', textAlign: 'right', fontSize: '0.72rem', color: '#666', fontWeight: 600 }}>TOKENS</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {data.by_skill.length === 0 ? (
-                            <tr><td colSpan={5} style={{ padding: '1.5rem', textAlign: 'center', color: '#555', fontSize: '0.82rem' }}>No skill invocations yet. Skills will appear here once agents run tasks.</td></tr>
-                        ) : (
-                            data.by_skill.map((stat) => <SkillRow key={stat.skill_id} stat={stat} />)
-                        )}
-                    </tbody>
-                </table>
+            {/* Skill Analytics table */}
+            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                <div style={{ padding: '0.9rem 1.25rem 0.6rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ width: 3, height: '0.95rem', background: 'var(--brand)', borderRadius: 2, display: 'inline-block', flexShrink: 0 }} />
+                    <h2 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.005em' }}>Skill Analytics</h2>
+                    {data.by_skill.length > 0 && (
+                        <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'var(--ink-muted)' }}>{data.by_skill.length} skills</span>
+                    )}
+                </div>
+                <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                            <tr>
+                                <th style={thStyle}>Skill</th>
+                                <th style={{ ...thStyle, textAlign: 'right' }}>Runs</th>
+                                <th style={{ ...thStyle, minWidth: 160 }}>Success Rate</th>
+                                <th style={{ ...thStyle, textAlign: 'right' }}>Avg Time</th>
+                                <th style={{ ...thStyle, textAlign: 'right' }}>Tokens</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {data.by_skill.length === 0
+                                ? <EmptyState icon="⚙️" message="No skill invocations yet" sub="Skills will appear here once agents run tasks." />
+                                : data.by_skill.map((stat) => <SkillRow key={stat.skill_id} stat={stat} />)
+                            }
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
-            {/* Provider table */}
-            <div style={{ padding: '1rem', background: '#1a1a2e', borderRadius: 10, border: '1px solid #333', overflowX: 'auto' }}>
-                <p style={{ fontSize: '0.75rem', color: '#888', marginBottom: '0.75rem', fontWeight: 600, textTransform: 'uppercase' }}>Cost by Provider</p>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                        <tr style={{ borderBottom: '1px solid #333' }}>
-                            <th style={{ padding: '0.4rem', textAlign: 'left', fontSize: '0.72rem', color: '#666', fontWeight: 600 }}>PROVIDER</th>
-                            <th style={{ padding: '0.4rem', textAlign: 'right', fontSize: '0.72rem', color: '#666', fontWeight: 600 }}>TOKENS</th>
-                            <th style={{ padding: '0.4rem', textAlign: 'right', fontSize: '0.72rem', color: '#666', fontWeight: 600 }}>EST. COST</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {data.by_provider.length === 0 ? (
-                            <tr><td colSpan={3} style={{ padding: '1.5rem', textAlign: 'center', color: '#555', fontSize: '0.82rem' }}>No provider usage yet. Costs will appear here once agents make LLM calls.</td></tr>
-                        ) : (
-                            data.by_provider.map((stat) => <ProviderRow key={stat.provider} stat={stat} />)
-                        )}
-                    </tbody>
-                </table>
+            {/* Cost by Provider table */}
+            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                <div style={{ padding: '0.9rem 1.25rem 0.6rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ width: 3, height: '0.95rem', background: 'var(--brand)', borderRadius: 2, display: 'inline-block', flexShrink: 0 }} />
+                    <h2 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.005em' }}>Cost by Provider</h2>
+                    {data.by_provider.length > 0 && (
+                        <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'var(--ink-muted)' }}>{data.by_provider.length} providers</span>
+                    )}
+                </div>
+                <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                            <tr>
+                                <th style={thStyle}>Provider</th>
+                                <th style={{ ...thStyle, textAlign: 'right' }}>Tokens</th>
+                                <th style={{ ...thStyle, textAlign: 'right' }}>Est. Cost</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {data.by_provider.length === 0
+                                ? <EmptyState icon="💹" message="No provider usage yet" sub="Costs will appear here once agents make LLM calls." />
+                                : data.by_provider.map((stat) => <ProviderRow key={stat.provider} stat={stat} />)
+                            }
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     );
