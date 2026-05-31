@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { fetchAuditAccess } from '../../../lib/plan-gate';
+import { fetchAuditAccess } from '../../../lib/plan-gate.server';
 
 export async function GET() {
     const { planName, access } = await fetchAuditAccess();

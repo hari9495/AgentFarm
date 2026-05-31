@@ -6,7 +6,7 @@ import {
 } from '../components/operational-signal-timeline';
 import { AuditUpgradeWall } from '../components/audit-upgrade-wall';
 import { getSessionPayload, getInternalSessionAuthHeader } from '../lib/internal-session';
-import { fetchAuditAccess } from '../lib/plan-gate';
+import { fetchAuditAccess } from '../lib/plan-gate.server';
 
 const API_BASE = () => process.env.DASHBOARD_API_BASE_URL ?? 'http://localhost:3000';
 

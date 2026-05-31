@@ -2,7 +2,7 @@ import { SessionReplayLoader } from '../../components/session-replay-loader';
 import { SessionIndexPanel } from '../../components/session-index-panel';
 import { PageHeader } from '../../components/page-header';
 import { AuditUpgradeWall } from '../../components/audit-upgrade-wall';
-import { fetchAuditAccess } from '../../lib/plan-gate';
+import { fetchAuditAccess } from '../../lib/plan-gate.server';
 
 export default async function SessionReplayPage({
     searchParams,
