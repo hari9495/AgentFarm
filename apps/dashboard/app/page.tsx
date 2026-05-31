@@ -29,7 +29,8 @@ import TaskRetryPanel from './components/task-retry-panel';
 import { KillSwitchBanner } from './components/kill-switch-banner';
 import type { DashboardTab } from './components/dashboard-navigation';
 import type { WorkspaceBudgetSnapshot } from './components/workspace-budget-panel-utils';
-import { isInternalSessionToken } from './lib/internal-session';
+import { isInternalSessionToken, getSessionPayload } from './lib/internal-session';
+import { hasAuditAccess } from './lib/plan-gate';
 import { DeveloperAgentOverviewPanel } from './components/developer-agent-overview-panel';
 import { DeveloperAgentStatusPanel } from './components/developer-agent-status-panel';
 import { MissionHero } from './components/mission-hero';
@@ -1090,6 +1091,11 @@ export default async function HomePage({
 
     const source = summarySource === 'live' && dashboardSlice.source === 'live' ? 'live' : 'fallback';
 
+    // Internal-scope sessions (AgentFarm operators) always have full audit access.
+    // Customer-scope sessions need a Business+ plan.
+    const sessionPayload = await getSessionPayload();
+    const auditUnlocked = sessionPayload?.scope === 'internal' || hasAuditAccess(summary.plan_name);
+
     const degradedWorkspaceCount = workspaceOptions.filter(
         (item) => item.workspace_status === 'degraded' || item.bot_status === 'degraded',
     ).length;
@@ -1234,7 +1240,7 @@ export default async function HomePage({
                                 workspaceName: item.workspace_name,
                             }))}
                             pendingCount={pendingAgentQuestions.length}
-                            planName={summary.plan_name}
+                            auditUnlocked={auditUnlocked}
                         />
                     </Suspense>
                 )}

@@ -11,7 +11,6 @@ import {
     ScrollText, Film, Waves, Lock,
     type LucideIcon,
 } from 'lucide-react';
-import { hasAuditAccess } from '../lib/plan-gate';
 import type { DashboardTab } from './dashboard-navigation';
 import { getDashboardTabStorageKey } from './dashboard-tab-storage';
 
@@ -40,7 +39,7 @@ type InternalSidebarProps = {
     workspaceName: string;
     workspaces: WorkspaceOption[];
     pendingCount?: number;
-    planName?: string;
+    auditUnlocked?: boolean;
 };
 
 function NavItem({
@@ -100,9 +99,8 @@ export function InternalSidebar({
     workspaceName,
     workspaces,
     pendingCount = 0,
-    planName = '',
+    auditUnlocked = true,
 }: InternalSidebarProps) {
-    const auditUnlocked = hasAuditAccess(planName);
     const router = useRouter();
     const searchParams = useSearchParams();
 
