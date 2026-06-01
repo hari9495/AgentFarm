@@ -7,6 +7,7 @@ const NAV_ITEMS = [
     { label: 'Overview', href: '/sales' },
     { label: 'Pipeline', href: '/sales/pipeline' },
     { label: 'Deals', href: '/sales/deals' },
+    { label: 'Leads', href: '/sales/leads' },
     { label: 'Activity', href: '/sales/activity' },
     { label: 'Browser Tasks', href: '/sales/browser-tasks' },
 ] as const;
