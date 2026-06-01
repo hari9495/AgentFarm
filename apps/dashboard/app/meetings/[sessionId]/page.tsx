@@ -354,6 +354,9 @@ export default function MeetingDetailPage() {
                     </button>
                 </div>
 
+                {/* ── Current speaker indicator ── */}
+                <CurrentSpeakerBadge events={auditData?.events ?? []} isLive={isLive} sessionStatus={session.status} />
+
                 <div style={{ display: 'grid', gap: '0.3rem', fontSize: '0.83rem' }}>
                     <Row label="Speaking enabled" value={session.speakingEnabled ? 'Yes' : 'No'} />
                     {session.agentVoiceId && <Row label="Voice ID" value={session.agentVoiceId} />}
@@ -513,6 +516,73 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
         <div style={{ display: 'flex', gap: '0.6rem', fontSize: '0.83rem' }}>
             <span style={{ color: 'var(--ink-muted)', fontWeight: 600, minWidth: '110px', flexShrink: 0 }}>{label}</span>
             <span style={{ color: 'var(--ink-soft)', wordBreak: 'break-all' }}>{value}</span>
+        </div>
+    );
+}
+
+// ── Current speaker derived from latest relevant audit event ───────────────────
+type SpeakerState = 'idle' | 'agent-speaking' | 'agent-listening' | 'participant-speaking' | 'transcribing' | 'ended';
+
+const SPEAKER_EVENTS = new Set(['spoke', 'listened', 'transcribed', 'joined', 'left']);
+
+function deriveSpeakerState(
+    events: MeetingAuditEvent[],
+    sessionStatus: string,
+): SpeakerState {
+    if (sessionStatus === 'ended' || sessionStatus === 'deleted') return 'ended';
+    const relevant = [...events].reverse().find((e) => SPEAKER_EVENTS.has(e.eventType));
+    if (!relevant) return 'idle';
+    switch (relevant.eventType) {
+        case 'spoke':        return 'agent-speaking';
+        case 'listened':     return 'agent-listening';
+        case 'transcribed':  return 'participant-speaking';
+        case 'joined':       return 'idle';
+        case 'left':         return 'ended';
+        default:             return 'idle';
+    }
+}
+
+const SPEAKER_STATE_UI: Record<SpeakerState, { label: string; dot: string; bg: string; color: string }> = {
+    'idle':                 { label: 'Idle',                   dot: '○', bg: '#f1f5f9', color: '#64748b' },
+    'agent-speaking':       { label: 'Agent speaking',         dot: '●', bg: '#dcfce7', color: '#166534' },
+    'agent-listening':      { label: 'Agent listening',        dot: '◉', bg: '#eff6ff', color: '#1d4ed8' },
+    'participant-speaking': { label: 'Participant speaking',   dot: '●', bg: '#fef9c3', color: '#854d0e' },
+    'transcribing':         { label: 'Transcribing',           dot: '◌', bg: '#f0fdf4', color: '#15803d' },
+    'ended':                { label: 'Session ended',          dot: '■', bg: '#f1f5f9', color: '#475569' },
+};
+
+function CurrentSpeakerBadge({
+    events,
+    isLive,
+    sessionStatus,
+}: {
+    events: MeetingAuditEvent[];
+    isLive: boolean;
+    sessionStatus: string;
+}) {
+    const state = deriveSpeakerState(events, sessionStatus);
+    const ui = SPEAKER_STATE_UI[state];
+
+    return (
+        <div style={{
+            display: 'flex', alignItems: 'center', gap: '0.65rem',
+            padding: '0.55rem 0.75rem', borderRadius: '7px',
+            background: ui.bg, border: `1px solid ${ui.color}22`,
+        }}>
+            <span style={{ fontSize: '1rem', color: ui.color, lineHeight: 1 }}>{ui.dot}</span>
+            <div style={{ flex: 1 }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: ui.color, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Currently speaking
+                </span>
+                <p style={{ margin: 0, fontSize: '0.86rem', fontWeight: 600, color: ui.color }}>
+                    {ui.label}
+                </p>
+            </div>
+            {isLive && (
+                <span style={{ fontSize: '0.68rem', color: ui.color, opacity: 0.7, fontWeight: 500 }}>
+                    updates every 4s
+                </span>
+            )}
         </div>
     );
 }
