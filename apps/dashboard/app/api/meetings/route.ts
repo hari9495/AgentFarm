@@ -3,6 +3,39 @@ import { getInternalSessionAuthHeader, getSessionPayload } from '../../lib/inter
 
 const getApiBaseUrl = (): string => process.env.DASHBOARD_API_BASE_URL ?? 'http://localhost:3000';
 
+export async function GET(request: Request) {
+    const authHeader = await getInternalSessionAuthHeader();
+    if (!authHeader) {
+        return NextResponse.json(
+            { error: 'forbidden', message: 'Internal session required.' },
+            { status: 403 },
+        );
+    }
+
+    const { searchParams } = new URL(request.url);
+    const qs = searchParams.toString();
+    const upstream = `${getApiBaseUrl()}/v1/meetings${qs ? `?${qs}` : ''}`;
+
+    try {
+        const response = await fetch(upstream, {
+            headers: { Authorization: authHeader },
+            cache: 'no-store',
+        });
+
+        const data = await response.json().catch(() => ({
+            error: 'upstream_error',
+            message: 'Unable to parse response.',
+        }));
+
+        return NextResponse.json(data, { status: response.status });
+    } catch {
+        return NextResponse.json(
+            { error: 'upstream_unavailable', message: 'Gateway request failed.' },
+            { status: 502 },
+        );
+    }
+}
+
 export async function POST(request: Request) {
     const authHeader = await getInternalSessionAuthHeader();
     if (!authHeader) {

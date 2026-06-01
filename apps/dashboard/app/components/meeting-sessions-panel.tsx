@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -135,30 +136,38 @@ export default function MeetingSessionsPanel({ tenantId }: { tenantId: string })
     const [speakBusy, setSpeakBusy] = useState(false);
     const [speakResult, setSpeakResult] = useState<{ ok: boolean; durationMs?: number; error?: string } | null>(null);
 
-    // Sessions are maintained locally (no list endpoint on gateway)
+    const loadSessions = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+        const response = await fetch('/api/meetings?limit=50', { cache: 'no-store' });
+        const data = (await response.json().catch(() => ({}))) as { items?: MeetingSession[]; message?: string };
+        if (!response.ok) {
+            setError(data.message ?? 'Unable to load sessions.');
+        } else {
+            setSessions(data.items ?? []);
+        }
+        setLoading(false);
+    }, []);
+
     const loadDetail = useCallback(async (id: string) => {
         setDetailLoading(true);
         setDetailId(id);
         setSpeakResult(null);
 
         const response = await fetch(`/api/meetings/${encodeURIComponent(id)}`, { cache: 'no-store' });
-        const data = (await response.json().catch(() => ({}))) as { session?: MeetingSession; message?: string };
+        const data = (await response.json().catch(() => ({}))) as MeetingSession & { message?: string };
 
         if (!response.ok) {
-            setError(data.message ?? 'Unable to load session detail.');
+            setError((data as { message?: string }).message ?? 'Unable to load session detail.');
             setDetailLoading(false);
             return;
         }
 
-        setDetail(data.session ?? null);
+        setDetail(data);
         setDetailLoading(false);
 
         // Refresh in local list
-        if (data.session) {
-            setSessions((prev) =>
-                prev.map((s) => (s.id === id ? (data.session as MeetingSession) : s)),
-            );
-        }
+        setSessions((prev) => prev.map((s) => (s.id === id ? data : s)));
     }, []);
 
     // Poll detail every 3s while a session is open and status is active/joining
@@ -252,22 +261,23 @@ export default function MeetingSessionsPanel({ tenantId }: { tenantId: string })
             }),
         });
 
-        const data = (await response.json().catch(() => ({}))) as { session?: MeetingSession; message?: string };
+        const data = (await response.json().catch(() => ({}))) as MeetingSession & { message?: string };
 
         if (!response.ok) {
-            setCreateError(data.message ?? 'Failed to create session.');
+            setCreateError((data as { message?: string }).message ?? 'Failed to create session.');
             setCreateBusy(false);
             return;
         }
 
-        if (data.session) {
-            setSessions((prev) => [data.session as MeetingSession, ...prev]);
+        if (data.id) {
+            setSessions((prev) => [data, ...prev]);
         }
 
         setNewSession({ workspaceId: '', agentId: '', meetingUrl: '', platform: 'teams', language: '' });
         setShowCreate(false);
         setCreateBusy(false);
         setMessage('Meeting session created.');
+        void loadSessions();
     };
 
     const endSession = async (id: string) => {
@@ -281,19 +291,17 @@ export default function MeetingSessionsPanel({ tenantId }: { tenantId: string })
             body: JSON.stringify({ status: 'ended', endedAt: new Date().toISOString() }),
         });
 
-        const data = (await response.json().catch(() => ({}))) as { session?: MeetingSession; message?: string };
+        const data = (await response.json().catch(() => ({}))) as MeetingSession & { message?: string };
 
         if (!response.ok) {
-            setError(data.message ?? 'Unable to end session.');
+            setError((data as { message?: string }).message ?? 'Unable to end session.');
             setBusyId(null);
             return;
         }
 
-        if (data.session) {
-            setSessions((prev) => prev.map((s) => (s.id === id ? (data.session as MeetingSession) : s)));
-            if (detailId === id) {
-                setDetail(data.session);
-            }
+        setSessions((prev) => prev.map((s) => (s.id === id ? data : s)));
+        if (detailId === id) {
+            setDetail(data);
         }
 
         setMessage('Session ended.');
@@ -327,11 +335,9 @@ export default function MeetingSessionsPanel({ tenantId }: { tenantId: string })
         setBusyId(null);
     };
 
-    // Load effect is no-op since there's no list endpoint; sessions populate via create
     useEffect(() => {
-        // Tenant context confirmed — sessions populate via create actions
-        setLoading(false);
-    }, [tenantId]);
+        void loadSessions();
+    }, [loadSessions]);
 
     return (
         <section className="card" style={{ display: 'grid', gap: '0.85rem' }}>
@@ -455,6 +461,13 @@ export default function MeetingSessionsPanel({ tenantId }: { tenantId: string })
                                         </td>
                                         <td style={{ padding: '0.5rem 0.6rem' }}>
                                             <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                                                <Link
+                                                    href={`/meetings/${session.id}`}
+                                                    className="secondary-action"
+                                                    style={{ textDecoration: 'none' }}
+                                                >
+                                                    View
+                                                </Link>
                                                 <button
                                                     type="button"
                                                     className="secondary-action"
