@@ -64,7 +64,7 @@ type AgentMessagePrismaClient = {
         update: (args: { where: Record<string, unknown>; data: Record<string, unknown> }) => Promise<AgentMessageRow>;
     };
     bot: {
-        findFirst: (args: Record<string, unknown>) => Promise<{ id: string; workspaceId: string } | null>;
+        findFirst: (args: Record<string, unknown>) => Promise<{ id: string; workspaceId: string; messagingEnabled: boolean } | null>;
     };
 };
 
@@ -89,17 +89,16 @@ const defaultGetPrisma = async (): Promise<AgentMessagePrismaClient> => {
     return db.prisma as unknown as AgentMessagePrismaClient;
 };
 
-// ── Helper: verify bot belongs to the session's tenant ───────────────────────
+// ── Helper: verify bot belongs to the session's workspace(s) ─────────────────
 
-async function verifyBotInSession(
+async function getBotInSession(
     prisma: AgentMessagePrismaClient,
     botId: string,
     workspaceIds: string[],
-): Promise<boolean> {
-    const bot = await prisma.bot.findFirst({
+): Promise<{ id: string; workspaceId: string; messagingEnabled: boolean } | null> {
+    return prisma.bot.findFirst({
         where: { id: botId, workspaceId: { in: workspaceIds } },
     });
-    return bot !== null;
 }
 
 // ── Route registration ────────────────────────────────────────────────────────
@@ -147,10 +146,22 @@ export const registerAgentMessageRoutes = (
 
             const prisma = await getPrisma();
 
-            // Verify sender belongs to session
-            const senderOk = await verifyBotInSession(prisma, botId, session.workspaceIds);
-            if (!senderOk) {
+            // Verify sender belongs to this session's workspace(s)
+            const senderBot = await getBotInSession(prisma, botId, session.workspaceIds);
+            if (!senderBot) {
                 return reply.code(403).send({ error: 'forbidden', message: 'fromBot does not belong to this session.' });
+            }
+            if (!senderBot.messagingEnabled) {
+                return reply.code(403).send({ error: 'messaging_disabled', message: 'This agent has messaging disabled.' });
+            }
+
+            // Verify recipient exists in the SAME workspace (prevents cross-tenant messaging)
+            const recipientBot = await getBotInSession(prisma, String(toBotId), session.workspaceIds);
+            if (!recipientBot) {
+                return reply.code(403).send({ error: 'forbidden', message: 'toBotId not found in this workspace.' });
+            }
+            if (!recipientBot.messagingEnabled) {
+                return reply.code(403).send({ error: 'messaging_disabled', message: 'The recipient agent has messaging disabled.' });
             }
 
             const id = randomUUID();
@@ -188,7 +199,7 @@ export const registerAgentMessageRoutes = (
             const query = request.query as { status?: string; limit?: string; threadId?: string };
 
             const prisma = await getPrisma();
-            const ok = await verifyBotInSession(prisma, botId, session.workspaceIds);
+            const ok = await getBotInSession(prisma, botId, session.workspaceIds);
             if (!ok) {
                 return reply.code(403).send({ error: 'forbidden' });
             }
@@ -228,7 +239,7 @@ export const registerAgentMessageRoutes = (
             const query = request.query as { limit?: string; threadId?: string };
 
             const prisma = await getPrisma();
-            const ok = await verifyBotInSession(prisma, botId, session.workspaceIds);
+            const ok = await getBotInSession(prisma, botId, session.workspaceIds);
             if (!ok) {
                 return reply.code(403).send({ error: 'forbidden' });
             }
@@ -273,7 +284,7 @@ export const registerAgentMessageRoutes = (
             }
 
             const prisma = await getPrisma();
-            const ok = await verifyBotInSession(prisma, botId, session.workspaceIds);
+            const ok = await getBotInSession(prisma, botId, session.workspaceIds);
             if (!ok) {
                 return reply.code(403).send({ error: 'forbidden' });
             }
@@ -331,7 +342,7 @@ export const registerAgentMessageRoutes = (
             }
 
             const prisma = await getPrisma();
-            const ok = await verifyBotInSession(prisma, botId, session.workspaceIds);
+            const ok = await getBotInSession(prisma, botId, session.workspaceIds);
             if (!ok) {
                 return reply.code(403).send({ error: 'forbidden' });
             }
@@ -385,7 +396,7 @@ export const registerAgentMessageRoutes = (
             const query = request.query as { limit?: string };
 
             const prisma = await getPrisma();
-            const ok = await verifyBotInSession(prisma, botId, session.workspaceIds);
+            const ok = await getBotInSession(prisma, botId, session.workspaceIds);
             if (!ok) {
                 return reply.code(403).send({ error: 'forbidden' });
             }

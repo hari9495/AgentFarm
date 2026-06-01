@@ -465,4 +465,48 @@ export const registerAgentControlRoutes = async (
 
         return reply.code(204).send();
     });
+
+    // -----------------------------------------------------------------------
+    // PATCH /v1/agents/:botId/messaging — toggle A2A messaging (operator+)
+    // -----------------------------------------------------------------------
+    app.patch<{ Params: BotIdParams; Body: { messagingEnabled: boolean } }>(
+        '/v1/agents/:botId/messaging',
+        async (request, reply) => {
+            const session = options.getSession(request);
+            if (!session) {
+                return reply.code(401).send({ error: 'unauthorized', message: 'A valid authenticated session is required.' });
+            }
+            if ((ROLE_RANK[session.role ?? ''] ?? 0) < (ROLE_RANK['operator'] ?? 99)) {
+                return reply.code(403).send({ error: 'insufficient_role', required: 'operator', actual: session.role });
+            }
+
+            const { botId } = request.params;
+            const { messagingEnabled } = request.body ?? {};
+
+            if (typeof messagingEnabled !== 'boolean') {
+                return reply.code(400).send({ error: 'bad_request', message: 'messagingEnabled (boolean) is required.' });
+            }
+
+            const db = await resolvePrisma();
+
+            const bot = await db.bot.findUnique({
+                where: { id: botId },
+                select: { id: true, workspace: { select: { tenantId: true } } },
+            });
+            if (!bot) {
+                return reply.code(404).send({ error: 'not_found', message: 'Bot not found.' });
+            }
+            if (bot.workspace.tenantId !== session.tenantId) {
+                return reply.code(403).send({ error: 'forbidden', message: 'Bot does not belong to your tenant.' });
+            }
+
+            const updated = await db.bot.update({
+                where: { id: botId },
+                data: { messagingEnabled },
+                select: { id: true, messagingEnabled: true, updatedAt: true },
+            });
+
+            return reply.send({ botId: updated.id, messagingEnabled: updated.messagingEnabled, updatedAt: updated.updatedAt });
+        },
+    );
 };

@@ -7,6 +7,7 @@ import AgentDecommissionButton from '../../components/agent-decommission-button'
 import AgentBillingCard from '../../components/agent-billing-card';
 import AgentVersionHistory from '../../components/agent-version-history';
 import AgentMessagesPanel from '../../components/agent-messages-panel';
+import AgentMessagingToggle from '../../components/agent-messaging-toggle';
 import AgentCapabilitiesFetcher from '../../components/agent-capabilities-fetcher';
 import AgentEpisodicMemoryPanel from '../../components/agent-episodic-memory-panel';
 import AgentMemoryPatternFetcher from '../../components/agent-memory-pattern-fetcher';
@@ -27,6 +28,7 @@ type Agent = {
     workspaceId: string;
     role: string;
     status: BotStatus;
+    messagingEnabled: boolean;
     createdAt: string;
     updatedAt: string;
 };
@@ -283,6 +285,14 @@ export default async function AgentDetailPage({ params }: PageProps) {
                             Pause or resume this agent. Pausing stops task execution while preserving all state.
                         </p>
                         <AgentControlPanel botId={botId} />
+                    </SectionCard>
+
+                    {/* Agent-to-agent messaging toggle */}
+                    <SectionCard title="Agent Messaging">
+                        <AgentMessagingToggle
+                            botId={botId}
+                            initialEnabled={agent.messagingEnabled ?? true}
+                        />
                     </SectionCard>
 
                     {/* Danger zone */}

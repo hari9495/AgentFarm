@@ -44,18 +44,19 @@ model Workspace {
 }
 
 model Bot {
-  id             String             @id @default(cuid())
-  workspaceId    String
-  role           String
-  status         BotStatus          @default(created)
-  containerPort  Int?               // port on the shared workspace VM (null until provisioned)
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
-  workspace      Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  configVersions BotConfigVersion[]
-  persona        AgentPersona?
-  sentMessages   AgentMessage[]     @relation("MessageFrom")
-  receivedMessages AgentMessage[]   @relation("MessageTo")
+  id               String             @id @default(cuid())
+  workspaceId      String
+  role             String
+  status           BotStatus          @default(created)
+  containerPort    Int?               // port on the shared workspace VM (null until provisioned)
+  messagingEnabled Boolean            @default(true)  // false = this bot cannot send or receive A2A messages
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  workspace        Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  configVersions   BotConfigVersion[]
+  persona          AgentPersona?
+  sentMessages     AgentMessage[]     @relation("MessageFrom")
+  receivedMessages AgentMessage[]     @relation("MessageTo")
 }
 
 model AgentPersona {
