@@ -352,6 +352,7 @@ export default async function AgentDetailPage({ params }: PageProps) {
             </SectionCard>
 
             {/* ── Quick navigation ─────────────────────────────────────────────── */}
+            <style>{`.agent-nav-card{display:block;padding:16px;background:#fff;border:1px solid #d2d2d7;border-radius:14px;text-decoration:none;box-shadow:0 1px 3px rgba(0,0,0,.06);transition:box-shadow .2s ease,transform .2s ease}.agent-nav-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.1);transform:translateY(-2px)}`}</style>
             <div style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(3, 1fr)',
@@ -365,28 +366,7 @@ export default async function AgentDetailPage({ params }: PageProps) {
                     { href: `/agents?selected=${botId}`, label: 'Task History', icon: '📋', desc: 'View recent task executions' },
                     { href: `/settings?botId=${botId}`, label: 'Connector Settings', icon: '🔌', desc: 'Manage tool integrations' },
                 ] as const).map(({ href, label, icon: navIcon, desc }) => (
-                    <a
-                        key={href}
-                        href={href}
-                        style={{
-                            display: 'block',
-                            padding: '16px',
-                            background: '#ffffff',
-                            border: '1px solid #d2d2d7',
-                            borderRadius: '14px',
-                            textDecoration: 'none',
-                            boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-                            transition: 'box-shadow 0.2s ease, transform 0.2s ease',
-                        }}
-                        onMouseEnter={(e) => {
-                            (e.currentTarget as HTMLAnchorElement).style.boxShadow = '0 4px 16px rgba(0,0,0,0.1)';
-                            (e.currentTarget as HTMLAnchorElement).style.transform = 'translateY(-2px)';
-                        }}
-                        onMouseLeave={(e) => {
-                            (e.currentTarget as HTMLAnchorElement).style.boxShadow = '0 1px 3px rgba(0,0,0,0.06)';
-                            (e.currentTarget as HTMLAnchorElement).style.transform = 'translateY(0)';
-                        }}
-                    >
+                    <a key={href} href={href} className="agent-nav-card">
                         <div style={{ fontSize: '20px', marginBottom: '6px' }}>{navIcon}</div>
                         <div style={{ fontSize: '13px', fontWeight: 600, color: '#1d1d1f', marginBottom: '2px' }}>
                             {label}

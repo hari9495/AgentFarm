@@ -427,7 +427,7 @@ export default function AgentObservabilityPanel({ botId }: AgentObservabilityPan
                                     {fmtUsd(costData.totalCostUsd)}
                                 </div>
                                 <StatRow label="Avg / task" value={fmtUsd(costData.avgCostUsd)} />
-                                <StatRow label="Tasks" value={costData.taskCount.toLocaleString()} />
+                                <StatRow label="Tasks" value={(costData.taskCount ?? 0).toLocaleString()} />
                                 <StatRow label="Success rate" value={fmtPct(costData.successRate)} />
                             </>
                         )}
