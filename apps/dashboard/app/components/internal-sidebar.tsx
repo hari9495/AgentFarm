@@ -237,6 +237,7 @@ export function InternalSidebar({
                                 { href: '/snapshots',     label: 'Bot Snapshots',      Icon: Camera            },
                                 { href: '/handoffs',      label: 'Handoffs',           Icon: GitBranch         },
                                 { href: '/loops',         label: 'Autonomous Loops',   Icon: RefreshCw         },
+                                { href: '/agent-chat',    label: 'Loop Chat',          Icon: MessageSquare     },
                                 { href: '/orchestration', label: 'Orchestration Runs', Icon: Network           },
                                 { href: '/routine-tasks', label: 'Routine Scheduler',  Icon: CalendarDays      },
                                 { href: '/wake-runs',     label: 'Wake Runs',          Icon: AlarmClock        },
