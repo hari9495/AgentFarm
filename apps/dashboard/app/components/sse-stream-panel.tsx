@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
     Copy, Check, ExternalLink, Radio,
     Zap, Globe, Shield,
@@ -140,7 +140,11 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function SseStreamPanel({ workspaceId }: { workspaceId?: string }) {
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    // Use state for origin so server and client render the same initial value,
+    // avoiding the React hydration mismatch caused by window.location.origin.
+    const [origin, setOrigin] = useState('');
+    useEffect(() => { setOrigin(window.location.origin); }, []);
+
     const path = '/api/sse/tasks';
     const fullUrl = workspaceId ? `${origin}${path}?workspaceId=${encodeURIComponent(workspaceId)}` : `${origin}${path}`;
     const { copied: urlCopied, copy: copyUrl } = useCopy(fullUrl);
