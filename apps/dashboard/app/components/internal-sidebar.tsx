@@ -4,14 +4,14 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
     Cpu, Brain, ShoppingBag, LayoutDashboard, ClipboardCheck,
-    Activity, FileText, Store, Search, LogOut, Settings,
+    Activity, FileText, Search, LogOut, Settings,
     ChevronDown, Bot, ListChecks, ShieldCheck, Link2,
     BarChart2, CreditCard, Wrench, TrendingUp, Video,
     MessageSquare, DollarSign, PieChart, LineChart, Trophy, Bell, CalendarClock,
     ScrollText, Film, Waves, Lock,
     GitPullRequest, SlidersHorizontal, Camera, GitBranch, RefreshCw,
     Network, CalendarDays, AlarmClock, Beaker, Monitor, Terminal,
-    Users, Building2, Zap, Star, Briefcase, UserCircle, Plug, Layers,
+    Users, Building2, Zap, Star, UserCircle, Plug, Layers,
     type LucideIcon,
 } from 'lucide-react';
 import type { DashboardTab } from './dashboard-navigation';
@@ -28,7 +28,6 @@ const navItems: NavItemDef[] = [
     { key: 'approvals', label: 'Approvals', icon: ClipboardCheck },
     { key: 'observability', label: 'Observability', icon: Activity },
     { key: 'audit', label: 'Evidence', icon: FileText },
-    { key: 'marketplace', label: 'Skill Marketplace', icon: Store },
 ];
 
 type WorkspaceOption = {
@@ -112,9 +111,9 @@ export function InternalSidebar({
     activeRoles = [],
 }: InternalSidebarProps) {
     // Testing: show all sections regardless of purchased roles
-    const showDevTools     = true;
+    const showDevTools = true;
     const showContentComms = true;
-    const showBusinessOps  = true;
+    const showBusinessOps = true;
     const router = useRouter();
     const searchParams = useSearchParams();
 
@@ -212,11 +211,11 @@ export function InternalSidebar({
                     <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Agents</p>
                     <div className="space-y-0.5">
                         {[
-                            { href: '/agents',            label: 'Agents',      Icon: Bot           },
-                            { href: '/tasks',             label: 'Tasks',       Icon: ListChecks    },
-                            { href: '/tasks?tab=queue',   label: 'Task Queue',  Icon: Layers        },
-                            { href: '/devops',            label: 'DevOps Hub',  Icon: Wrench        },
-                            { href: '/chat',              label: 'Chat',        Icon: MessageSquare },
+                            { href: '/agents', label: 'Agents', Icon: Bot },
+                            { href: '/tasks', label: 'Tasks', Icon: ListChecks },
+                            { href: '/tasks?tab=queue', label: 'Task Queue', Icon: Layers },
+                            { href: '/devops', label: 'DevOps Hub', Icon: Wrench },
+                            { href: '/chat', label: 'Chat', Icon: MessageSquare },
                         ].map(({ href, label, Icon }) => (
                             <Link key={href} href={href} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
                                 <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Icon className="w-3.5 h-3.5 text-slate-500" /></span>
@@ -232,18 +231,18 @@ export function InternalSidebar({
                         <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Developer Tools</p>
                         <div className="space-y-0.5">
                             {[
-                                { href: '/ci',            label: 'CI Triage',          Icon: Terminal          },
-                                { href: '/pr-drafts',     label: 'PR Drafts',          Icon: GitPullRequest    },
-                                { href: '/env',           label: 'Env Reconciler',     Icon: SlidersHorizontal },
-                                { href: '/snapshots',     label: 'Bot Snapshots',      Icon: Camera            },
-                                { href: '/handoffs',      label: 'Handoffs',           Icon: GitBranch         },
-                                { href: '/loops',         label: 'Autonomous Loops',   Icon: RefreshCw         },
-                                { href: '/agent-chat',    label: 'Loop Chat',          Icon: MessageSquare     },
-                                { href: '/orchestration', label: 'Orchestration Runs', Icon: Network           },
-                                { href: '/routine-tasks', label: 'Routine Scheduler',  Icon: CalendarDays      },
-                                { href: '/wake-runs',     label: 'Wake Runs',          Icon: AlarmClock        },
-                                { href: '/ab-tests',      label: 'A/B Tests',          Icon: Beaker            },
-                                { href: '/desktop',       label: 'Desktop',            Icon: Monitor           },
+                                { href: '/ci', label: 'CI Triage', Icon: Terminal },
+                                { href: '/pr-drafts', label: 'PR Drafts', Icon: GitPullRequest },
+                                { href: '/env', label: 'Env Reconciler', Icon: SlidersHorizontal },
+                                { href: '/snapshots', label: 'Bot Snapshots', Icon: Camera },
+                                { href: '/handoffs', label: 'Handoffs', Icon: GitBranch },
+                                { href: '/loops', label: 'Autonomous Loops', Icon: RefreshCw },
+                                { href: '/agent-chat', label: 'Loop Chat', Icon: MessageSquare },
+                                { href: '/orchestration', label: 'Orchestration Runs', Icon: Network },
+                                { href: '/routine-tasks', label: 'Routine Scheduler', Icon: CalendarDays },
+                                { href: '/wake-runs', label: 'Wake Runs', Icon: AlarmClock },
+                                { href: '/ab-tests', label: 'A/B Tests', Icon: Beaker },
+                                { href: '/desktop', label: 'Desktop', Icon: Monitor },
                             ].map(({ href, label, Icon }) => (
                                 <Link key={href} href={href} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
                                     <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Icon className="w-3.5 h-3.5 text-slate-500" /></span>
@@ -260,9 +259,9 @@ export function InternalSidebar({
                         <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Content &amp; Comms</p>
                         <div className="space-y-0.5">
                             {[
-                                { href: '/content-drafts', label: 'Content Drafts', Icon: FileText      },
-                                { href: '/comms-drafts',   label: 'Comms Inbox',   Icon: MessageSquare },
-                                { href: '/meetings',       label: 'Meetings',      Icon: Video         },
+                                { href: '/content-drafts', label: 'Content Drafts', Icon: FileText },
+                                { href: '/comms-drafts', label: 'Comms Inbox', Icon: MessageSquare },
+                                { href: '/meetings', label: 'Meetings', Icon: Video },
                             ].map(({ href, label, Icon }) => (
                                 <Link key={href} href={href} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
                                     <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Icon className="w-3.5 h-3.5 text-slate-500" /></span>
@@ -279,12 +278,12 @@ export function InternalSidebar({
                         <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Business Ops</p>
                         <div className="space-y-0.5">
                             {[
-                                { href: '/business-reports', label: 'Business Reports', Icon: BarChart2    },
-                                { href: '/project-plans',    label: 'Project Plans',    Icon: ListChecks   },
-                                { href: '/campaigns',        label: 'Campaigns',        Icon: TrendingUp   },
-                                { href: '/talent-pipeline',  label: 'Talent Pipeline',  Icon: Brain        },
-                                { href: '/support-queue',    label: 'Support Queue',    Icon: MessageSquare},
-                                { href: '/sales',            label: 'Sales',            Icon: TrendingUp   },
+                                { href: '/business-reports', label: 'Business Reports', Icon: BarChart2 },
+                                { href: '/project-plans', label: 'Project Plans', Icon: ListChecks },
+                                { href: '/campaigns', label: 'Campaigns', Icon: TrendingUp },
+                                { href: '/talent-pipeline', label: 'Talent Pipeline', Icon: Brain },
+                                { href: '/support-queue', label: 'Support Queue', Icon: MessageSquare },
+                                { href: '/sales', label: 'Sales', Icon: TrendingUp },
                             ].map(({ href, label, Icon }) => (
                                 <Link key={href} href={href} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
                                     <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Icon className="w-3.5 h-3.5 text-slate-500" /></span>
@@ -384,8 +383,8 @@ export function InternalSidebar({
                     <div className="space-y-0.5">
                         {[
                             { href: '/scheduled-reports', label: 'Scheduled Reports', Icon: CalendarClock },
-                            { href: '/billing',           label: 'Billing',           Icon: CreditCard    },
-                            { href: '/budget',            label: 'Budget',            Icon: DollarSign    },
+                            { href: '/billing', label: 'Billing', Icon: CreditCard },
+                            { href: '/budget', label: 'Budget', Icon: DollarSign },
                         ].map(({ href, label, Icon }) => (
                             <Link key={href} href={href} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
                                 <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Icon className="w-3.5 h-3.5 text-slate-500" /></span>
@@ -400,14 +399,13 @@ export function InternalSidebar({
                     <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Team &amp; Settings</p>
                     <div className="space-y-0.5">
                         {[
-                            { href: '/team',              label: 'Team Members',    Icon: Users       },
-                            { href: '/settings',          label: 'API Keys',        Icon: Settings    },
-                            { href: '/agent-persona',     label: 'Agent Personas',  Icon: UserCircle  },
-                            { href: '/tenant-settings',   label: 'Tenant Settings', Icon: Building2   },
-                            { href: '/llm-config',        label: 'LLM Config',      Icon: Zap         },
-                            { href: '/quality',           label: 'Quality Feedback',Icon: Star        },
-                            { href: '/notifications',     label: 'Notifications',   Icon: Bell        },
-                            { href: '/marketplace/roles', label: 'Roles Catalog',   Icon: Briefcase   },
+                            { href: '/team', label: 'Team Members', Icon: Users },
+                            { href: '/settings', label: 'API Keys', Icon: Settings },
+                            { href: '/agent-persona', label: 'Agent Personas', Icon: UserCircle },
+                            { href: '/tenant-settings', label: 'Tenant Settings', Icon: Building2 },
+                            { href: '/llm-config', label: 'LLM Config', Icon: Zap },
+                            { href: '/quality', label: 'Quality Feedback', Icon: Star },
+                            { href: '/notifications', label: 'Notifications', Icon: Bell },
                         ].map(({ href, label, Icon }) => (
                             <Link key={href} href={href} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
                                 <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Icon className="w-3.5 h-3.5 text-slate-500" /></span>
@@ -432,13 +430,18 @@ export function InternalSidebar({
                         </div>
                     </div>
                 )}
-                <Link
-                    href="/login"
-                    className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+                <button
+                    type="button"
+                    onClick={async () => {
+                        await fetch('/api/auth/logout', { method: 'POST' });
+                        document.cookie = 'agentfarm_internal_session=; path=/; max-age=0; samesite=strict';
+                        window.location.href = '/login';
+                    }}
+                    className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors w-full text-left"
                 >
                     <LogOut className="w-4 h-4 shrink-0" aria-hidden="true" />
                     <span>Sign out</span>
-                </Link>
+                </button>
             </div>
         </div>
     );

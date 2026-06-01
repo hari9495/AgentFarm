@@ -147,6 +147,9 @@ importers:
       '@azure/storage-blob':
         specifier: ^12.0.0
         version: 12.31.0
+      '@fastify/cors':
+        specifier: ^10.0.2
+        version: 10.1.0
       '@fastify/helmet':
         specifier: ^13.0.2
         version: 13.0.2
@@ -1961,6 +1964,9 @@ packages:
 
   '@fastify/busboy@3.2.0':
     resolution: {integrity: sha512-m9FVDXU3GT2ITSe0UaMA5rU3QkfC/UXtCU8y0gSN/GugTqtVldOBWIB5V6V3sbmenVZUIpU6f+mPEO2+m5iTaA==}
+
+  '@fastify/cors@10.1.0':
+    resolution: {integrity: sha512-MZyBCBJtII60CU9Xme/iE4aEy8G7QpzGR8zkdXZkDFt7ElEMachbE61tfhAG/bvSaULlqlf0huMT12T7iqEmdQ==}
 
   '@fastify/deepmerge@3.2.1':
     resolution: {integrity: sha512-N5Oqvltoa2r9z1tbx4xjky0oRR60v+T47Ic4J1ukoVQcptLOrIdRnCSdTGmOmajZuHVKlTnfcmrjyqsGEW1ztA==}
@@ -5388,6 +5394,9 @@ packages:
   mnemonist@0.38.3:
     resolution: {integrity: sha512-2K9QYubXx/NAjv4VLq1d1Ly8pWNC5L3BrixtdkyTegXWJIqY+zLNDhhX/A+ZwWt70tB1S8H4BE8FLYEFyNoOBw==}
 
+  mnemonist@0.40.0:
+    resolution: {integrity: sha512-kdd8AFNig2AD5Rkih7EPCXhu/iMvwevQFX/uEiGhZyPZi7fHqOoF4V4kHLpCfysxXMgQ4B52kdPMCwARshKvEg==}
+
   module-details-from-path@1.0.4:
     resolution: {integrity: sha512-EGWKgxALGMgzvxYF1UyGTy0HXX/2vHLkw6+NvDKW2jypWbHpjQuj4UMcqQWXHERJhVGKikolT06G3bcKe4fi7w==}
 
@@ -5556,6 +5565,9 @@ packages:
 
   obliterator@1.6.1:
     resolution: {integrity: sha512-9WXswnqINnnhOG/5SLimUlzuU1hFJUc8zkwyD59Sd+dPOMf05PmnYG/d6Q7HZ+KmgkZJa1PxRso6QdM3sTNHig==}
+
+  obliterator@2.0.5:
+    resolution: {integrity: sha512-42CPE9AhahZRsMNslczq0ctAEtqk8Eka26QofnqC346BZdHDySk3LWka23LI7ULIw11NmltpiLagIq8gBozxTw==}
 
   officeparser@4.2.0:
     resolution: {integrity: sha512-LXSfaET8ZOBNjmSev4K1N6AiKTaY7m9NkddeCaMUdEe5D/HUuv2byB8VoPIaiLldtKun0I92tbhO+VGDUr/aXQ==}
@@ -8170,6 +8182,11 @@ snapshots:
       fast-uri: 3.1.0
 
   '@fastify/busboy@3.2.0': {}
+
+  '@fastify/cors@10.1.0':
+    dependencies:
+      fastify-plugin: 5.1.0
+      mnemonist: 0.40.0
 
   '@fastify/deepmerge@3.2.1': {}
 
@@ -11997,6 +12014,10 @@ snapshots:
     dependencies:
       obliterator: 1.6.1
 
+  mnemonist@0.40.0:
+    dependencies:
+      obliterator: 2.0.5
+
   module-details-from-path@1.0.4: {}
 
   motion-dom@12.38.0:
@@ -12151,6 +12172,8 @@ snapshots:
       es-object-atoms: 1.1.1
 
   obliterator@1.6.1: {}
+
+  obliterator@2.0.5: {}
 
   officeparser@4.2.0:
     dependencies:

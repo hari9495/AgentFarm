@@ -486,7 +486,26 @@ export const registerCiFailureRoutes = async (
 
             const repo = resolveRepo(options, store);
             const result = await repo.listReports({ tenantId: session.tenantId, workspaceId, status: statusFilter, limit });
-            return reply.status(200).send(result);
+            return reply.status(200).send({
+                total: result.total,
+                runs: result.runs.map((r) => ({
+                    triageId: r.id,
+                    provider: r.provider,
+                    runId: r.runId,
+                    repo: r.repo,
+                    branch: r.branch,
+                    failedJobs: r.failedJobs,
+                    status: r.status,
+                    rootCauseHypothesis: r.rootCauseHypothesis ?? null,
+                    reproSteps: r.reproSteps ?? null,
+                    patchProposal: r.patchProposal ?? null,
+                    confidence: r.confidence ?? null,
+                    blastRadius: r.blastRadius ?? null,
+                    correlationId: r.correlationId,
+                    createdAt: r.createdAt,
+                    updatedAt: r.updatedAt,
+                })),
+            });
         },
     );
 

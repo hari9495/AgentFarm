@@ -1542,7 +1542,7 @@ export default async function HomePage({
                             <QuickAccessGrid />
                             <AgentPerformancePanel />
                             <AgentControlPanel botId={workspace.bot_id} />
-                            <TaskRetryPanel botId={workspace.bot_id} />
+                            <TaskRetryPanel botId={workspace.bot_id} workspaceId={workspace.workspace_id} />
                         </section>
                     )}
 

@@ -86,9 +86,9 @@ function truncateId(id: string): string {
     return id.length > 12 ? `${id.slice(0, 12)}…` : id;
 }
 
-type Props = { botId: string };
+type Props = { botId: string; workspaceId?: string };
 
-export default function TaskRetryPanel({ botId }: Props) {
+export default function TaskRetryPanel({ botId, workspaceId }: Props) {
     const [tasks, setTasks] = useState<TaskRecord[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [fetchError, setFetchError] = useState<string | null>(null);
@@ -100,7 +100,8 @@ export default function TaskRetryPanel({ botId }: Props) {
         setIsLoading(true);
         setFetchError(null);
         try {
-            const res = await fetch(`/api/runtime/${botId}/tasks`, { cache: 'no-store' });
+            const qs = workspaceId ? `?workspaceId=${encodeURIComponent(workspaceId)}` : '';
+            const res = await fetch(`/api/runtime/${botId}/tasks${qs}`, { cache: 'no-store' });
             if (!res.ok) {
                 setFetchError('Failed to load task history.');
                 return;

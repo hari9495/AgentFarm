@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 
 type SessionScope = 'customer' | 'internal';
 
-const PUBLIC_PATHS = new Set(['/login', '/onboarding']);
+const PUBLIC_PATHS = new Set(['/login', '/signup', '/onboarding']);
 
 const decodeBase64Url = (value: string): string | null => {
     const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
@@ -75,7 +75,7 @@ export function middleware(request: NextRequest) {
     }
 
     if (PUBLIC_PATHS.has(pathname)) {
-        if (pathname === '/login' && hasInternalSession) {
+        if ((pathname === '/login' || pathname === '/signup') && hasInternalSession) {
             return NextResponse.redirect(new URL('/', request.url));
         }
         return NextResponse.next();

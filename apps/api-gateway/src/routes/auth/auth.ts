@@ -285,6 +285,56 @@ export const registerAuthRoutes = async (
     });
 
     /**
+     * POST /auth/passwordless-login
+     * Creates an internal session for a user without requiring a password.
+     * Caller MUST present the PASSWORDLESS_LOGIN_SHARED_TOKEN as a Bearer token.
+     * Only the Next.js dashboard should call this — after it has verified an OTP or magic link.
+     */
+    app.post<{ Body: { email?: string } }>('/auth/passwordless-login', async (request, reply) => {
+        const expected = process.env['PASSWORDLESS_LOGIN_SHARED_TOKEN'];
+        const auth = request.headers['authorization'];
+        if (!expected || auth !== `Bearer ${expected}`) {
+            return reply.code(401).send({ error: 'unauthorized', message: 'Invalid shared token.' });
+        }
+
+        const email = request.body?.email?.trim().toLowerCase();
+        if (!email) {
+            return reply.code(400).send({ error: 'validation_failed', message: 'Email is required.' });
+        }
+
+        const user = await repo.findUserByEmail(email);
+        if (!user) {
+            return reply.code(404).send({ error: 'user_not_found', message: 'No account found for this email.' });
+        }
+
+        if (!isInternalAccessAllowed({ email, role: user.role })) {
+            return reply.code(403).send({
+                error: 'internal_access_denied',
+                message: 'Your account is not allowed to use internal login.',
+            });
+        }
+
+        const workspaces = await repo.getWorkspacesForTenant(user.tenantId);
+        const token = buildSessionToken({
+            userId: user.id,
+            tenantId: user.tenantId,
+            workspaceIds: workspaces.map((w: { id: string }) => w.id),
+            scope: 'internal',
+            role: user.role,
+        });
+
+        return reply
+            .header('Set-Cookie', setSessionCookie(token))
+            .send({
+                token,
+                user_id: user.id,
+                tenant_id: user.tenantId,
+                workspace_ids: workspaces.map((w: { id: string }) => w.id),
+                scope: 'internal',
+            });
+    });
+
+    /**
      * POST /auth/logout
      * Clears the session cookie.
      */

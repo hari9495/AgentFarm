@@ -11,8 +11,8 @@ export async function GET() {
 
     const payload = {
         userId: 'dev-user-001',
-        tenantId: 'dev-tenant-001',
-        workspaceIds: ['dev-workspace-001'],
+        tenantId: 'tenant_acme_001',
+        workspaceIds: ['ws_primary_001'],
         scope: 'internal' as const,
         role: 'admin',
         expiresAt: Date.now() + 8 * 60 * 60 * 1000,

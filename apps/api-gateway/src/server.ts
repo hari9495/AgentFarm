@@ -29,6 +29,7 @@ const PUBLIC_PATHS = new Set([
     '/auth/signup',
     '/auth/login',
     '/auth/internal-login',
+    '/auth/passwordless-login',
     '/portal/auth/signup',
     '/portal/auth/login',
     '/portal/auth/logout',
@@ -233,6 +234,7 @@ export const createServer = async (): Promise<FastifyInstance> => {
             userId: 'dev-user-001',
             tenantId: 'tenant_acme_001',
             workspaceIds: ['ws_primary_001'],
+            scope: 'internal',
         });
         return { token, expires_in_seconds: 8 * 60 * 60 };
     });

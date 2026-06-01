@@ -20,6 +20,7 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const limit = searchParams.get('limit');
     const cursor = searchParams.get('cursor');
+    const workspaceId = searchParams.get('workspaceId') ?? botId;
 
     const query = new URLSearchParams();
     if (limit) query.set('limit', limit);
@@ -28,7 +29,7 @@ export async function GET(
 
     const result = await runRuntimeProxy({
         sessionAuthHeader: authHeader,
-        upstreamUrl: `${getApiBaseUrl()}/v1/workspaces/${botId}/tasks${qs}`,
+        upstreamUrl: `${getApiBaseUrl()}/v1/workspaces/${workspaceId}/tasks${qs}`,
         requestInit: {
             method: 'GET',
             headers: { Authorization: authHeader },
