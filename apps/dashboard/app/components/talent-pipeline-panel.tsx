@@ -24,10 +24,7 @@ type JobRequisition = {
     openedAt: string;
 };
 
-const API_BASE =
-    typeof window !== 'undefined'
-        ? (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000')
-        : 'http://localhost:3000';
+const API_BASE = '';
 
 const STATUS_STYLE: Record<CandidateStatus, { bg: string; color: string; icon: React.ElementType }> = {
     sourced:      { bg: '#f1f5f9', color: '#475569', icon: Users },
@@ -59,11 +56,11 @@ export default function TalentPipelinePanel({ workspaceId }: { workspaceId: stri
         try {
             const params = new URLSearchParams({ workspace_id: workspaceId });
             if (view === 'candidates') {
-                const res = await fetch(`${API_BASE}/v1/talent/candidates?${params.toString()}`);
+                const res = await fetch(`${API_BASE}/api/talent-pipeline/candidates?${params.toString()}`);
                 const data = await res.json().catch(() => ({}));
                 setCandidates(Array.isArray(data) ? data : (data.candidates ?? []));
             } else {
-                const res = await fetch(`${API_BASE}/v1/talent/requisitions?${params.toString()}`);
+                const res = await fetch(`${API_BASE}/api/talent-pipeline/requisitions?${params.toString()}`);
                 const data = await res.json().catch(() => ({}));
                 setRequisitions(Array.isArray(data) ? data : (data.requisitions ?? []));
             }
@@ -77,7 +74,7 @@ export default function TalentPipelinePanel({ workspaceId }: { workspaceId: stri
     useEffect(() => { load(); }, [load]);
 
     const advance = async (id: string) => {
-        await fetch(`${API_BASE}/v1/talent/candidates/${id}/advance`, { method: 'POST' }).catch(() => null);
+        await fetch(`${API_BASE}/api/talent-pipeline/candidates/${id}/advance`, { method: 'POST' }).catch(() => null);
         await load();
     };
 

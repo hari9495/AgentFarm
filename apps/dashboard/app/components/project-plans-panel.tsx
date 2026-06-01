@@ -18,10 +18,7 @@ type ProjectPlan = {
     createdAt: string;
 };
 
-const API_BASE =
-    typeof window !== 'undefined'
-        ? (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000')
-        : 'http://localhost:3000';
+const API_BASE = '';
 
 const TYPE_LABEL: Record<PlanType, string> = {
     sprint_plan: 'Sprint Plan', project_roadmap: 'Roadmap', risk_register: 'Risk Register',
@@ -56,7 +53,7 @@ export default function ProjectPlansPanel({ workspaceId }: { workspaceId: string
         try {
             const params = new URLSearchParams({ workspace_id: workspaceId });
             if (filter !== 'all') params.set('status', filter);
-            const res = await fetch(`${API_BASE}/v1/projects/plans?${params.toString()}`);
+            const res = await fetch(`${API_BASE}/api/project-plans?${params.toString()}`);
             if (!res.ok) throw new Error();
             const data = await res.json();
             setPlans(Array.isArray(data) ? data : (data.plans ?? []));
@@ -70,7 +67,7 @@ export default function ProjectPlansPanel({ workspaceId }: { workspaceId: string
     useEffect(() => { load(); }, [load]);
 
     const approve = async (id: string) => {
-        await fetch(`${API_BASE}/v1/projects/plans/${id}/approve`, { method: 'POST' }).catch(() => null);
+        await fetch(`${API_BASE}/api/project-plans/${id}/approve`, { method: 'POST' }).catch(() => null);
         await load();
     };
 

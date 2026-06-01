@@ -20,10 +20,7 @@ type SupportTicket = {
     updatedAt: string;
 };
 
-const API_BASE =
-    typeof window !== 'undefined'
-        ? (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000')
-        : 'http://localhost:3000';
+const API_BASE = '';
 
 const STATUS_STYLE: Record<TicketStatus, { bg: string; color: string; icon: React.ElementType }> = {
     open:             { bg: '#eff6ff', color: '#1e40af', icon: Clock },
@@ -55,7 +52,7 @@ export default function SupportQueuePanel({ workspaceId }: { workspaceId: string
         try {
             const params = new URLSearchParams({ workspace_id: workspaceId });
             if (filter !== 'all') params.set('status', filter);
-            const res = await fetch(`${API_BASE}/v1/support/tickets?${params.toString()}`);
+            const res = await fetch(`${API_BASE}/api/support-queue?${params.toString()}`);
             if (!res.ok) throw new Error();
             const data = await res.json();
             setTickets(Array.isArray(data) ? data : (data.tickets ?? []));
@@ -69,12 +66,12 @@ export default function SupportQueuePanel({ workspaceId }: { workspaceId: string
     useEffect(() => { load(); }, [load]);
 
     const escalate = async (id: string) => {
-        await fetch(`${API_BASE}/v1/support/tickets/${id}/escalate`, { method: 'POST' }).catch(() => null);
+        await fetch(`${API_BASE}/api/support-queue/${id}/escalate`, { method: 'POST' }).catch(() => null);
         await load();
     };
 
     const resolve = async (id: string) => {
-        await fetch(`${API_BASE}/v1/support/tickets/${id}/resolve`, { method: 'POST' }).catch(() => null);
+        await fetch(`${API_BASE}/api/support-queue/${id}/resolve`, { method: 'POST' }).catch(() => null);
         await load();
     };
 

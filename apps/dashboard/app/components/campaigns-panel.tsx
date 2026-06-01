@@ -21,10 +21,7 @@ type Campaign = {
     createdAt: string;
 };
 
-const API_BASE =
-    typeof window !== 'undefined'
-        ? (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000')
-        : 'http://localhost:3000';
+const API_BASE = '';
 
 const CHANNEL_LABEL: Record<CampaignChannel, string> = {
     email: 'Email', social: 'Social', paid_search: 'Paid Search',
@@ -54,7 +51,7 @@ export default function CampaignsPanel({ workspaceId }: { workspaceId: string })
         try {
             const params = new URLSearchParams({ workspace_id: workspaceId });
             if (filter !== 'all') params.set('status', filter);
-            const res = await fetch(`${API_BASE}/v1/marketing/campaigns?${params.toString()}`);
+            const res = await fetch(`${API_BASE}/api/campaigns?${params.toString()}`);
             if (!res.ok) throw new Error();
             const data = await res.json();
             setCampaigns(Array.isArray(data) ? data : (data.campaigns ?? []));
@@ -68,7 +65,7 @@ export default function CampaignsPanel({ workspaceId }: { workspaceId: string })
     useEffect(() => { load(); }, [load]);
 
     const act = async (id: string, action: 'approve' | 'reject' | 'pause' | 'resume') => {
-        await fetch(`${API_BASE}/v1/marketing/campaigns/${id}/${action}`, { method: 'POST' }).catch(() => null);
+        await fetch(`${API_BASE}/api/campaigns/${id}/${action}`, { method: 'POST' }).catch(() => null);
         await load();
     };
 

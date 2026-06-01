@@ -18,10 +18,7 @@ type BusinessReport = {
     createdAt: string;
 };
 
-const API_BASE =
-    typeof window !== 'undefined'
-        ? (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000')
-        : 'http://localhost:3000';
+const API_BASE = '';
 
 const TYPE_LABEL: Record<ReportType, string> = {
     brd: 'BRD', market_analysis: 'Market Analysis', stakeholder_report: 'Stakeholder Report',
@@ -48,7 +45,7 @@ export default function BusinessReportsPanel({ workspaceId }: { workspaceId: str
         try {
             const params = new URLSearchParams({ workspace_id: workspaceId });
             if (filter !== 'all') params.set('status', filter);
-            const res = await fetch(`${API_BASE}/v1/business/reports?${params.toString()}`);
+            const res = await fetch(`${API_BASE}/api/business-reports?${params.toString()}`);
             if (!res.ok) throw new Error();
             const data = await res.json();
             setReports(Array.isArray(data) ? data : (data.reports ?? []));
@@ -62,7 +59,7 @@ export default function BusinessReportsPanel({ workspaceId }: { workspaceId: str
     useEffect(() => { load(); }, [load]);
 
     const act = async (id: string, action: 'approve' | 'reject') => {
-        await fetch(`${API_BASE}/v1/business/reports/${id}/${action}`, { method: 'POST' }).catch(() => null);
+        await fetch(`${API_BASE}/api/business-reports/${id}/${action}`, { method: 'POST' }).catch(() => null);
         await load();
     };
 
