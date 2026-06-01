@@ -14,11 +14,6 @@ export default async function InternalSkillCatalogPage({ searchParams }: { searc
     const workspaceId = (params.workspaceId ?? params.workspace_id ?? 'ws_primary_001').trim();
     const botId = (params.botId ?? params.bot_id ?? 'bot_dev_001').trim();
 
-    const query = new URLSearchParams({
-        workspaceId,
-        botId,
-    }).toString();
-
     return (
         <main className="page-shell" style={{ maxWidth: 980 }}>
             <PageHeader
@@ -30,9 +25,6 @@ export default async function InternalSkillCatalogPage({ searchParams }: { searc
             <div style={{ display: 'flex', gap: '0.55rem', flexWrap: 'wrap' }}>
                 <Link href={`/?workspaceId=${encodeURIComponent(workspaceId)}&tab=overview`} className="secondary-action" style={{ textDecoration: 'none' }}>
                     Back to Dashboard
-                </Link>
-                <Link href={`/marketplace?${query}`} className="primary-action" style={{ textDecoration: 'none' }}>
-                    Open Customer Marketplace View
                 </Link>
             </div>
 

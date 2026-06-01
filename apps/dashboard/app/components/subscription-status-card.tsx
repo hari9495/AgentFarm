@@ -1,7 +1,5 @@
 'use client';
 
-import Link from 'next/link';
-
 export type SubscriptionStatusCardProps = {
     plan?: string;
     status: string;
@@ -95,71 +93,6 @@ function UsageBar({ used, limit }: { used: number; limit: number }) {
                 {pct.toFixed(0)}% of limit used
             </p>
         </div>
-    );
-}
-
-// ── CTA buttons ───────────────────────────────────────────────────────────────
-
-function PlanCTA({ plan }: { plan: string }) {
-    const lower = plan.toLowerCase();
-    if (lower === 'enterprise') {
-        return (
-            <Link
-                href="/contact"
-                style={{
-                    display: 'inline-block',
-                    marginTop: '1rem',
-                    padding: '0.55rem 1.1rem',
-                    fontSize: '0.875rem',
-                    fontWeight: 600,
-                    border: '1px solid var(--brand)',
-                    borderRadius: 8,
-                    color: 'var(--brand)',
-                    textDecoration: 'none',
-                }}
-            >
-                Contact Sales
-            </Link>
-        );
-    }
-    if (lower === 'pro') {
-        return (
-            <Link
-                href="/billing/upgrade"
-                style={{
-                    display: 'inline-block',
-                    marginTop: '1rem',
-                    padding: '0.55rem 1.1rem',
-                    fontSize: '0.875rem',
-                    fontWeight: 600,
-                    border: '1px solid var(--brand)',
-                    borderRadius: 8,
-                    color: 'var(--brand)',
-                    textDecoration: 'none',
-                }}
-            >
-                Upgrade to Enterprise →
-            </Link>
-        );
-    }
-    // free or unknown
-    return (
-        <Link
-            href="/billing/upgrade"
-            style={{
-                display: 'inline-block',
-                marginTop: '1rem',
-                padding: '0.55rem 1.1rem',
-                fontSize: '0.875rem',
-                fontWeight: 700,
-                background: 'var(--brand)',
-                color: '#fff',
-                borderRadius: 8,
-                textDecoration: 'none',
-            }}
-        >
-            Upgrade to Pro →
-        </Link>
     );
 }
 
@@ -285,10 +218,6 @@ export function SubscriptionStatusCard({
                     </span>
                 </div>
             )}
-
-            <div>
-                <PlanCTA plan={plan ?? 'free'} />
-            </div>
         </div>
     );
 }

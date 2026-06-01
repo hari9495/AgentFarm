@@ -60,9 +60,8 @@ function AdaptersTab({ workspaceId }: { workspaceId: string }) {
                 {[
                     { title: 'Browse adapters',      desc: 'View all registered adapters and their health status',       href: `/adapters?workspaceId=${workspaceId}` },
                     { title: 'Register new adapter', desc: 'Add a custom adapter endpoint to this workspace',            href: `/adapters?workspaceId=${workspaceId}&action=register` },
-                    { title: 'Adapter capabilities', desc: 'See what actions each adapter exposes to agents',            href: `/connector-marketplace` },
-                ].map(({ title, desc, href }, i) => (
-                    <Link key={href} href={href} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 18px', textDecoration: 'none', borderBottom: i < 2 ? '1px solid #f0f0f2' : 'none', transition: 'background 0.15s' }}
+                ].map(({ title, desc, href }, i, arr) => (
+                    <Link key={href} href={href} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 18px', textDecoration: 'none', borderBottom: i < arr.length - 1 ? '1px solid #f0f0f2' : 'none', transition: 'background 0.15s' }}
                         onMouseEnter={e => (e.currentTarget.style.background = '#f5f5f7')}
                         onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
                         <div style={{ flex: 1 }}>
