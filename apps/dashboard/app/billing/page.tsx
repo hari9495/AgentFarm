@@ -9,6 +9,25 @@ import { AgentCostTable, type ProviderCost } from '../components/agent-cost-tabl
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
+type OrderInvoice = {
+    id: string;
+    number?: string | null;
+    amountCents: number;
+    currency: string;
+    paidAt?: string | null;
+    pdfUrl?: string | null;
+};
+
+type Order = {
+    id: string;
+    planId: string;
+    status: string;
+    amountCents: number;
+    currency: string;
+    createdAt: string;
+    invoice?: OrderInvoice | null;
+};
+
 type SubscriptionData = {
     status: string;
     expiresAt?: string | null;
@@ -89,21 +108,25 @@ export default function BillingPage() {
     const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
     const [costSummary, setCostSummary] = useState<CostSummaryData | null>(null);
     const [metering, setMetering] = useState<MeteringData | null>(null);
+    const [orders, setOrders] = useState<Order[]>([]);
     const [subLoading, setSubLoading] = useState(true);
     const [costLoading, setCostLoading] = useState(true);
     const [subError, setSubError] = useState<string | null>(null);
     const [costError, setCostError] = useState<string | null>(null);
 
-    // Fetch subscription once on mount
+    // Fetch subscription + orders once on mount
     useEffect(() => {
         let cancelled = false;
         setSubLoading(true);
         setSubError(null);
-        fetch('/api/billing/subscription', { cache: 'no-store' })
-            .then((r) => r.json() as Promise<SubscriptionData>)
-            .then((data) => {
+        Promise.all([
+            fetch('/api/billing/subscription', { cache: 'no-store' }).then((r) => r.json() as Promise<SubscriptionData>),
+            fetch('/api/billing/orders', { cache: 'no-store' }).then((r) => r.ok ? (r.json() as Promise<{ orders: Order[] }>) : Promise.resolve({ orders: [] })),
+        ])
+            .then(([subData, ordersData]) => {
                 if (!cancelled) {
-                    setSubscription(data);
+                    setSubscription(subData);
+                    setOrders(ordersData.orders ?? []);
                     setSubLoading(false);
                 }
             })
@@ -291,50 +314,65 @@ export default function BillingPage() {
                     </div>
                 )}
 
-                {/* Invoice history — placeholder (no backend route today) */}
+                {/* Invoice history */}
                 <div className="card" style={{ display: 'grid', gap: '0.75rem' }}>
                     <h2 style={{ margin: 0 }}>Invoice History</h2>
-                    <p
-                        style={{
-                            margin: 0,
-                            fontSize: '0.83rem',
-                            color: 'var(--ink-muted)',
-                        }}
-                    >
-                        Invoices will appear here once available.
-                    </p>
-                    <div
-                        style={{
-                            display: 'grid',
-                            gap: '0.5rem',
-                        }}
-                    >
-                        {(['Jan 2025', 'Feb 2025', 'Mar 2025'] as const).map((m) => (
-                            <div
-                                key={m}
-                                style={{
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    padding: '0.5rem 0',
-                                    borderBottom: '1px solid var(--line)',
-                                    fontSize: '0.83rem',
-                                    color: 'var(--ink-soft)',
-                                }}
-                            >
-                                <span>{m}</span>
-                                <span
-                                    style={{
-                                        fontSize: '0.7rem',
-                                        color: 'var(--ink-muted)',
-                                        fontStyle: 'italic',
-                                    }}
-                                >
-                                    Coming soon
-                                </span>
-                            </div>
-                        ))}
-                    </div>
+                    {orders.length === 0 ? (
+                        <p style={{ margin: 0, fontSize: '0.83rem', color: 'var(--ink-muted)' }}>
+                            No invoices yet.
+                        </p>
+                    ) : (
+                        <div style={{ display: 'grid', gap: '0.5rem' }}>
+                            {orders.slice(0, 6).map((order) => {
+                                const inv = order.invoice;
+                                const label = inv?.number
+                                    ? `INV-${inv.number}`
+                                    : new Date(order.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+                                const amount = new Intl.NumberFormat('en-US', {
+                                    style: 'currency',
+                                    currency: (inv?.currency ?? order.currency ?? 'usd').toUpperCase(),
+                                    minimumFractionDigits: 0,
+                                }).format((inv?.amountCents ?? order.amountCents) / 100);
+                                const paid = inv?.paidAt ?? null;
+                                return (
+                                    <div
+                                        key={order.id}
+                                        style={{
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                            padding: '0.5rem 0',
+                                            borderBottom: '1px solid var(--line)',
+                                            fontSize: '0.83rem',
+                                            color: 'var(--ink-soft)',
+                                        }}
+                                    >
+                                        <div>
+                                            <span style={{ fontWeight: 600, color: 'var(--ink)' }}>{label}</span>
+                                            <span style={{ marginLeft: '0.5rem', fontSize: '0.75rem', color: 'var(--ink-muted)' }}>
+                                                {paid
+                                                    ? `Paid ${new Date(paid).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+                                                    : order.status === 'pending' ? 'Pending' : order.status}
+                                            </span>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <span style={{ fontWeight: 600, color: 'var(--ink)', fontVariantNumeric: 'tabular-nums' }}>{amount}</span>
+                                            {inv?.pdfUrl && (
+                                                <a
+                                                    href={inv.pdfUrl}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    style={{ fontSize: '0.72rem', color: 'var(--brand)', textDecoration: 'none' }}
+                                                >
+                                                    PDF
+                                                </a>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
 
                 <CostTrendChart data={costSummary?.weekly_trend ?? []} />
