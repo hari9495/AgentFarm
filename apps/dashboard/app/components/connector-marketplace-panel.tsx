@@ -584,8 +584,7 @@ export function ConnectorMarketplacePanel({ agentRoles = [] }: ConnectorMarketpl
                     <div>
                         <p className="text-sm font-medium text-zinc-300">Testing &amp; QA connectors are locked</p>
                         <p className="mt-0.5 text-xs text-zinc-500">
-                            14 integrations — Selenium, Playwright, Cypress, Appium, k6, JMeter, Postman, SoapUI, TestRail, Zephyr, OWASP ZAP, Burp Suite, Jenkins, CircleCI — are only available after hiring the{' '}
-                            <a href="/marketplace/tester" className="text-blue-400 hover:underline">Tester agent</a>.
+                            14 integrations — Selenium, Playwright, Cypress, Appium, k6, JMeter, Postman, SoapUI, TestRail, Zephyr, OWASP ZAP, Burp Suite, Jenkins, CircleCI — are only available after the Tester agent is enabled for this workspace.
                         </p>
                     </div>
                 </div>

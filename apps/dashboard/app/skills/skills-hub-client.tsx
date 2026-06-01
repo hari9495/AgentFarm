@@ -126,7 +126,7 @@ function TelemetryTab({ botId, workspaceId }: { botId: string; workspaceId: stri
     );
 }
 
-// ── Role-based skills tab — links to existing /marketplace/roles page ──────────
+// ── Role-based skills tab — curated skill recommendations per agent role ───────
 
 function RolesTab() {
     return (
@@ -178,10 +178,6 @@ function RolesTab() {
                     </div>
                 ))}
             </div>
-
-            <Link href="/marketplace/roles" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 18px', borderRadius: 9999, border: '1px solid rgba(0,102,204,0.25)', background: 'rgba(0,102,204,0.06)', color: '#0066cc', fontSize: 13, fontWeight: 700, textDecoration: 'none', width: 'fit-content' }}>
-                Open full role catalog →
-            </Link>
         </div>
     );
 }

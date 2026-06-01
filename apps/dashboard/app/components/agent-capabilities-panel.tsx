@@ -284,12 +284,6 @@ function LockedSection({ section }: { section: AgentCapabilitySection }) {
                         <p className="text-xs text-zinc-500 mt-0.5">{section.tagline}</p>
                     </div>
                 </div>
-                <a
-                    href={`/marketplace/${section.roleKey}`}
-                    className="shrink-0 rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:bg-zinc-700 hover:text-white transition-colors"
-                >
-                    Hire agent →
-                </a>
             </div>
 
             {/* Blurred feature preview */}
@@ -416,9 +410,6 @@ export function AgentCapabilitiesPanel({ capabilities, error }: Props) {
             ) : (
                 <div className="rounded-xl border border-zinc-700 bg-zinc-800/50 p-6 text-center">
                     <p className="text-zinc-400 text-sm">No agents hired yet.</p>
-                    <a href="/marketplace" className="mt-2 inline-block text-blue-400 text-sm hover:underline">
-                        Browse available agents →
-                    </a>
                 </div>
             )}
 

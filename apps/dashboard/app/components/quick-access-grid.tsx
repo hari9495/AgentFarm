@@ -20,7 +20,7 @@ const CATEGORIES: ToolCategory[] = [
         title: 'Monitoring',
         color: 'bg-sky-100 text-sky-700',
         tools: [
-            { label: 'Live Feed', href: '/live-feed', icon: '📡', description: 'Real-time event stream' },
+            { label: 'Live Feed', href: '/live', icon: '📡', description: 'Real-time event stream' },
             { label: 'Health & Status', href: '/health', icon: '💚', description: 'Service health overview' },
             { label: 'Observability', href: '/?tab=observability', icon: '📈', description: 'Metrics & traces' },
             { label: 'Audit Log', href: '/?tab=audit', icon: '📋', description: 'All activity history' },
@@ -36,11 +36,11 @@ const CATEGORIES: ToolCategory[] = [
         color: 'bg-violet-100 text-violet-700',
         tools: [
             { label: 'Agents', href: '/agents', icon: '🤖', description: 'Manage all agents' },
-            { label: 'Task History', href: '/task-history', icon: '📝', description: 'All task records' },
+            { label: 'Task History', href: '/tasks', icon: '📝', description: 'All task records' },
             { label: 'Approvals', href: '/?tab=approvals', icon: '✅', description: 'Pending approvals' },
             { label: 'Agent Chat', href: '/agent-chat', icon: '💬', description: 'Chat interface' },
             { label: 'Orchestration', href: '/orchestration', icon: '🎛️', description: 'Task orchestration' },
-            { label: 'CI/CD Triage', href: '/cicd-triage', icon: '🔧', description: 'Pipeline triage' },
+            { label: 'CI/CD Triage', href: '/ci', icon: '🔧', description: 'Pipeline triage' },
         ],
     },
     {
@@ -48,8 +48,8 @@ const CATEGORIES: ToolCategory[] = [
         title: 'Workflows',
         color: 'bg-emerald-100 text-emerald-700',
         tools: [
-            { label: 'Workflow Builder', href: '/workflow-builder', icon: '⚙️', description: 'Build workflows' },
-            { label: 'Routine Tasks', href: '/routines', icon: '🔄', description: 'Scheduled routines' },
+            { label: 'Workflow Builder', href: '/governance/workflows', icon: '⚙️', description: 'Build workflows' },
+            { label: 'Routine Tasks', href: '/routine-tasks', icon: '🔄', description: 'Scheduled routines' },
             { label: 'Scheduled Reports', href: '/scheduled-reports', icon: '📅', description: 'Automated reports' },
             { label: 'Pipelines', href: '/pipelines', icon: '🚀', description: 'Data pipelines' },
             { label: 'Loops', href: '/loops', icon: '🔁', description: 'Iteration loops' },
@@ -61,12 +61,11 @@ const CATEGORIES: ToolCategory[] = [
         title: 'Platform & Connectors',
         color: 'bg-amber-100 text-amber-700',
         tools: [
-            { label: 'Connectors', href: '/marketplace', icon: '🔌', description: 'Connector marketplace' },
+            { label: 'Connectors', href: '/connectors', icon: '🔌', description: 'Adapters & integrations' },
             { label: 'Webhook Manager', href: '/webhooks', icon: '🪝', description: 'Inbound & outbound' },
             { label: 'Knowledge Graph', href: '/knowledge-graph', icon: '🧠', description: 'Org knowledge base' },
-            { label: 'API Docs', href: '/api-docs', icon: '📖', description: 'Integration reference' },
             { label: 'A/B Tests', href: '/ab-tests', icon: '🧪', description: 'Experiment manager' },
-            { label: 'Env Reconciler', href: '/env-reconciler', icon: '🔬', description: 'Config sync' },
+            { label: 'Env Reconciler', href: '/env', icon: '🔬', description: 'Config sync' },
         ],
     },
     {
@@ -75,7 +74,7 @@ const CATEGORIES: ToolCategory[] = [
         color: 'bg-slate-100 text-slate-700',
         tools: [
             { label: 'Governance', href: '/governance', icon: '🏛️', description: 'Policy & controls' },
-            { label: 'Tenant Settings', href: '/settings', icon: '⚙️', description: 'Tenant configuration' },
+            { label: 'Tenant Settings', href: '/tenant-settings', icon: '⚙️', description: 'Tenant configuration' },
             { label: 'Quality', href: '/quality', icon: '🎯', description: 'Quality gates' },
             { label: 'Team', href: '/team', icon: '👥', description: 'Team members' },
             { label: 'Desktop', href: '/desktop', icon: '🖥️', description: 'Remote desktop' },
@@ -105,8 +104,7 @@ const CATEGORIES: ToolCategory[] = [
             { label: 'Memory', href: '/memory', icon: '🗄️', description: 'Persistent memory' },
             { label: 'PR Drafts', href: '/pr-drafts', icon: '📝', description: 'Draft pull requests' },
             { label: 'Notifications', href: '/notifications', icon: '🔔', description: 'Notification rules' },
-            { label: 'Lead Queue', href: '/lead-queue', icon: '📥', description: 'Inbound leads' },
-            { label: 'Skill Catalog', href: '/skill-catalog', icon: '📚', description: 'Internal skills' },
+            { label: 'Skill Catalog', href: '/internal/skills', icon: '📚', description: 'Internal skills' },
         ],
     },
 ];
