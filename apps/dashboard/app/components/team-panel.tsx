@@ -14,10 +14,10 @@ type Member = {
 
 const ROLES: Role[] = ['viewer', 'operator', 'admin'];
 
-const roleBadge: Record<Role, React.CSSProperties> = {
-    viewer: { background: '#1c2b3a', color: '#7dd3fc' },
-    operator: { background: '#1c2a1c', color: '#86efac' },
-    admin: { background: '#2d1b3a', color: '#d8b4fe' },
+const roleBadgeClass: Record<Role, string> = {
+    viewer: 'badge neutral',
+    operator: 'badge low',
+    admin: 'badge warn',
 };
 
 export default function TeamPanel() {
@@ -26,7 +26,7 @@ export default function TeamPanel() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    // Invite form state
+    // Invite form
     const [showInvite, setShowInvite] = useState(false);
     const [inviteEmail, setInviteEmail] = useState('');
     const [inviteName, setInviteName] = useState('');
@@ -35,11 +35,11 @@ export default function TeamPanel() {
     const [inviting, setInviting] = useState(false);
     const [inviteError, setInviteError] = useState<string | null>(null);
 
-    // Delete confirmation state
+    // Delete confirmation
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
-    // Roles tab state
+    // Roles tab
     const [assignUserId, setAssignUserId] = useState('');
     const [assignRole, setAssignRole] = useState<Role>('viewer');
     const [assigning, setAssigning] = useState(false);
@@ -65,10 +65,7 @@ export default function TeamPanel() {
 
     const handleAssignRole = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!assignUserId) {
-            setAssignError('Please select a member.');
-            return;
-        }
+        if (!assignUserId) { setAssignError('Please select a member.'); return; }
         setAssigning(true);
         setAssignError(null);
         setAssignSuccess(null);
@@ -112,10 +109,7 @@ export default function TeamPanel() {
                 return;
             }
             setShowInvite(false);
-            setInviteEmail('');
-            setInviteName('');
-            setInvitePassword('');
-            setInviteRole('viewer');
+            setInviteEmail(''); setInviteName(''); setInvitePassword(''); setInviteRole('viewer');
             await fetchMembers();
         } catch {
             setInviteError('Failed to invite member.');
@@ -142,73 +136,48 @@ export default function TeamPanel() {
         }
     };
 
-    const inputStyle: React.CSSProperties = {
-        fontSize: '0.85rem',
-        padding: '0.3rem 0.5rem',
-        borderRadius: '4px',
-        border: '1px solid var(--line)',
-        background: 'var(--bg)',
-        color: 'var(--ink)',
-        minWidth: '10rem',
-    };
-
-    const thStyle: React.CSSProperties = {
-        padding: '0.4rem 0.5rem',
-        color: 'var(--ink-muted)',
-        fontWeight: 600,
-        textAlign: 'left',
-        borderBottom: '1px solid var(--line)',
-    };
-
     return (
         <section className="card" style={{ marginTop: '1rem' }}>
+            {/* Header row */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
                 <div>
-                    <h2 style={{ marginBottom: '0.2rem' }}>Team Members</h2>
-                    <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--ink-muted)' }}>
-                        Manage users and roles for this tenant.
-                    </p>
+                    <h2>Team Members</h2>
+                    <p className="panel-subtitle">Manage users and dashboard access roles for this tenant.</p>
                 </div>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    {activeTab === 'members' && (
-                        <>
-                            <button
-                                onClick={() => void fetchMembers()}
-                                disabled={loading}
-                                style={{ fontSize: '0.85rem', padding: '0.3rem 0.75rem', borderRadius: '4px', cursor: 'pointer' }}
-                            >
-                                {loading ? 'Loading…' : 'Refresh'}
-                            </button>
-                            <button
-                                onClick={() => { setShowInvite(v => !v); setInviteError(null); }}
-                                style={{ fontSize: '0.85rem', padding: '0.3rem 0.75rem', borderRadius: '4px', cursor: 'pointer', background: 'var(--accent)', color: '#fff', border: 'none' }}
-                            >
-                                {showInvite ? 'Cancel' : '+ Invite'}
-                            </button>
-                        </>
-                    )}
-                </div>
+                {activeTab === 'members' && (
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button
+                            type="button"
+                            onClick={() => void fetchMembers()}
+                            disabled={loading}
+                            className="secondary-action"
+                        >
+                            {loading ? 'Loading…' : 'Refresh'}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => { setShowInvite(v => !v); setInviteError(null); }}
+                            className="primary-action"
+                        >
+                            {showInvite ? 'Cancel' : '+ Invite'}
+                        </button>
+                    </div>
+                )}
             </div>
 
-            {/* Tab switcher */}
-            <div
-                style={{
-                    display: 'flex',
-                    gap: '4px',
-                    borderBottom: '1px solid var(--line)',
-                    marginBottom: '1rem',
-                }}
-            >
+            {/* Tabs */}
+            <div style={{ display: 'flex', gap: '4px', borderBottom: '1px solid var(--line)', marginBottom: '1.25rem' }}>
                 {(['members', 'roles'] as const).map((tab) => (
                     <button
                         key={tab}
+                        type="button"
                         onClick={() => setActiveTab(tab)}
                         style={{
-                            padding: '6px 14px',
+                            padding: '6px 16px',
                             background: 'transparent',
                             border: 'none',
-                            borderBottom: activeTab === tab ? '2px solid var(--accent)' : '2px solid transparent',
-                            color: activeTab === tab ? 'var(--accent)' : 'var(--ink-muted)',
+                            borderBottom: activeTab === tab ? '2px solid var(--brand)' : '2px solid transparent',
+                            color: activeTab === tab ? 'var(--brand)' : 'var(--ink-muted)',
                             fontSize: '0.84rem',
                             fontWeight: activeTab === tab ? 600 : 400,
                             cursor: 'pointer',
@@ -216,7 +185,7 @@ export default function TeamPanel() {
                             textTransform: 'capitalize',
                         }}
                     >
-                        {tab}
+                        {tab === 'members' ? 'Members' : 'Roles'}
                     </button>
                 ))}
             </div>
@@ -224,57 +193,101 @@ export default function TeamPanel() {
             {/* ── Members tab ─────────────────────────────────────── */}
             {activeTab === 'members' && (
                 <>
-                    {/* Error banner */}
                     {error && (
-                        <p style={{ padding: '0.6rem 0.8rem', background: '#450a0a', border: '1px solid #991b1b', borderRadius: '6px', color: '#fca5a5', fontSize: '0.84rem', marginBottom: '0.75rem' }}>
-                            {error}
-                        </p>
+                        <p className="panel-inline-note error" style={{ marginBottom: '0.75rem' }}>{error}</p>
                     )}
 
                     {/* Invite form */}
                     {showInvite && (
-                        <form onSubmit={e => void handleInvite(e)} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', background: 'var(--bg-raised, #0f172a)', border: '1px solid var(--line)', borderRadius: '8px', padding: '1rem', marginBottom: '1rem' }}>
-                            <p style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--ink)', margin: '0 0 0.25rem' }}>Invite new member</p>
-                            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                                <input type="text" placeholder="Full name" value={inviteName} onChange={e => setInviteName(e.target.value)} required style={inputStyle} />
-                                <input type="email" placeholder="Email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} required style={inputStyle} />
-                                <input type="password" placeholder="Temporary password" value={invitePassword} onChange={e => setInvitePassword(e.target.value)} required style={inputStyle} />
-                                <select value={inviteRole} onChange={e => setInviteRole(e.target.value as Role)} style={inputStyle}>
-                                    {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-                                </select>
-                                <button type="submit" disabled={inviting} style={{ fontSize: '0.85rem', padding: '0.3rem 0.75rem', borderRadius: '4px', cursor: 'pointer', background: '#2563eb', color: '#fff', border: 'none' }}>
+                        <form
+                            onSubmit={e => void handleInvite(e)}
+                            className="panel-group"
+                            style={{ marginBottom: '1.25rem' }}
+                        >
+                            <h3 className="panel-group-title">Invite new member</h3>
+                            <div className="panel-form-grid">
+                                <label className="panel-field">
+                                    <span className="panel-field-label">Full name <span className="required">*</span></span>
+                                    <input
+                                        type="text"
+                                        placeholder="Jane Smith"
+                                        value={inviteName}
+                                        onChange={e => setInviteName(e.target.value)}
+                                        required
+                                        className="panel-control"
+                                    />
+                                </label>
+                                <label className="panel-field">
+                                    <span className="panel-field-label">Email <span className="required">*</span></span>
+                                    <input
+                                        type="email"
+                                        placeholder="jane@company.com"
+                                        value={inviteEmail}
+                                        onChange={e => setInviteEmail(e.target.value)}
+                                        required
+                                        className="panel-control"
+                                    />
+                                </label>
+                                <label className="panel-field">
+                                    <span className="panel-field-label">Temporary password <span className="required">*</span></span>
+                                    <input
+                                        type="password"
+                                        placeholder="Set a temporary password"
+                                        value={invitePassword}
+                                        onChange={e => setInvitePassword(e.target.value)}
+                                        required
+                                        className="panel-control"
+                                    />
+                                </label>
+                                <label className="panel-field">
+                                    <span className="panel-field-label">Access role</span>
+                                    <select
+                                        value={inviteRole}
+                                        onChange={e => setInviteRole(e.target.value as Role)}
+                                        className="panel-control"
+                                    >
+                                        {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                                    </select>
+                                </label>
+                            </div>
+                            {inviteError && (
+                                <p className="panel-inline-note error">{inviteError}</p>
+                            )}
+                            <div className="panel-actions-end">
+                                <button type="submit" disabled={inviting} className="primary-action">
                                     {inviting ? 'Inviting…' : 'Send invite'}
                                 </button>
                             </div>
-                            {inviteError && (
-                                <p style={{ color: '#fca5a5', fontSize: '0.82rem', margin: 0 }}>{inviteError}</p>
-                            )}
                         </form>
                     )}
 
                     {/* Loading skeleton */}
                     {loading && (
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-                            <thead>
-                                <tr>{['Name', 'Email', 'Role', 'Joined', ''].map(h => <th key={h} style={thStyle}>{h}</th>)}</tr>
-                            </thead>
-                            <tbody>
-                                {[0, 1, 2].map(i => (
-                                    <tr key={i} style={{ borderBottom: '1px solid var(--line)', opacity: 0.4 }}>
-                                        {[0, 1, 2, 3, 4].map(j => (
-                                            <td key={j} style={{ padding: '0.5rem' }}>
-                                                <div style={{ height: '0.8rem', background: 'var(--line)', borderRadius: '3px', width: '70%' }} />
-                                            </td>
-                                        ))}
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                        <div style={{ overflowX: 'auto' }}>
+                            <table className="panel-table" style={{ width: '100%' }}>
+                                <thead>
+                                    <tr>{['Name', 'Email', 'Role', 'Joined', ''].map(h => (
+                                        <th key={h} className="panel-th">{h}</th>
+                                    ))}</tr>
+                                </thead>
+                                <tbody>
+                                    {[0, 1, 2].map(i => (
+                                        <tr key={i} className="panel-tr" style={{ opacity: 0.4 }}>
+                                            {[0, 1, 2, 3, 4].map(j => (
+                                                <td key={j} className="panel-td">
+                                                    <div style={{ height: '0.75rem', background: 'var(--line)', borderRadius: '3px', width: '70%' }} />
+                                                </td>
+                                            ))}
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     )}
 
                     {/* Empty state */}
                     {!loading && members.length === 0 && !error && (
-                        <p style={{ color: 'var(--ink-muted)', fontSize: '0.86rem', textAlign: 'center', padding: '1.5rem 0' }}>
+                        <p className="panel-muted" style={{ textAlign: 'center', padding: '1.5rem 0' }}>
                             No team members found.
                         </p>
                     )}
@@ -284,44 +297,51 @@ export default function TeamPanel() {
                         <div style={{ overflowX: 'auto' }}>
                             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                                 <thead>
-                                    <tr>{['Name', 'Email', 'Role', 'Joined', ''].map(h => <th key={h} style={thStyle}>{h}</th>)}</tr>
+                                    <tr>
+                                        {['Name', 'Email', 'Role', 'Joined', ''].map(h => (
+                                            <th key={h} style={{ padding: '0.4rem 0.6rem', color: 'var(--ink-muted)', fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em', textAlign: 'left', borderBottom: '1px solid var(--line)' }}>{h}</th>
+                                        ))}
+                                    </tr>
                                 </thead>
                                 <tbody>
                                     {members.map(m => {
                                         const joined = new Date(m.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
-                                        const badgeStyle = roleBadge[m.role] ?? roleBadge.viewer;
                                         return (
                                             <tr key={m.id} style={{ borderBottom: '1px solid var(--line)' }}>
-                                                <td style={{ padding: '0.5rem', color: 'var(--ink)' }}>{m.name}</td>
-                                                <td style={{ padding: '0.5rem', color: 'var(--ink-muted)' }}>{m.email}</td>
-                                                <td style={{ padding: '0.5rem' }}>
-                                                    <span style={{ ...badgeStyle, padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.78rem', fontWeight: 600 }}>
-                                                        {m.role}
-                                                    </span>
+                                                <td style={{ padding: '0.55rem 0.6rem', color: 'var(--ink)', fontWeight: 500 }}>{m.name}</td>
+                                                <td style={{ padding: '0.55rem 0.6rem', color: 'var(--ink-muted)' }}>{m.email}</td>
+                                                <td style={{ padding: '0.55rem 0.6rem' }}>
+                                                    <span className={roleBadgeClass[m.role]}>{m.role}</span>
                                                 </td>
-                                                <td style={{ padding: '0.5rem', color: 'var(--ink-muted)' }}>{joined}</td>
-                                                <td style={{ padding: '0.5rem', textAlign: 'right' }}>
+                                                <td style={{ padding: '0.55rem 0.6rem', color: 'var(--ink-muted)' }}>{joined}</td>
+                                                <td style={{ padding: '0.55rem 0.6rem', textAlign: 'right' }}>
                                                     {confirmDeleteId === m.id ? (
                                                         <span style={{ display: 'inline-flex', gap: '0.4rem', alignItems: 'center' }}>
-                                                            <span style={{ fontSize: '0.78rem', color: '#fca5a5' }}>Remove?</span>
+                                                            <span style={{ fontSize: '0.78rem', color: 'var(--ink-muted)' }}>Remove?</span>
                                                             <button
+                                                                type="button"
                                                                 onClick={() => void handleDelete(m.id)}
                                                                 disabled={deletingId === m.id}
-                                                                style={{ fontSize: '0.78rem', padding: '0.2rem 0.5rem', borderRadius: '4px', cursor: 'pointer', background: '#991b1b', color: '#fff', border: 'none' }}
+                                                                className="danger-action"
+                                                                style={{ fontSize: '0.78rem', padding: '0.2rem 0.55rem' }}
                                                             >
                                                                 {deletingId === m.id ? '…' : 'Yes'}
                                                             </button>
                                                             <button
+                                                                type="button"
                                                                 onClick={() => setConfirmDeleteId(null)}
-                                                                style={{ fontSize: '0.78rem', padding: '0.2rem 0.5rem', borderRadius: '4px', cursor: 'pointer' }}
+                                                                className="secondary-action"
+                                                                style={{ fontSize: '0.78rem', padding: '0.2rem 0.55rem' }}
                                                             >
                                                                 No
                                                             </button>
                                                         </span>
                                                     ) : (
                                                         <button
+                                                            type="button"
                                                             onClick={() => setConfirmDeleteId(m.id)}
-                                                            style={{ fontSize: '0.78rem', padding: '0.2rem 0.5rem', borderRadius: '4px', cursor: 'pointer', color: '#fca5a5', background: 'transparent', border: '1px solid #991b1b' }}
+                                                            className="secondary-action"
+                                                            style={{ fontSize: '0.78rem', padding: '0.2rem 0.55rem' }}
                                                         >
                                                             Remove
                                                         </button>
@@ -340,127 +360,112 @@ export default function TeamPanel() {
             {/* ── Roles tab ────────────────────────────────────────── */}
             {activeTab === 'roles' && (
                 <div>
-                    <p style={{ fontSize: '0.84rem', color: 'var(--ink-muted)', marginBottom: '1rem' }}>
-                        Assign dashboard access roles to team members. <strong>viewer</strong> can read, <strong>operator</strong> can approve/act, <strong>admin</strong> has full control.
+                    <p className="panel-muted" style={{ marginBottom: '1.25rem' }}>
+                        Assign dashboard access roles to team members.{' '}
+                        <strong>viewer</strong> can read,{' '}
+                        <strong>operator</strong> can approve/act,{' '}
+                        <strong>admin</strong> has full control.
                     </p>
 
                     {/* Assign role form */}
-                    <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--ink)', marginBottom: '0.75rem' }}>
-                        Assign Access Role
-                    </h3>
-                    <form
-                        onSubmit={e => void handleAssignRole(e)}
-                        style={{
-                            display: 'flex',
-                            gap: '0.5rem',
-                            flexWrap: 'wrap',
-                            alignItems: 'flex-end',
-                            background: 'var(--bg-raised, #0f172a)',
-                            border: '1px solid var(--line)',
-                            borderRadius: '8px',
-                            padding: '1rem',
-                            marginBottom: '1.5rem',
-                        }}
-                    >
-                        <div>
-                            <label style={{ fontSize: '0.78rem', color: 'var(--ink-muted)', display: 'block', marginBottom: '4px' }}>
-                                Member
+                    <form onSubmit={e => void handleAssignRole(e)} className="panel-group" style={{ marginBottom: '1.25rem' }}>
+                        <h3 className="panel-group-title">Assign Access Role</h3>
+                        <div className="panel-form-grid">
+                            <label className="panel-field">
+                                <span className="panel-field-label">Member</span>
+                                <select
+                                    value={assignUserId}
+                                    onChange={e => setAssignUserId(e.target.value)}
+                                    required
+                                    className="panel-control"
+                                >
+                                    <option value="">— select member —</option>
+                                    {members.map(m => (
+                                        <option key={m.id} value={m.id}>
+                                            {m.name} ({m.email})
+                                        </option>
+                                    ))}
+                                </select>
                             </label>
-                            <select
-                                value={assignUserId}
-                                onChange={e => setAssignUserId(e.target.value)}
-                                required
-                                style={inputStyle}
-                            >
-                                <option value="">— select —</option>
-                                {members.map(m => (
-                                    <option key={m.id} value={m.id}>
-                                        {m.name} ({m.email})
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                        <div>
-                            <label style={{ fontSize: '0.78rem', color: 'var(--ink-muted)', display: 'block', marginBottom: '4px' }}>
-                                Role
+                            <label className="panel-field">
+                                <span className="panel-field-label">Role</span>
+                                <select
+                                    value={assignRole}
+                                    onChange={e => setAssignRole(e.target.value as Role)}
+                                    className="panel-control"
+                                >
+                                    {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                                </select>
                             </label>
-                            <select
-                                value={assignRole}
-                                onChange={e => setAssignRole(e.target.value as Role)}
-                                style={inputStyle}
-                            >
-                                {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-                            </select>
                         </div>
-                        <button
-                            type="submit"
-                            disabled={assigning}
-                            style={{ fontSize: '0.85rem', padding: '0.3rem 0.75rem', borderRadius: '4px', cursor: assigning ? 'not-allowed' : 'pointer', background: '#2563eb', color: '#fff', border: 'none' }}
-                        >
-                            {assigning ? 'Assigning…' : 'Assign'}
-                        </button>
-                        {assignError && <p style={{ color: '#fca5a5', fontSize: '0.82rem', margin: 0, alignSelf: 'center' }}>{assignError}</p>}
-                        {assignSuccess && <p style={{ color: '#86efac', fontSize: '0.82rem', margin: 0, alignSelf: 'center' }}>{assignSuccess}</p>}
+                        {assignError && <p className="panel-inline-note error">{assignError}</p>}
+                        {assignSuccess && <p className="panel-inline-note success">{assignSuccess}</p>}
+                        <div className="panel-actions-end">
+                            <button type="submit" disabled={assigning} className="primary-action">
+                                {assigning ? 'Assigning…' : 'Assign Role'}
+                            </button>
+                        </div>
                     </form>
 
-                    {/* Part C: Current assignments */}
-                    <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--ink)', marginBottom: '0.75rem' }}>
-                        Current Assignments
-                    </h3>
+                    {/* Current assignments */}
+                    <h3 className="panel-group-title" style={{ marginBottom: '0.75rem' }}>Current Assignments</h3>
                     {loading ? (
-                        <p style={{ fontSize: '0.84rem', color: 'var(--ink-muted)' }}>Loading members…</p>
+                        <p className="panel-muted">Loading members…</p>
                     ) : members.length === 0 ? (
-                        <p style={{ fontSize: '0.84rem', color: 'var(--ink-muted)' }}>No members found.</p>
+                        <p className="panel-muted">No members found.</p>
                     ) : (
                         <div style={{ overflowX: 'auto' }}>
                             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                                 <thead>
                                     <tr>
-                                        {['Name', 'Email', 'Role', ''].map(h => <th key={h} style={thStyle}>{h}</th>)}
+                                        {['Name', 'Email', 'Role', ''].map(h => (
+                                            <th key={h} style={{ padding: '0.4rem 0.6rem', color: 'var(--ink-muted)', fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em', textAlign: 'left', borderBottom: '1px solid var(--line)' }}>{h}</th>
+                                        ))}
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {members.map(m => {
-                                        const badgeStyle = roleBadge[m.role] ?? roleBadge.viewer;
-                                        return (
-                                            <tr key={m.id} style={{ borderBottom: '1px solid var(--line)' }}>
-                                                <td style={{ padding: '0.5rem', color: 'var(--ink)' }}>{m.name}</td>
-                                                <td style={{ padding: '0.5rem', color: 'var(--ink-muted)' }}>{m.email}</td>
-                                                <td style={{ padding: '0.5rem' }}>
-                                                    <span style={{ ...badgeStyle, padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.78rem', fontWeight: 600 }}>
-                                                        {m.role}
-                                                    </span>
-                                                </td>
-                                                <td style={{ padding: '0.5rem', textAlign: 'right' }}>
-                                                    {confirmDeleteId === m.id ? (
-                                                        <span style={{ display: 'inline-flex', gap: '0.4rem', alignItems: 'center' }}>
-                                                            <span style={{ fontSize: '0.78rem', color: '#fca5a5' }}>Revoke?</span>
-                                                            <button
-                                                                onClick={() => void handleDelete(m.id)}
-                                                                disabled={deletingId === m.id}
-                                                                style={{ fontSize: '0.78rem', padding: '0.2rem 0.5rem', borderRadius: '4px', cursor: 'pointer', background: '#991b1b', color: '#fff', border: 'none' }}
-                                                            >
-                                                                {deletingId === m.id ? '…' : 'Yes'}
-                                                            </button>
-                                                            <button
-                                                                onClick={() => setConfirmDeleteId(null)}
-                                                                style={{ fontSize: '0.78rem', padding: '0.2rem 0.5rem', borderRadius: '4px', cursor: 'pointer' }}
-                                                            >
-                                                                No
-                                                            </button>
-                                                        </span>
-                                                    ) : (
+                                    {members.map(m => (
+                                        <tr key={m.id} style={{ borderBottom: '1px solid var(--line)' }}>
+                                            <td style={{ padding: '0.55rem 0.6rem', color: 'var(--ink)', fontWeight: 500 }}>{m.name}</td>
+                                            <td style={{ padding: '0.55rem 0.6rem', color: 'var(--ink-muted)' }}>{m.email}</td>
+                                            <td style={{ padding: '0.55rem 0.6rem' }}>
+                                                <span className={roleBadgeClass[m.role]}>{m.role}</span>
+                                            </td>
+                                            <td style={{ padding: '0.55rem 0.6rem', textAlign: 'right' }}>
+                                                {confirmDeleteId === m.id ? (
+                                                    <span style={{ display: 'inline-flex', gap: '0.4rem', alignItems: 'center' }}>
+                                                        <span style={{ fontSize: '0.78rem', color: 'var(--ink-muted)' }}>Revoke?</span>
                                                         <button
-                                                            onClick={() => setConfirmDeleteId(m.id)}
-                                                            style={{ fontSize: '0.78rem', padding: '0.2rem 0.5rem', borderRadius: '4px', cursor: 'pointer', color: '#fca5a5', background: 'transparent', border: '1px solid #991b1b' }}
+                                                            type="button"
+                                                            onClick={() => void handleDelete(m.id)}
+                                                            disabled={deletingId === m.id}
+                                                            className="danger-action"
+                                                            style={{ fontSize: '0.78rem', padding: '0.2rem 0.55rem' }}
                                                         >
-                                                            Revoke
+                                                            {deletingId === m.id ? '…' : 'Yes'}
                                                         </button>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setConfirmDeleteId(null)}
+                                                            className="secondary-action"
+                                                            style={{ fontSize: '0.78rem', padding: '0.2rem 0.55rem' }}
+                                                        >
+                                                            No
+                                                        </button>
+                                                    </span>
+                                                ) : (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setConfirmDeleteId(m.id)}
+                                                        className="secondary-action"
+                                                        style={{ fontSize: '0.78rem', padding: '0.2rem 0.55rem' }}
+                                                    >
+                                                        Revoke
+                                                    </button>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
                                 </tbody>
                             </table>
                         </div>
