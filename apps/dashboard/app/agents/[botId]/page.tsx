@@ -54,137 +54,55 @@ async function fetchAgent(botId: string): Promise<Agent | null> {
     }
 }
 
-// ── Status helpers ─────────────────────────────────────────────────────────────
+// ── Status → badge class ──────────────────────────────────────────────────────
 
-const STATUS_COLORS: Record<BotStatus, string> = {
-    active: '#16a34a',
-    created: '#2563eb',
-    bootstrapping: '#d97706',
-    connector_setup_required: '#f59e0b',
-    paused: '#6b7280',
-    failed: '#dc2626',
+const STATUS_BADGE: Record<BotStatus, string> = {
+    active:                   'ok',
+    created:                  'info',
+    bootstrapping:            'warn',
+    connector_setup_required: 'warn',
+    paused:                   'neutral',
+    failed:                   'high',
 };
 
 const STATUS_LABELS: Record<BotStatus, string> = {
-    active: 'Active',
-    created: 'Created',
-    bootstrapping: 'Bootstrapping',
+    active:                   'Active',
+    created:                  'Created',
+    bootstrapping:            'Bootstrapping',
     connector_setup_required: 'Setup Required',
-    paused: 'Paused',
-    failed: 'Failed',
+    paused:                   'Paused',
+    failed:                   'Failed',
 };
 
 const ROLE_DESCRIPTIONS: Record<string, string> = {
-    developer: 'Writes code, opens PRs, runs CI pipelines',
-    fullstack_developer: 'Handles frontend and backend development tasks',
-    tester: 'Runs tests, files bugs, tracks quality metrics',
-    business_analyst: 'Gathers requirements, drafts specs, manages Jira',
-    technical_writer: 'Produces docs, READMEs, and API references',
-    content_writer: 'Creates blog posts, copy, and marketing content',
-    sales_rep: 'Manages leads, follows up, logs CRM activities',
-    marketing_specialist: 'Plans campaigns, tracks analytics, creates content',
-    corporate_assistant: 'Manages calendar, email, and scheduling tasks',
-    customer_support_executive: 'Handles tickets, chat, email, and voice queries',
-    project_manager_product_owner_scrum_master: 'Runs sprints, facilitates standups, tracks velocity',
-    recruiter: 'Screens candidates, schedules interviews, tracks pipeline',
+    developer:                                     'Writes code, opens PRs, runs CI pipelines',
+    fullstack_developer:                           'Handles frontend and backend development tasks',
+    tester:                                        'Runs tests, files bugs, tracks quality metrics',
+    business_analyst:                              'Gathers requirements, drafts specs, manages Jira',
+    technical_writer:                              'Produces docs, READMEs, and API references',
+    content_writer:                                'Creates blog posts, copy, and marketing content',
+    sales_rep:                                     'Manages leads, follows up, logs CRM activities',
+    marketing_specialist:                          'Plans campaigns, tracks analytics, creates content',
+    corporate_assistant:                           'Manages calendar, email, and scheduling tasks',
+    customer_support_executive:                    'Handles tickets, chat, email, and voice queries',
+    project_manager_product_owner_scrum_master:    'Runs sprints, facilitates standups, tracks velocity',
+    recruiter:                                     'Screens candidates, schedules interviews, tracks pipeline',
 };
 
 const ROLE_ICONS: Record<string, string> = {
-    developer: '💻',
-    fullstack_developer: '🖥️',
-    tester: '🧪',
-    business_analyst: '📊',
-    technical_writer: '✍️',
-    content_writer: '📝',
-    sales_rep: '🤝',
-    marketing_specialist: '📣',
-    corporate_assistant: '🗓️',
-    customer_support_executive: '🎧',
+    developer:                                  '💻',
+    fullstack_developer:                        '🖥️',
+    tester:                                     '🧪',
+    business_analyst:                           '📊',
+    technical_writer:                           '✍️',
+    content_writer:                             '📝',
+    sales_rep:                                  '🤝',
+    marketing_specialist:                       '📣',
+    corporate_assistant:                        '🗓️',
+    customer_support_executive:                 '🎧',
     project_manager_product_owner_scrum_master: '🗂️',
-    recruiter: '🔍',
+    recruiter:                                  '🔍',
 };
-
-// ── Sub-components ─────────────────────────────────────────────────────────────
-
-function StatusBadge({ status }: { status: BotStatus }) {
-    const color = STATUS_COLORS[status] ?? '#6b7280';
-    const label = STATUS_LABELS[status] ?? status;
-    return (
-        <span style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '5px',
-            padding: '4px 12px',
-            borderRadius: '9999px',
-            fontSize: '12px',
-            fontWeight: 600,
-            background: `${color}1a`,
-            color,
-            border: `1px solid ${color}44`,
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-        }}>
-            <span style={{
-                width: '7px',
-                height: '7px',
-                borderRadius: '50%',
-                background: color,
-                flexShrink: 0,
-                ...(status === 'active' ? { boxShadow: `0 0 5px ${color}` } : {}),
-            }} />
-            {label}
-        </span>
-    );
-}
-
-function InfoRow({ label, value }: { label: string; value: string }) {
-    return (
-        <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-start',
-            padding: '9px 0',
-            borderBottom: '1px solid #f0f0f2',
-        }}>
-            <span style={{ fontSize: '12px', color: '#6e6e73', flexShrink: 0, marginRight: '12px' }}>
-                {label}
-            </span>
-            <span style={{
-                fontSize: '12px',
-                color: '#1d1d1f',
-                fontFamily: /id|workspace/i.test(label) ? 'monospace' : undefined,
-                textAlign: 'right',
-                wordBreak: 'break-all',
-            }}>
-                {value}
-            </span>
-        </div>
-    );
-}
-
-function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
-    return (
-        <div style={{
-            background: '#ffffff',
-            border: '1px solid #d2d2d7',
-            borderRadius: '18px',
-            padding: '20px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-        }}>
-            <h2 style={{
-                margin: '0 0 16px',
-                fontSize: '11px',
-                fontWeight: 700,
-                color: '#6e6e73',
-                textTransform: 'uppercase',
-                letterSpacing: '0.08em',
-            }}>
-                {title}
-            </h2>
-            {children}
-        </div>
-    );
-}
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 
@@ -196,9 +114,12 @@ export default async function AgentDetailPage({ params }: PageProps) {
 
     if (!agent) notFound();
 
-    const icon = ROLE_ICONS[agent.role] ?? '🤖';
+    const icon        = ROLE_ICONS[agent.role] ?? '🤖';
     const description = ROLE_DESCRIPTIONS[agent.role] ?? `${agent.role} agent`;
-    const shortId = agent.id.slice(-8).toUpperCase();
+    const roleLabel   = agent.role.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    const shortId     = agent.id.slice(-8).toUpperCase();
+    const badgeClass  = `badge ${STATUS_BADGE[agent.status] ?? 'neutral'}`;
+
     const created = new Date(agent.createdAt).toLocaleString('en-US', {
         month: 'short', day: 'numeric', year: 'numeric',
         hour: '2-digit', minute: '2-digit',
@@ -209,169 +130,148 @@ export default async function AgentDetailPage({ params }: PageProps) {
     });
 
     return (
-        <main className="page-shell" style={{ maxWidth: '1200px', margin: '0 auto', background: '#f5f5f7', minHeight: '100vh' }}>
-            {/* ── Header ─────────────────────────────────────────────────────── */}
+        <main className="page-shell">
+            {/* ── Header ──────────────────────────────────────────────────── */}
             <PageHeader
                 eyebrow="Agent Detail"
-                title={`${icon} ${agent.role.replace(/_/g, ' ')}`}
+                title={`${icon} ${roleLabel}`}
                 description={description}
                 backHref="/agents"
                 backLabel="← All Agents"
                 tone="cyan"
             />
 
-            {/* ── Identity bar ────────────────────────────────────────────────── */}
-            <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '16px',
-                padding: '16px 20px',
-                background: '#ffffff',
-                border: '1px solid #d2d2d7',
-                borderRadius: '18px',
-                marginBottom: '24px',
-                flexWrap: 'wrap',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-            }}>
+            {/* ── Identity bar ─────────────────────────────────────────────── */}
+            <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
                 <div style={{
-                    width: '48px',
-                    height: '48px',
-                    borderRadius: '12px',
-                    background: 'rgba(0,102,204,0.1)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '22px',
-                    flexShrink: 0,
+                    width: 48, height: 48, borderRadius: 'var(--radius-md)',
+                    background: 'var(--brand-light)', display: 'flex',
+                    alignItems: 'center', justifyContent: 'center',
+                    fontSize: '22px', flexShrink: 0,
                 }}>
                     {icon}
                 </div>
-                <div style={{ flex: 1, minWidth: '160px' }}>
-                    <div style={{ fontSize: '16px', fontWeight: 700, color: '#1d1d1f', marginBottom: '3px', letterSpacing: '-0.02em' }}>
-                        {agent.role.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+                <div style={{ flex: 1, minWidth: 140 }}>
+                    <div style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--ink)', letterSpacing: '-0.02em' }}>
+                        {roleLabel}
                     </div>
-                    <div style={{ fontSize: '11px', color: '#6e6e73', fontFamily: 'monospace' }}>
-                        ID #{shortId}
+                    <div style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', fontFamily: 'monospace', marginTop: 2 }}>
+                        ID #{shortId} · {agent.workspaceId}
                     </div>
                 </div>
-                <StatusBadge status={agent.status} />
+                <span className={badgeClass}>
+                    {STATUS_LABELS[agent.status] ?? agent.status}
+                </span>
             </div>
 
-            {/* ── Two-column layout ────────────────────────────────────────────── */}
-            <div style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: '24px',
-                marginBottom: '24px',
-            }}
-                className="agent-detail-grid"
-            >
-                {/* Left column */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            {/* ── Two-column grid ──────────────────────────────────────────── */}
+            <div className="agent-detail-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.1rem' }}>
 
-                    {/* Agent metadata */}
-                    <SectionCard title="Identity">
-                        <InfoRow label="Agent ID" value={agent.id} />
-                        <InfoRow label="Workspace ID" value={agent.workspaceId} />
-                        <InfoRow label="Role" value={agent.role.replace(/_/g, ' ')} />
-                        <InfoRow label="Status" value={STATUS_LABELS[agent.status] ?? agent.status} />
-                        <InfoRow label="Created" value={created} />
-                        <InfoRow label="Last updated" value={updated} />
-                    </SectionCard>
+                {/* ── Left column ─────────────────────────────────────────── */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
 
-                    {/* Controls — live pause / resume */}
-                    <SectionCard title="Controls">
-                        <p style={{ margin: '0 0 14px', fontSize: '12px', color: '#64748b', lineHeight: '1.5' }}>
+                    {/* Identity */}
+                    <section className="card">
+                        <h2>Identity</h2>
+                        <ul className="kv-list">
+                            <li><span>Agent ID</span>     <strong style={{ fontFamily: 'monospace', fontSize: '0.78rem' }}>{agent.id}</strong></li>
+                            <li><span>Workspace</span>    <strong style={{ fontFamily: 'monospace', fontSize: '0.78rem' }}>{agent.workspaceId}</strong></li>
+                            <li><span>Role</span>         <strong>{agent.role.replace(/_/g, ' ')}</strong></li>
+                            <li><span>Status</span>       <strong><span className={badgeClass}>{STATUS_LABELS[agent.status] ?? agent.status}</span></strong></li>
+                            <li><span>Created</span>      <strong suppressHydrationWarning>{created}</strong></li>
+                            <li><span>Last updated</span> <strong suppressHydrationWarning>{updated}</strong></li>
+                        </ul>
+                    </section>
+
+                    {/* Controls */}
+                    <section className="card">
+                        <h2>Controls</h2>
+                        <p style={{ margin: '0 0 0.85rem', fontSize: '0.84rem', color: 'var(--ink-muted)', lineHeight: 1.5 }}>
                             Pause or resume this agent. Pausing stops task execution while preserving all state.
                         </p>
                         <AgentControlPanel botId={botId} />
-                    </SectionCard>
+                    </section>
 
-                    {/* Agent-to-agent messaging toggle */}
-                    <SectionCard title="Agent Messaging">
+                    {/* Agent Messaging */}
+                    <section className="card">
+                        <h2>Agent Messaging</h2>
                         <AgentMessagingToggle
                             botId={botId}
                             initialEnabled={agent.messagingEnabled ?? true}
                         />
-                    </SectionCard>
+                    </section>
 
                     {/* Danger zone */}
-                    <SectionCard title="Danger Zone">
-                        <p style={{ margin: '0 0 14px', fontSize: '12px', color: '#64748b', lineHeight: '1.5' }}>
+                    <section className="card" style={{ borderColor: 'var(--danger-border)', background: 'var(--danger-bg)' }}>
+                        <h2 style={{ color: 'var(--danger)' }}>Danger Zone</h2>
+                        <p style={{ margin: '0 0 0.85rem', fontSize: '0.84rem', color: 'var(--ink-muted)', lineHeight: 1.5 }}>
                             Decommissioning permanently stops this agent and releases its VM resources.
                             This action cannot be undone.
                         </p>
                         <AgentDecommissionButton botId={botId} />
-                    </SectionCard>
+                    </section>
                 </div>
 
-                {/* Right column */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                {/* ── Right column ────────────────────────────────────────── */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
 
                     {/* Persona */}
-                    <SectionCard title="Agent Persona">
+                    <section className="card">
+                        <h2>Agent Persona</h2>
                         <AgentPersonaPanel botId={botId} />
-                    </SectionCard>
+                    </section>
 
-                    {/* Per-agent billing */}
-                    <SectionCard title="Cost (Last 30 Days)">
+                    {/* Billing */}
+                    <section className="card">
+                        <h2>Cost — Last 30 Days</h2>
                         <AgentBillingCard botId={botId} />
-                    </SectionCard>
-
+                    </section>
                 </div>
             </div>
 
-            {/* ── Full-width observability ────────────────────────────────────── */}
-            <SectionCard title="Observability & Performance">
+            {/* ── Full-width sections ──────────────────────────────────────── */}
+            <section className="card">
+                <h2>Observability &amp; Performance</h2>
                 <AgentObservabilityPanel botId={botId} />
-            </SectionCard>
+            </section>
 
-            {/* ── Capabilities ─────────────────────────────────────────────────── */}
-            <SectionCard title="Capabilities">
+            <section className="card">
+                <h2>Capabilities</h2>
                 <AgentCapabilitiesFetcher botId={botId} />
-            </SectionCard>
+            </section>
 
-            {/* ── Messages ─────────────────────────────────────────────────────── */}
-            <SectionCard title="Messages">
+            <section className="card">
+                <h2>Messages</h2>
                 <AgentMessagesPanel botId={botId} />
-            </SectionCard>
+            </section>
 
-            {/* ── Version History ──────────────────────────────────────────────── */}
-            <SectionCard title="Version History">
+            <section className="card">
+                <h2>Version History</h2>
                 <AgentVersionHistory botId={botId} />
-            </SectionCard>
+            </section>
 
-            {/* ── Episodic Memory ──────────────────────────────────────────────── */}
-            <SectionCard title="Episodic Memory">
+            <section className="card">
+                <h2>Episodic Memory</h2>
                 <AgentEpisodicMemoryPanel defaultBotId={botId} />
-            </SectionCard>
+            </section>
 
-            {/* ── Memory Pattern Browser ───────────────────────────────────────── */}
-            <SectionCard title="Memory Patterns">
+            <section className="card">
+                <h2>Memory Patterns</h2>
                 <AgentMemoryPatternFetcher botId={botId} />
-            </SectionCard>
+            </section>
 
-            {/* ── Quick navigation ─────────────────────────────────────────────── */}
-            <style>{`.agent-nav-card{display:block;padding:16px;background:#fff;border:1px solid #d2d2d7;border-radius:14px;text-decoration:none;box-shadow:0 1px 3px rgba(0,0,0,.06);transition:box-shadow .2s ease,transform .2s ease}.agent-nav-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.1);transform:translateY(-2px)}`}</style>
-            <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(3, 1fr)',
-                gap: '12px',
-                marginTop: '24px',
-            }}
-                className="agent-nav-grid"
-            >
+            {/* ── Quick navigation ─────────────────────────────────────────── */}
+            <style>{`.agent-nav-card{display:block;padding:1rem 1.1rem;background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);text-decoration:none;box-shadow:var(--shadow-sm);transition:box-shadow var(--ease-spring) 0.2s,transform var(--ease-spring) 0.2s}.agent-nav-card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px)}`}</style>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '1rem' }}>
                 {([
-                    { href: `/approvals?botId=${botId}`, label: 'Approval Queue', icon: '✅', desc: 'Review pending decisions' },
-                    { href: `/agents?selected=${botId}`, label: 'Task History', icon: '📋', desc: 'View recent task executions' },
-                    { href: `/settings?botId=${botId}`, label: 'Connector Settings', icon: '🔌', desc: 'Manage tool integrations' },
-                ] as const).map(({ href, label, icon: navIcon, desc }) => (
+                    { href: `/approvals?botId=${botId}`, label: 'Approval Queue',     icon: '✅', desc: 'Review pending decisions'    },
+                    { href: `/agents?selected=${botId}`, label: 'Task History',       icon: '📋', desc: 'View recent task executions' },
+                    { href: `/settings?botId=${botId}`,  label: 'Connector Settings', icon: '🔌', desc: 'Manage tool integrations'    },
+                ] as const).map(({ href, label, icon: ni, desc }) => (
                     <a key={href} href={href} className="agent-nav-card">
-                        <div style={{ fontSize: '20px', marginBottom: '6px' }}>{navIcon}</div>
-                        <div style={{ fontSize: '13px', fontWeight: 600, color: '#1d1d1f', marginBottom: '2px' }}>
-                            {label}
-                        </div>
-                        <div style={{ fontSize: '11px', color: '#6e6e73' }}>{desc}</div>
+                        <div style={{ fontSize: '20px', marginBottom: '0.4rem' }}>{ni}</div>
+                        <div style={{ fontSize: '0.84rem', fontWeight: 600, color: 'var(--ink)', marginBottom: '0.2rem' }}>{label}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>{desc}</div>
                     </a>
                 ))}
             </div>
