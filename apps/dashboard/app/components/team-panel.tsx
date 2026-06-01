@@ -12,14 +12,6 @@ type Member = {
     createdAt: string;
 };
 
-type RoleCatalogEntry = {
-    roleKey: string;
-    displayName: string;
-    description: string;
-    roleVersion: string;
-    active: boolean;
-};
-
 const ROLES: Role[] = ['viewer', 'operator', 'admin'];
 
 const roleBadge: Record<Role, React.CSSProperties> = {
@@ -48,9 +40,6 @@ export default function TeamPanel() {
     const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
     // Roles tab state
-    const [catalog, setCatalog] = useState<RoleCatalogEntry[]>([]);
-    const [catalogLoading, setCatalogLoading] = useState(false);
-    const [catalogError, setCatalogError] = useState<string | null>(null);
     const [assignUserId, setAssignUserId] = useState('');
     const [assignRole, setAssignRole] = useState<Role>('viewer');
     const [assigning, setAssigning] = useState(false);
@@ -72,29 +61,7 @@ export default function TeamPanel() {
         }
     };
 
-    const fetchCatalog = async () => {
-        setCatalogLoading(true);
-        setCatalogError(null);
-        try {
-            const res = await fetch('/api/roles/catalog', { cache: 'no-store' });
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const data = (await res.json()) as { roles: RoleCatalogEntry[] };
-            setCatalog(data.roles ?? []);
-        } catch {
-            setCatalogError('Failed to load roles catalog.');
-        } finally {
-            setCatalogLoading(false);
-        }
-    };
-
     useEffect(() => { void fetchMembers(); }, []);
-
-    useEffect(() => {
-        if (activeTab === 'roles' && catalog.length === 0 && !catalogLoading) {
-            void fetchCatalog();
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [activeTab]);
 
     const handleAssignRole = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -373,62 +340,11 @@ export default function TeamPanel() {
             {/* ── Roles tab ────────────────────────────────────────── */}
             {activeTab === 'roles' && (
                 <div>
-                    {/* Part A: Catalog cards */}
-                    <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--ink)', marginBottom: '0.75rem' }}>
-                        Agent Role Catalog
-                    </h3>
-                    {catalogLoading && (
-                        <p style={{ fontSize: '0.84rem', color: 'var(--ink-muted)' }}>Loading catalog…</p>
-                    )}
-                    {catalogError && (
-                        <p style={{ fontSize: '0.84rem', color: '#fca5a5' }}>{catalogError}</p>
-                    )}
-                    {!catalogLoading && catalog.length > 0 && (
-                        <div
-                            style={{
-                                display: 'grid',
-                                gridTemplateColumns: 'repeat(2, 1fr)',
-                                gap: '0.75rem',
-                                marginBottom: '1.5rem',
-                            }}
-                        >
-                            {catalog.map((r) => (
-                                <div
-                                    key={r.roleKey}
-                                    style={{
-                                        background: 'var(--bg-raised, #0f172a)',
-                                        border: '1px solid var(--line)',
-                                        borderRadius: '8px',
-                                        padding: '0.9rem 1rem',
-                                    }}
-                                >
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.4rem' }}>
-                                        <span style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--ink)' }}>
-                                            {r.displayName}
-                                        </span>
-                                        {r.active && (
-                                            <span style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem', background: '#14532d', color: '#86efac', borderRadius: '4px', fontWeight: 700 }}>
-                                                active
-                                            </span>
-                                        )}
-                                    </div>
-                                    <p style={{ fontSize: '0.8rem', color: 'var(--ink-muted)', margin: '0 0 0.5rem' }}>
-                                        {r.description}
-                                    </p>
-                                    <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
-                                        <span style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem', background: '#1c2b3a', color: '#7dd3fc', borderRadius: '4px', fontFamily: 'monospace' }}>
-                                            {r.roleKey}
-                                        </span>
-                                        <span style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem', background: '#1e1b4b', color: '#c7d2fe', borderRadius: '4px' }}>
-                                            {r.roleVersion}
-                                        </span>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
+                    <p style={{ fontSize: '0.84rem', color: 'var(--ink-muted)', marginBottom: '1rem' }}>
+                        Assign dashboard access roles to team members. <strong>viewer</strong> can read, <strong>operator</strong> can approve/act, <strong>admin</strong> has full control.
+                    </p>
 
-                    {/* Part B: Assign role form */}
+                    {/* Assign role form */}
                     <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--ink)', marginBottom: '0.75rem' }}>
                         Assign Access Role
                     </h3>
