@@ -112,7 +112,7 @@ function ChatBubble({ message }: { message: LoopMessage }) {
             }}>
                 {message.content}
             </div>
-            <span style={{ fontSize: '0.68rem', color: '#6b7280', marginTop: '0.2rem' }}>
+            <span suppressHydrationWarning style={{ fontSize: '0.68rem', color: '#6b7280', marginTop: '0.2rem' }}>
                 {new Date(message.timestamp).toLocaleTimeString()}
                 {message.loop_id && ` · ${message.loop_id}`}
             </span>
