@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
     Activity, History, List, RefreshCw, Layers,
     Radio, Package, ChevronDown, Bot, Plug, ListChecks,
@@ -17,13 +18,13 @@ import SseStreamPanel from '../components/sse-stream-panel';
 type Tab = 'live' | 'history' | 'queue' | 'retry' | 'runtime' | 'repro' | 'sse';
 
 const TABS: { key: Tab; label: string; icon: React.ElementType; needsBot?: boolean }[] = [
-    { key: 'live',    label: 'Live Feed',   icon: Radio },
-    { key: 'history', label: 'History',     icon: History },
-    { key: 'queue',   label: 'Queue + DAG', icon: Layers },
-    { key: 'retry',   label: 'Retry',       icon: RefreshCw, needsBot: true },
-    { key: 'runtime', label: 'Runtime',     icon: Activity,  needsBot: true },
-    { key: 'repro',   label: 'Repro Packs', icon: Package,   needsBot: true },
-    { key: 'sse',     label: 'SSE Stream',  icon: Plug },
+    { key: 'live', label: 'Live Feed', icon: Radio },
+    { key: 'history', label: 'History', icon: History },
+    { key: 'queue', label: 'Queue + DAG', icon: Layers },
+    { key: 'retry', label: 'Retry', icon: RefreshCw, needsBot: true },
+    { key: 'runtime', label: 'Runtime', icon: Activity, needsBot: true },
+    { key: 'repro', label: 'Repro Packs', icon: Package, needsBot: true },
+    { key: 'sse', label: 'SSE Stream', icon: Plug },
 ];
 
 // ── Bot ID input — shown inline inside tabs that need it ──────────────────────
@@ -66,9 +67,19 @@ export default function TasksPageClient({
     tenantId: string;
     workspaceIds: string[];
 }) {
-    const [activeTab, setActiveTab] = useState<Tab>('live');
+    const searchParams = useSearchParams();
+    const initialTab = (searchParams.get('tab') as Tab | null) ?? 'live';
+    const VALID_TABS = new Set<Tab>(['live', 'history', 'queue', 'retry', 'runtime', 'repro', 'sse']);
+    const [activeTab, setActiveTab] = useState<Tab>(VALID_TABS.has(initialTab) ? initialTab : 'live');
     const [workspaceId, setWorkspaceId] = useState(workspaceIds[0] ?? '');
     const [botId, setBotId] = useState('');
+
+    // Sync tab when URL param changes (e.g. sidebar navigation)
+    useEffect(() => {
+        const t = (searchParams.get('tab') as Tab | null) ?? 'live';
+        if (VALID_TABS.has(t)) setActiveTab(t);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [searchParams]);
 
     return (
         <div style={{
@@ -180,7 +191,7 @@ export default function TasksPageClient({
                     <TabShell title="Task Retry" icon={RefreshCw} description="Manually retry failed tasks for a specific bot.">
                         {!botId.trim()
                             ? <BotIdInput botId={botId} setBotId={setBotId} />
-                            : <TaskRetryPanel botId={botId} />
+                            : <TaskRetryPanel botId={botId} workspaceId={workspaceId || undefined} />
                         }
                     </TabShell>
                 )}

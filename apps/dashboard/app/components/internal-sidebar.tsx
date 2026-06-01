@@ -11,7 +11,7 @@ import {
     ScrollText, Film, Waves, Lock,
     GitPullRequest, SlidersHorizontal, Camera, GitBranch, RefreshCw,
     Network, CalendarDays, AlarmClock, Beaker, Monitor, Terminal,
-    Users, Building2, Zap, Star, Briefcase, UserCircle, Plug,
+    Users, Building2, Zap, Star, Briefcase, UserCircle, Plug, Layers,
     type LucideIcon,
 } from 'lucide-react';
 import type { DashboardTab } from './dashboard-navigation';
@@ -204,10 +204,6 @@ export function InternalSidebar({
                             <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Bell className="w-3.5 h-3.5 text-slate-500" /></span>
                             <span className="flex-1">Activity</span>
                         </Link>
-                        <Link href="/circuit-breakers" className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
-                            <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Plug className="w-3.5 h-3.5 text-slate-500" /></span>
-                            <span className="flex-1">Circuit Breakers</span>
-                        </Link>
                     </div>
                 </div>
 
@@ -216,10 +212,11 @@ export function InternalSidebar({
                     <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Agents</p>
                     <div className="space-y-0.5">
                         {[
-                            { href: '/agents',     label: 'Agents',       Icon: Bot         },
-                            { href: '/tasks',      label: 'Tasks',        Icon: ListChecks  },
-                            { href: '/devops',     label: 'DevOps Hub',   Icon: Wrench      },
-                            { href: '/chat',       label: 'Chat',         Icon: MessageSquare },
+                            { href: '/agents',            label: 'Agents',      Icon: Bot           },
+                            { href: '/tasks',             label: 'Tasks',       Icon: ListChecks    },
+                            { href: '/tasks?tab=queue',   label: 'Task Queue',  Icon: Layers        },
+                            { href: '/devops',            label: 'DevOps Hub',  Icon: Wrench        },
+                            { href: '/chat',              label: 'Chat',        Icon: MessageSquare },
                         ].map(({ href, label, Icon }) => (
                             <Link key={href} href={href} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
                                 <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Icon className="w-3.5 h-3.5 text-slate-500" /></span>
@@ -328,6 +325,7 @@ export function InternalSidebar({
                                 { href: '/audit', label: 'Audit Log', Icon: ScrollText },
                                 { href: '/audit/session-replay', label: 'Session Replay', Icon: Film },
                                 { href: '/operational-signals', label: 'Op. Signals', Icon: Waves },
+                                { href: '/circuit-breakers', label: 'Circuit Breakers', Icon: Plug },
                             ].map(({ href, label, Icon }) => (
                                 <Link key={href} href={href} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
                                     <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Icon className="w-3.5 h-3.5 text-slate-500" /></span>
