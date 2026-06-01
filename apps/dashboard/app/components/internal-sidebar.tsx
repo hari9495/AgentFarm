@@ -11,6 +11,7 @@ import {
     ScrollText, Film, Waves, Lock,
     GitPullRequest, SlidersHorizontal, Camera, GitBranch, RefreshCw,
     Network, CalendarDays, AlarmClock, Beaker, Monitor, Terminal,
+    Users, Building2, Zap, Star, Briefcase,
     type LucideIcon,
 } from 'lucide-react';
 import type { DashboardTab } from './dashboard-navigation';
@@ -214,7 +215,7 @@ export function InternalSidebar({
                             { href: '/agents',     label: 'Agents',       Icon: Bot         },
                             { href: '/tasks',      label: 'Tasks',        Icon: ListChecks  },
                             { href: '/devops',     label: 'DevOps Hub',   Icon: Wrench      },
-                            { href: '/agent-chat', label: 'Chat',         Icon: MessageSquare },
+                            { href: '/chat',       label: 'Chat',         Icon: MessageSquare },
                         ].map(({ href, label, Icon }) => (
                             <Link key={href} href={href} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
                                 <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Icon className="w-3.5 h-3.5 text-slate-500" /></span>
@@ -391,14 +392,24 @@ export function InternalSidebar({
                     </div>
                 </div>
 
-                {/* ── Admin ────────────────────────────────────────── */}
+                {/* ── Team & Settings ──────────────────────────────── */}
                 <div>
-                    <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Admin</p>
+                    <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Team &amp; Settings</p>
                     <div className="space-y-0.5">
-                        <Link href="/settings" className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
-                            <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Settings className="w-3.5 h-3.5 text-slate-500" /></span>
-                            <span className="flex-1">Settings</span>
-                        </Link>
+                        {[
+                            { href: '/team',              label: 'Team Members',    Icon: Users     },
+                            { href: '/settings',          label: 'API Keys',        Icon: Settings  },
+                            { href: '/tenant-settings',   label: 'Tenant Settings', Icon: Building2 },
+                            { href: '/llm-config',        label: 'LLM Config',      Icon: Zap       },
+                            { href: '/quality',           label: 'Quality Feedback',Icon: Star      },
+                            { href: '/notifications',     label: 'Notifications',   Icon: Bell      },
+                            { href: '/marketplace/roles', label: 'Roles Catalog',   Icon: Briefcase },
+                        ].map(({ href, label, Icon }) => (
+                            <Link key={href} href={href} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
+                                <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Icon className="w-3.5 h-3.5 text-slate-500" /></span>
+                                <span className="flex-1">{label}</span>
+                            </Link>
+                        ))}
                     </div>
                 </div>
             </nav>
