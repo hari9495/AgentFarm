@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 type CiTriagePanelProps = { workspaceId: string };
 
-type FailedJob = string;
+type FailedJob = { jobName: string; step?: string; exitCode?: number; logRef?: string };
 
 type ReproStep = string;
 
@@ -38,7 +38,7 @@ type IntakeResponse = {
 
 const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
     queued: { bg: '#fef9c3', color: '#854d0e' },
-    analyzing: { bg: '#dbeafe', color: '#1d4ed8' },
+    triaging: { bg: '#dbeafe', color: '#1d4ed8' },
     complete: { bg: '#dcfce7', color: '#166534' },
     failed: { bg: '#fee2e2', color: '#991b1b' },
 };
@@ -418,7 +418,7 @@ export default function CiTriagePanel({ workspaceId }: CiTriagePanelProps) {
                                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                                         {selectedReport.failedJobs.map((job) => (
                                             <span
-                                                key={job}
+                                                key={job.jobName}
                                                 style={{
                                                     padding: '2px 8px',
                                                     background: '#fee2e2',
@@ -429,7 +429,7 @@ export default function CiTriagePanel({ workspaceId }: CiTriagePanelProps) {
                                                     fontFamily: 'monospace',
                                                 }}
                                             >
-                                                {job}
+                                                {job.jobName}
                                             </span>
                                         ))}
                                     </div>

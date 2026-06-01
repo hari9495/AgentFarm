@@ -54,6 +54,16 @@ export default function AbTestsPanel({ tenantId: _tenantId }: AbTestsPanelProps)
     const [conclusionNotes, setConclusionNotes] = useState<Record<string, string>>({});
     const [openConcludeId, setOpenConcludeId] = useState<string | null>(null);
 
+    // Create form
+    const [showCreateForm, setShowCreateForm] = useState(false);
+    const [creating, setCreating] = useState(false);
+    const [createError, setCreateError] = useState<string | null>(null);
+    const [formName, setFormName] = useState('');
+    const [formBotId, setFormBotId] = useState('');
+    const [formVersionA, setFormVersionA] = useState('');
+    const [formVersionB, setFormVersionB] = useState('');
+    const [formSplit, setFormSplit] = useState(50);
+
     const fetchAbTests = useCallback(async () => {
         try {
             const res = await fetch('/api/ab-tests', { cache: 'no-store' });
@@ -128,6 +138,40 @@ export default function AbTestsPanel({ tenantId: _tenantId }: AbTestsPanelProps)
         }
     }
 
+    async function handleCreate() {
+        if (!formName.trim() || !formBotId.trim() || !formVersionA.trim() || !formVersionB.trim()) {
+            setCreateError('Name, Bot ID, Version A ID, and Version B ID are required.');
+            return;
+        }
+        setCreating(true);
+        setCreateError(null);
+        try {
+            const res = await fetch('/api/ab-tests', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    botId: formBotId.trim(),
+                    name: formName.trim(),
+                    versionAId: formVersionA.trim(),
+                    versionBId: formVersionB.trim(),
+                    trafficSplit: formSplit,
+                }),
+            });
+            const data = (await res.json()) as { error?: string; message?: string };
+            if (!res.ok) {
+                setCreateError(data.message ?? data.error ?? 'Failed to create test.');
+                return;
+            }
+            setShowCreateForm(false);
+            setFormName(''); setFormBotId(''); setFormVersionA(''); setFormVersionB(''); setFormSplit(50);
+            await fetchAbTests();
+        } catch {
+            setCreateError('Network error creating test.');
+        } finally {
+            setCreating(false);
+        }
+    }
+
     const visibleTests = showConcluded
         ? abTests
         : abTests.filter((t) => t.status !== 'concluded');
@@ -151,24 +195,68 @@ export default function AbTestsPanel({ tenantId: _tenantId }: AbTestsPanelProps)
                 <h2 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--ink)', margin: 0 }}>
                     A/B Tests
                 </h2>
-                <label
-                    style={{
-                        fontSize: '0.85rem',
-                        color: 'var(--ink-muted)',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.35rem',
-                        cursor: 'pointer',
-                    }}
-                >
-                    <input
-                        type="checkbox"
-                        checked={showConcluded}
-                        onChange={(e) => setShowConcluded(e.target.checked)}
-                    />
-                    Show concluded
-                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <label
+                        style={{
+                            fontSize: '0.85rem',
+                            color: 'var(--ink-muted)',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.35rem',
+                            cursor: 'pointer',
+                        }}
+                    >
+                        <input
+                            type="checkbox"
+                            checked={showConcluded}
+                            onChange={(e) => setShowConcluded(e.target.checked)}
+                        />
+                        Show concluded
+                    </label>
+                    <button
+                        type="button"
+                        className="primary-action"
+                        style={{ fontSize: '0.8rem', padding: '0.3rem 0.7rem' }}
+                        onClick={() => { setShowCreateForm((v) => !v); setCreateError(null); }}
+                    >
+                        {showCreateForm ? 'Cancel' : '+ New Test'}
+                    </button>
+                </div>
             </div>
+
+            {/* Create form */}
+            {showCreateForm && (
+                <div style={{ background: 'var(--bg)', border: '1px solid var(--line)', borderRadius: 8, padding: '1rem', marginBottom: '1rem' }}>
+                    <p style={{ margin: '0 0 0.75rem', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--ink-muted)' }}>New A/B Test</p>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem', marginBottom: '0.6rem' }}>
+                        {[
+                            ['Test Name *', formName, setFormName, 'e.g. prompt-v2-vs-v1'],
+                            ['Bot ID *', formBotId, setFormBotId, 'e.g. bot_dev_001'],
+                            ['Version A ID *', formVersionA, setFormVersionA, 'control version ID'],
+                            ['Version B ID *', formVersionB, setFormVersionB, 'challenger version ID'],
+                        ].map(([label, val, setter, ph]) => (
+                            <label key={label as string} style={{ fontSize: '0.8rem', fontWeight: 600 }}>
+                                {label as string}
+                                <input
+                                    type="text"
+                                    value={val as string}
+                                    onChange={(e) => (setter as (v: string) => void)(e.target.value)}
+                                    placeholder={ph as string}
+                                    style={{ display: 'block', width: '100%', boxSizing: 'border-box', marginTop: '0.2rem', padding: '0.3rem 0.5rem', border: '1px solid var(--line)', borderRadius: 5, fontSize: '0.82rem' }}
+                                />
+                            </label>
+                        ))}
+                    </div>
+                    <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.6rem' }}>
+                        Traffic Split — A: {formSplit}% / B: {100 - formSplit}%
+                        <input type="range" min={10} max={90} value={formSplit} onChange={(e) => setFormSplit(Number(e.target.value))} style={{ display: 'block', width: '100%', marginTop: '0.2rem' }} />
+                    </label>
+                    {createError && <p style={{ color: '#dc2626', fontSize: '0.8rem', margin: '0 0 0.5rem' }}>{createError}</p>}
+                    <button type="button" className="primary-action" disabled={creating} onClick={() => void handleCreate()} style={{ fontSize: '0.8rem', padding: '0.35rem 0.8rem' }}>
+                        {creating ? 'Creating…' : 'Create Test'}
+                    </button>
+                </div>
+            )}
 
             {/* Error banner */}
             {error && (

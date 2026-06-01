@@ -139,7 +139,15 @@ export default function PrDraftsPanel({ tenantId, workspaceId }: PrDraftsPanelPr
             },
         );
 
-        const data = (await response.json().catch(() => ({}))) as PrDraft & { message?: string };
+        const data = (await response.json().catch(() => ({}))) as {
+            draftId?: string;
+            title?: string;
+            body?: string;
+            checklist?: string[];
+            reviewersSuggested?: string[];
+            correlationId?: string;
+            message?: string;
+        };
 
         if (!response.ok) {
             setCreateError(data.message ?? 'Failed to create PR draft.');
@@ -147,7 +155,28 @@ export default function PrDraftsPanel({ tenantId, workspaceId }: PrDraftsPanelPr
             return;
         }
 
-        setDrafts((prev) => [data, ...prev]);
+        const nowIso = new Date().toISOString();
+        const fullDraft: PrDraft = {
+            id: data.draftId ?? crypto.randomUUID(),
+            tenantId,
+            workspaceId,
+            branch: formBranch.trim(),
+            targetBranch: formTargetBranch.trim() || 'main',
+            changeSummary: formChangeSummary.trim(),
+            linkedIssueIds: formLinkedIssues ? formLinkedIssues.split(',').map((s) => s.trim()) : [],
+            title: data.title ?? '',
+            body: data.body ?? '',
+            checklist: data.checklist ?? [],
+            reviewersSuggested: data.reviewersSuggested ?? [],
+            status: 'draft',
+            prId: null,
+            provider: null,
+            labels: [],
+            correlationId: data.correlationId ?? '',
+            createdAt: nowIso,
+            updatedAt: nowIso,
+        };
+        setDrafts((prev) => [fullDraft, ...prev]);
         setFormBranch('');
         setFormChangeSummary('');
         setFormTargetBranch('main');

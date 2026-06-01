@@ -28,10 +28,7 @@ type ScheduleForm = {
     correlationId: string;
 };
 
-const API_BASE =
-    typeof window !== 'undefined'
-        ? (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000')
-        : 'http://localhost:3000';
+const API_BASE = '';
 
 const WAKE_SOURCES: WakeSource[] = [
     'timer', 'assignment', 'on_demand', 'automation', 'proactive_signal', 'agent_handoff',
@@ -118,7 +115,7 @@ export default function WakeRunsPanel({ workspaceId }: { workspaceId: string }) 
         setError(null);
         try {
             const params = new URLSearchParams({ workspace_id: workspaceId });
-            const res = await fetch(`${API_BASE}/v1/wake/runs?${params.toString()}`);
+            const res = await fetch(`${API_BASE}/api/wake/runs?${params.toString()}`);
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
             setRuns(Array.isArray(data) ? data : (data.runs ?? []));
@@ -146,7 +143,7 @@ export default function WakeRunsPanel({ workspaceId }: { workspaceId: string }) 
             if (form.timestamp) body.timestamp = form.timestamp;
             if (form.correlationId) body.correlation_id = form.correlationId;
 
-            const res = await fetch(`${API_BASE}/v1/wake/schedule`, {
+            const res = await fetch(`${API_BASE}/api/wake/schedule`, {
                 method: 'POST',
                 headers: { 'content-type': 'application/json' },
                 body: JSON.stringify(body),

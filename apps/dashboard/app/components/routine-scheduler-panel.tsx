@@ -12,10 +12,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-const API_BASE =
-    typeof window !== 'undefined'
-        ? (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000')
-        : 'http://localhost:3000';
+const API_BASE = '';
 
 type ScheduleType = 'once' | 'hourly' | 'daily' | 'weekly' | 'monthly';
 type ScheduledRunStatus = 'scheduled' | 'queued' | 'active' | 'completed' | 'skipped' | 'failed';
@@ -98,7 +95,7 @@ export function RoutineSchedulerPanel({ botId, workspaceId, tenantId: _tenantId 
         setError(null);
         try {
             const res = await fetch(
-                `${API_BASE}/v1/bots/${encodeURIComponent(botId)}/routine-tasks`,
+                `${API_BASE}/api/bots/${encodeURIComponent(botId)}/routine-tasks`,
                 { cache: 'no-store' },
             );
             const body = (await res.json().catch(() => null)) as
@@ -130,7 +127,7 @@ export function RoutineSchedulerPanel({ botId, workspaceId, tenantId: _tenantId 
         setCreating(true);
         setCreateError(null);
         try {
-            const res = await fetch(`${API_BASE}/v1/routine-tasks`, {
+            const res = await fetch(`${API_BASE}/api/routine-tasks`, {
                 method: 'POST',
                 headers: { 'content-type': 'application/json' },
                 body: JSON.stringify({
@@ -168,7 +165,7 @@ export function RoutineSchedulerPanel({ botId, workspaceId, tenantId: _tenantId 
         setTriggerResult(null);
         try {
             const res = await fetch(
-                `${API_BASE}/v1/routine-tasks/${encodeURIComponent(taskId)}/runs`,
+                `${API_BASE}/api/routine-tasks/${encodeURIComponent(taskId)}/runs`,
                 {
                     method: 'POST',
                     headers: { 'content-type': 'application/json' },
