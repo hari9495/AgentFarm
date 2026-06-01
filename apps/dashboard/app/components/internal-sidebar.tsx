@@ -11,7 +11,7 @@ import {
     ScrollText, Film, Waves, Lock,
     GitPullRequest, SlidersHorizontal, Camera, GitBranch, RefreshCw,
     Network, CalendarDays, AlarmClock, Beaker, Monitor, Terminal,
-    Users, Building2, Zap, Star, Briefcase,
+    Users, Building2, Zap, Star, Briefcase, UserCircle, Plug,
     type LucideIcon,
 } from 'lucide-react';
 import type { DashboardTab } from './dashboard-navigation';
@@ -203,6 +203,10 @@ export function InternalSidebar({
                         <Link href="/activity" className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
                             <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Bell className="w-3.5 h-3.5 text-slate-500" /></span>
                             <span className="flex-1">Activity</span>
+                        </Link>
+                        <Link href="/circuit-breakers" className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
+                            <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Plug className="w-3.5 h-3.5 text-slate-500" /></span>
+                            <span className="flex-1">Circuit Breakers</span>
                         </Link>
                     </div>
                 </div>
@@ -398,13 +402,14 @@ export function InternalSidebar({
                     <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Team &amp; Settings</p>
                     <div className="space-y-0.5">
                         {[
-                            { href: '/team',              label: 'Team Members',    Icon: Users     },
-                            { href: '/settings',          label: 'API Keys',        Icon: Settings  },
-                            { href: '/tenant-settings',   label: 'Tenant Settings', Icon: Building2 },
-                            { href: '/llm-config',        label: 'LLM Config',      Icon: Zap       },
-                            { href: '/quality',           label: 'Quality Feedback',Icon: Star      },
-                            { href: '/notifications',     label: 'Notifications',   Icon: Bell      },
-                            { href: '/marketplace/roles', label: 'Roles Catalog',   Icon: Briefcase },
+                            { href: '/team',              label: 'Team Members',    Icon: Users       },
+                            { href: '/settings',          label: 'API Keys',        Icon: Settings    },
+                            { href: '/agent-persona',     label: 'Agent Personas',  Icon: UserCircle  },
+                            { href: '/tenant-settings',   label: 'Tenant Settings', Icon: Building2   },
+                            { href: '/llm-config',        label: 'LLM Config',      Icon: Zap         },
+                            { href: '/quality',           label: 'Quality Feedback',Icon: Star        },
+                            { href: '/notifications',     label: 'Notifications',   Icon: Bell        },
+                            { href: '/marketplace/roles', label: 'Roles Catalog',   Icon: Briefcase   },
                         ].map(({ href, label, Icon }) => (
                             <Link key={href} href={href} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
                                 <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Icon className="w-3.5 h-3.5 text-slate-500" /></span>

@@ -1,10 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getSessionPayload, getInternalSessionAuthHeader } from '../lib/internal-session';
-import { SubscriptionStatusCard } from '../components/subscription-status-card';
 import ApiKeysPanel from '../components/api-keys-panel';
-import CircuitBreakersPanel from '../components/circuit-breakers-panel';
-import TaskQueuePanel from '../components/task-queue-panel';
-import AgentPersonaPanel from '../components/agent-persona-panel';
 import { PageHeader } from '../components/page-header';
 
 const getApiBaseUrl = (): string => process.env.DASHBOARD_API_BASE_URL ?? 'http://localhost:3000';
@@ -30,20 +26,6 @@ async function fetchSubscription(tenantId: string, authHeader: string): Promise<
     }
 }
 
-async function fetchFirstBotId(authHeader: string): Promise<string | null> {
-    try {
-        const res = await fetch(`${getApiBaseUrl()}/v1/agents`, {
-            headers: { Authorization: authHeader },
-            cache: 'no-store',
-        });
-        if (!res.ok) return null;
-        const data = (await res.json()) as { bots?: { id: string }[] };
-        return data.bots?.[0]?.id ?? null;
-    } catch {
-        return null;
-    }
-}
-
 export default async function SettingsPage() {
     const session = await getSessionPayload();
     if (!session?.tenantId) {
@@ -52,38 +34,34 @@ export default async function SettingsPage() {
 
     const { tenantId } = session;
     const authHeader = await getInternalSessionAuthHeader();
-    const [subscription, firstBotId] = await Promise.all([
-        authHeader ? fetchSubscription(tenantId, authHeader) : Promise.resolve({ status: 'none' } as SubscriptionData),
-        authHeader ? fetchFirstBotId(authHeader) : Promise.resolve(null),
-    ]);
+    const subscription = authHeader
+        ? await fetchSubscription(tenantId, authHeader)
+        : { status: 'none' } as SubscriptionData;
+
+    const planLabel = subscription.status === 'none' ? 'No active plan' : subscription.status;
 
     return (
         <main className="page-shell">
             <PageHeader
-                eyebrow="Settings &amp; Ops"
-                title="Operational Settings"
-                description="Manage API keys, inspect circuit breaker state, and monitor the task queue."
+                eyebrow="Developer Access"
+                title="API Keys"
+                description="Create and manage API keys for CI pipelines, scripts, and external integrations."
             />
 
-            <SubscriptionStatusCard
-                status={subscription.status}
-                expiresAt={subscription.expiresAt}
-                gracePeriodDays={subscription.gracePeriodDays}
-                suspendedAt={subscription.suspendedAt}
-                daysUntilSuspension={subscription.daysUntilSuspension}
-            />
+            {/* Plan context strip */}
+            {subscription.status !== 'none' && (
+                <div className="card" style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.85rem 1.25rem' }}>
+                    <div>
+                        <p style={{ margin: 0, fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--ink-muted)' }}>Current plan</p>
+                        <p style={{ margin: '0.15rem 0 0', fontSize: '0.95rem', fontWeight: 600, color: 'var(--ink)' }}>{planLabel}</p>
+                    </div>
+                    <a href="/billing" style={{ fontSize: '0.82rem', color: 'var(--brand)', fontWeight: 600, textDecoration: 'none' }}>
+                        Manage billing →
+                    </a>
+                </div>
+            )}
 
-            <div style={{ marginTop: '2rem' }}>
-                {firstBotId && (
-                    <>
-                        <AgentPersonaPanel botId={firstBotId} />
-                        <hr style={{ border: 'none', borderTop: '1px solid var(--border, #e5e7eb)', margin: '1.5rem 0' }} />
-                    </>
-                )}
-                <ApiKeysPanel tenantId={tenantId} />
-                <CircuitBreakersPanel tenantId={tenantId} />
-                <TaskQueuePanel tenantId={tenantId} />
-            </div>
+            <ApiKeysPanel tenantId={tenantId} />
         </main>
     );
 }
