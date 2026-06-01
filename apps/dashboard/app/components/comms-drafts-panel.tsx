@@ -18,10 +18,7 @@ type CommsDraft = {
     createdAt: string;
 };
 
-const API_BASE =
-    typeof window !== 'undefined'
-        ? (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000')
-        : 'http://localhost:3000';
+const API_BASE = '';
 
 const TYPE_LABEL: Record<CommsType, string> = {
     email: 'Email', memo: 'Memo', meeting_summary: 'Meeting Summary',
@@ -73,7 +70,7 @@ export default function CommsDraftsPanel({ workspaceId }: { workspaceId: string 
         try {
             const params = new URLSearchParams({ workspace_id: workspaceId });
             if (filter !== 'all') params.set('status', filter);
-            const res = await fetch(`${API_BASE}/v1/comms/drafts?${params.toString()}`);
+            const res = await fetch(`${API_BASE}/api/comms-drafts?${params.toString()}`);
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
             setDrafts(Array.isArray(data) ? data : (data.drafts ?? []));
@@ -88,7 +85,7 @@ export default function CommsDraftsPanel({ workspaceId }: { workspaceId: string 
 
     const act = async (id: string, action: 'approve' | 'reject' | 'send') => {
         try {
-            await fetch(`${API_BASE}/v1/comms/drafts/${id}/${action}`, { method: 'POST' });
+            await fetch(`${API_BASE}/api/comms-drafts/${id}/${action}`, { method: 'POST' });
             await load();
         } catch {
             setError(`Failed to ${action}`);

@@ -20,10 +20,7 @@ type ContentDraft = {
     updatedAt: string;
 };
 
-const API_BASE =
-    typeof window !== 'undefined'
-        ? (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000')
-        : 'http://localhost:3000';
+const API_BASE = '';
 
 const TYPE_LABEL: Record<DraftType, string> = {
     blog_post: 'Blog Post',
@@ -73,7 +70,7 @@ export default function ContentDraftsPanel({ workspaceId }: { workspaceId: strin
         try {
             const params = new URLSearchParams({ workspace_id: workspaceId });
             if (filter !== 'all') params.set('status', filter);
-            const res = await fetch(`${API_BASE}/v1/content/drafts?${params.toString()}`);
+            const res = await fetch(`${API_BASE}/api/content-drafts?${params.toString()}`);
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
             setDrafts(Array.isArray(data) ? data : (data.drafts ?? []));
@@ -88,7 +85,7 @@ export default function ContentDraftsPanel({ workspaceId }: { workspaceId: strin
 
     const act = async (id: string, action: 'approve' | 'reject' | 'publish') => {
         try {
-            await fetch(`${API_BASE}/v1/content/drafts/${id}/${action}`, { method: 'POST' });
+            await fetch(`${API_BASE}/api/content-drafts/${id}/${action}`, { method: 'POST' });
             await load();
         } catch {
             setError(`Failed to ${action} draft`);

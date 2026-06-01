@@ -127,6 +127,10 @@ import { registerMarketplaceRoutes } from './routes/admin/marketplace.js';
 // Meetings
 import { registerMeetingRoutes } from './routes/meetings.js';
 
+// Content & Comms
+import { registerContentDraftRoutes } from './routes/content/drafts.js';
+import { registerCommsDraftRoutes } from './routes/comms/drafts.js';
+
 // Ops monitoring
 import { registerOpsSlaRoutes } from './routes/ops/provisioning-sla.js';
 
@@ -274,6 +278,10 @@ export const registerAllRoutes = async (
 
     // Meetings
     await registerMeetingRoutes(app, { getSession });
+
+    // Content & Comms
+    registerContentDraftRoutes(app, { getSession });
+    registerCommsDraftRoutes(app, { getSession });
 
     // Ops monitoring
     await registerOpsSlaRoutes(app);
