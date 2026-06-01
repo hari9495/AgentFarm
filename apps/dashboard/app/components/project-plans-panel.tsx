@@ -2,6 +2,16 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Layers, Clock, CheckCircle2, AlertTriangle, RefreshCw } from 'lucide-react';
+import OperatorGuide from './operator-guide';
+
+const PP_GUIDE_ITEMS = [
+    { label: 'Capacity vs story points', hint: 'For sprint plans: check teamSize × sprint velocity against the estimated scope. If the plan exceeds capacity by >20%, send back for re-scoping.', level: 'critical' as const },
+    { label: 'Dependencies are identified', hint: 'Roadmaps and release plans should list blockers. An agent-generated plan with no dependencies is likely incomplete — ask it to identify cross-team dependencies.', level: 'caution' as const },
+    { label: 'Risk level calibration', hint: '"High" risk plans need mitigation strategies documented. If riskLevel is high but the plan has no risk section, reject and request a risk register alongside it.', level: 'caution' as const },
+    { label: 'Duration is realistic', hint: 'Compare durationDays to scope. A 90-day roadmap for 18 epics with a team of 4 is under-resourced. A 1-day sprint plan that spans 2 weeks is mislabelled.', level: 'verify' as const },
+    { label: 'Retrospective actions are specific', hint: 'Retrospective items should name owners and deadlines. "Improve communication" is not actionable — it should be "Engineering sync every Monday at 10am, owned by EM".', level: 'caution' as const },
+    { label: 'Approve = this plan is the team\'s direction', hint: 'Once approved, the PM agent will use this plan to guide task generation and sprint execution. Ensure the priorities match actual business objectives.', level: 'critical' as const },
+];
 
 type PlanStatus = 'draft' | 'in_review' | 'approved' | 'active' | 'completed' | 'on_hold';
 type PlanType = 'sprint_plan' | 'project_roadmap' | 'risk_register' | 'retrospective' | 'release_plan' | 'backlog_refinement';
@@ -73,6 +83,11 @@ export default function ProjectPlansPanel({ workspaceId }: { workspaceId: string
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <OperatorGuide
+                title="Project Plans — Operator Review Guide"
+                intro="The PM agent generates plans from task context and workspace history. Review before approval — this becomes the team's execution direction."
+                items={PP_GUIDE_ITEMS}
+            />
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
                 <div style={{ display: 'flex', gap: 4 }}>
                     {(['in_review', 'approved', 'active', 'all'] as const).map(k => (

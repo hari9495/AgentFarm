@@ -2,6 +2,16 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Users, Briefcase, RefreshCw, CheckCircle2, Clock, XCircle } from 'lucide-react';
+import OperatorGuide from './operator-guide';
+
+const TALENT_GUIDE_ITEMS = [
+    { label: 'Match score is algorithmic, not a hiring decision', hint: 'Match score reflects skills overlap with the JD. It does not assess culture fit, communication, or growth potential. Never advance or reject based on score alone.', level: 'critical' as const },
+    { label: 'Advance stage means communications will follow', hint: 'Moving a candidate from "screening" to "interviewing" will trigger the agent to draft and queue interview invitation emails. Confirm the candidate is ready for contact.', level: 'critical' as const },
+    { label: 'Source credibility', hint: 'Check the source field. "LinkedIn" and "Referral" are higher-signal than "Cold outreach". A 95% match from cold outreach warrants more scrutiny than a referral at 80%.', level: 'caution' as const },
+    { label: 'Offer stage requires legal/HR sign-off', hint: 'Never advance a candidate to "offer_sent" without an approved offer letter and HR sign-off on compensation. The agent will draft offer communications automatically.', level: 'critical' as const },
+    { label: 'Open requisitions vs active candidates', hint: 'Check that the number of candidates in "interviewing" and "offer_sent" stages does not exceed the headcount approved for each requisition.', level: 'caution' as const },
+    { label: 'Rejected candidates receive notifications', hint: 'Rejecting a candidate triggers the agent to draft and queue a rejection email. Review your rejection email template before using bulk reject.', level: 'caution' as const },
+];
 
 type CandidateStatus = 'sourced' | 'screened' | 'interviewing' | 'offer_sent' | 'hired' | 'rejected';
 
@@ -80,6 +90,11 @@ export default function TalentPipelinePanel({ workspaceId }: { workspaceId: stri
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <OperatorGuide
+                title="Talent Pipeline — Operator Review Guide"
+                intro="The Recruiter agent sources and advances candidates. Stage changes trigger real communications to real people — review carefully before each action."
+                items={TALENT_GUIDE_ITEMS}
+            />
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
                 <div style={{ display: 'flex', gap: 4 }}>
                     {(['candidates', 'requisitions'] as const).map(v => (

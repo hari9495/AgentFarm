@@ -2,6 +2,16 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { HeadphonesIcon, AlertCircle, Clock, CheckCircle2, ArrowUpRight, RefreshCw } from 'lucide-react';
+import OperatorGuide from './operator-guide';
+
+const SUPPORT_GUIDE_ITEMS = [
+    { label: 'SLA deadline — act immediately on near-breach', hint: 'Tickets with slaBreachAt within 1 hour need immediate action. An escalated or resolved ticket stops the SLA clock. Check the "escalated" tab regularly.', level: 'critical' as const },
+    { label: 'Draft response accuracy', hint: 'When agentDraftReady shows "Ready", click Review to read the draft before resolving. Check: does it address the actual customer complaint? Are product claims accurate?', level: 'critical' as const },
+    { label: 'CRITICAL tickets must not be auto-resolved', hint: 'Never resolve a CRITICAL ticket without reading the draft. Critical tickets often involve data loss, security issues, or outages — the draft may need a subject matter expert review first.', level: 'critical' as const },
+    { label: 'Escalate means a human takes over', hint: 'Escalating moves the ticket to "escalated" status and removes it from agent queue. A human must then own this ticket end-to-end. Confirm the escalation recipient is available.', level: 'caution' as const },
+    { label: 'Customer channel affects tone', hint: 'Portal tickets are from technical users (more detailed language OK). Chat tickets expect fast, brief responses. Email tickets allow more formal structure. Match the draft tone to channel.', level: 'verify' as const },
+    { label: 'Bulk resolve only safe statuses', hint: 'Only resolve tickets in "pending_customer" or "in_progress". Never bulk-resolve tickets in "open" without reading each draft — the customer has not yet responded to the agent\'s reply.', level: 'caution' as const },
+];
 
 type TicketStatus = 'open' | 'in_progress' | 'pending_customer' | 'resolved' | 'escalated';
 type TicketPriority = 'low' | 'normal' | 'high' | 'critical';
@@ -77,6 +87,11 @@ export default function SupportQueuePanel({ workspaceId }: { workspaceId: string
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <OperatorGuide
+                title="Support Queue — Operator Review Guide"
+                intro="The Customer Support agent drafts responses to real customers. Approving a draft triggers an actual reply. SLA breaches are tracked — act on CRITICAL tickets first."
+                items={SUPPORT_GUIDE_ITEMS}
+            />
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
                 <div style={{ display: 'flex', gap: 4 }}>
                     {(['open', 'in_progress', 'escalated', 'resolved', 'all'] as const).map(k => (

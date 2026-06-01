@@ -2,6 +2,16 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { FileText, CheckCircle2, XCircle, Clock, RefreshCw, Eye } from 'lucide-react';
+import OperatorGuide from './operator-guide';
+
+const CONTENT_GUIDE_ITEMS = [
+    { label: 'Factual accuracy', hint: 'Check all statistics, dates, product names, and pricing mentioned in the excerpt. AI agents hallucinate specifics — verify against primary sources before approving.', level: 'critical' as const },
+    { label: 'Brand voice consistency', hint: 'Compare tone to your style guide. Watch for: overly formal language, superlatives ("best", "only"), unsubstantiated claims, and competitor mentions.', level: 'caution' as const },
+    { label: 'Target channel fit', hint: 'A "blog_post" going to "twitter" is a mismatch. Confirm the channel matches the draft type and word count. Social posts should be ≤ 280 chars after formatting.', level: 'caution' as const },
+    { label: 'Word count vs brief', hint: 'Compare wordCount to your brief. Significant over/under (>20%) suggests the agent misunderstood scope — send back with a revised prompt.', level: 'verify' as const },
+    { label: 'No PII or confidential data', hint: 'Scan the excerpt for customer names, internal project codenames, unreleased feature names, or financial figures not yet in the public record.', level: 'critical' as const },
+    { label: 'Publish = live', hint: 'Clicking Publish sends the content to the targetChannel integration. There is no draft mode after this — it will go live immediately.', level: 'verify' as const },
+];
 
 type DraftStatus = 'pending_review' | 'approved' | 'rejected' | 'published';
 type DraftType = 'blog_post' | 'social_post' | 'email_campaign' | 'technical_doc' | 'api_doc' | 'runbook' | 'release_note';
@@ -102,6 +112,11 @@ export default function ContentDraftsPanel({ workspaceId }: { workspaceId: strin
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <OperatorGuide
+                title="Content Drafts — Operator Review Guide"
+                intro="AI-generated content requires editorial sign-off before publishing. The agent cannot verify facts — that is your role."
+                items={CONTENT_GUIDE_ITEMS}
+            />
             {/* Toolbar */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
                 <div style={{ display: 'flex', gap: 4 }}>

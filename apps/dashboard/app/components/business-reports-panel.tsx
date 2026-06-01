@@ -2,6 +2,16 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { BarChart2, Clock, CheckCircle2, XCircle, Download, RefreshCw } from 'lucide-react';
+import OperatorGuide from './operator-guide';
+
+const BR_GUIDE_ITEMS = [
+    { label: 'Source data verification', hint: 'AI analysts infer from context. Check: are the cited market sizes, growth rates, and competitor data from verifiable sources? Reject if the agent cannot cite a primary source.', level: 'critical' as const },
+    { label: 'Numeric accuracy', hint: 'Cross-check key figures (revenue estimates, percentages, headcounts) against your internal data. A 10% error in a BRD can cascade into budget misalignment.', level: 'critical' as const },
+    { label: 'Stakeholder list completeness', hint: 'Review the requestedBy field. Is the correct sponsor named? Misattributed reports create accountability gaps in decision trails.', level: 'caution' as const },
+    { label: 'Scope creep in BRDs', hint: 'Check that requirements are within the original ask. Agents sometimes add "nice to have" requirements as "must have" — flag these for scope clarification.', level: 'caution' as const },
+    { label: 'Page count vs depth', hint: 'A 2-page feasibility study is under-researched. A 60-page BRD for a small feature is over-scoped. Flag outliers for revision before approval.', level: 'verify' as const },
+    { label: 'Approval is a strategic commitment', hint: 'Approving a BRD or roadmap report signals executive buy-in. Ensure the report is ready for stakeholder distribution before approving.', level: 'caution' as const },
+];
 
 type ReportStatus = 'draft' | 'pending_review' | 'approved' | 'rejected';
 type ReportType = 'brd' | 'market_analysis' | 'stakeholder_report' | 'feasibility_study' | 'gap_analysis' | 'requirements_spec';
@@ -65,6 +75,11 @@ export default function BusinessReportsPanel({ workspaceId }: { workspaceId: str
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <OperatorGuide
+                title="Business Reports — Operator Review Guide"
+                intro="The BA agent produces reports from available workspace context. It cannot independently verify data — your review is the quality gate."
+                items={BR_GUIDE_ITEMS}
+            />
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
                 <div style={{ display: 'flex', gap: 4 }}>
                     {(['pending_review', 'approved', 'rejected', 'all'] as const).map(k => (

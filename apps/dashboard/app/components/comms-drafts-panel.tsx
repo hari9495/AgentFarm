@@ -2,6 +2,16 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Mail, Clock, CheckCircle2, XCircle, Send, RefreshCw } from 'lucide-react';
+import OperatorGuide from './operator-guide';
+
+const COMMS_GUIDE_ITEMS = [
+    { label: 'Recipient list is correct', hint: 'Verify recipientCount matches your intended audience. A memo to 200 people vs 45 is a very different action. Cross-check with the subject line context.', level: 'critical' as const },
+    { label: 'Sender identity', hint: 'The agent sends under the authorised account. Confirm the "from" identity is appropriate — an email from the CEO should not come from a support mailbox.', level: 'critical' as const },
+    { label: 'No legally sensitive statements', hint: 'Look for: promises of refunds/compensation, liability admissions, guarantee statements, or regulatory claims. These require legal sign-off before sending.', level: 'critical' as const },
+    { label: 'Tone matches urgency and relationship', hint: '"URGENT" priority + formal tone to customers is right. "URGENT" + casual tone to the board is wrong. Check priority badge vs communication type.', level: 'caution' as const },
+    { label: 'Send Now is permanent', hint: 'Once you click Send Now, the message is dispatched to the connector immediately. There is no recall. For high recipient counts (>50), require a second reviewer.', level: 'critical' as const },
+    { label: 'Scheduled timing', hint: 'If a scheduledAt time is shown, verify the timezone is correct. A "9am" announcement sent at 9am UTC reaches US/East at 4am — check this before approving.', level: 'caution' as const },
+];
 
 type CommsStatus = 'draft' | 'pending_review' | 'approved' | 'sent' | 'rejected';
 type CommsType = 'email' | 'memo' | 'meeting_summary' | 'announcement' | 'report' | 'proposal';
@@ -102,6 +112,11 @@ export default function CommsDraftsPanel({ workspaceId }: { workspaceId: string 
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <OperatorGuide
+                title="Comms Inbox — Operator Review Guide"
+                intro="The Corporate Assistant sends messages under your organisation's name. Approval is a hard gate — sending is permanent."
+                items={COMMS_GUIDE_ITEMS}
+            />
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
                 <div style={{ display: 'flex', gap: 4 }}>
                     {filters.map(({ key, label }) => (

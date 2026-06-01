@@ -2,6 +2,16 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Megaphone, TrendingUp, RefreshCw, Play, Pause, CheckCircle2, Clock } from 'lucide-react';
+import OperatorGuide from './operator-guide';
+
+const CAMP_GUIDE_ITEMS = [
+    { label: 'Budget is within approved limit', hint: 'Confirm budgetUsd is within your approved channel spend. The agent may propose a budget based on historical averages — verify against current quarter allocation.', level: 'critical' as const },
+    { label: 'Targeting does not violate compliance', hint: 'Check targetAudience for age, demographic, or geographic targeting that may violate GDPR, CCPA, or platform-specific ad policies.', level: 'critical' as const },
+    { label: 'Channel is appropriate for the message', hint: '"Paid Search" for brand awareness and "Email" for product launch announcements have different intent match. Mismatch = wasted budget.', level: 'caution' as const },
+    { label: 'CTR benchmark check (active campaigns)', hint: 'Expected CTR by channel: Email 2–5%, Paid Search 2–4%, Social 0.5–1.5%, Display 0.1–0.3%. A 10%+ CTR likely has a tracking error — pause and investigate.', level: 'caution' as const },
+    { label: 'Start/end dates are correct', hint: 'Verify campaign dates do not overlap with product blackout periods, competitive launches, or major company events. The agent has no calendar context.', level: 'caution' as const },
+    { label: 'Approve = live spend authorisation', hint: 'Approving a campaign authorises the marketing agent to begin execution on the connected channel. Budget will begin accruing immediately after the start date.', level: 'critical' as const },
+];
 
 type CampaignStatus = 'draft' | 'pending_approval' | 'approved' | 'active' | 'paused' | 'completed' | 'rejected';
 type CampaignChannel = 'email' | 'social' | 'paid_search' | 'display' | 'content' | 'seo';
@@ -74,6 +84,11 @@ export default function CampaignsPanel({ workspaceId }: { workspaceId: string })
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <OperatorGuide
+                title="Campaigns — Operator Review Guide"
+                intro="The Marketing agent drafts and proposes campaigns. Approving authorises spend. Pausing stops active spend immediately."
+                items={CAMP_GUIDE_ITEMS}
+            />
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
                 <div style={{ display: 'flex', gap: 4 }}>
                     {(['pending_approval', 'active', 'paused', 'all'] as const).map(k => (

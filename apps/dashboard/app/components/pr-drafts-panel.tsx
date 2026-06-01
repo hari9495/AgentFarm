@@ -1,6 +1,16 @@
 'use client';
 
 import { useCallback, useState } from 'react';
+import OperatorGuide from './operator-guide';
+
+const PR_GUIDE_ITEMS = [
+    { label: 'Branch target is correct', hint: 'Confirm targetBranch is the right merge destination. AI agents default to "main" — double-check for feature branches, hotfix tracks, or release branches.', level: 'critical' as const },
+    { label: 'No deploy/force/merge keywords in summary', hint: 'If the change summary contains "deploy", "merge", "force push", or "revert" — the publish will be blocked. Revise the summary before publishing.', level: 'caution' as const },
+    { label: 'Linked issues match the changes', hint: 'Verify the linked issue IDs describe what the PR actually does. Mismatched issue links break traceability audits.', level: 'verify' as const },
+    { label: 'Title follows commit convention', hint: 'AI-generated titles default to "chore:". Change to "feat:", "fix:", "docs:" etc. as appropriate before publishing.', level: 'caution' as const },
+    { label: 'No secrets or credentials in the diff', hint: 'Before publishing, confirm the change summary does not reference hardcoded API keys, tokens, or passwords. These cannot be recalled once the PR is open.', level: 'critical' as const },
+    { label: 'Draft status means it has NOT been published', hint: 'A "draft" PR exists only in AgentFarm. Clicking Publish opens the real PR on your VCS. There is no undo — the PR will be visible to your team immediately.', level: 'verify' as const },
+];
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -270,6 +280,11 @@ export default function PrDraftsPanel({ tenantId, workspaceId }: PrDraftsPanelPr
 
     return (
         <section className="card" style={{ display: 'grid', gap: '1.5rem' }}>
+            <OperatorGuide
+                title="PR Drafts — Operator Review Guide"
+                intro="AI-generated PRs queue here for human sign-off. Publishing is irreversible — the PR opens on your VCS immediately."
+                items={PR_GUIDE_ITEMS}
+            />
             {/* ── Section 1: Create Draft ─────────────────────────────────── */}
             <div>
                 <h2 style={{ margin: '0 0 0.75rem' }}>Create PR Draft</h2>

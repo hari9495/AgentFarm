@@ -1,6 +1,16 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import OperatorGuide from './operator-guide';
+
+const CI_GUIDE_ITEMS = [
+    { label: 'Root cause plausibility', hint: 'Does the hypothesis match the failing job names? A "build failure" diagnosis on a test-only job is suspicious — check the job name against the category.', level: 'critical' as const },
+    { label: 'Confidence score threshold', hint: 'Score ≥ 70%: act on the proposal. 50–70%: investigate further before applying. < 50%: discard and triage manually.', level: 'caution' as const },
+    { label: 'Blast radius assessment', hint: 'If blast radius is "High" or "Medium-High", the patch touches shared infrastructure — require a second human review before applying.', level: 'critical' as const },
+    { label: 'Patch proposal review', hint: 'Read every line of the patch. Never auto-apply. Check for: hardcoded secrets, removed safety checks, logic inversions, scope creep beyond the stated fix.', level: 'critical' as const },
+    { label: 'Repro steps validation', hint: 'Can you follow the repro steps locally? If they reference environment variables or services not available in dev, flag before escalating.', level: 'caution' as const },
+    { label: 'Run ID uniqueness', hint: 'Re-submitting the same runId is idempotent — the system will return the existing report. Use a new runId for each distinct CI run.', level: 'verify' as const },
+];
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -187,6 +197,12 @@ export default function CiTriagePanel({ workspaceId }: CiTriagePanelProps) {
     }
 
     return (
+        <div>
+        <OperatorGuide
+            title="CI Triage — Operator Review Guide"
+            intro="Each triage report is AI-generated from job names and log hints. Before acting on a patch proposal, verify each item below."
+            items={CI_GUIDE_ITEMS}
+        />
         <div style={{ display: 'grid', gridTemplateColumns: selectedTriageId ? '1fr 1.4fr' : '1fr', gap: '24px', alignItems: 'start' }}>
             {/* Left column */}
             <div>
@@ -517,6 +533,7 @@ export default function CiTriagePanel({ workspaceId }: CiTriagePanelProps) {
                     )}
                 </div>
             )}
+        </div>
         </div>
     );
 }
