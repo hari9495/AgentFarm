@@ -119,10 +119,11 @@ export default function CiTriagePanel({ workspaceId }: CiTriagePanelProps) {
     useEffect(() => { void loadHistory(); }, [loadHistory]);
 
     async function submitIntake() {
-        if (!intakeProvider.trim() || !intakeRunId.trim() || !intakeRepo.trim() || !intakeBranch.trim()) {
-            setIntakeError('provider, runId, repo, and branch are required.');
-            return;
-        }
+        if (!intakeProvider) { setIntakeError('Please select a CI provider from the dropdown.'); return; }
+        if (!intakeRunId.trim()) { setIntakeError('Run ID is required. Find it in the URL of your CI run page.'); return; }
+        if (!intakeRepo.trim()) { setIntakeError('Repository is required. Use the format owner/repo-name.'); return; }
+        if (!intakeRepo.includes('/')) { setIntakeError('Repository must be in the format owner/repo-name (e.g. acme-corp/backend-api).'); return; }
+        if (!intakeBranch.trim()) { setIntakeError('Branch is required. Enter the branch name shown in your CI run summary.'); return; }
 
         // Bug fix: API expects { jobName } objects, not plain strings
         const failedJobs = intakeJobsRaw
@@ -217,78 +218,155 @@ export default function CiTriagePanel({ workspaceId }: CiTriagePanelProps) {
                         marginBottom: '24px',
                     }}
                 >
-                    <div
-                        style={{
-                            fontSize: '12px',
-                            fontWeight: 700,
-                            color: 'var(--ink-muted)',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.06em',
-                            marginBottom: '14px',
-                        }}
-                    >
-                        Submit CI Failure
+                    {/* Form header */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                        <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                            Submit CI Failure
+                        </span>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setIntakeProvider('github');
+                                setIntakeRunId('12345678');
+                                setIntakeRepo('acme-corp/backend-api');
+                                setIntakeBranch('main');
+                                setIntakeJobsRaw('typecheck, test:integration');
+                            }}
+                            style={{ fontSize: '11px', color: '#6366f1', background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: '5px', padding: '3px 9px', cursor: 'pointer', fontWeight: 600 }}
+                        >
+                            ✦ Use example data
+                        </button>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
-                        <input
-                            type="text"
-                            placeholder="Provider (e.g. github)"
-                            value={intakeProvider}
-                            onChange={(e) => setIntakeProvider(e.target.value)}
-                            style={inputStyle}
-                        />
-                        <input
-                            type="text"
-                            placeholder="Run ID"
-                            value={intakeRunId}
-                            onChange={(e) => setIntakeRunId(e.target.value)}
-                            style={inputStyle}
-                        />
-                        <input
-                            type="text"
-                            placeholder="Repository (owner/repo)"
-                            value={intakeRepo}
-                            onChange={(e) => setIntakeRepo(e.target.value)}
-                            style={inputStyle}
-                        />
-                        <input
-                            type="text"
-                            placeholder="Branch"
-                            value={intakeBranch}
-                            onChange={(e) => setIntakeBranch(e.target.value)}
-                            style={inputStyle}
-                        />
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                        {/* Provider */}
+                        <div>
+                            <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--ink-muted)', display: 'block', marginBottom: '4px' }}>
+                                CI Provider <span style={{ color: '#ef4444' }}>*</span>
+                            </label>
+                            <select
+                                value={intakeProvider}
+                                onChange={(e) => setIntakeProvider(e.target.value)}
+                                style={{ ...inputStyle, appearance: 'none', backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'10\' height=\'6\'%3E%3Cpath d=\'M0 0l5 6 5-6z\' fill=\'%2394a3b8\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center', paddingRight: '28px' }}
+                            >
+                                <option value="">— Select provider —</option>
+                                <option value="github">GitHub Actions</option>
+                                <option value="gitlab">GitLab CI</option>
+                                <option value="bitbucket">Bitbucket Pipelines</option>
+                                <option value="jenkins">Jenkins</option>
+                                <option value="circleci">CircleCI</option>
+                                <option value="azure">Azure DevOps</option>
+                                <option value="buildkite">Buildkite</option>
+                            </select>
+                            <p style={{ fontSize: '10px', color: '#94a3b8', margin: '3px 0 0' }}>
+                                Which CI system ran the failing pipeline?
+                            </p>
+                        </div>
+
+                        {/* Run ID */}
+                        <div>
+                            <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--ink-muted)', display: 'block', marginBottom: '4px' }}>
+                                Run ID <span style={{ color: '#ef4444' }}>*</span>
+                            </label>
+                            <input
+                                type="text"
+                                placeholder="e.g. 12345678"
+                                value={intakeRunId}
+                                onChange={(e) => setIntakeRunId(e.target.value)}
+                                style={inputStyle}
+                            />
+                            <p style={{ fontSize: '10px', color: '#94a3b8', margin: '3px 0 0' }}>
+                                The numeric ID in the CI run URL. GitHub: <em>…/actions/runs/<strong>12345678</strong></em>
+                            </p>
+                        </div>
+
+                        {/* Repository */}
+                        <div>
+                            <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--ink-muted)', display: 'block', marginBottom: '4px' }}>
+                                Repository <span style={{ color: '#ef4444' }}>*</span>
+                            </label>
+                            <input
+                                type="text"
+                                placeholder="e.g. acme-corp/backend-api"
+                                value={intakeRepo}
+                                onChange={(e) => setIntakeRepo(e.target.value)}
+                                style={{ ...inputStyle, borderColor: intakeRepo && !intakeRepo.includes('/') ? '#fca5a5' : undefined }}
+                            />
+                            <p style={{ fontSize: '10px', color: intakeRepo && !intakeRepo.includes('/') ? '#ef4444' : '#94a3b8', margin: '3px 0 0' }}>
+                                Format: <strong>owner/repo-name</strong>. Find in your repo URL after github.com/
+                            </p>
+                        </div>
+
+                        {/* Branch */}
+                        <div>
+                            <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--ink-muted)', display: 'block', marginBottom: '4px' }}>
+                                Branch <span style={{ color: '#ef4444' }}>*</span>
+                            </label>
+                            <input
+                                type="text"
+                                placeholder="e.g. main or feature/my-fix"
+                                value={intakeBranch}
+                                onChange={(e) => setIntakeBranch(e.target.value)}
+                                style={inputStyle}
+                            />
+                            <p style={{ fontSize: '10px', color: '#94a3b8', margin: '3px 0 0' }}>
+                                The branch that was running when the failure occurred. Shown in the CI run summary.
+                            </p>
+                        </div>
                     </div>
-                    <input
-                        type="text"
-                        placeholder="Failed jobs (comma-separated)"
-                        value={intakeJobsRaw}
-                        onChange={(e) => setIntakeJobsRaw(e.target.value)}
-                        style={{ ...inputStyle, width: '100%', boxSizing: 'border-box', marginBottom: '10px' }}
-                    />
+
+                    {/* Failed jobs */}
+                    <div style={{ marginBottom: '12px' }}>
+                        <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--ink-muted)', display: 'block', marginBottom: '4px' }}>
+                            Failed Job Names <span style={{ color: '#64748b', fontWeight: 400 }}>(optional but recommended)</span>
+                        </label>
+                        <input
+                            type="text"
+                            placeholder="e.g. typecheck, test:integration, build:docker"
+                            value={intakeJobsRaw}
+                            onChange={(e) => setIntakeJobsRaw(e.target.value)}
+                            style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' }}
+                        />
+                        <p style={{ fontSize: '10px', color: '#94a3b8', margin: '3px 0 0' }}>
+                            Comma-separated job names that show a ✗ or red status in the CI run. Find under the <strong>Jobs</strong> panel of your CI run page. The more specific, the more accurate the AI diagnosis.
+                        </p>
+                    </div>
+
                     {intakeError && (
-                        <p style={{ fontSize: '12px', color: '#f87171', marginBottom: '8px' }}>{intakeError}</p>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', padding: '8px 10px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', marginBottom: '10px' }}>
+                            <span style={{ fontSize: '13px', lineHeight: 1 }}>⚠</span>
+                            <p style={{ fontSize: '12px', color: '#dc2626', margin: 0 }}>{intakeError}</p>
+                        </div>
                     )}
                     {intakeSuccess && (
-                        <p style={{ fontSize: '12px', color: '#4ade80', marginBottom: '8px' }}>{intakeSuccess}</p>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', padding: '8px 10px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', marginBottom: '10px' }}>
+                            <span style={{ fontSize: '13px', lineHeight: 1 }}>✓</span>
+                            <p style={{ fontSize: '12px', color: '#16a34a', margin: 0 }}>{intakeSuccess}</p>
+                        </div>
                     )}
-                    <button
-                        onClick={() => void submitIntake()}
-                        disabled={intakeSubmitting}
-                        style={{
-                            padding: '8px 18px',
-                            background: 'var(--ink)',
-                            color: 'var(--bg)',
-                            border: 'none',
-                            borderRadius: '6px',
-                            fontSize: '12px',
-                            fontWeight: 600,
-                            cursor: intakeSubmitting ? 'not-allowed' : 'pointer',
-                            opacity: intakeSubmitting ? 0.6 : 1,
-                        }}
-                    >
-                        {intakeSubmitting ? 'Submitting…' : 'Submit for Triage'}
-                    </button>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <button
+                            onClick={() => void submitIntake()}
+                            disabled={intakeSubmitting}
+                            style={{
+                                padding: '8px 18px',
+                                background: 'var(--ink)',
+                                color: 'var(--bg)',
+                                border: 'none',
+                                borderRadius: '6px',
+                                fontSize: '12px',
+                                fontWeight: 600,
+                                cursor: intakeSubmitting ? 'not-allowed' : 'pointer',
+                                opacity: intakeSubmitting ? 0.6 : 1,
+                            }}
+                        >
+                            {intakeSubmitting ? 'Submitting…' : 'Submit for Triage'}
+                        </button>
+                        <span style={{ fontSize: '11px', color: '#94a3b8' }}>
+                            The AI will analyse the failure and return a root-cause report within seconds.
+                        </span>
+                    </div>
                 </div>
 
                 {/* Report list */}
