@@ -22,6 +22,8 @@ import type { LocalWorkspaceResult, LocalWorkspaceConnectorClient } from '../../
 import {
     applyDisclosureToConnectorPayload,
 } from '../../outbound-disclosure.js';
+import { McpProtocolClient } from '../../mcp-protocol-client.js';
+import { getTesterMcpClients } from './tester-mcp-provisioner.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -32,7 +34,12 @@ export type TesterActionType =
     | 'workspace_test_case_sync'
     | 'workspace_test_run_publish'
     | 'workspace_create_bug'
-    | 'workspace_security_test_report';
+    | 'workspace_security_test_report'
+    // CDP-native actions via chrome-devtools-mcp
+    | 'workspace_lighthouse_audit'
+    | 'workspace_console_logs'
+    | 'workspace_network_requests'
+    | 'workspace_heap_snapshot';
 
 export function isTesterActionType(t: string): t is TesterActionType {
     return (
@@ -40,7 +47,11 @@ export function isTesterActionType(t: string): t is TesterActionType {
         t === 'workspace_test_case_sync' ||
         t === 'workspace_test_run_publish' ||
         t === 'workspace_create_bug' ||
-        t === 'workspace_security_test_report'
+        t === 'workspace_security_test_report' ||
+        t === 'workspace_lighthouse_audit' ||
+        t === 'workspace_console_logs' ||
+        t === 'workspace_network_requests' ||
+        t === 'workspace_heap_snapshot'
     );
 }
 
@@ -90,16 +101,17 @@ export async function handleTesterAction(params: {
 }): Promise<LocalWorkspaceResult> {
     const {
         actionType,
-        tenantId: _tenantId,
+        tenantId,
         botId: _botId,
         taskId: _taskId,
         payload,
         workspaceDir = '',
         connectorActionExecuteClient,
         executeAction,
+        workspaceId,
     } = params;
 
-    void _tenantId; void _botId; void _taskId; // available for future per-action audit use
+    void _botId; void _taskId; // available for future per-action audit use
 
     switch (actionType) {
 
@@ -409,6 +421,110 @@ export async function handleTesterAction(params: {
             return { ok: true, output: JSON.stringify(report, null, 2), errorOutput: '' };
         }
 
+        // ------------------------------------------------------------------
+        // workspace_lighthouse_audit
+        // Run a Lighthouse audit on a URL via chrome-devtools-mcp and return
+        // performance, accessibility, best-practices and SEO scores.
+        // payload: { url: string }
+        // Falls back to a descriptive error when MCP is unavailable so the
+        // agent can surface a human-readable message rather than crashing.
+        // ------------------------------------------------------------------
+        case 'workspace_lighthouse_audit': {
+            const auditUrl = typeof payload['url'] === 'string' ? payload['url'].trim() : '';
+            if (!auditUrl) {
+                return { ok: false, output: '', errorOutput: 'workspace_lighthouse_audit: payload.url is required' };
+            }
+            const cdpClient = await resolveCdpClient(tenantId, workspaceId);
+            if (!cdpClient) {
+                return {
+                    ok: false, output: '',
+                    errorOutput: 'workspace_lighthouse_audit: chrome-devtools-mcp is not reachable. ' +
+                        'Set MCP_CHROME_DEVTOOLS_URL or start the desktop-agent container.',
+                };
+            }
+            try {
+                const raw = await cdpClient.callTool('lighthouse_audit', { url: auditUrl });
+                const text = extractMcpText(raw);
+                return { ok: true, output: text, errorOutput: '' };
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: `lighthouse_audit failed: ${String(err)}` };
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_console_logs
+        // Retrieve browser console messages for the currently open page.
+        // payload: { url?: string }   (navigate first if url is supplied)
+        // ------------------------------------------------------------------
+        case 'workspace_console_logs': {
+            const cdpClient = await resolveCdpClient(tenantId, workspaceId);
+            if (!cdpClient) {
+                return {
+                    ok: false, output: '',
+                    errorOutput: 'workspace_console_logs: chrome-devtools-mcp is not reachable. ' +
+                        'Set MCP_CHROME_DEVTOOLS_URL or start the desktop-agent container.',
+                };
+            }
+            try {
+                const logUrl = typeof payload['url'] === 'string' ? payload['url'].trim() : '';
+                if (logUrl) {
+                    await cdpClient.callTool('navigate_page', { url: logUrl }).catch(() => undefined);
+                }
+                const raw = await cdpClient.callTool('list_console_messages', {});
+                return { ok: true, output: extractMcpText(raw), errorOutput: '' };
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: `console_logs failed: ${String(err)}` };
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_network_requests
+        // List network requests captured by the open Chrome tab.
+        // payload: { url?: string }
+        // ------------------------------------------------------------------
+        case 'workspace_network_requests': {
+            const cdpClient = await resolveCdpClient(tenantId, workspaceId);
+            if (!cdpClient) {
+                return {
+                    ok: false, output: '',
+                    errorOutput: 'workspace_network_requests: chrome-devtools-mcp is not reachable. ' +
+                        'Set MCP_CHROME_DEVTOOLS_URL or start the desktop-agent container.',
+                };
+            }
+            try {
+                const netUrl = typeof payload['url'] === 'string' ? payload['url'].trim() : '';
+                if (netUrl) {
+                    await cdpClient.callTool('navigate_page', { url: netUrl }).catch(() => undefined);
+                }
+                const raw = await cdpClient.callTool('list_network_requests', {});
+                return { ok: true, output: extractMcpText(raw), errorOutput: '' };
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: `network_requests failed: ${String(err)}` };
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_heap_snapshot
+        // Take a V8 heap snapshot and return a summary (top classes by size).
+        // payload: {}
+        // ------------------------------------------------------------------
+        case 'workspace_heap_snapshot': {
+            const cdpClient = await resolveCdpClient(tenantId, workspaceId);
+            if (!cdpClient) {
+                return {
+                    ok: false, output: '',
+                    errorOutput: 'workspace_heap_snapshot: chrome-devtools-mcp is not reachable. ' +
+                        'Set MCP_CHROME_DEVTOOLS_URL or start the desktop-agent container.',
+                };
+            }
+            try {
+                const raw = await cdpClient.callTool('take_heapsnapshot', {});
+                return { ok: true, output: extractMcpText(raw), errorOutput: '' };
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: `heap_snapshot failed: ${String(err)}` };
+            }
+        }
+
         default: {
             const _exhaustive: never = actionType;
             return {
@@ -418,6 +534,39 @@ export async function handleTesterAction(params: {
             };
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// CDP helper utilities (private to this module)
+// ---------------------------------------------------------------------------
+
+/**
+ * Resolve an McpProtocolClient for chrome-devtools-mcp.
+ *
+ * Resolution order:
+ *   1. Cached provisioner session (pre-warmed by runtime-server on tester bot start).
+ *   2. Direct env-var fallback (MCP_CHROME_DEVTOOLS_URL) — useful for local dev.
+ *   3. null — MCP is unavailable; callers must return a graceful error.
+ */
+async function resolveCdpClient(tenantId: string, workspaceId?: string): Promise<McpProtocolClient | null> {
+    try {
+        const clients = await getTesterMcpClients(tenantId, workspaceId);
+        const provisioned = clients.get('chrome-devtools');
+        if (provisioned) return provisioned;
+    } catch {
+        // provisioner unavailable — fall through to env-var path
+    }
+    const url = (process.env['MCP_CHROME_DEVTOOLS_URL'] ?? '').trim();
+    return url ? new McpProtocolClient(url) : null;
+}
+
+/** Extract the text content from an MCP tool call result. */
+function extractMcpText(raw: { content?: Array<{ type: string; text?: string }> }): string {
+    if (!Array.isArray(raw.content)) return JSON.stringify(raw);
+    return raw.content
+        .filter((c) => c.type === 'text' && typeof c.text === 'string')
+        .map((c) => c.text as string)
+        .join('\n');
 }
 
 // ---------------------------------------------------------------------------

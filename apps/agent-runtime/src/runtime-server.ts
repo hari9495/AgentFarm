@@ -3439,8 +3439,17 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
 
         // For tester bots: pre-warm MCP connector sessions in the background so the first
         // test action doesn't incur the full initialization latency.
+        // The provisioner caches the returned clients; subsequent calls to getTesterMcpClients
+        // (e.g. from workspace_lighthouse_audit) resolve instantly from that cache.
         if (config.roleKey === 'tester') {
-            getTesterMcpClients(config.tenantId, config.workspaceId).catch(() => { /* non-blocking */ });
+            getTesterMcpClients(config.tenantId, config.workspaceId).then((clients) => {
+                if (clients.size > 0) {
+                    console.info(
+                        `[runtime] Tester MCP pre-warm complete for tenant ${config.tenantId}: ` +
+                        `[${[...clients.keys()].join(', ')}]`,
+                    );
+                }
+            }).catch(() => { /* non-blocking — chrome-devtools-mcp may not be running locally */ });
         }
         // For sales rep bots: pre-warm CRM and outreach MCP sessions in the background.
         if (config.roleKey === 'sales_rep') {

@@ -24,7 +24,8 @@ import {
 import { safePackageOperation } from './package-manager-service.js';
 import { getDesktopOperator } from './desktop-operator-factory.js';
 import { evaluateEscalation } from './escalation-engine.js';
-import { webLogin, webNavigate, webReadPage, webFillForm, webClick, webExtractData } from '@agentfarm/browser-actions/web-actions.js';
+import { BrowserActionRouter } from '@agentfarm/browser-actions/browser-action-router.js';
+import { McpProtocolClient } from './mcp-protocol-client.js';
 import {
     researchForTask,
     defaultSynthesise,
@@ -198,6 +199,11 @@ export type LocalWorkspaceActionType =
     | 'workspace_web_fill_form'
     | 'workspace_web_click'
     | 'workspace_web_extract_data'
+    // Tier 17b (Chrome DevTools MCP — CDP-native actions)
+    | 'workspace_lighthouse_audit'
+    | 'workspace_console_logs'
+    | 'workspace_network_requests'
+    | 'workspace_heap_snapshot'
     // Tier 20: Testing tool integrations
     | 'workspace_selenium_test_run'
     | 'workspace_cypress_test_run'
@@ -1030,6 +1036,11 @@ export const LOCAL_WORKSPACE_ACTION_TYPES = new Set<LocalWorkspaceActionType>([
     'workspace_web_fill_form',
     'workspace_web_click',
     'workspace_web_extract_data',
+    // Tier 17b — Chrome DevTools MCP
+    'workspace_lighthouse_audit',
+    'workspace_console_logs',
+    'workspace_network_requests',
+    'workspace_heap_snapshot',
     // Tier 20
     'workspace_selenium_test_run',
     'workspace_cypress_test_run',
@@ -3610,6 +3621,23 @@ const executeTier11ObservedAction = async <T>(input: {
 
 // Tier 17 — Generic Web Operator Session Registry
 const _webContextCache = new Map<string, import('playwright').BrowserContext>();
+
+// Lazy singleton McpProtocolClient for chrome-devtools-mcp.
+// Resolved once from MCP_CHROME_DEVTOOLS_URL; null when the env var is unset.
+let _cdpMcpClient: McpProtocolClient | null | undefined = undefined;
+function getCdpMcpClient(): McpProtocolClient | null {
+    if (_cdpMcpClient !== undefined) return _cdpMcpClient;
+    const url = (process.env['MCP_CHROME_DEVTOOLS_URL'] ?? '').trim();
+    _cdpMcpClient = url ? new McpProtocolClient(url) : null;
+    return _cdpMcpClient;
+}
+
+/** Build a BrowserActionRouter: MCP-first when chrome-devtools-mcp is configured, Playwright fallback always. */
+async function buildWebRouter(tenantId: string, botId: string): Promise<BrowserActionRouter> {
+    const ctx = await getWebContext(tenantId, botId);
+    const client = getCdpMcpClient();
+    return new BrowserActionRouter(client ? client.callTool.bind(client) : null, ctx);
+}
 
 // REPL session registry: keyed by session_id; cleaned up on stop or process exit
 const _replSessions = new Map<string, {
@@ -11285,38 +11313,42 @@ export async function executeLocalWorkspaceAction(input: {
         }
 
         case 'workspace_web_login': {
-            const context = await getWebContext(input.tenantId, input.botId);
-            const result = await webLogin(context, input.payload as { url: string; username: string; password: string });
+            const p = input.payload as { url: string; username: string; password: string };
+            const router = await buildWebRouter(input.tenantId, input.botId);
+            const result = await router.execute({ action: 'login', url: p.url, username: p.username, password: p.password });
             return { ok: result.ok, output: result.output, errorOutput: result.reason };
         }
 
         case 'workspace_web_navigate': {
-            const context = await getWebContext(input.tenantId, input.botId);
-            const result = await webNavigate(context, input.payload as { url: string });
+            const router = await buildWebRouter(input.tenantId, input.botId);
+            const result = await router.execute({ action: 'navigate', url: (input.payload as { url: string }).url });
             return { ok: result.ok, output: result.output, errorOutput: result.reason };
         }
 
         case 'workspace_web_read_page': {
-            const context = await getWebContext(input.tenantId, input.botId);
-            const result = await webReadPage(context, input.payload as { url?: string });
+            const router = await buildWebRouter(input.tenantId, input.botId);
+            const result = await router.execute({ action: 'read_page', url: (input.payload as { url?: string }).url });
             return { ok: result.ok, output: result.output, errorOutput: result.reason };
         }
 
         case 'workspace_web_fill_form': {
-            const context = await getWebContext(input.tenantId, input.botId);
-            const result = await webFillForm(context, input.payload as { url?: string; fields: Record<string, string>; submit: boolean });
+            const p = input.payload as { url?: string; fields: Record<string, string>; submit?: boolean };
+            const router = await buildWebRouter(input.tenantId, input.botId);
+            const result = await router.execute({ action: 'fill_form', url: p.url, fields: p.fields, submit: p.submit ?? false });
             return { ok: result.ok, output: result.output, errorOutput: result.reason };
         }
 
         case 'workspace_web_click': {
-            const context = await getWebContext(input.tenantId, input.botId);
-            const result = await webClick(context, input.payload as { url?: string; target: string });
+            const p = input.payload as { url?: string; target: string };
+            const router = await buildWebRouter(input.tenantId, input.botId);
+            const result = await router.execute({ action: 'click', target: p.target, url: p.url });
             return { ok: result.ok, output: result.output, errorOutput: result.reason };
         }
 
         case 'workspace_web_extract_data': {
-            const context = await getWebContext(input.tenantId, input.botId);
-            const result = await webExtractData(context, input.payload as { url?: string; target: 'table' | 'list' | 'fields' | 'all' });
+            const p = input.payload as { url?: string; target: 'table' | 'list' | 'fields' | 'all' };
+            const router = await buildWebRouter(input.tenantId, input.botId);
+            const result = await router.execute({ action: 'extract_data', target: p.target, url: p.url });
             return { ok: result.ok, output: result.output, errorOutput: result.reason };
         }
 
@@ -13600,9 +13632,11 @@ export async function executeLocalWorkspaceAction(input: {
                 opts?: { extract?: 'text' | 'tables' | 'all'; screenshot?: boolean; taskId?: string },
             ) => {
                 try {
-                    const ctx = await getWebContext(tenantId, botId);
                     const extractTarget = opts?.extract === 'tables' ? 'table' : opts?.extract === 'all' ? 'all' : undefined;
-                    const pageResult = await webReadPage(ctx, { url });
+                    const ctx = await getWebContext(tenantId, botId);
+                    const cdpClient = getCdpMcpClient();
+                    const twRouter = new BrowserActionRouter(cdpClient ? cdpClient.callTool.bind(cdpClient) : null, ctx);
+                    const pageResult = await twRouter.execute({ action: 'read_page', url });
                     if (!pageResult.ok) return null;
 
                     const text = pageResult.output;
@@ -13613,7 +13647,7 @@ export async function executeLocalWorkspaceAction(input: {
 
                     let tables: unknown[] | undefined;
                     if (extractTarget) {
-                        const extracted = await webExtractData(ctx, { url, target: extractTarget as 'table' | 'all' });
+                        const extracted = await twRouter.execute({ action: 'extract_data', url, target: extractTarget as 'table' | 'all' });
                         if (extracted.ok) {
                             try { tables = JSON.parse(extracted.output) as unknown[]; } catch { /* ignore */ }
                         }
@@ -13665,8 +13699,9 @@ export async function executeLocalWorkspaceAction(input: {
                 opts?: { extract?: 'text' | 'tables' | 'all'; screenshot?: boolean; taskId?: string },
             ) => {
                 try {
-                    const ctx = await getWebContext(tenantId, botId);
-                    const pageResult = await webReadPage(ctx, { url });
+                    void opts; // unused in this path
+                    const twVerifyRouter = await buildWebRouter(tenantId, botId);
+                    const pageResult = await twVerifyRouter.execute({ action: 'read_page', url });
                     if (!pageResult.ok) return null;
                     const text = pageResult.output;
                     const headings: string[] = [];
@@ -13855,7 +13890,12 @@ export async function executeLocalWorkspaceAction(input: {
         case 'workspace_test_case_sync':
         case 'workspace_test_run_publish':
         case 'workspace_create_bug':
-        case 'workspace_security_test_report': {
+        case 'workspace_security_test_report':
+        // Tier 17b — CDP-native actions delegated through the tester handler
+        case 'workspace_lighthouse_audit':
+        case 'workspace_console_logs':
+        case 'workspace_network_requests':
+        case 'workspace_heap_snapshot': {
             return handleTesterAction({
                 actionType,
                 tenantId,

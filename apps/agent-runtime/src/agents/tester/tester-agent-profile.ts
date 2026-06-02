@@ -84,6 +84,11 @@ export const TESTER_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = [
     'workspace_web_fill_form',
     'workspace_web_click',
     'workspace_web_extract_data',
+    // ── Chrome DevTools MCP — CDP-native actions (Tier 17b) ──────────────
+    'workspace_lighthouse_audit',
+    'workspace_console_logs',
+    'workspace_network_requests',
+    'workspace_heap_snapshot',
     // ── Tier 20: Testing tool integrations ───────────────────────────────
     'workspace_selenium_test_run',
     'workspace_cypress_test_run',
