@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -50,7 +50,7 @@ const fromNow = (timestamp: number): string => {
     return `${days}d ago`;
 };
 
-export default function ApprovalsQueue({ scope, agentSlug, headerTitle, headerSubtitle, backHref, userRole }: Props) {
+export default function ApprovalsQueue({ scope, agentSlug, headerTitle, headerSubtitle, backHref, userRole = "member" }: Props) {
     const canAudit = userRole === "admin" || userRole === "superadmin";
     const [items, setItems] = useState<Approval[]>([]);
     const [loading, setLoading] = useState(true);
