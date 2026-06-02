@@ -82,7 +82,7 @@ export default function DashboardPage() {
                     <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: "radial-gradient(circle, rgba(255,255,255,1) 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
                 </div>
 
-                <div className="relative max-w-7xl mx-auto w-full px-6 sm:px-10 lg:px-16 py-10 sm:py-14">
+                <div className="relative max-w-7xl mx-auto w-full px-6 sm:px-10 lg:px-16 py-6 sm:py-8">
                     <div className="flex items-center gap-2 mb-5">
                         <div className="flex items-center gap-2 rounded-xl bg-sky-500/10 border border-sky-500/20 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-sky-400">
                             <PremiumIcon icon={LayoutGrid} tone="sky" containerClassName="w-4 h-4 rounded bg-sky-400/20 text-sky-300" iconClassName="w-2.5 h-2.5" />
@@ -113,7 +113,7 @@ export default function DashboardPage() {
                     </div>
 
                     {/* Mini stats bar */}
-                    <div className="mt-8 flex flex-wrap items-center gap-6 border-t border-white/10 pt-6">
+                    <div className="mt-5 flex flex-wrap items-center gap-6 border-t border-white/10 pt-4">
                         {[
                             { icon: <Users className="w-3.5 h-3.5 text-sky-400" />,       label: "4 active teammates" },
                             { icon: <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />, label: "284 tasks this week" },
