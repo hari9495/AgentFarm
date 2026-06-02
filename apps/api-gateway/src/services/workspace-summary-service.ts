@@ -45,17 +45,17 @@ export const getTenantSummary = async (tenantId: string) => {
 export const getWorkspaceBotSummaries = async (tenantId: string) => {
     const workspaces = await prisma.workspace.findMany({
         where: { tenantId },
-        include: { bot: true },
+        include: { bots: true },
     });
 
     return workspaces.map((ws: any) => ({
         workspace_id: ws.id,
         tenant_id: tenantId,
         workspace_name: ws.name,
-        role_type: ws.bot?.[0]?.role ?? 'Developer Agent',
-        bot_id: ws.bot?.[0]?.id ?? null,
-        bot_name: ws.bot?.[0]?.name ?? 'Unnamed Bot',
-        bot_status: ws.bot?.[0]?.status ?? 'created',
+        role_type: ws.bots?.[0]?.role ?? 'Developer Agent',
+        bot_id: ws.bots?.[0]?.id ?? null,
+        bot_name: ws.bots?.[0]?.name ?? 'Unnamed Bot',
+        bot_status: ws.bots?.[0]?.status ?? 'created',
         workspace_status: ws.status,
         runtime_tier: 'dedicated_vm',
         last_heartbeat_at: new Date().toISOString(),

@@ -162,6 +162,67 @@ export const registerDashboardRoutes = async (app: FastifyInstance): Promise<voi
     });
 
     // ------------------------------------------------------------------
+    // Workspace historical metrics (time-series)
+    // ------------------------------------------------------------------
+
+    app.get<{ Params: { workspaceId: string }; Querystring: { window?: string; bucket?: string } }>(
+        '/v1/dashboard/workspace/:workspaceId/historical-metrics',
+        async (request, reply) => {
+            const { workspaceId } = request.params;
+            const { window: windowParam = '12h', bucket: bucketParam = '1h' } = request.query;
+
+            const windowMatch = windowParam.match(/^(\d+)([hd])$/);
+            const bucketMatch = bucketParam.match(/^(\d+)([hm])$/);
+
+            const windowMs = windowMatch
+                ? parseInt(windowMatch[1]) * (windowMatch[2] === 'h' ? 3600000 : 86400000)
+                : 12 * 3600000;
+            const bucketMs = bucketMatch
+                ? parseInt(bucketMatch[1]) * (bucketMatch[2] === 'h' ? 3600000 : 60000)
+                : 3600000;
+
+            const since = new Date(Date.now() - windowMs);
+
+            const records = await prisma.taskExecutionRecord.findMany({
+                where: { workspaceId, executedAt: { gte: since } },
+                select: { executedAt: true, outcome: true, latencyMs: true, totalTokens: true },
+                orderBy: { executedAt: 'asc' },
+            });
+
+            // Build bucket map
+            const bucketCount = Math.ceil(windowMs / bucketMs);
+            const buckets: Array<{ at: string; task_count: number; success_count: number; error_count: number; avg_latency_ms: number; total_tokens: number }> = [];
+
+            for (let i = 0; i < bucketCount; i++) {
+                const bucketStart = since.getTime() + i * bucketMs;
+                const bucketEnd = bucketStart + bucketMs;
+                const slice = records.filter((r) => {
+                    const t = r.executedAt.getTime();
+                    return t >= bucketStart && t < bucketEnd;
+                });
+                const successes = slice.filter((r) => r.outcome === 'success');
+                const avgLatency = slice.length > 0 ? Math.round(slice.reduce((s, r) => s + r.latencyMs, 0) / slice.length) : 0;
+                const totalTokens = slice.reduce((s, r) => s + (r.totalTokens ?? 0), 0);
+                buckets.push({
+                    at: new Date(bucketStart).toISOString(),
+                    task_count: slice.length,
+                    success_count: successes.length,
+                    error_count: slice.length - successes.length,
+                    avg_latency_ms: avgLatency,
+                    total_tokens: totalTokens,
+                });
+            }
+
+            return {
+                workspace_id: workspaceId,
+                window: windowParam,
+                bucket: bucketParam,
+                points: buckets,
+            };
+        },
+    );
+
+    // ------------------------------------------------------------------
     // Single provisioning job detail
     // ------------------------------------------------------------------
 

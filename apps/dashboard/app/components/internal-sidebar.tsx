@@ -4,14 +4,14 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
     Cpu, Brain, ShoppingBag, LayoutDashboard, ClipboardCheck,
-    Activity, FileText, Search, LogOut, Settings,
+    Activity, FileText, Search, LogOut,
     ChevronDown, Bot, ListChecks, ShieldCheck, Link2,
-    BarChart2, CreditCard, Wrench, TrendingUp, Video,
-    MessageSquare, DollarSign, PieChart, LineChart, Trophy, Bell, CalendarClock,
+    BarChart2, CreditCard, Wrench,
+    MessageSquare, DollarSign, PieChart, LineChart, Trophy, Bell,
     ScrollText, Film, Waves, Lock,
-    GitPullRequest, SlidersHorizontal, Camera, GitBranch, RefreshCw,
+    SlidersHorizontal, Camera, GitBranch, RefreshCw,
     Network, CalendarDays, AlarmClock, Beaker, Monitor, Terminal,
-    Users, Building2, Zap, Star, UserCircle, Plug, Layers,
+    Zap, Star, Plug, Layers,
     type LucideIcon,
 } from 'lucide-react';
 import type { DashboardTab } from './dashboard-navigation';
@@ -34,11 +34,6 @@ type WorkspaceOption = {
     workspaceId: string;
     workspaceName: string;
 };
-
-// Which roles unlock each section
-const DEV_ROLES = new Set(['developer', 'fullstack_developer', 'devops_engineer', 'mobile_engineer', 'tester']);
-const CONTENT_ROLES = new Set(['content_writer', 'technical_writer', 'corporate_assistant']);
-const BUSINESS_ROLES = new Set(['business_analyst', 'project_manager_product_owner_scrum_master', 'marketing_specialist', 'recruiter', 'customer_support_executive', 'sales_rep']);
 
 type InternalSidebarProps = {
     activeTab: DashboardTab;
@@ -110,10 +105,6 @@ export function InternalSidebar({
     auditUnlocked = true,
     activeRoles = [],
 }: InternalSidebarProps) {
-    // Testing: show all sections regardless of purchased roles
-    const showDevTools = true;
-    const showContentComms = true;
-    const showBusinessOps = true;
     const router = useRouter();
     const searchParams = useSearchParams();
 
@@ -225,74 +216,30 @@ export function InternalSidebar({
                     </div>
                 </div>
 
-                {/* ── Developer Tools (dev/devops/fsd/mobile/tester) ── */}
-                {showDevTools && (
-                    <div>
-                        <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Developer Tools</p>
-                        <div className="space-y-0.5">
-                            {[
-                                { href: '/ci', label: 'CI Triage', Icon: Terminal },
-                                { href: '/pr-drafts', label: 'PR Drafts', Icon: GitPullRequest },
-                                { href: '/env', label: 'Env Reconciler', Icon: SlidersHorizontal },
-                                { href: '/snapshots', label: 'Bot Snapshots', Icon: Camera },
-                                { href: '/handoffs', label: 'Handoffs', Icon: GitBranch },
-                                { href: '/loops', label: 'Autonomous Loops', Icon: RefreshCw },
-                                { href: '/agent-chat', label: 'Loop Chat', Icon: MessageSquare },
-                                { href: '/orchestration', label: 'Orchestration Runs', Icon: Network },
-                                { href: '/routine-tasks', label: 'Routine Scheduler', Icon: CalendarDays },
-                                { href: '/wake-runs', label: 'Wake Runs', Icon: AlarmClock },
-                                { href: '/ab-tests', label: 'A/B Tests', Icon: Beaker },
-                                { href: '/desktop', label: 'Desktop', Icon: Monitor },
-                            ].map(({ href, label, Icon }) => (
-                                <Link key={href} href={href} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
-                                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Icon className="w-3.5 h-3.5 text-slate-500" /></span>
-                                    <span className="flex-1">{label}</span>
-                                </Link>
-                            ))}
-                        </div>
+                {/* ── Developer Tools ── */}
+                <div>
+                    <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Developer Tools</p>
+                    <div className="space-y-0.5">
+                        {[
+                            { href: '/ci', label: 'CI Triage', Icon: Terminal },
+                            { href: '/env', label: 'Env Reconciler', Icon: SlidersHorizontal },
+                            { href: '/snapshots', label: 'Bot Snapshots', Icon: Camera },
+                            { href: '/handoffs', label: 'Handoffs', Icon: GitBranch },
+                            { href: '/loops', label: 'Autonomous Loops', Icon: RefreshCw },
+                            { href: '/agent-chat', label: 'Loop Chat', Icon: MessageSquare },
+                            { href: '/orchestration', label: 'Orchestration Runs', Icon: Network },
+                            { href: '/routine-tasks', label: 'Routine Scheduler', Icon: CalendarDays },
+                            { href: '/wake-runs', label: 'Wake Runs', Icon: AlarmClock },
+                            { href: '/ab-tests', label: 'A/B Tests', Icon: Beaker },
+                            { href: '/desktop', label: 'Desktop', Icon: Monitor },
+                        ].map(({ href, label, Icon }) => (
+                            <Link key={href} href={href} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
+                                <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Icon className="w-3.5 h-3.5 text-slate-500" /></span>
+                                <span className="flex-1">{label}</span>
+                            </Link>
+                        ))}
                     </div>
-                )}
-
-                {/* ── Content & Comms (content_writer/technical_writer/corporate_assistant) */}
-                {showContentComms && (
-                    <div>
-                        <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Content &amp; Comms</p>
-                        <div className="space-y-0.5">
-                            {[
-                                { href: '/content-drafts', label: 'Content Drafts', Icon: FileText },
-                                { href: '/comms-drafts', label: 'Comms Inbox', Icon: MessageSquare },
-                                { href: '/meetings', label: 'Meetings', Icon: Video },
-                            ].map(({ href, label, Icon }) => (
-                                <Link key={href} href={href} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
-                                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Icon className="w-3.5 h-3.5 text-slate-500" /></span>
-                                    <span className="flex-1">{label}</span>
-                                </Link>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {/* ── Business Ops (ba/pm/marketing/recruiter/support/sales) */}
-                {showBusinessOps && (
-                    <div>
-                        <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Business Ops</p>
-                        <div className="space-y-0.5">
-                            {[
-                                { href: '/business-reports', label: 'Business Reports', Icon: BarChart2 },
-                                { href: '/project-plans', label: 'Project Plans', Icon: ListChecks },
-                                { href: '/campaigns', label: 'Campaigns', Icon: TrendingUp },
-                                { href: '/talent-pipeline', label: 'Talent Pipeline', Icon: Brain },
-                                { href: '/support-queue', label: 'Support Queue', Icon: MessageSquare },
-                                { href: '/sales', label: 'Sales', Icon: TrendingUp },
-                            ].map(({ href, label, Icon }) => (
-                                <Link key={href} href={href} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
-                                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Icon className="w-3.5 h-3.5 text-slate-500" /></span>
-                                    <span className="flex-1">{label}</span>
-                                </Link>
-                            ))}
-                        </div>
-                    </div>
-                )}
+                </div>
 
                 {/* ── Analytics ────────────────────────────────────── */}
                 <div>
@@ -382,7 +329,6 @@ export function InternalSidebar({
                     <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Business</p>
                     <div className="space-y-0.5">
                         {[
-                            { href: '/scheduled-reports', label: 'Scheduled Reports', Icon: CalendarClock },
                             { href: '/billing', label: 'Billing', Icon: CreditCard },
                             { href: '/budget', label: 'Budget', Icon: DollarSign },
                         ].map(({ href, label, Icon }) => (
@@ -399,10 +345,6 @@ export function InternalSidebar({
                     <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Team &amp; Settings</p>
                     <div className="space-y-0.5">
                         {[
-                            { href: '/team', label: 'Team Members', Icon: Users },
-                            { href: '/settings', label: 'API Keys', Icon: Settings },
-                            { href: '/agent-persona', label: 'Agent Personas', Icon: UserCircle },
-                            { href: '/tenant-settings', label: 'Tenant Settings', Icon: Building2 },
                             { href: '/llm-config', label: 'LLM Config', Icon: Zap },
                             { href: '/quality', label: 'Quality Feedback', Icon: Star },
                             { href: '/notifications', label: 'Notifications', Icon: Bell },
