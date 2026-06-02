@@ -82,7 +82,7 @@ export default function DashboardPage() {
                     <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: "radial-gradient(circle, rgba(255,255,255,1) 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
                 </div>
 
-                <div className="relative max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
+                <div className="relative max-w-7xl mx-auto w-full px-6 sm:px-10 lg:px-16 py-10 sm:py-14">
                     <div className="flex items-center gap-2 mb-5">
                         <div className="flex items-center gap-2 rounded-xl bg-sky-500/10 border border-sky-500/20 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-sky-400">
                             <PremiumIcon icon={LayoutGrid} tone="sky" containerClassName="w-4 h-4 rounded bg-sky-400/20 text-sky-300" iconClassName="w-2.5 h-2.5" />
@@ -131,7 +131,7 @@ export default function DashboardPage() {
             </section>
 
             {/* ── Main content ─────────────────────────────────────────────── */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-7">
+            <div className="max-w-7xl mx-auto px-6 sm:px-10 lg:px-16 py-8 space-y-7">
 
                 {/* KPI cards */}
                 <KpiCards />
