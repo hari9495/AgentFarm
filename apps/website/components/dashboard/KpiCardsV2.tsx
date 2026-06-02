@@ -60,11 +60,14 @@ function SkeletonCard() {
     );
 }
 
+// Single top contributor shown across all KPI cards
+const TOP_CONTRIBUTOR = { ini: "AB", name: "AI Backend Dev", aBg: "bg-sky-500" };
+
 const CARDS = [
-    { key: "tasksCompleted" as const, icon: CheckCircle2, border: "border-sky-100", bg: "bg-gradient-to-br from-sky-50 to-white", iconBg: "bg-sky-100", iconColor: "text-sky-600", barBg: "bg-sky-400", dPos: "text-emerald-700 bg-emerald-50 border border-emerald-100", dNeg: "text-rose-600 bg-rose-50 border border-rose-100", label: "Tasks Completed", contrib: { ini: "AB", name: "AI Backend Dev", aBg: "bg-sky-500" } },
-    { key: "prsMerged" as const, icon: GitPullRequest, border: "border-violet-100", bg: "bg-gradient-to-br from-violet-50 to-white", iconBg: "bg-violet-100", iconColor: "text-violet-600", barBg: "bg-violet-400", dPos: "text-emerald-700 bg-emerald-50 border border-emerald-100", dNeg: "text-rose-600 bg-rose-50 border border-rose-100", label: "PRs Merged", contrib: { ini: "AQ", name: "AI QA Engineer", aBg: "bg-violet-500" } },
-    { key: "medianCycleTime" as const, icon: Timer, border: "border-amber-100", bg: "bg-gradient-to-br from-amber-50 to-white", iconBg: "bg-amber-100", iconColor: "text-amber-600", barBg: "bg-amber-400", dPos: "text-emerald-700 bg-emerald-50 border border-emerald-100", dNeg: "text-rose-600 bg-rose-50 border border-rose-100", label: "Median Cycle Time", contrib: { ini: "AD", name: "AI DevOps Eng", aBg: "bg-amber-500" } },
-    { key: "estimatedSavings" as const, icon: TrendingUp, border: "border-emerald-100", bg: "bg-gradient-to-br from-emerald-50 to-white", iconBg: "bg-emerald-100", iconColor: "text-emerald-600", barBg: "bg-emerald-400", dPos: "text-emerald-700 bg-emerald-50 border border-emerald-100", dNeg: "text-rose-600 bg-rose-50 border border-rose-100", label: "Estimated Savings", contrib: { ini: "AB", name: "AI Backend Dev", aBg: "bg-emerald-500" } },
+    { key: "tasksCompleted" as const, icon: CheckCircle2, border: "border-sky-100", bg: "bg-gradient-to-br from-sky-50 to-white", iconBg: "bg-sky-100", iconColor: "text-sky-600", barBg: "bg-sky-400", dPos: "text-emerald-700 bg-emerald-50 border border-emerald-100", dNeg: "text-rose-600 bg-rose-50 border border-rose-100", label: "Tasks Completed" },
+    { key: "prsMerged" as const, icon: GitPullRequest, border: "border-violet-100", bg: "bg-gradient-to-br from-violet-50 to-white", iconBg: "bg-violet-100", iconColor: "text-violet-600", barBg: "bg-violet-400", dPos: "text-emerald-700 bg-emerald-50 border border-emerald-100", dNeg: "text-rose-600 bg-rose-50 border border-rose-100", label: "PRs Merged" },
+    { key: "medianCycleTime" as const, icon: Timer, border: "border-amber-100", bg: "bg-gradient-to-br from-amber-50 to-white", iconBg: "bg-amber-100", iconColor: "text-amber-600", barBg: "bg-amber-400", dPos: "text-emerald-700 bg-emerald-50 border border-emerald-100", dNeg: "text-rose-600 bg-rose-50 border border-rose-100", label: "Median Cycle Time" },
+    { key: "estimatedSavings" as const, icon: TrendingUp, border: "border-emerald-100", bg: "bg-gradient-to-br from-emerald-50 to-white", iconBg: "bg-emerald-100", iconColor: "text-emerald-600", barBg: "bg-emerald-400", dPos: "text-emerald-700 bg-emerald-50 border border-emerald-100", dNeg: "text-rose-600 bg-rose-50 border border-rose-100", label: "Estimated Savings" },
 ] as const;
 
 export default function KpiCardsV2() {
@@ -117,8 +120,8 @@ export default function KpiCardsV2() {
                         <DailyBars values={stat.trend} barBg={cfg.barBg} />
                         <div className="flex items-center justify-between pt-1 border-t border-slate-100">
                             <div className="flex items-center gap-1.5">
-                                <span className={"inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold text-white shrink-0 " + cfg.contrib.aBg}>{cfg.contrib.ini}</span>
-                                <span className="text-[11px] text-slate-500 font-medium truncate">{cfg.contrib.name}</span>
+                                <span className={"inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold text-white shrink-0 " + TOP_CONTRIBUTOR.aBg}>{TOP_CONTRIBUTOR.ini}</span>
+                                <span className="text-[11px] text-slate-500 font-medium truncate">{TOP_CONTRIBUTOR.name}</span>
                             </div>
                             <div className="flex items-center gap-1 shrink-0">
                                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
