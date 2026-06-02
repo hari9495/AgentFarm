@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, ClipboardCheck, Shield, Timer, Cpu } from "lucide-react";
+import { ArrowRight, ArrowLeft, ChevronLeft, ChevronRight, ClipboardCheck, Shield, Timer, Cpu, RotateCcw } from "lucide-react";
 
 export const metadata: Metadata = {
     title: "Agents - AgentFarms Dashboard",
@@ -19,22 +19,28 @@ const agents = [
 const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const DAY_FULL    = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
-/** Build an array of 28 Date objects ending on today (server time). */
-function buildHeatmapDates(): Date[] {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+/** Max periods the user can navigate back (≈ 1 year). */
+const MAX_OFFSET = 12;
+
+/**
+ * Build 28 dates for the selected period.
+ * offset=0 → last 28 days ending today
+ * offset=1 → 28-day window ending 28 days ago, etc.
+ */
+function buildHeatmapDates(offset: number): Date[] {
+    const anchor = new Date();
+    anchor.setHours(0, 0, 0, 0);
+    anchor.setDate(anchor.getDate() - offset * 28);
     return Array.from({ length: 28 }, (_, i) => {
-        const d = new Date(today);
-        d.setDate(today.getDate() - 27 + i);
+        const d = new Date(anchor);
+        d.setDate(anchor.getDate() - 27 + i);
         return d;
     });
 }
 
 /**
- * Returns the month abbreviation to show on the left of a week row, or null
- * when the month hasn't changed since the previous week.
- * - Week 0 always shows its starting month.
- * - Subsequent weeks show the new month only when it first appears in that row.
+ * Returns the month abbreviation to show on the left of a week row,
+ * or null when the month hasn't changed since the previous week.
  */
 function getWeekMonthLabel(weekIdx: number, dates: Date[]): string | null {
     if (weekIdx === 0) return MONTH_SHORT[dates[0].getMonth()];
@@ -45,12 +51,13 @@ function getWeekMonthLabel(weekIdx: number, dates: Date[]): string | null {
     return null;
 }
 
-function heatCell(seed: number, i: number): string {
-    const v = ((seed * 17 + i * 31 + i * seed) % 10);
-    if (v <= 1) return "bg-slate-200 dark:bg-slate-700";           // no activity
-    if (v <= 3) return "bg-emerald-200 dark:bg-emerald-900/50";    // low
-    if (v <= 6) return "bg-emerald-400 dark:bg-emerald-600";       // medium
-    return "bg-emerald-600 dark:bg-emerald-400";                   // high
+function heatCell(seed: number, i: number, offset: number): string {
+    // Vary the pattern per offset so going back shows different data
+    const v = ((seed * 17 + i * 31 + i * seed + offset * 7) % 10);
+    if (v <= 1) return "bg-slate-200 dark:bg-slate-700";
+    if (v <= 3) return "bg-emerald-200 dark:bg-emerald-900/50";
+    if (v <= 6) return "bg-emerald-400 dark:bg-emerald-600";
+    return "bg-emerald-600 dark:bg-emerald-400";
 }
 
 // ── Tone / status maps ─────────────────────────────────────────────────────────
@@ -76,19 +83,31 @@ const statusConfig: Record<string, { dot: string; text: string; pulse: boolean }
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 
-export default function AgentsIndexPage() {
+export default async function AgentsIndexPage({
+    searchParams,
+}: {
+    searchParams: Promise<{ offset?: string }>;
+}) {
+    const { offset: rawOffset } = await searchParams;
+    const offset = Math.min(MAX_OFFSET, Math.max(0, parseInt(rawOffset ?? "0", 10) || 0));
+
     const activeCount    = agents.filter((a) => a.status === "Active").length;
     const totalTasks     = agents.reduce((sum, a) => sum + a.tasks, 0);
     const avgReliability = (agents.reduce((sum, a) => sum + a.reliability, 0) / agents.length).toFixed(1);
 
-    // Real 28-day window: computed once, shared by all cards
-    const heatmapDates = buildHeatmapDates();
+    // Real date window for the selected period
+    const heatmapDates = buildHeatmapDates(offset);
     const rangeStart   = heatmapDates[0];
     const rangeEnd     = heatmapDates[27];
     const rangeLabel   =
         rangeStart.getMonth() === rangeEnd.getMonth()
-            ? `${MONTH_SHORT[rangeStart.getMonth()]} ${rangeStart.getDate()} – ${rangeEnd.getDate()}`
-            : `${MONTH_SHORT[rangeStart.getMonth()]} ${rangeStart.getDate()} – ${MONTH_SHORT[rangeEnd.getMonth()]} ${rangeEnd.getDate()}`;
+            ? `${MONTH_SHORT[rangeStart.getMonth()]} ${rangeStart.getDate()} – ${rangeEnd.getDate()}, ${rangeEnd.getFullYear()}`
+            : `${MONTH_SHORT[rangeStart.getMonth()]} ${rangeStart.getDate()} – ${MONTH_SHORT[rangeEnd.getMonth()]} ${rangeEnd.getDate()}, ${rangeEnd.getFullYear()}`;
+
+    const prevHref    = `?offset=${offset + 1}`;
+    const nextHref    = `?offset=${offset - 1}`;
+    const isLatest    = offset === 0;
+    const isEarliest  = offset >= MAX_OFFSET;
 
     return (
         <div className="site-shell min-h-screen bg-slate-50 dark:bg-slate-950">
@@ -122,6 +141,53 @@ export default function AgentsIndexPage() {
                         </div>
                     </div>
                 </div>
+
+                {/* Period navigator — sits below the title row */}
+                <div className="max-w-5xl mx-auto mt-4 flex items-center gap-2">
+                    {/* Prev (go further back) */}
+                    <Link
+                        href={isEarliest ? "#" : prevHref}
+                        aria-disabled={isEarliest}
+                        className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors
+                            ${isEarliest
+                                ? "border-slate-100 dark:border-slate-800 text-slate-300 dark:text-slate-600 pointer-events-none cursor-not-allowed"
+                                : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                            }`}
+                    >
+                        <ChevronLeft className="h-3.5 w-3.5" />
+                        Prev
+                    </Link>
+
+                    {/* Date range pill */}
+                    <div className="flex-1 flex items-center justify-center gap-2">
+                        <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                            {rangeLabel}
+                        </span>
+                        {!isLatest && (
+                            <Link
+                                href="?offset=0"
+                                className="inline-flex items-center gap-1 rounded-full bg-sky-50 dark:bg-sky-900/30 border border-sky-200 dark:border-sky-800 px-2 py-0.5 text-[10px] font-semibold text-sky-600 dark:text-sky-400 hover:bg-sky-100 dark:hover:bg-sky-900/50 transition-colors"
+                            >
+                                <RotateCcw className="h-2.5 w-2.5" />
+                                Back to today
+                            </Link>
+                        )}
+                    </div>
+
+                    {/* Next (go toward present) */}
+                    <Link
+                        href={isLatest ? "#" : nextHref}
+                        aria-disabled={isLatest}
+                        className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors
+                            ${isLatest
+                                ? "border-slate-100 dark:border-slate-800 text-slate-300 dark:text-slate-600 pointer-events-none cursor-not-allowed"
+                                : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                            }`}
+                    >
+                        Next
+                        <ChevronRight className="h-3.5 w-3.5" />
+                    </Link>
+                </div>
             </div>
 
             {/* Cards */}
@@ -152,9 +218,8 @@ export default function AgentsIndexPage() {
 
                             {/* Heatmap */}
                             <div className="mt-4">
-                                {/* Header: date range + legend */}
-                                <div className="flex items-center justify-between mb-2">
-                                    <p className="text-[10px] text-slate-400">Activity · {rangeLabel}</p>
+                                {/* Legend */}
+                                <div className="flex items-center justify-end mb-2">
                                     <div className="flex items-center gap-1">
                                         <span className="text-[9px] text-slate-400 mr-0.5">Less</span>
                                         <div className="h-2.5 w-2.5 rounded-sm bg-slate-200 dark:bg-slate-700" />
@@ -165,7 +230,7 @@ export default function AgentsIndexPage() {
                                     </div>
                                 </div>
 
-                                {/* Day-of-week labels — left spacer aligns with month label column */}
+                                {/* Day-of-week labels */}
                                 <div className="flex items-center gap-1 mb-1">
                                     <div className="w-6 shrink-0" />
                                     <div className="flex-1 grid grid-cols-7 gap-1">
@@ -181,7 +246,6 @@ export default function AgentsIndexPage() {
                                         const monthLabel = getWeekMonthLabel(week, heatmapDates);
                                         return (
                                             <div key={week} className="flex items-center gap-1">
-                                                {/* Month label — shown only when month changes */}
                                                 <div className="w-6 shrink-0 text-right">
                                                     {monthLabel && (
                                                         <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide leading-none">
@@ -189,7 +253,6 @@ export default function AgentsIndexPage() {
                                                         </span>
                                                     )}
                                                 </div>
-                                                {/* 7 cells */}
                                                 <div className="flex-1 grid grid-cols-7 gap-1">
                                                     {Array.from({ length: 7 }, (_, day) => {
                                                         const idx  = week * 7 + day;
@@ -198,7 +261,7 @@ export default function AgentsIndexPage() {
                                                         return (
                                                             <div
                                                                 key={idx}
-                                                                className={`h-3.5 rounded-sm ${heatCell(agent.heatSeed, idx)} hover:ring-1 hover:ring-emerald-400 transition-all cursor-default`}
+                                                                className={`h-3.5 rounded-sm ${heatCell(agent.heatSeed, idx, offset)} hover:ring-1 hover:ring-emerald-400 transition-all cursor-default`}
                                                                 title={label}
                                                             />
                                                         );
