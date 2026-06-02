@@ -196,7 +196,7 @@ function SidebarContent({
     };
 
     return (
-        <aside className="flex flex-col w-64 h-full bg-[#0d1117] border-r border-white/[0.07]">
+        <aside className="flex flex-col w-64 h-full bg-slate-950 border-r border-white/[0.07]">
 
             {/* CommandPalette listener — renders nothing visible */}
             <CommandPalette />
@@ -371,7 +371,7 @@ export default function AppSidebar({
             {/* Mobile toggle button */}
             <button
                 onClick={() => setOpen(true)}
-                className="md:hidden fixed top-3.5 left-3.5 z-40 p-2 bg-[#0d1117] border border-white/10 rounded-lg shadow-lg"
+                className="md:hidden fixed top-3.5 left-3.5 z-40 p-2 bg-slate-950 border border-white/10 rounded-lg shadow-lg"
                 aria-label="Open navigation"
             >
                 <Menu className="w-4 h-4 text-slate-400" />
