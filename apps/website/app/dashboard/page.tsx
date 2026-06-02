@@ -74,15 +74,18 @@ export default function DashboardPage() {
     return (
         <div className="site-shell min-h-screen bg-slate-50">
 
+            {/* ── Single shared container — hero + all widgets aligned ────── */}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-6 space-y-6">
+
             {/* ── Hero header ─────────────────────────────────────────────── */}
-            <section className="relative overflow-hidden border-b border-slate-200 bg-slate-950">
+            <section className="relative overflow-hidden rounded-2xl bg-slate-950">
                 <div className="absolute inset-0 pointer-events-none">
                     <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_80%_at_0%_0%,rgba(14,165,233,0.18)_0%,transparent_60%)]" />
                     <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_70%_at_100%_100%,rgba(16,185,129,0.12)_0%,transparent_60%)]" />
                     <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: "radial-gradient(circle, rgba(255,255,255,1) 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
                 </div>
 
-                <div className="relative max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-10 py-6 sm:py-8">
+                <div className="relative px-6 sm:px-8 py-6 sm:py-8">
                     <div className="flex items-center gap-2 mb-5">
                         <div className="flex items-center gap-2 rounded-xl bg-sky-500/10 border border-sky-500/20 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-sky-400">
                             <PremiumIcon icon={LayoutGrid} tone="sky" containerClassName="w-4 h-4 rounded bg-sky-400/20 text-sky-300" iconClassName="w-2.5 h-2.5" />
@@ -130,8 +133,8 @@ export default function DashboardPage() {
                 </div>
             </section>
 
-            {/* ── Main content ─────────────────────────────────────────────── */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-8 space-y-7">
+            {/* ── Widgets ──────────────────────────────────────────────────── */}
+            <div className="space-y-6">
 
                 {/* KPI cards */}
                 <KpiCards />
@@ -332,7 +335,8 @@ export default function DashboardPage() {
                     </div>
 
                 </div>
-            </div>
+            </div>{/* end widgets */}
+            </div>{/* end shared container */}
         </div>
     );
 }
