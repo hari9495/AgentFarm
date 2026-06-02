@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AgentFarm Taste — Style Discovery</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0a0e17; color: #e2e8f0; font-family: system-ui, -apple-system, sans-serif; }
+
+  /* Hero */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 80px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 60% 50% at 0% 50%, rgba(14,165,233,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #38bdf8;
+    margin-bottom: 24px;
+  }
+  .hero-headline {
+    font-size: clamp(40px, 6vw, 72px);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    color: #f8fafc;
+    max-width: 700px;
+    margin-bottom: 24px;
+  }
+  .hero-headline em {
+    font-style: normal;
+    color: #38bdf8;
+  }
+  .hero-soul {
+    font-size: 18px;
+    line-height: 1.7;
+    color: #94a3b8;
+    max-width: 580px;
+    margin-bottom: 48px;
+    font-style: italic;
+  }
+  .hero-north-star {
+    display: inline-block;
+    border-left: 3px solid #38bdf8;
+    padding-left: 20px;
+    font-size: 20px;
+    font-weight: 600;
+    color: #cbd5e1;
+    line-height: 1.4;
+  }
+  .phase-badge {
+    position: absolute;
+    top: 40px;
+    right: 40px;
+    background: rgba(56,189,248,0.1);
+    border: 1px solid rgba(56,189,248,0.2);
+    color: #38bdf8;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border-radius: 20px;
+  }
+
+  /* Phase sections */
+  .phase-section {
+    padding: 80px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .phase-section h2 {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #475569;
+    margin-bottom: 16px;
+  }
+  .placeholder {
+    background: rgba(255,255,255,0.02);
+    border: 1px dashed rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 60px;
+    text-align: center;
+    color: #334155;
+    font-size: 14px;
+    font-style: italic;
+  }
+  .placeholder strong { color: #475569; font-style: normal; }
+
+  /* Footer */
+  .footer {
+    padding: 60px 80px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+  .footer-left h3 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #f1f5f9;
+    margin-bottom: 8px;
+  }
+  .footer-left p {
+    font-size: 13px;
+    color: #475569;
+    max-width: 380px;
+    line-height: 1.6;
+  }
+  .footer-right {
+    text-align: right;
+  }
+  .footer-phase {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #334155;
+    margin-bottom: 4px;
+  }
+  .footer-status {
+    font-size: 13px;
+    color: #38bdf8;
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+
+  <!-- HERO: Soul confirmed -->
+  <section class="hero">
+    <span class="phase-badge">Phase 1 Complete — Soul</span>
+    <p class="hero-label">AgentFarm · Taste Discovery</p>
+    <h1 class="hero-headline">This is where you keep the authority<br>you <em>did not</em> hand over.</h1>
+    <p class="hero-soul">
+      AgentFarms operates where mistakes have consequences. Production systems. Real data. Real money.
+      The interface does not perform seriousness — it is serious, because the work is serious.
+    </p>
+    <div class="hero-north-star">
+      Feeling: In control through full transparency.<br>
+      Never: A toy pretending to be serious.
+    </div>
+  </section>
+
+  <!-- Phase 2: Placeholder -->
+  <section class="phase-section">
+    <h2>Phase 2 — Visual References</h2>
+    <div class="placeholder">
+      <strong>Coming after Phase 2.</strong><br>
+      Visual references and moodboard — sites and images that have the feeling we just described.
+    </div>
+  </section>
+
+  <!-- Phase 3: Placeholder -->
+  <section class="phase-section">
+    <h2>Phase 3 — Dimensions Preview</h2>
+    <div class="placeholder">
+      <strong>Coming after Phase 3.</strong><br>
+      Color palette, typography, spacing, shape, motion — positioned on the taste axes.
+    </div>
+  </section>
+
+  <!-- Phase 4: Placeholder -->
+  <section class="phase-section">
+    <h2>Phase 4 — Token Values</h2>
+    <div class="placeholder">
+      <strong>Coming after Phase 4.</strong><br>
+      Exact hex values, font scales, spacing units, radii, and easing curves.
+    </div>
+  </section>
+
+  <!-- Phase 5: Placeholder -->
+  <section class="phase-section">
+    <h2>Phase 5 — Component Gallery</h2>
+    <div class="placeholder">
+      <strong>Coming after Phase 5.</strong><br>
+      Button, card, input, heading, and navigation built in the taste.
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-left">
+      <h3>AgentFarm Taste</h3>
+      <p>A visual style built for engineering teams who run AI at production stakes. Earned, transparent, and never pretending to be lighter than it is.</p>
+    </div>
+    <div class="footer-right">
+      <p class="footer-phase">Discovery in progress</p>
+      <p class="footer-status">Phase 1 of 5 complete</p>
+    </div>
+  </footer>
+
+</body>
+</html>

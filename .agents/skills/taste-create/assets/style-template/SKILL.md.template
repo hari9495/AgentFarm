@@ -1,0 +1,53 @@
+---
+name: {{STYLE_NAME}}
+description: |
+  {{STYLE_DESCRIPTION}}
+---
+
+# {{STYLE_NAME}}
+
+> {{STYLE_VOICE}}
+
+## How to Determine Your Mode
+
+### Review Mode
+When visual code has been written and needs evaluation:
+1. Read `references/principles.md` — check rules
+2. Read `references/tokens.md` — check values
+3. Read `references/soul.md` — check feeling
+4. Provide feedback with the *why*
+5. End with: "{{FEELING_TEST}}"
+
+### Guide Mode
+When visual decisions are being made:
+1. Read `references/principles.md` and `references/tokens.md`
+2. Suggest aligned choices with token references
+
+### Generate Mode
+When building UI:
+1. Read `references/tokens.md` and `references/components.md`
+2. For web: also read `references/web-implementation.md`
+3. Use tokens consistently, make judgment calls aligned with the soul
+
+## Reference Files
+
+| Need | File |
+|------|------|
+| Emotional intent | `references/soul.md` |
+| Do's and don'ts | `references/principles.md` |
+| Token values | `references/tokens.md` |
+| Component patterns | `references/components.md` |
+| Motion rules | `references/motion.md` |
+| Image treatment | `references/imagery.md` |
+
+## Review Checklist
+
+1. Tokens — correct values?
+2. Principles — rules followed?
+3. Motion — nothing animating that shouldn't?
+4. Imagery — treatment correct?
+5. Soul — does it *feel* right?
+
+## Judgment
+
+{{FEELING_TEST}}

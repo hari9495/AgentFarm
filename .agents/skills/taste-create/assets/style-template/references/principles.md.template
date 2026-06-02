@@ -1,0 +1,21 @@
+# Principles
+
+> Do's and don'ts. Each rule has a rationale.
+
+---
+
+## Do
+
+{{DO_RULES}}
+
+---
+
+## Never
+
+{{NEVER_RULES}}
+
+---
+
+## Edge Cases
+
+{{EDGE_CASES}}

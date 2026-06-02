@@ -1,0 +1,43 @@
+# Tokens
+
+> Platform-agnostic design tokens.
+
+---
+
+## Colors
+
+{{COLOR_PROSE}}
+
+{{COLOR_TOKENS_TABLE}}
+
+---
+
+## Typography
+
+{{TYPE_PROSE}}
+
+{{TYPE_TOKENS_TABLE}}
+
+---
+
+## Spacing
+
+{{SPACE_PROSE}}
+
+{{SPACE_TOKENS_TABLE}}
+
+---
+
+## Shape
+
+{{SHAPE_PROSE}}
+
+{{SHAPE_TOKENS_TABLE}}
+
+---
+
+## Motion
+
+{{MOTION_PROSE}}
+
+{{MOTION_TOKENS_TABLE}}
