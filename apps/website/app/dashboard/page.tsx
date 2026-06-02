@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import ButtonLink from "@/components/shared/ButtonLink";
 import DeploymentStatusPanel from "@/components/dashboard/DeploymentStatusPanel";
-import KpiCards from "@/components/dashboard/KpiCardsWrapper";
+import KpiCards from "@/components/dashboard/KpiCardsV2";
 import OverviewApprovalQueue from "@/components/dashboard/OverviewApprovalQueue";
 import ProvisioningProgressCard from "@/components/dashboard/ProvisioningProgressCard";
 import PremiumIcon from "@/components/shared/PremiumIcon";

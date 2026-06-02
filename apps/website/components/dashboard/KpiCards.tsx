@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
     ArrowDownRight,
     ArrowUpRight,
@@ -8,6 +8,7 @@ import {
     GitPullRequest,
     Timer,
     TrendingUp,
+    Users,
 } from "lucide-react";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -30,48 +31,34 @@ type StatsResponse = {
     };
 };
 
-// ── Smooth gradient sparkline ────────────────────────────────────────────────
+// ── Daily bar chart ──────────────────────────────────────────────────────────
 
-function Sparkline({ values, color, gradientId }: { values: number[]; color: string; gradientId: string }) {
-    const W = 100;
-    const H = 32;
-    const PAD = 3;
+const DAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
 
-    const min = Math.min(...values);
-    const max = Math.max(...values);
-    const range = max - min || 1;
-
-    const pts = values.map((v, i) => ({
-        x: PAD + (i / (values.length - 1)) * (W - PAD * 2),
-        y: H - PAD - ((v - min) / range) * (H - PAD * 2),
-    }));
-
-    // Smooth bezier path
-    const path = pts.reduce((d, pt, i) => {
-        if (i === 0) return `M ${pt.x},${pt.y}`;
-        const prev = pts[i - 1]!;
-        const cx = (prev.x + pt.x) / 2;
-        return `${d} C ${cx},${prev.y} ${cx},${pt.y} ${pt.x},${pt.y}`;
-    }, "");
-
-    // Area fill path (close to bottom)
-    const area = `${path} L ${pts[pts.length - 1]!.x},${H} L ${pts[0]!.x},${H} Z`;
+function DailyBars({ values, barBg }: { values: number[]; barBg: string }) {
+    const max = Math.max(...values) || 1;
+    // today = last value (index 6)
+    const todayIdx = values.length - 1;
 
     return (
-        <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-8" aria-hidden preserveAspectRatio="none">
-            <defs>
-                <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="currentColor" stopOpacity="0.25" />
-                    <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
-                </linearGradient>
-            </defs>
-            {/* Gradient fill */}
-            <path d={area} fill={`url(#${gradientId})`} className={color} />
-            {/* Line */}
-            <path d={path} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={color} />
-            {/* End dot */}
-            <circle cx={pts[pts.length - 1]!.x} cy={pts[pts.length - 1]!.y} r="2.5" fill="currentColor" className={color} />
-        </svg>
+        <div className="flex items-end gap-[3px] h-10">
+            {values.map((v, i) => {
+                const heightPct = Math.max(12, Math.round((v / max) * 100));
+                const isToday = i === todayIdx;
+                return (
+                    <div key={i} className="flex-1 flex flex-col items-center gap-[3px]">
+                        <div
+                            className={`w-full rounded-[3px] transition-all duration-300 ${barBg} ${isToday ? "opacity-100" : "opacity-50"}`}
+                            style={{ height: `${heightPct}%` }}
+                            title={`${DAY_LABELS[i]}: ${v}`}
+                        />
+                        <span className={`text-[9px] font-semibold leading-none ${isToday ? "text-slate-600" : "text-slate-300"}`}>
+                            {DAY_LABELS[i]}
+                        </span>
+                    </div>
+                );
+            })}
+        </div>
     );
 }
 
@@ -89,7 +76,8 @@ function SkeletonCard() {
                 <div className="h-4 w-32 rounded bg-slate-200 dark:bg-slate-700" />
                 <div className="h-3 w-20 rounded bg-slate-200 dark:bg-slate-700" />
             </div>
-            <div className="h-7 w-full rounded bg-slate-200 dark:bg-slate-700" />
+            <div className="h-10 w-full rounded bg-slate-200 dark:bg-slate-700" />
+            <div className="h-5 w-32 rounded-full bg-slate-200 dark:bg-slate-700" />
         </div>
     );
 }
@@ -104,11 +92,12 @@ const cardConfig = [
         headerBg:     "bg-gradient-to-br from-sky-50 to-white",
         iconBg:       "bg-sky-100",
         iconColor:    "text-sky-600",
-        sparkColor:   "text-sky-500",
+        barBg:        "bg-sky-400",
         gradientId:   "grad-tasks",
         deltaPos:     "text-emerald-700 bg-emerald-50 border border-emerald-100",
         deltaNeg:     "text-rose-600 bg-rose-50 border border-rose-100",
         label:        "Tasks Completed",
+        contributor:  { initials: "AB", name: "AI Backend Dev", avatarBg: "bg-sky-500" },
     },
     {
         key: "prsMerged" as const,
@@ -117,11 +106,12 @@ const cardConfig = [
         headerBg:     "bg-gradient-to-br from-violet-50 to-white",
         iconBg:       "bg-violet-100",
         iconColor:    "text-violet-600",
-        sparkColor:   "text-violet-500",
+        barBg:        "bg-violet-400",
         gradientId:   "grad-prs",
         deltaPos:     "text-emerald-700 bg-emerald-50 border border-emerald-100",
         deltaNeg:     "text-rose-600 bg-rose-50 border border-rose-100",
         label:        "PRs Merged",
+        contributor:  { initials: "AQ", name: "AI QA Engineer", avatarBg: "bg-violet-500" },
     },
     {
         key: "medianCycleTime" as const,
@@ -130,11 +120,12 @@ const cardConfig = [
         headerBg:     "bg-gradient-to-br from-amber-50 to-white",
         iconBg:       "bg-amber-100",
         iconColor:    "text-amber-600",
-        sparkColor:   "text-amber-500",
+        barBg:        "bg-amber-400",
         gradientId:   "grad-cycle",
         deltaPos:     "text-emerald-700 bg-emerald-50 border border-emerald-100",
         deltaNeg:     "text-rose-600 bg-rose-50 border border-rose-100",
         label:        "Median Cycle Time",
+        contributor:  { initials: "AD", name: "AI DevOps Eng", avatarBg: "bg-amber-500" },
     },
     {
         key: "estimatedSavings" as const,
@@ -143,11 +134,12 @@ const cardConfig = [
         headerBg:     "bg-gradient-to-br from-emerald-50 to-white",
         iconBg:       "bg-emerald-100",
         iconColor:    "text-emerald-600",
-        sparkColor:   "text-emerald-500",
+        barBg:        "bg-emerald-400",
         gradientId:   "grad-savings",
         deltaPos:     "text-emerald-700 bg-emerald-50 border border-emerald-100",
         deltaNeg:     "text-rose-600 bg-rose-50 border border-rose-100",
         label:        "Estimated Savings",
+        contributor:  { initials: "AB", name: "AI Backend Dev", avatarBg: "bg-emerald-500" },
     },
 ] as const;
 
@@ -198,6 +190,7 @@ export default function KpiCards() {
                         style={{ animationDelay: `${idx * 60}ms` }}
                         className={`choreo-rise relative rounded-2xl border ${cfg.border} ${cfg.headerBg} p-5 flex flex-col gap-3 shadow-sm hover:shadow-md hover:-translate-y-0.5 [transition:transform_220ms_cubic-bezier(0.22,1,0.36,1),box-shadow_220ms_cubic-bezier(0.22,1,0.36,1)]`}
                     >
+                        {/* Top row — icon + delta */}
                         <div className="flex items-start justify-between gap-3">
                             <div className={`w-10 h-10 rounded-xl ${cfg.iconBg} flex items-center justify-center shrink-0`}>
                                 <Icon className={`w-5 h-5 ${cfg.iconColor}`} />
@@ -216,6 +209,7 @@ export default function KpiCards() {
                             )}
                         </div>
 
+                        {/* Metric */}
                         <div>
                             <p className="text-3xl font-extrabold text-slate-900 tabular-nums leading-none tracking-tight">
                                 {stat.label}
@@ -224,12 +218,21 @@ export default function KpiCards() {
                             <p className="text-xs text-slate-400 mt-0.5">{stat.sub}</p>
                         </div>
 
-                        <Sparkline values={stat.trend} color={cfg.sparkColor} gradientId={cfg.gradientId} />
+                        {/* Daily bars */}
+                        <DailyBars values={stat.trend} barBg={cfg.barBg} />
 
-                        {/* Live indicator */}
-                        <div className="absolute bottom-3 right-3 flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                            <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Live</span>
+                        {/* Bottom row — top contributor + live dot */}
+                        <div className="flex items-center justify-between pt-1 border-t border-slate-100">
+                            <div className="flex items-center gap-1.5">
+                                <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold text-white shrink-0 ${cfg.contributor.avatarBg}`}>
+                                    {cfg.contributor.initials}
+                                </span>
+                                <span className="text-[11px] text-slate-500 font-medium truncate">{cfg.contributor.name}</span>
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Live</span>
+                            </div>
                         </div>
                     </div>
                 );
@@ -237,3 +240,4 @@ export default function KpiCards() {
         </div>
     );
 }
+

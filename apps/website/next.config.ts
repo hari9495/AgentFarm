@@ -17,7 +17,7 @@ const nextConfig: NextConfig = {
             { source: '/(.*)', headers: securityHeaders },
             {
                 source: '/_next/static/(.*)',
-                headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+                headers: [{ key: 'Cache-Control', value: process.env.NODE_ENV === 'development' ? 'no-store' : 'public, max-age=31536000, immutable' }],
             },
             {
                 source: '/_next/image(.*)',
