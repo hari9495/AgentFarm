@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { BarChart3, CheckCircle2, Clock, GitPullRequest, ShieldAlert, TrendingDown, TrendingUp, Zap } from "lucide-react";
+import { BarChart3, CheckCircle2, ChevronRight, Clock, GitPullRequest, ShieldAlert, TrendingDown, TrendingUp, Zap } from "lucide-react";
 import PremiumIcon from "@/components/shared/PremiumIcon";
 
 export const metadata: Metadata = {
@@ -57,19 +57,33 @@ function SparkLine({ values }: { values: number[] }) {
 
 export default function DashboardReportsPage() {
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
-            {/* Header */}
-            <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-5 md:px-8">
-                <div className="flex items-center gap-3">
-                    <PremiumIcon icon={BarChart3} tone="sky" containerClassName="h-9 w-9 rounded-xl bg-sky-100 dark:bg-sky-900/40 text-sky-600 dark:text-sky-400" iconClassName="w-5 h-5" />
-                    <div>
-                        <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100">Reports & Analytics</h1>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">Weekly output, reliability trends, and risk distribution</p>
-                    </div>
-                </div>
-            </div>
+        <div className="min-h-screen bg-slate-50">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-6 space-y-6">
 
-            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+                {/* Dark hero */}
+                <section className="relative overflow-hidden rounded-2xl bg-slate-950">
+                    <div className="absolute inset-0 pointer-events-none">
+                        <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_80%_at_0%_0%,rgba(14,165,233,0.18)_0%,transparent_60%)]" />
+                        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_70%_at_100%_100%,rgba(16,185,129,0.12)_0%,transparent_60%)]" />
+                        <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: "radial-gradient(circle, rgba(255,255,255,1) 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
+                    </div>
+                    <div className="relative px-6 sm:px-8 py-6 sm:py-8">
+                        <div className="flex items-center gap-2 mb-4">
+                            <div className="flex items-center gap-2 rounded-xl bg-sky-500/10 border border-sky-500/20 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-sky-400">
+                                <BarChart3 className="w-3.5 h-3.5" />
+                                Reports
+                            </div>
+                            <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
+                            <span className="text-xs text-slate-500">Analytics</span>
+                        </div>
+                        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5">
+                            <div>
+                                <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">Reports & Analytics</h1>
+                                <p className="mt-2 text-slate-400 text-base max-w-lg">Weekly output, reliability trends, and risk distribution across all AI workers.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
 
                 {/* Summary KPIs */}
                 <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
@@ -211,6 +225,7 @@ export default function DashboardReportsPage() {
                         </div>
                     </div>
                 </div>
+
             </div>
         </div>
     );

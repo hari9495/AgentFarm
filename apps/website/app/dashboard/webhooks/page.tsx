@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Plus, Trash2, RefreshCw, Copy, Check, ArrowDownToLine, Clock, CheckCircle2, AlertCircle, ExternalLink } from "lucide-react";
+import { Plus, Trash2, RefreshCw, Copy, Check, ArrowDownToLine, ChevronRight, Clock, CheckCircle2, AlertCircle, ExternalLink } from "lucide-react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -123,34 +123,41 @@ export default function CustomerWebhooksPage() {
     const lbl = "block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5";
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+        <div className="min-h-screen bg-slate-50">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-6 space-y-6">
 
-            {/* ── Page header ──────────────────────────────────────────── */}
-            <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-5 md:px-8">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div className="flex items-start gap-3">
-                        <div className="h-10 w-10 rounded-xl bg-sky-100 dark:bg-sky-900/40 flex items-center justify-center shrink-0 mt-0.5">
-                            <ArrowDownToLine className="w-5 h-5 text-sky-600 dark:text-sky-400" />
+                {/* Dark hero */}
+                <section className="relative overflow-hidden rounded-2xl bg-slate-950">
+                    <div className="absolute inset-0 pointer-events-none">
+                        <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_80%_at_0%_0%,rgba(14,165,233,0.18)_0%,transparent_60%)]" />
+                        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_70%_at_100%_100%,rgba(16,185,129,0.12)_0%,transparent_60%)]" />
+                        <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: "radial-gradient(circle, rgba(255,255,255,1) 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
+                    </div>
+                    <div className="relative px-6 sm:px-8 py-6 sm:py-8">
+                        <div className="flex items-center gap-2 mb-4">
+                            <div className="flex items-center gap-2 rounded-xl bg-sky-500/10 border border-sky-500/20 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-sky-400">
+                                <ArrowDownToLine className="w-3.5 h-3.5" />
+                                Webhooks
+                            </div>
+                            <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
+                            <span className="text-xs text-slate-500">Inbound</span>
                         </div>
-                        <div>
-                            <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100">Inbound Webhooks</h1>
-                            <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5 max-w-xl">
-                                Register external services (GitHub, Jira, Slack) to push events into AgentFarm.
-                                Each source gets a unique URL and secret — paste them into the service's webhook settings
-                                and your agents start reacting to events automatically.
-                            </p>
+                        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5">
+                            <div>
+                                <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">Inbound Webhooks</h1>
+                                <p className="mt-2 text-slate-400 text-base max-w-lg">Register external services to push events into AgentFarm.</p>
+                            </div>
+                            {activeTab === "sources" && (
+                                <button onClick={() => setShowForm(v => !v)}
+                                    className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-sky-600 hover:bg-sky-700 text-white text-sm font-bold transition-colors shrink-0">
+                                    <Plus className="w-3.5 h-3.5" /> {showForm ? "Cancel" : "+ Add Source"}
+                                </button>
+                            )}
                         </div>
                     </div>
-                    {activeTab === "sources" && (
-                        <button onClick={() => setShowForm(v => !v)}
-                            className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-sky-600 hover:bg-sky-700 text-white text-sm font-bold transition-colors shrink-0">
-                            <Plus className="w-3.5 h-3.5" /> {showForm ? "Cancel" : "Add Source"}
-                        </button>
-                    )}
-                </div>
-            </div>
+                </section>
 
-            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+                <div className="space-y-6">
 
                 {/* ── New secret reveal ─────────────────────────────── */}
                 {newSource && (
@@ -378,6 +385,8 @@ export default function CustomerWebhooksPage() {
                         )}
                     </div>
                 )}
+            </div>
+
             </div>
         </div>
     );

@@ -195,39 +195,54 @@ export default async function AgentsIndexPage({
     const numWeeks = cells.length / 7;
 
     return (
-        <div className="site-shell min-h-screen bg-slate-50 dark:bg-slate-950">
-            {/* ── Header ───────────────────────────────────────────────── */}
-            <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-6 md:px-8">
-                <div className="max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-sky-400 to-violet-500 flex items-center justify-center shadow-sm">
-                            <Cpu className="h-4.5 w-4.5 text-white" />
-                        </div>
-                        <div>
-                            <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100 leading-none">AI Workers</h1>
-                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Inspect each worker's task history, quality, and approvals.</p>
-                        </div>
-                    </div>
-                    <div className="hidden sm:flex items-center gap-5">
-                        <div className="text-center">
-                            <p className="text-xl font-bold text-slate-900 dark:text-slate-100 leading-none">{activeCount}</p>
-                            <p className="text-[10px] text-slate-400 mt-0.5 uppercase tracking-wide">Active</p>
-                        </div>
-                        <div className="w-px h-8 bg-slate-200 dark:bg-slate-700" />
-                        <div className="text-center">
-                            <p className="text-xl font-bold text-slate-900 dark:text-slate-100 leading-none">{totalTasks}</p>
-                            <p className="text-[10px] text-slate-400 mt-0.5 uppercase tracking-wide">Total Tasks</p>
-                        </div>
-                        <div className="w-px h-8 bg-slate-200 dark:bg-slate-700" />
-                        <div className="text-center">
-                            <p className="text-xl font-bold text-slate-900 dark:text-slate-100 leading-none">{avgReliability}%</p>
-                            <p className="text-[10px] text-slate-400 mt-0.5 uppercase tracking-wide">Avg Reliability</p>
-                        </div>
-                    </div>
-                </div>
+        <div className="min-h-screen bg-slate-50">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-6 space-y-6">
 
-                {/* ── Period navigator ─────────────────────────────────── */}
-                <div className="max-w-5xl mx-auto mt-4 flex items-center gap-2">
+                {/* Dark hero */}
+                <section className="relative overflow-hidden rounded-2xl bg-slate-950">
+                    <div className="absolute inset-0 pointer-events-none">
+                        <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_80%_at_0%_0%,rgba(14,165,233,0.18)_0%,transparent_60%)]" />
+                        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_70%_at_100%_100%,rgba(16,185,129,0.12)_0%,transparent_60%)]" />
+                        <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: "radial-gradient(circle, rgba(255,255,255,1) 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
+                    </div>
+                    <div className="relative px-6 sm:px-8 py-6 sm:py-8">
+                        <div className="flex items-center gap-2 mb-4">
+                            <div className="flex items-center gap-2 rounded-xl bg-sky-500/10 border border-sky-500/20 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-sky-400">
+                                <Cpu className="w-3.5 h-3.5" />
+                                Agents
+                            </div>
+                            <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
+                            <span className="text-xs text-slate-500">AI Workers</span>
+                        </div>
+                        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5">
+                            <div>
+                                <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">AI Workers</h1>
+                                <p className="mt-2 text-slate-400 text-base max-w-lg">Inspect each worker's task history, quality, and approvals.</p>
+                            </div>
+                        </div>
+
+                        {/* Mini stats bar */}
+                        <div className="mt-5 flex flex-wrap gap-6">
+                            <div className="text-center">
+                                <p className="text-xl font-bold text-white leading-none">{activeCount}</p>
+                                <p className="text-[10px] text-slate-400 mt-0.5 uppercase tracking-wide">Active</p>
+                            </div>
+                            <div className="w-px h-8 bg-slate-700 self-center" />
+                            <div className="text-center">
+                                <p className="text-xl font-bold text-white leading-none">{totalTasks}</p>
+                                <p className="text-[10px] text-slate-400 mt-0.5 uppercase tracking-wide">Total Tasks</p>
+                            </div>
+                            <div className="w-px h-8 bg-slate-700 self-center" />
+                            <div className="text-center">
+                                <p className="text-xl font-bold text-white leading-none">{avgReliability}%</p>
+                                <p className="text-[10px] text-slate-400 mt-0.5 uppercase tracking-wide">Avg Reliability</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                {/* Period navigator */}
+                <div className="flex items-center gap-2 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 px-4 py-3">
                     {/* Prev */}
                     <Link
                         href={isEarliest ? "#" : `?from=${prevFrom}&to=${prevTo}`}
@@ -279,136 +294,137 @@ export default async function AgentsIndexPage({
                         <ChevronRight className="h-3.5 w-3.5" />
                     </Link>
                 </div>
-            </div>
 
-            {/* ── Cards ────────────────────────────────────────────────── */}
-            <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 grid grid-cols-1 md:grid-cols-2 gap-5">
-                {agents.map((agent) => {
-                    const sc = statusConfig[agent.status] ?? { dot: "bg-slate-400", text: "text-slate-500", pulse: false };
-                    return (
-                        <article
-                            key={agent.slug}
-                            className="group rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200"
-                        >
-                            {/* Role + status */}
-                            <div className="flex items-center justify-between">
-                                <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold ${toneClass[agent.tone]}`}>
-                                    <span className={`h-1.5 w-1.5 rounded-full ${toneDot[agent.tone]}`} />
-                                    {agent.role}
-                                </span>
-                                <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${sc.text}`}>
-                                    <span className={`h-2 w-2 rounded-full ${sc.dot} ${sc.pulse ? "animate-pulse" : ""}`} />
-                                    {agent.status}
-                                </span>
-                            </div>
-
-                            {/* Name */}
-                            <h2 className="mt-3 text-base font-bold text-slate-900 dark:text-slate-100 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
-                                {agent.name}
-                            </h2>
-
-                            {/* Heatmap */}
-                            <div className="mt-4">
-                                {/* Legend */}
-                                <div className="flex items-center justify-end mb-2">
-                                    <div className="flex items-center gap-1">
-                                        <span className="text-[9px] text-slate-400 mr-0.5">Less</span>
-                                        <div className="h-2.5 w-2.5 rounded-sm bg-slate-200 dark:bg-slate-700" />
-                                        <div className="h-2.5 w-2.5 rounded-sm bg-emerald-200 dark:bg-emerald-900/50" />
-                                        <div className="h-2.5 w-2.5 rounded-sm bg-emerald-400 dark:bg-emerald-600" />
-                                        <div className="h-2.5 w-2.5 rounded-sm bg-emerald-600 dark:bg-emerald-400" />
-                                        <span className="text-[9px] text-slate-400 ml-0.5">More</span>
-                                    </div>
+                {/* Agent cards grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    {agents.map((agent) => {
+                        const sc = statusConfig[agent.status] ?? { dot: "bg-slate-400", text: "text-slate-500", pulse: false };
+                        return (
+                            <article
+                                key={agent.slug}
+                                className="group rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200"
+                            >
+                                {/* Role + status */}
+                                <div className="flex items-center justify-between">
+                                    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold ${toneClass[agent.tone]}`}>
+                                        <span className={`h-1.5 w-1.5 rounded-full ${toneDot[agent.tone]}`} />
+                                        {agent.role}
+                                    </span>
+                                    <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${sc.text}`}>
+                                        <span className={`h-2 w-2 rounded-full ${sc.dot} ${sc.pulse ? "animate-pulse" : ""}`} />
+                                        {agent.status}
+                                    </span>
                                 </div>
 
-                                {/* Day labels */}
-                                <div className="flex items-center gap-1 mb-1">
-                                    <div className="w-6 shrink-0" />
-                                    <div className="flex-1 grid grid-cols-7 gap-1">
-                                        {['M','T','W','T','F','S','S'].map((d, idx) => (
-                                            <div key={idx} className="text-center text-[9px] font-semibold text-slate-400">{d}</div>
-                                        ))}
-                                    </div>
-                                </div>
+                                {/* Name */}
+                                <h2 className="mt-3 text-base font-bold text-slate-900 dark:text-slate-100 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
+                                    {agent.name}
+                                </h2>
 
-                                {/* Dynamic week rows */}
-                                <div className="space-y-1">
-                                    {Array.from({ length: numWeeks }, (_, week) => {
-                                        const monthLabel = getWeekMonthLabel(week, cells);
-                                        return (
-                                            <div key={week} className="flex items-center gap-1">
-                                                <div className="w-6 shrink-0 text-right">
-                                                    {monthLabel && (
-                                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide leading-none">
-                                                            {monthLabel}
-                                                        </span>
-                                                    )}
+                                {/* Heatmap */}
+                                <div className="mt-4">
+                                    {/* Legend */}
+                                    <div className="flex items-center justify-end mb-2">
+                                        <div className="flex items-center gap-1">
+                                            <span className="text-[9px] text-slate-400 mr-0.5">Less</span>
+                                            <div className="h-2.5 w-2.5 rounded-sm bg-slate-200 dark:bg-slate-700" />
+                                            <div className="h-2.5 w-2.5 rounded-sm bg-emerald-200 dark:bg-emerald-900/50" />
+                                            <div className="h-2.5 w-2.5 rounded-sm bg-emerald-400 dark:bg-emerald-600" />
+                                            <div className="h-2.5 w-2.5 rounded-sm bg-emerald-600 dark:bg-emerald-400" />
+                                            <span className="text-[9px] text-slate-400 ml-0.5">More</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Day labels */}
+                                    <div className="flex items-center gap-1 mb-1">
+                                        <div className="w-6 shrink-0" />
+                                        <div className="flex-1 grid grid-cols-7 gap-1">
+                                            {['M','T','W','T','F','S','S'].map((d, idx) => (
+                                                <div key={idx} className="text-center text-[9px] font-semibold text-slate-400">{d}</div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Dynamic week rows */}
+                                    <div className="space-y-1">
+                                        {Array.from({ length: numWeeks }, (_, week) => {
+                                            const monthLabel = getWeekMonthLabel(week, cells);
+                                            return (
+                                                <div key={week} className="flex items-center gap-1">
+                                                    <div className="w-6 shrink-0 text-right">
+                                                        {monthLabel && (
+                                                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide leading-none">
+                                                                {monthLabel}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex-1 grid grid-cols-7 gap-1">
+                                                        {Array.from({ length: 7 }, (_, day) => {
+                                                            const idx  = week * 7 + day;
+                                                            const cell = cells[idx];
+                                                            if (!cell) return <div key={day} className="h-3.5" />;
+                                                            const label = cell.active
+                                                                ? `${DAY_FULL[cell.date.getDay()]}, ${MONTH_SHORT[cell.date.getMonth()]} ${cell.date.getDate()}`
+                                                                : "";
+                                                            return (
+                                                                <div
+                                                                    key={idx}
+                                                                    className={`h-3.5 rounded-sm ${heatCellClass(agent.heatSeed, idx, fromDate, cell.active)} ${cell.active ? "hover:ring-1 hover:ring-emerald-400" : ""} transition-all cursor-default`}
+                                                                    title={label}
+                                                                />
+                                                            );
+                                                        })}
+                                                    </div>
                                                 </div>
-                                                <div className="flex-1 grid grid-cols-7 gap-1">
-                                                    {Array.from({ length: 7 }, (_, day) => {
-                                                        const idx  = week * 7 + day;
-                                                        const cell = cells[idx];
-                                                        if (!cell) return <div key={day} className="h-3.5" />;
-                                                        const label = cell.active
-                                                            ? `${DAY_FULL[cell.date.getDay()]}, ${MONTH_SHORT[cell.date.getMonth()]} ${cell.date.getDate()}`
-                                                            : "";
-                                                        return (
-                                                            <div
-                                                                key={idx}
-                                                                className={`h-3.5 rounded-sm ${heatCellClass(agent.heatSeed, idx, fromDate, cell.active)} ${cell.active ? "hover:ring-1 hover:ring-emerald-400" : ""} transition-all cursor-default`}
-                                                                title={label}
-                                                            />
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
+                                            );
+                                        })}
+                                    </div>
                                 </div>
-                            </div>
 
-                            {/* Stats */}
-                            <div className="mt-4 grid grid-cols-2 gap-2">
-                                <div className="rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700/50 px-3 py-2.5 flex items-center gap-2.5">
-                                    <div className="h-7 w-7 rounded-lg bg-sky-100 dark:bg-sky-900/40 flex items-center justify-center shrink-0">
-                                        <ClipboardCheck className="h-3.5 w-3.5 text-sky-600 dark:text-sky-400" />
+                                {/* Stats */}
+                                <div className="mt-4 grid grid-cols-2 gap-2">
+                                    <div className="rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700/50 px-3 py-2.5 flex items-center gap-2.5">
+                                        <div className="h-7 w-7 rounded-lg bg-sky-100 dark:bg-sky-900/40 flex items-center justify-center shrink-0">
+                                            <ClipboardCheck className="h-3.5 w-3.5 text-sky-600 dark:text-sky-400" />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-none">{agent.tasks}</p>
+                                            <p className="text-[10px] text-slate-400 mt-0.5">tasks done</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-none">{agent.tasks}</p>
-                                        <p className="text-[10px] text-slate-400 mt-0.5">tasks done</p>
+                                    <div className="rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700/50 px-3 py-2.5 flex items-center gap-2.5">
+                                        <div className="h-7 w-7 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center shrink-0">
+                                            <Shield className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-none">{agent.reliability}%</p>
+                                            <p className="text-[10px] text-slate-400 mt-0.5">reliability</p>
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700/50 px-3 py-2.5 flex items-center gap-2.5">
-                                    <div className="h-7 w-7 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center shrink-0">
-                                        <Shield className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                                    </div>
-                                    <div>
-                                        <p className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-none">{agent.reliability}%</p>
-                                        <p className="text-[10px] text-slate-400 mt-0.5">reliability</p>
-                                    </div>
-                                </div>
-                            </div>
 
-                            {/* Actions */}
-                            <div className="mt-4 flex gap-2">
-                                <Link
-                                    href={`/dashboard/agents/${agent.slug}`}
-                                    className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 px-3 py-2.5 text-xs font-semibold text-white dark:bg-slate-100 dark:text-slate-900 hover:bg-slate-700 dark:hover:bg-white/90 transition-colors"
-                                >
-                                    View details
-                                    <ArrowRight className="h-3.5 w-3.5" />
-                                </Link>
-                                <Link
-                                    href={`/dashboard/agents/${agent.slug}/approvals`}
-                                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-                                >
-                                    <Timer className="h-3.5 w-3.5" />
-                                    Approvals
-                                </Link>
-                            </div>
-                        </article>
-                    );
-                })}
+                                {/* Actions */}
+                                <div className="mt-4 flex gap-2">
+                                    <Link
+                                        href={`/dashboard/agents/${agent.slug}`}
+                                        className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 px-3 py-2.5 text-xs font-semibold text-white dark:bg-slate-100 dark:text-slate-900 hover:bg-slate-700 dark:hover:bg-white/90 transition-colors"
+                                    >
+                                        View details
+                                        <ArrowRight className="h-3.5 w-3.5" />
+                                    </Link>
+                                    <Link
+                                        href={`/dashboard/agents/${agent.slug}/approvals`}
+                                        className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                                    >
+                                        <Timer className="h-3.5 w-3.5" />
+                                        Approvals
+                                    </Link>
+                                </div>
+                            </article>
+                        );
+                    })}
+                </div>
+
             </div>
         </div>
     );

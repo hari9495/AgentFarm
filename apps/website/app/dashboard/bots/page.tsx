@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState, useCallback } from "react";
 import {
@@ -6,6 +6,7 @@ import {
     AlertTriangle,
     Bot,
     CheckCircle2,
+    ChevronRight,
     Clock,
     RefreshCw,
     ShieldCheck,
@@ -119,57 +120,68 @@ export default function DashboardBotsPage() {
     const errorCount = bots.filter((b) => b.status === "error").length;
 
     return (
-        <div className="site-shell min-h-screen">
+        <div className="min-h-screen bg-slate-50">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-6 space-y-6">
 
-            {/* Header */}
-            <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-5 md:px-8">
-                <div className="flex items-start justify-between gap-4 flex-wrap">
-                    <div>
-                        <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                            <PremiumIcon icon={Bot} tone="violet" containerClassName="w-8 h-8 rounded-xl bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-400" iconClassName="w-4 h-4" />
-                            Bot Status Monitor
-                        </h1>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                            Live status, reliability, and configuration of all AI workers. Auto-refreshes every 30 s.
-                        </p>
+                {/* Dark hero */}
+                <section className="relative overflow-hidden rounded-2xl bg-slate-950">
+                    <div className="absolute inset-0 pointer-events-none">
+                        <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_80%_at_0%_0%,rgba(14,165,233,0.18)_0%,transparent_60%)]" />
+                        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_70%_at_100%_100%,rgba(16,185,129,0.12)_0%,transparent_60%)]" />
+                        <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: "radial-gradient(circle, rgba(255,255,255,1) 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
                     </div>
-                    <div className="flex items-center gap-3">
-                        <span className="text-xs text-slate-400 dark:text-slate-500">
-                            Updated {lastRefresh.toLocaleTimeString()}
-                        </span>
-                        <button
-                            onClick={fetchBots}
-                            disabled={loading}
-                            className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
-                        >
-                            <PremiumIcon icon={RefreshCw} tone="slate" containerClassName="w-6 h-6 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300" iconClassName={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-                            Refresh
-                        </button>
-                    </div>
-                </div>
-
-                {/* Summary bar */}
-                {!loading && !error && (
-                    <div className="mt-4 flex flex-wrap gap-4">
-                        <div className="inline-flex items-center gap-2 text-sm">
-                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                            <span className="font-semibold text-slate-700 dark:text-slate-300">{activeCount} active</span>
+                    <div className="relative px-6 sm:px-8 py-6 sm:py-8">
+                        <div className="flex items-center gap-2 mb-4">
+                            <div className="flex items-center gap-2 rounded-xl bg-sky-500/10 border border-sky-500/20 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-sky-400">
+                                <Bot className="w-3.5 h-3.5" />
+                                Bot Status
+                            </div>
+                            <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
+                            <span className="text-xs text-slate-500">Live Monitor</span>
                         </div>
-                        {errorCount > 0 && (
-                            <div className="inline-flex items-center gap-2 text-sm">
-                                <PremiumIcon icon={AlertTriangle} tone="rose" containerClassName="w-6 h-6 rounded-lg bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400" iconClassName="w-3.5 h-3.5" />
-                                <span className="font-semibold text-rose-600 dark:text-rose-400">{errorCount} bot{errorCount > 1 ? "s" : ""} need attention</span>
+                        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5">
+                            <div>
+                                <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">Bot Status Monitor</h1>
+                                <p className="mt-2 text-slate-400 text-base max-w-lg">Live status, reliability, and configuration of all AI workers. Auto-refreshes every 30s.</p>
+                            </div>
+                            <div className="flex flex-col items-end gap-2 shrink-0">
+                                <div className="flex items-center gap-3">
+                                    <span className="text-xs text-slate-400">
+                                        Updated {lastRefresh.toLocaleTimeString()}
+                                    </span>
+                                    <button
+                                        onClick={fetchBots}
+                                        disabled={loading}
+                                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:bg-slate-700 transition-colors disabled:opacity-50"
+                                    >
+                                        <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+                                        Refresh
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Mini stats bar */}
+                        {!loading && !error && (
+                            <div className="mt-5 flex flex-wrap gap-4">
+                                <div className="inline-flex items-center gap-2 text-sm">
+                                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                                    <span className="font-semibold text-slate-300">{activeCount} active</span>
+                                </div>
+                                {errorCount > 0 && (
+                                    <div className="inline-flex items-center gap-2 text-sm">
+                                        <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
+                                        <span className="font-semibold text-rose-400">{errorCount} bot{errorCount > 1 ? "s" : ""} need attention</span>
+                                    </div>
+                                )}
+                                <div className="inline-flex items-center gap-2 text-sm text-slate-400">
+                                    <Bot className="w-3.5 h-3.5" />
+                                    {bots.length} total workers
+                                </div>
                             </div>
                         )}
-                        <div className="inline-flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-                            <PremiumIcon icon={Bot} tone="slate" containerClassName="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400" iconClassName="w-3.5 h-3.5" />
-                            {bots.length} total workers
-                        </div>
                     </div>
-                )}
-            </div>
-
-            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                </section>
 
                 {loading && bots.length === 0 ? (
                     <p className="text-slate-400 dark:text-slate-500 text-sm py-12 text-center">Loading bot status…</p>
@@ -179,7 +191,7 @@ export default function DashboardBotsPage() {
                     <>
                         {/* Error alerts */}
                         {errorCount > 0 && (
-                            <div className="mb-6 rounded-xl border border-rose-200 dark:border-rose-900/40 bg-rose-50 dark:bg-rose-950/20 px-4 py-3.5 flex items-start gap-3">
+                            <div className="rounded-xl border border-rose-200 dark:border-rose-900/40 bg-rose-50 dark:bg-rose-950/20 px-4 py-3.5 flex items-start gap-3">
                                 <PremiumIcon icon={AlertTriangle} tone="rose" containerClassName="w-6 h-6 mt-0.5 shrink-0 rounded-lg bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400" iconClassName="w-3.5 h-3.5" />
                                 <div>
                                     <p className="text-sm font-semibold text-rose-800 dark:text-rose-300">
@@ -273,7 +285,7 @@ export default function DashboardBotsPage() {
                         </div>
 
                         {/* Legend */}
-                        <div className="mt-8 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
+                        <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
                             <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-3 uppercase tracking-wide">Status legend</p>
                             <div className="flex flex-wrap gap-4">
                                 {(Object.entries(statusMeta) as [BotStatus, typeof statusMeta[BotStatus]][]).map(([key, val]) => (
@@ -286,6 +298,7 @@ export default function DashboardBotsPage() {
                         </div>
                     </>
                 )}
+
             </div>
         </div>
     );

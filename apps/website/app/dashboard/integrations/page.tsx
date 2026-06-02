@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Link2, Plus, RefreshCw, Trash2, Zap, Settings2 } from "lucide-react";
+import { Link2, Plus, RefreshCw, Trash2, Zap, Settings2, ChevronRight } from "lucide-react";
 import type { Metadata } from "next";
 import PremiumIcon from "@/components/shared/PremiumIcon";
 
@@ -686,7 +686,7 @@ export default function DashboardIntegrationsPage() {
     const selectedBot = context?.options.find((o) => o.workspaceId === selectedWorkspaceId && o.botId === selectedBotId) ?? context?.options[0] ?? null;
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+        <div className="min-h-screen bg-slate-50">
             {/* Toast */}
             {toast && (
                 <div className={`fixed top-4 right-4 z-50 rounded-xl px-4 py-3 text-sm font-medium shadow-lg ${toast.type === "success" ? "bg-emerald-600 text-white" : "bg-rose-600 text-white"}`}>
@@ -705,27 +705,39 @@ export default function DashboardIntegrationsPage() {
                 />
             )}
 
-            {/* Page header */}
-            <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-5 md:px-8">
-                <div className="flex flex-wrap items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                        <PremiumIcon icon={Link2} tone="sky" containerClassName="h-9 w-9 rounded-xl bg-sky-100 dark:bg-sky-900/40 shrink-0 text-sky-600 dark:text-sky-400" iconClassName="w-5 h-5" />
-                        <div>
-                            <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100">Integrations</h1>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">
-                                Connect tools so your agent can work across your entire stack
-                            </p>
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-6 space-y-6">
+
+                {/* Dark hero */}
+                <section className="relative overflow-hidden rounded-2xl bg-slate-950">
+                    <div className="absolute inset-0 pointer-events-none">
+                        <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_80%_at_0%_0%,rgba(14,165,233,0.18)_0%,transparent_60%)]" />
+                        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_70%_at_100%_100%,rgba(16,185,129,0.12)_0%,transparent_60%)]" />
+                        <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: "radial-gradient(circle, rgba(255,255,255,1) 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
+                    </div>
+                    <div className="relative px-6 sm:px-8 py-6 sm:py-8">
+                        <div className="flex items-center gap-2 mb-4">
+                            <div className="flex items-center gap-2 rounded-xl bg-sky-500/10 border border-sky-500/20 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-sky-400">
+                                <Link2 className="w-3.5 h-3.5" />
+                                Integrations
+                            </div>
+                            <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
+                            <span className="text-xs text-slate-500">Connectors</span>
+                        </div>
+                        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5">
+                            <div>
+                                <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">Integrations</h1>
+                                <p className="mt-2 text-slate-400 text-base max-w-lg">
+                                    Connect tools so your agent can work across your entire stack.
+                                    {available.length > 0 && (
+                                        <span className="ml-2 inline-flex items-center rounded-full bg-sky-500/10 border border-sky-500/20 px-2.5 py-0.5 text-xs font-semibold text-sky-400">
+                                            {available.length} connectors available
+                                        </span>
+                                    )}
+                                </p>
+                            </div>
                         </div>
                     </div>
-                    {available.length > 0 && (
-                        <span className="text-xs font-semibold bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 px-3 py-1.5 rounded-full">
-                            {available.length} connectors available
-                        </span>
-                    )}
-                </div>
-            </div>
-
-            <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+                </section>
 
                 {/* Connector showcase */}
                 {!loading && available.length > 0 && (

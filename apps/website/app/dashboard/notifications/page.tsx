@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Bell, CheckCircle2, CreditCard, Info, ShieldAlert, Zap } from "lucide-react";
+import { Bell, CheckCircle2, ChevronRight, CreditCard, Info, ShieldAlert, Zap } from "lucide-react";
 import PremiumIcon from "@/components/shared/PremiumIcon";
 import type { LucideIcon } from "lucide-react";
 
@@ -116,57 +116,64 @@ const unread = notifications.filter((n) => !n.read).length;
 
 export default function DashboardNotificationsPage() {
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
-            {/* Header */}
-            <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-5 md:px-8">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="relative">
-                            <PremiumIcon icon={Bell} tone="sky" containerClassName="h-9 w-9 rounded-xl bg-sky-100 dark:bg-sky-900/40 text-sky-600 dark:text-sky-400" iconClassName="w-5 h-5" />
-                            {unread > 0 && (
-                                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center">
-                                    {unread}
-                                </span>
-                            )}
+        <div className="min-h-screen bg-slate-50">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-6 space-y-6">
+
+                {/* Dark hero */}
+                <section className="relative overflow-hidden rounded-2xl bg-slate-950">
+                    <div className="absolute inset-0 pointer-events-none">
+                        <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_80%_at_0%_0%,rgba(14,165,233,0.18)_0%,transparent_60%)]" />
+                        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_70%_at_100%_100%,rgba(16,185,129,0.12)_0%,transparent_60%)]" />
+                        <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: "radial-gradient(circle, rgba(255,255,255,1) 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
+                    </div>
+                    <div className="relative px-6 sm:px-8 py-6 sm:py-8">
+                        <div className="flex items-center gap-2 mb-4">
+                            <div className="flex items-center gap-2 rounded-xl bg-sky-500/10 border border-sky-500/20 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-sky-400">
+                                <Bell className="w-3.5 h-3.5" />
+                                Notifications
+                            </div>
+                            <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
+                            <span className="text-xs text-slate-500">{unread} unread</span>
                         </div>
-                        <div>
-                            <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100">Notifications</h1>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">
-                                {unread} unread · {notifications.length} total
-                            </p>
+                        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5">
+                            <div>
+                                <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">Notifications</h1>
+                                <p className="mt-2 text-slate-400 text-base max-w-lg">System alerts, approval outcomes, and deployment events.</p>
+                            </div>
+                            <button className="text-xs font-semibold text-sky-400 border border-sky-500/30 hover:border-sky-400/60 bg-sky-500/10 hover:bg-sky-500/20 rounded-lg px-4 py-2 transition-colors shrink-0">
+                                Mark all read
+                            </button>
                         </div>
                     </div>
-                    <button className="text-xs font-semibold text-sky-600 dark:text-sky-400 hover:underline">
-                        Mark all read
-                    </button>
-                </div>
-            </div>
+                </section>
 
-            <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-3">
-                {notifications.map((notif) => {
-                    const style = levelStyle[notif.level];
-                    const tone = levelIconTone[notif.level];
-                    return (
-                        <div
-                            key={notif.id}
-                            className={`rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden ${style.container} transition-opacity ${notif.read ? "opacity-70" : ""}`}
-                        >
-                            <div className="flex items-start gap-3 px-5 py-4">
-                                <PremiumIcon icon={notif.icon} tone={tone} containerClassName="w-8 h-8 rounded-xl shrink-0 mt-0.5" iconClassName="w-4 h-4" />
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                        <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{notif.title}</p>
-                                        {!notif.read && (
-                                            <span className={`w-2 h-2 rounded-full shrink-0 ${style.dot}`} />
-                                        )}
+                <div className="space-y-3">
+                    {notifications.map((notif) => {
+                        const style = levelStyle[notif.level];
+                        const tone = levelIconTone[notif.level];
+                        return (
+                            <div
+                                key={notif.id}
+                                className={`rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden ${style.container} transition-opacity ${notif.read ? "opacity-70" : ""}`}
+                            >
+                                <div className="flex items-start gap-3 px-5 py-4">
+                                    <PremiumIcon icon={notif.icon} tone={tone} containerClassName="w-8 h-8 rounded-xl shrink-0 mt-0.5" iconClassName="w-4 h-4" />
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{notif.title}</p>
+                                            {!notif.read && (
+                                                <span className={`w-2 h-2 rounded-full shrink-0 ${style.dot}`} />
+                                            )}
+                                        </div>
+                                        <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">{notif.body}</p>
+                                        <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-2 font-mono">{notif.time}</p>
                                     </div>
-                                    <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">{notif.body}</p>
-                                    <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-2 font-mono">{notif.time}</p>
                                 </div>
                             </div>
-                        </div>
-                    );
-                })}
+                        );
+                    })}
+                </div>
+
             </div>
         </div>
     );
