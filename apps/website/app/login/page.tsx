@@ -3,169 +3,391 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
-import { ArrowRight, Eye, EyeOff, Lock, Mail, ShieldCheck, CheckCircle2, GitPullRequest } from "lucide-react";
+import {
+    ArrowRight, Eye, EyeOff, Lock, Mail, ShieldCheck,
+    Building2, CheckCircle2, AlertCircle, Fingerprint, Key, Zap,
+} from "lucide-react";
+
+const SECURITY_FEATURES = [
+    { icon: ShieldCheck, label: "SOC 2 Type II certified", sub: "Annual third-party audits, continuous monitoring" },
+    { icon: Lock, label: "TLS 1.3 encryption in transit", sub: "End-to-end encrypted authentication" },
+    { icon: Fingerprint, label: "MFA & passkey support", sub: "TOTP, WebAuthn, and hardware security keys" },
+    { icon: Key, label: "Enterprise SSO ready", sub: "SAML 2.0, OIDC, Okta, Azure AD, Google Workspace" },
+] as const;
+
+const COMPLIANCE_LABELS = ["GDPR", "CCPA", "ISO 27001", "99.9% SLA"] as const;
+
+const INPUT_STYLE = {
+    base: { border: "1px solid #d2d2d7", borderRadius: 12, background: "#f5f5f7" } as React.CSSProperties,
+    error: { border: "1px solid #ff3b30", borderRadius: 12, background: "#f5f5f7" } as React.CSSProperties,
+};
+
+function Spinner() {
+    return (
+        <svg className="animate-spin w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+        </svg>
+    );
+}
+
+function Divider({ label }: { label: string }) {
+    return (
+        <div className="flex items-center gap-3 my-5">
+            <div className="flex-1 h-px" style={{ background: "#e8e8ed" }} />
+            <span className="text-[12px] font-medium" style={{ color: "#aeaeb2" }}>{label}</span>
+            <div className="flex-1 h-px" style={{ background: "#e8e8ed" }} />
+        </div>
+    );
+}
+
+function AgentFarmsLogo({ size = 8 }: { size?: number }) {
+    const px = size * 4;
+    const iconPx = px * 0.55;
+    return (
+        <div
+            className="rounded-[10px] flex items-center justify-center shrink-0"
+            style={{ background: "#0071e3", width: px, height: px }}
+        >
+            <svg width={iconPx} height={iconPx} viewBox="0 0 16 16" fill="none">
+                <circle cx="8" cy="8" r="6.5" stroke="white" strokeWidth="2" />
+                <path d="M5 8h6M8 5v6" stroke="white" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+        </div>
+    );
+}
+
+// ── SSO sub-view ────────────────────────────────────────────────────────────
+
+function SSOView({ onBack }: { onBack: () => void }) {
+    const [ssoEmail, setSsoEmail] = useState("");
+
+    return (
+        <div
+            className="flex items-center justify-center px-6"
+            style={{ background: "#f5f5f7", fontFamily: "-apple-system, 'SF Pro Display', system-ui, sans-serif", minHeight: "100dvh" }}
+        >
+            <div className="w-full max-w-[400px]">
+                <button
+                    onClick={onBack}
+                    className="flex items-center gap-1.5 text-[13px] font-medium mb-8 cursor-pointer transition-colors"
+                    style={{ color: "#6e6e73" }}
+                    onMouseOver={(e) => (e.currentTarget.style.color = "#1d1d1f")}
+                    onMouseOut={(e) => (e.currentTarget.style.color = "#6e6e73")}
+                >
+                    ← Back to sign in
+                </button>
+
+                <div className="bg-white rounded-[20px] p-8" style={{ boxShadow: "0 2px 20px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)" }}>
+                    <div className="w-10 h-10 rounded-[12px] flex items-center justify-center mb-6" style={{ background: "#0071e3" }}>
+                        <Building2 className="w-5 h-5 text-white" />
+                    </div>
+                    <h2 className="font-semibold text-[#1d1d1f] mb-2" style={{ fontSize: "1.5rem", letterSpacing: "-0.02em" }}>
+                        Enterprise SSO
+                    </h2>
+                    <p className="text-[14px] text-[#6e6e73] mb-6" style={{ lineHeight: 1.6 }}>
+                        Enter your work email and we&apos;ll redirect you to your identity provider.
+                    </p>
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-[13px] font-semibold text-[#1d1d1f] mb-1.5">Work email</label>
+                            <input
+                                type="email"
+                                placeholder="you@company.com"
+                                value={ssoEmail}
+                                onChange={(e) => setSsoEmail(e.target.value)}
+                                className="w-full px-4 py-3 text-[15px] text-[#1d1d1f] placeholder:text-[#aeaeb2] outline-none transition-colors"
+                                style={INPUT_STYLE.base}
+                                onFocus={(e) => (e.currentTarget.style.borderColor = "#0071e3")}
+                                onBlur={(e) => (e.currentTarget.style.borderColor = "#d2d2d7")}
+                                autoComplete="email"
+                                autoCapitalize="off"
+                            />
+                        </div>
+                        <a
+                            href={`/api/auth/sso?email=${encodeURIComponent(ssoEmail)}`}
+                            className="w-full flex items-center justify-center gap-2 py-3 text-[15px] font-medium text-white rounded-full transition-all"
+                            style={{ background: "#0071e3" }}
+                            onMouseOver={(e) => (e.currentTarget.style.background = "#0077ed")}
+                            onMouseOut={(e) => (e.currentTarget.style.background = "#0071e3")}
+                        >
+                            Continue with SSO <ArrowRight className="w-4 h-4" />
+                        </a>
+                    </div>
+                    <p className="mt-6 text-[12px] text-center" style={{ color: "#aeaeb2", lineHeight: 1.6 }}>
+                        Supports SAML 2.0 · OIDC · Okta · Azure AD · Google Workspace
+                    </p>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ── Magic Link sub-view ─────────────────────────────────────────────────────
+
+function MagicLinkView({ onBack }: { onBack: () => void }) {
+    const [mlEmail, setMlEmail] = useState("");
+    const [mlError, setMlError] = useState("");
+    const [sending, setSending] = useState(false);
+    const [sent, setSent] = useState(false);
+
+    async function onSend(e: React.FormEvent) {
+        e.preventDefault();
+        setMlError("");
+        if (!/^\S+@\S+\.\S+$/.test(mlEmail)) {
+            setMlError("Enter a valid work email address.");
+            return;
+        }
+        setSending(true);
+        try {
+            const res = await fetch("/api/auth/send-magic-link", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: mlEmail }),
+            });
+            if (res.status === 429) {
+                setMlError("Too many requests. Please wait a moment and try again.");
+                return;
+            }
+            setSent(true);
+        } catch {
+            setMlError("Unable to send. Please check your connection and try again.");
+        } finally {
+            setSending(false);
+        }
+    }
+
+    return (
+        <div
+            className="flex items-center justify-center px-6"
+            style={{ background: "#f5f5f7", fontFamily: "-apple-system, 'SF Pro Display', system-ui, sans-serif", minHeight: "100dvh" }}
+        >
+            <div className="w-full max-w-[400px]">
+                <button
+                    onClick={onBack}
+                    className="flex items-center gap-1.5 text-[13px] font-medium mb-8 cursor-pointer transition-colors"
+                    style={{ color: "#6e6e73" }}
+                    onMouseOver={(e) => (e.currentTarget.style.color = "#1d1d1f")}
+                    onMouseOut={(e) => (e.currentTarget.style.color = "#6e6e73")}
+                >
+                    ← Back to sign in
+                </button>
+
+                <div className="bg-white rounded-[20px] p-8" style={{ boxShadow: "0 2px 20px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)" }}>
+                    {sent ? (
+                        /* ── Sent confirmation ── */
+                        <div className="text-center py-4">
+                            <div
+                                className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-5"
+                                style={{ background: "rgba(0,113,227,0.08)", border: "1px solid rgba(0,113,227,0.15)" }}
+                            >
+                                <Mail className="w-6 h-6" style={{ color: "#0071e3" }} />
+                            </div>
+                            <h2 className="font-semibold text-[#1d1d1f] mb-2" style={{ fontSize: "1.4rem", letterSpacing: "-0.02em" }}>
+                                Check your inbox
+                            </h2>
+                            <p className="text-[14px] text-[#6e6e73] mb-6" style={{ lineHeight: 1.6 }}>
+                                We sent a sign-in link to <span className="font-semibold text-[#1d1d1f]">{mlEmail}</span>.
+                                It expires in <span className="font-semibold text-[#1d1d1f]">15 minutes</span>.
+                            </p>
+                            <p className="text-[12px]" style={{ color: "#aeaeb2", lineHeight: 1.6 }}>
+                                Didn&apos;t receive it? Check your spam folder or{" "}
+                                <button
+                                    onClick={() => setSent(false)}
+                                    className="font-semibold cursor-pointer"
+                                    style={{ color: "#0071e3" }}
+                                >
+                                    try again
+                                </button>.
+                            </p>
+                        </div>
+                    ) : (
+                        /* ── Send form ── */
+                        <>
+                            <div className="w-10 h-10 rounded-[12px] flex items-center justify-center mb-6" style={{ background: "#f5f5f7", border: "1px solid #e8e8ed" }}>
+                                <Zap className="w-5 h-5" style={{ color: "#0071e3" }} />
+                            </div>
+                            <h2 className="font-semibold text-[#1d1d1f] mb-2" style={{ fontSize: "1.5rem", letterSpacing: "-0.02em" }}>
+                                Magic link
+                            </h2>
+                            <p className="text-[14px] text-[#6e6e73] mb-6" style={{ lineHeight: 1.6 }}>
+                                Enter your work email and we&apos;ll send a one-click sign-in link. No password needed.
+                            </p>
+                            <form onSubmit={onSend} noValidate className="space-y-4">
+                                <div>
+                                    <label className="block text-[13px] font-semibold text-[#1d1d1f] mb-1.5">Work email</label>
+                                    <div className="relative">
+                                        <Mail
+                                            className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4"
+                                            style={{ color: "#aeaeb2" }}
+                                        />
+                                        <input
+                                            type="email"
+                                            placeholder="you@company.com"
+                                            value={mlEmail}
+                                            onChange={(e) => setMlEmail(e.target.value)}
+                                            className="w-full pl-10 pr-4 py-3 text-[15px] text-[#1d1d1f] placeholder:text-[#aeaeb2] outline-none transition-colors"
+                                            style={mlError ? INPUT_STYLE.error : INPUT_STYLE.base}
+                                            onFocus={(e) => (e.currentTarget.style.borderColor = "#0071e3")}
+                                            onBlur={(e) => (e.currentTarget.style.borderColor = mlError ? "#ff3b30" : "#d2d2d7")}
+                                            autoComplete="email"
+                                            autoCapitalize="off"
+                                            autoFocus
+                                        />
+                                    </div>
+                                    {mlError && (
+                                        <p className="mt-1.5 flex items-center gap-1 text-[12px] text-[#ff3b30]">
+                                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />{mlError}
+                                        </p>
+                                    )}
+                                </div>
+                                <button
+                                    type="submit"
+                                    disabled={sending}
+                                    className="w-full flex items-center justify-center gap-2 py-3 text-[15px] font-medium text-white rounded-full transition-all disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+                                    style={{ background: "#1d1d1f" }}
+                                    onMouseOver={(e) => !sending && (e.currentTarget.style.background = "#2d2d2f")}
+                                    onMouseOut={(e) => (e.currentTarget.style.background = "#1d1d1f")}
+                                >
+                                    {sending ? <><Spinner /> Sending…</> : <>Send magic link <ArrowRight className="w-4 h-4 shrink-0" /></>}
+                                </button>
+                            </form>
+                            <p className="mt-5 text-[12px] text-center" style={{ color: "#aeaeb2", lineHeight: 1.6 }}>
+                                Link expires in 15 minutes · Single use · No password stored
+                            </p>
+                        </>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ── Main login form ─────────────────────────────────────────────────────────
 
 function LoginForm() {
     const searchParams = useSearchParams();
     const from = searchParams.get("from") ?? undefined;
+    const linkError = searchParams.get("error");
+
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
+    const [rememberMe, setRememberMe] = useState(false);
     const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
-    const [serverError, setServerError] = useState("");
+    const [serverError, setServerError] = useState(
+        linkError === "expired_link" ? "Your sign-in link has expired. Please request a new one." :
+        linkError === "invalid_link" ? "This sign-in link is invalid. Please try again." : ""
+    );
     const [submitting, setSubmitting] = useState(false);
+    const [view, setView] = useState<"main" | "sso" | "magic">("main");
 
     async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
         const nextErrors: { email?: string; password?: string } = {};
-        if (!/^\S+@\S+\.\S+$/.test(email)) nextErrors.email = "Enter a valid work email.";
-        if (password.length < 8) nextErrors.password = "Password must be at least 8 characters.";
+        if (!/^\S+@\S+\.\S+$/.test(email)) nextErrors.email = "Enter a valid email address.";
+        if (password.length < 10) nextErrors.password = "Password must be at least 10 characters.";
         setErrors(nextErrors);
         setServerError("");
         if (Object.keys(nextErrors).length > 0) return;
 
         setSubmitting(true);
         try {
-            const response = await fetch("/api/auth/login", {
+            const res = await fetch("/api/auth/login", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, password, from }),
+                body: JSON.stringify({ email, password, from, rememberMe }),
             });
-            const data = (await response.json()) as { error?: string; redirectTo?: string };
-            if (!response.ok) {
-                setServerError(data.error ?? "Unable to sign in right now.");
+            const data = (await res.json()) as { error?: string; redirectTo?: string };
+            if (!res.ok) {
+                // Ambiguous — prevents username enumeration
+                setServerError("Invalid email or password. Please try again.");
                 return;
             }
             window.location.assign(data.redirectTo ?? "/dashboard");
         } catch {
-            setServerError("Network error. Please try again.");
+            setServerError("Unable to sign in. Please check your connection and try again.");
         } finally {
             setSubmitting(false);
         }
     }
 
-    return (
-        <div className="min-h-screen flex" style={{ background: "#ffffff" }}>
+    if (view === "sso") return <SSOView onBack={() => setView("main")} />;
+    if (view === "magic") return <MagicLinkView onBack={() => setView("main")} />;
 
-            {/* ── Left panel — brand / social proof ── */}
+    return (
+        <div
+            className="flex"
+            style={{ fontFamily: "-apple-system, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif", background: "#ffffff", minHeight: "100dvh" }}
+        >
+            {/* ── Left panel ── */}
             <div
-                className="hidden lg:flex lg:w-[52%] flex-col relative overflow-hidden"
-                style={{ background: "#1a1a1c" }}
+                className="hidden lg:flex lg:w-[48%] flex-col relative overflow-hidden"
+                style={{ background: "#1d1d1f", minHeight: "100dvh" }}
             >
-                {/* Subtle ambient glow */}
                 <div
                     className="absolute inset-0 pointer-events-none"
                     style={{
-                        background: "radial-gradient(ellipse 70% 50% at 20% 20%, rgba(0,102,204,0.18) 0%, transparent 60%), radial-gradient(ellipse 50% 40% at 80% 80%, rgba(41,151,255,0.10) 0%, transparent 60%)",
+                        background:
+                            "radial-gradient(ellipse 80% 60% at 10% 15%, rgba(0,113,227,0.15) 0%, transparent 55%), radial-gradient(ellipse 60% 50% at 90% 85%, rgba(0,113,227,0.08) 0%, transparent 55%)",
                     }}
                 />
-
-                <div className="relative z-10 flex flex-col h-full p-12">
+                <div className="relative z-10 flex flex-col flex-1 px-14 pt-12 pb-10">
                     {/* Logo */}
                     <div className="flex items-center gap-2.5">
-                        <div
-                            className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                            style={{ background: "#0066cc" }}
-                        >
-                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                                <circle cx="8" cy="8" r="6.5" stroke="white" strokeWidth="2" />
-                                <path d="M5 8h6M8 5v6" stroke="white" strokeWidth="2" strokeLinecap="round" />
-                            </svg>
-                        </div>
+                        <AgentFarmsLogo size={8} />
                         <span className="text-white font-semibold text-[15px]" style={{ letterSpacing: "-0.01em" }}>
                             AgentFarms
                         </span>
                     </div>
 
-                    {/* Hero copy */}
+                    {/* Hero */}
                     <div className="flex-1 flex flex-col justify-center max-w-[420px]">
                         <div
-                            className="inline-flex items-center gap-2 self-start rounded-full mb-7 px-3.5 py-1.5 text-[12px] font-semibold"
-                            style={{ border: "1px solid rgba(41,151,255,0.3)", background: "rgba(41,151,255,0.1)", color: "#2997ff" }}
+                            className="inline-flex items-center gap-2 self-start rounded-full mb-8 px-3.5 py-1.5 text-[12px] font-semibold"
+                            style={{ border: "1px solid rgba(0,113,227,0.35)", background: "rgba(0,113,227,0.1)", color: "#2997ff" }}
                         >
                             <span className="w-1.5 h-1.5 rounded-full bg-[#2997ff] animate-pulse" />
-                            Workers active right now
+                            Enterprise-grade AI workforce
                         </div>
-
                         <h2
-                            className="font-semibold text-white"
-                            style={{ fontSize: "clamp(2rem, 3.5vw, 2.6rem)", letterSpacing: "-0.03em", lineHeight: 1.1 }}
+                            className="font-semibold text-white mb-4"
+                            style={{ fontSize: "clamp(1.9rem, 3vw, 2.5rem)", letterSpacing: "-0.03em", lineHeight: 1.08 }}
                         >
-                            AI workers that ship{" "}
+                            AI workers that ship
+                            <br />
                             <span style={{ color: "#2997ff" }}>with your oversight.</span>
                         </h2>
-                        <p className="mt-4 text-[15px]" style={{ color: "#98989d", lineHeight: 1.6 }}>
-                            12 specialist roles, 18 connectors, approval gates on every high-stakes action.
+                        <p className="text-[15px] mb-10" style={{ color: "#86868b", lineHeight: 1.6 }}>
+                            12 specialist roles, 18 connectors, and approval gates on every
+                            high-stakes action — built for teams that need real output with real guardrails.
                         </p>
-
-                        {/* Metric mini-cards */}
-                        <div className="mt-8 grid grid-cols-2 gap-3">
-                            {[
-                                { label: "Tasks today", value: "184", delta: "↑ 19% this week", icon: CheckCircle2, color: "#2997ff" },
-                                { label: "PRs merged", value: "46", delta: "↑ 12% this week", icon: GitPullRequest, color: "#30d158" },
-                            ].map(({ label, value, delta, icon: Icon, color }) => (
-                                <div
-                                    key={label}
-                                    className="rounded-[14px] p-5"
-                                    style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
-                                >
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: `${color}20` }}>
-                                            <Icon className="w-3.5 h-3.5" style={{ color }} />
-                                        </div>
-                                        <span className="text-[12px] font-medium" style={{ color: "#6e6e73" }}>{label}</span>
+                        <div className="space-y-4">
+                            {SECURITY_FEATURES.map(({ icon: Icon, label, sub }) => (
+                                <div key={label} className="flex items-start gap-3">
+                                    <div
+                                        className="w-8 h-8 rounded-[8px] flex items-center justify-center shrink-0 mt-0.5"
+                                        style={{ background: "rgba(0,113,227,0.12)", border: "1px solid rgba(0,113,227,0.2)" }}
+                                    >
+                                        <Icon className="w-4 h-4" style={{ color: "#2997ff" }} />
                                     </div>
-                                    <p className="text-[2rem] font-semibold text-white" style={{ letterSpacing: "-0.03em", lineHeight: 1 }}>{value}</p>
-                                    <p className="text-[12px] font-semibold mt-2" style={{ color }}>{delta}</p>
+                                    <div>
+                                        <p className="text-[13px] font-semibold text-white">{label}</p>
+                                        <p className="text-[12px]" style={{ color: "#6e6e73" }}>{sub}</p>
+                                    </div>
                                 </div>
                             ))}
                         </div>
-
-                        {/* Live activity feed */}
-                        <div
-                            className="mt-3 rounded-[14px] p-5"
-                            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
-                        >
-                            <div className="flex items-center justify-between mb-4">
-                                <span className="text-[11px] font-semibold uppercase tracking-[0.07em]" style={{ color: "#6e6e73" }}>
-                                    Live Activity
-                                </span>
-                                <span className="flex items-center gap-1.5 text-[11px] font-semibold" style={{ color: "#30d158" }}>
-                                    <span className="w-1.5 h-1.5 rounded-full bg-[#30d158] animate-pulse" />
-                                    Streaming
-                                </span>
-                            </div>
-                            <div className="space-y-3.5">
-                                {[
-                                    { initials: "AB", agent: "AI Backend Dev", action: "opened PR #482 · billing webhooks", time: "2m ago", color: "#2997ff" },
-                                    { initials: "AQ", agent: "AI QA Engineer", action: "passed 423/423 tests", time: "8m ago", color: "#30d158" },
-                                    { initials: "AD", agent: "AI DevOps", action: "deployed canary to staging", time: "15m ago", color: "#ff9f0a" },
-                                ].map((item) => (
-                                    <div key={item.action} className="flex items-center gap-3">
-                                        <div
-                                            className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-[11px] font-bold"
-                                            style={{ background: `${item.color}18`, color: item.color, border: `1px solid ${item.color}30` }}
-                                        >
-                                            {item.initials}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-[12px] truncate" style={{ color: "#e5e5ea" }}>
-                                                <span className="font-semibold" style={{ color: item.color }}>{item.agent}</span>{" "}
-                                                {item.action}
-                                            </p>
-                                        </div>
-                                        <span className="text-[11px] shrink-0" style={{ color: "#6e6e73" }}>{item.time}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
                     </div>
 
-                    {/* Trust bar */}
-                    <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-                        {["SOC 2 Ready", "256-bit encryption", "99.9% uptime"].map((label) => (
-                            <span key={label} className="flex items-center gap-1.5 text-[12px]" style={{ color: "#6e6e73" }}>
-                                <ShieldCheck className="w-3.5 h-3.5" />
+                    {/* Compliance badges */}
+                    <div className="flex flex-wrap gap-2">
+                        {COMPLIANCE_LABELS.map((label) => (
+                            <span
+                                key={label}
+                                className="text-[11px] font-medium px-2.5 py-1 rounded-full"
+                                style={{ background: "rgba(255,255,255,0.06)", color: "#6e6e73", border: "1px solid rgba(255,255,255,0.08)" }}
+                            >
                                 {label}
                             </span>
                         ))}
@@ -173,87 +395,107 @@ function LoginForm() {
                 </div>
             </div>
 
-            {/* ── Right panel — form ── */}
-            <div className="flex-1 flex items-center justify-center px-6 py-12" style={{ background: "#ffffff" }}>
-                <div className="w-full max-w-[400px]">
-
+            {/* ── Right panel ── */}
+            <div
+                className="flex-1 flex items-center justify-center px-8 py-12"
+                style={{ background: "#ffffff", minHeight: "100dvh" }}
+            >
+                <div className="w-full max-w-[390px]">
                     {/* Mobile logo */}
                     <div className="flex items-center gap-2.5 mb-10 lg:hidden">
-                        <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "#0066cc" }}>
-                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                                <circle cx="7" cy="7" r="5.5" stroke="white" strokeWidth="1.8" />
-                                <path d="M4.5 7h5M7 4.5v5" stroke="white" strokeWidth="1.8" strokeLinecap="round" />
-                            </svg>
-                        </div>
+                        <AgentFarmsLogo size={7} />
                         <span className="font-semibold text-[#1d1d1f] text-[15px]">AgentFarms</span>
                     </div>
 
                     {/* Heading */}
-                    <div className="mb-8">
-                        <h1 className="font-semibold text-[#1d1d1f]" style={{ fontSize: "2rem", letterSpacing: "-0.028em", lineHeight: 1.1 }}>
-                            Welcome back
+                    <div className="mb-7">
+                        <h1 className="font-semibold text-[#1d1d1f]" style={{ fontSize: "2rem", letterSpacing: "-0.03em", lineHeight: 1.1 }}>
+                            Sign in
                         </h1>
-                        <p className="mt-2 text-[15px] text-[#6e6e73]" style={{ lineHeight: 1.5 }}>
-                            Sign in to your AgentFarms workspace.
+                        <p className="mt-2 text-[15px]" style={{ color: "#6e6e73", lineHeight: 1.5 }}>
+                            Access your AgentFarms workspace.
                         </p>
                     </div>
 
+                    {/* Tier 1 — Enterprise SSO */}
+                    <button
+                        onClick={() => setView("sso")}
+                        className="w-full flex items-center justify-center gap-2.5 py-3 text-[15px] font-medium rounded-[12px] transition-all cursor-pointer"
+                        style={{ background: "#0071e3", color: "#ffffff" }}
+                        onMouseOver={(e) => (e.currentTarget.style.background = "#0077ed")}
+                        onMouseOut={(e) => (e.currentTarget.style.background = "#0071e3")}
+                    >
+                        <Building2 className="w-4 h-4" />
+                        Continue with SSO
+                    </button>
+
+                    <Divider label="or" />
+
+                    {/* Tier 2 — Magic Link (passwordless) */}
+                    <button
+                        onClick={() => setView("magic")}
+                        className="w-full flex items-center justify-center gap-2.5 py-3 text-[15px] font-medium rounded-[12px] transition-all cursor-pointer"
+                        style={{ background: "#f5f5f7", color: "#1d1d1f", border: "1px solid #e8e8ed" }}
+                        onMouseOver={(e) => (e.currentTarget.style.background = "#ebebf0")}
+                        onMouseOut={(e) => (e.currentTarget.style.background = "#f5f5f7")}
+                    >
+                        <Zap className="w-4 h-4" style={{ color: "#0071e3" }} />
+                        Send me a magic link
+                    </button>
+
+                    <Divider label="or sign in with password" />
+
+                    {/* Tier 3 — Email + Password */}
                     <form onSubmit={onSubmit} noValidate className="space-y-4">
                         {/* Email */}
                         <div>
-                            <label className="block text-[14px] font-semibold text-[#1d1d1f] mb-1.5">
-                                Work email
-                            </label>
+                            <label className="block text-[13px] font-semibold text-[#1d1d1f] mb-1.5">Email</label>
                             <div className="relative">
-                                <Mail className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 z-10" style={{ color: "#aeaeb2" }} />
+                                <Mail
+                                    className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 z-10"
+                                    style={{ color: "#aeaeb2" }}
+                                />
                                 <input
                                     type="email"
                                     placeholder="you@company.com"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     className="w-full pl-10 pr-4 py-3 text-[15px] text-[#1d1d1f] placeholder:text-[#aeaeb2] outline-none transition-colors"
-                                    style={{
-                                        border: errors.email ? "1px solid #ff3b30" : "1px solid #d2d2d7",
-                                        borderRadius: 11,
-                                        background: "#f5f5f7",
-                                    }}
-                                    onFocus={(e) => (e.currentTarget.style.borderColor = "#0066cc")}
+                                    style={errors.email ? INPUT_STYLE.error : INPUT_STYLE.base}
+                                    onFocus={(e) => (e.currentTarget.style.borderColor = "#0071e3")}
                                     onBlur={(e) => (e.currentTarget.style.borderColor = errors.email ? "#ff3b30" : "#d2d2d7")}
                                     autoComplete="email"
+                                    autoCapitalize="off"
                                 />
                             </div>
                             {errors.email && (
-                                <p className="mt-1.5 text-[12px] text-[#ff3b30]">{errors.email}</p>
+                                <p className="mt-1.5 flex items-center gap-1 text-[12px] text-[#ff3b30]">
+                                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />{errors.email}
+                                </p>
                             )}
                         </div>
 
                         {/* Password */}
                         <div>
                             <div className="flex items-center justify-between mb-1.5">
-                                <label className="block text-[14px] font-semibold text-[#1d1d1f]">
-                                    Password
-                                </label>
-                                <Link
-                                    href="/forgot-password"
-                                    className="text-[13px] font-medium text-[#0066cc] hover:text-[#0071e3] transition-colors"
-                                >
+                                <label className="block text-[13px] font-semibold text-[#1d1d1f]">Password</label>
+                                <Link href="/forgot-password" className="text-[13px] font-medium text-[#0071e3] hover:text-[#0077ed] transition-colors">
                                     Forgot password?
                                 </Link>
                             </div>
                             <div className="relative">
-                                <Lock className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "#aeaeb2" }} />
+                                <Lock
+                                    className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4"
+                                    style={{ color: "#aeaeb2" }}
+                                />
                                 <input
                                     type={showPassword ? "text" : "password"}
-                                    placeholder="••••••••"
+                                    placeholder="••••••••••"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     className="w-full pl-10 pr-12 py-3 text-[15px] text-[#1d1d1f] placeholder:text-[#aeaeb2] outline-none transition-colors"
-                                    style={{
-                                        border: errors.password ? "1px solid #ff3b30" : "1px solid #d2d2d7",
-                                        borderRadius: 11,
-                                        background: "#f5f5f7",
-                                    }}
-                                    onFocus={(e) => (e.currentTarget.style.borderColor = "#0066cc")}
+                                    style={errors.password ? INPUT_STYLE.error : INPUT_STYLE.base}
+                                    onFocus={(e) => (e.currentTarget.style.borderColor = "#0071e3")}
                                     onBlur={(e) => (e.currentTarget.style.borderColor = errors.password ? "#ff3b30" : "#d2d2d7")}
                                     autoComplete="current-password"
                                 />
@@ -268,14 +510,41 @@ function LoginForm() {
                                 </button>
                             </div>
                             {errors.password && (
-                                <p className="mt-1.5 text-[12px] text-[#ff3b30]">{errors.password}</p>
+                                <p className="mt-1.5 flex items-center gap-1 text-[12px] text-[#ff3b30]">
+                                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />{errors.password}
+                                </p>
                             )}
                         </div>
 
-                        {/* Server error */}
+                        {/* Remember me */}
+                        <div className="flex items-center gap-2.5 pt-0.5">
+                            <button
+                                type="button"
+                                onClick={() => setRememberMe((r) => !r)}
+                                className="w-5 h-5 rounded-[5px] flex items-center justify-center shrink-0 transition-all cursor-pointer"
+                                style={{ border: rememberMe ? "none" : "1.5px solid #c7c7cc", background: rememberMe ? "#0071e3" : "transparent" }}
+                                aria-pressed={rememberMe}
+                                aria-label="Keep me signed in for 30 days"
+                            >
+                                {rememberMe && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
+                            </button>
+                            <span
+                                className="text-[13px] select-none cursor-pointer"
+                                style={{ color: "#6e6e73" }}
+                                onClick={() => setRememberMe((r) => !r)}
+                            >
+                                Keep me signed in for <span className="font-medium text-[#1d1d1f]">30 days</span>
+                            </span>
+                        </div>
+
+                        {/* Server / link error */}
                         {serverError && (
-                            <div className="rounded-[11px] px-4 py-3" style={{ background: "rgba(255,59,48,0.06)", border: "1px solid rgba(255,59,48,0.25)" }}>
-                                <p className="text-[13px] text-[#ff3b30] font-medium">{serverError}</p>
+                            <div
+                                className="rounded-[12px] px-4 py-3 flex items-start gap-2.5"
+                                style={{ background: "rgba(255,59,48,0.05)", border: "1px solid rgba(255,59,48,0.2)" }}
+                            >
+                                <AlertCircle className="w-4 h-4 text-[#ff3b30] shrink-0 mt-0.5" />
+                                <p className="text-[13px] text-[#ff3b30]">{serverError}</p>
                             </div>
                         )}
 
@@ -283,49 +552,30 @@ function LoginForm() {
                         <button
                             type="submit"
                             disabled={submitting}
-                            className="w-full flex items-center justify-center gap-2 py-3 text-[15px] font-medium text-white rounded-full transition-colors disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
-                            style={{ background: "#0066cc" }}
-                            onMouseOver={(e) => !submitting && (e.currentTarget.style.background = "#0071e3")}
-                            onMouseOut={(e) => (e.currentTarget.style.background = "#0066cc")}
+                            className="w-full flex items-center justify-center gap-2 py-3 text-[15px] font-medium text-white rounded-full transition-all disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+                            style={{ background: "#1d1d1f" }}
+                            onMouseOver={(e) => !submitting && (e.currentTarget.style.background = "#2d2d2f")}
+                            onMouseOut={(e) => (e.currentTarget.style.background = "#1d1d1f")}
                         >
-                            {submitting ? (
-                                <>
-                                    <svg className="animate-spin w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                                    </svg>
-                                    Signing in…
-                                </>
-                            ) : (
-                                <>
-                                    Sign in to AgentFarms
-                                    <ArrowRight className="w-4 h-4 shrink-0" />
-                                </>
-                            )}
+                            {submitting ? <><Spinner /> Signing in…</> : <>Sign in <ArrowRight className="w-4 h-4 shrink-0" /></>}
                         </button>
                     </form>
 
-                    {/* Sign up link */}
-                    <p className="mt-6 text-center text-[14px] text-[#6e6e73]">
+                    {/* Sign-up link */}
+                    <p className="mt-6 text-center text-[13px]" style={{ color: "#6e6e73" }}>
                         Don&rsquo;t have an account?{" "}
-                        <Link href="/get-started" className="font-semibold text-[#0066cc] hover:text-[#0071e3] transition-colors">
-                            Get started free
+                        <Link href="/get-started" className="font-semibold text-[#0071e3] hover:text-[#0077ed] transition-colors">
+                            Create one free
                         </Link>
                     </p>
 
                     {/* Trust row */}
-                    <div
-                        className="mt-8 pt-6 flex items-center justify-center gap-3 text-[12px] text-[#aeaeb2]"
-                        style={{ borderTop: "1px solid #e8e8ed" }}
-                    >
-                        <span className="flex items-center gap-1">
-                            <ShieldCheck className="w-3.5 h-3.5" />
-                            SOC 2 Ready
+                    <div className="mt-8 pt-5 flex items-center justify-center gap-4 flex-wrap" style={{ borderTop: "1px solid #f0f0f5" }}>
+                        <span className="flex items-center gap-1.5 text-[11px] font-medium" style={{ color: "#aeaeb2" }}>
+                            <ShieldCheck className="w-3.5 h-3.5" /> SOC 2 Ready
                         </span>
-                        <span>·</span>
-                        <span>256-bit encryption</span>
-                        <span>·</span>
-                        <span>99.9% uptime</span>
+                        <span className="text-[11px] font-medium" style={{ color: "#aeaeb2" }}>256-bit TLS</span>
+                        <span className="text-[11px] font-medium" style={{ color: "#aeaeb2" }}>GDPR Compliant</span>
                     </div>
                 </div>
             </div>

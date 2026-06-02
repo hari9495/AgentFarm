@@ -6,7 +6,7 @@ import Footer from "./Footer";
 import MobileStickyCTA from "./MobileStickyCTA";
 import AnnouncementBar from "./AnnouncementBar";
 
-const APP_PREFIXES = ["/dashboard", "/admin", "/portal"];
+const APP_PREFIXES = ["/dashboard", "/admin", "/portal", "/login", "/signup", "/forgot-password", "/onboarding", "/get-started"];
 
 export default function MarketingShell({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
