@@ -79,17 +79,17 @@ function Sparkline({ values, color, gradientId }: { values: number[]; color: str
 
 function SkeletonCard() {
     return (
-        <div className="relative rounded-2xl border border-slate-200 bg-white p-5 flex flex-col gap-4 shadow-sm overflow-hidden animate-pulse">
+        <div className="relative rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 flex flex-col gap-4 shadow-sm overflow-hidden animate-pulse">
             <div className="flex items-start justify-between gap-3">
-                <div className="w-10 h-10 rounded-xl bg-slate-100" />
-                <div className="h-6 w-14 rounded-full bg-slate-100" />
+                <div className="w-10 h-10 rounded-xl bg-slate-200 dark:bg-slate-700" />
+                <div className="h-6 w-16 rounded-full bg-slate-200 dark:bg-slate-700" />
             </div>
             <div className="space-y-2">
-                <div className="h-8 w-20 rounded bg-slate-100" />
-                <div className="h-4 w-28 rounded bg-slate-100" />
-                <div className="h-3 w-16 rounded bg-slate-100" />
+                <div className="h-7 w-24 rounded bg-slate-200 dark:bg-slate-700" />
+                <div className="h-4 w-32 rounded bg-slate-200 dark:bg-slate-700" />
+                <div className="h-3 w-20 rounded bg-slate-200 dark:bg-slate-700" />
             </div>
-            <div className="h-8 w-full rounded bg-slate-100" />
+            <div className="h-7 w-full rounded bg-slate-200 dark:bg-slate-700" />
         </div>
     );
 }
