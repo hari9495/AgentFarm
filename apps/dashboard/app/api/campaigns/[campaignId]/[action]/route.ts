@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 
 type CampaignStatus = 'draft' | 'pending_approval' | 'approved' | 'active' | 'paused' | 'completed' | 'rejected';
-declare global { var __campaigns: Map<string, { id: string; status: CampaignStatus; [k: string]: unknown }> | undefined; }
+type CampaignChannel = 'email' | 'social' | 'paid_search' | 'display' | 'content' | 'seo';
+type Campaign = { id: string; name: string; channel: CampaignChannel; targetAudience: string; budgetUsd: number; status: CampaignStatus; impressions?: number; clicks?: number; conversions?: number; startDate?: string; endDate?: string; createdAt: string; };
+// eslint-disable-next-line no-var
+declare global { var __campaigns: Map<string, Campaign> | undefined; }
 
 const TRANSITIONS: Record<string, CampaignStatus> = {
     approve: 'approved', reject: 'rejected', pause: 'paused', resume: 'active',

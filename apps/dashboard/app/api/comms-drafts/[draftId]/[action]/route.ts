@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 
 type CommsStatus = 'draft' | 'pending_review' | 'approved' | 'sent' | 'rejected';
+type CommsDraft = { id: string; botId: string; commsType: string; subject: string; recipientCount: number; priority: 'low' | 'normal' | 'high' | 'urgent'; status: CommsStatus; scheduledAt?: string; createdAt: string; updatedAt: string; };
 
 declare global {
     // eslint-disable-next-line no-var
-    var __commsDrafts: Map<string, { id: string; status: CommsStatus; updatedAt: string; [key: string]: unknown }> | undefined;
+    var __commsDrafts: Map<string, CommsDraft> | undefined;
 }
 
 const TRANSITIONS: Record<string, CommsStatus> = {

@@ -79,6 +79,75 @@ async function replyWebhook(
     }
 }
 
+/**
+ * Obtain a short-lived Bot Framework bearer token using client credentials.
+ * Requires TEAMS_BOT_APP_ID and TEAMS_BOT_APP_PASSWORD environment variables.
+ */
+async function getBotFrameworkToken(): Promise<string> {
+    const appId = process.env['TEAMS_BOT_APP_ID'];
+    const appPassword = process.env['TEAMS_BOT_APP_PASSWORD'];
+    if (!appId || !appPassword) {
+        throw new Error(
+            'Teams reply requires TEAMS_BOT_APP_ID and TEAMS_BOT_APP_PASSWORD ' +
+            'environment variables. Set these to your Azure Bot registration credentials.',
+        );
+    }
+
+    const body = new URLSearchParams({
+        grant_type: 'client_credentials',
+        client_id: appId,
+        client_secret: appPassword,
+        scope: 'https://api.botframework.com/.default',
+    });
+
+    const res = await fetch(
+        'https://login.microsoftonline.com/botframework.com/oauth2/v2.0/token',
+        {
+            method: 'POST',
+            headers: { 'content-type': 'application/x-www-form-urlencoded' },
+            body: body.toString(),
+        },
+    );
+
+    if (!res.ok) {
+        throw new Error(`Bot Framework token fetch failed: ${res.status} ${await res.text()}`);
+    }
+
+    const json = await res.json() as { access_token?: string };
+    if (!json.access_token) {
+        throw new Error('Bot Framework token response missing access_token');
+    }
+    return json.access_token;
+}
+
+async function replyTeams(
+    ctx: Extract<ReplyContext, { source: 'teams' }>,
+    message: string,
+): Promise<void> {
+    const token = await getBotFrameworkToken();
+
+    // serviceUrl already includes trailing slash in most Bot Framework payloads;
+    // normalise to avoid double-slash.
+    const base = ctx.serviceUrl.replace(/\/$/, '');
+    const url = `${base}/v3/conversations/${encodeURIComponent(ctx.conversationId)}/activities/${encodeURIComponent(ctx.activityId)}`;
+
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'content-type': 'application/json',
+            Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+            type: 'message',
+            text: message,
+        }),
+    });
+
+    if (!response.ok) {
+        throw new Error(`Teams reply failed: ${response.status} ${await response.text()}`);
+    }
+}
+
 export class ReplyDispatcher {
     async reply(event: TriggerEvent, result: DispatchResult): Promise<void> {
         const message = formatReply(result, event);
@@ -96,8 +165,7 @@ export class ReplyDispatcher {
                     await replyWebhook(ctx, message);
                     break;
                 case 'teams':
-                    // Teams outbound not yet implemented — log and skip
-                    console.warn('ReplyDispatcher: Teams reply not yet implemented');
+                    await replyTeams(ctx, message);
                     break;
                 default: {
                     const _exhaustive: never = ctx;

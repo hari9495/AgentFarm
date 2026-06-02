@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 
 type TicketStatus = 'open' | 'in_progress' | 'pending_customer' | 'resolved' | 'escalated';
-declare global { var __supportTickets: Map<string, { id: string; status: TicketStatus; updatedAt: string; [k: string]: unknown }> | undefined; }
+type TicketPriority = 'low' | 'normal' | 'high' | 'critical';
+type SupportTicket = { id: string; ticketNumber: string; subject: string; customerName: string; channel: 'email' | 'chat' | 'phone' | 'portal'; priority: TicketPriority; status: TicketStatus; agentDraftReady: boolean; slaBreachAt?: string; createdAt: string; updatedAt: string; };
+// eslint-disable-next-line no-var
+declare global { var __supportTickets: Map<string, SupportTicket> | undefined; }
 
 const TRANSITIONS: Record<string, TicketStatus> = {
     escalate: 'escalated', resolve: 'resolved', reopen: 'open',

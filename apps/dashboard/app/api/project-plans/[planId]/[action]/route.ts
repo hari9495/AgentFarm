@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 
 type PlanStatus = 'draft' | 'in_review' | 'approved' | 'active' | 'completed' | 'on_hold';
-declare global { var __projectPlans: Map<string, { id: string; status: PlanStatus; [k: string]: unknown }> | undefined; }
+type PlanType = 'sprint_plan' | 'project_roadmap' | 'risk_register' | 'retrospective' | 'release_plan' | 'backlog_refinement';
+type ProjectPlan = { id: string; botId: string; planType: PlanType; title: string; teamSize: number; durationDays: number; status: PlanStatus; riskLevel: 'low' | 'medium' | 'high'; createdAt: string; };
+// eslint-disable-next-line no-var
+declare global { var __projectPlans: Map<string, ProjectPlan> | undefined; }
 
 const TRANSITIONS: Record<string, PlanStatus> = { approve: 'approved', reject: 'on_hold' };
 

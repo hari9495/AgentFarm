@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 
 type CandidateStatus = 'sourced' | 'screened' | 'interviewing' | 'offer_sent' | 'hired' | 'rejected';
-declare global { var __candidates: Map<string, { id: string; status: CandidateStatus; [k: string]: unknown }> | undefined; }
+type Candidate = { id: string; name: string; role: string; source: string; status: CandidateStatus; matchScore: number; appliedAt: string; };
+// eslint-disable-next-line no-var
+declare global { var __candidates: Map<string, Candidate> | undefined; }
 
 const ADVANCE: Record<CandidateStatus, CandidateStatus> = {
     sourced: 'screened', screened: 'interviewing', interviewing: 'offer_sent',
