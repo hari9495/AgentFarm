@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, ClipboardCheck, Shield, Timer } from "lucide-react";
-import PremiumIcon from "@/components/shared/PremiumIcon";
+import { ArrowRight, ClipboardCheck, Shield, Timer, Cpu } from "lucide-react";
 
 export const metadata: Metadata = {
     title: "Agents - AgentFarms Dashboard",
@@ -30,57 +29,139 @@ const toneClass: Record<string, string> = {
     rose: "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300",
 };
 
+const toneDot: Record<string, string> = {
+    sky: "bg-sky-500",
+    violet: "bg-violet-500",
+    amber: "bg-amber-500",
+    rose: "bg-rose-500",
+};
+
+const statusConfig: Record<string, { dot: string; text: string; pulse: boolean }> = {
+    "Active": { dot: "bg-emerald-400", text: "text-emerald-600 dark:text-emerald-400", pulse: true },
+    "Needs review": { dot: "bg-amber-400", text: "text-amber-600 dark:text-amber-400", pulse: false },
+};
+
 export default function AgentsIndexPage() {
+    const activeCount = agents.filter((a) => a.status === "Active").length;
+    const totalTasks = agents.reduce((sum, a) => sum + a.tasks, 0);
+    const avgReliability = (agents.reduce((sum, a) => sum + a.reliability, 0) / agents.length).toFixed(1);
+
     return (
-        <div className="site-shell min-h-screen">
-            <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-5 md:px-8">
-                <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100">AI Workers</h1>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Inspect each worker's task history, quality, and approvals.</p>
+        <div className="site-shell min-h-screen bg-slate-50 dark:bg-slate-950">
+            {/* Header */}
+            <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-6 md:px-8">
+                <div className="max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                        <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-sky-400 to-violet-500 flex items-center justify-center shadow-sm">
+                            <Cpu className="h-4.5 w-4.5 text-white" />
+                        </div>
+                        <div>
+                            <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100 leading-none">AI Workers</h1>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Inspect each worker's task history, quality, and approvals.</p>
+                        </div>
+                    </div>
+
+                    <div className="hidden sm:flex items-center gap-5">
+                        <div className="text-center">
+                            <p className="text-xl font-bold text-slate-900 dark:text-slate-100 leading-none">{activeCount}</p>
+                            <p className="text-[10px] text-slate-400 mt-0.5 uppercase tracking-wide">Active</p>
+                        </div>
+                        <div className="w-px h-8 bg-slate-200 dark:bg-slate-700" />
+                        <div className="text-center">
+                            <p className="text-xl font-bold text-slate-900 dark:text-slate-100 leading-none">{totalTasks}</p>
+                            <p className="text-[10px] text-slate-400 mt-0.5 uppercase tracking-wide">Total Tasks</p>
+                        </div>
+                        <div className="w-px h-8 bg-slate-200 dark:bg-slate-700" />
+                        <div className="text-center">
+                            <p className="text-xl font-bold text-slate-900 dark:text-slate-100 leading-none">{avgReliability}%</p>
+                            <p className="text-[10px] text-slate-400 mt-0.5 uppercase tracking-wide">Avg Reliability</p>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 grid grid-cols-1 md:grid-cols-2 gap-4">
-                {agents.map((agent) => (
-                    <article key={agent.slug} className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
-                        <div className="flex items-center justify-between">
-                            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${toneClass[agent.tone]}`}>
-                                {agent.role}
-                            </span>
-                            <span className="text-xs text-slate-500 dark:text-slate-400">{agent.status}</span>
-                        </div>
-                        <h2 className="mt-3 text-base font-bold text-slate-900 dark:text-slate-100">{agent.name}</h2>
-
-                        {/* D4: 7-day × 4-week task heatmap */}
-                        <div className="mt-4">
-                            <p className="text-[10px] text-slate-400 mb-1.5">Activity heatmap — last 4 weeks</p>
-                            <div className="grid grid-cols-7 gap-0.5">
-                                {Array.from({ length: 28 }, (_, i) => (
-                                    <div
-                                        key={i}
-                                        className={`h-3 rounded-sm ${heatCell(agent.heatSeed, i)}`}
-                                        title={`Day ${i + 1}`}
-                                    />
-                                ))}
+            {/* Cards */}
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 grid grid-cols-1 md:grid-cols-2 gap-5">
+                {agents.map((agent) => {
+                    const sc = statusConfig[agent.status] ?? { dot: "bg-slate-400", text: "text-slate-500", pulse: false };
+                    return (
+                        <article
+                            key={agent.slug}
+                            className="group rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200"
+                        >
+                            {/* Role + status */}
+                            <div className="flex items-center justify-between">
+                                <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold ${toneClass[agent.tone]}`}>
+                                    <span className={`h-1.5 w-1.5 rounded-full ${toneDot[agent.tone]}`} />
+                                    {agent.role}
+                                </span>
+                                <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${sc.text}`}>
+                                    <span className={`h-2 w-2 rounded-full ${sc.dot} ${sc.pulse ? "animate-pulse" : ""}`} />
+                                    {agent.status}
+                                </span>
                             </div>
-                        </div>
 
-                        <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-                            <p className="rounded-lg bg-slate-50 dark:bg-slate-800 px-3 py-2 text-slate-600 dark:text-slate-300 inline-flex items-center gap-1.5">
-                                <PremiumIcon icon={ClipboardCheck} tone="sky" containerClassName="w-6 h-6 rounded-lg bg-sky-100 dark:bg-sky-900/40 text-sky-600 dark:text-sky-400" iconClassName="w-3.5 h-3.5" /> {agent.tasks} tasks
-                            </p>
-                            <p className="rounded-lg bg-slate-50 dark:bg-slate-800 px-3 py-2 text-slate-600 dark:text-slate-300 inline-flex items-center gap-1.5">
-                                <PremiumIcon icon={Shield} tone="emerald" containerClassName="w-6 h-6 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400" iconClassName="w-3.5 h-3.5" /> {agent.reliability}% reliability
-                            </p>
-                        </div>
-                        <div className="mt-4 flex gap-2">
-                            <Link href={`/dashboard/agents/${agent.slug}`} className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white dark:bg-slate-100 dark:text-slate-900">
-                                View details <PremiumIcon icon={ArrowRight} tone="slate" containerClassName="w-6 h-6 rounded-lg bg-white/15 text-white border-white/30 dark:bg-slate-900/10 dark:text-slate-900 dark:border-slate-900/20" iconClassName="w-3.5 h-3.5" />
-                            </Link>
-                            <Link href={`/dashboard/agents/${agent.slug}/approvals`} className="inline-flex items-center gap-1 rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
-                                <PremiumIcon icon={Timer} tone="slate" containerClassName="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400" iconClassName="w-3.5 h-3.5" /> Approvals
-                            </Link>
-                        </div>
-                    </article>
-                ))}
+                            {/* Name */}
+                            <h2 className="mt-3 text-base font-bold text-slate-900 dark:text-slate-100 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
+                                {agent.name}
+                            </h2>
+
+                            {/* Heatmap */}
+                            <div className="mt-4">
+                                <p className="text-[10px] text-slate-400 mb-2">Activity heatmap — last 4 weeks</p>
+                                <div className="grid grid-cols-7 gap-1">
+                                    {Array.from({ length: 28 }, (_, i) => (
+                                        <div
+                                            key={i}
+                                            className={`h-4 rounded ${heatCell(agent.heatSeed, i)} hover:opacity-70 transition-opacity cursor-default`}
+                                            title={`Day ${i + 1}`}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Stats */}
+                            <div className="mt-4 grid grid-cols-2 gap-2">
+                                <div className="rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700/50 px-3 py-2.5 flex items-center gap-2.5">
+                                    <div className="h-7 w-7 rounded-lg bg-sky-100 dark:bg-sky-900/40 flex items-center justify-center shrink-0">
+                                        <ClipboardCheck className="h-3.5 w-3.5 text-sky-600 dark:text-sky-400" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-none">{agent.tasks}</p>
+                                        <p className="text-[10px] text-slate-400 mt-0.5">tasks done</p>
+                                    </div>
+                                </div>
+                                <div className="rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700/50 px-3 py-2.5 flex items-center gap-2.5">
+                                    <div className="h-7 w-7 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center shrink-0">
+                                        <Shield className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-none">{agent.reliability}%</p>
+                                        <p className="text-[10px] text-slate-400 mt-0.5">reliability</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="mt-4 flex gap-2">
+                                <Link
+                                    href={`/dashboard/agents/${agent.slug}`}
+                                    className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 px-3 py-2.5 text-xs font-semibold text-white dark:bg-slate-100 dark:text-slate-900 hover:bg-slate-700 dark:hover:bg-white/90 transition-colors"
+                                >
+                                    View details
+                                    <ArrowRight className="h-3.5 w-3.5" />
+                                </Link>
+                                <Link
+                                    href={`/dashboard/agents/${agent.slug}/approvals`}
+                                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                                >
+                                    <Timer className="h-3.5 w-3.5" />
+                                    Approvals
+                                </Link>
+                            </div>
+                        </article>
+                    );
+                })}
             </div>
         </div>
     );
