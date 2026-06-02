@@ -279,18 +279,26 @@ export default function DashboardPage() {
                             </p>
                         </div>
                         <div className="p-5 overflow-y-auto max-h-[340px]">
-                            <div className="relative pl-7 space-y-0">
-                                <div className="absolute left-2.5 top-2 bottom-2 w-px bg-gradient-to-b from-slate-300 via-slate-200 to-transparent" />
+                            <div className="space-y-0">
                                 {timeline.map((item, i) => (
-                                    <div key={i} className="relative pb-5 last:pb-0 group">
-                                        <span className={`absolute -left-4.5 top-1 w-3 h-3 rounded-full ring-2 ring-white shadow-sm ${riskStyles[item.risk].dot}`} />
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <span className="text-[11px] font-mono text-slate-400 tabular-nums">{item.time}</span>
-                                            <span className={`text-[10px] font-bold rounded-full px-2 py-0.5 uppercase tracking-wide ${riskStyles[item.risk].badge}`}>
-                                                {item.risk}
-                                            </span>
+                                    <div key={i} className="flex items-start gap-3 pb-5 last:pb-0 group">
+                                        {/* Dot + connector line */}
+                                        <div className="flex flex-col items-center shrink-0 pt-0.5">
+                                            <span className={`w-2.5 h-2.5 rounded-full ring-2 ring-white shadow-sm shrink-0 ${riskStyles[item.risk].dot}`} />
+                                            {i < timeline.length - 1 && (
+                                                <div className="w-px flex-1 mt-1 bg-gradient-to-b from-slate-200 to-transparent" style={{ minHeight: "36px" }} />
+                                            )}
                                         </div>
-                                        <p className="text-xs text-slate-700 leading-snug">{item.event}</p>
+                                        {/* Content */}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <span className="text-[11px] font-mono font-semibold text-slate-500 tabular-nums">{item.time}</span>
+                                                <span className={`text-[10px] font-bold rounded-full px-2 py-0.5 uppercase tracking-wide ${riskStyles[item.risk].badge}`}>
+                                                    {item.risk}
+                                                </span>
+                                            </div>
+                                            <p className="text-xs text-slate-700 leading-snug">{item.event}</p>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
