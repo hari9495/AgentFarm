@@ -196,7 +196,7 @@ function SidebarContent({
     };
 
     return (
-        <aside className="flex flex-col w-64 h-full bg-white border-r border-slate-200">
+        <aside style={{ width: 260 }} className="flex flex-col h-full bg-white border-r border-slate-200 shrink-0">
 
             {/* CommandPalette listener — renders nothing visible */}
             <CommandPalette />
