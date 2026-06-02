@@ -1846,37 +1846,31 @@ export async function handleFsdAction(
         // ====================================================================
         // workspace_fsd_perf_profile
         // Live CPU hot-path detection via Chrome DevTools Protocol.
-        // Attaches a CDP Profiler session to a running page, samples for
-        // `duration_ms` milliseconds, and returns the top functions by
-        // self-time — exactly what the Chrome DevTools Performance tab shows.
-        // LLM pass adds root-cause and optimisation suggestion per hot function.
+        //
+        // Strategy (with automatic fallback):
+        //   Path A — chrome-devtools-mcp (preferred):
+        //     workspace_perf_trace_start → navigate → workspace_perf_trace_stop
+        //     → workspace_perf_trace_analyze  (CrUX data + built-in insights)
+        //   Path B — Playwright CDP script (fallback when MCP unavailable):
+        //     Writes + runs __fsd_perf_profile.cjs, parses V8 cpuprofile,
+        //     then applies LLM optimisation hints.
         //
         // payload:
         //   target_url    — URL of the running app to profile (required)
-        //   duration_ms?  — profiling window in ms (default: 5000)
+        //   duration_ms?  — profiling window in ms, Path B only (default: 5000)
         //   source_file?  — path to source file to include as LLM context
         //   source_code?  — raw source code string for LLM context
+        //   force_playwright? — set true to skip MCP and use Path B directly
         // ====================================================================
         case 'workspace_fsd_perf_profile': {
             const targetUrl  = str(payload['target_url']);
             const durationMs = typeof payload['duration_ms'] === 'number' ? payload['duration_ms'] : 5_000;
             const sourceFile = str(payload['source_file']);
             let   sourceCode = str(payload['source_code']);
+            const forcePw    = payload['force_playwright'] === true;
 
             if (!targetUrl) {
-                return {
-                    ok: false,
-                    output: '',
-                    errorOutput: 'workspace_fsd_perf_profile: target_url is required',
-                };
-            }
-
-            if (!runCommand) {
-                return {
-                    ok: false,
-                    output: '',
-                    errorOutput: 'workspace_fsd_perf_profile: runCommand callback not available',
-                };
+                return { ok: false, output: '', errorOutput: 'workspace_fsd_perf_profile: target_url is required' };
             }
 
             // Read source file for LLM context if not inlined
@@ -1885,48 +1879,64 @@ export async function handleFsdAction(
                 sourceCode = readResult.ok ? readResult.output : '';
             }
 
-            // 1. Write the Playwright profiling script to a temp file
+            // ── Path A: chrome-devtools-mcp performance trace ─────────────────
+            const mcpUrl = (process.env['MCP_CHROME_DEVTOOLS_URL'] ?? '').trim();
+            if (mcpUrl && !forcePw) {
+                try {
+                    await executeAction('workspace_perf_trace_start', {});
+                    await executeAction('workspace_web_navigate', { url: targetUrl });
+                    // Let the page run for the requested duration
+                    await new Promise<void>((resolve) => setTimeout(resolve, Math.min(durationMs, 15_000)));
+                    const stopResult  = await executeAction('workspace_perf_trace_stop', {});
+                    const insightResult = await executeAction('workspace_perf_trace_analyze', {});
+                    const output = [stopResult.output, insightResult.output].filter(Boolean).join('\n\n');
+                    return {
+                        ok: true,
+                        output: JSON.stringify({
+                            target_url: targetUrl,
+                            backend:    'chrome-devtools-mcp',
+                            trace_stop: stopResult.output,
+                            insights:   insightResult.output,
+                            summary:    output.slice(0, 500),
+                        }, null, 2),
+                        errorOutput: '',
+                    };
+                } catch (mcpErr) {
+                    console.warn(`[fsd-perf-profile] MCP trace failed (${mcpErr}), falling back to Playwright CDP.`);
+                    // fall through to Path B
+                }
+            }
+
+            // ── Path B: Playwright CDP script ────────────────────────────────
+            if (!runCommand) {
+                return { ok: false, output: '', errorOutput: 'workspace_fsd_perf_profile: runCommand callback not available and MCP is unreachable' };
+            }
+
             const script     = buildPlaywrightProfilingScript(targetUrl, durationMs);
             const scriptPath = '__fsd_perf_profile.cjs';
-            await executeAction('workspace_write_file', {
-                file_path: scriptPath,
-                content:   script,
-            });
+            await executeAction('workspace_write_file', { file_path: scriptPath, content: script });
 
-            // 2. Run the script — total timeout is profiling window + 40s headroom
-            let report = parseCpuProfile('', targetUrl);   // safe default
+            let report = parseCpuProfile('', targetUrl);
             try {
-                const runResult = await runCommand(
-                    ['node', scriptPath],
-                    workspaceDir,
-                    durationMs + 40_000,
-                );
+                const runResult = await runCommand(['node', scriptPath], workspaceDir, durationMs + 40_000);
                 report = parseCpuProfile(runResult.stdout + '\n' + runResult.stderr, targetUrl);
             } catch (runErr) {
                 const msg = runErr instanceof Error ? runErr.message : String(runErr);
                 report = {
-                    targetUrl,
-                    totalSamples: 0,
-                    durationMs,
-                    hotFunctions: [],
-                    score:        0,
-                    summary:      `Profiling failed — Playwright not available or script error: ${msg}. Run: npm install playwright`,
+                    targetUrl, totalSamples: 0, durationMs, hotFunctions: [], score: 0,
+                    summary: `Profiling failed — Playwright not available or script error: ${msg}. Run: npm install playwright`,
                 };
             }
 
-            // 3. LLM pass — root-cause + optimisation per hot function
             if (callLlm && report.hotFunctions.length > 0) {
                 const optPrompt = buildPerfOptimizationPrompt(report, sourceCode || undefined);
-                const llmRaw    = await callLlmSafe(
-                    callLlm,
-                    optPrompt,
-                    'You are a senior performance engineer. Be specific and actionable.',
-                );
+                const llmRaw    = await callLlmSafe(callLlm, optPrompt, 'You are a senior performance engineer. Be specific and actionable.');
                 report = { ...report, hotFunctions: applyPerfSuggestions(llmRaw, report.hotFunctions) };
             }
 
             return safeJson({
                 target_url:    targetUrl,
+                backend:       'playwright-cdp',
                 score:         report.score,
                 total_samples: report.totalSamples,
                 duration_ms:   report.durationMs,

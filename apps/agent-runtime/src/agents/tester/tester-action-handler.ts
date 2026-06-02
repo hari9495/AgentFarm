@@ -39,7 +39,13 @@ export type TesterActionType =
     | 'workspace_lighthouse_audit'
     | 'workspace_console_logs'
     | 'workspace_network_requests'
-    | 'workspace_heap_snapshot';
+    | 'workspace_heap_snapshot'
+    // #7 — single network request detail
+    | 'workspace_network_request_detail'
+    // #9 — Chrome extension management
+    | 'workspace_extension_list'
+    | 'workspace_extension_install'
+    | 'workspace_extension_trigger';
 
 export function isTesterActionType(t: string): t is TesterActionType {
     return (
@@ -51,7 +57,11 @@ export function isTesterActionType(t: string): t is TesterActionType {
         t === 'workspace_lighthouse_audit' ||
         t === 'workspace_console_logs' ||
         t === 'workspace_network_requests' ||
-        t === 'workspace_heap_snapshot'
+        t === 'workspace_heap_snapshot' ||
+        t === 'workspace_network_request_detail' ||
+        t === 'workspace_extension_list' ||
+        t === 'workspace_extension_install' ||
+        t === 'workspace_extension_trigger'
     );
 }
 
@@ -522,6 +532,111 @@ export async function handleTesterAction(params: {
                 return { ok: true, output: extractMcpText(raw), errorOutput: '' };
             } catch (err) {
                 return { ok: false, output: '', errorOutput: `heap_snapshot failed: ${String(err)}` };
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_network_request_detail  (#7)
+        // Fetch full detail (headers, body, timing) for a single captured
+        // network request by URL or index.
+        // payload: { url?: string; index?: number }
+        // ------------------------------------------------------------------
+        case 'workspace_network_request_detail': {
+            const cdpClient = await resolveCdpClient(tenantId, workspaceId);
+            if (!cdpClient) {
+                return {
+                    ok: false, output: '',
+                    errorOutput: 'workspace_network_request_detail: chrome-devtools-mcp is not reachable.',
+                };
+            }
+            try {
+                const reqUrl = typeof payload['url'] === 'string' ? payload['url'].trim() : undefined;
+                const reqIndex = typeof payload['index'] === 'number' ? payload['index'] : undefined;
+                const args: Record<string, unknown> = {};
+                if (reqUrl !== undefined) args['url'] = reqUrl;
+                if (reqIndex !== undefined) args['index'] = reqIndex;
+                const raw = await cdpClient.callTool('get_network_request', args);
+                return { ok: true, output: extractMcpText(raw), errorOutput: '' };
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: `network_request_detail failed: ${String(err)}` };
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_extension_list  (#9)
+        // List all installed Chrome extensions.
+        // payload: {}
+        // ------------------------------------------------------------------
+        case 'workspace_extension_list': {
+            const cdpClient = await resolveCdpClient(tenantId, workspaceId);
+            if (!cdpClient) {
+                return {
+                    ok: false, output: '',
+                    errorOutput: 'workspace_extension_list: chrome-devtools-mcp is not reachable.',
+                };
+            }
+            try {
+                const raw = await cdpClient.callTool('list_extensions', {});
+                return { ok: true, output: extractMcpText(raw), errorOutput: '' };
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: `extension_list failed: ${String(err)}` };
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_extension_install  (#9)
+        // Install a Chrome extension by ID or path.
+        // payload: { extension_id?: string; path?: string }
+        // ------------------------------------------------------------------
+        case 'workspace_extension_install': {
+            const cdpClient = await resolveCdpClient(tenantId, workspaceId);
+            if (!cdpClient) {
+                return {
+                    ok: false, output: '',
+                    errorOutput: 'workspace_extension_install: chrome-devtools-mcp is not reachable.',
+                };
+            }
+            try {
+                const extId = typeof payload['extension_id'] === 'string' ? payload['extension_id'].trim() : undefined;
+                const extPath = typeof payload['path'] === 'string' ? payload['path'].trim() : undefined;
+                if (!extId && !extPath) {
+                    return { ok: false, output: '', errorOutput: 'workspace_extension_install: extension_id or path is required' };
+                }
+                const args: Record<string, unknown> = {};
+                if (extId) args['extensionId'] = extId;
+                if (extPath) args['path'] = extPath;
+                const raw = await cdpClient.callTool('install_extension', args);
+                return { ok: true, output: extractMcpText(raw), errorOutput: '' };
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: `extension_install failed: ${String(err)}` };
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_extension_trigger  (#9)
+        // Trigger an action in an installed extension.
+        // payload: { extension_id: string; action?: string }
+        // ------------------------------------------------------------------
+        case 'workspace_extension_trigger': {
+            const cdpClient = await resolveCdpClient(tenantId, workspaceId);
+            if (!cdpClient) {
+                return {
+                    ok: false, output: '',
+                    errorOutput: 'workspace_extension_trigger: chrome-devtools-mcp is not reachable.',
+                };
+            }
+            try {
+                const extId = typeof payload['extension_id'] === 'string' ? payload['extension_id'].trim() : '';
+                if (!extId) {
+                    return { ok: false, output: '', errorOutput: 'workspace_extension_trigger: extension_id is required' };
+                }
+                const action = typeof payload['action'] === 'string' ? payload['action'].trim() : undefined;
+                const args: Record<string, unknown> = { extensionId: extId };
+                if (action) args['action'] = action;
+                const raw = await cdpClient.callTool('trigger_extension_action', args);
+                return { ok: true, output: extractMcpText(raw), errorOutput: '' };
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: `extension_trigger failed: ${String(err)}` };
             }
         }
 

@@ -204,6 +204,30 @@ export type LocalWorkspaceActionType =
     | 'workspace_console_logs'
     | 'workspace_network_requests'
     | 'workspace_heap_snapshot'
+    // Tier 17c (BrowserActionRouter — new action types, all 9 items)
+    | 'workspace_dom_snapshot'           // #1 accessibility tree
+    | 'workspace_web_wait'               // #2 wait for condition
+    | 'workspace_web_hover'              // #3 hover
+    | 'workspace_web_drag'              // #3 drag
+    | 'workspace_web_type'              // #3 type text into focused element
+    | 'workspace_web_press_key'         // #3 press keyboard key
+    | 'workspace_web_upload_file'       // #3 file upload
+    | 'workspace_web_handle_dialog'     // #3 accept/dismiss dialog
+    | 'workspace_perf_trace_start'      // #4 start performance trace
+    | 'workspace_perf_trace_stop'       // #4 stop performance trace
+    | 'workspace_perf_trace_analyze'    // #4 analyze trace insights
+    | 'workspace_web_emulate'           // #5 device emulation
+    | 'workspace_web_resize'            // #5 viewport resize
+    | 'workspace_tab_new'               // #6 open new tab
+    | 'workspace_tab_close'             // #6 close current tab
+    | 'workspace_tab_list'              // #6 list open tabs
+    | 'workspace_tab_select'            // #6 select tab by page_id
+    | 'workspace_network_request_detail'// #7 single request detail
+    | 'workspace_screencast_start'      // #8 start screencast
+    | 'workspace_screencast_stop'       // #8 stop screencast
+    | 'workspace_extension_list'        // #9 list extensions
+    | 'workspace_extension_install'     // #9 install extension
+    | 'workspace_extension_trigger'     // #9 trigger extension action
     // Tier 20: Testing tool integrations
     | 'workspace_selenium_test_run'
     | 'workspace_cypress_test_run'
@@ -1036,11 +1060,35 @@ export const LOCAL_WORKSPACE_ACTION_TYPES = new Set<LocalWorkspaceActionType>([
     'workspace_web_fill_form',
     'workspace_web_click',
     'workspace_web_extract_data',
-    // Tier 17b — Chrome DevTools MCP
+    // Tier 17b — Chrome DevTools MCP (tester handler)
     'workspace_lighthouse_audit',
     'workspace_console_logs',
     'workspace_network_requests',
     'workspace_heap_snapshot',
+    // Tier 17c — BrowserActionRouter new action types
+    'workspace_dom_snapshot',
+    'workspace_web_wait',
+    'workspace_web_hover',
+    'workspace_web_drag',
+    'workspace_web_type',
+    'workspace_web_press_key',
+    'workspace_web_upload_file',
+    'workspace_web_handle_dialog',
+    'workspace_perf_trace_start',
+    'workspace_perf_trace_stop',
+    'workspace_perf_trace_analyze',
+    'workspace_web_emulate',
+    'workspace_web_resize',
+    'workspace_tab_new',
+    'workspace_tab_close',
+    'workspace_tab_list',
+    'workspace_tab_select',
+    'workspace_network_request_detail',
+    'workspace_screencast_start',
+    'workspace_screencast_stop',
+    'workspace_extension_list',
+    'workspace_extension_install',
+    'workspace_extension_trigger',
     // Tier 20
     'workspace_selenium_test_run',
     'workspace_cypress_test_run',
@@ -11352,6 +11400,138 @@ export async function executeLocalWorkspaceAction(input: {
             return { ok: result.ok, output: result.output, errorOutput: result.reason };
         }
 
+        // ====================================================================
+        // TIER 17c: BrowserActionRouter — new CDP action types (items #1–#6, #8)
+        // ====================================================================
+
+        // #1 — accessibility tree snapshot
+        case 'workspace_dom_snapshot': {
+            const router = await buildWebRouter(input.tenantId, input.botId);
+            const result = await router.execute({ action: 'snapshot' });
+            return { ok: result.ok, output: result.output, errorOutput: result.reason };
+        }
+
+        // #2 — wait for page condition
+        case 'workspace_web_wait': {
+            const p = input.payload as { condition?: string; value?: string; timeout_ms?: number };
+            const router = await buildWebRouter(input.tenantId, input.botId);
+            const result = await router.execute({
+                action: 'wait',
+                condition: (['selector', 'network_idle', 'load', 'text'].includes(p.condition ?? '')
+                    ? p.condition as 'selector' | 'network_idle' | 'load' | 'text'
+                    : 'load'),
+                value: p.value,
+                timeout_ms: p.timeout_ms,
+            });
+            return { ok: result.ok, output: result.output, errorOutput: result.reason };
+        }
+
+        // #3 — fine-grained input
+        case 'workspace_web_hover': {
+            const p = input.payload as { target?: string; uid?: string; url?: string };
+            const router = await buildWebRouter(input.tenantId, input.botId);
+            const result = await router.execute({ action: 'hover', target: p.target, uid: p.uid, url: p.url });
+            return { ok: result.ok, output: result.output, errorOutput: result.reason };
+        }
+        case 'workspace_web_drag': {
+            const p = input.payload as { source_uid: string; target_uid: string };
+            const router = await buildWebRouter(input.tenantId, input.botId);
+            const result = await router.execute({ action: 'drag', source_uid: p.source_uid, target_uid: p.target_uid });
+            return { ok: result.ok, output: result.output, errorOutput: result.reason };
+        }
+        case 'workspace_web_type': {
+            const p = input.payload as { text: string };
+            const router = await buildWebRouter(input.tenantId, input.botId);
+            const result = await router.execute({ action: 'type', text: p.text });
+            return { ok: result.ok, output: result.output, errorOutput: result.reason };
+        }
+        case 'workspace_web_press_key': {
+            const p = input.payload as { key: string };
+            const router = await buildWebRouter(input.tenantId, input.botId);
+            const result = await router.execute({ action: 'press_key', key: p.key });
+            return { ok: result.ok, output: result.output, errorOutput: result.reason };
+        }
+        case 'workspace_web_upload_file': {
+            const p = input.payload as { uid?: string; selector?: string; file_path: string };
+            const router = await buildWebRouter(input.tenantId, input.botId);
+            const result = await router.execute({ action: 'upload_file', uid: p.uid, selector: p.selector, file_path: p.file_path });
+            return { ok: result.ok, output: result.output, errorOutput: result.reason };
+        }
+        case 'workspace_web_handle_dialog': {
+            const p = input.payload as { accept?: boolean; prompt_text?: string };
+            const router = await buildWebRouter(input.tenantId, input.botId);
+            const result = await router.execute({ action: 'handle_dialog', accept: p.accept ?? true, prompt_text: p.prompt_text });
+            return { ok: result.ok, output: result.output, errorOutput: result.reason };
+        }
+
+        // #4 — performance traces
+        case 'workspace_perf_trace_start': {
+            const router = await buildWebRouter(input.tenantId, input.botId);
+            const result = await router.execute({ action: 'perf_trace_start' });
+            return { ok: result.ok, output: result.output, errorOutput: result.reason };
+        }
+        case 'workspace_perf_trace_stop': {
+            const router = await buildWebRouter(input.tenantId, input.botId);
+            const result = await router.execute({ action: 'perf_trace_stop' });
+            return { ok: result.ok, output: result.output, errorOutput: result.reason };
+        }
+        case 'workspace_perf_trace_analyze': {
+            const router = await buildWebRouter(input.tenantId, input.botId);
+            const result = await router.execute({ action: 'perf_trace_analyze' });
+            return { ok: result.ok, output: result.output, errorOutput: result.reason };
+        }
+
+        // #5 — device emulation
+        case 'workspace_web_emulate': {
+            const p = input.payload as { device?: string; width?: number; height?: number; mobile?: boolean; user_agent?: string };
+            const router = await buildWebRouter(input.tenantId, input.botId);
+            const result = await router.execute({ action: 'emulate', device: p.device, width: p.width, height: p.height, mobile: p.mobile, user_agent: p.user_agent });
+            return { ok: result.ok, output: result.output, errorOutput: result.reason };
+        }
+        case 'workspace_web_resize': {
+            const p = input.payload as { width: number; height: number };
+            const router = await buildWebRouter(input.tenantId, input.botId);
+            const result = await router.execute({ action: 'resize', width: p.width, height: p.height });
+            return { ok: result.ok, output: result.output, errorOutput: result.reason };
+        }
+
+        // #6 — multi-tab management
+        case 'workspace_tab_new': {
+            const p = input.payload as { url?: string };
+            const router = await buildWebRouter(input.tenantId, input.botId);
+            const result = await router.execute({ action: 'tab_new', url: p.url });
+            return { ok: result.ok, output: result.output, errorOutput: result.reason };
+        }
+        case 'workspace_tab_close': {
+            const router = await buildWebRouter(input.tenantId, input.botId);
+            const result = await router.execute({ action: 'tab_close' });
+            return { ok: result.ok, output: result.output, errorOutput: result.reason };
+        }
+        case 'workspace_tab_list': {
+            const router = await buildWebRouter(input.tenantId, input.botId);
+            const result = await router.execute({ action: 'tab_list' });
+            return { ok: result.ok, output: result.output, errorOutput: result.reason };
+        }
+        case 'workspace_tab_select': {
+            const p = input.payload as { page_id: string };
+            const router = await buildWebRouter(input.tenantId, input.botId);
+            const result = await router.execute({ action: 'tab_select', page_id: p.page_id });
+            return { ok: result.ok, output: result.output, errorOutput: result.reason };
+        }
+
+        // #8 — screencast
+        case 'workspace_screencast_start': {
+            const p = input.payload as { output_path?: string };
+            const router = await buildWebRouter(input.tenantId, input.botId);
+            const result = await router.execute({ action: 'screencast_start', output_path: p.output_path });
+            return { ok: result.ok, output: result.output, errorOutput: result.reason };
+        }
+        case 'workspace_screencast_stop': {
+            const router = await buildWebRouter(input.tenantId, input.botId);
+            const result = await router.execute({ action: 'screencast_stop' });
+            return { ok: result.ok, output: result.output, errorOutput: result.reason };
+        }
+
         // ------------------------------------------------------------------
         // mcp_tool_call: invoke a tool on a registered MCP server
         // payload: { mcpServerUrl, mcpHeaders?, toolName, toolArgs? }
@@ -13895,7 +14075,13 @@ export async function executeLocalWorkspaceAction(input: {
         case 'workspace_lighthouse_audit':
         case 'workspace_console_logs':
         case 'workspace_network_requests':
-        case 'workspace_heap_snapshot': {
+        case 'workspace_heap_snapshot':
+        // #7 — single request detail
+        case 'workspace_network_request_detail':
+        // #9 — extension management
+        case 'workspace_extension_list':
+        case 'workspace_extension_install':
+        case 'workspace_extension_trigger': {
             return handleTesterAction({
                 actionType,
                 tenantId,
