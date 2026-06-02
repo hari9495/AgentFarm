@@ -1,251 +1,368 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import {
-    Bot,
     Activity,
+    ArrowUpRight,
+    BarChart3,
+    Bell,
+    Bot,
     ClipboardCheck,
+    Cpu,
+    FileArchive,
+    Layers,
     LayoutDashboard,
-    Settings,
     Link2,
+    LogOut,
+    Menu,
+    Moon,
+    Rocket,
+    Search,
+    Settings,
     Shield,
     ShieldCheck,
-    Users,
-    CreditCard,
-    ClipboardList,
-    Menu,
-    ArrowLeft,
-    LogOut,
-    X,
+    Sun,
     Radio,
-    Rocket,
-    FileArchive,
-    Bell,
-    BarChart3,
-    Search,
-    Layers,
-    Cpu,
     ArrowDownToLine,
+    X,
+    ChevronRight,
     type LucideIcon,
 } from "lucide-react";
-import PremiumIcon from "@/components/shared/PremiumIcon";
-import ThemeToggle from "@/components/shared/ThemeToggle";
+import { useTheme } from "@/components/shared/ThemeProvider";
 import CommandPalette from "@/components/shared/CommandPalette";
 
-const dashboardNav = [
-    { href: "/dashboard", label: "Overview", icon: LayoutDashboard, exact: true },
-    { href: "/dashboard/agents", label: "Agents", icon: Bot },
-    { href: "/dashboard/deployments", label: "Deployments", icon: Rocket },
-    { href: "/dashboard/bots", label: "Bot Status", icon: Radio },
-    { href: "/dashboard/approvals", label: "Approvals", icon: ClipboardCheck, badgeCount: 3 },
-    { href: "/dashboard/evidence", label: "Evidence", icon: FileArchive },
-    { href: "/dashboard/governance", label: "Governance", icon: ShieldCheck },
-    { href: "/dashboard/integrations", label: "Integrations",  icon: Link2            },
-    { href: "/dashboard/webhooks",    label: "Webhooks",      icon: ArrowDownToLine  },
-    { href: "/dashboard/mcp",         label: "MCP Servers",   icon: Cpu              },
-    { href: "/dashboard/adapters",    label: "Custom APIs",   icon: Layers           },
-    { href: "/dashboard/activity", label: "Activity", icon: Activity },
-    { href: "/dashboard/reports", label: "Reports", icon: BarChart3 },
-    { href: "/dashboard/notifications", label: "Notifications", icon: Bell, badgeCount: 3 },
-    { href: "/dashboard/settings", label: "Settings", icon: Settings },
-];
+// ── Nav structure ─────────────────────────────────────────────────────────────
 
-const adminNav = [
-    { href: "/admin", label: "Console", icon: Shield, exact: true },
-    { href: "/admin/users", label: "Team & Access", icon: Users },
-    { href: "/admin/bots", label: "Bot Control", icon: Bot },
-    { href: "/admin/superadmin", label: "Tenant Superadmin", icon: ShieldCheck, superAdminOnly: true },
-    { href: "/admin/roles", label: "Roles & Permissions", icon: ShieldCheck },
-    { href: "/admin/security", label: "Security", icon: Shield },
-    { href: "/admin/integrations", label: "Integrations", icon: Link2 },
-    { href: "/admin/billing", label: "Billing", icon: CreditCard },
-    { href: "/admin/audit", label: "Audit Log", icon: ClipboardList },
-];
-
-type SidebarSection = "dashboard" | "admin";
-type SidebarUserRole = "superadmin" | "admin" | "member";
-
-function NavItem({
-    href,
-    label,
-    icon: Icon,
-    exact,
-    onClick,
-    badgeCount,
-}: {
+type NavItem = {
     href: string;
     label: string;
     icon: LucideIcon;
     exact?: boolean;
+    badge?: "approvals" | "notifications";
+};
+
+type NavGroup = {
+    label: string;
+    items: NavItem[];
+};
+
+const dashboardGroups: NavGroup[] = [
+    {
+        label: "Main",
+        items: [
+            { href: "/dashboard",              label: "Overview",      icon: LayoutDashboard, exact: true },
+            { href: "/dashboard/agents",       label: "Agents",        icon: Bot },
+            { href: "/dashboard/approvals",    label: "Approvals",     icon: ClipboardCheck, badge: "approvals" },
+        ],
+    },
+    {
+        label: "Operations",
+        items: [
+            { href: "/dashboard/deployments",  label: "Deployments",   icon: Rocket },
+            { href: "/dashboard/bots",         label: "Bot Status",    icon: Radio },
+            { href: "/dashboard/activity",     label: "Activity",      icon: Activity },
+            { href: "/dashboard/evidence",     label: "Evidence",      icon: FileArchive },
+            { href: "/dashboard/reports",      label: "Reports",       icon: BarChart3 },
+        ],
+    },
+    {
+        label: "Configure",
+        items: [
+            { href: "/dashboard/integrations", label: "Integrations",  icon: Link2 },
+            { href: "/dashboard/webhooks",     label: "Webhooks",      icon: ArrowDownToLine },
+            { href: "/dashboard/mcp",          label: "MCP Servers",   icon: Cpu },
+            { href: "/dashboard/adapters",     label: "Custom APIs",   icon: Layers },
+            { href: "/dashboard/governance",   label: "Governance",    icon: ShieldCheck },
+        ],
+    },
+    {
+        label: "Account",
+        items: [
+            { href: "/dashboard/notifications", label: "Notifications", icon: Bell, badge: "notifications" },
+            { href: "/dashboard/settings",      label: "Settings",      icon: Settings },
+        ],
+    },
+];
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+type BadgeCounts  = { approvals: number; notifications: number };
+type SidebarUserRole = "superadmin" | "admin" | "member";
+
+// ── Single nav item ────────────────────────────────────────────────────────────
+
+function NavLink({
+    item,
+    badges,
+    onClick,
+}: {
+    item: NavItem;
+    badges: BadgeCounts;
     onClick?: () => void;
-    badgeCount?: number;
 }) {
     const pathname = usePathname();
-    const active = exact
-        ? pathname === href
-        : pathname === href || pathname.startsWith(href + "/");
+    const active = item.exact
+        ? pathname === item.href
+        : pathname === item.href || pathname.startsWith(item.href + "/");
+
+    const Icon  = item.icon;
+    const count = item.badge ? badges[item.badge] : 0;
 
     return (
         <Link
-            href={href}
+            href={item.href}
             onClick={onClick}
-            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${active
-                ? "bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300 font-semibold"
-                : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100"
-                }`}
+            className={`
+                group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm
+                font-medium transition-all duration-150 select-none
+                ${active
+                    ? "bg-sky-500/15 text-white shadow-sm"
+                    : "text-slate-400 hover:bg-white/[0.05] hover:text-slate-100"
+                }
+            `}
         >
-            <PremiumIcon icon={Icon} tone={active ? "sky" : "slate"} containerClassName="h-7 w-7 rounded-lg shrink-0" iconClassName="w-3.5 h-3.5" />
-            <span className="flex-1">{label}</span>
-            {badgeCount && badgeCount > 0 ? (
-                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-rose-500 text-white text-[9px] font-bold shrink-0">
-                    {badgeCount}
+            {/* Left accent bar */}
+            {active && (
+                <span className="absolute left-0 inset-y-[6px] w-[3px] rounded-r-full bg-sky-400 shadow-[0_0_8px_rgba(56,189,248,0.6)]" />
+            )}
+
+            {/* Icon container */}
+            <span className={`
+                flex items-center justify-center w-8 h-8 rounded-lg shrink-0 transition-all duration-150
+                ${active
+                    ? "bg-sky-500/20 text-sky-300"
+                    : "text-slate-500 group-hover:text-slate-300 group-hover:bg-white/[0.06]"
+                }
+            `}>
+                <Icon className="w-[17px] h-[17px]" />
+            </span>
+
+            <span className="flex-1 truncate tracking-[-0.01em]">{item.label}</span>
+
+            {count > 0 && (
+                <span className="inline-flex items-center justify-center min-w-[20px] h-5 rounded-full bg-rose-500 text-white text-[10px] font-bold px-1.5 shrink-0 shadow-sm shadow-rose-500/40">
+                    {count > 99 ? "99+" : count}
                 </span>
-            ) : null}
+            )}
+
+            {!active && !count && (
+                <ChevronRight className="w-3 h-3 text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+            )}
         </Link>
     );
 }
 
+// ── Sidebar content ────────────────────────────────────────────────────────────
+
 function SidebarContent({
-    section,
     userName,
     userRole,
     showCompanyPortal,
+    badges,
     onClose,
 }: {
-    section: SidebarSection;
     userName: string;
     userRole: SidebarUserRole;
     showCompanyPortal?: boolean;
+    badges: BadgeCounts;
     onClose?: () => void;
 }) {
-    const currentNav = (section === "admin" ? adminNav : dashboardNav).filter((item) => {
-        if ("superAdminOnly" in item && item.superAdminOnly) {
-            return userRole === "superadmin";
-        }
-        return true;
-    });
-    const navLabel = section === "admin" ? "Admin" : "Dashboard";
-    const switchHref = section === "admin" ? "/dashboard" : "/admin";
-    const switchLabel = section === "admin" ? "Switch to dashboard" : "Switch to admin";
+    const router = useRouter();
+    const { theme, toggle } = useTheme();
+
     const initials = userName
         .trim()
         .split(/\s+/)
         .slice(0, 2)
-        .map((part) => part[0]?.toUpperCase() ?? "")
+        .map((p) => p[0]?.toUpperCase() ?? "")
         .join("") || "U";
 
+    const roleLabel =
+        userRole === "superadmin" ? "Super Admin"
+        : userRole === "admin"    ? "Org Admin"
+        : "Member";
+
+    const handleLogout = async () => {
+        await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+        router.push("/login");
+    };
+
+    const openSearch = () => {
+        window.dispatchEvent(
+            new KeyboardEvent("keydown", { key: "k", ctrlKey: true, bubbles: true }),
+        );
+    };
+
     return (
-        <aside className="flex flex-col w-60 h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
-            {/* Logo */}
+        <aside className="flex flex-col w-64 h-full bg-[#0d1117] border-r border-white/[0.07]">
+
+            {/* CommandPalette listener — renders nothing visible */}
             <CommandPalette />
-            <div className="flex items-center gap-2 px-4 h-14 border-b border-slate-200 dark:border-slate-800 shrink-0">
+
+            {/* ── Logo row ─────────────────────────────────────────────── */}
+            <div className="flex items-center gap-3 px-4 py-5 border-b border-white/[0.07] shrink-0">
                 <Link
                     href="/"
-                    className="flex items-center gap-2 font-bold text-slate-900 dark:text-slate-100"
                     onClick={onClose}
+                    className="flex items-center gap-3 group flex-1 min-w-0"
                 >
-                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-sky-500 via-blue-600 to-emerald-500 shadow-sm">
-                        <Bot className="w-3.5 h-3.5 text-white" />
+                    <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 via-blue-600 to-emerald-500 shadow-lg shadow-sky-500/25">
+                        <Bot className="w-4 h-4 text-white" />
                     </span>
-                    <span className="text-sm tracking-tight">AgentFarms</span>
+                    <div className="min-w-0">
+                        <span className="block text-[15px] font-bold text-white tracking-tight group-hover:text-sky-300 transition-colors truncate leading-tight">
+                            AgentFarms
+                        </span>
+                        <span className="block text-[10px] text-slate-500 uppercase tracking-widest font-semibold leading-tight mt-0.5">
+                            Dashboard
+                        </span>
+                    </div>
                 </Link>
                 {onClose && (
                     <button
                         onClick={onClose}
-                        className="ml-auto p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 md:hidden"
+                        className="shrink-0 p-1.5 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-white/8 transition-colors md:hidden"
                     >
                         <X className="w-4 h-4" />
                     </button>
                 )}
             </div>
 
-            {/* Nav */}
-            <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-5">
-                {/* D2: ⌘K command palette trigger */}
+            {/* ── Search bar ───────────────────────────────────────────── */}
+            <div className="px-3 pt-4 pb-2">
                 <button
-                    onClick={() => {
-                        const evt = new KeyboardEvent("keydown", { key: "k", ctrlKey: true, bubbles: true });
-                        window.dispatchEvent(evt);
-                    }}
-                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-xs text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                    onClick={openSearch}
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-[13px] text-slate-500 hover:bg-white/[0.07] hover:text-slate-300 hover:border-white/[0.12] transition-all group"
                 >
-                    <Search className="w-3.5 h-3.5 shrink-0" />
-                    <span className="flex-1 text-left">Search pages…</span>
-                    <kbd className="inline-flex items-center gap-0.5 text-[9px] font-mono text-slate-400 dark:text-slate-500">⌘K</kbd>
+                    <Search className="w-4 h-4 shrink-0 group-hover:text-slate-300 transition-colors" />
+                    <span className="flex-1 text-left">Search…</span>
+                    <kbd className="text-[10px] font-mono bg-white/[0.06] text-slate-600 px-1.5 py-0.5 rounded-md border border-white/[0.06]">⌘K</kbd>
                 </button>
-                <div>
-                    <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                        {navLabel}
-                    </p>
-                    <div className="space-y-0.5">
-                        {currentNav.map((item) => (
-                            <NavItem key={item.href} {...item} onClick={onClose} />
-                        ))}
+            </div>
+
+            {/* ── Nav groups ───────────────────────────────────────────── */}
+            <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-5 scrollbar-none">
+                {dashboardGroups.map((group) => (
+                    <div key={group.label}>
+                        {/* Section header */}
+                        <div className="flex items-center gap-2 px-3 mb-2">
+                            <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-600">
+                                {group.label}
+                            </p>
+                            <div className="flex-1 h-px bg-white/[0.05]" />
+                        </div>
+                        <div className="space-y-0.5">
+                            {group.items.map((item) => (
+                                <NavLink
+                                    key={item.href}
+                                    item={item}
+                                    badges={badges}
+                                    onClick={onClose}
+                                />
+                            ))}
+                        </div>
                     </div>
-                </div>
+                ))}
+
+                {/* Internal links (admin / company portal) */}
+                {(userRole !== "member" || showCompanyPortal) && (
+                    <div>
+                        <div className="flex items-center gap-2 px-3 mb-2">
+                            <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-600">
+                                Internal
+                            </p>
+                            <div className="flex-1 h-px bg-white/[0.05]" />
+                        </div>
+                        <div className="space-y-0.5">
+                            {userRole !== "member" && (
+                                <Link
+                                    href="/admin"
+                                    onClick={onClose}
+                                    className="group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-400 hover:bg-white/[0.05] hover:text-slate-100 transition-all"
+                                >
+                                    <span className="flex items-center justify-center w-8 h-8 rounded-lg text-slate-500 group-hover:text-slate-300 group-hover:bg-white/[0.06] transition-all">
+                                        <Shield className="w-[17px] h-[17px]" />
+                                    </span>
+                                    <span className="flex-1 truncate tracking-[-0.01em]">Admin Console</span>
+                                    <ArrowUpRight className="w-3.5 h-3.5 text-slate-600 shrink-0" />
+                                </Link>
+                            )}
+                            {showCompanyPortal && (
+                                <Link
+                                    href="/company"
+                                    onClick={onClose}
+                                    className="group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-fuchsia-400/80 hover:bg-fuchsia-500/10 hover:text-fuchsia-300 transition-all"
+                                >
+                                    <span className="flex items-center justify-center w-8 h-8 rounded-lg group-hover:bg-fuchsia-500/10 transition-all">
+                                        <ShieldCheck className="w-[17px] h-[17px]" />
+                                    </span>
+                                    <span className="flex-1 truncate tracking-[-0.01em]">Company Portal</span>
+                                    <ArrowUpRight className="w-3.5 h-3.5 shrink-0" />
+                                </Link>
+                            )}
+                        </div>
+                    </div>
+                )}
             </nav>
 
-            {/* Footer */}
-            <div className="border-t border-slate-200 dark:border-slate-800 px-3 py-3 space-y-0.5 shrink-0">
-                <div className="flex items-center px-2 py-1">
-                    <ThemeToggle />
-                    <span className="text-xs text-slate-400 dark:text-slate-500 ml-1">Theme</span>
-                </div>
-                <Link
-                    href="/"
-                    onClick={onClose}
-                    className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
-                >
-                    <ArrowLeft className="w-4 h-4 shrink-0" />
-                    <span>Back to site</span>
-                </Link>
-                {userRole !== "member" ? (
-                    <Link
-                        href={switchHref}
-                        onClick={onClose}
-                        className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
-                    >
-                        <Shield className="w-4 h-4 shrink-0" />
-                        <span>{switchLabel}</span>
-                    </Link>
-                ) : null}
-                {showCompanyPortal ? (
-                    <Link
-                        href="/company"
-                        onClick={onClose}
-                        className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-fuchsia-600 dark:text-fuchsia-300 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-900/20 transition-colors"
-                    >
-                        <ShieldCheck className="w-4 h-4 shrink-0" />
-                        <span>Company Portal</span>
-                    </Link>
-                ) : null}
-                <div className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm">
-                    <div className="h-7 w-7 rounded-full bg-sky-100 dark:bg-sky-900/50 flex items-center justify-center text-[10px] font-bold text-sky-700 dark:text-sky-300 shrink-0">
+            {/* ── Footer ───────────────────────────────────────────────── */}
+            <div className="border-t border-white/[0.07] p-3 space-y-1 shrink-0">
+
+                {/* User identity row */}
+                <div className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-white/[0.04] transition-colors cursor-default">
+                    <div className="h-8 w-8 rounded-full bg-gradient-to-br from-sky-500 to-emerald-500 flex items-center justify-center text-[12px] font-bold text-white shrink-0 shadow-md shadow-sky-500/25 ring-2 ring-white/10">
                         {initials}
                     </div>
                     <div className="flex-1 min-w-0">
-                        <p className="text-slate-700 dark:text-slate-300 font-medium truncate text-xs">{userName}</p>
-                        <p className="text-slate-400 dark:text-slate-500 truncate text-[10px]">{userRole === "superadmin" ? "Super Admin" : userRole === "admin" ? "Org Admin" : "Member"}</p>
+                        <p className="text-[13px] font-semibold text-slate-200 truncate leading-snug">
+                            {userName}
+                        </p>
+                        <p className="text-[11px] text-slate-500 truncate leading-snug">
+                            {roleLabel}
+                        </p>
                     </div>
-                    <LogOut className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0" />
+                    {/* Theme toggle */}
+                    <button
+                        onClick={toggle}
+                        aria-label="Toggle theme"
+                        title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+                        className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-300 hover:bg-white/[0.08] transition-colors"
+                    >
+                        {theme === "dark"
+                            ? <Sun className="w-[15px] h-[15px]" />
+                            : <Moon className="w-[15px] h-[15px]" />}
+                    </button>
                 </div>
+
+                {/* Sign out */}
+                <button
+                    onClick={() => void handleLogout()}
+                    className="w-full flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-slate-500 hover:bg-rose-500/10 hover:text-rose-400 transition-all group"
+                >
+                    <span className="flex items-center justify-center w-8 h-8 rounded-lg group-hover:bg-rose-500/10 transition-all">
+                        <LogOut className="w-[15px] h-[15px]" />
+                    </span>
+                    <span className="tracking-[-0.01em]">Sign out</span>
+                </button>
             </div>
         </aside>
     );
 }
 
+// ── Root export (handles mobile drawer + desktop static) ──────────────────────
+
 export default function AppSidebar({
-    section,
     userName,
     userRole,
     showCompanyPortal,
+    badges,
 }: {
-    section: SidebarSection;
     userName: string;
     userRole: SidebarUserRole;
     showCompanyPortal?: boolean;
+    badges: BadgeCounts;
 }) {
     const [open, setOpen] = useState(false);
 
@@ -254,31 +371,43 @@ export default function AppSidebar({
             {/* Mobile toggle button */}
             <button
                 onClick={() => setOpen(true)}
-                className="md:hidden fixed top-3.5 left-3.5 z-40 p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm"
+                className="md:hidden fixed top-3.5 left-3.5 z-40 p-2 bg-[#0d1117] border border-white/10 rounded-lg shadow-lg"
                 aria-label="Open navigation"
             >
-                <Menu className="w-4 h-4 text-slate-600 dark:text-slate-300" />
+                <Menu className="w-4 h-4 text-slate-400" />
             </button>
 
             {/* Mobile backdrop */}
             {open && (
                 <div
-                    className="md:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
+                    className="md:hidden fixed inset-0 z-40 bg-black/70 backdrop-blur-sm"
                     onClick={() => setOpen(false)}
                 />
             )}
 
             {/* Mobile drawer */}
             <div
-                className={`md:hidden fixed inset-y-0 left-0 z-50 transition-transform duration-200 ${open ? "translate-x-0" : "-translate-x-full"
-                    }`}
+                className={`md:hidden fixed inset-y-0 left-0 z-50 transition-transform duration-200 ease-out ${
+                    open ? "translate-x-0" : "-translate-x-full"
+                }`}
             >
-                <SidebarContent section={section} userName={userName} userRole={userRole} showCompanyPortal={showCompanyPortal} onClose={() => setOpen(false)} />
+                <SidebarContent
+                    userName={userName}
+                    userRole={userRole}
+                    showCompanyPortal={showCompanyPortal}
+                    badges={badges}
+                    onClose={() => setOpen(false)}
+                />
             </div>
 
-            {/* Desktop sidebar — always visible */}
-            <div className="hidden md:flex flex-col w-60 min-h-screen shrink-0">
-                <SidebarContent section={section} userName={userName} userRole={userRole} showCompanyPortal={showCompanyPortal} />
+            {/* Desktop — always visible */}
+            <div className="hidden md:flex flex-col min-h-screen shrink-0">
+                <SidebarContent
+                    userName={userName}
+                    userRole={userRole}
+                    showCompanyPortal={showCompanyPortal}
+                    badges={badges}
+                />
             </div>
         </>
     );
