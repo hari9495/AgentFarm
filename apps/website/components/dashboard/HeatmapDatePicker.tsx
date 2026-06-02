@@ -103,9 +103,9 @@ export default function HeatmapDatePicker({ fromValue, toValue, minDate, maxDate
                         </button>
                     </div>
 
-                    {/* Side-by-side date inputs with arrow divider */}
-                    <div className="grid grid-cols-[1fr_20px_1fr] items-end gap-1.5 mb-3">
-                        <div>
+                    {/* Side-by-side date inputs — flex so each gets equal width */}
+                    <div className="flex items-end gap-2 mb-3">
+                        <div className="flex-1 min-w-0">
                             <label className="block mb-1 text-[9px] font-bold uppercase tracking-widest text-slate-400">From</label>
                             <input
                                 type="date"
@@ -116,10 +116,10 @@ export default function HeatmapDatePicker({ fromValue, toValue, minDate, maxDate
                                 className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-2.5 py-2 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-400 transition"
                             />
                         </div>
-                        <div className="flex items-center justify-center pb-2.5">
+                        <div className="shrink-0 pb-2.5">
                             <ArrowRight className="h-3.5 w-3.5 text-slate-400" />
                         </div>
-                        <div>
+                        <div className="flex-1 min-w-0">
                             <label className="block mb-1 text-[9px] font-bold uppercase tracking-widest text-slate-400">To</label>
                             <input
                                 type="date"
