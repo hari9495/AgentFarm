@@ -235,22 +235,30 @@ export default function DashboardPage() {
                         </div>
                         <div className="p-5">
                             {/* Bar chart */}
-                            <div className="flex items-end gap-2 h-28">
+                            <div className="flex items-end gap-[6px]" style={{ height: "96px" }}>
                                 {weeklyActivity.map((d) => {
-                                    const heightPct = (d.tasks / maxTasks) * 100;
-                                    const isToday = d.day === "Mon"; // Mon = start of demo week
+                                    const heightPct = Math.max(8, Math.round((d.tasks / maxTasks) * 100));
+                                    const isToday = d.day === "Mon";
                                     return (
-                                        <div key={d.day} className="flex-1 flex flex-col items-center gap-1.5 group">
-                                            <span className="text-[10px] font-bold text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity tabular-nums">
+                                        <div key={d.day} className="flex-1 flex flex-col items-center gap-1" style={{ height: "100%" }}>
+                                            {/* Value label — always visible */}
+                                            <span className="text-[10px] font-bold tabular-nums" style={{ color: isToday ? "#0ea5e9" : "#94a3b8" }}>
                                                 {d.tasks}
                                             </span>
-                                            <div className="w-full flex flex-col justify-end" style={{ height: "80px" }}>
+                                            {/* Bar grows from bottom */}
+                                            <div className="flex-1 w-full flex flex-col justify-end">
                                                 <div
-                                                    className={`w-full rounded-t-md transition-all duration-300 ${isToday ? "bg-sky-500" : "bg-sky-200 group-hover:bg-sky-400"}`}
-                                                    style={{ height: `${heightPct}%` }}
+                                                    className="w-full rounded-t-[4px] transition-all duration-500"
+                                                    style={{
+                                                        height: `${heightPct}%`,
+                                                        background: isToday ? "#0ea5e9" : "#bae6fd",
+                                                    }}
                                                 />
                                             </div>
-                                            <span className="text-[10px] font-semibold text-slate-400">{d.day}</span>
+                                            {/* Day label */}
+                                            <span className="text-[10px] font-semibold" style={{ color: isToday ? "#0f172a" : "#94a3b8" }}>
+                                                {d.day}
+                                            </span>
                                         </div>
                                     );
                                 })}
