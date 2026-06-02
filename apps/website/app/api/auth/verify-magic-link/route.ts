@@ -28,12 +28,12 @@ export async function GET(request: Request) {
     // Create session cookie
     const { sessionToken } = await createSession(user.id);
     const response = NextResponse.redirect(new URL("/dashboard", request.url));
-    response.cookies.set("session", sessionToken, {
+    response.cookies.set("agentfarm_session", sessionToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
         path: "/",
-        maxAge: 60 * 60 * 24 * 7, // 7 days
+        maxAge: 8 * 60 * 60, // 8 hours — matches SESSION_TTL_MS in auth-store
     });
 
     return response;

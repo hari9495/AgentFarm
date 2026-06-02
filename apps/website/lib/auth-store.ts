@@ -871,8 +871,10 @@ export const authenticateUser = async (email: string, password: string): Promise
         .prepare(`SELECT id, email, name, company, role, password_hash FROM users WHERE email = ?`)
         .bind(email).first<Record<string, unknown> & { password_hash: string }>();
 
+    // Must be pbkdf2 format so verifyPassword runs the full PBKDF2 derivation
+    // when the user is not found — prevents timing side-channel revealing email existence.
     const DUMMY_HASH =
-        "scrypt:0000000000000000000000000000000000000000000000000000000000000000:0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
+        "pbkdf2:0000000000000000000000000000000000000000000000000000000000000000:0000000000000000000000000000000000000000000000000000000000000000";
 
     const valid = row
         ? await verifyPassword(password, String(row.password_hash))

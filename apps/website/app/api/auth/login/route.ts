@@ -117,8 +117,8 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Enter a valid email address." }, { status: 400 });
     }
 
-    if (password.length < 8) {
-        return NextResponse.json({ error: "Password must be at least 8 characters." }, { status: 400 });
+    if (password.length < 10) {
+        return NextResponse.json({ error: "Password must be at least 10 characters." }, { status: 400 });
     }
 
     const user = await authenticateUser(email, password);
