@@ -121,7 +121,6 @@ export default function KpiCardsV2() {
     const [appliedTo, setAppliedTo]     = useState(defaultTo);
 
     const agent = AGENTS.find(a => a.id === activeAgent) ?? AGENTS[0]!;
-    const isDirty = fromDate !== appliedFrom || toDate !== appliedTo;
 
     function fetchStats(agentId: AgentId, from: string, to: string) {
         setLoading(true);
@@ -163,7 +162,8 @@ export default function KpiCardsV2() {
                 <select
                     value={activeAgent}
                     onChange={e => handleAgentChange(e.target.value as AgentId)}
-                    className="appearance-none pl-10 pr-8 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl shadow-sm hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer transition-colors"
+                    style={{ WebkitAppearance: "none", MozAppearance: "none", appearance: "none" }}
+                    className="pl-10 pr-8 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl shadow-sm hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer transition-colors"
                 >
                     {AGENTS.map(a => (
                         <option key={a.id} value={a.id}>{a.name}</option>
@@ -198,22 +198,15 @@ export default function KpiCardsV2() {
                 />
             </div>
 
-            {/* Apply button — only shown when date has changed */}
-            {isDirty && (
-                <button
-                    onClick={handleApply}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-sky-600 hover:bg-sky-700 rounded-xl shadow-sm transition-colors"
-                >
-                    Apply
-                </button>
-            )}
+            {/* Apply button — always visible */}
+            <button
+                onClick={handleApply}
+                disabled={!fromDate || !toDate || fromDate > toDate}
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-sky-600 hover:bg-sky-700 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl shadow-sm transition-colors"
+            >
+                Apply
+            </button>
 
-            {/* Applied range label */}
-            {!isDirty && (
-                <span className="text-xs text-slate-400 font-medium hidden sm:inline">
-                    {formatLabel(appliedFrom, appliedTo)}
-                </span>
-            )}
         </div>
     );
 
