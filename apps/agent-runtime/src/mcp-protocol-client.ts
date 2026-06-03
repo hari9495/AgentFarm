@@ -58,6 +58,7 @@ export class McpProtocolClient {
     private readonly serverUrl: string;
     private readonly headers: Record<string, string>;
     private readonly timeoutMs: number;
+    private _reqId = 0;
 
     constructor(serverUrl: string, headers: Record<string, string> = {}) {
         this.serverUrl = serverUrl;
@@ -135,7 +136,7 @@ export class McpProtocolClient {
     async callTool(name: string, args: Record<string, unknown>): Promise<McpToolCallResult> {
         const body = {
             jsonrpc: '2.0' as const,
-            id: Date.now(),
+            id: ++this._reqId,
             method: 'tools/call',
             params: {
                 name,

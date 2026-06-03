@@ -1,7 +1,7 @@
 ﻿import AppSidebar from "@/components/layout/AppSidebar";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { getSessionUser, isCompanyOperatorEmail } from "@/lib/auth-store";
+import { getSessionUser, isCompanyOperatorEmail, listApprovals } from "@/lib/auth-store";
 
 const COOKIE_NAME = "agentfarm_session";
 
@@ -33,9 +33,19 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
     const showCompanyPortal = isCompanyOperatorEmail(user.email);
 
+    const pendingApprovals = await listApprovals({
+        status: "pending",
+        tenantId: user.tenantId ?? undefined,
+        limit: 100,
+    });
+    const badges = {
+        approvals: pendingApprovals.length,
+        notifications: 0,
+    };
+
     return (
         <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950">
-            <AppSidebar section="admin" userName={user.name} userRole={user.role} showCompanyPortal={showCompanyPortal} />
+            <AppSidebar userName={user.name} userRole={user.role} showCompanyPortal={showCompanyPortal} badges={badges} />
             <div className="flex-1 min-w-0 overflow-auto">
                 {children}
             </div>
