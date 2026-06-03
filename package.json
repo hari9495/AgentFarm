@@ -27,5 +27,12 @@
         "prisma": "6.19.3",
         "typescript": "^5.7.2",
         "xlsx": "^0.18.5"
+    },
+    "pnpm": {
+        "overrides": {
+            "fast-uri": ">=3.1.2",
+            "protobufjs": ">=8.0.2",
+            "vitest": ">=4.1.8"
+        }
     }
 }

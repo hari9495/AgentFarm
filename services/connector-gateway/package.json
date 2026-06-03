@@ -20,6 +20,6 @@
         "@agentfarm/connector-contracts": "workspace:*",
         "@agentfarm/observability": "workspace:*",
         "@agentfarm/shared-types": "workspace:*",
-        "nodemailer": "^6.9.16"
+        "nodemailer": "^8.0.10"
     }
 }

@@ -204,7 +204,6 @@
         "ts-node": "^10.9.2",
         "tsx": "^4.20.6",
         "typescript": "^5.7.2",
-        "vitest": "^2.1.8",
         "@types/nodemailer": "^6.4.17"
     },
     "dependencies": {
@@ -222,7 +221,7 @@
         "@agentfarm/memory-service": "workspace:*",
         "@prisma/client": "^6.19.3",
         "fastify": "^5.2.1",
-        "nodemailer": "^6.9.16",
+        "nodemailer": "^8.0.10",
         "playwright": "^1.59.1"
     }
 }

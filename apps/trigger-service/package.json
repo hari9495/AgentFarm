@@ -18,7 +18,7 @@
         "fastify": "^5.2.1",
         "imapflow": "^1.0.190",
         "mailparser": "^3.7.2",
-        "nodemailer": "^6.10.1"
+        "nodemailer": "^8.0.10"
     },
     "devDependencies": {
         "@types/mailparser": "^3.4.6",
