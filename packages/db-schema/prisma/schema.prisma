@@ -19,6 +19,22 @@ model Tenant {
   scheduledJobs       ScheduledJob[]
   users               TenantUser[]
   workspaces          Workspace[]
+  branding            TenantBranding?
+}
+
+model TenantBranding {
+  id           String   @id @default(cuid())
+  tenantId     String   @unique
+  companyName  String?
+  logoUrl      String?
+  primaryColor String?
+  portalTitle  String?
+  faviconUrl   String?
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([tenantId])
 }
 
 model TenantUser {

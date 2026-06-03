@@ -1,4 +1,4 @@
-﻿import { cookies } from "next/headers";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import {
@@ -24,6 +24,15 @@ interface SessionData {
     role: string;
 }
 
+interface BrandingData {
+    company_name: string | null;
+    logo_url: string | null;
+    primary_color: string | null;
+    portal_title: string | null;
+    favicon_url: string | null;
+    configured: boolean;
+}
+
 async function getSession(token: string): Promise<SessionData | null> {
     try {
         const res = await fetch(`${GATEWAY_URL}/portal/auth/me`, {
@@ -37,12 +46,26 @@ async function getSession(token: string): Promise<SessionData | null> {
     }
 }
 
+async function getBranding(tenantId: string): Promise<BrandingData | null> {
+    try {
+        const res = await fetch(
+            `${GATEWAY_URL}/portal/data/branding?tenant_id=${encodeURIComponent(tenantId)}`,
+            { cache: "no-store" },
+        );
+        if (!res.ok) return null;
+        const data = (await res.json()) as { branding?: BrandingData };
+        return data.branding ?? null;
+    } catch {
+        return null;
+    }
+}
+
 const navItems = [
-    { href: "/portal/agents", label: "Agents", icon: Bot },
+    { href: "/portal/agents",     label: "Agents",       icon: Bot },
     { href: "/portal/connectors", label: "Integrations", icon: Plug },
-    { href: "/portal/usage", label: "Usage", icon: BarChart3 },
-    { href: "/portal/billing", label: "Billing", icon: CreditCard },
-    { href: "/portal/profile", label: "Profile", icon: User },
+    { href: "/portal/usage",      label: "Usage",        icon: BarChart3 },
+    { href: "/portal/billing",    label: "Billing",      icon: CreditCard },
+    { href: "/portal/profile",    label: "Profile",      icon: User },
 ];
 
 export default async function PortalAppLayout({
@@ -53,28 +76,50 @@ export default async function PortalAppLayout({
     const cookieStore = await cookies();
     const token = cookieStore.get("portal_session")?.value;
 
-    if (!token) {
-        redirect("/portal/login");
-    }
+    if (!token) redirect("/portal/login");
 
     const session = await getSession(token);
+    if (!session) redirect("/portal/login");
 
-    if (!session) {
-        redirect("/portal/login");
-    }
+    const branding = await getBranding(session.tenantId);
+
+    const primaryColor = branding?.primary_color ?? "#0284c7"; // sky-600 default
+    const companyName = branding?.company_name ?? "AgentFarms Portal";
+    const portalTitle = branding?.portal_title ?? companyName;
+    const logoUrl = branding?.logo_url;
 
     const displayName = session.displayName ?? session.email;
 
+    // Build CSS variables for brand color shades
+    const brandCss = `
+        :root {
+            --portal-primary: ${primaryColor};
+            --portal-primary-light: ${primaryColor}1a;
+            --portal-primary-ring: ${primaryColor}4d;
+        }
+        .portal-brand-bg  { background-color: var(--portal-primary) !important; }
+        .portal-brand-text { color: var(--portal-primary) !important; }
+        .portal-brand-border { border-color: var(--portal-primary) !important; }
+    `;
+
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col">
+            {/* Inject brand CSS */}
+            <style dangerouslySetInnerHTML={{ __html: brandCss }} />
+
             {/* Top nav */}
             <header className="sticky top-0 z-30 h-14 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 flex items-center px-4 sm:px-6 gap-4">
                 <Link
                     href="/portal/agents"
                     className="flex items-center gap-2 font-semibold text-slate-900 dark:text-slate-100 hover:opacity-80 transition-opacity"
                 >
-                    <LayoutDashboard className="h-4 w-4 text-sky-600 dark:text-sky-400" />
-                    <span className="text-sm">AgentFarms Portal</span>
+                    {logoUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={logoUrl} alt={companyName} style={{ height: 28, objectFit: "contain" }} />
+                    ) : (
+                        <LayoutDashboard className="h-4 w-4" style={{ color: primaryColor }} />
+                    )}
+                    <span className="text-sm">{portalTitle}</span>
                 </Link>
 
                 <div className="flex-1" />

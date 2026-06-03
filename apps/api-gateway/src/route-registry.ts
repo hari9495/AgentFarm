@@ -107,6 +107,7 @@ import { registerChatRoutes } from './routes/platform/chat.js';
 import { registerAbTestRoutes } from './routes/platform/ab-tests.js';
 import { registerScheduledReportRoutes } from './routes/platform/scheduled-reports.js';
 import { registerDashboardRoutes } from './routes/platform/dashboard.js';
+import { registerTenantBrandingRoutes } from './routes/platform/tenant-branding.js';
 
 // Sales
 import { registerLeadRoutes } from './routes/sales/leads.js';
@@ -269,6 +270,7 @@ export const registerAllRoutes = async (
     await registerAbTestRoutes(app, { getSession });
     await registerScheduledReportRoutes(app, { getSession, prisma: prisma as never });
     await registerDashboardRoutes(app);
+    await registerTenantBrandingRoutes(app, { getSession });
 
     // Sales
     registerLeadRoutes(app, { prisma });
