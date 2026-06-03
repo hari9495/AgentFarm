@@ -1,5 +1,8 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
 import { analyzeAbTest } from './ab-test-analyzer.js';
+
+const closeTo = (a: number, b: number, d = 2) => Math.abs(a - b) < Math.pow(10, -d) / 2;
 
 describe('analyzeAbTest', () => {
     it('declares significant winner when sample is large enough', () => {
@@ -11,9 +14,9 @@ describe('analyzeAbTest', () => {
                 { name: 'Challenger (Green)', impressions: 10000, conversions: 350 },
             ],
         });
-        expect(result.isStatisticallySignificant).toBe(true);
-        expect(result.winner).toBe('Challenger (Green)');
-        expect(result.winnerUplift).toBeGreaterThan(0);
+        assert.equal(result.isStatisticallySignificant, true);
+        assert.equal(result.winner, 'Challenger (Green)');
+        assert.ok((result.winnerUplift ?? 0) > 0);
     });
 
     it('does not declare winner when test is underpowered', () => {
@@ -25,8 +28,8 @@ describe('analyzeAbTest', () => {
                 { name: 'Variant B', impressions: 100, conversions: 12 },
             ],
         });
-        expect(result.isStatisticallySignificant).toBe(false);
-        expect(result.winner).toBeNull();
+        assert.equal(result.isStatisticallySignificant, false);
+        assert.equal(result.winner, null);
     });
 
     it('computes correct conversion rates', () => {
@@ -40,23 +43,21 @@ describe('analyzeAbTest', () => {
         });
         const a = result.variants.find((v) => v.name === 'A')!;
         const b = result.variants.find((v) => v.name === 'B')!;
-        expect(a.conversionRate).toBeCloseTo(0.05, 3);
-        expect(b.conversionRate).toBeCloseTo(0.08, 3);
+        assert.ok(closeTo(a.conversionRate, 0.05, 3), `Expected ~0.05, got ${a.conversionRate}`);
+        assert.ok(closeTo(b.conversionRate, 0.08, 3), `Expected ~0.08, got ${b.conversionRate}`);
     });
 
     it('provides Wilson confidence intervals', () => {
         const result = analyzeAbTest({
             testName: 'Test',
             metric: 'CVR',
-            variants: [
-                { name: 'A', impressions: 1000, conversions: 50 },
-            ],
+            variants: [{ name: 'A', impressions: 1000, conversions: 50 }],
         });
         const a = result.variants[0]!;
-        expect(a.confidenceInterval.lower).toBeGreaterThan(0);
-        expect(a.confidenceInterval.upper).toBeLessThan(1);
-        expect(a.confidenceInterval.lower).toBeLessThan(a.conversionRate);
-        expect(a.confidenceInterval.upper).toBeGreaterThan(a.conversionRate);
+        assert.ok(a.confidenceInterval.lower > 0);
+        assert.ok(a.confidenceInterval.upper < 1);
+        assert.ok(a.confidenceInterval.lower < a.conversionRate);
+        assert.ok(a.confidenceInterval.upper > a.conversionRate);
     });
 
     it('uses 99% confidence when specified', () => {
@@ -69,7 +70,7 @@ describe('analyzeAbTest', () => {
                 { name: 'B', impressions: 10000, conversions: 350 },
             ],
         });
-        expect(result.confidenceLevel).toBe(0.99);
+        assert.equal(result.confidenceLevel, 0.99);
     });
 
     it('computes CPA when spend is provided', () => {
@@ -82,7 +83,7 @@ describe('analyzeAbTest', () => {
             ],
         });
         const a = result.variants.find((v) => v.name === 'A')!;
-        expect(a.cpa).toBeCloseTo(10, 1);
+        assert.ok(closeTo(a.cpa!, 10, 1), `Expected ~10, got ${a.cpa}`);
     });
 
     it('handles zero conversions gracefully', () => {
@@ -94,6 +95,6 @@ describe('analyzeAbTest', () => {
                 { name: 'B', impressions: 1000, conversions: 0 },
             ],
         });
-        expect(result.isStatisticallySignificant).toBe(false);
+        assert.equal(result.isStatisticallySignificant, false);
     });
 });

@@ -1,97 +1,66 @@
-import { describe, it, expect } from 'vitest';
+﻿import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
 import {
-    isMarketingGateType,
-    buildMarketingGateRecord,
-    buildMarketingGateApprovalSummary,
-    buildMarketingGateImpactScope,
-    buildMarketingGateRiskReason,
+    isMarketingGateType, buildMarketingGateRecord, buildMarketingGateApprovalSummary,
+    buildMarketingGateImpactScope, buildMarketingGateRiskReason,
 } from './human-gate-requests.js';
 
 describe('isMarketingGateType', () => {
     it('accepts all valid gate types', () => {
-        const valid = ['live_campaign_activation', 'budget_commitment', 'bulk_email_send', 'campaign_pause', 'ab_test_winner_apply', 'content_publish_external'];
-        for (const t of valid) {
-            expect(isMarketingGateType(t)).toBe(true);
+        for (const t of ['live_campaign_activation','budget_commitment','bulk_email_send','campaign_pause','ab_test_winner_apply','content_publish_external']) {
+            assert.ok(isMarketingGateType(t), t + ' should be valid');
         }
     });
     it('rejects unknown gate types', () => {
-        expect(isMarketingGateType('delete_campaign')).toBe(false);
-        expect(isMarketingGateType('')).toBe(false);
+        assert.equal(isMarketingGateType('delete_campaign'), false);
+        assert.equal(isMarketingGateType(''), false);
     });
 });
 
 describe('buildMarketingGateRecord', () => {
     it('builds a live_campaign_activation gate', () => {
-        const gate = buildMarketingGateRecord({
-            gateType: 'live_campaign_activation',
-            campaignName: 'Q3 Launch',
-        });
-        expect(gate.riskLevel).toBe('high');
-        expect(gate.question).toContain('Q3 Launch');
+        const gate = buildMarketingGateRecord({ gateType: 'live_campaign_activation', campaignName: 'Q3 Launch' });
+        assert.equal(gate.riskLevel, 'high');
+        assert.ok(gate.question.includes('Q3 Launch'));
     });
-
     it('builds a budget_commitment gate with amount', () => {
-        const gate = buildMarketingGateRecord({
-            gateType: 'budget_commitment',
-            campaignName: 'Q3 PPC',
-            budgetAmount: 25000,
-            currency: 'USD',
-        });
-        expect(gate.question).toContain('25,000');
-        expect(gate.riskLevel).toBe('high');
+        const gate = buildMarketingGateRecord({ gateType: 'budget_commitment', campaignName: 'Q3 PPC', budgetAmount: 25000, currency: 'USD' });
+        assert.ok(gate.question.includes('25,000'));
+        assert.equal(gate.riskLevel, 'high');
     });
-
     it('builds a bulk_email_send gate with recipient count', () => {
-        const gate = buildMarketingGateRecord({
-            gateType: 'bulk_email_send',
-            campaignName: 'June Newsletter',
-            recipientCount: 15000,
-        });
-        expect(gate.question).toContain('15,000');
-        expect(gate.category).toBe('audience_reach');
+        const gate = buildMarketingGateRecord({ gateType: 'bulk_email_send', campaignName: 'June Newsletter', recipientCount: 15000 });
+        assert.ok(gate.question.includes('15,000'));
+        assert.equal(gate.category, 'audience_reach');
     });
-
     it('campaign_pause is medium risk', () => {
-        const gate = buildMarketingGateRecord({
-            gateType: 'campaign_pause',
-            campaignName: 'Summer Promo',
-            detail: 'CTR dropped below threshold',
-        });
-        expect(gate.riskLevel).toBe('medium');
-        expect(gate.question).toContain('CTR dropped');
+        const gate = buildMarketingGateRecord({ gateType: 'campaign_pause', campaignName: 'Summer Promo', detail: 'CTR dropped below threshold' });
+        assert.equal(gate.riskLevel, 'medium');
+        assert.ok(gate.question.includes('CTR dropped'));
     });
 });
 
 describe('buildMarketingGateApprovalSummary', () => {
     it('includes campaign name and action', () => {
-        const gate = buildMarketingGateRecord({ gateType: 'live_campaign_activation', campaignName: 'Test Campaign' });
-        const summary = buildMarketingGateApprovalSummary(gate);
-        expect(summary).toContain('Test Campaign');
-        expect(summary).toContain('activate');
+        const summary = buildMarketingGateApprovalSummary(buildMarketingGateRecord({ gateType: 'live_campaign_activation', campaignName: 'Test Campaign' }));
+        assert.ok(summary.includes('Test Campaign'));
+        assert.ok(summary.includes('activate'));
     });
 });
 
 describe('buildMarketingGateImpactScope', () => {
     it('returns financial scope for budget gates', () => {
-        const gate = buildMarketingGateRecord({ gateType: 'budget_commitment', campaignName: 'X', budgetAmount: 5000, currency: '$' });
-        const scope = buildMarketingGateImpactScope(gate);
-        expect(scope).toContain('Financial');
+        assert.ok(buildMarketingGateImpactScope(buildMarketingGateRecord({ gateType: 'budget_commitment', campaignName: 'X', budgetAmount: 5000, currency: '$' })).includes('Financial'));
     });
-
     it('returns audience scope for bulk email', () => {
-        const gate = buildMarketingGateRecord({ gateType: 'bulk_email_send', campaignName: 'Newsletter', recipientCount: 10000 });
-        const scope = buildMarketingGateImpactScope(gate);
-        expect(scope).toContain('Audience');
+        assert.ok(buildMarketingGateImpactScope(buildMarketingGateRecord({ gateType: 'bulk_email_send', campaignName: 'Newsletter', recipientCount: 10000 })).includes('Audience'));
     });
 });
 
 describe('buildMarketingGateRiskReason', () => {
     it('provides a risk reason for each gate type', () => {
-        const types = ['live_campaign_activation', 'budget_commitment', 'bulk_email_send', 'campaign_pause', 'ab_test_winner_apply', 'content_publish_external'] as const;
-        for (const gateType of types) {
-            const gate = buildMarketingGateRecord({ gateType, campaignName: 'Test' });
-            const reason = buildMarketingGateRiskReason(gate);
-            expect(reason.length).toBeGreaterThan(10);
+        for (const gateType of ['live_campaign_activation','budget_commitment','bulk_email_send','campaign_pause','ab_test_winner_apply','content_publish_external'] as const) {
+            assert.ok(buildMarketingGateRiskReason(buildMarketingGateRecord({ gateType, campaignName: 'Test' })).length > 10);
         }
     });
 });

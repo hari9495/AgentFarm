@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest';
+﻿import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
 import { segmentAudience } from './audience-segmenter.js';
 import type { AudienceSegmentInput } from './audience-segmenter.js';
 
@@ -12,48 +13,35 @@ const input: AudienceSegmentInput = {
 };
 
 describe('segmentAudience', () => {
-    it('returns all segments', () => {
-        const result = segmentAudience(input);
-        expect(result.segments.length).toBe(4);
-    });
-
+    it('returns all segments', () => { assert.equal(segmentAudience(input).segments.length, 4); });
     it('ranks enterprise buyers as champion', () => {
-        const result = segmentAudience(input);
-        expect(result.segments[0]!.segmentId).toBe('s1');
-        expect(result.segments[0]!.tier).toBe('champion');
+        const r = segmentAudience(input);
+        assert.equal(r.segments[0]!.segmentId, 's1');
+        assert.equal(r.segments[0]!.tier, 'champion');
     });
-
     it('assigns low_priority to one-time visitors', () => {
-        const result = segmentAudience(input);
-        const lastSeg = result.segments[result.segments.length - 1]!;
-        expect(lastSeg.segmentId).toBe('s4');
-        expect(lastSeg.tier).toBe('low_priority');
+        const r = segmentAudience(input);
+        const last = r.segments[r.segments.length - 1]!;
+        assert.equal(last.segmentId, 's4');
+        assert.equal(last.tier, 'low_priority');
     });
-
     it('budget allocation percentages sum to ~100', () => {
-        const result = segmentAudience(input);
-        const total = result.segments.reduce((s, seg) => s + seg.budgetAllocationPct, 0);
-        expect(total).toBeGreaterThanOrEqual(95);
-        expect(total).toBeLessThanOrEqual(105);
+        const total = segmentAudience(input).segments.reduce((s, seg) => s + seg.budgetAllocationPct, 0);
+        assert.ok(total >= 95 && total <= 105, 'sum was ' + total);
     });
-
     it('provides recommended messaging for each segment', () => {
-        const result = segmentAudience(input);
-        for (const seg of result.segments) {
-            expect(seg.recommendedMessaging.length).toBeGreaterThan(0);
-            expect(seg.recommendedChannels.length).toBeGreaterThan(0);
+        for (const seg of segmentAudience(input).segments) {
+            assert.ok(seg.recommendedMessaging.length > 0);
+            assert.ok(seg.recommendedChannels.length > 0);
         }
     });
-
     it('recommends linkedin for B2B champion segment', () => {
-        const result = segmentAudience(input);
-        const enterprise = result.segments.find((s) => s.segmentId === 's1')!;
-        expect(enterprise.recommendedChannels).toContain('linkedin_ads');
+        const enterprise = segmentAudience(input).segments.find((s) => s.segmentId === 's1')!;
+        assert.ok(enterprise.recommendedChannels.includes('linkedin_ads'));
     });
-
     it('handles empty segments', () => {
-        const result = segmentAudience({ segments: [] });
-        expect(result.segments.length).toBe(0);
-        expect(result.totalAudienceSize).toBe(0);
+        const r = segmentAudience({ segments: [] });
+        assert.equal(r.segments.length, 0);
+        assert.equal(r.totalAudienceSize, 0);
     });
 });
