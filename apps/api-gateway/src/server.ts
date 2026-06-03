@@ -34,6 +34,8 @@ const PUBLIC_PATHS = new Set([
     '/portal/auth/login',
     '/portal/auth/logout',
     '/portal/auth/me',
+    // MFA step-2: user only has a short-lived mfa_token (not a full session)
+    '/v1/auth/mfa/verify',
 ]);
 
 const isPublicPath = (url: string): boolean => {

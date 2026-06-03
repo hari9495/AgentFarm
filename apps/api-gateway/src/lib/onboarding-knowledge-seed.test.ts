@@ -21,23 +21,21 @@ function makeMocks() {
     const embedFn = async (_text: string): Promise<number[]> => [0.1, 0.2, 0.3];
 
     const prismaMock = {
-        $queryRaw: async (_query: unknown, ...values: unknown[]) => {
-            // Extract content and sourceType from the INSERT call values.
-            // Positions: id, tenantId, botId, content, sourceUrl, sourceType, ...
-            const row = {
-                id: values[0] as string,
-                tenantId: values[1] as string,
-                botId: values[2] as string | null,
-                content: values[3] as string,
-                sourceUrl: values[4] as string | null,
-                sourceType: values[5] as string,
-                embeddingModel: values[6] as string,
-                createdAt: new Date(),
-                updatedAt: new Date(),
-            };
-            writeCalls.push({ content: row.content, sourceType: row.sourceType });
-            return [row];
+        // writeSemanticMemory uses $executeRaw for the INSERT.
+        // The tagged-template call passes interpolated values as rest args.
+        // Positions in the INSERT: id, tenantId, botId, content, sourceUrl, sourceType, embeddingModel, ...
+        $executeRaw: async (_query: unknown, ...values: unknown[]) => {
+            // INSERT positions (after gen_random_uuid()::text which is SQL, not a value):
+            // 0=tenantId, 1=botId, 2=content, 3=sourceUrl, 4=sourceType, 5=deployment, 6=vector
+            const content = values[2] as string;
+            const sourceType = values[4] as string;
+            if (content && sourceType) {
+                writeCalls.push({ content, sourceType });
+            }
+            return 1;
         },
+        // Keep $queryRaw as no-op so callers that use it don't throw
+        $queryRaw: async () => [],
     };
 
     return { embedFn, prismaMock, writeCalls };
@@ -121,15 +119,13 @@ describe('seedOnboardingKnowledge', () => {
     it('still seeds partial chunks even if one write throws', async () => {
         let callCount = 0;
         const flakyPrisma = {
-            $queryRaw: async (_query: unknown, ...values: unknown[]) => {
+            // writeSemanticMemory uses $executeRaw — throw on the first call to simulate DB error
+            $executeRaw: async (_query: unknown, ..._values: unknown[]) => {
                 callCount++;
                 if (callCount === 1) throw new Error('DB error');
-                return [{
-                    id: values[0], tenantId: values[1], botId: values[2],
-                    content: values[3], sourceUrl: values[4], sourceType: values[5],
-                    embeddingModel: values[6], createdAt: new Date(), updatedAt: new Date(),
-                }];
+                return 1;
             },
+            $queryRaw: async () => [],
         };
         const embedFn = async (_text: string): Promise<number[]> => [0.1, 0.2];
         const result = await seedOnboardingKnowledge(baseParams, embedFn, flakyPrisma as any);

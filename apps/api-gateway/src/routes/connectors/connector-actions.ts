@@ -1098,6 +1098,50 @@ export const registerConnectorActionRoutes = async (
     });
 
     // -------------------------------------------------------------------------
+    // GET /v1/connectors/health/summary
+    //
+    // Lightweight dashboard summary: lists all connectors with their current
+    // status and a human-readable remediation hint. No live probing — reads
+    // stored status from the connector metadata table only.
+    // -------------------------------------------------------------------------
+
+    app.get<{ Querystring: { workspace_id?: string } }>('/v1/connectors/health/summary', async (request, reply) => {
+        const session = options.getSession(request);
+        if (!session) {
+            return reply.code(401).send({ error: 'unauthorized' });
+        }
+
+        const workspaceId = request.query?.workspace_id ?? session.workspaceIds[0];
+        if (!workspaceId || !session.workspaceIds.includes(workspaceId)) {
+            return reply.code(403).send({ error: 'workspace_scope_violation' });
+        }
+
+        const connectors = await repo.listAuthMetadata({ tenantId: session.tenantId, workspaceId });
+
+        const remediationFor = (status: string, lastErrorClass: string | null): string => {
+            if (status === 'permission_invalid' || lastErrorClass === 'insufficient_scope') {
+                return 're_auth_or_reconsent';
+            }
+            if (status === 'consent_pending') return 'reconsent';
+            if (status === 'token_expired' || status === 'auth_failed') return 're_auth';
+            if (status === 'degraded') return 'contact_support';
+            return 'none';
+        };
+
+        return reply.code(200).send({
+            workspace_id: workspaceId,
+            connector_count: connectors.length,
+            connectors: connectors.map((c) => ({
+                connector_id: c.connectorId,
+                connector_type: c.connectorType,
+                status: c.status,
+                remediation: remediationFor(c.status, c.lastErrorClass ?? null),
+                last_healthcheck_at: c.lastHealthcheckAt?.toISOString() ?? null,
+            })),
+        });
+    });
+
+    // -------------------------------------------------------------------------
     // PUT /v1/connectors/:connectorId/credentials
     //
     // Lets a customer update the raw credential JSON for a connector via the

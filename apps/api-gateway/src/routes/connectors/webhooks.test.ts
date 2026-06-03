@@ -31,20 +31,24 @@ const buildApp = async () => {
     let sourceSeq = 0;
 
     const prisma = {
-        $queryRaw: async (_strings: TemplateStringsArray, ...values: unknown[]) => {
+        // writeEpisodicMemoryNoEmbed uses $executeRaw for the INSERT.
+        // INSERT positions (after gen_random_uuid()::text):
+        //   0=tenantId, 1=botId, 2=workspaceId, 3=pattern, 4=summary, 5=confidence
+        $executeRaw: async (_strings: TemplateStringsArray, ...values: unknown[]) => {
             const record: LearnedPatternRecord = {
                 id: `ltm-${learnedPatterns.length + 1}`,
                 tenantId: String(values[0]),
-                workspaceId: String(values[1]),
-                pattern: String(values[2]),
-                confidence: Number(values[3]),
-                observedCount: Number(values[4]),
-                lastSeen: values[5] instanceof Date ? values[5] : new Date(String(values[5])),
+                workspaceId: String(values[2]),
+                pattern: String(values[3]),
+                confidence: Number(values[5]),
+                observedCount: 1,
+                lastSeen: new Date(),
                 createdAt: new Date('2026-05-07T00:00:00.000Z'),
             };
             learnedPatterns.push(record);
-            return [record];
+            return 1;
         },
+        $queryRaw: async () => [],
         webhookSource: {
             findMany: async ({ where }: { where?: { tenantId?: string } } = {}) => {
                 if (where?.tenantId) return webhookSources.filter((s) => s.tenantId === where.tenantId);

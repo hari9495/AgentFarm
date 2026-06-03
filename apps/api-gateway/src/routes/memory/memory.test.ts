@@ -16,6 +16,8 @@ function makePrisma(): PrismaClient {
     return {
         // $queryRaw is used by readLongTermMemory / writeLongTermMemory
         $queryRaw: async () => [],
+        // $executeRaw is used by writeEpisodicMemoryNoEmbed and writeSemanticMemory
+        $executeRaw: async () => 0,
         agentShortTermMemory: {
             findMany: async () => [],
             count: async () => 0,
@@ -51,6 +53,7 @@ function makePrisma(): PrismaClient {
                 ...args.data,
             }),
             updateMany: async () => ({ count: 1 }),
+            deleteMany: async () => ({ count: 0 }),
         },
     } as unknown as PrismaClient;
 }
@@ -304,6 +307,7 @@ function makePrismaForEpisodicWrite(): PrismaClient {
     return {
         ...makePrisma(),
         $queryRaw: async () => [fakeEpisodicWriteRow],
+        $executeRaw: async () => 0,
     } as unknown as PrismaClient;
 }
 
@@ -444,9 +448,9 @@ test('POST /v1/episodic-memory/write — success → 201 with record', async () 
             },
         });
         assert.equal(res.statusCode, 201);
-        const body = res.json<{ record: { id: string; pattern: string } }>();
-        assert.equal(body.record.id, 'ep-2');
-        assert.equal(body.record.pattern, 'deploy-hotfix');
+        const body = res.json<{ pattern: string; message: string }>();
+        assert.equal(body.pattern, 'deploy-hotfix');
+        assert.ok(body.message, 'message should be present');
     } finally {
         await app.close();
     }

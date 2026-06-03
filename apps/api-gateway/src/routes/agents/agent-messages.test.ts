@@ -44,7 +44,7 @@ const makePrisma = (overrides: Record<string, unknown> = {}) => ({
         ...(overrides['agentMessage'] as Record<string, unknown> | undefined ?? {}),
     },
     bot: {
-        findFirst: async () => ({ id: 'bot-1', workspaceId: 'ws-1' }),
+        findFirst: async () => ({ id: 'bot-1', workspaceId: 'ws-1', messagingEnabled: true }),
         ...(overrides['bot'] as Record<string, unknown> | undefined ?? {}),
     },
 });
