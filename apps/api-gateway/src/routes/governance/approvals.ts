@@ -449,18 +449,15 @@ const fetchApprovalDelegationFields = async (
     delegatedAt?: Date | null;
     delegationExpiresAt?: Date | null;
 }> => {
-    const rows = await prisma.$queryRaw<Array<{
-        delegatedToUserId: string | null;
-        delegatedByUserId: string | null;
-        delegatedAt: Date | null;
-        delegationExpiresAt: Date | null;
-    }>>`
-        SELECT "delegatedToUserId", "delegatedByUserId", "delegatedAt", "delegationExpiresAt"
-        FROM "Approval"
-        WHERE id = ${approvalId}
-        LIMIT 1
-    `;
-    const row = rows[0];
+    const row = await prisma.approval.findUnique({
+        where: { id: approvalId },
+        select: {
+            delegatedToUserId: true,
+            delegatedByUserId: true,
+            delegatedAt: true,
+            delegationExpiresAt: true,
+        },
+    });
     return {
         delegatedToUserId: row?.delegatedToUserId ?? undefined,
         delegatedByUserId: row?.delegatedByUserId ?? undefined,
@@ -700,14 +697,15 @@ const defaultRepo: ApprovalRepo = {
     },
     async delegateApproval(input) {
         const prisma = await getPrisma();
-        await prisma.$executeRaw`
-            UPDATE "Approval"
-            SET "delegatedToUserId"   = ${input.delegatedToUserId},
-                "delegatedByUserId"   = ${input.delegatedByUserId},
-                "delegatedAt"         = ${input.delegatedAt},
-                "delegationExpiresAt" = ${input.delegationExpiresAt}
-            WHERE id = ${input.approvalId}
-        `;
+        await prisma.approval.update({
+            where: { id: input.approvalId },
+            data: {
+                delegatedToUserId: input.delegatedToUserId,
+                delegatedByUserId: input.delegatedByUserId,
+                delegatedAt: input.delegatedAt,
+                delegationExpiresAt: input.delegationExpiresAt,
+            },
+        });
     },
     async findTenantUser(input) {
         const prisma = await getPrisma();
