@@ -1528,3 +1528,270 @@ test('intake does not include evidence bundle when session_id is not provided', 
         await app.close();
     }
 });
+
+// ---------------------------------------------------------------------------
+// Delegation endpoint tests
+// ---------------------------------------------------------------------------
+
+type DelegationRecord = {
+    approvalId: string;
+    delegatedToUserId: string;
+    delegatedByUserId: string;
+    delegatedAt: Date;
+    delegationExpiresAt: Date | null;
+};
+
+const createDelegationRepo = (opts: {
+    delegateUser?: { id: string; name: string; email: string } | null;
+} = {}) => {
+    const base = createRepo();
+    const delegations: DelegationRecord[] = [];
+
+    // Seed a pending approval in ws_1
+    const approvalId = 'appr_delegate_1';
+    base.approvals.set(approvalId, {
+        id: approvalId,
+        tenantId: 'tenant_1',
+        workspaceId: 'ws_1',
+        botId: 'bot_1',
+        taskId: 'task_1',
+        actionId: 'act_delegate_1',
+        riskLevel: 'high',
+        actionSummary: 'Deploy to production',
+        requestedBy: 'runtime:bot_1',
+        policyPackVersion: 'mvp-v1',
+        escalationTimeoutSeconds: 3600,
+        decision: 'pending',
+        createdAt: new Date(),
+        escalatedAt: null,
+    });
+
+    const repo = {
+        ...base.repo,
+        async delegateApproval(input: DelegationRecord) {
+            delegations.push(input);
+            const approval = base.approvals.get(input.approvalId);
+            if (approval) {
+                // mark as delegated in the stored record
+                (approval as StoredApproval & { delegatedToUserId?: string }).delegatedToUserId = input.delegatedToUserId;
+            }
+        },
+        async findTenantUser(_input: { userId: string; tenantId: string }) {
+            return opts.delegateUser !== undefined
+                ? opts.delegateUser
+                : { id: 'user_delegate', name: 'Alice Reviewer', email: 'alice@example.com' };
+        },
+    };
+
+    return { approvals: base.approvals, delegations, repo, approvalId };
+};
+
+test('delegate — 401 when no session', async () => {
+    const { repo, approvalId } = createDelegationRepo();
+    const app = Fastify();
+    await registerApprovalRoutes(app, { getSession: () => null, repo });
+    try {
+        const res = await app.inject({
+            method: 'POST',
+            url: `/v1/approvals/${approvalId}/delegate`,
+            payload: { workspace_id: 'ws_1', delegate_to_user_id: 'user_other' },
+        });
+        assert.equal(res.statusCode, 401);
+    } finally { await app.close(); }
+});
+
+test('delegate — 403 when workspace not in session scope', async () => {
+    const { repo, approvalId } = createDelegationRepo();
+    const app = Fastify();
+    await registerApprovalRoutes(app, { getSession: () => session(), repo });
+    try {
+        const res = await app.inject({
+            method: 'POST',
+            url: `/v1/approvals/${approvalId}/delegate`,
+            payload: { workspace_id: 'ws_other', delegate_to_user_id: 'user_other' },
+        });
+        assert.equal(res.statusCode, 403);
+        assert.equal(res.json<{ error: string }>().error, 'workspace_scope_violation');
+    } finally { await app.close(); }
+});
+
+test('delegate — 400 when delegate_to_user_id is missing', async () => {
+    const { repo, approvalId } = createDelegationRepo();
+    const app = Fastify();
+    await registerApprovalRoutes(app, { getSession: () => session(), repo });
+    try {
+        const res = await app.inject({
+            method: 'POST',
+            url: `/v1/approvals/${approvalId}/delegate`,
+            payload: { workspace_id: 'ws_1' },
+        });
+        assert.equal(res.statusCode, 400);
+        assert.equal(res.json<{ error: string }>().error, 'invalid_request');
+    } finally { await app.close(); }
+});
+
+test('delegate — 400 when trying to delegate to self', async () => {
+    const { repo, approvalId } = createDelegationRepo();
+    const app = Fastify();
+    await registerApprovalRoutes(app, { getSession: () => session(), repo });
+    try {
+        const res = await app.inject({
+            method: 'POST',
+            url: `/v1/approvals/${approvalId}/delegate`,
+            // session().userId === 'user_1'
+            payload: { workspace_id: 'ws_1', delegate_to_user_id: 'user_1' },
+        });
+        assert.equal(res.statusCode, 400);
+        assert.equal(res.json<{ error: string }>().error, 'self_delegation');
+    } finally { await app.close(); }
+});
+
+test('delegate — 400 when expires_at is in the past', async () => {
+    const { repo, approvalId } = createDelegationRepo();
+    const app = Fastify();
+    await registerApprovalRoutes(app, { getSession: () => session(), repo });
+    try {
+        const pastDate = new Date(Date.now() - 60_000).toISOString();
+        const res = await app.inject({
+            method: 'POST',
+            url: `/v1/approvals/${approvalId}/delegate`,
+            payload: { workspace_id: 'ws_1', delegate_to_user_id: 'user_other', expires_at: pastDate },
+        });
+        assert.equal(res.statusCode, 400);
+        assert.equal(res.json<{ error: string }>().error, 'invalid_expires_at');
+    } finally { await app.close(); }
+});
+
+test('delegate — 400 when expires_at is more than 7 days away', async () => {
+    const { repo, approvalId } = createDelegationRepo();
+    const app = Fastify();
+    await registerApprovalRoutes(app, { getSession: () => session(), repo });
+    try {
+        const farFuture = new Date(Date.now() + 8 * 24 * 60 * 60 * 1000).toISOString();
+        const res = await app.inject({
+            method: 'POST',
+            url: `/v1/approvals/${approvalId}/delegate`,
+            payload: { workspace_id: 'ws_1', delegate_to_user_id: 'user_other', expires_at: farFuture },
+        });
+        assert.equal(res.statusCode, 400);
+        assert.equal(res.json<{ error: string }>().error, 'invalid_expires_at');
+    } finally { await app.close(); }
+});
+
+test('delegate — 404 when approval not found', async () => {
+    const { repo } = createDelegationRepo();
+    const app = Fastify();
+    await registerApprovalRoutes(app, { getSession: () => session(), repo });
+    try {
+        const res = await app.inject({
+            method: 'POST',
+            url: '/v1/approvals/does_not_exist/delegate',
+            payload: { workspace_id: 'ws_1', delegate_to_user_id: 'user_other' },
+        });
+        assert.equal(res.statusCode, 404);
+        assert.equal(res.json<{ error: string }>().error, 'approval_not_found');
+    } finally { await app.close(); }
+});
+
+test('delegate — 409 when approval is already decided', async () => {
+    const { repo, approvals } = createDelegationRepo();
+    const decidedId = 'appr_decided';
+    approvals.set(decidedId, {
+        id: decidedId, tenantId: 'tenant_1', workspaceId: 'ws_1', botId: 'bot_1',
+        taskId: 'task_1', actionId: 'act_decided', riskLevel: 'high',
+        actionSummary: 'Already approved action', requestedBy: 'runtime:bot_1',
+        policyPackVersion: 'mvp-v1', escalationTimeoutSeconds: 3600,
+        decision: 'approved', createdAt: new Date(), escalatedAt: null,
+    });
+    const app = Fastify();
+    await registerApprovalRoutes(app, { getSession: () => session(), repo });
+    try {
+        const res = await app.inject({
+            method: 'POST',
+            url: `/v1/approvals/${decidedId}/delegate`,
+            payload: { workspace_id: 'ws_1', delegate_to_user_id: 'user_other' },
+        });
+        assert.equal(res.statusCode, 409);
+        assert.equal(res.json<{ error: string }>().error, 'approval_already_decided');
+    } finally { await app.close(); }
+});
+
+test('delegate — 404 when delegate user not in tenant', async () => {
+    const { repo, approvalId } = createDelegationRepo({ delegateUser: null });
+    const app = Fastify();
+    await registerApprovalRoutes(app, { getSession: () => session(), repo });
+    try {
+        const res = await app.inject({
+            method: 'POST',
+            url: `/v1/approvals/${approvalId}/delegate`,
+            payload: { workspace_id: 'ws_1', delegate_to_user_id: 'user_ghost' },
+        });
+        assert.equal(res.statusCode, 404);
+        assert.equal(res.json<{ error: string }>().error, 'delegate_user_not_found');
+    } finally { await app.close(); }
+});
+
+test('delegate — 200 success path stores delegation and returns summary', async () => {
+    const { repo, approvalId, delegations } = createDelegationRepo();
+    const app = Fastify();
+    await registerApprovalRoutes(app, { getSession: () => session(), repo });
+    try {
+        const res = await app.inject({
+            method: 'POST',
+            url: `/v1/approvals/${approvalId}/delegate`,
+            payload: { workspace_id: 'ws_1', delegate_to_user_id: 'user_delegate', note: 'Out sick today' },
+        });
+        assert.equal(res.statusCode, 200);
+        const body = res.json<{
+            approval_id: string;
+            delegated_to_user_id: string;
+            delegated_to_user_name: string;
+            delegated_at: string;
+        }>();
+        assert.equal(body.approval_id, approvalId);
+        assert.equal(body.delegated_to_user_id, 'user_delegate');
+        assert.equal(body.delegated_to_user_name, 'Alice Reviewer');
+        assert.ok(body.delegated_at, 'delegated_at should be present');
+        assert.equal(delegations.length, 1, 'delegateApproval should have been called once');
+        assert.equal(delegations[0]?.delegatedToUserId, 'user_delegate');
+        assert.equal(delegations[0]?.delegatedByUserId, 'user_1');
+    } finally { await app.close(); }
+});
+
+test('delegate — 409 when approval is already delegated', async () => {
+    const { repo, approvals, approvalId } = createDelegationRepo();
+    // Manually mark the approval as already delegated
+    const approval = approvals.get(approvalId);
+    if (approval) {
+        (approval as StoredApproval & { delegatedToUserId?: string }).delegatedToUserId = 'user_existing_delegate';
+    }
+    const app = Fastify();
+    await registerApprovalRoutes(app, { getSession: () => session(), repo });
+    try {
+        const res = await app.inject({
+            method: 'POST',
+            url: `/v1/approvals/${approvalId}/delegate`,
+            payload: { workspace_id: 'ws_1', delegate_to_user_id: 'user_other' },
+        });
+        assert.equal(res.statusCode, 409);
+        assert.equal(res.json<{ error: string }>().error, 'already_delegated');
+    } finally { await app.close(); }
+});
+
+test('delegate — 200 with valid future expires_at stores delegation expiry', async () => {
+    const { repo, approvalId, delegations } = createDelegationRepo();
+    const app = Fastify();
+    await registerApprovalRoutes(app, { getSession: () => session(), repo });
+    try {
+        const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+        const res = await app.inject({
+            method: 'POST',
+            url: `/v1/approvals/${approvalId}/delegate`,
+            payload: { workspace_id: 'ws_1', delegate_to_user_id: 'user_delegate', expires_at: tomorrow },
+        });
+        assert.equal(res.statusCode, 200);
+        const body = res.json<{ delegation_expires_at: string | null }>();
+        assert.ok(body.delegation_expires_at, 'delegation_expires_at should be set');
+        assert.ok(delegations[0]?.delegationExpiresAt instanceof Date);
+    } finally { await app.close(); }
+});

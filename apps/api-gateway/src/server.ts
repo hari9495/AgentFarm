@@ -54,7 +54,31 @@ export const createServer = async (): Promise<FastifyInstance> => {
     const requireAuth = process.env.API_REQUIRE_AUTH === 'true';
 
     // 1 MB max request body — prevents large payload DoS
-    const app = Fastify({ logger: true, bodyLimit: 1_048_576 });
+    // pino redact: strip sensitive fields from structured logs so PII/credentials
+    // never appear in Azure Monitor, stdout, or any log aggregator.
+    const app = Fastify({
+        logger: {
+            redact: {
+                paths: [
+                    'req.headers.authorization',
+                    'req.headers.cookie',
+                    'req.headers["x-api-key"]',
+                    'req.body.password',
+                    'req.body.passwordHash',
+                    'req.body.code',
+                    'req.body.mfa_token',
+                    'req.body.client_secret',
+                    'req.body.api_key',
+                    'req.body.secret',
+                    'req.body.token',
+                    'res.body.token',
+                    'res.body.mfa_token',
+                ],
+                censor: '[REDACTED]',
+            },
+        },
+        bodyLimit: 1_048_576,
+    });
 
     await app.register(helmet, {
         contentSecurityPolicy: {
