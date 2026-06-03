@@ -12,6 +12,7 @@ import AgentMessagingToggle from '../../components/agent-messaging-toggle';
 import AgentCapabilitiesFetcher from '../../components/agent-capabilities-fetcher';
 import AgentEpisodicMemoryPanel from '../../components/agent-episodic-memory-panel';
 import AgentMemoryPatternFetcher from '../../components/agent-memory-pattern-fetcher';
+import AgentInsightsCard from '../../components/agent-insights-card';
 import { getInternalSessionAuthHeader } from '../../lib/internal-session';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -185,6 +186,8 @@ export default async function AgentDetailPage({ params }: PageProps) {
                     <h2>Agent Messaging</h2>
                     <AgentMessagingToggle botId={botId} initialEnabled={agent.messagingEnabled ?? true} />
                 </section>
+
+                <AgentInsightsCard botId={botId} />
 
                 <section className="card" style={{ borderColor: 'var(--danger-border)', background: 'var(--danger-bg)' }}>
                     <h2 style={{ color: 'var(--danger)' }}>Danger Zone</h2>
