@@ -10,6 +10,10 @@
         "./web-actions.js": {
             "types": "./src/web-actions.ts",
             "default": "./src/web-actions.ts"
+        },
+        "./browser-action-router.js": {
+            "types": "./src/browser-action-router.ts",
+            "default": "./src/browser-action-router.ts"
         }
     },
     "devDependencies": {

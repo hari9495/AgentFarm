@@ -1,8 +1,57 @@
 import TurndownService from 'turndown';
 import mammoth from 'mammoth';
 import * as XLSX from 'xlsx';
+import { spawnSync } from 'node:child_process';
+import { writeFileSync, unlinkSync, existsSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { randomBytes } from 'node:crypto';
+import { fileURLToPath } from 'node:url';
+import { resolve, dirname } from 'node:path';
 
 const td = new TurndownService({ headingStyle: 'atx', bulletListMarker: '-' });
+
+// ---------------------------------------------------------------------------
+// MarkItDown helper (PDF + PPTX)
+// Resolves the markitdown CLI from the workspace .venv so it works both
+// locally (Windows/Linux) and inside Docker (where the venv is at /app/.venv).
+// ---------------------------------------------------------------------------
+
+function resolveMarkitdownCli(): string {
+    const __filename = fileURLToPath(import.meta.url);
+    // packages/document-converter/src → go 3 levels up to workspace root
+    const workspaceRoot = resolve(dirname(__filename), '..', '..', '..');
+    const candidates = [
+        join(workspaceRoot, '.venv', 'Scripts', 'markitdown.exe'), // Windows dev
+        join(workspaceRoot, '.venv', 'bin', 'markitdown'),          // Linux dev
+        '/app/.venv/bin/markitdown',                                 // Docker / CI
+    ];
+    for (const c of candidates) {
+        if (existsSync(c)) return c;
+    }
+    return 'markitdown'; // fall back to PATH
+}
+
+const MARKITDOWN_CLI = resolveMarkitdownCli();
+
+async function markitdownConvert(buffer: Buffer, ext: string): Promise<string> {
+    const tmpPath = join(tmpdir(), `af-doc-${randomBytes(8).toString('hex')}${ext}`);
+    try {
+        writeFileSync(tmpPath, buffer);
+        const result = spawnSync(MARKITDOWN_CLI, [tmpPath], {
+            encoding: 'utf8',
+            maxBuffer: 10 * 1024 * 1024,
+            timeout: 30_000,
+        });
+        if (result.status === 0 && result.stdout) {
+            return result.stdout.trim();
+        }
+        // Fall back — caller will use legacy parser
+        throw new Error(result.stderr || `markitdown exited ${result.status}`);
+    } finally {
+        try { unlinkSync(tmpPath); } catch { /* ignore */ }
+    }
+}
 
 // ---------------------------------------------------------------------------
 // Public constants
@@ -22,12 +71,12 @@ export const SUPPORTED_MIME_TYPES = [
 export type SupportedMimeType = (typeof SUPPORTED_MIME_TYPES)[number];
 
 const EXT_MIME_MAP: Record<string, string> = {
-    '.txt':  'text/plain',
+    '.txt': 'text/plain',
     '.html': 'text/html',
-    '.htm':  'text/html',
-    '.csv':  'text/csv',
+    '.htm': 'text/html',
+    '.csv': 'text/csv',
     '.json': 'application/json',
-    '.pdf':  'application/pdf',
+    '.pdf': 'application/pdf',
     '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
@@ -80,11 +129,17 @@ export async function convertToMarkdown(buffer: Buffer, mimeType: string): Promi
         }
 
         case 'application/pdf': {
-            // pdf-parse is CJS; dynamic import avoids ESM interop issues at module load time
-            const mod = await import('pdf-parse');
-            const pdfParse = (mod.default ?? mod) as (buf: Buffer) => Promise<{ text: string }>;
-            const result = await pdfParse(buffer);
-            return result.text;
+            // MarkItDown produces structured Markdown (headings, tables) — significantly more
+            // token-efficient and LLM-friendly than the raw text dump from pdf-parse.
+            try {
+                return await markitdownConvert(buffer, '.pdf');
+            } catch {
+                // Fallback: pdf-parse (CJS; dynamic import avoids ESM interop issues)
+                const mod = await import('pdf-parse');
+                const pdfParse = (mod.default ?? mod) as (buf: Buffer) => Promise<{ text: string }>;
+                const result = await pdfParse(buffer);
+                return result.text;
+            }
         }
 
         case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': {
@@ -102,9 +157,14 @@ export async function convertToMarkdown(buffer: Buffer, mimeType: string): Promi
         }
 
         case 'application/vnd.openxmlformats-officedocument.presentationml.presentation': {
-            // officeparser v4+ accepts a Buffer directly and auto-detects PPTX from ZIP structure
-            const { parseOfficeAsync } = await import('officeparser');
-            return parseOfficeAsync(buffer as unknown as string);
+            // MarkItDown produces slide-by-slide Markdown structure vs officeparser's flat text.
+            try {
+                return await markitdownConvert(buffer, '.pptx');
+            } catch {
+                // Fallback: officeparser
+                const { parseOfficeAsync } = await import('officeparser');
+                return parseOfficeAsync(buffer as unknown as string);
+            }
         }
 
         default:

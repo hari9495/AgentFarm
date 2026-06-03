@@ -25,6 +25,7 @@
         "eslint": "^9.17.0",
         "prettier": "^3.4.2",
         "prisma": "6.19.3",
-        "typescript": "^5.7.2"
+        "typescript": "^5.7.2",
+        "xlsx": "^0.18.5"
     }
 }

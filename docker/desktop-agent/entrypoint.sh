@@ -45,6 +45,19 @@ NOVNC_PID=$!
 
 echo "[desktop-agent] All display services started. noVNC accessible at http://localhost:${NOVNC_PORT}/vnc.html"
 
+# ── chrome-devtools-mcp (browser action engine) ──────────────────────────────
+# Runs headless Chrome + DevTools MCP server, bridged to HTTP via supergateway
+# so McpProtocolClient can reach it at http://localhost:3100.
+# Playwright in browser-action-router.ts is the automatic fallback if this
+# process is not running or returns errors.
+CHROME_DEVTOOLS_MCP_PORT="${CHROME_DEVTOOLS_MCP_PORT:-3100}"
+echo "[desktop-agent] Starting chrome-devtools-mcp on port ${CHROME_DEVTOOLS_MCP_PORT}"
+CHROME_DEVTOOLS_MCP_NO_USAGE_STATISTICS=1 \
+  supergateway \
+    --port "${CHROME_DEVTOOLS_MCP_PORT}" \
+    --stdio "npx chrome-devtools-mcp --headless --isolated --redactNetworkHeaders --no-usage-statistics" &
+CHROME_DEVTOOLS_MCP_PID=$!
+
 # ── Voice sidecar (pipecat_sidecar.py) ───────────────────────────────────────
 # Optional — gated by ENABLE_VOICE_SIDECAR=1. When enabled we configure
 # PulseAudio (virtual mic + monitor source) then launch the Python sidecar
@@ -80,6 +93,7 @@ cleanup() {
     if [ -n "${PIPECAT_PID}" ]; then
         kill "${PIPECAT_PID}" 2>/dev/null || true
     fi
+    kill "${CHROME_DEVTOOLS_MCP_PID}" 2>/dev/null || true
     kill "${NOVNC_PID}" "${X11VNC_PID}" "${XVFB_PID}" 2>/dev/null || true
 }
 trap cleanup SIGTERM SIGINT

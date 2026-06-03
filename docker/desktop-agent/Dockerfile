@@ -149,13 +149,23 @@ RUN --mount=type=cache,target=/root/.npm \
 RUN --mount=type=cache,target=/root/.npm \
     npm install -g newman newman-reporter-html appium
 
+# ── chrome-devtools-mcp + supergateway ───────────────────────────────────────
+# chrome-devtools-mcp: official Google DevTools MCP server (browser actions,
+#   Lighthouse audits, network inspection, heap snapshots, screenshots).
+# supergateway: bridges the stdio MCP server to HTTP so McpProtocolClient
+#   can reach it at http://localhost:3100.
+RUN --mount=type=cache,target=/root/.npm \
+    npm install -g chrome-devtools-mcp supergateway
+
 RUN appium driver install uiautomator2 || true \
     && appium driver install xcuitest || true
 
 # ── Stage 5: runtime — application code (fastest-changing layer last) ────────
 FROM node-tools AS runtime
 
-ENV PATH="${PATH}:/opt/jmeter/bin:/opt/zaproxy"
+ENV PATH="${PATH}:/opt/jmeter/bin:/opt/zaproxy" \
+    CHROME_DEVTOOLS_MCP_PORT=3100 \
+    MCP_CHROME_DEVTOOLS_URL=http://localhost:3100/mcp
 
 WORKDIR /app
 COPY . .

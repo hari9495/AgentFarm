@@ -191,6 +191,8 @@ export class McpProtocolClient {
                 method: 'POST',
                 headers: {
                     'content-type': 'application/json',
+                    // MCP streamable-HTTP transport requires both accept types (spec §4.2.1)
+                    'accept': 'application/json, text/event-stream',
                     ...this.headers,
                 },
                 body: JSON.stringify(body),

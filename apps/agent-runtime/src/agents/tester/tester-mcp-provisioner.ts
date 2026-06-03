@@ -12,6 +12,7 @@
  * overridden per deployment without code changes.
  *
  * Environment variables (all optional — connectors without a URL are skipped):
+ *   MCP_CHROME_DEVTOOLS_URL  (built-in browser engine; Playwright is the fallback)
  *   MCP_JIRA_URL, MCP_LINEAR_URL, MCP_GITHUB_URL, MCP_GITLAB_URL,
  *   MCP_TEAMS_URL, MCP_SLACK_URL, MCP_EMAIL_URL,
  *   MCP_JENKINS_URL, MCP_CIRCLECI_URL,
@@ -34,6 +35,7 @@ import { TESTER_ROLE_ALLOWED_CONNECTORS } from './tester-agent-profile.js';
  * Connectors whose env var is unset are simply unavailable for the session.
  */
 const TESTER_MCP_ENV_MAP: Record<string, string> = {
+    'chrome-devtools': 'MCP_CHROME_DEVTOOLS_URL',
     jira: 'MCP_JIRA_URL',
     linear: 'MCP_LINEAR_URL',
     github: 'MCP_GITHUB_URL',
