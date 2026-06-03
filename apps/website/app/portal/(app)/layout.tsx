@@ -8,6 +8,7 @@ import {
     User,
     LayoutDashboard,
     LogOut,
+    Plug,
 } from "lucide-react";
 
 const GATEWAY_URL =
@@ -38,6 +39,7 @@ async function getSession(token: string): Promise<SessionData | null> {
 
 const navItems = [
     { href: "/portal/agents", label: "Agents", icon: Bot },
+    { href: "/portal/connectors", label: "Integrations", icon: Plug },
     { href: "/portal/usage", label: "Usage", icon: BarChart3 },
     { href: "/portal/billing", label: "Billing", icon: CreditCard },
     { href: "/portal/profile", label: "Profile", icon: User },

@@ -520,4 +520,105 @@ export const registerPortalDataRoutes = async (
         const updated = await repo.updateDisplayName(session.accountId, displayName.trim());
         return reply.send({ ok: true, displayName: updated.displayName });
     });
+
+    // ── GET /portal/data/connectors ──────────────────────────────────────────
+    // Read-only view: which connectors are connected for the tenant's workspace.
+    app.get('/portal/data/connectors', async (request, reply) => {
+        const session = await checkSession(request, reply);
+        if (!session) return;
+
+        const prisma = await resolvePrisma();
+
+        // Get the first workspace for this tenant
+        const bot = await prisma.bot.findFirst({
+            where: { workspace: { tenantId: session.tenantId } },
+            select: { workspaceId: true },
+        });
+        if (!bot) {
+            return reply.send({ connectors: [], workspace_id: null });
+        }
+
+        const workspaceId = bot.workspaceId;
+
+        // Fetch connector auth metadata for this workspace
+        const records = await prisma.connectorAuthMetadata.findMany({
+            where: { tenantId: session.tenantId, workspaceId },
+            select: {
+                connectorId: true,
+                connectorType: true,
+                status: true,
+                scopeStatus: true,
+                lastErrorClass: true,
+                lastRefreshAt: true,
+                tokenExpiresAt: true,
+            },
+        }) as Array<{
+            connectorId: string;
+            connectorType: string;
+            status: string;
+            scopeStatus: string | null;
+            lastErrorClass: string | null;
+            lastRefreshAt: Date | null;
+            tokenExpiresAt: Date | null;
+        }>;
+
+        return reply.send({
+            workspace_id: workspaceId,
+            connectors: records.map((r) => ({
+                connector_id: r.connectorId,
+                connector_type: r.connectorType,
+                status: r.status,
+                scope_status: r.scopeStatus,
+                last_error_class: r.lastErrorClass,
+                last_refresh_at: r.lastRefreshAt?.toISOString() ?? null,
+                token_expires_at: r.tokenExpiresAt?.toISOString() ?? null,
+            })),
+        });
+    });
+
+    // ── POST /portal/data/connectors/request ─────────────────────────────────
+    // Portal users request the operator to connect a specific integration.
+    // Creates an audit event the operator can see in the dashboard.
+    app.post<{ Body: { connector_type?: string; note?: string } }>(
+        '/portal/data/connectors/request',
+        async (request, reply) => {
+            const session = await checkSession(request, reply);
+            if (!session) return;
+
+            const connectorType = request.body?.connector_type?.trim();
+            if (!connectorType) {
+                return reply.code(400).send({ error: 'connector_type is required.' });
+            }
+
+            const prisma = await resolvePrisma();
+
+            // Get workspace for audit event
+            const bot = await prisma.bot.findFirst({
+                where: { workspace: { tenantId: session.tenantId } },
+                select: { id: true, workspaceId: true },
+            });
+
+            const note = request.body?.note?.trim();
+            const summary = `Portal user ${session.accountId} requested ${connectorType} connector integration${note ? `: ${note}` : ''}.`;
+
+            await prisma.auditEvent.create({
+                data: {
+                    tenantId: session.tenantId,
+                    workspaceId: bot?.workspaceId ?? 'portal',
+                    botId: bot?.id ?? 'portal-request',
+                    eventType: 'audit_event',
+                    severity: 'info',
+                    summary,
+                    sourceSystem: 'portal-connector-request',
+                    correlationId: `portal_connector_request_${Date.now()}`,
+                },
+            });
+
+            return reply.code(201).send({
+                ok: true,
+                connector_type: connectorType,
+                message: 'Your request has been sent to the workspace administrator.',
+            });
+        },
+    );
 };
