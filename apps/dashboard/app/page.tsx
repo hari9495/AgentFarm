@@ -27,6 +27,7 @@ import AgentPerformancePanel from './components/agent-performance-panel';
 import AgentControlPanel from './components/agent-control-panel';
 import TaskRetryPanel from './components/task-retry-panel';
 import { KillSwitchBanner } from './components/kill-switch-banner';
+import { OperatorOnboardingBanner } from './components/operator-onboarding-banner';
 import type { DashboardTab } from './components/dashboard-navigation';
 import type { WorkspaceBudgetSnapshot } from './components/workspace-budget-panel-utils';
 import { isInternalSessionToken, getSessionPayload } from './lib/internal-session';
@@ -1292,6 +1293,13 @@ export default async function HomePage({
                         />
                     </Suspense>
                     <KillSwitchBanner />
+                    <OperatorOnboardingBanner
+                        hasBot={summary.active_bots > 0}
+                        hasConnector={dashboardSlice.connectors.some((c) => c.status === 'connected')}
+                        hasPendingApproval={dashboardSlice.approvalMetrics.decision_count > 0}
+                        hasSchedule={false}
+                        hasBranding={false}
+                    />
 
                     {unifiedView && <MissionMiniNav items={missionSections} />}
 
