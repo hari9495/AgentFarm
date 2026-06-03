@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import {
-    BookOpen, Search, Play, X, ChevronRight, RefreshCw,
-    AlertCircle, CheckCircle, Clock, Zap, Filter,
+    BookOpen, Search, X, ChevronRight, RefreshCw,
+    AlertCircle, CheckCircle, Clock, Zap, Filter, Lock,
 } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -31,6 +31,7 @@ type Template = {
     isBuiltIn: boolean;
     useCount: number;
     estimatedTime?: string;
+    locked?: boolean;
 };
 
 type Bot = { id: string; role: string; status: string; workspaceId: string };
@@ -101,19 +102,25 @@ function CategoryPill({ label, active, onClick }: { label: string; active: boole
 }
 
 function TemplateCard({ template, onClick }: { template: Template; onClick: () => void }) {
+    const locked = template.locked === true;
     return (
         <button
             onClick={onClick}
             style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 10,
                 padding: '18px 20px', borderRadius: 14,
-                border: '1px solid var(--line)', background: 'var(--card)',
+                border: `1px solid ${locked ? 'var(--line)' : 'var(--line)'}`,
+                background: locked ? 'var(--bg-deep)' : 'var(--card)',
                 cursor: 'pointer', textAlign: 'left', width: '100%',
                 transition: 'border-color 0.15s, box-shadow 0.15s',
+                opacity: locked ? 0.72 : 1,
+                position: 'relative', overflow: 'hidden',
             }}
             onMouseEnter={e => {
-                (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--accent)';
-                (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 2px 12px rgba(0,0,0,0.07)';
+                if (!locked) {
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--accent)';
+                    (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 2px 12px rgba(0,0,0,0.07)';
+                }
             }}
             onMouseLeave={e => {
                 (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--line)';
@@ -122,22 +129,30 @@ function TemplateCard({ template, onClick }: { template: Template; onClick: () =
         >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
                 <span style={{
-                    fontSize: 10, fontWeight: 600, color: 'var(--accent)',
-                    background: 'color-mix(in srgb, var(--accent) 12%, transparent)',
+                    fontSize: 10, fontWeight: 600,
+                    color: locked ? 'var(--ink-muted)' : 'var(--accent)',
+                    background: locked ? 'rgba(0,0,0,0.06)' : 'color-mix(in srgb, var(--accent) 12%, transparent)',
                     padding: '2px 8px', borderRadius: 9999, textTransform: 'uppercase', letterSpacing: '0.05em',
                 }}>
                     {CATEGORY_LABELS[template.category] ?? template.category}
                 </span>
-                {template.estimatedTime && (
+                {locked ? (
+                    <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--ink-muted)', display: 'flex', alignItems: 'center', gap: 4,
+                        background: 'rgba(0,0,0,0.06)', padding: '2px 8px', borderRadius: 9999 }}>
+                        <Lock size={9} /> Add agent to unlock
+                    </span>
+                ) : template.estimatedTime ? (
                     <span style={{ fontSize: 11, color: 'var(--ink-muted)', display: 'flex', alignItems: 'center', gap: 3 }}>
                         <Clock size={10} /> {template.estimatedTime}
                     </span>
-                )}
+                ) : null}
             </div>
 
             <div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', marginBottom: 4 }}>{template.name}</div>
-                <div style={{ fontSize: 12, color: 'var(--ink-soft)', lineHeight: 1.5 }}>{template.description}</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: locked ? 'var(--ink-soft)' : 'var(--ink)', marginBottom: 4 }}>
+                    {template.name}
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--ink-muted)', lineHeight: 1.5 }}>{template.description}</div>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginTop: 'auto' }}>
@@ -149,9 +164,18 @@ function TemplateCard({ template, onClick }: { template: Template; onClick: () =
                         }}>{tag}</span>
                     ))}
                 </div>
-                <span style={{ color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: 3, fontSize: 12, fontWeight: 600 }}>
-                    Use <ChevronRight size={12} />
-                </span>
+                {locked ? (
+                    <a href="/agents" onClick={e => e.stopPropagation()} style={{
+                        fontSize: 11, fontWeight: 600, color: 'var(--accent)',
+                        textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 3,
+                    }}>
+                        Add {ROLE_LABEL[template.agentRole] ?? template.agentRole} <ChevronRight size={11} />
+                    </a>
+                ) : (
+                    <span style={{ color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: 3, fontSize: 12, fontWeight: 600 }}>
+                        Use <ChevronRight size={12} />
+                    </span>
+                )}
             </div>
         </button>
     );
@@ -364,6 +388,7 @@ export default function PlaybooksClient({
     const [query, setQuery] = useState('');
     const [activeCategory, setActiveCategory] = useState('all');
     const [selected, setSelected] = useState<Template | null>(null);
+    const [lockedTemplate, setLockedTemplate] = useState<Template | null>(null);
 
     const load = useCallback(async () => {
         setLoading(true); setError(null);
@@ -466,7 +491,11 @@ export default function PlaybooksClient({
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 }}>
                             {filtered.map(t => (
-                                <TemplateCard key={t.id} template={t} onClick={() => setSelected(t)} />
+                                <TemplateCard
+                                    key={t.id}
+                                    template={t}
+                                    onClick={() => t.locked ? setLockedTemplate(t) : setSelected(t)}
+                                />
                             ))}
                         </div>
                     </>
@@ -481,6 +510,55 @@ export default function PlaybooksClient({
                     workspaceId={workspaceId}
                     onClose={() => setSelected(null)}
                 />
+            )}
+
+            {/* Locked template prompt */}
+            {lockedTemplate && (
+                <div style={{
+                    position: 'fixed', inset: 0, zIndex: 9999,
+                    background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    padding: 20,
+                }}
+                    onClick={e => { if (e.target === e.currentTarget) setLockedTemplate(null); }}
+                >
+                    <div style={{
+                        background: 'var(--card)', borderRadius: 18, border: '1px solid var(--line)',
+                        width: '100%', maxWidth: 420, padding: 32,
+                        boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, textAlign: 'center',
+                    }}>
+                        <div style={{ width: 48, height: 48, borderRadius: 9999, background: 'rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Lock size={22} color="var(--ink-soft)" />
+                        </div>
+                        <div>
+                            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', marginBottom: 6 }}>
+                                {lockedTemplate.name}
+                            </div>
+                            <div style={{ fontSize: 13, color: 'var(--ink-soft)', lineHeight: 1.6 }}>
+                                This playbook requires a{' '}
+                                <strong>{ROLE_LABEL[lockedTemplate.agentRole] ?? lockedTemplate.agentRole}</strong>{' '}
+                                agent. Add one to your workspace to unlock it.
+                            </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 10, width: '100%' }}>
+                            <a href="/agents" style={{
+                                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                padding: '10px 16px', borderRadius: 10,
+                                background: 'var(--accent)', color: '#fff',
+                                fontSize: 13, fontWeight: 700, textDecoration: 'none',
+                            }}>
+                                Add Agent
+                            </a>
+                            <button onClick={() => setLockedTemplate(null)} style={{
+                                flex: 1, padding: '10px 16px', borderRadius: 10,
+                                border: '1px solid var(--line)', background: 'var(--card)',
+                                color: 'var(--ink-soft)', fontSize: 13, cursor: 'pointer',
+                            }}>
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

@@ -23,7 +23,8 @@ export type RegisterTaskTemplateRoutesOptions = {
     getSession: (request: FastifyRequest) => SessionContext | null;
 };
 
-// ── Built-in templates (always available, not stored in DB) ──────────────────
+// ── Built-in templates ────────────────────────────────────────────────────────
+// agentRole values match the RoleKey type from shared-types exactly.
 
 const BUILT_IN_TEMPLATES: TaskTemplate[] = [
     {
@@ -32,7 +33,7 @@ const BUILT_IN_TEMPLATES: TaskTemplate[] = [
         name: 'Draft Cold Email',
         description: 'Generate a personalised cold outreach email for a prospect, including a compelling hook, value proposition, and clear CTA.',
         category: 'sales',
-        agentRole: 'sales_agent',
+        agentRole: 'sales_rep',
         promptTemplate: 'Draft a cold email to {{prospect_name}} at {{company_name}}. Their role is {{prospect_role}}. Focus on {{pain_point}} and highlight how we can help. Keep it under 150 words with a clear call to action.',
         inputSchema: [
             { name: 'prospect_name', label: 'Prospect Name', type: 'text', required: true, placeholder: 'Jane Smith' },
@@ -55,7 +56,7 @@ const BUILT_IN_TEMPLATES: TaskTemplate[] = [
         name: 'Qualify Inbound Lead',
         description: 'Evaluate a new inbound lead against BANT criteria and produce a qualification scorecard with recommended next steps.',
         category: 'sales',
-        agentRole: 'sales_agent',
+        agentRole: 'sales_rep',
         promptTemplate: 'Qualify the inbound lead from {{lead_name}} at {{company}}. Their stated need is: {{stated_need}}. Company size: {{company_size}}. Evaluate budget fit, authority, need, and timeline. Return a qualification scorecard and recommended next action.',
         inputSchema: [
             { name: 'lead_name', label: 'Lead Name', type: 'text', required: true, placeholder: 'John Doe' },
@@ -170,7 +171,7 @@ const BUILT_IN_TEMPLATES: TaskTemplate[] = [
         name: 'Debug CI Failure',
         description: 'Diagnose a failing CI pipeline run — identify root cause, list impacted tests, and suggest a remediation plan.',
         category: 'devops',
-        agentRole: 'devops',
+        agentRole: 'devops_engineer',
         promptTemplate: 'Analyse this CI failure for the {{repo}} repository on branch {{branch}}. Pipeline stage: {{stage}}. Error output: {{error_output}}. Identify the root cause, list affected tests or steps, and propose a fix.',
         inputSchema: [
             { name: 'repo', label: 'Repository', type: 'text', required: true, placeholder: 'org/my-service' },
@@ -240,7 +241,7 @@ const BUILT_IN_TEMPLATES: TaskTemplate[] = [
         name: 'Summarise Meeting Notes',
         description: 'Transform raw meeting notes or a transcript into a structured summary with decisions, action items, owners, and deadlines.',
         category: 'meetings',
-        agentRole: 'meeting_agent',
+        agentRole: 'corporate_assistant',
         promptTemplate: 'Summarise these meeting notes from {{meeting_title}} on {{meeting_date}}. Attendees: {{attendees}}. Notes: {{notes}}. Output: executive summary (3 sentences), list of decisions, action items with owners and deadlines, and open questions.',
         inputSchema: [
             { name: 'meeting_title', label: 'Meeting Title', type: 'text', required: true, placeholder: 'Q2 Planning Sync' },
@@ -292,6 +293,34 @@ function dbRowToTemplate(row: {
     };
 }
 
+// Returns the set of bot roles the tenant currently has provisioned.
+// Falls back to an empty set if the DB is unavailable (all templates lock).
+async function getTenantBotRoles(tenantId: string, workspaceIds: string[]): Promise<Set<string>> {
+    try {
+        const prisma = await getPrisma();
+        const bots = await prisma.bot.findMany({
+            where: { workspaceId: { in: workspaceIds } },
+            select: { role: true },
+        });
+        // If no workspace IDs in session, fall back to a tenant-wide query via workspace join
+        if (bots.length === 0 && workspaceIds.length === 0) {
+            const workspaces = await prisma.workspace.findMany({
+                where: { tenantId },
+                select: { id: true },
+            });
+            const ids = workspaces.map(w => w.id);
+            const allBots = await prisma.bot.findMany({
+                where: { workspaceId: { in: ids } },
+                select: { role: true },
+            });
+            return new Set(allBots.map(b => b.role));
+        }
+        return new Set(bots.map(b => b.role));
+    } catch {
+        return new Set<string>();
+    }
+}
+
 // ── Route registration ────────────────────────────────────────────────────────
 
 export async function registerTaskTemplateRoutes(
@@ -309,7 +338,13 @@ export async function registerTaskTemplateRoutes(
 
             const { category, agentRole, q, builtInOnly } = request.query;
 
-            let results: TaskTemplate[] = [...BUILT_IN_TEMPLATES];
+            // Resolve which roles this tenant has purchased/provisioned
+            const ownedRoles = await getTenantBotRoles(session.tenantId, session.workspaceIds);
+
+            let results: TaskTemplate[] = BUILT_IN_TEMPLATES.map(t => ({
+                ...t,
+                locked: ownedRoles.size > 0 ? !ownedRoles.has(t.agentRole) : false,
+            }));
 
             if (builtInOnly !== 'true') {
                 try {
@@ -324,7 +359,11 @@ export async function registerTaskTemplateRoutes(
                         orderBy: { useCount: 'desc' },
                         take: 100,
                     });
-                    results = [...results, ...dbRows.map(dbRowToTemplate)];
+                    const dbTemplates = dbRows.map(row => ({
+                        ...dbRowToTemplate(row),
+                        locked: ownedRoles.size > 0 ? !ownedRoles.has(row.agentRole) : false,
+                    }));
+                    results = [...results, ...dbTemplates];
                 } catch {
                     // DB not available — return built-ins only
                 }
@@ -341,6 +380,12 @@ export async function registerTaskTemplateRoutes(
                 );
             }
 
+            // Unlocked first, then locked; within each group preserve original order
+            results.sort((a, b) => {
+                if (a.locked === b.locked) return 0;
+                return a.locked ? 1 : -1;
+            });
+
             const categories = [...new Set(BUILT_IN_TEMPLATES.map(t => t.category))];
             return reply.send({ templates: results, categories, total: results.length });
         },
@@ -354,9 +399,14 @@ export async function registerTaskTemplateRoutes(
             if (!session) return reply.code(401).send({ error: 'Unauthorized' });
 
             const { id } = request.params;
+            const ownedRoles = await getTenantBotRoles(session.tenantId, session.workspaceIds);
 
             const builtin = BUILT_IN_TEMPLATES.find(t => t.id === id || t.slug === id);
-            if (builtin) return reply.send({ template: builtin });
+            if (builtin) {
+                return reply.send({
+                    template: { ...builtin, locked: ownedRoles.size > 0 ? !ownedRoles.has(builtin.agentRole) : false },
+                });
+            }
 
             try {
                 const prisma = await getPrisma();
@@ -367,7 +417,12 @@ export async function registerTaskTemplateRoutes(
                     },
                 });
                 if (!row) return reply.code(404).send({ error: 'Template not found' });
-                return reply.send({ template: dbRowToTemplate(row) });
+                return reply.send({
+                    template: {
+                        ...dbRowToTemplate(row),
+                        locked: ownedRoles.size > 0 ? !ownedRoles.has(row.agentRole) : false,
+                    },
+                });
             } catch {
                 return reply.code(404).send({ error: 'Template not found' });
             }
@@ -375,7 +430,7 @@ export async function registerTaskTemplateRoutes(
     );
 
     // ── POST /v1/task-templates ────────────────────────────────────────────────
-    app.post<{ Body: Partial<Omit<TaskTemplate, 'id' | 'createdAt' | 'updatedAt' | 'useCount' | 'isBuiltIn'>> }>(
+    app.post<{ Body: Partial<Omit<TaskTemplate, 'id' | 'createdAt' | 'updatedAt' | 'useCount' | 'isBuiltIn' | 'locked'>> }>(
         '/v1/task-templates',
         async (request, reply) => {
             const session = getSession(request);
@@ -428,6 +483,9 @@ export async function registerTaskTemplateRoutes(
                 return reply.code(400).send({ error: 'agentId and workspaceId are required' });
             }
 
+            // Enforce lock: cannot dispatch a template for a role the tenant hasn't purchased
+            const ownedRoles = await getTenantBotRoles(session.tenantId, session.workspaceIds);
+
             const builtin = BUILT_IN_TEMPLATES.find(t => t.id === id || t.slug === id);
             let template: TaskTemplate | null = builtin ?? null;
 
@@ -447,6 +505,13 @@ export async function registerTaskTemplateRoutes(
             }
 
             if (!template) return reply.code(404).send({ error: 'Template not found' });
+
+            if (ownedRoles.size > 0 && !ownedRoles.has(template.agentRole)) {
+                return reply.code(403).send({
+                    error: 'agent_not_purchased',
+                    message: `You need a ${template.agentRole} agent to use this playbook. Add one from the Agents page.`,
+                });
+            }
 
             const inputs = (body.inputs ?? {}) as Record<string, string>;
             const taskDescription = renderPrompt(template.promptTemplate, inputs);
@@ -470,7 +535,7 @@ export async function registerTaskTemplateRoutes(
                     },
                 });
 
-                // Increment use count for DB templates
+                // Increment use count for custom (DB-stored) templates
                 if (!builtin) {
                     await prisma.taskTemplate.update({
                         where: { id: template.id },

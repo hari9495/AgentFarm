@@ -2879,6 +2879,7 @@ export interface TaskTemplate {
   tenantId: string | null;
   useCount: number;
   estimatedTime?: string;
+  locked?: boolean;
   createdAt: string;
   updatedAt: string;
 }
