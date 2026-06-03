@@ -69,6 +69,7 @@ export default function AuditPage() {
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [workspaceId, setWorkspaceId] = useState('');
     const [exportError, setExportError] = useState<string | null>(null);
+    const [exporting, setExporting] = useState(false);
     const [sortKey, setSortKey] = useState<SortKey>('created_at');
     const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
@@ -112,6 +113,10 @@ export default function AuditPage() {
                 const items = body.events ?? [];
                 const nc = body.next_cursor ?? null;
                 setEvents(items);
+                // Auto-populate workspace ID from first event
+                if (items.length > 0 && items[0]?.workspace_id && !workspaceId) {
+                    setWorkspaceId(items[0].workspace_id);
+                }
                 if (nc) {
                     pageCursors.current[page + 1] = nc;
                     setTotal((prev) => Math.max(prev, (page + 2) * PAGE_SIZE));
@@ -161,10 +166,15 @@ export default function AuditPage() {
         }
     };
 
-    const handleExportCsv = async (): Promise<void> => {
+    const handleExport = async (format: 'csv' | 'json'): Promise<void> => {
+        if (!workspaceId.trim()) {
+            setExportError('Workspace ID is required for export. Wait for events to load or enter one manually.');
+            return;
+        }
         setExportError(null);
-        const params = new URLSearchParams();
-        if (workspaceId.trim()) params.set('workspace_id', workspaceId.trim());
+        setExporting(true);
+        const params = new URLSearchParams({ format, limit: '500' });
+        params.set('workspace_id', workspaceId.trim());
         if (filters.from) params.set('from', new Date(filters.from).toISOString());
         if (filters.to)   params.set('to',   new Date(filters.to).toISOString());
         if (filters.action.trim())  params.set('event_type', filters.action.trim());
@@ -173,20 +183,22 @@ export default function AuditPage() {
         try {
             const res = await fetch(`/api/audit/export?${params.toString()}`);
             if (!res.ok) {
-                setExportError('Export failed. Provide a Workspace ID and try again.');
+                setExportError('Export failed. Check your workspace ID and try again.');
                 return;
             }
             const blob = await res.blob();
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'audit-export.csv';
+            a.download = `audit-export-${workspaceId.trim().slice(0, 12)}.${format}`;
             document.body.appendChild(a);
             a.click();
             a.remove();
             URL.revokeObjectURL(url);
         } catch {
             setExportError('Export failed. Check your connection.');
+        } finally {
+            setExporting(false);
         }
     };
 
@@ -324,20 +336,29 @@ export default function AuditPage() {
                     Clear filters
                 </button>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: 'auto' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: 'auto', flexWrap: 'wrap' }}>
                     <input
                         type="text"
                         value={workspaceId}
-                        placeholder="Workspace ID (export)"
-                        style={{ ...inputStyle, width: 170 }}
+                        placeholder="Workspace ID (auto-filled)"
+                        style={{ ...inputStyle, width: 180 }}
                         onChange={(e) => setWorkspaceId(e.target.value)}
                     />
                     <button
                         type="button"
-                        onClick={() => { void handleExportCsv(); }}
-                        style={{ ...btnBase, border: '1px solid #6366f1', background: '#6366f1', color: '#fff' }}
+                        onClick={() => { void handleExport('csv'); }}
+                        disabled={exporting}
+                        style={{ ...btnBase, border: '1px solid #6366f1', background: '#6366f1', color: '#fff', opacity: exporting ? 0.6 : 1 }}
                     >
-                        Export CSV
+                        {exporting ? 'Exporting…' : '↓ CSV'}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => { void handleExport('json'); }}
+                        disabled={exporting}
+                        style={{ ...btnBase, border: '1px solid #6366f1', background: '#fff', color: '#6366f1', opacity: exporting ? 0.6 : 1 }}
+                    >
+                        ↓ JSON
                     </button>
                 </div>
             </div>
