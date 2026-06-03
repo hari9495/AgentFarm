@@ -90,6 +90,7 @@ import { registerPrRoutes } from './routes/workspace/pull-requests.js';
 import { registerCiFailureRoutes } from './routes/workspace/ci-failures.js';
 import { registerReproPackRoutes } from './routes/workspace/repro-packs.js';
 import { registerDesktopSessionsRoutes } from './routes/workspace/desktop-sessions.js';
+import { registerDeliverableRoutes } from './routes/workspace/deliverables.js';
 
 // Platform
 import { registerLanguageRoutes } from './routes/platform/language.js';
@@ -243,6 +244,7 @@ export const registerAllRoutes = async (
     await registerCiFailureRoutes(app, { getSession, prisma });
     await registerReproPackRoutes(app, { getSession });
     await registerDesktopSessionsRoutes(app, { getSession });
+    await registerDeliverableRoutes(app, { getSession });
 
     // Platform
     await registerLanguageRoutes(app, { getSession });
