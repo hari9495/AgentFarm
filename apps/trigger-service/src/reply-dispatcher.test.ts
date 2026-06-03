@@ -137,6 +137,63 @@ describe('ReplyDispatcher', () => {
         });
     });
 
+    describe('google_chat: POSTs to spaces messages endpoint', () => {
+        it('sends message to correct space with Bearer token', async () => {
+            let captured: { url: string; body: Record<string, unknown>; auth: string } | undefined;
+
+            const originalFetch = global.fetch;
+            global.fetch = async (url, init) => {
+                captured = {
+                    url: url as string,
+                    body: JSON.parse(init?.body as string) as Record<string, unknown>,
+                    auth: (init?.headers as Record<string, string>)['Authorization'] ?? '',
+                };
+                return new Response('{}', { status: 200 });
+            };
+
+            const event: TriggerEvent = {
+                id: 'evt-gc-001', source: 'google_chat', tenantId: 'tenant-1', agentId: 'agent-1',
+                from: 'user@example.com', body: 'task', receivedAt: new Date(),
+                replyContext: {
+                    source: 'google_chat',
+                    spaceId: 'spaces/AAAA1234',
+                    threadName: 'spaces/AAAA1234/threads/BBBB5678',
+                    token: 'gchat-token-xyz',
+                },
+            };
+
+            const rd = new ReplyDispatcher();
+            await rd.reply(event, successResult);
+            global.fetch = originalFetch;
+
+            assert.ok(captured?.url.includes('spaces/AAAA1234/messages'), `Expected spaces URL, got: ${captured?.url}`);
+            assert.equal(captured?.auth, 'Bearer gchat-token-xyz');
+            assert.equal((captured?.body['thread'] as { name: string } | undefined)?.name, 'spaces/AAAA1234/threads/BBBB5678');
+        });
+
+        it('sends without thread when threadName is absent', async () => {
+            let capturedBody: Record<string, unknown> | undefined;
+            const originalFetch = global.fetch;
+            global.fetch = async (_, init) => {
+                capturedBody = JSON.parse(init?.body as string) as Record<string, unknown>;
+                return new Response('{}', { status: 200 });
+            };
+
+            const event: TriggerEvent = {
+                id: 'evt-gc-002', source: 'google_chat', tenantId: 'tenant-1', agentId: 'agent-1',
+                from: 'user@example.com', body: 'task', receivedAt: new Date(),
+                replyContext: { source: 'google_chat', spaceId: 'spaces/BBBB5678', token: 'tok' },
+            };
+
+            const rd = new ReplyDispatcher();
+            await rd.reply(event, successResult);
+            global.fetch = originalFetch;
+
+            assert.equal(capturedBody?.['thread'], undefined);
+            assert.ok(typeof capturedBody?.['text'] === 'string');
+        });
+    });
+
     describe('reply does not throw on error', () => {
         it('catches and logs errors without rethrowing', async () => {
             const originalFetch = global.fetch;

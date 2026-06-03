@@ -5,6 +5,22 @@ const MAX_RETRIES = 30
 const TEST_EMAIL = process.env['E2E_TEST_EMAIL'] ?? 'test@agentfarm.dev'
 const TEST_PASSWORD = process.env['E2E_TEST_PASSWORD'] ?? 'TestPassword123!'
 
+/**
+ * Quick one-shot reachability probe (no retries, 3s timeout).
+ * Used to detect offline environments before committing to a 60s poll loop.
+ */
+async function isReachable(url: string): Promise<boolean> {
+    try {
+        const ctrl = new AbortController()
+        const timer = setTimeout(() => ctrl.abort(), 3_000)
+        const res = await fetch(url, { signal: ctrl.signal })
+        clearTimeout(timer)
+        return res.ok
+    } catch {
+        return false
+    }
+}
+
 async function pollHealthy(url: string, name: string): Promise<void> {
     let lastError: unknown
     for (let i = 0; i < MAX_RETRIES; i++) {
@@ -50,6 +66,26 @@ async function ensureTestUser(): Promise<void> {
 }
 
 export default async function globalSetup(): Promise<void> {
+    // In CI, services are always expected to be running — fail hard if they're not.
+    // In local dev, skip gracefully if services aren't up to avoid poisoning `pnpm test`.
+    const inCi = process.env['CI'] === 'true'
+    const forceE2e = process.env['FORCE_E2E'] === 'true'
+
+    if (!inCi && !forceE2e) {
+        const apiUp = await isReachable(`${API_URL}/health`)
+        if (!apiUp) {
+            console.log('')
+            console.log('⚠️  E2E tests skipped — API gateway not reachable at ' + API_URL)
+            console.log('   Start services with `docker compose up` or set FORCE_E2E=true to run anyway.')
+            console.log('')
+            // Return without throwing — Playwright will still attempt tests but they will
+            // fail individually, which is acceptable for a local dev skip signal.
+            // Set a global flag that individual tests can check via process.env.
+            process.env['E2E_SERVICES_OFFLINE'] = 'true'
+            return
+        }
+    }
+
     await pollHealthy(`${API_URL}/health`, 'API gateway')
     await pollHealthy(`${DASHBOARD_URL}/api/health/gateway`, 'Dashboard')
     await ensureTestUser()

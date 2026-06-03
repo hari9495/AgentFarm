@@ -140,6 +140,34 @@ async function getBotFrameworkToken(): Promise<string> {
     return json.access_token;
 }
 
+async function replyGoogleChat(
+    ctx: Extract<ReplyContext, { source: 'google_chat' }>,
+    message: string,
+): Promise<void> {
+    // Google Chat REST API: POST /v1/{parent}/messages
+    // Docs: https://developers.google.com/chat/api/reference/rest/v1/spaces.messages/create
+    const parent = ctx.spaceId.startsWith('spaces/') ? ctx.spaceId : `spaces/${ctx.spaceId}`;
+    const url = `https://chat.googleapis.com/v1/${parent}/messages`;
+
+    const body: Record<string, unknown> = { text: message };
+    if (ctx.threadName) {
+        body['thread'] = { name: ctx.threadName };
+    }
+
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'content-type': 'application/json',
+            Authorization: `Bearer ${ctx.token}`,
+        },
+        body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+        throw new Error(`Google Chat reply failed: ${response.status} ${await response.text()}`);
+    }
+}
+
 async function replyTeams(
     ctx: Extract<ReplyContext, { source: 'teams' }>,
     message: string,
@@ -189,6 +217,9 @@ export class ReplyDispatcher {
                     break;
                 case 'teams':
                     await replyTeams(ctx, message);
+                    break;
+                case 'google_chat':
+                    await replyGoogleChat(ctx, message);
                     break;
                 default: {
                     const _exhaustive: never = ctx;

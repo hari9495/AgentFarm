@@ -113,7 +113,7 @@ export async function validateTenant(_job: JobRef): Promise<StepResult> {
 // Step 2: Create resource group + VNet + subnet + NIC
 // ---------------------------------------------------------------------------
 
-export async function createResources(job: JobRef): Promise<StepResult> {
+export async function createResources(job: JobRef, context: Record<string, string> = {}): Promise<StepResult> {
     const region = getAzureRegion();
     const resourceClient = getResourceClient();
     const networkClient = getNetworkClient();
@@ -124,7 +124,7 @@ export async function createResources(job: JobRef): Promise<StepResult> {
     const nic = wsNicName(job.workspaceId);
 
     try {
-        // 1. Resource group
+        // 1. Resource group — include any upstream context as tags for billing/governance queries
         await resourceClient.resourceGroups.createOrUpdate(rg, {
             location: region,
             tags: {
@@ -132,6 +132,10 @@ export async function createResources(job: JobRef): Promise<StepResult> {
                 workspaceId: job.workspaceId,
                 correlationId: job.correlationId,
                 managedBy: 'agentfarm-provisioner',
+                // Forward upstream context entries as tags (e.g. planId, roleType from validation step)
+                ...Object.fromEntries(
+                    Object.entries(context).filter(([, v]) => typeof v === 'string' && v.length <= 256),
+                ),
             },
         });
 

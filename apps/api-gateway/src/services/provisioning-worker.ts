@@ -163,8 +163,11 @@ async function azureValidateTenant(job: ProvisioningJobRecord): Promise<StepResu
     return validateTenant(job);
 }
 
-async function azureCreateResources(job: ProvisioningJobRecord): Promise<StepResult> {
-    return createResources(job);
+async function azureCreateResources(
+    job: ProvisioningJobRecord,
+    context: Record<string, string>,
+): Promise<StepResult> {
+    return createResources(job, context);
 }
 
 async function azureBootstrapVm(
@@ -228,7 +231,7 @@ type StepHandler = (
 
 const STEP_HANDLERS: Partial<Record<HappyState, StepHandler>> = {
     validating: (job) => azureValidateTenant(job),
-    creating_resources: (job, _ctx) => azureCreateResources(job),      // _ctx not yet threaded into azureCreateResources; pass ctx when resource tagging needs correlation data.
+    creating_resources: (job, ctx) => azureCreateResources(job, ctx),
     bootstrapping_vm: (job, ctx) => azureBootstrapVm(job, ctx),
     starting_container: (job, ctx) => azureStartContainer(job, ctx),
     registering_runtime: (job, ctx) => azureRegisterRuntime(job, ctx),

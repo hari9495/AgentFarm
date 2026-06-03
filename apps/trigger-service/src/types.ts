@@ -40,11 +40,22 @@ export type TeamsReplyContext = {
     activityId: string;
 };
 
+export type GoogleChatReplyContext = {
+    source: 'google_chat';
+    /** Google Chat space resource name, e.g. "spaces/AAAA1234" */
+    spaceId: string;
+    /** Thread resource name for threaded replies, e.g. "spaces/AAAA1234/threads/BBBB5678" */
+    threadName?: string;
+    /** OAuth2 or service-account bearer token with chat.messages.create scope */
+    token: string;
+};
+
 export type ReplyContext =
     | SlackReplyContext
     | EmailReplyContext
     | WebhookReplyContext
-    | TeamsReplyContext;
+    | TeamsReplyContext
+    | GoogleChatReplyContext;
 
 // ---------------------------------------------------------------------------
 // Normalised event produced by every TriggerSource
