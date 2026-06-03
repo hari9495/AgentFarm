@@ -13,11 +13,13 @@
 import type { FastifyInstance } from 'fastify';
 import type { SecretStore } from './lib/secret-store.js';
 import { readSession } from './request-context.js';
+import { buildSessionToken } from './lib/session-auth.js';
 import { prisma } from './lib/db.js';
 import { createEmbedFn } from '@agentfarm/memory-service';
 
 // Auth
 import { registerAuthRoutes } from './routes/auth/auth.js';
+import { registerMfaRoutes } from './routes/auth/mfa.js';
 import { registerPortalAuthRoutes } from './routes/auth/portal-auth.js';
 import { registerRoleRoutes } from './routes/auth/roles.js';
 import { registerInternalLoginPolicyRoutes } from './routes/auth/internal-login-policy.js';
@@ -170,6 +172,11 @@ export const registerAllRoutes = async (
 
     // Auth
     await registerAuthRoutes(app);
+    await registerMfaRoutes(app, {
+        getSession,
+        sessionSecret: process.env['API_SESSION_SECRET'] ?? '',
+        buildSessionToken: (payload) => buildSessionToken({ ...payload, scope: 'customer' }),
+    });
     await registerPortalAuthRoutes(app);
     await registerPortalDataRoutes(app);
     await registerRoleRoutes(app, { getSession });

@@ -22,14 +22,18 @@ model Tenant {
 }
 
 model TenantUser {
-  id           String   @id @default(cuid())
-  tenantId     String
-  email        String   @unique
-  name         String
-  passwordHash String
-  role         String
-  createdAt    DateTime @default(now())
-  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  id             String    @id @default(cuid())
+  tenantId       String
+  email          String    @unique
+  name           String
+  passwordHash   String
+  role           String
+  createdAt      DateTime  @default(now())
+  // ── MFA (TOTP) ─────────────────────────────────────────────────────────
+  totpSecret     String?   // AES-256-GCM encrypted TOTP secret; null = MFA not configured
+  totpEnabled    Boolean   @default(false)
+  totpVerifiedAt DateTime? // timestamp of last successful TOTP verification
+  tenant         Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
 model Workspace {

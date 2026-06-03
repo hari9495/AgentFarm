@@ -25,6 +25,52 @@ jobs:
           # remove if this repo is public or you are using the free tier.
           # GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
 
+  dependency-audit:
+    name: Dependency vulnerability scan (SCA)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Audit dependencies (fail on critical or high)
+        run: pnpm audit --audit-level=high
+        # To temporarily suppress a known unfixable CVE, add it to .npmrc:
+        # audit-ignore=<CVE-ID>
+
+  sast:
+    name: Static analysis (Semgrep)
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write  # required to upload SARIF results
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Semgrep
+        uses: semgrep/semgrep-action@v1
+        with:
+          config: >-
+            p/typescript
+            p/nodejs
+            p/owasp-top-ten
+            p/jwt
+            p/secrets
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+
   website-permissions:
     runs-on: ubuntu-latest
     steps:

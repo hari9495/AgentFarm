@@ -3,6 +3,7 @@ import type { FastifyInstance } from 'fastify';
 import { hashPassword, verifyPassword } from '../../lib/password.js';
 import { buildSessionToken } from '../../lib/session-auth.js';
 import { isInternalAccessAllowed } from '../../lib/internal-login-policy.js';
+import { issueMfaToken } from './mfa.js';
 
 type SignupBody = {
     name: string;
@@ -21,6 +22,7 @@ type UserRecord = {
     tenantId: string;
     passwordHash: string;
     role: string;
+    totpEnabled?: boolean; // present when MFA is configured
 };
 
 type SignupResult = {
@@ -207,6 +209,19 @@ export const registerAuthRoutes = async (
 
         if (!user || !passwordValid) {
             return reply.code(401).send({ error: 'invalid_credentials', message: 'Email or password is incorrect.' });
+        }
+
+        // ── MFA gate: if TOTP is enabled, issue a short-lived mfa_token instead
+        // of a full session. The client must then POST /v1/auth/mfa/verify with
+        // the mfa_token + their authenticator code to receive a full session.
+        if (user.totpEnabled) {
+            const sessionSecret = process.env['API_SESSION_SECRET'] ?? '';
+            const mfaToken = issueMfaToken(user.id, sessionSecret);
+            return reply.code(200).send({
+                mfa_required: true,
+                mfa_token: mfaToken,
+                message: 'MFA verification required. POST to /v1/auth/mfa/verify with your TOTP code.',
+            });
         }
 
         const workspaces = await repo.getWorkspacesForTenant(user.tenantId);

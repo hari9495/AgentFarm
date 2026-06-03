@@ -1,0 +1,96 @@
+version: 2
+
+updates:
+  # ── npm / pnpm (monorepo root + all workspaces) ─────────────────────────
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "08:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 10
+    groups:
+      # Batch all non-breaking patch/minor security updates into one PR per week
+      security-patches:
+        applies-to: security-updates
+        update-types:
+          - "patch"
+          - "minor"
+      # Batch routine dependency updates separately
+      routine-updates:
+        applies-to: version-updates
+        update-types:
+          - "patch"
+    ignore:
+      # Major version bumps require manual review
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    labels:
+      - "dependencies"
+      - "automated"
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(dev-deps)"
+      include: "scope"
+
+  # ── GitHub Actions ───────────────────────────────────────────────────────
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "08:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "github-actions"
+      - "automated"
+    commit-message:
+      prefix: "chore(actions)"
+
+  # ── Docker base images ───────────────────────────────────────────────────
+  - package-ecosystem: "docker"
+    directory: "/apps/api-gateway"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "docker"
+      - "automated"
+    commit-message:
+      prefix: "chore(docker)"
+
+  - package-ecosystem: "docker"
+    directory: "/apps/agent-runtime"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "docker"
+      - "automated"
+    commit-message:
+      prefix: "chore(docker)"
+
+  - package-ecosystem: "docker"
+    directory: "/apps/dashboard"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "docker"
+      - "automated"
+    commit-message:
+      prefix: "chore(docker)"
+
+  - package-ecosystem: "docker"
+    directory: "/apps/trigger-service"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "docker"
+      - "automated"
+    commit-message:
+      prefix: "chore(docker)"
