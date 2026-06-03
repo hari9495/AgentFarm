@@ -108,6 +108,146 @@ export const registerNotificationRoutes = (
         }
     });
 
+    // GET /v1/notifications/in-app — aggregated in-app notification feed
+    app.get('/v1/notifications/in-app', async (request, reply) => {
+        const session = options.getSession(request);
+        if (!session) {
+            return reply.code(401).send({ error: 'unauthorized', message: 'A valid authenticated session is required.' });
+        }
+
+        const query = request.query as { workspace_id?: string };
+        const workspaceId = query.workspace_id ?? session.workspaceIds[0];
+
+        type InAppItem = {
+            id: string;
+            type: string;
+            title: string;
+            body: string;
+            severity: 'high' | 'warn' | 'info';
+            link: string;
+            created_at: string;
+        };
+
+        const items: InAppItem[] = [];
+
+        try {
+            const prisma = await getPrisma() as unknown as {
+                approval: {
+                    count: (args: Record<string, unknown>) => Promise<number>;
+                    findMany: (args: Record<string, unknown>) => Promise<Array<{ id: string; riskLevel: string; requestedBy: string; createdAt: Date; escalatedAt: Date | null }>>;
+                };
+                auditEvent: {
+                    findMany: (args: Record<string, unknown>) => Promise<Array<{ id: string; eventType: string; summary: string; createdAt: Date }>>;
+                };
+                taskExecutionRecord: {
+                    count: (args: Record<string, unknown>) => Promise<number>;
+                };
+            };
+
+            const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+            const workspaceFilter = workspaceId ? { workspaceId } : {};
+
+            // 1. Pending approvals
+            const [pendingCount, escalatedApprovals] = await Promise.all([
+                prisma.approval.count({
+                    where: { tenantId: session.tenantId, ...workspaceFilter, decision: 'pending' },
+                }),
+                prisma.approval.findMany({
+                    where: {
+                        tenantId: session.tenantId,
+                        ...workspaceFilter,
+                        decision: 'pending',
+                        escalatedAt: { not: null },
+                    },
+                    orderBy: { escalatedAt: 'desc' },
+                    take: 3,
+                }),
+            ]);
+
+            if (pendingCount > 0) {
+                items.push({
+                    id: `pending_approvals_${workspaceId ?? session.tenantId}`,
+                    type: 'pending_approval',
+                    title: `${pendingCount} approval${pendingCount > 1 ? 's' : ''} waiting`,
+                    body: 'Agent actions are queued and need your decision.',
+                    severity: 'high',
+                    link: `/?tab=approvals${workspaceId ? `&workspaceId=${workspaceId}` : ''}`,
+                    created_at: new Date().toISOString(),
+                });
+            }
+
+            if (escalatedApprovals.length > 0) {
+                items.push({
+                    id: `escalated_${escalatedApprovals[0]?.id ?? 'none'}`,
+                    type: 'escalated_approval',
+                    title: `${escalatedApprovals.length} escalated approval${escalatedApprovals.length > 1 ? 's' : ''}`,
+                    body: 'These approvals have exceeded their SLA window and need urgent review.',
+                    severity: 'high',
+                    link: `/?tab=approvals${workspaceId ? `&workspaceId=${workspaceId}` : ''}`,
+                    created_at: escalatedApprovals[0]?.createdAt.toISOString() ?? new Date().toISOString(),
+                });
+            }
+
+            // 2. Budget audit events (last 24h)
+            const budgetEvents = await prisma.auditEvent.findMany({
+                where: {
+                    tenantId: session.tenantId,
+                    ...workspaceFilter,
+                    eventType: { in: ['budget_alert_warn', 'budget_alert_critical', 'budget_alert_exceeded'] },
+                    createdAt: { gte: since24h },
+                },
+                orderBy: { createdAt: 'desc' },
+                take: 3,
+            });
+
+            for (const evt of budgetEvents) {
+                const isCritical = evt.eventType === 'budget_alert_exceeded' || evt.eventType === 'budget_alert_critical';
+                items.push({
+                    id: `audit_${evt.id}`,
+                    type: 'budget_alert',
+                    title: isCritical ? 'Budget limit reached' : 'Budget warning',
+                    body: evt.summary,
+                    severity: isCritical ? 'high' : 'warn',
+                    link: '/budget',
+                    created_at: evt.createdAt.toISOString(),
+                });
+            }
+
+            // 3. Task failures (last 24h)
+            const failedCount = await prisma.taskExecutionRecord.count({
+                where: {
+                    tenantId: session.tenantId,
+                    ...(workspaceId ? { workspaceId } : {}),
+                    outcome: 'failed',
+                    executedAt: { gte: since24h },
+                },
+            });
+
+            if (failedCount > 0) {
+                items.push({
+                    id: `task_failures_${workspaceId ?? session.tenantId}_24h`,
+                    type: 'task_failure',
+                    title: `${failedCount} task${failedCount > 1 ? 's' : ''} failed in the last 24h`,
+                    body: 'Check the task history and agent logs for details.',
+                    severity: failedCount > 5 ? 'high' : 'warn',
+                    link: '/tasks?tab=history',
+                    created_at: new Date().toISOString(),
+                });
+            }
+        } catch {
+            // return empty rather than error
+        }
+
+        // Sort: high severity first, then by created_at desc
+        items.sort((a, b) => {
+            if (a.severity === b.severity) return b.created_at.localeCompare(a.created_at);
+            const rank = { high: 2, warn: 1, info: 0 };
+            return (rank[b.severity] ?? 0) - (rank[a.severity] ?? 0);
+        });
+
+        return reply.code(200).send({ items, total: items.length });
+    });
+
     // GET /v1/notifications — list recent notifications for tenant
     app.get('/v1/notifications', async (request, reply) => {
         const session = options.getSession(request);

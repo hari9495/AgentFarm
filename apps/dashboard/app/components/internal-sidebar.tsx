@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import type { DashboardTab } from './dashboard-navigation';
 import { getDashboardTabStorageKey } from './dashboard-tab-storage';
+import { NotificationBell } from './notification-bell';
 
 type NavItemDef = {
     key: DashboardTab;
@@ -133,7 +134,8 @@ export function InternalSidebar({
                 <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg shadow-sm shrink-0" style={{ background: '#0066cc' }}>
                     <Cpu className="w-3.5 h-3.5 text-white" aria-hidden="true" />
                 </span>
-                <span className="text-sm font-bold tracking-tight text-slate-900">AgentFarms Ops</span>
+                <span className="text-sm font-bold tracking-tight text-slate-900 flex-1">AgentFarms Ops</span>
+                <NotificationBell workspaceId={workspaceId} />
             </div>
 
             {/* Nav */}
@@ -247,9 +249,11 @@ export function InternalSidebar({
                     <div className="space-y-0.5">
                         {[
                             { href: '/analytics', label: 'Overview', Icon: BarChart2 },
+                            { href: '/roi', label: 'ROI Dashboard', Icon: Trophy },
                             { href: '/cost-dashboard', label: 'Cost Dashboard', Icon: PieChart },
                             { href: '/historical-metrics', label: 'Historical Metrics', Icon: LineChart },
-                            { href: '/quality-roi', label: 'Quality ROI', Icon: Trophy },
+                            { href: '/deliverables', label: 'Deliverables', Icon: ListChecks },
+                            { href: '/scheduled-tasks', label: 'Scheduled Tasks', Icon: CalendarDays },
                         ].map(({ href, label, Icon }) => (
                             <Link key={href} href={href} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
                                 <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Icon className="w-3.5 h-3.5 text-slate-500" /></span>
