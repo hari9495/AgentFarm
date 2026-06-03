@@ -223,6 +223,7 @@ export function InternalSidebar({
                     <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Developer Tools</p>
                     <div className="space-y-0.5">
                         {[
+                            { href: '/playground', label: 'API Playground', Icon: Zap },
                             { href: '/ci', label: 'CI Triage', Icon: Terminal },
                             { href: '/env', label: 'Env Reconciler', Icon: SlidersHorizontal },
                             { href: '/snapshots', label: 'Bot Snapshots', Icon: Camera },
