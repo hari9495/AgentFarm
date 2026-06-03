@@ -67,6 +67,7 @@ import { registerQuestionRoutes } from './routes/agents/questions.js';
 import { registerBotVersionRoutes } from './routes/agents/bot-versions.js';
 import { registerAgentMessageRoutes } from './routes/agents/agent-messages.js';
 import { registerAgentBudgetRoutes } from './routes/agents/agent-budget.js';
+import { registerBatchDispatchRoutes } from './routes/agents/batch-dispatch.js';
 
 // Runtime
 import { registerRuntimeLlmConfigRoutes } from './routes/runtime/runtime-llm-config.js';
@@ -223,6 +224,7 @@ export const registerAllRoutes = async (
     await registerBotVersionRoutes(app, { getSession });
     registerAgentMessageRoutes(app, { getSession });
     await registerAgentBudgetRoutes(app, { getSession });
+    await registerBatchDispatchRoutes(app, { getSession });
 
     // Runtime
     await registerRuntimeLlmConfigRoutes(app, { getSession, secretStore });
