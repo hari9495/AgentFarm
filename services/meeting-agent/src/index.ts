@@ -17,6 +17,16 @@ export { createMeetingAgentServer } from './server.js';
 export type { MeetingAgentApp, MeetingAgentServerOptions, MeetingTtsClient } from './server.js';
 export { SarvamMeetingTtsClient } from './sarvam-tts-client.js';
 export type { SarvamMeetingTtsOptions } from './sarvam-tts-client.js';
+export { MeetingConnectorRouter, detectPlatform, createConnectorRouterFromEnv } from './meeting-connector-router.js';
+export { routeTtsProvider, buildTtsOverride } from './multilingual-tts-router.js';
+export type { TtsRoutingDecision } from './multilingual-tts-router.js';
+export { TeamsChatSender, ZoomChatSender, NullChatSender, PlatformChatSender } from './chat-sender.js';
+export type { ChatSender, ChatSendResult } from './chat-sender.js';
+export { BrowserJoinAdapter } from './adapters/browser-join-adapter.js';
+export { TeamsJoinAdapter, createTeamsAdapterFromEnv } from './adapters/teams-join-adapter.js';
+export { ZoomJoinAdapter, createZoomAdapterFromEnv } from './adapters/zoom-join-adapter.js';
+export { SipJoinAdapter, createSipAdapterFromEnv } from './adapters/sip-join-adapter.js';
+export type { MeetingJoinAdapter, MeetingJoinResult, MeetingLeaveResult, MeetingAdapterCapabilities, JoinMethod } from './adapters/meeting-join-adapter.js';
 
 import { createMeetingAgentServer } from './server.js';
 import { SupertonicClient } from './supertonic-client.js';
@@ -25,6 +35,10 @@ import { HttpVoiceInjector } from './voice-injector.js';
 import { HttpCaptureController } from './capture-controller.js';
 import { MeetingBrain } from './meeting-brain.js';
 import { MeetingEpisodicMemory } from './meeting-episodic-memory.js';
+import { createConnectorRouterFromEnv } from './meeting-connector-router.js';
+import { createTeamsAdapterFromEnv } from './adapters/teams-join-adapter.js';
+import { createZoomAdapterFromEnv } from './adapters/zoom-join-adapter.js';
+import { PlatformChatSender, TeamsChatSender, ZoomChatSender } from './chat-sender.js';
 
 /**
  * Boot the meeting-agent service from the environment.
@@ -137,6 +151,24 @@ export async function bootFromEnv(): Promise<void> {
     // Used by /v1/sessions/:id/join to launch the browser join script.
     const desktopAgentUrl = process.env['DESKTOP_AGENT_URL'] || undefined;
 
+    // MeetingConnectorRouter — selects best join adapter per platform.
+    // Reads TEAMS_*, ZOOM_*, FREESWITCH_* env vars automatically.
+    const meetingConnectorRouter = createConnectorRouterFromEnv(desktopAgentUrl ?? null);
+    console.error(`[meeting-agent] connector router ready`);
+
+    // ChatSender — register Teams and Zoom senders if credentials are available.
+    const chatSender = new PlatformChatSender();
+    const teamsAdapter = createTeamsAdapterFromEnv();
+    if (teamsAdapter) {
+        chatSender.register('teams', new TeamsChatSender(teamsAdapter));
+        console.error('[meeting-agent] Teams chat sender registered');
+    }
+    const zoomAdapter = createZoomAdapterFromEnv();
+    if (zoomAdapter) {
+        chatSender.register('zoom', new ZoomChatSender(zoomAdapter));
+        console.error('[meeting-agent] Zoom chat sender registered');
+    }
+
     // MEETING_BRAIN_PROVIDER enables the autonomous LLM response brain.
     // When unset or empty the brain is disabled (manual /say only).
     const brainProvider = process.env['MEETING_BRAIN_PROVIDER'];
@@ -179,6 +211,8 @@ export async function bootFromEnv(): Promise<void> {
         desktopAgentUrl,
         brain,
         memory,
+        meetingConnectorRouter,
+        chatSender,
     });
     await app.listen(port, host);
     console.error(`[meeting-agent] listening on ${host}:${port}`);

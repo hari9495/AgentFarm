@@ -14,6 +14,12 @@ const SARVAM_STT_URL = 'https://api.sarvam.ai/speech-to-text';
 const SARVAM_TTS_URL = 'https://api.sarvam.ai/text-to-speech';
 const DEEPGRAM_STT_URL = 'https://api.deepgram.com/v1/listen?smart_format=true&detect_language=true';
 
+// Defaults for self-hosted open-source providers
+const DEFAULT_WHISPER_ENDPOINT = 'http://localhost:9090'; // Dograh / Faster-Whisper server
+const DEFAULT_KOKORO_ENDPOINT = 'http://localhost:8880';  // Kokoro-FastAPI
+const DEFAULT_XTTS_ENDPOINT = 'http://localhost:8000';    // XTTS v2 server
+const DEFAULT_MMS_ENDPOINT = 'http://localhost:5002';     // Meta MMS-TTS server
+
 const SARVAM_SPEAKER_MAP: Record<string, string> = {
     'hi-IN': 'meera', 'ta-IN': 'pavithra', 'te-IN': 'arvind',
     'kn-IN': 'arvind', 'ml-IN': 'arvind', 'mr-IN': 'amol',
@@ -153,6 +159,129 @@ async function voxcpmTtsImpl(
     return { audioRef: `data:audio/mpeg;base64,${b64}`, durationMs: Date.now() - started };
 }
 
+// ── Whisper Local STT (Dograh / Faster-Whisper — OpenAI-compatible) ──────────
+
+async function whisperLocalSttImpl(
+    audioRef: string,
+    config: VoicePipelineConfig,
+): Promise<{ transcript: string; confidence?: number; durationMs?: number; languageDetected?: string }> {
+    const endpoint = (config.sttEndpoint ?? process.env['WHISPER_ENDPOINT'] ?? DEFAULT_WHISPER_ENDPOINT)
+        .replace(/\/+$/u, '');
+    const audioBytes = await resolveAudioBytes(audioRef);
+    const form = new FormData();
+    form.append('file', new Blob([audioBytes]), 'audio.wav');
+    form.append('model', config.sttModel ?? 'whisper-1');
+    if (config.languageCode) form.append('language', config.languageCode.split('-')[0]!); // 'hi-IN' → 'hi'
+    form.append('response_format', 'verbose_json');
+    const started = Date.now();
+    const res = await fetch(`${endpoint}/v1/audio/transcriptions`, {
+        method: 'POST',
+        body: form,
+    });
+    if (!res.ok) {
+        const detail = await res.text().catch(() => '');
+        throw new Error(`Whisper STT ${res.status}: ${detail.slice(0, 256)}`);
+    }
+    type WhisperResponse = { text?: string; language?: string };
+    const data = await res.json() as WhisperResponse;
+    return {
+        transcript: data.text ?? '',
+        languageDetected: data.language,
+        durationMs: Date.now() - started,
+    };
+}
+
+// ── Kokoro TTS (OpenAI-compatible, English-optimised, self-hosted) ────────────
+
+async function kokoroTtsImpl(
+    text: string,
+    config: VoicePipelineConfig,
+): Promise<{ audioRef?: string; durationMs?: number }> {
+    const endpoint = (config.ttsEndpoint ?? process.env['KOKORO_ENDPOINT'] ?? DEFAULT_KOKORO_ENDPOINT)
+        .replace(/\/+$/u, '');
+    const started = Date.now();
+    const res = await fetch(`${endpoint}/v1/audio/speech`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'audio/*' },
+        body: JSON.stringify({
+            model: config.ttsModel ?? 'kokoro',
+            input: text,
+            voice: config.voiceProfileId ?? 'af_sky',
+            response_format: 'mp3',
+        }),
+    });
+    if (!res.ok) {
+        const detail = await res.text().catch(() => '');
+        throw new Error(`Kokoro TTS ${res.status}: ${detail.slice(0, 256)}`);
+    }
+    const bytes = await res.arrayBuffer();
+    const b64 = Buffer.from(bytes).toString('base64');
+    return { audioRef: `data:audio/mpeg;base64,${b64}`, durationMs: Date.now() - started };
+}
+
+// ── XTTS v2 TTS (Coqui — 17 languages, self-hosted) ──────────────────────────
+
+// XTTS v2 supported language codes (ISO-639-1 subset)
+const XTTS_SUPPORTED_LANGS = new Set([
+    'en', 'es', 'fr', 'de', 'it', 'pt', 'pl', 'tr', 'ru', 'nl',
+    'cs', 'ar', 'zh', 'ja', 'hu', 'ko', 'hi',
+]);
+
+async function xttsTtsImpl(
+    text: string,
+    config: VoicePipelineConfig,
+): Promise<{ audioRef?: string; durationMs?: number }> {
+    const endpoint = (config.ttsEndpoint ?? process.env['XTTS_ENDPOINT'] ?? DEFAULT_XTTS_ENDPOINT)
+        .replace(/\/+$/u, '');
+    // BCP-47 → ISO-639-1 for XTTS (e.g. 'es-ES' → 'es')
+    const lang = (config.languageCode ?? 'en').split('-')[0]!.toLowerCase();
+    if (!XTTS_SUPPORTED_LANGS.has(lang)) {
+        throw new Error(`XTTS does not support language "${lang}". Use mms_tts for wider coverage.`);
+    }
+    const started = Date.now();
+    const res = await fetch(`${endpoint}/tts_to_audio/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            text,
+            language: lang,
+            speaker_wav: config.voiceProfileId ?? null,
+        }),
+    });
+    if (!res.ok) {
+        const detail = await res.text().catch(() => '');
+        throw new Error(`XTTS TTS ${res.status}: ${detail.slice(0, 256)}`);
+    }
+    const bytes = await res.arrayBuffer();
+    const b64 = Buffer.from(bytes).toString('base64');
+    return { audioRef: `data:audio/wav;base64,${b64}`, durationMs: Date.now() - started };
+}
+
+// ── Meta MMS-TTS (1100+ languages, self-hosted) ───────────────────────────────
+
+async function mmsTtsImpl(
+    text: string,
+    config: VoicePipelineConfig,
+): Promise<{ audioRef?: string; durationMs?: number }> {
+    const endpoint = (config.ttsEndpoint ?? process.env['MMS_TTS_ENDPOINT'] ?? DEFAULT_MMS_ENDPOINT)
+        .replace(/\/+$/u, '');
+    // MMS expects BCP-47 directly (e.g. 'hi', 'ta', 'es')
+    const lang = (config.languageCode ?? 'eng').split('-')[0]!.toLowerCase();
+    const started = Date.now();
+    const res = await fetch(`${endpoint}/api/tts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, language: lang }),
+    });
+    if (!res.ok) {
+        const detail = await res.text().catch(() => '');
+        throw new Error(`MMS TTS ${res.status}: ${detail.slice(0, 256)}`);
+    }
+    const bytes = await res.arrayBuffer();
+    const b64 = Buffer.from(bytes).toString('base64');
+    return { audioRef: `data:audio/wav;base64,${b64}`, durationMs: Date.now() - started };
+}
+
 // ── Adapters for STT / TTS (injectable for testing) ──────────────────────────
 
 export type SttAdapter = (
@@ -168,6 +297,10 @@ export type TtsAdapter = (
 const defaultSttAdapter: SttAdapter = async (audioRef, config) => {
     if (config.sttProvider === 'sarvam_ai') return sarvamSttImpl(audioRef, config);
     if (config.sttProvider === 'deepgram') return deepgramSttImpl(audioRef, config);
+    // whisper_local: Dograh self-hosted / Faster-Whisper / any OpenAI-compatible Whisper server
+    if (config.sttProvider === 'whisper_local' || config.sttProvider === 'whisper_cloud') {
+        return whisperLocalSttImpl(audioRef, config);
+    }
     console.error(
         `[voice-pipeline] no built-in STT adapter for provider "${config.sttProvider}". Inject a custom SttAdapter.`,
     );
@@ -177,6 +310,9 @@ const defaultSttAdapter: SttAdapter = async (audioRef, config) => {
 const defaultTtsAdapter: TtsAdapter = async (text, config) => {
     if (config.ttsProvider === 'sarvam_ai') return sarvamTtsImpl(text, config);
     if (config.ttsProvider === 'voxcpm') return voxcpmTtsImpl(text, config);
+    if (config.ttsProvider === 'kokoro') return kokoroTtsImpl(text, config);
+    if (config.ttsProvider === 'xtts') return xttsTtsImpl(text, config);
+    if (config.ttsProvider === 'mms_tts') return mmsTtsImpl(text, config);
     console.error(
         `[voice-pipeline] no built-in TTS adapter for provider "${config.ttsProvider}". Inject a custom TtsAdapter.`,
     );

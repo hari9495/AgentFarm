@@ -29,6 +29,8 @@ import type { MeetingMode, MeetingPlatform } from '@agentfarm/shared-types';
 import { MeetingBrain } from './meeting-brain.js';
 import type { BrainTurn } from './meeting-brain.js';
 import { MeetingEpisodicMemory } from './meeting-episodic-memory.js';
+import { MeetingConnectorRouter, detectPlatform as routerDetectPlatform } from './meeting-connector-router.js';
+import type { ChatSender } from './chat-sender.js';
 
 const ALLOWED_PLATFORMS: ReadonlySet<MeetingPlatform> = new Set([
     'teams',
@@ -111,6 +113,17 @@ export interface MeetingAgentServerOptions {
      * back into memory automatically.
      */
     memory?: MeetingEpisodicMemory | null;
+    /**
+     * Meeting connector router. When set, the `/join` handler uses the router
+     * to select the best native adapter (Teams SDK, Zoom SDK, SIP, browser).
+     * When not set the existing desktop-agent browser path is used.
+     */
+    meetingConnectorRouter?: MeetingConnectorRouter | null;
+    /**
+     * Chat sender. When set, `POST /v1/sessions/:id/chat` forwards messages
+     * to the platform's native chat API (Teams Graph, Zoom in-meeting chat).
+     */
+    chatSender?: ChatSender | null;
     /** Bearer token clients must present in `Authorization`. */
     authToken?: string;
     /** Logger override (defaults to `console.error`). */
@@ -145,6 +158,8 @@ export function createMeetingAgentServer(
         : null;
     const brain = options.brain ?? null;
     const memory = options.memory ?? null;
+    const meetingConnectorRouter = options.meetingConnectorRouter ?? null;
+    const chatSender = options.chatSender ?? null;
 
     const server = createServer(async (req, res) => {
         try {
@@ -159,6 +174,8 @@ export function createMeetingAgentServer(
                 desktopAgentUrl,
                 brain,
                 memory,
+                meetingConnectorRouter,
+                chatSender,
                 log,
             });
         } catch (error) {
@@ -201,17 +218,16 @@ interface HandleContext {
     brain: MeetingBrain | null;
     /** Per-speaker episodic memory. null = memory disabled. */
     memory: MeetingEpisodicMemory | null;
+    /** Meeting connector router for native platform join. null = browser only. */
+    meetingConnectorRouter: MeetingConnectorRouter | null;
+    /** Chat sender for native in-meeting chat. null = chat disabled. */
+    chatSender: ChatSender | null;
     log: (line: string) => void;
 }
 
-/** Maps a meeting URL to its platform identifier. Returns null for unrecognised URLs. */
+/** Maps a meeting URL to its platform identifier. Single source of truth lives in meeting-connector-router. */
 function detectPlatform(meetingUrl: string): MeetingPlatform | null {
-    if (/^https:\/\/meet\.google\.com\//u.test(meetingUrl)) return 'meet';
-    if (/^https:\/\/teams\.microsoft\.com\//u.test(meetingUrl)) return 'teams';
-    if (/^https:\/\/teams\.live\.com\//u.test(meetingUrl)) return 'teams';
-    if (/^https?:\/\/([a-z0-9-]+\.)?zoom\.us\//u.test(meetingUrl)) return 'zoom';
-    if (/^https?:\/\/([a-z0-9-]+\.)?webex\.com\//u.test(meetingUrl)) return 'webex';
-    return null;
+    return routerDetectPlatform(meetingUrl);
 }
 
 async function handle(
@@ -348,9 +364,33 @@ async function handle(
                 return;
             }
 
-            // Best-effort: tell the desktop-agent to launch the browser join script.
+            // Join the meeting via the best available adapter.
+            // Priority: MeetingConnectorRouter (Teams SDK / Zoom SDK / SIP) → desktop-agent browser.
             let joinPid: number | null = null;
-            if (ctx.desktopAgentUrl) {
+            let joinMethod = 'browser';
+            let joinHandle: string | undefined;
+
+            if (ctx.meetingConnectorRouter) {
+                const resolved = ctx.meetingConnectorRouter.resolve(meetingUrl);
+                if (resolved) {
+                    ctx.log(`[meeting-agent] join via ${ctx.meetingConnectorRouter.explain(meetingUrl)}`);
+                    try {
+                        const result = await resolved.adapter.join(meetingUrl, displayName);
+                        if (result.ok) {
+                            joinMethod = result.joinMethod;
+                            joinHandle = result.sessionHandle;
+                        } else {
+                            ctx.log(`[meeting-agent] native join failed (${result.joinMethod}): ${result.error} — falling back to browser`);
+                            // fall through to desktop-agent below
+                        }
+                    } catch (error) {
+                        ctx.log(`[meeting-agent] native join threw: ${(error as Error).message} — falling back to browser`);
+                    }
+                }
+            }
+
+            // Fall back to desktop-agent browser join when native adapter unavailable or failed.
+            if (joinMethod === 'browser' && ctx.desktopAgentUrl) {
                 try {
                     const joinResp = await fetch(`${ctx.desktopAgentUrl}/v1/meeting/join`, {
                         method: 'POST',
@@ -360,14 +400,15 @@ async function handle(
                     if (joinResp.ok) {
                         const joinData = await joinResp.json() as { pid?: number };
                         joinPid = typeof joinData.pid === 'number' ? joinData.pid : null;
+                        joinHandle = joinPid != null ? String(joinPid) : undefined;
                     } else {
                         ctx.log(`[meeting-agent] desktop-agent /v1/meeting/join returned ${joinResp.status}`);
                     }
                 } catch (error) {
                     ctx.log(`[meeting-agent] desktop-agent join call failed: ${(error as Error).message}`);
                 }
-            } else {
-                ctx.log('[meeting-agent] DESKTOP_AGENT_URL not set — browser join skipped; FSM will still advance');
+            } else if (joinMethod === 'browser') {
+                ctx.log('[meeting-agent] no join adapter configured — FSM will still advance');
             }
 
             // Advance FSM to listening and start capture after the join delay.
@@ -406,9 +447,11 @@ async function handle(
             respond(res, 202, {
                 session: session.machine.getSession(),
                 platform,
-                joinPid,
+                joinMethod,
+                joinHandle,
+                joinPid,   // kept for back-compat when browser path was used
                 joinDelayMs,
-                message: `browser join launched; session will advance to listening in ~${Math.round(joinDelayMs / 1000)}s — poll GET /v1/sessions/${id} for status`,
+                message: `join launched via ${joinMethod}; session will advance to listening in ~${Math.round(joinDelayMs / 1000)}s — poll GET /v1/sessions/${id} for status`,
             });
             return;
         }
@@ -537,6 +580,35 @@ async function handle(
                 accepted: true,
                 length: ctx.sessions.getTranscript(id).length,
             });
+            return;
+        }
+
+        // POST /v1/sessions/:id/chat — send a text message to the meeting chat.
+        // Requires a ChatSender configured on the server (Teams Graph API or Zoom).
+        // Returns 501 when no chat sender is available for the session's platform.
+        if (action === 'chat' && !subAction && method === 'POST') {
+            const body = await readJson(req);
+            const text = typeof body['text'] === 'string' ? (body['text'] as string).trim() : '';
+            if (!text) {
+                respond(res, 400, { error: 'invalid_request', details: ['text is required'] });
+                return;
+            }
+            const handle = typeof body['handle'] === 'string' ? (body['handle'] as string).trim() : '';
+            if (!handle) {
+                respond(res, 400, { error: 'invalid_request', details: ['handle is required (Teams: threadId, Zoom: meetingId)'] });
+                return;
+            }
+            if (!ctx.chatSender) {
+                respond(res, 501, { error: 'chat_not_configured', detail: 'No ChatSender registered on this server instance' });
+                return;
+            }
+            const sessionRecord = session.machine.getSession();
+            const result = await ctx.chatSender.send(sessionRecord.platform, handle, text);
+            if (!result.ok) {
+                respond(res, 502, { error: 'chat_send_failed', detail: result.error });
+                return;
+            }
+            respond(res, 200, { sent: true, platform: result.platform });
             return;
         }
 

@@ -1383,24 +1383,33 @@ export interface MeetingQuestionRecord {
 }
 
 // ============================================================================
-// VOICE PIPELINE CONTRACTS (VoxCPM / Voicebox / Whisper)
+// VOICE PIPELINE CONTRACTS (VoxCPM / Voicebox / Whisper / Kokoro / XTTS)
 // ============================================================================
 
 export type SttProvider = 'whisper_local' | 'whisper_cloud' | 'azure_speech' | 'sarvam_ai' | 'deepgram';
 
-export type TtsProvider = 'voxcpm' | 'voicebox' | 'azure_tts' | 'openai_tts' | 'sarvam_ai';
+export type TtsProvider =
+  | 'voxcpm'
+  | 'voicebox'
+  | 'azure_tts'
+  | 'openai_tts'
+  | 'sarvam_ai'
+  | 'kokoro'    // open-source English TTS — self-hosted, zero per-call cost
+  | 'xtts'      // Coqui XTTS v2 — 17 languages, self-hosted
+  | 'mms_tts';  // Meta MMS-TTS — 1100+ languages, self-hosted
 
 export type VoiceQuality = 'standard' | 'high' | 'studio';
 
 export interface VoicePipelineConfig {
   sttProvider: SttProvider;
-  sttModel?: string; // e.g. 'whisper-turbo', 'whisper-large-v3'
+  sttModel?: string;     // e.g. 'whisper-turbo', 'whisper-large-v3'
+  sttEndpoint?: string;  // for whisper_local: e.g. 'http://localhost:9090' (Dograh / Faster-Whisper)
   ttsProvider: TtsProvider;
-  ttsModel?: string; // e.g. 'openbmb/VoxCPM2'
-  ttsEndpoint?: string; // e.g. 'http://localhost:8000/v1/audio/speech'
-  voiceProfileId?: string; // for voice cloning
+  ttsModel?: string;     // e.g. 'openbmb/VoxCPM2', 'kokoro', 'tts_models/multilingual/multi-dataset/xtts_v2'
+  ttsEndpoint?: string;  // e.g. 'http://localhost:8000/v1/audio/speech'
+  voiceProfileId?: string; // for voice cloning / speaker selection
   voiceQuality?: VoiceQuality;
-  languageCode?: string; // BCP-47, e.g. 'en-US'
+  languageCode?: string; // BCP-47, e.g. 'en-US', 'hi-IN', 'es-ES'
   streamingEnabled?: boolean;
 }
 
