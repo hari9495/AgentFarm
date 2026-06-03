@@ -1,6 +1,6 @@
 import TurndownService from 'turndown';
 import mammoth from 'mammoth';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { spawnSync } from 'node:child_process';
 import { writeFileSync, unlinkSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -148,10 +148,17 @@ export async function convertToMarkdown(buffer: Buffer, mimeType: string): Promi
         }
 
         case 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': {
-            const wb = XLSX.read(buffer, { type: 'buffer' });
-            const sections = wb.SheetNames.map(name => {
-                const csv = XLSX.utils.sheet_to_csv(wb.Sheets[name]!);
-                return `## ${name}\n\n${csv}`;
+            const workbook = new ExcelJS.Workbook();
+            // exceljs load() accepts Buffer; cast through unknown to satisfy strict overload types
+            await workbook.xlsx.load(buffer as unknown as ArrayBuffer);
+            const sections = workbook.worksheets.map(ws => {
+                const rows: string[] = [];
+                ws.eachRow((row) => {
+                    // row.values is 1-indexed; slice(1) drops the undefined 0th slot
+                    const cells = (row.values as unknown[]).slice(1);
+                    rows.push(cells.map(v => (v == null ? '' : String(v))).join(','));
+                });
+                return `## ${ws.name}\n\n${rows.join('\n')}`;
             });
             return sections.join('\n\n');
         }

@@ -209,26 +209,37 @@ const xlsxBuf = Buffer.from(await xlsxResp.arrayBuffer());
 writeFileSync(xlsxPath, xlsxBuf);
 console.log(`  Downloaded challenge.xlsx (${xlsxBuf.length} bytes)`);
 
-// Parse with xlsx (workspace dev dep: pnpm add xlsx -D -w)
-const { createRequire } = await import('node:module');
-const require = createRequire(import.meta.url);
-const XLSX = require('xlsx');
-const wb = XLSX.read(xlsxBuf, { type: 'buffer' });
-const ws = wb.Sheets[wb.SheetNames[0]];
-const raw = XLSX.utils.sheet_to_json(ws, { defval: '' });
-// Normalise column names (xlsx may have trailing spaces: "Last Name ")
-const challengeData = raw.map(r => {
-    const n = Object.fromEntries(Object.entries(r).map(([k, v]) => [k.trim(), v]));
-    return {
-        firstName: String(n['First Name'] ?? '').trim(),
-        lastName: String(n['Last Name'] ?? '').trim(),
-        company: String(n['Company Name'] ?? '').trim(),
-        role: String(n['Role in Company'] ?? '').trim(),
-        address: String(n['Address'] ?? '').trim(),
-        email: String(n['Email'] ?? '').trim(),
-        phone: String(n['Phone Number'] ?? '').trim(),
-    };
-}).filter(r => r.firstName);
+// Parse with exceljs (replaces xlsx which has unfixed CVEs on npm)
+const { default: ExcelJS } = await import('exceljs');
+const workbook = new ExcelJS.Workbook();
+await workbook.xlsx.load(xlsxBuf);
+const worksheet = workbook.worksheets[0];
+
+// Read headers from row 1
+const headers = [];
+worksheet.getRow(1).eachCell((cell) => headers.push(String(cell.value ?? '').trim()));
+
+// Read data rows
+const challengeData = [];
+worksheet.eachRow((row, rowNumber) => {
+    if (rowNumber === 1) return; // skip header row
+    const r = {};
+    row.eachCell((cell, colIdx) => {
+        const key = headers[colIdx - 1];
+        if (key) r[key] = String(cell.value ?? '').trim();
+    });
+    if (r['First Name']) {
+        challengeData.push({
+            firstName: r['First Name'] ?? '',
+            lastName: r['Last Name'] ?? '',
+            company: r['Company Name'] ?? '',
+            role: r['Role in Company'] ?? '',
+            address: r['Address'] ?? '',
+            email: r['Email'] ?? '',
+            phone: r['Phone Number'] ?? '',
+        });
+    }
+});
 
 if (challengeData.length === 0) {
     console.error('❌  Excel parsed but found no data rows. Columns:', Object.keys(raw[0] ?? {}));

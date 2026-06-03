@@ -1,6 +1,6 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import {
     convertToMarkdown,
     detectMimeType,
@@ -114,14 +114,17 @@ describe('convertToMarkdown', () => {
     });
 
     // ---------------------------------------------------------------------------
-    // XLSX — create a real workbook buffer using the same xlsx library
+    // XLSX — create a real workbook buffer using exceljs
     // ---------------------------------------------------------------------------
 
     test('xlsx — single sheet renders as markdown section with csv content', async () => {
-        const wb = XLSX.utils.book_new();
-        const ws = XLSX.utils.aoa_to_sheet([['Name', 'Score'], ['Alice', 95], ['Bob', 88]]);
-        XLSX.utils.book_append_sheet(wb, ws, 'Results');
-        const buf = Buffer.from(XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }) as ArrayBuffer);
+        const wb = new ExcelJS.Workbook();
+        const ws = wb.addWorksheet('Results');
+        ws.addRow(['Name', 'Score']);
+        ws.addRow(['Alice', 95]);
+        ws.addRow(['Bob', 88]);
+        const raw = await wb.xlsx.writeBuffer();
+        const buf = Buffer.from(raw);
 
         const result = await convertToMarkdown(buf, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         assert.match(result, /## Results/);
@@ -131,10 +134,13 @@ describe('convertToMarkdown', () => {
     });
 
     test('xlsx — multiple sheets each get a ## heading', async () => {
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['A', 1]]), 'Sheet1');
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['B', 2]]), 'Sheet2');
-        const buf = Buffer.from(XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }) as ArrayBuffer);
+        const wb = new ExcelJS.Workbook();
+        const ws1 = wb.addWorksheet('Sheet1');
+        ws1.addRow(['A', 1]);
+        const ws2 = wb.addWorksheet('Sheet2');
+        ws2.addRow(['B', 2]);
+        const raw = await wb.xlsx.writeBuffer();
+        const buf = Buffer.from(raw);
 
         const result = await convertToMarkdown(buf, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         assert.match(result, /## Sheet1/);
