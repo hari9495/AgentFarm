@@ -3680,9 +3680,16 @@ function getCdpMcpClient(): McpProtocolClient | null {
     return _cdpMcpClient;
 }
 
-/** Build a BrowserActionRouter: MCP-first when chrome-devtools-mcp is configured, Playwright fallback always. */
+/** Build a BrowserActionRouter: MCP-first when chrome-devtools-mcp is configured, Playwright fallback always.
+ *  If Playwright is unavailable (not installed, no display), the router is constructed with null context
+ *  and will return ok:false for Playwright-only actions rather than throwing. */
 async function buildWebRouter(tenantId: string, botId: string): Promise<BrowserActionRouter> {
-    const ctx = await getWebContext(tenantId, botId);
+    let ctx: import('playwright').BrowserContext | null = null;
+    try {
+        ctx = await getWebContext(tenantId, botId);
+    } catch {
+        // Playwright unavailable — MCP-only mode; CDP actions still work.
+    }
     const client = getCdpMcpClient();
     return new BrowserActionRouter(client ? client.callTool.bind(client) : null, ctx);
 }
@@ -3943,6 +3950,8 @@ export async function executeLocalWorkspaceAction(input: {
     taskId: string;
     actionType: LocalWorkspaceActionType;
     payload: Record<string, unknown>;
+    /** When provided, scopes the MCP provisioner session to the correct workspace. */
+    workspaceId?: string;
     connectorActionExecuteClient?: LocalWorkspaceConnectorClient;
     /** Optional LLM code-generation function injected by the execution engine.
      *  When provided and the task has no pre-generated plan, workspace_subagent_spawn
@@ -14087,6 +14096,7 @@ export async function executeLocalWorkspaceAction(input: {
                 tenantId,
                 botId,
                 taskId,
+                workspaceId: input.workspaceId,
                 payload,
                 workspaceDir,
                 connectorActionExecuteClient,
@@ -14095,6 +14105,7 @@ export async function executeLocalWorkspaceAction(input: {
                         tenantId,
                         botId,
                         taskId,
+                        workspaceId: input.workspaceId,
                         actionType: aType as LocalWorkspaceActionType,
                         payload: aPayload,
                         connectorActionExecuteClient,

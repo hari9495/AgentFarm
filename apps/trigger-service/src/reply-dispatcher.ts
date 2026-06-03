@@ -79,11 +79,20 @@ async function replyWebhook(
     }
 }
 
+// Module-level cache: Bot Framework tokens are valid for 3600 s; re-fetch 60 s early.
+let _botFwTokenCache: { token: string; expiresAt: number } | null = null;
+
 /**
  * Obtain a short-lived Bot Framework bearer token using client credentials.
+ * Tokens are cached for ~59 minutes so concurrent replies share one token.
  * Requires TEAMS_BOT_APP_ID and TEAMS_BOT_APP_PASSWORD environment variables.
  */
 async function getBotFrameworkToken(): Promise<string> {
+    const now = Date.now();
+    if (_botFwTokenCache && _botFwTokenCache.expiresAt > now + 60_000) {
+        return _botFwTokenCache.token;
+    }
+
     const appId = process.env['TEAMS_BOT_APP_ID'];
     const appPassword = process.env['TEAMS_BOT_APP_PASSWORD'];
     if (!appId || !appPassword) {
@@ -113,10 +122,12 @@ async function getBotFrameworkToken(): Promise<string> {
         throw new Error(`Bot Framework token fetch failed: ${res.status} ${await res.text()}`);
     }
 
-    const json = await res.json() as { access_token?: string };
+    const json = await res.json() as { access_token?: string; expires_in?: number };
     if (!json.access_token) {
         throw new Error('Bot Framework token response missing access_token');
     }
+    const ttlMs = (json.expires_in ?? 3600) * 1000;
+    _botFwTokenCache = { token: json.access_token, expiresAt: now + ttlMs };
     return json.access_token;
 }
 
@@ -129,7 +140,9 @@ async function replyTeams(
     // serviceUrl already includes trailing slash in most Bot Framework payloads;
     // normalise to avoid double-slash.
     const base = ctx.serviceUrl.replace(/\/$/, '');
-    const url = `${base}/v3/conversations/${encodeURIComponent(ctx.conversationId)}/activities/${encodeURIComponent(ctx.activityId)}`;
+    // POST to /activities (no activityId in path) — the Bot Framework reply endpoint.
+    // replyToId in the body threads the reply under the original inbound activity.
+    const url = `${base}/v3/conversations/${encodeURIComponent(ctx.conversationId)}/activities`;
 
     const response = await fetch(url, {
         method: 'POST',
@@ -140,6 +153,7 @@ async function replyTeams(
         body: JSON.stringify({
             type: 'message',
             text: message,
+            replyToId: ctx.activityId,
         }),
     });
 

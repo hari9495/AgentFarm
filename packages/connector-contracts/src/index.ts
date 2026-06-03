@@ -148,19 +148,38 @@ export interface ConnectorAction {
 
 export const TESTER_ROLE_POLICY = {
   allowedActions: [
-    'workspace_generate_test',
-    'workspace_run_ci_checks',
-    'workspace_fix_test_failures',
-    'workspace_code_coverage',
-    'workspace_complexity_metrics',
-    'workspace_security_scan',
-    'workspace_flaky_test_detector',
-    'workspace_test_coverage_reporter',
-    'workspace_diff_preview',
-    'workspace_audit_export',
-    'create_task',
-    'add_comment',
-    'send_message',
+    // Core test authoring & analysis
+    'workspace_generate_test', 'workspace_run_ci_checks', 'workspace_fix_test_failures',
+    'workspace_code_coverage', 'workspace_complexity_metrics', 'workspace_security_scan',
+    'workspace_flaky_test_detector', 'workspace_test_coverage_reporter',
+    'workspace_diff_preview', 'workspace_audit_export',
+    // Browser & CDP actions (Tier 17 / 17b / 17c)
+    'workspace_browser_open', 'workspace_app_launch',
+    'workspace_web_login', 'workspace_web_navigate', 'workspace_web_read_page',
+    'workspace_web_fill_form', 'workspace_web_click', 'workspace_web_extract_data',
+    'workspace_lighthouse_audit', 'workspace_console_logs', 'workspace_network_requests',
+    'workspace_heap_snapshot', 'workspace_dom_snapshot', 'workspace_web_wait',
+    'workspace_web_hover', 'workspace_web_drag', 'workspace_web_type',
+    'workspace_web_press_key', 'workspace_web_upload_file', 'workspace_web_handle_dialog',
+    'workspace_perf_trace_start', 'workspace_perf_trace_stop', 'workspace_perf_trace_analyze',
+    'workspace_web_emulate', 'workspace_web_resize',
+    'workspace_tab_new', 'workspace_tab_close', 'workspace_tab_list', 'workspace_tab_select',
+    'workspace_network_request_detail', 'workspace_screencast_start', 'workspace_screencast_stop',
+    'workspace_extension_list', 'workspace_extension_install', 'workspace_extension_trigger',
+    // Testing tool integrations (Tier 20)
+    'workspace_selenium_test_run', 'workspace_cypress_test_run', 'workspace_appium_test_run',
+    'workspace_playwright_test_run', 'workspace_load_test_run', 'workspace_load_test_report',
+    'workspace_load_test_regression', 'workspace_api_test_run', 'workspace_api_test_report',
+    'workspace_dast_scan', 'workspace_security_test_report',
+    'workspace_test_case_sync', 'workspace_test_run_publish', 'workspace_visual_regression',
+    // Accessibility & mutation testing (Tier 21 / 22)
+    'workspace_axe_scan', 'workspace_create_bug', 'workspace_mutation_test', 'workspace_contract_test',
+    // Test data & mobile (Tier 23)
+    'workspace_generate_test_data', 'workspace_mobile_test',
+    // Sub-agent spawn (mobile_engineer delegation)
+    'workspace_subagent_spawn',
+    // Connector actions
+    'create_task', 'add_comment', 'send_message',
   ],
   highRiskActions: [
     'workspace_autonomous_plan_execute',
@@ -170,7 +189,6 @@ export const TESTER_ROLE_POLICY = {
     'merge_pr',
     'deploy_production',
     'delete_resource',
-    'workspace_subagent_spawn',
     'run_shell_command',
     'change_permissions',
   ],

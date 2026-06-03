@@ -138,16 +138,32 @@ const MCP_TOOL_MAP: Record<BrowserActionInput['action'], McpMapping> = {
             const fi = i as { url?: string; fields: Record<string, string>; submit?: boolean };
             return {
                 ...(fi.url ? { url: fi.url } : {}),
+                // Each key is tried first as a CSS selector; if nothing is found,
+                // falls back to label-text matching — same strategy as webFillForm()
+                // so MCP and Playwright paths behave identically for human-readable keys.
                 function: `() => {
                     const fields = ${JSON.stringify(fi.fields)};
                     const results = [];
-                    for (const [sel, value] of Object.entries(fields)) {
-                        const el = document.querySelector(sel);
-                        if (!el) { results.push('not found: ' + sel); continue; }
+                    for (const [key, value] of Object.entries(fields)) {
+                        let el = document.querySelector(key);
+                        if (!el) {
+                            // label-text fallback: find label whose text contains the key,
+                            // then resolve its associated input via 'for' attr or next sibling.
+                            const lc = key.toLowerCase();
+                            const label = Array.from(document.querySelectorAll('label'))
+                                .find(l => l.textContent?.trim().toLowerCase().includes(lc));
+                            if (label) {
+                                const forId = label.getAttribute('for');
+                                el = forId
+                                    ? document.getElementById(forId)
+                                    : label.querySelector('input,select,textarea') ?? label.nextElementSibling;
+                            }
+                        }
+                        if (!el) { results.push('not found: ' + key); continue; }
                         el.value = value;
                         el.dispatchEvent(new Event('input', { bubbles: true }));
                         el.dispatchEvent(new Event('change', { bubbles: true }));
-                        results.push('filled: ' + sel);
+                        results.push('filled: ' + key);
                     }
                     ${fi.submit ? `
                     const btn = document.querySelector('[type="submit"],button[type="submit"]');
@@ -159,22 +175,12 @@ const MCP_TOOL_MAP: Record<BrowserActionInput['action'], McpMapping> = {
     },
 
     // ── Login ────────────────────────────────────────────────────────────────
+    // NOTE: login is handled specially in execute() via separate fill calls to
+    // avoid embedding credentials in evaluate_script source code. This entry is
+    // a no-op fallback used only if the special-case is bypassed.
     login: {
         tool: 'evaluate_script',
-        args: (i) => {
-            const li = i as { username: string; password: string };
-            return {
-                function: `() => {
-                    const user = document.querySelector('[name="username"],[type="email"],[name="email"],[id*="user"],[id*="email"]');
-                    const pass = document.querySelector('[type="password"]');
-                    if (user) { user.value = ${JSON.stringify(li.username)}; user.dispatchEvent(new Event('input', { bubbles: true })); }
-                    if (pass) { pass.value = ${JSON.stringify(li.password)}; pass.dispatchEvent(new Event('input', { bubbles: true })); }
-                    const btn = document.querySelector('[type="submit"],button[type="submit"],button');
-                    if (btn) btn.click();
-                    return { user: !!user, pass: !!pass, btn: !!btn };
-                }`,
-            };
-        },
+        args: () => ({ function: '() => ({ skipped: true })' }),
     },
 
     // ── Read / extract ───────────────────────────────────────────────────────
@@ -373,7 +379,10 @@ export class BrowserActionRouter {
             const timer = setTimeout(() => controller.abort(), timeoutMs);
             const res = await fetch(mcpUrl, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'accept': 'application/json, text/event-stream',
+                },
                 body: JSON.stringify({
                     jsonrpc: '2.0',
                     id: 1,
@@ -404,6 +413,31 @@ export class BrowserActionRouter {
      *   3. If both are unavailable, throw.
      */
     async execute(input: BrowserActionInput): Promise<BrowserActionResult> {
+        // ── Special case: login via separate fill calls ──────────────────────
+        // Credentials must NOT be embedded inside an evaluate_script function
+        // body — doing so leaks them into MCP debug logs and CDP trace events.
+        // Use dedicated fill tool calls so credentials stay as JSON data args.
+        if (input.action === 'login' && this.mcpCall !== null) {
+            try {
+                const li = input as { url: string; username: string; password: string };
+                if (li.url) await this.mcpCall('navigate_page', { url: li.url });
+                await this.mcpCall('fill', {
+                    selector: '[name="username"],[type="email"],[name="email"],[id*="email"],[id*="user"]',
+                    value: li.username,
+                });
+                await this.mcpCall('fill', { selector: '[type="password"]', value: li.password });
+                const btnResult = await this.mcpCall('evaluate_script', {
+                    function: `() => { const btn = document.querySelector('[type="submit"],button[type="submit"],button'); if (btn) { btn.click(); return 'submitted'; } return 'no submit button'; }`,
+                });
+                const text = Array.isArray(btnResult.content)
+                    ? btnResult.content.filter((c) => c.type === 'text').map((c) => c.text as string).join('\n')
+                    : '';
+                return { ok: true, output: text, via: 'chrome-devtools-mcp' };
+            } catch (err) {
+                console.warn(`[BrowserActionRouter] chrome-devtools-mcp login failed, falling back to Playwright. Reason: ${err}`);
+            }
+        }
+
         // ── Attempt 1: chrome-devtools-mcp ──────────────────────────────────
         if (this.mcpCall !== null) {
             try {
@@ -428,10 +462,13 @@ export class BrowserActionRouter {
 
         // ── Attempt 2: Playwright fallback ──────────────────────────────────
         if (this.playwrightCtx === null) {
-            throw new Error(
-                `[BrowserActionRouter] No browser backend available for action "${input.action}". ` +
-                'Both chrome-devtools-mcp and Playwright are unavailable.',
-            );
+            return {
+                ok: false,
+                output: '',
+                reason: `[BrowserActionRouter] No browser backend available for action "${input.action}". ` +
+                    'Both chrome-devtools-mcp and Playwright are unavailable.',
+                via: 'playwright',
+            };
         }
 
         const playwrightResult = await this._playwrightFallback(input);
@@ -573,14 +610,27 @@ export class BrowserActionRouter {
                 const page = await this._getActivePage();
                 if (!page) return { ok: false, output: '', reason: 'no active page' };
                 try {
-                    page.once('dialog', async (dialog) => {
-                        if (input.accept) {
-                            await dialog.accept(input.prompt_text ?? '');
-                        } else {
-                            await dialog.dismiss();
-                        }
+                    await new Promise<void>((resolve, reject) => {
+                        const timer = setTimeout(() => {
+                            page.off('dialog', handler);
+                            reject(new Error('handle_dialog: no dialog appeared within 5000ms'));
+                        }, 5_000);
+                        const handler = async (dialog: import('playwright').Dialog) => {
+                            clearTimeout(timer);
+                            try {
+                                if (input.accept) {
+                                    await dialog.accept(input.prompt_text ?? '');
+                                } else {
+                                    await dialog.dismiss();
+                                }
+                                resolve();
+                            } catch (e) {
+                                reject(e);
+                            }
+                        };
+                        page.once('dialog', handler);
                     });
-                    return { ok: true, output: `dialog handler registered: ${input.accept ? 'accept' : 'dismiss'}` };
+                    return { ok: true, output: `dialog ${input.accept ? 'accepted' : 'dismissed'}` };
                 } catch (e) {
                     return { ok: false, output: '', reason: String(e) };
                 }
