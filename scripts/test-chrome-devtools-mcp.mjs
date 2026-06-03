@@ -149,7 +149,21 @@ function parseSnapshotFields(snapshotText) {
 
 // Use direct node spawn (shell:false) — shell:true on Windows routes stdin
 // through cmd.exe which does NOT forward it to the MCP process stdin.
-const MCP_BIN = 'C:/Users/HariSivaSaiKumarMada/AppData/Roaming/npm/node_modules/chrome-devtools-mcp/build/src/bin/chrome-devtools-mcp.js';
+import { createRequire } from 'node:module';
+import { execSync } from 'node:child_process';
+import { resolve as resolvePath } from 'node:path';
+
+function findMcpBin() {
+    try {
+        return createRequire(import.meta.url).resolve(
+            'chrome-devtools-mcp/build/src/bin/chrome-devtools-mcp.js',
+        );
+    } catch {
+        const globalRoot = execSync('npm root -g', { encoding: 'utf8' }).trim();
+        return resolvePath(globalRoot, 'chrome-devtools-mcp/build/src/bin/chrome-devtools-mcp.js');
+    }
+}
+const MCP_BIN = findMcpBin();
 
 console.log('\x1b[1m=== AgentFarm chrome-devtools-mcp RPA Test ===\x1b[0m\n');
 console.log('Spawning chrome-devtools-mcp (stdio transport)…');

@@ -243,6 +243,10 @@ model Approval {
   decidedAt                DateTime?
   llmModel                 String?
   llmProvider              String?
+  delegatedToUserId        String?
+  delegatedByUserId        String?
+  delegatedAt              DateTime?
+  delegationExpiresAt      DateTime?
 
   @@index([tenantId])
   @@index([workspaceId])
@@ -251,6 +255,7 @@ model Approval {
   @@index([decision])
   @@index([riskLevel])
   @@index([decisionLatencySeconds])
+  @@index([delegatedToUserId])
 }
 
 model AuditEvent {

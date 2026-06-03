@@ -146,6 +146,18 @@ const createRepo = () => {
             async findActionTypeByActionId(input: { actionId: string }) {
                 return actionTypes.get(input.actionId) ?? null;
             },
+            async delegateApproval(_input: {
+                approvalId: string;
+                delegatedToUserId: string;
+                delegatedByUserId: string;
+                delegatedAt: Date;
+                delegationExpiresAt: Date | null;
+            }) {
+                // stub — delegation tests use the real endpoint
+            },
+            async findTenantUser(_input: { userId: string; tenantId: string }) {
+                return null;
+            },
         },
     };
 };

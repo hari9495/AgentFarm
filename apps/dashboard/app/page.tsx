@@ -141,6 +141,11 @@ type ApprovalItem = {
     requested_at: string;
     decided_at: string | null;
     decision_reason: string | null;
+    delegated_to_user_id?: string | null;
+    delegated_to_user_name?: string | null;
+    delegated_by_user_id?: string | null;
+    delegated_at?: string | null;
+    delegation_expires_at?: string | null;
 };
 
 type ApprovalMetrics = {
@@ -1567,6 +1572,7 @@ export default async function HomePage({
                                 initialRecent={dashboardSlice.recentDecisions}
                                 focusedApprovalId={focusedApprovalId}
                                 initialMetrics={dashboardSlice.approvalMetrics}
+                                currentUserId={sessionPayload?.userId}
                             />
                             <AgentQuestionPanel
                                 workspaceId={workspace.workspace_id}

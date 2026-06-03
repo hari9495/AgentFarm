@@ -10,7 +10,22 @@ import { Buffer } from 'node:buffer';
 // Direct spawn: node.exe → chrome-devtools-mcp.js — no cmd.exe shell in between.
 // Using shell:true pipes stdin through cmd.exe which does NOT forward it to the
 // actual child process stdin, resulting in 0 bytes received from the MCP server.
-const MCP_BIN = 'C:/Users/HariSivaSaiKumarMada/AppData/Roaming/npm/node_modules/chrome-devtools-mcp/build/src/bin/chrome-devtools-mcp.js';
+import { createRequire } from 'node:module';
+import { resolve as resolvePath } from 'node:path';
+
+function findMcpBin() {
+    // Resolve from the locally installed package first, then fall back to global.
+    try {
+        const req = createRequire(import.meta.url);
+        return req.resolve('chrome-devtools-mcp/build/src/bin/chrome-devtools-mcp.js');
+    } catch {
+        // Global npm install fallback
+        const { execSync } = await import('node:child_process');
+        const global = execSync('npm root -g', { encoding: 'utf8' }).trim();
+        return resolvePath(global, 'chrome-devtools-mcp/build/src/bin/chrome-devtools-mcp.js');
+    }
+}
+const MCP_BIN = await findMcpBin();
 
 console.log('Spawning chrome-devtools-mcp...');
 

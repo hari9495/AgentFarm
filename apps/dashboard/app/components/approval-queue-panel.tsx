@@ -33,6 +33,11 @@ type ApprovalItem = {
     decided_at: string | null;
     decision_reason: string | null;
     selected_option_id?: string | null;
+    delegated_to_user_id?: string | null;
+    delegated_to_user_name?: string | null;
+    delegated_by_user_id?: string | null;
+    delegated_at?: string | null;
+    delegation_expires_at?: string | null;
 };
 
 type WhatIfOption = {
@@ -49,11 +54,19 @@ type ApprovalBatchCard = {
     reason?: string;
 };
 
+type TeamMember = {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+};
+
 type Props = {
     workspaceId: string;
     initialPending: ApprovalItem[];
     initialRecent: ApprovalItem[];
     focusedApprovalId?: string;
+    currentUserId?: string;
     initialMetrics: {
         pending_count: number;
         decision_count: number;
@@ -63,7 +76,7 @@ type Props = {
 
 type DecisionValue = 'approved' | 'rejected' | 'timeout_rejected';
 type SortValue = 'requested_desc' | 'requested_asc' | 'risk_desc';
-type SavedView = 'all' | 'pending_high_risk' | 'aging_15m' | 'my_team';
+type SavedView = 'all' | 'pending_high_risk' | 'aging_15m' | 'my_team' | 'delegated_to_me';
 
 const REASON_TEMPLATES = [
     'Approved after policy review and scope verification',
@@ -130,7 +143,7 @@ const getQualityStatus = (approval: ApprovalItem): string => {
     return `Lint ${approval.lint_status ?? 'not_run'} | Test ${approval.test_status ?? 'not_run'}`;
 };
 
-export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent, focusedApprovalId, initialMetrics }: Props) {
+export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent, focusedApprovalId, initialMetrics, currentUserId }: Props) {
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const [pending, setPending] = useState<ApprovalItem[]>(initialPending);
@@ -179,6 +192,15 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
     const [evidenceOffset, setEvidenceOffset] = useState(0);
     const evidenceRequestIdRef = useRef(0);
     const selectedApprovalIdRef = useRef<string | null>(selectedApprovalId);
+
+    const [delegatingApprovalId, setDelegatingApprovalId] = useState<string | null>(null);
+    const [delegateTargetUserId, setDelegateTargetUserId] = useState('');
+    const [delegateExpiresAt, setDelegateExpiresAt] = useState('');
+    const [delegateNote, setDelegateNote] = useState('');
+    const [delegateBusy, setDelegateBusy] = useState(false);
+    const [delegateResult, setDelegateResult] = useState<{ ok: boolean; msg: string } | null>(null);
+    const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+    const [teamMembersLoaded, setTeamMembersLoaded] = useState(false);
 
     const evidencePaginationEnabled = isEvidencePaginationEnabled(process.env.NEXT_PUBLIC_APPROVAL_EVIDENCE_PAGINATION);
     const EVIDENCE_PAGE_SIZE = 5;
@@ -251,6 +273,10 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
 
                 if (savedView === 'my_team') {
                     return item.risk_level === 'high' || item.risk_level === 'medium';
+                }
+
+                if (savedView === 'delegated_to_me') {
+                    return Boolean(currentUserId && item.delegated_to_user_id === currentUserId);
                 }
 
                 return true;
@@ -647,6 +673,101 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
         setRecentPage(1);
     };
 
+    const fetchTeamMembers = async () => {
+        if (teamMembersLoaded) {
+            return;
+        }
+        try {
+            const res = await fetch('/api/team/members');
+            if (res.ok) {
+                const data = (await res.json()) as { members?: TeamMember[] };
+                setTeamMembers(data.members ?? []);
+                setTeamMembersLoaded(true);
+            }
+        } catch {
+            // non-fatal
+        }
+    };
+
+    const openDelegateModal = (approvalId: string) => {
+        setDelegatingApprovalId(approvalId);
+        setDelegateTargetUserId('');
+        setDelegateExpiresAt('');
+        setDelegateNote('');
+        setDelegateResult(null);
+        void fetchTeamMembers();
+    };
+
+    const closeDelegateModal = () => {
+        setDelegatingApprovalId(null);
+        setDelegateResult(null);
+    };
+
+    const submitDelegation = async () => {
+        if (!delegatingApprovalId || !delegateTargetUserId) {
+            return;
+        }
+        setDelegateBusy(true);
+        setDelegateResult(null);
+
+        try {
+            const body: Record<string, unknown> = {
+                workspace_id: workspaceId,
+                delegate_to_user_id: delegateTargetUserId,
+            };
+            if (delegateExpiresAt) {
+                body.expires_at = new Date(delegateExpiresAt).toISOString();
+            }
+            if (delegateNote.trim()) {
+                body.note = delegateNote.trim();
+            }
+
+            const res = await fetch(`/api/approvals/${encodeURIComponent(delegatingApprovalId)}/delegate`, {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+
+            const data = (await res.json().catch(() => ({}))) as {
+                error?: string;
+                message?: string;
+                delegated_to_user_name?: string;
+                delegated_at?: string;
+            };
+
+            if (!res.ok) {
+                setDelegateResult({ ok: false, msg: data.message ?? data.error ?? 'Delegation failed.' });
+                return;
+            }
+
+            const delegateName =
+                data.delegated_to_user_name ??
+                teamMembers.find((m) => m.id === delegateTargetUserId)?.name ??
+                delegateTargetUserId;
+
+            setPending((prev) =>
+                prev.map((a) =>
+                    a.approval_id === delegatingApprovalId
+                        ? {
+                            ...a,
+                            delegated_to_user_id: delegateTargetUserId,
+                            delegated_to_user_name: delegateName,
+                            delegated_by_user_id: currentUserId,
+                            delegated_at: data.delegated_at ?? new Date().toISOString(),
+                        }
+                        : a,
+                ),
+            );
+
+            setDelegateResult({ ok: true, msg: `Delegated to ${delegateName}.` });
+            setTimeout(() => {
+                closeDelegateModal();
+            }, 1400);
+        } finally {
+            setDelegateBusy(false);
+        }
+    };
+
     const fetchEvidence = async (approvalId: string, options?: { offset?: number }) => {
         const offset = Math.max(0, options?.offset ?? 0);
         const params = new URLSearchParams({ workspace_id: workspaceId });
@@ -745,6 +866,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                     <option value="pending_high_risk">View: pending-high-risk</option>
                     <option value="aging_15m">View: aging {`>`} 15m</option>
                     <option value="my_team">View: my-team</option>
+                    <option value="delegated_to_me">View: delegated to me</option>
                 </select>
             </div>
 
@@ -935,6 +1057,18 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                                     className="chip-button"
                                                 />
                                             </span>
+                                            {approval.delegated_to_user_id && (
+                                                <span style={{ fontSize: '0.75rem', color: '#0369a1', display: 'flex', alignItems: 'center', gap: '0.3rem', paddingLeft: '1.55rem' }}>
+                                                    <span style={{ padding: '0.1rem 0.45rem', borderRadius: 9999, background: 'rgba(3,105,161,0.08)', border: '1px solid rgba(3,105,161,0.2)', fontWeight: 600 }}>
+                                                        → {approval.delegated_to_user_name ?? approval.delegated_to_user_id}
+                                                    </span>
+                                                    {approval.delegation_expires_at && (
+                                                        <span style={{ color: '#78716c' }}>
+                                                            expires {new Date(approval.delegation_expires_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                        </span>
+                                                    )}
+                                                </span>
+                                            )}
                                         </div>
                                     </td>
                                     <td>
@@ -1032,6 +1166,13 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                                 >
                                                     ↑ Escalate
                                                 </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => openDelegateModal(approval.approval_id)}
+                                                    style={{ padding: '0.35rem 0.7rem', borderRadius: 9999, border: '1px solid rgba(3,105,161,0.3)', background: 'rgba(3,105,161,0.07)', color: '#0369a1', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
+                                                >
+                                                    → Delegate
+                                                </button>
                                             </div>
                                         </div>
                                     </td>
@@ -1120,6 +1261,93 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                     <button type="button" onClick={() => setRecentPage((v) => Math.min(recentPageCount, v + 1))} disabled={recentPage >= recentPageCount}>Next</button>
                 </div>
             </div>
+
+            {delegatingApprovalId && (
+                <div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label="Delegate approval"
+                    style={{ position: 'fixed', inset: 0, background: 'rgba(12,18,28,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}
+                    onClick={(e) => { if (e.target === e.currentTarget) closeDelegateModal(); }}
+                >
+                    <div style={{ width: 'min(26rem, 95%)', background: '#fff', borderRadius: '0.75rem', padding: '1.25rem', boxShadow: '0 24px 48px rgba(15,23,42,0.22)', display: 'grid', gap: '0.85rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                                <h3 style={{ margin: 0, fontSize: '1rem' }}>Delegate Approval</h3>
+                                <p style={{ margin: '0.2rem 0 0', fontSize: '0.78rem', color: '#57534e' }}>
+                                    Assign this approval to another team member for review.
+                                </p>
+                            </div>
+                            <button type="button" className="chip-button" onClick={closeDelegateModal}>Close</button>
+                        </div>
+
+                        <div style={{ display: 'grid', gap: '0.55rem' }}>
+                            <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>
+                                Delegate to
+                                <select
+                                    value={delegateTargetUserId}
+                                    onChange={(e) => setDelegateTargetUserId(e.target.value)}
+                                    className="approval-select"
+                                    style={{ display: 'block', width: '100%', marginTop: '0.3rem' }}
+                                >
+                                    <option value="">— select team member —</option>
+                                    {teamMembers
+                                        .filter((m) => m.id !== currentUserId)
+                                        .map((m) => (
+                                            <option key={m.id} value={m.id}>
+                                                {m.name} ({m.email})
+                                            </option>
+                                        ))}
+                                </select>
+                            </label>
+
+                            <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>
+                                Decision deadline <span style={{ fontWeight: 400, color: '#78716c' }}>(optional)</span>
+                                <input
+                                    type="datetime-local"
+                                    value={delegateExpiresAt}
+                                    onChange={(e) => setDelegateExpiresAt(e.target.value)}
+                                    className="approval-input"
+                                    style={{ display: 'block', width: '100%', marginTop: '0.3rem' }}
+                                    min={new Date(Date.now() + 60_000).toISOString().slice(0, 16)}
+                                />
+                            </label>
+
+                            <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>
+                                Note <span style={{ fontWeight: 400, color: '#78716c' }}>(optional)</span>
+                                <input
+                                    type="text"
+                                    value={delegateNote}
+                                    onChange={(e) => setDelegateNote(e.target.value)}
+                                    placeholder="Why are you delegating this?"
+                                    className="approval-input"
+                                    style={{ display: 'block', width: '100%', marginTop: '0.3rem' }}
+                                />
+                            </label>
+                        </div>
+
+                        {delegateResult && (
+                            <div style={{ padding: '0.5rem 0.75rem', borderRadius: '0.4rem', background: delegateResult.ok ? 'rgba(26,122,74,0.07)' : 'rgba(196,22,28,0.07)', border: `1px solid ${delegateResult.ok ? 'rgba(26,122,74,0.2)' : 'rgba(196,22,28,0.2)'}`, fontSize: '0.82rem', color: delegateResult.ok ? '#1a7a4a' : '#c4161c' }}>
+                                {delegateResult.ok ? '✓ ' : '⚠ '}{delegateResult.msg}
+                            </div>
+                        )}
+
+                        <div style={{ display: 'flex', gap: '0.45rem', justifyContent: 'flex-end' }}>
+                            <button type="button" className="chip-button" onClick={closeDelegateModal} disabled={delegateBusy}>
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => void submitDelegation()}
+                                disabled={delegateBusy || !delegateTargetUserId}
+                                style={{ padding: '0.45rem 1rem', borderRadius: 9999, border: '1px solid rgba(3,105,161,0.35)', background: delegateBusy || !delegateTargetUserId ? '#f5f5f7' : 'rgba(3,105,161,0.08)', color: delegateBusy || !delegateTargetUserId ? '#aeaeb2' : '#0369a1', fontSize: '0.82rem', fontWeight: 700, cursor: delegateBusy || !delegateTargetUserId ? 'not-allowed' : 'pointer' }}
+                            >
+                                {delegateBusy ? 'Delegating…' : '→ Delegate'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {selectedApproval && (
                 <div
@@ -1296,6 +1524,35 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                         <div>
                                             <strong>Raw Action Summary</strong>
                                             <p style={{ margin: '0.2rem 0 0', color: '#44403c' }}>{selectedApproval.action_summary}</p>
+                                        </div>
+                                    )}
+
+                                    {/* ── Delegation info ─────────────────────────────────── */}
+                                    {selectedApproval.delegated_to_user_id && (
+                                        <div style={{ padding: '0.65rem 0.75rem', borderRadius: '0.4rem', background: 'rgba(3,105,161,0.05)', border: '1px solid rgba(3,105,161,0.18)', display: 'grid', gap: '0.3rem' }}>
+                                            <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0369a1', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Delegated</div>
+                                            <div style={{ fontSize: '0.85rem', color: '#0c4a6e' }}>
+                                                → <strong>{selectedApproval.delegated_to_user_name ?? selectedApproval.delegated_to_user_id}</strong>
+                                            </div>
+                                            {selectedApproval.delegated_at && (
+                                                <div style={{ fontSize: '0.75rem', color: '#57534e' }}>
+                                                    since {new Date(selectedApproval.delegated_at).toLocaleString()}
+                                                </div>
+                                            )}
+                                            {selectedApproval.delegation_expires_at && (
+                                                <div style={{ fontSize: '0.75rem', color: '#b45309' }}>
+                                                    deadline: {new Date(selectedApproval.delegation_expires_at).toLocaleString()}
+                                                </div>
+                                            )}
+                                            {selectedApproval.decision_status === 'pending' && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => openDelegateModal(selectedApproval.approval_id)}
+                                                    style={{ marginTop: '0.3rem', alignSelf: 'flex-start', padding: '0.3rem 0.65rem', borderRadius: 9999, border: '1px solid rgba(3,105,161,0.3)', background: 'rgba(3,105,161,0.07)', color: '#0369a1', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}
+                                                >
+                                                    Re-delegate
+                                                </button>
+                                            )}
                                         </div>
                                     )}
 

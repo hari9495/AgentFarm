@@ -36,6 +36,10 @@ type ApprovalRecord = {
     decision: 'pending' | 'approved' | 'rejected' | 'timeout_rejected';
     createdAt: Date;
     escalatedAt: Date | null;
+    delegatedToUserId?: string | null;
+    delegatedByUserId?: string | null;
+    delegatedAt?: Date | null;
+    delegationExpiresAt?: Date | null;
 };
 
 type ApprovalRepo = {
@@ -98,6 +102,17 @@ type ApprovalRepo = {
         workspaceId: string;
         actionId: string;
     }): Promise<string | null>;
+    delegateApproval(input: {
+        approvalId: string;
+        delegatedToUserId: string;
+        delegatedByUserId: string;
+        delegatedAt: Date;
+        delegationExpiresAt: Date | null;
+    }): Promise<void>;
+    findTenantUser(input: {
+        userId: string;
+        tenantId: string;
+    }): Promise<{ id: string; name: string; email: string } | null>;
 };
 
 type DecisionWebhookNotifier = (input: {
@@ -158,6 +173,17 @@ type QualitySignalNotifier = (input: {
     statusCode: number;
     errorMessage?: string;
 }>;
+
+type DelegateBody = {
+    workspace_id?: string;
+    delegate_to_user_id?: string;
+    expires_at?: string;
+    note?: string;
+};
+
+type DelegateParams = {
+    approvalId: string;
+};
 
 type EscalateBody = {
     workspace_id?: string;
@@ -413,6 +439,35 @@ const immutableFieldsMatch = (existing: ApprovalRecord, incoming: {
         && existing.escalationTimeoutSeconds === incoming.escalationTimeoutSeconds;
 };
 
+const fetchApprovalDelegationFields = async (
+    prisma: Awaited<ReturnType<typeof getPrisma>>,
+    approvalId: string,
+): Promise<{
+    delegatedToUserId?: string | null;
+    delegatedByUserId?: string | null;
+    delegatedAt?: Date | null;
+    delegationExpiresAt?: Date | null;
+}> => {
+    const rows = await prisma.$queryRaw<Array<{
+        delegatedToUserId: string | null;
+        delegatedByUserId: string | null;
+        delegatedAt: Date | null;
+        delegationExpiresAt: Date | null;
+    }>>`
+        SELECT "delegatedToUserId", "delegatedByUserId", "delegatedAt", "delegationExpiresAt"
+        FROM "Approval"
+        WHERE id = ${approvalId}
+        LIMIT 1
+    `;
+    const row = rows[0];
+    return {
+        delegatedToUserId: row?.delegatedToUserId ?? undefined,
+        delegatedByUserId: row?.delegatedByUserId ?? undefined,
+        delegatedAt: row?.delegatedAt ?? undefined,
+        delegationExpiresAt: row?.delegationExpiresAt ?? undefined,
+    };
+};
+
 const fetchApprovalLlmMetadata = async (
     prisma: Awaited<ReturnType<typeof getPrisma>>,
     approvalId: string,
@@ -454,6 +509,7 @@ const defaultRepo: ApprovalRepo = {
             taskId: approval.taskId,
             actionId: approval.actionId,
             ...(await fetchApprovalLlmMetadata(prisma, approval.id)),
+            ...(await fetchApprovalDelegationFields(prisma, approval.id)),
             riskLevel: approval.riskLevel as RiskLevel,
             actionSummary: approval.actionSummary,
             requestedBy: approval.requestedBy,
@@ -485,6 +541,7 @@ const defaultRepo: ApprovalRepo = {
             taskId: approval.taskId,
             actionId: approval.actionId,
             ...(await fetchApprovalLlmMetadata(prisma, approval.id)),
+            ...(await fetchApprovalDelegationFields(prisma, approval.id)),
             riskLevel: approval.riskLevel as RiskLevel,
             actionSummary: approval.actionSummary,
             requestedBy: approval.requestedBy,
@@ -639,6 +696,25 @@ const defaultRepo: ApprovalRepo = {
         });
 
         return action?.actionType ?? null;
+    },
+    async delegateApproval(input) {
+        const prisma = await getPrisma();
+        await prisma.$executeRaw`
+            UPDATE "Approval"
+            SET "delegatedToUserId"   = ${input.delegatedToUserId},
+                "delegatedByUserId"   = ${input.delegatedByUserId},
+                "delegatedAt"         = ${input.delegatedAt},
+                "delegationExpiresAt" = ${input.delegationExpiresAt}
+            WHERE id = ${input.approvalId}
+        `;
+    },
+    async findTenantUser(input) {
+        const prisma = await getPrisma();
+        const user = await prisma.tenantUser.findFirst({
+            where: { id: input.userId, tenantId: input.tenantId },
+            select: { id: true, name: true, email: true },
+        });
+        return user ?? null;
     },
 };
 
@@ -1402,6 +1478,138 @@ export const registerApprovalRoutes = async (
         return {
             batch: updated,
         };
+    });
+
+    app.post<{ Params: DelegateParams; Body: DelegateBody }>('/v1/approvals/:approvalId/delegate', async (request, reply) => {
+        const session = options.getSession(request);
+        if (!session) {
+            return reply.code(401).send({
+                error: 'unauthorized',
+                message: 'A valid authenticated session is required.',
+            });
+        }
+
+        const workspaceId = request.body?.workspace_id ?? session.workspaceIds[0];
+        if (!workspaceId || !session.workspaceIds.includes(workspaceId)) {
+            return reply.code(403).send({
+                error: 'workspace_scope_violation',
+                message: 'workspace_id is not in your authenticated session scope.',
+            });
+        }
+
+        const delegateToUserId = request.body?.delegate_to_user_id?.trim();
+        if (!delegateToUserId) {
+            return reply.code(400).send({
+                error: 'invalid_request',
+                message: 'delegate_to_user_id is required.',
+            });
+        }
+
+        if (delegateToUserId === session.userId) {
+            return reply.code(400).send({
+                error: 'self_delegation',
+                message: 'You cannot delegate an approval to yourself.',
+            });
+        }
+
+        let delegationExpiresAt: Date | null = null;
+        const expiresAtRaw = request.body?.expires_at?.trim();
+        if (expiresAtRaw) {
+            const parsed = new Date(expiresAtRaw);
+            if (isNaN(parsed.getTime())) {
+                return reply.code(400).send({
+                    error: 'invalid_expires_at',
+                    message: 'expires_at must be a valid ISO timestamp.',
+                });
+            }
+            const nowMs = now();
+            if (parsed.getTime() <= nowMs) {
+                return reply.code(400).send({
+                    error: 'invalid_expires_at',
+                    message: 'expires_at must be in the future.',
+                });
+            }
+            const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+            if (parsed.getTime() > nowMs + sevenDaysMs) {
+                return reply.code(400).send({
+                    error: 'invalid_expires_at',
+                    message: 'expires_at cannot be more than 7 days from now.',
+                });
+            }
+            delegationExpiresAt = parsed;
+        }
+
+        const approval = await repo.findById({
+            approvalId: request.params.approvalId,
+            tenantId: session.tenantId,
+            workspaceId,
+        });
+
+        if (!approval) {
+            return reply.code(404).send({
+                error: 'approval_not_found',
+                message: 'Approval record not found in current scope.',
+            });
+        }
+
+        if (approval.decision !== 'pending') {
+            return reply.code(409).send({
+                error: 'approval_already_decided',
+                message: 'Only pending approvals can be delegated.',
+                decision: approval.decision,
+            });
+        }
+
+        if (approval.delegatedToUserId) {
+            return reply.code(409).send({
+                error: 'already_delegated',
+                message: 'This approval has already been delegated. Revoke the existing delegation before re-delegating.',
+                delegated_to_user_id: approval.delegatedToUserId,
+                delegated_at: approval.delegatedAt?.toISOString() ?? null,
+            });
+        }
+
+        const delegateUser = await repo.findTenantUser({
+            userId: delegateToUserId,
+            tenantId: session.tenantId,
+        });
+
+        if (!delegateUser) {
+            return reply.code(404).send({
+                error: 'delegate_user_not_found',
+                message: 'The specified delegate user was not found in this tenant.',
+            });
+        }
+
+        const delegatedAt = new Date(now());
+        await repo.delegateApproval({
+            approvalId: approval.id,
+            delegatedToUserId: delegateToUserId,
+            delegatedByUserId: session.userId,
+            delegatedAt,
+            delegationExpiresAt,
+        });
+
+        const noteSnippet = request.body?.note?.trim() ?? null;
+        await repo.createAuditEvent({
+            tenantId: approval.tenantId,
+            workspaceId: approval.workspaceId,
+            botId: approval.botId,
+            summary: `Approval ${approval.id} delegated to ${delegateUser.email} by ${session.userId}${noteSnippet ? `: ${noteSnippet}` : ''}.`,
+            correlationId: `approval_delegate_${approval.id}_${Math.floor(now())}`,
+            severity: 'info',
+        });
+
+        return reply.code(200).send({
+            approval_id: approval.id,
+            workspace_id: approval.workspaceId,
+            delegated_to_user_id: delegateToUserId,
+            delegated_to_user_name: delegateUser.name,
+            delegated_to_user_email: delegateUser.email,
+            delegated_by_user_id: session.userId,
+            delegated_at: delegatedAt.toISOString(),
+            delegation_expires_at: delegationExpiresAt?.toISOString() ?? null,
+        });
     });
 
     app.get<{ Params: EvidenceParams; Querystring: EvidenceQuery }>('/v1/approvals/:approvalId/evidence', async (request, reply) => {
