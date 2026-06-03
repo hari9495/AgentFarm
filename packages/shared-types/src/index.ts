@@ -2849,6 +2849,55 @@ export interface NpsResponseRecord {
 // KPI REPORT TYPES (Sprint 21)
 // ============================================================================
 
+// ============================================================================
+// Task Templates / Playbook Library
+// ============================================================================
+
+export type TaskTemplateInputFieldType = 'text' | 'textarea' | 'select';
+
+export interface TaskTemplateInputField {
+  name: string;
+  label: string;
+  type: TaskTemplateInputFieldType;
+  required: boolean;
+  placeholder?: string;
+  options?: string[];
+}
+
+export interface TaskTemplate {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  category: string;
+  agentRole: string;
+  promptTemplate: string;
+  inputSchema: TaskTemplateInputField[];
+  exampleInputs: Record<string, string>;
+  tags: string[];
+  isBuiltIn: boolean;
+  tenantId: string | null;
+  useCount: number;
+  estimatedTime?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TaskTemplateDispatchRequest {
+  templateId: string;
+  agentId: string;
+  workspaceId: string;
+  inputs: Record<string, string>;
+}
+
+export interface TaskTemplateDispatchResult {
+  dispatchId: string;
+  templateId: string;
+  taskDescription: string;
+  status: 'queued' | 'dispatched' | 'failed';
+  queuedAt: string;
+}
+
 export interface SalesFunnelStage {
   stage: string;
   count: number;

@@ -11,7 +11,7 @@ import {
     ScrollText, Film, Waves, Lock,
     SlidersHorizontal, Camera, GitBranch, RefreshCw,
     Network, CalendarDays, AlarmClock, Beaker, Monitor, Terminal,
-    Zap, Star, Plug, Layers,
+    Zap, Star, Plug, Layers, BookOpen,
     type LucideIcon,
 } from 'lucide-react';
 import type { DashboardTab } from './dashboard-navigation';
@@ -207,6 +207,7 @@ export function InternalSidebar({
                             { href: '/agents', label: 'Agents', Icon: Bot },
                             { href: '/tasks', label: 'Tasks', Icon: ListChecks },
                             { href: '/tasks?tab=queue', label: 'Task Queue', Icon: Layers },
+                            { href: '/playbooks', label: 'Playbooks', Icon: BookOpen },
                             { href: '/devops', label: 'DevOps Hub', Icon: Wrench },
                             { href: '/chat', label: 'Chat', Icon: MessageSquare },
                         ].map(({ href, label, Icon }) => (

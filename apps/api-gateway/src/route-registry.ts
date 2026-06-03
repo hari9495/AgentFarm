@@ -85,6 +85,7 @@ import { registerSseTaskRoutes } from './routes/runtime/sse-tasks.js';
 import { registerTaskNotifyRoutes } from './routes/runtime/task-notify.js';
 import { registerScheduleRoutes } from './routes/runtime/schedules.js';
 import { registerTaskQueueRoutes } from './routes/runtime/task-queue.js';
+import { registerTaskTemplateRoutes } from './routes/runtime/task-templates.js';
 
 // Workspace
 import { registerWorkspaceSessionRoutes } from './routes/workspace/workspace-session.js';
@@ -248,6 +249,7 @@ export const registerAllRoutes = async (
     await registerTaskNotifyRoutes(app, { getSession });
     await registerScheduleRoutes(app, { getSession });
     await registerTaskQueueRoutes(app, { getSession, prisma: prisma as never });
+    await registerTaskTemplateRoutes(app, { getSession });
 
     // Workspace
     await registerWorkspaceSessionRoutes(app, { getSession });

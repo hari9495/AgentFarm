@@ -2019,6 +2019,29 @@ model InboundWebhookEvent {
 }
 
 // Sprint 9 — Semantic Memory / Company Knowledge RAG
+model TaskTemplate {
+  id             String   @id @default(cuid())
+  slug           String   @unique
+  name           String
+  description    String
+  category       String
+  agentRole      String
+  promptTemplate String
+  inputSchema    Json     @default("[]")
+  exampleInputs  Json     @default("{}")
+  tags           Json     @default("[]")
+  isBuiltIn      Boolean  @default(false)
+  tenantId       String?
+  useCount       Int      @default(0)
+  estimatedTime  String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([category])
+  @@index([agentRole])
+  @@index([tenantId])
+}
+
 model AgentKnowledgeBase {
   id             String   @id @default(cuid())
   tenantId       String
