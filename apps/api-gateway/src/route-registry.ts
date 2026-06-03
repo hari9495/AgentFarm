@@ -66,6 +66,7 @@ import { registerHandoffRoutes } from './routes/agents/handoffs.js';
 import { registerQuestionRoutes } from './routes/agents/questions.js';
 import { registerBotVersionRoutes } from './routes/agents/bot-versions.js';
 import { registerAgentMessageRoutes } from './routes/agents/agent-messages.js';
+import { registerAgentBudgetRoutes } from './routes/agents/agent-budget.js';
 
 // Runtime
 import { registerRuntimeLlmConfigRoutes } from './routes/runtime/runtime-llm-config.js';
@@ -220,6 +221,7 @@ export const registerAllRoutes = async (
     await registerQuestionRoutes(app, prisma);
     await registerBotVersionRoutes(app, { getSession });
     registerAgentMessageRoutes(app, { getSession });
+    await registerAgentBudgetRoutes(app, { getSession });
 
     // Runtime
     await registerRuntimeLlmConfigRoutes(app, { getSession, secretStore });

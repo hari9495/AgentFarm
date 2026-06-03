@@ -13,6 +13,7 @@ import AgentCapabilitiesFetcher from '../../components/agent-capabilities-fetche
 import AgentEpisodicMemoryPanel from '../../components/agent-episodic-memory-panel';
 import AgentMemoryPatternFetcher from '../../components/agent-memory-pattern-fetcher';
 import AgentInsightsCard from '../../components/agent-insights-card';
+import { AgentBudgetCapCard } from '../../components/agent-budget-cap-card';
 import { getInternalSessionAuthHeader } from '../../lib/internal-session';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -210,6 +211,8 @@ export default async function AgentDetailPage({ params }: PageProps) {
                     <h2>Cost — Last 30 Days</h2>
                     <AgentBillingCard botId={botId} />
                 </section>
+
+                <AgentBudgetCapCard botId={botId} />
             </div>
         </div>
     );

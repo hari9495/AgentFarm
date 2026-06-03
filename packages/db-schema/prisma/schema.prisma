@@ -676,6 +676,21 @@ model AgentDispatchRecord {
   @@index([orchestrationRunId])
 }
 
+model AgentBudgetConfig {
+  id              String   @id @default(cuid())
+  tenantId        String
+  workspaceId     String
+  botId           String   @unique
+  dailyLimitUsd   Float?
+  monthlyLimitUsd Float?
+  enabled         Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([workspaceId])
+}
+
 model AgentShortTermMemory {
   id               String    @id @default(cuid())
   workspaceId      String
