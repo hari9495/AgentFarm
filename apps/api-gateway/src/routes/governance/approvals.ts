@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { parseApprovalPacket, type EvidenceBundle } from '../../lib/approval-packet.js';
+import { dispatchOutboundWebhooks } from '../../lib/webhook-dispatcher.js';
 
 const getPrisma = async () => {
     const db = await import('../../lib/db.js');
@@ -1244,6 +1245,37 @@ export const registerApprovalRoutes = async (
             correlationId: `approval_decision_${approval.id}_${Math.floor(now())}`,
             severity: decision === 'approved' ? 'info' : 'warn',
         });
+
+        // Fire outbound webhook for task_completed / task_failed so customers can
+        // stream approval outcomes to their own systems.
+        {
+            const prisma = await getPrisma();
+            const eventType = decision === 'approved' ? 'task_completed' : 'task_failed';
+            const ts = new Date(now()).toISOString();
+            void dispatchOutboundWebhooks(
+                {
+                    tenantId: approval.tenantId,
+                    workspaceId: approval.workspaceId,
+                    eventType,
+                    taskId: approval.taskId,
+                    payload: {
+                        eventType,
+                        tenantId: approval.tenantId,
+                        workspaceId: approval.workspaceId,
+                        timestamp: ts,
+                        taskId: approval.taskId,
+                        botId: approval.botId,
+                        outcome: decision,
+                        approvalId: approval.id,
+                        decisionReason: reason,
+                        riskLevel: approval.riskLevel,
+                        ...(decision !== 'approved' ? { reason: reason ?? 'Approval rejected' } : {}),
+                    },
+                    timestamp: ts,
+                },
+                prisma,
+            );
+        }
 
         const runtimeEndpoint = await repo.findRuntimeDecisionEndpoint({
             tenantId: approval.tenantId,

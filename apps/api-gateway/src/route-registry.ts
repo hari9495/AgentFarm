@@ -79,6 +79,7 @@ import { registerRoutineSchedulerRoutes } from './routes/runtime/routine-schedul
 import { registerWakeRunRoutes } from './routes/runtime/wake-runs.js';
 import { registerOrchestrationRoutes } from './routes/runtime/orchestration.js';
 import { registerSseTaskRoutes } from './routes/runtime/sse-tasks.js';
+import { registerTaskNotifyRoutes } from './routes/runtime/task-notify.js';
 import { registerScheduleRoutes } from './routes/runtime/schedules.js';
 import { registerTaskQueueRoutes } from './routes/runtime/task-queue.js';
 
@@ -234,6 +235,7 @@ export const registerAllRoutes = async (
     await registerWakeRunRoutes(app, { getSession });
     await registerOrchestrationRoutes(app, { getSession });
     await registerSseTaskRoutes(app, { getSession });
+    await registerTaskNotifyRoutes(app, { getSession });
     await registerScheduleRoutes(app, { getSession });
     await registerTaskQueueRoutes(app, { getSession, prisma: prisma as never });
 
