@@ -1,8 +1,14 @@
-import { describe, it } from 'node:test';
+import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { ReplyDispatcher } from './reply-dispatcher.js';
 import type { TriggerEvent } from './types.js';
 import type { DispatchResult } from './trigger-dispatcher.js';
+
+// Skip live DNS resolution in unit tests — SSRF guard IP/hostname checks still run.
+// DNS check is covered separately in ssrf-guard.test.ts with mock resolvers.
+let originalSsrfDnsCheck: string | undefined;
+before(() => { originalSsrfDnsCheck = process.env['SSRF_DNS_CHECK']; process.env['SSRF_DNS_CHECK'] = 'false'; });
+after(() => { process.env['SSRF_DNS_CHECK'] = originalSsrfDnsCheck ?? 'false'; });
 
 function makeSlackEvent(overrides: Partial<TriggerEvent> = {}): TriggerEvent {
     return {

@@ -15,11 +15,12 @@
  */
 
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { TOTP, generateURI } from 'otplib';
+import { TOTP, generateURI, NobleCryptoPlugin, ScureBase32Plugin } from 'otplib';
 import QRCode from 'qrcode';
 
 // Shared TOTP instance — RFC 6238 defaults: SHA-1, 6 digits, 30s step
-const totp = new TOTP();
+// otplib v13 requires explicit crypto + base32 plugins
+const totp = new TOTP({ crypto: new NobleCryptoPlugin(), base32: new ScureBase32Plugin() });
 import { createCipheriv, createDecipheriv, randomBytes, createHmac } from 'node:crypto';
 
 // ---------------------------------------------------------------------------
@@ -101,6 +102,16 @@ type MfaRouteOptions = {
         tenantId: string;
         workspaceIds: string[];
     }) => string;
+    /** Optional Prisma factory — injected in tests to avoid a real DB import */
+    getPrisma?: () => Promise<{
+        tenantUser: {
+            findUnique: (args: { where: { id: string }; select?: Record<string, boolean> }) => Promise<Record<string, unknown> | null>;
+            update: (args: { where: { id: string }; data: Record<string, unknown> }) => Promise<Record<string, unknown>>;
+        };
+        workspace?: {
+            findMany: (args: { where: { tenantId: string }; select?: Record<string, boolean> }) => Promise<{ id: string }[]>;
+        };
+    }>;
 };
 
 // ---------------------------------------------------------------------------
@@ -110,10 +121,25 @@ type MfaRouteOptions = {
 export async function registerMfaRoutes(app: FastifyInstance, options: MfaRouteOptions): Promise<void> {
     const { getSession, sessionSecret, buildSessionToken } = options;
 
-    const getPrisma = async () => {
-        const db = await import('../../lib/db.js');
-        return db.prisma;
-    };
+    const getPrisma = options.getPrisma ?? (async () => {
+        const { prisma } = await import('../../lib/db.js');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return prisma as any;
+    });
+
+    // ── GET /v1/auth/mfa/status ──────────────────────────────────────────────
+    // Returns whether MFA is currently enabled for the authenticated user.
+    app.get('/v1/auth/mfa/status', async (request, reply) => {
+        const session = getSession(request);
+        if (!session) return reply.code(401).send({ error: 'unauthorized' });
+
+        const prisma = await getPrisma();
+        const user = await prisma.tenantUser.findUnique({
+            where: { id: session.userId },
+            select: { totpEnabled: true },
+        });
+        return reply.code(200).send({ enabled: user?.totpEnabled ?? false });
+    });
 
     // ── POST /v1/auth/mfa/setup ──────────────────────────────────────────────
     // Generates a new TOTP secret and returns the otpauth URI + QR code SVG.
@@ -178,8 +204,13 @@ export async function registerMfaRoutes(app: FastifyInstance, options: MfaRouteO
             return reply.code(409).send({ error: 'mfa_already_enabled' });
         }
 
-        const secret = decryptSecret(user.totpSecret);
-        const valid = totp.verify(code, { secret });
+        let secret: string;
+        try {
+            secret = decryptSecret(user.totpSecret);
+        } catch {
+            return reply.code(400).send({ error: 'invalid_code', message: 'Setup corrupted — please restart MFA setup' });
+        }
+        const { valid } = await totp.verify(code, { secret });
         if (!valid) {
             return reply.code(400).send({ error: 'invalid_code', message: 'Incorrect TOTP code — try again' });
         }
@@ -223,8 +254,13 @@ export async function registerMfaRoutes(app: FastifyInstance, options: MfaRouteO
             return reply.code(400).send({ error: 'mfa_not_enabled' });
         }
 
-        const secret = decryptSecret(user.totpSecret);
-        const valid = totp.verify(code, { secret });
+        let secret: string;
+        try {
+            secret = decryptSecret(user.totpSecret);
+        } catch {
+            return reply.code(500).send({ error: 'mfa_decrypt_error', message: 'MFA configuration error' });
+        }
+        const { valid } = await totp.verify(code, { secret });
         if (!valid) {
             return reply.code(401).send({ error: 'invalid_code', message: 'Incorrect TOTP code' });
         }
@@ -234,13 +270,13 @@ export async function registerMfaRoutes(app: FastifyInstance, options: MfaRouteO
             data: { totpVerifiedAt: new Date() },
         });
 
-        const workspaces = await prisma.workspace.findMany({
+        const workspaces = (await prisma.workspace!.findMany({
             where: { tenantId: user.tenantId },
             select: { id: true },
-        });
+        })) as { id: string }[];
         const token = buildSessionToken({
-            userId: user.id,
-            tenantId: user.tenantId,
+            userId: user.id as string,
+            tenantId: user.tenantId as string,
             workspaceIds: workspaces.map((w) => w.id),
         });
 
@@ -270,8 +306,13 @@ export async function registerMfaRoutes(app: FastifyInstance, options: MfaRouteO
             return reply.code(400).send({ error: 'mfa_not_enabled' });
         }
 
-        const secret = decryptSecret(user.totpSecret);
-        const valid = totp.verify(code, { secret });
+        let secret: string;
+        try {
+            secret = decryptSecret(user.totpSecret);
+        } catch {
+            return reply.code(500).send({ error: 'mfa_decrypt_error', message: 'MFA configuration error' });
+        }
+        const { valid } = await totp.verify(code, { secret });
         if (!valid) {
             return reply.code(401).send({ error: 'invalid_code', message: 'Incorrect TOTP code' });
         }

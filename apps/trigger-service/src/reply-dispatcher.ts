@@ -1,5 +1,6 @@
 import type { TriggerEvent, ReplyContext } from './types.js';
 import type { DispatchResult } from './trigger-dispatcher.js';
+import { validateCallbackUrl } from './ssrf-guard.js';
 
 function formatReply(result: DispatchResult, event: TriggerEvent): string {
     if (!result.ok) {
@@ -66,6 +67,14 @@ async function replyWebhook(
 ): Promise<void> {
     if (!ctx.callbackUrl) {
         return; // no callback — skip silently
+    }
+
+    // SSRF guard: validate the callback URL before fetching.
+    // callbackUrl comes from user-supplied webhook payload and must not target
+    // internal services, cloud metadata endpoints, or private IP ranges.
+    const guard = await validateCallbackUrl(ctx.callbackUrl);
+    if (!guard.ok) {
+        throw new Error(`Webhook callback URL rejected (SSRF guard): ${guard.reason}`);
     }
 
     const response = await fetch(ctx.callbackUrl, {

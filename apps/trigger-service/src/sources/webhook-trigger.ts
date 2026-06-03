@@ -1,5 +1,6 @@
 import type { TriggerSource, TriggerSourceKind, TriggerEvent } from '../types.js';
 import crypto from 'node:crypto';
+import { validateCallbackUrl } from '../ssrf-guard.js';
 
 type RawWebhookEvent = Omit<TriggerEvent, 'tenantId' | 'agentId'>;
 type OnEvent = (event: RawWebhookEvent) => Promise<void>;
@@ -69,8 +70,23 @@ export class WebhookTriggerSource implements TriggerSource {
                     ? parsed['text']
                     : body;
 
-        const callbackUrl =
+        // SSRF guard: validate callbackUrl at intake so a malicious URL never
+        // reaches the ReplyDispatcher at all. Strip it if it fails validation.
+        const rawCallbackUrl =
             typeof parsed['callbackUrl'] === 'string' ? parsed['callbackUrl'] : undefined;
+        let callbackUrl: string | undefined;
+        if (rawCallbackUrl) {
+            const guard = await validateCallbackUrl(rawCallbackUrl);
+            if (guard.ok) {
+                callbackUrl = rawCallbackUrl;
+            } else {
+                console.warn(
+                    `[WebhookTrigger] callbackUrl rejected by SSRF guard: ${guard.reason}. ` +
+                    `URL: ${rawCallbackUrl.slice(0, 100)}`,
+                );
+                // callbackUrl stays undefined — event is still processed, reply is silently skipped
+            }
+        }
 
         const event: RawWebhookEvent = {
             id: crypto.randomUUID(),

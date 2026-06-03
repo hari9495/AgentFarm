@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getSessionPayload, getInternalSessionAuthHeader } from '../lib/internal-session';
 import ApiKeysPanel from '../components/api-keys-panel';
+import MfaPanel from '../components/mfa-panel';
 import { PageHeader } from '../components/page-header';
 
 const getApiBaseUrl = (): string => process.env.DASHBOARD_API_BASE_URL ?? 'http://localhost:3000';
@@ -60,6 +61,10 @@ export default async function SettingsPage() {
                     </a>
                 </div>
             )}
+
+            <div style={{ marginBottom: '2rem' }}>
+                <MfaPanel />
+            </div>
 
             <ApiKeysPanel tenantId={tenantId} />
         </main>
