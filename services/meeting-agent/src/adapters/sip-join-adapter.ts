@@ -155,17 +155,37 @@ export class SipJoinAdapter implements MeetingJoinAdapter {
             let buffer = '';
             let authenticated = false;
             let commandSent = false;
-            let replyLines: string[] = [];
             let collectingReply = false;
+            // After seeing 'Content-Type: api/response', we switch to byte-counting mode.
+            // The body is Content-Length bytes starting immediately after the \n\n separator.
+            let apiBodyLen = -1; // -1 = not yet in body-reading mode
+
+            const tryResolveBody = () => {
+                if (apiBodyLen < 0) return;
+                // Wait until we have enough bytes in buffer
+                if (buffer.length >= apiBodyLen) {
+                    const reply = buffer.slice(0, apiBodyLen).trim();
+                    clearTimeout(timer);
+                    socket.destroy();
+                    resolve(reply || '+OK');
+                }
+            };
 
             socket.setEncoding('utf8');
             socket.on('data', (chunk: string) => {
                 buffer += chunk;
-                const parts = buffer.split('\n\n');
-                // Process all complete ESL blocks (separated by double newline)
-                while (parts.length > 1) {
-                    const block = parts.shift()!;
-                    buffer = parts.join('\n\n');
+
+                // If we are already reading the API response body, check length.
+                if (apiBodyLen >= 0) {
+                    tryResolveBody();
+                    return;
+                }
+
+                // Parse header blocks (separated by \n\n).
+                let sepIdx: number;
+                while ((sepIdx = buffer.indexOf('\n\n')) !== -1) {
+                    const block = buffer.slice(0, sepIdx).trim();
+                    buffer = buffer.slice(sepIdx + 2);
 
                     if (!authenticated) {
                         if (block.includes('Content-Type: auth/request')) {
@@ -176,24 +196,19 @@ export class SipJoinAdapter implements MeetingJoinAdapter {
                                 commandSent = true;
                                 socket.write(`${command}\n\n`);
                                 collectingReply = true;
-                                replyLines = [];
                             }
                         } else if (block.includes('Reply-Text: -ERR')) {
                             clearTimeout(timer);
                             socket.destroy();
                             reject(new Error('FreeSWITCH ESL authentication failed'));
                         }
-                    } else if (collectingReply) {
-                        // The reply block contains the API response
-                        const apiReplyMatch = block.match(/^Content-Type: api\/response\nContent-Length: \d+\n\n([\s\S]*)$/mu);
-                        if (apiReplyMatch) {
-                            const reply = (apiReplyMatch[1] ?? '').trim();
-                            clearTimeout(timer);
-                            socket.destroy();
-                            resolve(reply);
-                            return;
-                        }
-                        replyLines.push(block);
+                    } else if (collectingReply && block.includes('Content-Type: api/response')) {
+                        // Extract Content-Length and switch to body-reading mode.
+                        const lenMatch = block.match(/Content-Length:\s*(\d+)/u);
+                        apiBodyLen = lenMatch ? parseInt(lenMatch[1]!, 10) : 0;
+                        // Body bytes may already be in `buffer` (same TCP packet).
+                        tryResolveBody();
+                        return; // stop processing further blocks; body is raw bytes
                     }
                 }
             });
@@ -205,9 +220,7 @@ export class SipJoinAdapter implements MeetingJoinAdapter {
 
             socket.on('close', () => {
                 clearTimeout(timer);
-                const combined = replyLines.join('\n');
-                if (combined) resolve(combined);
-                else reject(new Error('ESL connection closed before reply'));
+                reject(new Error('ESL connection closed before reply was received'));
             });
         });
     }

@@ -25,6 +25,13 @@ import type { MeetingAdapterCapabilities, MeetingJoinAdapter, MeetingJoinResult,
 const GRAPH_BASE = 'https://graph.microsoft.com/v1.0';
 const TOKEN_ENDPOINT_TEMPLATE = 'https://login.microsoftonline.com/{tenantId}/oauth2/v2.0/token';
 
+export type FetchLike = (url: string, init?: {
+    method?: string;
+    headers?: Record<string, string>;
+    body?: string | URLSearchParams;
+    signal?: AbortSignal;
+}) => Promise<{ ok: boolean; status: number; json: () => Promise<unknown>; text: () => Promise<string> }>;
+
 export interface TeamsJoinAdapterOptions {
     tenantId: string;
     clientId: string;
@@ -35,6 +42,8 @@ export interface TeamsJoinAdapterOptions {
     botId?: string;
     /** Per-request timeout in ms (default: 20 s). */
     timeoutMs?: number;
+    /** Override fetch (used by tests). */
+    fetchImpl?: FetchLike;
 }
 
 interface GraphToken {
@@ -60,6 +69,7 @@ interface ResolvedTeamsOptions {
 export class TeamsJoinAdapter implements MeetingJoinAdapter {
     private readonly opts: ResolvedTeamsOptions;
     private cachedToken: GraphToken | null = null;
+    private readonly fetchImpl: FetchLike;
 
     constructor(options: TeamsJoinAdapterOptions) {
         if (!options.tenantId || !options.clientId || !options.clientSecret) {
@@ -73,6 +83,8 @@ export class TeamsJoinAdapter implements MeetingJoinAdapter {
             botId: options.botId ?? options.clientId,
             timeoutMs: options.timeoutMs ?? 20_000,
         };
+        const globalFetch = (globalThis as { fetch?: FetchLike }).fetch;
+        this.fetchImpl = options.fetchImpl ?? globalFetch ?? (() => { throw new Error('No fetch available'); });
     }
 
     // ── Public API ──────────────────────────────────────────────────────────────
@@ -112,7 +124,7 @@ export class TeamsJoinAdapter implements MeetingJoinAdapter {
             body: { content: text },
         });
         if (!res.ok) {
-            const detail = await res.response.text().catch(() => '');
+            const detail = await res.text().catch(() => '');
             throw new Error(`Teams chat ${res.status}: ${detail.slice(0, 256)}`);
         }
     }
@@ -126,7 +138,7 @@ export class TeamsJoinAdapter implements MeetingJoinAdapter {
             const token = await this.getToken();
             const res = await this.graphRequest(token, 'GET', `/communications/calls/${callId}`);
             if (!res.ok) return null;
-            const data = await res.response.json() as GraphCallResponse;
+            const data = await res.json() as GraphCallResponse;
             return data.chatInfo?.threadId ?? null;
         } catch {
             return null;
@@ -159,7 +171,7 @@ export class TeamsJoinAdapter implements MeetingJoinAdapter {
             client_secret: this.opts.clientSecret,
             scope: 'https://graph.microsoft.com/.default',
         });
-        const res = await fetch(url, { method: 'POST', body });
+        const res = await this.fetchImpl(url, { method: 'POST', body });
         if (!res.ok) {
             const detail = await res.text().catch(() => '');
             throw new Error(`Teams token error ${res.status}: ${detail.slice(0, 256)}`);
@@ -197,10 +209,10 @@ export class TeamsJoinAdapter implements MeetingJoinAdapter {
 
         const res = await this.graphRequest(token, 'POST', '/communications/calls', { body: payload });
         if (!res.ok) {
-            const detail = await res.response.text().catch(() => '');
+            const detail = await res.text().catch(() => '');
             throw new Error(`Graph POST /communications/calls ${res.status}: ${detail.slice(0, 256)}`);
         }
-        const data = await res.response.json() as GraphCallResponse;
+        const data = await res.json() as GraphCallResponse;
         if (!data.id) throw new Error('Teams call created but no call ID returned');
         return data.id;
     }
@@ -210,7 +222,7 @@ export class TeamsJoinAdapter implements MeetingJoinAdapter {
         method: string,
         path: string,
         opts: { body?: unknown } = {},
-    ): Promise<{ ok: boolean; status: number; response: Response }> {
+    ): Promise<{ ok: boolean; status: number; json: () => Promise<unknown>; text: () => Promise<string> }> {
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), this.opts.timeoutMs);
         try {
@@ -218,13 +230,13 @@ export class TeamsJoinAdapter implements MeetingJoinAdapter {
                 Authorization: `Bearer ${token}`,
                 'Content-Type': 'application/json',
             };
-            const res = await fetch(`${GRAPH_BASE}${path}`, {
+            const res = await this.fetchImpl(`${GRAPH_BASE}${path}`, {
                 method,
                 headers,
                 body: opts.body ? JSON.stringify(opts.body) : undefined,
                 signal: controller.signal,
             });
-            return { ok: res.ok, status: res.status, response: res };
+            return res;
         } finally {
             clearTimeout(timer);
         }

@@ -23,12 +23,21 @@ import type { MeetingAdapterCapabilities, MeetingJoinAdapter, MeetingJoinResult,
 const ZOOM_TOKEN_URL = 'https://zoom.us/oauth/token?grant_type=account_credentials&account_id=';
 const ZOOM_API_BASE = 'https://api.zoom.us/v2';
 
+export type FetchLike = (url: string, init?: {
+    method?: string;
+    headers?: Record<string, string>;
+    body?: string;
+    signal?: AbortSignal;
+}) => Promise<{ ok: boolean; status: number; json: () => Promise<unknown>; text: () => Promise<string> }>;
+
 export interface ZoomJoinAdapterOptions {
     accountId: string;
     clientId: string;
     clientSecret: string;
     /** Per-request timeout in ms (default: 15 s). */
     timeoutMs?: number;
+    /** Override fetch (used by tests). */
+    fetchImpl?: FetchLike;
 }
 
 interface ZoomToken {
@@ -44,12 +53,15 @@ interface ZoomJoinTokenResponse {
 export class ZoomJoinAdapter implements MeetingJoinAdapter {
     private readonly opts: Required<ZoomJoinAdapterOptions>;
     private cachedToken: ZoomToken | null = null;
+    private readonly fetchImpl: FetchLike;
 
     constructor(options: ZoomJoinAdapterOptions) {
         if (!options.accountId || !options.clientId || !options.clientSecret) {
             throw new Error('ZoomJoinAdapter requires accountId, clientId, and clientSecret');
         }
-        this.opts = { ...options, timeoutMs: options.timeoutMs ?? 15_000 };
+        this.opts = { ...options, fetchImpl: options.fetchImpl ?? ((() => { throw new Error('No fetch'); }) as FetchLike), timeoutMs: options.timeoutMs ?? 15_000 };
+        const globalFetch = (globalThis as { fetch?: FetchLike }).fetch;
+        this.fetchImpl = options.fetchImpl ?? globalFetch ?? (() => { throw new Error('No fetch available'); });
     }
 
     async join(meetingUrl: string, displayName?: string): Promise<MeetingJoinResult> {
@@ -94,7 +106,7 @@ export class ZoomJoinAdapter implements MeetingJoinAdapter {
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), this.opts.timeoutMs);
         try {
-            const res = await fetch(`${ZOOM_API_BASE}/chat/users/me/messages`, {
+            const res = await this.fetchImpl(`${ZOOM_API_BASE}/chat/users/me/messages`, {
                 method: 'POST',
                 headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify(body),
@@ -129,7 +141,7 @@ export class ZoomJoinAdapter implements MeetingJoinAdapter {
             return this.cachedToken.access_token;
         }
         const credentials = Buffer.from(`${this.opts.clientId}:${this.opts.clientSecret}`).toString('base64');
-        const res = await fetch(`${ZOOM_TOKEN_URL}${this.opts.accountId}`, {
+        const res = await this.fetchImpl(`${ZOOM_TOKEN_URL}${this.opts.accountId}`, {
             method: 'POST',
             headers: { Authorization: `Basic ${credentials}`, 'Content-Type': 'application/x-www-form-urlencoded' },
         });
@@ -146,7 +158,7 @@ export class ZoomJoinAdapter implements MeetingJoinAdapter {
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), this.opts.timeoutMs);
         try {
-            const res = await fetch(
+            const res = await this.fetchImpl(
                 `${ZOOM_API_BASE}/meetings/${meetingId}/jointoken/local_recording`,
                 { headers: { Authorization: `Bearer ${token}` }, signal: controller.signal },
             );

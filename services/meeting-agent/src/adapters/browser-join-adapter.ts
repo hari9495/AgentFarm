@@ -13,28 +13,40 @@
 
 import type { MeetingAdapterCapabilities, MeetingJoinAdapter, MeetingJoinResult, MeetingLeaveResult } from './meeting-join-adapter.js';
 
+export type FetchLike = (url: string, init?: {
+    method?: string;
+    headers?: Record<string, string>;
+    body?: string;
+    signal?: AbortSignal;
+}) => Promise<{ ok: boolean; status: number; json: () => Promise<unknown>; text: () => Promise<string> }>;
+
 export interface BrowserJoinAdapterOptions {
     /** Base URL of the desktop-agent HTTP API, e.g. `http://desktop-agent:5003`. */
     desktopAgentUrl: string;
     /** Per-request timeout in ms (default: 15 s). */
     timeoutMs?: number;
+    /** Override fetch (used by tests). */
+    fetchImpl?: FetchLike;
 }
 
 export class BrowserJoinAdapter implements MeetingJoinAdapter {
     private readonly desktopAgentUrl: string;
     private readonly timeoutMs: number;
+    private readonly fetchImpl: FetchLike;
 
     constructor(options: BrowserJoinAdapterOptions) {
         if (!options.desktopAgentUrl) throw new Error('BrowserJoinAdapter requires desktopAgentUrl');
         this.desktopAgentUrl = options.desktopAgentUrl.replace(/\/+$/u, '');
         this.timeoutMs = options.timeoutMs ?? 15_000;
+        const globalFetch = (globalThis as { fetch?: FetchLike }).fetch;
+        this.fetchImpl = options.fetchImpl ?? globalFetch ?? (() => { throw new Error('No fetch available'); });
     }
 
     async join(meetingUrl: string, displayName?: string): Promise<MeetingJoinResult> {
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), this.timeoutMs);
         try {
-            const res = await fetch(`${this.desktopAgentUrl}/v1/meeting/join`, {
+            const res = await this.fetchImpl(`${this.desktopAgentUrl}/v1/meeting/join`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ url: meetingUrl, displayName }),
@@ -65,7 +77,7 @@ export class BrowserJoinAdapter implements MeetingJoinAdapter {
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), this.timeoutMs);
         try {
-            const res = await fetch(`${this.desktopAgentUrl}/v1/meeting/leave`, {
+            const res = await this.fetchImpl(`${this.desktopAgentUrl}/v1/meeting/leave`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ pid: Number(sessionHandle) }),
