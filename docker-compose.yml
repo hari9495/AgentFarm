@@ -326,6 +326,36 @@ services:
       MEETING_BRAIN_MODEL: ${MEETING_BRAIN_MODEL:-claude-sonnet-4-6}
       MEETING_BRAIN_SYSTEM_PROMPT: ${MEETING_BRAIN_SYSTEM_PROMPT:-}
       MEETING_BRAIN_MAX_TOKENS: ${MEETING_BRAIN_MAX_TOKENS:-}
+      # ── Self-hosted voice stack (active when --profile voice is used) ──────
+      # Whisper STT — points at the whisper service (port 9090).
+      # Set sttProvider=whisper_local in VoicePipelineConfig to use this.
+      WHISPER_ENDPOINT: ${WHISPER_ENDPOINT:-http://whisper:8000}
+      # Kokoro TTS — OpenAI-compatible endpoint.
+      # To replace VoxCPM2 with Kokoro: set SUPERTONIC_URL=http://kokoro:8880
+      KOKORO_ENDPOINT: ${KOKORO_ENDPOINT:-http://kokoro:8880}
+      # XTTS v2 — 17-language TTS (optional, add xtts service to use)
+      XTTS_ENDPOINT: ${XTTS_ENDPOINT:-}
+      # Meta MMS-TTS — 1100+ languages (optional, add mms_tts service to use)
+      MMS_TTS_ENDPOINT: ${MMS_TTS_ENDPOINT:-}
+      # ── FreeSWITCH SIP — universal meeting dial-in ─────────────────────────
+      # Used by SipJoinAdapter to originate SIP calls into any meeting platform.
+      # Active when the freeswitch service is running (--profile voice).
+      FREESWITCH_ESL_HOST: ${FREESWITCH_ESL_HOST:-freeswitch}
+      FREESWITCH_ESL_PORT: ${FREESWITCH_ESL_PORT:-8021}
+      FREESWITCH_ESL_PASSWORD: ${FREESWITCH_ESL_PASSWORD:-ClueCon}
+      FREESWITCH_SIP_PROFILE: ${FREESWITCH_SIP_PROFILE:-external}
+      # ── Meeting platform native SDK credentials ────────────────────────────
+      # Microsoft Teams — Graph API calling bot.
+      # Requires: Calls.JoinGroupCall.All, OnlineMeetings.ReadWrite.All
+      TEAMS_TENANT_ID: ${TEAMS_TENANT_ID:-}
+      TEAMS_CLIENT_ID: ${TEAMS_CLIENT_ID:-}
+      TEAMS_CLIENT_SECRET: ${TEAMS_CLIENT_SECRET:-}
+      TEAMS_BOT_DISPLAY_NAME: ${TEAMS_BOT_DISPLAY_NAME:-AgentFarm Bot}
+      # Zoom — Server-to-Server OAuth app (marketplace.zoom.us).
+      # Requires scopes: meeting:write:admin, meeting:read:admin
+      ZOOM_ACCOUNT_ID: ${ZOOM_ACCOUNT_ID:-}
+      ZOOM_CLIENT_ID: ${ZOOM_CLIENT_ID:-}
+      ZOOM_CLIENT_SECRET: ${ZOOM_CLIENT_SECRET:-}
     depends_on:
       voxcpm:
         condition: service_healthy
@@ -359,8 +389,103 @@ services:
       - agentfarm
     restart: unless-stopped
 
+  # ── Self-hosted open-source voice stack (zero per-call cost) ─────────────────
+  #
+  # Enable:  docker compose --profile voice up
+  # Or add:  COMPOSE_PROFILES=voice  to your .env file
+  #
+  # These three services replace paid APIs:
+  #   whisper    → Sarvam AI / Deepgram  (STT, 99 languages)
+  #   kokoro     → Sarvam Bulbul / VoxCPM2 (TTS, English, OpenAI-compatible)
+  #   freeswitch → Twilio SIP (universal meeting dial-in via SipJoinAdapter)
+  #
+  # First boot downloads models (whisper ~1.5 GB, kokoro ~300 MB).
+  # Set COMPOSE_PROFILES=voice in .env to include these on every `docker compose up`.
+
+  whisper:
+    image: fedirz/faster-whisper-server:latest-cpu
+    container_name: agentfarm-whisper
+    profiles: [ voice ]
+    ports:
+      - '9090:8000'
+    environment:
+      # Model: medium balances speed and accuracy for 99 languages.
+      # Upgrade to large-v3 for best accuracy (needs more RAM).
+      WHISPER__MODEL: ${WHISPER_STT_MODEL:-Systran/faster-whisper-medium}
+      WHISPER__INFERENCE_DEVICE: cpu
+      WHISPER__COMPUTE_TYPE: ${WHISPER_COMPUTE_TYPE:-int8}
+    volumes:
+      - whisper_models:/root/.cache/huggingface
+    healthcheck:
+      test: [ 'CMD-SHELL', 'wget -qO- http://localhost:8000/health || exit 1' ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      # Model download on first boot — allow up to 3 minutes.
+      start_period: 180s
+    networks:
+      - agentfarm
+    restart: unless-stopped
+
+  kokoro:
+    # OpenAI-compatible TTS — drop-in replacement for the /v1/audio/speech endpoint.
+    # Works as SUPERTONIC_URL=http://kokoro:8880 for the meeting-agent /say path.
+    image: ghcr.io/remsky/kokoro-fastapi-cpu:v0.2.2
+    container_name: agentfarm-kokoro
+    profiles: [ voice ]
+    ports:
+      - '8880:8880'
+    volumes:
+      - kokoro_models:/app/models
+    healthcheck:
+      test: [ 'CMD-SHELL', 'wget -qO- http://localhost:8880/health || exit 1' ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    networks:
+      - agentfarm
+    restart: unless-stopped
+
+  freeswitch:
+    # FreeSWITCH SIP server — used by SipJoinAdapter to dial into any meeting
+    # platform (Teams, Zoom, Meet, Webex) as an audio-only participant.
+    # ESL password defaults to "ClueCon" — change via FREESWITCH_ESL_PASSWORD.
+    build:
+      context: ./docker/freeswitch
+      dockerfile: Dockerfile
+    container_name: agentfarm-freeswitch
+    profiles: [ voice ]
+    ports:
+      - '5060:5060/udp'   # SIP signaling — internal profile
+      - '5060:5060/tcp'
+      - '5080:5080/udp'   # SIP signaling — external/outbound profile
+      - '5080:5080/tcp'
+      - '8021:8021'       # ESL (Event Socket Layer) — used by SipJoinAdapter
+      - '16384-16484:16384-16484/udp'  # RTP media (100-port range, ~50 calls)
+    environment:
+      ESL_PASSWORD: ${FREESWITCH_ESL_PASSWORD:-ClueCon}
+    volumes:
+      - freeswitch_db:/var/lib/freeswitch
+      - freeswitch_log:/var/log/freeswitch
+    healthcheck:
+      test: [ 'CMD-SHELL', 'nc -z 127.0.0.1 8021 || exit 1' ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - agentfarm
+    restart: unless-stopped
+
 volumes:
   postgres_data:
+  # Voice model caches — persist across container restarts to avoid re-downloading.
+  whisper_models:
+  kokoro_models:
+  # FreeSWITCH persistent state (call records, certificates).
+  freeswitch_db:
+  freeswitch_log:
 
 networks:
   agentfarm:
