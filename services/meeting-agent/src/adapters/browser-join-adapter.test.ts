@@ -146,3 +146,144 @@ describe('BrowserJoinAdapter.getCapabilities()', () => {
         assert.equal(caps.nativeAudioStream, false);
     });
 });
+
+// ── startScreenShare() ────────────────────────────────────────────────────────
+
+describe('BrowserJoinAdapter.startScreenShare()', () => {
+    const DA_URL = 'http://agent:5003';
+
+    /** Build an adapter that has already joined a Teams meeting (lastPlatform stored). */
+    async function makeJoinedTeamsAdapter(fetchImpl: FetchLike): Promise<BrowserJoinAdapter> {
+        const adapter = new BrowserJoinAdapter({ desktopAgentUrl: DA_URL, fetchImpl });
+        await adapter.join('https://teams.microsoft.com/l/meetup-join/test', 'Bot');
+        return adapter;
+    }
+
+    it('calls screen-share/start then screen-share/inject and returns ok:true with streamUrl', async () => {
+        const calls: string[] = [];
+        const fetchImpl: FetchLike = async (url) => {
+            calls.push(url);
+            if (url.includes('/v1/meeting/join'))
+                return { ok: true, status: 202, json: async () => ({ pid: 1 }), text: async () => '' };
+            if (url.includes('/screen-share/start'))
+                return { ok: true, status: 200, json: async () => ({ ok: true, streamUrl: 'http://agent:5003/v1/screen-share/stream.m3u8' }), text: async () => '' };
+            if (url.includes('/screen-share/inject'))
+                return { ok: true, status: 200, json: async () => ({ ok: true }), text: async () => '' };
+            return { ok: true, status: 200, json: async () => ({}), text: async () => '' };
+        };
+
+        const adapter = await makeJoinedTeamsAdapter(fetchImpl);
+        const result = await adapter.startScreenShare!('1', DA_URL);
+
+        assert.equal(result.ok, true);
+        assert.ok(result.streamUrl?.includes('stream.m3u8'));
+        assert.ok(calls.some((u) => u.includes('/screen-share/start')));
+        assert.ok(calls.some((u) => u.includes('/screen-share/inject')));
+    });
+
+    it('returns ok:false when screen-share/start fails', async () => {
+        const fetchImpl: FetchLike = async (url) => {
+            if (url.includes('/v1/meeting/join'))
+                return { ok: true, status: 202, json: async () => ({ pid: 1 }), text: async () => '' };
+            if (url.includes('/screen-share/start'))
+                return { ok: false, status: 409, json: async () => ({ ok: false, error: 'already active' }), text: async () => 'already active' };
+            return { ok: true, status: 200, json: async () => ({}), text: async () => '' };
+        };
+
+        const adapter = await makeJoinedTeamsAdapter(fetchImpl);
+        const result = await adapter.startScreenShare!('1', DA_URL);
+
+        assert.equal(result.ok, false);
+        assert.ok(result.error?.includes('409'));
+    });
+
+    it('returns ok:true with warning when inject fails (FFmpeg still running)', async () => {
+        const fetchImpl: FetchLike = async (url) => {
+            if (url.includes('/v1/meeting/join'))
+                return { ok: true, status: 202, json: async () => ({ pid: 1 }), text: async () => '' };
+            if (url.includes('/screen-share/start'))
+                return { ok: true, status: 200, json: async () => ({ ok: true, streamUrl: 'http://agent/stream.m3u8' }), text: async () => '' };
+            if (url.includes('/screen-share/inject'))
+                return { ok: false, status: 404, json: async () => ({ ok: false, error: 'no chromium window' }), text: async () => 'no window' };
+            return { ok: true, status: 200, json: async () => ({}), text: async () => '' };
+        };
+
+        const adapter = await makeJoinedTeamsAdapter(fetchImpl);
+        const result = await adapter.startScreenShare!('1', DA_URL);
+
+        // FFmpeg started, inject failed non-fatally
+        assert.equal(result.ok, true);
+        assert.ok(result.streamUrl?.includes('stream.m3u8'));
+        assert.ok(result.error?.toLowerCase().includes('inject'));
+    });
+
+    it('sends platform=teams when last joined URL was Teams', async () => {
+        let injectBody: { platform?: string } = {};
+        const fetchImpl: FetchLike = async (url, init) => {
+            if (url.includes('/v1/meeting/join'))
+                return { ok: true, status: 202, json: async () => ({ pid: 1 }), text: async () => '' };
+            if (url.includes('/screen-share/start'))
+                return { ok: true, status: 200, json: async () => ({ ok: true, streamUrl: 'http://a/s.m3u8' }), text: async () => '' };
+            if (url.includes('/screen-share/inject')) {
+                injectBody = JSON.parse(init?.body ?? '{}') as { platform?: string };
+                return { ok: true, status: 200, json: async () => ({}), text: async () => '' };
+            }
+            return { ok: true, status: 200, json: async () => ({}), text: async () => '' };
+        };
+
+        const adapter = await makeJoinedTeamsAdapter(fetchImpl);
+        await adapter.startScreenShare!('1', DA_URL);
+        assert.equal(injectBody.platform, 'teams');
+    });
+
+    it('returns ok:false when fetch throws (network error)', async () => {
+        const fetchImpl: FetchLike = async (url) => {
+            if (url.includes('/v1/meeting/join'))
+                return { ok: true, status: 202, json: async () => ({ pid: 1 }), text: async () => '' };
+            throw new Error('ECONNREFUSED');
+        };
+
+        const adapter = await makeJoinedTeamsAdapter(fetchImpl);
+        const result = await adapter.startScreenShare!('1', DA_URL);
+
+        assert.equal(result.ok, false);
+        assert.ok(result.error?.includes('ECONNREFUSED'));
+    });
+});
+
+// ── stopScreenShare() ─────────────────────────────────────────────────────────
+
+describe('BrowserJoinAdapter.stopScreenShare()', () => {
+    const DA_URL = 'http://agent:5003';
+
+    it('calls /screen-share/stop and returns ok:true', async () => {
+        let stoppedUrl = '';
+        const fetchImpl: FetchLike = async (url) => {
+            stoppedUrl = url;
+            return { ok: true, status: 200, json: async () => ({ ok: true }), text: async () => '' };
+        };
+        const adapter = new BrowserJoinAdapter({ desktopAgentUrl: DA_URL, fetchImpl });
+        const result = await adapter.stopScreenShare!('handle', DA_URL);
+
+        assert.equal(result.ok, true);
+        assert.ok(stoppedUrl.includes('/screen-share/stop'));
+    });
+
+    it('returns ok:false when desktop-agent returns non-2xx', async () => {
+        const fetchImpl: FetchLike = async () => ({ ok: false, status: 500, json: async () => ({}), text: async () => '' });
+        const adapter = new BrowserJoinAdapter({ desktopAgentUrl: DA_URL, fetchImpl });
+        const result = await adapter.stopScreenShare!('handle', DA_URL);
+
+        assert.equal(result.ok, false);
+        assert.ok(result.error?.includes('500'));
+    });
+
+    it('returns ok:false when fetch throws', async () => {
+        const fetchImpl: FetchLike = async () => { throw new Error('network error'); };
+        const adapter = new BrowserJoinAdapter({ desktopAgentUrl: DA_URL, fetchImpl });
+        const result = await adapter.stopScreenShare!('handle', DA_URL);
+
+        assert.equal(result.ok, false);
+        assert.ok(result.error?.includes('network error'));
+    });
+});

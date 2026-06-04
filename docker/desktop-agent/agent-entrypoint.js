@@ -36,6 +36,8 @@ const https = require('https');
 const { parse: parseUrl } = require('url');
 const { execFileSync, spawn } = require('child_process');
 const { randomUUID } = require('crypto');
+const fs = require('fs');
+const path = require('path');
 
 // ── Config ───────────────────────────────────────────────────────────────────
 
@@ -550,6 +552,115 @@ function parseLlmResponse(raw) {
     }
 }
 
+// ── Screen-share controller ───────────────────────────────────────────────────
+
+const HLS_DIR = '/tmp/hls';
+const FFMPEG_LOG = '/tmp/ffmpeg-screenshare.log';
+
+/**
+ * Manages a single FFmpeg x11grab → H.264/HLS pipeline.
+ * Only one pipeline may be active at a time.
+ */
+class ScreenShareController {
+    constructor(display, appPort) {
+        this.display = display;
+        this.appPort = appPort;
+        this.proc = null;
+        this.startedAt = null;
+        this.streamUrl = null;
+        this.fps = 15;
+        this.width = 1280;
+        this.height = 800;
+    }
+
+    /** @returns {{ ok:boolean, pid?:number, streamUrl?:string, startedAt?:string, fps?:number, width?:number, height?:number, error?:string }} */
+    start({ fps = 15, width = 1280, height = 800, segmentSeconds = 2 } = {}) {
+        fps    = Math.max(1,   Math.min(fps, 30));
+        width  = Math.max(320, Math.min(width, 3840));
+        height = Math.max(240, Math.min(height, 2160));
+        segmentSeconds = Math.max(1, Math.min(segmentSeconds, 10));
+
+        if (this.proc && this.proc.exitCode === null) {
+            return { ok: false, error: 'Screen share already active', pid: this.proc.pid, streamUrl: this.streamUrl };
+        }
+
+        // Prepare HLS output directory
+        fs.mkdirSync(HLS_DIR, { recursive: true });
+        for (const f of fs.readdirSync(HLS_DIR)) {
+            if (f.endsWith('.ts') || f === 'screen.m3u8') {
+                try { fs.unlinkSync(path.join(HLS_DIR, f)); } catch { /* ignore */ }
+            }
+        }
+
+        const gop = fps * segmentSeconds;
+        const args = [
+            '-y',
+            '-f', 'x11grab', '-video_size', `${width}x${height}`, '-framerate', String(fps), '-i', this.display,
+            '-vcodec', 'libx264', '-preset', 'ultrafast', '-tune', 'zerolatency',
+            '-profile:v', 'baseline', '-level', '3.1', '-pix_fmt', 'yuv420p',
+            '-g', String(gop), '-sc_threshold', '0',
+            '-hls_time', String(segmentSeconds), '-hls_list_size', '6',
+            '-hls_flags', 'delete_segments+append_list',
+            '-hls_segment_filename', path.join(HLS_DIR, 'seg%05d.ts'),
+            '-f', 'hls', path.join(HLS_DIR, 'screen.m3u8'),
+        ];
+
+        const logFd = fs.openSync(FFMPEG_LOG, 'w');
+        this.proc = spawn('ffmpeg', args, {
+            env: { ...process.env, DISPLAY: this.display },
+            stdio: ['ignore', logFd, logFd],
+        });
+        fs.closeSync(logFd);
+
+        this.proc.on('exit', (code) => {
+            log('info', `[screen-share] ffmpeg exited with code ${code}`);
+        });
+
+        this.startedAt = new Date().toISOString();
+        this.streamUrl = `http://localhost:${this.appPort}/v1/screen-share/stream.m3u8`;
+        this.fps = fps;
+        this.width = width;
+        this.height = height;
+
+        log('info', `[screen-share] started: pid=${this.proc.pid} ${width}x${height}@${fps}fps`);
+        return { ok: true, pid: this.proc.pid, streamUrl: this.streamUrl, startedAt: this.startedAt, fps, width, height };
+    }
+
+    /** @returns {{ ok:boolean, error?:string, message?:string }} */
+    stop() {
+        if (!this.proc || this.proc.exitCode !== null) {
+            this.proc = null;
+            this.startedAt = null;
+            this.streamUrl = null;
+            return { ok: true, message: 'No active screen share' };
+        }
+        const pid = this.proc.pid;
+        this.proc.kill('SIGTERM');
+        this.proc = null;
+        this.startedAt = null;
+        this.streamUrl = null;
+        log('info', `[screen-share] stopped: pid=${pid}`);
+        return { ok: true };
+    }
+
+    /** @returns {{ active:boolean, pid?:number, streamUrl?:string, startedAt?:string, fps?:number, width?:number, height?:number }} */
+    status() {
+        const active = this.proc !== null && this.proc.exitCode === null;
+        return {
+            active,
+            pid:       active ? this.proc.pid   : undefined,
+            streamUrl: active ? this.streamUrl  : undefined,
+            startedAt: active ? this.startedAt  : undefined,
+            fps:       active ? this.fps        : undefined,
+            width:     active ? this.width      : undefined,
+            height:    active ? this.height     : undefined,
+        };
+    }
+}
+
+/** Singleton — one capture session per container. */
+const screenShare = new ScreenShareController(DISPLAY, APP_PORT);
+
 // ── Vision loop ───────────────────────────────────────────────────────────────
 
 /**
@@ -885,6 +996,119 @@ const server = http.createServer(async (req, res) => {
             return send(res, 200, result);
         }
 
+        // ── Screen-share routes ───────────────────────────────────────────────
+
+        if (method === 'POST' && pathname === '/v1/screen-share/start') {
+            let body = {};
+            try { body = await readBody(req); } catch { /* use defaults */ }
+            const result = screenShare.start({
+                fps:            typeof body.fps            === 'number' ? body.fps            : 15,
+                width:          typeof body.width          === 'number' ? body.width          : 1280,
+                height:         typeof body.height         === 'number' ? body.height         : 800,
+                segmentSeconds: typeof body.segmentSeconds === 'number' ? body.segmentSeconds : 2,
+            });
+            return send(res, result.ok ? 200 : 409, result);
+        }
+
+        if (method === 'POST' && pathname === '/v1/screen-share/stop') {
+            return send(res, 200, screenShare.stop());
+        }
+
+        if (method === 'GET' && pathname === '/v1/screen-share/status') {
+            return send(res, 200, screenShare.status());
+        }
+
+        if (method === 'GET' && pathname === '/v1/screen-share/stream.m3u8') {
+            const playlist = path.join(HLS_DIR, 'screen.m3u8');
+            if (!fs.existsSync(playlist)) {
+                return send(res, 404, { error: 'No active screen share — call /v1/screen-share/start first' });
+            }
+            const content = fs.readFileSync(playlist);
+            res.writeHead(200, {
+                'content-type': 'application/vnd.apple.mpegurl',
+                'content-length': content.length,
+                'cache-control': 'no-store',
+            });
+            return res.end(content);
+        }
+
+        // HLS segment files — /v1/screen-share/seg00000.ts etc.
+        const segMatch = pathname.match(/^\/v1\/screen-share\/(seg\d+\.ts)$/);
+        if (method === 'GET' && segMatch) {
+            const segPath = path.join(HLS_DIR, segMatch[1]);
+            if (!fs.existsSync(segPath)) {
+                return send(res, 404, { error: 'segment not found' });
+            }
+            const content = fs.readFileSync(segPath);
+            res.writeHead(200, { 'content-type': 'video/mp2t', 'content-length': content.length });
+            return res.end(content);
+        }
+
+        // POST /v1/screen-share/inject — trigger screen share in the running Chromium window.
+        //
+        // Uses xdotool to focus the Chromium window for the active meeting platform and
+        // sends the keyboard shortcut that opens the platform's screen-share picker.
+        // Requires Chromium to be launched with --auto-select-desktop-capture-source so
+        // the getDisplayMedia() picker is bypassed automatically.
+        //
+        // Body: { platform: 'teams'|'zoom'|'meet'|'webex' }
+        if (method === 'POST' && pathname === '/v1/screen-share/inject') {
+            let body = {};
+            try { body = await readBody(req); } catch { /* ignore */ }
+
+            const platform = (typeof body.platform === 'string' ? body.platform : '').toLowerCase();
+
+            try {
+                // Find all Chromium windows on this display.
+                // We use --class to match Chromium instances launched by the join scripts.
+                let wids = [];
+                try {
+                    wids = execFileSync(
+                        'xdotool', ['search', '--class', 'chromium'],
+                        { env: { ...process.env, DISPLAY }, timeout: 4_000 },
+                    ).toString().trim().split('\n').filter(Boolean);
+                } catch {
+                    /* xdotool returns exit code 1 when no windows found */
+                }
+
+                if (wids.length === 0) {
+                    return send(res, 404, { ok: false, error: 'No Chromium window found — is a meeting join script running?' });
+                }
+
+                // Use the last window opened (most recent join).
+                const wid = wids[wids.length - 1];
+                execFileSync('xdotool', ['windowfocus', '--sync', wid], {
+                    env: { ...process.env, DISPLAY }, timeout: 3_000,
+                });
+
+                // Platform-specific keyboard shortcut to open the share screen dialog.
+                // These trigger getDisplayMedia() internally; Chromium auto-approves
+                // when --auto-select-desktop-capture-source=Entire screen is set.
+                let shortcut;
+                if (platform === 'teams') {
+                    // Ctrl+Shift+E opens the Teams "Present" / share-tray in the web client
+                    shortcut = 'ctrl+shift+e';
+                } else if (platform === 'zoom') {
+                    // Alt+S opens the Zoom share picker in the web client
+                    shortcut = 'alt+s';
+                } else {
+                    // Generic: let caller try a specific shortcut or use xdotool to click Share
+                    shortcut = null;
+                }
+
+                if (shortcut) {
+                    execFileSync('xdotool', ['key', '--clearmodifiers', shortcut], {
+                        env: { ...process.env, DISPLAY }, timeout: 3_000,
+                    });
+                }
+
+                log('info', `[screen-share] inject: platform=${platform} wid=${wid} shortcut=${shortcut ?? 'none'}`);
+                return send(res, 200, { ok: true, platform, windowId: wid, shortcut });
+            } catch (err) {
+                return send(res, 500, { ok: false, error: `inject failed: ${err.message}` });
+            }
+        }
+
         // ── POST /v1/meeting/join — platform-specific meeting join ───────────
         // Dispatches to the appropriate Playwright join script based on platform.
         // body: { platform: 'meet'|'teams'|'zoom', url: string, displayName?: string, timeout?: number }
@@ -900,6 +1124,7 @@ const server = http.createServer(async (req, res) => {
             const meetUrl = typeof body.url === 'string' ? body.url.trim() : '';
             const joinDisplayName = typeof body.displayName === 'string' ? body.displayName.trim() : undefined;
             const joinTimeout = typeof body.timeout === 'number' ? Math.min(Math.max(body.timeout, 10_000), 300_000) : 90_000;
+            const enableScreenShare = body.screenShare === true;
 
             if (!platform) return send(res, 400, { error: "'platform' is required ('meet', 'teams', 'zoom', or 'webex')" });
             if (!meetUrl) return send(res, 400, { error: "'url' is required" });
@@ -917,6 +1142,7 @@ const server = http.createServer(async (req, res) => {
 
             const scriptArgs = [script, meetUrl, '--timeout', String(joinTimeout)];
             if (joinDisplayName) scriptArgs.push('--name', joinDisplayName);
+            if (enableScreenShare) scriptArgs.push('--screen-share');
 
             const child = spawn(process.execPath, scriptArgs, {
                 detached: true,
@@ -934,6 +1160,7 @@ const server = http.createServer(async (req, res) => {
                 platform,
                 url: meetUrl,
                 pid: child.pid ?? null,
+                screenShare: enableScreenShare,
                 message: `${platform} join script launched; check desktop stream at /vnc.html`,
             });
         }

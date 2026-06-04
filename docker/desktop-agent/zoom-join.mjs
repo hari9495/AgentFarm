@@ -33,16 +33,18 @@
 
 const args = process.argv.slice(2);
 if (args.length === 0 || args[0].startsWith('-')) {
-    console.error('usage: zoom-join.mjs <meetingUrl> [--name "Display Name"] [--timeout 90000]');
+    console.error('usage: zoom-join.mjs <meetingUrl> [--name "Display Name"] [--timeout 90000] [--screen-share]');
     process.exit(1);
 }
 
 const rawUrl = args[0];
 let displayName = process.env.ZOOM_DISPLAY_NAME || 'AgentFarm Agent';
 let timeoutMs = Number(process.env.ZOOM_JOIN_TIMEOUT_MS || 90000);
+let enableScreenShare = false;
 for (let i = 1; i < args.length; i++) {
     if (args[i] === '--name' && args[i + 1]) { displayName = args[++i]; }
     else if (args[i] === '--timeout' && args[i + 1]) { timeoutMs = Number(args[++i]); }
+    else if (args[i] === '--screen-share') { enableScreenShare = true; }
 }
 
 if (!/^https?:\/\/([a-z0-9-]+\.)?zoom\.us\//.test(rawUrl)) {
@@ -97,6 +99,8 @@ const browser = await chromium.launchPersistentContext('/tmp/zoom-profile', {
         '--window-size=1280,800',
         // Zoom web client checks user-agent; use a normal Chrome string.
         '--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        // Auto-approve the getDisplayMedia() screen-picker when screen share is triggered.
+        '--auto-select-desktop-capture-source=Entire screen',
     ],
     viewport: { width: 1280, height: 800 },
     permissions: ['microphone', 'camera'],
@@ -204,5 +208,65 @@ try {
 }
 
 clearTimeout(overall);
+
+// ── Screen share (if requested via --screen-share flag) ───────────────────────
+// After joining, use Alt+S to open the Zoom share dialog.
+// Chromium's --auto-select-desktop-capture-source=Entire screen auto-approves
+// the getDisplayMedia() picker, so the share starts without user interaction.
+if (enableScreenShare) {
+    console.log('zoom-join: initiating screen share');
+    try {
+        // Brief settle time so the Zoom meeting controls are fully rendered.
+        await page.waitForTimeout(3_000);
+
+        // Try clicking the Share Screen toolbar button first (most reliable).
+        const shareSelectors = [
+            'button[aria-label*="Share Screen" i]',
+            'button[aria-label*="share screen" i]',
+            '[class*="share-screen"]',
+        ];
+        let shareClicked = false;
+        for (const sel of shareSelectors) {
+            try {
+                const el = page.locator(sel).first();
+                if (await el.isVisible({ timeout: 2_000 })) {
+                    await el.click();
+                    shareClicked = true;
+                    console.log(`zoom-join: clicked share button via ${sel}`);
+                    break;
+                }
+            } catch { /* try next */ }
+        }
+
+        // Fallback: keyboard shortcut Alt+S
+        if (!shareClicked) {
+            await page.keyboard.press('Alt+s');
+            console.log('zoom-join: sent Alt+S shortcut for screen share');
+        }
+
+        // If a share-type picker appears, click "Screen" or "Entire Screen".
+        await page.waitForTimeout(1_500);
+        const screenOptionSelectors = [
+            'button[aria-label*="Screen" i]',
+            'button[aria-label*="Entire Screen" i]',
+            '[class*="share-screen-option"]',
+        ];
+        for (const sel of screenOptionSelectors) {
+            try {
+                const el = page.locator(sel).first();
+                if (await el.isVisible({ timeout: 2_000 })) {
+                    await el.click();
+                    console.log(`zoom-join: selected screen option via ${sel}`);
+                    break;
+                }
+            } catch { /* try next */ }
+        }
+        console.log('zoom-join: screen share initiated');
+    } catch (err) {
+        console.warn(`zoom-join: screen share initiation failed: ${err.message}`);
+        // Non-fatal — the meeting join itself succeeded
+    }
+}
+
 console.log('zoom-join: done');
 // Keep the browser open — the desktop-agent process keeps it alive.

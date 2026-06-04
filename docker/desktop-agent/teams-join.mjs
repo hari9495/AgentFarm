@@ -31,16 +31,18 @@
 
 const args = process.argv.slice(2);
 if (args.length === 0 || args[0].startsWith('-')) {
-    console.error('usage: teams-join.mjs <meetingUrl> [--name "Display Name"] [--timeout 90000]');
+    console.error('usage: teams-join.mjs <meetingUrl> [--name "Display Name"] [--timeout 90000] [--screen-share]');
     process.exit(1);
 }
 
 const meetingUrl = args[0];
 let displayName = process.env.TEAMS_DISPLAY_NAME || 'AgentFarm Agent';
 let timeoutMs = Number(process.env.TEAMS_JOIN_TIMEOUT_MS || 90000);
+let enableScreenShare = false;
 for (let i = 1; i < args.length; i++) {
     if (args[i] === '--name' && args[i + 1]) { displayName = args[++i]; }
     else if (args[i] === '--timeout' && args[i + 1]) { timeoutMs = Number(args[++i]); }
+    else if (args[i] === '--screen-share') { enableScreenShare = true; }
 }
 
 const VALID_TEAMS_ORIGINS = [
@@ -74,6 +76,8 @@ const browser = await chromium.launchPersistentContext('/tmp/teams-profile', {
         '--window-size=1280,800',
         // Teams web requires a real user-agent; avoid "browser not supported" page.
         '--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        // Auto-approve the getDisplayMedia() screen-picker when screen share is triggered.
+        '--auto-select-desktop-capture-source=Entire screen',
     ],
     viewport: { width: 1280, height: 800 },
     permissions: ['microphone', 'camera'],
@@ -230,5 +234,43 @@ try {
 }
 
 clearTimeout(overall);
+
+// ── Screen share (if requested via --screen-share flag) ───────────────────────
+// After joining, press Ctrl+Shift+E to open the Teams share tray.
+// Chromium's --auto-select-desktop-capture-source=Entire screen auto-approves
+// the getDisplayMedia() picker, so the share starts without user interaction.
+if (enableScreenShare) {
+    console.log('teams-join: initiating screen share via Ctrl+Shift+E');
+    try {
+        // Brief settle time so the Teams call controls are fully rendered.
+        await page.waitForTimeout(3_000);
+        await page.keyboard.press('Control+Shift+E');
+        await page.waitForTimeout(1_500);
+
+        // Teams may show a share-type picker (Desktop / Window / PowerPoint).
+        // Click the first "Screen" / "Desktop" button if it appears.
+        const screenOptionSelectors = [
+            'button[aria-label*="Screen" i]',
+            'button[aria-label*="Desktop" i]',
+            '[data-tid="share-screen-option"]',
+            '[data-tid="desktop-share"]',
+        ];
+        for (const sel of screenOptionSelectors) {
+            try {
+                const el = page.locator(sel).first();
+                if (await el.isVisible({ timeout: 2_000 })) {
+                    await el.click();
+                    console.log(`teams-join: clicked screen option via ${sel}`);
+                    break;
+                }
+            } catch { /* try next */ }
+        }
+        console.log('teams-join: screen share initiated');
+    } catch (err) {
+        console.warn(`teams-join: screen share initiation failed: ${err.message}`);
+        // Non-fatal — the meeting join itself succeeded
+    }
+}
+
 console.log('teams-join: done');
 // Keep the browser open — the desktop-agent process keeps it alive.
