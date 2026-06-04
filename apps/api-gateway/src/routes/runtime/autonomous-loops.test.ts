@@ -34,9 +34,18 @@ const makeOrchestrator = () => {
     };
 };
 
+const mockSession = {
+    userId: 'user_test',
+    tenantId: 'tenant_test',
+    workspaceIds: ['ws_test'],
+    scope: 'customer' as const,
+    expiresAt: Date.now() + 3_600_000,
+};
+const getSession = () => mockSession;
+
 const buildApp = (orchestrator = makeOrchestrator()) => {
     const app = Fastify();
-    registerAutonomousLoopRoutes(app, { orchestrator });
+    registerAutonomousLoopRoutes(app, { orchestrator, getSession });
     return { app, orchestrator };
 };
 
@@ -85,7 +94,7 @@ describe('POST /v1/autonomous-loops/execute', () => {
             async execute() { return { loopId: 'l1', state: 'running' }; },
         };
         const app = Fastify();
-        registerAutonomousLoopRoutes(app, { orchestrator });
+        registerAutonomousLoopRoutes(app, { orchestrator, getSession });
         const res = await app.inject({
             method: 'POST',
             url: '/v1/autonomous-loops/execute',
@@ -100,7 +109,7 @@ describe('POST /v1/autonomous-loops/execute', () => {
             async execute() { throw new Error('orchestrator_down'); },
         };
         const app = Fastify();
-        registerAutonomousLoopRoutes(app, { orchestrator });
+        registerAutonomousLoopRoutes(app, { orchestrator, getSession });
         const res = await app.inject({
             method: 'POST',
             url: '/v1/autonomous-loops/execute',
@@ -198,7 +207,7 @@ describe('DELETE /v1/autonomous-loops/:loopId', () => {
         // Inject a running loop directly into the store
         orchestrator._runs.set('loop_running', { loopId: 'loop_running', state: 'running' });
         const app = Fastify();
-        registerAutonomousLoopRoutes(app, { orchestrator });
+        registerAutonomousLoopRoutes(app, { orchestrator, getSession });
         const res = await app.inject({ method: 'DELETE', url: '/v1/autonomous-loops/loop_running' });
         assert.equal(res.statusCode, 204);
     });

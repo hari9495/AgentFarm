@@ -55,10 +55,19 @@ const makeStore = () => {
     return stub;
 };
 
+const mockSession = {
+    userId: 'user_test',
+    tenantId: 'tenant_test',
+    workspaceIds: ['ws_test'],
+    scope: 'customer' as const,
+    expiresAt: Date.now() + 3_600_000,
+};
+const getSession = () => mockSession;
+
 const buildApp = () => {
     const store = makeStore();
     const app = Fastify();
-    registerRetentionPolicyRoutes(app, store as never);
+    registerRetentionPolicyRoutes(app, store as never, { getSession });
     return { app, store };
 };
 
@@ -67,12 +76,13 @@ const buildApp = () => {
 // ---------------------------------------------------------------------------
 
 describe('POST /v1/retention-policies', () => {
-    it('returns 400 when required fields are missing', async () => {
+    it('returns 400 when required fields (name, scope, action) are missing', async () => {
         const { app } = buildApp();
+        // tenantId is now taken from the session — only other required fields matter
         const res = await app.inject({
             method: 'POST',
             url: '/v1/retention-policies',
-            payload: { tenantId: 't1' },
+            payload: {},
         });
         assert.equal(res.statusCode, 400);
         assert.ok(res.json().error);
@@ -83,22 +93,23 @@ describe('POST /v1/retention-policies', () => {
         const res = await app.inject({
             method: 'POST',
             url: '/v1/retention-policies',
-            payload: { tenantId: 't1', name: 'p1', scope: 'workspace', action: 'auto_delete_after_days' },
+            payload: { name: 'p1', scope: 'workspace', action: 'auto_delete_after_days' },
         });
         assert.equal(res.statusCode, 400);
     });
 
-    it('creates a policy and returns 201', async () => {
+    it('creates a policy and returns 201 scoped to the session tenant', async () => {
         const { app } = buildApp();
         const res = await app.inject({
             method: 'POST',
             url: '/v1/retention-policies',
-            payload: { tenantId: 't1', name: 'Retain 30 days', scope: 'workspace', action: 'retain' },
+            payload: { name: 'Retain 30 days', scope: 'workspace', action: 'retain' },
         });
         assert.equal(res.statusCode, 201);
         const body = res.json();
         assert.ok(body.policy.id);
-        assert.equal(body.policy.tenantId, 't1');
+        // tenantId must come from the session, not from the request body
+        assert.equal(body.policy.tenantId, mockSession.tenantId);
         assert.equal(body.policy.name, 'Retain 30 days');
     });
 
@@ -107,7 +118,7 @@ describe('POST /v1/retention-policies', () => {
         const res = await app.inject({
             method: 'POST',
             url: '/api/v1/retention-policies',
-            payload: { tenantId: 't1', name: 'p2', scope: 'tenant', action: 'retain' },
+            payload: { name: 'p2', scope: 'tenant', action: 'retain' },
         });
         assert.equal(res.statusCode, 201);
     });
@@ -118,27 +129,30 @@ describe('POST /v1/retention-policies', () => {
 // ---------------------------------------------------------------------------
 
 describe('GET /v1/retention-policies', () => {
-    it('returns 400 when tenantId is missing', async () => {
+    it('returns 200 empty list when no policies exist for session tenant', async () => {
         const { app } = buildApp();
+        // tenantId is now always from the session — no query param needed
         const res = await app.inject({ method: 'GET', url: '/v1/retention-policies' });
-        assert.equal(res.statusCode, 400);
+        assert.equal(res.statusCode, 200);
+        assert.equal(res.json().policyCount, 0);
     });
 
-    it('returns policies for tenantId', async () => {
+    it('returns only policies belonging to the session tenant', async () => {
         const { app } = buildApp();
+        // Both policies are created under the session tenant (mockSession.tenantId)
         await app.inject({
             method: 'POST', url: '/v1/retention-policies',
-            payload: { tenantId: 't1', name: 'p1', scope: 'workspace', action: 'retain' },
+            payload: { name: 'p1', scope: 'workspace', action: 'retain' },
         });
         await app.inject({
             method: 'POST', url: '/v1/retention-policies',
-            payload: { tenantId: 't2', name: 'p2', scope: 'workspace', action: 'retain' },
+            payload: { name: 'p2', scope: 'workspace', action: 'retain' },
         });
-        const res = await app.inject({ method: 'GET', url: '/v1/retention-policies?tenantId=t1' });
+        const res = await app.inject({ method: 'GET', url: '/v1/retention-policies' });
         assert.equal(res.statusCode, 200);
         const body = res.json();
-        assert.equal(body.tenantId, 't1');
-        assert.equal(body.policyCount, 1);
+        assert.equal(body.tenantId, mockSession.tenantId);
+        assert.equal(body.policyCount, 2);
     });
 });
 
@@ -157,7 +171,7 @@ describe('GET /v1/retention-policies/:policyId', () => {
         const { app } = buildApp();
         const createRes = await app.inject({
             method: 'POST', url: '/v1/retention-policies',
-            payload: { tenantId: 't1', name: 'p1', scope: 'workspace', action: 'retain' },
+            payload: { name: 'p1', scope: 'workspace', action: 'retain' },
         });
         const { policy } = createRes.json();
         const res = await app.inject({ method: 'GET', url: `/v1/retention-policies/${policy.id}` });
@@ -184,7 +198,7 @@ describe('PATCH /v1/retention-policies/:policyId', () => {
         const { app } = buildApp();
         const createRes = await app.inject({
             method: 'POST', url: '/v1/retention-policies',
-            payload: { tenantId: 't1', name: 'p1', scope: 'workspace', action: 'retain' },
+            payload: { name: 'p1', scope: 'workspace', action: 'retain' },
         });
         const id = createRes.json().policy.id;
         const res = await app.inject({
@@ -198,7 +212,7 @@ describe('PATCH /v1/retention-policies/:policyId', () => {
         const { app } = buildApp();
         const createRes = await app.inject({
             method: 'POST', url: '/v1/retention-policies',
-            payload: { tenantId: 't1', name: 'Old Name', scope: 'workspace', action: 'retain' },
+            payload: { name: 'Old Name', scope: 'workspace', action: 'retain' },
         });
         const id = createRes.json().policy.id;
         const res = await app.inject({
@@ -225,7 +239,7 @@ describe('DELETE /v1/retention-policies/:policyId', () => {
         const { app, store } = buildApp();
         const createRes = await app.inject({
             method: 'POST', url: '/v1/retention-policies',
-            payload: { tenantId: 't1', name: 'p1', scope: 'workspace', action: 'retain' },
+            payload: { name: 'p1', scope: 'workspace', action: 'retain' },
         });
         const id = createRes.json().policy.id;
         const res = await app.inject({ method: 'DELETE', url: `/v1/retention-policies/${id}` });
@@ -240,7 +254,7 @@ describe('DELETE /v1/retention-policies/:policyId', () => {
         const { app, store } = buildApp();
         const createRes = await app.inject({
             method: 'POST', url: '/v1/retention-policies',
-            payload: { tenantId: 't1', name: 'p1', scope: 'workspace', action: 'retain' },
+            payload: { name: 'p1', scope: 'workspace', action: 'retain' },
         });
         const id = createRes.json().policy.id;
         const res = await app.inject({ method: 'DELETE', url: `/v1/retention-policies/${id}?mode=hard` });
@@ -254,34 +268,26 @@ describe('DELETE /v1/retention-policies/:policyId', () => {
 // ---------------------------------------------------------------------------
 
 describe('POST /v1/retention-policies/:policyId/set-default', () => {
-    it('returns 400 when tenantId is missing', async () => {
-        const { app } = buildApp();
-        const res = await app.inject({
-            method: 'POST', url: '/v1/retention-policies/p1/set-default',
-            payload: {},
-        });
-        assert.equal(res.statusCode, 400);
-    });
-
     it('returns 404 for unknown policy', async () => {
         const { app } = buildApp();
         const res = await app.inject({
             method: 'POST', url: '/v1/retention-policies/nope/set-default',
-            payload: { tenantId: 't1' },
+            payload: {},
         });
         assert.equal(res.statusCode, 404);
     });
 
-    it('returns 200 when policy matches tenantId', async () => {
+    it('returns 200 when policy belongs to the session tenant', async () => {
         const { app } = buildApp();
+        // tenantId is now always taken from session — no need to pass it in the body
         const createRes = await app.inject({
             method: 'POST', url: '/v1/retention-policies',
-            payload: { tenantId: 't1', name: 'p1', scope: 'workspace', action: 'retain' },
+            payload: { name: 'p1', scope: 'workspace', action: 'retain' },
         });
         const id = createRes.json().policy.id;
         const res = await app.inject({
             method: 'POST', url: `/v1/retention-policies/${id}/set-default`,
-            payload: { tenantId: 't1' },
+            payload: {},
         });
         assert.equal(res.statusCode, 200);
         assert.ok(res.json().message.includes(id));

@@ -182,7 +182,7 @@ export async function registerSsoRoutes(
                 userId:       user.id,
                 tenantId,
                 workspaceIds: workspaces.map(w => w.id),
-                scope:        'internal',
+                scope:        'customer',  // SSO is a user-facing login — internal scope is for machine-to-machine only
             });
 
             // Redirect to dashboard with session cookie

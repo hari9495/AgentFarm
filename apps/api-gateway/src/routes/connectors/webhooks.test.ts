@@ -79,8 +79,17 @@ const buildApp = async () => {
         },
     };
 
+    const mockSession = {
+        userId: 'user_test',
+        tenantId: 'tenant_test',
+        workspaceIds: ['ws_test'],
+        scope: 'customer' as const,
+        expiresAt: Date.now() + 3_600_000,
+    };
+    const getSession = () => mockSession;
+
     const app = Fastify({ logger: false });
-    registerWebhookRoutes(app, prisma as never);
+    registerWebhookRoutes(app, prisma as never, { getSession });
     return { app, learnedPatterns, webhookSources };
 };
 
@@ -145,10 +154,11 @@ describe('POST /api/v1/memory/patterns/code-review', () => {
 });
 
 describe('GET /v1/webhooks/inbound/sources', () => {
-    it('returns an empty sources array for a tenant', async () => {
+    it('returns an empty sources array for the authenticated tenant', async () => {
         const { app } = await buildApp();
         try {
-            const res = await app.inject({ method: 'GET', url: '/v1/webhooks/inbound/sources?tenantId=tenant-001' });
+            // tenantId now comes from the session — no query param needed
+            const res = await app.inject({ method: 'GET', url: '/v1/webhooks/inbound/sources' });
             assert.equal(res.statusCode, 200);
             const body = res.json() as { sources: unknown[] };
             assert.ok(Array.isArray(body.sources));
@@ -156,26 +166,17 @@ describe('GET /v1/webhooks/inbound/sources', () => {
             await app.close();
         }
     });
-
-    it('returns 400 when tenantId is missing', async () => {
-        const { app } = await buildApp();
-        try {
-            const res = await app.inject({ method: 'GET', url: '/v1/webhooks/inbound/sources' });
-            assert.equal(res.statusCode, 400);
-        } finally {
-            await app.close();
-        }
-    });
 });
 
 describe('POST /v1/webhooks/inbound/sources', () => {
-    it('creates a new source and returns id, name, secret, inboundUrl', async () => {
+    it('creates a new source scoped to the session tenant', async () => {
         const { app } = await buildApp();
         try {
+            // tenantId is taken from the session — not needed in the body
             const res = await app.inject({
                 method: 'POST',
                 url: '/v1/webhooks/inbound/sources',
-                payload: { name: 'GitHub Actions', description: 'CI triggers', tenantId: 'tenant-001' },
+                payload: { name: 'GitHub Actions', description: 'CI triggers' },
             });
             assert.equal(res.statusCode, 201);
             const body = res.json() as { id: string; name: string; secret: string; inboundUrl: string };
@@ -194,21 +195,7 @@ describe('POST /v1/webhooks/inbound/sources', () => {
             const res = await app.inject({
                 method: 'POST',
                 url: '/v1/webhooks/inbound/sources',
-                payload: { tenantId: 'tenant-001' },
-            });
-            assert.equal(res.statusCode, 400);
-        } finally {
-            await app.close();
-        }
-    });
-
-    it('rejects requests without a tenantId', async () => {
-        const { app } = await buildApp();
-        try {
-            const res = await app.inject({
-                method: 'POST',
-                url: '/v1/webhooks/inbound/sources',
-                payload: { name: 'Test Source' },
+                payload: {},
             });
             assert.equal(res.statusCode, 400);
         } finally {
@@ -231,14 +218,14 @@ describe('DELETE /v1/webhooks/inbound/sources/:sourceId', () => {
         }
     });
 
-    it('returns deleted: true for an existing source', async () => {
+    it('returns deleted: true for a source belonging to the session tenant', async () => {
         const { app } = await buildApp();
         try {
-            // Create a source first
+            // Create a source (tenantId comes from session)
             const createRes = await app.inject({
                 method: 'POST',
                 url: '/v1/webhooks/inbound/sources',
-                payload: { name: 'To Delete', tenantId: 'tenant-001' },
+                payload: { name: 'To Delete' },
             });
             const { id } = createRes.json() as { id: string };
 
@@ -256,20 +243,11 @@ describe('DELETE /v1/webhooks/inbound/sources/:sourceId', () => {
 });
 
 describe('GET /v1/webhooks/inbound/events', () => {
-    it('returns 400 when neither source nor tenantId is provided', async () => {
+    it('returns an empty events array for the authenticated session tenant', async () => {
         const { app } = await buildApp();
         try {
+            // tenantId comes from the session — no query param needed
             const res = await app.inject({ method: 'GET', url: '/v1/webhooks/inbound/events' });
-            assert.equal(res.statusCode, 400);
-        } finally {
-            await app.close();
-        }
-    });
-
-    it('returns an empty events array when tenantId is provided', async () => {
-        const { app } = await buildApp();
-        try {
-            const res = await app.inject({ method: 'GET', url: '/v1/webhooks/inbound/events?tenantId=tenant-001' });
             assert.equal(res.statusCode, 200);
             const body = res.json() as { events: unknown[] };
             assert.ok(Array.isArray(body.events));

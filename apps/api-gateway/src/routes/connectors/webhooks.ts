@@ -62,6 +62,18 @@ type CodeReviewPayload = {
 
 const trimString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 
+type SessionContext = {
+    userId: string;
+    tenantId: string;
+    workspaceIds: string[];
+    scope?: 'customer' | 'internal';
+    expiresAt: number;
+};
+
+type RegisterWebhookRoutesOptions = {
+    getSession: (request: import('fastify').FastifyRequest) => SessionContext | null;
+};
+
 const extractAnswerPayload = (payload: QuestionWebhookPayload): { questionId: string; answer: string; answeredBy: string } | null => {
     const questionId = trimString(payload.question_id)
         || trimString(payload.value?.questionId)
@@ -102,11 +114,13 @@ const normalizePattern = (comment: string): string | null => {
     return sentence ? sentence[0].toUpperCase() + sentence.slice(1) : null;
 };
 
-export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient): void {
+export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient, options: RegisterWebhookRoutesOptions): void {
+    const { getSession } = options;
     const questionStore = new PrismaQuestionStore(prisma);
 
     // List registrations
-    app.get('/webhooks', async (_req, reply) => {
+    app.get('/webhooks', async (req, reply) => {
+        if (!getSession(req)) return reply.status(401).send({ error: 'Unauthorized' });
         const { globalWebhookEngine } = await import('@agentfarm/agent-runtime/webhook-ingestion.js').catch(
             () => import('../../agent-runtime-stubs.js'),
         );
@@ -115,6 +129,7 @@ export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient
 
     // Register webhook
     app.post('/webhooks', async (req: FastifyRequest<{ Body: WebhookRegisterBody }>, reply) => {
+        if (!getSession(req)) return reply.status(401).send({ error: 'Unauthorized' });
         const body = (req.body ?? {}) as WebhookRegisterBody;
         if (!body.provider || !body.events?.length || !body.target_url) {
             return reply.status(400).send({ error: 'provider, events, and target_url required' });
@@ -135,6 +150,7 @@ export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient
     app.patch(
         '/webhooks/:id',
         async (req: FastifyRequest<{ Params: WebhookIdParams; Body: { active?: boolean } }>, reply) => {
+            if (!getSession(req)) return reply.status(401).send({ error: 'Unauthorized' });
             const { globalWebhookEngine } = await import(
                 '@agentfarm/agent-runtime/webhook-ingestion.js'
             ).catch(() => import('../../agent-runtime-stubs.js'));
@@ -149,6 +165,7 @@ export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient
     app.delete(
         '/webhooks/:id',
         async (req: FastifyRequest<{ Params: WebhookIdParams }>, reply) => {
+            if (!getSession(req)) return reply.status(401).send({ error: 'Unauthorized' });
             const { globalWebhookEngine } = await import(
                 '@agentfarm/agent-runtime/webhook-ingestion.js'
             ).catch(() => import('../../agent-runtime-stubs.js'));
@@ -162,6 +179,7 @@ export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient
     app.get(
         '/webhooks/events',
         async (req: FastifyRequest<{ Querystring: { limit?: string; provider?: string } }>, reply) => {
+            if (!getSession(req)) return reply.status(401).send({ error: 'Unauthorized' });
             const limit = Number(req.query.limit ?? 20);
             const { globalWebhookEngine } = await import(
                 '@agentfarm/agent-runtime/webhook-ingestion.js'
@@ -263,6 +281,11 @@ export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient
     app.post(
         '/api/v1/memory/patterns/code-review',
         async (req: FastifyRequest<{ Body: CodeReviewPayload }>, reply) => {
+            // Primary auth: require a valid session
+            const session = getSession(req);
+            if (!session) return reply.code(401).send({ error: 'Unauthorized' });
+
+            // Secondary guard: honour optional HMAC secret for machine-to-machine callers
             const memorySecret = process.env['MEMORY_WEBHOOK_SECRET'];
             if (memorySecret) {
                 const sig = (req.headers['x-hub-signature-256'] as string)
@@ -273,7 +296,8 @@ export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient
                 }
             }
             const body = req.body ?? {};
-            const tenantId = trimString(body.tenantId);
+            // Always scope to the authenticated tenant — never trust tenantId from the body
+            const tenantId = session.tenantId;
             const workspaceId = trimString(body.workspaceId);
 
             if (!tenantId || !workspaceId) {
@@ -331,16 +355,14 @@ export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient
 
     /**
      * GET /v1/webhooks/inbound/sources
-     * Returns the list of registered inbound webhook sources for a tenant.
-     * Query: tenantId (required)
+     * Returns the list of registered inbound webhook sources for the authenticated tenant.
      */
-    app.get<{ Querystring: { tenantId?: string } }>('/v1/webhooks/inbound/sources', async (req, reply) => {
-        const tenantId = trimString(req.query.tenantId);
-        if (!tenantId) {
-            return reply.code(400).send({ error: 'tenantId query parameter is required' });
-        }
+    app.get('/v1/webhooks/inbound/sources', async (req, reply) => {
+        const session = getSession(req);
+        if (!session) return reply.code(401).send({ error: 'Unauthorized' });
+
         const sources = await prisma.webhookSource.findMany({
-            where: { tenantId },
+            where: { tenantId: session.tenantId },
             orderBy: { createdAt: 'desc' },
         });
         return reply.send({ sources });
@@ -348,24 +370,24 @@ export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient
 
     /**
      * POST /v1/webhooks/inbound/sources
-     * Registers a new inbound webhook source.
-     * Body: { name: string, tenantId: string, description?: string }
+     * Registers a new inbound webhook source for the authenticated tenant.
+     * Body: { name: string, description?: string }
      */
-    app.post<{ Body: { name?: unknown; description?: unknown; tenantId?: unknown } }>(
+    app.post<{ Body: { name?: unknown; description?: unknown } }>(
         '/v1/webhooks/inbound/sources',
         async (req, reply) => {
+            const session = getSession(req);
+            if (!session) return reply.code(401).send({ error: 'Unauthorized' });
+
             const name = trimString(req.body?.name);
-            const tenantId = trimString(req.body?.tenantId);
             if (!name) {
                 return reply.code(400).send({ error: 'name is required' });
             }
-            if (!tenantId) {
-                return reply.code(400).send({ error: 'tenantId is required' });
-            }
             const description = trimString(req.body?.description) || undefined;
             const secret = randomUUID();
+            // tenantId is always taken from the authenticated session — never from the request body
             const source = await prisma.webhookSource.create({
-                data: { tenantId, name, description, secret },
+                data: { tenantId: session.tenantId, name, description, secret },
             });
             const inboundUrl = `/webhooks/ingest/inbound?source=${source.id}`;
             return reply.code(201).send({ id: source.id, name: source.name, secret: source.secret, inboundUrl });
@@ -374,14 +396,21 @@ export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient
 
     /**
      * DELETE /v1/webhooks/inbound/sources/:sourceId
-     * Removes a registered inbound webhook source.
+     * Removes a registered inbound webhook source (must belong to the authenticated tenant).
      */
     app.delete<{ Params: { sourceId: string } }>(
         '/v1/webhooks/inbound/sources/:sourceId',
         async (req, reply) => {
+            const session = getSession(req);
+            if (!session) return reply.code(401).send({ error: 'Unauthorized' });
+
             const existing = await prisma.webhookSource.findUnique({ where: { id: req.params.sourceId } });
             if (!existing) {
                 return reply.code(404).send({ error: 'source not found' });
+            }
+            // Ownership check: prevent cross-tenant deletion
+            if (existing.tenantId !== session.tenantId) {
+                return reply.code(403).send({ error: 'Forbidden' });
             }
             await prisma.webhookSource.delete({ where: { id: req.params.sourceId } });
             return reply.send({ deleted: true });
@@ -390,23 +419,23 @@ export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient
 
     /**
      * GET /v1/webhooks/inbound/events
-     * Returns recent inbound webhook events.
-     * Query: source?, tenantId?, limit?, cursor?
-     * At least one of source or tenantId is required.
+     * Returns recent inbound webhook events scoped to the authenticated tenant.
+     * Query: source?, limit?, cursor?
      */
-    app.get<{ Querystring: { source?: string; tenantId?: string; limit?: string; cursor?: string } }>(
+    app.get<{ Querystring: { source?: string; limit?: string; cursor?: string } }>(
         '/v1/webhooks/inbound/events',
         async (req, reply) => {
+            const session = getSession(req);
+            if (!session) return reply.code(401).send({ error: 'Unauthorized' });
+
             const sourceId = req.query.source ? trimString(req.query.source) : undefined;
-            const tenantId = req.query.tenantId ? trimString(req.query.tenantId) : undefined;
-            if (!sourceId && !tenantId) {
-                return reply.code(400).send({ error: 'source or tenantId query parameter is required' });
-            }
             const limit = Math.min(Number(req.query.limit ?? 20), 100);
             const cursor = req.query.cursor ? trimString(req.query.cursor) : undefined;
-            const where: Record<string, unknown> = {};
+
+            // Always filter by session tenant; optionally narrow by sourceId
+            const where: Record<string, unknown> = { tenantId: session.tenantId };
             if (sourceId) where['sourceId'] = sourceId;
-            if (tenantId) where['tenantId'] = tenantId;
+
             const events = await prisma.inboundWebhookEvent.findMany({
                 where,
                 orderBy: { receivedAt: 'desc' },

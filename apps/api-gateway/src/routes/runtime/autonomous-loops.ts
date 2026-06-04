@@ -5,6 +5,8 @@
  * GET  /v1/autonomous-loops/:loopId — Get loop status/result
  * GET  /v1/autonomous-loops — List recent loops
  * DELETE /v1/autonomous-loops/:loopId — Cancel a loop
+ *
+ * All routes require an authenticated session.
  */
 
 import type { FastifyInstance, FastifyRequest } from 'fastify';
@@ -36,11 +38,21 @@ type LoopOrchestrator = {
     cancelLoop: (id: string) => boolean;
 };
 
-export type RegisterAutonomousLoopRoutesOptions = {
-    orchestrator?: LoopOrchestrator;
+type SessionContext = {
+    userId: string;
+    tenantId: string;
+    workspaceIds: string[];
+    scope?: 'customer' | 'internal';
+    expiresAt: number;
 };
 
-export function registerAutonomousLoopRoutes(app: FastifyInstance, options: RegisterAutonomousLoopRoutesOptions = {}): void {
+export type RegisterAutonomousLoopRoutesOptions = {
+    orchestrator?: LoopOrchestrator;
+    getSession: (request: FastifyRequest) => SessionContext | null;
+};
+
+export function registerAutonomousLoopRoutes(app: FastifyInstance, options: RegisterAutonomousLoopRoutesOptions): void {
+    const { getSession } = options;
     const resolveOrchestrator = options.orchestrator
         ? () => Promise.resolve(options.orchestrator!)
         : getLoopOrchestrator;
@@ -49,6 +61,9 @@ export function registerAutonomousLoopRoutes(app: FastifyInstance, options: Regi
     app.post(
         '/v1/autonomous-loops/execute',
         async (req: FastifyRequest<{ Body: ExecuteLoopBody }>, reply) => {
+            const session = getSession(req);
+            if (!session) return reply.status(401).send({ error: 'Unauthorized' });
+
             const orchestrator = await resolveOrchestrator();
             const config = (req.body ?? {}) as LoopConfig;
 
@@ -69,6 +84,9 @@ export function registerAutonomousLoopRoutes(app: FastifyInstance, options: Regi
     app.get(
         '/v1/autonomous-loops/:loopId',
         async (req: FastifyRequest<{ Params: LoopIdParams }>, reply) => {
+            const session = getSession(req);
+            if (!session) return reply.status(401).send({ error: 'Unauthorized' });
+
             const orchestrator = await resolveOrchestrator();
             const { loopId } = req.params as LoopIdParams;
 
@@ -82,9 +100,11 @@ export function registerAutonomousLoopRoutes(app: FastifyInstance, options: Regi
     );
 
     // List recent loop runs
-    app.get('/v1/autonomous-loops', async (_req, reply) => {
-        const orchestrator = await resolveOrchestrator();
+    app.get('/v1/autonomous-loops', async (req, reply) => {
+        const session = getSession(req);
+        if (!session) return reply.status(401).send({ error: 'Unauthorized' });
 
+        const orchestrator = await resolveOrchestrator();
         const runs = orchestrator.getRecentRuns(20);
         return reply.send({ loops: runs, total: runs.length });
     });
@@ -93,6 +113,9 @@ export function registerAutonomousLoopRoutes(app: FastifyInstance, options: Regi
     app.delete(
         '/v1/autonomous-loops/:loopId',
         async (req: FastifyRequest<{ Params: LoopIdParams }>, reply) => {
+            const session = getSession(req);
+            if (!session) return reply.status(401).send({ error: 'Unauthorized' });
+
             const orchestrator = await resolveOrchestrator();
             const { loopId } = req.params as LoopIdParams;
 

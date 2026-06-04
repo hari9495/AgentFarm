@@ -198,7 +198,7 @@ export const registerAllRoutes = async (
         featureEnabled: process.env.FEATURE_EXTERNAL_PLUGIN_LOADING === 'true',
         trustedPublishers: [{ publisher: 'agentfarm-plugins', sourceRepoPrefix: 'https://github.com/agentfarm/' }],
     });
-    registerWebhookRoutes(app, prisma);
+    registerWebhookRoutes(app, prisma, { getSession });
     registerConnectorHealthRoutes(app);
     registerAdapterRegistryRoutes(app, { getSession });
     await registerOutboundWebhookRoutes(app, { getSession });
@@ -214,7 +214,7 @@ export const registerAllRoutes = async (
     await registerActivityFeedRoutes(app, { getSession });
     await registerDisclosureRoutes(app, { getSession });
     registerGovernanceKPIRoutes(app);
-    await registerRetentionPolicyRoutes(app, prisma);
+    await registerRetentionPolicyRoutes(app, prisma, { getSession });
     await registerCircuitBreakerRoutes(app, { getSession });
 
     // Memory
@@ -245,7 +245,7 @@ export const registerAllRoutes = async (
     registerSkillPipelineRoutes(app, { getSession });
     registerSkillSchedulerRoutes(app, { getSession });
     registerSkillCompositionRoutes(app);
-    registerAutonomousLoopRoutes(app);
+    registerAutonomousLoopRoutes(app, { getSession });
     await registerRoutineSchedulerRoutes(app, { getSession });
     await registerWakeRunRoutes(app, { getSession });
     await registerOrchestrationRoutes(app, { getSession });
