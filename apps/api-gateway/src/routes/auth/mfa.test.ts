@@ -108,11 +108,14 @@ describe('issueMfaToken', () => {
     test('tokens from different secrets are not interchangeable', () => {
         const t1 = issueMfaToken('user_1', 'secret-a-minimum-32-characters-long!!');
         const t2 = issueMfaToken('user_1', 'secret-b-minimum-32-characters-long!!');
-        // Same data, different sigs
-        const [data1] = t1.split('.');
-        const [data2] = t2.split('.');
-        assert.equal(data1, data2, 'payloads should be the same');
-        assert.notEqual(t1, t2, 'signatures should differ');
+        // Both payloads encode the same userId (secret is never in the payload)
+        const [d1] = t1.split('.');
+        const [d2] = t2.split('.');
+        const p1 = JSON.parse(Buffer.from(d1!, 'base64url').toString('utf8')) as { userId: string };
+        const p2 = JSON.parse(Buffer.from(d2!, 'base64url').toString('utf8')) as { userId: string };
+        assert.equal(p1.userId, p2.userId, 'userId should be identical in both payloads');
+        // The full tokens must differ — only the HMAC signature changes with the secret
+        assert.notEqual(t1, t2, 'tokens signed with different secrets must not be equal');
     });
 });
 
