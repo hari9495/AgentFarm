@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { consumeToken } from "../send-magic-link/route";
+import { consumeToken } from "../_magic-link-store";
 import { findUserByEmail } from "@/lib/auth-store";
 import { createSession } from "@/lib/auth-store";
 

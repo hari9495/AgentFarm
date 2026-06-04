@@ -1,11 +1,6 @@
 import { NextResponse } from "next/server";
 import { checkAuthRateLimit } from "@/lib/rate-limit";
-
-// In-memory token store (process-local; acceptable for single-process prod / dev).
-// In production replace with Redis or a DB table with a TTL index.
-type MagicLinkEntry = { email: string; expiresAt: number };
-const tokenStore = new Map<string, MagicLinkEntry>();
-const EXPIRY_MS = 15 * 60 * 1000; // 15 minutes
+import { storeToken } from "../_magic-link-store";
 
 function getClientIp(req: Request): string {
     return (
@@ -19,15 +14,6 @@ function generateToken(): string {
     const bytes = new Uint8Array(32);
     globalThis.crypto.getRandomValues(bytes);
     return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-// Exported so verify route can read tokens (same process).
-export function consumeToken(token: string): string | null {
-    const entry = tokenStore.get(token);
-    if (!entry) return null;
-    tokenStore.delete(token);
-    if (Date.now() > entry.expiresAt) return null;
-    return entry.email;
 }
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -64,7 +50,7 @@ export async function POST(request: Request) {
     }
 
     const token = generateToken();
-    tokenStore.set(token, { email, expiresAt: Date.now() + EXPIRY_MS });
+    storeToken(token, email);
 
     const baseUrl =
         request.headers.get("origin") ??
