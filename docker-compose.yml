@@ -615,6 +615,37 @@ services:
       - agentfarm
     restart: unless-stopped
 
+  ngrok:
+    # ngrok reverse tunnel — exposes teams-media-bot:8090 as a public HTTPS URL so
+    # Teams can POST ICE/DTLS callbacks to it during local development.
+    #
+    # Activate: COMPOSE_PROFILES=voice (same as the rest of the voice stack).
+    # Requires: NGROK_AUTHTOKEN env var (free account at https://dashboard.ngrok.com).
+    #
+    # The public URL is available at http://localhost:4040/api/tunnels once the
+    # container is healthy. Run scripts/voice-dev.sh (or .ps1) to start the whole
+    # voice stack and auto-inject the URL into teams-media-bot in one command.
+    image: ngrok/ngrok:latest
+    container_name: agentfarm-ngrok
+    profiles: [ voice ]
+    command: http teams-media-bot:8090 --log stdout
+    ports:
+      - '4040:4040'
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:-}
+    depends_on:
+      teams-media-bot:
+        condition: service_healthy
+    healthcheck:
+      test: [ 'CMD-SHELL', 'wget -qO- http://localhost:4040/api/tunnels | grep -q "public_url" || exit 1' ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    networks:
+      - agentfarm
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   # Voice model caches — persist across container restarts to avoid re-downloading.
