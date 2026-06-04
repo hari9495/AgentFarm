@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import AuditLogPanel from '../components/audit-log-panel';
+import { TokenHeatmap } from '../components/token-heatmap';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -504,6 +505,7 @@ export default function AnalyticsPage() {
 
                 <CostSummarySection data={costData} isLoading={costLoading} error={costError} />
                 <AgentPerformanceSection data={agentData} isLoading={agentLoading} error={agentError} />
+                <TokenHeatmap workspaceId={workspaceId || undefined} />
                 <AuditLogPanel key={auditKey} from={fromIso} to={toIso} workspaceId={workspaceId || undefined} />
             </main>
         </div>

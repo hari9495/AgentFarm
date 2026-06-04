@@ -17,6 +17,8 @@ import {
 import type { DashboardTab } from './dashboard-navigation';
 import { getDashboardTabStorageKey } from './dashboard-tab-storage';
 import { NotificationBell } from './notification-bell';
+import { ThemeToggle } from './theme-toggle';
+import { LocaleSwitcher } from './locale-switcher';
 
 type NavItemDef = {
     key: DashboardTab;
@@ -211,6 +213,7 @@ export function InternalSidebar({
                         {[
                             { href: '/agents', label: 'Agents', Icon: Bot },
                             { href: '/agents/health', label: 'Agent Health', Icon: HeartPulse },
+                            { href: '/agents/compare', label: 'Agent Comparison', Icon: BarChart2 },
                             { href: '/tasks', label: 'Tasks', Icon: ListChecks },
                             { href: '/tasks?tab=queue', label: 'Task Queue', Icon: Layers },
                             { href: '/playbooks', label: 'Playbooks', Icon: BookOpen },
@@ -363,6 +366,8 @@ export function InternalSidebar({
                             { href: '/llm-config', label: 'LLM Config', Icon: Zap },
                             { href: '/quality', label: 'Quality Feedback', Icon: Star },
                             { href: '/notifications', label: 'Notifications', Icon: Bell },
+                            { href: '/sla-alerts', label: 'SLA Alerts', Icon: AlarmClock },
+                            { href: '/scheduled-reports', label: 'Report Emails', Icon: CalendarDays },
                         ].map(({ href, label, Icon }) => (
                             <Link key={href} href={href} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
                                 <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Icon className="w-3.5 h-3.5 text-slate-500" /></span>
@@ -387,6 +392,8 @@ export function InternalSidebar({
                         </div>
                     </div>
                 )}
+                <ThemeToggle />
+                <LocaleSwitcher />
                 <button
                     type="button"
                     onClick={async () => {

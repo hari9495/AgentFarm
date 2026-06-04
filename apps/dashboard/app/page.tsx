@@ -36,6 +36,7 @@ import { DeveloperAgentOverviewPanel } from './components/developer-agent-overvi
 import { DeveloperAgentStatusPanel } from './components/developer-agent-status-panel';
 import { MissionHero } from './components/mission-hero';
 import { InternalSidebar } from './components/internal-sidebar';
+import { OnboardingChecklist } from './components/onboarding-checklist';
 
 type TenantSummary = {
     tenant_id: string;
@@ -1306,6 +1307,11 @@ export default async function HomePage({
                     {(unifiedView || activeTab === 'overview') && (
                         <section id="dashboard-panel-overview" role="tabpanel" aria-labelledby="dashboard-tab-overview" className="dashboard-panel mission-section" style={{ '--stagger-index': '0' } as React.CSSProperties}>
                             {unifiedView && <p className="mission-section-label">Section 01 · Operations Overview</p>}
+                            <OnboardingChecklist
+                                agentCount={summary.active_bots}
+                                taskCount={dashboardSlice.approvalMetrics.decision_count}
+                                webhookCount={dashboardSlice.connectors.filter((c) => c.status === 'connected').length}
+                            />
                             <MissionHero
                                 tenantName={summary.tenant_name}
                                 planName={summary.plan_name}
