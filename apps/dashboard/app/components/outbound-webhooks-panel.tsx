@@ -37,12 +37,26 @@ type EventDefinition = {
     examplePayload: Record<string, unknown>;
 };
 
-type ActiveTab = 'dlq' | 'deliveries' | 'catalog';
+type ActiveTab = 'registered' | 'dlq' | 'deliveries' | 'catalog';
+
+type RegisteredWebhook = {
+    id: string;
+    url: string;
+    events: string[];
+    enabled: boolean;
+    createdAt: string;
+};
 
 type ReplayResult = { success: boolean; status: number };
 
 export default function OutboundWebhooksPanel({ tenantId: _tenantId }: OutboundWebhooksPanelProps) {
-    const [activeTab, setActiveTab] = useState<ActiveTab>('dlq');
+    const [activeTab, setActiveTab] = useState<ActiveTab>('registered');
+
+    // Registered webhooks tab state
+    const [webhooks, setWebhooks]           = useState<RegisteredWebhook[]>([]);
+    const [webhooksLoading, setWHLoading]   = useState(false);
+    const [testing, setTesting]             = useState<string | null>(null);
+    const [testResults, setTestResults]     = useState<Record<string, { ok: boolean; msg: string }>>({});
     const [dlq, setDlq] = useState<DlqEntry[]>([]);
     const [showResolved, setShowResolved] = useState(false);
     const [deliveries, setDeliveries] = useState<DeliveryRecord[]>([]);
@@ -179,6 +193,40 @@ export default function OutboundWebhooksPanel({ tenantId: _tenantId }: OutboundW
         }
     }
 
+    const fetchWebhooks = useCallback(async () => {
+        setWHLoading(true);
+        try {
+            const res = await fetch('/api/outbound-webhooks', { cache: 'no-store' });
+            const data = (await res.json()) as { webhooks?: RegisteredWebhook[]; error?: string };
+            if (res.ok) setWebhooks(data.webhooks ?? []);
+        } catch { /* ignore */ }
+        finally { setWHLoading(false); }
+    }, []);
+
+    useEffect(() => {
+        if (activeTab === 'registered') void fetchWebhooks();
+    }, [activeTab, fetchWebhooks]);
+
+    async function handleTest(webhookId: string) {
+        setTesting(webhookId);
+        setTestResults(prev => ({ ...prev, [webhookId]: { ok: false, msg: 'Sending…' } }));
+        try {
+            const res = await fetch(`/api/outbound-webhooks/${encodeURIComponent(webhookId)}/test`, { method: 'POST' });
+            const data = (await res.json()) as { dispatched?: boolean; error?: string; message?: string };
+            if (res.ok && data.dispatched) {
+                setTestResults(prev => ({ ...prev, [webhookId]: { ok: true, msg: '✓ Test payload sent' } }));
+            } else {
+                setTestResults(prev => ({ ...prev, [webhookId]: { ok: false, msg: data.message ?? data.error ?? 'Failed' } }));
+            }
+        } catch {
+            setTestResults(prev => ({ ...prev, [webhookId]: { ok: false, msg: 'Network error' } }));
+        } finally {
+            setTesting(null);
+            // Clear result after 4 s
+            setTimeout(() => setTestResults(prev => { const n = { ...prev }; delete n[webhookId]; return n; }), 4000);
+        }
+    }
+
     function handleDeliveriesSubmit(e: React.FormEvent) {
         e.preventDefault();
         const id = webhookIdInput.trim();
@@ -220,6 +268,7 @@ export default function OutboundWebhooksPanel({ tenantId: _tenantId }: OutboundW
                     marginBottom: '1.25rem',
                 }}
             >
+                <button style={TAB_BTN('registered')} onClick={() => setActiveTab('registered')}>Registered</button>
                 <button style={TAB_BTN('dlq')} onClick={() => setActiveTab('dlq')}>DLQ</button>
                 <button style={TAB_BTN('deliveries')} onClick={() => setActiveTab('deliveries')}>Deliveries</button>
                 <button style={TAB_BTN('catalog')} onClick={() => setActiveTab('catalog')}>Event Catalog</button>
@@ -239,6 +288,93 @@ export default function OutboundWebhooksPanel({ tenantId: _tenantId }: OutboundW
                     }}
                 >
                     {error}
+                </div>
+            )}
+
+            {/* ── Registered webhooks tab ── */}
+            {activeTab === 'registered' && (
+                <div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                        <p style={{ fontSize: '0.83rem', color: 'var(--ink-soft)', margin: 0 }}>
+                            Outbound webhooks registered for this tenant. Use the <strong>Test</strong> button to fire a sample payload.
+                        </p>
+                        <button
+                            onClick={() => void fetchWebhooks()}
+                            disabled={webhooksLoading}
+                            style={{ fontSize: '0.78rem', padding: '0.3rem 0.8rem', borderRadius: '0.4rem', border: '1px solid var(--line)', background: 'var(--card)', cursor: 'pointer', color: 'var(--ink-soft)' }}
+                        >
+                            {webhooksLoading ? 'Loading…' : '↻ Refresh'}
+                        </button>
+                    </div>
+                    {webhooksLoading && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            {[1,2,3].map(i => <div key={i} style={{ height: 48, borderRadius: 8, background: 'var(--bg-deep)' }} />)}
+                        </div>
+                    )}
+                    {!webhooksLoading && webhooks.length === 0 && (
+                        <p style={{ fontSize: '0.83rem', color: 'var(--ink-muted)', padding: '1rem 0' }}>
+                            No outbound webhooks registered yet. Create one from the Webhooks settings page.
+                        </p>
+                    )}
+                    {!webhooksLoading && webhooks.length > 0 && (
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.83rem' }}>
+                            <thead>
+                                <tr style={{ borderBottom: '1px solid var(--line)', textAlign: 'left' }}>
+                                    <th style={TH}>URL</th>
+                                    <th style={TH}>Events</th>
+                                    <th style={TH}>Status</th>
+                                    <th style={TH}>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {webhooks.map(wh => {
+                                    const result = testResults[wh.id];
+                                    return (
+                                        <tr key={wh.id} style={{ borderBottom: '1px solid var(--line)' }}>
+                                            <td style={{ ...TD, fontFamily: 'monospace', maxWidth: 280, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                {wh.url}
+                                            </td>
+                                            <td style={TD_MUTED}>
+                                                {Array.isArray(wh.events) ? wh.events.slice(0, 2).join(', ') + (wh.events.length > 2 ? ` +${wh.events.length - 2}` : '') : '—'}
+                                            </td>
+                                            <td style={TD}>
+                                                <span style={{
+                                                    padding: '2px 8px', borderRadius: 9999, fontSize: '0.72rem', fontWeight: 700,
+                                                    background: wh.enabled ? '#dcfce7' : '#f1f5f9',
+                                                    color: wh.enabled ? '#166534' : '#475569',
+                                                }}>
+                                                    {wh.enabled ? 'Active' : 'Disabled'}
+                                                </span>
+                                            </td>
+                                            <td style={TD}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                    <button
+                                                        onClick={() => void handleTest(wh.id)}
+                                                        disabled={testing === wh.id}
+                                                        style={{
+                                                            fontSize: '0.75rem', fontWeight: 600,
+                                                            padding: '0.3rem 0.8rem', borderRadius: '0.4rem',
+                                                            border: '1px solid var(--accent, #0066cc)',
+                                                            background: testing === wh.id ? 'var(--line)' : 'var(--accent, #0066cc)',
+                                                            color: testing === wh.id ? 'var(--ink-muted)' : '#fff',
+                                                            cursor: testing === wh.id ? 'not-allowed' : 'pointer',
+                                                        }}
+                                                    >
+                                                        {testing === wh.id ? 'Sending…' : '▶ Test'}
+                                                    </button>
+                                                    {result && (
+                                                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: result.ok ? '#166534' : '#dc2626' }}>
+                                                            {result.msg}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    )}
                 </div>
             )}
 

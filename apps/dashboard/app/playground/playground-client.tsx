@@ -151,17 +151,72 @@ const METHOD_COLORS: Record<string, string> = {
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-function buildCurl(endpoint: EndpointDef, resolvedPath: string, body: string, queryParams: Record<string, string>, baseUrl: string): string {
+function buildUrl(resolvedPath: string, queryParams: Record<string, string>, baseUrl: string): URL {
     const url = new URL(`${baseUrl}${resolvedPath}`);
-    for (const [k, v] of Object.entries(queryParams)) {
-        if (v) url.searchParams.set(k, v);
-    }
+    for (const [k, v] of Object.entries(queryParams)) { if (v) url.searchParams.set(k, v); }
+    return url;
+}
+
+function buildCurl(endpoint: EndpointDef, resolvedPath: string, body: string, queryParams: Record<string, string>, baseUrl: string): string {
+    const url = buildUrl(resolvedPath, queryParams, baseUrl);
     let curl = `curl -X ${endpoint.method} \\\n  '${url.toString()}'`;
     curl += ` \\\n  -H 'Authorization: Bearer YOUR_API_KEY'`;
     if (endpoint.method !== 'GET' && endpoint.method !== 'DELETE' && body.trim()) {
         curl += ` \\\n  -H 'Content-Type: application/json' \\\n  -d '${body.replace(/'/g, "\\'")}'`;
     }
     return curl;
+}
+
+function buildPython(endpoint: EndpointDef, resolvedPath: string, body: string, queryParams: Record<string, string>, baseUrl: string): string {
+    const url = buildUrl(resolvedPath, queryParams, baseUrl);
+    const hasBody = endpoint.method !== 'GET' && endpoint.method !== 'DELETE' && body.trim();
+    const lines: string[] = [
+        'import requests',
+        '',
+        'API_KEY = "YOUR_API_KEY"',
+        `BASE_URL = "${baseUrl}"`,
+        '',
+        'headers = {',
+        '    "Authorization": f"Bearer {API_KEY}",',
+        ...(hasBody ? ['    "Content-Type": "application/json",'] : []),
+        '}',
+        '',
+    ];
+    if (hasBody) {
+        lines.push('payload = ' + body.split('\n').map((l, i) => i === 0 ? l : '    ' + l).join('\n'));
+        lines.push('');
+    }
+    const qs = url.search ? `?${url.searchParams.toString()}` : '';
+    lines.push(`response = requests.${endpoint.method.toLowerCase()}(`);
+    lines.push(`    f"{BASE_URL}${resolvedPath}${qs}",`);
+    lines.push('    headers=headers,');
+    if (hasBody) lines.push('    json=payload,');
+    lines.push(')');
+    lines.push('');
+    lines.push('print(response.status_code, response.json())');
+    return lines.join('\n');
+}
+
+function buildTypeScript(endpoint: EndpointDef, resolvedPath: string, body: string, queryParams: Record<string, string>, baseUrl: string): string {
+    const url = buildUrl(resolvedPath, queryParams, baseUrl);
+    const hasBody = endpoint.method !== 'GET' && endpoint.method !== 'DELETE' && body.trim();
+    const lines: string[] = [
+        'const API_KEY = "YOUR_API_KEY";',
+        `const BASE_URL = "${baseUrl}";`,
+        '',
+        `const response = await fetch(\`\${BASE_URL}${url.pathname}${url.search}\`, {`,
+        `    method: "${endpoint.method}",`,
+        '    headers: {',
+        '        "Authorization": `Bearer ${API_KEY}`,',
+        ...(hasBody ? ['        "Content-Type": "application/json",'] : []),
+        '    },',
+        ...(hasBody ? [`    body: JSON.stringify(${body.split('\n').map((l, i) => i === 0 ? l : '    ' + l).join('\n')}),`] : []),
+        '});',
+        '',
+        'const data = await response.json();',
+        'console.log(response.status, data);',
+    ];
+    return lines.join('\n');
 }
 
 // ── Component ──────────────────────────────────────────────────────────────
@@ -182,6 +237,7 @@ export default function PlaygroundClient({ tenantId, workspaceId }: { tenantId: 
     } | null>(null);
     const [showCurl, setShowCurl] = useState(false);
     const [copied, setCopied] = useState(false);
+    const [snippetLang, setSnippetLang] = useState<'curl' | 'python' | 'typescript'>('curl');
 
     const endpoint = ENDPOINTS.find((e) => e.id === selectedId) ?? ENDPOINTS[0]!;
 
@@ -239,8 +295,6 @@ export default function PlaygroundClient({ tenantId, workspaceId }: { tenantId: 
             setLoading(false);
         }
     }, [endpoint, resolvedPath, queryParams, bodyText]);
-
-    const curlSnippet = buildCurl(endpoint, resolvedPath, bodyText, queryParams, 'https://your-gateway.agentfarm.io');
 
     const copyText = (text: string) => {
         void navigator.clipboard.writeText(text).then(() => {
@@ -329,7 +383,7 @@ export default function PlaygroundClient({ tenantId, workspaceId }: { tenantId: 
                             onClick={() => setShowCurl((v) => !v)}
                             style={{ flexShrink: 0 }}
                         >
-                            {showCurl ? 'Hide cURL' : 'cURL'}
+                            {showCurl ? 'Hide code' : '&lt;/&gt; Code'}
                         </button>
                     </div>
                     {endpoint.description && (
@@ -337,20 +391,43 @@ export default function PlaygroundClient({ tenantId, workspaceId }: { tenantId: 
                     )}
                 </div>
 
-                {/* cURL snippet */}
-                {showCurl && (
-                    <div className="card" style={{ padding: '0.75rem 1rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
-                            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#57534e', textTransform: 'uppercase', letterSpacing: '0.05em' }}>cURL</span>
-                            <button type="button" className="chip-button" onClick={() => copyText(curlSnippet)}>
-                                {copied ? '✓ Copied' : 'Copy'}
-                            </button>
+                {/* Code snippets — cURL / Python / TypeScript */}
+                {showCurl && (() => {
+                    const BASE = 'https://your-gateway.agentfarm.io';
+                    const snippets: Record<string, string> = {
+                        curl:       buildCurl(endpoint, resolvedPath, bodyText, queryParams, BASE),
+                        python:     buildPython(endpoint, resolvedPath, bodyText, queryParams, BASE),
+                        typescript: buildTypeScript(endpoint, resolvedPath, bodyText, queryParams, BASE),
+                    };
+                    const active = snippets[snippetLang] ?? '';
+                    const LANG_COLORS: Record<string, string> = { curl: '#a8e6cf', python: '#ffd580', typescript: '#82b4ff' };
+                    return (
+                        <div className="card" style={{ padding: '0.75rem 1rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: '0.5rem' }}>
+                                {(['curl', 'python', 'typescript'] as const).map(lang => (
+                                    <button key={lang} type="button"
+                                        onClick={() => setSnippetLang(lang)}
+                                        style={{
+                                            fontSize: '0.72rem', fontWeight: 700, padding: '0.2rem 0.7rem',
+                                            borderRadius: '0.3rem', border: 'none', cursor: 'pointer',
+                                            background: snippetLang === lang ? '#374151' : 'transparent',
+                                            color: snippetLang === lang ? (LANG_COLORS[lang] ?? '#fff') : '#78716c',
+                                            textTransform: lang === 'typescript' ? 'none' : 'capitalize',
+                                        }}>
+                                        {lang === 'typescript' ? 'TypeScript' : lang === 'python' ? 'Python' : 'cURL'}
+                                    </button>
+                                ))}
+                                <button type="button" className="chip-button" style={{ marginLeft: 'auto' }}
+                                    onClick={() => copyText(active)}>
+                                    {copied ? '✓ Copied' : 'Copy'}
+                                </button>
+                            </div>
+                            <pre style={{ margin: 0, fontSize: '0.75rem', fontFamily: 'ui-monospace, monospace', background: '#1d1d1f', color: LANG_COLORS[snippetLang] ?? '#a8e6cf', padding: '0.75rem', borderRadius: '0.4rem', overflowX: 'auto', lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+                                {active}
+                            </pre>
                         </div>
-                        <pre style={{ margin: 0, fontSize: '0.75rem', fontFamily: 'ui-monospace, monospace', background: '#1d1d1f', color: '#a8e6cf', padding: '0.75rem', borderRadius: '0.4rem', overflowX: 'auto', lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
-                            {curlSnippet}
-                        </pre>
-                    </div>
-                )}
+                    );
+                })()}
 
                 {/* Parameters */}
                 {(endpoint.params.some((p) => p.in === 'path') || endpoint.params.some((p) => p.in === 'query')) && (

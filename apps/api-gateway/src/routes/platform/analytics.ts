@@ -535,4 +535,103 @@ export const registerAnalyticsRoutes = async (
 
         return reply.send({ from: fromDate.toISOString(), to: toDate.toISOString(), byAgent: result });
     });
+
+    // -----------------------------------------------------------------------
+    // GET /v1/analytics/cost-forecast
+    // Projects end-of-month spend from the current run rate.
+    // Returns actual daily spending + projected remaining days.
+    // -----------------------------------------------------------------------
+    app.get<{ Querystring: { tenantId?: string; workspaceId?: string } }>(
+        '/v1/analytics/cost-forecast',
+        async (request, reply) => {
+            const session = options.getSession(request);
+            if (!session) return reply.code(401).send({ error: 'unauthorized' });
+
+            const tenantId = request.query.tenantId ?? session.tenantId;
+            if (tenantId !== session.tenantId) return reply.code(403).send({ error: 'forbidden' });
+
+            const prisma = await getPrisma();
+            const now   = new Date();
+            const year  = now.getUTCFullYear();
+            const month = now.getUTCMonth(); // 0-indexed
+
+            const monthStart    = new Date(Date.UTC(year, month, 1));
+            const monthEnd      = new Date(Date.UTC(year, month + 1, 1)); // exclusive
+            const lastMonStart  = new Date(Date.UTC(year, month - 1, 1));
+            const lastMonEnd    = monthStart;
+
+            const daysInMonth   = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+            const daysElapsed   = Math.max(1, now.getUTCDate());
+            const daysRemaining = daysInMonth - daysElapsed;
+
+            const where = (from: Date, to: Date) => ({
+                tenantId,
+                executedAt: { gte: from, lt: to },
+                ...(request.query.workspaceId ? { workspaceId: request.query.workspaceId } : {}),
+            });
+
+            const [currentRecs, lastMonRecs] = await Promise.all([
+                prisma.taskExecutionRecord.findMany({
+                    where: where(monthStart, monthEnd),
+                    select: { executedAt: true, estimatedCostUsd: true, platformFeeUsd: true, outcome: true },
+                }),
+                prisma.taskExecutionRecord.aggregate({
+                    where: where(lastMonStart, lastMonEnd),
+                    _sum: { estimatedCostUsd: true, platformFeeUsd: true },
+                }),
+            ]);
+
+            // Group by UTC date
+            const byDay: Record<string, { costUsd: number; taskCount: number }> = {};
+            let actualCostUsd = 0;
+            for (const rec of currentRecs) {
+                const dayKey = rec.executedAt.toISOString().slice(0, 10);
+                if (!byDay[dayKey]) byDay[dayKey] = { costUsd: 0, taskCount: 0 };
+                const cost = (rec.estimatedCostUsd ?? 0) + (rec.platformFeeUsd ?? 0);
+                byDay[dayKey].costUsd += cost;
+                byDay[dayKey].taskCount += 1;
+                actualCostUsd += cost;
+            }
+
+            const dailyRate = actualCostUsd / daysElapsed;
+            const projectedRemaining = dailyRate * daysRemaining;
+            const projectedMonthTotal = actualCostUsd + projectedRemaining;
+
+            const lastMonthCostUsd = (lastMonRecs._sum.estimatedCostUsd ?? 0) +
+                                     (lastMonRecs._sum.platformFeeUsd ?? 0);
+            const percentChangeVsLastMonth = lastMonthCostUsd > 0
+                ? ((projectedMonthTotal - lastMonthCostUsd) / lastMonthCostUsd) * 100
+                : null;
+
+            // Build daily data: actual for elapsed days + projected for remaining
+            const dailyData: Array<{ date: string; costUsd: number; taskCount: number; isProjected: boolean }> = [];
+            for (let d = 1; d <= daysInMonth; d++) {
+                const date = new Date(Date.UTC(year, month, d)).toISOString().slice(0, 10);
+                const isProjected = d > daysElapsed;
+                const actual = byDay[date];
+                dailyData.push({
+                    date,
+                    costUsd:    isProjected ? dailyRate : (actual?.costUsd ?? 0),
+                    taskCount:  isProjected ? 0         : (actual?.taskCount ?? 0),
+                    isProjected,
+                });
+            }
+
+            return reply.send({
+                month:                  `${year}-${String(month + 1).padStart(2, '0')}`,
+                today:                  now.toISOString().slice(0, 10),
+                daysInMonth,
+                daysElapsed,
+                daysRemaining,
+                actualCostUsd:          Math.round(actualCostUsd * 10000) / 10000,
+                projectedMonthTotal:    Math.round(projectedMonthTotal * 10000) / 10000,
+                dailyRate:              Math.round(dailyRate * 10000) / 10000,
+                lastMonthCostUsd:       Math.round(lastMonthCostUsd * 10000) / 10000,
+                percentChangeVsLastMonth: percentChangeVsLastMonth !== null
+                    ? Math.round(percentChangeVsLastMonth * 10) / 10
+                    : null,
+                dailyData,
+            });
+        },
+    );
 };
