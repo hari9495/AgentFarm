@@ -29,12 +29,27 @@ type LoopIdParams = {
     loopId: string;
 };
 
-export function registerAutonomousLoopRoutes(app: FastifyInstance): void {
+type LoopOrchestrator = {
+    execute: (config: LoopConfig) => Promise<{ state: string; [key: string]: unknown }>;
+    getRunById: (id: string) => unknown;
+    getRecentRuns: (n: number) => unknown[];
+    cancelLoop: (id: string) => boolean;
+};
+
+export type RegisterAutonomousLoopRoutesOptions = {
+    orchestrator?: LoopOrchestrator;
+};
+
+export function registerAutonomousLoopRoutes(app: FastifyInstance, options: RegisterAutonomousLoopRoutesOptions = {}): void {
+    const resolveOrchestrator = options.orchestrator
+        ? () => Promise.resolve(options.orchestrator!)
+        : getLoopOrchestrator;
+
     // Execute an autonomous loop
     app.post(
         '/v1/autonomous-loops/execute',
         async (req: FastifyRequest<{ Body: ExecuteLoopBody }>, reply) => {
-            const orchestrator = await getLoopOrchestrator();
+            const orchestrator = await resolveOrchestrator();
             const config = (req.body ?? {}) as LoopConfig;
 
             if (!config.initial_skill || !config.success_criteria) {
@@ -54,7 +69,7 @@ export function registerAutonomousLoopRoutes(app: FastifyInstance): void {
     app.get(
         '/v1/autonomous-loops/:loopId',
         async (req: FastifyRequest<{ Params: LoopIdParams }>, reply) => {
-            const orchestrator = await getLoopOrchestrator();
+            const orchestrator = await resolveOrchestrator();
             const { loopId } = req.params as LoopIdParams;
 
             const run = orchestrator.getRunById(loopId);
@@ -68,7 +83,7 @@ export function registerAutonomousLoopRoutes(app: FastifyInstance): void {
 
     // List recent loop runs
     app.get('/v1/autonomous-loops', async (_req, reply) => {
-        const orchestrator = await getLoopOrchestrator();
+        const orchestrator = await resolveOrchestrator();
 
         const runs = orchestrator.getRecentRuns(20);
         return reply.send({ loops: runs, total: runs.length });
@@ -78,7 +93,7 @@ export function registerAutonomousLoopRoutes(app: FastifyInstance): void {
     app.delete(
         '/v1/autonomous-loops/:loopId',
         async (req: FastifyRequest<{ Params: LoopIdParams }>, reply) => {
-            const orchestrator = await getLoopOrchestrator();
+            const orchestrator = await resolveOrchestrator();
             const { loopId } = req.params as LoopIdParams;
 
             const success = orchestrator.cancelLoop(loopId);

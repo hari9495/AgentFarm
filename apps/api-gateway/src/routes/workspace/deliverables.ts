@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { PrismaClient } from '@prisma/client';
 
 const getPrisma = async () => {
     const db = await import('../../lib/db.js');
@@ -15,6 +16,7 @@ type SessionContext = {
 export type RegisterDeliverableRoutesOptions = {
     getSession: (req: FastifyRequest) => SessionContext | null;
     now?: () => number;
+    prisma?: PrismaClient;
 };
 
 type DeliverablesQuery = {
@@ -51,6 +53,9 @@ export const registerDeliverableRoutes = async (
     app: FastifyInstance,
     options: RegisterDeliverableRoutesOptions,
 ): Promise<void> => {
+    const resolvePrisma = options.prisma
+        ? () => Promise.resolve(options.prisma!)
+        : getPrisma;
 
     // GET /v1/workspaces/:workspaceId/deliverables
     app.get<{ Params: DeliverableParams; Querystring: DeliverablesQuery }>(
@@ -79,7 +84,7 @@ export const registerDeliverableRoutes = async (
             const rawStatus = request.query.status?.trim().toLowerCase();
             const statusFilter = rawStatus && ALLOWED_STATUSES.has(rawStatus) ? rawStatus : 'completed';
 
-            const prisma = await getPrisma();
+            const prisma = await resolvePrisma();
 
             const where = {
                 workspaceId,
@@ -175,7 +180,7 @@ export const registerDeliverableRoutes = async (
                 return reply.code(403).send({ error: 'workspace_scope_violation' });
             }
 
-            const prisma = await getPrisma();
+            const prisma = await resolvePrisma();
             const rows = await prisma.$queryRaw<Array<{ actionType: string }>>`
                 SELECT DISTINCT "actionType"
                 FROM "ActionRecord"

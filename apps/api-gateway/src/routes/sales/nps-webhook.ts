@@ -17,8 +17,14 @@ import type { FastifyInstance } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
 import { recordNpsResponse } from '@agentfarm/agent-runtime/sales/nps-handler.js';
 
+type RecordNpsFn = (
+    params: { token: string; score: number; feedback?: string },
+    prisma: PrismaClient,
+) => Promise<{ ok: boolean; error?: string }>;
+
 export type RegisterNpsWebhookRoutesOptions = {
     prisma?: PrismaClient;
+    recordNpsResponse?: RecordNpsFn;
 };
 
 type TokenParams = { token: string };
@@ -76,6 +82,7 @@ export async function registerNpsWebhookRoutes(
     const resolvePrisma = options.prisma
         ? () => Promise.resolve(options.prisma!)
         : getPrisma;
+    const doRecordNpsResponse = options.recordNpsResponse ?? recordNpsResponse;
 
     // POST — body { score, feedback? }
     app.post<{ Params: TokenParams; Body: NpsBody }>(
@@ -90,7 +97,7 @@ export async function registerNpsWebhookRoutes(
                 return reply.status(400).send({ code: 'INVALID_SCORE', message: scoreError });
             }
 
-            const result = await recordNpsResponse(
+            const result = await doRecordNpsResponse(
                 { token, score, feedback: request.body?.feedback },
                 prisma,
             );
@@ -117,7 +124,7 @@ export async function registerNpsWebhookRoutes(
                 return reply.status(400).send({ code: 'INVALID_SCORE', message: scoreError });
             }
 
-            await recordNpsResponse({ token, score }, prisma).catch(() => undefined);
+            await doRecordNpsResponse({ token, score }, prisma).catch(() => undefined);
 
             // Redirect to a thank-you page if one is configured, else JSON
             const thankYouUrl = process.env['NPS_THANKYOU_URL'];

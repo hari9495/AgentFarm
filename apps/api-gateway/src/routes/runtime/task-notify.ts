@@ -10,6 +10,7 @@
  */
 
 import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { PrismaClient } from '@prisma/client';
 import { dispatchOutboundWebhooks } from '../../lib/webhook-dispatcher.js';
 
 const getPrisma = async () => {
@@ -34,6 +35,7 @@ export type RegisterTaskNotifyRoutesOptions = {
     getSession?: (req: FastifyRequest) => { tenantId: string } | null;
     dispatchToken?: string;
     now?: () => number;
+    prisma?: PrismaClient;
 };
 
 const readDispatchToken = (request: FastifyRequest): string | null => {
@@ -55,6 +57,9 @@ export const registerTaskNotifyRoutes = async (
         ?? null;
 
     const now = options.now ?? (() => Date.now());
+    const resolvePrisma = options.prisma
+        ? () => Promise.resolve(options.prisma!)
+        : getPrisma;
 
     app.post<{ Body: NotifyBody }>('/v1/tasks/notify', async (request, reply) => {
         // Auth: accept HMAC dispatch token OR an authenticated session
@@ -86,7 +91,7 @@ export const registerTaskNotifyRoutes = async (
         }
 
         const timestamp = new Date(now()).toISOString();
-        const prisma = await getPrisma();
+        const prisma = await resolvePrisma();
 
         const isFailure = outcome === 'failed' || outcome === 'failure';
 

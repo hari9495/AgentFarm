@@ -16,6 +16,7 @@
 
 import { randomUUID } from 'node:crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { PrismaClient } from '@prisma/client';
 
 const getPrisma = async () => {
     const db = await import('../../lib/db.js');
@@ -31,6 +32,7 @@ type SessionContext = {
 
 export type RegisterBatchDispatchRoutesOptions = {
     getSession: (req: FastifyRequest) => SessionContext | null;
+    prisma?: PrismaClient;
 };
 
 const MAX_ROWS = 200;
@@ -64,6 +66,9 @@ export const registerBatchDispatchRoutes = async (
     app: FastifyInstance,
     options: RegisterBatchDispatchRoutesOptions,
 ): Promise<void> => {
+    const resolvePrisma = options.prisma
+        ? () => Promise.resolve(options.prisma!)
+        : getPrisma;
 
     // ── POST /v1/agents/batch-dispatch — create batch ────────────────────────
     app.post<{ Body: CreateBatchBody }>('/v1/agents/batch-dispatch', async (request, reply) => {
@@ -98,7 +103,7 @@ export const registerBatchDispatchRoutes = async (
         }
 
         // Verify bot belongs to this tenant
-        const prisma = await getPrisma();
+        const prisma = await resolvePrisma();
         const bot = await prisma.bot.findFirst({
             where: { id: toAgentId, workspace: { tenantId: session.tenantId } },
             select: { id: true, workspaceId: true },
@@ -195,7 +200,7 @@ export const registerBatchDispatchRoutes = async (
                 return reply.code(403).send({ error: 'workspace_scope_violation' });
             }
 
-            const prisma = await getPrisma();
+            const prisma = await resolvePrisma();
             const runs = await prisma.orchestrationRun.findMany({
                 where: {
                     tenantId: session.tenantId,
@@ -230,7 +235,7 @@ export const registerBatchDispatchRoutes = async (
             const session = options.getSession(request);
             if (!session) return reply.code(401).send({ error: 'unauthorized' });
 
-            const prisma = await getPrisma();
+            const prisma = await resolvePrisma();
             const run = await prisma.orchestrationRun.findFirst({
                 where: { id: request.params.batchId, tenantId: session.tenantId },
                 include: {

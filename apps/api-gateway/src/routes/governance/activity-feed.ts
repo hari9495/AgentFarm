@@ -7,6 +7,7 @@
  */
 
 import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { PrismaClient } from '@prisma/client';
 
 const getPrisma = async () => {
     const db = await import('../../lib/db.js');
@@ -23,6 +24,7 @@ type SessionContext = {
 
 export type RegisterActivityFeedRoutesOptions = {
     getSession: (request: FastifyRequest) => SessionContext | null;
+    prisma?: PrismaClient;
 };
 
 // ── Normalised item type ──────────────────────────────────────────────────────
@@ -161,6 +163,9 @@ export async function registerActivityFeedRoutes(
     options: RegisterActivityFeedRoutesOptions,
 ): Promise<void> {
     const { getSession } = options;
+    const resolvePrisma = options.prisma
+        ? () => Promise.resolve(options.prisma!)
+        : getPrisma;
 
     app.get<{
         Params: { workspaceId: string };
@@ -181,7 +186,7 @@ export async function registerActivityFeedRoutes(
             const perSource = Math.max(limit, 60); // fetch more than needed before merge
 
             try {
-                const prisma = await getPrisma();
+                const prisma = await resolvePrisma();
 
                 const [activityEvents, dispatches, approvals] = await Promise.all([
                     // ActivityEvent — primary feed source

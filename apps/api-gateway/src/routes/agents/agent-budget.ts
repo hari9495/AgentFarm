@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { PrismaClient } from '@prisma/client';
 import { randomBytes } from 'node:crypto';
 
 const getPrisma = async () => {
@@ -15,6 +16,7 @@ type SessionContext = {
 
 export type RegisterAgentBudgetRoutesOptions = {
     getSession: (req: FastifyRequest) => SessionContext | null;
+    prisma?: PrismaClient;
 };
 
 type BudgetConfigRow = {
@@ -37,6 +39,9 @@ export const registerAgentBudgetRoutes = async (
     app: FastifyInstance,
     options: RegisterAgentBudgetRoutesOptions,
 ): Promise<void> => {
+    const resolvePrisma = options.prisma
+        ? () => Promise.resolve(options.prisma!)
+        : getPrisma;
 
     // GET /v1/agents/:botId/budget — fetch config + current month/day spend
     app.get<{ Params: { botId: string } }>('/v1/agents/:botId/budget', async (request, reply) => {
@@ -44,7 +49,7 @@ export const registerAgentBudgetRoutes = async (
         if (!session) return reply.code(401).send({ error: 'unauthorized' });
 
         const { botId } = request.params;
-        const prisma = await getPrisma();
+        const prisma = await resolvePrisma();
 
         // Verify bot belongs to this tenant
         const bot = await prisma.bot.findFirst({
@@ -125,7 +130,7 @@ export const registerAgentBudgetRoutes = async (
             });
         }
 
-        const prisma = await getPrisma();
+        const prisma = await resolvePrisma();
         const bot = await prisma.bot.findFirst({
             where: { id: botId, workspace: { tenantId: session.tenantId } },
             select: { id: true, workspaceId: true },
@@ -190,7 +195,7 @@ export const registerAgentBudgetRoutes = async (
         if (!session) return reply.code(401).send({ error: 'unauthorized' });
 
         const { botId } = request.params;
-        const prisma = await getPrisma();
+        const prisma = await resolvePrisma();
 
         const bot = await prisma.bot.findFirst({
             where: { id: botId, workspace: { tenantId: session.tenantId } },

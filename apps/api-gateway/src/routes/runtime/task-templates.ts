@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { PrismaClient } from '@prisma/client';
 import type {
     TaskTemplate,
     TaskTemplateDispatchRequest,
@@ -21,6 +22,7 @@ type SessionContext = {
 
 export type RegisterTaskTemplateRoutesOptions = {
     getSession: (request: FastifyRequest) => SessionContext | null;
+    prisma?: PrismaClient;
 };
 
 // ── Built-in templates ────────────────────────────────────────────────────────
@@ -328,6 +330,9 @@ export async function registerTaskTemplateRoutes(
     options: RegisterTaskTemplateRoutesOptions,
 ): Promise<void> {
     const { getSession } = options;
+    const resolvePrisma = options.prisma
+        ? () => Promise.resolve(options.prisma!)
+        : getPrisma;
 
     // ── GET /v1/task-templates ─────────────────────────────────────────────────
     app.get<{ Querystring: { category?: string; agentRole?: string; q?: string; builtInOnly?: string } }>(
@@ -348,7 +353,7 @@ export async function registerTaskTemplateRoutes(
 
             if (builtInOnly !== 'true') {
                 try {
-                    const prisma = await getPrisma();
+                    const prisma = await resolvePrisma();
                     const dbRows = await prisma.taskTemplate.findMany({
                         where: {
                             OR: [{ tenantId: null }, { tenantId: session.tenantId }],
@@ -409,7 +414,7 @@ export async function registerTaskTemplateRoutes(
             }
 
             try {
-                const prisma = await getPrisma();
+                const prisma = await resolvePrisma();
                 const row = await prisma.taskTemplate.findFirst({
                     where: {
                         OR: [{ id }, { slug: id }],
@@ -442,7 +447,7 @@ export async function registerTaskTemplateRoutes(
             }
 
             try {
-                const prisma = await getPrisma();
+                const prisma = await resolvePrisma();
                 const row = await prisma.taskTemplate.create({
                     data: {
                         id: randomUUID(),
@@ -491,7 +496,7 @@ export async function registerTaskTemplateRoutes(
 
             if (!template) {
                 try {
-                    const prisma = await getPrisma();
+                    const prisma = await resolvePrisma();
                     const row = await prisma.taskTemplate.findFirst({
                         where: {
                             OR: [{ id }, { slug: id }],
@@ -519,7 +524,7 @@ export async function registerTaskTemplateRoutes(
             const queuedAt = new Date().toISOString();
 
             try {
-                const prisma = await getPrisma();
+                const prisma = await resolvePrisma();
 
                 await prisma.agentDispatchRecord.create({
                     data: {
