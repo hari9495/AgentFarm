@@ -160,15 +160,18 @@ export const registerAgentBudgetRoutes = async (
                 )
             `;
         } else {
-            const setClauses: string[] = ['"updatedAt" = NOW()'];
-            if (dailyLimit !== undefined)  setClauses.push(`"dailyLimitUsd" = ${dailyLimit === null ? 'NULL' : dailyLimit}`);
-            if (monthlyLimit !== undefined) setClauses.push(`"monthlyLimitUsd" = ${monthlyLimit === null ? 'NULL' : monthlyLimit}`);
-            if (typeof enabled === 'boolean') setClauses.push(`"enabled" = ${enabled}`);
-            await prisma.$executeRawUnsafe(
-                `UPDATE "AgentBudgetConfig" SET ${setClauses.join(', ')} WHERE "botId" = $1 AND "tenantId" = $2`,
-                botId,
-                session.tenantId,
-            );
+            // Use individual parameterised $executeRaw calls per field — avoids
+            // $executeRawUnsafe even though the values are numbers/booleans and
+            // the injection risk is low. Consistent with the tenant-branding pattern.
+            if (dailyLimit !== undefined) {
+                await prisma.$executeRaw`UPDATE "AgentBudgetConfig" SET "dailyLimitUsd" = ${dailyLimit ?? null}, "updatedAt" = NOW() WHERE "botId" = ${botId} AND "tenantId" = ${session.tenantId}`;
+            }
+            if (monthlyLimit !== undefined) {
+                await prisma.$executeRaw`UPDATE "AgentBudgetConfig" SET "monthlyLimitUsd" = ${monthlyLimit ?? null}, "updatedAt" = NOW() WHERE "botId" = ${botId} AND "tenantId" = ${session.tenantId}`;
+            }
+            if (typeof enabled === 'boolean') {
+                await prisma.$executeRaw`UPDATE "AgentBudgetConfig" SET "enabled" = ${enabled}, "updatedAt" = NOW() WHERE "botId" = ${botId} AND "tenantId" = ${session.tenantId}`;
+            }
         }
 
         const updated = await prisma.$queryRaw<BudgetConfigRow[]>`
