@@ -23,6 +23,7 @@
 // ---------------------------------------------------------------------------
 
 import { normalizeIngestContent } from '../shared/rag-ingest-normalizer.js';
+import { applyRagContextBudget } from '../shared/rag-context-limiter.js';
 import type { MemoryRetrievalConfig } from '@agentfarm/memory-service';
 
 export type PmDocumentType =
@@ -219,7 +220,7 @@ export async function buildPmRagContext(
     const s3 = formatPmLessons(lessons); if (s3) sections.push(s3);
 
     return {
-        contextBlock: sections.length > 0 ? `## Project Context\n\n${sections.join('\n---\n\n')}` : '',
+        contextBlock: sections.length > 0 ? applyRagContextBudget(`## Project Context\n\n${sections.join('\n---\n\n')}`) : '',
         similarDocCount: similarDocs.length,
         templateChunkCount: templateChunks.length,
         lessonCount: lessons.length,

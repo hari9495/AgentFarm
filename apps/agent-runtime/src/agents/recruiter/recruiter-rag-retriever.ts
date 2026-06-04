@@ -24,6 +24,7 @@
 // ---------------------------------------------------------------------------
 
 import { normalizeIngestContent } from '../shared/rag-ingest-normalizer.js';
+import { applyRagContextBudget } from '../shared/rag-context-limiter.js';
 import type { MemoryRetrievalConfig } from '@agentfarm/memory-service';
 
 export type RecruiterDomain =
@@ -286,7 +287,7 @@ export async function buildRecruiterRagContext(
     if (lessonsSection) sections.push(lessonsSection);
 
     const contextBlock = sections.length > 0
-        ? `## Hiring Context\n\n${sections.join('\n---\n\n')}`
+        ? applyRagContextBudget(`## Hiring Context\n\n${sections.join('\n---\n\n')}`)
         : '';
 
     return {

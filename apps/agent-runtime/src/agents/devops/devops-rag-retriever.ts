@@ -15,6 +15,7 @@
  */
 
 import { normalizeIngestContent } from '../shared/rag-ingest-normalizer.js';
+import { applyRagContextBudget } from '../shared/rag-context-limiter.js';
 import type { MemoryRetrievalConfig } from '@agentfarm/memory-service';
 
 export type DevOpsDocumentType =
@@ -121,7 +122,7 @@ export async function buildDevOpsRagContext(query: DevOpsRagQuery, gatewayBaseUr
         sections.push(lines.join('\n'));
     }
 
-    return { contextBlock: sections.length > 0 ? `## Ops Context\n\n${sections.join('\n---\n\n')}` : '', similarArtifactCount: similarArtifacts.length, templateChunkCount: templateChunks.length, lessonCount: lessons.length, retrievedAt: new Date().toISOString() };
+    return { contextBlock: sections.length > 0 ? applyRagContextBudget(`## Ops Context\n\n${sections.join('\n---\n\n')}`) : '', similarArtifactCount: similarArtifacts.length, templateChunkCount: templateChunks.length, lessonCount: lessons.length, retrievedAt: new Date().toISOString() };
 }
 
 export async function ingestApprovedOpsArtifact(params: { tenantId: string; botId?: string; artifactTitle: string; documentType: DevOpsDocumentType; content: string; mimeType?: string; sourceUrl?: string; cloudProvider?: CloudProvider; stack?: string[]; gatewayBaseUrl: string; serviceToken: string }): Promise<boolean> {

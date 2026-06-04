@@ -15,6 +15,7 @@
  */
 
 import { normalizeIngestContent } from '../shared/rag-ingest-normalizer.js';
+import { applyRagContextBudget } from '../shared/rag-context-limiter.js';
 import type { MemoryRetrievalConfig } from '@agentfarm/memory-service';
 
 export type MarketingChannel =
@@ -138,7 +139,7 @@ export async function buildMarketingRagContext(query: MarketingRagQuery, gateway
         sections.push(lines.join('\n'));
     }
 
-    return { contextBlock: sections.length > 0 ? `## Marketing Context\n\n${sections.join('\n---\n\n')}` : '', similarCampaignCount: similarCampaigns.length, playbookChunkCount: playbookChunks.length, lessonCount: lessons.length, retrievedAt: new Date().toISOString() };
+    return { contextBlock: sections.length > 0 ? applyRagContextBudget(`## Marketing Context\n\n${sections.join('\n---\n\n')}`) : '', similarCampaignCount: similarCampaigns.length, playbookChunkCount: playbookChunks.length, lessonCount: lessons.length, retrievedAt: new Date().toISOString() };
 }
 
 export async function ingestApprovedCampaign(params: { tenantId: string; botId?: string; campaignTitle: string; documentType: MarketingDocumentType; content: string; mimeType?: string; sourceUrl?: string; channels?: MarketingChannel[]; performanceScore?: number; gatewayBaseUrl: string; serviceToken: string }): Promise<boolean> {

@@ -23,6 +23,7 @@
 // ---------------------------------------------------------------------------
 
 import { normalizeIngestContent } from '../shared/rag-ingest-normalizer.js';
+import { applyRagContextBudget } from '../shared/rag-context-limiter.js';
 import type { MemoryRetrievalConfig } from '@agentfarm/memory-service';
 
 export type DevDocumentType =
@@ -233,7 +234,7 @@ export async function buildDeveloperRagContext(
     const s3 = formatDevLessons(lessons); if (s3) sections.push(s3);
 
     return {
-        contextBlock: sections.length > 0 ? `## Developer Context\n\n${sections.join('\n---\n\n')}` : '',
+        contextBlock: sections.length > 0 ? applyRagContextBudget(`## Developer Context\n\n${sections.join('\n---\n\n')}`) : '',
         similarImplCount: similarImpls.length,
         patternChunkCount: patternChunks.length,
         lessonCount: lessons.length,

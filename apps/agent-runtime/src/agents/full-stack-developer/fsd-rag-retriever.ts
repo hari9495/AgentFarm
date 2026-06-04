@@ -15,6 +15,7 @@
  */
 
 import { normalizeIngestContent } from '../shared/rag-ingest-normalizer.js';
+import { applyRagContextBudget } from '../shared/rag-context-limiter.js';
 import type { MemoryRetrievalConfig } from '@agentfarm/memory-service';
 
 export type FsdDocumentType =
@@ -116,7 +117,7 @@ export async function buildFsdRagContext(query: FsdRagQuery, gatewayBaseUrl: str
         sections.push(lines.join('\n'));
     }
 
-    return { contextBlock: sections.length > 0 ? `## Dev Context\n\n${sections.join('\n---\n\n')}` : '', similarImplCount: similarImpls.length, patternChunkCount: patternChunks.length, lessonCount: lessons.length, retrievedAt: new Date().toISOString() };
+    return { contextBlock: sections.length > 0 ? applyRagContextBudget(`## Dev Context\n\n${sections.join('\n---\n\n')}`) : '', similarImplCount: similarImpls.length, patternChunkCount: patternChunks.length, lessonCount: lessons.length, retrievedAt: new Date().toISOString() };
 }
 
 export async function ingestApprovedImplementation(params: { tenantId: string; botId?: string; implTitle: string; documentType: FsdDocumentType; content: string; mimeType?: string; sourceUrl?: string; stack?: FsdStack[]; gatewayBaseUrl: string; serviceToken: string }): Promise<boolean> {

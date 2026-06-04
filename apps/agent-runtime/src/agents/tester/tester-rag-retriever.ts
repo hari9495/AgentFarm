@@ -15,6 +15,7 @@
  */
 
 import { normalizeIngestContent } from '../shared/rag-ingest-normalizer.js';
+import { applyRagContextBudget } from '../shared/rag-context-limiter.js';
 import type { MemoryRetrievalConfig } from '@agentfarm/memory-service';
 
 export type TesterDocumentType =
@@ -99,7 +100,7 @@ export async function buildTesterRagContext(query: TesterRagQuery, gatewayBaseUr
         sections.push(lines.join('\n'));
     }
 
-    return { contextBlock: sections.length > 0 ? `## Testing Context\n\n${sections.join('\n---\n\n')}` : '', similarTestCount: similarTests.length, templateChunkCount: templateChunks.length, lessonCount: lessons.length, retrievedAt: new Date().toISOString() };
+    return { contextBlock: sections.length > 0 ? applyRagContextBudget(`## Testing Context\n\n${sections.join('\n---\n\n')}`) : '', similarTestCount: similarTests.length, templateChunkCount: templateChunks.length, lessonCount: lessons.length, retrievedAt: new Date().toISOString() };
 }
 
 export async function ingestApprovedTestSuite(params: { tenantId: string; botId?: string; suiteTitle: string; documentType: TesterDocumentType; content: string; mimeType?: string; sourceUrl?: string; testType?: string; bugCount?: number; gatewayBaseUrl: string; serviceToken: string }): Promise<boolean> {

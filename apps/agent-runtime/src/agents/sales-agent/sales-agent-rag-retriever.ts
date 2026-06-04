@@ -26,6 +26,7 @@
 // ---------------------------------------------------------------------------
 
 import { normalizeIngestContent } from '../shared/rag-ingest-normalizer.js';
+import { applyRagContextBudget } from '../shared/rag-context-limiter.js';
 import type { MemoryRetrievalConfig } from '@agentfarm/memory-service';
 
 export type SalesDomain =
@@ -341,7 +342,7 @@ export async function buildSalesRagContext(
 
     const contextBlock =
         sections.length > 0
-            ? `## Sales Context\n\n${sections.join('\n---\n\n')}`
+            ? applyRagContextBudget(`## Sales Context\n\n${sections.join('\n---\n\n')}`)
             : '';
 
     return {

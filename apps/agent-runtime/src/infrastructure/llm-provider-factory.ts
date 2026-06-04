@@ -274,8 +274,9 @@ const buildAnthropicCodeGenFn = (apiKey: string, model: string): LlmCodeGenFn =>
                     'content-type': 'application/json',
                     'x-api-key': apiKey,
                     'anthropic-version': '2023-06-01',
+                    'anthropic-beta': 'prompt-caching-2024-07-31',
                 },
-                body: JSON.stringify({ model, max_tokens: 4096, stream: true, system: systemMsg, messages: [{ role: 'user', content: userMsg }] }),
+                body: JSON.stringify({ model, max_tokens: 4096, stream: true, system: [{ type: 'text', text: systemMsg, cache_control: { type: 'ephemeral' } }], messages: [{ role: 'user', content: userMsg }] }),
                 signal: AbortSignal.timeout(120_000),
             });
             if (!response.ok || !response.body) return [];

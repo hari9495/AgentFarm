@@ -120,11 +120,15 @@ Voicebox / VoxCPM2  — STT / TTS
 
 **Route registration:** Each Fastify app has a `src/route-registry.ts` that dynamically imports and registers domain routes grouped by area (agents, governance, connectors, etc.).
 
-**Session auth:** Cookie-based signed token (`API_SESSION_SECRET`, 32+ chars). Payload: `userId`, `tenantId`, `workspaceIds[]`, `scope`, `expiresAt`. All `/v1/*` routes require auth; public paths explicitly allowlisted.
+**Session auth:** Cookie-based signed token (`API_SESSION_SECRET`, 32+ chars). Payload: `userId`, `tenantId`, `workspaceIds[]`, `scope`, `expiresAt`. All `/v1/*` routes require auth; public paths explicitly allowlisted. `scope: 'customer'` for browser sessions; `scope: 'internal'` for machine-to-machine service tokens only — SSO users get `customer` scope.
+
+**Adding auth to a new route:** Pass `getSession` into the route registration function options (see `RegisterAutonomousLoopRoutesOptions` or `RegisterRetentionPolicyRoutesOptions` as templates). Check `getSession(request)` at the top of each handler and return `401` if null. Always scope DB queries to `session.tenantId` — never accept `tenantId` from the request body. Add a 401 regression test to `src/routes/auth-regression.test.ts`.
+
+**Inbound webhook auth pattern:** Use `timingSafeEqual` for token comparison (never `===`). Fail-closed: if a secret env var is set, a valid signature is **required**; if the env var is absent, return 503 (endpoint not configured), not a pass-through. Reference: `zoho-sign-webhook.ts`, `calls-webhook.ts`.
 
 **Rate limiting:** Per-IP (180 req/min general, 20 req/min auth) and per-tenant (600 req/min). Redis-backed, headers returned on responses.
 
-**Inter-service auth:** HMAC shared tokens per route group (`APPROVAL_INTAKE_SHARED_TOKEN`, `RUNTIME_TASK_SHARED_TOKEN`, etc.).
+**Inter-service auth:** HMAC shared tokens per route group (`APPROVAL_INTAKE_SHARED_TOKEN`, `RUNTIME_TASK_SHARED_TOKEN`, etc.). Use `timingSafeEqual` for all token comparisons — `task-notify.ts` is the reference implementation.
 
 **Connector framework:** 18 connectors with OAuth 2.0/API key/basic auth. Token lifecycle workers handle auto-refresh, revoke, and re-consent. Marketplace registry with health monitoring.
 
@@ -140,12 +144,24 @@ Schema at `packages/db-schema/prisma/schema.prisma` — 70 models across 8 domai
 
 ### Environment variables
 
-All variables documented in `.env.example` (380 lines). Minimum required to run locally:
+All variables documented in `.env.example`. Minimum required to run locally:
 - `DATABASE_URL`, `REDIS_URL`, `OPA_BASE_URL`
 - `API_SESSION_SECRET` (32+ chars)
 - `API_REQUIRE_AUTH=true`
 - HMAC tokens: `APPROVAL_INTAKE_SHARED_TOKEN`, `CONNECTOR_EXEC_SHARED_TOKEN`, `RUNTIME_DECISION_SHARED_TOKEN`, `RUNTIME_DISPATCH_SHARED_TOKEN`, `RUNTIME_TASK_SHARED_TOKEN`
 - LLM keys as needed: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, etc.
+
+**Webhook secrets (required in production — fail-closed if set):**
+| Variable | Endpoint protected |
+|---|---|
+| `ZOHO_SIGN_WEBHOOK_TOKEN` | `POST /v1/webhooks/zoho-sign` |
+| `BOOKING_WEBHOOK_SECRET` | `POST /v1/webhooks/booking` |
+| `CONTRACT_WEBHOOK_SECRET` | `POST /webhooks/contract` |
+| `CALLS_WEBHOOK_SECRET` | `POST /v1/sales/calls/answer|turn|status` |
+| `SLACK_WEBHOOK_SECRET` | `POST /api/v1/questions/webhooks/slack` |
+| `TEAMS_WEBHOOK_SECRET` | `POST /api/v1/questions/webhooks/teams` |
+| `MEMORY_WEBHOOK_SECRET` | `POST /api/v1/memory/patterns/code-review` |
+| `WEBHOOK_INGEST_SECRET` | `POST /webhooks/ingest/:provider` |
 
 ### Docker services
 
@@ -157,7 +173,7 @@ All variables documented in `.env.example` (380 lines). Minimum required to run 
 
 ## RAG (Retrieval-Augmented Generation)
 
-All 15 agents use RAG to ground LLM prompts in workspace-specific prior work, templates, and learned lessons. The pattern is identical across every agent — only the domain vocabulary differs.
+All 15 agents use RAG to ground LLM prompts in workspace-specific prior work, templates, and learned lessons. The pattern is identical across every agent — only the domain vocabulary differs. The `developer` agent uses `developer-episodic-hooks.ts` instead of a dedicated lesson pipeline; all other agents use the standard `*-lesson-pipeline.ts` + `classifyFeedback()` pattern.
 
 ### Infrastructure
 
@@ -230,6 +246,7 @@ Each agent's lesson pipeline uses a domain-specific set of categories for target
 | customer-support-executive | resolution_quality, escalation_timing, empathy, product_accuracy, sla_compliance, de_escalation, follow_through |
 | corporate-assistant | tone, completeness, urgency_detection, stakeholder_awareness, formatting, confidentiality, escalation_timing |
 | mobile | platform_consistency, performance, accessibility, ux_patterns, code_quality, testing_coverage, api_integration |
+| developer | feature_impl, bug_fix, code_review, refactor, test_authoring, debug, security_audit, dependency_audit, perf_audit, code_quality, api_design, incident |
 | tester | coverage_gaps, bug_reproduction, edge_cases, environment_setup, test_quality, regression_detection, reporting |
 | meeting-agent | action_item_clarity, decision_capture, participant_engagement, summary_accuracy, follow_up_tracking, time_management |
 

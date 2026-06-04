@@ -23,6 +23,7 @@
 // ---------------------------------------------------------------------------
 
 import { normalizeIngestContent } from '../shared/rag-ingest-normalizer.js';
+import { applyRagContextBudget } from '../shared/rag-context-limiter.js';
 import type { MemoryRetrievalConfig } from '@agentfarm/memory-service';
 
 export type TwDocumentType =
@@ -241,7 +242,7 @@ export async function buildTechnicalWriterRagContext(
     if (lessonsSection) sections.push(lessonsSection);
 
     return {
-        contextBlock: sections.length > 0 ? `## Documentation Context\n\n${sections.join('\n---\n\n')}` : '',
+        contextBlock: sections.length > 0 ? applyRagContextBudget(`## Documentation Context\n\n${sections.join('\n---\n\n')}`) : '',
         similarDocCount: similarDocs.length,
         styleGuideChunkCount: styleChunks.length,
         lessonCount: lessons.length,

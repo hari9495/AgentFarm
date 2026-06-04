@@ -42,7 +42,14 @@ export type AnthropicCallResult = {
     /** The actual model that produced the response (may differ from the
      *  preferred model if fallback was triggered). */
     modelUsed: string;
-    usage?: { input_tokens: number; output_tokens: number };
+    usage?: {
+        input_tokens: number;
+        output_tokens: number;
+        /** Tokens written into the cache on this call (billed at 1.25× normal rate). */
+        cache_creation_input_tokens?: number;
+        /** Tokens read from cache (billed at 0.1× normal rate — the main saving). */
+        cache_read_input_tokens?: number;
+    };
 };
 
 export type AnthropicCallParams = {
@@ -55,6 +62,13 @@ export type AnthropicCallParams = {
     maxTokens?: number;
     temperature?: number;
     signal?: AbortSignal;
+    /**
+     * When true, marks the system prompt with cache_control: ephemeral so
+     * Anthropic caches it for 5 minutes. Requires a static (or rarely-changing)
+     * system prompt — agent role prompts are ideal candidates.
+     * Adds the anthropic-beta: prompt-caching-2024-07-31 header automatically.
+     */
+    enablePromptCache?: boolean;
 };
 
 // ---------------------------------------------------------------------------
@@ -124,16 +138,25 @@ export async function callAnthropic(params: AnthropicCallParams): Promise<Anthro
             max_tokens: params.maxTokens ?? 1024,
             messages: params.messages,
         };
-        if (params.system)      bodyObj['system']      = params.system;
+        if (params.system) {
+            bodyObj['system'] = params.enablePromptCache
+                ? [{ type: 'text', text: params.system, cache_control: { type: 'ephemeral' } }]
+                : params.system;
+        }
         if (params.temperature !== undefined) bodyObj['temperature'] = params.temperature;
+
+        const headers: Record<string, string> = {
+            'content-type':      'application/json',
+            'x-api-key':         apiKey,
+            'anthropic-version': ANTHROPIC_VERSION,
+        };
+        if (params.enablePromptCache) {
+            headers['anthropic-beta'] = 'prompt-caching-2024-07-31';
+        }
 
         const response = await fetch(`${ANTHROPIC_BASE_URL}/v1/messages`, {
             method: 'POST',
-            headers: {
-                'content-type':    'application/json',
-                'x-api-key':       apiKey,
-                'anthropic-version': ANTHROPIC_VERSION,
-            },
+            headers,
             body: JSON.stringify(bodyObj),
             signal: params.signal,
         });

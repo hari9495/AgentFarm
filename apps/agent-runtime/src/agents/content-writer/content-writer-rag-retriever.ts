@@ -23,6 +23,7 @@
 // ---------------------------------------------------------------------------
 
 import { normalizeIngestContent } from '../shared/rag-ingest-normalizer.js';
+import { applyRagContextBudget } from '../shared/rag-context-limiter.js';
 import type { MemoryRetrievalConfig } from '@agentfarm/memory-service';
 
 export type ContentDomain =
@@ -285,7 +286,7 @@ export async function buildContentWriterRagContext(
     if (lessonsSection) sections.push(lessonsSection);
 
     const contextBlock = sections.length > 0
-        ? `## Content Context\n\n${sections.join('\n---\n\n')}`
+        ? applyRagContextBudget(`## Content Context\n\n${sections.join('\n---\n\n')}`)
         : '';
 
     return {

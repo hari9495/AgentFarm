@@ -15,6 +15,7 @@
  */
 
 import { normalizeIngestContent } from '../shared/rag-ingest-normalizer.js';
+import { applyRagContextBudget } from '../shared/rag-context-limiter.js';
 import type { MemoryRetrievalConfig } from '@agentfarm/memory-service';
 
 export type CorporateDocumentType =
@@ -99,7 +100,7 @@ export async function buildCorporateRagContext(query: CorporateRagQuery, gateway
         sections.push(lines.join('\n'));
     }
 
-    return { contextBlock: sections.length > 0 ? `## Communication Context\n\n${sections.join('\n---\n\n')}` : '', similarDocCount: similarDocs.length, templateChunkCount: templateChunks.length, lessonCount: lessons.length, retrievedAt: new Date().toISOString() };
+    return { contextBlock: sections.length > 0 ? applyRagContextBudget(`## Communication Context\n\n${sections.join('\n---\n\n')}`) : '', similarDocCount: similarDocs.length, templateChunkCount: templateChunks.length, lessonCount: lessons.length, retrievedAt: new Date().toISOString() };
 }
 
 export async function ingestApprovedCommunication(params: { tenantId: string; botId?: string; subject: string; documentType: CorporateDocumentType; content: string; mimeType?: string; sourceUrl?: string; recipientRole?: string; gatewayBaseUrl: string; serviceToken: string }): Promise<boolean> {

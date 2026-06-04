@@ -25,6 +25,7 @@
 // ---------------------------------------------------------------------------
 
 import { normalizeIngestContent } from '../shared/rag-ingest-normalizer.js';
+import { applyRagContextBudget } from '../shared/rag-context-limiter.js';
 import type { MemoryRetrievalConfig } from '@agentfarm/memory-service';
 
 export type BaComplianceFramework =
@@ -382,7 +383,7 @@ export async function buildBaRagContext(
 
     const contextBlock =
         sections.length > 0
-            ? `## Prior Knowledge\n\n${sections.join('\n---\n\n')}`
+            ? applyRagContextBudget(`## Prior Knowledge\n\n${sections.join('\n---\n\n')}`)
             : '';
 
     return {

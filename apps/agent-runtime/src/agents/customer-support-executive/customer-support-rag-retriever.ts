@@ -15,6 +15,7 @@
  */
 
 import { normalizeIngestContent } from '../shared/rag-ingest-normalizer.js';
+import { applyRagContextBudget } from '../shared/rag-context-limiter.js';
 import type { MemoryRetrievalConfig } from '@agentfarm/memory-service';
 
 export type SupportDocumentType =
@@ -114,7 +115,7 @@ export async function buildSupportRagContext(query: SupportRagQuery, gatewayBase
         sections.push(lines.join('\n'));
     }
 
-    return { contextBlock: sections.length > 0 ? `## Support Context\n\n${sections.join('\n---\n\n')}` : '', similarResolutionCount: similarResolutions.length, knowledgeChunkCount: knowledgeChunks.length, lessonCount: lessons.length, retrievedAt: new Date().toISOString() };
+    return { contextBlock: sections.length > 0 ? applyRagContextBudget(`## Support Context\n\n${sections.join('\n---\n\n')}`) : '', similarResolutionCount: similarResolutions.length, knowledgeChunkCount: knowledgeChunks.length, lessonCount: lessons.length, retrievedAt: new Date().toISOString() };
 }
 
 export async function ingestResolvedTicket(params: { tenantId: string; botId?: string; issueTitle: string; documentType: SupportDocumentType; content: string; mimeType?: string; sourceUrl?: string; productArea?: string; csatScore?: number; gatewayBaseUrl: string; serviceToken: string }): Promise<boolean> {

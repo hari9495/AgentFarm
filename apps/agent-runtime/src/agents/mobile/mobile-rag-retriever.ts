@@ -15,6 +15,7 @@
  */
 
 import { normalizeIngestContent } from '../shared/rag-ingest-normalizer.js';
+import { applyRagContextBudget } from '../shared/rag-context-limiter.js';
 import type { MemoryRetrievalConfig } from '@agentfarm/memory-service';
 
 export type MobilePlatform = 'ios' | 'android' | 'cross_platform';
@@ -92,7 +93,7 @@ export async function buildMobileRagContext(query: MobileRagQuery, gatewayBaseUr
         sections.push(lines.join('\n'));
     }
 
-    return { contextBlock: sections.length > 0 ? `## Mobile Dev Context\n\n${sections.join('\n---\n\n')}` : '', similarComponentCount: similarComponents.length, guidelineChunkCount: guidelineChunks.length, lessonCount: lessons.length, retrievedAt: new Date().toISOString() };
+    return { contextBlock: sections.length > 0 ? applyRagContextBudget(`## Mobile Dev Context\n\n${sections.join('\n---\n\n')}`) : '', similarComponentCount: similarComponents.length, guidelineChunkCount: guidelineChunks.length, lessonCount: lessons.length, retrievedAt: new Date().toISOString() };
 }
 
 export async function ingestApprovedMobileComponent(params: { tenantId: string; botId?: string; componentTitle: string; documentType: MobileDocumentType; content: string; mimeType?: string; sourceUrl?: string; platform?: MobilePlatform; framework?: string; gatewayBaseUrl: string; serviceToken: string }): Promise<boolean> {
