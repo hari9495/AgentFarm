@@ -58,7 +58,7 @@ export default function ApiKeysPanel({ tenantId: _tenantId }: { tenantId: string
     // Create form
     const [name, setName]         = useState('');
     const [role, setRole]         = useState<'viewer' | 'operator' | 'admin'>('operator');
-    const [expiresIn, setExpires] = useState('');   // days, empty = never
+    const [expiresIn, setExpiresIn] = useState('');   // days, empty = never
     const [creating, setCreating] = useState(false);
     const [createErr, setCreateErr] = useState<string | null>(null);
     const [newRawKey, setNewRawKey] = useState<string | null>(null);
@@ -183,7 +183,7 @@ export default function ApiKeysPanel({ tenantId: _tenantId }: { tenantId: string
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                     <label style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Expires in</label>
-                    <select value={expiresIn} onChange={e => setExpires(e.target.value)}
+                    <select value={expiresIn} onChange={e => setExpiresIn(e.target.value)}
                         style={{ padding: '0.45rem 0.6rem', border: '1px solid var(--line)', borderRadius: 6, background: 'var(--bg)', color: 'var(--ink)', fontSize: '0.875rem' }}>
                         <option value="">Never</option>
                         <option value="30">30 days</option>

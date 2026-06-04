@@ -142,6 +142,76 @@ export const registerAgentsRoutes = async (
     });
 
     // -----------------------------------------------------------------------
+    // GET /v1/agents/health — aggregated health summary for all bots in tenant
+    // Returns each bot with last task timestamp, 24h task count, and last outcome
+    // in a single round-trip (no N+1).
+    // -----------------------------------------------------------------------
+    app.get('/v1/agents/health', async (request, reply) => {
+        const session = options.getSession(request);
+        if (!session) return reply.code(401).send({ error: 'unauthorized' });
+
+        const db = await resolvePrisma();
+        const since24h = new Date(Date.now() - 86_400_000);
+
+        // 1. All bots for this tenant
+        const bots = await db.bot.findMany({
+            where: { workspace: { tenantId: session.tenantId } },
+            include: { workspace: { select: { id: true, name: true } } },
+            orderBy: { createdAt: 'asc' },
+        });
+
+        if (bots.length === 0) {
+            return reply.send({ agents: [], summary: { active: 0, paused: 0, failed: 0, other: 0 } });
+        }
+
+        const botIds = bots.map(b => b.id);
+
+        // 2. Latest task per bot + 24h counts in one query each
+        const [latestTasks, recentCounts] = await Promise.all([
+            db.taskExecutionRecord.findMany({
+                where: { botId: { in: botIds } },
+                orderBy: { executedAt: 'desc' },
+                distinct: ['botId'],
+                select: { botId: true, executedAt: true, outcome: true },
+            }),
+            db.taskExecutionRecord.groupBy({
+                by: ['botId'],
+                where: { botId: { in: botIds }, executedAt: { gte: since24h } },
+                _count: { id: true },
+            }),
+        ]);
+
+        const latestByBot = Object.fromEntries(latestTasks.map(t => [t.botId, t]));
+        const countByBot  = Object.fromEntries(recentCounts.map(c => [c.botId, c._count.id]));
+
+        const agents = bots.map(b => ({
+            id:            b.id,
+            role:          b.role,
+            status:        b.status,
+            workspaceId:   b.workspaceId,
+            workspaceName: (b.workspace as { name?: string }).name ?? b.workspaceId,
+            createdAt:     b.createdAt.toISOString(),
+            updatedAt:     b.updatedAt.toISOString(),
+            lastTaskAt:    latestByBot[b.id]?.executedAt.toISOString() ?? null,
+            lastOutcome:   latestByBot[b.id]?.outcome ?? null,
+            tasks24h:      countByBot[b.id] ?? 0,
+        }));
+
+        const summary = agents.reduce(
+            (acc, a) => {
+                if (a.status === 'active')          acc.active++;
+                else if (a.status === 'paused')     acc.paused++;
+                else if (a.status === 'failed')     acc.failed++;
+                else                                acc.other++;
+                return acc;
+            },
+            { active: 0, paused: 0, failed: 0, other: 0 },
+        );
+
+        return reply.send({ agents, summary });
+    });
+
+    // -----------------------------------------------------------------------
     // GET /v1/agents/:botId — get a single bot
     // -----------------------------------------------------------------------
     app.get<{ Params: BotIdParams }>('/v1/agents/:botId', async (request, reply) => {

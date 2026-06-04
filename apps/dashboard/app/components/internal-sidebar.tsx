@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
     Cpu, Brain, ShoppingBag, LayoutDashboard, ClipboardCheck,
-    Activity, FileText, Search, LogOut,
+    Activity, FileText, Search, LogOut, HeartPulse,
     ChevronDown, Bot, ListChecks, ShieldCheck, Link2,
     BarChart2, CreditCard, Wrench,
     MessageSquare, DollarSign, PieChart, LineChart, Trophy, Bell,
@@ -210,6 +210,7 @@ export function InternalSidebar({
                     <div className="space-y-0.5">
                         {[
                             { href: '/agents', label: 'Agents', Icon: Bot },
+                            { href: '/agents/health', label: 'Agent Health', Icon: HeartPulse },
                             { href: '/tasks', label: 'Tasks', Icon: ListChecks },
                             { href: '/tasks?tab=queue', label: 'Task Queue', Icon: Layers },
                             { href: '/playbooks', label: 'Playbooks', Icon: BookOpen },
