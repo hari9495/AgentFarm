@@ -122,6 +122,28 @@ export async function handleCorporateAssistantAction(params: {
     workspaceId?: string;
 }): Promise<LocalWorkspaceResult> {
     const { actionType, tenantId, botId, taskId, payload } = params;
+    const { gatewayBaseUrl, serviceToken, workspaceId } = params;
+
+    // RAG pre-flight — fetch prior approved communications and lessons for context
+    let ragContextBlock = '';
+    if (gatewayBaseUrl && serviceToken && workspaceId) {
+        try {
+            const { buildCorporateRagContext } = await import('./corporate-assistant-rag-retriever.js');
+            const { deriveMemoryConfig } = await import('@agentfarm/memory-service');
+            const taskBlock = (payload['task'] ?? {}) as Record<string, unknown>;
+            const ragCtx = await buildCorporateRagContext(
+                {
+                    tenantId,
+                    botId,
+                    subject: String(payload['subject'] ?? taskBlock['subject'] ?? actionType),
+                    contextDescription: String(payload['description'] ?? taskBlock['objective'] ?? ''),
+                    documentType: 'email',
+                },
+                gatewayBaseUrl, serviceToken, workspaceId, deriveMemoryConfig(actionType),
+            );
+            ragContextBlock = ragCtx.contextBlock;
+        } catch { /* non-fatal */ }
+    }
 
     switch (actionType) {
         // ------------------------------------------------------------------

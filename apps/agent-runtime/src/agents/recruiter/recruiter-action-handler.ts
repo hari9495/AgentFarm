@@ -292,6 +292,28 @@ export async function handleRecruiterAction(
     input: RecruiterActionInput,
 ): Promise<LocalWorkspaceResult> {
     const { actionType, payload } = input;
+    const { tenantId, botId, gatewayBaseUrl, serviceToken, workspaceId } = input;
+
+    // RAG pre-flight — fetch prior approved hiring artifacts, templates, and recruiter lessons
+    let ragContextBlock = '';
+    if (gatewayBaseUrl && serviceToken && workspaceId) {
+        try {
+            const { buildRecruiterRagContext } = await import('./recruiter-rag-retriever.js');
+            const { deriveMemoryConfig } = await import('@agentfarm/memory-service');
+            const ragCtx = await buildRecruiterRagContext(
+                {
+                    tenantId,
+                    botId,
+                    roleTitle: String(payload['title'] ?? payload['role_title'] ?? payload['jobTitle'] ?? actionType),
+                    roleDescription: String(payload['description'] ?? (Array.isArray(payload['responsibilities']) ? (payload['responsibilities'] as string[]).join(', ') : '') ?? ''),
+                    domain: 'engineering',
+                    documentType: 'job_description',
+                },
+                gatewayBaseUrl, serviceToken, workspaceId, deriveMemoryConfig(actionType),
+            );
+            ragContextBlock = ragCtx.contextBlock;
+        } catch { /* non-fatal */ }
+    }
 
     switch (actionType) {
 

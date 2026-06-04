@@ -51,6 +51,10 @@ import {
     PROJECT_MANAGER_ROLE_ALLOWED_CONNECTORS,
     PROJECT_MANAGER_ROLE_ALLOWED_LOCAL_ACTIONS,
 } from '../agents/project-manager/project-manager-agent-profile.js';
+import {
+    SALES_REP_ROLE_ALLOWED_CONNECTORS,
+    SALES_REP_ROLE_ALLOWED_LOCAL_ACTIONS,
+} from '../agents/sales-agent/sales-rep-agent-profile.js';
 
 export interface RoleProfile {
     roleKey: RoleKey;
@@ -124,16 +128,8 @@ export const ROLE_PROFILES: Record<RoleKey, RoleProfile> = {
         roleKey: 'sales_rep',
         displayName: 'Sales Rep',
         description: 'Handles end-to-end sales — prospecting, outreach, qualification, proposals, and closing',
-        allowedConnectorTools: [
-            'apollo', 'hunter', 'linkedin', 'gmail', 'outlook', 'smtp',
-            'sendgrid', 'mailgun', 'salesforce', 'hubspot', 'pipedrive', 'zoho_crm',
-            'google_calendar', 'calendly', 'cal_com', 'docusign', 'zoho_sign', 'slack',
-        ],
-        allowedActions: [
-            'find_leads', 'enrich_lead', 'send_email', 'schedule_meeting',
-            'create_deal', 'update_deal', 'generate_proposal', 'send_contract',
-            'update_crm', 'send_message', 'qualify_lead', 'handle_objection',
-        ],
+        allowedConnectorTools: [...SALES_REP_ROLE_ALLOWED_CONNECTORS],
+        allowedActions: [...SALES_REP_ROLE_ALLOWED_LOCAL_ACTIONS],
         requiredConfig: ['leadSourceProvider', 'emailProvider', 'crmProvider', 'calendarProvider', 'productDescription', 'icp'],
     },
     marketing_specialist: {

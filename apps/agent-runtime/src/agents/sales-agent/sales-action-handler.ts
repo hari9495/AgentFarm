@@ -1125,6 +1125,11 @@ export async function handleSalesAction(params: {
                 await prisma.$disconnect().catch(() => undefined);
             }
         }
+
+        default: {
+            const _exhaustive: never = actionType;
+            return { ok: false, output: '', errorOutput: `Unknown Sales action: ${_exhaustive as string}` };
+        }
     }
 }
 

@@ -1852,6 +1852,11 @@ export async function handlePmAction(params: PmActionParams): Promise<PmActionRe
         case 'workspace_pm_milestone_plan':
         case 'workspace_pm_budget_forecast':
             return handlePmDocumentAction(params);
+
+        default: {
+            const _exhaustive: never = actionType;
+            return { ok: false, output: '', errorOutput: `Unknown PM action: ${_exhaustive as string}` };
+        }
     }
 }
 

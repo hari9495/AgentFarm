@@ -842,6 +842,9 @@ export async function onContentPublished(params: {
     } catch { /* non-fatal */ }
 }
 
+/** Alias following the onAgent*Approved naming convention used by all other agents. */
+export const onContentApproved = onContentPublished;
+
 export async function onContentFeedbackReceived(params: {
     tenantId: string; workspaceId: string; taskId: string; contentId: string;
     feedbackReasons: string[];

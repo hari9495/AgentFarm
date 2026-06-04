@@ -3968,6 +3968,11 @@ export async function executeLocalWorkspaceAction(input: {
      *  Required for all workspace_cw_* actions that generate or transform text via LLM.
      *  When omitted the executor builds one from AF_MODEL_PROVIDER env vars if available. */
     callerFn?: ProseCallerFn;
+    /** Optional gateway base URL — passed to agent action handlers that need to call the
+     *  RAG retriever or lesson-pipeline endpoints on the api-gateway. */
+    gatewayBaseUrl?: string;
+    /** Optional service token for authenticated calls to the api-gateway from agent handlers. */
+    serviceToken?: string;
 }): Promise<LocalWorkspaceResult> {
     const { tenantId, botId, taskId, actionType, payload, connectorActionExecuteClient } = input;
     const workspaceKey = typeof payload['workspace_key'] === 'string' && payload['workspace_key'].trim()
@@ -13787,7 +13792,7 @@ export async function executeLocalWorkspaceAction(input: {
         case 'workspace_ca_escalate':
         case 'workspace_ca_message_send':
         case 'workspace_ca_standup_report': {
-            return handleCorporateAssistantAction({ actionType, tenantId, botId, taskId, payload });
+            return handleCorporateAssistantAction({ actionType, tenantId, botId, taskId, payload, gatewayBaseUrl: input.gatewayBaseUrl, serviceToken: input.serviceToken, workspaceId: input.workspaceId });
         }
 
         // ====================================================================
@@ -14097,6 +14102,8 @@ export async function executeLocalWorkspaceAction(input: {
                 botId,
                 taskId,
                 workspaceId: input.workspaceId,
+                gatewayBaseUrl: input.gatewayBaseUrl,
+                serviceToken: input.serviceToken,
                 payload,
                 workspaceDir,
                 connectorActionExecuteClient,
@@ -15096,6 +15103,9 @@ export async function executeLocalWorkspaceAction(input: {
                 taskId,
                 workspaceDir: workspaceDir ?? taskId,
                 payload,
+                gatewayBaseUrl: input.gatewayBaseUrl,
+                serviceToken: input.serviceToken,
+                workspaceId: input.workspaceId,
             });
             const recTitle =
                 typeof payload['candidateName'] === 'string' ? payload['candidateName'] :
@@ -15153,6 +15163,9 @@ export async function executeLocalWorkspaceAction(input: {
                 botId,
                 taskId,
                 payload,
+                gatewayBaseUrl: input.gatewayBaseUrl,
+                serviceToken: input.serviceToken,
+                workspaceId: input.workspaceId,
             });
             const cseTitle =
                 typeof payload['subject'] === 'string' ? payload['subject'] :

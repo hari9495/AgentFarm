@@ -157,6 +157,27 @@ export async function handleCustomerSupportExecutiveAction(params: {
     workspaceId?: string;
 }): Promise<LocalWorkspaceResult> {
     const { actionType, tenantId, botId, taskId, payload } = params;
+    const { gatewayBaseUrl, serviceToken, workspaceId } = params;
+
+    // RAG pre-flight — fetch prior resolved tickets, product knowledge, and support lessons
+    let ragContextBlock = '';
+    if (gatewayBaseUrl && serviceToken && workspaceId) {
+        try {
+            const { buildSupportRagContext } = await import('./customer-support-rag-retriever.js');
+            const { deriveMemoryConfig } = await import('@agentfarm/memory-service');
+            const ragCtx = await buildSupportRagContext(
+                {
+                    tenantId,
+                    botId,
+                    issueTitle: String(payload['subject'] ?? payload['issue_title'] ?? actionType),
+                    issueDescription: String(payload['description'] ?? payload['body'] ?? ''),
+                    documentType: 'ticket_response',
+                },
+                gatewayBaseUrl, serviceToken, workspaceId, deriveMemoryConfig(actionType),
+            );
+            ragContextBlock = ragCtx.contextBlock;
+        } catch { /* non-fatal */ }
+    }
 
     switch (actionType) {
 
@@ -777,6 +798,9 @@ export async function onTicketResolved(params: {
         await ingestResolvedTicket({ ...params });
     } catch { /* non-fatal */ }
 }
+
+/** Alias following the onAgent*Approved naming convention used by all other agents. */
+export const onCseTicketApproved = onTicketResolved;
 
 export async function onSupportFeedbackReceived(params: {
     tenantId: string; workspaceId: string; taskId: string; ticketId: string;

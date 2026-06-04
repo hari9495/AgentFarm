@@ -119,9 +119,31 @@ export async function handleTesterAction(params: {
         connectorActionExecuteClient,
         executeAction,
         workspaceId,
+        gatewayBaseUrl,
+        serviceToken,
     } = params;
 
     void _botId; void _taskId; // available for future per-action audit use
+
+    // RAG pre-flight — fetch prior approved test suites, testing templates, and tester lessons
+    let ragContextBlock = '';
+    if (gatewayBaseUrl && serviceToken && workspaceId) {
+        try {
+            const { buildTesterRagContext } = await import('./tester-rag-retriever.js');
+            const { deriveMemoryConfig } = await import('@agentfarm/memory-service');
+            const ragCtx = await buildTesterRagContext(
+                {
+                    tenantId,
+                    botId: _botId,
+                    featureOrComponent: String(payload['suite_name'] ?? payload['feature'] ?? payload['title'] ?? actionType),
+                    contextDescription: String(payload['description'] ?? payload['scope'] ?? ''),
+                    documentType: 'test_plan',
+                },
+                gatewayBaseUrl, serviceToken, workspaceId, deriveMemoryConfig(actionType),
+            );
+            ragContextBlock = ragCtx.contextBlock;
+        } catch { /* non-fatal */ }
+    }
 
     switch (actionType) {
 

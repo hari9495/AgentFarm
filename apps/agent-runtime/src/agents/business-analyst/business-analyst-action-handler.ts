@@ -766,6 +766,13 @@ async function _handleBaActionCore(params: BaActionParams): Promise<BaActionResu
     } = params;
 
     // -------------------------------------------------------------------------
+    // Guard — reject unrecognised action types before entering the pipeline
+    // -------------------------------------------------------------------------
+    if (!isBaActionType(actionType)) {
+        return { ok: false, output: '', errorOutput: `Unknown BA action: ${actionType as string}` };
+    }
+
+    // -------------------------------------------------------------------------
     // Proactive monitoring actions use a separate lightweight pipeline
     // -------------------------------------------------------------------------
     if (actionType === 'workspace_ba_proactive_conflict_scan') {
