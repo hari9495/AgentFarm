@@ -244,7 +244,7 @@ export const registerAllRoutes = async (
     await registerRuntimeTaskRoutes(app, { getSession, prisma });
     registerSkillPipelineRoutes(app, { getSession });
     registerSkillSchedulerRoutes(app, { getSession });
-    registerSkillCompositionRoutes(app);
+    registerSkillCompositionRoutes(app, { getSession });
     registerAutonomousLoopRoutes(app, { getSession });
     await registerRoutineSchedulerRoutes(app, { getSession });
     await registerWakeRunRoutes(app, { getSession });
@@ -279,7 +279,7 @@ export const registerAllRoutes = async (
     await registerTenantBrandingRoutes(app, { getSession });
 
     // Sales
-    registerLeadRoutes(app, { prisma });
+    registerLeadRoutes(app, { prisma, getSession });
     await registerProspectsRoutes(app, { getSession, prisma: prisma as never });
     await registerSalesConfigRoutes(app, { getSession, prisma: prisma as never });
     await registerOutreachRoutes(app, { getSession, prisma: prisma as never });

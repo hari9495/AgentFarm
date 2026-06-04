@@ -1,4 +1,4 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
 import {
     isSalesforceLeadSyncEnabled,
@@ -35,7 +35,20 @@ function trimStr(v: unknown): string {
 
 const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 
-export function registerLeadRoutes(app: FastifyInstance, options: { prisma?: PrismaClient } = {}): void {
+type SessionContext = {
+    userId: string;
+    tenantId: string;
+    workspaceIds: string[];
+};
+
+export type RegisterLeadRoutesOptions = {
+    prisma?: PrismaClient;
+    /** Required for authenticated routes (GET / PATCH). POST is always public. */
+    getSession?: (request: FastifyRequest) => SessionContext | null;
+};
+
+export function registerLeadRoutes(app: FastifyInstance, options: RegisterLeadRoutesOptions = {}): void {
+    const { getSession } = options;
     const getPrisma = async (): Promise<PrismaClient> => {
         if (options.prisma) return options.prisma;
         const { prisma: dbPrisma } = await import('../../lib/db.js');
@@ -128,6 +141,7 @@ export function registerLeadRoutes(app: FastifyInstance, options: { prisma?: Pri
     app.patch<{ Params: LeadIdParams; Body: LeadStatusBody }>(
         '/api/v1/leads/:id/status',
         async (request, reply) => {
+            if (!getSession?.(request)) return reply.code(401).send({ error: 'Unauthorized' });
             const { id } = request.params;
             const status = trimStr((request.body as LeadStatusBody)?.status).toUpperCase();
 
@@ -172,6 +186,7 @@ export function registerLeadRoutes(app: FastifyInstance, options: { prisma?: Pri
     app.get<{ Querystring: LeadListQuery }>(
         '/api/v1/leads',
         async (request, reply) => {
+            if (!getSession?.(request)) return reply.code(401).send({ error: 'Unauthorized' });
             const { status, page, limit } = request.query;
 
             const pageNum = Math.max(1, parseInt(page ?? '1', 10) || 1);

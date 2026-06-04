@@ -231,14 +231,16 @@ export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient
     app.post(
         '/api/v1/questions/webhooks/slack',
         async (req: FastifyRequest<{ Body: QuestionWebhookPayload }>, reply) => {
+            // Fail-closed: secret must be configured or the endpoint is disabled
             const slackSecret = process.env['SLACK_WEBHOOK_SECRET'];
-            if (slackSecret) {
-                const sig = (req.headers['x-hub-signature-256'] as string)
-                    ?? (req.headers['x-signature'] as string)
-                    ?? '';
-                if (!verifyHmacSha256(JSON.stringify(req.body), slackSecret, sig.replace('sha256=', ''))) {
-                    return reply.code(401).send({ error: 'invalid signature' });
-                }
+            if (!slackSecret) {
+                return reply.code(503).send({ error: 'Slack webhook not configured' });
+            }
+            const sig = (req.headers['x-hub-signature-256'] as string)
+                ?? (req.headers['x-signature'] as string)
+                ?? '';
+            if (!verifyHmacSha256(JSON.stringify(req.body), slackSecret, sig.replace('sha256=', ''))) {
+                return reply.code(401).send({ error: 'invalid signature' });
             }
             const payload = extractAnswerPayload(req.body ?? {});
             if (!payload) {
@@ -260,14 +262,16 @@ export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient
     app.post(
         '/api/v1/questions/webhooks/teams',
         async (req: FastifyRequest<{ Body: QuestionWebhookPayload }>, reply) => {
+            // Fail-closed: secret must be configured or the endpoint is disabled
             const teamsSecret = process.env['TEAMS_WEBHOOK_SECRET'];
-            if (teamsSecret) {
-                const sig = (req.headers['x-hub-signature-256'] as string)
-                    ?? (req.headers['x-signature'] as string)
-                    ?? '';
-                if (!verifyHmacSha256(JSON.stringify(req.body), teamsSecret, sig.replace('sha256=', ''))) {
-                    return reply.code(401).send({ error: 'invalid signature' });
-                }
+            if (!teamsSecret) {
+                return reply.code(503).send({ error: 'Teams webhook not configured' });
+            }
+            const sig = (req.headers['x-hub-signature-256'] as string)
+                ?? (req.headers['x-signature'] as string)
+                ?? '';
+            if (!verifyHmacSha256(JSON.stringify(req.body), teamsSecret, sig.replace('sha256=', ''))) {
+                return reply.code(401).send({ error: 'invalid signature' });
             }
             const payload = extractAnswerPayload(req.body ?? {});
             if (!payload) {

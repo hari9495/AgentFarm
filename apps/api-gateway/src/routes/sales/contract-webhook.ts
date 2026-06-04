@@ -64,23 +64,29 @@ export async function registerContractWebhookRoutes(
         const prisma = await resolvePrisma();
         const db = prisma as unknown as PrismaWithContract;
 
-        // Load config to check for contractWebhookSecret
+        // Load config — per-tenant secret takes priority; server-level env var is the
+        // mandatory fallback. Fail closed: if ANY secret is configured, a valid
+        // signature is required. No secret → reject (not configured = not safe).
         const salesConfig = await db.salesAgentConfig.findFirst({ where: { tenantId } });
         const secret = salesConfig?.['contractWebhookSecret']
             ? String(salesConfig['contractWebhookSecret'])
-            : '';
+            : (process.env['CONTRACT_WEBHOOK_SECRET'] ?? '');
+
+        if (!secret) {
+            return reply.code(503).send({ error: 'Contract webhook not configured for this tenant' });
+        }
 
         const signature = typeof request.headers['x-webhook-signature'] === 'string'
             ? request.headers['x-webhook-signature']
             : undefined;
 
-        if (secret && signature) {
-            const valid = verifyHmacSha256(JSON.stringify(request.body), secret, signature, 'hex');
-            if (!valid) {
-                return reply.code(401).send({ error: 'Invalid signature' });
-            }
-        } else if (secret && !signature) {
-            return reply.code(401).send({ error: 'Missing signature' });
+        if (!signature) {
+            return reply.code(401).send({ error: 'Missing x-webhook-signature header' });
+        }
+
+        const valid = verifyHmacSha256(JSON.stringify(request.body), secret, signature, 'hex');
+        if (!valid) {
+            return reply.code(401).send({ error: 'Invalid signature' });
         }
 
         const body = request.body as Record<string, unknown>;

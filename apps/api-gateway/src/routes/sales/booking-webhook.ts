@@ -67,23 +67,24 @@ export async function registerBookingWebhookRoutes(
         const prisma = await resolvePrisma();
         const db = prisma as unknown as PrismaWithBooking;
 
-        // Verify HMAC signature if secret is configured for this tenant
-        if (signature) {
-            const salesConfig = await db.salesAgentConfig.findFirst({
-                where: { tenantId },
-            });
-            const secret = salesConfig?.['bookingWebhookSecret']
-                ? String(salesConfig['bookingWebhookSecret'])
-                : '';
-            if (secret) {
-                // Use JSON.stringify of parsed body as the canonical payload
-                const rawBody = JSON.stringify(request.body);
-                const valid = verifyHmacSha256(rawBody, secret, signature, 'hex');
-                if (!valid) {
-                    // Log but still return 200 to prevent provider from retrying
-                    request.log.warn({ tenantId }, '[booking-webhook] HMAC signature mismatch — ignoring payload');
-                    return reply.code(200).send({ received: true });
-                }
+        // Verify HMAC signature — fail closed: if a secret is configured, a valid
+        // signature MUST be present. Requests without a signature are rejected when
+        // a secret is configured to prevent unsigned forgeries.
+        const salesConfig = await db.salesAgentConfig.findFirst({
+            where: { tenantId },
+        });
+        const secret = salesConfig?.['bookingWebhookSecret']
+            ? String(salesConfig['bookingWebhookSecret'])
+            : (process.env['BOOKING_WEBHOOK_SECRET'] ?? '');
+
+        if (secret) {
+            if (!signature) {
+                return reply.code(401).send({ error: 'Missing x-webhook-signature header' });
+            }
+            const rawBody = JSON.stringify(request.body);
+            const valid = verifyHmacSha256(rawBody, secret, signature, 'hex');
+            if (!valid) {
+                return reply.code(401).send({ error: 'Invalid webhook signature' });
             }
         }
 

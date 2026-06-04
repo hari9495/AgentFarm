@@ -13,9 +13,18 @@ const minDag = () => ({
     edges: [],
 });
 
+const mockSession = {
+    userId: 'user_test',
+    tenantId: 'tenant_test',
+    workspaceIds: ['ws_test'],
+    scope: 'customer' as const,
+    expiresAt: Date.now() + 3_600_000,
+};
+const getSession = () => mockSession;
+
 const buildApp = () => {
     const app = Fastify();
-    registerSkillCompositionRoutes(app);
+    registerSkillCompositionRoutes(app, { getSession });
     return app;
 };
 

@@ -25,6 +25,7 @@
  *       (X-Twilio-Signature for Twilio, etc.).
  */
 
+import { timingSafeEqual } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
 import {
@@ -86,8 +87,24 @@ function getProviderForWebhook(providerSlug: string): TelephonyProvider {
 
 const MAX_TURNS = 5;
 
+/**
+ * Verifies the shared HMAC/token header sent by the telephony gateway.
+ * Uses the CALLS_WEBHOOK_SECRET env var.  Returns false when the secret is
+ * not configured (fail-closed) or when the presented token is wrong.
+ */
+function verifyCallsToken(request: { headers: Record<string, string | string[] | undefined> }): boolean {
+    const secret = process.env['CALLS_WEBHOOK_SECRET'];
+    if (!secret) return false;
+    const raw = request.headers['x-calls-webhook-token'];
+    const provided = typeof raw === 'string' ? raw.trim() : '';
+    if (!provided || provided.length !== secret.length) return false;
+    return timingSafeEqual(Buffer.from(provided), Buffer.from(secret));
+}
+
 export type RegisterCallsWebhookOptions = {
     prisma?: PrismaClient;
+    /** Override token verifier in tests (returns true to simulate valid token). */
+    verifyToken?: (request: { headers: Record<string, string | string[] | undefined> }) => boolean;
 };
 
 export async function registerCallsWebhookRoutes(
@@ -100,11 +117,15 @@ export async function registerCallsWebhookRoutes(
             const { prisma } = await import('../../lib/db.js');
             return prisma;
         };
+    const doVerifyToken = options.verifyToken ?? verifyCallsToken;
 
     // ── Answer: serve opening script ─────────────────────────────────────
     app.post<{ Params: AnswerParams; Body: Record<string, string>; Querystring: { s?: string; p?: string } }>(
         '/v1/sales/calls/answer/:tenantId/:botId/:prospectId',
         async (request, reply) => {
+            if (!doVerifyToken(request)) {
+                return reply.code(401).send({ error: 'Unauthorized' });
+            }
             const { tenantId, botId, prospectId } = request.params;
             const encodedScript = request.query?.['s'] ?? '';
             const providerSlug = request.query?.['p'] ?? 'twilio';
@@ -152,6 +173,9 @@ export async function registerCallsWebhookRoutes(
     app.post<{ Params: TurnParams; Body: Record<string, string>; Querystring: { s?: string; p?: string } }>(
         '/v1/sales/calls/turn/:tenantId/:botId/:prospectId/:turn',
         async (request, reply) => {
+            if (!doVerifyToken(request)) {
+                return reply.code(401).send({ error: 'Unauthorized' });
+            }
             const { tenantId, botId, prospectId, turn } = request.params;
             const turnNumber = parseInt(turn, 10) || 1;
             const providerSlug = request.query?.['p'] ?? 'twilio';
@@ -242,6 +266,9 @@ export async function registerCallsWebhookRoutes(
     app.post<{ Params: StatusParams; Body: Record<string, string>; Querystring: { p?: string } }>(
         '/v1/sales/calls/status/:tenantId/:botId/:prospectId',
         async (request, reply) => {
+            if (!doVerifyToken(request)) {
+                return reply.code(401).send({ error: 'Unauthorized' });
+            }
             const { tenantId, botId, prospectId } = request.params;
             const providerSlug = request.query?.['p'] ?? 'twilio';
             const telephonyProvider = getProviderForWebhook(providerSlug);
