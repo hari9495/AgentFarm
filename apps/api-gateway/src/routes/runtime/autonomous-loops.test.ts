@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import Fastify from 'fastify';
+import type { LoopConfig } from '@agentfarm/shared-types';
 import { registerAutonomousLoopRoutes } from './autonomous-loops.js';
 
 // ---------------------------------------------------------------------------
@@ -8,10 +9,10 @@ import { registerAutonomousLoopRoutes } from './autonomous-loops.js';
 // ---------------------------------------------------------------------------
 
 const makeOrchestrator = () => {
-    const runs = new Map<string, { loopId: string; state: string; [k: string]: unknown }>();
+    const runs = new Map<string, { loopId: string; state: string;[k: string]: unknown }>();
 
     return {
-        async execute(config: { initial_skill: string; success_criteria: string; [k: string]: unknown }) {
+        async execute(config: LoopConfig) {
             const loopId = `loop_${Math.random().toString(36).slice(2)}`;
             const result = { loopId, state: 'success', initial_skill: config.initial_skill, success_criteria: config.success_criteria };
             runs.set(loopId, result);
