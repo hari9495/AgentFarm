@@ -87,6 +87,6 @@ export default async function globalSetup(): Promise<void> {
     }
 
     await pollHealthy(`${API_URL}/health`, 'API gateway')
-    await pollHealthy(`${DASHBOARD_URL}/api/health/gateway`, 'Dashboard')
+    await pollHealthy(`${DASHBOARD_URL}/api/health`, 'Dashboard')
     await ensureTestUser()
 }
