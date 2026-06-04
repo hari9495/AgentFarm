@@ -60,6 +60,30 @@ function spendBarColor(ratio: number): string {
     return '#991b1b';
 }
 
+// ── SpendBar with 80% warn / 90% critical threshold markers ─────────────────
+
+function SpendBar({ spent, limit }: { spent: number; limit: number }) {
+    const pct     = Math.min((spent / limit) * 100, 100);
+    const fillClr = spendBarColor(spent / limit);
+    return (
+        <div>
+            <div style={{ position: 'relative', height: 8, background: 'var(--line)', borderRadius: 4, marginBottom: 4 }}>
+                {/* Spend fill */}
+                <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${pct}%`, background: fillClr, borderRadius: 4, transition: 'width 0.3s ease' }} />
+                {/* 80% warn marker */}
+                <div title="80% — warning threshold" style={{ position: 'absolute', left: '80%', top: -3, width: 2, height: 14, background: '#b45309', borderRadius: 1, zIndex: 1 }} />
+                {/* 90% critical marker */}
+                <div title="90% — critical threshold" style={{ position: 'absolute', left: '90%', top: -3, width: 2, height: 14, background: '#991b1b', borderRadius: 1, zIndex: 1 }} />
+            </div>
+            <div style={{ display: 'flex', gap: 12, fontSize: 10, color: 'var(--ink-muted)', fontWeight: 500 }}>
+                <span style={{ color: '#b45309' }}>⚠ 80% warn</span>
+                <span style={{ color: '#991b1b' }}>🛑 90% critical</span>
+                <span style={{ marginLeft: 'auto' }}>{pct.toFixed(1)}% used</span>
+            </div>
+        </div>
+    );
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 type BudgetPolicyPanelProps = {
@@ -331,26 +355,7 @@ export default function BudgetPolicyPanel({ tenantId, workspaceId }: BudgetPolic
                                     </span>
                                 </p>
                                 {budgetState.dailyLimit != null && (
-                                    <div
-                                        style={{
-                                            height: '6px',
-                                            background: 'var(--line)',
-                                            borderRadius: '3px',
-                                            overflow: 'hidden',
-                                        }}
-                                    >
-                                        <div
-                                            style={{
-                                                height: '100%',
-                                                width: `${Math.min((budgetState.dailySpent / budgetState.dailyLimit) * 100, 100)}%`,
-                                                background: spendBarColor(
-                                                    budgetState.dailySpent / budgetState.dailyLimit,
-                                                ),
-                                                borderRadius: '3px',
-                                                transition: 'width 0.3s ease',
-                                            }}
-                                        />
-                                    </div>
+                                    <SpendBar spent={budgetState.dailySpent} limit={budgetState.dailyLimit} />
                                 )}
                             </div>
                             <div>
@@ -364,26 +369,7 @@ export default function BudgetPolicyPanel({ tenantId, workspaceId }: BudgetPolic
                                     </span>
                                 </p>
                                 {budgetState.monthlyLimit != null && (
-                                    <div
-                                        style={{
-                                            height: '6px',
-                                            background: 'var(--line)',
-                                            borderRadius: '3px',
-                                            overflow: 'hidden',
-                                        }}
-                                    >
-                                        <div
-                                            style={{
-                                                height: '100%',
-                                                width: `${Math.min((budgetState.monthlySpent / budgetState.monthlyLimit) * 100, 100)}%`,
-                                                background: spendBarColor(
-                                                    budgetState.monthlySpent / budgetState.monthlyLimit,
-                                                ),
-                                                borderRadius: '3px',
-                                                transition: 'width 0.3s ease',
-                                            }}
-                                        />
-                                    </div>
+                                    <SpendBar spent={budgetState.monthlySpent} limit={budgetState.monthlyLimit} />
                                 )}
                             </div>
                         </div>

@@ -39,7 +39,10 @@ export default function TeamPanel() {
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
-    // Roles tab
+    // Inline role change
+    const [changingRoleId, setChangingRoleId] = useState<string | null>(null);
+
+    // Roles tab (kept for backwards compat)
     const [assignUserId, setAssignUserId] = useState('');
     const [assignRole, setAssignRole] = useState<Role>('viewer');
     const [assigning, setAssigning] = useState(false);
@@ -86,6 +89,27 @@ export default function TeamPanel() {
             setAssignError('Failed to assign role.');
         } finally {
             setAssigning(false);
+        }
+    };
+
+    const handleRoleChange = async (userId: string, newRole: Role) => {
+        setChangingRoleId(userId);
+        try {
+            const res = await fetch(`/api/team/members/${encodeURIComponent(userId)}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ role: newRole }),
+            });
+            if (!res.ok) {
+                const body = (await res.json()) as { message?: string };
+                window.alert(body.message ?? 'Failed to update role.');
+                return;
+            }
+            await fetchMembers();
+        } catch {
+            window.alert('Network error updating role.');
+        } finally {
+            setChangingRoleId(null);
         }
     };
 
@@ -311,7 +335,25 @@ export default function TeamPanel() {
                                                 <td style={{ padding: '0.55rem 0.6rem', color: 'var(--ink)', fontWeight: 500 }}>{m.name}</td>
                                                 <td style={{ padding: '0.55rem 0.6rem', color: 'var(--ink-muted)' }}>{m.email}</td>
                                                 <td style={{ padding: '0.55rem 0.6rem' }}>
-                                                    <span className={roleBadgeClass[m.role]}>{m.role}</span>
+                                                    {changingRoleId === m.id ? (
+                                                        <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>Saving…</span>
+                                                    ) : (
+                                                        <select
+                                                            value={m.role}
+                                                            onChange={e => void handleRoleChange(m.id, e.target.value as Role)}
+                                                            title="Change role"
+                                                            style={{
+                                                                fontSize: '0.75rem', fontWeight: 700,
+                                                                padding: '2px 6px', borderRadius: 4,
+                                                                border: '1px solid var(--line)',
+                                                                background: m.role === 'admin' ? '#fef9c3' : m.role === 'operator' ? '#dbeafe' : '#f1f5f9',
+                                                                color: m.role === 'admin' ? '#92400e' : m.role === 'operator' ? '#1d4ed8' : '#475569',
+                                                                cursor: 'pointer',
+                                                            }}
+                                                        >
+                                                            {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                                                        </select>
+                                                    )}
                                                 </td>
                                                 <td style={{ padding: '0.55rem 0.6rem', color: 'var(--ink-muted)' }}>{joined}</td>
                                                 <td style={{ padding: '0.55rem 0.6rem', textAlign: 'right' }}>

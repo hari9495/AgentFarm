@@ -358,6 +358,8 @@ export function InternalSidebar({
                     <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Team &amp; Settings</p>
                     <div className="space-y-0.5">
                         {[
+                            { href: '/settings', label: 'API Keys', Icon: Lock },
+                            { href: '/settings/sso', label: 'SSO / SAML', Icon: ShieldCheck },
                             { href: '/llm-config', label: 'LLM Config', Icon: Zap },
                             { href: '/quality', label: 'Quality Feedback', Icon: Star },
                             { href: '/notifications', label: 'Notifications', Icon: Bell },

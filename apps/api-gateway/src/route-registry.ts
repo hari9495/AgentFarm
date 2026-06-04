@@ -19,6 +19,7 @@ import { createEmbedFn } from '@agentfarm/memory-service';
 
 // Auth
 import { registerAuthRoutes } from './routes/auth/auth.js';
+import { registerSsoRoutes } from './routes/auth/sso.js';
 import { registerMfaRoutes } from './routes/auth/mfa.js';
 import { registerPortalAuthRoutes } from './routes/auth/portal-auth.js';
 import { registerRoleRoutes } from './routes/auth/roles.js';
@@ -175,6 +176,7 @@ export const registerAllRoutes = async (
 
     // Auth
     await registerAuthRoutes(app);
+    await registerSsoRoutes(app, { getSession });
     await registerMfaRoutes(app, {
         getSession,
         sessionSecret: process.env['API_SESSION_SECRET'] ?? '',

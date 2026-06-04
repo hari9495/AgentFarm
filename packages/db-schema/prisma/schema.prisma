@@ -20,6 +20,25 @@ model Tenant {
   users               TenantUser[]
   workspaces          Workspace[]
   branding            TenantBranding?
+  ssoConfig           TenantSsoConfig?
+}
+
+model TenantSsoConfig {
+  id              String   @id @default(cuid())
+  tenantId        String   @unique
+  enabled         Boolean  @default(false)
+  provider        String   @default("saml")   // "saml" | "oidc"
+  entryPoint      String                       // IdP SSO URL
+  issuer          String                       // IdP entity ID / issuer
+  cert            String                       // IdP public certificate (PEM)
+  spEntityId      String                       // SP entity ID (our side)
+  callbackUrl     String                       // ACS URL
+  signatureAlgo   String   @default("sha256")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
 }
 
 model TenantBranding {
@@ -42,9 +61,12 @@ model TenantUser {
   tenantId       String
   email          String    @unique
   name           String
-  passwordHash   String
+  passwordHash   String?   // null for SSO-only users
   role           String
   createdAt      DateTime  @default(now())
+  // ── SSO ────────────────────────────────────────────────────────────────
+  ssoProvider    String?   // "saml" | null
+  ssoSubject     String?   // NameID from IdP assertion
   // ── MFA (TOTP) ─────────────────────────────────────────────────────────
   totpSecret     String?   // AES-256-GCM encrypted TOTP secret; null = MFA not configured
   totpEnabled    Boolean   @default(false)
