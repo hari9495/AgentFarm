@@ -273,12 +273,57 @@ export const createServer = async (): Promise<FastifyInstance> => {
 // ---------------------------------------------------------------------------
 
 export const runStartupChecks = async (app: FastifyInstance): Promise<void> => {
+    // ── Hard-fail: these vars must always be present ─────────────────────────
     const requiredVars = ['DATABASE_URL', 'API_SESSION_SECRET'];
     const missing = requiredVars.filter((v) => !process.env[v]?.trim());
     if (missing.length > 0) {
         app.log.error(`Startup checks failed: missing required env vars: ${missing.join(', ')}`);
         process.exit(1);
     }
+
+    // ── Soft-warn: encryption at rest ────────────────────────────────────────
+    // MFA_ENCRYPTION_KEY: needed to encrypt TOTP secrets at rest.
+    // If absent, any attempt to enrol in MFA will throw at runtime. Warn early.
+    if (!process.env['MFA_ENCRYPTION_KEY']?.trim()) {
+        app.log.warn(
+            'MFA_ENCRYPTION_KEY is not set. TOTP secrets cannot be encrypted at rest. ' +
+            'Set this to a random ≥32-char string to enable MFA for users.',
+        );
+    }
+
+    // FIELD_ENCRYPTION_KEY: used by field-encryption.ts to protect sensitive DB
+    // columns (telephony tokens, third-party API keys, webhook secrets).
+    // Without this key those fields are stored as plaintext.
+    if (!process.env['FIELD_ENCRYPTION_KEY']?.trim()) {
+        app.log.warn(
+            'FIELD_ENCRYPTION_KEY is not set. Sensitive columns (telephony tokens, ' +
+            'API keys, webhook secrets) will be stored as plaintext in the database. ' +
+            'Set this to a random ≥32-char string and run a data migration to encrypt existing rows.',
+        );
+    }
+
+    // DATABASE_URL SSL: in production, the connection string should include
+    // sslmode=require (Postgres) so data is encrypted in transit to the DB.
+    // Azure Database for PostgreSQL enforces SSL by default but local and
+    // non-production setups may not.
+    if (process.env['NODE_ENV'] === 'production') {
+        const dbUrl = process.env['DATABASE_URL'] ?? '';
+        const hasSSL =
+            dbUrl.includes('sslmode=require') ||
+            dbUrl.includes('sslmode=verify-ca') ||
+            dbUrl.includes('sslmode=verify-full') ||
+            dbUrl.includes('ssl=true');
+        if (!hasSSL) {
+            app.log.warn(
+                'DATABASE_URL does not include an SSL mode parameter in production. ' +
+                'Add ?sslmode=require to enforce TLS encryption in transit. ' +
+                'Azure Database for PostgreSQL enforces SSL server-side but the client ' +
+                'should request it explicitly.',
+            );
+        }
+    }
+
+    // ── Database connectivity ─────────────────────────────────────────────────
     try {
         await prisma.$queryRaw`SELECT 1`;
     } catch (err) {

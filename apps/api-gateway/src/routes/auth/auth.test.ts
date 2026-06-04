@@ -13,6 +13,7 @@ type StoredUser = {
     tenantId: string;
     passwordHash: string;
     role: string;
+    totpEnabled?: boolean;
 };
 
 const createRepo = (): { repo: AuthRepo; users: Map<string, StoredUser>; signupCalls: number } => {
@@ -560,4 +561,147 @@ test('POST /auth/logout — 200 clears session cookie', async () => {
     assert.ok(cookie);
     assert.match(cookie, /agentfarm_session=;/);
     assert.match(cookie, /Max-Age=0/);
+});
+
+// ---------------------------------------------------------------------------
+// POST /auth/login — MFA gate
+// These tests cover the branch where user.totpEnabled is true, which must
+// return { mfa_required: true, mfa_token } instead of a full session.
+// ---------------------------------------------------------------------------
+
+const MFA_SESSION_SECRET = 'test-session-secret-minimum-32-characters!!';
+
+test('POST /auth/login — MFA gate: returns mfa_required + mfa_token, no session cookie', async () => {
+    const prevSecret = process.env['API_SESSION_SECRET'];
+    process.env['API_SESSION_SECRET'] = MFA_SESSION_SECRET;
+
+    const { repo, users } = createRepo();
+    const { app, register } = buildApp(repo);
+    await register();
+
+    const pw = 'correctPassword1';
+    await app.inject({
+        method: 'POST', url: '/auth/signup',
+        body: { name: 'MFA User', email: 'mfagate@acme.com', password: pw, companyName: 'Acme' },
+    });
+
+    // Enable MFA on the stored user
+    const stored = users.get('mfagate@acme.com');
+    assert.ok(stored, 'user must exist after signup');
+    stored.totpEnabled = true;
+
+    const res = await app.inject({
+        method: 'POST', url: '/auth/login',
+        body: { email: 'mfagate@acme.com', password: pw },
+    });
+
+    assert.equal(res.statusCode, 200);
+    const body = res.json<{ mfa_required?: boolean; mfa_token?: string; token?: string; message?: string }>();
+    assert.equal(body.mfa_required, true, 'mfa_required must be true');
+    assert.ok(body.mfa_token, 'mfa_token must be present');
+    assert.ok(!body.token, 'full session token must NOT be present when MFA is required');
+    assert.match(body.message ?? '', /mfa|verify/i, 'message should mention MFA verification');
+
+    // Must NOT set a full session cookie
+    const cookie = res.headers['set-cookie'] as string | undefined;
+    assert.ok(!cookie || !cookie.includes('agentfarm_session=v1'), 'must not issue session cookie before MFA is verified');
+
+    restoreEnv('API_SESSION_SECRET', prevSecret);
+});
+
+test('POST /auth/login — MFA gate: mfa_token payload contains userId and future expiry', async () => {
+    const prevSecret = process.env['API_SESSION_SECRET'];
+    process.env['API_SESSION_SECRET'] = MFA_SESSION_SECRET;
+
+    const { repo, users } = createRepo();
+    const { app, register } = buildApp(repo);
+    await register();
+
+    const pw = 'correctPassword1';
+    await app.inject({
+        method: 'POST', url: '/auth/signup',
+        body: { name: 'MFA User 2', email: 'mfapayload@acme.com', password: pw, companyName: 'Acme' },
+    });
+
+    const stored = users.get('mfapayload@acme.com');
+    assert.ok(stored);
+    stored.totpEnabled = true;
+
+    const res = await app.inject({
+        method: 'POST', url: '/auth/login',
+        body: { email: 'mfapayload@acme.com', password: pw },
+    });
+
+    const body = res.json<{ mfa_token: string }>();
+    assert.ok(body.mfa_token, 'mfa_token must be present');
+
+    // mfa_token format is: base64url(payload).hmac-sig
+    const parts = body.mfa_token.split('.');
+    assert.equal(parts.length, 2, 'mfa_token must have exactly two dot-separated parts');
+    const payload = JSON.parse(Buffer.from(parts[0]!, 'base64url').toString('utf8')) as {
+        userId: string;
+        exp: number;
+    };
+
+    assert.equal(payload.userId, stored.id, 'mfa_token must encode the correct userId');
+    assert.ok(typeof payload.exp === 'number', 'exp must be a number');
+    assert.ok(payload.exp > Date.now(), 'mfa_token must not be expired immediately after issuance');
+    assert.ok(payload.exp < Date.now() + 10 * 60 * 1000, 'mfa_token TTL must be ≤ 10 minutes');
+
+    restoreEnv('API_SESSION_SECRET', prevSecret);
+});
+
+test('POST /auth/login — MFA gate: wrong password returns 401 even when MFA is enabled', async () => {
+    const prevSecret = process.env['API_SESSION_SECRET'];
+    process.env['API_SESSION_SECRET'] = MFA_SESSION_SECRET;
+
+    const { repo, users } = createRepo();
+    const { app, register } = buildApp(repo);
+    await register();
+
+    const pw = 'correctPassword1';
+    await app.inject({
+        method: 'POST', url: '/auth/signup',
+        body: { name: 'MFA User 3', email: 'mfawrongpw@acme.com', password: pw, companyName: 'Acme' },
+    });
+
+    const stored = users.get('mfawrongpw@acme.com');
+    assert.ok(stored);
+    stored.totpEnabled = true;
+
+    const res = await app.inject({
+        method: 'POST', url: '/auth/login',
+        body: { email: 'mfawrongpw@acme.com', password: 'wrongpassword!' },
+    });
+
+    // Password check happens before MFA gate — wrong password must still 401
+    assert.equal(res.statusCode, 401);
+    const body = res.json<{ error: string }>();
+    assert.equal(body.error, 'invalid_credentials');
+
+    restoreEnv('API_SESSION_SECRET', prevSecret);
+});
+
+test('POST /auth/login — MFA gate: non-MFA user still receives full session token', async () => {
+    const { repo } = createRepo();
+    const { app, register } = buildApp(repo);
+    await register();
+
+    const pw = 'correctPassword1';
+    await app.inject({
+        method: 'POST', url: '/auth/signup',
+        body: { name: 'Normal User', email: 'nomfa@acme.com', password: pw, companyName: 'Acme' },
+    });
+
+    const res = await app.inject({
+        method: 'POST', url: '/auth/login',
+        body: { email: 'nomfa@acme.com', password: pw },
+    });
+
+    assert.equal(res.statusCode, 200);
+    const body = res.json<{ token?: string; mfa_required?: boolean }>();
+    assert.ok(body.token, 'full session token must be present for non-MFA user');
+    assert.ok(!body.mfa_required, 'mfa_required must be absent for non-MFA user');
+    const cookie = res.headers['set-cookie'] as string | undefined;
+    assert.ok(cookie?.includes('agentfarm_session='), 'session cookie must be set for non-MFA user');
 });
