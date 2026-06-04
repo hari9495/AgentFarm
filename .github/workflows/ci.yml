@@ -43,6 +43,14 @@ jobs:
         with:
           version: 9.12.0
 
+      - name: Restore pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/pnpm/store
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-${{ runner.os }}-
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -252,7 +260,7 @@ jobs:
             pnpm-store-${{ runner.os }}-
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
 
       - name: Generate Prisma client
         run: pnpm --filter @agentfarm/db-schema prisma:generate
@@ -287,6 +295,15 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     env:
       DATABASE_URL: postgresql://agentfarm:agentfarm@localhost:5432/agentfarm
       REDIS_URL: redis://localhost:6379
@@ -317,7 +334,7 @@ jobs:
             pnpm-store-${{ runner.os }}-
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
 
       - name: Generate Prisma client
         run: pnpm --filter @agentfarm/db-schema prisma:generate
@@ -423,7 +440,7 @@ jobs:
             pnpm-store-${{ runner.os }}-
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
 
       - name: Generate Prisma client
         run: pnpm --filter @agentfarm/db-schema prisma:generate
@@ -433,6 +450,20 @@ jobs:
 
       - name: Start API gateway
         run: nohup pnpm --filter @agentfarm/api-gateway dev > /tmp/api-gateway.log 2>&1 &
+
+      - name: Wait for API gateway
+        run: |
+          for i in {1..30}; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:3000/health || true)
+            if [ "$code" = "200" ]; then
+              echo "API gateway ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "API gateway failed to start"
+          cat /tmp/api-gateway.log
+          exit 1
 
       - name: Build Dashboard
         run: pnpm --filter @agentfarm/dashboard build
@@ -484,7 +515,7 @@ jobs:
             pnpm-store-${{ runner.os }}-
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
 
       - name: Lint
         run: pnpm lint
