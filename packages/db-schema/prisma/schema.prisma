@@ -754,6 +754,25 @@ model AgentLongTermMemory {
   @@index([botId])
 }
 
+model AgentMemoryEdge {
+  id          String   @id @default(cuid())
+  tenantId    String
+  workspaceId String
+  fromId      String
+  fromType    String
+  toId        String
+  toType      String
+  edgeType    String
+  agentPrefix String?
+  weight      Float    @default(1.0)
+  createdAt   DateTime @default(now())
+
+  @@unique([tenantId, fromId, toId, edgeType])
+  @@index([tenantId, workspaceId])
+  @@index([tenantId, fromId, fromType])
+  @@index([tenantId, toId, toType])
+}
+
 model AgentRepoKnowledge {
   id          String   @id @default(cuid())
   tenantId    String

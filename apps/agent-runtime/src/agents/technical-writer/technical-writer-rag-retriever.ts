@@ -23,6 +23,7 @@
 // ---------------------------------------------------------------------------
 
 import { normalizeIngestContent } from '../shared/rag-ingest-normalizer.js';
+import type { MemoryRetrievalConfig } from '@agentfarm/memory-service';
 
 export type TwDocumentType =
     | 'api_reference'
@@ -223,11 +224,12 @@ export async function buildTechnicalWriterRagContext(
     gatewayBaseUrl: string,
     serviceToken: string,
     workspaceId: string,
+    config?: MemoryRetrievalConfig,
 ): Promise<TechnicalWriterRagContext> {
     const [similarDocs, styleChunks, lessons] = await Promise.all([
-        retrieveSimilarDocs(query, gatewayBaseUrl, serviceToken),
-        retrieveStyleGuide(query, gatewayBaseUrl, serviceToken),
-        retrieveTwLessons(query.tenantId, workspaceId, gatewayBaseUrl, serviceToken),
+        config?.usePriorWork !== false ? retrieveSimilarDocs(query, gatewayBaseUrl, serviceToken) : Promise.resolve([]),
+        config?.useTemplates !== false ? retrieveStyleGuide(query, gatewayBaseUrl, serviceToken) : Promise.resolve([]),
+        config?.useLessons   !== false ? retrieveTwLessons(query.tenantId, workspaceId, gatewayBaseUrl, serviceToken) : Promise.resolve([]),
     ]);
 
     const sections: string[] = [];

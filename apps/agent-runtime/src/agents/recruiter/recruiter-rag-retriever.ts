@@ -24,6 +24,7 @@
 // ---------------------------------------------------------------------------
 
 import { normalizeIngestContent } from '../shared/rag-ingest-normalizer.js';
+import type { MemoryRetrievalConfig } from '@agentfarm/memory-service';
 
 export type RecruiterDomain =
     | 'engineering'
@@ -268,11 +269,12 @@ export async function buildRecruiterRagContext(
     gatewayBaseUrl: string,
     serviceToken: string,
     workspaceId: string,
+    config?: MemoryRetrievalConfig,
 ): Promise<RecruiterRagContext> {
     const [similarDocs, complianceChunks, lessons] = await Promise.all([
-        retrieveSimilarHiringArtifacts(query, gatewayBaseUrl, serviceToken),
-        retrieveRecruiterCompliance(query, gatewayBaseUrl, serviceToken),
-        retrieveRecruiterLessons(query.tenantId, workspaceId, gatewayBaseUrl, serviceToken),
+        config?.usePriorWork !== false ? retrieveSimilarHiringArtifacts(query, gatewayBaseUrl, serviceToken) : Promise.resolve([]),
+        config?.useTemplates !== false ? retrieveRecruiterCompliance(query, gatewayBaseUrl, serviceToken) : Promise.resolve([]),
+        config?.useLessons   !== false ? retrieveRecruiterLessons(query.tenantId, workspaceId, gatewayBaseUrl, serviceToken) : Promise.resolve([]),
     ]);
 
     const sections: string[] = [];

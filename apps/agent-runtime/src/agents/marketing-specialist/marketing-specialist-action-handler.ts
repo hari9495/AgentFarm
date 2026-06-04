@@ -153,6 +153,7 @@ export async function handleMarketingSpecialistAction(
     if (rawCallerFn && gatewayBaseUrl && serviceToken && workspaceId) {
         try {
             const { buildMarketingRagContext } = await import('./marketing-specialist-rag-retriever.js');
+            const { deriveMemoryConfig } = await import('@agentfarm/memory-service');
             const ragCtx = await buildMarketingRagContext(
                 {
                     tenantId, botId,
@@ -160,7 +161,7 @@ export async function handleMarketingSpecialistAction(
                     campaignDescription: String(payload['description'] ?? payload['goal'] ?? ''),
                     documentType: 'campaign_plan',
                 },
-                gatewayBaseUrl, serviceToken, workspaceId,
+                gatewayBaseUrl, serviceToken, workspaceId, deriveMemoryConfig(actionType),
             );
             if (ragCtx.contextBlock) {
                 callerFn = (prompt: string): Promise<string> => rawCallerFn(`${ragCtx.contextBlock}\n\n${prompt}`);

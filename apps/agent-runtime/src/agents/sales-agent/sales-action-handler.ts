@@ -173,6 +173,7 @@ export async function handleSalesAction(params: {
     if (rawCallLlm && gatewayBaseUrl && serviceToken && workspaceId) {
         try {
             const { buildSalesRagContext } = await import('./sales-agent-rag-retriever.js');
+            const { deriveMemoryConfig } = await import('@agentfarm/memory-service');
             const ragCtx = await buildSalesRagContext(
                 {
                     tenantId, botId,
@@ -180,7 +181,7 @@ export async function handleSalesAction(params: {
                     contextDescription: String(payload['description'] ?? payload['pain_points'] ?? ''),
                     documentType: 'outreach_email',
                 },
-                gatewayBaseUrl, serviceToken, workspaceId,
+                gatewayBaseUrl, serviceToken, workspaceId, deriveMemoryConfig(actionType),
             );
             if (ragCtx.contextBlock) {
                 callLlm = (prompt: string, sys?: string): Promise<string> =>

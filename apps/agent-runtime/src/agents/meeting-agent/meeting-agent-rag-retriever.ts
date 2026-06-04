@@ -14,6 +14,7 @@
  */
 
 import { normalizeIngestContent } from '../shared/rag-ingest-normalizer.js';
+import type { MemoryRetrievalConfig } from '@agentfarm/memory-service';
 
 export type MeetingDocumentType =
     | 'meeting_summary'
@@ -81,11 +82,11 @@ export async function retrieveMeetingLessons(tenantId: string, workspaceId: stri
     } catch { return []; }
 }
 
-export async function buildMeetingRagContext(query: MeetingRagQuery, gatewayBaseUrl: string, serviceToken: string, workspaceId: string): Promise<MeetingRagContext> {
+export async function buildMeetingRagContext(query: MeetingRagQuery, gatewayBaseUrl: string, serviceToken: string, workspaceId: string, config?: MemoryRetrievalConfig): Promise<MeetingRagContext> {
     const [similarMeetings, templateChunks, lessons] = await Promise.all([
-        retrieveSimilarMeetings(query, gatewayBaseUrl, serviceToken),
-        retrieveMeetingTemplates(query, gatewayBaseUrl, serviceToken),
-        retrieveMeetingLessons(query.tenantId, workspaceId, gatewayBaseUrl, serviceToken),
+        config?.usePriorWork !== false ? retrieveSimilarMeetings(query, gatewayBaseUrl, serviceToken) : Promise.resolve([]),
+        config?.useTemplates !== false ? retrieveMeetingTemplates(query, gatewayBaseUrl, serviceToken) : Promise.resolve([]),
+        config?.useLessons   !== false ? retrieveMeetingLessons(query.tenantId, workspaceId, gatewayBaseUrl, serviceToken) : Promise.resolve([]),
     ]);
 
     const sections: string[] = [];

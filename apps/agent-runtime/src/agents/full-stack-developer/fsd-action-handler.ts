@@ -348,6 +348,7 @@ export async function handleFsdAction(
     if (callLlmRaw && gatewayBaseUrl && serviceToken && workspaceId) {
         try {
             const { buildFsdRagContext } = await import('./fsd-rag-retriever.js');
+            const { deriveMemoryConfig } = await import('@agentfarm/memory-service');
             const ragCtx = await buildFsdRagContext(
                 {
                     tenantId, botId,
@@ -355,7 +356,7 @@ export async function handleFsdAction(
                     featureDescription: String(payload['description'] ?? ''),
                     documentType: 'feature_implementation',
                 },
-                gatewayBaseUrl, serviceToken, workspaceId,
+                gatewayBaseUrl, serviceToken, workspaceId, deriveMemoryConfig(actionType),
             );
             if (ragCtx.contextBlock) {
                 callLlmBase = (prompt: string, sys?: string): Promise<string> =>

@@ -1569,6 +1569,7 @@ export async function handleTechnicalWriterAction(params: {
     if (rawCallLlm && gatewayBaseUrl && serviceToken && workspaceId) {
         try {
             const { buildTechnicalWriterRagContext } = await import('./technical-writer-rag-retriever.js');
+            const { deriveMemoryConfig } = await import('@agentfarm/memory-service');
             const ragCtx = await buildTechnicalWriterRagContext(
                 {
                     tenantId, botId,
@@ -1576,7 +1577,7 @@ export async function handleTechnicalWriterAction(params: {
                     docDescription: String(payload['description'] ?? ''),
                     documentType: 'api_reference',
                 },
-                gatewayBaseUrl, serviceToken, workspaceId,
+                gatewayBaseUrl, serviceToken, workspaceId, deriveMemoryConfig(actionType),
             );
             if (ragCtx.contextBlock) {
                 callLlm = (prompt: string, sys?: string): Promise<string> =>

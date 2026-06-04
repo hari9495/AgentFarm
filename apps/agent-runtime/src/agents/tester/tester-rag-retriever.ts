@@ -15,6 +15,7 @@
  */
 
 import { normalizeIngestContent } from '../shared/rag-ingest-normalizer.js';
+import type { MemoryRetrievalConfig } from '@agentfarm/memory-service';
 
 export type TesterDocumentType =
     | 'test_plan'
@@ -74,11 +75,11 @@ export async function retrieveTesterLessons(tenantId: string, workspaceId: strin
     } catch { return []; }
 }
 
-export async function buildTesterRagContext(query: TesterRagQuery, gatewayBaseUrl: string, serviceToken: string, workspaceId: string): Promise<TesterRagContext> {
+export async function buildTesterRagContext(query: TesterRagQuery, gatewayBaseUrl: string, serviceToken: string, workspaceId: string, config?: MemoryRetrievalConfig): Promise<TesterRagContext> {
     const [similarTests, templateChunks, lessons] = await Promise.all([
-        retrieveSimilarTestSuites(query, gatewayBaseUrl, serviceToken),
-        retrieveTestingTemplates(query, gatewayBaseUrl, serviceToken),
-        retrieveTesterLessons(query.tenantId, workspaceId, gatewayBaseUrl, serviceToken),
+        config?.usePriorWork !== false ? retrieveSimilarTestSuites(query, gatewayBaseUrl, serviceToken) : Promise.resolve([]),
+        config?.useTemplates !== false ? retrieveTestingTemplates(query, gatewayBaseUrl, serviceToken) : Promise.resolve([]),
+        config?.useLessons   !== false ? retrieveTesterLessons(query.tenantId, workspaceId, gatewayBaseUrl, serviceToken) : Promise.resolve([]),
     ]);
 
     const sections: string[] = [];

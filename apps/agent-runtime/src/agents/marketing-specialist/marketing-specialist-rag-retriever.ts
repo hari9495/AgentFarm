@@ -15,6 +15,7 @@
  */
 
 import { normalizeIngestContent } from '../shared/rag-ingest-normalizer.js';
+import type { MemoryRetrievalConfig } from '@agentfarm/memory-service';
 
 export type MarketingChannel =
     | 'email'
@@ -112,11 +113,11 @@ export async function retrieveMarketingLessons(tenantId: string, workspaceId: st
     } catch { return []; }
 }
 
-export async function buildMarketingRagContext(query: MarketingRagQuery, gatewayBaseUrl: string, serviceToken: string, workspaceId: string): Promise<MarketingRagContext> {
+export async function buildMarketingRagContext(query: MarketingRagQuery, gatewayBaseUrl: string, serviceToken: string, workspaceId: string, config?: MemoryRetrievalConfig): Promise<MarketingRagContext> {
     const [similarCampaigns, playbookChunks, lessons] = await Promise.all([
-        retrieveSimilarCampaigns(query, gatewayBaseUrl, serviceToken),
-        retrieveChannelPlaybooks(query, gatewayBaseUrl, serviceToken),
-        retrieveMarketingLessons(query.tenantId, workspaceId, gatewayBaseUrl, serviceToken),
+        config?.usePriorWork !== false ? retrieveSimilarCampaigns(query, gatewayBaseUrl, serviceToken) : Promise.resolve([]),
+        config?.useTemplates !== false ? retrieveChannelPlaybooks(query, gatewayBaseUrl, serviceToken) : Promise.resolve([]),
+        config?.useLessons   !== false ? retrieveMarketingLessons(query.tenantId, workspaceId, gatewayBaseUrl, serviceToken) : Promise.resolve([]),
     ]);
 
     const sections: string[] = [];

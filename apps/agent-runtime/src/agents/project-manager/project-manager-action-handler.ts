@@ -1717,9 +1717,10 @@ async function handlePmDocumentAction(params: PmActionParams): Promise<PmActionR
             if (actionType === 'workspace_pm_milestone_plan')   return 'milestone_plan' as const;
             return 'budget_forecast' as const;
         })();
+        const { deriveMemoryConfig } = await import('@agentfarm/memory-service');
         const ragCtx = await buildPmRagContext(
             { tenantId, botId, projectTitle: projectName, projectDescription: str(payload['description']), documentType: pmDocType },
-            gatewayBaseUrl, serviceToken, workspaceId,
+            gatewayBaseUrl, serviceToken, workspaceId, deriveMemoryConfig(actionType),
         );
         ragContextBlock = ragCtx.contextBlock;
     } catch {

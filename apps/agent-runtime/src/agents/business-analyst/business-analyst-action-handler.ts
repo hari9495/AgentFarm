@@ -88,6 +88,7 @@ import {
     recordSignoff,
     type SignoffDecision,
 } from './business-analyst-signoff-ledger.js';
+import { deriveMemoryConfig } from '@agentfarm/memory-service';
 import type { TaskEnvelope, ProcessedTaskResult } from '../../execution-engine.js';
 
 // ---------------------------------------------------------------------------
@@ -802,7 +803,7 @@ async function _handleBaActionCore(params: BaActionParams): Promise<BaActionResu
     const lessonStore = new GatewayBaLessonStore(gatewayBaseUrl, serviceToken);
 
     const [ragResult, lessons] = await Promise.all([
-        buildBaRagContext(ragQuery, gatewayBaseUrl, serviceToken, workspaceId),
+        buildBaRagContext(ragQuery, gatewayBaseUrl, serviceToken, workspaceId, deriveMemoryConfig(actionType)),
         lessonStore.findByWorkspace(workspaceId, {
             docType: actionToRagDocType(actionType) as 'brd' | 'user_story' | 'acceptance_criteria' | 'gap_analysis' | 'process_map' | 'impact_analysis' | 'uat_checklist' | 'any',
             limit: 12,

@@ -226,6 +226,7 @@ export async function handleContentWriterAction(
     if (rawCallerFn && gatewayBaseUrl && serviceToken && workspaceId) {
         try {
             const { buildContentWriterRagContext } = await import('./content-writer-rag-retriever.js');
+            const { deriveMemoryConfig } = await import('@agentfarm/memory-service');
             const ragCtx = await buildContentWriterRagContext(
                 {
                     tenantId, botId,
@@ -233,7 +234,7 @@ export async function handleContentWriterAction(
                     contentDescription: String(payload['description'] ?? payload['brief'] ?? ''),
                     documentType: 'blog_post',
                 },
-                gatewayBaseUrl, serviceToken, workspaceId,
+                gatewayBaseUrl, serviceToken, workspaceId, deriveMemoryConfig(actionType),
             );
             if (ragCtx.contextBlock) {
                 callerFn = (systemPrompt: string, userPrompt: string) => rawCallerFn(`${ragCtx.contextBlock}\n\n${systemPrompt}`, userPrompt);

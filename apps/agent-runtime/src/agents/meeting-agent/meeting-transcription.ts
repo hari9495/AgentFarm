@@ -186,6 +186,7 @@ export async function summarizeMeeting(
             const base = gatewayBase();
             const svcToken = ragOptions.serviceToken ?? process.env['RUNTIME_TASK_SHARED_TOKEN'] ?? '';
             if (base && svcToken) {
+                const { deriveMemoryConfig } = await import('@agentfarm/memory-service');
                 const ragCtx = await buildMeetingRagContext(
                     {
                         tenantId,
@@ -194,7 +195,7 @@ export async function summarizeMeeting(
                         meetingDescription: transcript.slice(0, 500),
                         documentType: 'meeting_summary',
                     },
-                    base, svcToken, ragOptions.workspaceId,
+                    base, svcToken, ragOptions.workspaceId, deriveMemoryConfig('meeting_summary'),
                 );
                 ragContextBlock = ragCtx.contextBlock;
             }

@@ -15,6 +15,7 @@
  */
 
 import { normalizeIngestContent } from '../shared/rag-ingest-normalizer.js';
+import type { MemoryRetrievalConfig } from '@agentfarm/memory-service';
 
 export type SupportDocumentType =
     | 'ticket_response'
@@ -89,11 +90,11 @@ export async function retrieveSupportLessons(tenantId: string, workspaceId: stri
     } catch { return []; }
 }
 
-export async function buildSupportRagContext(query: SupportRagQuery, gatewayBaseUrl: string, serviceToken: string, workspaceId: string): Promise<SupportRagContext> {
+export async function buildSupportRagContext(query: SupportRagQuery, gatewayBaseUrl: string, serviceToken: string, workspaceId: string, config?: MemoryRetrievalConfig): Promise<SupportRagContext> {
     const [similarResolutions, knowledgeChunks, lessons] = await Promise.all([
-        retrieveSimilarResolutions(query, gatewayBaseUrl, serviceToken),
-        retrieveProductKnowledge(query, gatewayBaseUrl, serviceToken),
-        retrieveSupportLessons(query.tenantId, workspaceId, gatewayBaseUrl, serviceToken),
+        config?.usePriorWork !== false ? retrieveSimilarResolutions(query, gatewayBaseUrl, serviceToken) : Promise.resolve([]),
+        config?.useTemplates !== false ? retrieveProductKnowledge(query, gatewayBaseUrl, serviceToken) : Promise.resolve([]),
+        config?.useLessons   !== false ? retrieveSupportLessons(query.tenantId, workspaceId, gatewayBaseUrl, serviceToken) : Promise.resolve([]),
     ]);
 
     const sections: string[] = [];

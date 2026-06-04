@@ -23,6 +23,7 @@
 // ---------------------------------------------------------------------------
 
 import { normalizeIngestContent } from '../shared/rag-ingest-normalizer.js';
+import type { MemoryRetrievalConfig } from '@agentfarm/memory-service';
 
 export type PmDocumentType =
     | 'project_charter'
@@ -204,11 +205,12 @@ export async function buildPmRagContext(
     gatewayBaseUrl: string,
     serviceToken: string,
     workspaceId: string,
+    config?: MemoryRetrievalConfig,
 ): Promise<PmRagContext> {
     const [similarDocs, templateChunks, lessons] = await Promise.all([
-        retrieveSimilarPmArtifacts(query, gatewayBaseUrl, serviceToken),
-        retrievePmTemplates(query, gatewayBaseUrl, serviceToken),
-        retrievePmLessons(query.tenantId, workspaceId, gatewayBaseUrl, serviceToken),
+        config?.usePriorWork !== false ? retrieveSimilarPmArtifacts(query, gatewayBaseUrl, serviceToken) : Promise.resolve([]),
+        config?.useTemplates !== false ? retrievePmTemplates(query, gatewayBaseUrl, serviceToken) : Promise.resolve([]),
+        config?.useLessons   !== false ? retrievePmLessons(query.tenantId, workspaceId, gatewayBaseUrl, serviceToken) : Promise.resolve([]),
     ]);
 
     const sections: string[] = [];

@@ -31,3 +31,26 @@ export {
     CONSOLIDATION_THRESHOLD,
 }                                               from './consolidation.js';
 export type { ConsolidationResult }             from './consolidation.js';
+
+export {
+    deriveMemoryConfig,
+    PROFILE_CONFIGS,
+}                                               from './task-profile.js';
+export type {
+    TaskMemoryProfile,
+    MemoryRetrievalConfig,
+}                                               from './task-profile.js';
+
+export {
+    writeMemoryEdge,
+    readEdgesFrom,
+    readEdgesTo,
+    traverseMemoryGraph,
+}                                               from './graph.js';
+export type {
+    MemoryNodeType,
+    MemoryEdgeType,
+    WriteEdgeParams,
+    MemoryEdge,
+    TraversalNode,
+}                                               from './graph.js';

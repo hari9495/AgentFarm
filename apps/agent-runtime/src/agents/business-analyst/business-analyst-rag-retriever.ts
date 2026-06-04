@@ -25,6 +25,7 @@
 // ---------------------------------------------------------------------------
 
 import { normalizeIngestContent } from '../shared/rag-ingest-normalizer.js';
+import type { MemoryRetrievalConfig } from '@agentfarm/memory-service';
 
 export type BaComplianceFramework =
     | 'gdpr'
@@ -358,12 +359,12 @@ export async function buildBaRagContext(
     gatewayBaseUrl: string,
     serviceToken: string,
     workspaceId: string,
+    config?: MemoryRetrievalConfig,
 ): Promise<BaRagContext> {
-    // Run all three retrieval paths concurrently
     const [similarDocs, complianceChunks, lessons] = await Promise.all([
-        retrieveSimilarPriorWork(query, gatewayBaseUrl, serviceToken),
-        retrieveComplianceRequirements(query, gatewayBaseUrl, serviceToken),
-        retrieveBaLessons(query.tenantId, workspaceId, gatewayBaseUrl, serviceToken),
+        config?.usePriorWork !== false ? retrieveSimilarPriorWork(query, gatewayBaseUrl, serviceToken)                              : Promise.resolve([]),
+        config?.useTemplates !== false ? retrieveComplianceRequirements(query, gatewayBaseUrl, serviceToken)                       : Promise.resolve([]),
+        config?.useLessons   !== false ? retrieveBaLessons(query.tenantId, workspaceId, gatewayBaseUrl, serviceToken)              : Promise.resolve([]),
     ]);
 
     const sections: string[] = [];

@@ -15,6 +15,7 @@
  */
 
 import { normalizeIngestContent } from '../shared/rag-ingest-normalizer.js';
+import type { MemoryRetrievalConfig } from '@agentfarm/memory-service';
 
 export type MobilePlatform = 'ios' | 'android' | 'cross_platform';
 export type MobileDocumentType = 'ui_component' | 'api_client' | 'push_notification' | 'deep_link' | 'navigation' | 'state_management' | 'widget' | 'accessibility';
@@ -67,11 +68,11 @@ export async function retrieveMobileLessons(tenantId: string, workspaceId: strin
     } catch { return []; }
 }
 
-export async function buildMobileRagContext(query: MobileRagQuery, gatewayBaseUrl: string, serviceToken: string, workspaceId: string): Promise<MobileRagContext> {
+export async function buildMobileRagContext(query: MobileRagQuery, gatewayBaseUrl: string, serviceToken: string, workspaceId: string, config?: MemoryRetrievalConfig): Promise<MobileRagContext> {
     const [similarComponents, guidelineChunks, lessons] = await Promise.all([
-        retrieveSimilarComponents(query, gatewayBaseUrl, serviceToken),
-        retrievePlatformGuidelines(query, gatewayBaseUrl, serviceToken),
-        retrieveMobileLessons(query.tenantId, workspaceId, gatewayBaseUrl, serviceToken),
+        config?.usePriorWork !== false ? retrieveSimilarComponents(query, gatewayBaseUrl, serviceToken) : Promise.resolve([]),
+        config?.useTemplates !== false ? retrievePlatformGuidelines(query, gatewayBaseUrl, serviceToken) : Promise.resolve([]),
+        config?.useLessons   !== false ? retrieveMobileLessons(query.tenantId, workspaceId, gatewayBaseUrl, serviceToken) : Promise.resolve([]),
     ]);
 
     const sections: string[] = [];

@@ -19,8 +19,11 @@ import {
     writeEpisodicMemory,
     writeEpisodicMemoryNoEmbed,
     searchEpisodicMemoryNoEmbed,
+    writeMemoryEdge,
+    readEdgesFrom,
+    readEdgesTo,
 } from '@agentfarm/memory-service';
-import type { EmbedFn } from '@agentfarm/memory-service';
+import type { EmbedFn, MemoryNodeType, MemoryEdgeType } from '@agentfarm/memory-service';
 import type { EpisodicSearchRequest, EpisodicWriteRequest } from '@agentfarm/shared-types';
 
 type SessionContext = {
@@ -234,6 +237,59 @@ export async function registerMemoryRoutes(
         } catch (error) {
             const msg = error instanceof Error ? error.message : 'Unknown error';
             return res.status(500).send({ error: `Failed to cleanup: ${msg}` });
+        }
+    });
+
+    // ── WRITE memory edge ─────────────────────────────────────────────────────
+    on('post', '/memory/edges', async (req: FastifyRequest, res: FastifyReply) => {
+        const session = getSession(req);
+        if (!session) return res.status(401).send({ error: 'unauthorized' });
+        try {
+            const body = req.body as Record<string, unknown>;
+            const { tenantId, workspaceId, fromId, fromType, toId, toType, edgeType, agentPrefix, weight } = body;
+
+            if (!tenantId || !workspaceId || !fromId || !fromType || !toId || !toType || !edgeType) {
+                return res.status(400).send({ error: 'Missing required: tenantId, workspaceId, fromId, fromType, toId, toType, edgeType' });
+            }
+
+            const edge = await writeMemoryEdge(prisma, {
+                tenantId: String(tenantId),
+                workspaceId: String(workspaceId),
+                fromId: String(fromId),
+                fromType: String(fromType) as MemoryNodeType,
+                toId: String(toId),
+                toType: String(toType) as MemoryNodeType,
+                edgeType: String(edgeType) as MemoryEdgeType,
+                agentPrefix: typeof agentPrefix === 'string' ? agentPrefix : undefined,
+                weight: typeof weight === 'number' ? weight : 1.0,
+            });
+
+            return res.status(201).send(edge);
+        } catch (error) {
+            const msg = error instanceof Error ? error.message : 'Unknown error';
+            return res.status(500).send({ error: `Failed to write memory edge: ${msg}` });
+        }
+    });
+
+    // ── READ memory edges ─────────────────────────────────────────────────────
+    on('get', '/memory/edges', async (req: FastifyRequest, res: FastifyReply) => {
+        const session = getSession(req);
+        if (!session) return res.status(401).send({ error: 'unauthorized' });
+        try {
+            const { nodeId, nodeType, direction } = req.query as { nodeId?: string; nodeType?: string; direction?: string };
+
+            if (!nodeId || !nodeType) {
+                return res.status(400).send({ error: 'Missing required query params: nodeId, nodeType' });
+            }
+
+            const edges = direction === 'to'
+                ? await readEdgesTo(prisma, session.tenantId, nodeId, nodeType as MemoryNodeType)
+                : await readEdgesFrom(prisma, session.tenantId, nodeId, nodeType as MemoryNodeType);
+
+            return res.send({ edges, count: edges.length, direction: direction ?? 'from' });
+        } catch (error) {
+            const msg = error instanceof Error ? error.message : 'Unknown error';
+            return res.status(500).send({ error: `Failed to read memory edges: ${msg}` });
         }
     });
 

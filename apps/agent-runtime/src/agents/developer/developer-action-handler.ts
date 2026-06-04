@@ -166,6 +166,7 @@ export async function handleDeveloperAction(
     if (rawCallLlm && gatewayBaseUrl && serviceToken && workspaceId) {
         try {
             const { buildDeveloperRagContext } = await import('./developer-rag-retriever.js');
+            const { deriveMemoryConfig } = await import('@agentfarm/memory-service');
             const ragCtx = await buildDeveloperRagContext(
                 {
                     tenantId, botId,
@@ -173,7 +174,7 @@ export async function handleDeveloperAction(
                     taskDescription: String(payload['description'] ?? ''),
                     documentType: 'feature_implementation',
                 },
-                gatewayBaseUrl, serviceToken, workspaceId,
+                gatewayBaseUrl, serviceToken, workspaceId, deriveMemoryConfig(actionType),
             );
             if (ragCtx.contextBlock) {
                 callLlm = (prompt: string, sys?: string): Promise<string> =>

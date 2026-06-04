@@ -15,6 +15,7 @@
  */
 
 import { normalizeIngestContent } from '../shared/rag-ingest-normalizer.js';
+import type { MemoryRetrievalConfig } from '@agentfarm/memory-service';
 
 export type DevOpsDocumentType =
     | 'runbook'
@@ -96,11 +97,11 @@ export async function retrieveDevOpsLessons(tenantId: string, workspaceId: strin
     } catch { return []; }
 }
 
-export async function buildDevOpsRagContext(query: DevOpsRagQuery, gatewayBaseUrl: string, serviceToken: string, workspaceId: string): Promise<DevOpsRagContext> {
+export async function buildDevOpsRagContext(query: DevOpsRagQuery, gatewayBaseUrl: string, serviceToken: string, workspaceId: string, config?: MemoryRetrievalConfig): Promise<DevOpsRagContext> {
     const [similarArtifacts, templateChunks, lessons] = await Promise.all([
-        retrieveSimilarOpsArtifacts(query, gatewayBaseUrl, serviceToken),
-        retrieveInfraTemplates(query, gatewayBaseUrl, serviceToken),
-        retrieveDevOpsLessons(query.tenantId, workspaceId, gatewayBaseUrl, serviceToken),
+        config?.usePriorWork !== false ? retrieveSimilarOpsArtifacts(query, gatewayBaseUrl, serviceToken) : Promise.resolve([]),
+        config?.useTemplates !== false ? retrieveInfraTemplates(query, gatewayBaseUrl, serviceToken) : Promise.resolve([]),
+        config?.useLessons   !== false ? retrieveDevOpsLessons(query.tenantId, workspaceId, gatewayBaseUrl, serviceToken) : Promise.resolve([]),
     ]);
 
     const sections: string[] = [];

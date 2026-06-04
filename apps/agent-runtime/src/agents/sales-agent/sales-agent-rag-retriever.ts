@@ -26,6 +26,7 @@
 // ---------------------------------------------------------------------------
 
 import { normalizeIngestContent } from '../shared/rag-ingest-normalizer.js';
+import type { MemoryRetrievalConfig } from '@agentfarm/memory-service';
 
 export type SalesDomain =
     | 'saas'
@@ -319,11 +320,12 @@ export async function buildSalesRagContext(
     gatewayBaseUrl: string,
     serviceToken: string,
     workspaceId: string,
+    config?: MemoryRetrievalConfig,
 ): Promise<SalesRagContext> {
     const [similarArtifacts, playbookChunks, lessons] = await Promise.all([
-        retrieveSimilarSalesArtifacts(query, gatewayBaseUrl, serviceToken),
-        retrieveSalesPlaybooks(query, gatewayBaseUrl, serviceToken),
-        retrieveSalesLessons(query.tenantId, workspaceId, gatewayBaseUrl, serviceToken),
+        config?.usePriorWork !== false ? retrieveSimilarSalesArtifacts(query, gatewayBaseUrl, serviceToken) : Promise.resolve([]),
+        config?.useTemplates !== false ? retrieveSalesPlaybooks(query, gatewayBaseUrl, serviceToken) : Promise.resolve([]),
+        config?.useLessons   !== false ? retrieveSalesLessons(query.tenantId, workspaceId, gatewayBaseUrl, serviceToken) : Promise.resolve([]),
     ]);
 
     const sections: string[] = [];

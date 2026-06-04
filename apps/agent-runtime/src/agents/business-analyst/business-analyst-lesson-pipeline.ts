@@ -182,13 +182,11 @@ export class GatewayBaLessonStore implements IBaLessonStore {
 
     async save(lesson: BaLesson): Promise<void> {
         const base = this.gatewayBaseUrl.replace(/\/+$/, '');
+        const headers = { 'content-type': 'application/json', Authorization: `Bearer ${this.serviceToken}` };
         try {
             await fetch(`${base}/v1/memory/patterns`, {
                 method: 'POST',
-                headers: {
-                    'content-type': 'application/json',
-                    Authorization: `Bearer ${this.serviceToken}`,
-                },
+                headers,
                 body: JSON.stringify({
                     tenantId: lesson.tenantId,
                     workspaceId: lesson.workspaceId,
@@ -213,6 +211,25 @@ export class GatewayBaLessonStore implements IBaLessonStore {
                 }),
                 signal: AbortSignal.timeout(10_000),
             });
+
+            // Write spawned_lesson edge: approved doc → lesson (non-fatal)
+            if (lesson.sourceDocumentId) {
+                fetch(`${base}/v1/memory/edges`, {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({
+                        tenantId: lesson.tenantId,
+                        workspaceId: lesson.workspaceId,
+                        fromId: lesson.sourceDocumentId,
+                        fromType: 'knowledge',
+                        toId: lesson.id,
+                        toType: 'lesson',
+                        edgeType: 'spawned_lesson',
+                        agentPrefix: 'ba',
+                    }),
+                    signal: AbortSignal.timeout(5_000),
+                }).catch(() => { /* non-fatal */ });
+            }
         } catch (err) {
             console.warn(`[GatewayBaLessonStore] save failed for lesson ${lesson.id}: ${String(err)}`);
         }

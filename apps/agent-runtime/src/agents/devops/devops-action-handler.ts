@@ -1121,6 +1121,7 @@ export async function handleDevopsAction(params: DevopsActionParams): Promise<De
     if (rawCallLlm && gatewayBaseUrl && serviceToken && workspaceId) {
         try {
             const { buildDevOpsRagContext } = await import('./devops-rag-retriever.js');
+            const { deriveMemoryConfig } = await import('@agentfarm/memory-service');
             const ragCtx = await buildDevOpsRagContext(
                 {
                     tenantId, botId,
@@ -1128,7 +1129,7 @@ export async function handleDevopsAction(params: DevopsActionParams): Promise<De
                     contextDescription: String(payload['description'] ?? ''),
                     documentType: 'runbook',
                 },
-                gatewayBaseUrl, serviceToken, workspaceId,
+                gatewayBaseUrl, serviceToken, workspaceId, deriveMemoryConfig(actionType),
             );
             if (ragCtx.contextBlock) {
                 callLlm = (prompt: string, sys?: string): Promise<string> =>
