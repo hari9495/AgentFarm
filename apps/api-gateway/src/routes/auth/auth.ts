@@ -20,7 +20,7 @@ type LoginBody = {
 type UserRecord = {
     id: string;
     tenantId: string;
-    passwordHash: string;
+    passwordHash: string | null; // null for SSO-only accounts (no password set)
     role: string;
     totpEnabled?: boolean; // present when MFA is configured
 };
@@ -201,13 +201,15 @@ export const registerAuthRoutes = async (
         const normalizedEmail = email.trim().toLowerCase();
         const user = await repo.findUserByEmail(normalizedEmail);
 
-        // Always run verification to prevent timing-based user enumeration
+        // Always run verification to prevent timing-based user enumeration.
+        // SSO-only accounts (passwordHash = null) are treated as non-existent for
+        // password login — they must authenticate via their SSO provider.
         const DUMMY_HASH = 'scrypt:0000000000000000000000000000000000000000000000000000000000000000:0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000';
-        const passwordValid = user
+        const passwordValid = user?.passwordHash
             ? await verifyPassword(password, user.passwordHash)
-            : await verifyPassword(password, DUMMY_HASH);
+            : await verifyPassword(password, DUMMY_HASH); // constant-time even for null
 
-        if (!user || !passwordValid) {
+        if (!user || !user.passwordHash || !passwordValid) {
             return reply.code(401).send({ error: 'invalid_credentials', message: 'Email or password is incorrect.' });
         }
 
@@ -263,11 +265,11 @@ export const registerAuthRoutes = async (
         const user = await repo.findUserByEmail(normalizedEmail);
 
         const DUMMY_HASH = 'scrypt:0000000000000000000000000000000000000000000000000000000000000000:0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000';
-        const passwordValid = user
+        const passwordValid = user?.passwordHash
             ? await verifyPassword(password, user.passwordHash)
             : await verifyPassword(password, DUMMY_HASH);
 
-        if (!user || !passwordValid) {
+        if (!user || !user.passwordHash || !passwordValid) {
             return reply.code(401).send({ error: 'invalid_credentials', message: 'Email or password is incorrect.' });
         }
 

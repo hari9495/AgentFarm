@@ -1,5 +1,45 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
+import { encryptFieldIfSet, decryptFieldMaybeUnencrypted } from '../../lib/field-encryption.js';
+
+// ---------------------------------------------------------------------------
+// Sensitive fields — encrypted at rest via field-encryption.ts (AES-256-GCM).
+// On write: encryptFieldIfSet (graceful — stores plaintext if key absent, warns).
+// On read:  decryptFieldMaybeUnencrypted (handles both legacy plaintext and enc: values).
+// ---------------------------------------------------------------------------
+const SENSITIVE_SALES_FIELDS = [
+    'twilioAuthToken',
+    'signalwireApiToken',
+    'plivoAuthToken',
+    'vonageApiSecret',
+    'vonagePrivateKey',
+    'phantombusterApiKey',
+    'newsApiKey',
+    'hubspotAccessToken',
+    'salesforceAccessToken',
+] as const;
+
+function encryptSalesConfigFields(data: Record<string, unknown>): Record<string, unknown> {
+    const out = { ...data };
+    for (const field of SENSITIVE_SALES_FIELDS) {
+        if (typeof out[field] === 'string' && out[field]) {
+            out[field] = encryptFieldIfSet(out[field] as string);
+        }
+    }
+    return out;
+}
+
+function decryptSalesConfigFields(config: Record<string, unknown>): Record<string, unknown> {
+    const out = { ...config };
+    for (const field of SENSITIVE_SALES_FIELDS) {
+        if (typeof out[field] === 'string' && out[field]) {
+            try {
+                out[field] = decryptFieldMaybeUnencrypted(out[field] as string);
+            } catch { /* non-fatal — return ciphertext as-is if key unavailable */ }
+        }
+    }
+    return out;
+}
 
 type SessionContext = {
     userId: string;
@@ -116,7 +156,7 @@ export async function registerSalesConfigRoutes(
 
             if (!config) return reply.code(404).send({ error: 'SalesAgentConfig not found' });
 
-            return reply.code(200).send({ config });
+            return reply.code(200).send({ config: decryptSalesConfigFields(config) });
         },
     );
 
@@ -157,58 +197,60 @@ export async function registerSalesConfigRoutes(
                 return reply.code(409).send({ error: 'SalesAgentConfig already exists for this bot — use PUT to update' });
             }
 
+            const rawData = {
+                tenantId: session.tenantId,
+                botId: body.botId,
+                productDescription: body.productDescription,
+                icp: body.icp,
+                leadSourceProvider: body.leadSourceProvider,
+                emailProvider: body.emailProvider,
+                crmProvider: body.crmProvider,
+                calendarProvider: body.calendarProvider,
+                signatureProvider: body.signatureProvider,
+                emailTone: body.emailTone ?? 'conversational',
+                followUpDays: body.followUpDays ?? [3, 7, 14],
+                maxProspectsPerDay: body.maxProspectsPerDay ?? 50,
+                active: body.active ?? true,
+                telephonyProvider: body.telephonyProvider ?? null,
+                callWebhookBaseUrl: body.callWebhookBaseUrl ?? null,
+                twilioAccountSid: body.twilioAccountSid ?? null,
+                twilioAuthToken: body.twilioAuthToken ?? null,
+                twilioFromNumber: body.twilioFromNumber ?? null,
+                signalwireProjectId: body.signalwireProjectId ?? null,
+                signalwireApiToken: body.signalwireApiToken ?? null,
+                signalwireSpaceUrl: body.signalwireSpaceUrl ?? null,
+                signalwireFromNumber: body.signalwireFromNumber ?? null,
+                plivoAuthId: body.plivoAuthId ?? null,
+                plivoAuthToken: body.plivoAuthToken ?? null,
+                plivoFromNumber: body.plivoFromNumber ?? null,
+                vonageApiKey: body.vonageApiKey ?? null,
+                vonageApiSecret: body.vonageApiSecret ?? null,
+                vonageApplicationId: body.vonageApplicationId ?? null,
+                vonagePrivateKey: body.vonagePrivateKey ?? null,
+                vonageFromNumber: body.vonageFromNumber ?? null,
+                phantombusterApiKey: body.phantombusterApiKey ?? null,
+                phantombusterLinkedInPhantomId: body.phantombusterLinkedInPhantomId ?? null,
+                marketResearchEnabled: body.marketResearchEnabled ?? false,
+                newsApiKey: body.newsApiKey ?? null,
+                marketResearchIntervalHours: body.marketResearchIntervalHours ?? null,
+                maxDiscountPercent: body.maxDiscountPercent ?? null,
+                discountApprovalRequired: body.discountApprovalRequired ?? false,
+                discountApproverEmail: body.discountApproverEmail ?? null,
+                npsEnabled: body.npsEnabled ?? false,
+                npsDelayDays: body.npsDelayDays ?? [30, 60, 90],
+                upsellEnabled: body.upsellEnabled ?? false,
+                upsellCheckInDays: body.upsellCheckInDays ?? 90,
+                crmSyncEnabled: body.crmSyncEnabled ?? false,
+                hubspotAccessToken: body.hubspotAccessToken ?? null,
+                salesforceInstanceUrl: body.salesforceInstanceUrl ?? null,
+                salesforceAccessToken: body.salesforceAccessToken ?? null,
+            };
+
             const config = await (prisma as never as PrismaWithSales).salesAgentConfig.create({
-                data: {
-                    tenantId: session.tenantId,
-                    botId: body.botId,
-                    productDescription: body.productDescription,
-                    icp: body.icp,
-                    leadSourceProvider: body.leadSourceProvider,
-                    emailProvider: body.emailProvider,
-                    crmProvider: body.crmProvider,
-                    calendarProvider: body.calendarProvider,
-                    signatureProvider: body.signatureProvider,
-                    emailTone: body.emailTone ?? 'conversational',
-                    followUpDays: body.followUpDays ?? [3, 7, 14],
-                    maxProspectsPerDay: body.maxProspectsPerDay ?? 50,
-                    active: body.active ?? true,
-                    telephonyProvider: body.telephonyProvider ?? null,
-                    callWebhookBaseUrl: body.callWebhookBaseUrl ?? null,
-                    twilioAccountSid: body.twilioAccountSid ?? null,
-                    twilioAuthToken: body.twilioAuthToken ?? null,
-                    twilioFromNumber: body.twilioFromNumber ?? null,
-                    signalwireProjectId: body.signalwireProjectId ?? null,
-                    signalwireApiToken: body.signalwireApiToken ?? null,
-                    signalwireSpaceUrl: body.signalwireSpaceUrl ?? null,
-                    signalwireFromNumber: body.signalwireFromNumber ?? null,
-                    plivoAuthId: body.plivoAuthId ?? null,
-                    plivoAuthToken: body.plivoAuthToken ?? null,
-                    plivoFromNumber: body.plivoFromNumber ?? null,
-                    vonageApiKey: body.vonageApiKey ?? null,
-                    vonageApiSecret: body.vonageApiSecret ?? null,
-                    vonageApplicationId: body.vonageApplicationId ?? null,
-                    vonagePrivateKey: body.vonagePrivateKey ?? null,
-                    vonageFromNumber: body.vonageFromNumber ?? null,
-                    phantombusterApiKey: body.phantombusterApiKey ?? null,
-                    phantombusterLinkedInPhantomId: body.phantombusterLinkedInPhantomId ?? null,
-                    marketResearchEnabled: body.marketResearchEnabled ?? false,
-                    newsApiKey: body.newsApiKey ?? null,
-                    marketResearchIntervalHours: body.marketResearchIntervalHours ?? null,
-                    maxDiscountPercent: body.maxDiscountPercent ?? null,
-                    discountApprovalRequired: body.discountApprovalRequired ?? false,
-                    discountApproverEmail: body.discountApproverEmail ?? null,
-                    npsEnabled: body.npsEnabled ?? false,
-                    npsDelayDays: body.npsDelayDays ?? [30, 60, 90],
-                    upsellEnabled: body.upsellEnabled ?? false,
-                    upsellCheckInDays: body.upsellCheckInDays ?? 90,
-                    crmSyncEnabled: body.crmSyncEnabled ?? false,
-                    hubspotAccessToken: body.hubspotAccessToken ?? null,
-                    salesforceInstanceUrl: body.salesforceInstanceUrl ?? null,
-                    salesforceAccessToken: body.salesforceAccessToken ?? null,
-                },
+                data: encryptSalesConfigFields(rawData) as never,
             });
 
-            return reply.code(201).send({ ok: true, config });
+            return reply.code(201).send({ ok: true, config: decryptSalesConfigFields(config) });
         },
     );
 
@@ -281,12 +323,14 @@ export async function registerSalesConfigRoutes(
                 if (body[f] !== undefined) updateData[f] = body[f];
             }
 
+            const encryptedUpdate = encryptSalesConfigFields(updateData);
+
             const config = await (prisma as never as PrismaWithSales).salesAgentConfig.update({
                 where: { id: existing['id'] as string },
-                data: updateData as never,
+                data: encryptedUpdate as never,
             });
 
-            return reply.code(200).send({ ok: true, config });
+            return reply.code(200).send({ ok: true, config: decryptSalesConfigFields(config) });
         },
     );
 }
