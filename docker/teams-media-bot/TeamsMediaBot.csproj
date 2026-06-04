@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>TeamsMediaBot</RootNamespace>
+    <AssemblyName>TeamsMediaBot</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Microsoft Graph REST client (control-plane API calls) -->
+    <PackageReference Include="Microsoft.Graph" Version="5.56.0" />
+    <!-- MSAL — Azure AD client-credentials token acquisition -->
+    <PackageReference Include="Microsoft.Identity.Client" Version="4.65.0" />
+  </ItemGroup>
+</Project>

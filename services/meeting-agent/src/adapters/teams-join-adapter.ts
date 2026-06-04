@@ -42,6 +42,23 @@ export interface TeamsJoinAdapterOptions {
     botId?: string;
     /** Per-request timeout in ms (default: 20 s). */
     timeoutMs?: number;
+    /**
+     * Base URL of the teams-media-bot sidecar, e.g. `http://teams-media-bot:8090`.
+     * When set:
+     *   - `join()` delegates call creation to the sidecar using `applicationHostedMediaConfig`
+     *     (real media endpoint) instead of the Graph REST `serviceHostedMediaConfig` fallback.
+     *   - `startScreenShare()` calls `/v1/calls/:id/inject/start` so the sidecar relays
+     *     the FFmpeg HLS stream to the Teams media endpoint via RTP/SRTP.
+     * When null/undefined: falls back to the Graph REST control-plane path (audio only,
+     * no real video injection — screen share falls back to modality PATCH only).
+     */
+    mediasBotUrl?: string | null;
+    /**
+     * Public base URL the sidecar is reachable on by Teams for callback notifications,
+     * e.g. `https://mybot.example.com`. Set via TEAMS_CALLBACK_BASE_URL.
+     * Required for Teams to POST ICE/DTLS negotiation data to the sidecar.
+     */
+    callbackBaseUrl?: string | null;
     /** Override fetch (used by tests). */
     fetchImpl?: FetchLike;
 }
@@ -64,6 +81,8 @@ interface ResolvedTeamsOptions {
     botDisplayName: string;
     botId: string;
     timeoutMs: number;
+    mediasBotUrl: string | null;
+    callbackBaseUrl: string | null;
 }
 
 export class TeamsJoinAdapter implements MeetingJoinAdapter {
@@ -82,6 +101,12 @@ export class TeamsJoinAdapter implements MeetingJoinAdapter {
             botDisplayName: options.botDisplayName ?? 'AgentFarm Bot',
             botId: options.botId ?? options.clientId,
             timeoutMs: options.timeoutMs ?? 20_000,
+            mediasBotUrl: options.mediasBotUrl
+                ? options.mediasBotUrl.replace(/\/+$/u, '')
+                : null,
+            callbackBaseUrl: options.callbackBaseUrl
+                ? options.callbackBaseUrl.replace(/\/+$/u, '')
+                : null,
         };
         const globalFetch = (globalThis as { fetch?: FetchLike }).fetch;
         this.fetchImpl = options.fetchImpl ?? globalFetch ?? (() => { throw new Error('No fetch available'); });
@@ -90,12 +115,55 @@ export class TeamsJoinAdapter implements MeetingJoinAdapter {
     // ── Public API ──────────────────────────────────────────────────────────────
 
     async join(meetingUrl: string, displayName?: string): Promise<MeetingJoinResult> {
+        // Prefer the sidecar path when configured — it uses applicationHostedMediaConfig
+        // which gives the bot a real media endpoint for video injection.
+        if (this.opts.mediasBotUrl) {
+            return this.joinViaSidecar(meetingUrl, displayName);
+        }
+        // Fallback: Graph REST join with serviceHostedMediaConfig (audio only).
         try {
             const token = await this.getToken();
             const callId = await this.createCall(token, meetingUrl, displayName ?? this.opts.botDisplayName);
             return { ok: true, joinMethod: 'teams_sdk', sessionHandle: callId };
         } catch (error) {
             return { ok: false, joinMethod: 'teams_sdk', error: (error as Error).message };
+        }
+    }
+
+    private async joinViaSidecar(meetingUrl: string, displayName?: string): Promise<MeetingJoinResult> {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), this.opts.timeoutMs);
+        try {
+            const res = await this.fetchImpl(`${this.opts.mediasBotUrl}/v1/calls/join`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    meetingUrl,
+                    tenantId: this.opts.tenantId,
+                    clientId: this.opts.clientId,
+                    clientSecret: this.opts.clientSecret,
+                    botId: this.opts.botId,
+                    callbackBaseUrl: this.opts.callbackBaseUrl ?? '',
+                    botDisplayName: displayName ?? this.opts.botDisplayName,
+                }),
+                signal: controller.signal,
+            });
+            if (!res.ok) {
+                const detail = await res.text().catch(() => '');
+                return { ok: false, joinMethod: 'teams_sdk', error: `sidecar join ${res.status}: ${detail.slice(0, 256)}` };
+            }
+            const data = await res.json() as { ok: boolean; callId?: string; error?: string };
+            if (!data.ok || !data.callId) {
+                return { ok: false, joinMethod: 'teams_sdk', error: data.error ?? 'sidecar returned no callId' };
+            }
+            return { ok: true, joinMethod: 'teams_sdk', sessionHandle: data.callId };
+        } catch (error) {
+            const msg = (error as Error).name === 'AbortError'
+                ? `sidecar timeout after ${this.opts.timeoutMs}ms`
+                : (error as Error).message;
+            return { ok: false, joinMethod: 'teams_sdk', error: msg };
+        } finally {
+            clearTimeout(timer);
         }
     }
 
@@ -176,7 +244,28 @@ export class TeamsJoinAdapter implements MeetingJoinAdapter {
                 return { ok: false, error: captureData.error ?? 'desktop-agent returned ok:false' };
             }
 
-            // 2. PATCH the active Teams call to add the video modality.
+            // 2a. Sidecar path: inject HLS stream into the Teams media endpoint.
+            //     The sidecar relays the HLS → FFmpeg → RTP/SRTP to the media IP:port
+            //     negotiated when the call was created with applicationHostedMediaConfig.
+            if (this.opts.mediasBotUrl && captureData.streamUrl) {
+                const injectRes = await this.fetchImpl(
+                    `${this.opts.mediasBotUrl}/v1/calls/${encodeURIComponent(sessionHandle)}/inject/start`,
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ hlsUrl: captureData.streamUrl }),
+                    },
+                );
+                if (!injectRes.ok) {
+                    const detail = await injectRes.text().catch(() => '');
+                    return { ok: false, error: `sidecar inject/start ${injectRes.status}: ${detail.slice(0, 256)}` };
+                }
+                return { ok: true, streamUrl: captureData.streamUrl };
+            }
+
+            // 2b. Fallback path (no sidecar): PATCH modalities so Teams knows video is available.
+            //     No real video frames are injected — the call remains audio-only until the
+            //     sidecar is configured and provides the applicationHostedMediaConfig endpoint.
             const token = await this.getToken();
             const patchRes = await this.graphRequest(
                 token, 'PATCH', `/communications/calls/${sessionHandle}`,
@@ -193,14 +282,28 @@ export class TeamsJoinAdapter implements MeetingJoinAdapter {
         }
     }
 
-    /** Stop screen share: terminate the FFmpeg pipeline on the desktop-agent. */
-    async stopScreenShare(_sessionHandle: string, desktopAgentUrl: string): Promise<ScreenShareResult> {
+    /** Stop screen share: stop FFmpeg on the desktop-agent and halt sidecar injection. */
+    async stopScreenShare(sessionHandle: string, desktopAgentUrl: string): Promise<ScreenShareResult> {
         const base = desktopAgentUrl.replace(/\/+$/u, '');
         try {
-            const res = await this.fetchImpl(`${base}/v1/screen-share/stop`, { method: 'POST' });
-            if (!res.ok) {
-                return { ok: false, error: `desktop-agent screen-share/stop ${res.status}` };
+            // Stop FFmpeg on the desktop-agent.
+            const stopRes = await this.fetchImpl(`${base}/v1/screen-share/stop`, { method: 'POST' });
+            if (!stopRes.ok) {
+                return { ok: false, error: `desktop-agent screen-share/stop ${stopRes.status}` };
             }
+
+            // Tell the sidecar to stop the RTP relay (best-effort — non-fatal).
+            if (this.opts.mediasBotUrl) {
+                try {
+                    await this.fetchImpl(
+                        `${this.opts.mediasBotUrl}/v1/calls/${encodeURIComponent(sessionHandle)}/inject/stop`,
+                        { method: 'POST' },
+                    );
+                } catch {
+                    // Non-fatal: FFmpeg is already stopped on the desktop-agent side.
+                }
+            }
+
             return { ok: true };
         } catch (error) {
             return { ok: false, error: (error as Error).message };
@@ -307,5 +410,9 @@ export function createTeamsAdapterFromEnv(): TeamsJoinAdapter | null {
         clientId,
         clientSecret,
         botDisplayName: process.env['TEAMS_BOT_DISPLAY_NAME'] ?? 'AgentFarm Bot',
+        // Optional: teams-media-bot sidecar for applicationHostedMediaConfig + video injection.
+        // Set TEAMS_MEDIA_BOT_URL to activate; leave unset to use Graph REST fallback.
+        mediasBotUrl: process.env['TEAMS_MEDIA_BOT_URL'] ?? null,
+        callbackBaseUrl: process.env['TEAMS_CALLBACK_BASE_URL'] ?? null,
     });
 }

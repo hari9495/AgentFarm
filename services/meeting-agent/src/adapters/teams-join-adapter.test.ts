@@ -215,6 +215,191 @@ describe('TeamsJoinAdapter.getCapabilities()', () => {
     });
 });
 
+// ── join() via sidecar ────────────────────────────────────────────────────────
+
+describe('TeamsJoinAdapter.join() — sidecar path', () => {
+    it('calls sidecar /v1/calls/join and returns callId as sessionHandle', async () => {
+        let capturedUrl = '';
+        let capturedBody: Record<string, unknown> = {};
+        const fetchImpl: FetchLike = async (url, init) => {
+            capturedUrl = String(url);
+            capturedBody = JSON.parse(String(init?.body ?? '{}')) as Record<string, unknown>;
+            return { ok: true, status: 200, json: async () => ({ ok: true, callId: 'sidecar-call-1' }), text: async () => '' };
+        };
+        const adapter = new TeamsJoinAdapter({
+            tenantId: 'tid', clientId: 'cid', clientSecret: 'sec',
+            mediasBotUrl: 'http://teams-media-bot:8090',
+            callbackBaseUrl: 'https://mybot.example.com',
+            fetchImpl,
+        });
+        const result = await adapter.join('https://teams.microsoft.com/l/meetup-join/test', 'AgentBot');
+
+        assert.equal(result.ok, true);
+        assert.equal(result.joinMethod, 'teams_sdk');
+        assert.equal(result.sessionHandle, 'sidecar-call-1');
+        assert.equal(capturedUrl, 'http://teams-media-bot:8090/v1/calls/join');
+        assert.equal(capturedBody['meetingUrl'], 'https://teams.microsoft.com/l/meetup-join/test');
+        assert.equal(capturedBody['callbackBaseUrl'], 'https://mybot.example.com');
+        assert.equal(capturedBody['botDisplayName'], 'AgentBot');
+    });
+
+    it('returns ok:false when sidecar returns non-2xx', async () => {
+        const fetchImpl: FetchLike = async () => ({
+            ok: false, status: 502, json: async () => ({}), text: async () => 'bad gateway',
+        });
+        const adapter = new TeamsJoinAdapter({
+            tenantId: 't', clientId: 'c', clientSecret: 's',
+            mediasBotUrl: 'http://teams-media-bot:8090',
+            fetchImpl,
+        });
+        const result = await adapter.join('https://teams.microsoft.com/test');
+        assert.equal(result.ok, false);
+        assert.ok(result.error?.includes('502'));
+    });
+
+    it('returns ok:false when sidecar responds ok:false (no callId)', async () => {
+        const fetchImpl: FetchLike = async () => ({
+            ok: true, status: 200,
+            json: async () => ({ ok: false, error: 'Azure AD auth failed' }),
+            text: async () => '',
+        });
+        const adapter = new TeamsJoinAdapter({
+            tenantId: 't', clientId: 'c', clientSecret: 's',
+            mediasBotUrl: 'http://teams-media-bot:8090',
+            fetchImpl,
+        });
+        const result = await adapter.join('https://teams.microsoft.com/test');
+        assert.equal(result.ok, false);
+        assert.ok(result.error?.includes('Azure AD auth failed'));
+    });
+
+    it('falls back to Graph REST join when mediasBotUrl is not set', async () => {
+        let calledUrl = '';
+        const fetchImpl: FetchLike = async (url) => {
+            calledUrl = String(url);
+            if (calledUrl.includes('/token'))
+                return { ok: true, status: 200, json: async () => ({ access_token: 'tok', expires_in: 3600 }), text: async () => '' };
+            return { ok: true, status: 201, json: async () => ({ id: 'graph-call-1' }), text: async () => '' };
+        };
+        const adapter = new TeamsJoinAdapter({ tenantId: 't', clientId: 'c', clientSecret: 's', fetchImpl });
+        const result = await adapter.join('https://teams.microsoft.com/test');
+        assert.equal(result.ok, true);
+        assert.equal(result.sessionHandle, 'graph-call-1');
+        assert.ok(calledUrl.includes('graph.microsoft.com'), 'should use Graph API, not sidecar');
+    });
+});
+
+// ── startScreenShare() — sidecar path ─────────────────────────────────────────
+
+describe('TeamsJoinAdapter.startScreenShare() — sidecar path', () => {
+    it('calls desktop-agent start then sidecar inject/start when sidecar is configured', async () => {
+        const calls: string[] = [];
+        const fetchImpl: FetchLike = async (url) => {
+            calls.push(url);
+            if (url.includes('/token'))
+                return { ok: true, status: 200, json: async () => ({ access_token: 'tok', expires_in: 3600 }), text: async () => '' };
+            if (url.includes('/screen-share/start'))
+                return { ok: true, status: 200, json: async () => ({ ok: true, streamUrl: 'http://da/stream.m3u8' }), text: async () => '' };
+            if (url.includes('/inject/start'))
+                return { ok: true, status: 200, json: async () => ({ ok: true }), text: async () => '' };
+            return { ok: true, status: 200, json: async () => ({}), text: async () => '' };
+        };
+        const adapter = new TeamsJoinAdapter({
+            tenantId: 't', clientId: 'c', clientSecret: 's',
+            mediasBotUrl: 'http://teams-media-bot:8090',
+            fetchImpl,
+        });
+        const result = await adapter.startScreenShare!('call-abc', 'http://desktop-agent:5003');
+
+        assert.equal(result.ok, true);
+        assert.ok(result.streamUrl?.includes('stream.m3u8'));
+        assert.ok(calls.some((u) => u.includes('/screen-share/start')));
+        assert.ok(calls.some((u) => u.includes('/inject/start')));
+        // Should NOT call Graph PATCH when sidecar is configured
+        assert.ok(!calls.some((u) => u.includes('graph.microsoft.com/v1.0/communications')));
+    });
+
+    it('returns ok:false when sidecar inject/start fails', async () => {
+        const fetchImpl: FetchLike = async (url) => {
+            if (url.includes('/token'))
+                return { ok: true, status: 200, json: async () => ({ access_token: 'tok', expires_in: 3600 }), text: async () => '' };
+            if (url.includes('/screen-share/start'))
+                return { ok: true, status: 200, json: async () => ({ ok: true, streamUrl: 'http://da/s.m3u8' }), text: async () => '' };
+            if (url.includes('/inject/start'))
+                return { ok: false, status: 503, json: async () => ({}), text: async () => 'sidecar unavailable' };
+            return { ok: true, status: 200, json: async () => ({}), text: async () => '' };
+        };
+        const adapter = new TeamsJoinAdapter({
+            tenantId: 't', clientId: 'c', clientSecret: 's',
+            mediasBotUrl: 'http://teams-media-bot:8090',
+            fetchImpl,
+        });
+        const result = await adapter.startScreenShare!('call-abc', 'http://da:5003');
+        assert.equal(result.ok, false);
+        assert.ok(result.error?.includes('503'));
+    });
+
+    it('falls back to Graph PATCH when sidecar is not configured', async () => {
+        const calls: string[] = [];
+        const fetchImpl: FetchLike = async (url) => {
+            calls.push(url);
+            if (url.includes('/token'))
+                return { ok: true, status: 200, json: async () => ({ access_token: 'tok', expires_in: 3600 }), text: async () => '' };
+            if (url.includes('/screen-share/start'))
+                return { ok: true, status: 200, json: async () => ({ ok: true, streamUrl: 'http://da/s.m3u8' }), text: async () => '' };
+            return { ok: true, status: 200, json: async () => ({}), text: async () => '' };
+        };
+        const adapter = new TeamsJoinAdapter({ tenantId: 't', clientId: 'c', clientSecret: 's', fetchImpl });
+        const result = await adapter.startScreenShare!('call-abc', 'http://da:5003');
+
+        assert.equal(result.ok, true);
+        assert.ok(calls.some((u) => u.includes('/communications/calls/call-abc')), 'should PATCH Graph API');
+        assert.ok(!calls.some((u) => u.includes('/inject/start')), 'should NOT call sidecar');
+    });
+});
+
+// ── stopScreenShare() — sidecar path ──────────────────────────────────────────
+
+describe('TeamsJoinAdapter.stopScreenShare() — sidecar path', () => {
+    it('calls desktop-agent stop then sidecar inject/stop', async () => {
+        const calls: string[] = [];
+        const fetchImpl: FetchLike = async (url) => {
+            calls.push(url);
+            return { ok: true, status: 200, json: async () => ({ ok: true }), text: async () => '' };
+        };
+        const adapter = new TeamsJoinAdapter({
+            tenantId: 't', clientId: 'c', clientSecret: 's',
+            mediasBotUrl: 'http://teams-media-bot:8090',
+            fetchImpl,
+        });
+        const result = await adapter.stopScreenShare!('call-abc', 'http://da:5003');
+
+        assert.equal(result.ok, true);
+        assert.ok(calls.some((u) => u.includes('/screen-share/stop')));
+        assert.ok(calls.some((u) => u.includes('/inject/stop')));
+    });
+
+    it('returns ok:true even when sidecar inject/stop throws (non-fatal)', async () => {
+        let stopCount = 0;
+        const fetchImpl: FetchLike = async (url) => {
+            if (url.includes('/screen-share/stop')) {
+                stopCount++;
+                return { ok: true, status: 200, json: async () => ({}), text: async () => '' };
+            }
+            if (url.includes('/inject/stop')) throw new Error('sidecar gone');
+            return { ok: true, status: 200, json: async () => ({}), text: async () => '' };
+        };
+        const adapter = new TeamsJoinAdapter({
+            tenantId: 't', clientId: 'c', clientSecret: 's',
+            mediasBotUrl: 'http://teams-media-bot:8090',
+            fetchImpl,
+        });
+        const result = await adapter.stopScreenShare!('call-abc', 'http://da:5003');
+        assert.equal(result.ok, true);
+        assert.equal(stopCount, 1, 'desktop-agent stop should have been called');
+    });
+});
+
 // ── startScreenShare() ────────────────────────────────────────────────────────
 
 describe('TeamsJoinAdapter.startScreenShare()', () => {

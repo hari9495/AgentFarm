@@ -354,6 +354,13 @@ services:
       TEAMS_CLIENT_ID: ${TEAMS_CLIENT_ID:-}
       TEAMS_CLIENT_SECRET: ${TEAMS_CLIENT_SECRET:-}
       TEAMS_BOT_DISPLAY_NAME: ${TEAMS_BOT_DISPLAY_NAME:-AgentFarm Bot}
+      # teams-media-bot sidecar (active when --profile voice is used).
+      # When set, join() uses applicationHostedMediaConfig and startScreenShare()
+      # relays the FFmpeg HLS stream to the Teams media endpoint via the sidecar.
+      TEAMS_MEDIA_BOT_URL: ${TEAMS_MEDIA_BOT_URL:-http://teams-media-bot:8090}
+      # Public URL Teams can POST callbacks (ICE/DTLS negotiation) to.
+      # Must be reachable from Microsoft's servers — use ngrok or Azure Relay in dev.
+      TEAMS_CALLBACK_BASE_URL: ${TEAMS_CALLBACK_BASE_URL:-}
       # Zoom — Server-to-Server OAuth app (marketplace.zoom.us).
       # Requires scopes: meeting:write:admin, meeting:read:admin
       ZOOM_ACCOUNT_ID: ${ZOOM_ACCOUNT_ID:-}
@@ -527,6 +534,45 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+    networks:
+      - agentfarm
+    restart: unless-stopped
+
+  teams-media-bot:
+    # Teams media bot sidecar — .NET 8 ASP.NET Core service that:
+    #   1. Joins Teams calls using applicationHostedMediaConfig so the bot owns the media endpoint.
+    #   2. Relays the desktop-agent FFmpeg HLS stream to the Teams media endpoint via RTP/SRTP.
+    #   3. Handles Teams ICE/DTLS negotiation callbacks (POST /v1/callbacks/calls).
+    #
+    # Activate: COMPOSE_PROFILES=voice (same profile as the rest of the voice stack).
+    #
+    # DTLS/SRTP note: Teams rejects plain RTP. Full video injection requires either:
+    #   (a) TEAMS_CALLBACK_BASE_URL set to a public HTTPS URL so Teams can send ICE/DTLS data, OR
+    #   (b) The Windows-only Microsoft.Graph.Communications.Calls.Media SDK in an Azure Container.
+    # Without DTLS, the sidecar still correctly manages the call control-plane and the HLS
+    # pipeline is ready — only the crypto handshake is missing.
+    build:
+      context: ./docker/teams-media-bot
+      dockerfile: Dockerfile
+    container_name: agentfarm-teams-media-bot
+    profiles: [ voice ]
+    ports:
+      - '8090:8090'
+    environment:
+      PORT: '8090'
+      # Pass credentials so the sidecar can acquire Graph API tokens on its own.
+      # These are also passed per-request from the meeting-agent, but env vars
+      # provide a convenient fallback for health-check and diagnostic calls.
+      TEAMS_TENANT_ID: ${TEAMS_TENANT_ID:-}
+      TEAMS_CLIENT_ID: ${TEAMS_CLIENT_ID:-}
+      TEAMS_CLIENT_SECRET: ${TEAMS_CLIENT_SECRET:-}
+      TEAMS_CALLBACK_BASE_URL: ${TEAMS_CALLBACK_BASE_URL:-}
+    healthcheck:
+      test: [ 'CMD-SHELL', 'wget -qO- http://localhost:8090/health || exit 1' ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
     networks:
       - agentfarm
     restart: unless-stopped
