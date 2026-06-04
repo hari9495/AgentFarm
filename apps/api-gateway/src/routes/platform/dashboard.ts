@@ -35,12 +35,7 @@ export const registerDashboardRoutes = async (app: FastifyInstance): Promise<voi
         const session = readSession(request);
 
         if (!session) {
-            return {
-                session_scope: null,
-                tenantSummary: null,
-                workspaceBotSummaries: [],
-                usageSummary: null,
-            };
+            return reply.code(401).send({ error: 'Unauthorized' });
         }
 
         if (session.scope !== 'internal') {
@@ -115,33 +110,30 @@ export const registerDashboardRoutes = async (app: FastifyInstance): Promise<voi
     app.get<{ Params: { workspaceId: string } }>('/v1/workspaces/:workspaceId/provisioning', async (request, reply) => {
         const { workspaceId } = request.params;
         const session = readSession(request);
-
-        if (session && !session.workspaceIds.includes(workspaceId)) {
+        if (!session) return reply.code(401).send({ error: 'Unauthorized' });
+        if (!session.workspaceIds.includes(workspaceId)) {
             return reply.code(403).send({ error: 'forbidden', message: 'Workspace is outside your session scope.' });
         }
-
         return (await getProvisioningStatus(workspaceId)) ?? EMPTY_PROVISIONING(workspaceId);
     });
 
     app.get<{ Params: { workspaceId: string } }>('/v1/workspaces/:workspaceId/connectors', async (request, reply) => {
         const { workspaceId } = request.params;
         const session = readSession(request);
-
-        if (session && !session.workspaceIds.includes(workspaceId)) {
+        if (!session) return reply.code(401).send({ error: 'Unauthorized' });
+        if (!session.workspaceIds.includes(workspaceId)) {
             return reply.code(403).send({ error: 'forbidden', message: 'Workspace is outside your session scope.' });
         }
-
         return { connectors: await getConnectorHealth(workspaceId) };
     });
 
     app.get<{ Params: { workspaceId: string } }>('/v1/workspaces/:workspaceId/approvals', async (request, reply) => {
         const { workspaceId } = request.params;
         const session = readSession(request);
-
-        if (session && !session.workspaceIds.includes(workspaceId)) {
+        if (!session) return reply.code(401).send({ error: 'Unauthorized' });
+        if (!session.workspaceIds.includes(workspaceId)) {
             return reply.code(403).send({ error: 'forbidden', message: 'Workspace is outside your session scope.' });
         }
-
         const approvals = await getApprovals(workspaceId);
         return {
             pending_approvals: approvals.filter((a: any) => a.decision_status === 'pending'),
@@ -153,11 +145,10 @@ export const registerDashboardRoutes = async (app: FastifyInstance): Promise<voi
     app.get<{ Params: { workspaceId: string } }>('/v1/workspaces/:workspaceId/activity', async (request, reply) => {
         const { workspaceId } = request.params;
         const session = readSession(request);
-
-        if (session && !session.workspaceIds.includes(workspaceId)) {
+        if (!session) return reply.code(401).send({ error: 'Unauthorized' });
+        if (!session.workspaceIds.includes(workspaceId)) {
             return reply.code(403).send({ error: 'forbidden', message: 'Workspace is outside your session scope.' });
         }
-
         return { events: await getActivityEvents(workspaceId), next_cursor: null };
     });
 

@@ -88,14 +88,24 @@ export const createServer = async (): Promise<FastifyInstance> => {
     });
 
     await app.register(helmet, {
+        // Prevent browsers from inferring content type (defense against MIME sniffing)
         contentSecurityPolicy: {
             directives: {
-                defaultSrc: ["'none'"],
-                frameAncestors: ["'none'"],
+                defaultSrc: ["'none'"],       // API gateway — no document resources
+                frameAncestors: ["'none'"],   // belt-and-suspenders alongside X-Frame-Options
             },
         },
+        // HTTP Strict Transport Security — 1-year max-age, qualifies for preload list
+        hsts: {
+            maxAge: 31536000,
+            includeSubDomains: true,
+            preload: true,
+        },
         referrerPolicy: { policy: ['strict-origin-when-cross-origin'] },
+        // X-Frame-Options: DENY — belt-and-suspenders alongside CSP frame-ancestors
         frameguard: { action: 'deny' },
+        // API gateway never serves embedded documents, so COEP is unnecessary overhead
+        crossOriginEmbedderPolicy: false,
     });
 
     await app.register(multipart, {

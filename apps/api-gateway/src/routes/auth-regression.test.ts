@@ -18,6 +18,7 @@ import { registerWebhookRoutes } from './connectors/webhooks.js';
 import { registerRetentionPolicyRoutes } from './governance/retention-policy.js';
 import { registerSkillCompositionRoutes } from './runtime/skill-composition-execute.js';
 import { registerLeadRoutes } from './sales/leads.js';
+import { registerDashboardRoutes } from './platform/dashboard.js';
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
@@ -254,5 +255,47 @@ describe('AUTH — leads GET and PATCH require session; POST is public', () => {
             payload: {},  // missing required fields → 400, not 401
         });
         assert.equal(res.statusCode, 400);
+    });
+});
+
+// ── 8. Dashboard routes (no injected session = 401) ───────────────────────────
+// Dashboard uses readSession() internally rather than an options.getSession callback.
+// With no cookie/bearer token in the request, readSession returns null → 401.
+
+describe('AUTH — dashboard routes return 401 without session', () => {
+    const buildApp = async () => {
+        const app = Fastify({ logger: false });
+        await registerDashboardRoutes(app);
+        return app;
+    };
+
+    it('GET /v1/dashboard/summary → 401', async () => {
+        const app = await buildApp();
+        const res = await app.inject({ method: 'GET', url: '/v1/dashboard/summary' });
+        assert.equal(res.statusCode, 401);
+    });
+
+    it('GET /v1/workspaces/:workspaceId/provisioning → 401', async () => {
+        const app = await buildApp();
+        const res = await app.inject({ method: 'GET', url: '/v1/workspaces/ws_1/provisioning' });
+        assert.equal(res.statusCode, 401);
+    });
+
+    it('GET /v1/workspaces/:workspaceId/connectors → 401', async () => {
+        const app = await buildApp();
+        const res = await app.inject({ method: 'GET', url: '/v1/workspaces/ws_1/connectors' });
+        assert.equal(res.statusCode, 401);
+    });
+
+    it('GET /v1/workspaces/:workspaceId/approvals → 401', async () => {
+        const app = await buildApp();
+        const res = await app.inject({ method: 'GET', url: '/v1/workspaces/ws_1/approvals' });
+        assert.equal(res.statusCode, 401);
+    });
+
+    it('GET /v1/workspaces/:workspaceId/activity → 401', async () => {
+        const app = await buildApp();
+        const res = await app.inject({ method: 'GET', url: '/v1/workspaces/ws_1/activity' });
+        assert.equal(res.statusCode, 401);
     });
 });

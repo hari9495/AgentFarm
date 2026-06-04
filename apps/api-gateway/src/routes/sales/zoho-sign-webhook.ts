@@ -1,4 +1,4 @@
-import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
 import { verifyTimingSafeEqual } from '../../lib/webhook-verify.js';
 
@@ -20,7 +20,7 @@ type ZohoSignWebhookBody = {
 };
 
 export type RegisterZohoSignWebhookRoutesOptions = {
-    getSession?: (request: FastifyRequest) => unknown;
+    /** Auth is handled by verifyTimingSafeEqual on ZOHO_SIGN_WEBHOOK_TOKEN — no session needed. */
     prisma?: PrismaClient;
 };
 

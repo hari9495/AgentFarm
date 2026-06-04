@@ -43,11 +43,15 @@ type SessionContext = {
 
 export type RegisterLeadRoutesOptions = {
     prisma?: PrismaClient;
-    /** Required for authenticated routes (GET / PATCH). POST is always public. */
-    getSession?: (request: FastifyRequest) => SessionContext | null;
+    /**
+     * Required. GET /api/v1/leads and PATCH /api/v1/leads/:id/status enforce auth
+     * via this callback. POST /api/v1/leads is intentionally public (website contact
+     * form) and does not call getSession.
+     */
+    getSession: (request: FastifyRequest) => SessionContext | null;
 };
 
-export function registerLeadRoutes(app: FastifyInstance, options: RegisterLeadRoutesOptions = {}): void {
+export function registerLeadRoutes(app: FastifyInstance, options: RegisterLeadRoutesOptions): void {
     const { getSession } = options;
     const getPrisma = async (): Promise<PrismaClient> => {
         if (options.prisma) return options.prisma;
@@ -141,7 +145,7 @@ export function registerLeadRoutes(app: FastifyInstance, options: RegisterLeadRo
     app.patch<{ Params: LeadIdParams; Body: LeadStatusBody }>(
         '/api/v1/leads/:id/status',
         async (request, reply) => {
-            if (!getSession?.(request)) return reply.code(401).send({ error: 'Unauthorized' });
+            if (!getSession(request)) return reply.code(401).send({ error: 'Unauthorized' });
             const { id } = request.params;
             const status = trimStr((request.body as LeadStatusBody)?.status).toUpperCase();
 
@@ -186,7 +190,7 @@ export function registerLeadRoutes(app: FastifyInstance, options: RegisterLeadRo
     app.get<{ Querystring: LeadListQuery }>(
         '/api/v1/leads',
         async (request, reply) => {
-            if (!getSession?.(request)) return reply.code(401).send({ error: 'Unauthorized' });
+            if (!getSession(request)) return reply.code(401).send({ error: 'Unauthorized' });
             const { status, page, limit } = request.query;
 
             const pageNum = Math.max(1, parseInt(page ?? '1', 10) || 1);

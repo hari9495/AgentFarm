@@ -73,6 +73,15 @@ function makePrismaStub() {
 
 function resetStore() { leadStore = {}; idSeq = 0; }
 
+/** Mock session — used by GET and PATCH tests (POST is public and doesn't call getSession). */
+const mockSession = {
+    userId: 'user_test',
+    tenantId: 'tenant_test',
+    workspaceIds: ['ws_test'],
+    expiresAt: Date.now() + 3_600_000,
+};
+const getSession = () => mockSession;
+
 // ---------------------------------------------------------------------------
 // POST /api/v1/leads — validation
 // ---------------------------------------------------------------------------
@@ -80,7 +89,7 @@ function resetStore() { leadStore = {}; idSeq = 0; }
 test('POST /api/v1/leads returns 400 when lastName is missing', async () => {
     resetStore();
     const app = Fastify({ logger: false });
-    registerLeadRoutes(app, { prisma: makePrismaStub() });
+    registerLeadRoutes(app, { prisma: makePrismaStub(), getSession });
     try {
         const res = await app.inject({
             method: 'POST',
@@ -98,7 +107,7 @@ test('POST /api/v1/leads returns 400 when lastName is missing', async () => {
 test('POST /api/v1/leads returns 400 when email is missing', async () => {
     resetStore();
     const app = Fastify({ logger: false });
-    registerLeadRoutes(app, { prisma: makePrismaStub() });
+    registerLeadRoutes(app, { prisma: makePrismaStub(), getSession });
     try {
         const res = await app.inject({
             method: 'POST',
@@ -116,7 +125,7 @@ test('POST /api/v1/leads returns 400 when email is missing', async () => {
 test('POST /api/v1/leads returns 400 when company is missing', async () => {
     resetStore();
     const app = Fastify({ logger: false });
-    registerLeadRoutes(app, { prisma: makePrismaStub() });
+    registerLeadRoutes(app, { prisma: makePrismaStub(), getSession });
     try {
         const res = await app.inject({
             method: 'POST',
@@ -140,7 +149,7 @@ test('POST /api/v1/leads returns 201 with salesforce.synced=false when lead sync
     delete process.env['SALESFORCE_LEAD_SYNC_ENABLED'];
 
     const app = Fastify({ logger: false });
-    registerLeadRoutes(app, { prisma: makePrismaStub() });
+    registerLeadRoutes(app, { prisma: makePrismaStub(), getSession });
     try {
         const res = await app.inject({
             method: 'POST',
@@ -190,7 +199,7 @@ test('POST /api/v1/leads syncs to Salesforce and returns salesforce.synced=true'
     );
 
     const app = Fastify({ logger: false });
-    registerLeadRoutes(app, { prisma: makePrismaStub() });
+    registerLeadRoutes(app, { prisma: makePrismaStub(), getSession });
     try {
         const res = await app.inject({
             method: 'POST',
@@ -235,7 +244,7 @@ test('POST /api/v1/leads returns 201 even when Salesforce fetch throws', async (
     });
 
     const app = Fastify({ logger: false });
-    registerLeadRoutes(app, { prisma: makePrismaStub() });
+    registerLeadRoutes(app, { prisma: makePrismaStub(), getSession });
     try {
         const res = await app.inject({
             method: 'POST',
@@ -263,7 +272,7 @@ test('POST /api/v1/leads creates a Lead record in the database', async () => {
     resetStore();
     const prisma = makePrismaStub();
     const app = Fastify({ logger: false });
-    registerLeadRoutes(app, { prisma });
+    registerLeadRoutes(app, { prisma, getSession });
     try {
         const res = await app.inject({
             method: 'POST',
@@ -307,7 +316,7 @@ test('PATCH /api/v1/leads/:id/status → NURTURE sets nextContactAt ~3 days out'
     };
 
     const app = Fastify({ logger: false });
-    registerLeadRoutes(app, { prisma });
+    registerLeadRoutes(app, { prisma, getSession });
     try {
         const res = await app.inject({
             method: 'PATCH',
@@ -346,7 +355,7 @@ test('PATCH /api/v1/leads/:id/status → QUALIFIED sets qualifiedAt', async () =
     };
 
     const app = Fastify({ logger: false });
-    registerLeadRoutes(app, { prisma });
+    registerLeadRoutes(app, { prisma, getSession });
     try {
         const res = await app.inject({
             method: 'PATCH',
@@ -384,7 +393,7 @@ test('GET /api/v1/leads returns paginated leads', async () => {
     }
 
     const app = Fastify({ logger: false });
-    registerLeadRoutes(app, { prisma });
+    registerLeadRoutes(app, { prisma, getSession });
     try {
         const res = await app.inject({ method: 'GET', url: '/api/v1/leads?page=1&limit=10' });
         assert.equal(res.statusCode, 200);
@@ -419,7 +428,7 @@ test('GET /api/v1/leads?status=NURTURE returns only nurture leads', async () => 
     }
 
     const app = Fastify({ logger: false });
-    registerLeadRoutes(app, { prisma });
+    registerLeadRoutes(app, { prisma, getSession });
     try {
         const res = await app.inject({ method: 'GET', url: '/api/v1/leads?status=NURTURE' });
         assert.equal(res.statusCode, 200);

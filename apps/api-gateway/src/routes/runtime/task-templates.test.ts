@@ -274,4 +274,40 @@ describe('POST /v1/task-templates/:id/dispatch', () => {
         assert.equal(body.status, 'queued');
         assert.ok(body.taskDescription.includes('Jane Smith'));
     });
+
+    // ── Ownership check tests ───────────────────────────────────────────────────
+    // These verify that the workspace.includes and bot.findFirst guards correctly
+    // prevent cross-tenant dispatch even for authenticated sessions.
+
+    it('returns 403 when workspaceId is not in session.workspaceIds', async () => {
+        const store = makeStore();
+        const app = Fastify();
+        // Session has ws_1 but dispatch targets ws_other
+        registerTaskTemplateRoutes(app, {
+            getSession: () => ({ userId: 'u1', tenantId: 'tenant_1', workspaceIds: ['ws_1'], expiresAt: Date.now() + 60_000 }),
+            prisma: store as never,
+        });
+        const res = await app.inject({
+            method: 'POST', url: '/v1/task-templates/draft-cold-email/dispatch',
+            payload: { ...dispatchBody(), workspaceId: 'ws_other_tenant' },
+        });
+        assert.equal(res.statusCode, 403);
+        assert.equal(res.json().error, 'workspace_not_accessible');
+    });
+
+    it('returns 403 when agentId belongs to a different tenant', async () => {
+        const store = makeStore();
+        // bot.findFirst will return null for agent not in tenant_1
+        const app = Fastify();
+        registerTaskTemplateRoutes(app, {
+            getSession: () => ({ userId: 'u1', tenantId: 'tenant_1', workspaceIds: ['ws_1'], expiresAt: Date.now() + 60_000 }),
+            prisma: store as never,
+        });
+        const res = await app.inject({
+            method: 'POST', url: '/v1/task-templates/draft-cold-email/dispatch',
+            payload: { ...dispatchBody(), agentId: 'bot_belongs_to_tenant_2' },  // not in tenant_1
+        });
+        assert.equal(res.statusCode, 403);
+        assert.equal(res.json().error, 'agent_not_accessible');
+    });
 });
