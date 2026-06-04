@@ -120,16 +120,18 @@ export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient
 
     // List registrations
     app.get('/webhooks', async (req, reply) => {
-        if (!getSession(req)) return reply.status(401).send({ error: 'Unauthorized' });
+        const session = getSession(req);
+        if (!session) return reply.status(401).send({ error: 'Unauthorized' });
         const { globalWebhookEngine } = await import('@agentfarm/agent-runtime/webhook-ingestion.js').catch(
             () => import('../../agent-runtime-stubs.js'),
         );
-        return reply.send({ registrations: globalWebhookEngine.listRegistrations() });
+        return reply.send({ registrations: globalWebhookEngine.listRegistrations(session.tenantId) });
     });
 
     // Register webhook
     app.post('/webhooks', async (req: FastifyRequest<{ Body: WebhookRegisterBody }>, reply) => {
-        if (!getSession(req)) return reply.status(401).send({ error: 'Unauthorized' });
+        const session = getSession(req);
+        if (!session) return reply.status(401).send({ error: 'Unauthorized' });
         const body = (req.body ?? {}) as WebhookRegisterBody;
         if (!body.provider || !body.events?.length || !body.target_url) {
             return reply.status(400).send({ error: 'provider, events, and target_url required' });
@@ -137,26 +139,29 @@ export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient
         const { globalWebhookEngine } = await import('@agentfarm/agent-runtime/webhook-ingestion.js').catch(
             () => import('../../agent-runtime-stubs.js'),
         );
-        const registration = globalWebhookEngine.registerWebhook({
+        const registration = await globalWebhookEngine.registerWebhook({
             provider: body.provider,
             events: body.events,
             target_url: body.target_url,
             secret: body.secret,
+            tenantId: session.tenantId,
         });
         return reply.status(201).send({ registration });
     });
 
-    // Deactivate / delete webhook
+    // Deactivate / update webhook
     app.patch(
         '/webhooks/:id',
         async (req: FastifyRequest<{ Params: WebhookIdParams; Body: { active?: boolean } }>, reply) => {
-            if (!getSession(req)) return reply.status(401).send({ error: 'Unauthorized' });
+            const session = getSession(req);
+            if (!session) return reply.status(401).send({ error: 'Unauthorized' });
             const { globalWebhookEngine } = await import(
                 '@agentfarm/agent-runtime/webhook-ingestion.js'
             ).catch(() => import('../../agent-runtime-stubs.js'));
             if (req.body?.active === false) {
-                const ok = globalWebhookEngine.deactivateWebhook(req.params.id);
-                if (!ok) return reply.status(404).send({ error: 'webhook not found' });
+                const result = await globalWebhookEngine.deactivateWebhook(req.params.id, session.tenantId);
+                if (result === 'not_found') return reply.status(404).send({ error: 'webhook not found' });
+                if (result === 'forbidden') return reply.status(403).send({ error: 'Forbidden' });
             }
             return reply.send({ ok: true });
         },
@@ -165,12 +170,14 @@ export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient
     app.delete(
         '/webhooks/:id',
         async (req: FastifyRequest<{ Params: WebhookIdParams }>, reply) => {
-            if (!getSession(req)) return reply.status(401).send({ error: 'Unauthorized' });
+            const session = getSession(req);
+            if (!session) return reply.status(401).send({ error: 'Unauthorized' });
             const { globalWebhookEngine } = await import(
                 '@agentfarm/agent-runtime/webhook-ingestion.js'
             ).catch(() => import('../../agent-runtime-stubs.js'));
-            const ok = globalWebhookEngine.deleteWebhook(req.params.id);
-            if (!ok) return reply.status(404).send({ error: 'webhook not found' });
+            const result = await globalWebhookEngine.deleteWebhook(req.params.id, session.tenantId);
+            if (result === 'not_found') return reply.status(404).send({ error: 'webhook not found' });
+            if (result === 'forbidden') return reply.status(403).send({ error: 'Forbidden' });
             return reply.send({ deleted: true });
         },
     );
@@ -179,14 +186,15 @@ export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient
     app.get(
         '/webhooks/events',
         async (req: FastifyRequest<{ Querystring: { limit?: string; provider?: string } }>, reply) => {
-            if (!getSession(req)) return reply.status(401).send({ error: 'Unauthorized' });
+            const session = getSession(req);
+            if (!session) return reply.status(401).send({ error: 'Unauthorized' });
             const limit = Number(req.query.limit ?? 20);
             const { globalWebhookEngine } = await import(
                 '@agentfarm/agent-runtime/webhook-ingestion.js'
             ).catch(() => import('../../agent-runtime-stubs.js'));
             const events = req.query.provider
-                ? globalWebhookEngine.getEventsByProvider(req.query.provider as never, limit)
-                : globalWebhookEngine.getRecentEvents(limit);
+                ? globalWebhookEngine.getEventsByProvider(req.query.provider as never, limit, session.tenantId)
+                : globalWebhookEngine.getRecentEvents(limit, session.tenantId);
             return reply.send({ events });
         },
     );

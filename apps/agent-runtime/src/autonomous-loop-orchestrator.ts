@@ -86,7 +86,7 @@ export class AutonomousLoopOrchestrator {
                     }
                 }
                 if (currentState === 'success') {
-                    return this.buildLoopResult(loopId, 'success', iterationCount, Date.now() - startedAt, trace, previousOutput, 'Learned pattern succeeded');
+                    return this.buildLoopResult(loopId, 'success', iterationCount, Date.now() - startedAt, trace, previousOutput, 'Learned pattern succeeded', config.tenantId);
                 }
             }
         }
@@ -163,6 +163,7 @@ export class AutonomousLoopOrchestrator {
             trace,
             previousOutput,
             currentState === 'success' ? 'Success criteria met' : `Failed after ${iterationCount} iterations`,
+            config.tenantId,
         );
 
         this.loopHistory.push(result);
@@ -348,9 +349,11 @@ export class AutonomousLoopOrchestrator {
         trace: LoopStepTrace[],
         finalOutput: Record<string, unknown> | null,
         reason: string,
+        tenantId?: string,
     ): LoopRunResult {
         return {
             loop_id: loopId,
+            tenantId,
             state,
             iterations,
             total_duration_ms: totalDurationMs,
@@ -362,31 +365,38 @@ export class AutonomousLoopOrchestrator {
     }
 
     /**
-     * Get recent loop runs.
+     * Get recent loop runs scoped to a tenant.
      */
-    getRecentRuns(limit = 20): LoopRunResult[] {
-        return this.loopHistory.slice(-limit).reverse();
+    getRecentRuns(limit = 20, tenantId?: string): LoopRunResult[] {
+        const history = tenantId
+            ? this.loopHistory.filter((r) => r.tenantId === tenantId)
+            : this.loopHistory;
+        return history.slice(-limit).reverse();
     }
 
     /**
-     * Get a specific loop run by ID.
+     * Get a specific loop run by ID, scoped to a tenant.
+     * Returns undefined if the run does not exist or belongs to a different tenant.
      */
-    getRunById(loopId: string): LoopRunResult | undefined {
-        return this.loopHistory.find((r) => r.loop_id === loopId);
+    getRunById(loopId: string, tenantId?: string): LoopRunResult | undefined {
+        const run = this.loopHistory.find((r) => r.loop_id === loopId);
+        if (!run) return undefined;
+        if (tenantId && run.tenantId !== tenantId) return undefined;
+        return run;
     }
 
     /**
-     * Cancel an active loop.
+     * Cancel an active loop, scoped to a tenant.
+     * Returns false if the loop does not exist or belongs to a different tenant.
      */
-    cancelLoop(loopId: string): boolean {
+    cancelLoop(loopId: string, tenantId?: string): boolean {
         const run = this.activeLoops.get(loopId);
-        if (run) {
-            run.state = 'cancelled';
-            this.activeLoops.delete(loopId);
-            this.loopHistory.push(run);
-            return true;
-        }
-        return false;
+        if (!run) return false;
+        if (tenantId && run.tenantId !== tenantId) return false;
+        run.state = 'cancelled';
+        this.activeLoops.delete(loopId);
+        this.loopHistory.push(run);
+        return true;
     }
 }
 

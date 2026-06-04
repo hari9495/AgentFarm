@@ -9,6 +9,7 @@
  * Auth: HMAC shared token via x-runtime-dispatch-token header.
  */
 
+import { timingSafeEqual } from 'node:crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
 import { dispatchOutboundWebhooks } from '../../lib/webhook-dispatcher.js';
@@ -65,7 +66,12 @@ export const registerTaskNotifyRoutes = async (
         // Auth: accept HMAC dispatch token OR an authenticated session
         const providedToken = readDispatchToken(request);
         const dispatchToken = resolveDispatchToken();
-        const tokenAuthorized = Boolean(dispatchToken && providedToken === dispatchToken);
+        const tokenAuthorized = Boolean(
+            dispatchToken &&
+            providedToken &&
+            providedToken.length === dispatchToken.length &&
+            timingSafeEqual(Buffer.from(providedToken), Buffer.from(dispatchToken)),
+        );
 
         if (!tokenAuthorized && options.getSession) {
             const session = options.getSession(request);

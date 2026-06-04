@@ -3,6 +3,9 @@ import { describe, it, beforeEach } from 'node:test';
 import { createHmac } from 'crypto';
 import { WebhookIngestionEngine } from './webhook-ingestion.js';
 
+const TENANT_A = 'tenant-a';
+const TENANT_B = 'tenant-b';
+
 function makeGitHubSignature(body: string, secret: string): string {
     const hmac = createHmac('sha256', secret);
     hmac.update(body);
@@ -22,48 +25,89 @@ describe('webhook-ingestion: WebhookIngestionEngine', () => {
             events: ['push'],
             target_url: 'https://example.com/hook',
             secret: 'mysecret',
+            tenantId: TENANT_A,
         });
         assert.ok(reg.id.length > 0);
         assert.equal(reg.provider, 'github');
         assert.equal(reg.active, true);
+        assert.equal(reg.tenantId, TENANT_A);
     });
 
-    it('listRegistrations includes newly registered webhook', async () => {
+    it('listRegistrations scopes results to tenant', async () => {
         await engine.registerWebhook({
             provider: 'linear',
             events: ['issue'],
             target_url: 'https://example.com',
             secret: 'sec',
+            tenantId: TENANT_A,
         });
-        const list = engine.listRegistrations();
-        assert.ok(list.length >= 1);
+        await engine.registerWebhook({
+            provider: 'github',
+            events: ['push'],
+            target_url: 'https://example.com',
+            secret: 'sec',
+            tenantId: TENANT_B,
+        });
+        const listA = engine.listRegistrations(TENANT_A);
+        assert.equal(listA.length, 1);
+        assert.equal(listA[0].provider, 'linear');
+
+        const listB = engine.listRegistrations(TENANT_B);
+        assert.equal(listB.length, 1);
+        assert.equal(listB[0].provider, 'github');
     });
 
-    it('deactivateWebhook sets active=false', async () => {
+    it('deactivateWebhook sets active=false for owner', async () => {
         const reg = await engine.registerWebhook({
             provider: 'pagerduty',
             events: ['incident'],
             target_url: 'https://example.com',
             secret: 'sec',
+            tenantId: TENANT_A,
         });
-        const ok = await engine.deactivateWebhook(reg.id);
-        assert.equal(ok, true);
-        const list = engine.listRegistrations();
+        const result = await engine.deactivateWebhook(reg.id, TENANT_A);
+        assert.equal(result, 'ok');
+        const list = engine.listRegistrations(TENANT_A);
         const found = list.find((r) => r.id === reg.id);
         assert.equal(found?.active, false);
     });
 
-    it('deleteWebhook removes registration', async () => {
+    it('deactivateWebhook returns forbidden for wrong tenant', async () => {
+        const reg = await engine.registerWebhook({
+            provider: 'pagerduty',
+            events: ['incident'],
+            target_url: 'https://example.com',
+            secret: 'sec',
+            tenantId: TENANT_A,
+        });
+        const result = await engine.deactivateWebhook(reg.id, TENANT_B);
+        assert.equal(result, 'forbidden');
+    });
+
+    it('deleteWebhook removes registration for owner', async () => {
         const reg = await engine.registerWebhook({
             provider: 'sentry',
             events: ['alert'],
             target_url: 'https://example.com',
             secret: 'sec',
+            tenantId: TENANT_A,
         });
-        const ok = await engine.deleteWebhook(reg.id);
-        assert.equal(ok, true);
-        const list = engine.listRegistrations();
+        const result = await engine.deleteWebhook(reg.id, TENANT_A);
+        assert.equal(result, 'ok');
+        const list = engine.listRegistrations(TENANT_A);
         assert.ok(!list.some((r) => r.id === reg.id));
+    });
+
+    it('deleteWebhook returns forbidden for wrong tenant', async () => {
+        const reg = await engine.registerWebhook({
+            provider: 'sentry',
+            events: ['alert'],
+            target_url: 'https://example.com',
+            secret: 'sec',
+            tenantId: TENANT_A,
+        });
+        const result = await engine.deleteWebhook(reg.id, TENANT_B);
+        assert.equal(result, 'forbidden');
     });
 
     it('ingest processes GitHub push event with valid signature', async () => {
@@ -73,6 +117,7 @@ describe('webhook-ingestion: WebhookIngestionEngine', () => {
             events: ['push'],
             target_url: 'https://example.com',
             secret,
+            tenantId: TENANT_A,
         });
         const rawBody = JSON.stringify({ action: 'push', repository: { full_name: 'org/repo' } });
         const signature = makeGitHubSignature(rawBody, secret);
@@ -87,12 +132,37 @@ describe('webhook-ingestion: WebhookIngestionEngine', () => {
         assert.equal(result.ok, true);
     });
 
+    it('ingest stamps tenantId from registration onto the stored event', async () => {
+        const reg = await engine.registerWebhook({
+            provider: 'github',
+            events: ['push'],
+            target_url: 'https://example.com',
+            secret: 'sec',
+            tenantId: TENANT_A,
+        });
+        const rawBody = JSON.stringify({ action: 'push' });
+        await engine.ingest({
+            provider: 'github',
+            headers: { 'x-github-event': 'push' },
+            rawBody,
+            sourceIp: '127.0.0.1',
+            registrationId: reg.id,
+        });
+        const events = engine.getRecentEvents(1, TENANT_A);
+        assert.equal(events.length, 1);
+        assert.equal(events[0]?.tenantId, TENANT_A);
+
+        const eventsB = engine.getRecentEvents(10, TENANT_B);
+        assert.equal(eventsB.length, 0);
+    });
+
     it('ingest with invalid signature records signature_valid=false but still returns ok:true', async () => {
         const reg = await engine.registerWebhook({
             provider: 'github',
             events: ['push'],
             target_url: 'https://example.com',
             secret: 'correct-secret',
+            tenantId: TENANT_A,
         });
         const rawBody = JSON.stringify({ action: 'push' });
 
@@ -103,10 +173,8 @@ describe('webhook-ingestion: WebhookIngestionEngine', () => {
             sourceIp: '127.0.0.1',
             registrationId: reg.id,
         });
-        // Engine processes the event regardless of signature validity
         assert.equal(result.ok, true);
-        // But the event log marks it unverified
-        const events = engine.getRecentEvents(1);
+        const events = engine.getRecentEvents(1, TENANT_A);
         assert.equal(events[0]?.signature_valid, false);
     });
 
@@ -120,6 +188,7 @@ describe('webhook-ingestion: WebhookIngestionEngine', () => {
             events: ['issue'],
             target_url: 'https://example.com',
             secret,
+            tenantId: TENANT_A,
         });
         const rawBody = JSON.stringify({ action: 'opened', issue: { title: 'Bug found', number: 1 } });
         const signature = makeGitHubSignature(rawBody, secret);
@@ -132,13 +201,12 @@ describe('webhook-ingestion: WebhookIngestionEngine', () => {
             registrationId: reg.id,
         });
         assert.ok(Array.isArray(triggered));
-        // Triggered should have at least one entry from issue.opened rule
         assert.ok(triggered.length >= 1);
         assert.ok(triggered[0].includes('Bug found'));
     });
 
     it('getRecentEvents returns array', () => {
-        const events = engine.getRecentEvents(10);
+        const events = engine.getRecentEvents(10, TENANT_A);
         assert.ok(Array.isArray(events));
     });
 
@@ -153,6 +221,7 @@ describe('webhook-ingestion: WebhookIngestionEngine', () => {
             events: ['push'],
             target_url: 'https://example.com',
             secret: 'sec',
+            tenantId: TENANT_A,
         });
         const bigBody = 'x'.repeat(1_100_000); // > 1MB
         const result = await engine.ingest({

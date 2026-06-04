@@ -65,7 +65,7 @@ export function registerAutonomousLoopRoutes(app: FastifyInstance, options: Regi
             if (!session) return reply.status(401).send({ error: 'Unauthorized' });
 
             const orchestrator = await resolveOrchestrator();
-            const config = (req.body ?? {}) as LoopConfig;
+            const config = { ...(req.body ?? {}), tenantId: session.tenantId } as LoopConfig;
 
             if (!config.initial_skill || !config.success_criteria) {
                 return reply.status(400).send({ error: 'initial_skill and success_criteria required' });
@@ -90,7 +90,7 @@ export function registerAutonomousLoopRoutes(app: FastifyInstance, options: Regi
             const orchestrator = await resolveOrchestrator();
             const { loopId } = req.params as LoopIdParams;
 
-            const run = orchestrator.getRunById(loopId);
+            const run = orchestrator.getRunById(loopId, session.tenantId);
             if (!run) {
                 return reply.status(404).send({ error: 'Loop not found' });
             }
@@ -105,7 +105,7 @@ export function registerAutonomousLoopRoutes(app: FastifyInstance, options: Regi
         if (!session) return reply.status(401).send({ error: 'Unauthorized' });
 
         const orchestrator = await resolveOrchestrator();
-        const runs = orchestrator.getRecentRuns(20);
+        const runs = orchestrator.getRecentRuns(20, session.tenantId);
         return reply.send({ loops: runs, total: runs.length });
     });
 
@@ -119,7 +119,7 @@ export function registerAutonomousLoopRoutes(app: FastifyInstance, options: Regi
             const orchestrator = await resolveOrchestrator();
             const { loopId } = req.params as LoopIdParams;
 
-            const success = orchestrator.cancelLoop(loopId);
+            const success = orchestrator.cancelLoop(loopId, session.tenantId);
             if (!success) {
                 return reply.status(404).send({ error: 'Loop not found or already completed' });
             }

@@ -52,10 +52,12 @@ export type InboundWebhookPayload = {
     received_at: string;
     signature_valid: boolean;
     source_ip: string;
+    tenantId?: string;
 };
 
 export type WebhookRegistration = {
     id: string;
+    tenantId: string;
     provider: WebhookProvider;
     secret: string;
     events: WebhookEventType[];
@@ -226,10 +228,12 @@ export class WebhookIngestionEngine {
         events: WebhookEventType[];
         target_url: string;
         secret: string;
+        tenantId: string;
     }): Promise<WebhookRegistration> {
         const { randomUUID } = await import('node:crypto');
         const reg: WebhookRegistration = {
             id: randomUUID(),
+            tenantId: input.tenantId,
             provider: input.provider,
             secret: input.secret,
             events: input.events,
@@ -243,23 +247,26 @@ export class WebhookIngestionEngine {
         return reg;
     }
 
-    async deactivateWebhook(id: string): Promise<boolean> {
+    async deactivateWebhook(id: string, tenantId: string): Promise<'ok' | 'not_found' | 'forbidden'> {
         const reg = this.registrations.get(id);
-        if (!reg) return false;
+        if (!reg) return 'not_found';
+        if (reg.tenantId !== tenantId) return 'forbidden';
         reg.active = false;
         await this.persistRegistrations();
-        return true;
+        return 'ok';
     }
 
-    async deleteWebhook(id: string): Promise<boolean> {
-        const existed = this.registrations.has(id);
+    async deleteWebhook(id: string, tenantId: string): Promise<'ok' | 'not_found' | 'forbidden'> {
+        const reg = this.registrations.get(id);
+        if (!reg) return 'not_found';
+        if (reg.tenantId !== tenantId) return 'forbidden';
         this.registrations.delete(id);
-        if (existed) await this.persistRegistrations();
-        return existed;
+        await this.persistRegistrations();
+        return 'ok';
     }
 
-    listRegistrations(): WebhookRegistration[] {
-        return Array.from(this.registrations.values());
+    listRegistrations(tenantId: string): WebhookRegistration[] {
+        return Array.from(this.registrations.values()).filter((r) => r.tenantId === tenantId);
     }
 
     // ── Loop trigger callback ──────────────────────────────────────────────
@@ -359,7 +366,8 @@ export class WebhookIngestionEngine {
             eventType = 'alert';
         }
 
-        // Store in event log
+        // Store in event log — stamp tenantId from the matched registration so events
+        // can be filtered per-tenant when retrieved via the API.
         const payload: InboundWebhookPayload = {
             id: webhookId,
             provider: input.provider,
@@ -369,6 +377,7 @@ export class WebhookIngestionEngine {
             received_at: new Date().toISOString(),
             signature_valid: signatureValid,
             source_ip: input.sourceIp,
+            tenantId: reg?.tenantId,
         };
         this.recentEvents.unshift(payload);
         if (this.recentEvents.length > MAX_STORED_EVENTS) {
@@ -438,12 +447,17 @@ export class WebhookIngestionEngine {
 
     // ── History ────────────────────────────────────────────────────────────
 
-    getRecentEvents(limit = 50): InboundWebhookPayload[] {
-        return this.recentEvents.slice(0, limit);
+    getRecentEvents(limit = 50, tenantId?: string): InboundWebhookPayload[] {
+        const events = tenantId
+            ? this.recentEvents.filter((e) => e.tenantId === tenantId)
+            : this.recentEvents;
+        return events.slice(0, limit);
     }
 
-    getEventsByProvider(provider: WebhookProvider, limit = 50): InboundWebhookPayload[] {
-        return this.recentEvents.filter((e) => e.provider === provider).slice(0, limit);
+    getEventsByProvider(provider: WebhookProvider, limit = 50, tenantId?: string): InboundWebhookPayload[] {
+        return this.recentEvents
+            .filter((e) => e.provider === provider && (!tenantId || e.tenantId === tenantId))
+            .slice(0, limit);
     }
 
     // ── Persistence ────────────────────────────────────────────────────────

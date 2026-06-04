@@ -25,6 +25,7 @@ export type SkillBranch = {
 
 export type LoopConfig = {
     loop_id: string;
+    tenantId?: string;
     initial_skill: SkillBranch;
     success_criteria: SuccessCriteria;
     branches?: SkillBranch[];
@@ -48,6 +49,7 @@ export type LoopStepTrace = {
 
 export type LoopRunResult = {
     loop_id: string;
+    tenantId?: string;
     state: LoopState;
     iterations: number;
     total_duration_ms: number;

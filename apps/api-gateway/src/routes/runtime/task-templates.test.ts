@@ -52,6 +52,14 @@ const makeStore = () => {
                 return record;
             },
         },
+        // bot stub — used by the agent ownership check in dispatch
+        bot: {
+            findFirst: async ({ where }: { where: { id: string; tenantId: string } }) => {
+                // Return a match when the agent belongs to the session tenant
+                if (where.id === 'bot_1' && where.tenantId === 'tenant_1') return { id: 'bot_1' };
+                return null;
+            },
+        },
         _templates: templates,
         _dispatches: dispatches,
     };

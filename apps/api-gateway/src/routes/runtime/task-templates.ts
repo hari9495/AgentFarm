@@ -488,7 +488,12 @@ export async function registerTaskTemplateRoutes(
                 return reply.code(400).send({ error: 'agentId and workspaceId are required' });
             }
 
-            // Enforce lock: cannot dispatch a template for a role the tenant hasn't purchased
+            // Workspace ownership check — prevent dispatching into another tenant's workspace
+            if (!session.workspaceIds.includes(body.workspaceId)) {
+                return reply.code(403).send({ error: 'workspace_not_accessible' });
+            }
+
+            // Resolve the template before doing expensive ownership checks
             const ownedRoles = await getTenantBotRoles(session.tenantId, session.workspaceIds);
 
             const builtin = BUILT_IN_TEMPLATES.find(t => t.id === id || t.slug === id);
@@ -516,6 +521,21 @@ export async function registerTaskTemplateRoutes(
                     error: 'agent_not_purchased',
                     message: `You need a ${template.agentRole} agent to use this playbook. Add one from the Agents page.`,
                 });
+            }
+
+            // Agent ownership check — verify the target agent belongs to this tenant
+            // (done after template resolution so unknown templates short-circuit first)
+            {
+                const prisma = await resolvePrisma();
+                const agent = await (prisma as unknown as {
+                    bot: { findFirst: (a: { where: { id: string; tenantId: string }; select: { id: boolean } }) => Promise<{ id: string } | null> };
+                }).bot.findFirst({
+                    where: { id: body.agentId, tenantId: session.tenantId },
+                    select: { id: true },
+                });
+                if (!agent) {
+                    return reply.code(403).send({ error: 'agent_not_accessible' });
+                }
             }
 
             const inputs = (body.inputs ?? {}) as Record<string, string>;
