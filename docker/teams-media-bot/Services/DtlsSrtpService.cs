@@ -100,23 +100,8 @@ public sealed class DtlsSrtpService : IDisposable
         }
 
         // ── Export SRTP key material (RFC 5705 + RFC 5764 §4.2) ───────────────
-        // Label: "EXTRACTOR-dtls_srtp", no context, 60 bytes.
-        //
-        // Layout of the 60 bytes:
-        //   [  0.. 15] client_write_SRTP_master_key   (16 B)
-        //   [ 16.. 31] server_write_SRTP_master_key   (16 B)
-        //   [ 32.. 45] client_write_SRTP_master_salt  (14 B)
-        //   [ 46.. 59] server_write_SRTP_master_salt  (14 B)
-        //
-        // We are the server — FFmpeg sends WITH the server write credentials.
         byte[] km = server.ExportKeyingMaterial();
-        var serverWriteKey  = km[16..32];  // 16 bytes
-        var serverWriteSalt = km[46..60];  // 14 bytes
-        var combined = new byte[30];
-        serverWriteKey.CopyTo(combined, 0);
-        serverWriteSalt.CopyTo(combined, 16);
-
-        var b64 = Convert.ToBase64String(combined);
+        var b64 = AssembleSrtpParams(km);
         _log.LogInformation("DTLS handshake complete. SRTP key material derived.");
         return b64;
     }
@@ -154,6 +139,26 @@ public sealed class DtlsSrtpService : IDisposable
         var raw = tlsCert.GetCertificateAt(0).GetEncoded();
         var hash = SHA256.HashData(raw);
         return string.Join(":", hash.Select(b => b.ToString("X2")));
+    }
+
+    /// <summary>
+    /// Assembles the 30-byte FFmpeg SRTP parameter string from the raw 60-byte RFC 5705 export.
+    ///
+    /// Layout of the 60-byte keying-material export (RFC 5764 §4.2):
+    ///   [  0.. 15] client_write_SRTP_master_key   (16 B)
+    ///   [ 16.. 31] server_write_SRTP_master_key   (16 B)  ← we are the server
+    ///   [ 32.. 45] client_write_SRTP_master_salt  (14 B)
+    ///   [ 46.. 59] server_write_SRTP_master_salt  (14 B)  ← we are the server
+    ///
+    /// FFmpeg expects key then salt concatenated (30 bytes total), base64-encoded,
+    /// passed as <c>-srtp_out_params</c>.
+    /// </summary>
+    internal static string AssembleSrtpParams(byte[] km)
+    {
+        var combined = new byte[30];
+        km[16..32].CopyTo(combined, 0);   // server_write_SRTP_master_key  (16 B)
+        km[46..60].CopyTo(combined, 16);  // server_write_SRTP_master_salt (14 B)
+        return Convert.ToBase64String(combined);
     }
 
     public void Dispose() => _crypto.SecureRandom.NextBytes(new byte[1]); // flush entropy

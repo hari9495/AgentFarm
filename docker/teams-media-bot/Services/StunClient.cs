@@ -73,7 +73,7 @@ public sealed class StunClient
 
     // ── Private helpers ───────────────────────────────────────────────────────
 
-    private static byte[] BuildBindingRequest(byte[] txId)
+    internal static byte[] BuildBindingRequest(byte[] txId)
     {
         // 20-byte STUN header, no attributes
         var msg = new byte[20];
@@ -96,7 +96,7 @@ public sealed class StunClient
         return msg;
     }
 
-    private static bool IsSuccessResponse(byte[] data, byte[] expectedTxId)
+    internal static bool IsSuccessResponse(byte[] data, byte[] expectedTxId)
     {
         // Minimum STUN header length is 20 bytes
         if (data.Length < 20) return false;

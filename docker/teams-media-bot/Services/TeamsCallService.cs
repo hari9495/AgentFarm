@@ -353,7 +353,7 @@ public sealed class TeamsCallService : IDisposable
     // Teams embeds media endpoints in callbacks in several formats depending on
     // the API version and the notification type. We try all known locations.
 
-    private sealed record IceCandidate(string Ip, int Port);
+    internal sealed record IceCandidate(string Ip, int Port);
 
     /// <summary>Parser A: <c>mediaConfig.preFetchMedia[].uri</c> format ("rtp://ip:port")</summary>
     private IceCandidate? TryParseIceCandidateFromPreFetchMedia(JsonElement data)
@@ -429,14 +429,14 @@ public sealed class TeamsCallService : IDisposable
         catch (Exception ex) { _log.LogDebug(ex, "[{CallId}] TryExtractMediaEndpoint: exception (non-fatal)", callId); }
     }
 
-    private static IceCandidate? ParseIpPortFromUri(string? uri)
+    internal static IceCandidate? ParseIpPortFromUri(string? uri)
     {
         if (string.IsNullOrWhiteSpace(uri)) return null;
         var m = Regex.Match(uri, @"://(\d{1,3}(?:\.\d{1,3}){3}):(\d+)", RegexOptions.None, TimeSpan.FromSeconds(1));
         return m.Success ? new IceCandidate(m.Groups[1].Value, int.Parse(m.Groups[2].Value)) : null;
     }
 
-    private static IceCandidate? ParseSdpCandidate(string? sdp)
+    internal static IceCandidate? ParseSdpCandidate(string? sdp)
     {
         if (string.IsNullOrWhiteSpace(sdp)) return null;
         // RFC 5245: "candidate:X X UDP priority ip port typ ..."
@@ -446,7 +446,7 @@ public sealed class TeamsCallService : IDisposable
         return m.Success ? new IceCandidate(m.Groups[1].Value, int.Parse(m.Groups[2].Value)) : null;
     }
 
-    private static string? ParseCallIdFromUrl(string? url)
+    internal static string? ParseCallIdFromUrl(string? url)
     {
         if (url is null) return null;
         var m = Regex.Match(url, @"/communications/calls/([^/]+)", RegexOptions.None, TimeSpan.FromSeconds(1));
