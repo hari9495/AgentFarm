@@ -457,6 +457,9 @@ jobs:
       - name: Apply DB migrations
         run: pnpm db:migrate:deploy
 
+      - name: Build shared-types
+        run: pnpm --filter @agentfarm/shared-types build
+
       - name: Create .env for api-gateway dev server
         run: touch apps/api-gateway/.env
 
