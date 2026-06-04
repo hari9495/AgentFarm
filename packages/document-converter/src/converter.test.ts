@@ -49,10 +49,20 @@ describe('isSupportedMimeType', () => {
         }
     });
 
+    test('returns true for newly added types', () => {
+        assert.equal(isSupportedMimeType('image/png'),    true);
+        assert.equal(isSupportedMimeType('image/jpeg'),   true);
+        assert.equal(isSupportedMimeType('image/gif'),    true);
+        assert.equal(isSupportedMimeType('image/webp'),   true);
+        assert.equal(isSupportedMimeType('message/rfc822'), true);
+        assert.equal(isSupportedMimeType('application/xml'), true);
+        assert.equal(isSupportedMimeType('text/xml'),     true);
+    });
+
     test('returns false for unsupported types', () => {
-        assert.equal(isSupportedMimeType('image/png'),   false);
         assert.equal(isSupportedMimeType('video/mp4'),   false);
         assert.equal(isSupportedMimeType('audio/mpeg'),  false);
+        assert.equal(isSupportedMimeType('video/webm'),  false);
     });
 });
 
@@ -117,7 +127,7 @@ describe('convertToMarkdown', () => {
     // XLSX — create a real workbook buffer using exceljs
     // ---------------------------------------------------------------------------
 
-    test('xlsx — single sheet renders as markdown section with csv content', async () => {
+    test('xlsx — single sheet includes sheet name and data', async () => {
         const wb = new ExcelJS.Workbook();
         const ws = wb.addWorksheet('Results');
         ws.addRow(['Name', 'Score']);
@@ -127,13 +137,14 @@ describe('convertToMarkdown', () => {
         const buf = Buffer.from(raw);
 
         const result = await convertToMarkdown(buf, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        assert.match(result, /## Results/);
+        // Accept both MarkItDown table output and ExcelJS CSV fallback
+        assert.match(result, /Results/);
         assert.match(result, /Alice/);
         assert.match(result, /95/);
         assert.match(result, /Bob/);
     });
 
-    test('xlsx — multiple sheets each get a ## heading', async () => {
+    test('xlsx — multiple sheets each represented in output', async () => {
         const wb = new ExcelJS.Workbook();
         const ws1 = wb.addWorksheet('Sheet1');
         ws1.addRow(['A', 1]);
@@ -143,8 +154,8 @@ describe('convertToMarkdown', () => {
         const buf = Buffer.from(raw);
 
         const result = await convertToMarkdown(buf, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        assert.match(result, /## Sheet1/);
-        assert.match(result, /## Sheet2/);
+        assert.match(result, /Sheet1/);
+        assert.match(result, /Sheet2/);
     });
 
     // ---------------------------------------------------------------------------
@@ -153,7 +164,7 @@ describe('convertToMarkdown', () => {
 
     test('unsupported mime type throws UnsupportedFormatError', async () => {
         await assert.rejects(
-            () => convertToMarkdown(Buffer.from('data'), 'image/png'),
+            () => convertToMarkdown(Buffer.from('data'), 'video/mp4'),
             (err: unknown) => {
                 assert.ok(err instanceof UnsupportedFormatError);
                 assert.match((err as Error).message, /Unsupported/);
@@ -164,11 +175,24 @@ describe('convertToMarkdown', () => {
 
     test('UnsupportedFormatError has correct name', async () => {
         await assert.rejects(
-            () => convertToMarkdown(Buffer.from('x'), 'audio/mpeg'),
+            () => convertToMarkdown(Buffer.from('x'), 'video/mp4'),
             (err: unknown) => {
                 assert.equal((err as Error).name, 'UnsupportedFormatError');
                 return true;
             },
         );
+    });
+
+    test('application/xml — passthrough on markitdown failure', async () => {
+        const xml = '<root><item>hello</item></root>';
+        // markitdown not available in test env → falls back to raw string
+        const result = await convertToMarkdown(Buffer.from(xml), 'application/xml');
+        assert.match(result, /hello/);
+    });
+
+    test('text/xml — treated same as application/xml', async () => {
+        const xml = '<config><key>value</key></config>';
+        const result = await convertToMarkdown(Buffer.from(xml), 'text/xml');
+        assert.match(result, /value/);
     });
 });

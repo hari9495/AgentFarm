@@ -61,11 +61,18 @@ export const SUPPORTED_MIME_TYPES = [
     'text/plain',
     'text/html',
     'text/csv',
+    'text/xml',
     'application/json',
+    'application/xml',
     'application/pdf',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'image/png',
+    'image/jpeg',
+    'image/gif',
+    'image/webp',
+    'message/rfc822',
 ] as const;
 
 export type SupportedMimeType = (typeof SUPPORTED_MIME_TYPES)[number];
@@ -76,10 +83,17 @@ const EXT_MIME_MAP: Record<string, string> = {
     '.htm': 'text/html',
     '.csv': 'text/csv',
     '.json': 'application/json',
+    '.xml': 'application/xml',
     '.pdf': 'application/pdf',
     '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.gif': 'image/gif',
+    '.webp': 'image/webp',
+    '.eml': 'message/rfc822',
 };
 
 // ---------------------------------------------------------------------------
@@ -142,35 +156,69 @@ export async function convertToMarkdown(buffer: Buffer, mimeType: string): Promi
             }
         }
 
+        case 'text/xml':
+        case 'application/xml': {
+            try {
+                return await markitdownConvert(buffer, '.xml');
+            } catch {
+                return buffer.toString('utf8');
+            }
+        }
+
         case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': {
-            const result = await mammoth.convertToHtml({ buffer });
-            return td.turndown(result.value);
+            // MarkItDown produces cleaner Markdown than the mammoth→HTML→turndown chain.
+            try {
+                return await markitdownConvert(buffer, '.docx');
+            } catch {
+                const result = await mammoth.convertToHtml({ buffer });
+                return td.turndown(result.value);
+            }
         }
 
         case 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': {
-            const workbook = new ExcelJS.Workbook();
-            // exceljs load() accepts Buffer; cast through unknown to satisfy strict overload types
-            await workbook.xlsx.load(buffer as unknown as ArrayBuffer);
-            const sections = workbook.worksheets.map(ws => {
-                const rows: string[] = [];
-                ws.eachRow((row) => {
-                    // row.values is 1-indexed; slice(1) drops the undefined 0th slot
-                    const cells = (row.values as unknown[]).slice(1);
-                    rows.push(cells.map(v => (v == null ? '' : String(v))).join(','));
+            // MarkItDown produces proper Markdown tables vs ExcelJS's CSV-style rows.
+            try {
+                return await markitdownConvert(buffer, '.xlsx');
+            } catch {
+                const workbook = new ExcelJS.Workbook();
+                await workbook.xlsx.load(buffer as unknown as ArrayBuffer);
+                const sections = workbook.worksheets.map(ws => {
+                    const rows: string[] = [];
+                    ws.eachRow((row) => {
+                        const cells = (row.values as unknown[]).slice(1);
+                        rows.push(cells.map(v => (v == null ? '' : String(v))).join(','));
+                    });
+                    return `## ${ws.name}\n\n${rows.join('\n')}`;
                 });
-                return `## ${ws.name}\n\n${rows.join('\n')}`;
-            });
-            return sections.join('\n\n');
+                return sections.join('\n\n');
+            }
         }
 
         case 'application/vnd.openxmlformats-officedocument.presentationml.presentation': {
-            // MarkItDown produces slide-by-slide Markdown structure vs officeparser's flat text.
             try {
                 return await markitdownConvert(buffer, '.pptx');
             } catch {
-                // Fallback: officeparser
                 const { parseOfficeAsync } = await import('officeparser');
                 return parseOfficeAsync(buffer as unknown as string);
+            }
+        }
+
+        case 'image/png':
+        case 'image/jpeg':
+        case 'image/gif':
+        case 'image/webp': {
+            const imgExtMap: Record<string, string> = {
+                'image/png': '.png', 'image/jpeg': '.jpg',
+                'image/gif': '.gif', 'image/webp': '.webp',
+            };
+            return await markitdownConvert(buffer, imgExtMap[base]);
+        }
+
+        case 'message/rfc822': {
+            try {
+                return await markitdownConvert(buffer, '.eml');
+            } catch {
+                return buffer.toString('utf8');
             }
         }
 

@@ -1,5 +1,22 @@
 import type { TriggerSource, TriggerSourceKind, TriggerEvent } from '../types.js';
 import crypto from 'node:crypto';
+import { simpleParser } from 'mailparser';
+
+function stripHtml(html: string): string {
+    return html
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ')
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, ' ')
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<\/(?:p|div|li|tr|h[1-6])>/gi, '\n')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+}
 
 type RawEvent = Omit<TriggerEvent, 'tenantId' | 'agentId'>;
 type OnEvent = (event: RawEvent) => Promise<void>;
@@ -76,8 +93,7 @@ export class EmailTriggerSource implements TriggerSource {
 
                 for await (const message of this.client.fetch('1:*', {
                     uid: true,
-                    envelope: true,
-                    bodyParts: ['TEXT'],
+                    source: true,
                     flags: true,
                 })) {
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -87,21 +103,28 @@ export class EmailTriggerSource implements TriggerSource {
                     // Mark seen BEFORE dispatch to prevent double-processing
                     await this.client.messageFlagsAdd({ uid: msg.uid }, ['\\Seen'], { uid: true });
 
-                    const envelope = msg.envelope ?? {};
-                    const from =
-                        Array.isArray(envelope.from) && envelope.from.length > 0
+                    let from = 'unknown';
+                    let subject: string | undefined;
+                    let body = '';
+
+                    try {
+                        const parsed = await simpleParser(msg.source as Buffer);
+                        from = parsed.from?.text ?? 'unknown';
+                        subject = parsed.subject ?? undefined;
+                        if (parsed.text) {
+                            body = parsed.text.slice(0, 4000);
+                        } else if (parsed.html) {
+                            body = stripHtml(parsed.html).slice(0, 4000);
+                        }
+                    } catch {
+                        // fallback: imapflow envelope (plain-text emails without parseable source)
+                        const envelope = msg.envelope ?? {};
+                        from = Array.isArray(envelope.from) && envelope.from.length > 0
                             ? (envelope.from[0]?.address ?? 'unknown')
                             : 'unknown';
-                    const subject = typeof envelope.subject === 'string' ? envelope.subject : undefined;
-
-                    // Extract plain text body
-                    let body = '';
-                    if (msg.bodyParts) {
-                        const textPart = msg.bodyParts.get('TEXT') ?? msg.bodyParts.get('text');
-                        if (textPart instanceof Uint8Array) {
-                            body = new TextDecoder().decode(textPart).slice(0, 4000);
-                        }
+                        subject = typeof envelope.subject === 'string' ? envelope.subject : undefined;
                     }
+
                     if (!body) body = subject ?? '(no body)';
 
                     const smtpHost = this.opts.smtpConfig?.host ?? this.opts.host;
