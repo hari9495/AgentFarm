@@ -36,6 +36,18 @@ export interface ZoomJoinAdapterOptions {
     clientSecret: string;
     /** Per-request timeout in ms (default: 15 s). */
     timeoutMs?: number;
+    /**
+     * Base URL of the zoom-video-sidecar, e.g. `http://zoom-video-sidecar:8091`.
+     * When set:
+     *   - `join()` delegates to the sidecar, which manages the Playwright Zoom
+     *     browser session with screen-share pre-wired.
+     *   - `startScreenShare()` starts FFmpeg on the desktop-agent then tells the
+     *     sidecar to trigger the in-meeting Share button via xdotool.
+     *   - `stopScreenShare()` and `leave()` delegate to the sidecar.
+     * When null/undefined: falls back to the existing REST-only path
+     * (FFmpeg capture + best-effort Zoom status PUT).
+     */
+    videoSidecarUrl?: string | null;
     /** Override fetch (used by tests). */
     fetchImpl?: FetchLike;
 }
@@ -51,7 +63,7 @@ interface ZoomJoinTokenResponse {
 }
 
 export class ZoomJoinAdapter implements MeetingJoinAdapter {
-    private readonly opts: Required<ZoomJoinAdapterOptions>;
+    private readonly opts: Required<Omit<ZoomJoinAdapterOptions, 'videoSidecarUrl'>> & { videoSidecarUrl: string | null };
     private cachedToken: ZoomToken | null = null;
     private readonly fetchImpl: FetchLike;
 
@@ -59,12 +71,24 @@ export class ZoomJoinAdapter implements MeetingJoinAdapter {
         if (!options.accountId || !options.clientId || !options.clientSecret) {
             throw new Error('ZoomJoinAdapter requires accountId, clientId, and clientSecret');
         }
-        this.opts = { ...options, fetchImpl: options.fetchImpl ?? ((() => { throw new Error('No fetch'); }) as FetchLike), timeoutMs: options.timeoutMs ?? 15_000 };
+        this.opts = {
+            ...options,
+            fetchImpl: options.fetchImpl ?? ((() => { throw new Error('No fetch'); }) as FetchLike),
+            timeoutMs: options.timeoutMs ?? 15_000,
+            videoSidecarUrl: options.videoSidecarUrl
+                ? options.videoSidecarUrl.replace(/\/+$/u, '')
+                : null,
+        };
         const globalFetch = (globalThis as { fetch?: FetchLike }).fetch;
         this.fetchImpl = options.fetchImpl ?? globalFetch ?? (() => { throw new Error('No fetch available'); });
     }
 
     async join(meetingUrl: string, displayName?: string): Promise<MeetingJoinResult> {
+        // Sidecar path: delegates browser join + screen-share pre-wiring to the sidecar.
+        if (this.opts.videoSidecarUrl) {
+            return this.joinViaSidecar(meetingUrl, displayName);
+        }
+        // Fallback: REST-only path (returns Zoom join token; no browser is launched).
         try {
             const meetingId = this.extractMeetingId(meetingUrl);
             if (!meetingId) {
@@ -72,8 +96,6 @@ export class ZoomJoinAdapter implements MeetingJoinAdapter {
             }
             const token = await this.getToken();
             const joinToken = await this.getJoinToken(token, meetingId);
-            // The join token is used by the desktop-agent or Zoom Video SDK client.
-            // We return it as the sessionHandle for downstream use.
             return {
                 ok: true,
                 joinMethod: 'zoom_sdk',
@@ -81,6 +103,35 @@ export class ZoomJoinAdapter implements MeetingJoinAdapter {
             };
         } catch (error) {
             return { ok: false, joinMethod: 'zoom_sdk', error: (error as Error).message };
+        }
+    }
+
+    private async joinViaSidecar(meetingUrl: string, displayName?: string): Promise<MeetingJoinResult> {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), this.opts.timeoutMs);
+        try {
+            const res = await this.fetchImpl(`${this.opts.videoSidecarUrl}/v1/sessions/join`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ meetingUrl, displayName }),
+                signal: controller.signal,
+            });
+            if (!res.ok) {
+                const detail = await res.text().catch(() => '');
+                return { ok: false, joinMethod: 'zoom_sdk', error: `sidecar join ${res.status}: ${detail.slice(0, 256)}` };
+            }
+            const data = await res.json() as { ok: boolean; sessionId?: string; error?: string };
+            if (!data.ok || !data.sessionId) {
+                return { ok: false, joinMethod: 'zoom_sdk', error: data.error ?? 'sidecar returned no sessionId' };
+            }
+            return { ok: true, joinMethod: 'zoom_sdk', sessionHandle: data.sessionId };
+        } catch (error) {
+            const msg = (error as Error).name === 'AbortError'
+                ? `sidecar timeout after ${this.opts.timeoutMs}ms`
+                : (error as Error).message;
+            return { ok: false, joinMethod: 'zoom_sdk', error: msg };
+        } finally {
+            clearTimeout(timer);
         }
     }
 
@@ -140,16 +191,7 @@ export class ZoomJoinAdapter implements MeetingJoinAdapter {
     async startScreenShare(sessionHandle: string, desktopAgentUrl: string): Promise<ScreenShareResult> {
         const base = desktopAgentUrl.replace(/\/+$/u, '');
         try {
-            // Parse the session handle to extract the Zoom meeting ID.
-            let meetingId: string | undefined;
-            try {
-                const parsed = JSON.parse(sessionHandle) as { meetingId?: string };
-                meetingId = parsed.meetingId;
-            } catch {
-                // Fall through — meetingId stays undefined; we still start capture.
-            }
-
-            // 1. Start Xvfb → FFmpeg → HLS capture on the desktop-agent.
+            // 1. Start Xvfb → FFmpeg → HLS capture on the desktop-agent (same for both paths).
             const captureRes = await this.fetchImpl(`${base}/v1/screen-share/start`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -164,8 +206,34 @@ export class ZoomJoinAdapter implements MeetingJoinAdapter {
                 return { ok: false, error: captureData.error ?? 'desktop-agent returned ok:false' };
             }
 
-            // 2. Notify Zoom that sharing has started (best-effort — Zoom REST does
-            //    not provide direct screen-share injection; the SDK handles media).
+            // 2a. Sidecar path — tell the sidecar to trigger the in-meeting Share button.
+            //     The sidecar calls desktop-agent /v1/screen-share/inject { platform:'zoom' }
+            //     which uses xdotool to press Alt+S in the running Chromium window.
+            if (this.opts.videoSidecarUrl && captureData.streamUrl) {
+                const shareRes = await this.fetchImpl(
+                    `${this.opts.videoSidecarUrl}/v1/sessions/${encodeURIComponent(sessionHandle)}/share/start`,
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ hlsUrl: captureData.streamUrl }),
+                    },
+                );
+                if (!shareRes.ok) {
+                    const detail = await shareRes.text().catch(() => '');
+                    return { ok: false, error: `sidecar share/start ${shareRes.status}: ${detail.slice(0, 256)}` };
+                }
+                return { ok: true, streamUrl: captureData.streamUrl };
+            }
+
+            // 2b. Fallback path (no sidecar) — best-effort Zoom REST status update.
+            //     Zoom's REST API does not support direct video injection; this only
+            //     signals intent. The HLS stream is the actual video source.
+            let meetingId: string | undefined;
+            try {
+                const parsed = JSON.parse(sessionHandle) as { meetingId?: string };
+                meetingId = parsed.meetingId;
+            } catch { /* non-JSON handle — skip REST call */ }
+
             if (meetingId) {
                 try {
                     const token = await this.getToken();
@@ -174,10 +242,7 @@ export class ZoomJoinAdapter implements MeetingJoinAdapter {
                         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
                         body: JSON.stringify({ action: 'start_sharing' }),
                     });
-                } catch {
-                    // Non-fatal: the Zoom REST endpoint may not support this action for all
-                    // plan types. The HLS stream is still available via streamUrl.
-                }
+                } catch { /* non-fatal */ }
             }
 
             return { ok: true, streamUrl: captureData.streamUrl };
@@ -186,14 +251,26 @@ export class ZoomJoinAdapter implements MeetingJoinAdapter {
         }
     }
 
-    /** Stop screen share: terminate the FFmpeg pipeline on the desktop-agent. */
-    async stopScreenShare(_sessionHandle: string, desktopAgentUrl: string): Promise<ScreenShareResult> {
+    /** Stop screen share: stop FFmpeg and notify the sidecar. */
+    async stopScreenShare(sessionHandle: string, desktopAgentUrl: string): Promise<ScreenShareResult> {
         const base = desktopAgentUrl.replace(/\/+$/u, '');
         try {
-            const res = await this.fetchImpl(`${base}/v1/screen-share/stop`, { method: 'POST' });
-            if (!res.ok) {
-                return { ok: false, error: `desktop-agent screen-share/stop ${res.status}` };
+            // Stop FFmpeg on the desktop-agent.
+            const stopRes = await this.fetchImpl(`${base}/v1/screen-share/stop`, { method: 'POST' });
+            if (!stopRes.ok) {
+                return { ok: false, error: `desktop-agent screen-share/stop ${stopRes.status}` };
             }
+
+            // Notify the sidecar so it can update session state (best-effort).
+            if (this.opts.videoSidecarUrl) {
+                try {
+                    await this.fetchImpl(
+                        `${this.opts.videoSidecarUrl}/v1/sessions/${encodeURIComponent(sessionHandle)}/share/stop`,
+                        { method: 'POST' },
+                    );
+                } catch { /* non-fatal */ }
+            }
+
             return { ok: true };
         } catch (error) {
             return { ok: false, error: (error as Error).message };
@@ -257,5 +334,12 @@ export function createZoomAdapterFromEnv(): ZoomJoinAdapter | null {
     const clientId = process.env['ZOOM_CLIENT_ID'];
     const clientSecret = process.env['ZOOM_CLIENT_SECRET'];
     if (!accountId || !clientId || !clientSecret) return null;
-    return new ZoomJoinAdapter({ accountId, clientId, clientSecret });
+    return new ZoomJoinAdapter({
+        accountId,
+        clientId,
+        clientSecret,
+        // Optional: zoom-video-sidecar for browser-join + xdotool screen-share.
+        // Set ZOOM_VIDEO_SIDECAR_URL to activate; leave unset to use REST fallback.
+        videoSidecarUrl: process.env['ZOOM_VIDEO_SIDECAR_URL'] ?? null,
+    });
 }

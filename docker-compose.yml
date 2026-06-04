@@ -366,6 +366,10 @@ services:
       ZOOM_ACCOUNT_ID: ${ZOOM_ACCOUNT_ID:-}
       ZOOM_CLIENT_ID: ${ZOOM_CLIENT_ID:-}
       ZOOM_CLIENT_SECRET: ${ZOOM_CLIENT_SECRET:-}
+      # zoom-video-sidecar (active when --profile voice is used).
+      # When set, ZoomJoinAdapter.join() delegates browser join to the sidecar
+      # and startScreenShare() triggers the in-meeting Share button via xdotool.
+      ZOOM_VIDEO_SIDECAR_URL: ${ZOOM_VIDEO_SIDECAR_URL:-http://zoom-video-sidecar:8091}
     depends_on:
       voxcpm:
         condition: service_healthy
@@ -404,12 +408,14 @@ services:
   # Enable:  docker compose --profile voice up
   # Or add:  COMPOSE_PROFILES=voice  to your .env file
   #
-  # These five services replace paid APIs:
-  #   whisper    → Sarvam AI / Deepgram  (STT, 99 languages)
-  #   kokoro     → Sarvam Bulbul / VoxCPM2 (TTS, English, OpenAI-compatible)
-  #   freeswitch → Twilio SIP (universal meeting dial-in via SipJoinAdapter)
-  #   xtts       → Coqui XTTS v2 (TTS, 17 languages, zero cost)
-  #   mms-tts    → Meta MMS-TTS (TTS, 1100+ languages, zero cost)
+  # These seven services replace paid APIs or add native platform capabilities:
+  #   whisper          → Sarvam AI / Deepgram  (STT, 99 languages)
+  #   kokoro           → Sarvam Bulbul / VoxCPM2 (TTS, English, OpenAI-compatible)
+  #   freeswitch       → Twilio SIP (universal meeting dial-in via SipJoinAdapter)
+  #   xtts             → Coqui XTTS v2 (TTS, 17 languages, zero cost)
+  #   mms-tts          → Meta MMS-TTS (TTS, 1100+ languages, zero cost)
+  #   teams-media-bot  → Teams native screen share (applicationHostedMediaConfig + DTLS-SRTP)
+  #   zoom-video-sidecar → Zoom native screen share (Playwright browser + xdotool)
   #
   # First boot downloads models (whisper ~1.5 GB, kokoro ~300 MB, xtts ~2 GB).
   # MMS-TTS models download on first request per language (~30-100 MB each).
@@ -534,6 +540,38 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+    networks:
+      - agentfarm
+    restart: unless-stopped
+
+  zoom-video-sidecar:
+    # Zoom screen share sidecar — Node.js 20 orchestration service.
+    # Manages Zoom browser sessions by delegating to the desktop-agent container:
+    #   POST /v1/sessions/join           → desktop-agent /v1/meeting/join (zoom)
+    #   POST /v1/sessions/:id/share/start → desktop-agent /v1/screen-share/inject (xdotool)
+    #   POST /v1/sessions/:id/share/stop  → session state update
+    #   POST /v1/sessions/:id/leave       → desktop-agent /v1/meeting/leave
+    # No extra downloads — uses the desktop-agent's existing Playwright + Chromium.
+    build:
+      context: ./docker/zoom-video-sidecar
+      dockerfile: Dockerfile
+    container_name: agentfarm-zoom-video-sidecar
+    profiles: [ voice ]
+    ports:
+      - '8091:8091'
+    environment:
+      PORT: '8091'
+      DESKTOP_AGENT_URL: http://desktop-agent:5003
+      SIDECAR_TOKEN: ${ZOOM_SIDECAR_TOKEN:-}
+    depends_on:
+      desktop-agent:
+        condition: service_healthy
+    healthcheck:
+      test: [ 'CMD-SHELL', 'node -e "fetch(\"http://localhost:8091/health\").then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"' ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     networks:
       - agentfarm
     restart: unless-stopped
