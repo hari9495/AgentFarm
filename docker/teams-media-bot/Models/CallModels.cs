@@ -30,19 +30,34 @@ public record StartInjectionRequest(
 
 public record InjectionResult(bool Ok, string? Error = null);
 
+/// <summary>Body for POST /v1/calls/:callId/media-endpoint (manual ICE override).</summary>
+public record MediaEndpointOverrideRequest(string Ip, int Port);
+
 // ── Internal state ────────────────────────────────────────────────────────────
 
 /// <summary>
 /// Teams media endpoint received via the ICE/DTLS negotiation callback.
-/// Populated by TeamsCallService once Teams sends its IceGatheringStateChanged notification.
+/// Populated by TeamsCallService once Teams sends its ICE candidates; updated
+/// again by DtlsSrtpService once the handshake completes.
 /// </summary>
 public record MediaEndpoint(
     string Ip,
     int Port,
-    /// <summary>DTLS certificate fingerprint (SHA-256) — used for SRTP key derivation.</summary>
+    /// <summary>
+    /// Our bot's DTLS certificate fingerprint (SHA-256, colon-separated).
+    /// Included in the createCall payload so Teams can verify our certificate.
+    /// </summary>
     string? DtlsFingerprint = null,
-    /// <summary>SRTP crypto suite negotiated during the DTLS handshake.</summary>
-    string SrtpCryptoSuite = "AES_128_CM_HMAC_SHA1_80"
+    /// <summary>SRTP crypto suite negotiated during DTLS (used for logging/diagnostics).</summary>
+    string SrtpCryptoSuite = "AES_128_CM_HMAC_SHA1_80",
+    /// <summary>
+    /// Base64-encoded SRTP server-write key+salt (30 bytes) derived from the DTLS
+    /// keying-material exporter (RFC 5705).  Populated after the DTLS handshake.
+    /// When set, VideoInjectorService uses -f srtp instead of -f rtp.
+    /// </summary>
+    string? SrtpKeyMaterial = null,
+    /// <summary>Local UDP port this bot is listening on for the DTLS connection from Teams.</summary>
+    int LocalDtlsPort = 0
 );
 
 public enum CallState { Joining, Established, Terminated }

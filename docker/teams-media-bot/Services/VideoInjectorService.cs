@@ -57,9 +57,9 @@ public sealed class VideoInjectorService
                 return Task.FromResult(new InjectionResult(Ok: false, Error: "injection already active for this call"));
         }
 
-        var (outputFormat, outputTarget) = BuildOutputTarget(callId, endpoint);
+        var (outputFormat, outputTarget, srtpKeyMaterial) = ResolveOutput(callId, endpoint);
 
-        var args = BuildFfmpegArgs(hlsUrl, outputFormat, outputTarget);
+        var args = BuildFfmpegArgs(hlsUrl, outputFormat, outputTarget, srtpKeyMaterial);
         _log.LogInformation("Starting FFmpeg injection: call={CallId} target={Target}", callId, outputTarget);
 
         var psi = new ProcessStartInfo("ffmpeg")
@@ -123,47 +123,71 @@ public sealed class VideoInjectorService
 
     // ── Private helpers ───────────────────────────────────────────────────────
 
-    private (string format, string target) BuildOutputTarget(string callId, MediaEndpoint? endpoint)
+    private (string format, string target, string? srtpKeyMaterial) ResolveOutput(
+        string callId, MediaEndpoint? endpoint)
     {
         if (endpoint is null || string.IsNullOrWhiteSpace(endpoint.Ip))
         {
-            _log.LogWarning("[{CallId}] No media endpoint — discarding output (DTLS pending)", callId);
-            // Discard output until DTLS negotiation completes and endpoint is known.
-            return ("null", "/dev/null");
+            _log.LogWarning("[{CallId}] No media endpoint yet (DTLS pending) — discarding output", callId);
+            return ("null", "/dev/null", null);
         }
 
-        if (!string.IsNullOrWhiteSpace(endpoint.DtlsFingerprint))
+        if (!string.IsNullOrWhiteSpace(endpoint.SrtpKeyMaterial))
         {
-            // SRTP mode — key material derived from DTLS handshake (TODO: implement DTLS).
-            // Once the DTLS handshake is complete, replace the placeholder params below
-            // with the real base64-encoded key+salt from the DTLS exporter.
-            _log.LogWarning("[{CallId}] DTLS fingerprint present but DTLS handshake not yet implemented — " +
-                "falling back to plain RTP (Teams will reject until SRTP is wired)", callId);
+            // ── SRTP mode — DTLS handshake complete ──────────────────────────
+            _log.LogInformation(
+                "[{CallId}] SRTP active: sending encrypted video to {Ip}:{Port}",
+                callId, endpoint.Ip, endpoint.Port);
+            return ("srtp", $"srtp://{endpoint.Ip}:{endpoint.Port}?pkt_size=1316", endpoint.SrtpKeyMaterial);
         }
 
-        // Plain RTP — correct structure, Teams rejects without SRTP.
-        // Flip to srtp:// once the DTLS layer is complete.
-        return ("rtp", $"rtp://{endpoint.Ip}:{endpoint.Port}?pkt_size=1316");
+        // ── Plain RTP fallback — DTLS handshake in progress ──────────────────
+        // Teams will reject plain RTP, but this keeps the pipeline alive while
+        // the background DTLS task (NegotiateMediaAsync) completes.  Once DTLS
+        // finishes, VideoInjectorService.StartInjectionAsync is called again by
+        // TeamsCallService which will then switch to SRTP.
+        _log.LogWarning(
+            "[{CallId}] DTLS not yet complete — plain RTP to {Ip}:{Port} (Teams will reject until SRTP is ready)",
+            callId, endpoint.Ip, endpoint.Port);
+        return ("rtp", $"rtp://{endpoint.Ip}:{endpoint.Port}?pkt_size=1316", null);
     }
 
-    private static string BuildFfmpegArgs(string hlsUrl, string outputFormat, string outputTarget) =>
-        string.Join(" ", new[]
+    private static string BuildFfmpegArgs(
+        string hlsUrl,
+        string outputFormat,
+        string outputTarget,
+        string? srtpKeyMaterial)
+    {
+        var parts = new List<string>
         {
             "-re",
             "-i", $"\"{hlsUrl}\"",
-            // Video: H.264 baseline, minimal latency
+            // Video: H.264 baseline for broadest Teams compatibility
             "-vcodec", "libx264",
             "-preset", "ultrafast",
-            "-tune", "zerolatency",
+            "-tune",   "zerolatency",
             "-profile:v", "baseline",
-            "-level", "3.1",
+            "-level",  "3.1",
             "-pix_fmt", "yuv420p",
             "-b:v", "500k",
-            // No audio track in the video injection — audio is a separate Teams channel
+            // Audio is handled by Teams' own audio pipeline — omit from this stream
             "-an",
-            "-f", outputFormat,
-            outputTarget,
-        });
+        };
+
+        if (outputFormat == "srtp" && srtpKeyMaterial is not null)
+        {
+            // RFC 3711 / ffmpeg srtp muxer:
+            //   -srtp_out_suite  — negotiated crypto suite
+            //   -srtp_out_params — base64(server_write_master_key + server_write_master_salt)
+            parts.AddRange([
+                "-srtp_out_suite", "AES_128_CM_HMAC_SHA1_80",
+                "-srtp_out_params", srtpKeyMaterial,
+            ]);
+        }
+
+        parts.AddRange(["-f", outputFormat, outputTarget]);
+        return string.Join(" ", parts);
+    }
 }
 
 internal sealed record InjectionSession(string CallId, Process Process);

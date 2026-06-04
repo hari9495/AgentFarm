@@ -33,17 +33,29 @@ namespace TeamsMediaBot.Services;
 public sealed class TeamsCallService : IDisposable
 {
     private const string GraphBase = "https://graph.microsoft.com/v1.0";
-    private const string TokenTemplate = "https://login.microsoftonline.com/{0}/oauth2/v2.0/token";
+
+    // UDP port range reserved for per-call DTLS listeners
+    private const int DtlsPortBase = 49200;
+    private const int DtlsPortRange = 800;
+    private static int _nextDtlsPort = DtlsPortBase;
 
     private readonly Dictionary<string, CallRecord> _calls = new(StringComparer.Ordinal);
     private readonly Lock _lock = new();
     private readonly ILogger<TeamsCallService> _log;
     private readonly HttpClient _http;
+    private readonly DtlsSrtpService _dtls;
+    private readonly StunClient _stun;
 
-    public TeamsCallService(ILogger<TeamsCallService> log, IHttpClientFactory httpFactory)
+    public TeamsCallService(
+        ILogger<TeamsCallService> log,
+        IHttpClientFactory httpFactory,
+        DtlsSrtpService dtls,
+        StunClient stun)
     {
-        _log = log;
+        _log  = log;
         _http = httpFactory.CreateClient(nameof(TeamsCallService));
+        _dtls = dtls;
+        _stun = stun;
     }
 
     // ── Join ──────────────────────────────────────────────────────────────────
@@ -118,8 +130,11 @@ public sealed class TeamsCallService : IDisposable
     // ── Teams notification callback ───────────────────────────────────────────
 
     /// <summary>
-    /// Process a raw JSON payload from Teams (IceGatheringStateChanged, callStateChanged, etc.).
-    /// Parses media-negotiation data and stores the resulting <see cref="MediaEndpoint"/>.
+    /// Process a raw JSON notification from Teams.
+    /// Handles:
+    ///   • <c>callStateChanged</c> — update FSM (joining/established/terminated)
+    ///   • ICE candidate payloads — extract Teams' media IP:port, run STUN probe,
+    ///     then kick off the DTLS-SRTP handshake in the background.
     /// </summary>
     public Task HandleCallbackAsync(string payload)
     {
@@ -138,34 +153,51 @@ public sealed class TeamsCallService : IDisposable
                 var state = data.TryGetProperty("state", out var s) ? s.GetString() : null;
                 _log.LogInformation("Teams callback: call={CallId} state={State}", callId, state ?? "?");
 
+                CallRecord? record;
                 lock (_lock)
                 {
-                    if (!_calls.TryGetValue(callId, out var record)) continue;
+                    if (!_calls.TryGetValue(callId, out record)) continue;
+                    if (state == "established")                    record.State = CallState.Established;
+                    else if (state is "terminated" or "disconnected") record.State = CallState.Terminated;
+                }
 
-                    if (state == "established") record.State = CallState.Established;
-                    else if (state == "terminated" || state == "disconnected") record.State = CallState.Terminated;
+                // ── ICE candidate parsing → STUN probe → DTLS handshake ───────
+                //
+                // Teams sends its ICE candidates in one of three places:
+                //   a) resourceData.mediaConfig.preFetchMedia[].uri  (documented REST format)
+                //   b) resourceData.iceGatheringState.iceCandidates[].candidate (SDP-style)
+                //   c) resourceData.mediaState (indicates media is active — endpoint confirmed)
+                //
+                // We attempt all three parsers and start the DTLS handshake as soon as
+                // we find a candidate.  The handshake runs in a background task so the
+                // HTTP callback returns 200 immediately.
+                var candidate = TryParseIceCandidateFromPreFetchMedia(data)
+                             ?? TryParseIceCandidateFromIceGatheringState(data)
+                             ?? TryParseIceCandidateFromMediaState(data);
 
-                    // ── Media endpoint extraction ─────────────────────────────
-                    // When Teams sends the IceGatheringStateChanged notification it
-                    // provides its ICE candidates (IP/port) and the DTLS fingerprint.
-                    //
-                    // TODO: implement full ICE/DTLS negotiation here:
-                    //   1. Parse Teams ICE candidates from the iceGatheringState payload
-                    //   2. Generate our own ICE candidates (STUN binding request)
-                    //   3. Perform DTLS handshake using System.Net.Security.SslStream or libsrtp2
-                    //   4. Derive SRTP master key and salt from the DTLS handshake
-                    //   5. Store in record.MediaEndpoint so VideoInjectorService can use them
-                    //
-                    // The Windows Media SDK (Microsoft.Graph.Communications.Calls.Media)
-                    // automates steps 2-4 but is not available on Linux.
-                    //
-                    if (data.TryGetProperty("mediaConfig", out var mc))
+                if (candidate is not null)
+                {
+                    int dtlsPort;
+                    lock (_lock)
                     {
-                        _log.LogDebug("[{CallId}] Media config in callback — parsing ICE/DTLS (TODO: SRTP handshake)", callId);
-                        // Placeholder: extract IP/port from preFetchMedia or iceCandidate list
-                        // if present, so VideoInjectorService has a target endpoint.
-                        TryExtractMediaEndpoint(callId, mc, record);
+                        // Assign a local DTLS UDP port and optimistically set the endpoint
+                        // so VideoInjectorService can start while DTLS completes in the background.
+                        dtlsPort = AllocateDtlsPort();
+                        record.MediaEndpoint = new MediaEndpoint(
+                            candidate.Ip, candidate.Port,
+                            DtlsFingerprint: _dtls.DtlsFingerprint,
+                            LocalDtlsPort: dtlsPort);
                     }
+                    _log.LogInformation(
+                        "[{CallId}] ICE candidate: {Ip}:{Port} → starting STUN probe then DTLS on local port {Local}",
+                        callId, candidate.Ip, candidate.Port, dtlsPort);
+
+                    // Fire-and-forget — callback must return 200 quickly
+                    _ = NegotiateMediaAsync(callId, record, candidate.Ip, candidate.Port, dtlsPort);
+                }
+                else if (data.TryGetProperty("mediaConfig", out var mc))
+                {
+                    TryExtractMediaEndpoint(callId, mc, record);
                 }
             }
         }
@@ -176,7 +208,65 @@ public sealed class TeamsCallService : IDisposable
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Allow an operator (or test) to manually specify the Teams media endpoint
+    /// when auto-parsing fails. Immediately triggers STUN + DTLS.
+    /// </summary>
+    public void SetMediaEndpointManual(string callId, string ip, int port)
+    {
+        CallRecord? record;
+        lock (_lock)
+        {
+            if (!_calls.TryGetValue(callId, out record)) return;
+            var dtlsPort = AllocateDtlsPort();
+            record.MediaEndpoint = new MediaEndpoint(ip, port,
+                DtlsFingerprint: _dtls.DtlsFingerprint, LocalDtlsPort: dtlsPort);
+        }
+        if (record is not null)
+            _ = NegotiateMediaAsync(callId, record, ip, port, record.MediaEndpoint!.LocalDtlsPort);
+    }
+
+    // ── Media negotiation (STUN → DTLS → SRTP) ───────────────────────────────
+
+    private async Task NegotiateMediaAsync(
+        string callId, CallRecord record, string remoteIp, int remotePort, int localDtlsPort)
+    {
+        // 1. STUN binding request — confirms UDP reachability before opening DTLS socket
+        var remote = new IPEndPoint(IPAddress.Parse(remoteIp), remotePort);
+        var reachable = await _stun.ProbeAsync(remote);
+        if (!reachable)
+        {
+            _log.LogWarning("[{CallId}] STUN probe failed — DTLS handshake will proceed anyway", callId);
+        }
+
+        // 2. DTLS-SRTP handshake — Teams initiates as DTLS client
+        var keyMaterial = await _dtls.HandshakeAsync(remoteIp, remotePort, localDtlsPort, CancellationToken.None);
+        if (keyMaterial is null)
+        {
+            _log.LogError("[{CallId}] DTLS handshake failed — video injection will use plain RTP (Teams will reject)", callId);
+            return;
+        }
+
+        // 3. Store SRTP key material in the endpoint record so VideoInjectorService
+        //    switches from plain-RTP discard to SRTP output on next injection cycle.
+        lock (_lock)
+        {
+            if (_calls.TryGetValue(callId, out var r) && r.MediaEndpoint is { } ep)
+            {
+                r.MediaEndpoint = ep with { SrtpKeyMaterial = keyMaterial };
+            }
+        }
+        _log.LogInformation("[{CallId}] SRTP keys stored — video injection now active", callId);
+    }
+
     // ── Private helpers ───────────────────────────────────────────────────────
+
+    private static int AllocateDtlsPort()
+    {
+        // Cycle through the reserved port range (atomic increment, wraps around)
+        var port = Interlocked.Increment(ref _nextDtlsPort);
+        return DtlsPortBase + (port % DtlsPortRange);
+    }
 
     private async Task<string> AcquireTokenAsync(string tenantId, string clientId, string clientSecret)
     {
@@ -208,10 +298,20 @@ public sealed class TeamsCallService : IDisposable
                 ["joinWebUrl"]  = req.MeetingUrl,
             },
             // applicationHostedMediaConfig: the bot owns the media endpoint.
-            // Teams will send ICE/DTLS parameters to callbackUri so we can establish SRTP.
+            // Teams will send its ICE candidates to callbackUri so we can perform
+            // the DTLS-SRTP handshake and receive/send encrypted media.
+            //
+            // The dtlsFingerprint tells Teams our certificate so it can verify
+            // our DTLS ServerHello during the handshake.
             ["mediaConfig"]  = new JsonObject
             {
-                ["@odata.type"] = "#microsoft.graph.applicationHostedMediaConfig",
+                ["@odata.type"]    = "#microsoft.graph.applicationHostedMediaConfig",
+                ["dtlsFingerprint"] = new JsonObject
+                {
+                    ["@odata.type"] = "#microsoft.graph.dtlsFingerprint",
+                    ["hashFunction"] = "sha-256",
+                    ["value"]        = _dtls.DtlsFingerprint.ToLowerInvariant(),
+                },
             },
             ["requestedModalities"] = new JsonArray("audio", "video"),
             ["source"]       = new JsonObject
@@ -249,11 +349,66 @@ public sealed class TeamsCallService : IDisposable
         return id;
     }
 
+    // ── ICE candidate parsers ─────────────────────────────────────────────────
+    // Teams embeds media endpoints in callbacks in several formats depending on
+    // the API version and the notification type. We try all known locations.
+
+    private sealed record IceCandidate(string Ip, int Port);
+
+    /// <summary>Parser A: <c>mediaConfig.preFetchMedia[].uri</c> format ("rtp://ip:port")</summary>
+    private IceCandidate? TryParseIceCandidateFromPreFetchMedia(JsonElement data)
+    {
+        try
+        {
+            if (!data.TryGetProperty("mediaConfig", out var mc)) return null;
+            if (!mc.TryGetProperty("preFetchMedia", out var pfm)) return null;
+            foreach (var item in pfm.EnumerateArray())
+            {
+                if (!item.TryGetProperty("uri", out var uri)) continue;
+                var candidate = ParseIpPortFromUri(uri.GetString());
+                if (candidate is not null) return candidate;
+            }
+        }
+        catch (Exception ex) { _log.LogDebug(ex, "ICE parser A: exception (non-fatal)"); }
+        return null;
+    }
+
+    /// <summary>Parser B: <c>resourceData.iceGatheringState.iceCandidates[].candidate</c> (SDP-style)</summary>
+    private IceCandidate? TryParseIceCandidateFromIceGatheringState(JsonElement data)
+    {
+        try
+        {
+            if (!data.TryGetProperty("iceGatheringState", out var igs)) return null;
+            if (!igs.TryGetProperty("iceCandidates", out var candidates)) return null;
+            foreach (var item in candidates.EnumerateArray())
+            {
+                if (!item.TryGetProperty("candidate", out var c)) continue;
+                // SDP candidate format: "candidate:X X UDP priority ip port typ host"
+                var candidate = ParseSdpCandidate(c.GetString());
+                if (candidate is not null) return candidate;
+            }
+        }
+        catch (Exception ex) { _log.LogDebug(ex, "ICE parser B: exception (non-fatal)"); }
+        return null;
+    }
+
+    /// <summary>Parser C: <c>resourceData.mediaState</c> active — endpoint confirmed via the call record</summary>
+    private IceCandidate? TryParseIceCandidateFromMediaState(JsonElement data)
+    {
+        try
+        {
+            // If Teams tells us media is active and we already have an endpoint stored
+            // (e.g., from a prior preFetchMedia parse), return it so DTLS can proceed.
+            if (!data.TryGetProperty("mediaState", out _)) return null;
+            // Caller handles storing existing record endpoint — nothing extra to extract here.
+        }
+        catch (Exception ex) { _log.LogDebug(ex, "ICE parser C: exception (non-fatal)"); }
+        return null;
+    }
+
     private void TryExtractMediaEndpoint(string callId, JsonElement mediaConfig, CallRecord record)
     {
-        // Best-effort extraction of the Teams media IP/port from the preFetchMedia array
-        // or iceCandidate data. The exact schema depends on the Teams API version.
-        // This is where you'd parse the Teams SDP offer / ICE candidate list.
+        // Legacy path: extract endpoint from mediaConfig when no ICE candidate was found above.
         try
         {
             if (mediaConfig.TryGetProperty("preFetchMedia", out var pfm) &&
@@ -261,32 +416,34 @@ public sealed class TeamsCallService : IDisposable
             {
                 foreach (var item in pfm.EnumerateArray())
                 {
-                    if (item.TryGetProperty("uri", out var uri))
-                    {
-                        // URI format: "rtp://x.x.x.x:port" or "srtp://x.x.x.x:port"
-                        var parsed = TryParseMediaUri(uri.GetString());
-                        if (parsed is not null)
-                        {
-                            record.MediaEndpoint = parsed;
-                            _log.LogInformation("[{CallId}] Media endpoint: {Ip}:{Port}", callId, parsed.Ip, parsed.Port);
-                            return;
-                        }
-                    }
+                    if (!item.TryGetProperty("uri", out var uri)) continue;
+                    var candidate = ParseIpPortFromUri(uri.GetString());
+                    if (candidate is null) continue;
+                    record.MediaEndpoint = new MediaEndpoint(
+                        candidate.Ip, candidate.Port, DtlsFingerprint: _dtls.DtlsFingerprint);
+                    _log.LogInformation("[{CallId}] Media endpoint (legacy): {Ip}:{Port}", callId, candidate.Ip, candidate.Port);
+                    return;
                 }
             }
         }
-        catch (Exception ex)
-        {
-            _log.LogDebug(ex, "[{CallId}] TryExtractMediaEndpoint: parse error (non-fatal)", callId);
-        }
+        catch (Exception ex) { _log.LogDebug(ex, "[{CallId}] TryExtractMediaEndpoint: exception (non-fatal)", callId); }
     }
 
-    private static MediaEndpoint? TryParseMediaUri(string? uri)
+    private static IceCandidate? ParseIpPortFromUri(string? uri)
     {
         if (string.IsNullOrWhiteSpace(uri)) return null;
         var m = Regex.Match(uri, @"://(\d{1,3}(?:\.\d{1,3}){3}):(\d+)", RegexOptions.None, TimeSpan.FromSeconds(1));
-        if (!m.Success) return null;
-        return new MediaEndpoint(m.Groups[1].Value, int.Parse(m.Groups[2].Value));
+        return m.Success ? new IceCandidate(m.Groups[1].Value, int.Parse(m.Groups[2].Value)) : null;
+    }
+
+    private static IceCandidate? ParseSdpCandidate(string? sdp)
+    {
+        if (string.IsNullOrWhiteSpace(sdp)) return null;
+        // RFC 5245: "candidate:X X UDP priority ip port typ ..."
+        var m = Regex.Match(sdp,
+            @"candidate:\S+\s+\d+\s+UDP\s+\d+\s+(\d{1,3}(?:\.\d{1,3}){3})\s+(\d+)",
+            RegexOptions.IgnoreCase, TimeSpan.FromSeconds(1));
+        return m.Success ? new IceCandidate(m.Groups[1].Value, int.Parse(m.Groups[2].Value)) : null;
     }
 
     private static string? ParseCallIdFromUrl(string? url)

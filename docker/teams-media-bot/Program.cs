@@ -30,6 +30,8 @@ using TeamsMediaBot.Services;
 var builder = WebApplication.CreateBuilder(args);
 builder.Logging.AddConsole();
 builder.Services.AddHttpClient();
+builder.Services.AddSingleton<DtlsSrtpService>();
+builder.Services.AddSingleton<StunClient>();
 builder.Services.AddSingleton<TeamsCallService>();
 builder.Services.AddSingleton<VideoInjectorService>();
 
@@ -110,6 +112,25 @@ app.MapPost("/v1/calls/{callId}/inject/stop", async (
     log.LogInformation("inject/stop: call={CallId}", callId);
     await injectorSvc.StopInjectionAsync(callId);
     return Results.Ok(new { ok = true });
+});
+
+// ── Manual media-endpoint override ────────────────────────────────────────────
+// When ICE auto-parsing from the Teams callback fails, an operator can POST the
+// Teams media IP:port directly.  This immediately triggers the STUN probe and
+// DTLS handshake so video injection can proceed.
+// Body: { ip: string, port: number }
+app.MapPost("/v1/calls/{callId}/media-endpoint", (
+    string callId,
+    MediaEndpointOverrideRequest req,
+    TeamsCallService callSvc,
+    ILogger<Program> log) =>
+{
+    if (string.IsNullOrWhiteSpace(req.Ip) || req.Port <= 0)
+        return Results.BadRequest(new { error = "ip and port are required" });
+
+    log.LogInformation("manual media-endpoint override: call={CallId} {Ip}:{Port}", callId, req.Ip, req.Port);
+    callSvc.SetMediaEndpointManual(callId, req.Ip, req.Port);
+    return Results.Ok(new { ok = true, message = "STUN probe + DTLS handshake initiated" });
 });
 
 // ── Teams notification callback ────────────────────────────────────────────────

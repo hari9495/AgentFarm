@@ -11,5 +11,9 @@
     <PackageReference Include="Microsoft.Graph" Version="5.56.0" />
     <!-- MSAL — Azure AD client-credentials token acquisition -->
     <PackageReference Include="Microsoft.Identity.Client" Version="4.65.0" />
+    <!-- BouncyCastle — DTLS-SRTP handshake (RFC 5764) for the media plane.
+         Provides DtlsServerProtocol, use_srtp extension, and the keying-material
+         exporter used to derive SRTP master key + salt from the DTLS session. -->
+    <PackageReference Include="BouncyCastle.Cryptography" Version="2.4.0" />
   </ItemGroup>
 </Project>
