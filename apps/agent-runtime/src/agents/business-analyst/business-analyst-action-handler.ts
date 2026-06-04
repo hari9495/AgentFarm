@@ -935,9 +935,9 @@ async function _handleBaActionCore(params: BaActionParams): Promise<BaActionResu
             }
         }
 
-        // Persist to KB for future RAG retrieval
+        // Persist to KB for future RAG retrieval, then write derived_from edges
         if (versionedContent) {
-            await ingestApprovedDocument({
+            const newDocId = await ingestApprovedDocument({
                 tenantId,
                 botId,
                 documentTitle: projectTitle,
@@ -948,6 +948,17 @@ async function _handleBaActionCore(params: BaActionParams): Promise<BaActionResu
                 gatewayBaseUrl,
                 serviceToken,
             });
+            if (newDocId && ragResult.similarDocumentIds.length > 0) {
+                const base = gatewayBaseUrl.replace(/\/+$/, '');
+                for (const priorId of ragResult.similarDocumentIds) {
+                    fetch(`${base}/v1/memory/edges`, {
+                        method: 'POST',
+                        headers: { 'content-type': 'application/json', Authorization: `Bearer ${serviceToken}` },
+                        body: JSON.stringify({ tenantId, workspaceId, fromId: newDocId, fromType: 'knowledge', toId: priorId, toType: 'knowledge', edgeType: 'derived_from', agentPrefix: 'ba' }),
+                        signal: AbortSignal.timeout(5_000),
+                    }).catch(() => { /* non-fatal */ });
+                }
+            }
         }
 
         // RTM auto-update — fire-and-forget, never blocks the response
@@ -1269,6 +1280,12 @@ export async function onBaDocumentApproved(params: {
     ticketProjectKey?: string;
     /** Epic / cycle / milestone ID for ticket grouping. */
     ticketEpicId?: string;
+    /**
+     * IDs of similar prior documents retrieved during generation — used to write
+     * derived_from memory-graph edges so the new document is linked to its sources.
+     * Comes from BaRagContext.similarDocumentIds; pass an empty array or omit to skip.
+     */
+    similarDocumentIds?: string[];
 }): Promise<void> {
     const {
         tenantId, botId, workspaceId, taskId, actionType,
@@ -1278,6 +1295,7 @@ export async function onBaDocumentApproved(params: {
         stakeholderId, stakeholderName, stakeholderRole, approvalComments,
         executeAction, workspaceDir,
         ticketPlatform, ticketProjectKey, ticketEpicId,
+        similarDocumentIds = [],
     } = params;
 
     const documentType = ACTION_TYPE_TO_DOC_TYPE[actionType] ?? 'draft_brd';
@@ -1303,7 +1321,7 @@ export async function onBaDocumentApproved(params: {
         ).catch((e) => console.warn('[ba-action-handler] signoff record failed:', e));
     }
 
-    await ingestApprovedDocument({
+    const newDocId = await ingestApprovedDocument({
         tenantId,
         botId,
         documentTitle,
@@ -1314,6 +1332,17 @@ export async function onBaDocumentApproved(params: {
         gatewayBaseUrl,
         serviceToken,
     });
+    if (newDocId && similarDocumentIds.length > 0) {
+        const base = gatewayBaseUrl.replace(/\/+$/, '');
+        for (const priorId of similarDocumentIds) {
+            fetch(`${base}/v1/memory/edges`, {
+                method: 'POST',
+                headers: { 'content-type': 'application/json', Authorization: `Bearer ${serviceToken}` },
+                body: JSON.stringify({ tenantId, workspaceId, fromId: newDocId, fromType: 'knowledge', toId: priorId, toType: 'knowledge', edgeType: 'derived_from', agentPrefix: 'ba' }),
+                signal: AbortSignal.timeout(5_000),
+            }).catch(() => { /* non-fatal */ });
+        }
+    }
 
     // Persist to durable storage when connectors are available
     if (executeAction && documentContent && workspaceDir) {

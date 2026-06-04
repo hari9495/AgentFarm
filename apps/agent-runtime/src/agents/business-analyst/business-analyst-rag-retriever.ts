@@ -81,6 +81,8 @@ export interface BaRagContext {
     contextBlock: string;
     /** How many similar documents were retrieved. */
     similarDocumentCount: number;
+    /** IDs of retrieved similar documents — used to write derived_from edges on approval. */
+    similarDocumentIds: string[];
     /** How many compliance chunks were retrieved. */
     complianceChunkCount: number;
     /** How many BA lesson patterns were retrieved. */
@@ -386,6 +388,7 @@ export async function buildBaRagContext(
     return {
         contextBlock,
         similarDocumentCount: similarDocs.length,
+        similarDocumentIds: similarDocs.map((d) => d.id),
         complianceChunkCount: complianceChunks.length,
         lessonCount: lessons.length,
         retrievedAt: new Date().toISOString(),
@@ -410,7 +413,7 @@ export async function ingestApprovedDocument(params: {
     complianceFrameworks?: string[];
     gatewayBaseUrl: string;
     serviceToken: string;
-}): Promise<boolean> {
+}): Promise<string | null> {
     const {
         tenantId, botId, documentTitle, documentType, content, mimeType,
         sourceUrl, domain, complianceFrameworks, gatewayBaseUrl, serviceToken,
@@ -442,8 +445,10 @@ export async function ingestApprovedDocument(params: {
             signal: AbortSignal.timeout(15_000),
         });
 
-        return res.ok;
+        if (!res.ok) return null;
+        const data = await res.json() as { record?: { id?: string } };
+        return data.record?.id ?? null;
     } catch {
-        return false;
+        return null;
     }
 }
