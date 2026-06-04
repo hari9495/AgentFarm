@@ -44,6 +44,7 @@ import { registerBudgetPolicyRoutes } from './routes/governance/budget-policy.js
 import { registerGovernanceWorkflowRoutes } from './routes/governance/governance-workflows.js';
 import { registerKillSwitchRoutes } from './routes/governance/kill-switches.js';
 import { registerActivityRoutes } from './routes/governance/activity-events.js';
+import { registerActivityFeedRoutes } from './routes/governance/activity-feed.js';
 import { registerDisclosureRoutes } from './routes/governance/disclosure.js';
 import { registerGovernanceKPIRoutes } from './routes/governance/governance-kpis.js';
 import { registerRetentionPolicyRoutes } from './routes/governance/retention-policy.js';
@@ -208,6 +209,7 @@ export const registerAllRoutes = async (
     await registerGovernanceWorkflowRoutes(app, { getSession });
     await registerKillSwitchRoutes(app, { getSession });
     await registerActivityRoutes(app, { getSession });
+    await registerActivityFeedRoutes(app, { getSession });
     await registerDisclosureRoutes(app, { getSession });
     registerGovernanceKPIRoutes(app);
     await registerRetentionPolicyRoutes(app, prisma);
