@@ -12,7 +12,16 @@ type SessionPayload = {
 export type SessionScope = SessionPayload['scope'];
 export type { SessionPayload };
 
-const getSecret = (): string => process.env.API_SESSION_SECRET ?? 'agentfarm-dev-secret';
+const getSecret = (): string => {
+    const secret = process.env.API_SESSION_SECRET;
+    if (!secret || secret.length < 32) {
+        throw new Error(
+            'API_SESSION_SECRET must be set and at least 32 characters. ' +
+            'Generate one with: openssl rand -hex 32',
+        );
+    }
+    return secret;
+};
 
 const toBase64Url = (value: string): string => Buffer.from(value, 'utf8').toString('base64url');
 const fromBase64Url = (value: string): string => Buffer.from(value, 'base64url').toString('utf8');

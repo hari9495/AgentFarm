@@ -5,6 +5,10 @@ import { hashPassword } from '../../lib/password.js';
 import { verifySessionToken } from '../../lib/session-auth.js';
 import { registerAuthRoutes, type AuthRepo } from './auth.js';
 
+// Ensure API_SESSION_SECRET is present — required by the hardened getSecret()
+// that throws instead of falling back to a default (security fix).
+process.env['API_SESSION_SECRET'] ??= 'test-secret-32-chars-minimum-ok!!';
+
 type StoredUser = {
     id: string;
     tenantId: string;

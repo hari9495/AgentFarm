@@ -5,6 +5,10 @@ import { registerTeamRoutes } from './team.js';
 import { buildSessionToken, verifySessionToken } from '../../lib/session-auth.js';
 import { requireRole } from '../../lib/require-role.js';
 
+// Ensure API_SESSION_SECRET is present — required by the hardened getSecret()
+// that throws instead of falling back to a default (security fix).
+process.env['API_SESSION_SECRET'] ??= 'test-secret-32-chars-minimum-ok!!';
+
 // ── Session helpers ───────────────────────────────────────────────────────────
 
 const makeSession = (overrides: Record<string, unknown> = {}) => ({

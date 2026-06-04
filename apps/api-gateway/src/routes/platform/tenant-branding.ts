@@ -134,16 +134,24 @@ export const registerTenantBrandingRoutes = async (
                     ${now}, ${now})
             `;
         } else {
-            const updates: string[] = ['"updatedAt" = NOW()'];
-            if (companyName !== undefined) updates.push(`"companyName" = ${companyName === null ? 'NULL' : `'${companyName.replace(/'/g, "''")}'`}`);
-            if (logoUrl !== undefined) updates.push(`"logoUrl" = ${logoUrl === null ? 'NULL' : `'${logoUrl.replace(/'/g, "''")}'`}`);
-            if (primaryColor !== undefined) updates.push(`"primaryColor" = ${primaryColor === null ? 'NULL' : `'${primaryColor.replace(/'/g, "''")}'`}`);
-            if (portalTitle !== undefined) updates.push(`"portalTitle" = ${portalTitle === null ? 'NULL' : `'${portalTitle.replace(/'/g, "''")}'`}`);
-            if (faviconUrl !== undefined) updates.push(`"faviconUrl" = ${faviconUrl === null ? 'NULL' : `'${faviconUrl.replace(/'/g, "''")}'`}`);
-            await prisma.$executeRawUnsafe(
-                `UPDATE "TenantBranding" SET ${updates.join(', ')} WHERE "tenantId" = $1`,
-                session.tenantId,
-            );
+            // Use individual parameterised $executeRaw calls per field to avoid
+            // the SQL-injection risk of $executeRawUnsafe with string interpolation.
+            // Each field is only updated when explicitly provided in the request body.
+            if (companyName !== undefined) {
+                await prisma.$executeRaw`UPDATE "TenantBranding" SET "companyName" = ${companyName}, "updatedAt" = NOW() WHERE "tenantId" = ${session.tenantId}`;
+            }
+            if (logoUrl !== undefined) {
+                await prisma.$executeRaw`UPDATE "TenantBranding" SET "logoUrl" = ${logoUrl}, "updatedAt" = NOW() WHERE "tenantId" = ${session.tenantId}`;
+            }
+            if (primaryColor !== undefined) {
+                await prisma.$executeRaw`UPDATE "TenantBranding" SET "primaryColor" = ${primaryColor}, "updatedAt" = NOW() WHERE "tenantId" = ${session.tenantId}`;
+            }
+            if (portalTitle !== undefined) {
+                await prisma.$executeRaw`UPDATE "TenantBranding" SET "portalTitle" = ${portalTitle}, "updatedAt" = NOW() WHERE "tenantId" = ${session.tenantId}`;
+            }
+            if (faviconUrl !== undefined) {
+                await prisma.$executeRaw`UPDATE "TenantBranding" SET "faviconUrl" = ${faviconUrl}, "updatedAt" = NOW() WHERE "tenantId" = ${session.tenantId}`;
+            }
         }
 
         const updated = await prisma.$queryRaw<BrandingRow[]>`

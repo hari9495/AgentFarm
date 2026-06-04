@@ -17,8 +17,9 @@ type SessionPayload = {
 function buildTestApp(opts: { allowedOrigins?: string } = {}) {
     const app = Fastify({ logger: false });
 
-    // Replicate SESSION_SECRET env so verifySessionToken works
-    process.env['SESSION_SECRET'] = process.env['SESSION_SECRET'] ?? 'test-secret-32-chars-minimum-ok!';
+    // Ensure API_SESSION_SECRET is set — required by the hardened getSecret() which
+    // throws rather than falling back to a default (security fix).
+    process.env['API_SESSION_SECRET'] = process.env['API_SESSION_SECRET'] ?? 'test-secret-32-chars-minimum-ok!';
 
     // FIX 2 — security headers on every response
     app.addHook('onSend', async (_req, reply) => {

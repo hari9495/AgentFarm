@@ -67,6 +67,19 @@ function makePrismaStub() {
                 });
             } else if (sql.includes('DELETE FROM "TenantBranding"')) {
                 brandingStore.delete(values[0] as string);
+            } else if (sql.includes('UPDATE "TenantBranding" SET "')) {
+                // Per-field parameterised UPDATE: SET "col" = $value, "updatedAt" = NOW() WHERE "tenantId" = $tenantId
+                // strings[0] = '...\n  UPDATE "TenantBranding" SET "colName" = '  (may have leading whitespace)
+                // values[0]  = new field value (string | null)
+                // values[1]  = tenantId
+                const colMatch = sql.match(/UPDATE "TenantBranding" SET "(\w+)" = $/);
+                if (colMatch) {
+                    const col = colMatch[1] as string;
+                    const newValue = (values[0] ?? null) as string | null;
+                    const tenantId = values[1] as string;
+                    const existing = brandingStore.get(tenantId);
+                    if (existing) (existing as Record<string, unknown>)[col] = newValue;
+                }
             }
             return 1;
         },

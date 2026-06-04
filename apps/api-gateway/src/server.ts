@@ -36,6 +36,8 @@ const PUBLIC_PATHS = new Set([
     '/portal/auth/me',
     // MFA step-2: user only has a short-lived mfa_token (not a full session)
     '/v1/auth/mfa/verify',
+    // Portal branding — public read so the website can load tenant theming before login
+    '/portal/data/branding',
 ]);
 
 const isPublicPath = (url: string): boolean => {
@@ -43,7 +45,10 @@ const isPublicPath = (url: string): boolean => {
     return (
         PUBLIC_PATHS.has(path) ||
         path === '/auth/logout' ||
-        path.startsWith('/portal/') ||
+        // NOTE: /portal/* is intentionally NOT a blanket bypass. Only the explicit
+        // paths in PUBLIC_PATHS above are unauthenticated. Portal data routes
+        // (/portal/data/*) carry sensitive billing/agent information and each
+        // handler enforces its own portal session check.
         path.startsWith('/v1/webhooks/events')
     );
 };
@@ -104,10 +109,24 @@ export const createServer = async (): Promise<FastifyInstance> => {
     await app.register(cors, {
         origin: (origin, callback) => {
             const allowedOriginsEnv = process.env['ALLOWED_ORIGINS'];
-            if (!allowedOriginsEnv || !origin) {
+
+            // No origin header = same-origin or server-to-server request — allow.
+            if (!origin) {
                 callback(null, true);
                 return;
             }
+
+            // ALLOWED_ORIGINS must be explicitly configured. Fail closed when
+            // absent: reject all cross-origin requests rather than permitting
+            // every origin. This prevents CSRF against credentialed sessions in
+            // staging/preview environments where the env var is often forgotten.
+            if (!allowedOriginsEnv) {
+                const err = new Error('CORS: ALLOWED_ORIGINS is not configured — cross-origin requests are blocked') as Error & { statusCode: number };
+                err.statusCode = 403;
+                callback(err, false);
+                return;
+            }
+
             const allowed = allowedOriginsEnv.split(',').map((s) => s.trim());
             if (allowed.includes(origin)) {
                 callback(null, true);
