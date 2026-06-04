@@ -612,6 +612,75 @@ async function handle(
             return;
         }
 
+        // POST /v1/sessions/:id/screen-share/start
+        // Starts the Xvfb→FFmpeg→HLS capture pipeline on the desktop-agent and
+        // signals the platform adapter to add video to the active call.
+        //
+        // Body: { joinHandle: string }
+        //   joinHandle — value returned by the /join response (Teams call ID,
+        //                Zoom session JSON, etc.)
+        if (action === 'screen-share' && subAction === 'start' && method === 'POST') {
+            if (!ctx.desktopAgentUrl) {
+                respond(res, 501, { error: 'screen_share_not_configured', detail: 'desktopAgentUrl not set on this server instance' });
+                return;
+            }
+            const body = await readJson(req);
+            const joinHandle = typeof body['joinHandle'] === 'string' ? (body['joinHandle'] as string).trim() : '';
+            if (!joinHandle) {
+                respond(res, 400, { error: 'invalid_request', details: ['joinHandle is required'] });
+                return;
+            }
+
+            const sessionRecord = session.machine.getSession();
+            const adapter = ctx.meetingConnectorRouter?.resolveByPlatform(sessionRecord.platform) ?? null;
+            if (!adapter?.startScreenShare) {
+                respond(res, 501, {
+                    error: 'screen_share_not_supported',
+                    detail: `Platform '${sessionRecord.platform}' does not support screen share via its current adapter`,
+                });
+                return;
+            }
+
+            const result = await adapter.startScreenShare(joinHandle, ctx.desktopAgentUrl);
+            if (!result.ok) {
+                respond(res, 502, { error: 'screen_share_failed', detail: result.error });
+                return;
+            }
+            respond(res, 200, { ok: true, streamUrl: result.streamUrl, platform: sessionRecord.platform });
+            return;
+        }
+
+        // POST /v1/sessions/:id/screen-share/stop
+        // Stops an active screen share and terminates the FFmpeg pipeline.
+        //
+        // Body: { joinHandle: string }
+        if (action === 'screen-share' && subAction === 'stop' && method === 'POST') {
+            if (!ctx.desktopAgentUrl) {
+                respond(res, 501, { error: 'screen_share_not_configured', detail: 'desktopAgentUrl not set on this server instance' });
+                return;
+            }
+            const body = await readJson(req);
+            const joinHandle = typeof body['joinHandle'] === 'string' ? (body['joinHandle'] as string).trim() : '';
+            if (!joinHandle) {
+                respond(res, 400, { error: 'invalid_request', details: ['joinHandle is required'] });
+                return;
+            }
+
+            const sessionRecord = session.machine.getSession();
+            const adapter = ctx.meetingConnectorRouter?.resolveByPlatform(sessionRecord.platform) ?? null;
+            if (!adapter?.stopScreenShare) {
+                respond(res, 501, {
+                    error: 'screen_share_not_supported',
+                    detail: `Platform '${sessionRecord.platform}' does not support screen share via its current adapter`,
+                });
+                return;
+            }
+
+            const result = await adapter.stopScreenShare(joinHandle, ctx.desktopAgentUrl);
+            respond(res, result.ok ? 200 : 502, result.ok ? { ok: true } : { error: 'screen_share_stop_failed', detail: result.error });
+            return;
+        }
+
         if (action === 'say' && method === 'POST') {
             const body = await readJson(req);
             let text = typeof body['text'] === 'string' ? (body['text'] as string).trim() : '';

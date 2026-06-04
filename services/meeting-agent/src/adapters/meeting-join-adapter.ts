@@ -34,6 +34,14 @@ export interface MeetingAdapterCapabilities {
     nativeAudioStream: boolean;
 }
 
+/** Result returned by screen-share start / stop operations. */
+export interface ScreenShareResult {
+    ok: boolean;
+    /** HLS stream URL served by the desktop-agent, e.g. `http://desktop-agent:5003/v1/screen-share/stream.m3u8`. */
+    streamUrl?: string;
+    error?: string;
+}
+
 export interface MeetingJoinAdapter {
     /**
      * Join the meeting at `meetingUrl` and return a handle for subsequent
@@ -50,4 +58,24 @@ export interface MeetingJoinAdapter {
 
     /** Capabilities this adapter provides. */
     getCapabilities(): MeetingAdapterCapabilities;
+
+    /**
+     * Start sharing the virtual display into the active meeting call.
+     *
+     * Concrete steps per adapter:
+     *   - Teams: calls `desktopAgentUrl/v1/screen-share/start` to begin
+     *     FFmpeg capture, then PATCHes the call to add the `video` modality.
+     *   - Zoom: starts FFmpeg capture and triggers the Zoom sharing API.
+     *   - Browser/SIP: not supported (returns `ok: false`).
+     *
+     * `sessionHandle` is the value returned by `join()`.
+     * `desktopAgentUrl` is the base URL of the desktop-agent HTTP API.
+     */
+    startScreenShare?(sessionHandle: string, desktopAgentUrl: string): Promise<ScreenShareResult>;
+
+    /**
+     * Stop an active screen share and terminate the FFmpeg capture pipeline.
+     * Should not throw — always resolves.
+     */
+    stopScreenShare?(sessionHandle: string, desktopAgentUrl: string): Promise<ScreenShareResult>;
 }

@@ -20,7 +20,7 @@
  * Docs: https://learn.microsoft.com/en-us/graph/api/application-post-calls
  */
 
-import type { MeetingAdapterCapabilities, MeetingJoinAdapter, MeetingJoinResult, MeetingLeaveResult } from './meeting-join-adapter.js';
+import type { MeetingAdapterCapabilities, MeetingJoinAdapter, MeetingJoinResult, MeetingLeaveResult, ScreenShareResult } from './meeting-join-adapter.js';
 
 const GRAPH_BASE = 'https://graph.microsoft.com/v1.0';
 const TOKEN_ENDPOINT_TEMPLATE = 'https://login.microsoftonline.com/{tenantId}/oauth2/v2.0/token';
@@ -148,10 +148,63 @@ export class TeamsJoinAdapter implements MeetingJoinAdapter {
     getCapabilities(): MeetingAdapterCapabilities {
         return {
             chat: true,
-            screenShare: true,     // via Graph API media bot (requires extra setup)
-            attendeeList: true,    // GET /communications/calls/{id}/participants
+            screenShare: true,       // implemented via startScreenShare()
+            attendeeList: true,      // GET /communications/calls/{id}/participants
             nativeAudioStream: true, // real-time audio via Graph Calling API
         };
+    }
+
+    /**
+     * Start screen share: kick off Xvfb→FFmpeg capture on the desktop-agent,
+     * then PATCH the call to add the `video` modality so Teams streams it.
+     */
+    async startScreenShare(sessionHandle: string, desktopAgentUrl: string): Promise<ScreenShareResult> {
+        const base = desktopAgentUrl.replace(/\/+$/u, '');
+        try {
+            // 1. Start Xvfb → FFmpeg → HLS capture on the desktop-agent.
+            const captureRes = await this.fetchImpl(`${base}/v1/screen-share/start`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ fps: 15, width: 1280, height: 800 }),
+            });
+            if (!captureRes.ok) {
+                const detail = await captureRes.text().catch(() => '');
+                return { ok: false, error: `desktop-agent screen-share/start ${captureRes.status}: ${detail.slice(0, 200)}` };
+            }
+            const captureData = await captureRes.json() as { ok: boolean; streamUrl?: string; error?: string };
+            if (!captureData.ok) {
+                return { ok: false, error: captureData.error ?? 'desktop-agent returned ok:false' };
+            }
+
+            // 2. PATCH the active Teams call to add the video modality.
+            const token = await this.getToken();
+            const patchRes = await this.graphRequest(
+                token, 'PATCH', `/communications/calls/${sessionHandle}`,
+                { body: { requestedModalities: ['audio', 'video'] } },
+            );
+            if (!patchRes.ok) {
+                const detail = await patchRes.text().catch(() => '');
+                return { ok: false, error: `Graph PATCH requestedModalities ${patchRes.status}: ${detail.slice(0, 256)}` };
+            }
+
+            return { ok: true, streamUrl: captureData.streamUrl };
+        } catch (error) {
+            return { ok: false, error: (error as Error).message };
+        }
+    }
+
+    /** Stop screen share: terminate the FFmpeg pipeline on the desktop-agent. */
+    async stopScreenShare(_sessionHandle: string, desktopAgentUrl: string): Promise<ScreenShareResult> {
+        const base = desktopAgentUrl.replace(/\/+$/u, '');
+        try {
+            const res = await this.fetchImpl(`${base}/v1/screen-share/stop`, { method: 'POST' });
+            if (!res.ok) {
+                return { ok: false, error: `desktop-agent screen-share/stop ${res.status}` };
+            }
+            return { ok: true };
+        } catch (error) {
+            return { ok: false, error: (error as Error).message };
+        }
     }
 
     // ── Private helpers ─────────────────────────────────────────────────────────

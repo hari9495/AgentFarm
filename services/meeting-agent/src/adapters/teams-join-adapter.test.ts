@@ -214,3 +214,106 @@ describe('TeamsJoinAdapter.getCapabilities()', () => {
         assert.equal(caps.nativeAudioStream, true);
     });
 });
+
+// ── startScreenShare() ────────────────────────────────────────────────────────
+
+describe('TeamsJoinAdapter.startScreenShare()', () => {
+    const DA_URL = 'http://desktop-agent:5003';
+
+    it('returns ok:true with streamUrl when desktop-agent and Graph PATCH succeed', async () => {
+        const calls: string[] = [];
+        const fetchImpl: FetchLike = async (url) => {
+            calls.push(url);
+            if (url.includes('/token'))
+                return { ok: true, status: 200, json: async () => ({ access_token: 'tok', expires_in: 3600 }), text: async () => '' };
+            if (url.includes('/screen-share/start'))
+                return { ok: true, status: 200, json: async () => ({ ok: true, streamUrl: 'http://da:5003/v1/screen-share/stream.m3u8' }), text: async () => '' };
+            // Graph PATCH
+            return { ok: true, status: 200, json: async () => ({}), text: async () => '' };
+        };
+        const adapter = new TeamsJoinAdapter({ tenantId: 't', clientId: 'c', clientSecret: 's', fetchImpl });
+        const result = await adapter.startScreenShare!('call-abc', DA_URL);
+
+        assert.equal(result.ok, true);
+        assert.ok(result.streamUrl?.includes('stream.m3u8'));
+        assert.ok(calls.some((u) => u.includes('/screen-share/start')), 'should have called desktop-agent');
+        assert.ok(calls.some((u) => u.includes('/communications/calls/call-abc')), 'should have PATCHed Teams call');
+    });
+
+    it('returns ok:false when desktop-agent screen-share/start fails', async () => {
+        const fetchImpl: FetchLike = async (url) => {
+            if (url.includes('/token'))
+                return { ok: true, status: 200, json: async () => ({ access_token: 'tok', expires_in: 3600 }), text: async () => '' };
+            if (url.includes('/screen-share/start'))
+                return { ok: false, status: 409, json: async () => ({ ok: false, error: 'already active' }), text: async () => 'already active' };
+            return { ok: true, status: 200, json: async () => ({}), text: async () => '' };
+        };
+        const adapter = new TeamsJoinAdapter({ tenantId: 't', clientId: 'c', clientSecret: 's', fetchImpl });
+        const result = await adapter.startScreenShare!('call-abc', DA_URL);
+
+        assert.equal(result.ok, false);
+        assert.ok(result.error?.includes('409'));
+    });
+
+    it('returns ok:false when Graph PATCH to add video modality fails', async () => {
+        const fetchImpl: FetchLike = async (url) => {
+            if (url.includes('/token'))
+                return { ok: true, status: 200, json: async () => ({ access_token: 'tok', expires_in: 3600 }), text: async () => '' };
+            if (url.includes('/screen-share/start'))
+                return { ok: true, status: 200, json: async () => ({ ok: true, streamUrl: 'http://da/stream.m3u8' }), text: async () => '' };
+            // Graph PATCH fails
+            return { ok: false, status: 403, json: async () => ({}), text: async () => 'Forbidden' };
+        };
+        const adapter = new TeamsJoinAdapter({ tenantId: 't', clientId: 'c', clientSecret: 's', fetchImpl });
+        const result = await adapter.startScreenShare!('call-abc', DA_URL);
+
+        assert.equal(result.ok, false);
+        assert.ok(result.error?.includes('403'));
+    });
+
+    it('returns ok:false when fetch throws (network error)', async () => {
+        const fetchImpl: FetchLike = async () => { throw new Error('network down'); };
+        const adapter = new TeamsJoinAdapter({ tenantId: 't', clientId: 'c', clientSecret: 's', fetchImpl });
+        const result = await adapter.startScreenShare!('call-abc', DA_URL);
+
+        assert.equal(result.ok, false);
+        assert.ok(result.error?.includes('network down'));
+    });
+});
+
+// ── stopScreenShare() ─────────────────────────────────────────────────────────
+
+describe('TeamsJoinAdapter.stopScreenShare()', () => {
+    const DA_URL = 'http://desktop-agent:5003';
+
+    it('returns ok:true when desktop-agent stop succeeds', async () => {
+        let stoppedUrl = '';
+        const fetchImpl: FetchLike = async (url) => {
+            stoppedUrl = url;
+            return { ok: true, status: 200, json: async () => ({ ok: true }), text: async () => '' };
+        };
+        const adapter = new TeamsJoinAdapter({ tenantId: 't', clientId: 'c', clientSecret: 's', fetchImpl });
+        const result = await adapter.stopScreenShare!('call-abc', DA_URL);
+
+        assert.equal(result.ok, true);
+        assert.ok(stoppedUrl.includes('/screen-share/stop'));
+    });
+
+    it('returns ok:false when desktop-agent returns non-2xx', async () => {
+        const fetchImpl: FetchLike = async () => ({ ok: false, status: 500, json: async () => ({}), text: async () => '' });
+        const adapter = new TeamsJoinAdapter({ tenantId: 't', clientId: 'c', clientSecret: 's', fetchImpl });
+        const result = await adapter.stopScreenShare!('call-abc', DA_URL);
+
+        assert.equal(result.ok, false);
+        assert.ok(result.error?.includes('500'));
+    });
+
+    it('returns ok:false when fetch throws', async () => {
+        const fetchImpl: FetchLike = async () => { throw new Error('connection refused'); };
+        const adapter = new TeamsJoinAdapter({ tenantId: 't', clientId: 'c', clientSecret: 's', fetchImpl });
+        const result = await adapter.stopScreenShare!('call-abc', DA_URL);
+
+        assert.equal(result.ok, false);
+        assert.ok(result.error?.includes('connection refused'));
+    });
+});

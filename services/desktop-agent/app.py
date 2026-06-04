@@ -22,8 +22,9 @@ import time
 import uuid
 from typing import Any
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_file
 from flask_cors import CORS
+from screen_share import HLS_DIR, ScreenShareController
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -205,6 +206,9 @@ class SessionStore:
 
 # Global store — initialized at startup
 _store = SessionStore(redis_client=_init_redis_client())
+
+# Screen-share controller — one active capture per container instance
+_screen_share = ScreenShareController(display=DISPLAY, app_port=APP_PORT)
 
 
 # ---------------------------------------------------------------------------
@@ -1683,6 +1687,69 @@ def _playwright_join_and_converse(session_id: str, meeting_url: str) -> None:
         _store.update_fields(session_id, status="idle")
         _start_avatar_loop(session_id, "idle")
         logger.info("[playwright-join] session %s ended", session_id)
+
+
+# ---------------------------------------------------------------------------
+# Screen-share routes (Xvfb → FFmpeg → HLS)
+# ---------------------------------------------------------------------------
+
+@app.route("/v1/screen-share/start", methods=["POST"])
+def screen_share_start():
+    """Start capturing the virtual display and encoding to HLS.
+
+    Optional body params:
+      fps           (int, 1-30, default 15)
+      width         (int, default 1280)
+      height        (int, default 800)
+      segmentSeconds (int, 1-10, default 2)
+    """
+    body: dict[str, Any] = request.get_json(force=True, silent=True) or {}
+    result = _screen_share.start(
+        fps=int(body.get("fps", 15)),
+        width=int(body.get("width", 1280)),
+        height=int(body.get("height", 800)),
+        segment_seconds=int(body.get("segmentSeconds", 2)),
+    )
+    status_code = 200 if result.get("ok") else 409
+    return jsonify(result), status_code
+
+
+@app.route("/v1/screen-share/stop", methods=["POST"])
+def screen_share_stop():
+    """Stop the active FFmpeg capture. Idempotent."""
+    result = _screen_share.stop()
+    return jsonify(result), 200 if result.get("ok") else 500
+
+
+@app.route("/v1/screen-share/status", methods=["GET"])
+def screen_share_status():
+    """Return the current capture state."""
+    return jsonify(_screen_share.status())
+
+
+@app.route("/v1/screen-share/stream.m3u8", methods=["GET"])
+def screen_share_playlist():
+    """Serve the live HLS playlist."""
+    playlist_path = HLS_DIR / "screen.m3u8"
+    if not playlist_path.exists():
+        return jsonify({"error": "No active screen share — start capture first"}), 404
+    return send_file(
+        str(playlist_path),
+        mimetype="application/vnd.apple.mpegurl",
+        conditional=False,
+    )
+
+
+@app.route("/v1/screen-share/<path:filename>", methods=["GET"])
+def screen_share_segment(filename: str):
+    """Serve an HLS segment (.ts file)."""
+    # Guard against path traversal
+    if "/" in filename or ".." in filename or not filename.endswith(".ts"):
+        return jsonify({"error": "invalid segment path"}), 400
+    segment_path = HLS_DIR / filename
+    if not segment_path.exists():
+        return jsonify({"error": "segment not found"}), 404
+    return send_file(str(segment_path), mimetype="video/mp2t")
 
 
 # ---------------------------------------------------------------------------

@@ -10,6 +10,8 @@ import type {
     CaptureStopInput,
     CaptureResult,
 } from './capture-controller.js';
+import { MeetingConnectorRouter } from './meeting-connector-router.js';
+import type { MeetingJoinAdapter, MeetingJoinResult, MeetingLeaveResult, ScreenShareResult } from './adapters/meeting-join-adapter.js';
 
 let app: MeetingAgentApp | undefined;
 let baseUrl = '';
@@ -600,5 +602,156 @@ describe('POST /v1/sessions/:id/join', () => {
         });
         assert.equal(r.status, 409);
         assert.equal(r.json.error, 'invalid_transition');
+    });
+});
+
+// ── Screen-share routes ───────────────────────────────────────────────────────
+
+/** Minimal MeetingJoinAdapter stub that supports (or withholds) screen share. */
+function makeScreenShareAdapter(opts: {
+    failStart?: boolean;
+    failStop?: boolean;
+    withoutScreenShare?: boolean;
+} = {}): MeetingJoinAdapter {
+    const base: MeetingJoinAdapter = {
+        join: async (): Promise<MeetingJoinResult> => ({ ok: true, joinMethod: 'teams_sdk', sessionHandle: 'call-123' }),
+        leave: async (): Promise<MeetingLeaveResult> => ({ ok: true }),
+        getCapabilities: () => ({ chat: true, screenShare: !opts.withoutScreenShare, attendeeList: false, nativeAudioStream: false }),
+    };
+    if (!opts.withoutScreenShare) {
+        base.startScreenShare = async (): Promise<ScreenShareResult> =>
+            opts.failStart
+                ? { ok: false, error: 'FFmpeg failed' }
+                : { ok: true, streamUrl: 'http://desktop-agent:5003/v1/screen-share/stream.m3u8' };
+        base.stopScreenShare = async (): Promise<ScreenShareResult> =>
+            opts.failStop
+                ? { ok: false, error: 'stop failed' }
+                : { ok: true };
+    }
+    return base;
+}
+
+async function callIsolated(
+    port: number,
+    path: string,
+    method = 'GET',
+    body?: unknown,
+): Promise<{ status: number; json: unknown }> {
+    const res = await fetch(`http://127.0.0.1:${port}${path}`, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    return { status: res.status, json: await res.json() };
+}
+
+describe('POST /v1/sessions/:id/screen-share/start', () => {
+    it('returns 501 when desktopAgentUrl is not configured on the server', async () => {
+        const created = await call('/v1/sessions', 'POST', {
+            tenantId: 't1', workspaceId: 'ws1', botId: 'b1',
+            platform: 'teams', mode: 'standup', meetingId: 'm1',
+        });
+        const id = (created.json as { session: { id: string } }).session.id;
+
+        const r = await call(`/v1/sessions/${id}/screen-share/start`, 'POST', { joinHandle: 'call-abc' });
+        assert.equal(r.status, 501);
+        assert.equal((r.json as { error: string }).error, 'screen_share_not_configured');
+    });
+
+    it('returns 400 when joinHandle is missing', async () => {
+        const router = new MeetingConnectorRouter({ teamsAdapter: makeScreenShareAdapter() as any });
+        const isolated = createMeetingAgentServer({ desktopAgentUrl: 'http://da:5003', meetingConnectorRouter: router });
+        await isolated.listen(0);
+        const port = (isolated.server.address() as AddressInfo).port;
+        try {
+            const c = await callIsolated(port, '/v1/sessions', 'POST', { tenantId: 't1', workspaceId: 'ws1', botId: 'b1', platform: 'teams', mode: 'standup', meetingId: 'm1' });
+            const id = (c.json as { session: { id: string } }).session.id;
+
+            const r = await callIsolated(port, `/v1/sessions/${id}/screen-share/start`, 'POST', {});
+            assert.equal(r.status, 400);
+            assert.equal((r.json as { error: string }).error, 'invalid_request');
+        } finally { await isolated.close(); }
+    });
+
+    it('returns 501 when platform adapter does not implement startScreenShare', async () => {
+        const router = new MeetingConnectorRouter({ teamsAdapter: makeScreenShareAdapter({ withoutScreenShare: true }) as any });
+        const isolated = createMeetingAgentServer({ desktopAgentUrl: 'http://da:5003', meetingConnectorRouter: router });
+        await isolated.listen(0);
+        const port = (isolated.server.address() as AddressInfo).port;
+        try {
+            const c = await callIsolated(port, '/v1/sessions', 'POST', { tenantId: 't1', workspaceId: 'ws1', botId: 'b1', platform: 'teams', mode: 'standup', meetingId: 'm1' });
+            const id = (c.json as { session: { id: string } }).session.id;
+
+            const r = await callIsolated(port, `/v1/sessions/${id}/screen-share/start`, 'POST', { joinHandle: 'call-abc' });
+            assert.equal(r.status, 501);
+            assert.equal((r.json as { error: string }).error, 'screen_share_not_supported');
+        } finally { await isolated.close(); }
+    });
+
+    it('returns 200 with streamUrl when adapter.startScreenShare succeeds', async () => {
+        const router = new MeetingConnectorRouter({ teamsAdapter: makeScreenShareAdapter() as any });
+        const isolated = createMeetingAgentServer({ desktopAgentUrl: 'http://da:5003', meetingConnectorRouter: router });
+        await isolated.listen(0);
+        const port = (isolated.server.address() as AddressInfo).port;
+        try {
+            const c = await callIsolated(port, '/v1/sessions', 'POST', { tenantId: 't1', workspaceId: 'ws1', botId: 'b1', platform: 'teams', mode: 'standup', meetingId: 'm1' });
+            const id = (c.json as { session: { id: string } }).session.id;
+
+            const r = await callIsolated(port, `/v1/sessions/${id}/screen-share/start`, 'POST', { joinHandle: 'call-abc' });
+            const body = r.json as { ok: boolean; streamUrl: string; platform: string };
+            assert.equal(r.status, 200);
+            assert.equal(body.ok, true);
+            assert.ok(body.streamUrl.includes('stream.m3u8'));
+            assert.equal(body.platform, 'teams');
+        } finally { await isolated.close(); }
+    });
+
+    it('returns 502 when adapter.startScreenShare returns ok:false', async () => {
+        const router = new MeetingConnectorRouter({ teamsAdapter: makeScreenShareAdapter({ failStart: true }) as any });
+        const isolated = createMeetingAgentServer({ desktopAgentUrl: 'http://da:5003', meetingConnectorRouter: router });
+        await isolated.listen(0);
+        const port = (isolated.server.address() as AddressInfo).port;
+        try {
+            const c = await callIsolated(port, '/v1/sessions', 'POST', { tenantId: 't1', workspaceId: 'ws1', botId: 'b1', platform: 'teams', mode: 'standup', meetingId: 'm1' });
+            const id = (c.json as { session: { id: string } }).session.id;
+
+            const r = await callIsolated(port, `/v1/sessions/${id}/screen-share/start`, 'POST', { joinHandle: 'call-abc' });
+            const body = r.json as { error: string; detail: string };
+            assert.equal(r.status, 502);
+            assert.equal(body.error, 'screen_share_failed');
+            assert.ok(body.detail.includes('FFmpeg'));
+        } finally { await isolated.close(); }
+    });
+});
+
+describe('POST /v1/sessions/:id/screen-share/stop', () => {
+    it('returns 200 when adapter.stopScreenShare succeeds', async () => {
+        const router = new MeetingConnectorRouter({ teamsAdapter: makeScreenShareAdapter() as any });
+        const isolated = createMeetingAgentServer({ desktopAgentUrl: 'http://da:5003', meetingConnectorRouter: router });
+        await isolated.listen(0);
+        const port = (isolated.server.address() as AddressInfo).port;
+        try {
+            const c = await callIsolated(port, '/v1/sessions', 'POST', { tenantId: 't1', workspaceId: 'ws1', botId: 'b1', platform: 'teams', mode: 'standup', meetingId: 'm1' });
+            const id = (c.json as { session: { id: string } }).session.id;
+
+            const r = await callIsolated(port, `/v1/sessions/${id}/screen-share/stop`, 'POST', { joinHandle: 'call-abc' });
+            assert.equal(r.status, 200);
+            assert.equal((r.json as { ok: boolean }).ok, true);
+        } finally { await isolated.close(); }
+    });
+
+    it('returns 502 when adapter.stopScreenShare returns ok:false', async () => {
+        const router = new MeetingConnectorRouter({ teamsAdapter: makeScreenShareAdapter({ failStop: true }) as any });
+        const isolated = createMeetingAgentServer({ desktopAgentUrl: 'http://da:5003', meetingConnectorRouter: router });
+        await isolated.listen(0);
+        const port = (isolated.server.address() as AddressInfo).port;
+        try {
+            const c = await callIsolated(port, '/v1/sessions', 'POST', { tenantId: 't1', workspaceId: 'ws1', botId: 'b1', platform: 'teams', mode: 'standup', meetingId: 'm1' });
+            const id = (c.json as { session: { id: string } }).session.id;
+
+            const r = await callIsolated(port, `/v1/sessions/${id}/screen-share/stop`, 'POST', { joinHandle: 'call-abc' });
+            assert.equal(r.status, 502);
+            assert.equal((r.json as { error: string }).error, 'screen_share_stop_failed');
+        } finally { await isolated.close(); }
     });
 });

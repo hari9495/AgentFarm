@@ -101,6 +101,15 @@ export class MeetingConnectorRouter {
         return { adapter, platform };
     }
 
+    /**
+     * Returns the best adapter for an already-identified platform.
+     * Used by the screen-share routes which know the platform from the session
+     * record without needing to re-parse a URL.
+     */
+    resolveByPlatform(platform: MeetingPlatform | null): MeetingJoinAdapter | null {
+        return this.selectAdapter(platform);
+    }
+
     /** Which adapter would be selected for a given platform (for diagnostics). */
     explain(meetingUrl: string): string {
         const platform = detectPlatform(meetingUrl);
