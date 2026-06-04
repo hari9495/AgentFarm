@@ -96,7 +96,7 @@ export async function searchSemanticMemory(
         LIMIT ${topK}
     `;
 
-    return rows.map((row) => ({
+    return rows.map((row: RawSemanticRow) => ({
         memory:     rowToRecord(row),
         similarity: Number(row.similarity),
     }));

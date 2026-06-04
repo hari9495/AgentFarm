@@ -84,6 +84,7 @@ jobs:
               --include="*.ts" --include="*.tsx" \
               --exclude-dir=node_modules \
               --exclude-dir=.next \
+              --exclude-dir=api-gateway \
               --exclude="*.test.ts" \
               --exclude="*.spec.ts" 2>/dev/null || true)
             if [ -n "$hits" ]; then

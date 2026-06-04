@@ -142,7 +142,7 @@ export async function searchEpisodicMemory(
         LIMIT ${topK}
     `;
 
-    return rows.map((row) => ({
+    return rows.map((row: RawEpisodicRow) => ({
         memory:     rowToRecord(row),
         similarity: Number(row.similarity),
     }));
@@ -176,7 +176,7 @@ export async function searchEpisodicMemoryNoEmbed(
         LIMIT ${topK}
     `;
 
-    return rows.map((row) => ({
+    return rows.map((row: RawEpisodicRow) => ({
         memory:     rowToRecord(row),
         similarity: 0.5,   // sentinel: text match, not vector match
     }));

@@ -126,6 +126,9 @@ test("permission matrix for company portal and superadmin APIs", async () => {
     const anonymousSuperadminApi = await request("/api/superadmin/overview");
     assert.equal(anonymousSuperadminApi.status, 401);
 
+    // Remove any conflicting rows before updating (idempotent in re-runs and concurrent envs)
+    db.prepare("DELETE FROM users WHERE email = ? AND id != ?").run("admin@customerexample.com", admin.id);
+    db.prepare("DELETE FROM users WHERE email = ? AND id != ?").run("member@customerexample.com", member.id);
     db.prepare("UPDATE users SET email = ? WHERE id = ?").run("admin@customerexample.com", admin.id);
     db.prepare("UPDATE users SET email = ? WHERE id = ?").run("member@customerexample.com", member.id);
 
@@ -310,7 +313,7 @@ test("company operator policy — additional security regressions", () => {
 
     // Domain match is case-insensitive.
     assert.equal(
-        isCompanyOperatorEmailForPolicy("OPS@AgentFarms.LOCAL", {
+        isCompanyOperatorEmailForPolicy("OPS@AgentFarm.LOCAL", {
             nodeEnv: "development",
             companyEmails: "",
             companyDomains: "",

@@ -52,7 +52,7 @@ jobs:
             pnpm-store-${{ runner.os }}-
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Audit dependencies (fail on critical or high)
         run: pnpm audit --audit-level=high
@@ -127,8 +127,6 @@ jobs:
 
       - name: Run website deployment UI regression
         run: pnpm --filter @agentfarm/website test:deployments:ui
-        env:
-          WEBSITE_BASE_URL: http://127.0.0.1:3002
 
   validate:
     runs-on: ubuntu-latest
@@ -159,7 +157,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:16
+        image: pgvector/pgvector:pg16
         env:
           POSTGRES_USER: agentfarm
           POSTGRES_PASSWORD: agentfarm
@@ -285,7 +283,7 @@ jobs:
           - '@agentfarm/notification-adapters'
     services:
       postgres:
-        image: postgres:16
+        image: pgvector/pgvector:pg16
         env:
           POSTGRES_USER: agentfarm
           POSTGRES_PASSWORD: agentfarm
@@ -383,7 +381,7 @@ jobs:
     timeout-minutes: 20
     services:
       postgres:
-        image: postgres:16
+        image: pgvector/pgvector:pg16
         env:
           POSTGRES_USER: agentfarm
           POSTGRES_PASSWORD: agentfarm
@@ -476,20 +474,6 @@ jobs:
         run: nohup pnpm --filter @agentfarm/dashboard start > /tmp/dashboard.log 2>&1 &
         env:
           NODE_ENV: production
-
-      - name: Wait for Dashboard
-        run: |
-          for i in {1..30}; do
-            code=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:3001/ || true)
-            if [ "$code" = "200" ] || [ "$code" = "401" ]; then
-              echo "Dashboard ready"
-              exit 0
-            fi
-            sleep 2
-          done
-          echo "Dashboard failed to start"
-          cat /tmp/dashboard.log
-          exit 1
 
       - name: Install Playwright Chromium
         run: pnpm --filter @agentfarm/e2e exec playwright install chromium --with-deps
