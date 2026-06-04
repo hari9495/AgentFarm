@@ -336,10 +336,10 @@ services:
       # Kokoro TTS — OpenAI-compatible endpoint.
       # To replace VoxCPM2 with Kokoro: set SUPERTONIC_URL=http://kokoro:8880
       KOKORO_ENDPOINT: ${KOKORO_ENDPOINT:-http://kokoro:8880}
-      # XTTS v2 — 17-language TTS (optional, add xtts service to use)
-      XTTS_ENDPOINT: ${XTTS_ENDPOINT:-}
-      # Meta MMS-TTS — 1100+ languages (optional, add mms_tts service to use)
-      MMS_TTS_ENDPOINT: ${MMS_TTS_ENDPOINT:-}
+      # XTTS v2 — 17-language TTS. Active when --profile voice is used.
+      XTTS_ENDPOINT: ${XTTS_ENDPOINT:-http://xtts:5002}
+      # Meta MMS-TTS — 1100+ languages. Active when --profile voice is used.
+      MMS_TTS_ENDPOINT: ${MMS_TTS_ENDPOINT:-http://mms-tts:5002}
       # ── FreeSWITCH SIP — universal meeting dial-in ─────────────────────────
       # Used by SipJoinAdapter to originate SIP calls into any meeting platform.
       # Active when the freeswitch service is running (--profile voice).
@@ -397,12 +397,15 @@ services:
   # Enable:  docker compose --profile voice up
   # Or add:  COMPOSE_PROFILES=voice  to your .env file
   #
-  # These three services replace paid APIs:
+  # These five services replace paid APIs:
   #   whisper    → Sarvam AI / Deepgram  (STT, 99 languages)
   #   kokoro     → Sarvam Bulbul / VoxCPM2 (TTS, English, OpenAI-compatible)
   #   freeswitch → Twilio SIP (universal meeting dial-in via SipJoinAdapter)
+  #   xtts       → Coqui XTTS v2 (TTS, 17 languages, zero cost)
+  #   mms-tts    → Meta MMS-TTS (TTS, 1100+ languages, zero cost)
   #
-  # First boot downloads models (whisper ~1.5 GB, kokoro ~300 MB).
+  # First boot downloads models (whisper ~1.5 GB, kokoro ~300 MB, xtts ~2 GB).
+  # MMS-TTS models download on first request per language (~30-100 MB each).
   # Set COMPOSE_PROFILES=voice in .env to include these on every `docker compose up`.
 
   whisper:
@@ -481,11 +484,60 @@ services:
       - agentfarm
     restart: unless-stopped
 
+  xtts:
+    # XTTS v2 — 17-language self-hosted TTS (Coqui).
+    # API: POST /tts_to_audio/ { text, language, speaker_wav? } → WAV bytes.
+    # Used by meeting-agent when ttsProvider="xtts" (languages: es fr de it pt pl tr ru nl cs ar zh ja hu ko hi).
+    # First start downloads the XTTS v2 model (~2 GB). Cached in xtts_models volume.
+    image: daswer123/xtts-api-server:latest
+    container_name: agentfarm-xtts
+    profiles: [ voice ]
+    ports:
+      - '5004:5002'
+    volumes:
+      - xtts_models:/root/.local/share/tts
+    healthcheck:
+      test: [ 'CMD-SHELL', 'wget -qO- http://localhost:5002/docs || exit 1' ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      # Model download on first boot — allow up to 5 minutes.
+      start_period: 300s
+    networks:
+      - agentfarm
+    restart: unless-stopped
+
+  mms-tts:
+    # Meta MMS-TTS — 1100+ language self-hosted TTS fallback.
+    # API: POST /api/tts { text, language } → WAV bytes.
+    # Used by meeting-agent when ttsProvider="mms_tts" (any language not covered by XTTS).
+    # Models download on first request per language (~30-100 MB each). Cached in mms_tts_models volume.
+    build:
+      context: ./docker/mms-tts
+      dockerfile: Dockerfile
+    container_name: agentfarm-mms-tts
+    profiles: [ voice ]
+    ports:
+      - '5005:5002'
+    volumes:
+      - mms_tts_models:/root/.cache/huggingface
+    healthcheck:
+      test: [ 'CMD-SHELL', 'wget -qO- http://localhost:5002/health || exit 1' ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - agentfarm
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   # Voice model caches — persist across container restarts to avoid re-downloading.
   whisper_models:
   kokoro_models:
+  xtts_models:
+  mms_tts_models:
   # FreeSWITCH persistent state (call records, certificates).
   freeswitch_db:
   freeswitch_log:
