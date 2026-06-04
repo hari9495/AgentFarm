@@ -13,6 +13,7 @@
 
 import { randomUUID } from 'crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { PrismaClient } from '@prisma/client';
 import { SAML } from '@node-saml/node-saml';
 import { buildSessionToken } from '../../lib/session-auth.js';
 import { readSession } from '../../request-context.js';
@@ -54,6 +55,7 @@ function buildSaml(cfg: {
 
 export type RegisterSsoRoutesOptions = {
     getSession?: (req: FastifyRequest) => { userId: string; tenantId: string; role?: string } | null;
+    prisma?: PrismaClient;
 };
 
 export async function registerSsoRoutes(
@@ -61,13 +63,16 @@ export async function registerSsoRoutes(
     options: RegisterSsoRoutesOptions = {},
 ): Promise<void> {
     const getSession = options.getSession ?? ((req) => readSession(req) as { userId: string; tenantId: string; role?: string } | null);
+    const resolvePrisma = options.prisma
+        ? () => Promise.resolve(options.prisma!)
+        : getPrisma;
 
     // ── SP Metadata XML ──────────────────────────────────────────────────────
     app.get<{ Params: { tenantId: string } }>(
         '/v1/auth/sso/:tenantId/metadata',
         async (request, reply) => {
             const { tenantId } = request.params;
-            const prisma = await getPrisma();
+            const prisma = await resolvePrisma();
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const cfg = await (prisma as any).tenantSsoConfig.findUnique({ where: { tenantId } }) as {
                 entryPoint: string; issuer: string; cert: string;
@@ -90,7 +95,7 @@ export async function registerSsoRoutes(
         '/v1/auth/sso/:tenantId/login',
         async (request, reply) => {
             const { tenantId } = request.params;
-            const prisma = await getPrisma();
+            const prisma = await resolvePrisma();
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const cfg = await (prisma as any).tenantSsoConfig.findUnique({ where: { tenantId } }) as {
                 entryPoint: string; issuer: string; cert: string;
@@ -113,7 +118,7 @@ export async function registerSsoRoutes(
         '/v1/auth/sso/:tenantId/acs',
         async (request, reply) => {
             const { tenantId } = request.params;
-            const prisma = await getPrisma();
+            const prisma = await resolvePrisma();
 
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const cfg = await (prisma as any).tenantSsoConfig.findUnique({
@@ -194,7 +199,7 @@ export async function registerSsoRoutes(
         const session = getSession(request);
         if (!session) return reply.code(401).send({ error: 'unauthorized' });
 
-        const prisma = await getPrisma();
+        const prisma = await resolvePrisma();
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const cfg = await (prisma as any).tenantSsoConfig.findUnique({ where: { tenantId: session.tenantId } });
         if (!cfg) {
@@ -243,7 +248,7 @@ export async function registerSsoRoutes(
         const spEntityId = entityId(session.tenantId);
         const callbackUrl = acsUrl(session.tenantId);
 
-        const prisma = await getPrisma();
+        const prisma = await resolvePrisma();
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const cfg = await (prisma as any).tenantSsoConfig.upsert({
             where:  { tenantId: session.tenantId },
@@ -271,7 +276,7 @@ export async function registerSsoRoutes(
         if (!session) return reply.code(401).send({ error: 'unauthorized' });
         if (session.role !== 'admin') return reply.code(403).send({ error: 'admin_required' });
 
-        const prisma = await getPrisma();
+        const prisma = await resolvePrisma();
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await (prisma as any).tenantSsoConfig.deleteMany({ where: { tenantId: session.tenantId } });
         return reply.send({ deleted: true });
