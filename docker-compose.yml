@@ -223,6 +223,9 @@ services:
       DASHBOARD_API_BASE_URL: http://api-gateway:3000
       NODE_ENV: production
       DASHBOARD_API_TOKEN: ${DASHBOARD_API_TOKEN}
+      # Meeting-agent live controls (join, stop, transcript, chat)
+      MEETING_AGENT_URL: http://meeting-agent:7799
+      MEETING_AGENT_TOKEN: ${MEETING_AGENT_TOKEN:-}
     depends_on:
       api-gateway:
         condition: service_healthy

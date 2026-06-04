@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { PageHeader } from '../../components/page-header';
+import MeetingLivePanel from '../../components/meeting-live-panel';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -341,6 +342,17 @@ export default function MeetingDetailPage() {
                     </p>
                 )}
             </section>
+
+            {/* ── Live Control (meeting-agent: join, live transcript, chat) ─── */}
+            <MeetingLivePanel
+                gw={{
+                    tenantId: session.tenantId,
+                    workspaceId: session.workspaceId,
+                    agentId: session.agentId,
+                    platform: session.platform,
+                    meetingUrl: session.meetingUrl,
+                }}
+            />
 
             {/* ── Speaking agent ────────────────────────────────────── */}
             <section className="card" style={{ display: 'grid', gap: '0.75rem', marginBottom: '1rem' }}>
