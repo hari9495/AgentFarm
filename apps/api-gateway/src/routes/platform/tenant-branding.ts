@@ -8,6 +8,7 @@
 
 import { randomBytes } from 'node:crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { PrismaClient } from '@prisma/client';
 import { ROLE_RANK } from '../../lib/require-role.js';
 
 const getPrisma = async () => {
@@ -63,19 +64,23 @@ const serializeBranding = (row: BrandingRow | null) => ({
 
 export type RegisterTenantBrandingRoutesOptions = {
     getSession: (req: FastifyRequest) => SessionContext | null;
+    prisma?: PrismaClient;
 };
 
 export const registerTenantBrandingRoutes = async (
     app: FastifyInstance,
     options: RegisterTenantBrandingRoutesOptions,
 ): Promise<void> => {
+    const resolvePrisma = options.prisma
+        ? () => Promise.resolve(options.prisma!)
+        : getPrisma;
 
     // ── GET /v1/tenant/branding ───────────────────────────────────────────────
     app.get('/v1/tenant/branding', async (request, reply) => {
         const session = options.getSession(request);
         if (!session) return reply.code(401).send({ error: 'unauthorized' });
 
-        const prisma = await getPrisma();
+        const prisma = await resolvePrisma();
         const rows = await prisma.$queryRaw<BrandingRow[]>`
             SELECT * FROM "TenantBranding" WHERE "tenantId" = ${session.tenantId} LIMIT 1
         `;
@@ -113,7 +118,7 @@ export const registerTenantBrandingRoutes = async (
             return reply.code(400).send({ error: 'primary_color must be a valid hex color (e.g. #0052cc).' });
         }
 
-        const prisma = await getPrisma();
+        const prisma = await resolvePrisma();
         const existing = await prisma.$queryRaw<Array<{ id: string }>>`
             SELECT id FROM "TenantBranding" WHERE "tenantId" = ${session.tenantId} LIMIT 1
         `;
@@ -154,7 +159,7 @@ export const registerTenantBrandingRoutes = async (
         if ((ROLE_RANK[session.role ?? ''] ?? 0) < (ROLE_RANK['admin'] ?? 99)) {
             return reply.code(403).send({ error: 'insufficient_role', required: 'admin' });
         }
-        const prisma = await getPrisma();
+        const prisma = await resolvePrisma();
         await prisma.$executeRaw`DELETE FROM "TenantBranding" WHERE "tenantId" = ${session.tenantId}`;
         return reply.code(204).send();
     });
@@ -165,7 +170,7 @@ export const registerTenantBrandingRoutes = async (
         const tenantId = request.query.tenant_id?.trim();
         if (!tenantId) return reply.code(400).send({ error: 'tenant_id is required.' });
 
-        const prisma = await getPrisma();
+        const prisma = await resolvePrisma();
         const rows = await prisma.$queryRaw<BrandingRow[]>`
             SELECT * FROM "TenantBranding" WHERE "tenantId" = ${tenantId} LIMIT 1
         `;
