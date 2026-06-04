@@ -44,6 +44,12 @@ export interface CreateSessionInput {
 export interface ManagedSession {
     machine: MeetingLifecycleStateMachine;
     transcript: TranscriptEntry[];
+    /**
+     * RAG context block fetched at session-start time from AgentKnowledgeBase.
+     * Injected into the brain system prompt on every think() call so prior
+     * meeting summaries, action items, and lessons are always in context.
+     */
+    ragContextBlock?: string;
 }
 
 /**

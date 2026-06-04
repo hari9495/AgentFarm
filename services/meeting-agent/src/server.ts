@@ -124,6 +124,18 @@ export interface MeetingAgentServerOptions {
      * to the platform's native chat API (Teams Graph, Zoom in-meeting chat).
      */
     chatSender?: ChatSender | null;
+    /**
+     * Base URL of the api-gateway (e.g. `http://api-gateway:3000`).
+     * When set together with `serviceToken`, the meeting-agent fetches RAG
+     * context from AgentKnowledgeBase at session-start time and ingests
+     * meeting summaries into the flywheel at session-stop time.
+     */
+    gatewayBaseUrl?: string | null;
+    /**
+     * Service token for authenticated calls to the api-gateway knowledge-base
+     * and lesson-pipeline endpoints.
+     */
+    serviceToken?: string | null;
     /** Bearer token clients must present in `Authorization`. */
     authToken?: string;
     /** Logger override (defaults to `console.error`). */
@@ -160,6 +172,10 @@ export function createMeetingAgentServer(
     const memory = options.memory ?? null;
     const meetingConnectorRouter = options.meetingConnectorRouter ?? null;
     const chatSender = options.chatSender ?? null;
+    const gatewayBaseUrl = options.gatewayBaseUrl
+        ? options.gatewayBaseUrl.replace(/\/+$/u, '')
+        : null;
+    const serviceToken = options.serviceToken ?? null;
 
     const server = createServer(async (req, res) => {
         try {
@@ -176,6 +192,8 @@ export function createMeetingAgentServer(
                 memory,
                 meetingConnectorRouter,
                 chatSender,
+                gatewayBaseUrl,
+                serviceToken,
                 log,
             });
         } catch (error) {
@@ -222,6 +240,10 @@ interface HandleContext {
     meetingConnectorRouter: MeetingConnectorRouter | null;
     /** Chat sender for native in-meeting chat. null = chat disabled. */
     chatSender: ChatSender | null;
+    /** api-gateway base URL for RAG and lesson-pipeline calls. null = flywheel disabled. */
+    gatewayBaseUrl: string | null;
+    /** Service token for api-gateway knowledge-base endpoints. null = flywheel disabled. */
+    serviceToken: string | null;
     log: (line: string) => void;
 }
 
@@ -297,6 +319,32 @@ async function handle(
                 return;
             }
             ctx.sessions.appendTranscript(id, { source: 'system', text: 'session started' });
+
+            // RAG pre-flight — fetch prior meeting summaries and lessons once per session.
+            // Stored on the session object so brain.think() picks it up on every utterance.
+            if (ctx.gatewayBaseUrl && ctx.serviceToken) {
+                const sessionRecord = session.machine.getSession();
+                void (async () => {
+                    try {
+                        const { buildMeetingBrainRagContext } = await import('./meeting-rag-client.js');
+                        const ragCtx = await buildMeetingBrainRagContext({
+                            tenantId: sessionRecord.tenantId,
+                            botId: sessionRecord.botId,
+                            workspaceId: sessionRecord.workspaceId,
+                            meetingId: sessionRecord.meetingId,
+                            mode: sessionRecord.mode,
+                            gatewayBaseUrl: ctx.gatewayBaseUrl!,
+                            serviceToken: ctx.serviceToken!,
+                        });
+                        if (ragCtx.contextBlock) {
+                            session.ragContextBlock = ragCtx.contextBlock;
+                            ctx.log(`[meeting-agent] RAG context loaded for session ${id} (${ragCtx.similarMeetingCount} prior meetings, ${ragCtx.lessonCount} lessons)`);
+                        }
+                    } catch (err) {
+                        ctx.log(`[meeting-agent] RAG pre-flight failed for session ${id}: ${(err as Error).message}`);
+                    }
+                })();
+            }
 
             let capture: { ok: boolean; captureId?: string; error?: string } | undefined;
             if (ctx.captureController) {
@@ -428,6 +476,30 @@ async function handle(
                         source: 'system',
                         text: `joined ${platform} meeting`,
                     });
+
+                    // RAG pre-flight — same as /start path; fetch once per session.
+                    if (ctx.gatewayBaseUrl && ctx.serviceToken) {
+                        const sr = s.machine.getSession();
+                        try {
+                            const { buildMeetingBrainRagContext } = await import('./meeting-rag-client.js');
+                            const ragCtx = await buildMeetingBrainRagContext({
+                                tenantId: sr.tenantId,
+                                botId: sr.botId,
+                                workspaceId: sr.workspaceId,
+                                meetingId: sr.meetingId,
+                                mode: sr.mode,
+                                gatewayBaseUrl: ctx.gatewayBaseUrl!,
+                                serviceToken: ctx.serviceToken!,
+                            });
+                            if (ragCtx.contextBlock) {
+                                s.ragContextBlock = ragCtx.contextBlock;
+                                ctx.log(`[meeting-agent] RAG context loaded for session ${id}`);
+                            }
+                        } catch (err) {
+                            ctx.log(`[meeting-agent] RAG pre-flight failed for session ${id}: ${(err as Error).message}`);
+                        }
+                    }
+
                     if (ctx.captureController) {
                         try {
                             await ctx.captureController.start({
@@ -479,6 +551,34 @@ async function handle(
                 }
             }
 
+            // Flywheel: ingest the meeting transcript summary so future sessions
+            // benefit from prior meeting context via RAG retrieval.
+            if (ctx.gatewayBaseUrl && ctx.serviceToken) {
+                const sr = session.machine.getSession();
+                const transcript = ctx.sessions.getTranscript(id);
+                void (async () => {
+                    try {
+                        const { ingestMeetingSessionSummary } = await import('./meeting-rag-client.js');
+                        const summaryText = transcript
+                            .filter((e) => e.source === 'participant' || e.source === 'agent')
+                            .map((e) => `${e.speaker ?? e.source}: ${e.text}`)
+                            .join('\n');
+                        const ok = await ingestMeetingSessionSummary({
+                            tenantId: sr.tenantId,
+                            botId: sr.botId,
+                            meetingId: sr.meetingId,
+                            mode: sr.mode,
+                            transcript: summaryText,
+                            gatewayBaseUrl: ctx.gatewayBaseUrl!,
+                            serviceToken: ctx.serviceToken!,
+                        });
+                        if (ok) ctx.log(`[meeting-agent] meeting summary ingested for session ${id}`);
+                    } catch (err) {
+                        ctx.log(`[meeting-agent] summary ingest failed for session ${id}: ${(err as Error).message}`);
+                    }
+                })();
+            }
+
             respond(res, 200, {
                 session: session.machine.getSession(),
                 ...(capture ? { capture } : {}),
@@ -528,6 +628,7 @@ async function handle(
 
                         // Build past-exchange context for this speaker and inject
                         // into the brain system prompt (avoids polluting history).
+                        // Combine with the session-level RAG context block fetched at start.
                         let memoryContext: string | undefined;
                         if (ctx.memory && speaker) {
                             try {
@@ -536,6 +637,14 @@ async function handle(
                             } catch {
                                 // Best-effort — never block execution on memory failure
                             }
+                        }
+                        // Prepend RAG context (prior meeting summaries + lessons) to the
+                        // combined memory context so the LLM always has institutional
+                        // knowledge in scope.
+                        if (session.ragContextBlock) {
+                            memoryContext = memoryContext
+                                ? `${session.ragContextBlock}\n\n${memoryContext}`
+                                : session.ragContextBlock;
                         }
 
                         const sessionRecord = session.machine.getSession();

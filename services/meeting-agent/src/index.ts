@@ -201,6 +201,18 @@ export async function bootFromEnv(): Promise<void> {
     // Stores last N exchanges per speaker so the brain can recall past interactions.
     const memory = new MeetingEpisodicMemory();
 
+    // RAG + lesson-pipeline flywheel.
+    // API_GATEWAY_URL — base URL of the api-gateway (default http://localhost:3000).
+    // MEETING_SERVICE_TOKEN — service token for authenticated knowledge-base calls.
+    // Both must be set to enable RAG context fetching and summary ingestion.
+    const gatewayBaseUrl = process.env['API_GATEWAY_URL'] ?? null;
+    const serviceToken = process.env['MEETING_SERVICE_TOKEN'] ?? null;
+    if (gatewayBaseUrl && serviceToken) {
+        console.error(`[meeting-agent] RAG flywheel enabled (gateway=${gatewayBaseUrl})`);
+    } else {
+        console.error('[meeting-agent] RAG flywheel disabled — set API_GATEWAY_URL and MEETING_SERVICE_TOKEN to enable');
+    }
+
     const app = createMeetingAgentServer({
         authToken,
         tts,
@@ -213,6 +225,8 @@ export async function bootFromEnv(): Promise<void> {
         memory,
         meetingConnectorRouter,
         chatSender,
+        gatewayBaseUrl,
+        serviceToken,
     });
     await app.listen(port, host);
     console.error(`[meeting-agent] listening on ${host}:${port}`);
