@@ -537,6 +537,9 @@ importers:
       '@types/node':
         specifier: '*'
         version: 22.19.17
+      tsx:
+        specifier: ^4.20.6
+        version: 4.21.0
       typescript:
         specifier: '*'
         version: 5.9.3

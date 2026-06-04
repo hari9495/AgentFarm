@@ -23,6 +23,10 @@ import { startNpsWorker, stopNpsWorker } from './services/nps-worker.js';
 import { startUpsellWorker, stopUpsellWorker } from './services/upsell-worker.js';
 import { startCrmSyncWorker, stopCrmSyncWorker } from './services/crm-sync-worker.js';
 import { startDrainSweep, stopDrainSweep } from './lib/task-queue.js';
+import {
+    startMemoryConsolidationWorker,
+    stopMemoryConsolidationWorker,
+} from './services/memory-consolidation-worker.js';
 import { prisma } from './lib/db.js';
 
 export type WorkerManagerDeps = {
@@ -54,6 +58,8 @@ export class WorkerManager {
             agentRuntimeUrl: this.deps.agentRuntimeUrl,
             prisma: prisma as never,
         });
+
+        startMemoryConsolidationWorker();
     }
 
     stopAll(): void {
@@ -67,6 +73,7 @@ export class WorkerManager {
         stopUpsellWorker();
         stopCrmSyncWorker();
         stopDrainSweep();
+        stopMemoryConsolidationWorker();
     }
 
     private makeLogger() {

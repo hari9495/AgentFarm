@@ -22,3 +22,12 @@ export {
     writeSemanticMemory,
     searchSemanticMemory,
 }                                               from './semantic.js';
+
+export {
+    consolidateLessons,
+    parseLessonPattern,
+    buildConsolidatedSummary,
+    computeConsolidatedConfidence,
+    CONSOLIDATION_THRESHOLD,
+}                                               from './consolidation.js';
+export type { ConsolidationResult }             from './consolidation.js';
