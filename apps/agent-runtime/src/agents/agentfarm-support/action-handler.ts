@@ -13,6 +13,11 @@ import { buildInfraFixRequest, dispatchToDevopsAgent } from './infra-fix-dispatc
 import { buildEscalationReport, sendEscalation, updateIssueEscalated, type TriedTier } from './escalation-handler.js';
 import { ingestApprovedCase } from './rag-retriever.js';
 import { ingestSupportFeedback, GatewaySupportLessonStore } from './lesson-pipeline.js';
+import {
+    detectProprietaryInfoRequest,
+    sanitizeResponseForCustomer,
+    DISCLOSURE_REFUSAL,
+} from './information-disclosure-guard.js';
 
 // ---------------------------------------------------------------------------
 // Action type registry
@@ -147,6 +152,12 @@ export async function handleAgentfarmSupportAction(
             if (!customerMessage) {
                 return { ok: false, output: '', errorOutput: 'payload.customerMessage is required' };
             }
+
+            // Refuse attempts to extract proprietary information
+            if (detectProprietaryInfoRequest(customerMessage)) {
+                return { ok: true, output: JSON.stringify({ text: DISCLOSURE_REFUSAL.chat, refused: true }) };
+            }
+
             const rawReport = payload['diagnosisReport'] as Record<string, unknown> | null | undefined;
             const summary: string[] = rawReport
                 ? ((rawReport['summary'] as string[] | undefined) ?? [])
@@ -161,7 +172,7 @@ export async function handleAgentfarmSupportAction(
                 replyText = `Thank you for reaching out. I've run a full platform diagnosis${issueId ? ` for issue ${issueId}` : ''}. No critical issues were detected in the current window. If the problem continues, please share any error messages or task IDs and I'll investigate further.`;
             }
 
-            return { ok: true, output: JSON.stringify({ text: replyText }) };
+            return { ok: true, output: JSON.stringify({ text: sanitizeResponseForCustomer(replyText) }) };
         }
 
         // ── Sprint 22: Voice reply ────────────────────────────────────────────
@@ -170,6 +181,19 @@ export async function handleAgentfarmSupportAction(
             if (!transcript) {
                 return { ok: false, output: '', errorOutput: 'payload.transcript is required' };
             }
+
+            // Refuse attempts to extract proprietary information via voice
+            if (detectProprietaryInfoRequest(transcript)) {
+                return {
+                    ok: true,
+                    output: JSON.stringify({
+                        text: DISCLOSURE_REFUSAL.voice,
+                        languageCode: str(payload['languageCode'], 'en-IN'),
+                        refused: true,
+                    }),
+                };
+            }
+
             const languageCode = str(payload['languageCode'], 'hi-IN');
             const issueId = str(payload['issueId'], '');
 
@@ -188,7 +212,7 @@ export async function handleAgentfarmSupportAction(
 
             return {
                 ok: true,
-                output: JSON.stringify({ text: replyText, languageCode }),
+                output: JSON.stringify({ text: sanitizeResponseForCustomer(replyText), languageCode }),
             };
         }
 

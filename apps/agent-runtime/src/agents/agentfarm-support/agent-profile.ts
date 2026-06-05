@@ -43,7 +43,9 @@ export const AGENTFARM_SUPPORT_ALLOWED_ACTIONS: LocalWorkspaceActionType[] = [
     'agentfarm_support_infra_fix_dispatch',
     'agentfarm_support_escalate',
     'agentfarm_support_resolve',
-    // Read-only workspace introspection (for diagnostic context)
+    // Read-only workspace introspection — INTERNAL DIAGNOSTIC USE ONLY.
+    // Results from these actions must never be forwarded directly to customers.
+    // information-disclosure-guard.ts enforces this at the chat/voice reply layer.
     'workspace_read_file',
     'workspace_grep',
     'workspace_list_files',
@@ -54,11 +56,20 @@ export const AGENTFARM_SUPPORT_ALLOWED_ACTIONS: LocalWorkspaceActionType[] = [
     'workspace_meeting_speak',
 ];
 
+// Actions that are read-only but whose output is internal-only — must never
+// be surfaced verbatim to customers. See information-disclosure-guard.ts.
+export const AGENTFARM_SUPPORT_INTERNAL_DIAGNOSTIC_ACTIONS: ReadonlyArray<string> = [
+    'workspace_read_file',
+    'workspace_grep',
+    'workspace_list_files',
+] as const;
+
 // ---------------------------------------------------------------------------
-// Blocked actions (irreversible or out of scope for support)
+// Blocked actions (irreversible, out of scope, or data-exfiltration risk)
 // ---------------------------------------------------------------------------
 
 export const AGENTFARM_SUPPORT_BLOCKED_ACTIONS: ReadonlyArray<string> = [
+    // Destructive operations
     'run_shell_command',
     'git_push',
     'workspace_devops_tf_apply',
@@ -66,6 +77,17 @@ export const AGENTFARM_SUPPORT_BLOCKED_ACTIONS: ReadonlyArray<string> = [
     'workspace_devops_k8s_rollback',
     'drop_database',
     'delete_resource',
+    // Arbitrary network / data exfiltration
+    'workspace_browser_navigate',
+    'workspace_http_request',
+    'workspace_send_email',
+    // Credential / secret access
+    'workspace_read_secret',
+    'workspace_list_secrets',
+    'workspace_rotate_secret',
+    // Cross-tenant data access
+    'workspace_list_tenants',
+    'workspace_impersonate_user',
 ] as const;
 
 // ---------------------------------------------------------------------------
