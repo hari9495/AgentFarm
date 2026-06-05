@@ -1,6 +1,5 @@
 // Phase 13 — Agent Chat: LLM reply generation for multi-turn sessions
-import { getTracer } from '@agentfarm/observability';
-import { SpanStatusCode } from '@opentelemetry/api';
+import { getTracer, SpanStatusCode } from '@agentfarm/observability';
 
 export type ChatMessage = {
     role: 'system' | 'user' | 'assistant';

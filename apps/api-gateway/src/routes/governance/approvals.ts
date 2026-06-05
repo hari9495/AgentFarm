@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { parseApprovalPacket, type EvidenceBundle } from '../../lib/approval-packet.js';
 import { dispatchOutboundWebhooks } from '../../lib/webhook-dispatcher.js';
+import { getTracer, SpanStatusCode } from '@agentfarm/observability';
 
 const getPrisma = async () => {
     const db = await import('../../lib/db.js');
@@ -1068,20 +1069,43 @@ export const registerApprovalRoutes = async (
             };
         }
 
-        const created = await repo.createPending({
-            tenantId,
-            workspaceId,
-            botId,
-            taskId,
-            actionId,
-            riskLevel,
-            actionSummary,
-            requestedBy,
-            policyPackVersion,
-            escalationTimeoutSeconds,
-            llmProvider: request.body?.llm_provider?.trim() || undefined,
-            llmModel: request.body?.llm_model?.trim() || undefined,
+        const intakeTracer = getTracer('agentfarm.approval.workflow');
+        const intakeSpan = intakeTracer.startSpan('approval.intake', {
+            attributes: {
+                'approval.risk_level':  riskLevel,
+                'approval.action_id':   actionId,
+                'approval.task_id':     taskId,
+                'approval.bot_id':      botId,
+                'approval.tenant_id':   tenantId,
+                'approval.workspace_id': workspaceId,
+            },
         });
+
+        let created: Awaited<ReturnType<typeof repo.createPending>>;
+        try {
+            created = await repo.createPending({
+                tenantId,
+                workspaceId,
+                botId,
+                taskId,
+                actionId,
+                riskLevel,
+                actionSummary,
+                requestedBy,
+                policyPackVersion,
+                escalationTimeoutSeconds,
+                llmProvider: request.body?.llm_provider?.trim() || undefined,
+                llmModel: request.body?.llm_model?.trim() || undefined,
+            });
+            intakeSpan.setAttribute('approval.id', created.id);
+            intakeSpan.setStatus({ code: SpanStatusCode.OK });
+        } catch (err) {
+            intakeSpan.recordException(err as Error);
+            intakeSpan.setStatus({ code: SpanStatusCode.ERROR, message: (err as Error).message });
+            intakeSpan.end();
+            throw err;
+        }
+        intakeSpan.end();
 
         // Fetch evidence bundle for high-risk actions if session ID is available
         let evidenceBundle: EvidenceBundle | undefined;
@@ -1226,14 +1250,36 @@ export const registerApprovalRoutes = async (
         const decidedAt = new Date(now());
         const decisionLatencySeconds = Math.max(0, Math.floor((decidedAt.getTime() - approval.createdAt.getTime()) / 1000));
 
-        await repo.setDecision({
-            approvalId: approval.id,
-            decision,
-            reason,
-            approverId: session.userId,
-            decidedAt,
-            decisionLatencySeconds,
+        const decisionTracer = getTracer('agentfarm.approval.workflow');
+        const decisionSpan = decisionTracer.startSpan('approval.decision', {
+            attributes: {
+                'approval.id':               approval.id,
+                'approval.decision':          decision,
+                'approval.risk_level':        approval.riskLevel,
+                'approval.latency_seconds':   decisionLatencySeconds,
+                'approval.actor':             session.userId,
+                'approval.tenant_id':         approval.tenantId,
+                'approval.workspace_id':      approval.workspaceId,
+            },
         });
+
+        try {
+            await repo.setDecision({
+                approvalId: approval.id,
+                decision,
+                reason,
+                approverId: session.userId,
+                decidedAt,
+                decisionLatencySeconds,
+            });
+            decisionSpan.setStatus({ code: SpanStatusCode.OK });
+        } catch (err) {
+            decisionSpan.recordException(err as Error);
+            decisionSpan.setStatus({ code: SpanStatusCode.ERROR, message: (err as Error).message });
+            decisionSpan.end();
+            throw err;
+        }
+        decisionSpan.end();
 
         await repo.createAuditEvent({
             tenantId: approval.tenantId,

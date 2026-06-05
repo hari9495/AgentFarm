@@ -25,8 +25,7 @@ import {
     UnsupportedFormatError,
     OcrNotConfiguredError,
 } from '@agentfarm/document-converter';
-import { getTracer } from '@agentfarm/observability';
-import { SpanStatusCode } from '@opentelemetry/api';
+import { getTracer, SpanStatusCode } from '@agentfarm/observability';
 
 type SessionContext = {
     userId: string;

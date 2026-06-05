@@ -1,5 +1,5 @@
 ﻿import { NodeSDK } from '@opentelemetry/sdk-node';
-import { trace, metrics, type Tracer, type Meter } from '@opentelemetry/api';
+import { trace, metrics, SpanStatusCode, type Tracer, type Meter } from '@opentelemetry/api';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http';
 import { ConsoleSpanExporter } from '@opentelemetry/sdk-trace-node';
@@ -127,6 +127,9 @@ export const initObservability = (config: ObservabilityConfig): void => {
   currentSdk = sdk;
   initialised = true;
 };
+
+// ─── Re-exports for callers that should not import @opentelemetry/api directly ──
+export { SpanStatusCode };
 
 // ─── Provider accessors ────────────────────────────────────────────────────────
 
