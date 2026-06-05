@@ -11,7 +11,7 @@ import {
     ScrollText, Film, Waves, Lock,
     SlidersHorizontal, Camera, GitBranch, RefreshCw,
     Network, CalendarDays, AlarmClock, Beaker, Monitor, Terminal,
-    Zap, Star, Plug, Layers, BookOpen,
+    Zap, Star, Plug, Layers, BookOpen, LifeBuoy,
     type LucideIcon,
 } from 'lucide-react';
 import type { DashboardTab } from './dashboard-navigation';
@@ -331,6 +331,7 @@ export function InternalSidebar({
                             { href: '/skills', label: 'Skills', Icon: ShoppingBag },
                             { href: '/memory', label: 'Memory', Icon: Brain },
                             { href: '/governance', label: 'Governance', Icon: ShieldCheck },
+                            { href: '/support', label: 'Support Agent', Icon: LifeBuoy },
                         ].map(({ href, label, Icon }) => (
                             <Link key={href} href={href} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
                                 <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Icon className="w-3.5 h-3.5 text-slate-500" /></span>
