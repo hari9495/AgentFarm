@@ -159,12 +159,31 @@ export async function handleAgentfarmSupportAction(
             return { ok: true, output: JSON.stringify({ text: replyText }) };
         }
 
-        // ── Sprint 22: Voice reply (stub) ────────────────────────────────────
+        // ── Sprint 22: Voice reply ────────────────────────────────────────────
         case 'agentfarm_support_voice_reply': {
+            const transcript = str(payload['transcript']);
+            if (!transcript) {
+                return { ok: false, output: '', errorOutput: 'payload.transcript is required' };
+            }
+            const languageCode = str(payload['languageCode'], 'hi-IN');
+            const issueId = str(payload['issueId'], '');
+
+            // Build a concise spoken reply (short sentences work better for TTS)
+            let replyText: string;
+            const lc = languageCode.toLowerCase();
+            if (lc.startsWith('hi')) {
+                replyText = `आपकी बात सुन ली। मैं आपकी समस्या की जाँच कर रहा हूँ।${issueId ? ` इशू आईडी: ${issueId.slice(0, 8)}.` : ''} कृपया प्रतीक्षा करें।`;
+            } else if (lc.startsWith('ta')) {
+                replyText = `உங்கள் பிரச்சனையை கேட்டேன். ஆராய்கிறேன். சற்று காத்திருங்கள்.`;
+            } else if (lc.startsWith('te')) {
+                replyText = `మీ సమస్య విన్నాను. పరిశీలిస్తున్నాను. దయచేసి వేచి ఉండండి.`;
+            } else {
+                replyText = `I heard you. You said: "${transcript.slice(0, 80)}".${issueId ? ` Issue ${issueId.slice(0, 8)} is being investigated.` : ''} I'm checking your platform now. Please hold on.`;
+            }
+
             return {
-                ok: false,
-                output: '',
-                errorOutput: 'agentfarm_support_voice_reply: not yet implemented (Sprint 22)',
+                ok: true,
+                output: JSON.stringify({ text: replyText, languageCode }),
             };
         }
 

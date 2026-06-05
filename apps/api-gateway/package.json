@@ -21,6 +21,7 @@
         "@agentfarm/connector-contracts": "workspace:*",
         "@agentfarm/crm-adapters": "workspace:*",
         "@agentfarm/document-converter": "workspace:*",
+        "@agentfarm/meeting-agent": "workspace:*",
         "@agentfarm/memory-service": "workspace:*",
         "@agentfarm/observability": "workspace:*",
         "@agentfarm/queue-contracts": "workspace:*",

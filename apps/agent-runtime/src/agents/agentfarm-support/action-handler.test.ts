@@ -210,12 +210,53 @@ describe('agentfarm_support_chat_reply', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Sprint 22-23 stubs — must return ok:false with informative message
+// Sprint 22: Voice reply — implemented
+// ---------------------------------------------------------------------------
+
+describe('agentfarm_support_voice_reply', () => {
+    it('returns ok:false when transcript is missing', async () => {
+        const { handleAgentfarmSupportAction } = await import('./action-handler.js');
+        const result = await handleAgentfarmSupportAction({
+            ...BASE,
+            actionType: 'agentfarm_support_voice_reply',
+            payload: {},
+        });
+        assert.equal(result.ok, false);
+        assert.ok(result.errorOutput?.includes('transcript is required'));
+    });
+
+    it('returns ok:true with reply text and languageCode for English', async () => {
+        const { handleAgentfarmSupportAction } = await import('./action-handler.js');
+        const result = await handleAgentfarmSupportAction({
+            ...BASE,
+            actionType: 'agentfarm_support_voice_reply',
+            payload: { transcript: 'My account is broken', languageCode: 'en-IN' },
+        });
+        assert.equal(result.ok, true);
+        const parsed = JSON.parse(result.output) as { text?: string; languageCode?: string };
+        assert.ok(typeof parsed.text === 'string' && parsed.text.length > 0);
+        assert.equal(parsed.languageCode, 'en-IN');
+    });
+
+    it('returns Hindi reply text for hi-IN language', async () => {
+        const { handleAgentfarmSupportAction } = await import('./action-handler.js');
+        const result = await handleAgentfarmSupportAction({
+            ...BASE,
+            actionType: 'agentfarm_support_voice_reply',
+            payload: { transcript: 'मेरी समस्या है', languageCode: 'hi-IN' },
+        });
+        assert.equal(result.ok, true);
+        const parsed = JSON.parse(result.output) as { text?: string };
+        assert.ok(parsed.text?.includes('आपकी'), 'Hindi reply should be in Hindi');
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Sprint 23 stubs — must return ok:false with informative message
 // ---------------------------------------------------------------------------
 
 describe('unimplemented action stubs', () => {
     const stubs: Array<AgentfarmSupportActionParams['actionType']> = [
-        'agentfarm_support_voice_reply',
         'agentfarm_support_code_fix_dispatch',
         'agentfarm_support_infra_fix_dispatch',
         'agentfarm_support_escalate',

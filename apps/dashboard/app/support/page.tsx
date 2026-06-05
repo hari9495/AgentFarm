@@ -6,6 +6,7 @@ import { SupportDiagnosisTrace } from '../components/support-diagnosis-trace';
 import { SupportFixTimeline } from '../components/support-fix-timeline';
 import { SupportChatWidget } from '../components/support-chat-widget';
 import { SupportStatsBar } from '../components/support-stats-bar';
+import { SupportVoiceWidget } from '../components/support-voice-widget';
 
 export default async function SupportPage() {
     const session = await getSessionPayload();
@@ -40,10 +41,11 @@ export default async function SupportPage() {
                 {/* Right top: Diagnosis Trace */}
                 <SupportDiagnosisTrace />
 
-                {/* Right bottom: two panels side-by-side */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                {/* Right bottom: three panels side-by-side */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
                     <SupportFixTimeline />
                     <SupportChatWidget />
+                    <SupportVoiceWidget />
                 </div>
             </div>
         </main>

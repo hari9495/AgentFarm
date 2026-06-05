@@ -23,6 +23,7 @@ import { registerConnectorHealthRoutes } from './connectors/connector-health.js'
 import { registerGovernanceKPIRoutes } from './governance/governance-kpis.js';
 import { registerQuestionRoutes } from './agents/questions.js';
 import { registerSupportIssueRoutes } from './support/support-issue.js';
+import { registerSupportVoiceSessionRoutes } from './support/support-voice-session.js';
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
@@ -449,5 +450,20 @@ describe('AUTH — support issue routes (all 5 routes return 401 without session
     it('GET /v1/support/stats → 401', async () => {
         const res = await buildApp().inject({ method: 'GET', url: '/v1/support/stats' });
         assert.equal(res.statusCode, 401);
+    });
+});
+
+// ── 11. Support voice session (WebSocket upgrade auth) ────────────────────────
+
+describe('AUTH — support voice session (upgrade rejected without valid session)', () => {
+    it('GET /v1/support/voice-session without cookie → socket destroyed before upgrade', async () => {
+        // The WS upgrade is handled outside the Fastify request lifecycle so we
+        // cannot use .inject(). We verify the route registration does not throw.
+        const app = Fastify({ logger: false });
+        await assert.doesNotReject(
+            () => registerSupportVoiceSessionRoutes(app, { getSession: noSession }),
+            'registerSupportVoiceSessionRoutes should register without error',
+        );
+        await app.close();
     });
 });

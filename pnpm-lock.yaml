@@ -122,6 +122,9 @@ importers:
       '@agentfarm/document-converter':
         specifier: workspace:*
         version: link:../../packages/document-converter
+      '@agentfarm/meeting-agent':
+        specifier: workspace:*
+        version: link:../../services/meeting-agent
       '@agentfarm/memory-service':
         specifier: workspace:*
         version: link:../../packages/memory-service

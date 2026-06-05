@@ -144,6 +144,7 @@ import { registerCommsDraftRoutes } from './routes/comms/drafts.js';
 // Support
 import { registerSupportIssueRoutes } from './routes/support/support-issue.js';
 import { registerSupportChatSessionRoutes } from './routes/support/support-chat-session.js';
+import { registerSupportVoiceSessionRoutes } from './routes/support/support-voice-session.js';
 
 // Ops monitoring
 import { registerOpsSlaRoutes } from './routes/ops/provisioning-sla.js';
@@ -313,6 +314,7 @@ export const registerAllRoutes = async (
     // Support
     await registerSupportIssueRoutes(app, { getSession });
     await registerSupportChatSessionRoutes(app, { getSession });
+    await registerSupportVoiceSessionRoutes(app, { getSession });
 
     // Ops monitoring
     await registerOpsSlaRoutes(app);
