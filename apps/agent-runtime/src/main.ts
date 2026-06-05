@@ -19,6 +19,7 @@ import { ensureBusinessAnalystMcpServers } from './agents/business-analyst/busin
 import { ensureProjectManagerMcpServers } from './agents/project-manager/project-manager-mcp-provisioner.js';
 import { ensureCseMcpServers } from './agents/customer-support-executive/customer-support-executive-mcp-provisioner.js';
 import { ensureMobileMcpServers } from './agents/mobile/mobile-mcp-provisioner.js';
+import { startProactiveMonitor } from './agents/agentfarm-support/proactive-monitor.js';
 
 void startRuntimeServer().catch((err: unknown) => {
     console.error('agent-runtime failed to start', err);
@@ -60,4 +61,11 @@ for (const provision of agentMcpProvisioners) {
 // Fire-and-forget: seed default voice profiles for all 12 roles.
 seedVoiceProfiles().catch((err: unknown) => {
     console.warn('[voice-profile-seeder] startup seeding failed (non-fatal):', err);
+});
+
+// Start proactive platform health monitor (no-op unless PROACTIVE_MONITOR_ENABLED=true).
+startProactiveMonitor({
+    gatewayBaseUrl: process.env['GATEWAY_BASE_URL'] ?? 'http://localhost:3000',
+    serviceToken: process.env['RUNTIME_TASK_SHARED_TOKEN'] ?? '',
+    supportBotId: process.env['SUPPORT_BOT_ID'] ?? 'agentfarm-support',
 });

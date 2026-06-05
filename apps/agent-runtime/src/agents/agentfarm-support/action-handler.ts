@@ -20,6 +20,8 @@ import {
     INJECTION_REFUSAL,
     DISCLOSURE_REFUSAL,
 } from './information-disclosure-guard.js';
+import { sendSupportCsatSurvey } from './csat-sender.js';
+import { deduplicateIssue } from './issue-deduplicator.js';
 
 // ---------------------------------------------------------------------------
 // Input length limits — enforced at the action boundary before any processing
@@ -270,6 +272,20 @@ export async function handleAgentfarmSupportAction(
             const e5 = tooLong(issueId, MAX_LEN.issueId, 'issueId');                         if (e5) return e5;
             const e6 = tooLong(issueDescription, MAX_LEN.issueDescription, 'issueDescription'); if (e6) return e6;
 
+            // Dedup check — avoid spinning up a developer agent for a root cause already in flight
+            const codeDup = await deduplicateIssue(rawReport as DiagnosisReport, tenantId, deps);
+            if (codeDup.isDuplicate) {
+                return {
+                    ok: true,
+                    output: JSON.stringify({
+                        deduplicated: true,
+                        existingIssueId: codeDup.existingIssueId,
+                        rootCauseKey: codeDup.rootCauseKey,
+                        message: `A fix for root cause '${codeDup.rootCauseKey}' is already in progress (issue ${codeDup.existingIssueId}).`,
+                    }),
+                };
+            }
+
             const request = buildCodeFixRequest(rawReport as DiagnosisReport, issueDescription, issueId);
             const result = await dispatchToDeveloperAgent(request, {
                 ...deps,
@@ -308,6 +324,20 @@ export async function handleAgentfarmSupportAction(
             const issueDescription = str(payload['issueDescription'], 'Unknown infrastructure failure');
             const e7 = tooLong(issueId, MAX_LEN.issueId, 'issueId');                         if (e7) return e7;
             const e8 = tooLong(issueDescription, MAX_LEN.issueDescription, 'issueDescription'); if (e8) return e8;
+
+            // Dedup check — avoid spinning up a devops agent for a root cause already in flight
+            const infraDup = await deduplicateIssue(rawReport as DiagnosisReport, tenantId, deps);
+            if (infraDup.isDuplicate) {
+                return {
+                    ok: true,
+                    output: JSON.stringify({
+                        deduplicated: true,
+                        existingIssueId: infraDup.existingIssueId,
+                        rootCauseKey: infraDup.rootCauseKey,
+                        message: `A fix for root cause '${infraDup.rootCauseKey}' is already in progress (issue ${infraDup.existingIssueId}).`,
+                    }),
+                };
+            }
 
             const request = buildInfraFixRequest(rawReport as DiagnosisReport, issueDescription, issueId);
             const result = await dispatchToDevopsAgent(request, {
@@ -403,6 +433,9 @@ export async function handleAgentfarmSupportAction(
                     });
                 } catch { /* best-effort — don't fail the action on network error */ }
             }
+
+            // Best-effort CSAT survey — fire-and-forget, never blocks resolve
+            void sendSupportCsatSurvey({ tenantId, botId: params.botId, issueId, resolutionNotes }, deps).catch(() => {});
 
             // Feed the RAG flywheel — ingest resolved case so future retrievals benefit
             if (resolutionNotes.length > 20) {
