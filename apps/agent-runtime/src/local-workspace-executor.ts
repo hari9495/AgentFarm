@@ -65,6 +65,7 @@ import { handleBaAction, isBaActionType, type BaActionType } from './agents/busi
 import { handleMarketingSpecialistAction, isMarketingSpecialistActionType, type MarketingSpecialistActionType } from './agents/marketing-specialist/marketing-specialist-action-handler.js';
 import { handleRecruiterAction, isRecruiterActionType, type RecruiterActionType } from './agents/recruiter/recruiter-action-handler.js';
 import { handleCustomerSupportExecutiveAction, isCustomerSupportExecutiveActionType, type CustomerSupportExecutiveActionType } from './agents/customer-support-executive/customer-support-executive-action-handler.js';
+import { handleAgentfarmSupportAction, isAgentfarmSupportActionType, type AgentfarmSupportActionType } from './agents/agentfarm-support/action-handler.js';
 import type { ProseCallerFn } from './agents/content-writer/llm-prose-writer.js';
 import { streamLLM } from './llm-decision-adapter.js';
 import { globalEpisodicMemory } from './episodic-memory.js';
@@ -687,7 +688,17 @@ export type LocalWorkspaceActionType =
     | 'workspace_cse_live_chat_handle'
     | 'workspace_cse_sla_check'
     | 'workspace_cse_voice_call_handle'
-    | 'workspace_cse_voice_transcribe';
+    | 'workspace_cse_voice_transcribe'
+    // Tier 49 (AgentFarm Support Agent domain actions)
+    | 'agentfarm_support_issue_ingest'
+    | 'agentfarm_support_diagnose'
+    | 'agentfarm_support_config_fix'
+    | 'agentfarm_support_chat_reply'
+    | 'agentfarm_support_voice_reply'
+    | 'agentfarm_support_code_fix_dispatch'
+    | 'agentfarm_support_infra_fix_dispatch'
+    | 'agentfarm_support_escalate'
+    | 'agentfarm_support_resolve';
 
 export type LocalWorkspaceResult = {
     ok: boolean;
@@ -15182,6 +15193,41 @@ export async function executeLocalWorkspaceAction(input: {
                 errorMessage: cseResult.errorOutput ? cseResult.errorOutput.slice(0, 200) : undefined,
             });
             return cseResult;
+        }
+
+        case 'agentfarm_support_issue_ingest':
+        case 'agentfarm_support_diagnose':
+        case 'agentfarm_support_config_fix':
+        case 'agentfarm_support_chat_reply':
+        case 'agentfarm_support_voice_reply':
+        case 'agentfarm_support_code_fix_dispatch':
+        case 'agentfarm_support_infra_fix_dispatch':
+        case 'agentfarm_support_escalate':
+        case 'agentfarm_support_resolve': {
+            if (!isAgentfarmSupportActionType(actionType)) {
+                return { ok: false, output: '', errorOutput: `Unrecognised AgentFarm Support action: ${actionType}` };
+            }
+            const supportResult = await handleAgentfarmSupportAction({
+                actionType: actionType as AgentfarmSupportActionType,
+                tenantId,
+                botId,
+                taskId,
+                payload,
+                gatewayBaseUrl: input.gatewayBaseUrl ?? '',
+                serviceToken: input.serviceToken ?? '',
+                workspaceId: input.workspaceId,
+            });
+            void globalEpisodicMemory.record({
+                taskId,
+                workspaceId: workspaceDir,
+                botId,
+                actionType,
+                promptSummary: (typeof payload['issueId'] === 'string' ? `issue:${payload['issueId']}` : actionType).slice(0, 200),
+                outcome: supportResult.ok ? 'success' : 'failed',
+                timestamp: Date.now(),
+                errorMessage: supportResult.errorOutput ? supportResult.errorOutput.slice(0, 200) : undefined,
+            });
+            return supportResult;
         }
 
         default: {
