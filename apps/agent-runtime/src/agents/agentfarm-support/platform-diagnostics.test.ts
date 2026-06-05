@@ -8,6 +8,7 @@
 import assert from 'node:assert/strict';
 import { describe, it, beforeEach, afterEach, mock } from 'node:test';
 import type { DiagnosticsDeps } from './platform-diagnostics.js';
+import { writeDiagnosticAccessAudit } from './platform-diagnostics.js';
 
 const DEPS: DiagnosticsDeps = {
     gatewayBaseUrl: 'http://gw:3000',
@@ -226,5 +227,63 @@ describe('buildDiagnosisReport', () => {
         ];
         assert.ok(statuses.some((s) => s !== 'ok'));
         assert.ok(report.summary.some((s) => s.includes('Partial')));
+    });
+});
+
+// ── writeDiagnosticAccessAudit ────────────────────────────────────────────
+
+describe('writeDiagnosticAccessAudit', () => {
+    afterEach(() => mock.restoreAll());
+
+    it('POSTs an audit entry with correct eventType and fields', async () => {
+        type Captured = { url: string; body: Record<string, unknown> };
+        let captured: Captured | null = null;
+        mock.method(globalThis, 'fetch', async (url: string, init: RequestInit) => {
+            captured = { url, body: JSON.parse(init.body as string) } as Captured;
+            return { ok: true, status: 200 };
+        });
+
+        await writeDiagnosticAccessAudit(
+            {
+                tenantId: 'tenant-x',
+                requestedBy: 'bot-123',
+                dataSources: ['task_logs', 'billing'],
+                timedOutSources: [],
+                timestamp: '2026-01-01T00:00:00.000Z',
+                correlationId: 'corr-abc',
+            },
+            DEPS,
+        );
+
+        const c = captured as Captured | null;
+        assert.ok(c !== null, 'fetch should have been called');
+        assert.ok(c.url.includes('/v1/audit/support-diagnostic'));
+        assert.equal(c.body['eventType'], 'support_agent_diagnostic_read');
+        assert.equal(c.body['tenantId'], 'tenant-x');
+        assert.equal(c.body['requestedBy'], 'bot-123');
+        assert.deepEqual(c.body['dataSources'], ['task_logs', 'billing']);
+        assert.equal(c.body['correlationId'], 'corr-abc');
+    });
+
+    it('does not throw when the audit endpoint is unavailable', async () => {
+        mock.method(globalThis, 'fetch', async () => { throw new Error('network error'); });
+
+        await assert.doesNotReject(() =>
+            writeDiagnosticAccessAudit(
+                { tenantId: 't', requestedBy: 'b', dataSources: [], timedOutSources: [], timestamp: '' },
+                DEPS,
+            ),
+        );
+    });
+
+    it('does not throw when the audit endpoint returns a non-2xx status', async () => {
+        mock.method(globalThis, 'fetch', async () => ({ ok: false, status: 404 }));
+
+        await assert.doesNotReject(() =>
+            writeDiagnosticAccessAudit(
+                { tenantId: 't', requestedBy: 'b', dataSources: [], timedOutSources: [], timestamp: '' },
+                DEPS,
+            ),
+        );
     });
 });

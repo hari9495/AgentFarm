@@ -313,15 +313,48 @@ export async function readAuditLog(
 }
 
 // ---------------------------------------------------------------------------
+// Diagnostic access audit — best-effort, never blocks the diagnosis
+// ---------------------------------------------------------------------------
+
+export interface DiagnosticAccessAuditEntry {
+    tenantId: string;
+    requestedBy: string;
+    dataSources: string[];
+    timedOutSources: string[];
+    timestamp: string;
+    correlationId?: string;
+}
+
+export async function writeDiagnosticAccessAudit(
+    entry: DiagnosticAccessAuditEntry,
+    deps: DiagnosticsDeps,
+): Promise<void> {
+    try {
+        const base = deps.gatewayBaseUrl.replace(/\/+$/, '');
+        await fetch(`${base}/v1/audit/support-diagnostic`, {
+            method: 'POST',
+            headers: {
+                'content-type': 'application/json',
+                Authorization: `Bearer ${deps.serviceToken}`,
+            },
+            body: JSON.stringify({ eventType: 'support_agent_diagnostic_read', ...entry }),
+            signal: AbortSignal.timeout(3_000),
+        });
+    } catch {
+        // Non-critical — diagnostic must never fail because auditing is unavailable.
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Build full diagnosis report — all sources in parallel with per-source timeout
 // ---------------------------------------------------------------------------
 
 export async function buildDiagnosisReport(
     tenantId: string,
     deps: DiagnosticsDeps,
-    opts: { timeWindowHours?: number; correlationId?: string; auditLimit?: number } = {},
+    opts: { timeWindowHours?: number; correlationId?: string; auditLimit?: number; requestedBy?: string } = {},
 ): Promise<DiagnosisReport> {
-    const { timeWindowHours = 4, correlationId, auditLimit = 20 } = opts;
+    const { timeWindowHours = 4, correlationId, auditLimit = 20, requestedBy = 'unknown' } = opts;
 
     const perSourceTimeout = deps.timeoutMs ?? SOURCE_TIMEOUT_MS;
     const [taskResult, otelResult, connectorResult, approvalResult, billingResult, provisioningResult, auditResult] =
@@ -334,6 +367,22 @@ export async function buildDiagnosisReport(
             withTimeout('provisioning', () => readProvisioningState(tenantId, deps),         perSourceTimeout),
             withTimeout('audit',        () => readAuditLog(tenantId, auditLimit, deps),      perSourceTimeout),
         ]);
+
+    // Write access audit (best-effort, non-blocking)
+    const allSources = ['task_logs', 'otel_traces', 'connectors', 'approvals', 'billing', 'provisioning', 'audit'];
+    const allResults = [taskResult, otelResult, connectorResult, approvalResult, billingResult, provisioningResult, auditResult];
+    const timedOutSources = allSources.filter((_, i) => allResults[i].status !== 'ok');
+    void writeDiagnosticAccessAudit(
+        {
+            tenantId,
+            requestedBy,
+            dataSources: allSources,
+            timedOutSources,
+            timestamp: new Date().toISOString(),
+            correlationId,
+        },
+        deps,
+    );
 
     const summary: string[] = [];
 

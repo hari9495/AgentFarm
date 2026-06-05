@@ -14,10 +14,31 @@ import { buildEscalationReport, sendEscalation, updateIssueEscalated, type Tried
 import { ingestApprovedCase } from './rag-retriever.js';
 import { ingestSupportFeedback, GatewaySupportLessonStore } from './lesson-pipeline.js';
 import {
+    detectPromptInjection,
     detectProprietaryInfoRequest,
     sanitizeResponseForCustomer,
+    INJECTION_REFUSAL,
     DISCLOSURE_REFUSAL,
 } from './information-disclosure-guard.js';
+
+// ---------------------------------------------------------------------------
+// Input length limits — enforced at the action boundary before any processing
+// ---------------------------------------------------------------------------
+
+const MAX_LEN = {
+    title: 500,
+    description: 2_000,
+    transcript: 3_000,
+    issueId: 100,
+    resolutionNotes: 5_000,
+    issueDescription: 2_000,
+} as const;
+
+function tooLong(value: string, max: number, field: string): AgentfarmSupportActionResult | null {
+    return value.length > max
+        ? { ok: false, output: '', errorOutput: `payload.${field} exceeds ${max} character limit` }
+        : null;
+}
 
 // ---------------------------------------------------------------------------
 // Action type registry
@@ -99,6 +120,8 @@ export async function handleAgentfarmSupportAction(
             if (!description) {
                 return { ok: false, output: '', errorOutput: 'payload.description is required' };
             }
+            const e1 = tooLong(title, MAX_LEN.title, 'title');               if (e1) return e1;
+            const e2 = tooLong(description, MAX_LEN.description, 'description'); if (e2) return e2;
             return {
                 ok: true,
                 output: JSON.stringify({
@@ -117,7 +140,11 @@ export async function handleAgentfarmSupportAction(
             const correlationId    = str(payload['correlationId'], undefined as unknown as string) || undefined;
             const timeWindowHours  = typeof payload['timeWindowHours'] === 'number' ? payload['timeWindowHours'] : 4;
             try {
-                const report = await buildDiagnosisReport(tenantId, deps, { correlationId, timeWindowHours });
+                const report = await buildDiagnosisReport(tenantId, deps, {
+                    correlationId,
+                    timeWindowHours,
+                    requestedBy: params.botId,
+                });
                 return { ok: true, output: JSON.stringify(report) };
             } catch (err) {
                 return {
@@ -152,8 +179,12 @@ export async function handleAgentfarmSupportAction(
             if (!customerMessage) {
                 return { ok: false, output: '', errorOutput: 'payload.customerMessage is required' };
             }
+            const e3 = tooLong(customerMessage, MAX_LEN.description, 'customerMessage'); if (e3) return e3;
 
-            // Refuse attempts to extract proprietary information
+            // Security checks — injection first, then disclosure
+            if (detectPromptInjection(customerMessage)) {
+                return { ok: true, output: JSON.stringify({ text: INJECTION_REFUSAL.chat, refused: true }) };
+            }
             if (detectProprietaryInfoRequest(customerMessage)) {
                 return { ok: true, output: JSON.stringify({ text: DISCLOSURE_REFUSAL.chat, refused: true }) };
             }
@@ -182,7 +213,19 @@ export async function handleAgentfarmSupportAction(
                 return { ok: false, output: '', errorOutput: 'payload.transcript is required' };
             }
 
-            // Refuse attempts to extract proprietary information via voice
+            const e4 = tooLong(transcript, MAX_LEN.transcript, 'transcript'); if (e4) return e4;
+
+            // Security checks — injection first, then disclosure
+            if (detectPromptInjection(transcript)) {
+                return {
+                    ok: true,
+                    output: JSON.stringify({
+                        text: INJECTION_REFUSAL.voice,
+                        languageCode: str(payload['languageCode'], 'en-IN'),
+                        refused: true,
+                    }),
+                };
+            }
             if (detectProprietaryInfoRequest(transcript)) {
                 return {
                     ok: true,
@@ -224,6 +267,8 @@ export async function handleAgentfarmSupportAction(
             }
             const issueId = str(payload['issueId'], '');
             const issueDescription = str(payload['issueDescription'], 'Unknown platform issue');
+            const e5 = tooLong(issueId, MAX_LEN.issueId, 'issueId');                         if (e5) return e5;
+            const e6 = tooLong(issueDescription, MAX_LEN.issueDescription, 'issueDescription'); if (e6) return e6;
 
             const request = buildCodeFixRequest(rawReport as DiagnosisReport, issueDescription, issueId);
             const result = await dispatchToDeveloperAgent(request, {
@@ -261,6 +306,8 @@ export async function handleAgentfarmSupportAction(
             }
             const issueId = str(payload['issueId'], '');
             const issueDescription = str(payload['issueDescription'], 'Unknown infrastructure failure');
+            const e7 = tooLong(issueId, MAX_LEN.issueId, 'issueId');                         if (e7) return e7;
+            const e8 = tooLong(issueDescription, MAX_LEN.issueDescription, 'issueDescription'); if (e8) return e8;
 
             const request = buildInfraFixRequest(rawReport as DiagnosisReport, issueDescription, issueId);
             const result = await dispatchToDevopsAgent(request, {
@@ -298,6 +345,8 @@ export async function handleAgentfarmSupportAction(
             }
             const issueId = str(payload['issueId'], '');
             const issueDescription = str(payload['issueDescription'], 'Unknown issue requiring escalation');
+            const e9  = tooLong(issueId, MAX_LEN.issueId, 'issueId');                         if (e9) return e9;
+            const e10 = tooLong(issueDescription, MAX_LEN.issueDescription, 'issueDescription'); if (e10) return e10;
             const rawTiers = Array.isArray(payload['triedTiers']) ? payload['triedTiers'] : ['tier1'];
             const triedTiers = (rawTiers as unknown[])
                 .map((t) => String(t))
@@ -337,6 +386,8 @@ export async function handleAgentfarmSupportAction(
         case 'agentfarm_support_resolve': {
             const issueId = str(payload['issueId'], '');
             const resolutionNotes = str(payload['resolutionNotes'], 'Issue resolved by support agent.');
+            const e11 = tooLong(issueId, MAX_LEN.issueId, 'issueId');                        if (e11) return e11;
+            const e12 = tooLong(resolutionNotes, MAX_LEN.resolutionNotes, 'resolutionNotes'); if (e12) return e12;
             const base = deps.gatewayBaseUrl.replace(/\/+$/, '');
 
             if (issueId) {
