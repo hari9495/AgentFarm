@@ -6,8 +6,13 @@
 // Sprint 20-23 actions return not-yet-implemented until those sprints land.
 // ============================================================================
 
-import { buildDiagnosisReport } from './platform-diagnostics.js';
+import { buildDiagnosisReport, type DiagnosisReport } from './platform-diagnostics.js';
 import { applyTier1Fix } from './config-fixer.js';
+import { buildCodeFixRequest, dispatchToDeveloperAgent } from './code-fix-dispatcher.js';
+import { buildInfraFixRequest, dispatchToDevopsAgent } from './infra-fix-dispatcher.js';
+import { buildEscalationReport, sendEscalation, updateIssueEscalated, type TriedTier } from './escalation-handler.js';
+import { ingestApprovedCase } from './rag-retriever.js';
+import { ingestSupportFeedback, GatewaySupportLessonStore } from './lesson-pipeline.js';
 
 // ---------------------------------------------------------------------------
 // Action type registry
@@ -78,7 +83,7 @@ export async function handleAgentfarmSupportAction(
 ): Promise<AgentfarmSupportActionResult> {
     const { actionType, tenantId, payload, gatewayBaseUrl, serviceToken } = params;
 
-    const deps = { gatewayBaseUrl, serviceToken };
+    const deps = { gatewayBaseUrl, serviceToken } as const;
 
     switch (actionType) {
         // ── Sprint 19: Issue ingest ──────────────────────────────────────────
@@ -187,39 +192,165 @@ export async function handleAgentfarmSupportAction(
             };
         }
 
-        // ── Sprint 23: Code fix dispatch (stub) ──────────────────────────────
+        // ── Sprint 23: Code fix dispatch (Tier 2) ────────────────────────────
         case 'agentfarm_support_code_fix_dispatch': {
+            const rawReport = payload['diagnosisReport'];
+            if (!rawReport || typeof rawReport !== 'object') {
+                return { ok: false, output: '', errorOutput: 'payload.diagnosisReport is required' };
+            }
+            const issueId = str(payload['issueId'], '');
+            const issueDescription = str(payload['issueDescription'], 'Unknown platform issue');
+
+            const request = buildCodeFixRequest(rawReport as DiagnosisReport, issueDescription, issueId);
+            const result = await dispatchToDeveloperAgent(request, {
+                ...deps,
+                supportBotId: params.botId,
+                workspaceId: params.workspaceId,
+            });
+
+            if (!result.dispatched) {
+                if (params.workspaceId) {
+                    const store = new GatewaySupportLessonStore(gatewayBaseUrl, serviceToken);
+                    await ingestSupportFeedback(
+                        { tenantId, workspaceId: params.workspaceId, taskId: params.taskId, issueId, actionType: 'agentfarm_support_code_fix_dispatch', correlationId: issueId },
+                        [{ body: `Code fix dispatch failed for issue "${issueDescription}": ${result.detail ?? 'unknown error'}` }],
+                        store,
+                    );
+                }
+                return { ok: false, output: '', errorOutput: `Code fix dispatch failed: ${result.detail}` };
+            }
             return {
-                ok: false,
-                output: '',
-                errorOutput: 'agentfarm_support_code_fix_dispatch: not yet implemented (Sprint 23)',
+                ok: true,
+                output: JSON.stringify({
+                    dispatched: true,
+                    dispatchId: result.dispatchId,
+                    message: `Developer agent dispatched (ID: ${result.dispatchId ?? 'unknown'}). A pull request will be raised once the fix is ready.`,
+                }),
             };
         }
 
-        // ── Sprint 23: Infra fix dispatch (stub) ─────────────────────────────
+        // ── Sprint 23: Infra fix dispatch (Tier 3) ───────────────────────────
         case 'agentfarm_support_infra_fix_dispatch': {
+            const rawReport = payload['diagnosisReport'];
+            if (!rawReport || typeof rawReport !== 'object') {
+                return { ok: false, output: '', errorOutput: 'payload.diagnosisReport is required' };
+            }
+            const issueId = str(payload['issueId'], '');
+            const issueDescription = str(payload['issueDescription'], 'Unknown infrastructure failure');
+
+            const request = buildInfraFixRequest(rawReport as DiagnosisReport, issueDescription, issueId);
+            const result = await dispatchToDevopsAgent(request, {
+                ...deps,
+                supportBotId: params.botId,
+                workspaceId: params.workspaceId,
+            });
+
+            if (!result.dispatched) {
+                if (params.workspaceId) {
+                    const store = new GatewaySupportLessonStore(gatewayBaseUrl, serviceToken);
+                    await ingestSupportFeedback(
+                        { tenantId, workspaceId: params.workspaceId, taskId: params.taskId, issueId, actionType: 'agentfarm_support_infra_fix_dispatch', correlationId: issueId },
+                        [{ body: `Infra fix dispatch failed for issue "${issueDescription}": ${result.detail ?? 'unknown error'}` }],
+                        store,
+                    );
+                }
+                return { ok: false, output: '', errorOutput: `Infra fix dispatch failed: ${result.detail}` };
+            }
             return {
-                ok: false,
-                output: '',
-                errorOutput: 'agentfarm_support_infra_fix_dispatch: not yet implemented (Sprint 23)',
+                ok: true,
+                output: JSON.stringify({
+                    dispatched: true,
+                    dispatchId: result.dispatchId,
+                    message: `DevOps agent dispatched (ID: ${result.dispatchId ?? 'unknown'}). A runbook will be executed to restore service.`,
+                }),
             };
         }
 
-        // ── Sprint 23: Escalate (stub) ────────────────────────────────────────
+        // ── Sprint 23: Escalate (Tier 4) ──────────────────────────────────────
         case 'agentfarm_support_escalate': {
+            const rawReport = payload['diagnosisReport'];
+            if (!rawReport || typeof rawReport !== 'object') {
+                return { ok: false, output: '', errorOutput: 'payload.diagnosisReport is required' };
+            }
+            const issueId = str(payload['issueId'], '');
+            const issueDescription = str(payload['issueDescription'], 'Unknown issue requiring escalation');
+            const rawTiers = Array.isArray(payload['triedTiers']) ? payload['triedTiers'] : ['tier1'];
+            const triedTiers = (rawTiers as unknown[])
+                .map((t) => String(t))
+                .filter((t): t is TriedTier => ['tier1', 'tier2', 'tier3'].includes(t));
+
+            const report = buildEscalationReport(
+                issueId,
+                issueDescription,
+                rawReport as DiagnosisReport,
+                triedTiers.length > 0 ? triedTiers : ['tier1'],
+                {
+                    tier1Result: str(payload['tier1Result'], undefined as unknown as string) || undefined,
+                    tier2Result: str(payload['tier2Result'], undefined as unknown as string) || undefined,
+                    tier3Result: str(payload['tier3Result'], undefined as unknown as string) || undefined,
+                },
+            );
+
+            const escalationResult = await sendEscalation(report, deps);
+            await updateIssueEscalated(
+                issueId,
+                { channel: escalationResult.channel, escalatedAt: report.escalatedAt },
+                deps,
+            );
+
             return {
-                ok: false,
-                output: '',
-                errorOutput: 'agentfarm_support_escalate: not yet implemented (Sprint 23)',
+                ok: true,
+                output: JSON.stringify({
+                    escalated: escalationResult.escalated,
+                    channel: escalationResult.channel ?? null,
+                    detail: escalationResult.detail ?? null,
+                    escalatedAt: report.escalatedAt,
+                }),
             };
         }
 
-        // ── Sprint 23: Resolve (stub) ─────────────────────────────────────────
+        // ── Sprint 23: Resolve ────────────────────────────────────────────────
         case 'agentfarm_support_resolve': {
+            const issueId = str(payload['issueId'], '');
+            const resolutionNotes = str(payload['resolutionNotes'], 'Issue resolved by support agent.');
+            const base = deps.gatewayBaseUrl.replace(/\/+$/, '');
+
+            if (issueId) {
+                try {
+                    await fetch(`${base}/v1/support/issues/${encodeURIComponent(issueId)}/resolve`, {
+                        method: 'POST',
+                        headers: {
+                            'content-type': 'application/json',
+                            Authorization: `Bearer ${deps.serviceToken}`,
+                        },
+                        body: JSON.stringify({ resolutionNotes }),
+                        signal: AbortSignal.timeout(10_000),
+                    });
+                } catch { /* best-effort — don't fail the action on network error */ }
+            }
+
+            // Feed the RAG flywheel — ingest resolved case so future retrievals benefit
+            if (resolutionNotes.length > 20) {
+                await ingestApprovedCase({
+                    tenantId,
+                    botId: params.botId,
+                    caseTitle: issueId ? `Resolved issue ${issueId}` : 'Resolved support case',
+                    documentType: 'case_resolution',
+                    content: resolutionNotes,
+                    issueCategory: str(payload['issueCategory'], undefined as unknown as string) || undefined,
+                    gatewayBaseUrl,
+                    serviceToken,
+                });
+            }
+
             return {
-                ok: false,
-                output: '',
-                errorOutput: 'agentfarm_support_resolve: not yet implemented (Sprint 23)',
+                ok: true,
+                output: JSON.stringify({
+                    resolved: true,
+                    issueId: issueId || null,
+                    resolvedAt: new Date().toISOString(),
+                    resolutionNotes,
+                }),
             };
         }
     }

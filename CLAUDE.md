@@ -227,6 +227,7 @@ Next run retrieves both — so agents improve automatically without retraining.
 | `mobile` | `mobile-rag-retriever.ts` | `mobile-lesson-pipeline.ts` | `mobile:lesson:` |
 | `tester` | `tester-rag-retriever.ts` | `tester-lesson-pipeline.ts` | `tester:lesson:` |
 | `meeting-agent` | `meeting-agent-rag-retriever.ts` | `meeting-agent-lesson-pipeline.ts` | `meeting:lesson:` |
+| `agentfarm-support` | `rag-retriever.ts` | `lesson-pipeline.ts` | `support:lesson:` |
 
 ### Lesson Category Taxonomy
 
@@ -249,6 +250,7 @@ Each agent's lesson pipeline uses a domain-specific set of categories for target
 | developer | feature_impl, bug_fix, code_review, refactor, test_authoring, debug, security_audit, dependency_audit, perf_audit, code_quality, api_design, incident |
 | tester | coverage_gaps, bug_reproduction, edge_cases, environment_setup, test_quality, regression_detection, reporting |
 | meeting-agent | action_item_clarity, decision_capture, participant_engagement, summary_accuracy, follow_up_tracking, time_management |
+| agentfarm-support | config_error, code_bug, infra_failure, billing_issue, connector_failure, provisioning_error, user_error |
 
 ### Adding RAG to a New Agent
 
