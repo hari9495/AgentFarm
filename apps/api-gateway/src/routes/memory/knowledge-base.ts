@@ -13,6 +13,7 @@ import type { PrismaClient } from '@prisma/client';
 import {
     writeSemanticMemory,
     searchSemanticMemory,
+    chunkText,
 } from '@agentfarm/memory-service';
 import type { EmbedFn } from '@agentfarm/memory-service';
 import type { SemanticWriteRequest, SemanticSearchRequest } from '@agentfarm/shared-types';
@@ -195,21 +196,29 @@ export async function registerKnowledgeBaseRoutes(
             return reply.code(422).send({ error: `Conversion failed: ${(err as Error).message}` });
         }
 
-        const writeReq: SemanticWriteRequest = {
-            tenantId: session.tenantId,
-            botId:    botId || undefined,
-            content:  markdown,
-            sourceUrl: sourceUrl || (filename ? `urn:agentfarm:doc:${encodeURIComponent(filename)}` : undefined),
-            sourceType,
-        };
+        const resolvedSourceUrl = sourceUrl || (filename ? `urn:agentfarm:doc:${encodeURIComponent(filename)}` : undefined);
+        const chunks = chunkText(markdown);
+        const multiChunk = chunks.length > 1;
 
-        await writeHook(writeReq, embedFn, prisma, deployment);
+        await Promise.all(
+            chunks.map((chunk, i) => {
+                const writeReq: SemanticWriteRequest = {
+                    tenantId: session.tenantId,
+                    botId:    botId || undefined,
+                    content:  chunk,
+                    sourceUrl: multiChunk && resolvedSourceUrl ? `${resolvedSourceUrl}#chunk-${i}` : resolvedSourceUrl,
+                    sourceType,
+                };
+                return writeHook(writeReq, embedFn, prisma, deployment);
+            }),
+        );
 
         return reply.code(201).send({
             ok:               true,
             originalFilename: filename ?? null,
             mimeType,
             charCount:        markdown.length,
+            chunkCount:       chunks.length,
         });
     });
 

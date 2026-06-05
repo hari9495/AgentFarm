@@ -186,7 +186,7 @@ test('POST /v1/knowledge-base/write — unknown mimeType stores content as-is', 
     const app = makeApp(session);
     const res = await app.inject({
         method: 'POST', url: '/v1/knowledge-base/write',
-        payload: { content: original, sourceType: 'notes', mimeType: 'image/png' },
+        payload: { content: original, sourceType: 'notes', mimeType: 'video/mp4' },
     });
     await app.close();
     assert.equal(res.statusCode, 201);
@@ -321,7 +321,7 @@ test('POST /v1/knowledge-base/ingest-file — 415 when file type is unsupported'
     const app = makeApp(session);
     const { body, contentType } = makeMultipartBody(
         { sourceType: 'manual' },
-        { filename: 'photo.jpg', content: Buffer.from('\xff\xd8\xff'), mimeType: 'image/jpeg' },
+        { filename: 'clip.mp4', content: Buffer.from('...'), mimeType: 'video/mp4' },
     );
     const res = await app.inject({
         method: 'POST', url: '/v1/knowledge-base/ingest-file',

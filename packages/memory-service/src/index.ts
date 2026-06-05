@@ -20,8 +20,12 @@ export {
 
 export {
     writeSemanticMemory,
+    writeSemanticMemoryChunked,
     searchSemanticMemory,
 }                                               from './semantic.js';
+
+export { chunkText, CHUNK_MAX_CHARS, CHUNK_OVERLAP_CHARS } from './chunker.js';
+export type { ChunkOptions }                    from './chunker.js';
 
 export {
     consolidateLessons,
