@@ -165,12 +165,56 @@ describe('agentfarm_support_config_fix', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Sprint 20-23 stubs — must return ok:false with informative message
+// Sprint 20: Chat reply
+// ---------------------------------------------------------------------------
+
+describe('agentfarm_support_chat_reply', () => {
+    it('returns ok:false when customerMessage is missing', async () => {
+        const { handleAgentfarmSupportAction } = await import('./action-handler.js');
+        const result = await handleAgentfarmSupportAction({
+            ...BASE,
+            actionType: 'agentfarm_support_chat_reply',
+            payload: {},
+        });
+        assert.equal(result.ok, false);
+        assert.ok(result.errorOutput?.includes('customerMessage'));
+    });
+
+    it('returns ok:true with reply text when no diagnosis report', async () => {
+        const { handleAgentfarmSupportAction } = await import('./action-handler.js');
+        const result = await handleAgentfarmSupportAction({
+            ...BASE,
+            actionType: 'agentfarm_support_chat_reply',
+            payload: { customerMessage: 'Why is the agent stuck?' },
+        });
+        assert.equal(result.ok, true);
+        const parsed = JSON.parse(result.output) as { text: string };
+        assert.ok(typeof parsed.text === 'string' && parsed.text.length > 0);
+    });
+
+    it('includes diagnosis summary bullet points when report is provided', async () => {
+        const { handleAgentfarmSupportAction } = await import('./action-handler.js');
+        const result = await handleAgentfarmSupportAction({
+            ...BASE,
+            actionType: 'agentfarm_support_chat_reply',
+            payload: {
+                customerMessage: 'What is wrong?',
+                diagnosisReport: { summary: ['1 connector unhealthy: github', 'Billing: 90% monthly budget used'] },
+            },
+        });
+        assert.equal(result.ok, true);
+        const parsed = JSON.parse(result.output) as { text: string };
+        assert.ok(parsed.text.includes('connector unhealthy'));
+        assert.ok(parsed.text.includes('Billing'));
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Sprint 22-23 stubs — must return ok:false with informative message
 // ---------------------------------------------------------------------------
 
 describe('unimplemented action stubs', () => {
     const stubs: Array<AgentfarmSupportActionParams['actionType']> = [
-        'agentfarm_support_chat_reply',
         'agentfarm_support_voice_reply',
         'agentfarm_support_code_fix_dispatch',
         'agentfarm_support_infra_fix_dispatch',

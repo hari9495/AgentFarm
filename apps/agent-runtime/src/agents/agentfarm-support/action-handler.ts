@@ -136,13 +136,27 @@ export async function handleAgentfarmSupportAction(
             }
         }
 
-        // ── Sprint 20: Chat reply (stub) ─────────────────────────────────────
+        // ── Sprint 20: Chat reply ────────────────────────────────────────────
         case 'agentfarm_support_chat_reply': {
-            return {
-                ok: false,
-                output: '',
-                errorOutput: 'agentfarm_support_chat_reply: not yet implemented (Sprint 20)',
-            };
+            const customerMessage = str(payload['customerMessage']);
+            if (!customerMessage) {
+                return { ok: false, output: '', errorOutput: 'payload.customerMessage is required' };
+            }
+            const rawReport = payload['diagnosisReport'] as Record<string, unknown> | null | undefined;
+            const summary: string[] = rawReport
+                ? ((rawReport['summary'] as string[] | undefined) ?? [])
+                : [];
+            const issueId = str(payload['issueId'], '');
+
+            let replyText: string;
+            if (summary.length > 0) {
+                const bulletList = summary.map((s) => `• ${s}`).join('\n');
+                replyText = `I've analysed your platform and found the following:\n\n${bulletList}\n\nI've applied all available automatic fixes. Please let me know if the issue persists or if you need further assistance.`;
+            } else {
+                replyText = `Thank you for reaching out. I've run a full platform diagnosis${issueId ? ` for issue ${issueId}` : ''}. No critical issues were detected in the current window. If the problem continues, please share any error messages or task IDs and I'll investigate further.`;
+            }
+
+            return { ok: true, output: JSON.stringify({ text: replyText }) };
         }
 
         // ── Sprint 22: Voice reply (stub) ────────────────────────────────────

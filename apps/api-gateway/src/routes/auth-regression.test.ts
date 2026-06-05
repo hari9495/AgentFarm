@@ -22,6 +22,7 @@ import { registerDashboardRoutes } from './platform/dashboard.js';
 import { registerConnectorHealthRoutes } from './connectors/connector-health.js';
 import { registerGovernanceKPIRoutes } from './governance/governance-kpis.js';
 import { registerQuestionRoutes } from './agents/questions.js';
+import { registerSupportIssueRoutes } from './support/support-issue.js';
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
@@ -406,6 +407,47 @@ describe('AUTH — question routes return 401 without session', () => {
     it('GET /v1/questions/:questionId → 401', async () => {
         const app = await buildApp();
         const res = await app.inject({ method: 'GET', url: '/v1/questions/q_1' });
+        assert.equal(res.statusCode, 401);
+    });
+});
+
+// ── 10. Support issue routes ──────────────────────────────────────────────────
+
+describe('AUTH — support issue routes (all 5 routes return 401 without session)', () => {
+    const buildApp = () => {
+        const app = Fastify({ logger: false });
+        registerSupportIssueRoutes(app, { getSession: noSession });
+        return app;
+    };
+
+    it('POST /v1/support/issues → 401', async () => {
+        const res = await buildApp().inject({
+            method: 'POST', url: '/v1/support/issues',
+            payload: { description: 'test' },
+        });
+        assert.equal(res.statusCode, 401);
+    });
+
+    it('GET /v1/support/issues → 401', async () => {
+        const res = await buildApp().inject({ method: 'GET', url: '/v1/support/issues' });
+        assert.equal(res.statusCode, 401);
+    });
+
+    it('GET /v1/support/issues/:id → 401', async () => {
+        const res = await buildApp().inject({ method: 'GET', url: '/v1/support/issues/issue_1' });
+        assert.equal(res.statusCode, 401);
+    });
+
+    it('POST /v1/support/issues/:id/resolve → 401', async () => {
+        const res = await buildApp().inject({
+            method: 'POST', url: '/v1/support/issues/issue_1/resolve',
+            payload: {},
+        });
+        assert.equal(res.statusCode, 401);
+    });
+
+    it('GET /v1/support/stats → 401', async () => {
+        const res = await buildApp().inject({ method: 'GET', url: '/v1/support/stats' });
         assert.equal(res.statusCode, 401);
     });
 });

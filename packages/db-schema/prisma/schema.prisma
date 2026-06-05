@@ -2402,3 +2402,62 @@ enum SalesActivityType {
   objection_rebuttal_sent
   crm_synced
 }
+
+// ── Sprint 20 — AgentFarm Support Agent ──────────────────────────────────────
+
+model SupportIssue {
+  id               String                  @id @default(cuid())
+  tenantId         String
+  workspaceId      String?
+  title            String
+  description      String
+  status           SupportIssueStatus      @default(open)
+  severity         SupportIssueSeverity    @default(medium)
+  tierReached      Int?
+  fixApplied       Boolean                 @default(false)
+  diagnosisReport  Json?
+  resolutionNotes  String?
+  escalatedTo      String?
+  createdAt        DateTime                @default(now())
+  resolvedAt       DateTime?
+  steps            SupportDiagnosisStep[]
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+}
+
+model SupportDiagnosisStep {
+  id          String          @id @default(cuid())
+  issueId     String
+  stepType    String
+  description String
+  status      DiagnosisStepStatus @default(pending)
+  metadata    Json            @default("{}")
+  createdAt   DateTime        @default(now())
+  issue       SupportIssue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+
+  @@index([issueId])
+}
+
+enum SupportIssueStatus {
+  open
+  diagnosing
+  fixing
+  escalated
+  resolved
+}
+
+enum SupportIssueSeverity {
+  critical
+  high
+  medium
+  low
+}
+
+enum DiagnosisStepStatus {
+  pending
+  running
+  done
+  failed
+}
+

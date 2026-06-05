@@ -141,6 +141,10 @@ import { registerMeetingRoutes } from './routes/meetings.js';
 import { registerContentDraftRoutes } from './routes/content/drafts.js';
 import { registerCommsDraftRoutes } from './routes/comms/drafts.js';
 
+// Support
+import { registerSupportIssueRoutes } from './routes/support/support-issue.js';
+import { registerSupportChatSessionRoutes } from './routes/support/support-chat-session.js';
+
 // Ops monitoring
 import { registerOpsSlaRoutes } from './routes/ops/provisioning-sla.js';
 
@@ -305,6 +309,10 @@ export const registerAllRoutes = async (
     // Content & Comms
     registerContentDraftRoutes(app, { getSession });
     registerCommsDraftRoutes(app, { getSession });
+
+    // Support
+    await registerSupportIssueRoutes(app, { getSession });
+    await registerSupportChatSessionRoutes(app, { getSession });
 
     // Ops monitoring
     await registerOpsSlaRoutes(app);
