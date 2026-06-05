@@ -19,6 +19,9 @@ import { registerRetentionPolicyRoutes } from './governance/retention-policy.js'
 import { registerSkillCompositionRoutes } from './runtime/skill-composition-execute.js';
 import { registerLeadRoutes } from './sales/leads.js';
 import { registerDashboardRoutes } from './platform/dashboard.js';
+import { registerConnectorHealthRoutes } from './connectors/connector-health.js';
+import { registerGovernanceKPIRoutes } from './governance/governance-kpis.js';
+import { registerQuestionRoutes } from './agents/questions.js';
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
@@ -296,6 +299,113 @@ describe('AUTH — dashboard routes return 401 without session', () => {
     it('GET /v1/workspaces/:workspaceId/activity → 401', async () => {
         const app = await buildApp();
         const res = await app.inject({ method: 'GET', url: '/v1/workspaces/ws_1/activity' });
+        assert.equal(res.statusCode, 401);
+    });
+});
+
+// ── 9. Connector health ───────────────────────────────────────────────────────
+
+describe('AUTH — connector health routes return 401 without session', () => {
+    const buildApp = () => {
+        const app = Fastify({ logger: false });
+        registerConnectorHealthRoutes(app, { getSession: noSession });
+        return app;
+    };
+
+    it('GET /connectors/:id/health → 401', async () => {
+        const res = await buildApp().inject({ method: 'GET', url: '/connectors/github/health' });
+        assert.equal(res.statusCode, 401);
+    });
+
+    it('GET /connectors/health/all → 401', async () => {
+        const res = await buildApp().inject({ method: 'GET', url: '/connectors/health/all' });
+        assert.equal(res.statusCode, 401);
+    });
+
+    it('POST /connectors/health/ping-all → 401', async () => {
+        const res = await buildApp().inject({ method: 'POST', url: '/connectors/health/ping-all' });
+        assert.equal(res.statusCode, 401);
+    });
+});
+
+// ── 10. Governance KPIs ───────────────────────────────────────────────────────
+
+describe('AUTH — governance KPI routes return 401 without session', () => {
+    const buildApp = () => {
+        const app = Fastify({ logger: false });
+        registerGovernanceKPIRoutes(app, { getSession: noSession });
+        return app;
+    };
+
+    it('GET /v1/governance/kpis → 401', async () => {
+        const res = await buildApp().inject({ method: 'GET', url: '/v1/governance/kpis' });
+        assert.equal(res.statusCode, 401);
+    });
+
+    it('GET /v1/governance/kpis/providers → 401', async () => {
+        const res = await buildApp().inject({ method: 'GET', url: '/v1/governance/kpis/providers' });
+        assert.equal(res.statusCode, 401);
+    });
+
+    it('GET /v1/governance/kpis/export → 401', async () => {
+        const res = await buildApp().inject({ method: 'GET', url: '/v1/governance/kpis/export?workspace_id=ws_1' });
+        assert.equal(res.statusCode, 401);
+    });
+
+    it('GET /v1/governance/sla-compliance → 401', async () => {
+        const res = await buildApp().inject({ method: 'GET', url: '/v1/governance/sla-compliance' });
+        assert.equal(res.statusCode, 401);
+    });
+});
+
+// ── 11. Agent questions ───────────────────────────────────────────────────────
+
+describe('AUTH — question routes return 401 without session', () => {
+    const buildApp = async () => {
+        const app = Fastify({ logger: false });
+        await registerQuestionRoutes(app, {} as never, { getSession: noSession });
+        return app;
+    };
+
+    it('POST /v1/questions → 401', async () => {
+        const app = await buildApp();
+        const res = await app.inject({ method: 'POST', url: '/v1/questions', payload: {} });
+        assert.equal(res.statusCode, 401);
+    });
+
+    it('POST /api/v1/questions → 401 (deprecated alias also protected)', async () => {
+        const app = await buildApp();
+        const res = await app.inject({ method: 'POST', url: '/api/v1/questions', payload: {} });
+        assert.equal(res.statusCode, 401);
+    });
+
+    it('POST /v1/questions/:id/answer → 401', async () => {
+        const app = await buildApp();
+        const res = await app.inject({ method: 'POST', url: '/v1/questions/q_1/answer', payload: {} });
+        assert.equal(res.statusCode, 401);
+    });
+
+    it('GET /v1/tasks/:taskId/questions → 401', async () => {
+        const app = await buildApp();
+        const res = await app.inject({ method: 'GET', url: '/v1/tasks/task_1/questions' });
+        assert.equal(res.statusCode, 401);
+    });
+
+    it('GET /v1/workspaces/:workspaceId/questions/pending → 401', async () => {
+        const app = await buildApp();
+        const res = await app.inject({ method: 'GET', url: '/v1/workspaces/ws_1/questions/pending' });
+        assert.equal(res.statusCode, 401);
+    });
+
+    it('POST /v1/workspaces/:workspaceId/questions/sweep-expired → 401', async () => {
+        const app = await buildApp();
+        const res = await app.inject({ method: 'POST', url: '/v1/workspaces/ws_1/questions/sweep-expired', payload: {} });
+        assert.equal(res.statusCode, 401);
+    });
+
+    it('GET /v1/questions/:questionId → 401', async () => {
+        const app = await buildApp();
+        const res = await app.inject({ method: 'GET', url: '/v1/questions/q_1' });
         assert.equal(res.statusCode, 401);
     });
 });

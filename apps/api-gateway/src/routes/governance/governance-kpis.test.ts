@@ -16,7 +16,7 @@ const KPI_SHAPE_KEYS = [
 
 test('GET /v1/governance/kpis returns 200 with correct shape', async () => {
     const app = Fastify();
-    registerGovernanceKPIRoutes(app);
+    registerGovernanceKPIRoutes(app, { getSession: () => ({ userId: 'u1', tenantId: 'tenant_test', workspaceIds: ['ws_test'], expiresAt: Date.now() + 3_600_000 }) });
 
     try {
         const res = await app.inject({ method: 'GET', url: '/v1/governance/kpis' });
@@ -52,12 +52,13 @@ test('GET /v1/governance/kpis returns 200 with correct shape', async () => {
 
 test('GET /v1/governance/kpis respects time_window_seconds and workspace_id query params', async () => {
     const app = Fastify();
-    registerGovernanceKPIRoutes(app);
+    registerGovernanceKPIRoutes(app, { getSession: () => ({ userId: 'u1', tenantId: 'tenant_test', workspaceIds: ['ws_test'], expiresAt: Date.now() + 3_600_000 }) });
 
     try {
         const res = await app.inject({
             method: 'GET',
-            url: '/v1/governance/kpis?time_window_seconds=7200&workspace_id=ws-test',
+            // workspace_id must be in session.workspaceIds ('ws_test')
+            url: '/v1/governance/kpis?time_window_seconds=7200&workspace_id=ws_test',
         });
 
         assert.equal(res.statusCode, 200);
@@ -72,7 +73,7 @@ test('GET /v1/governance/kpis respects time_window_seconds and workspace_id quer
 
 test('B3: GET /v1/governance/kpis includes provider_failover_rate field', async () => {
     const app = Fastify();
-    registerGovernanceKPIRoutes(app);
+    registerGovernanceKPIRoutes(app, { getSession: () => ({ userId: 'u1', tenantId: 'tenant_test', workspaceIds: ['ws_test'], expiresAt: Date.now() + 3_600_000 }) });
 
     try {
         const res = await app.inject({ method: 'GET', url: '/v1/governance/kpis' });
@@ -87,7 +88,7 @@ test('B3: GET /v1/governance/kpis includes provider_failover_rate field', async 
 
 test('B3: GET /v1/governance/kpis/export returns 400 when workspace_id is missing', async () => {
     const app = Fastify();
-    registerGovernanceKPIRoutes(app);
+    registerGovernanceKPIRoutes(app, { getSession: () => ({ userId: 'u1', tenantId: 'tenant_test', workspaceIds: ['ws_test'], expiresAt: Date.now() + 3_600_000 }) });
 
     try {
         const res = await app.inject({ method: 'GET', url: '/v1/governance/kpis/export' });
@@ -101,12 +102,13 @@ test('B3: GET /v1/governance/kpis/export returns 400 when workspace_id is missin
 
 test('B3: GET /v1/governance/kpis/export returns complete quality report with timestamps', async () => {
     const app = Fastify();
-    registerGovernanceKPIRoutes(app);
+    registerGovernanceKPIRoutes(app, { getSession: () => ({ userId: 'u1', tenantId: 'tenant_test', workspaceIds: ['ws_test'], expiresAt: Date.now() + 3_600_000 }) });
 
     try {
         const res = await app.inject({
             method: 'GET',
-            url: '/v1/governance/kpis/export?workspace_id=ws-b3-test&tenant_id=tenant-b3&report_date=2026-05-15',
+            // tenant_id is now always taken from the session — query param is ignored
+            url: '/v1/governance/kpis/export?workspace_id=ws-b3-test&report_date=2026-05-15',
         });
         assert.equal(res.statusCode, 200);
         const body = res.json() as Record<string, unknown>;
@@ -114,7 +116,8 @@ test('B3: GET /v1/governance/kpis/export returns complete quality report with ti
         // Report identity
         assert.equal(body['report_date'], '2026-05-15');
         assert.equal(body['workspace_id'], 'ws-b3-test');
-        assert.equal(body['tenant_id'], 'tenant-b3');
+        // tenant_id now comes from the session (never from the query string)
+        assert.equal(body['tenant_id'], 'tenant_test');
         assert.ok(body['generated_at'], 'generated_at timestamp must be present');
         assert.ok(body['period_start'], 'period_start must be present');
         assert.ok(body['period_end'], 'period_end must be present');
@@ -144,7 +147,7 @@ test('B3: GET /v1/governance/kpis/export returns complete quality report with ti
 
 test('B3: GET /v1/governance/kpis/export is workspace-scoped', async () => {
     const app = Fastify();
-    registerGovernanceKPIRoutes(app);
+    registerGovernanceKPIRoutes(app, { getSession: () => ({ userId: 'u1', tenantId: 'tenant_test', workspaceIds: ['ws_test'], expiresAt: Date.now() + 3_600_000 }) });
 
     try {
         const res1 = await app.inject({

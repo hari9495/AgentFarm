@@ -199,7 +199,7 @@ export const registerAllRoutes = async (
         trustedPublishers: [{ publisher: 'agentfarm-plugins', sourceRepoPrefix: 'https://github.com/agentfarm/' }],
     });
     registerWebhookRoutes(app, prisma, { getSession });
-    registerConnectorHealthRoutes(app);
+    registerConnectorHealthRoutes(app, { getSession });
     registerAdapterRegistryRoutes(app, { getSession });
     await registerOutboundWebhookRoutes(app, { getSession });
     await registerConnectorCapabilitiesRoutes(app, { getSession });
@@ -213,7 +213,7 @@ export const registerAllRoutes = async (
     await registerActivityRoutes(app, { getSession });
     await registerActivityFeedRoutes(app, { getSession });
     await registerDisclosureRoutes(app, { getSession });
-    registerGovernanceKPIRoutes(app);
+    registerGovernanceKPIRoutes(app, { getSession });
     await registerRetentionPolicyRoutes(app, prisma, { getSession });
     await registerCircuitBreakerRoutes(app, { getSession });
 
@@ -233,7 +233,7 @@ export const registerAllRoutes = async (
     await registerAgentDispatchRoutes(app, { getSession });
     registerAgentFeedbackRoutes(app, { getSession });
     await registerHandoffRoutes(app, { getSession });
-    await registerQuestionRoutes(app, prisma);
+    await registerQuestionRoutes(app, prisma, { getSession });
     await registerBotVersionRoutes(app, { getSession });
     registerAgentMessageRoutes(app, { getSession });
     await registerAgentBudgetRoutes(app, { getSession });

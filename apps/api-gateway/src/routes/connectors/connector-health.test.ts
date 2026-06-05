@@ -7,9 +7,18 @@ import { registerConnectorHealthRoutes } from './connector-health.js';
 // agent-runtime-stubs.js — the stub returns { id: 'stub', status: 'unknown' }
 // for ping and [] for getAllStatuses.
 
+const mockSession = {
+    userId: 'user_test',
+    tenantId: 'tenant_test',
+    workspaceIds: ['ws_test'],
+    scope: 'customer' as const,
+    expiresAt: Date.now() + 3_600_000,
+};
+const getSession = () => mockSession;
+
 const buildApp = () => {
     const app = Fastify();
-    registerConnectorHealthRoutes(app);
+    registerConnectorHealthRoutes(app, { getSession });
     return app;
 };
 

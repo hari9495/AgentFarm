@@ -7,19 +7,28 @@ import { InMemoryQuestionStore } from '@agentfarm/agent-question-service';
 
 process.env.DATABASE_URL ??= 'postgresql://agentfarm:agentfarm@localhost:5432/agentfarm';
 
+const makeSession = (tenantId: string, workspaceIds: string[]) => ({
+    userId: 'user_test',
+    tenantId,
+    workspaceIds,
+    scope: 'customer' as const,
+    expiresAt: Date.now() + 3_600_000,
+});
+
 test('POST /questions creates and GET /questions lists pending questions', async () => {
+    const session = makeSession('tenant_1', ['ws_1']);
     const app = Fastify({ logger: false });
     const prisma = new PrismaClient();
     const questionStore = new InMemoryQuestionStore();
 
-    await registerQuestionRoutes(app, prisma, { questionStore });
+    await registerQuestionRoutes(app, prisma, { questionStore, getSession: () => session });
 
     try {
         const create = await app.inject({
             method: 'POST',
             url: '/api/v1/questions',
             payload: {
-                tenantId: 'tenant_1',
+                // tenantId is now taken from session — not needed in body
                 workspaceId: 'ws_1',
                 taskId: 'task_1',
                 botId: 'bot_1',
@@ -51,18 +60,18 @@ test('POST /questions creates and GET /questions lists pending questions', async
 });
 
 test('POST /questions/:id/answer resolves a pending question', async () => {
+    const session = makeSession('tenant_2', ['ws_2']);
     const app = Fastify({ logger: false });
     const prisma = new PrismaClient();
     const questionStore = new InMemoryQuestionStore();
 
-    await registerQuestionRoutes(app, prisma, { questionStore });
+    await registerQuestionRoutes(app, prisma, { questionStore, getSession: () => session });
 
     try {
         const create = await app.inject({
             method: 'POST',
             url: '/api/v1/questions',
             payload: {
-                tenantId: 'tenant_2',
                 workspaceId: 'ws_2',
                 taskId: 'task_2',
                 botId: 'bot_2',

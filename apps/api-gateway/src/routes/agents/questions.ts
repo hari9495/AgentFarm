@@ -342,12 +342,26 @@ const processTimeoutPolicy = async (
     };
 };
 
+type SessionContext = {
+    userId: string;
+    tenantId: string;
+    workspaceIds: string[];
+    scope?: 'customer' | 'internal';
+    expiresAt: number;
+};
+
+export type RegisterQuestionRoutesOptions = {
+    questionStore?: IQuestionStore;
+    getSession: (request: FastifyRequest) => SessionContext | null;
+};
+
 export async function registerQuestionRoutes(
     app: FastifyInstance,
     prisma: PrismaClient,
-    options?: { questionStore?: IQuestionStore },
+    options: RegisterQuestionRoutesOptions,
 ) {
-    const questionStore = options?.questionStore ?? new PrismaQuestionStore(prisma);
+    const { getSession } = options;
+    const questionStore = options.questionStore ?? new PrismaQuestionStore(prisma);
 
     // Register route at both /v1/ (auth-protected by middleware) and /api/v1/ (deprecated alias — will be removed in v2)
     const on = (m: 'get' | 'post' | 'patch' | 'delete', p: string, h: (req: FastifyRequest, res: FastifyReply) => Promise<unknown>) => {
@@ -357,10 +371,12 @@ export async function registerQuestionRoutes(
 
     // ========== CREATE QUESTION (from agent) ==========
     on('post', '/questions', async (req: FastifyRequest, res: FastifyReply) => {
+        const session = getSession(req);
+        if (!session) return res.status(401).send({ error: 'Unauthorized' });
+
         try {
             const body = req.body as any;
             const {
-                tenantId,
                 workspaceId,
                 taskId,
                 botId,
@@ -373,13 +389,20 @@ export async function registerQuestionRoutes(
                 notificationTarget,
             } = body;
 
+            // tenantId is always taken from the authenticated session
+            const tenantId = session.tenantId;
+
             const normalizedContext = normalizeQuestionContext(context);
             const normalizedOptions = normalizeQuestionOptions(options);
 
-            if (!tenantId || !workspaceId || !taskId || !botId || !question || !normalizedContext) {
+            if (!workspaceId || !taskId || !botId || !question || !normalizedContext) {
                 return res.status(400).send({
-                    error: 'Missing required: tenantId, workspaceId, taskId, botId, question, context',
+                    error: 'Missing required: workspaceId, taskId, botId, question, context',
                 });
+            }
+
+            if (!session.workspaceIds.includes(workspaceId)) {
+                return res.status(403).send({ error: 'Workspace outside session scope' });
             }
 
             if (!['slack', 'teams', 'dashboard'].includes(askedVia)) {
@@ -418,6 +441,7 @@ export async function registerQuestionRoutes(
 
     // ========== ANSWER QUESTION (webhook from Slack/Teams or dashboard) ==========
     on('post', '/questions/:questionId/answer', async (req: FastifyRequest, res: FastifyReply) => {
+        if (!getSession(req)) return res.status(401).send({ error: 'Unauthorized' });
         try {
             const params = req.params as any;
             const body = req.body as any;
@@ -442,6 +466,7 @@ export async function registerQuestionRoutes(
 
     // ========== GET PENDING QUESTIONS FOR TASK ==========
     on('get', '/tasks/:taskId/questions', async (req: FastifyRequest, res: FastifyReply) => {
+        if (!getSession(req)) return res.status(401).send({ error: 'Unauthorized' });
         try {
             const params = req.params as any;
             const { taskId } = params;
@@ -456,9 +481,14 @@ export async function registerQuestionRoutes(
 
     // ========== GET PENDING QUESTIONS FOR WORKSPACE (orchestrator sweep) ==========
     on('get', '/workspaces/:workspaceId/questions/pending', async (req: FastifyRequest, res: FastifyReply) => {
+        const session = getSession(req);
+        if (!session) return res.status(401).send({ error: 'Unauthorized' });
         try {
             const params = req.params as any;
             const { workspaceId } = params;
+            if (!session.workspaceIds.includes(workspaceId)) {
+                return res.status(403).send({ error: 'Workspace outside session scope' });
+            }
 
             const questions = await questionStore.findPendingByWorkspace(workspaceId);
             return res.send({ workspaceId, pendingCount: questions.length, questions });
@@ -470,9 +500,14 @@ export async function registerQuestionRoutes(
 
     // ========== SWEEP EXPIRED QUESTIONS (orchestrator wake cycle) ==========
     on('post', '/workspaces/:workspaceId/questions/sweep-expired', async (req: FastifyRequest, res: FastifyReply) => {
+        const session = getSession(req);
+        if (!session) return res.status(401).send({ error: 'Unauthorized' });
         try {
             const params = req.params as any;
             const { workspaceId } = params;
+            if (!session.workspaceIds.includes(workspaceId)) {
+                return res.status(403).send({ error: 'Workspace outside session scope' });
+            }
 
             const expired = await sweepExpiredQuestions(workspaceId, questionStore);
             const resolutions = await Promise.all(expired.map((entry) => processTimeoutPolicy(prisma, entry)));
@@ -491,6 +526,7 @@ export async function registerQuestionRoutes(
 
     // ========== GET SPECIFIC QUESTION ==========
     on('get', '/questions/:questionId', async (req: FastifyRequest, res: FastifyReply) => {
+        if (!getSession(req)) return res.status(401).send({ error: 'Unauthorized' });
         try {
             const params = req.params as any;
             const { questionId } = params;

@@ -13,15 +13,25 @@ const getPrisma = async () => {
     return db.prisma;
 };
 
+type SessionContext = {
+    userId: string;
+    tenantId: string;
+    workspaceIds: string[];
+    scope?: 'customer' | 'internal';
+    expiresAt: number;
+};
+
+export type RegisterGovernanceKPIRoutesOptions = {
+    getSession: (request: FastifyRequest) => SessionContext | null;
+};
+
 type KPIQuery = {
     time_window_seconds?: string;
     workspace_id?: string;
-    tenant_id?: string;
 };
 
 type ExportQuery = {
     workspace_id: string;
-    tenant_id?: string;
     report_date?: string;
 };
 
@@ -37,13 +47,25 @@ const getProviderState = async () => {
     return globalProviderState;
 };
 
-export function registerGovernanceKPIRoutes(app: FastifyInstance): void {
+export function registerGovernanceKPIRoutes(
+    app: FastifyInstance,
+    options: RegisterGovernanceKPIRoutesOptions,
+): void {
+    const { getSession } = options;
+
     // Get KPI snapshot
     app.get(
         '/v1/governance/kpis',
         async (req: FastifyRequest<{ Querystring: KPIQuery }>, reply) => {
+            const session = getSession(req);
+            if (!session) return reply.status(401).send({ error: 'Unauthorized' });
+
             const timeWindow = parseInt((req.query as KPIQuery).time_window_seconds || '3600', 10);
             const workspaceId = (req.query as KPIQuery).workspace_id?.trim() || undefined;
+            // Validate workspace belongs to session tenant
+            if (workspaceId && !session.workspaceIds.includes(workspaceId)) {
+                return reply.status(403).send({ error: 'Workspace outside session scope' });
+            }
             const windowStart = new Date(Date.now() - timeWindow * 1000);
 
             const staticFallback = {
@@ -153,9 +175,9 @@ export function registerGovernanceKPIRoutes(app: FastifyInstance): void {
     );
 
     // Get provider health KPIs
-    app.get('/v1/governance/kpis/providers', async (_req, reply) => {
+    app.get('/v1/governance/kpis/providers', async (req, reply) => {
+        if (!getSession(req)) return reply.status(401).send({ error: 'Unauthorized' });
         const providerState = await getProviderState();
-
         const providers = providerState.getAllStates();
         return reply.send({ providers, total: providers.length });
     });
@@ -164,8 +186,12 @@ export function registerGovernanceKPIRoutes(app: FastifyInstance): void {
     app.get(
         '/v1/governance/kpis/export',
         async (req: FastifyRequest<{ Querystring: ExportQuery }>, reply) => {
+            const session = getSession(req);
+            if (!session) return reply.status(401).send({ error: 'Unauthorized' });
+
             const workspaceId = (req.query as ExportQuery).workspace_id?.trim();
-            const tenantId = (req.query as ExportQuery).tenant_id?.trim() ?? 'unknown';
+            // Always scope tenant to the authenticated session — never trust query param
+            const tenantId = session.tenantId;
 
             if (!workspaceId) {
                 return reply.status(400).send({ error: 'workspace_id is required' });
@@ -243,7 +269,8 @@ export function registerGovernanceKPIRoutes(app: FastifyInstance): void {
     );
 
     // Get SLA compliance
-    app.get('/v1/governance/sla-compliance', async (_req, reply) => {
+    app.get('/v1/governance/sla-compliance', async (req, reply) => {
+        if (!getSession(req)) return reply.status(401).send({ error: 'Unauthorized' });
         const compliance = {
             approval_sla_percent: 95,
             audit_sla_percent: 100,
