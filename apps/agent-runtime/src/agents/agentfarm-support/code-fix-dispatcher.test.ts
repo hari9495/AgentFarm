@@ -132,7 +132,7 @@ describe('dispatchToDeveloperAgent', () => {
 
     it('returns dispatched:false on HTTP error', async () => {
         const req = buildCodeFixRequest(makeReport(), 'Fix auth', 'issue-1');
-        const result = await dispatchToDeveloperAgent(req, BASE_DEPS, failFetch(500, 'Internal error'));
+        const result = await dispatchToDeveloperAgent(req, BASE_DEPS, failFetch(500, 'Internal error'), []);
         assert.equal(result.dispatched, false);
         assert.ok(result.detail);
     });
@@ -140,9 +140,52 @@ describe('dispatchToDeveloperAgent', () => {
     it('returns dispatched:false on network error', async () => {
         const req = buildCodeFixRequest(makeReport(), 'Fix auth', 'issue-1');
         const throwFetch = async () => { throw new Error('ECONNREFUSED'); };
-        const result = await dispatchToDeveloperAgent(req, BASE_DEPS, throwFetch as never);
+        const result = await dispatchToDeveloperAgent(req, BASE_DEPS, throwFetch as never, []);
         assert.equal(result.dispatched, false);
         assert.ok(result.detail?.includes('ECONNREFUSED'));
+    });
+
+    it('retries on transient failure and succeeds on 3rd attempt', async () => {
+        let callCount = 0;
+        const fetchFn = async () => {
+            callCount++;
+            if (callCount < 3) {
+                return { ok: false, status: 503, json: async () => ({ error: 'queue full' }), text: async () => '' } as Response;
+            }
+            return { ok: true, status: 202, json: async () => ({ dispatchId: 'retry-success' }), text: async () => '' } as Response;
+        };
+        const req = buildCodeFixRequest(makeReport(), 'Fix auth', 'issue-1');
+        const result = await dispatchToDeveloperAgent(req, BASE_DEPS, fetchFn, [0, 0, 0]);
+        assert.equal(result.dispatched, true);
+        assert.equal(result.dispatchId, 'retry-success');
+        assert.equal(callCount, 3);
+    });
+
+    it('returns dispatched:false with retriesExhausted:true after all retries fail', async () => {
+        const req = buildCodeFixRequest(makeReport(), 'Fix auth', 'issue-1');
+        const result = await dispatchToDeveloperAgent(req, BASE_DEPS, failFetch(503, 'queue full'), [0, 0, 0]);
+        assert.equal(result.dispatched, false);
+        assert.equal(result.retriesExhausted, true);
+    });
+
+    it('exhausts retries on repeated network errors and sets retriesExhausted:true', async () => {
+        let callCount = 0;
+        const throwFetch = async () => { callCount++; throw new Error('ECONNREFUSED'); };
+        const req = buildCodeFixRequest(makeReport(), 'Fix auth', 'issue-1');
+        const result = await dispatchToDeveloperAgent(req, BASE_DEPS, throwFetch as never, [0, 0, 0]);
+        assert.equal(result.dispatched, false);
+        assert.equal(result.retriesExhausted, true);
+        assert.equal(callCount, 4); // 1 initial + 3 retries
+    });
+
+    it('does not retry when DEVELOPER_AGENT_BOT_ID is missing (fast fail)', async () => {
+        let callCount = 0;
+        const countFetch = async () => { callCount++; return { ok: true, status: 202, json: async () => ({ dispatchId: 'x' }) } as Response; };
+        const req = buildCodeFixRequest(makeReport(), 'Fix auth', 'issue-1');
+        const result = await dispatchToDeveloperAgent(req, { ...BASE_DEPS, developerBotId: '' }, countFetch, [0, 0, 0]);
+        assert.equal(result.dispatched, false);
+        assert.equal(callCount, 0);
+        assert.equal(result.retriesExhausted, undefined);
     });
 
     it('includes error context and summary in task description', async () => {

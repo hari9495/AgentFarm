@@ -110,6 +110,8 @@ export interface RegisterSupportVoiceSessionRoutesOptions {
     gatewayBaseUrl?: string;
     serviceToken?: string;
     sarvamApiKey?: string;
+    /** Milliseconds of inactivity before the session is terminated. Default: SUPPORT_SESSION_TIMEOUT_MS env var, then 10 minutes. */
+    sessionTimeoutMs?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -127,6 +129,8 @@ export async function registerSupportVoiceSessionRoutes(
         opts.serviceToken ?? process.env['RUNTIME_TASK_SHARED_TOKEN'] ?? '';
     const sarvamApiKey =
         opts.sarvamApiKey ?? process.env['SARVAM_API_KEY'] ?? '';
+    const sessionTimeoutMs =
+        opts.sessionTimeoutMs ?? Number(process.env['SUPPORT_SESSION_TIMEOUT_MS'] ?? 10 * 60_000);
 
     const wss = new WebSocketServer({ noServer: true });
 
@@ -156,6 +160,21 @@ export async function registerSupportVoiceSessionRoutes(
         let currentIssueId: string | null = null;
         let currentLanguageCode = 'hi-IN';
 
+        // Forward-declared so the inactivity timer closure can reference it
+        let stt: InstanceType<typeof SarvamRealtimeSttClient> | null = null;
+
+        // Inactivity timer — resets on every audio chunk, fires if the client goes silent
+        let inactivityTimer: NodeJS.Timeout | null = null;
+
+        function resetInactivityTimer(): void {
+            if (inactivityTimer) clearTimeout(inactivityTimer);
+            inactivityTimer = setTimeout(() => {
+                sendFrame(ws, { type: 'error', text: 'Session closed due to inactivity' });
+                stt?.endSession();
+                ws.close(1000, 'inactivity timeout');
+            }, sessionTimeoutMs);
+        }
+
         // Create or reuse an issue for this voice session
         const issue: SupportIssueRecord = {
             id: randomUUID(),
@@ -180,7 +199,7 @@ export async function registerSupportVoiceSessionRoutes(
         sendFrame(ws, { type: 'connected', issueId: currentIssueId });
 
         // Sarvam STT client — only instantiate when API key is configured
-        const stt = sarvamApiKey ? new SarvamRealtimeSttClient({
+        stt = sarvamApiKey ? new SarvamRealtimeSttClient({
             apiKey: sarvamApiKey,
             languageCode: 'hi-IN',
             callbacks: {
@@ -227,8 +246,10 @@ export async function registerSupportVoiceSessionRoutes(
         }) : null;
 
         stt?.startSession();
+        resetInactivityTimer();
 
         ws.on('message', (data, isBinary) => {
+            resetInactivityTimer();
             if (isBinary) {
                 const buf = data instanceof Buffer ? data : Buffer.from(data as ArrayBuffer);
                 stt?.sendAudioChunk(buf);
@@ -238,10 +259,12 @@ export async function registerSupportVoiceSessionRoutes(
         });
 
         ws.on('close', () => {
+            if (inactivityTimer) clearTimeout(inactivityTimer);
             stt?.endSession();
         });
 
         ws.on('error', (err) => {
+            if (inactivityTimer) clearTimeout(inactivityTimer);
             console.warn('[support-voice-session] ws error:', err.message);
             stt?.endSession();
         });

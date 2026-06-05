@@ -223,6 +223,8 @@ export interface RegisterSupportChatSessionRoutesOptions {
     getSession: (req: FastifyRequest) => SessionContext | null;
     gatewayBaseUrl?: string;
     serviceToken?: string;
+    /** Milliseconds of inactivity before the session is terminated. Default: SUPPORT_SESSION_TIMEOUT_MS env var, then 10 minutes. */
+    sessionTimeoutMs?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -236,6 +238,8 @@ export async function registerSupportChatSessionRoutes(
     const { getSession } = opts;
     const gatewayBaseUrl = opts.gatewayBaseUrl ?? process.env['GATEWAY_BASE_URL'] ?? 'http://localhost:3000';
     const serviceToken = opts.serviceToken ?? process.env['RUNTIME_TASK_SHARED_TOKEN'] ?? '';
+    const sessionTimeoutMs =
+        opts.sessionTimeoutMs ?? Number(process.env['SUPPORT_SESSION_TIMEOUT_MS'] ?? 10 * 60_000);
 
     // Create a WebSocket server that piggybacks on the existing HTTP server
     // (noServer:true means it does NOT create its own HTTP server)
@@ -269,10 +273,24 @@ export async function registerSupportChatSessionRoutes(
     wss.on('connection', (ws: WebSocket, _req: unknown, session: SessionContext) => {
         let currentIssueId: string | null = null;
 
+        // Inactivity timer — resets on every message, fires if the client goes silent
+        let inactivityTimer: NodeJS.Timeout | null = null;
+
+        function resetInactivityTimer(): void {
+            if (inactivityTimer) clearTimeout(inactivityTimer);
+            inactivityTimer = setTimeout(() => {
+                sendFrame(ws, { type: 'error', text: 'Session closed due to inactivity' });
+                ws.close(1000, 'inactivity timeout');
+            }, sessionTimeoutMs);
+        }
+
+        resetInactivityTimer();
+
         // Send connected frame with session info
         sendFrame(ws, { type: 'connected', issueId: currentIssueId ?? undefined });
 
         ws.on('message', (data) => {
+            resetInactivityTimer();
             void (async () => {
                 let msg: Partial<ChatMessage>;
                 try {
@@ -329,8 +347,12 @@ export async function registerSupportChatSessionRoutes(
             })();
         });
 
+        ws.on('close', () => {
+            if (inactivityTimer) clearTimeout(inactivityTimer);
+        });
+
         ws.on('error', (err) => {
-            // Log but don't throw — connection is already broken
+            if (inactivityTimer) clearTimeout(inactivityTimer);
             console.warn('[support-chat-session] ws error:', err.message);
         });
     });

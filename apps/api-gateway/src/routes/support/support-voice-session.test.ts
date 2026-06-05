@@ -5,7 +5,7 @@
  * connects with the ws library to test the voice session protocol.
  */
 
-import test, { before, after, beforeEach } from 'node:test';
+import test, { before, after, beforeEach, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import Fastify from 'fastify';
 import { WebSocket } from 'ws';
@@ -208,4 +208,82 @@ test('support-voice-session: accepts binary audio frames without error', async (
     await new Promise((r) => setTimeout(r, 200));
     assert.equal(frames.length, 1, 'No error frame expected for binary audio');
     ws.close();
+});
+
+// ---------------------------------------------------------------------------
+// Inactivity timeout
+// ---------------------------------------------------------------------------
+
+describe('SupportVoiceSession — inactivity timeout', () => {
+    let timeoutServer: ReturnType<typeof Fastify>;
+    let timeoutPort: number;
+
+    before(async () => {
+        timeoutServer = Fastify();
+        await registerSupportVoiceSessionRoutes(timeoutServer, {
+            getSession: (req) => {
+                const cookie = req.headers?.cookie ?? '';
+                return cookie.includes('valid') ? VALID_SESSION : null;
+            },
+            sarvamApiKey: '',
+            sessionTimeoutMs: 150,
+        });
+        timeoutServer.get('/health', async () => ({ ok: true }));
+        await timeoutServer.listen({ port: 0, host: '127.0.0.1' });
+        timeoutPort = (timeoutServer.server.address() as { port: number }).port;
+    });
+
+    after(async () => {
+        await timeoutServer.close();
+    });
+
+    test('closes WebSocket after inactivity timeout fires', async () => {
+        const frames: string[] = [];
+        const closed = await new Promise<boolean>((resolve) => {
+            const ws = new WebSocket(`ws://127.0.0.1:${timeoutPort}/v1/support/voice-session`, {
+                headers: { cookie: 'session=valid' },
+            });
+            ws.on('message', (d) => frames.push(d.toString()));
+            ws.on('close', () => resolve(true));
+            setTimeout(() => resolve(false), 1_000);
+        });
+        assert.equal(closed, true, 'WebSocket should have been closed by inactivity timeout');
+    });
+
+    test('sends error frame before closing on inactivity timeout', async () => {
+        const frames: string[] = [];
+        await new Promise<void>((resolve) => {
+            const ws = new WebSocket(`ws://127.0.0.1:${timeoutPort}/v1/support/voice-session`, {
+                headers: { cookie: 'session=valid' },
+            });
+            ws.on('message', (d) => frames.push(d.toString()));
+            ws.on('close', () => resolve());
+            setTimeout(() => resolve(), 1_000);
+        });
+        const hasErrorFrame = frames.some((f) => {
+            try {
+                const parsed = JSON.parse(f) as { type: string; text?: string };
+                return parsed.type === 'error' && /inacti|timeout/i.test(parsed.text ?? '');
+            } catch { return false; }
+        });
+        assert.ok(hasErrorFrame, 'expected an error frame mentioning inactivity/timeout before close');
+    });
+
+    test('resets inactivity timer on binary audio frame — socket stays open', async () => {
+        // sessionTimeoutMs=150: send audio at ~80ms, check still open at ~200ms (only ~120ms since last audio)
+        const ws = await new Promise<WebSocket>((resolve, reject) => {
+            const client = new WebSocket(`ws://127.0.0.1:${timeoutPort}/v1/support/voice-session`, {
+                headers: { cookie: 'session=valid' },
+            });
+            client.on('open', () => resolve(client));
+            client.on('error', reject);
+            setTimeout(() => reject(new Error('connect timeout')), 3_000);
+        });
+
+        await new Promise((r) => setTimeout(r, 80));
+        ws.send(Buffer.from([0x00, 0x01, 0x02])); // reset the 150ms timer
+        await new Promise((r) => setTimeout(r, 120));
+        assert.equal(ws.readyState, WebSocket.OPEN, 'socket should still be open (only 120ms since last audio)');
+        ws.close();
+    });
 });

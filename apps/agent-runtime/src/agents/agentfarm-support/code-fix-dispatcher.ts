@@ -27,6 +27,8 @@ export interface CodeFixDispatchResult {
     dispatched: boolean;
     dispatchId?: string;
     detail?: string;
+    /** Set when all retry attempts were exhausted — caller should fall through to Tier 3. */
+    retriesExhausted?: boolean;
 }
 
 export type PrStatusResult =
@@ -44,6 +46,13 @@ export interface CodeFixDispatcherDeps {
 }
 
 export type FetchFn = (url: string, init?: RequestInit) => Promise<Response>;
+
+/** Default backoff delays between dispatch attempts: 2 s, 5 s, 10 s (3 retries). */
+export const DISPATCH_RETRY_DELAYS_MS = [2_000, 5_000, 10_000] as const;
+
+function sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 // ---------------------------------------------------------------------------
 // Build request
@@ -90,6 +99,7 @@ export async function dispatchToDeveloperAgent(
     request: CodeFixRequest,
     deps: CodeFixDispatcherDeps,
     fetchFn: FetchFn = fetch,
+    delaysMs: readonly number[] = DISPATCH_RETRY_DELAYS_MS,
 ): Promise<CodeFixDispatchResult> {
     const base = deps.gatewayBaseUrl.replace(/\/+$/, '');
     const toAgentId = deps.developerBotId ?? process.env['DEVELOPER_AGENT_BOT_ID'] ?? '';
@@ -114,26 +124,36 @@ export async function dispatchToDeveloperAgent(
         `\n\nInvestigate the root cause, implement a fix, and create a pull request. ` +
         `Reference issue ID: ${request.issueId}`;
 
-    try {
-        const res = await fetchFn(`${base}/v1/agents/dispatch`, {
-            method: 'POST',
-            headers: {
-                'content-type': 'application/json',
-                Authorization: `Bearer ${deps.serviceToken}`,
-            },
-            body: JSON.stringify({ fromAgentId, toAgentId, workspaceId, tenantId: request.tenantId, taskDescription }),
-            signal: AbortSignal.timeout(15_000),
-        });
+    // 1 initial attempt + up to delaysMs.length retries
+    let lastDetail = '';
+    for (let attempt = 0; attempt <= delaysMs.length; attempt++) {
+        try {
+            const res = await fetchFn(`${base}/v1/agents/dispatch`, {
+                method: 'POST',
+                headers: {
+                    'content-type': 'application/json',
+                    Authorization: `Bearer ${deps.serviceToken}`,
+                },
+                body: JSON.stringify({ fromAgentId, toAgentId, workspaceId, tenantId: request.tenantId, taskDescription }),
+                signal: AbortSignal.timeout(15_000),
+            });
 
-        const data = await res.json() as { dispatchId?: string; error?: string };
-        if (!res.ok || !data.dispatchId) {
-            return { dispatched: false, detail: data.error ?? `HTTP ${res.status}` };
+            const data = await res.json() as { dispatchId?: string; error?: string };
+            if (!res.ok || !data.dispatchId) {
+                lastDetail = data.error ?? `HTTP ${res.status}`;
+            } else {
+                return { dispatched: true, dispatchId: data.dispatchId };
+            }
+        } catch (err) {
+            lastDetail = err instanceof Error ? err.message : String(err);
         }
 
-        return { dispatched: true, dispatchId: data.dispatchId };
-    } catch (err) {
-        return { dispatched: false, detail: err instanceof Error ? err.message : String(err) };
+        if (attempt < delaysMs.length) {
+            await sleep(delaysMs[attempt]!);
+        }
     }
+
+    return { dispatched: false, detail: lastDetail, retriesExhausted: true };
 }
 
 // ---------------------------------------------------------------------------

@@ -294,6 +294,26 @@ export async function handleAgentfarmSupportAction(
             });
 
             if (!result.dispatched) {
+                // Tier 2 retries exhausted — automatically fall through to Tier 3 (infra dispatch)
+                if (result.retriesExhausted) {
+                    const infraFallback = buildInfraFixRequest(rawReport as DiagnosisReport, issueDescription, issueId);
+                    const infraResult = await dispatchToDevopsAgent(infraFallback, {
+                        ...deps,
+                        supportBotId: params.botId,
+                        workspaceId: params.workspaceId,
+                    });
+                    if (infraResult.dispatched) {
+                        return {
+                            ok: true,
+                            output: JSON.stringify({
+                                dispatched: true,
+                                tier: 3,
+                                dispatchId: infraResult.dispatchId,
+                                message: `Tier 2 queue full — DevOps agent dispatched as Tier 3 fallback (ID: ${infraResult.dispatchId ?? 'unknown'}).`,
+                            }),
+                        };
+                    }
+                }
                 if (params.workspaceId) {
                     const store = new GatewaySupportLessonStore(gatewayBaseUrl, serviceToken);
                     await ingestSupportFeedback(
@@ -308,6 +328,7 @@ export async function handleAgentfarmSupportAction(
                 ok: true,
                 output: JSON.stringify({
                     dispatched: true,
+                    tier: 2,
                     dispatchId: result.dispatchId,
                     message: `Developer agent dispatched (ID: ${result.dispatchId ?? 'unknown'}). A pull request will be raised once the fix is ready.`,
                 }),
