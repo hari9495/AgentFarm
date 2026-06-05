@@ -1,11 +1,18 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import ExcelJS from 'exceljs';
+
+// Skip OCR-unavailability tests when OCR tools are present in this environment.
+const markitdownAvail = spawnSync('markitdown', ['--version'], { encoding: 'utf8' }).status === 0;
+const tesseractAvail  = spawnSync('tesseract', ['--version'], { encoding: 'utf8' }).status === 0;
+const ocrAvail = markitdownAvail || tesseractAvail;
 import {
     convertToMarkdown,
     detectMimeType,
     isSupportedMimeType,
     UnsupportedFormatError,
+    OcrNotConfiguredError,
     SUPPORTED_MIME_TYPES,
 } from './index.js';
 
@@ -194,5 +201,44 @@ describe('convertToMarkdown', () => {
         const xml = '<config><key>value</key></config>';
         const result = await convertToMarkdown(Buffer.from(xml), 'text/xml');
         assert.match(result, /value/);
+    });
+
+    // ---------------------------------------------------------------------------
+    // Image OCR — OcrNotConfiguredError when neither MarkItDown nor Tesseract is available
+    // ---------------------------------------------------------------------------
+
+    test('image/png — throws OcrNotConfiguredError when OCR is unavailable',
+        { skip: ocrAvail ? 'OCR tools are available in this environment' : false },
+        async () => {
+        // In CI/dev neither Azure Doc Intelligence nor system Tesseract is configured,
+        // so both OCR paths fail and OcrNotConfiguredError must be thrown.
+        await assert.rejects(
+            () => convertToMarkdown(Buffer.from('\x89PNG\r\n\x1a\n'), 'image/png'),
+            (err: unknown) => {
+                assert.ok(err instanceof OcrNotConfiguredError, `expected OcrNotConfiguredError, got ${(err as Error)?.name}`);
+                assert.match((err as Error).message, /OCR/);
+                assert.match((err as Error).message, /MarkItDown|Tesseract/);
+                return true;
+            },
+        );
+    });
+
+    test('image/jpeg — throws OcrNotConfiguredError when OCR is unavailable',
+        { skip: ocrAvail ? 'OCR tools are available in this environment' : false },
+        async () => {
+        await assert.rejects(
+            () => convertToMarkdown(Buffer.from('\xff\xd8\xff'), 'image/jpeg'),
+            (err: unknown) => {
+                assert.ok(err instanceof OcrNotConfiguredError);
+                return true;
+            },
+        );
+    });
+
+    test('OcrNotConfiguredError has correct name and mentions configuration options', () => {
+        const err = new OcrNotConfiguredError();
+        assert.equal(err.name, 'OcrNotConfiguredError');
+        assert.match(err.message, /AZURE_DOCUMENT_INTELLIGENCE/);
+        assert.match(err.message, /tesseract/i);
     });
 });

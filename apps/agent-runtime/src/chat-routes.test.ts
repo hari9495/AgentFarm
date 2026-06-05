@@ -231,6 +231,143 @@ test('DELETE /chat/sessions/:sessionId: returns 404 for unknown session', async 
     }
 });
 
+// ── SSE streaming route ───────────────────────────────────────────────────────
+
+async function* mockTokenGenerator(tokens: string[]) {
+    for (const t of tokens) yield t;
+}
+
+test('POST /chat/sessions/:sessionId/messages/stream: 400 when tenantId missing', async () => {
+    const app = Fastify();
+    registerChatRoutes(app, { prisma: makePrisma() });
+    try {
+        const res = await app.inject({
+            method: 'POST',
+            url: '/chat/sessions/s1/messages/stream',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ content: 'Hi' }),
+        });
+        assert.equal(res.statusCode, 400);
+    } finally {
+        await app.close();
+    }
+});
+
+test('POST /chat/sessions/:sessionId/messages/stream: 400 when content missing', async () => {
+    const session = makeSession('s1', 'tenant_1');
+    const app = Fastify();
+    registerChatRoutes(app, {
+        prisma: makePrisma({ 'chatSession.findUnique': () => Promise.resolve(session) }),
+    });
+    try {
+        const res = await app.inject({
+            method: 'POST',
+            url: '/chat/sessions/s1/messages/stream',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ tenantId: 'tenant_1' }),
+        });
+        assert.equal(res.statusCode, 400);
+    } finally {
+        await app.close();
+    }
+});
+
+test('POST /chat/sessions/:sessionId/messages/stream: 404 for unknown session', async () => {
+    const app = Fastify();
+    registerChatRoutes(app, {
+        prisma: makePrisma({ 'chatSession.findUnique': () => Promise.resolve(null) }),
+    });
+    try {
+        const res = await app.inject({
+            method: 'POST',
+            url: '/chat/sessions/bad/messages/stream',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ tenantId: 'tenant_1', content: 'Hi' }),
+        });
+        assert.equal(res.statusCode, 404);
+    } finally {
+        await app.close();
+    }
+});
+
+test('POST /chat/sessions/:sessionId/messages/stream: streams SSE tokens and done event', async () => {
+    const session     = makeSession('s1', 'tenant_1');
+    const userMsg     = makeMessage('m1', 's1', 'user', 'Hi');
+    const assistantMsg = makeMessage('m2', 's1', 'assistant', 'Hello world');
+    let createCount   = 0;
+
+    const app = Fastify();
+    registerChatRoutes(app, {
+        prisma: makePrisma({
+            'chatSession.findUnique': () => Promise.resolve(session),
+            'chatMessage.findMany':   () => Promise.resolve([userMsg]),
+            'chatMessage.create':     () => {
+                createCount++;
+                return Promise.resolve(createCount === 1 ? userMsg : assistantMsg);
+            },
+            'chatSession.update': () => Promise.resolve(session),
+        }),
+        streamChatReply: () => mockTokenGenerator(['Hello', ' ', 'world']) as ReturnType<typeof import('./chat-service.js').streamChatReply>,
+    });
+
+    try {
+        const res = await app.inject({
+            method: 'POST',
+            url: '/chat/sessions/s1/messages/stream',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ tenantId: 'tenant_1', content: 'Hi' }),
+        });
+
+        assert.equal(res.headers['content-type'], 'text/event-stream');
+
+        const body = res.body;
+        // Should contain token events
+        assert.match(body, /"type":"token"/);
+        assert.match(body, /"content":"Hello"/);
+        assert.match(body, /"content":" "/);
+        assert.match(body, /"content":"world"/);
+        // Should contain done event with messageId
+        assert.match(body, /"type":"done"/);
+        assert.match(body, /"messageId":"m2"/);
+        // Should end with [DONE]
+        assert.match(body, /data: \[DONE\]/);
+        // Two chatMessage.create calls: user + assistant
+        assert.equal(createCount, 2);
+    } finally {
+        await app.close();
+    }
+});
+
+test('POST /chat/sessions/:sessionId/messages/stream: writes error event on LLM failure', async () => {
+    const session = makeSession('s1', 'tenant_1');
+    const userMsg  = makeMessage('m1', 's1', 'user', 'Hi');
+
+    const app = Fastify();
+    registerChatRoutes(app, {
+        prisma: makePrisma({
+            'chatSession.findUnique': () => Promise.resolve(session),
+            'chatMessage.findMany':   () => Promise.resolve([userMsg]),
+            'chatMessage.create':     () => Promise.resolve(userMsg),
+        }),
+        streamChatReply: () => (async function* () { throw new Error('LLM timeout'); })() as ReturnType<typeof import('./chat-service.js').streamChatReply>,
+    });
+
+    try {
+        const res = await app.inject({
+            method: 'POST',
+            url: '/chat/sessions/s1/messages/stream',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ tenantId: 'tenant_1', content: 'Hi' }),
+        });
+        assert.equal(res.headers['content-type'], 'text/event-stream');
+        assert.match(res.body, /"type":"error"/);
+        assert.match(res.body, /LLM timeout/);
+        assert.match(res.body, /data: \[DONE\]/);
+    } finally {
+        await app.close();
+    }
+});
+
 test('DELETE /chat/sessions/:sessionId: deletes session and returns 204', async () => {
     const session = makeSession('s1', 'tenant_1');
     let deleted = false;

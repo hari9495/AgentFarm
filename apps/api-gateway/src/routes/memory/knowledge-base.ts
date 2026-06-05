@@ -23,7 +23,10 @@ import {
     isSupportedMimeType,
     SUPPORTED_MIME_TYPES,
     UnsupportedFormatError,
+    OcrNotConfiguredError,
 } from '@agentfarm/document-converter';
+import { getTracer } from '@agentfarm/observability';
+import { SpanStatusCode } from '@opentelemetry/api';
 
 type SessionContext = {
     userId: string;
@@ -193,6 +196,9 @@ export async function registerKnowledgeBaseRoutes(
             if (err instanceof UnsupportedFormatError) {
                 return reply.code(415).send({ error: err.message });
             }
+            if (err instanceof OcrNotConfiguredError) {
+                return reply.code(503).send({ error: err.message });
+            }
             return reply.code(422).send({ error: `Conversion failed: ${(err as Error).message}` });
         }
 
@@ -255,7 +261,28 @@ export async function registerKnowledgeBaseRoutes(
             minSimilarity: (body.minSimilarity as number | undefined),
         };
 
-        const results = await searchHook(searchReq, embedFn, prisma);
+        const tracer = getTracer('agentfarm.rag.retrieval');
+        const span = tracer.startSpan('rag.search', {
+            attributes: {
+                'rag.tenant_id':  tenantId,
+                'rag.top_k':      searchReq.topK ?? 10,
+                'rag.min_sim':    searchReq.minSimilarity ?? 0.65,
+                'rag.query_len':  queryText.length,
+            },
+        });
+
+        let results: Awaited<ReturnType<typeof searchHook>>;
+        try {
+            results = await searchHook(searchReq, embedFn, prisma);
+            span.setAttribute('rag.result_count', results.length);
+            span.setStatus({ code: SpanStatusCode.OK });
+        } catch (err) {
+            span.recordException(err as Error);
+            span.setStatus({ code: SpanStatusCode.ERROR, message: (err as Error).message });
+            span.end();
+            throw err;
+        }
+        span.end();
 
         return reply.code(200).send({ results });
     });

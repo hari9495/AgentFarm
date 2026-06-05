@@ -400,6 +400,26 @@ test('POST /v1/knowledge-base/ingest-file — MIME type resolved from filename e
     assert.ok(!capturedWriteReq!.content.includes('<p>'), 'HTML tags should be stripped');
 });
 
+test('POST /v1/knowledge-base/ingest-file — 503 when image OCR is not configured', async () => {
+    const app = makeApp(session);
+    // PNG magic bytes — real image so MIME detection works, but OCR will fail
+    const pngMagic = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    const { body, contentType } = makeMultipartBody(
+        { sourceType: 'scan' },
+        { filename: 'screenshot.png', content: pngMagic, mimeType: 'image/png' },
+    );
+    const res = await app.inject({
+        method: 'POST', url: '/v1/knowledge-base/ingest-file',
+        headers: { 'content-type': contentType },
+        payload: body,
+    });
+    await app.close();
+    // Without Azure Doc Intelligence or Tesseract, OCR fails with a config error
+    assert.equal(res.statusCode, 503);
+    const respBody = res.json<{ error: string }>();
+    assert.match(respBody.error, /OCR/);
+});
+
 test('POST /v1/knowledge-base/ingest-file — sourceUrl is set from field when provided', async () => {
     capturedWriteReq = undefined;
     const app = makeApp(session);

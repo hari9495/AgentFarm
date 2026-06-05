@@ -3,6 +3,7 @@ export {
     detectMimeType,
     isSupportedMimeType,
     UnsupportedFormatError,
+    OcrNotConfiguredError,
     SUPPORTED_MIME_TYPES,
 } from './converter.js';
 

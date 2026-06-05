@@ -2,7 +2,7 @@ import TurndownService from 'turndown';
 import mammoth from 'mammoth';
 import ExcelJS from 'exceljs';
 import { spawnSync } from 'node:child_process';
-import { writeFileSync, unlinkSync, existsSync } from 'node:fs';
+import { writeFileSync, readFileSync, unlinkSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
@@ -43,11 +43,12 @@ async function markitdownConvert(buffer: Buffer, ext: string): Promise<string> {
             maxBuffer: 10 * 1024 * 1024,
             timeout: 30_000,
         });
-        if (result.status === 0 && result.stdout) {
-            return result.stdout.trim();
+        const out = result.stdout?.trim() ?? '';
+        if (result.status === 0 && out) {
+            return out;
         }
         // Fall back — caller will use legacy parser
-        throw new Error(result.stderr || `markitdown exited ${result.status}`);
+        throw new Error(result.stderr?.trim() || `markitdown exited ${result.status}`);
     } finally {
         try { unlinkSync(tmpPath); } catch { /* ignore */ }
     }
@@ -114,6 +115,47 @@ export class UnsupportedFormatError extends Error {
     constructor(mimeType: string) {
         super(`Unsupported MIME type: ${mimeType}`);
         this.name = 'UnsupportedFormatError';
+    }
+}
+
+/**
+ * Thrown when image OCR is attempted but neither MarkItDown (Azure Document
+ * Intelligence) nor a local Tesseract installation is available.
+ * Callers should surface this as a 503 so operators know it's a config gap,
+ * not a bug in the document conversion pipeline.
+ */
+export class OcrNotConfiguredError extends Error {
+    constructor() {
+        super(
+            'Image OCR is not available. Configure one of: ' +
+            '(1) MarkItDown with AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT + AZURE_DOCUMENT_INTELLIGENCE_KEY, ' +
+            'or (2) install Tesseract locally (apt-get install tesseract-ocr / brew install tesseract).',
+        );
+        this.name = 'OcrNotConfiguredError';
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Tesseract local OCR fallback (system binary — no npm dep required)
+// ---------------------------------------------------------------------------
+
+async function tesseractOcr(buffer: Buffer, ext: string): Promise<string> {
+    const id = randomBytes(8).toString('hex');
+    const tmpIn  = join(tmpdir(), `af-ocr-in-${id}${ext}`);
+    const tmpOut = join(tmpdir(), `af-ocr-out-${id}`); // tesseract appends .txt
+    try {
+        writeFileSync(tmpIn, buffer);
+        const result = spawnSync('tesseract', [tmpIn, tmpOut, '-l', 'eng', 'quiet'], {
+            encoding: 'utf8',
+            timeout: 30_000,
+        });
+        if (result.status !== 0 || result.error) {
+            throw new Error(result.stderr?.trim() || `tesseract exited ${result.status}`);
+        }
+        return readFileSync(`${tmpOut}.txt`, 'utf8').trim();
+    } finally {
+        try { unlinkSync(tmpIn); }            catch { /* ignore */ }
+        try { unlinkSync(`${tmpOut}.txt`); }  catch { /* ignore */ }
     }
 }
 
@@ -211,7 +253,16 @@ export async function convertToMarkdown(buffer: Buffer, mimeType: string): Promi
                 'image/png': '.png', 'image/jpeg': '.jpg',
                 'image/gif': '.gif', 'image/webp': '.webp',
             };
-            return await markitdownConvert(buffer, imgExtMap[base]);
+            const ext = imgExtMap[base]!;
+            // Primary: MarkItDown with Azure Document Intelligence OCR
+            try {
+                return await markitdownConvert(buffer, ext);
+            } catch { /* fall through to Tesseract */ }
+            // Fallback: local Tesseract binary (no cloud credentials needed)
+            try {
+                return await tesseractOcr(buffer, ext);
+            } catch { /* fall through to error */ }
+            throw new OcrNotConfiguredError();
         }
 
         case 'message/rfc822': {

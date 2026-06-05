@@ -319,6 +319,32 @@ export async function handlePairmodeAction(
                 }
             }
 
+            // Team context delta: load the previous pair suggestion from memory to
+            // detect which files are NEW since the last session and avoid re-suggesting
+            // work the developer already acted on.
+            let lastSuggestionFiles: string[] = [];
+            let lastSuggestionDate = '';
+            try {
+                const prevResult = await executeAction('workspace_memory_search', {
+                    query: `pair_suggest ${taskContext || 'development'}`,
+                    tags:  ['pair_suggest'],
+                    limit: 1,
+                });
+                if (prevResult.ok && prevResult.output.trim()) {
+                    const tsMatch  = /pair_suggest \((\d{4}-\d{2}-\d{2})\)/.exec(prevResult.output);
+                    if (tsMatch) lastSuggestionDate = tsMatch[1]!;
+                    const filesMatch = /Files: ([^\n]+)/.exec(prevResult.output);
+                    if (filesMatch) {
+                        lastSuggestionFiles = filesMatch[1]!.split(',').map((f) => f.trim()).filter(Boolean);
+                    }
+                }
+            } catch { /* best-effort — delta is advisory */ }
+
+            // Files not seen in the previous suggestion are the delta
+            const deltaFiles = lastSuggestionFiles.length > 0
+                ? changedFiles.filter((f) => !lastSuggestionFiles.includes(f))
+                : changedFiles;
+
             // Recent memory for additional context
             const memResult = await executeAction('workspace_memory_search', {
                 query: taskContext || 'recent development',
@@ -326,17 +352,21 @@ export async function handlePairmodeAction(
             });
             const recentMemory = memResult.ok ? memResult.output : undefined;
 
-            // LLM suggestion
+            // LLM suggestion — prefer delta files when we have prior context
+            const filesToSuggestOn = deltaFiles.length > 0 ? deltaFiles : changedFiles;
+
             let suggestion = 'No suggestion available — LLM not connected.';
             let rationale  = '';
             let codeExample: string | null = null;
             let fileToEdit: string | null  = null;
             let priority: 'high' | 'medium' | 'low' = 'medium';
 
-            if (callLlm && (changedFiles.length > 0 || taskContext)) {
+            if (callLlm && (filesToSuggestOn.length > 0 || taskContext)) {
                 const prompt = buildPairSuggestPrompt({
-                    changedFiles,
-                    fileContents,
+                    changedFiles: filesToSuggestOn,
+                    fileContents: Object.fromEntries(
+                        Object.entries(fileContents).filter(([k]) => filesToSuggestOn.includes(k)),
+                    ),
                     taskContext:  taskContext  || undefined,
                     techStack:    techStack    || undefined,
                     recentMemory: recentMemory || undefined,
@@ -354,15 +384,34 @@ export async function handlePairmodeAction(
                 priority    = parsed.priority;
             }
 
+            // Store this suggestion in memory so the next call can compute a delta
+            const todayStr = new Date().toISOString().slice(0, 10);
+            try {
+                await executeAction('workspace_memory_write', {
+                    content: [
+                        `pair_suggest (${todayStr}):`,
+                        `Files: ${changedFiles.join(', ')}`,
+                        `Suggestion: ${suggestion.slice(0, 200)}`,
+                    ].join('\n'),
+                    tags: ['pair_suggest', taskContext || 'development'],
+                });
+            } catch { /* best-effort */ }
+
             return safeJson({
-                changed_files:  changedFiles,
-                files_read:     Object.keys(fileContents).length,
+                changed_files:     changedFiles,
+                files_read:        Object.keys(fileContents).length,
+                // Delta: files not seen in the previous suggestion
+                monitoring_since:  lastSuggestionDate || null,
+                delta_file_count:  deltaFiles.length,
+                delta_files:       deltaFiles,
                 suggestion,
                 rationale,
-                code_example:   codeExample,
-                file_to_edit:   fileToEdit,
+                code_example:      codeExample,
+                file_to_edit:      fileToEdit,
                 priority,
-                summary: `Pair suggestion (${priority}): ${suggestion.slice(0, 100)}`,
+                summary: lastSuggestionDate
+                    ? `Pair suggestion (since ${lastSuggestionDate}, ${deltaFiles.length} new file(s), ${priority}): ${suggestion.slice(0, 80)}`
+                    : `Pair suggestion (${priority}): ${suggestion.slice(0, 100)}`,
             });
         }
 
