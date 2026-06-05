@@ -1134,6 +1134,7 @@ export const registerConnectorActionRoutes = async (
             connectors: connectors.map((c) => ({
                 connector_id: c.connectorId,
                 connector_type: c.connectorType,
+                is_connected: c.status === 'connected',
                 status: c.status,
                 remediation: remediationFor(c.status, c.lastErrorClass ?? null),
                 last_healthcheck_at: c.lastHealthcheckAt?.toISOString() ?? null,

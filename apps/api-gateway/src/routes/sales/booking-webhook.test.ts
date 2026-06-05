@@ -140,7 +140,7 @@ describe('POST /v1/webhooks/booking', () => {
         }
     });
 
-    test('returns 200 but ignores payload when HMAC signature is invalid', async () => {
+    test('returns 401 when HMAC signature is invalid', async () => {
         const prisma = makePrismaStub(null, {
             id: 'cfg-1',
             bookingWebhookSecret: 'super-secret-key',
@@ -161,13 +161,7 @@ describe('POST /v1/webhooks/booking', () => {
                 },
             });
 
-            assert.equal(res.statusCode, 200);
-            const body = res.json<{ received: boolean }>();
-            assert.equal(body.received, true);
-
-            // No booking event should be created
-            const bookingCreated = prisma._created.find((r: Row) => r['type'] === 'booking');
-            assert.equal(bookingCreated, undefined, 'should NOT create booking on invalid signature');
+            assert.equal(res.statusCode, 401);
         } finally {
             await app.close();
         }

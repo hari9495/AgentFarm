@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import Fastify from 'fastify';
 import { registerConnectorAuthRoutes, type ConnectorAuthRepo, type SessionContext } from './connector-auth.js';
+import { registerConnectorActionRoutes, type ConnectorActionRepo } from './connector-actions.js';
 
 type Metadata = {
     connectorId: string;
@@ -149,6 +150,47 @@ const sessionContext = (): SessionContext => ({
     workspaceIds: ['ws_1'],
     expiresAt: Date.now() + 3600_000,
 });
+
+type ActionMetadata = {
+    connectorId: string;
+    tenantId: string;
+    workspaceId: string;
+    connectorType: string;
+    status: string;
+    authMode: string;
+    secretRefId: string | null;
+    tokenExpiresAt: Date | null;
+    lastRefreshAt: Date | null;
+    scopeStatus: string | null;
+    lastErrorClass: string | null;
+    lastHealthcheckAt?: Date | null;
+};
+
+const createFakeActionRepo = (): ConnectorActionRepo & {
+    upsertAuthMetadata: (input: ActionMetadata) => Promise<void>;
+} => {
+    const metadata = new Map<string, ActionMetadata>();
+    return {
+        async upsertAuthMetadata(input) {
+            metadata.set(input.connectorId, input);
+        },
+        async findAuthMetadata(connectorId) {
+            return (metadata.get(connectorId) ?? null) as never;
+        },
+        async listAuthMetadata({ tenantId, workspaceId }) {
+            const results: ActionMetadata[] = [];
+            for (const m of metadata.values()) {
+                if (m.tenantId === tenantId && m.workspaceId === workspaceId) {
+                    results.push(m);
+                }
+            }
+            return results as never;
+        },
+        async updateAuthMetadata() { /* no-op */ },
+        async createConnectorActionLog() { /* no-op */ },
+        async listConnectorActions() { return []; },
+    };
+};
 
 test('oauth initiate creates connector auth session and returns authorization URL', async () => {
     const app = Fastify();
@@ -793,7 +835,7 @@ test('revoke endpoint clears connector auth token reference and marks revoked', 
 
 test('health summary returns 401 when no session', async () => {
     const app = Fastify();
-    await registerConnectorAuthRoutes(app, {
+    await registerConnectorActionRoutes(app, {
         getSession: () => null,
     });
     try {
@@ -806,7 +848,7 @@ test('health summary returns 401 when no session', async () => {
 
 test('health summary returns 403 when workspace not in session scope', async () => {
     const app = Fastify();
-    await registerConnectorAuthRoutes(app, {
+    await registerConnectorActionRoutes(app, {
         getSession: () => sessionContext(),
     });
     try {
@@ -819,8 +861,8 @@ test('health summary returns 403 when workspace not in session scope', async () 
 
 test('health summary returns empty connectors array when none configured', async () => {
     const app = Fastify();
-    const repo = createFakeRepo();
-    await registerConnectorAuthRoutes(app, {
+    const repo = createFakeActionRepo();
+    await registerConnectorActionRoutes(app, {
         getSession: () => sessionContext(),
         repo,
     });
@@ -836,20 +878,9 @@ test('health summary returns empty connectors array when none configured', async
 
 test('health summary returns connected connector status when OAuth is complete', async () => {
     const app = Fastify();
-    const repo = createFakeRepo();
+    const repo = createFakeActionRepo();
 
-    await registerConnectorAuthRoutes(app, {
-        getSession: () => sessionContext(),
-        repo,
-        nonceGenerator: () => 'state_nonce_health',
-        env: {
-            API_BASE_URL: 'http://localhost:3000',
-            CONNECTOR_GITHUB_AUTHORIZE_URL: 'https://github.com/login/oauth/authorize',
-            CONNECTOR_GITHUB_CLIENT_ID: 'gh-client-456',
-        },
-    });
-
-    // Manually seed connected metadata
+    // Manually seed connected metadata before registering routes
     await repo.upsertAuthMetadata({
         connectorId: 'github:tenant_1:ws_1',
         tenantId: 'tenant_1',
@@ -862,6 +893,11 @@ test('health summary returns connected connector status when OAuth is complete',
         lastRefreshAt: new Date(),
         scopeStatus: 'full',
         lastErrorClass: null,
+    });
+
+    await registerConnectorActionRoutes(app, {
+        getSession: () => sessionContext(),
+        repo,
     });
 
     try {
