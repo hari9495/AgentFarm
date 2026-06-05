@@ -311,10 +311,19 @@ export const registerAllRoutes = async (
     registerContentDraftRoutes(app, { getSession });
     registerCommsDraftRoutes(app, { getSession });
 
-    // Support
+    // Support — also accept portal_session cookie for WS connections
+    const getPortalSession = async (cookies: string) => {
+        const { verifyPortalSession } = await import('./lib/portal-session.js');
+        const item = cookies.split(';').map((v) => v.trim()).find((v) => v.startsWith('portal_session='));
+        if (!item) return null;
+        const token = decodeURIComponent(item.slice('portal_session='.length));
+        const data = await verifyPortalSession(token, prisma);
+        if (!data) return null;
+        return { userId: data.accountId, tenantId: data.tenantId, workspaceIds: [], expiresAt: Date.now() + 3_600_000 };
+    };
     await registerSupportIssueRoutes(app, { getSession });
-    await registerSupportChatSessionRoutes(app, { getSession });
-    await registerSupportVoiceSessionRoutes(app, { getSession });
+    await registerSupportChatSessionRoutes(app, { getSession, getPortalSession });
+    await registerSupportVoiceSessionRoutes(app, { getSession, getPortalSession });
 
     // Ops monitoring
     await registerOpsSlaRoutes(app);

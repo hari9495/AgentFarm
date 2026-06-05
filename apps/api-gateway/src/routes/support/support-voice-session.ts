@@ -107,6 +107,8 @@ function sendFrame(ws: WebSocket, frame: VoiceFrame): void {
 
 export interface RegisterSupportVoiceSessionRoutesOptions {
     getSession: (req: FastifyRequest) => SessionContext | null;
+    /** Optional async lookup for portal_session cookie — used when agentfarm_session is absent. */
+    getPortalSession?: (cookies: string) => Promise<SessionContext | null>;
     gatewayBaseUrl?: string;
     serviceToken?: string;
     sarvamApiKey?: string;
@@ -122,7 +124,7 @@ export async function registerSupportVoiceSessionRoutes(
     app: FastifyInstance,
     opts: RegisterSupportVoiceSessionRoutesOptions,
 ): Promise<void> {
-    const { getSession } = opts;
+    const { getSession, getPortalSession } = opts;
     const gatewayBaseUrl =
         opts.gatewayBaseUrl ?? process.env['GATEWAY_BASE_URL'] ?? 'http://localhost:3000';
     const serviceToken =
@@ -135,25 +137,31 @@ export async function registerSupportVoiceSessionRoutes(
     const wss = new WebSocketServer({ noServer: true });
 
     app.server.on('upgrade', (req, socket, head) => {
-        const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
-        if (url.pathname !== '/v1/support/voice-session') {
-            // Not our path — let other handlers deal with it
-            return;
-        }
+        void (async () => {
+            const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
+            if (url.pathname !== '/v1/support/voice-session') {
+                return;
+            }
 
-        const rawCookie = req.headers['cookie'] ?? '';
-        const mockReq = { headers: { cookie: rawCookie } } as unknown as FastifyRequest;
-        const session = getSession(mockReq);
+            const rawCookie = req.headers['cookie'] ?? '';
+            const mockReq = { headers: { cookie: rawCookie } } as unknown as FastifyRequest;
+            let session: SessionContext | null = getSession(mockReq);
 
-        if (!session || session.expiresAt < Date.now()) {
-            socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
-            socket.destroy();
-            return;
-        }
+            // Fall back to portal_session if no agentfarm_session present
+            if ((!session || session.expiresAt < Date.now()) && getPortalSession) {
+                session = await getPortalSession(rawCookie);
+            }
 
-        wss.handleUpgrade(req, socket, head, (ws) => {
-            wss.emit('connection', ws, req, session);
-        });
+            if (!session || session.expiresAt < Date.now()) {
+                socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+                socket.destroy();
+                return;
+            }
+
+            wss.handleUpgrade(req, socket, head, (ws) => {
+                wss.emit('connection', ws, req, session!);
+            });
+        })();
     });
 
     wss.on('connection', (ws: WebSocket, _req: unknown, session: SessionContext) => {
