@@ -252,23 +252,169 @@ describe('agentfarm_support_voice_reply', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Sprint 23 stubs — must return ok:false with informative message
+// Sprint 23: Code fix dispatch
 // ---------------------------------------------------------------------------
 
-describe('unimplemented action stubs', () => {
-    const stubs: Array<AgentfarmSupportActionParams['actionType']> = [
-        'agentfarm_support_code_fix_dispatch',
-        'agentfarm_support_infra_fix_dispatch',
-        'agentfarm_support_escalate',
-        'agentfarm_support_resolve',
-    ];
-
-    for (const actionType of stubs) {
-        it(`${actionType} returns ok:false with not-yet-implemented message`, async () => {
-            const { handleAgentfarmSupportAction } = await import('./action-handler.js');
-            const result = await handleAgentfarmSupportAction({ ...BASE, actionType, payload: {} });
-            assert.equal(result.ok, false);
-            assert.ok(result.errorOutput?.includes('not yet implemented'));
+describe('agentfarm_support_code_fix_dispatch', () => {
+    it('returns ok:false when diagnosisReport is missing', async () => {
+        const { handleAgentfarmSupportAction } = await import('./action-handler.js');
+        const result = await handleAgentfarmSupportAction({
+            ...BASE,
+            actionType: 'agentfarm_support_code_fix_dispatch',
+            payload: { issueId: 'issue-1', issueDescription: 'Auth broken' },
         });
-    }
+        assert.equal(result.ok, false);
+        assert.ok(result.errorOutput?.includes('diagnosisReport'));
+    });
+
+    it('returns ok:false when DEVELOPER_AGENT_BOT_ID is not configured', async () => {
+        const { handleAgentfarmSupportAction } = await import('./action-handler.js');
+        const diagnosisReport = {
+            tenantId: 'tenant-1', generatedAt: new Date().toISOString(),
+            taskLogs: { status: 'ok', entries: [] }, otelTraces: { status: 'ok', spans: [] },
+            connectorHealth: { status: 'ok', connectors: [] },
+            approvalQueue: { status: 'ok', state: { pendingCount: 0, isJammed: false, oldestPendingAgeMinutes: 0 } },
+            billing: { status: 'ok', state: { subscriptionStatus: 'active', budgetPolicyEnabled: false, dailyUsagePercent: 0, monthlyUsagePercent: 0, isThrottled: false, isHardStopped: false } },
+            provisioning: { status: 'ok', state: { runningJobs: 0, stuckJobs: [] } },
+            auditLog: { status: 'ok', entries: [] }, summary: [],
+        };
+        // Env var not set → dispatchToDeveloperAgent returns dispatched:false
+        const savedEnv = process.env['DEVELOPER_AGENT_BOT_ID'];
+        delete process.env['DEVELOPER_AGENT_BOT_ID'];
+        try {
+            const result = await handleAgentfarmSupportAction({
+                ...BASE,
+                actionType: 'agentfarm_support_code_fix_dispatch',
+                payload: { diagnosisReport, issueId: 'issue-1', issueDescription: 'Auth broken' },
+            });
+            assert.equal(result.ok, false);
+            assert.ok(result.errorOutput?.includes('DEVELOPER_AGENT_BOT_ID'));
+        } finally {
+            if (savedEnv !== undefined) process.env['DEVELOPER_AGENT_BOT_ID'] = savedEnv;
+        }
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Sprint 23: Infra fix dispatch
+// ---------------------------------------------------------------------------
+
+describe('agentfarm_support_infra_fix_dispatch', () => {
+    it('returns ok:false when diagnosisReport is missing', async () => {
+        const { handleAgentfarmSupportAction } = await import('./action-handler.js');
+        const result = await handleAgentfarmSupportAction({
+            ...BASE,
+            actionType: 'agentfarm_support_infra_fix_dispatch',
+            payload: { issueId: 'issue-2', issueDescription: 'Infra down' },
+        });
+        assert.equal(result.ok, false);
+        assert.ok(result.errorOutput?.includes('diagnosisReport'));
+    });
+
+    it('returns ok:false when DEVOPS_AGENT_BOT_ID is not configured', async () => {
+        const { handleAgentfarmSupportAction } = await import('./action-handler.js');
+        const diagnosisReport = {
+            tenantId: 'tenant-1', generatedAt: new Date().toISOString(),
+            taskLogs: { status: 'ok', entries: [] }, otelTraces: { status: 'ok', spans: [] },
+            connectorHealth: { status: 'ok', connectors: [] },
+            approvalQueue: { status: 'ok', state: { pendingCount: 0, isJammed: false, oldestPendingAgeMinutes: 0 } },
+            billing: { status: 'ok', state: { subscriptionStatus: 'active', budgetPolicyEnabled: false, dailyUsagePercent: 0, monthlyUsagePercent: 0, isThrottled: false, isHardStopped: false } },
+            provisioning: { status: 'ok', state: { runningJobs: 0, stuckJobs: [] } },
+            auditLog: { status: 'ok', entries: [] }, summary: [],
+        };
+        const savedEnv = process.env['DEVOPS_AGENT_BOT_ID'];
+        delete process.env['DEVOPS_AGENT_BOT_ID'];
+        try {
+            const result = await handleAgentfarmSupportAction({
+                ...BASE,
+                actionType: 'agentfarm_support_infra_fix_dispatch',
+                payload: { diagnosisReport, issueId: 'issue-2', issueDescription: 'Infra down' },
+            });
+            assert.equal(result.ok, false);
+            assert.ok(result.errorOutput?.includes('DEVOPS_AGENT_BOT_ID'));
+        } finally {
+            if (savedEnv !== undefined) process.env['DEVOPS_AGENT_BOT_ID'] = savedEnv;
+        }
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Sprint 23: Escalate
+// ---------------------------------------------------------------------------
+
+describe('agentfarm_support_escalate', () => {
+    it('returns ok:false when diagnosisReport is missing', async () => {
+        const { handleAgentfarmSupportAction } = await import('./action-handler.js');
+        const result = await handleAgentfarmSupportAction({
+            ...BASE,
+            actionType: 'agentfarm_support_escalate',
+            payload: { issueId: 'issue-3', issueDescription: 'All tiers failed' },
+        });
+        assert.equal(result.ok, false);
+        assert.ok(result.errorOutput?.includes('diagnosisReport'));
+    });
+
+    it('returns ok:true with escalated field when no channel configured', async () => {
+        const { handleAgentfarmSupportAction } = await import('./action-handler.js');
+        const diagnosisReport = {
+            tenantId: 'tenant-1', generatedAt: new Date().toISOString(),
+            taskLogs: { status: 'ok', entries: [] }, otelTraces: { status: 'ok', spans: [] },
+            connectorHealth: { status: 'ok', connectors: [] },
+            approvalQueue: { status: 'ok', state: { pendingCount: 0, isJammed: false, oldestPendingAgeMinutes: 0 } },
+            billing: { status: 'ok', state: { subscriptionStatus: 'active', budgetPolicyEnabled: false, dailyUsagePercent: 0, monthlyUsagePercent: 0, isThrottled: false, isHardStopped: false } },
+            provisioning: { status: 'ok', state: { runningJobs: 0, stuckJobs: [] } },
+            auditLog: { status: 'ok', entries: [] }, summary: [],
+        };
+        // No MCP URLs in env → sendEscalation returns escalated:false
+        const savedSlack = process.env['MCP_SLACK_URL'];
+        const savedPd = process.env['MCP_PAGERDUTY_URL'];
+        delete process.env['MCP_SLACK_URL'];
+        delete process.env['MCP_PAGERDUTY_URL'];
+        try {
+            const result = await handleAgentfarmSupportAction({
+                ...BASE,
+                actionType: 'agentfarm_support_escalate',
+                payload: { diagnosisReport, issueId: '', issueDescription: 'All tiers failed', triedTiers: ['tier1', 'tier2'] },
+            });
+            assert.equal(result.ok, true);
+            const parsed = JSON.parse(result.output) as Record<string, unknown>;
+            assert.ok('escalated' in parsed);
+            assert.ok('escalatedAt' in parsed);
+        } finally {
+            if (savedSlack !== undefined) process.env['MCP_SLACK_URL'] = savedSlack;
+            if (savedPd !== undefined) process.env['MCP_PAGERDUTY_URL'] = savedPd;
+        }
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Sprint 23: Resolve
+// ---------------------------------------------------------------------------
+
+describe('agentfarm_support_resolve', () => {
+    it('returns ok:true with resolved:true and default notes', async () => {
+        const { handleAgentfarmSupportAction } = await import('./action-handler.js');
+        const result = await handleAgentfarmSupportAction({
+            ...BASE,
+            actionType: 'agentfarm_support_resolve',
+            payload: { issueId: '' },
+        });
+        assert.equal(result.ok, true);
+        const parsed = JSON.parse(result.output) as Record<string, unknown>;
+        assert.equal(parsed['resolved'], true);
+        assert.ok(parsed['resolvedAt']);
+        assert.ok(typeof parsed['resolutionNotes'] === 'string');
+    });
+
+    it('echoes provided resolutionNotes in output', async () => {
+        const { handleAgentfarmSupportAction } = await import('./action-handler.js');
+        const result = await handleAgentfarmSupportAction({
+            ...BASE,
+            actionType: 'agentfarm_support_resolve',
+            payload: { issueId: '', resolutionNotes: 'Connector credentials refreshed manually.' },
+        });
+        assert.equal(result.ok, true);
+        const parsed = JSON.parse(result.output) as Record<string, unknown>;
+        assert.equal(parsed['resolutionNotes'], 'Connector credentials refreshed manually.');
+    });
 });
