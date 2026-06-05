@@ -179,6 +179,9 @@ services:
       DESKTOP_AGENT_URL: http://desktop-agent:5003
       DESKTOP_AGENT_TOKEN: ${DESKTOP_AGENT_TOKEN:-}
       NODE_ENV: production
+      AF_ACTION_RESULT_LOG_PATH: /data/action-results.ndjson
+    volumes:
+      - agent_data:/data
     depends_on:
       api-gateway:
         condition: service_healthy
@@ -226,6 +229,7 @@ services:
       DASHBOARD_API_BASE_URL: http://api-gateway:3000
       NODE_ENV: production
       DASHBOARD_API_TOKEN: ${DASHBOARD_API_TOKEN}
+      REDIS_URL: redis://redis:6379
       # Meeting-agent live controls (join, stop, transcript, chat)
       MEETING_AGENT_URL: http://meeting-agent:7799
       MEETING_AGENT_TOKEN: ${MEETING_AGENT_TOKEN:-}
@@ -652,6 +656,7 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  agent_data:
   # Voice model caches — persist across container restarts to avoid re-downloading.
   whisper_models:
   kokoro_models:

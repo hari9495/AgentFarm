@@ -13,7 +13,7 @@ export async function GET(request: Request) {
         return NextResponse.redirect(`${origin}/login?error=invalid_link`);
     }
 
-    const result = consumeMagicToken(token);
+    const result = await consumeMagicToken(token);
 
     if ('error' in result) {
         return NextResponse.redirect(`${origin}/login?error=${result.error}`);

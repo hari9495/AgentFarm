@@ -26,7 +26,7 @@ export async function POST(request: Request) {
         );
     }
 
-    const token = generateMagicToken(email);
+    const token = await generateMagicToken(email);
     const link = `${getDashboardBaseUrl()}/api/auth/verify-magic-link?token=${token}`;
 
     // In production: send via email service.

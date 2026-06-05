@@ -21,7 +21,7 @@ export async function POST(request: Request) {
         );
     }
 
-    const result = generateOtp(email);
+    const result = await generateOtp(email);
 
     if ('cooldown' in result) {
         return NextResponse.json(
